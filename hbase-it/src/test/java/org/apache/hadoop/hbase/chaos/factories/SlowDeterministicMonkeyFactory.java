@@ -79,42 +79,42 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
     // move one region around. They are not so destructive,
     // can be executed more frequently.
     Action[] actions1 = new Action[] {
-      new CompactTableAction(tableName, compactTableRatio),
-      new CompactRandomRegionOfTableAction(tableName, compactRandomRegionRatio),
-      new FlushTableAction(tableName),
-      new FlushRandomRegionOfTableAction(tableName),
-      new MoveRandomRegionOfTableAction(tableName)
+        new CompactTableAction(tableName, compactTableRatio),
+        new CompactRandomRegionOfTableAction(tableName, compactRandomRegionRatio),
+        new FlushTableAction(tableName),
+        new FlushRandomRegionOfTableAction(tableName),
+        new MoveRandomRegionOfTableAction(tableName)
     };
 
     // Actions such as split/merge/snapshot.
     // They should not cause data loss, or unreliability
     // such as region stuck in transition.
     Action[] actions2 = new Action[] {
-      new SplitRandomRegionOfTableAction(tableName),
-      new MergeRandomAdjacentRegionsOfTableAction(tableName),
-      new SnapshotTableAction(tableName),
-      new AddColumnAction(tableName),
-      new RemoveColumnAction(tableName, columnFamilies),
-      new ChangeEncodingAction(tableName),
-      new ChangeCompressionAction(tableName),
-      new ChangeBloomFilterAction(tableName),
-      new ChangeVersionsAction(tableName),
-      new ChangeSplitPolicyAction(tableName),
+        new SplitRandomRegionOfTableAction(tableName),
+        new MergeRandomAdjacentRegionsOfTableAction(tableName),
+        new SnapshotTableAction(tableName),
+        new AddColumnAction(tableName),
+        new RemoveColumnAction(tableName, columnFamilies),
+        new ChangeEncodingAction(tableName),
+        new ChangeCompressionAction(tableName),
+        new ChangeBloomFilterAction(tableName),
+        new ChangeVersionsAction(tableName),
+        new ChangeSplitPolicyAction(tableName),
     };
 
     // Destructive actions to mess things around.
     Action[] actions3 = new Action[] {
-      new MoveRegionsOfTableAction(moveRegionsSleepTime, moveRegionsMaxTime,
-          tableName),
-      new MoveRandomRegionOfTableAction(moveRandomRegionSleepTime, tableName),
-      new RestartRandomRsAction(restartRandomRSSleepTime),
-      new BatchRestartRsAction(batchRestartRSSleepTime, batchRestartRSRatio),
-      new RestartActiveMasterAction(restartActiveMasterSleepTime),
-      new RollingBatchRestartRsAction(rollingBatchRestartRSSleepTime,
-          rollingBatchRestartRSRatio),
-      new RestartRsHoldingMetaAction(restartRsHoldingMetaSleepTime),
-      new DecreaseMaxHFileSizeAction(decreaseHFileSizeSleepTime, tableName),
-      new SplitAllRegionOfTableAction(tableName),
+        new MoveRegionsOfTableAction(moveRegionsSleepTime, moveRegionsMaxTime,
+            tableName),
+        new MoveRandomRegionOfTableAction(moveRandomRegionSleepTime, tableName),
+        new RestartRandomRsAction(restartRandomRSSleepTime),
+        new BatchRestartRsAction(batchRestartRSSleepTime, batchRestartRSRatio),
+        new RestartActiveMasterAction(restartActiveMasterSleepTime),
+        new RollingBatchRestartRsAction(rollingBatchRestartRSSleepTime,
+            rollingBatchRestartRSRatio),
+        new RestartRsHoldingMetaAction(restartRsHoldingMetaSleepTime),
+        new DecreaseMaxHFileSizeAction(decreaseHFileSizeSleepTime, tableName),
+        new SplitAllRegionOfTableAction(tableName),
       new GracefulRollingRestartRsAction(gracefulRollingRestartTSSLeepTime),
       new RollingBatchSuspendResumeRsAction(rollingBatchSuspendRSSleepTime,
           rollingBatchSuspendtRSRatio)
@@ -122,7 +122,7 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
 
     // Action to log more info for debugging
     Action[] actions4 = new Action[] {
-      new DumpClusterStatusAction()
+        new DumpClusterStatusAction()
     };
 
     return new PolicyBasedChaosMonkey(util,
@@ -136,54 +136,54 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
 
   private void loadProperties() {
 
-    action1Period = Long.parseLong(this.properties.getProperty(
-      MonkeyConstants.PERIODIC_ACTION1_PERIOD,
-      MonkeyConstants.DEFAULT_PERIODIC_ACTION1_PERIOD + ""));
-    action2Period = Long.parseLong(this.properties.getProperty(
-      MonkeyConstants.PERIODIC_ACTION2_PERIOD,
-      MonkeyConstants.DEFAULT_PERIODIC_ACTION2_PERIOD + ""));
-    action3Period = Long.parseLong(this.properties.getProperty(
-      MonkeyConstants.COMPOSITE_ACTION3_PERIOD,
-      MonkeyConstants.DEFAULT_COMPOSITE_ACTION3_PERIOD + ""));
-    action4Period = Long.parseLong(this.properties.getProperty(
-      MonkeyConstants.PERIODIC_ACTION4_PERIOD,
-      MonkeyConstants.DEFAULT_PERIODIC_ACTION4_PERIOD + ""));
-    moveRegionsMaxTime = Long.parseLong(this.properties.getProperty(
-      MonkeyConstants.MOVE_REGIONS_MAX_TIME,
-      MonkeyConstants.DEFAULT_MOVE_REGIONS_MAX_TIME + ""));
-    moveRegionsSleepTime = Long.parseLong(this.properties.getProperty(
-      MonkeyConstants.MOVE_REGIONS_SLEEP_TIME,
-      MonkeyConstants.DEFAULT_MOVE_REGIONS_SLEEP_TIME + ""));
-    moveRandomRegionSleepTime = Long.parseLong(this.properties.getProperty(
-      MonkeyConstants.MOVE_RANDOM_REGION_SLEEP_TIME,
-      MonkeyConstants.DEFAULT_MOVE_RANDOM_REGION_SLEEP_TIME + ""));
-    restartRandomRSSleepTime = Long.parseLong(this.properties.getProperty(
-      MonkeyConstants.RESTART_RANDOM_RS_SLEEP_TIME,
-      MonkeyConstants.DEFAULT_RESTART_RANDOM_RS_SLEEP_TIME + ""));
-    batchRestartRSSleepTime = Long.parseLong(this.properties.getProperty(
-      MonkeyConstants.BATCH_RESTART_RS_SLEEP_TIME,
-      MonkeyConstants.DEFAULT_BATCH_RESTART_RS_SLEEP_TIME + ""));
-    batchRestartRSRatio = Float.parseFloat(this.properties.getProperty(
-      MonkeyConstants.BATCH_RESTART_RS_RATIO,
-      MonkeyConstants.DEFAULT_BATCH_RESTART_RS_RATIO + ""));
-    restartActiveMasterSleepTime = Long.parseLong(this.properties.getProperty(
-      MonkeyConstants.RESTART_ACTIVE_MASTER_SLEEP_TIME,
-      MonkeyConstants.DEFAULT_RESTART_ACTIVE_MASTER_SLEEP_TIME + ""));
-    rollingBatchRestartRSSleepTime = Long.parseLong(this.properties.getProperty(
-      MonkeyConstants.ROLLING_BATCH_RESTART_RS_SLEEP_TIME,
-      MonkeyConstants.DEFAULT_ROLLING_BATCH_RESTART_RS_SLEEP_TIME + ""));
-    rollingBatchRestartRSRatio = Float.parseFloat(this.properties.getProperty(
-      MonkeyConstants.ROLLING_BATCH_RESTART_RS_RATIO,
-      MonkeyConstants.DEFAULT_ROLLING_BATCH_RESTART_RS_RATIO + ""));
-    restartRsHoldingMetaSleepTime = Long.parseLong(this.properties.getProperty(
-      MonkeyConstants.RESTART_RS_HOLDING_META_SLEEP_TIME,
-      MonkeyConstants.DEFAULT_RESTART_RS_HOLDING_META_SLEEP_TIME + ""));
-    compactTableRatio = Float.parseFloat(this.properties.getProperty(
-      MonkeyConstants.COMPACT_TABLE_ACTION_RATIO,
-      MonkeyConstants.DEFAULT_COMPACT_TABLE_ACTION_RATIO + ""));
-    compactRandomRegionRatio = Float.parseFloat(this.properties.getProperty(
-      MonkeyConstants.COMPACT_RANDOM_REGION_RATIO,
-      MonkeyConstants.DEFAULT_COMPACT_RANDOM_REGION_RATIO + ""));
+      action1Period = Long.parseLong(this.properties.getProperty(
+        MonkeyConstants.PERIODIC_ACTION1_PERIOD,
+        MonkeyConstants.DEFAULT_PERIODIC_ACTION1_PERIOD + ""));
+      action2Period = Long.parseLong(this.properties.getProperty(
+        MonkeyConstants.PERIODIC_ACTION2_PERIOD,
+        MonkeyConstants.DEFAULT_PERIODIC_ACTION2_PERIOD + ""));
+      action3Period = Long.parseLong(this.properties.getProperty(
+        MonkeyConstants.COMPOSITE_ACTION3_PERIOD,
+        MonkeyConstants.DEFAULT_COMPOSITE_ACTION3_PERIOD + ""));
+      action4Period = Long.parseLong(this.properties.getProperty(
+        MonkeyConstants.PERIODIC_ACTION4_PERIOD,
+        MonkeyConstants.DEFAULT_PERIODIC_ACTION4_PERIOD + ""));
+      moveRegionsMaxTime = Long.parseLong(this.properties.getProperty(
+        MonkeyConstants.MOVE_REGIONS_MAX_TIME,
+        MonkeyConstants.DEFAULT_MOVE_REGIONS_MAX_TIME + ""));
+      moveRegionsSleepTime = Long.parseLong(this.properties.getProperty(
+        MonkeyConstants.MOVE_REGIONS_SLEEP_TIME,
+        MonkeyConstants.DEFAULT_MOVE_REGIONS_SLEEP_TIME + ""));
+      moveRandomRegionSleepTime = Long.parseLong(this.properties.getProperty(
+        MonkeyConstants.MOVE_RANDOM_REGION_SLEEP_TIME,
+        MonkeyConstants.DEFAULT_MOVE_RANDOM_REGION_SLEEP_TIME + ""));
+      restartRandomRSSleepTime = Long.parseLong(this.properties.getProperty(
+        MonkeyConstants.RESTART_RANDOM_RS_SLEEP_TIME,
+        MonkeyConstants.DEFAULT_RESTART_RANDOM_RS_SLEEP_TIME + ""));
+      batchRestartRSSleepTime = Long.parseLong(this.properties.getProperty(
+        MonkeyConstants.BATCH_RESTART_RS_SLEEP_TIME,
+        MonkeyConstants.DEFAULT_BATCH_RESTART_RS_SLEEP_TIME + ""));
+      batchRestartRSRatio = Float.parseFloat(this.properties.getProperty(
+        MonkeyConstants.BATCH_RESTART_RS_RATIO,
+        MonkeyConstants.DEFAULT_BATCH_RESTART_RS_RATIO + ""));
+      restartActiveMasterSleepTime = Long.parseLong(this.properties.getProperty(
+        MonkeyConstants.RESTART_ACTIVE_MASTER_SLEEP_TIME,
+        MonkeyConstants.DEFAULT_RESTART_ACTIVE_MASTER_SLEEP_TIME + ""));
+      rollingBatchRestartRSSleepTime = Long.parseLong(this.properties.getProperty(
+        MonkeyConstants.ROLLING_BATCH_RESTART_RS_SLEEP_TIME,
+        MonkeyConstants.DEFAULT_ROLLING_BATCH_RESTART_RS_SLEEP_TIME + ""));
+      rollingBatchRestartRSRatio = Float.parseFloat(this.properties.getProperty(
+        MonkeyConstants.ROLLING_BATCH_RESTART_RS_RATIO,
+        MonkeyConstants.DEFAULT_ROLLING_BATCH_RESTART_RS_RATIO + ""));
+      restartRsHoldingMetaSleepTime = Long.parseLong(this.properties.getProperty(
+        MonkeyConstants.RESTART_RS_HOLDING_META_SLEEP_TIME,
+        MonkeyConstants.DEFAULT_RESTART_RS_HOLDING_META_SLEEP_TIME + ""));
+      compactTableRatio = Float.parseFloat(this.properties.getProperty(
+        MonkeyConstants.COMPACT_TABLE_ACTION_RATIO,
+        MonkeyConstants.DEFAULT_COMPACT_TABLE_ACTION_RATIO + ""));
+      compactRandomRegionRatio = Float.parseFloat(this.properties.getProperty(
+        MonkeyConstants.COMPACT_RANDOM_REGION_RATIO,
+        MonkeyConstants.DEFAULT_COMPACT_RANDOM_REGION_RATIO + ""));
     decreaseHFileSizeSleepTime = Long.parseLong(this.properties.getProperty(
         MonkeyConstants.DECREASE_HFILE_SIZE_SLEEP_TIME,
         MonkeyConstants.DEFAULT_DECREASE_HFILE_SIZE_SLEEP_TIME + ""));

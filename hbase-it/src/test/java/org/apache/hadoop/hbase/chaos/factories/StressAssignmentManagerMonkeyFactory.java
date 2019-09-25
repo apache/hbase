@@ -57,32 +57,30 @@ public class StressAssignmentManagerMonkeyFactory extends MonkeyFactory {
     // Actions that could slow down region movement.
     // These could also get regions stuck if there are issues.
     Action[] actions1 = new Action[]{
-      new CompactTableAction(tableName, 0.5f),
-      new CompactRandomRegionOfTableAction(tableName, 0.6f),
-      new FlushTableAction(tableName),
-      new FlushRandomRegionOfTableAction(tableName)
+        new CompactTableAction(tableName, 0.5f),
+        new CompactRandomRegionOfTableAction(tableName, 0.6f),
+        new FlushTableAction(tableName),
+        new FlushRandomRegionOfTableAction(tableName)
     };
 
     Action[] actions2 = new Action[]{
-      new SplitRandomRegionOfTableAction(tableName),
-      new MergeRandomAdjacentRegionsOfTableAction(tableName),
-      new AddColumnAction(tableName),
-      new RemoveColumnAction(tableName, columnFamilies),
-      new MoveRegionsOfTableAction(MonkeyConstants.DEFAULT_MOVE_REGIONS_SLEEP_TIME,
-          1600,
-          tableName),
-      new MoveRandomRegionOfTableAction(MonkeyConstants.DEFAULT_MOVE_RANDOM_REGION_SLEEP_TIME,
-          tableName),
-      new RestartRandomRsAction(MonkeyConstants.DEFAULT_RESTART_RANDOM_RS_SLEEP_TIME),
-      new BatchRestartRsAction(MonkeyConstants.DEFAULT_ROLLING_BATCH_RESTART_RS_SLEEP_TIME,
-          0.5f),
-      new RollingBatchRestartRsAction(MonkeyConstants.DEFAULT_BATCH_RESTART_RS_SLEEP_TIME,
-          1.0f),
-      new RestartRsHoldingMetaAction(MonkeyConstants.DEFAULT_RESTART_RS_HOLDING_META_SLEEP_TIME),
-      new ChangeSplitPolicyAction(tableName),
-      new SplitAllRegionOfTableAction(tableName),
-      new DecreaseMaxHFileSizeAction(MonkeyConstants.DEFAULT_DECREASE_HFILE_SIZE_SLEEP_TIME,
-          tableName),
+        new SplitRandomRegionOfTableAction(tableName),
+        new MergeRandomAdjacentRegionsOfTableAction(tableName),
+        new AddColumnAction(tableName),
+        new RemoveColumnAction(tableName, columnFamilies),
+        new MoveRegionsOfTableAction(MonkeyConstants.DEFAULT_MOVE_REGIONS_SLEEP_TIME,
+            1600,
+            tableName),
+        new MoveRandomRegionOfTableAction(MonkeyConstants.DEFAULT_MOVE_RANDOM_REGION_SLEEP_TIME,
+            tableName),
+        new RestartRandomRsAction(MonkeyConstants.DEFAULT_RESTART_RANDOM_RS_SLEEP_TIME),
+        new BatchRestartRsAction(MonkeyConstants.DEFAULT_ROLLING_BATCH_RESTART_RS_SLEEP_TIME, 0.5f),
+        new RollingBatchRestartRsAction(MonkeyConstants.DEFAULT_BATCH_RESTART_RS_SLEEP_TIME, 1.0f),
+        new RestartRsHoldingMetaAction(MonkeyConstants.DEFAULT_RESTART_RS_HOLDING_META_SLEEP_TIME),
+        new ChangeSplitPolicyAction(tableName),
+        new SplitAllRegionOfTableAction(tableName),
+        new DecreaseMaxHFileSizeAction(MonkeyConstants.DEFAULT_DECREASE_HFILE_SIZE_SLEEP_TIME,
+            tableName),
       new GracefulRollingRestartRsAction(gracefulRollingRestartTSSLeepTime),
       new RollingBatchSuspendResumeRsAction(rollingBatchSuspendRSSleepTime,
           rollingBatchSuspendtRSRatio)
@@ -90,7 +88,7 @@ public class StressAssignmentManagerMonkeyFactory extends MonkeyFactory {
 
     // Action to log more info for debugging
     Action[] actions3 = new Action[]{
-      new DumpClusterStatusAction()
+        new DumpClusterStatusAction()
     };
 
     return new PolicyBasedChaosMonkey(util,

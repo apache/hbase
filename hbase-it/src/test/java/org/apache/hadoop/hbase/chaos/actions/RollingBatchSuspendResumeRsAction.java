@@ -58,7 +58,8 @@ public class RollingBatchSuspendResumeRsAction extends Action {
     SUSPEND, RESUME
   }
 
-  @Override public void perform() throws Exception {
+  @Override
+  public void perform() throws Exception {
     LOG.info(String.format("Performing action: Rolling batch restarting %d%% of region servers",
         (int) (ratio * 100)));
     List<ServerName> selectedServers = selectServers();
@@ -90,7 +91,7 @@ public class RollingBatchSuspendResumeRsAction extends Action {
           try {
             suspendRs(server);
           } catch (Shell.ExitCodeException e) {
-            LOG.info("Problem suspending but presume successful; code=" + e.getExitCode(), e);
+            LOG.warn("Problem suspending but presume successful; code={}", e.getExitCode(), e);
           }
           suspendedServers.add(server);
           break;
@@ -99,12 +100,12 @@ public class RollingBatchSuspendResumeRsAction extends Action {
           try {
             resumeRs(server);
           } catch (Shell.ExitCodeException e) {
-            LOG.info("Problem resuming, will retry; code=" + e.getExitCode(), e);
+            LOG.info("Problem resuming, will retry; code={}", e.getExitCode(), e);
           }
           break;
       }
 
-      LOG.info("Sleeping for:" + sleepTime);
+      LOG.info("Sleeping for:{}", sleepTime);
       Threads.sleep(sleepTime);
     }
   }

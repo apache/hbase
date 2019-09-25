@@ -24,11 +24,12 @@ import java.util.List;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.RegionMover;
+import org.apache.hadoop.util.Shell;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Gracefully restarts every non-admin regionserver in a rolling fashion. At each step, it unloads,
+ * Gracefully restarts every regionserver in a rolling fashion. At each step, it unloads,
  * restarts the loads every rs server sleeping randomly (0-sleepTime) in between servers.
  */
 public class GracefulRollingRestartRsAction extends RestartActionBaseAction {
@@ -44,25 +45,25 @@ public class GracefulRollingRestartRsAction extends RestartActionBaseAction {
     List<ServerName> selectedServers = selectServers();
 
     LOG.info("Disabling balancer to make unloading possible");
-    setBalancer(false, false);
+    setBalancer(false, true);
 
-    for(ServerName server : selectedServers){
+    for (ServerName server : selectedServers) {
       String rsName = server.getAddress().toString();
       try (RegionMover rm =
           new RegionMover.RegionMoverBuilder(rsName, getConf()).ack(true).build()) {
-        LOG.info("Unloading " + server);
+        LOG.info("Unloading {}", server);
         rm.unload();
-        LOG.info("Restarting " + server);
+        LOG.info("Restarting {}", server);
         gracefulRestartRs(server, sleepTime);
-        LOG.info("Loading " + server);
+        LOG.info("Loading {}", server);
         rm.load();
-      } catch (org.apache.hadoop.util.Shell.ExitCodeException e) {
+      } catch (Shell.ExitCodeException e) {
         LOG.info("Problem restarting but presume successful; code={}", e.getExitCode(), e);
       }
       sleep(RandomUtils.nextInt(0, (int)sleepTime));
     }
     LOG.info("Enabling balancer");
-    setBalancer(true, false);
+    setBalancer(true, true);
   }
 
   protected List<ServerName> selectServers() throws IOException {

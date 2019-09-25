@@ -507,7 +507,7 @@ public class MiniHBaseCluster extends HBaseCluster {
   public JVMClusterUtil.RegionServerThread suspendRegionServer(int serverNumber) {
     JVMClusterUtil.RegionServerThread server =
         hbaseCluster.getRegionServers().get(serverNumber);
-    LOG.info("Suspending " + server.toString());
+    LOG.info("Suspending {}", server.toString());
     server.suspend();
     return server;
   }
@@ -520,7 +520,7 @@ public class MiniHBaseCluster extends HBaseCluster {
   public JVMClusterUtil.RegionServerThread resumeRegionServer(int serverNumber) {
     JVMClusterUtil.RegionServerThread server =
         hbaseCluster.getRegionServers().get(serverNumber);
-    LOG.info("Resuming " + server.toString());
+    LOG.info("Resuming {}", server.toString());
     server.resume();
     return server;
   }

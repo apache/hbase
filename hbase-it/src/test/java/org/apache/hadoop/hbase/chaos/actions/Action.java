@@ -300,14 +300,10 @@ public class Action {
 
   protected void setBalancer(boolean onOrOff, boolean synchronous) throws Exception {
     Admin admin = this.context.getHBaseIntegrationTestingUtility().getAdmin();
-    boolean result = false;
     try {
-      result = admin.balancerSwitch(onOrOff, synchronous);
+      admin.balancerSwitch(onOrOff, synchronous);
     } catch (Exception e) {
       LOG.warn("Got exception while switching balance ", e);
-    }
-    if (!result) {
-      LOG.error("Balancer switch didn't succeed");
     }
   }
 

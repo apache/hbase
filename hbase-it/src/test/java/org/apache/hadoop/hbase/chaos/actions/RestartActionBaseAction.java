@@ -45,13 +45,15 @@ public class RestartActionBaseAction extends Action {
       return;
     }
 
+    LOG.info("Killing master: {}", server);
     killMaster(server);
     sleep(sleepTime);
+    LOG.info("Starting master: {}", server);
     startMaster(server);
   }
 
   /**
-   * Stop and then restart the region server instaedof killing it.
+   * Stop and then restart the region server instead of killing it.
    * @param server hostname to restart the regionserver on
    * @param sleepTime number of milliseconds between stop and restart
    * @throws IOException if something goes wrong
@@ -62,8 +64,10 @@ public class RestartActionBaseAction extends Action {
     if (context.isStopping()) {
       return;
     }
+    LOG.info("Stopping region server: {}", server);
     stopRs(server);
     sleep(sleepTime);
+    LOG.info("Starting region server: {}", server);
     startRs(server);
   }
 
@@ -73,8 +77,10 @@ public class RestartActionBaseAction extends Action {
     if (context.isStopping()) {
       return;
     }
+    LOG.info("Killing region server: {}", server);
     killRs(server);
     sleep(sleepTime);
+    LOG.info("Starting region server: {}", server);
     startRs(server);
   }
 
@@ -84,8 +90,10 @@ public class RestartActionBaseAction extends Action {
     if (context.isStopping()) {
       return;
     }
+    LOG.info("Killing zookeeper node: {}", server);
     killZKNode(server);
     sleep(sleepTime);
+    LOG.info("Starting zookeeper node: {}", server);
     startZKNode(server);
   }
 
@@ -95,8 +103,10 @@ public class RestartActionBaseAction extends Action {
     if (context.isStopping()) {
       return;
     }
+    LOG.info("Killing data node: {}", server);
     killDataNode(server);
     sleep(sleepTime);
+    LOG.info("Starting data node: {}", server);
     startDataNode(server);
   }
 
@@ -106,8 +116,10 @@ public class RestartActionBaseAction extends Action {
     if (context.isStopping()) {
       return;
     }
+    LOG.info("Killing name node: {}", server);
     killNameNode(server);
     sleep(sleepTime);
+    LOG.info("Starting name node: {}", server);
     startNameNode(server);
   }
 
