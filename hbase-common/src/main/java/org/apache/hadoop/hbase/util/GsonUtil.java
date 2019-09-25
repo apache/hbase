@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,28 +18,26 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
-import java.util.Map;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hbase.thirdparty.com.google.gson.Gson;
+import org.apache.hbase.thirdparty.com.google.gson.GsonBuilder;
+import org.apache.hbase.thirdparty.com.google.gson.LongSerializationPolicy;
 
 /**
- * Utility class for converting objects to JSON
+ * Helper class for gson.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
-public final class JsonMapper {
-  private JsonMapper() {
+@InterfaceAudience.Private
+public final class GsonUtil {
+
+  private GsonUtil() {
   }
 
-  private static final Gson GSON = GsonUtil.createGson().create();
-
-  public static String writeMapAsString(Map<String, Object> map) throws IOException {
-    return writeObjectAsString(map);
-  }
-
-  public static String writeObjectAsString(Object object) throws IOException {
-    return GSON.toJson(object);
+  /**
+   * Create a builder which is used to create a Gson instance.
+   * <p/>
+   * Will set some common configs for the builder.
+   */
+  public static GsonBuilder createGson() {
+    return new GsonBuilder().setLongSerializationPolicy(LongSerializationPolicy.STRING);
   }
 }

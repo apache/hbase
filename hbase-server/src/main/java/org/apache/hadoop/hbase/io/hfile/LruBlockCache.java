@@ -100,7 +100,6 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * to the relative sizes and usage.
  */
 @InterfaceAudience.Private
-@JsonIgnoreProperties({"encodingCountsForTest"})
 public class LruBlockCache implements ResizableBlockCache, HeapSize {
 
   private static final Log LOG = LogFactory.getLog(LruBlockCache.class);
@@ -157,21 +156,23 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   private static final long DEFAULT_MAX_BLOCK_SIZE = 16L * 1024L * 1024L;
 
   /** Concurrent map (the cache) */
-  private final Map<BlockCacheKey,LruCachedBlock> map;
+  private transient final Map<BlockCacheKey,LruCachedBlock> map;
 
   /** Eviction lock (locked when eviction in process) */
-  private final ReentrantLock evictionLock = new ReentrantLock(true);
+  private transient final ReentrantLock evictionLock = new ReentrantLock(true);
   private final long maxBlockSize;
 
   /** Volatile boolean to track if we are in an eviction process or not */
   private volatile boolean evictionInProgress = false;
 
   /** Eviction thread */
-  private final EvictionThread evictionThread;
+  private transient final EvictionThread evictionThread;
 
   /** Statistics thread schedule pool (for heavy debugging, could remove) */
-  private final ScheduledExecutorService scheduleThreadPool = Executors.newScheduledThreadPool(1,
-    new ThreadFactoryBuilder().setNameFormat("LruBlockCacheStatsExecutor").setDaemon(true).build());
+  private transient final ScheduledExecutorService scheduleThreadPool =
+    Executors.newScheduledThreadPool(1,
+      new ThreadFactoryBuilder().setNameFormat("LruBlockCacheStatsExecutor")
+        .setDaemon(true).build());
 
   /** Current size of cache */
   private final AtomicLong size;
@@ -216,7 +217,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   private boolean forceInMemory;
 
   /** Where to send victims (blocks evicted/missing from the cache) */
-  private BlockCache victimHandler = null;
+  private transient BlockCache victimHandler = null;
 
   /**
    * Default constructor.  Specify maximum size and expected average block

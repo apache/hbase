@@ -20,10 +20,11 @@ package org.apache.hadoop.hbase;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.GsonUtil;
+import org.apache.hbase.thirdparty.com.google.gson.Gson;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -35,10 +36,10 @@ public class TestPerformanceEvaluation {
     PerformanceEvaluation.TestOptions options = new PerformanceEvaluation.TestOptions();
     assertTrue(!options.isAutoFlush());
     options.setAutoFlush(true);
-    ObjectMapper mapper = new ObjectMapper();
-    String optionsString = mapper.writeValueAsString(options);
+    Gson gson = GsonUtil.createGson().create();
+    String optionsString = gson.toJson(options);
     PerformanceEvaluation.TestOptions optionsDeserialized =
-        mapper.readValue(optionsString, PerformanceEvaluation.TestOptions.class);
+      gson.fromJson(optionsString, PerformanceEvaluation.TestOptions.class);
     assertTrue(optionsDeserialized.isAutoFlush());
   }
 

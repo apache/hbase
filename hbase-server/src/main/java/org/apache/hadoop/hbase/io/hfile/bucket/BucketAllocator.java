@@ -20,7 +20,6 @@
 
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -52,11 +51,9 @@ import com.google.common.primitives.Ints;
  * This class is not thread safe.
  */
 @InterfaceAudience.Private
-@JsonIgnoreProperties({"indexStatistics", "freeSize", "usedSize"})
 public final class BucketAllocator {
   private static final Log LOG = LogFactory.getLog(BucketAllocator.class);
 
-  @JsonIgnoreProperties({"completelyFree", "uninstantiated"})
   public final static class Bucket {
     private long baseOffset;
     private int itemAllocationSize, sizeIndex;
@@ -308,7 +305,7 @@ public final class BucketAllocator {
   private Bucket[] buckets;
   private BucketSizeInfo[] bucketSizeInfos;
   private final long totalSize;
-  private long usedSize = 0;
+  private transient long usedSize = 0;
 
   BucketAllocator(long availableSpace, int[] bucketSizes)
       throws BucketAllocatorException {

@@ -1301,6 +1301,7 @@
     <jcodings.version>1.0.8</jcodings.version>
     <spy.version>2.11.6</spy.version>
     <bouncycastle.version>1.46</bouncycastle.version>
+    <hbase.shaded.gson.version>3.0.0</hbase.shaded.gson.version>
     <!-- Plugin Dependencies -->
     <maven.assembly.version>3.1.1</maven.assembly.version>
     <maven.antrun.version>1.6</maven.antrun.version>
@@ -1768,6 +1769,11 @@
         <groupId>com.fasterxml.jackson.core</groupId>
         <artifactId>jackson-databind</artifactId>
         <version>${jackson2.databind.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase.thirdparty</groupId>
+        <artifactId>hbase-shaded-gson</artifactId>
+        <version>${hbase.shaded.gson.version}</version>
       </dependency>
       <dependency>
         <!--If this is not in the runtime lib, we get odd
