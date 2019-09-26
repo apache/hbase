@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.wal;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -36,6 +35,7 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.util.GsonUtil;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -50,6 +50,8 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
 // imports for things that haven't moved yet.
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hbase.thirdparty.com.google.gson.Gson;
+
 
 /**
  * WALPrettyPrinter prints the contents of a given WAL with a variety of
@@ -79,7 +81,7 @@ public class WALPrettyPrinter {
   // useful for programmatic capture of JSON output
   private PrintStream out;
   // for JSON encoding
-  private static final ObjectMapper MAPPER = new ObjectMapper();
+  private static final Gson GSON = GsonUtil.createGson().create();
 
   private long position;
 
@@ -313,7 +315,7 @@ public class WALPrettyPrinter {
           else
             out.print(",");
           // encode and print JSON
-          out.print(MAPPER.writeValueAsString(txn));
+          out.print(GSON.toJson(txn));
         } else {
           // Pretty output, complete with indentation by atomic action
           out.println("Sequence=" + txn.get("sequence") + " "
