@@ -130,6 +130,20 @@ public class DistributedHBaseCluster extends HBaseCluster {
   }
 
   @Override
+  public void suspendRegionServer(ServerName serverName) throws IOException {
+    LOG.info("Suspend RS: " + serverName.getServerName());
+    clusterManager.suspend(ServiceType.HBASE_REGIONSERVER,
+        serverName.getHostname(), serverName.getPort());
+  }
+
+  @Override
+  public void resumeRegionServer(ServerName serverName) throws IOException {
+    LOG.info("Resume RS: " + serverName.getServerName());
+    clusterManager.resume(ServiceType.HBASE_REGIONSERVER,
+        serverName.getHostname(), serverName.getPort());
+  }
+
+  @Override
   public void startZkNode(String hostname, int port) throws IOException {
     LOG.info("Starting Zookeeper node on: " + hostname);
     clusterManager.start(ServiceType.ZOOKEEPER_SERVER, hostname, port);
@@ -206,7 +220,7 @@ public class DistributedHBaseCluster extends HBaseCluster {
 
   @Override
   public void stopNameNode(ServerName serverName) throws IOException {
-    LOG.info("Stopping name node on: " + serverName.getServerName());
+    LOG.info(String.format("Stopping name node on: %s", serverName.getServerName()));
     clusterManager.stop(ServiceType.HADOOP_NAMENODE, serverName.getHostname(),
       serverName.getPort());
   }
@@ -223,7 +237,8 @@ public class DistributedHBaseCluster extends HBaseCluster {
 
   private void waitForServiceToStop(ServiceType service, ServerName serverName, long timeout)
     throws IOException {
-    LOG.info("Waiting for service: " + service + " to stop: " + serverName.getServerName());
+    LOG.info(
+        String.format("Waiting for service: %s to stop: %s", service, serverName.getServerName()));
     long start = System.currentTimeMillis();
 
     while ((System.currentTimeMillis() - start) < timeout) {
@@ -237,7 +252,8 @@ public class DistributedHBaseCluster extends HBaseCluster {
 
   private void waitForServiceToStart(ServiceType service, ServerName serverName, long timeout)
     throws IOException {
-    LOG.info("Waiting for service: " + service + " to start: " + serverName.getServerName());
+    LOG.info(String.format(
+        "Waiting for service: %s to start: ", service, serverName.getServerName()));
     long start = System.currentTimeMillis();
 
     while ((System.currentTimeMillis() - start) < timeout) {
@@ -258,7 +274,7 @@ public class DistributedHBaseCluster extends HBaseCluster {
 
   @Override
   public void startMaster(String hostname, int port) throws IOException {
-    LOG.info("Starting Master on: " + hostname + ":" + port);
+    LOG.info(String.format("Starting Master on: %s:%s", hostname, port));
     clusterManager.start(ServiceType.HBASE_MASTER, hostname, port);
   }
 
@@ -437,8 +453,8 @@ public class DistributedHBaseCluster extends HBaseCluster {
       }
     }
     if (!deferred.isEmpty()) {
-      LOG.warn("Restoring cluster - restoring region servers reported "
-              + deferred.size() + " errors:");
+      LOG.warn(String.format("Restoring cluster - restoring region servers reported %s errors:",
+          deferred.size()));
       for (int i=0; i<deferred.size() && i < 3; i++) {
         LOG.warn(deferred.get(i));
       }
@@ -500,8 +516,8 @@ public class DistributedHBaseCluster extends HBaseCluster {
       }
     }
     if (!deferred.isEmpty()) {
-      LOG.warn("Restoring cluster - restoring region servers reported "
-              + deferred.size() + " errors:");
+      LOG.warn(String.format("Restoring cluster - restoring region servers reported %s errors:",
+          deferred.size()));
       for (int i=0; i<deferred.size() && i < 3; i++) {
         LOG.warn(deferred.get(i));
       }

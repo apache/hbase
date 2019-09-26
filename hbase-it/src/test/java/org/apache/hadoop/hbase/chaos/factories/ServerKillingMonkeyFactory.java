@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.chaos.actions.ForceBalancerAction;
 import org.apache.hadoop.hbase.chaos.actions.RestartActiveMasterAction;
 import org.apache.hadoop.hbase.chaos.actions.RestartRandomRsExceptMetaAction;
 import org.apache.hadoop.hbase.chaos.actions.RollingBatchRestartRsExceptMetaAction;
+import org.apache.hadoop.hbase.chaos.actions.RollingBatchSuspendResumeRsAction;
 import org.apache.hadoop.hbase.chaos.monkies.ChaosMonkey;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.chaos.policies.CompositeSequentialPolicy;
@@ -36,15 +37,21 @@ import org.apache.hadoop.hbase.chaos.policies.PeriodicRandomActionPolicy;
  */
 public class ServerKillingMonkeyFactory extends MonkeyFactory {
 
+  private long rollingBatchSuspendRSSleepTime;
+  private float rollingBatchSuspendtRSRatio;
+
   @Override
   public ChaosMonkey build() {
+    loadProperties();
 
     // Destructive actions to mess things around. Cannot run batch restart
     Action[] actions1 = new Action[] {
         new RestartRandomRsExceptMetaAction(60000),
         new RestartActiveMasterAction(5000),
         new RollingBatchRestartRsExceptMetaAction(5000, 1.0f, 2), //only allow 2 servers to be dead
-        new ForceBalancerAction()
+      new ForceBalancerAction(),
+      new RollingBatchSuspendResumeRsAction(rollingBatchSuspendRSSleepTime,
+          rollingBatchSuspendtRSRatio)
     };
 
     // Action to log more info for debugging
@@ -57,5 +64,14 @@ public class ServerKillingMonkeyFactory extends MonkeyFactory {
           new DoActionsOncePolicy(60 * 1000, actions1),
           new PeriodicRandomActionPolicy(60 * 1000, actions1)),
       new PeriodicRandomActionPolicy(60 * 1000, actions2));
+  }
+
+  private void loadProperties() {
+    rollingBatchSuspendRSSleepTime = Long.parseLong(this.properties.getProperty(
+        MonkeyConstants.ROLLING_BATCH_RESTART_RS_SLEEP_TIME,
+        MonkeyConstants.DEFAULT_ROLLING_BATCH_RESTART_RS_SLEEP_TIME + ""));
+    rollingBatchSuspendtRSRatio = Float.parseFloat(this.properties.getProperty(
+        MonkeyConstants.ROLLING_BATCH_RESTART_RS_RATIO,
+        MonkeyConstants.DEFAULT_ROLLING_BATCH_RESTART_RS_RATIO + ""));
   }
 }
