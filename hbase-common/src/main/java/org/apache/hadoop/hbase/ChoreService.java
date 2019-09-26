@@ -151,6 +151,10 @@ public class ChoreService implements ChoreServicer {
     }
 
     try {
+      if (chore.getPeriod() <= 0) {
+        LOG.info("The period is " + chore.getPeriod() + " seconds, " + chore.getName() + " is disabled");
+        return false;
+      }
       chore.setChoreServicer(this);
       ScheduledFuture<?> future =
           scheduler.scheduleAtFixedRate(chore, chore.getInitialDelay(), chore.getPeriod(),
