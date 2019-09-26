@@ -34,35 +34,55 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.Waiter;
-import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.replication.regionserver.Replication;
-import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.wal.WALProvider;
-import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.regionserver.HBaseInterClusterReplicationEndpoint;
+import org.apache.hadoop.hbase.replication.regionserver.MetricsSource;
+import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSource;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALProvider;
+import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+import org.mockito.ArgumentCaptor;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.TreeMap;
+import java.util.UUID;
+
+import static org.apache.hadoop.hbase.replication.TestReplicationEndpoint.ReplicationEndpointForTest;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.mockito.internal.verification.VerificationModeFactory.times;
 
 @Category(MediumTests.class)
 public class TestReplicationSource {
@@ -92,6 +112,24 @@ public class TestReplicationSource {
     if (FS.exists(logDir)) FS.delete(logDir, true);
   }
 
+  @Before
+  public void setup() throws IOException {
+    if (!FS.exists(logDir)) FS.mkdirs(logDir);
+    if (!FS.exists(oldLogDir)) FS.mkdirs(oldLogDir);
+
+    ReplicationEndpointForTest.contructedCount.set(0);
+    ReplicationEndpointForTest.startedCount.set(0);
+    ReplicationEndpointForTest.replicateCount.set(0);
+    ReplicationEndpointForTest.stoppedCount.set(0);
+    ReplicationEndpointForTest.lastEntries = null;
+  }
+
+  @After
+  public void tearDown() throws IOException {
+    if (FS.exists(oldLogDir)) FS.delete(oldLogDir, true);
+    if (FS.exists(logDir)) FS.delete(logDir, true);
+  }
+
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL_PEER.shutdownMiniHBaseCluster();
@@ -108,8 +146,6 @@ public class TestReplicationSource {
   @Test
   public void testLogMoving() throws Exception{
     Path logPath = new Path(logDir, "log");
-    if (!FS.exists(logDir)) FS.mkdirs(logDir);
-    if (!FS.exists(oldLogDir)) FS.mkdirs(oldLogDir);
     WALProvider.Writer writer = WALFactory.createWALWriter(FS, logPath,
         TEST_UTIL.getConfiguration());
     for(int i = 0; i < 3; i++) {
@@ -166,7 +202,6 @@ public class TestReplicationSource {
     Configuration testConf = HBaseConfiguration.create();
     testConf.setInt("replication.source.maxretriesmultiplier", 1);
     ReplicationSourceManager manager = Mockito.mock(ReplicationSourceManager.class);
-    Mockito.when(manager.getTotalBufferUsed()).thenReturn(new AtomicLong());
     source.init(testConf, null, manager, null, mockPeers, null, "testPeer",
         null, replicationEndpoint, null);
     ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -187,6 +222,180 @@ public class TestReplicationSource {
 
     });
 
+  }
+
+  private void appendEntries(WALProvider.Writer writer, int numEntries, boolean closeAfterAppends) throws IOException {
+    for(int i = 0; i < numEntries; i++) {
+      byte[] b = Bytes.toBytes(Integer.toString(i));
+      KeyValue kv = new KeyValue(b,b,b);
+      WALEdit edit = new WALEdit();
+      edit.add(kv);
+      WALKey key = new WALKey(b, TableName.valueOf(b), 0, 0,
+              HConstants.DEFAULT_CLUSTER_ID);
+      NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+      scopes.put(b, HConstants.REPLICATION_SCOPE_GLOBAL);
+      key.setScopes(scopes);
+      writer.append(new WAL.Entry(key, edit));
+      writer.sync(false);
+    }
+    if (closeAfterAppends) {
+      writer.close();
+    }
+  }
+
+  private void appendEntries(WALProvider.Writer writer, int numEntries) throws IOException {
+    appendEntries(writer, numEntries, true);
+  }
+
+  private long getPosition(WALFactory wals, Path log2, int numEntries) throws IOException {
+    WAL.Reader reader = wals.createReader(FS, log2);
+    for (int i = 0; i < numEntries; i++) {
+      reader.next();
+    }
+    return reader.getPosition();
+  }
+
+  private static class Mocks {
+    private final ReplicationSourceManager manager = mock(ReplicationSourceManager.class);
+    private final ReplicationQueues queues = mock(ReplicationQueues.class);
+    private final ReplicationPeers peers = mock(ReplicationPeers.class);
+    private final MetricsSource metrics = mock(MetricsSource.class);
+    private final ReplicationPeer peer = mock(ReplicationPeer.class);
+    private final ReplicationEndpoint.Context context = mock(ReplicationEndpoint.Context.class);
+
+    private Mocks() {
+      when(peers.getStatusOfPeer(anyString())).thenReturn(true);
+      when(context.getReplicationPeer()).thenReturn(peer);
+    }
+
+    ReplicationSource createReplicationSourceWithMocks(ReplicationEndpoint endpoint) throws IOException {
+      final ReplicationSource source = new ReplicationSource();
+      endpoint.init(context);
+      source.init(conf, FS, manager, queues, peers, mock(Stoppable.class),
+              "testPeerClusterZnode", UUID.randomUUID(), endpoint, metrics);
+      return source;
+    }
+  }
+
+  @Test
+  public void testSetLogPositionForWALCurrentlyReadingWhenLogsRolled() throws Exception {
+    final int numWALEntries = 5;
+    conf.setInt("replication.source.nb.capacity", numWALEntries);
+
+    Mocks mocks = new Mocks();
+    final ReplicationEndpointForTest endpoint = new ReplicationEndpointForTest() {
+      @Override
+      public WALEntryFilter getWALEntryfilter() {
+        return null;
+      }
+    };
+    WALFactory wals = new WALFactory(TEST_UTIL.getConfiguration(), null, "test");
+    final Path log1 = new Path(logDir, "log.1");
+    final Path log2 = new Path(logDir, "log.2");
+
+    WALProvider.Writer writer1 = WALFactory.createWALWriter(FS, log1, TEST_UTIL.getConfiguration());
+    WALProvider.Writer writer2 = WALFactory.createWALWriter(FS, log2, TEST_UTIL.getConfiguration());
+
+    appendEntries(writer1, 3);
+    appendEntries(writer2, 2);
+
+    long pos = getPosition(wals, log2, 2);
+
+    final ReplicationSource source = mocks.createReplicationSourceWithMocks(endpoint);
+    source.run();
+
+    source.enqueueLog(log1);
+    // log rolled
+    source.enqueueLog(log2);
+
+    Waiter.waitFor(conf, 20000, new Waiter.Predicate<Exception>() {
+      @Override public boolean evaluate() throws Exception {
+        return endpoint.replicateCount.get() > 0;
+      }
+    });
+
+    ArgumentCaptor<Path> pathCaptor = ArgumentCaptor.forClass(Path.class);
+    ArgumentCaptor<Long> positionCaptor = ArgumentCaptor.forClass(Long.class);
+    verify(mocks.manager, times(1))
+      .logPositionAndCleanOldLogs(pathCaptor.capture(), anyString(), positionCaptor.capture(), anyBoolean(), anyBoolean());
+    assertTrue(endpoint.lastEntries.size() == 5);
+    assertThat(pathCaptor.getValue(), is(log2));
+    assertThat(positionCaptor.getValue(), is(pos));
+  }
+
+  @Test
+  public void testSetLogPositionAndRemoveOldWALsEvenIfEmptyWALsRolled() throws Exception {
+    Mocks mocks = new Mocks();
+
+    final ReplicationEndpointForTest endpoint = new ReplicationEndpointForTest();
+    final ReplicationSource source = mocks.createReplicationSourceWithMocks(endpoint);
+    WALFactory wals = new WALFactory(TEST_UTIL.getConfiguration(), null, "test");
+
+    final Path log1 = new Path(logDir, "log.1");
+    final Path log2 = new Path(logDir, "log.2");
+
+    WALFactory.createWALWriter(FS, log1, TEST_UTIL.getConfiguration()).close();
+    WALFactory.createWALWriter(FS, log2, TEST_UTIL.getConfiguration()).close();
+    final long startPos = getPosition(wals, log2, 0);
+
+    source.run();
+    source.enqueueLog(log1);
+    source.enqueueLog(log2);
+
+    Waiter.waitFor(conf, 20000, new Waiter.Predicate<Exception>() {
+      @Override public boolean evaluate() throws Exception {
+        return log2.equals(source.getCurrentPath()) && source.getLastLoggedPosition() >= startPos;
+      }
+    });
+
+    ArgumentCaptor<Path> pathCaptor = ArgumentCaptor.forClass(Path.class);
+    ArgumentCaptor<Long> positionCaptor = ArgumentCaptor.forClass(Long.class);
+
+    verify(mocks.manager, times(1))
+      .logPositionAndCleanOldLogs(pathCaptor.capture(), anyString(), positionCaptor.capture(), anyBoolean(), anyBoolean());
+    assertThat(pathCaptor.getValue(), is(log2));
+    assertThat(positionCaptor.getValue(), is(startPos));
+  }
+
+  @Test
+  public void testSetLogPositionAndRemoveOldWALsEvenIfNoCfsReplicated() throws Exception {
+    Mocks mocks = new Mocks();
+    // set table cfs to filter all cells out
+    final TableName replicatedTable = TableName.valueOf("replicated_table");
+    final Map<TableName, List<String>> cfs = Collections.singletonMap(replicatedTable, Collections.<String>emptyList());
+    when(mocks.peer.getTableCFs()).thenReturn(cfs);
+
+    WALFactory wals = new WALFactory(TEST_UTIL.getConfiguration(), null, "test");
+    final Path log1 = new Path(logDir, "log.1");
+    final Path log2 = new Path(logDir, "log.2");
+
+    WALProvider.Writer writer1 = WALFactory.createWALWriter(FS, log1, TEST_UTIL.getConfiguration());
+    WALProvider.Writer writer2 = WALFactory.createWALWriter(FS, log2, TEST_UTIL.getConfiguration());
+
+    appendEntries(writer1, 3);
+    appendEntries(writer2, 2, false);
+    final long pos = getPosition(wals, log2, 2);
+
+    final ReplicationEndpointForTest endpoint = new ReplicationEndpointForTest();
+    final ReplicationSource source = mocks.createReplicationSourceWithMocks(endpoint);
+    source.enqueueLog(log1);
+    source.enqueueLog(log2);
+    source.run();
+    Waiter.waitFor(conf, 20000, new Waiter.Predicate<Exception>() {
+      @Override public boolean evaluate() throws Exception {
+        // wait until reader read all cells
+        return log2.equals(source.getCurrentPath()) && source.getLastLoggedPosition() >= pos;
+      }
+    });
+
+    ArgumentCaptor<Path> pathCaptor = ArgumentCaptor.forClass(Path.class);
+    ArgumentCaptor<Long> positionCaptor = ArgumentCaptor.forClass(Long.class);
+
+    // all old wals should be removed by updating wal position, even if no cfs replicated doesn't exist
+    verify(mocks.manager, times(1))
+      .logPositionAndCleanOldLogs(pathCaptor.capture(), anyString(), positionCaptor.capture(), anyBoolean(), anyBoolean());
+    assertThat(pathCaptor.getValue(), is(log2));
+    assertThat(positionCaptor.getValue(), is(pos));
   }
 
   /**

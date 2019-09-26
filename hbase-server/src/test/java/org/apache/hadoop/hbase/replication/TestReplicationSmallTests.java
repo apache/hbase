@@ -66,7 +66,9 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.mapreduce.Job;
 import org.junit.Before;
 import org.junit.Test;
@@ -829,8 +831,8 @@ public class TestReplicationSmallTests extends TestReplicationBase {
       WAL wal = utility1.getHBaseCluster().getRegionServer(i).getWAL(regionInfo);
       Path currentWalPath = DefaultWALProvider.getCurrentFileName(wal);
       String walGroupId = DefaultWALProvider.getWALPrefixFromWALName(currentWalPath.getName());
-      Path emptyWalPath = new Path(utility1.getDataTestDir(), walGroupId + "." + ts);
-      utility1.getTestFileSystem().create(emptyWalPath).close();
+      Path emptyWalPath = new Path(currentWalPath.getParent(), walGroupId + "." + ts);
+      WALFactory.createWALWriter(utility1.getTestFileSystem(), emptyWalPath, utility1.getConfiguration()).close();
       emptyWalPaths.add(emptyWalPath);
     }
 
