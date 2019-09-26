@@ -1215,13 +1215,8 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     int mobCompactionPeriod = conf.getInt(MobConstants.MOB_COMPACTION_CHORE_PERIOD,
         MobConstants.DEFAULT_MOB_COMPACTION_CHORE_PERIOD);
-    if (mobCompactionPeriod > 0) {
-      this.mobCompactChore = new MobCompactionChore(this, mobCompactionPeriod);
-      getChoreService().scheduleChore(mobCompactChore);
-    } else {
-      LOG
-        .info("The period is " + mobCompactionPeriod + " seconds, MobCompactionChore is disabled");
-    }
+    this.mobCompactChore = new MobCompactionChore(this, mobCompactionPeriod);
+    getChoreService().scheduleChore(mobCompactChore);
     this.mobCompactThread = new MasterMobCompactionThread(this);
   }
 
