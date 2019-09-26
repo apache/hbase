@@ -24,10 +24,12 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -37,7 +39,6 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RegionSplitter;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -64,31 +65,27 @@ public class TestRegionReplicasWithRestartScenarios {
 
   private static final int NB_SERVERS = 3;
   private Table table;
+  private TableName tableName;
 
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
   private static final byte[] f = HConstants.CATALOG_FAMILY;
 
   @BeforeClass
   public static void beforeClass() throws Exception {
-    // Reduce the hdfs block size and prefetch to trigger the file-link reopen
-    // when the file is moved to archive (e.g. compaction)
-    HTU.getConfiguration().setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 8192);
-    HTU.getConfiguration().setInt(DFSConfigKeys.DFS_CLIENT_READ_PREFETCH_SIZE_KEY, 1);
-    HTU.getConfiguration().setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 128 * 1024 * 1024);
-    HTU.getConfiguration().setInt("hbase.master.wait.on.regionservers.mintostart", 3);
+    HTU.getConfiguration().setInt("hbase.master.wait.on.regionservers.mintostart", NB_SERVERS);
     HTU.startMiniCluster(NB_SERVERS);
   }
 
   @Before
   public void before() throws IOException {
-    TableName tableName = TableName.valueOf(this.name.getMethodName());
-    // Create table then get the single region for our new table.
-    this.table = createTableDirectlyFromHTD(tableName);
+    this.tableName = TableName.valueOf(this.name.getMethodName());
+    this.table = createTableDirectlyFromHTD(this.tableName);
   }
 
   @After
   public void after() throws IOException {
     this.table.close();
+    HTU.deleteTable(this.tableName);
   }
 
   private static Table createTableDirectlyFromHTD(final TableName tableName) throws IOException {
@@ -125,6 +122,20 @@ public class TestRegionReplicasWithRestartScenarios {
 
   @Test
   public void testRegionReplicasCreated() throws Exception {
+    assertReplicaDistributed();
+  }
+
+  @Test
+  public void testWhenRestart() throws Exception {
+    ServerName serverName = getRS().getServerName();
+    HTU.getHBaseCluster().stopRegionServer(serverName);
+    HTU.getHBaseCluster().waitForRegionServerToStop(serverName, 60000);
+    HTU.getHBaseCluster().startRegionServerAndWait(60000);
+    HTU.waitTableAvailable(this.tableName);
+    assertReplicaDistributed();
+  }
+
+  private void assertReplicaDistributed() throws Exception {
     Collection<HRegion> onlineRegions = getRS().getOnlineRegionsLocalContext();
     boolean res = checkDuplicates(onlineRegions);
     assertFalse(res);
@@ -150,7 +161,7 @@ public class TestRegionReplicasWithRestartScenarios {
           RegionReplicaUtil.getRegionInfoForDefaultReplica(actualRegion.getRegionInfo()))) {
           i++;
           if (i > 1) {
-            LOG.info("Duplicate found " + actualRegion.getRegionInfo() + " " +
+            LOG.warn("Duplicate found {} and {}", actualRegion.getRegionInfo(),
                 region.getRegionInfo());
             assertTrue(Bytes.equals(region.getRegionInfo().getStartKey(),
               actualRegion.getRegionInfo().getStartKey()));
