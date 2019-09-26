@@ -51,7 +51,7 @@ public class ServerKillingMonkeyFactory extends MonkeyFactory {
         new RestartRandomRsExceptMetaAction(60000),
         new RestartActiveMasterAction(5000),
         new RollingBatchRestartRsExceptMetaAction(5000, 1.0f, 2), //only allow 2 servers to be dead
-        new ForceBalancerAction(),
+      new ForceBalancerAction(),
       new GracefulRollingRestartRsAction(gracefulRollingRestartTSSLeepTime),
       new RollingBatchSuspendResumeRsAction(rollingBatchSuspendRSSleepTime,
           rollingBatchSuspendtRSRatio)
