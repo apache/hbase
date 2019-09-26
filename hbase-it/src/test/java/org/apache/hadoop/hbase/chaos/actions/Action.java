@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseCluster;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
@@ -154,65 +155,93 @@ public class Action {
     LOG.info("Started master: " + server);
   }
 
+  protected void stopRs(ServerName server) throws IOException {
+    LOG.info("Stopping regionserver " + server);
+    cluster.stopRegionServer(server);
+    cluster.waitForRegionServerToStop(server, killRsTimeout);
+    LOG.info(String.format("Stoppiong regionserver %s. Reported num of rs: %s", server,
+        cluster.getClusterStatus().getLiveServersLoad().size()));
+  }
+
+  protected void suspendRs(ServerName server) throws IOException {
+    LOG.info("Suspending regionserver %s" + server);
+    cluster.suspendRegionServer(server);
+    if(!(cluster instanceof MiniHBaseCluster)){
+      cluster.waitForRegionServerToStop(server, killRsTimeout);
+    }
+    LOG.info(String.format("Suspending regionserver %s. Reported num of rs: %s", server,
+        cluster.getClusterStatus().getLiveServersLoad().size()));
+  }
+
+  protected void resumeRs(ServerName server) throws IOException {
+    LOG.info("Resuming regionserver " + server);
+    cluster.resumeRegionServer(server);
+    if(!(cluster instanceof MiniHBaseCluster)){
+      cluster.waitForRegionServerToStart(server.getHostname(), server.getPort(), startRsTimeout);
+    }
+    LOG.info(String.format("Resuming regionserver %s. Reported num of rs: %s", server,
+        cluster.getClusterStatus().getLiveServersLoad().size()));
+  }
+
   protected void killRs(ServerName server) throws IOException {
-    LOG.info("Killing region server:" + server);
+    LOG.info("Killing regionserver " + server);
     cluster.killRegionServer(server);
     cluster.waitForRegionServerToStop(server, killRsTimeout);
-    LOG.info("Killed region server:" + server + ". Reported num of rs:"
-        + cluster.getClusterStatus().getServersSize());
+    LOG.info(String.format("Killed regionserver %s. Reported num of rs: %s", server,
+        cluster.getClusterStatus().getLiveServersLoad().size()));
   }
 
   protected void startRs(ServerName server) throws IOException {
-    LOG.info("Starting region server:" + server.getHostname());
+    LOG.info("Starting regionserver " + server.getAddress());
     cluster.startRegionServer(server.getHostname(), server.getPort());
     cluster.waitForRegionServerToStart(server.getHostname(), server.getPort(), startRsTimeout);
-    LOG.info("Started region server:" + server + ". Reported num of rs:"
-      + cluster.getClusterStatus().getServersSize());
+    LOG.info(String.format("Started regionserver %s. Reported num of rs: %s", server.getAddress(),
+      cluster.getClusterStatus().getLiveServersLoad().size()));
   }
 
   protected void killZKNode(ServerName server) throws IOException {
-    LOG.info("Killing zookeeper node:" + server);
+    LOG.info("Killing zookeeper node " + server);
     cluster.killZkNode(server);
     cluster.waitForZkNodeToStop(server, killZkNodeTimeout);
-    LOG.info("Killed zookeeper node:" + server + ". Reported num of rs:"
-      + cluster.getClusterStatus().getServersSize());
+    LOG.info(String.format("Killed zookeeper node %s. Reported num of rs: %s", server,
+        cluster.getClusterStatus().getLiveServersLoad().size()));
   }
 
   protected void startZKNode(ServerName server) throws IOException {
-    LOG.info("Starting zookeeper node:" + server.getHostname());
+    LOG.info("Starting zookeeper node " + server.getHostname());
     cluster.startZkNode(server.getHostname(), server.getPort());
     cluster.waitForZkNodeToStart(server, startZkNodeTimeout);
-    LOG.info("Started zookeeper node:" + server);
+    LOG.info("Started zookeeper node " + server);
   }
 
   protected void killDataNode(ServerName server) throws IOException {
-    LOG.info("Killing datanode:" + server);
+    LOG.info("Killing datanode " + server);
     cluster.killDataNode(server);
     cluster.waitForDataNodeToStop(server, killDataNodeTimeout);
-    LOG.info("Killed datanode:" + server + ". Reported num of rs:"
-      + cluster.getClusterStatus().getServersSize());
+    LOG.info(String.format("Killed datanode %s. Reported num of rs: %s", server,
+        cluster.getClusterStatus().getLiveServersLoad().size()));
   }
 
   protected void startDataNode(ServerName server) throws IOException {
-    LOG.info("Starting datanode:" + server.getHostname());
+    LOG.info("Starting datanode " + server.getHostname());
     cluster.startDataNode(server);
     cluster.waitForDataNodeToStart(server, startDataNodeTimeout);
-    LOG.info("Started datanode:" + server);
+    LOG.info("Started datanode " + server);
   }
 
   protected void killNameNode(ServerName server) throws IOException {
-    LOG.info("Killing namenode :-" + server.getHostname());
+    LOG.info("Killing namenode : " + server.getHostname());
     cluster.killNameNode(server);
     cluster.waitForNameNodeToStop(server, killNameNodeTimeout);
-    LOG.info("Killed namenode:" + server + ". Reported num of rs:"
+    LOG.info("Killed namenode: " + server + ". Reported num of rs:"
         + cluster.getClusterStatus().getServersSize());
   }
 
   protected void startNameNode(ServerName server) throws IOException {
-    LOG.info("Starting Namenode :-" + server.getHostname());
+    LOG.info("Starting Namenode : " + server.getHostname());
     cluster.startNameNode(server);
     cluster.waitForNameNodeToStart(server, startNameNodeTimeout);
-    LOG.info("Started namenode:" + server);
+    LOG.info("Started namenode: " +  server);
   }
 
   protected void unbalanceRegions(ClusterStatus clusterStatus,
@@ -256,6 +285,15 @@ public class Action {
     }
     if (!result) {
       LOG.error("Balancer didn't succeed");
+    }
+  }
+
+  protected void setBalancer(boolean onOrOff, boolean synchronous) throws Exception {
+    Admin admin = this.context.getHBaseIntegrationTestingUtility().getHBaseAdmin();
+    try {
+      admin.setBalancerRunning(onOrOff, synchronous);
+    } catch (Exception e) {
+      LOG.warn("Got exception while switching balance ", e);
     }
   }
 

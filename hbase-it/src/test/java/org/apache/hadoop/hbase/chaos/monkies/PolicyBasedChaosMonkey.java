@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.hbase.chaos.monkies;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.lang.math.RandomUtils;
@@ -90,18 +91,12 @@ public class PolicyBasedChaosMonkey extends ChaosMonkey {
 
   /** Selects and returns ceil(ratio * items.length) random items from the given array */
   public static <T> List<T> selectRandomItems(T[] items, float ratio) {
-    int remaining = (int)Math.ceil(items.length * ratio);
+    int selectedNumber = (int)Math.ceil(items.length * ratio);
 
-    List<T> selectedItems = new ArrayList<T>(remaining);
-
-    for (int i=0; i<items.length && remaining > 0; i++) {
-      if (RandomUtils.nextFloat() < ((float)remaining/(items.length-i))) {
-        selectedItems.add(items[i]);
-        remaining--;
-      }
-    }
-
-    return selectedItems;
+    List<T> originalItems = Arrays.asList(items);
+    Collections.shuffle(originalItems);
+    int startIndex = RandomUtils.nextInt(items.length - selectedNumber);
+    return originalItems.subList(startIndex, startIndex + selectedNumber);
   }
 
   private Policy[] policies;
