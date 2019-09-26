@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.ipc;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.BlockingService;
@@ -121,6 +120,7 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenSecretManager;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Counter;
+import org.apache.hadoop.hbase.util.GsonUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.io.BytesWritable;
@@ -138,6 +138,7 @@ import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hbase.thirdparty.com.google.gson.Gson;
 import org.apache.htrace.TraceInfo;
 
 /**
@@ -279,7 +280,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
   private static final int DEFAULT_WARN_RESPONSE_TIME = 10000; // milliseconds
   private static final int DEFAULT_WARN_RESPONSE_SIZE = 100 * 1024 * 1024;
 
-  private static final ObjectMapper MAPPER = new ObjectMapper();
+  protected static final Gson GSON = GsonUtil.createGson().create();
 
   protected static final int DEFAULT_TRACE_LOG_MAX_LENGTH = 1000;
   protected static final String TRACE_LOG_MAX_LENGTH = "hbase.ipc.trace.log.max.length";
@@ -2524,7 +2525,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       responseInfo.put("multi.mutations", numMutations);
       responseInfo.put("multi.servicecalls", numServiceCalls);
     }
-    LOG.warn("(response" + tag + "): " + MAPPER.writeValueAsString(responseInfo));
+    LOG.warn("(response" + tag + "): " + GSON.toJson(responseInfo));
   }
 
   /** Stops the service.  No new calls will be handled after this is called. */
