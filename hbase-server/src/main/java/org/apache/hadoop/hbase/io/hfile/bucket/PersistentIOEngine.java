@@ -46,15 +46,14 @@ public abstract class PersistentIOEngine implements IOEngine {
    * Verify cache files's integrity
    * @param algorithm the backingMap persistence path
    */
-  protected boolean verifyFileIntegrity(byte[] persistentChecksum, String algorithm) {
+  protected void verifyFileIntegrity(byte[] persistentChecksum, String algorithm)
+    throws IOException {
     byte[] calculateChecksum = calculateChecksum(algorithm);
     if (!Bytes.equals(persistentChecksum, calculateChecksum)) {
-      LOG.error("Mismatch of checksum! The persistent checksum is " +
-        Bytes.toString(persistentChecksum) + ", but the calculate checksum is " +
+      throw new IOException("Mismatch of checksum! The persistent checksum is " +
+      Bytes.toString(persistentChecksum) + ", but the calculate checksum is " +
         Bytes.toString(calculateChecksum));
-      return false;
     }
-    return true;
   }
 
   /**
@@ -79,7 +78,7 @@ public abstract class PersistentIOEngine implements IOEngine {
       messageDigest.update(Bytes.toBytes(sb.toString()));
       return messageDigest.digest();
     } catch (IOException ioex) {
-      LOG.error("Calculating checksum failed.", ioex);
+      LOG.error("Calculating checksum failed, because of ", ioex);
       return null;
     } catch (NoSuchAlgorithmException e) {
       LOG.error("No such algorithm : " + algorithm + "!");

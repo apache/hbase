@@ -232,55 +232,6 @@ public class TestVerifyBucketCacheFile {
     TEST_UTIL.cleanupTestDir();
   }
 
-  /**
-   * Test whether it can read the old version's persistence file, it's for backward compatibility.
-   * Start BucketCache and add some blocks, then persist cache to file in old way and shutdown
-   * BucketCache. Restart BucketCache, and it can normally restore from old version persistence
-   * file.
-   * @throws Exception the exception
-   */
-  @Test
-  public void compatibilityTest() throws Exception {
-    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-    Path testDir = TEST_UTIL.getDataTestDir();
-    TEST_UTIL.getTestFileSystem().mkdirs(testDir);
-    String persistencePath = testDir + "/bucket.persistence";
-    BucketCache bucketCache =
-      new BucketCache("file:" + testDir + "/bucket.cache", capacitySize, constructedBlockSize,
-        constructedBlockSizes, writeThreads, writerQLen, persistencePath);
-    long usedSize = bucketCache.getAllocator().getUsedSize();
-    assertTrue(usedSize == 0);
-
-    CacheTestUtils.HFileBlockPair[] blocks =
-      CacheTestUtils.generateHFileBlocks(constructedBlockSize, 1);
-    // Add blocks
-    for (CacheTestUtils.HFileBlockPair block : blocks) {
-      cacheAndWaitUntilFlushedToBucket(bucketCache, block.getBlockName(), block.getBlock());
-    }
-    usedSize = bucketCache.getAllocator().getUsedSize();
-    assertTrue(usedSize != 0);
-    // persistence backingMap using old way
-    persistToFileInOldWay(bucketCache,persistencePath + ".old");
-    bucketCache.shutdown();
-
-    // restore cache from file which skip check checksum
-    bucketCache =
-      new BucketCache("file:" + testDir + "/bucket.cache", capacitySize, constructedBlockSize,
-        constructedBlockSizes, writeThreads, writerQLen, persistencePath + ".old");
-    assertEquals(usedSize, bucketCache.getAllocator().getUsedSize());
-    assertEquals(blocks.length, bucketCache.backingMap.size());
-
-    TEST_UTIL.cleanupTestDir();
-  }
-
-  private void persistToFileInOldWay(BucketCache cache, String persistencePath)
-    throws IOException {
-    try (FileOutputStream fos = new FileOutputStream(persistencePath, false)) {
-      fos.write(ProtobufMagic.PB_MAGIC);
-      BucketProtoUtils.toPB(cache).writeDelimitedTo(fos);
-    }
-  }
-
   private void waitUntilFlushedToBucket(BucketCache cache, BlockCacheKey cacheKey)
     throws InterruptedException {
     while (!cache.backingMap.containsKey(cacheKey) || cache.ramCache.containsKey(cacheKey)) {

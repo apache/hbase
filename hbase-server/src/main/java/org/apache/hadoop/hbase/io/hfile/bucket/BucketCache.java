@@ -248,6 +248,7 @@ public class BucketCache implements BlockCache, HeapSize {
    * persistent file integrity, default algorithm is MD5
    * */
   private String algorithm;
+  private byte[] checksum;
 
   public BucketCache(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
       int writerThreadNum, int writerQLen, String persistencePath) throws IOException {
@@ -1065,12 +1066,7 @@ public class BucketCache implements BlockCache, HeapSize {
     }
     try (FileOutputStream fos = new FileOutputStream(persistencePath, false)) {
       fos.write(ProtobufMagic.PB_MAGIC);
-      byte[] checksum = ((PersistentIOEngine) ioEngine).calculateChecksum(algorithm);
-      if (checksum != null) {
-        fos.write(ProtobufMagic.PB_MAGIC);
-        fos.write(Bytes.toBytes(checksum.length));
-        fos.write(checksum);
-      }
+      checksum = ((PersistentIOEngine) ioEngine).calculateChecksum(algorithm);
       BucketProtoUtils.toPB(this).writeDelimitedTo(fos);
     }
   }
@@ -1100,37 +1096,6 @@ public class BucketCache implements BlockCache, HeapSize {
         // TODO: In 2.x line, this might need to be filled in to support reading the old format
         throw new IOException("Persistence file does not start with protobuf magic number. " +
             persistencePath);
-      }
-      byte[] pbuf2 = new byte[pblen];
-      int read2 = in.read(pbuf2);
-      if (read2 != pblen) {
-        LOG.warn("Can't restore from file because of incorrect number of bytes read while " +
-          "checking for protobuf magic number. Requested=" + pblen + ", but received= " +
-          read2 + ".");
-        return;
-      }
-      if (ProtobufMagic.isPBMagicPrefix(pbuf2)) {
-        byte[] length = new byte[Integer.BYTES];
-        in.read(length);
-        byte[] persistentChecksum = new byte[Bytes.toInt(length)];
-        int readLen = in.read(persistentChecksum);
-        if (readLen != Bytes.toInt(length)) {
-          LOG.warn("Can't restore from file because of incorrect number of bytes read while " +
-            "checking for persistent checksum. Requested=" + length + ", but received=" +
-            readLen + ". ");
-          return;
-        }
-        if (!((PersistentIOEngine) ioEngine).verifyFileIntegrity(
-          persistentChecksum, algorithm)) {
-          LOG.warn("Can't restore from file because of verification failed.");
-          return;
-        }
-      } else {
-        // persistent file may be an old version of file, it's not support verification,
-        // so reopen FileInputStream and read the persistent file from head
-        in.close();
-        in = new FileInputStream(persistencePath);
-        in.read(pbuf);
       }
       parsePB(BucketCacheProtos.BucketCacheEntry.parseDelimitedFrom(in));
       bucketAllocator = new BucketAllocator(cacheCapacity, bucketSizes, backingMap, realCacheSize);
@@ -1190,6 +1155,8 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   private void parsePB(BucketCacheProtos.BucketCacheEntry proto) throws IOException {
+    ((PersistentIOEngine) ioEngine).verifyFileIntegrity(proto.getChecksum().toByteArray(),
+      algorithm);
     verifyCapacityAndClasses(proto.getCacheCapacity(), proto.getIoClass(), proto.getMapClass());
     backingMap = BucketProtoUtils.fromPB(proto.getDeserializersMap(), proto.getBackingMap());
   }
@@ -1582,6 +1549,10 @@ public class BucketCache implements BlockCache, HeapSize {
 
   float getMemoryFactor() {
     return memoryFactor;
+  }
+
+  public byte[] getChecksum() {
+    return checksum;
   }
 
   /**

@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockPriority;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializerIdManager;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.BucketCacheProtos;
@@ -40,13 +41,17 @@ final class BucketProtoUtils {
   }
 
   static BucketCacheProtos.BucketCacheEntry toPB(BucketCache cache) {
-    return BucketCacheProtos.BucketCacheEntry.newBuilder()
-        .setCacheCapacity(cache.getMaxSize())
-        .setIoClass(cache.ioEngine.getClass().getName())
-        .setMapClass(cache.backingMap.getClass().getName())
-        .putAllDeserializers(CacheableDeserializerIdManager.save())
-        .setBackingMap(BucketProtoUtils.toPB(cache.backingMap))
-        .build();
+    BucketCacheProtos.BucketCacheEntry.Builder builder =
+      BucketCacheProtos.BucketCacheEntry.newBuilder();
+    if (cache.getChecksum() != null) {
+      builder.setChecksum(ByteString.copyFrom(cache.getChecksum()));
+    }
+    builder.setCacheCapacity(cache.getMaxSize())
+      .setIoClass(cache.ioEngine.getClass().getName())
+      .setMapClass(cache.backingMap.getClass().getName())
+      .putAllDeserializers(CacheableDeserializerIdManager.save())
+      .setBackingMap(BucketProtoUtils.toPB(cache.backingMap));
+    return builder.build();
   }
 
   private static BucketCacheProtos.BackingMap toPB(

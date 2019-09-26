@@ -26,11 +26,12 @@ option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
 message BucketCacheEntry {
-  required int64 cache_capacity = 1;
-  required string io_class = 2;
-  required string map_class = 3;
-  map<int32, string> deserializers = 4;
-  required BackingMap backing_map = 5;
+  optional bytes checksum = 1;
+  required int64 cache_capacity = 2;
+  required string io_class = 3;
+  required string map_class = 4;
+  map<int32, string> deserializers = 5;
+  required BackingMap backing_map = 6;
 }
 
 message BackingMap {
