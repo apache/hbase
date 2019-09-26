@@ -835,9 +835,6 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     // stop tracking "abandoned" handlers
     cleanupSentinels();
 
-    // Verify snapshot validity
-    SnapshotReferenceUtil.verifySnapshot(master.getConfiguration(), fs, manifest);
-
     // Execute the restore/clone operation
     long procId;
     if (MetaTableAccessor.tableExists(master.getConnection(), tableName)) {

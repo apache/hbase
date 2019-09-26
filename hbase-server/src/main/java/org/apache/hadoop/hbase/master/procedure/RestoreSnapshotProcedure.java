@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
+import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -351,6 +352,12 @@ public class RestoreSnapshotProcedure
         mfs.getFileSystem(),
         SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, mfs.getRootDir()),
         snapshot);
+
+      // Verify snapshot validity
+      SnapshotReferenceUtil
+          .verifySnapshot(env.getMasterServices().getConfiguration(), mfs.getFileSystem(),
+              manifest);
+
       int snapshotRegionCount = manifest.getRegionManifestsMap().size();
       int tableRegionCount =
           ProcedureSyncWait.getMasterQuotaManager(env).getRegionCountOfTable(tableName);
