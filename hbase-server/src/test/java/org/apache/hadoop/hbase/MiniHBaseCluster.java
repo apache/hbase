@@ -292,6 +292,16 @@ public class MiniHBaseCluster extends HBaseCluster {
   }
 
   @Override
+  public void suspendRegionServer(ServerName serverName) throws IOException {
+    suspendRegionServer(getRegionServerIndex(serverName));
+  }
+
+  @Override
+  public void resumeRegionServer(ServerName serverName) throws IOException {
+    resumeRegionServer(getRegionServerIndex(serverName));
+  }
+
+  @Override
   public void waitForRegionServerToStop(ServerName serverName, long timeout) throws IOException {
     //ignore timeout for now
     waitOnRegionServer(getRegionServerIndex(serverName));
@@ -486,6 +496,32 @@ public class MiniHBaseCluster extends HBaseCluster {
       hbaseCluster.getRegionServers().get(serverNumber);
     LOG.info("Stopping " + server.toString());
     server.getRegionServer().stop("Stopping rs " + serverNumber);
+    return server;
+  }
+
+  /**
+   * Suspend the specified region server
+   * @param serverNumber Used as index into a list.
+   * @return
+   */
+  public JVMClusterUtil.RegionServerThread suspendRegionServer(int serverNumber) {
+    JVMClusterUtil.RegionServerThread server =
+        hbaseCluster.getRegionServers().get(serverNumber);
+    LOG.info("Suspending {}", server.toString());
+    server.suspend();
+    return server;
+  }
+
+  /**
+   * Resume the specified region server
+   * @param serverNumber Used as index into a list.
+   * @return
+   */
+  public JVMClusterUtil.RegionServerThread resumeRegionServer(int serverNumber) {
+    JVMClusterUtil.RegionServerThread server =
+        hbaseCluster.getRegionServers().get(serverNumber);
+    LOG.info("Resuming {}", server.toString());
+    server.resume();
     return server;
   }
 

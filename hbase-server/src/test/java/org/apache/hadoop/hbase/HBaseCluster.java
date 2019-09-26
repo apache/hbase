@@ -149,6 +149,20 @@ public abstract class HBaseCluster implements Closeable, Configurable {
       throws IOException;
 
   /**
+   * Suspend the region server
+   * @param serverName the hostname to suspend the regionserver on
+   * @throws IOException if something goes wrong
+   */
+  public abstract void suspendRegionServer(ServerName serverName) throws IOException;
+
+  /**
+   * Resume the region server
+   * @param serverName the hostname to resume the regionserver on
+   * @throws IOException if something goes wrong
+   */
+  public abstract void resumeRegionServer(ServerName serverName) throws IOException;
+
+  /**
    * Starts a new zookeeper node on the given hostname or if this is a mini/local cluster,
    * silently logs warning message.
    * @param hostname the hostname to start the regionserver on
