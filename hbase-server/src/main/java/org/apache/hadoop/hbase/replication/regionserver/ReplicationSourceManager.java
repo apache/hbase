@@ -121,9 +121,8 @@ public class ReplicationSourceManager implements ReplicationListener {
   private final Random rand;
   private final boolean replicationForBulkLoadDataEnabled;
 
+  private long totalBufferQuota;
   private AtomicLong totalBufferUsed = new AtomicLong();
-
-  private boolean pendingShipment;
 
   /**
    * Creates a replication manager and sets the watch on all the other registered region servers
@@ -177,6 +176,8 @@ public class ReplicationSourceManager implements ReplicationListener {
     replicationForBulkLoadDataEnabled =
         conf.getBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY,
           HConstants.REPLICATION_BULKLOAD_ENABLE_DEFAULT);
+    totalBufferQuota = conf.getLong(HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_KEY,
+            HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_DFAULT);
   }
 
   /**
@@ -192,18 +193,12 @@ public class ReplicationSourceManager implements ReplicationListener {
    */
   public synchronized void logPositionAndCleanOldLogs(Path log, String id, long position,
       boolean queueRecovered, boolean holdLogInZK) {
-    if (!this.pendingShipment) {
-      String fileName = log.getName();
-      this.replicationQueues.setLogPosition(id, fileName, position);
-      if (holdLogInZK) {
-        return;
-      }
-      cleanOldLogs(fileName, id, queueRecovered);
+    String fileName = log.getName();
+    this.replicationQueues.setLogPosition(id, fileName, position);
+    if (holdLogInZK) {
+      return;
     }
-  }
-
-  public synchronized void setPendingShipment(boolean pendingShipment) {
-    this.pendingShipment = pendingShipment;
+    cleanOldLogs(fileName, id, queueRecovered);
   }
 
   /**
@@ -466,8 +461,27 @@ public class ReplicationSourceManager implements ReplicationListener {
   }
 
   @VisibleForTesting
-  public AtomicLong getTotalBufferUsed() {
-    return totalBufferUsed;
+  public long getTotalBufferUsed() {
+    return totalBufferUsed.get();
+  }
+
+  /**
+   * @param size delta size for grown buffer
+   * @return true if total buffer size limit reached, after adding size
+   */
+  public boolean acquireBufferQuota(long size) {
+    return totalBufferUsed.addAndGet(size) >= totalBufferQuota;
+  }
+
+  public void releaseBufferQuota(long size) {
+    totalBufferUsed.addAndGet(-size);
+  }
+
+  /**
+   * @return true if total buffer size limit reached
+   */
+  public boolean isBufferQuotaReached() {
+    return totalBufferUsed.get() >= totalBufferQuota;
   }
 
   /**

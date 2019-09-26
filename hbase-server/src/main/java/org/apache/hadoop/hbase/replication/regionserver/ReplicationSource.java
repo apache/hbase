@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.Service;
@@ -145,8 +146,6 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     FINISHED  // The worker is done processing a recovered queue
   }
 
-  private AtomicLong totalBufferUsed;
-
   /**
    * Instantiation method used by region servers
    *
@@ -192,7 +191,6 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     defaultBandwidth = this.conf.getLong("replication.source.per.peer.node.bandwidth", 0);
     currentBandwidth = getCurrentBandwidth();
     this.throttler = new ReplicationThrottler((double) currentBandwidth / 10.0);
-    this.totalBufferUsed = manager.getTotalBufferUsed();
     LOG.info("peerClusterZnode=" + peerClusterZnode + ", ReplicationSource : " + peerId
         + ", currentBandwidth=" + this.currentBandwidth);
   }
@@ -439,12 +437,20 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
   }
 
   @Override
+  @VisibleForTesting
   public Path getCurrentPath() {
-    // only for testing
     for (ReplicationSourceShipperThread worker : workerThreads.values()) {
       if (worker.getCurrentPath() != null) return worker.getCurrentPath();
     }
     return null;
+  }
+
+  @VisibleForTesting
+  public long getLastLoggedPosition() {
+    for (ReplicationSourceShipperThread worker : workerThreads.values()) {
+      return worker.getLastLoggedPosition();
+    }
+    return 0;
   }
 
   private boolean isSourceActive() {
@@ -481,7 +487,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     for (Map.Entry<String, ReplicationSourceShipperThread> entry : workerThreads.entrySet()) {
       String walGroupId = entry.getKey();
       ReplicationSourceShipperThread worker = entry.getValue();
-      long position = worker.getCurrentPosition();
+      long position = worker.getLastLoggedPosition();
       Path currentPath = worker.getCurrentPath();
       sb.append("walGroup [").append(walGroupId).append("]: ");
       if (currentPath != null) {
@@ -535,7 +541,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
           .withQueueSize(queueSize)
           .withWalGroup(walGroupId)
           .withCurrentPath(currentPath)
-          .withCurrentPosition(worker.getCurrentPosition())
+          .withCurrentPosition(worker.getLastLoggedPosition())
           .withFileSize(fileSize)
           .withAgeOfLastShippedOp(ageOfLastShippedOp)
           .withReplicationDelay(replicationDelay);
@@ -599,14 +605,11 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
         try {
           WALEntryBatch entryBatch = entryReader.take();
           shipEdits(entryBatch);
-          releaseBufferQuota((int) entryBatch.getHeapSize());
-          if (replicationQueueInfo.isQueueRecovered() && entryBatch.getWalEntries().isEmpty()
-              && entryBatch.getLastSeqIds().isEmpty()) {
-            LOG.debug("Finished recovering queue for group " + walGroupId + " of peer "
-                + peerClusterZnode);
+          manager.releaseBufferQuota(entryBatch.getHeapSizeExcludeBulkLoad());
+          if (!entryBatch.hasMoreEntries()) {
+            LOG.debug("Finished recovering queue for group " + walGroupId + " of peer " + peerClusterZnode);
             metrics.incrCompletedRecoveryQueue();
             setWorkerState(WorkerState.FINISHED);
-            continue;
           }
         } catch (InterruptedException e) {
           LOG.trace("Interrupted while waiting for next replication entry batch", e);
@@ -614,7 +617,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
         }
       }
 
-      if (replicationQueueInfo.isQueueRecovered() && getWorkerState() == WorkerState.FINISHED) {
+      if (getWorkerState() == WorkerState.FINISHED) {
         // use synchronize to make sure one last thread will clean the queue
         synchronized (this) {
           Threads.sleep(100);// wait a short while for other worker thread to fully exit
@@ -677,18 +680,6 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     }
 
     /**
-     * get batchEntry size excludes bulk load file sizes.
-     * Uses ReplicationSourceWALReader's static method.
-     */
-    private int getBatchEntrySizeExcludeBulkLoad(WALEntryBatch entryBatch) {
-      int totalSize = 0;
-      for(Entry entry : entryBatch.getWalEntries()) {
-        totalSize += entryReader.getEntrySizeExcludeBulkLoad(entry);
-      }
-      return  totalSize;
-    }
-
-    /**
      * Do the shipping logic
      */
     protected void shipEdits(WALEntryBatch entryBatch) {
@@ -697,16 +688,14 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
       currentPath = entryBatch.getLastWalPath();
       int sleepMultiplier = 0;
       if (entries.isEmpty()) {
-        if (lastLoggedPosition != lastReadPosition) {
-          updateLogPosition(lastReadPosition);
-          // if there was nothing to ship and it's not an error
-          // set "ageOfLastShippedOp" to <now> to indicate that we're current
-          metrics.setAgeOfLastShippedOp(EnvironmentEdgeManager.currentTime(), walGroupId);
-        }
+        updateLogPosition(lastReadPosition);
+        // if there was nothing to ship and it's not an error
+        // set "ageOfLastShippedOp" to <now> to indicate that we're current
+        metrics.setAgeOfLastShippedOp(EnvironmentEdgeManager.currentTime(), walGroupId);
         return;
       }
       int currentSize = (int) entryBatch.getHeapSize();
-      int sizeExcludeBulkLoad = getBatchEntrySizeExcludeBulkLoad(entryBatch);
+      int sizeExcludeBulkLoad = (int) entryBatch.getHeapSizeExcludeBulkLoad();
       while (isWorkerActive()) {
         try {
           checkBandwidthChangeAndResetThrottler();
@@ -787,7 +776,6 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     }
 
     private void updateLogPosition(long lastReadPosition) {
-      manager.setPendingShipment(false);
       manager.logPositionAndCleanOldLogs(currentPath, peerClusterZnode, lastReadPosition,
         this.replicationQueueInfo.isQueueRecovered(), false);
       lastLoggedPosition = lastReadPosition;
@@ -938,11 +926,11 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     }
 
     public Path getCurrentPath() {
-      return this.entryReader.getCurrentPath();
+      return currentPath;
     }
 
-    public long getCurrentPosition() {
-      return this.lastLoggedPosition;
+    public long getLastLoggedPosition() {
+      return lastLoggedPosition;
     }
 
     private boolean isWorkerActive() {
@@ -982,10 +970,6 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
      */
     public WorkerState getWorkerState() {
       return state;
-    }
-
-    private void releaseBufferQuota(int size) {
-      totalBufferUsed.addAndGet(-size);
     }
   }
 }

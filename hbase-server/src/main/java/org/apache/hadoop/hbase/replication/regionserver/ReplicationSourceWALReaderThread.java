@@ -21,14 +21,11 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import java.io.EOFException;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,7 +34,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor;
@@ -70,6 +66,7 @@ public class ReplicationSourceWALReaderThread extends Thread {
   private int replicationBatchCountCapacity;
   // position in the WAL to start reading at
   private long currentPosition;
+  private Path currentPath;
   private WALEntryFilter filter;
   private long sleepForRetries;
   //Indicates whether this particular worker is running
@@ -78,10 +75,7 @@ public class ReplicationSourceWALReaderThread extends Thread {
   private int maxRetriesMultiplier;
   private MetricsSource metrics;
 
-  private AtomicLong totalBufferUsed;
-  private long totalBufferQuota;
-
-  private ReplicationSourceManager replicationSourceManager;
+  private ReplicationSourceManager manager;
 
   /**
    * Creates a reader worker for a given WAL queue. Reads WAL entries off a given queue, batches the
@@ -101,6 +95,7 @@ public class ReplicationSourceWALReaderThread extends Thread {
       FileSystem fs, Configuration conf, WALEntryFilter filter, MetricsSource metrics) {
     this.replicationQueueInfo = replicationQueueInfo;
     this.logQueue = logQueue;
+    this.currentPath = logQueue.peek();
     this.currentPosition = startPosition;
     this.fs = fs;
     this.conf = conf;
@@ -111,10 +106,7 @@ public class ReplicationSourceWALReaderThread extends Thread {
     // memory used will be batchSizeCapacity * (nb.batches + 1)
     // the +1 is for the current thread reading before placing onto the queue
     int batchCount = conf.getInt("replication.source.nb.batches", 1);
-    this.replicationSourceManager = manager;
-    this.totalBufferUsed = manager.getTotalBufferUsed();
-    this.totalBufferQuota = conf.getLong(HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_KEY,
-      HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_DFAULT);
+    this.manager = manager;
     this.sleepForRetries =
         this.conf.getLong("replication.source.sleepforretries", 1000);    // 1 second
     this.maxRetriesMultiplier =
@@ -135,59 +127,44 @@ public class ReplicationSourceWALReaderThread extends Thread {
       try (WALEntryStream entryStream =
           new WALEntryStream(logQueue, fs, conf, currentPosition, metrics)) {
         while (isReaderRunning()) { // loop here to keep reusing stream while we can
-          if (!checkQuota()) {
+          if (manager.isBufferQuotaReached()) {
+            Threads.sleep(sleepForRetries);
             continue;
           }
-          WALEntryBatch batch = null;
-          while (entryStream.hasNext()) {
-            if (batch == null) {
-              batch = new WALEntryBatch(replicationBatchCountCapacity, entryStream.getCurrentPath());
-            }
+          WALEntryBatch batch = new WALEntryBatch(replicationBatchCountCapacity, replicationBatchSizeCapacity);
+          boolean hasNext;
+          while (hasNext = entryStream.hasNext()) {
             Entry entry = entryStream.next();
             entry = filterEntry(entry);
             if (entry != null) {
               WALEdit edit = entry.getEdit();
               if (edit != null && !edit.isEmpty()) {
-                long entrySize = getEntrySizeIncludeBulkLoad(entry);
-                long entrySizeExlucdeBulkLoad = getEntrySizeExcludeBulkLoad(entry);
-                batch.addEntry(entry);
-                replicationSourceManager.setPendingShipment(true);
-                updateBatchStats(batch, entry, entryStream.getPosition(), entrySize);
-                boolean totalBufferTooLarge = acquireBufferQuota(entrySizeExlucdeBulkLoad);
+                long entrySizeExcludeBulkLoad = batch.addEntry(entry);
+                boolean totalBufferTooLarge = manager.acquireBufferQuota(entrySizeExcludeBulkLoad);
                 // Stop if too many entries or too big
-                if (totalBufferTooLarge || batch.getHeapSize() >= replicationBatchSizeCapacity
-                    || batch.getNbEntries() >= replicationBatchCountCapacity) {
+                if (totalBufferTooLarge || batch.isLimitReached()) {
                   break;
                 }
               }
-            } else {
-              replicationSourceManager.logPositionAndCleanOldLogs(entryStream.getCurrentPath(),
-                this.replicationQueueInfo.getPeerClusterZnode(),
-                entryStream.getPosition(),
-                this.replicationQueueInfo.isQueueRecovered(), false);
             }
           }
-          if (batch != null && (!batch.getLastSeqIds().isEmpty() || batch.getNbEntries() > 0)) {
-            if (LOG.isTraceEnabled()) {
-              LOG.trace(String.format("Read %s WAL entries eligible for replication",
-                batch.getNbEntries()));
-            }
-            entryBatchQueue.put(batch);
+
+          if (LOG.isTraceEnabled()) {
+            LOG.trace(String.format("Read %s WAL entries eligible for replication", batch.getNbEntries()));
+          }
+
+          updateBatch(entryStream, batch, hasNext);
+          if (isShippable(batch)) {
             sleepMultiplier = 1;
-          } else { // got no entries and didn't advance position in WAL
-            LOG.trace("Didn't read any new entries from WAL");
-            if (replicationQueueInfo.isQueueRecovered()) {
-              // we're done with queue recovery, shut ourself down
+            entryBatchQueue.put(batch);
+            if (!batch.hasMoreEntries()) {
+              // we're done with queue recovery, shut ourselves down
               setReaderRunning(false);
-              // shuts down shipper thread immediately
-              entryBatchQueue.put(batch != null ? batch
-                  : new WALEntryBatch(replicationBatchCountCapacity, entryStream.getCurrentPath()));
-            } else {
-              Thread.sleep(sleepForRetries);
             }
+          } else {
+            Thread.sleep(sleepForRetries);
           }
-          currentPosition = entryStream.getPosition();
-          entryStream.reset(); // reuse stream
+          resetStream(entryStream);
         }
       } catch (IOException | WALEntryStreamRuntimeException e) { // stream related
         if (sleepMultiplier < maxRetriesMultiplier) {
@@ -203,6 +180,26 @@ public class ReplicationSourceWALReaderThread extends Thread {
         Thread.currentThread().interrupt();
       }
     }
+  }
+
+  private void updateBatch(WALEntryStream entryStream, WALEntryBatch batch, boolean moreData) {
+    batch.updatePosition(entryStream);
+    batch.setMoreEntries(!replicationQueueInfo.isQueueRecovered() || moreData);
+  }
+
+  private boolean isShippable(WALEntryBatch batch) {
+    return !batch.isEmpty() || checkIfWALRolled(batch) || !batch.hasMoreEntries();
+  }
+
+  private boolean checkIfWALRolled(WALEntryBatch batch) {
+    return currentPath == null && batch.lastWalPath != null
+    || currentPath != null && !currentPath.equals(batch.lastWalPath);
+  }
+
+  private void resetStream(WALEntryStream stream) throws IOException {
+    currentPosition = stream.getPosition();
+    currentPath = stream.getCurrentPath();
+    stream.reset(); // reuse stream
   }
 
   // if we get an EOF due to a zero-length log, and there are other logs in queue
@@ -221,26 +218,6 @@ public class ReplicationSourceWALReaderThread extends Thread {
         LOG.warn("Couldn't get file length information about log " + logQueue.peek());
       }
     }
-  }
-
-  public Path getCurrentPath() {
-    // if we've read some WAL entries, get the Path we read from
-    WALEntryBatch batchQueueHead = entryBatchQueue.peek();
-    if (batchQueueHead != null) {
-      return batchQueueHead.lastWalPath;
-    }
-    // otherwise, we must be currently reading from the head of the log queue
-    return logQueue.peek();
-  }
-
-  //returns false if we've already exceeded the global quota
-  private boolean checkQuota() {
-    // try not to go over total quota
-    if (totalBufferUsed.get() > totalBufferQuota) {
-      Threads.sleep(sleepForRetries);
-      return false;
-    }
-    return true;
   }
 
   private Entry filterEntry(Entry entry) {
@@ -265,107 +242,6 @@ public class ReplicationSourceWALReaderThread extends Thread {
     return entryBatchQueue.poll(timeout, TimeUnit.MILLISECONDS);
   }
 
-  private long getEntrySizeIncludeBulkLoad(Entry entry) {
-    WALEdit edit = entry.getEdit();
-    WALKey key = entry.getKey();
-    return edit.heapSize() + sizeOfStoreFilesIncludeBulkLoad(edit) +
-        key.estimatedSerializedSizeOf();
-  }
-
-  public long getEntrySizeExcludeBulkLoad(Entry entry) {
-    WALEdit edit = entry.getEdit();
-    WALKey key = entry.getKey();
-    return edit.heapSize() + key.estimatedSerializedSizeOf();
-  }
-
-  private void updateBatchStats(WALEntryBatch batch, Entry entry, long entryPosition, long entrySize) {
-    WALEdit edit = entry.getEdit();
-    if (edit != null && !edit.isEmpty()) {
-      batch.incrementHeapSize(entrySize);
-      Pair<Integer, Integer> nbRowsAndHFiles = countDistinctRowKeysAndHFiles(edit);
-      batch.incrementNbRowKeys(nbRowsAndHFiles.getFirst());
-      batch.incrementNbHFiles(nbRowsAndHFiles.getSecond());
-    }
-    batch.lastWalPosition = entryPosition;
-  }
-
-  /**
-   * Count the number of different row keys in the given edit because of mini-batching. We assume
-   * that there's at least one Cell in the WALEdit.
-   * @param edit edit to count row keys from
-   * @return number of different row keys and HFiles
-   */
-  private Pair<Integer, Integer> countDistinctRowKeysAndHFiles(WALEdit edit) {
-    List<Cell> cells = edit.getCells();
-    int distinctRowKeys = 1;
-    int totalHFileEntries = 0;
-    Cell lastCell = cells.get(0);
-
-    int totalCells = edit.size();
-    for (int i = 0; i < totalCells; i++) {
-      // Count HFiles to be replicated
-      if (CellUtil.matchingQualifier(cells.get(i), WALEdit.BULK_LOAD)) {
-        try {
-          BulkLoadDescriptor bld = WALEdit.getBulkLoadDescriptor(cells.get(i));
-          List<StoreDescriptor> stores = bld.getStoresList();
-          int totalStores = stores.size();
-          for (int j = 0; j < totalStores; j++) {
-            totalHFileEntries += stores.get(j).getStoreFileList().size();
-          }
-        } catch (IOException e) {
-          LOG.error("Failed to deserialize bulk load entry from wal edit. "
-              + "Then its hfiles count will not be added into metric.");
-        }
-      }
-
-      if (!CellUtil.matchingRow(cells.get(i), lastCell)) {
-        distinctRowKeys++;
-      }
-      lastCell = cells.get(i);
-    }
-
-    Pair<Integer, Integer> result = new Pair<>(distinctRowKeys, totalHFileEntries);
-    return result;
-  }
-
-  /**
-   * Calculate the total size of all the store files
-   * @param edit edit to count row keys from
-   * @return the total size of the store files
-   */
-  private int sizeOfStoreFilesIncludeBulkLoad(WALEdit edit) {
-    List<Cell> cells = edit.getCells();
-    int totalStoreFilesSize = 0;
-
-    int totalCells = edit.size();
-    for (int i = 0; i < totalCells; i++) {
-      if (CellUtil.matchingQualifier(cells.get(i), WALEdit.BULK_LOAD)) {
-        try {
-          BulkLoadDescriptor bld = WALEdit.getBulkLoadDescriptor(cells.get(i));
-          List<StoreDescriptor> stores = bld.getStoresList();
-          int totalStores = stores.size();
-          for (int j = 0; j < totalStores; j++) {
-            totalStoreFilesSize += stores.get(j).getStoreFileSizeBytes();
-          }
-        } catch (IOException e) {
-          LOG.error("Failed to deserialize bulk load entry from wal edit. "
-              + "Size of HFiles part of cell will not be considered in replication "
-              + "request size calculation.",
-            e);
-        }
-      }
-    }
-    return totalStoreFilesSize;
-  }
-
-  /**
-   * @param size delta size for grown buffer
-   * @return true if we should clear buffer and push all
-   */
-  private boolean acquireBufferQuota(long size) {
-    return totalBufferUsed.addAndGet(size) >= totalBufferQuota;
-  }
-
   /**
    * @return whether the reader thread is running
    */
@@ -385,6 +261,8 @@ public class ReplicationSourceWALReaderThread extends Thread {
    *
    */
   static class WALEntryBatch {
+    private final int maxNbEntries;
+    private final long maxSizeBytes;
     private List<Entry> walEntries;
     // last WAL that was read
     private Path lastWalPath;
@@ -396,21 +274,23 @@ public class ReplicationSourceWALReaderThread extends Thread {
     private int nbHFiles = 0;
     // heap size of data we need to replicate
     private long heapSize = 0;
-    // save the last sequenceid for each region if the table has serial-replication scope
-    private Map<String, Long> lastSeqIds = new HashMap<>();
+    // whether more entries to read exist in WALs or not
+    private boolean moreEntries = true;
+    // heap size of data we need to replicate, the size of bulk loaded hfiles is not included.
+    private long heapSizeExcludeBulkLoad;
 
     /**
-     * @param walEntries
-     * @param lastWalPath Path of the WAL the last entry in this batch was read from
-     * @param lastWalPosition Position in the WAL the last entry in this batch was read from
+     * @param maxNbEntries
      */
-    private WALEntryBatch(int maxNbEntries, Path lastWalPath) {
+    private WALEntryBatch(int maxNbEntries, long maxSizeBytes) {
       this.walEntries = new ArrayList<>(maxNbEntries);
-      this.lastWalPath = lastWalPath;
+      this.maxNbEntries = maxNbEntries;
+      this.maxSizeBytes = maxSizeBytes;
     }
 
-    public void addEntry(Entry entry) {
+    public long addEntry(Entry entry) {
       walEntries.add(entry);
+      return updateBatchStats(entry);
     }
 
     /**
@@ -466,11 +346,8 @@ public class ReplicationSourceWALReaderThread extends Thread {
       return heapSize;
     }
 
-    /**
-     * @return the last sequenceid for each region if the table has serial-replication scope
-     */
-    public Map<String, Long> getLastSeqIds() {
-      return lastSeqIds;
+    public long getHeapSizeExcludeBulkLoad() {
+      return heapSizeExcludeBulkLoad;
     }
 
     private void incrementNbRowKeys(int increment) {
@@ -483,6 +360,121 @@ public class ReplicationSourceWALReaderThread extends Thread {
 
     private void incrementHeapSize(long increment) {
       heapSize += increment;
+    }
+
+    private void incrementHeapSizeExcludeBulkLoad(long increment) {
+      heapSizeExcludeBulkLoad += increment;
+    }
+
+    public boolean isEmpty() {
+      return walEntries.isEmpty();
+    }
+
+    public void updatePosition(WALEntryStream entryStream) {
+      lastWalPath = entryStream.getCurrentPath();
+      lastWalPosition = entryStream.getPosition();
+    }
+
+    public boolean hasMoreEntries() {
+      return moreEntries;
+    }
+
+    public void setMoreEntries(boolean moreEntries) {
+      this.moreEntries = moreEntries;
+    }
+
+    public boolean isLimitReached() {
+      return getHeapSize() >= maxSizeBytes || getNbEntries() >= maxNbEntries;
+    }
+
+    private long getEntrySizeExcludeBulkLoad(Entry entry) {
+      WALEdit edit = entry.getEdit();
+      WALKey key = entry.getKey();
+      return edit.heapSize() + key.estimatedSerializedSizeOf();
+    }
+
+    private long updateBatchStats(Entry entry) {
+      WALEdit edit = entry.getEdit();
+
+      long entrySizeExcludeBulkLoad = getEntrySizeExcludeBulkLoad(entry);
+      long entrySize = entrySizeExcludeBulkLoad + sizeOfStoreFilesIncludeBulkLoad(entry.getEdit());
+      incrementHeapSize(entrySize);
+      incrementHeapSizeExcludeBulkLoad(entrySizeExcludeBulkLoad);
+
+      Pair<Integer, Integer> nbRowsAndHFiles = countDistinctRowKeysAndHFiles(edit);
+      incrementNbRowKeys(nbRowsAndHFiles.getFirst());
+      incrementNbHFiles(nbRowsAndHFiles.getSecond());
+
+      return entrySizeExcludeBulkLoad;
+    }
+
+    /**
+     * Count the number of different row keys in the given edit because of mini-batching. We assume
+     * that there's at least one Cell in the WALEdit.
+     * @param edit edit to count row keys from
+     * @return number of different row keys and HFiles
+     */
+    private Pair<Integer, Integer> countDistinctRowKeysAndHFiles(WALEdit edit) {
+      List<Cell> cells = edit.getCells();
+      int distinctRowKeys = 1;
+      int totalHFileEntries = 0;
+      Cell lastCell = cells.get(0);
+
+      int totalCells = edit.size();
+      for (int i = 0; i < totalCells; i++) {
+        // Count HFiles to be replicated
+        if (CellUtil.matchingQualifier(cells.get(i), WALEdit.BULK_LOAD)) {
+          try {
+            BulkLoadDescriptor bld = WALEdit.getBulkLoadDescriptor(cells.get(i));
+            List<StoreDescriptor> stores = bld.getStoresList();
+            int totalStores = stores.size();
+            for (int j = 0; j < totalStores; j++) {
+              totalHFileEntries += stores.get(j).getStoreFileList().size();
+            }
+          } catch (IOException e) {
+            LOG.error("Failed to deserialize bulk load entry from wal edit. "
+                    + "Then its hfiles count will not be added into metric.");
+          }
+        }
+
+        if (!CellUtil.matchingRow(cells.get(i), lastCell)) {
+          distinctRowKeys++;
+        }
+        lastCell = cells.get(i);
+      }
+
+      Pair<Integer, Integer> result = new Pair<>(distinctRowKeys, totalHFileEntries);
+      return result;
+    }
+
+    /**
+     * Calculate the total size of all the store files
+     * @param edit edit to count row keys from
+     * @return the total size of the store files
+     */
+    private int sizeOfStoreFilesIncludeBulkLoad(WALEdit edit) {
+      List<Cell> cells = edit.getCells();
+      int totalStoreFilesSize = 0;
+
+      int totalCells = edit.size();
+      for (int i = 0; i < totalCells; i++) {
+        if (CellUtil.matchingQualifier(cells.get(i), WALEdit.BULK_LOAD)) {
+          try {
+            BulkLoadDescriptor bld = WALEdit.getBulkLoadDescriptor(cells.get(i));
+            List<StoreDescriptor> stores = bld.getStoresList();
+            int totalStores = stores.size();
+            for (int j = 0; j < totalStores; j++) {
+              totalStoreFilesSize += stores.get(j).getStoreFileSizeBytes();
+            }
+          } catch (IOException e) {
+            LOG.error("Failed to deserialize bulk load entry from wal edit. "
+                            + "Size of HFiles part of cell will not be considered in replication "
+                            + "request size calculation.",
+                    e);
+          }
+        }
+      }
+      return totalStoreFilesSize;
     }
   }
 }
