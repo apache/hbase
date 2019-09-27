@@ -69,7 +69,6 @@ import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.IdReadWriteLock;
@@ -248,7 +247,6 @@ public class BucketCache implements BlockCache, HeapSize {
    * persistent file integrity, default algorithm is MD5
    * */
   private String algorithm;
-  private byte[] checksum;
 
   public BucketCache(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
       int writerThreadNum, int writerQLen, String persistencePath) throws IOException {
@@ -1066,7 +1064,6 @@ public class BucketCache implements BlockCache, HeapSize {
     }
     try (FileOutputStream fos = new FileOutputStream(persistencePath, false)) {
       fos.write(ProtobufMagic.PB_MAGIC);
-      checksum = ((PersistentIOEngine) ioEngine).calculateChecksum(algorithm);
       BucketProtoUtils.toPB(this).writeDelimitedTo(fos);
     }
   }
@@ -1081,9 +1078,7 @@ public class BucketCache implements BlockCache, HeapSize {
     }
     assert !cacheEnabled;
 
-    FileInputStream in = null;
-    try {
-      in = new FileInputStream(persistencePath);
+    try (FileInputStream in = deleteFileOnClose(persistenceFile)) {
       int pblen = ProtobufMagic.lengthOfPBMagic();
       byte[] pbuf = new byte[pblen];
       int read = in.read(pbuf);
@@ -1099,14 +1094,6 @@ public class BucketCache implements BlockCache, HeapSize {
       }
       parsePB(BucketCacheProtos.BucketCacheEntry.parseDelimitedFrom(in));
       bucketAllocator = new BucketAllocator(cacheCapacity, bucketSizes, backingMap, realCacheSize);
-    } finally {
-      if (in != null) {
-        in.close();
-      }
-      if (!persistenceFile.delete()) {
-        throw new IOException("Failed deleting persistence file " +
-          persistenceFile.getAbsolutePath());
-      }
     }
   }
 
@@ -1155,8 +1142,10 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   private void parsePB(BucketCacheProtos.BucketCacheEntry proto) throws IOException {
-    ((PersistentIOEngine) ioEngine).verifyFileIntegrity(proto.getChecksum().toByteArray(),
-      algorithm);
+    if (proto.hasChecksum()) {
+      ((PersistentIOEngine) ioEngine).verifyFileIntegrity(proto.getChecksum().toByteArray(),
+        algorithm);
+    }
     verifyCapacityAndClasses(proto.getCacheCapacity(), proto.getIoClass(), proto.getMapClass());
     backingMap = BucketProtoUtils.fromPB(proto.getDeserializersMap(), proto.getBackingMap());
   }
@@ -1259,6 +1248,10 @@ public class BucketCache implements BlockCache, HeapSize {
   @Override
   public long getCurrentSize() {
     return this.bucketAllocator.getUsedSize();
+  }
+
+  public String getAlgorithm() {
+    return algorithm;
   }
 
   /**
@@ -1549,10 +1542,6 @@ public class BucketCache implements BlockCache, HeapSize {
 
   float getMemoryFactor() {
     return memoryFactor;
-  }
-
-  public byte[] getChecksum() {
-    return checksum;
   }
 
   /**
