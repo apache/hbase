@@ -313,6 +313,14 @@ public class ExecutorService {
       this.running = running;
     }
 
+    public List<EventHandler> getQueuedEvents() {
+      return queuedEvents;
+    }
+
+    public List<RunningEventStatus> getRunning() {
+      return running;
+    }
+
     /**
      * Dump a textual representation of the executor's status
      * to the given writer.
