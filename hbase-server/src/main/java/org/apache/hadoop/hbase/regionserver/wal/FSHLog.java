@@ -557,9 +557,6 @@ public class FSHLog implements WAL {
 
     this.useHsync = conf.getBoolean(HRegion.WAL_HSYNC_CONF_KEY, HRegion.DEFAULT_WAL_HSYNC);
 
-    // rollWriter sets this.hdfs_out if it can.
-    rollWriter();
-
     this.slowSyncNs = TimeUnit.MILLISECONDS.toNanos(conf.getInt(SLOW_SYNC_TIME_MS,
       conf.getInt("hbase.regionserver.hlog.slowsync.ms", DEFAULT_SLOW_SYNC_TIME_MS)));
     this.rollOnSyncNs = TimeUnit.MILLISECONDS.toNanos(conf.getInt(ROLL_ON_SYNC_TIME_MS,
@@ -570,6 +567,9 @@ public class FSHLog implements WAL {
       DEFAULT_SLOW_SYNC_ROLL_INTERVAL_MS);
     this.walSyncTimeout = conf.getLong(WAL_SYNC_TIMEOUT_MS,
       conf.getLong("hbase.regionserver.hlog.sync.timeout", DEFAULT_WAL_SYNC_TIMEOUT_MS));
+
+    // rollWriter sets this.hdfs_out if it can.
+    rollWriter();
 
     // This is the 'writer' -- a single threaded executor.  This single thread 'consumes' what is
     // put on the ring buffer.
