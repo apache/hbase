@@ -24,11 +24,12 @@ import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
 @Category({ MasterTests.class, MediumTests.class })
-public class TestRetainAssignmentOnRestartSplitWithoutZk extends TestRetainAssignmentOnRestart {
+public class TestRoundRobinAssignmentOnRestartSplitWithoutZk
+    extends TestRoundRobinAssignmentOnRestart {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRetainAssignmentOnRestartSplitWithoutZk.class);
+      HBaseClassTestRule.forClass(TestRoundRobinAssignmentOnRestartSplitWithoutZk.class);
 
   @Override
   protected boolean splitWALCoordinatedByZk() {
