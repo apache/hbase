@@ -184,8 +184,8 @@ public class ServerCrashProcedure
               LOG.debug("Dropped {} assigns because against disabling/disabled tables",
                   size - toAssign.size());
             }
-            // CreateAssignProcedure will try to use the old location for the region deploy.
-            addChildProcedure(am.createAssignProcedures(toAssign));
+            // Assign regions to new candidate server. See HBASE-23035 for more details.
+            addChildProcedure(am.createRoundRobinAssignProcedures(toAssign));
             setNextState(ServerCrashState.SERVER_CRASH_HANDLE_RIT2);
           } else {
             setNextState(ServerCrashState.SERVER_CRASH_FINISH);

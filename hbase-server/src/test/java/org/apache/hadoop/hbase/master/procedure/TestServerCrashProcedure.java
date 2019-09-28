@@ -157,17 +157,12 @@ public class TestServerCrashProcedure {
         long procId = getSCPProcId(procExec);
         ProcedureTestingUtility.waitProcedure(procExec, procId);
       }
-      assertReplicaDistributed(t);
       assertEquals(count, util.countRows(t));
       assertEquals(checksum, util.checksumRows(t));
     } catch (Throwable throwable) {
       LOG.error("Test failed!", throwable);
       throw throwable;
     }
-  }
-
-  protected void assertReplicaDistributed(final Table t) {
-    return;
   }
 
   protected Table createTable(final TableName tableName) throws IOException {

@@ -103,8 +103,7 @@ public class SnapshotOfRegionAssignmentFromMeta {
    * @throws IOException
    */
   public void initialize() throws IOException {
-    LOG.info("Start to scan the hbase:meta for the current region assignment " +
-      "snappshot");
+    LOG.info("Start to scan the hbase:meta for the current region assignment snappshot");
     // TODO: at some point this code could live in the MetaTableAccessor
     Visitor v = new Visitor() {
       @Override
@@ -168,8 +167,7 @@ public class SnapshotOfRegionAssignmentFromMeta {
     // Scan hbase:meta to pick up user regions
     MetaTableAccessor.fullScanRegions(connection, v);
     //regionToRegionServerMap = regions;
-    LOG.info("Finished to scan the hbase:meta for the current region assignment" +
-      "snapshot");
+    LOG.info("Finished to scan the hbase:meta for the current region assignment snapshot");
   }
 
   private void addRegion(RegionInfo regionInfo) {
