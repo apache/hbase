@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -43,6 +44,7 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MetaTableAccessor.Visitor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -58,6 +60,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -147,15 +150,7 @@ public class TestMasterOperationsForRegionReplicas {
 
       List<RegionInfo> hris = MetaTableAccessor.getTableRegions(ADMIN.getConnection(), tableName);
       assertEquals(numRegions * numReplica, hris.size());
-      // check that the master created expected number of RegionState objects
-      for (int i = 0; i < numRegions; i++) {
-        for (int j = 0; j < numReplica; j++) {
-          RegionInfo replica = RegionReplicaUtil.getRegionInfoForReplica(hris.get(i), j);
-          RegionState state = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
-            .getRegionStates().getRegionState(replica);
-          assertNotNull(state);
-        }
-      }
+      assertRegionStateNotNull(hris, numRegions, numReplica);
 
       List<Result> metaRows = MetaTableAccessor.fullScanRegions(ADMIN.getConnection());
       int numRows = 0;
@@ -184,14 +179,26 @@ public class TestMasterOperationsForRegionReplicas {
       TEST_UTIL.getHBaseClusterInterface().waitForActiveAndReadyMaster();
       TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
       TEST_UTIL.waitUntilNoRegionsInTransition();
-      for (int i = 0; i < numRegions; i++) {
-        for (int j = 0; j < numReplica; j++) {
-          RegionInfo replica = RegionReplicaUtil.getRegionInfoForReplica(hris.get(i), j);
-          RegionState state = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
-            .getRegionStates().getRegionState(replica);
-          assertNotNull(state);
-        }
+      assertRegionStateNotNull(hris, numRegions, numReplica);
+      validateFromSnapshotFromMeta(TEST_UTIL, tableName, numRegions, numReplica,
+        ADMIN.getConnection());
+
+      // Now shut the whole cluster down, and verify the assignments are kept so that the
+      // availability constraints are met. MiniHBaseCluster chooses arbitrary ports on each
+      // restart. This messes with our being able to test that we retain locality. Therefore,
+      // figure current cluster ports and pass them in on next cluster start so new cluster comes
+      // up at same coordinates -- and the assignment retention logic has a chance to cut in.
+      List<Integer> rsports = new ArrayList<>();
+      for (JVMClusterUtil.RegionServerThread rst : TEST_UTIL.getHBaseCluster()
+        .getLiveRegionServerThreads()) {
+        rsports.add(rst.getRegionServer().getRpcServer().getListenerAddress().getPort());
       }
+      TEST_UTIL.shutdownMiniHBaseCluster();
+      StartMiniClusterOption option =
+        StartMiniClusterOption.builder().numRegionServers(numSlaves).rsPorts(rsports).build();
+      TEST_UTIL.startMiniHBaseCluster(option);
+      TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
+      TEST_UTIL.waitUntilNoRegionsInTransition();
       validateFromSnapshotFromMeta(TEST_UTIL, tableName, numRegions, numReplica,
         ADMIN.getConnection());
 
@@ -252,6 +259,19 @@ public class TestMasterOperationsForRegionReplicas {
     } finally {
       ADMIN.disableTable(tableName);
       ADMIN.deleteTable(tableName);
+    }
+  }
+
+  private void assertRegionStateNotNull(List<RegionInfo> hris, int numRegions, int numReplica) {
+    // check that the master created expected number of RegionState objects
+    for (int i = 0; i < numRegions; i++) {
+      for (int j = 0; j < numReplica; j++) {
+        RegionInfo replica = RegionReplicaUtil.getRegionInfoForReplica(hris.get(i), j);
+        RegionState state =
+            TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
+                .getRegionState(replica);
+        assertNotNull(state);
+      }
     }
   }
 
