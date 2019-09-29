@@ -25,7 +25,6 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.hbase.client.RegionStatesCount;
@@ -74,12 +73,9 @@ public final class ClusterMetricsBuilder {
         .setMasterInfoPort(metrics.getMasterInfoPort())
         .addAllServersName(metrics.getServersName().stream().map(ProtobufUtil::toServerName)
           .collect(Collectors.toList()))
-        .addAllTableRegionStatesCount(metrics.getTableRegionStatesCount()
-          .entrySet()
-          .stream()
+        .addAllTableRegionStatesCount(metrics.getTableRegionStatesCount().entrySet().stream()
           .map(status ->
-            ClusterStatusProtos.TableRegionStatesCount
-              .newBuilder()
+            ClusterStatusProtos.TableRegionStatesCount.newBuilder()
               .setTableName(ProtobufUtil.toProtoTableName((status.getKey())))
               .setRegionStatesCount(ProtobufUtil.toTableRegionStatesCount(status.getValue()))
               .build())

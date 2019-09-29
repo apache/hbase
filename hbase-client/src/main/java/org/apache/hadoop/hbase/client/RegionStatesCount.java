@@ -128,4 +128,40 @@ public final class RegionStatesCount {
     return sb.toString();
   }
 
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    RegionStatesCount that = (RegionStatesCount) o;
+
+    if (openRegions != that.openRegions) {
+      return false;
+    }
+    if (splitRegions != that.splitRegions) {
+      return false;
+    }
+    if (closedRegions != that.closedRegions) {
+      return false;
+    }
+    if (regionsInTransition != that.regionsInTransition) {
+      return false;
+    }
+    return totalRegions == that.totalRegions;
+  }
+
+  @Override
+  public int hashCode() {
+    int result = openRegions;
+    result = 31 * result + splitRegions;
+    result = 31 * result + closedRegions;
+    result = 31 * result + regionsInTransition;
+    result = 31 * result + totalRegions;
+    return result;
+  }
+
 }
