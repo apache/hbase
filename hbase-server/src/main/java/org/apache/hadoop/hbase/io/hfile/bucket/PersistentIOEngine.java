@@ -63,9 +63,6 @@ public abstract class PersistentIOEngine implements IOEngine {
    * @throws NoSuchAlgorithmException no such algorithm
    */
   protected byte[] calculateChecksum(String algorithm) {
-    if (filePaths == null) {
-      return null;
-    }
     try {
       StringBuilder sb = new StringBuilder();
       for (String filePath : filePaths){
@@ -79,10 +76,10 @@ public abstract class PersistentIOEngine implements IOEngine {
       return messageDigest.digest();
     } catch (IOException ioex) {
       LOG.error("Calculating checksum failed, because of ", ioex);
-      return null;
+      return new byte[0];
     } catch (NoSuchAlgorithmException e) {
       LOG.error("No such algorithm : " + algorithm + "!");
-      return null;
+      return new byte[0];
     }
   }
 

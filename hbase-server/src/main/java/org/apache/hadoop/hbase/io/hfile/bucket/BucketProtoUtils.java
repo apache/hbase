@@ -41,20 +41,14 @@ final class BucketProtoUtils {
   }
 
   static BucketCacheProtos.BucketCacheEntry toPB(BucketCache cache) {
-    BucketCacheProtos.BucketCacheEntry.Builder builder =
-      BucketCacheProtos.BucketCacheEntry.newBuilder();
-    builder.setCacheCapacity(cache.getMaxSize())
+    return BucketCacheProtos.BucketCacheEntry.newBuilder()
+      .setCacheCapacity(cache.getMaxSize())
       .setIoClass(cache.ioEngine.getClass().getName())
       .setMapClass(cache.backingMap.getClass().getName())
       .putAllDeserializers(CacheableDeserializerIdManager.save())
-      .setBackingMap(BucketProtoUtils.toPB(cache.backingMap));
-    byte[] checksum =
-      ((PersistentIOEngine) cache.ioEngine).calculateChecksum(cache.getAlgorithm());
-
-    if (checksum != null) {
-      builder.setChecksum(ByteString.copyFrom(checksum));
-    }
-    return builder.build();
+      .setBackingMap(BucketProtoUtils.toPB(cache.backingMap))
+      .setChecksum(ByteString.copyFrom(((PersistentIOEngine) cache.ioEngine).
+        calculateChecksum(cache.getAlgorithm()))).build();
   }
 
   private static BucketCacheProtos.BackingMap toPB(
