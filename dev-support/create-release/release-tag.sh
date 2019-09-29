@@ -25,7 +25,7 @@ function exit_with_usage {
   local NAME=$(basename $0)
   cat << EOF
 usage: $NAME
-Tags an HBase release on a particular branch.
+Tags an $PROJECT release on a particular branch.
 
 Inputs are specified with the following environment variables:
 ASF_USERNAME - Apache Username
@@ -63,13 +63,25 @@ done
 init_java
 init_mvn
 
-ASF_HBASE_REPO="gitbox.apache.org/repos/asf/hbase.git"
+rm -rf ${PROJECT}
 
-rm -rf hbase
-git clone "https://$ASF_USERNAME:$ASF_PASSWORD@$ASF_HBASE_REPO" -b $GIT_BRANCH
-update_releasenotes `pwd`/hbase "$RELEASE_VERSION"
+ASF_REPO="gitbox.apache.org/repos/asf/${PROJECT}.git"
+# Ugly!
+encoded_username=$(python -c "import urllib; print urllib.quote('''$ASF_USERNAME''')")
+encoded_password=$(python -c "import urllib; print urllib.quote('''$ASF_PASSWORD''')")
+git clone "https://$encoded_username:$encoded_password@$ASF_REPO" -b $GIT_BRANCH
+# NOTE: Here we are prepending project name on version for fetching
+# changes from the HBASE JIRA. It has issues for hbase, hbase-conectors,
+# hbase-operator-tools, etc.
+shopt -s nocasematch
+if [ "${PROJECT}" != "hbase" ]; then
+  # Needs the '-' on the end.
+  prefix="${PROJECT}-"
+fi
+shopt -u nocasematch
+update_releasenotes `pwd`/${PROJECT} "${prefix}${RELEASE_VERSION}"
 
-cd hbase
+cd ${PROJECT}
 
 git config user.name "$GIT_NAME"
 git config user.email $GIT_EMAIL
@@ -78,7 +90,7 @@ git config user.email $GIT_EMAIL
 $MVN versions:set -DnewVersion=$RELEASE_VERSION | grep -v "no value" # silence logs
 git add RELEASENOTES.md CHANGES.md
 
-git commit -a -m "Preparing HBase release $RELEASE_TAG; tagging and updates to CHANGES.md and RELEASENOTES.md"
+git commit -a -m "Preparing ${PROJECT} release $RELEASE_TAG; tagging and updates to CHANGES.md and RELEASENOTES.md"
 echo "Creating tag $RELEASE_TAG at the head of $GIT_BRANCH"
 git tag $RELEASE_TAG
 
@@ -92,10 +104,10 @@ if ! is_dry_run; then
   git push origin $RELEASE_TAG
   git push origin HEAD:$GIT_BRANCH
   cd ..
-  rm -rf hbase
+  rm -rf ${PROJECT}
 else
   cd ..
-  mv hbase hbase.tag
-  echo "Clone with version changes and tag available as hbase.tag in the output directory."
+  mv ${PROJECT} ${PROJECT}.tag
+  echo "Clone with version changes and tag available as ${PROJECT}.tag in the output directory."
 fi
 
