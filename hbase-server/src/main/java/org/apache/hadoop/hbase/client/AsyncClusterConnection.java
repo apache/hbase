@@ -75,22 +75,11 @@ public interface AsyncClusterConnection extends AsyncConnection {
   CompletableFuture<String> prepareBulkLoad(TableName tableName);
 
   /**
-   * @deprecated Use bulkLoad(TableName tableName, List<Pair<byte[], String>> familyPaths,
-   * byte[] row, boolean assignSeqNum, Token<?> userToken, String bulkToken,
-   *       boolean copyFiles, List<String> clusterIds)
-   */
-  @Deprecated
-  CompletableFuture<Boolean> bulkLoad(TableName tableName, List<Pair<byte[], String>> familyPaths,
-      byte[] row, boolean assignSeqNum, Token<?> userToken, String bulkToken, boolean copyFiles);
-
-  /**
-   * Securely bulk load a list of HFiles, passing additional list of clusters ids tracking
-   * clusters where the given bulk load has already been processed
-   * (important for bulk loading replication).
-   *
-   * Defined as default here to avoid breaking callers who rely on the bulkLoad version that
-   * does not expect additional clusterIds param.
-   *
+   * Securely bulk load a list of HFiles, passing additional list of clusters ids tracking clusters
+   * where the given bulk load has already been processed (important for bulk loading replication).
+   * <p/>
+   * Defined as default here to avoid breaking callers who rely on the bulkLoad version that does
+   * not expect additional clusterIds param.
    * @param tableName the target table
    * @param familyPaths hdfs path for the the table family dirs containg files to be loaded
    * @param row row key
@@ -99,13 +88,10 @@ public interface AsyncClusterConnection extends AsyncConnection {
    * @param bulkToken bulk load token
    * @param copyFiles flag for copying the loaded hfiles
    * @param clusterIds list of cluster ids where the given bulk load has already been processed.
-   * @return
    */
-  default CompletableFuture<Boolean> bulkLoad(TableName tableName, List<Pair<byte[],
-    String>> familyPaths, byte[] row, boolean assignSeqNum, Token<?> userToken, String bulkToken,
-      boolean copyFiles, List<String> clusterIds) {
-    return null;
-  }
+  CompletableFuture<Boolean> bulkLoad(TableName tableName, List<Pair<byte[], String>> familyPaths,
+    byte[] row, boolean assignSeqNum, Token<?> userToken, String bulkToken, boolean copyFiles,
+    List<String> clusterIds);
 
   /**
    * Clean up after finishing bulk load, no matter success or not.
