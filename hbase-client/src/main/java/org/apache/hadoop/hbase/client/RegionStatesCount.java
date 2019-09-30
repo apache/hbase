@@ -37,10 +37,6 @@ public final class RegionStatesCount {
     return closedRegions;
   }
 
-  private void setClosedRegions(int closedRegions) {
-    this.closedRegions = closedRegions;
-  }
-
   public int getOpenRegions() {
     return openRegions;
   }
@@ -55,6 +51,10 @@ public final class RegionStatesCount {
 
   public int getTotalRegions() {
     return totalRegions;
+  }
+
+  private void setClosedRegions(int closedRegions) {
+    this.closedRegions = closedRegions;
   }
 
   private void setOpenRegions(int openRegions) {
