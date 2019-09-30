@@ -588,7 +588,9 @@ public class CompactingMemStore extends AbstractMemStore {
    * It takes the updatesLock exclusively, pushes active into the pipeline, releases updatesLock
    * and compacts the pipeline.
    */
-  private class InMemoryCompactionRunnable implements Runnable {
+  // When this class private, saw ClassNotFoundException? Being loaded from another classloader?
+  // Trying with class as public to see if makes a difference.
+  public class InMemoryCompactionRunnable implements Runnable {
     @Override
     public void run() {
       inMemoryCompaction();

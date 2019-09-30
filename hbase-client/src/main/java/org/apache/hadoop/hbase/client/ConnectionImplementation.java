@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -45,6 +45,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
@@ -163,6 +164,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   private final int metaReplicaCallTimeoutScanInMicroSecond;
   private final int numTries;
   final int rpcTimeout;
+  private final int operationTimeout;
 
   /**
    * Global nonceGenerator shared per client.Currently there's no reason to limit its scope.
@@ -330,6 +332,8 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       close();
       throw e;
     }
+    this.operationTimeout = this.conf.getInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
+        HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
   }
 
   private void spawnRenewalChore(final UserGroupInformation user) {
@@ -2057,12 +2061,30 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
 
   @Override
   public TableState getTableState(TableName tableName) throws IOException {
-    checkClosed();
-    TableState tableState = MetaTableAccessor.getTableState(this, tableName);
-    if (tableState == null) {
-      throw new TableNotFoundException(tableName);
+    // Go to the Master for Table State. It is the authority. It knows State for user-space
+    // and for system-space tables. Previous we went direct to the hbase:meta table to find
+    // table-state. hbase:meta does not have system-table states. This puts new load on Master.
+    // Now it proxies reads to the hbase:meta. Benefit is that we hide table state implementation.
+    // Downside is more load on Master. Master is host for hbase:meta table-state (and for that of
+    // other tables). Going to Master means one-stop-shop for all table states.
+    RpcControllerFactory factory = getRpcControllerFactory();
+    try (MasterCallable<TableState.State> c = new MasterCallable<TableState.State>(this, factory) {
+      @Override
+      protected TableState.State rpcCall() throws Exception {
+        setPriority(tableName);
+        MasterProtos.GetTableStateRequest req =
+          RequestConverter.buildGetTableStateRequest(tableName);
+        MasterProtos.GetTableStateResponse ret = master.getTableState(getRpcController(), req);
+        if (!ret.hasTableState() || ret.getTableState() == null) {
+          throw new TableNotFoundException(tableName);
+        }
+        return TableState.State.valueOf(ret.getTableState().getState().toString());
+      }
+    }) {
+      RpcRetryingCaller<TableState.State> caller = getRpcRetryingCallerFactory().
+          newCaller(this.rpcTimeout);
+      return new TableState(tableName, caller.callWithRetries(c, this.operationTimeout));
     }
-    return tableState;
   }
 
   @Override

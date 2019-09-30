@@ -78,9 +78,7 @@ public class CreateTableProcedure
   @Override
   protected Flow executeFromState(final MasterProcedureEnv env, final CreateTableState state)
       throws InterruptedException {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace(this + " execute state=" + state);
-    }
+    LOG.info("{} execute state={}", this, state);
     try {
       switch (state) {
         case CREATE_TABLE_PRE_OPERATION:

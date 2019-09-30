@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,6 +24,7 @@ import static org.apache.hadoop.hbase.HConstants.SPLIT_LOGDIR_NAME;
 import static org.apache.hadoop.hbase.HConstants.ZOOKEEPER_ZNODE_PARENT;
 import static org.apache.hadoop.hbase.client.RegionInfo.DEFAULT_REPLICA_ID;
 
+import java.util.Collection;
 import java.util.Optional;
 import java.util.stream.IntStream;
 import org.apache.hadoop.conf.Configuration;
@@ -40,15 +41,24 @@ public class ZNodePaths {
   // TODO: Replace this with ZooKeeper constant when ZOOKEEPER-277 is resolved.
   public static final char ZNODE_PATH_SEPARATOR = '/';
 
-  public final static String META_ZNODE_PREFIX = "meta-region-server";
+  private static final String META_ZNODE_PREFIX = "meta-region-server";
   private static final String DEFAULT_SNAPSHOT_CLEANUP_ZNODE = "snapshot-cleanup";
 
   // base znode for this cluster
   public final String baseZNode;
-  // the prefix of meta znode, does not include baseZNode.
-  public final String metaZNodePrefix;
-  // znodes containing the locations of the servers hosting the meta replicas
-  public final ImmutableMap<Integer, String> metaReplicaZNodes;
+
+  /**
+   * The prefix of meta znode. Does not include baseZNode.
+   * Its a 'prefix' because meta replica id integer can be tagged on the end (if
+   * no number present, it is 'default' replica).
+   */
+  private final String metaZNodePrefix;
+
+  /**
+   * znodes containing the locations of the servers hosting the meta replicas
+   */
+  private final ImmutableMap<Integer, String> metaReplicaZNodes;
+
   // znode containing ephemeral nodes of the regionservers
   public final String rsZNode;
   // znode containing ephemeral nodes of the draining regionservers
@@ -158,21 +168,21 @@ public class ZNodePaths {
   }
 
   /**
-   * Is the znode of any meta replica
-   * @param node
-   * @return true or false
+   * @return true if the znode is a meta region replica
    */
   public boolean isAnyMetaReplicaZNode(String node) {
-    if (metaReplicaZNodes.containsValue(node)) {
-      return true;
-    }
-    return false;
+    return this.metaReplicaZNodes.containsValue(node);
   }
 
   /**
-   * Get the znode string corresponding to a replicaId
-   * @param replicaId
-   * @return znode
+   * @return Meta Replica ZNodes
+   */
+  public Collection<String> getMetaReplicaZNodes() {
+    return this.metaReplicaZNodes.values();
+  }
+
+  /**
+   * @return the znode string corresponding to a replicaId
    */
   public String getZNodeForReplica(int replicaId) {
     // return a newly created path but don't update the cache of paths
@@ -183,24 +193,21 @@ public class ZNodePaths {
   }
 
   /**
-   * Parse the meta replicaId from the passed znode
+   * Parse the meta replicaId from the passed znode name.
    * @param znode the name of the znode, does not include baseZNode
    * @return replicaId
    */
   public int getMetaReplicaIdFromZnode(String znode) {
-    if (znode.equals(metaZNodePrefix)) {
-      return RegionInfo.DEFAULT_REPLICA_ID;
-    }
-    return Integer.parseInt(znode.substring(metaZNodePrefix.length() + 1));
+    return znode.equals(metaZNodePrefix)?
+        RegionInfo.DEFAULT_REPLICA_ID:
+        Integer.parseInt(znode.substring(metaZNodePrefix.length() + 1));
   }
 
   /**
-   * Is it the default meta replica's znode
-   * @param znode the name of the znode, does not include baseZNode
-   * @return true or false
+   * @return True if meta znode.
    */
-  public boolean isDefaultMetaReplicaZnode(String znode) {
-    return metaReplicaZNodes.get(DEFAULT_REPLICA_ID).equals(znode);
+  public boolean isMetaZNodePrefix(String znode) {
+    return znode != null && znode.startsWith(this.metaZNodePrefix);
   }
 
   /**
