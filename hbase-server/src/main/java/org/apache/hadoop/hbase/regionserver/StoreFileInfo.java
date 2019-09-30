@@ -25,7 +25,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.sun.istack.Nullable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -116,7 +115,7 @@ public class StoreFileInfo {
   }
 
   private StoreFileInfo(final Configuration conf, final FileSystem fs,
-      @Nullable final FileStatus fileStatus, final Path initialPath) throws IOException {
+      final FileStatus fileStatus, final Path initialPath) throws IOException {
     assert fs != null;
     assert initialPath != null;
     assert conf != null;
