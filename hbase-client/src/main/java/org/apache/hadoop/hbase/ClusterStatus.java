@@ -26,6 +26,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -342,6 +344,11 @@ public class ClusterStatus implements ClusterMetrics {
   @Override
   public int getMasterInfoPort() {
     return metrics.getMasterInfoPort();
+  }
+
+  @Override
+  public Map<TableName, RegionStatesCount> getTableRegionStatesCount() {
+    return metrics.getTableRegionStatesCount();
   }
 
   @Override
