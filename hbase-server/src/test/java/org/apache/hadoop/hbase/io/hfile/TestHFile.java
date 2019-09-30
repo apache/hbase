@@ -45,6 +45,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
+import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
@@ -60,12 +61,15 @@ import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 import org.junit.Assert;
@@ -760,5 +764,40 @@ public class TestHFile  {
         0, expectedArray.length);
   }
 
-}
+  @Test
+  public void testDBEShipped() throws IOException {
+    for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
+      DataBlockEncoder encoder = encoding.getEncoder();
+      if (encoder == null) {
+        continue;
+      }
+      Path f = new Path(ROOT_DIR, testName.getMethodName() + "_" + encoding);
+      HFileContext context = new HFileContextBuilder()
+          .withIncludesTags(false)
+          .withDataBlockEncoding(encoding).build();
+      HFileWriterImpl writer = (HFileWriterImpl) HFile.getWriterFactory(conf, cacheConf)
+          .withPath(fs, f).withFileContext(context).create();
 
+      KeyValue kv = new KeyValue(Bytes.toBytes("testkey1"), Bytes.toBytes("family"),
+          Bytes.toBytes("qual"), Bytes.toBytes("testvalue"));
+      KeyValue kv2 = new KeyValue(Bytes.toBytes("testkey2"), Bytes.toBytes("family"),
+        Bytes.toBytes("qual"), Bytes.toBytes("testvalue"));
+      KeyValue kv3 = new KeyValue(Bytes.toBytes("testkey3"), Bytes.toBytes("family"),
+        Bytes.toBytes("qual"), Bytes.toBytes("testvalue"));
+
+      ByteBuffer buffer = ByteBuffer.wrap(kv.getBuffer());
+      ByteBuffer buffer2 = ByteBuffer.wrap(kv2.getBuffer());
+      ByteBuffer buffer3 = ByteBuffer.wrap(kv3.getBuffer());
+
+      writer.append(new ByteBufferKeyValue(buffer, 0, buffer.remaining()));
+      writer.beforeShipped();
+
+      // pollute first cell's backing ByteBuffer
+      ByteBufferUtils.copyFromBufferToBuffer(buffer3, buffer);
+
+      // write another cell, if DBE not Shipped, test will fail
+      writer.append(new ByteBufferKeyValue(buffer2, 0, buffer2.remaining()));
+      writer.close();
+    }
+  }
+}

@@ -15,6 +15,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -30,11 +31,9 @@ public class RowIndexEncoderV1 {
   private DataOutputStream out;
   private NoneEncoder encoder;
   private int startOffset = -1;
-  private ByteArrayOutputStream rowsOffsetBAOS = new ByteArrayOutputStream(
-      64 * 4);
+  private ByteArrayOutputStream rowsOffsetBAOS = new ByteArrayOutputStream(64 * 4);
 
-  public RowIndexEncoderV1(DataOutputStream out,
-      HFileBlockDefaultEncodingContext encodingCtx) {
+  public RowIndexEncoderV1(DataOutputStream out, HFileBlockDefaultEncodingContext encodingCtx) {
     this.out = out;
     this.encoder = new NoneEncoder(out, encodingCtx);
   }
@@ -85,4 +84,9 @@ public class RowIndexEncoderV1 {
     }
   }
 
+  void beforeShipped() {
+    if (this.lastCell != null) {
+      this.lastCell = KeyValueUtil.toNewKeyCell(this.lastCell);
+    }
+  }
 }
