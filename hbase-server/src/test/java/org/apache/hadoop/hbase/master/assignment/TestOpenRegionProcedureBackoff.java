@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.client.AsyncAdmin;
 import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -94,7 +95,14 @@ public class TestOpenRegionProcedureBackoff {
     Configuration conf = UTIL.getConfiguration();
     conf.setClass(HConstants.MASTER_IMPL, HMasterForTest.class, HMaster.class);
     UTIL.startMiniCluster(1);
-    UTIL.waitTableAvailable(TableName.META_TABLE_NAME);
+    UTIL.waitFor(10000, () -> {
+      try (
+        RegionLocator locator = UTIL.getConnection().getRegionLocator(TableName.META_TABLE_NAME)) {
+        return locator.getRegionLocation(HConstants.EMPTY_START_ROW) != null;
+      } catch (Exception e) {
+        return false;
+      }
+    });
   }
 
   @AfterClass
