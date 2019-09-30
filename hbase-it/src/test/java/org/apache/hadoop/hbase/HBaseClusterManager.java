@@ -62,6 +62,15 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
       "timeout 30 /usr/bin/ssh %1$s %2$s%3$s%4$s \"sudo -u %6$s %5$s\"";
   private String tunnelCmd;
 
+  /**
+   * The command format that is used to execute the remote command with sudo. Arguments:
+   * 1 SSH options, 2 user name , 3 "@" if username is set, 4 host,
+   * 5 original command, 6 timeout.
+   */
+  private static final String DEFAULT_TUNNEL_SUDO_CMD =
+      "timeout %6$s /usr/bin/ssh %1$s %2$s%3$s%4$s \"sudo %5$s\"";
+  private String tunnelSudoCmd;
+
   private static final String RETRY_ATTEMPTS_KEY = "hbase.it.clustermanager.retry.attempts";
   private static final int DEFAULT_RETRY_ATTEMPTS = 5;
 
@@ -86,6 +95,7 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
     sshOptions = (sshOptions == null) ? "" : sshOptions;
     sshUserName = (sshUserName == null) ? "" : sshUserName;
     tunnelCmd = conf.get("hbase.it.clustermanager.ssh.cmd", DEFAULT_TUNNEL_CMD);
+    tunnelSudoCmd = conf.get("hbase.it.clustermanager.ssh.sudo.cmd", DEFAULT_TUNNEL_SUDO_CMD);
     // Print out ssh special config if any.
     if ((sshUserName != null && sshUserName.length() > 0) ||
         (sshOptions != null && sshOptions.length() > 0)) {
@@ -149,6 +159,38 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
       String at = sshUserName.isEmpty() ? "" : "@";
       String remoteCmd = StringUtils.join(super.getExecString(), " ");
       String cmd = String.format(tunnelCmd, sshOptions, sshUserName, at, hostname, remoteCmd, user);
+      LOG.info("Executing full command [" + cmd + "]");
+      return new String[] { "/usr/bin/env", "bash", "-c", cmd };
+    }
+
+    @Override
+    public void execute() throws IOException {
+      super.execute();
+    }
+  }
+
+  /**
+   * Executes commands over SSH
+   */
+  protected class RemoteSudoShell extends Shell.ShellCommandExecutor {
+    private String hostname;
+
+    public RemoteSudoShell(String hostname, String[] execString, long timeout) {
+      this(hostname, execString, null, null, timeout);
+    }
+
+    public RemoteSudoShell(String hostname, String[] execString, File dir, Map<String, String> env,
+        long timeout) {
+      super(execString, dir, env, timeout);
+      this.hostname = hostname;
+    }
+
+    @Override
+    public String[] getExecString() {
+      String at = sshUserName.isEmpty() ? "" : "@";
+      String remoteCmd = StringUtils.join(super.getExecString(), " ");
+      String cmd = String.format(tunnelSudoCmd, sshOptions, sshUserName, at, hostname, remoteCmd,
+          timeOutInterval/1000f);
       LOG.info("Executing full command [" + cmd + "]");
       return new String[] { "/usr/bin/env", "bash", "-c", cmd };
     }
@@ -324,6 +366,50 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
     while (true) {
       try {
         return exec(hostname, service, cmd);
+      } catch (IOException e) {
+        retryOrThrow(retryCounter, e, hostname, cmd);
+      }
+      try {
+        retryCounter.sleepUntilNextRetry();
+      } catch (InterruptedException ex) {
+        // ignore
+        LOG.warn("Sleep Interrupted:" + ex);
+      }
+    }
+  }
+
+  /**
+   * Execute the given command on the host using SSH
+   * @return pair of exit code and command output
+   * @throws IOException if something goes wrong.
+   */
+  public Pair<Integer, String> execSudo(String hostname, long timeout, String... cmd)
+      throws IOException {
+    LOG.info("Executing remote command: " + StringUtils.join(cmd, " ") + " , hostname:" + hostname);
+
+    RemoteSudoShell shell = new RemoteSudoShell(hostname, cmd, timeout);
+    try {
+      shell.execute();
+    } catch (Shell.ExitCodeException ex) {
+      // capture the stdout of the process as well.
+      String output = shell.getOutput();
+      // add output for the ExitCodeException.
+      throw new Shell.ExitCodeException(ex.getExitCode(), "stderr: " + ex.getMessage()
+          + ", stdout: " + output);
+    }
+
+    LOG.info("Executed remote command, exit code:" + shell.getExitCode()
+        + " , output:" + shell.getOutput());
+
+    return new Pair<>(shell.getExitCode(), shell.getOutput());
+  }
+
+  public Pair<Integer, String> execSudoWithRetries(String hostname, long timeout, String... cmd)
+      throws IOException {
+    RetryCounter retryCounter = retryCounterFactory.create();
+    while (true) {
+      try {
+        return execSudo(hostname, timeout, cmd);
       } catch (IOException e) {
         retryOrThrow(retryCounter, e, hostname, cmd);
       }
