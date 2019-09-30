@@ -19,8 +19,8 @@
 package org.apache.hadoop.hbase.io.encoding;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.yetus.audience.InterfaceAudience;
-
 /**
  * Keeps track of the encoding state.
  */
@@ -31,4 +31,12 @@ public class EncodingState {
    * The previous Cell the encoder encoded.
    */
   protected Cell prevCell = null;
+
+  public void beforeShipped() {
+    if (this.prevCell != null) {
+      // can't use KeyValueUtil#toNewKeyCell, because we need both key and value
+      // from the prevCell in FastDiffDeltaEncoder
+      this.prevCell = KeyValueUtil.copyToNewKeyValue(this.prevCell);
+    }
+  }
 }
