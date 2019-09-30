@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.sun.istack.Nullable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -111,11 +112,11 @@ public class StoreFileInfo {
    */
   public StoreFileInfo(final Configuration conf, final FileSystem fs, final Path initialPath)
       throws IOException {
-    this(conf, fs, initialPath, null, null);
+    this(conf, fs, null, initialPath);
   }
 
-  private StoreFileInfo(final Configuration conf, final FileSystem fs, final Path initialPath,
-      final Long createdTimestamp, final Long size) throws IOException {
+  private StoreFileInfo(final Configuration conf, final FileSystem fs,
+      @Nullable final FileStatus fileStatus, final Path initialPath) throws IOException {
     assert fs != null;
     assert initialPath != null;
     assert conf != null;
@@ -143,13 +144,13 @@ public class StoreFileInfo {
               " reference to " + referencePath);
     } else if (isHFile(p)) {
       // HFile
-      if (createdTimestamp != null && size != null) {
-        this.createdTimestamp = createdTimestamp;
-        this.size = size;
-      } else {
-        FileStatus fileStatus = fs.getFileStatus(initialPath);
+      if (fileStatus != null) {
         this.createdTimestamp = fileStatus.getModificationTime();
         this.size = fileStatus.getLen();
+      } else {
+        FileStatus fStatus = fs.getFileStatus(initialPath);
+        this.createdTimestamp = fStatus.getModificationTime();
+        this.size = fStatus.getLen();
       }
       this.reference = null;
       this.link = null;
@@ -166,7 +167,7 @@ public class StoreFileInfo {
    */
   public StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus)
       throws IOException {
-    this(conf, fs, fileStatus.getPath(), fileStatus.getModificationTime(), fileStatus.getLen());
+    this(conf, fs, fileStatus, fileStatus.getPath());
   }
 
   /**
