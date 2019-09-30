@@ -763,6 +763,7 @@ public class HFileWriterImpl implements HFile.Writer {
 
   @Override
   public void beforeShipped() throws IOException {
+    this.blockWriter.beforeShipped();
     // Add clone methods for every cell
     if (this.lastCell != null) {
       this.lastCell = KeyValueUtil.toNewKeyCell(this.lastCell);
