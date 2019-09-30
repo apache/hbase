@@ -325,6 +325,13 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
   }
 
   @Override
+  protected synchronized boolean setTimeoutFailure(MasterProcedureEnv env) {
+    setState(ProcedureProtos.ProcedureState.RUNNABLE);
+    env.getProcedureScheduler().addFront(this);
+    return false; // 'false' means that this procedure handled the timeout
+  }
+
+  @Override
   public boolean storeInDispatchedQueue() {
     return false;
   }
