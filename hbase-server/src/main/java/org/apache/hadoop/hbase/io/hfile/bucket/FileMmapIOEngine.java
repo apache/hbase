@@ -48,7 +48,7 @@ public abstract class FileMmapIOEngine extends PersistentIOEngine {
   private RandomAccessFile raf = null;
 
   public FileMmapIOEngine(String filePath, long capacity) throws IOException {
-    super(new String[] {filePath});
+    super(filePath);
     this.path = filePath;
     this.size = capacity;
     long fileSize = 0;

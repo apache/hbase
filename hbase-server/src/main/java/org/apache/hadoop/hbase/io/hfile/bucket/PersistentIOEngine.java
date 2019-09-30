@@ -38,7 +38,7 @@ public abstract class PersistentIOEngine implements IOEngine {
   private static final DuFileCommand DU = new DuFileCommand(new String[] {"du", ""});
   protected final String[] filePaths;
 
-  public PersistentIOEngine(String[] filePaths) {
+  public PersistentIOEngine(String... filePaths) {
     this.filePaths = filePaths;
   }
 

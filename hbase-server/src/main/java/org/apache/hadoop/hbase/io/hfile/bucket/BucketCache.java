@@ -1147,7 +1147,7 @@ public class BucketCache implements BlockCache, HeapSize {
         algorithm);
     } else {
       // if has not checksum, it means the persistence file is old format
-      LOG.warn("Persistence file is old format, it does not support verifying file integrity!");
+      LOG.info("Persistence file is old format, it does not support verifying file integrity!");
     }
     verifyCapacityAndClasses(proto.getCacheCapacity(), proto.getIoClass(), proto.getMapClass());
     backingMap = BucketProtoUtils.fromPB(proto.getDeserializersMap(), proto.getBackingMap());
@@ -1253,7 +1253,7 @@ public class BucketCache implements BlockCache, HeapSize {
     return this.bucketAllocator.getUsedSize();
   }
 
-  public String getAlgorithm() {
+  protected String getAlgorithm() {
     return algorithm;
   }
 
