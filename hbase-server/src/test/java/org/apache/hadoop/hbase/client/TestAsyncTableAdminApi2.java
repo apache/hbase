@@ -39,7 +39,6 @@ import java.util.Set;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 /**
  * Class to test asynchronous table admin operations
@@ -53,18 +52,6 @@ public class TestAsyncTableAdminApi2 extends TestAsyncAdminBase {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestAsyncTableAdminApi2.class);
-
-  @Test
-  public void testDisableCatalogTable() throws Exception {
-    try {
-      this.admin.disableTable(TableName.META_TABLE_NAME).join();
-      fail("Expected to throw ConstraintException");
-    } catch (Exception e) {
-    }
-    // Before the fix for HBASE-6146, the below table creation was failing as the hbase:meta table
-    // actually getting disabled by the disableTable() call.
-    createTableWithDefaultConf(tableName);
-  }
 
   @Test
   public void testAddColumnFamily() throws Exception {

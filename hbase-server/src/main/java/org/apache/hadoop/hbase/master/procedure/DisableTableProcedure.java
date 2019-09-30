@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableState;
-import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.TableStateManager;
@@ -109,8 +108,8 @@ public class DisableTableProcedure
           setNextState(DisableTableState.DISABLE_TABLE_ADD_REPLICATION_BARRIER);
           break;
         case DISABLE_TABLE_ADD_REPLICATION_BARRIER:
-          if (env.getMasterServices().getTableDescriptors().get(tableName)
-            .hasGlobalReplicationScope()) {
+          if (env.getMasterServices().getTableDescriptors().get(tableName).
+              hasGlobalReplicationScope()) {
             MasterFileSystem fs = env.getMasterFileSystem();
             try (BufferedMutator mutator = env.getMasterServices().getConnection()
               .getBufferedMutator(TableName.META_TABLE_NAME)) {
@@ -242,10 +241,7 @@ public class DisableTableProcedure
    */
   private boolean prepareDisable(final MasterProcedureEnv env) throws IOException {
     boolean canTableBeDisabled = true;
-    if (tableName.equals(TableName.META_TABLE_NAME)) {
-      setFailure("master-disable-table", new ConstraintException("Cannot disable catalog table"));
-      canTableBeDisabled = false;
-    } else if (!MetaTableAccessor.tableExists(env.getMasterServices().getConnection(), tableName)) {
+    if (!MetaTableAccessor.tableExists(env.getMasterServices().getConnection(), tableName)) {
       setFailure("master-disable-table", new TableNotFoundException(tableName));
       canTableBeDisabled = false;
     } else if (!skipTableStateCheck) {

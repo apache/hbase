@@ -147,8 +147,7 @@ public class RegionStateStore {
     }
   }
 
-  public void updateRegionLocation(RegionStateNode regionStateNode)
-      throws IOException {
+  void updateRegionLocation(RegionStateNode regionStateNode) throws IOException {
     if (regionStateNode.getRegionInfo().isMetaRegion()) {
       updateMetaLocation(regionStateNode.getRegionInfo(), regionStateNode.getRegionLocation(),
         regionStateNode.getState());
