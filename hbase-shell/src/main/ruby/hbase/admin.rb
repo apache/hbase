@@ -614,8 +614,8 @@ module Hbase
       begin
         cluster_metrics = @admin.getClusterMetrics
         table_region_status = cluster_metrics
-                                  .getTableRegionStatesCount
-                                  .get(org.apache.hadoop.hbase.TableName.valueOf(table_name))
+                              .getTableRegionStatesCount
+                              .get(org.apache.hadoop.hbase.TableName.valueOf(table_name))
         if table_region_status.getTotalRegions != 0
           updated_regions = table_region_status.getTotalRegions -
                             table_region_status.getRegionsInTransition -
