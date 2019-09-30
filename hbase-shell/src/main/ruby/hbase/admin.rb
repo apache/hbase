@@ -611,16 +611,21 @@ module Hbase
       # Table should exist
       raise(ArgumentError, "Can't find a table: #{table_name}") unless exists?(table_name)
 
-      status = Pair.new
       begin
-        status = @admin.getAlterStatus(org.apache.hadoop.hbase.TableName.valueOf(table_name))
-        if status.getSecond != 0
-          puts "#{status.getSecond - status.getFirst}/#{status.getSecond} regions updated."
+        cluster_metrics = @admin.getClusterMetrics
+        table_region_status = cluster_metrics
+                              .getTableRegionStatesCount
+                              .get(org.apache.hadoop.hbase.TableName.valueOf(table_name))
+        if table_region_status.getTotalRegions != 0
+          updated_regions = table_region_status.getTotalRegions -
+                            table_region_status.getRegionsInTransition -
+                            table_region_status.getClosedRegions
+          puts "#{updated_regions}/#{table_region_status.getTotalRegions} regions updated."
         else
           puts 'All regions updated.'
         end
         sleep 1
-      end while !status.nil? && status.getFirst != 0
+      end while !table_region_status.nil? && table_region_status.getRegionsInTransition != 0
       puts 'Done.'
     end
 
