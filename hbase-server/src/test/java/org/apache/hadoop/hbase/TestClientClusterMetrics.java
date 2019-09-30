@@ -30,6 +30,9 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.AsyncAdmin;
 import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionStatesCount;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
@@ -38,6 +41,7 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.junit.AfterClass;
@@ -60,6 +64,9 @@ public class TestClientClusterMetrics {
   private final static int MASTERS = 3;
   private static MiniHBaseCluster CLUSTER;
   private static HRegionServer DEAD;
+  private static final TableName TABLE_NAME = TableName.valueOf("test");
+  private static final byte[] CF = Bytes.toBytes("cf");
+
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -123,6 +130,11 @@ public class TestClientClusterMetrics {
         defaults.getLiveServerMetrics().size());
       Assert.assertEquals(origin.getMasterInfoPort(), defaults.getMasterInfoPort());
       Assert.assertEquals(origin.getServersName().size(), defaults.getServersName().size());
+      origin.getTableRegionStatesCount().forEach(((tableName, regionStatesCount) -> {
+        RegionStatesCount defaultRegionStatesCount = defaults.getTableRegionStatesCount()
+          .get(tableName);
+        Assert.assertEquals(defaultRegionStatesCount, regionStatesCount);
+      }));
     }
   }
 
@@ -165,6 +177,38 @@ public class TestClientClusterMetrics {
     Assert.assertEquals(DEAD.getServerName(), deadServerName);
     Assert.assertNotNull(metrics.getServersName());
     Assert.assertEquals(numRs, metrics.getServersName().size());
+  }
+
+  @Test
+  public void testRegionStatesCount() throws Exception {
+    Table table = UTIL.createTable(TABLE_NAME, CF);
+    table.put(new Put(Bytes.toBytes("k1"))
+      .addColumn(CF, Bytes.toBytes("q1"), Bytes.toBytes("v1")));
+    table.put(new Put(Bytes.toBytes("k2"))
+      .addColumn(CF, Bytes.toBytes("q2"), Bytes.toBytes("v2")));
+    table.put(new Put(Bytes.toBytes("k3"))
+      .addColumn(CF, Bytes.toBytes("q3"), Bytes.toBytes("v3")));
+
+    ClusterMetrics metrics = ADMIN.getClusterMetrics();
+    Assert.assertEquals(metrics.getTableRegionStatesCount().size(), 3);
+    Assert.assertEquals(metrics.getTableRegionStatesCount().get(TableName.META_TABLE_NAME)
+      .getRegionsInTransition(), 0);
+    Assert.assertEquals(metrics.getTableRegionStatesCount().get(TableName.META_TABLE_NAME)
+      .getOpenRegions(), 1);
+    Assert.assertEquals(metrics.getTableRegionStatesCount().get(TableName.META_TABLE_NAME)
+      .getTotalRegions(), 1);
+    Assert.assertEquals(metrics.getTableRegionStatesCount().get(TableName.META_TABLE_NAME)
+      .getClosedRegions(), 0);
+    Assert.assertEquals(metrics.getTableRegionStatesCount().get(TableName.META_TABLE_NAME)
+      .getSplitRegions(), 0);
+    Assert.assertEquals(metrics.getTableRegionStatesCount().get(TABLE_NAME)
+      .getRegionsInTransition(), 0);
+    Assert.assertEquals(metrics.getTableRegionStatesCount().get(TABLE_NAME)
+      .getOpenRegions(), 1);
+    Assert.assertEquals(metrics.getTableRegionStatesCount().get(TABLE_NAME)
+      .getTotalRegions(), 1);
+
+    UTIL.deleteTable(TABLE_NAME);
   }
 
   @Test
@@ -222,6 +266,17 @@ public class TestClientClusterMetrics {
         .anyMatch(s -> s.equals(MyObserver.class.getSimpleName())));
     Assert.assertEquals(preCount + 1, MyObserver.PRE_COUNT.get());
     Assert.assertEquals(postCount + 1, MyObserver.POST_COUNT.get());
+  }
+
+  private static void insertData(final TableName tableName, int startRow, int rowCount)
+      throws IOException {
+    Table t = UTIL.getConnection().getTable(tableName);
+    Put p;
+    for (int i = 0; i < rowCount; i++) {
+      p = new Put(Bytes.toBytes("" + (startRow + i)));
+      p.addColumn(CF, Bytes.toBytes("val1"), Bytes.toBytes(i));
+      t.put(p);
+    }
   }
 
   public static class MyObserver implements MasterCoprocessor, MasterObserver {

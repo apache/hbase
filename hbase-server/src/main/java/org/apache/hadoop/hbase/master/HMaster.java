@@ -83,6 +83,7 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
@@ -2514,6 +2515,24 @@ public class HMaster extends HRegionServer implements MasterServices {
         case SERVERS_NAME: {
           if (serverManager != null) {
             builder.setServerNames(serverManager.getOnlineServersList());
+          }
+          break;
+        }
+        case TABLE_TO_REGIONS_COUNT: {
+          if (isActiveMaster() && isInitialized() && assignmentManager != null) {
+            try {
+              Map<TableName, RegionStatesCount> tableRegionStatesCountMap = new HashMap<>();
+              Map<String, TableDescriptor> tableDescriptorMap = getTableDescriptors().getAll();
+              for (TableDescriptor tableDescriptor : tableDescriptorMap.values()) {
+                TableName tableName = tableDescriptor.getTableName();
+                RegionStatesCount regionStatesCount = assignmentManager
+                  .getRegionStatesCount(tableName);
+                tableRegionStatesCountMap.put(tableName, regionStatesCount);
+              }
+              builder.setTableRegionStatesCount(tableRegionStatesCountMap);
+            } catch (IOException e) {
+              LOG.error("Error while populating TABLE_TO_REGIONS_COUNT for Cluster Metrics..", e);
+            }
           }
           break;
         }

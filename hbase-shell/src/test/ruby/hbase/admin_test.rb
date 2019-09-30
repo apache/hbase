@@ -110,6 +110,13 @@ module Hbase
 
     #-------------------------------------------------------------------------------
 
+    define_test 'alter_status should work' do
+      output = capture_stdout { command(:alter_status, @test_name) }
+      assert(output.include?('1/1 regions updated'))
+    end
+
+    #-------------------------------------------------------------------------------
+
     define_test "compact should work" do
       command(:compact, 'hbase:meta')
     end
