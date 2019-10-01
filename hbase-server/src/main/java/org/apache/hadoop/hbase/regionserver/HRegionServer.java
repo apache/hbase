@@ -744,14 +744,9 @@ public class HRegionServer extends HasThread implements
 
   protected TableDescriptors getFsTableDescriptors() throws IOException {
     return new FSTableDescriptors(this.conf,
-      this.fs, this.rootDir, !canUpdateTableDescriptor(), false);
+      this.fs, this.rootDir, !canUpdateTableDescriptor(), false, getMetaTableObserver());
   }
 
-  /**
-   * @deprecated Since 2.3.0. Not needed anymore. Was used by Master to pass in replication
-   *   setting on hbase:meta construction. To be removed in hbase4.
-   */
-  @Deprecated
   protected Function<TableDescriptorBuilder, TableDescriptorBuilder> getMetaTableObserver() {
     return null;
   }

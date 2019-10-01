@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,10 +23,10 @@ import java.util.HashMap;
 import java.util.Map;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.TableStateManager;
+import org.apache.hadoop.hbase.master.TableStateManager.TableStateNotFoundException;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.PeerProcedureInterface;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
@@ -140,7 +140,7 @@ public abstract class AbstractPeerProcedure<TState> extends AbstractPeerNoLockPr
           return true;
         }
         Thread.sleep(SLEEP_INTERVAL_MS);
-      } catch (TableNotFoundException e) {
+      } catch (TableStateNotFoundException e) {
         return false;
       } catch (InterruptedException e) {
         throw (IOException) new InterruptedIOException(e.getMessage()).initCause(e);

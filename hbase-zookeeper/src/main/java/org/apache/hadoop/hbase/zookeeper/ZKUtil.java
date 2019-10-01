@@ -2057,7 +2057,7 @@ public final class ZKUtil {
       " byte(s) of data from znode " + znode +
       (watcherSet? " and set watcher; ": "; data=") +
       (data == null? "null": data.length == 0? "empty": (
-          zkw.getZNodePaths().isMetaZNodePrefix(znode)?
+          znode.startsWith(zkw.getZNodePaths().metaZNodePrefix)?
             getServerNameOrEmptyString(data):
           znode.startsWith(zkw.getZNodePaths().backupMasterAddressesZNode)?
             getServerNameOrEmptyString(data):

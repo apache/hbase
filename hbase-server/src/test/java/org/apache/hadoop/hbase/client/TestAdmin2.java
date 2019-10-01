@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.Waiter.Predicate;
+import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -501,6 +502,22 @@ public class TestAdmin2 extends TestAdminBase {
 
     table.close();
     return regionServer;
+  }
+
+  @Test
+  public void testDisableCatalogTable() throws Exception {
+    try {
+      ADMIN.disableTable(TableName.META_TABLE_NAME);
+      fail("Expected to throw ConstraintException");
+    } catch (ConstraintException e) {
+    }
+    // Before the fix for HBASE-6146, the below table creation was failing as the hbase:meta table
+    // actually getting disabled by the disableTable() call.
+    HTableDescriptor htd =
+        new HTableDescriptor(TableName.valueOf(Bytes.toBytes(name.getMethodName())));
+    HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toBytes("cf1"));
+    htd.addFamily(hcd);
+    TEST_UTIL.getAdmin().createTable(htd);
   }
 
   @Test

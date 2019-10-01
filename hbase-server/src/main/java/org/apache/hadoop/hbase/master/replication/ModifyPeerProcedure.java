@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,10 +20,10 @@ package org.apache.hadoop.hbase.master.replication;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.TableStateManager;
+import org.apache.hadoop.hbase.master.TableStateManager.TableStateNotFoundException;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure;
@@ -125,7 +125,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
           return false;
         }
         Thread.sleep(SLEEP_INTERVAL_MS);
-      } catch (TableNotFoundException e) {
+      } catch (TableStateNotFoundException e) {
         return false;
       } catch (InterruptedException e) {
         throw (IOException) new InterruptedIOException(e.getMessage()).initCause(e);

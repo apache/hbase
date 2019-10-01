@@ -18,9 +18,12 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -29,6 +32,7 @@ import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.regex.Pattern;
 import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
@@ -197,6 +201,14 @@ public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
       ok = false;
     }
     assertTrue(ok);
+    // meta table can not be disabled.
+    try {
+      admin.disableTable(TableName.META_TABLE_NAME).get();
+      fail("meta table can not be disabled");
+    } catch (ExecutionException e) {
+      Throwable cause = e.getCause();
+      assertThat(cause, instanceOf(DoNotRetryIOException.class));
+    }
   }
 
   @Test

@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -158,8 +158,7 @@ class ZKAsyncRegistry implements AsyncRegistry {
           }
           Pair<RegionState.State, ServerName> stateAndServerName = getStateAndServerName(proto);
           if (stateAndServerName.getFirst() != RegionState.State.OPEN) {
-            LOG.warn("hbase:meta region (replicaId={}) is in state {}", replicaId,
-                stateAndServerName.getFirst());
+            LOG.warn("Meta region is in state " + stateAndServerName.getFirst());
           }
           locs[DEFAULT_REPLICA_ID] = new HRegionLocation(
             getRegionInfoForDefaultReplica(FIRST_META_REGIONINFO), stateAndServerName.getSecond());
@@ -174,7 +173,7 @@ class ZKAsyncRegistry implements AsyncRegistry {
             LOG.warn("Failed to fetch " + path, error);
             locs[replicaId] = null;
           } else if (proto == null) {
-            LOG.warn("hbase:meta znode for replica " + replicaId + " is null");
+            LOG.warn("Meta znode for replica " + replicaId + " is null");
             locs[replicaId] = null;
           } else {
             Pair<RegionState.State, ServerName> stateAndServerName = getStateAndServerName(proto);
@@ -198,8 +197,9 @@ class ZKAsyncRegistry implements AsyncRegistry {
   public CompletableFuture<RegionLocations> getMetaRegionLocation() {
     CompletableFuture<RegionLocations> future = new CompletableFuture<>();
     addListener(
-      zk.list(znodePaths.baseZNode).thenApply(children -> children.stream().
-          filter(c -> znodePaths.isMetaZNodePrefix(c)).collect(Collectors.toList())),
+      zk.list(znodePaths.baseZNode)
+        .thenApply(children -> children.stream()
+          .filter(c -> c.startsWith(znodePaths.metaZNodePrefix)).collect(Collectors.toList())),
       (metaReplicaZNodes, error) -> {
         if (error != null) {
           future.completeExceptionally(error);

@@ -147,13 +147,6 @@ public class TestMetaWithReplicas {
   public void testMetaHTDReplicaCount() throws Exception {
     assertEquals(3,
       TEST_UTIL.getAdmin().getDescriptor(TableName.META_TABLE_NAME).getRegionReplication());
-    try (AsyncConnection connection =
-             ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get()) {
-      AsyncTable t = connection.getTable(TableName.META_TABLE_NAME);
-      List<HRegionLocation> rls =
-          t.getRegionLocator().getRegionLocations(HConstants.EMPTY_START_ROW, true).get();
-      assertEquals(3, rls.size());
-    }
   }
 
   @Test
