@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -59,6 +59,14 @@ public final class MetaTableLocator {
   private static final Logger LOG = LoggerFactory.getLogger(MetaTableLocator.class);
 
   private MetaTableLocator() {
+  }
+
+  /**
+   * Checks if the meta region location is available.
+   * @return true if meta region location is available, false if not
+   */
+  public static boolean isLocationAvailable(ZKWatcher zkw) {
+    return getMetaRegionLocation(zkw) != null;
   }
 
   /**
@@ -258,7 +266,7 @@ public final class MetaTableLocator {
   }
 
   /**
-   * Load the meta region state from the meta region server ZNode.
+   * Load the meta region state from the meta server ZNode.
    *
    * @param zkw reference to the {@link ZKWatcher} which also contains configuration and operation
    * @param replicaId the ID of the replica
@@ -298,8 +306,10 @@ public final class MetaTableLocator {
     if (serverName == null) {
       state = RegionState.State.OFFLINE;
     }
-    return new RegionState(RegionReplicaUtil.getRegionInfoForReplica(
-        RegionInfoBuilder.FIRST_META_REGIONINFO, replicaId), state, serverName);
+    return new RegionState(
+        RegionReplicaUtil.getRegionInfoForReplica(
+            RegionInfoBuilder.FIRST_META_REGIONINFO, replicaId),
+        state, serverName);
   }
 
   /**

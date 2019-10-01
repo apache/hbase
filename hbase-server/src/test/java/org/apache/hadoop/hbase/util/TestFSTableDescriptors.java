@@ -322,9 +322,7 @@ public class TestFSTableDescriptors {
     }
 
     Map<String, TableDescriptor> tables = tds.getAll();
-    assertEquals(5, tables.size());
-    // Remove because it messes up below order test.
-    tables.remove(TableName.META_TABLE_NAME.toString());
+    assertEquals(4, tables.size());
 
     String[] tableNamesOrdered =
         new String[] { "bar:foo", "default:bar", "default:foo", "foo:bar" };
@@ -370,9 +368,6 @@ public class TestFSTableDescriptors {
 
     for (Map.Entry<String, TableDescriptor> entry: nonchtds.getAll().entrySet()) {
       String t = (String) entry.getKey();
-      if (t.equals(TableName.META_TABLE_NAME.toString())) {
-        continue;
-      }
       TableDescriptor nchtd = entry.getValue();
       assertTrue("expected " + htd.toString() +
                    " got: " + chtds.get(TableName.valueOf(t)).toString(),

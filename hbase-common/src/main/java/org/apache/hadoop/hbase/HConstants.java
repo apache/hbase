@@ -1211,7 +1211,8 @@ public final class HConstants {
   /** Directories that are not HBase user table directories */
   public static final List<String> HBASE_NON_USER_TABLE_DIRS =
     Collections.unmodifiableList(Arrays.asList((String[])ArrayUtils.addAll(
-       HBASE_NON_TABLE_DIRS.toArray())));
+      new String[] { TableName.META_TABLE_NAME.getNameAsString() },
+      HBASE_NON_TABLE_DIRS.toArray())));
 
   /** Health script related settings. */
   public static final String HEALTH_SCRIPT_LOC = "hbase.node.health.script.location";

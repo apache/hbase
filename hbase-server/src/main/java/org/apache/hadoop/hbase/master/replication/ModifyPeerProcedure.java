@@ -25,11 +25,11 @@ import java.util.function.LongConsumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.TableStateManager;
+import org.apache.hadoop.hbase.master.TableStateManager.TableStateNotFoundException;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure;
@@ -149,7 +149,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
           return false;
         }
         Thread.sleep(SLEEP_INTERVAL_MS);
-      } catch (TableNotFoundException e) {
+      } catch (TableStateNotFoundException e) {
         return false;
       } catch (InterruptedException e) {
         throw (IOException) new InterruptedIOException(e.getMessage()).initCause(e);
@@ -228,7 +228,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
           return true;
         }
         Thread.sleep(SLEEP_INTERVAL_MS);
-      } catch (TableNotFoundException e) {
+      } catch (TableStateNotFoundException e) {
         return false;
       } catch (InterruptedException e) {
         throw (IOException) new InterruptedIOException(e.getMessage()).initCause(e);
