@@ -239,8 +239,8 @@ pipeline {
             always {
               stash name: 'general-result', includes: "${OUTPUT_DIR_RELATIVE}/commentfile"
               // Has to be relative to WORKSPACE.
-              archive "${env.OUTPUT_DIR_RELATIVE}/*"
-              archive "${env.OUTPUT_DIR_RELATIVE}/**/*"
+              archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/*"
+              archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/**/*"
               publishHTML target: [
                 allowMissing: true,
                 keepAll: true,
@@ -320,8 +320,8 @@ pipeline {
                 fi
 '''
               // Has to be relative to WORKSPACE.
-              archive "${env.OUTPUT_DIR_RELATIVE}/*"
-              archive "${env.OUTPUT_DIR_RELATIVE}/**/*"
+              archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/*"
+              archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/**/*"
               publishHTML target: [
                 allowMissing         : true,
                 keepAll              : true,
@@ -400,8 +400,8 @@ pipeline {
                 fi
 '''
               // Has to be relative to WORKSPACE.
-              archive "${env.OUTPUT_DIR_RELATIVE}/*"
-              archive "${env.OUTPUT_DIR_RELATIVE}/**/*"
+              archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/*"
+              archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/**/*"
               publishHTML target: [
                 allowMissing         : true,
                 keepAll              : true,
@@ -487,8 +487,8 @@ pipeline {
                 fi
 '''
               // Has to be relative to WORKSPACE.
-              archive "${env.OUTPUT_DIR_RELATIVE}/*"
-              archive "${env.OUTPUT_DIR_RELATIVE}/**/*"
+              archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/*"
+              archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/**/*"
               publishHTML target: [
                 allowMissing         : true,
                 keepAll              : true,
@@ -620,10 +620,10 @@ pipeline {
           post {
             always {
               stash name: 'srctarball-result', includes: "output-srctarball/commentfile,output-integration/commentfile"
-              archive 'output-srctarball/*'
-              archive 'output-srctarball/**/*'
-              archive 'output-integration/*'
-              archive 'output-integration/**/*'
+              archiveArtifacts artifacts: 'output-srctarball/*'
+              archiveArtifacts artifacts: 'output-srctarball/**/*'
+              archiveArtifacts artifacts: 'output-integration/*'
+              archiveArtifacts artifacts: 'output-integration/**/*'
             }
           }
         }
