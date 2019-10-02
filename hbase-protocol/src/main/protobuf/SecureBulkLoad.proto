@@ -32,6 +32,7 @@ message SecureBulkLoadHFilesRequest {
   optional bool assign_seq_num = 2;
   required DelegationToken fs_token = 3;
   required string bulk_token = 4;
+  repeated string cluster_ids = 5;
 }
 
 message SecureBulkLoadHFilesResponse {

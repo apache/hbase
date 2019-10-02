@@ -117,10 +117,24 @@ public class SecureBulkLoadClient {
     }
   }
 
+  /**
+   * @deprecated
+   * @param familyPaths
+   * @param userToken
+   * @param bulkToken
+   * @param startRow
+   * @return
+   * @throws IOException
+   */
   public boolean bulkLoadHFiles(final List<Pair<byte[], String>> familyPaths,
-                         final Token<?> userToken,
-                         final String bulkToken,
-                         final byte[] startRow) throws IOException {
+    final Token<?> userToken, final String bulkToken,
+    final byte[] startRow) throws IOException {
+    return this.bulkLoadHFiles(familyPaths, userToken, bulkToken, startRow, null);
+  }
+
+  public boolean bulkLoadHFiles(final List<Pair<byte[], String>> familyPaths,
+    final Token<?> userToken, final String bulkToken,
+    final byte[] startRow, List<String> clusterIds) throws IOException {
     // we never want to send a batch of HFiles to all regions, thus cannot call
     // HTable#coprocessorService methods that take start and end rowkeys; see HBASE-9639
     try {
@@ -151,6 +165,7 @@ public class SecureBulkLoadClient {
           SecureBulkLoadProtos.SecureBulkLoadHFilesRequest.newBuilder()
             .setFsToken(protoDT)
             .addAllFamilyPath(protoFamilyPaths)
+            .addAllClusterIds(clusterIds != null ? clusterIds : new ArrayList<String>())
             .setBulkToken(bulkToken).build();
 
       ServerRpcController controller = new ServerRpcController();
