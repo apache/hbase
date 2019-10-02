@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -47,11 +46,16 @@
 # 1. https://github.com/apache/spark/tree/master/dev/create-release
 #
 set -e
-SELF=$(cd $(dirname $0) && pwd)
+
+# Set this building other hbase repos: e.g. PROJECT=hbase-operator-tools
+export PROJECT="${PROJECT:-hbase}"
+
+SELF=$(cd $(dirname "$0") && pwd)
 . "$SELF/release-util.sh"
 
 function usage {
-  local NAME=$(basename $0)
+  local NAME
+  NAME="$(basename "$0")"
   cat <<EOF
 Usage: $NAME [options]
 
@@ -59,12 +63,13 @@ This script runs the release scripts inside a docker image.
 
 Options:
 
-  -d [path]  required. working directory. output will be written to "output" in here.
-  -n         dry run mode. Checks and local builds, but does not upload anything.
-  -t [tag]   tag for the hbase-rm docker image to use for building (default: "latest").
-  -j [path]  path to local JDK installation to use building. By default the script will
+  -d [path]    required. working directory. output will be written to "output" in here.
+  -n           dry run mode. Checks and local builds, but does not upload anything.
+  -t [tag]     tag for the hbase-rm docker image to use for building (default: "latest").
+  -j [path]    path to local JDK installation to use building. By default the script will
                use openjdk8 installed in the docker image.
-  -s [step]  runs a single step of the process; valid steps are: tag, build, publish. if
+  -p [project] project to build; default 'hbase'; alternatively, 'hbase-thirdparty', etc.
+  -s [step]    runs a single step of the process; valid steps are: tag, build, publish. if
                none specified, runs tag, then build, and then publish.
 EOF
 }
@@ -73,12 +78,13 @@ WORKDIR=
 IMGTAG=latest
 JAVA=
 RELEASE_STEP=
-while getopts "d:hj:ns:t:" opt; do
+while getopts "d:hj:np:s:t:" opt; do
   case $opt in
     d) WORKDIR="$OPTARG" ;;
     n) DRY_RUN=1 ;;
     t) IMGTAG="$OPTARG" ;;
     j) JAVA="$OPTARG" ;;
+    p) PROJECT="$OPTARG" ;;
     s) RELEASE_STEP="$OPTARG" ;;
     h) usage ;;
     ?) error "Invalid option. Run with -h for help." ;;
@@ -90,7 +96,7 @@ if [ -z "$WORKDIR" ] || [ ! -d "$WORKDIR" ]; then
 fi
 
 if [ -d "$WORKDIR/output" ]; then
-  read -p "Output directory already exists. Overwrite and continue? [y/n] " ANSWER
+  read -r -p "Output directory already exists. Overwrite and continue? [y/n] " ANSWER
   if [ "$ANSWER" != "y" ]; then
     error "Exiting."
   fi
@@ -112,7 +118,7 @@ done
 
 GPG_KEY_FILE="$WORKDIR/gpg.key"
 fcreate_secure "$GPG_KEY_FILE"
-$GPG --passphrase $GPG_PASSPHRASE --export-secret-key --armor "$GPG_KEY" > "$GPG_KEY_FILE"
+$GPG --passphrase "$GPG_PASSPHRASE" --export-secret-key --armor "$GPG_KEY" > "$GPG_KEY_FILE"
 
 run_silent "Building hbase-rm image with tag $IMGTAG..." "docker-build.log" \
   docker build -t "hbase-rm:$IMGTAG" --build-arg UID=$UID "$SELF/hbase-rm"
@@ -129,7 +135,7 @@ function cleanup {
 
 trap cleanup EXIT
 
-cat > $ENVFILE <<EOF
+cat > "$ENVFILE" <<EOF
 DRY_RUN=$DRY_RUN
 SKIP_TAG=$SKIP_TAG
 RUNNING_IN_DOCKER=1
@@ -138,7 +144,7 @@ NEXT_VERSION=$NEXT_VERSION
 RELEASE_VERSION=$RELEASE_VERSION
 RELEASE_TAG=$RELEASE_TAG
 GIT_REF=$GIT_REF
-HBASE_PACKAGE_VERSION=$HBASE_PACKAGE_VERSION
+PACKAGE_VERSION=$PACKAGE_VERSION
 ASF_USERNAME=$ASF_USERNAME
 GIT_NAME=$GIT_NAME
 GIT_EMAIL=$GIT_EMAIL
@@ -152,7 +158,7 @@ EOF
 
 JAVA_VOL=
 if [ -n "$JAVA" ]; then
-  echo "JAVA_HOME=/opt/hbase-java" >> $ENVFILE
+  echo "JAVA_HOME=/opt/hbase-java" >> "$ENVFILE"
   JAVA_VOL="--volume $JAVA:/opt/hbase-java"
 fi
 

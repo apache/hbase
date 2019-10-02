@@ -17,8 +17,12 @@
 # limitations under the License.
 #
 
-# Called by do-release-docker.sh. Can be run standalone but needs some love
-# for it to work smooth.
+# Use the adjacent do-release-docker.sh instead, if you can.
+# Otherwise, this runs core of the release creation.
+# Will ask you questions on what to build and for logins
+# and passwords to use building.
+export PROJECT="${PROJECT:-hbase}"
+
 SELF=$(cd $(dirname $0) && pwd)
 . "$SELF/release-util.sh"
 
@@ -30,6 +34,7 @@ while getopts "bn" opt; do
   esac
 done
 
+# If running in docker, import and then cache keys.
 if [ "$RUNNING_IN_DOCKER" = "1" ]; then
   # Run gpg agent.
   eval $(gpg-agent --disable-scdaemon --daemon --no-grab  --allow-preset-passphrase --default-cache-ttl=86400 --max-cache-ttl=86400)
@@ -66,7 +71,7 @@ else
 fi
 
 if should_build "build"; then
-  run_silent "Building HBase..." "build.log" \
+  run_silent "Building ${PROJECT}..." "build.log" \
     "$SELF/release-build.sh" build
 else
   echo "Skipping build step."

@@ -1,6 +1,14 @@
 Entrance script is _do-release-docker.sh_. Requires a local docker;
 for example, on mac os x, Docker for Desktop installed and running.
 
+For usage, pass '-h':
+
+ $ ./do-release-docker.sh -h
+
+To run a build w/o invoking docker (not recommeneded!), use
+_do_release.sh_. It does not take parameters. It will ask
+you what commands to run with taking defaults from environment.
+
 Before starting the RC build, run a reconciliation of what is in
 JIRA with what is in the commit log. Make sure they align and that
 anomalies are explained up in JIRA.
