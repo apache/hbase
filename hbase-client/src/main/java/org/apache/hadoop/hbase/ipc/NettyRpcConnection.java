@@ -36,6 +36,7 @@ import org.apache.hbase.thirdparty.io.netty.channel.ChannelFutureListener;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandler;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelOption;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelPipeline;
+import org.apache.hbase.thirdparty.io.netty.channel.WriteBufferWaterMark;
 import org.apache.hbase.thirdparty.io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleStateHandler;
 import org.apache.hbase.thirdparty.io.netty.util.ReferenceCountUtil;
@@ -257,6 +258,7 @@ class NettyRpcConnection extends RpcConnection {
         .option(ChannelOption.TCP_NODELAY, rpcClient.isTcpNoDelay())
         .option(ChannelOption.SO_KEEPALIVE, rpcClient.tcpKeepAlive)
         .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, rpcClient.connectTO)
+        .option(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(rpcClient.bufferLowWatermark, rpcClient.bufferHighWatermark))
         .handler(new BufferCallBeforeInitHandler()).localAddress(rpcClient.localAddr)
         .remoteAddress(remoteId.address).connect().addListener(new ChannelFutureListener() {
 

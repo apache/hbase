@@ -147,8 +147,13 @@ public abstract class RpcServer implements RpcServerInterface,
    */
   protected final LongAdder callQueueSizeInBytes = new LongAdder();
 
+  protected final boolean tcpReuseAddr; // if T then reuse address
   protected final boolean tcpNoDelay; // if T then disable Nagle's Algorithm
   protected final boolean tcpKeepAlive; // if T then use keepalives
+
+  protected final int tcpBacklog;
+  protected final int bufferLowWatermark;
+  protected final int bufferHighWatermark;
 
   /**
    * This flag is used to indicate to sub threads when they should go down.  When we call
@@ -174,6 +179,14 @@ public abstract class RpcServer implements RpcServerInterface,
   protected static final String WARN_RESPONSE_TIME = "hbase.ipc.warn.response.time";
   protected static final String WARN_RESPONSE_SIZE = "hbase.ipc.warn.response.size";
 
+  protected static final String SERVER_TCP_BACKLOG = "hbase.ipc.server.tcpbacklog";
+  protected static final String SERVER_TCP_REUSEADDR = "hbase.ipc.server.tcpreuseaddr";
+  protected static final String SERVER_TCP_NODELAY = "hbase.ipc.server.tcpnodelay";
+  protected static final String SERVER_TCP_KEEPALIVE = "hbase.ipc.server.tcpkeepalive";
+
+  protected static final String SERVER_BUFFER_LOW_WATERMARK = "hbase.ipc.server.bufferlowwatermark";
+  protected static final String SERVER_BUFFER_HIGH_WATERMARK = "hbase.ipc.server.bufferhighwatermark";
+
   /**
    * Minimum allowable timeout (in milliseconds) in rpc request's header. This
    * configuration exists to prevent the rpc service regarding this request as timeout immediately.
@@ -185,6 +198,10 @@ public abstract class RpcServer implements RpcServerInterface,
   public static final int DEFAULT_MAX_REQUEST_SIZE = DEFAULT_MAX_CALLQUEUE_SIZE / 4; // 256M
   protected static final int DEFAULT_WARN_RESPONSE_TIME = 10000; // milliseconds
   protected static final int DEFAULT_WARN_RESPONSE_SIZE = 100 * 1024 * 1024;
+
+  protected static final int DEFAULT_SERVER_TCP_BACKLOG = 1024;
+  protected static final int DEFAULT_SERVER_BUFFER_LOW_WATERMARK = 1024;
+  protected static final int DEFAULT_SERVER_BUFFER_HIGH_WATERMARK = 64 * 1024;
 
   protected static final int DEFAULT_TRACE_LOG_MAX_LENGTH = 1000;
   protected static final String TRACE_LOG_MAX_LENGTH = "hbase.ipc.trace.log.max.length";
@@ -273,8 +290,12 @@ public abstract class RpcServer implements RpcServerInterface,
     this.maxRequestSize = conf.getInt(MAX_REQUEST_SIZE, DEFAULT_MAX_REQUEST_SIZE);
 
     this.metrics = new MetricsHBaseServer(name, new MetricsHBaseServerWrapperImpl(this));
-    this.tcpNoDelay = conf.getBoolean("hbase.ipc.server.tcpnodelay", true);
-    this.tcpKeepAlive = conf.getBoolean("hbase.ipc.server.tcpkeepalive", true);
+    this.tcpBacklog = conf.getInt(SERVER_TCP_BACKLOG, DEFAULT_SERVER_TCP_BACKLOG);
+    this.tcpReuseAddr = conf.getBoolean(SERVER_TCP_REUSEADDR, true);
+    this.tcpNoDelay = conf.getBoolean(SERVER_TCP_NODELAY, true);
+    this.tcpKeepAlive = conf.getBoolean(SERVER_TCP_KEEPALIVE, true);
+    this.bufferLowWatermark = conf.getInt(SERVER_BUFFER_LOW_WATERMARK, DEFAULT_SERVER_BUFFER_LOW_WATERMARK);
+    this.bufferHighWatermark = conf.getInt(SERVER_BUFFER_HIGH_WATERMARK, DEFAULT_SERVER_BUFFER_HIGH_WATERMARK);
 
     this.cellBlockBuilder = new CellBlockBuilder(conf);
 

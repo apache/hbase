@@ -128,6 +128,8 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
   protected final long failureSleep; // Time to sleep before retry on failure.
   protected final boolean tcpNoDelay; // if T then disable Nagle's Algorithm
   protected final boolean tcpKeepAlive; // if T then use keepalives
+  protected final int bufferLowWatermark;
+  protected final int bufferHighWatermark;
   protected final Codec codec;
   protected final CompressionCodec compressor;
   protected final boolean fallbackAllowed;
@@ -165,12 +167,15 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
       MetricsConnection metrics) {
     this.userProvider = UserProvider.instantiate(conf);
     this.localAddr = localAddr;
-    this.tcpKeepAlive = conf.getBoolean("hbase.ipc.client.tcpkeepalive", true);
     this.clusterId = clusterId != null ? clusterId : HConstants.CLUSTER_ID_DEFAULT;
     this.failureSleep = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
       HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
-    this.maxRetries = conf.getInt("hbase.ipc.client.connect.max.retries", 0);
-    this.tcpNoDelay = conf.getBoolean("hbase.ipc.client.tcpnodelay", true);
+    this.maxRetries = conf.getInt(CLIENT_CONNECT_MAX_RETRIES, 0);
+    this.tcpNoDelay = conf.getBoolean(CLIENT_TCP_NODELAY, true);
+    this.tcpKeepAlive = conf.getBoolean(CLIENT_TCP_KEEPALIVE, true);
+    this.bufferLowWatermark = conf.getInt(CLIENT_BUFFER_LOW_WATERMARK, DEFAULT_CLIENT_BUFFER_LOW_WATERMARK);
+    this.bufferHighWatermark = conf.getInt(CLIENT_BUFFER_HIGH_WATERMARK, DEFAULT_CLIENT_BUFFER_HIGH_WATERMARK);
+
     this.cellBlockBuilder = new CellBlockBuilder(conf);
 
     this.minIdleTimeBeforeClose = conf.getInt(IDLE_TIME, 120000); // 2 minutes
