@@ -485,9 +485,31 @@ if (fqtn != null && master.isInitialized()) {
 <th>Region Server</th>
 <th>ReadRequests<br>(<%= String.format("%,1d", totalReadReq)%>)</th>
 <th>WriteRequests<br>(<%= String.format("%,1d", totalWriteReq)%>)</th>
-<th>StorefileSize<br>(<%= StringUtils.byteDesc(totalSize*1024l*1024)%>)</th>
+<th>StorefileSize<br>
+  <%
+     if (totalSize > 0) {
+  %>
+     (<%= StringUtils.byteDesc(totalSize*1024l*1024)%>)</th>
+  <%
+     } else {
+  %>
+     (<%= "0 MB" %>)</th>
+  <%
+     }
+  %>
 <th>Num.Storefiles<br>(<%= String.format("%,1d", totalStoreFileCount)%>)</th>
-<th>MemSize<br>(<%= StringUtils.byteDesc(totalMemSize*1024l*1024)%>)</th>
+<th>MemSize<br>
+  <%
+     if (totalMemSize > 0) {
+  %>
+     (<%= StringUtils.byteDesc(totalMemSize*1024l*1024)%>)</th>
+  <%
+     } else {
+  %>
+     (<%= "0 MB" %>)</th>
+  <%
+     }
+  %>
 <th>Locality</th>
 <th>Start Key</th>
 <th>End Key</th>
@@ -525,9 +547,19 @@ if (fqtn != null && master.isInitialized()) {
     if(load != null) {
       readReq = String.format("%,1d", load.getReadRequestCount());
       writeReq = String.format("%,1d", load.getWriteRequestCount());
-      regionSize = StringUtils.byteDesc((long) load.getStoreFileSize().get(Size.Unit.BYTE));
+      double rSize = load.getStoreFileSize().get(Size.Unit.BYTE);
+      if (rSize > 0) {
+      regionSize = StringUtils.byteDesc((long)rSize);
+      } else {
+      regionSize = "0 MB";
+      }
       fileCount = String.format("%,1d", load.getStoreFileCount());
-      memSize = StringUtils.byteDesc((long) load.getMemStoreSize().get(Size.Unit.BYTE));
+      double mSize = load.getMemStoreSize().get(Size.Unit.BYTE);
+      if (mSize > 0) {
+      memSize = StringUtils.byteDesc((long)mSize);
+      } else {
+      memSize = "0 MB";
+      }
       locality = load.getDataLocality();
     }
 
