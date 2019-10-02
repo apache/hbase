@@ -439,7 +439,7 @@ public class HRegionServer extends HasThread implements
   /**
    * Unique identifier for the cluster we are a part of.
    */
-  private String clusterId;
+  String clusterId;
 
   /**
    * MX Bean for RegionServerInfo

@@ -136,11 +136,17 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   private UserProvider userProvider;
   private int nrThreads;
 
+  private List<String> clusterIds = new ArrayList<>();
+
   private LoadIncrementalHFiles() {}
 
   public LoadIncrementalHFiles(Configuration conf) throws Exception {
     super(conf);
     initialize();
+  }
+
+  public void setClusterIds(List<String> clusterIds) {
+    this.clusterIds = clusterIds;
   }
 
   private void initialize() throws Exception {
@@ -854,7 +860,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
               + Bytes.toStringBinary(getRow()) + " with hfile group " + famPaths);
           byte[] regionName = getLocation().getRegionInfo().getRegionName();
           if (!isSecureBulkLoadEndpointAvailable()) {
-            success = ProtobufUtil.bulkLoadHFile(getStub(), famPaths, regionName, assignSeqIds);
+            success = ProtobufUtil.bulkLoadHFile(getStub(), famPaths, regionName, assignSeqIds,
+              clusterIds);
           } else {
             try (Table table = conn.getTable(getTableName())) {
               secureClient = new SecureBulkLoadClient(table);

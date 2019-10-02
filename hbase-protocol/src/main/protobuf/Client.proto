@@ -343,6 +343,7 @@ message BulkLoadHFileRequest {
   required RegionSpecifier region = 1;
   repeated FamilyPath family_path = 2;
   optional bool assign_seq_num = 3;
+  repeated string cluster_ids = 4;
 
   message FamilyPath {
     required bytes family = 1;

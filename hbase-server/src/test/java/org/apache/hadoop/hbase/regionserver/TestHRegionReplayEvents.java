@@ -1480,7 +1480,7 @@ public class TestHRegionReplayEvents {
         randomValues)));
       expectedLoadFileCount++;
     }
-    primaryRegion.bulkLoadHFiles(familyPaths, false, null);
+    primaryRegion.bulkLoadHFiles(familyPaths, false, null, null);
 
     // now replay the edits and the bulk load marker
     reader = createWALReaderForPrimary();

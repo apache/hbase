@@ -537,14 +537,15 @@ public interface Region extends ConfigurationObserver {
    * rows with multiple column families atomically.
    *
    * @param familyPaths List of Pair&lt;byte[] column family, String hfilePath&gt;
+   * @param assignSeqId
    * @param bulkLoadListener Internal hooks enabling massaging/preparation of a
    * file about to be bulk loaded
-   * @param assignSeqId
+   * @param clusterIds
    * @return true if successful, false if failed recoverably
    * @throws IOException if failed unrecoverably.
    */
   boolean bulkLoadHFiles(Collection<Pair<byte[], String>> familyPaths, boolean assignSeqId,
-      BulkLoadListener bulkLoadListener) throws IOException;
+    BulkLoadListener bulkLoadListener, List<String> clusterIds) throws IOException;
 
   ///////////////////////////////////////////////////////////////////////////
   // Coprocessors
