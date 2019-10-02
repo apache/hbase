@@ -364,7 +364,7 @@ public class TestWALReplay {
         Bytes.toBytes("z"), 10);
     List <Pair<byte[],String>>  hfs= new ArrayList<Pair<byte[],String>>(1);
     hfs.add(Pair.newPair(family, f.toString()));
-    region.bulkLoadHFiles(hfs, true, null);
+    region.bulkLoadHFiles(hfs, true, null, null);
 
     // Add an edit so something in the WAL
     byte [] row = tableName.getName();
@@ -438,7 +438,7 @@ public class TestWALReplay {
           Bytes.toBytes(i + "50"), 10);
       hfs.add(Pair.newPair(family, f.toString()));
     }
-    region.bulkLoadHFiles(hfs, true, null);
+    region.bulkLoadHFiles(hfs, true, null, null);
     final int rowsInsertedCount = 31;
     assertEquals(rowsInsertedCount, getScannedCount(region.getScanner(new Scan())));
 

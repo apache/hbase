@@ -8854,6 +8854,26 @@ public final class WALProtos {
      * <code>required int64 bulkload_seq_num = 4;</code>
      */
     long getBulkloadSeqNum();
+
+    // repeated string cluster_ids = 5;
+    /**
+     * <code>repeated string cluster_ids = 5;</code>
+     */
+    java.util.List<java.lang.String>
+    getClusterIdsList();
+    /**
+     * <code>repeated string cluster_ids = 5;</code>
+     */
+    int getClusterIdsCount();
+    /**
+     * <code>repeated string cluster_ids = 5;</code>
+     */
+    java.lang.String getClusterIds(int index);
+    /**
+     * <code>repeated string cluster_ids = 5;</code>
+     */
+    com.google.protobuf.ByteString
+        getClusterIdsBytes(int index);
   }
   /**
    * Protobuf type {@code hbase.pb.BulkLoadDescriptor}
@@ -8942,6 +8962,14 @@ public final class WALProtos {
               bulkloadSeqNum_ = input.readInt64();
               break;
             }
+            case 42: {
+              if (!((mutable_bitField0_ & 0x00000010) == 0x00000010)) {
+                clusterIds_ = new com.google.protobuf.LazyStringArrayList();
+                mutable_bitField0_ |= 0x00000010;
+              }
+              clusterIds_.add(input.readBytes());
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -8952,6 +8980,9 @@ public final class WALProtos {
       } finally {
         if (((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
           stores_ = java.util.Collections.unmodifiableList(stores_);
+        }
+        if (((mutable_bitField0_ & 0x00000010) == 0x00000010)) {
+          clusterIds_ = new com.google.protobuf.UnmodifiableLazyStringList(clusterIds_);
         }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
@@ -9075,11 +9106,42 @@ public final class WALProtos {
       return bulkloadSeqNum_;
     }
 
+    // repeated string cluster_ids = 5;
+    public static final int CLUSTER_IDS_FIELD_NUMBER = 5;
+    private com.google.protobuf.LazyStringList clusterIds_;
+    /**
+     * <code>repeated string cluster_ids = 5;</code>
+     */
+    public java.util.List<java.lang.String>
+        getClusterIdsList() {
+      return clusterIds_;
+    }
+    /**
+     * <code>repeated string cluster_ids = 5;</code>
+     */
+    public int getClusterIdsCount() {
+      return clusterIds_.size();
+    }
+    /**
+     * <code>repeated string cluster_ids = 5;</code>
+     */
+    public java.lang.String getClusterIds(int index) {
+      return clusterIds_.get(index);
+    }
+    /**
+     * <code>repeated string cluster_ids = 5;</code>
+     */
+    public com.google.protobuf.ByteString
+        getClusterIdsBytes(int index) {
+      return clusterIds_.getByteString(index);
+    }
+
     private void initFields() {
       tableName_ = org.apache.hadoop.hbase.protobuf.generated.TableProtos.TableName.getDefaultInstance();
       encodedRegionName_ = com.google.protobuf.ByteString.EMPTY;
       stores_ = java.util.Collections.emptyList();
       bulkloadSeqNum_ = 0L;
+      clusterIds_ = com.google.protobuf.LazyStringArrayList.EMPTY;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -9127,6 +9189,9 @@ public final class WALProtos {
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         output.writeInt64(4, bulkloadSeqNum_);
       }
+      for (int i = 0; i < clusterIds_.size(); i++) {
+        output.writeBytes(5, clusterIds_.getByteString(i));
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -9151,6 +9216,15 @@ public final class WALProtos {
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
           .computeInt64Size(4, bulkloadSeqNum_);
+      }
+      {
+        int dataSize = 0;
+        for (int i = 0; i < clusterIds_.size(); i++) {
+          dataSize += com.google.protobuf.CodedOutputStream
+            .computeBytesSizeNoTag(clusterIds_.getByteString(i));
+        }
+        size += dataSize;
+        size += 1 * getClusterIdsList().size();
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -9192,6 +9266,8 @@ public final class WALProtos {
         result = result && (getBulkloadSeqNum()
             == other.getBulkloadSeqNum());
       }
+      result = result && getClusterIdsList()
+          .equals(other.getClusterIdsList());
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -9220,6 +9296,10 @@ public final class WALProtos {
       if (hasBulkloadSeqNum()) {
         hash = (37 * hash) + BULKLOAD_SEQ_NUM_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getBulkloadSeqNum());
+      }
+      if (getClusterIdsCount() > 0) {
+        hash = (37 * hash) + CLUSTER_IDS_FIELD_NUMBER;
+        hash = (53 * hash) + getClusterIdsList().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -9353,6 +9433,8 @@ public final class WALProtos {
         }
         bulkloadSeqNum_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000008);
+        clusterIds_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000010);
         return this;
       }
 
@@ -9406,6 +9488,12 @@ public final class WALProtos {
           to_bitField0_ |= 0x00000004;
         }
         result.bulkloadSeqNum_ = bulkloadSeqNum_;
+        if (((bitField0_ & 0x00000010) == 0x00000010)) {
+          clusterIds_ = new com.google.protobuf.UnmodifiableLazyStringList(
+              clusterIds_);
+          bitField0_ = (bitField0_ & ~0x00000010);
+        }
+        result.clusterIds_ = clusterIds_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -9456,6 +9544,16 @@ public final class WALProtos {
         }
         if (other.hasBulkloadSeqNum()) {
           setBulkloadSeqNum(other.getBulkloadSeqNum());
+        }
+        if (!other.clusterIds_.isEmpty()) {
+          if (clusterIds_.isEmpty()) {
+            clusterIds_ = other.clusterIds_;
+            bitField0_ = (bitField0_ & ~0x00000010);
+          } else {
+            ensureClusterIdsIsMutable();
+            clusterIds_.addAll(other.clusterIds_);
+          }
+          onChanged();
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -9928,6 +10026,99 @@ public final class WALProtos {
       public Builder clearBulkloadSeqNum() {
         bitField0_ = (bitField0_ & ~0x00000008);
         bulkloadSeqNum_ = 0L;
+        onChanged();
+        return this;
+      }
+
+      // repeated string cluster_ids = 5;
+      private com.google.protobuf.LazyStringList clusterIds_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+      private void ensureClusterIdsIsMutable() {
+        if (!((bitField0_ & 0x00000010) == 0x00000010)) {
+          clusterIds_ = new com.google.protobuf.LazyStringArrayList(clusterIds_);
+          bitField0_ |= 0x00000010;
+         }
+      }
+      /**
+       * <code>repeated string cluster_ids = 5;</code>
+       */
+      public java.util.List<java.lang.String>
+          getClusterIdsList() {
+        return java.util.Collections.unmodifiableList(clusterIds_);
+      }
+      /**
+       * <code>repeated string cluster_ids = 5;</code>
+       */
+      public int getClusterIdsCount() {
+        return clusterIds_.size();
+      }
+      /**
+       * <code>repeated string cluster_ids = 5;</code>
+       */
+      public java.lang.String getClusterIds(int index) {
+        return clusterIds_.get(index);
+      }
+      /**
+       * <code>repeated string cluster_ids = 5;</code>
+       */
+      public com.google.protobuf.ByteString
+          getClusterIdsBytes(int index) {
+        return clusterIds_.getByteString(index);
+      }
+      /**
+       * <code>repeated string cluster_ids = 5;</code>
+       */
+      public Builder setClusterIds(
+          int index, java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureClusterIdsIsMutable();
+        clusterIds_.set(index, value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string cluster_ids = 5;</code>
+       */
+      public Builder addClusterIds(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureClusterIdsIsMutable();
+        clusterIds_.add(value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string cluster_ids = 5;</code>
+       */
+      public Builder addAllClusterIds(
+          java.lang.Iterable<java.lang.String> values) {
+        ensureClusterIdsIsMutable();
+        super.addAll(values, clusterIds_);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string cluster_ids = 5;</code>
+       */
+      public Builder clearClusterIds() {
+        clusterIds_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000010);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string cluster_ids = 5;</code>
+       */
+      public Builder addClusterIdsBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureClusterIdsIsMutable();
+        clusterIds_.add(value);
         onChanged();
         return this;
       }
@@ -12002,22 +12193,23 @@ public final class WALProtos {
       "ANNOT_FLUSH\020\003\"q\n\017StoreDescriptor\022\023\n\013fami" +
       "ly_name\030\001 \002(\014\022\026\n\016store_home_dir\030\002 \002(\t\022\022\n" +
       "\nstore_file\030\003 \003(\t\022\035\n\025store_file_size_byt" +
-      "es\030\004 \001(\004\"\237\001\n\022BulkLoadDescriptor\022\'\n\ntable" +
+      "es\030\004 \001(\004\"\264\001\n\022BulkLoadDescriptor\022\'\n\ntable" +
       "_name\030\001 \002(\0132\023.hbase.pb.TableName\022\033\n\023enco" +
       "ded_region_name\030\002 \002(\014\022)\n\006stores\030\003 \003(\0132\031." +
       "hbase.pb.StoreDescriptor\022\030\n\020bulkload_seq" +
-      "_num\030\004 \002(\003\"\272\002\n\025RegionEventDescriptor\022=\n\n" +
-      "event_type\030\001 \002(\0162).hbase.pb.RegionEventD" +
-      "escriptor.EventType\022\022\n\ntable_name\030\002 \002(\014\022",
-      "\033\n\023encoded_region_name\030\003 \002(\014\022\033\n\023log_sequ" +
-      "ence_number\030\004 \001(\004\022)\n\006stores\030\005 \003(\0132\031.hbas" +
-      "e.pb.StoreDescriptor\022$\n\006server\030\006 \001(\0132\024.h" +
-      "base.pb.ServerName\022\023\n\013region_name\030\007 \001(\014\"" +
-      ".\n\tEventType\022\017\n\013REGION_OPEN\020\000\022\020\n\014REGION_" +
-      "CLOSE\020\001\"\014\n\nWALTrailer*F\n\tScopeType\022\033\n\027RE" +
-      "PLICATION_SCOPE_LOCAL\020\000\022\034\n\030REPLICATION_S" +
-      "COPE_GLOBAL\020\001B?\n*org.apache.hadoop.hbase" +
-      ".protobuf.generatedB\tWALProtosH\001\210\001\000\240\001\001"
+      "_num\030\004 \002(\003\022\023\n\013cluster_ids\030\005 \003(\t\"\272\002\n\025Regi" +
+      "onEventDescriptor\022=\n\nevent_type\030\001 \002(\0162)." +
+      "hbase.pb.RegionEventDescriptor.EventType",
+      "\022\022\n\ntable_name\030\002 \002(\014\022\033\n\023encoded_region_n" +
+      "ame\030\003 \002(\014\022\033\n\023log_sequence_number\030\004 \001(\004\022)" +
+      "\n\006stores\030\005 \003(\0132\031.hbase.pb.StoreDescripto" +
+      "r\022$\n\006server\030\006 \001(\0132\024.hbase.pb.ServerName\022" +
+      "\023\n\013region_name\030\007 \001(\014\".\n\tEventType\022\017\n\013REG" +
+      "ION_OPEN\020\000\022\020\n\014REGION_CLOSE\020\001\"\014\n\nWALTrail" +
+      "er*F\n\tScopeType\022\033\n\027REPLICATION_SCOPE_LOC" +
+      "AL\020\000\022\034\n\030REPLICATION_SCOPE_GLOBAL\020\001B?\n*or" +
+      "g.apache.hadoop.hbase.protobuf.generated" +
+      "B\tWALProtosH\001\210\001\000\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -12071,7 +12263,7 @@ public final class WALProtos {
           internal_static_hbase_pb_BulkLoadDescriptor_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_BulkLoadDescriptor_descriptor,
-              new java.lang.String[] { "TableName", "EncodedRegionName", "Stores", "BulkloadSeqNum", });
+              new java.lang.String[] { "TableName", "EncodedRegionName", "Stores", "BulkloadSeqNum", "ClusterIds", });
           internal_static_hbase_pb_RegionEventDescriptor_descriptor =
             getDescriptor().getMessageTypes().get(7);
           internal_static_hbase_pb_RegionEventDescriptor_fieldAccessorTable = new

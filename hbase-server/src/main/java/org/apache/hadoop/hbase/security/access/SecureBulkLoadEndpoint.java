@@ -306,7 +306,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
 
   @Override
   public void secureBulkLoadHFiles(RpcController controller,
-                                   SecureBulkLoadHFilesRequest request,
+                                   final SecureBulkLoadHFilesRequest request,
                                    RpcCallback<SecureBulkLoadHFilesResponse> done) {
     final List<Pair<byte[], String>> familyPaths = new ArrayList<Pair<byte[], String>>();
     for(ClientProtos.BulkLoadHFileRequest.FamilyPath el : request.getFamilyPathList()) {
@@ -399,7 +399,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
             //We call bulkLoadHFiles as requesting user
             //To enable access prior to staging
             return env.getRegion().bulkLoadHFiles(familyPaths, true,
-                new SecureBulkLoadListener(fs, bulkToken, conf));
+                new SecureBulkLoadListener(fs, bulkToken, conf), request.getClusterIdsList());
           } catch (Exception e) {
             LOG.error("Failed to complete bulk load", e);
           }

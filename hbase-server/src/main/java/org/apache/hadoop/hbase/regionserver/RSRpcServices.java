@@ -2152,6 +2152,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   public BulkLoadHFileResponse bulkLoadHFile(final RpcController controller,
       final BulkLoadHFileRequest request) throws ServiceException {
     long start = EnvironmentEdgeManager.currentTime();
+    List<String> clusterIds = new ArrayList<String>(request.getClusterIdsList());
+    if(clusterIds.contains(this.regionServer.clusterId)){
+      return BulkLoadHFileResponse.newBuilder().setLoaded(true).build();
+    } else {
+      clusterIds.add(this.regionServer.clusterId);
+    }
     try {
       checkOpen();
       requestCount.increment();
@@ -2168,7 +2174,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       boolean loaded = false;
       try {
         if (!bypass) {
-          loaded = region.bulkLoadHFiles(familyPaths, request.getAssignSeqNum(), null);
+          loaded = region.bulkLoadHFiles(familyPaths, request.getAssignSeqNum(), null, clusterIds);
         }
       } finally {
         if (region.getCoprocessorHost() != null) {

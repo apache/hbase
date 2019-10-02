@@ -1807,12 +1807,31 @@ public final class ProtobufUtil {
    * @param assignSeqNum
    * @return true if all are loaded
    * @throws IOException
+   * @deprecated use bulkLoadHFile(final ClientService.BlockingInterface client,
+   * final List<Pair<byte[], String>> familyPaths, final byte[] regionName, boolean assignSeqNum,
+   * List<String> clusterIds) instead.
    */
   public static boolean bulkLoadHFile(final ClientService.BlockingInterface client,
       final List<Pair<byte[], String>> familyPaths,
       final byte[] regionName, boolean assignSeqNum) throws IOException {
+    return bulkLoadHFile(client, familyPaths, regionName, assignSeqNum, null);
+  }
+
+  /**
+   * A helper to bulk load a list of HFiles using client protocol.
+   *
+   * @param client
+   * @param familyPaths
+   * @param regionName
+   * @param assignSeqNum
+   * @return true if all are loaded
+   * @throws IOException
+   */
+  public static boolean bulkLoadHFile(final ClientService.BlockingInterface client,
+    final List<Pair<byte[], String>> familyPaths,
+    final byte[] regionName, boolean assignSeqNum, List<String> clusterIds) throws IOException {
     BulkLoadHFileRequest request =
-      RequestConverter.buildBulkLoadHFileRequest(familyPaths, regionName, assignSeqNum);
+      RequestConverter.buildBulkLoadHFileRequest(familyPaths, regionName, assignSeqNum, clusterIds);
     try {
       BulkLoadHFileResponse response =
         client.bulkLoadHFile(null, request);
@@ -3346,6 +3365,10 @@ public final class ProtobufUtil {
    * Generates a marker for the WAL so that we propagate the notion of a bulk region load
    * throughout the WAL.
    *
+   * @deprecated use toBulkLoadDescriptor(TableName tableName, ByteString encodedRegionName,
+   * Map<byte[], List<Path>> storeFiles, Map<String, Long> storeFilesSize, long bulkloadSeqId,
+   * List<String> clusterIds) instead.
+   *
    * @param tableName         The tableName into which the bulk load is being imported into.
    * @param encodedRegionName Encoded region name of the region which is being bulk loaded.
    * @param storeFiles        A set of store files of a column family are bulk loaded.
@@ -3355,17 +3378,42 @@ public final class ProtobufUtil {
    * @return The WAL log marker for bulk loads.
    */
   public static WALProtos.BulkLoadDescriptor toBulkLoadDescriptor(TableName tableName,
-      ByteString encodedRegionName, Map<byte[], List<Path>> storeFiles,
-      Map<String, Long> storeFilesSize, long bulkloadSeqId) {
+    ByteString encodedRegionName, Map<byte[], List<Path>> storeFiles,
+    Map<String, Long> storeFilesSize, long bulkloadSeqId) {
+    return toBulkLoadDescriptor(tableName, encodedRegionName, storeFiles,
+      storeFilesSize, bulkloadSeqId, null);
+  }
+
+  /**
+   * Generates a marker for the WAL so that we propagate the notion of a bulk region load
+   * throughout the WAL, keeping track of clusters who already applied the bulk event via
+   * the passed clusterIds parameter.
+   *
+   * @param tableName         The tableName into which the bulk load is being imported into.
+   * @param encodedRegionName Encoded region name of the region which is being bulk loaded.
+   * @param storeFiles        A set of store files of a column family are bulk loaded.
+   * @param storeFilesSize  Map of store files and their lengths
+   * @param bulkloadSeqId     sequence ID (by a force flush) used to create bulk load hfile name
+   * @param clusterIds      The list of cluster Ids with the clusters where the bulk even had
+   *                        already been processed.
+   *
+   * @return The WAL log marker for bulk loads.
+   */
+  public static WALProtos.BulkLoadDescriptor toBulkLoadDescriptor(TableName tableName,
+    ByteString encodedRegionName, Map<byte[], List<Path>> storeFiles,
+    Map<String, Long> storeFilesSize, long bulkloadSeqId, List<String> clusterIds) {
     BulkLoadDescriptor.Builder desc =
-        BulkLoadDescriptor.newBuilder()
+      BulkLoadDescriptor.newBuilder()
         .setTableName(ProtobufUtil.toProtoTableName(tableName))
         .setEncodedRegionName(encodedRegionName).setBulkloadSeqNum(bulkloadSeqId);
+    if(clusterIds != null) {
+      desc.addAllClusterIds(clusterIds);
+    }
 
     for (Map.Entry<byte[], List<Path>> entry : storeFiles.entrySet()) {
       WALProtos.StoreDescriptor.Builder builder = StoreDescriptor.newBuilder()
-          .setFamilyName(ByteStringer.wrap(entry.getKey()))
-          .setStoreHomeDir(Bytes.toString(entry.getKey())); // relative to region
+        .setFamilyName(ByteStringer.wrap(entry.getKey()))
+        .setStoreHomeDir(Bytes.toString(entry.getKey())); // relative to region
       for (Path path : entry.getValue()) {
         String name = path.getName();
         builder.addStoreFile(name);
