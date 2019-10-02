@@ -74,6 +74,26 @@ public final class SecureBulkLoadProtos {
      */
     com.google.protobuf.ByteString
         getBulkTokenBytes();
+
+    // repeated string cluster_ids = 5;
+    /**
+     * <code>repeated string cluster_ids = 5;</code>
+     */
+    java.util.List<java.lang.String>
+    getClusterIdsList();
+    /**
+     * <code>repeated string cluster_ids = 5;</code>
+     */
+    int getClusterIdsCount();
+    /**
+     * <code>repeated string cluster_ids = 5;</code>
+     */
+    java.lang.String getClusterIds(int index);
+    /**
+     * <code>repeated string cluster_ids = 5;</code>
+     */
+    com.google.protobuf.ByteString
+        getClusterIdsBytes(int index);
   }
   /**
    * Protobuf type {@code hbase.pb.SecureBulkLoadHFilesRequest}
@@ -157,6 +177,14 @@ public final class SecureBulkLoadProtos {
               bulkToken_ = input.readBytes();
               break;
             }
+            case 42: {
+              if (!((mutable_bitField0_ & 0x00000010) == 0x00000010)) {
+                clusterIds_ = new com.google.protobuf.LazyStringArrayList();
+                mutable_bitField0_ |= 0x00000010;
+              }
+              clusterIds_.add(input.readBytes());
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -167,6 +195,9 @@ public final class SecureBulkLoadProtos {
       } finally {
         if (((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
           familyPath_ = java.util.Collections.unmodifiableList(familyPath_);
+        }
+        if (((mutable_bitField0_ & 0x00000010) == 0x00000010)) {
+          clusterIds_ = new com.google.protobuf.UnmodifiableLazyStringList(clusterIds_);
         }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
@@ -317,11 +348,42 @@ public final class SecureBulkLoadProtos {
       }
     }
 
+    // repeated string cluster_ids = 5;
+    public static final int CLUSTER_IDS_FIELD_NUMBER = 5;
+    private com.google.protobuf.LazyStringList clusterIds_;
+    /**
+     * <code>repeated string cluster_ids = 5;</code>
+     */
+    public java.util.List<java.lang.String>
+        getClusterIdsList() {
+      return clusterIds_;
+    }
+    /**
+     * <code>repeated string cluster_ids = 5;</code>
+     */
+    public int getClusterIdsCount() {
+      return clusterIds_.size();
+    }
+    /**
+     * <code>repeated string cluster_ids = 5;</code>
+     */
+    public java.lang.String getClusterIds(int index) {
+      return clusterIds_.get(index);
+    }
+    /**
+     * <code>repeated string cluster_ids = 5;</code>
+     */
+    public com.google.protobuf.ByteString
+        getClusterIdsBytes(int index) {
+      return clusterIds_.getByteString(index);
+    }
+
     private void initFields() {
       familyPath_ = java.util.Collections.emptyList();
       assignSeqNum_ = false;
       fsToken_ = org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken.getDefaultInstance();
       bulkToken_ = "";
+      clusterIds_ = com.google.protobuf.LazyStringArrayList.EMPTY;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -361,6 +423,9 @@ public final class SecureBulkLoadProtos {
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         output.writeBytes(4, getBulkTokenBytes());
       }
+      for (int i = 0; i < clusterIds_.size(); i++) {
+        output.writeBytes(5, clusterIds_.getByteString(i));
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -385,6 +450,15 @@ public final class SecureBulkLoadProtos {
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(4, getBulkTokenBytes());
+      }
+      {
+        int dataSize = 0;
+        for (int i = 0; i < clusterIds_.size(); i++) {
+          dataSize += com.google.protobuf.CodedOutputStream
+            .computeBytesSizeNoTag(clusterIds_.getByteString(i));
+        }
+        size += dataSize;
+        size += 1 * getClusterIdsList().size();
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -426,6 +500,8 @@ public final class SecureBulkLoadProtos {
         result = result && getBulkToken()
             .equals(other.getBulkToken());
       }
+      result = result && getClusterIdsList()
+          .equals(other.getClusterIdsList());
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -454,6 +530,10 @@ public final class SecureBulkLoadProtos {
       if (hasBulkToken()) {
         hash = (37 * hash) + BULK_TOKEN_FIELD_NUMBER;
         hash = (53 * hash) + getBulkToken().hashCode();
+      }
+      if (getClusterIdsCount() > 0) {
+        hash = (37 * hash) + CLUSTER_IDS_FIELD_NUMBER;
+        hash = (53 * hash) + getClusterIdsList().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -582,6 +662,8 @@ public final class SecureBulkLoadProtos {
         bitField0_ = (bitField0_ & ~0x00000004);
         bulkToken_ = "";
         bitField0_ = (bitField0_ & ~0x00000008);
+        clusterIds_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000010);
         return this;
       }
 
@@ -635,6 +717,12 @@ public final class SecureBulkLoadProtos {
           to_bitField0_ |= 0x00000004;
         }
         result.bulkToken_ = bulkToken_;
+        if (((bitField0_ & 0x00000010) == 0x00000010)) {
+          clusterIds_ = new com.google.protobuf.UnmodifiableLazyStringList(
+              clusterIds_);
+          bitField0_ = (bitField0_ & ~0x00000010);
+        }
+        result.clusterIds_ = clusterIds_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -686,6 +774,16 @@ public final class SecureBulkLoadProtos {
         if (other.hasBulkToken()) {
           bitField0_ |= 0x00000008;
           bulkToken_ = other.bulkToken_;
+          onChanged();
+        }
+        if (!other.clusterIds_.isEmpty()) {
+          if (clusterIds_.isEmpty()) {
+            clusterIds_ = other.clusterIds_;
+            bitField0_ = (bitField0_ & ~0x00000010);
+          } else {
+            ensureClusterIdsIsMutable();
+            clusterIds_.addAll(other.clusterIds_);
+          }
           onChanged();
         }
         this.mergeUnknownFields(other.getUnknownFields());
@@ -1189,6 +1287,99 @@ public final class SecureBulkLoadProtos {
   }
   bitField0_ |= 0x00000008;
         bulkToken_ = value;
+        onChanged();
+        return this;
+      }
+
+      // repeated string cluster_ids = 5;
+      private com.google.protobuf.LazyStringList clusterIds_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+      private void ensureClusterIdsIsMutable() {
+        if (!((bitField0_ & 0x00000010) == 0x00000010)) {
+          clusterIds_ = new com.google.protobuf.LazyStringArrayList(clusterIds_);
+          bitField0_ |= 0x00000010;
+         }
+      }
+      /**
+       * <code>repeated string cluster_ids = 5;</code>
+       */
+      public java.util.List<java.lang.String>
+          getClusterIdsList() {
+        return java.util.Collections.unmodifiableList(clusterIds_);
+      }
+      /**
+       * <code>repeated string cluster_ids = 5;</code>
+       */
+      public int getClusterIdsCount() {
+        return clusterIds_.size();
+      }
+      /**
+       * <code>repeated string cluster_ids = 5;</code>
+       */
+      public java.lang.String getClusterIds(int index) {
+        return clusterIds_.get(index);
+      }
+      /**
+       * <code>repeated string cluster_ids = 5;</code>
+       */
+      public com.google.protobuf.ByteString
+          getClusterIdsBytes(int index) {
+        return clusterIds_.getByteString(index);
+      }
+      /**
+       * <code>repeated string cluster_ids = 5;</code>
+       */
+      public Builder setClusterIds(
+          int index, java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureClusterIdsIsMutable();
+        clusterIds_.set(index, value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string cluster_ids = 5;</code>
+       */
+      public Builder addClusterIds(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureClusterIdsIsMutable();
+        clusterIds_.add(value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string cluster_ids = 5;</code>
+       */
+      public Builder addAllClusterIds(
+          java.lang.Iterable<java.lang.String> values) {
+        ensureClusterIdsIsMutable();
+        super.addAll(values, clusterIds_);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string cluster_ids = 5;</code>
+       */
+      public Builder clearClusterIds() {
+        clusterIds_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000010);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string cluster_ids = 5;</code>
+       */
+      public Builder addClusterIdsBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureClusterIdsIsMutable();
+        clusterIds_.add(value);
         onChanged();
         return this;
       }
@@ -4858,30 +5049,30 @@ public final class SecureBulkLoadProtos {
   static {
     java.lang.String[] descriptorData = {
       "\n\024SecureBulkLoad.proto\022\010hbase.pb\032\013Table." +
-      "proto\032\013HBase.proto\032\014Client.proto\"\266\001\n\033Sec" +
+      "proto\032\013HBase.proto\032\014Client.proto\"\313\001\n\033Sec" +
       "ureBulkLoadHFilesRequest\022>\n\013family_path\030" +
       "\001 \003(\0132).hbase.pb.BulkLoadHFileRequest.Fa" +
       "milyPath\022\026\n\016assign_seq_num\030\002 \001(\010\022+\n\010fs_t" +
       "oken\030\003 \002(\0132\031.hbase.pb.DelegationToken\022\022\n" +
-      "\nbulk_token\030\004 \002(\t\".\n\034SecureBulkLoadHFile" +
-      "sResponse\022\016\n\006loaded\030\001 \002(\010\"V\n\017DelegationT" +
-      "oken\022\022\n\nidentifier\030\001 \001(\014\022\020\n\010password\030\002 \001" +
-      "(\014\022\014\n\004kind\030\003 \001(\t\022\017\n\007service\030\004 \001(\t\"A\n\026Pre",
-      "pareBulkLoadRequest\022\'\n\ntable_name\030\001 \002(\0132" +
-      "\023.hbase.pb.TableName\"-\n\027PrepareBulkLoadR" +
-      "esponse\022\022\n\nbulk_token\030\001 \002(\t\",\n\026CleanupBu" +
-      "lkLoadRequest\022\022\n\nbulk_token\030\001 \002(\t\"\031\n\027Cle" +
-      "anupBulkLoadResponse2\256\002\n\025SecureBulkLoadS" +
-      "ervice\022V\n\017PrepareBulkLoad\022 .hbase.pb.Pre" +
-      "pareBulkLoadRequest\032!.hbase.pb.PrepareBu" +
-      "lkLoadResponse\022e\n\024SecureBulkLoadHFiles\022%" +
-      ".hbase.pb.SecureBulkLoadHFilesRequest\032&." +
-      "hbase.pb.SecureBulkLoadHFilesResponse\022V\n",
-      "\017CleanupBulkLoad\022 .hbase.pb.CleanupBulkL" +
-      "oadRequest\032!.hbase.pb.CleanupBulkLoadRes" +
-      "ponseBJ\n*org.apache.hadoop.hbase.protobu" +
-      "f.generatedB\024SecureBulkLoadProtosH\001\210\001\001\240\001" +
-      "\001"
+      "\nbulk_token\030\004 \002(\t\022\023\n\013cluster_ids\030\005 \003(\t\"." +
+      "\n\034SecureBulkLoadHFilesResponse\022\016\n\006loaded" +
+      "\030\001 \002(\010\"V\n\017DelegationToken\022\022\n\nidentifier\030" +
+      "\001 \001(\014\022\020\n\010password\030\002 \001(\014\022\014\n\004kind\030\003 \001(\t\022\017\n",
+      "\007service\030\004 \001(\t\"A\n\026PrepareBulkLoadRequest" +
+      "\022\'\n\ntable_name\030\001 \002(\0132\023.hbase.pb.TableNam" +
+      "e\"-\n\027PrepareBulkLoadResponse\022\022\n\nbulk_tok" +
+      "en\030\001 \002(\t\",\n\026CleanupBulkLoadRequest\022\022\n\nbu" +
+      "lk_token\030\001 \002(\t\"\031\n\027CleanupBulkLoadRespons" +
+      "e2\256\002\n\025SecureBulkLoadService\022V\n\017PrepareBu" +
+      "lkLoad\022 .hbase.pb.PrepareBulkLoadRequest" +
+      "\032!.hbase.pb.PrepareBulkLoadResponse\022e\n\024S" +
+      "ecureBulkLoadHFiles\022%.hbase.pb.SecureBul" +
+      "kLoadHFilesRequest\032&.hbase.pb.SecureBulk",
+      "LoadHFilesResponse\022V\n\017CleanupBulkLoad\022 ." +
+      "hbase.pb.CleanupBulkLoadRequest\032!.hbase." +
+      "pb.CleanupBulkLoadResponseBJ\n*org.apache" +
+      ".hadoop.hbase.protobuf.generatedB\024Secure" +
+      "BulkLoadProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -4893,7 +5084,7 @@ public final class SecureBulkLoadProtos {
           internal_static_hbase_pb_SecureBulkLoadHFilesRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_SecureBulkLoadHFilesRequest_descriptor,
-              new java.lang.String[] { "FamilyPath", "AssignSeqNum", "FsToken", "BulkToken", });
+              new java.lang.String[] { "FamilyPath", "AssignSeqNum", "FsToken", "BulkToken", "ClusterIds", });
           internal_static_hbase_pb_SecureBulkLoadHFilesResponse_descriptor =
             getDescriptor().getMessageTypes().get(1);
           internal_static_hbase_pb_SecureBulkLoadHFilesResponse_fieldAccessorTable = new

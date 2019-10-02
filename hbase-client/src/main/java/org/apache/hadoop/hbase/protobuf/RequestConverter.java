@@ -561,14 +561,32 @@ public final class RequestConverter {
   /**
    * Create a protocol buffer bulk load request
    *
+   * @deprecated use buildBulkLoadHFileRequest(final List<Pair<byte[], String>> familyPaths,
+   * final byte[] regionName, boolean assignSeqNum, List<String> clusterIds)
+   *
    * @param familyPaths
    * @param regionName
    * @param assignSeqNum
    * @return a bulk load request
    */
   public static BulkLoadHFileRequest buildBulkLoadHFileRequest(
+    final List<Pair<byte[], String>> familyPaths,
+    final byte[] regionName, boolean assignSeqNum) {
+    return buildBulkLoadHFileRequest(familyPaths, regionName, assignSeqNum, null);
+  }
+
+  /**
+   * Create a protocol buffer bulk load request
+   *
+   * @param familyPaths
+   * @param regionName
+   * @param assignSeqNum
+   * @param clusterIds
+   * @return a bulk load request
+   */
+  public static BulkLoadHFileRequest buildBulkLoadHFileRequest(
       final List<Pair<byte[], String>> familyPaths,
-      final byte[] regionName, boolean assignSeqNum) {
+      final byte[] regionName, boolean assignSeqNum, List<String> clusterIds) {
     BulkLoadHFileRequest.Builder builder = BulkLoadHFileRequest.newBuilder();
     RegionSpecifier region = buildRegionSpecifier(
       RegionSpecifierType.REGION_NAME, regionName);
@@ -578,6 +596,9 @@ public final class RequestConverter {
       familyPathBuilder.setFamily(ByteStringer.wrap(familyPath.getFirst()));
       familyPathBuilder.setPath(familyPath.getSecond());
       builder.addFamilyPath(familyPathBuilder.build());
+    }
+    if(clusterIds!=null) {
+      builder.addAllClusterIds(clusterIds);
     }
     builder.setAssignSeqNum(assignSeqNum);
     return builder.build();

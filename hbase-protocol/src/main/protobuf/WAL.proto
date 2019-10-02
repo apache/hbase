@@ -150,6 +150,7 @@ message BulkLoadDescriptor {
   required bytes encoded_region_name = 2;
   repeated StoreDescriptor stores = 3;
   required int64 bulkload_seq_num = 4;
+  repeated string cluster_ids = 5;
 }
 
 /**
