@@ -192,7 +192,7 @@ if (master.getServerManager() != null) {
         usedHeapStr = TraditionalBinaryPrefix.long2String(usedHeap
                                       * TraditionalBinaryPrefix.MEGA.value, "B", 1);
       }
-      if (usedHeap > 0) {
+      if (maxHeap > 0) {
         maxHeapStr = TraditionalBinaryPrefix.long2String(maxHeap
                                       * TraditionalBinaryPrefix.MEGA.value, "B", 1);
       }
