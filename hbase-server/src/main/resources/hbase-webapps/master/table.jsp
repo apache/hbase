@@ -681,7 +681,19 @@ if (withReplica) {
   </tr>
   <tr>
     <td>Size</td>
-    <td><%= StringUtils.TraditionalBinaryPrefix.long2String(totalStoreFileSizeMB * 1024 * 1024, "B", 2)%></td>
+    <td>
+      <%
+         if (totalStoreFileSizeMB > 0) {
+      %>
+        <%= StringUtils.TraditionalBinaryPrefix.
+        long2String(totalStoreFileSizeMB * 1024 * 1024, "B", 2)%></td>
+      <%
+         } else {
+      %>
+         0 MB </td>
+      <%
+         }
+      %>
     <td>Total size of store files</td>
   </tr>
 </table>
