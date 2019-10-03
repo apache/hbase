@@ -879,6 +879,18 @@ The output can optionally be mapped to another set of tables.
 
 WALPlayer can also generate HFiles for later bulk importing, in that case only a single table and no mapping can be specified.
 
+.WALReader
+[NOTE]
+====
+Since hbase-2.3.0/2.2.2/2.1.8, a WALReader tool has been added. Pass it WALs or recovered.edits files,
+which are of the same format, and it will read the content spitting out offset, key names, and size
+of edit. Useful looking at content or just verifying a file readable. For example:
+----
+$ bin/hbase org.apache.hadoop.hbase.wal.WALReader <FILE> [<FILE>...]
+----
+====
+
+
 Invoke via:
 
 ----

@@ -302,7 +302,7 @@ public class OpenRegionHandler extends EventHandler {
       // and transition the node back to FAILED_OPEN. If that fails,
       // we rely on the Timeout Monitor in the master to reassign.
       LOG.error(
-          "Failed open of region=" + this.regionInfo.getRegionNameAsString(), t);
+          "Failed open of {}", this.regionInfo.getRegionNameAsString(), t);
     }
     return region;
   }
