@@ -126,13 +126,15 @@ function get_release_info {
     parse_version)
   echo "Current branch VERSION is $VERSION."
 
-  if [[ ! $VERSION =~ .*-SNAPSHOT ]]; then
-    error "Not a SNAPSHOT version: $VERSION"
+  NEXT_VERSION="$VERSION"
+  RELEASE_VERSION=""
+  SHORT_VERSION=$(echo "$VERSION" | cut -d . -f 1-2)
+   if [[ ! $VERSION =~ .*-SNAPSHOT ]]; then
+    RELEASE_VERSION="$VERSION"
+  else
+    RELEASE_VERSION="${VERSION/-SNAPSHOT/}"
   fi
 
-  NEXT_VERSION="$VERSION"
-  RELEASE_VERSION="${VERSION/-SNAPSHOT/}"
-  SHORT_VERSION=$(echo "$VERSION" | cut -d . -f 1-2)
   local REV=$(echo "$VERSION" | cut -d . -f 3)
 
   # Find out what RC is being prepared.

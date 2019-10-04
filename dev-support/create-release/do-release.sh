@@ -57,7 +57,13 @@ export GPG_TTY=$(tty)
 
 function should_build {
   local WHAT=$1
-  [ -z "$RELEASE_STEP" ] || [ "$WHAT" = "$RELEASE_STEP" ]
+  if [[ -z "$RELEASE_STEP" ]]; then
+    return 0
+  elif [[ "$RELEASE_STEP" == *"$WHAT"* ]]; then
+    return 0
+  else
+    return 1
+  fi
 }
 
 if should_build "tag" && [ $SKIP_TAG = 0 ]; then
