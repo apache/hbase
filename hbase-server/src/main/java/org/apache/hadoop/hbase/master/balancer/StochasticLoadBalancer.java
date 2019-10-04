@@ -348,9 +348,11 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     if (total <= 0 || sumMultiplier <= 0
         || (sumMultiplier > 0 && (total / sumMultiplier) < minCostNeedBalance)) {
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Skipping load balancing because balanced cluster; " + "total cost is " + total
-          + ", sum multiplier is " + sumMultiplier + " min cost which need balance is "
-          + minCostNeedBalance);
+        final String loadBalanceTarget =
+            isByTable ? String.format("table (%s)", tableName) : "cluster";
+        LOG.trace("Skipping load balancing because the {} is balanced. Total cost: {}, "
+            + "Sum multiplier: {}, Minimum cost needed for balance: {}", loadBalanceTarget, total,
+            sumMultiplier, minCostNeedBalance);
       }
       return false;
     }
