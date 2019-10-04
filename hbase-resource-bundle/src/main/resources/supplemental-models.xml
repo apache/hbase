@@ -1312,7 +1312,24 @@ under the License.
     </project>
   </supplement>
 
+  <supplement>
+    <project>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk15on</artifactId>
 
+      <licenses>
+        <!-- bcprov-jdk15on is licensed under the Bouncy Castle License, which is equivalent to the MIT License -->
+        <license>
+          <name>MIT License</name>
+          <url>http://www.opensource.org/licenses/mit-license.php</url>
+          <distribution>repo</distribution>
+          <comments>
+            Copyright (c) 2000 - 2018 The Legion of the Bouncy Castle Inc. (https://www.bouncycastle.org)
+          </comments>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
   <supplement>
     <project>
       <groupId>org.bouncycastle</groupId>

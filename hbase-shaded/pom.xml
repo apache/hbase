@@ -467,6 +467,9 @@
                                       <resource>ASL2.0</resource>
                                       <!-- also this unneeded doc -->
                                       <resource>overview.html</resource>
+                                      <resource>.SF</resource>
+                                      <resource>.RSA</resource>
+                                      <resource>.DSA</resource>
                                     </resources>
                                   </transformer>
                                   <!-- Where notices exist, just concat them -->
@@ -507,7 +510,6 @@
                                     </excludes>
                                   </filter>
                                   <filter>
-                                    <!-- server side webapps that we don't need -->
                                     <artifact>org.apache.hadoop:hadoop-yarn-common</artifact>
                                     <excludes>
                                       <exclude>webapps/*</exclude>
