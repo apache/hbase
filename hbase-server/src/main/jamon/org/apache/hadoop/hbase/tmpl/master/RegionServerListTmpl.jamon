@@ -274,6 +274,12 @@ if (sl != null) {
 </thead>
 <tbody>
 <%java>
+final String ZEROKB = "0 KB";
+final String ZEROMB = "0 MB";
+String storeUncompressedSizeMBStr = ZEROMB;
+String storeFileSizeMBStr = ZEROMB;
+String totalStaticIndexSizeKBStr = ZEROKB;
+String totalStaticBloomSizeKBStr = ZEROKB;
 for (ServerName serverName: serverNames) {
 
 ServerMetrics sl = master.getServerManager().getLoad(serverName);
@@ -292,12 +298,6 @@ if (sl != null) {
     totalStaticIndexSizeKB += rl.getStoreFileUncompressedDataIndexSize().get(Size.Unit.KILOBYTE);
     totalStaticBloomSizeKB += rl.getBloomFilterSize().get(Size.Unit.KILOBYTE);
   }
-  final String ZEROKB = "0 KB";
-  final String ZEROMB = "0 MB";
-  String storeUncompressedSizeMBStr = ZEROMB;
-  String storeFileSizeMBStr = ZEROMB;
-  String totalStaticIndexSizeKBStr = ZEROKB;
-  String totalStaticBloomSizeKBStr = ZEROKB;
   if (storeUncompressedSizeMB > 0) {
      storeUncompressedSizeMBStr = TraditionalBinaryPrefix.
      long2String(storeUncompressedSizeMB * TraditionalBinaryPrefix.MEGA.value, "B", 1);

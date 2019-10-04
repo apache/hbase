@@ -272,6 +272,12 @@ if (master.getServerManager() != null) {
     <th>Bloom Size</th>
 </tr>
 <%java>
+    final String ZEROKB = "0 KB";
+    final String ZEROMB = "0 MB";
+    String uncompressedStorefileSizeStr = ZEROMB;
+    String storefileSizeStr = ZEROMB;
+    String indexSizeStr = ZEROKB;
+    String bloomSizeStr = ZEROKB;
     for (RSGroupInfo rsGroupInfo: rsGroupInfos) {
       String rsGroupName = rsGroupInfo.getName();
       int numStores = 0;
@@ -295,12 +301,6 @@ if (master.getServerManager() != null) {
           count++;
         }
       }
-       final String ZEROKB = "0 KB";
-       final String ZEROMB = "0 MB";
-       String uncompressedStorefileSizeStr = ZEROMB;
-       String storefileSizeStr = ZEROMB;
-       String indexSizeStr = ZEROKB;
-       String bloomSizeStr = ZEROKB;
        if (uncompressedStorefileSize > 0) {
           uncompressedStorefileSizeStr = TraditionalBinaryPrefix.
           long2String(uncompressedStorefileSize * TraditionalBinaryPrefix.MEGA.value, "B", 1);
