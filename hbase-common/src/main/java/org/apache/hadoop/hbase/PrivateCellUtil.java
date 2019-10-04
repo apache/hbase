@@ -767,14 +767,15 @@ public final class PrivateCellUtil {
     if (startsWith == null || startsWith.length == 0) {
       throw new IllegalArgumentException("Cannot pass an empty startsWith");
     }
+    if (left.getQualifierLength() < startsWith.length) {
+      return false;
+    }
     if (left instanceof ByteBufferExtendedCell) {
-      return ((ByteBufferExtendedCell) left).getQualifierLength() >= startsWith.length
-          && ByteBufferUtils.equals(((ByteBufferExtendedCell) left).getQualifierByteBuffer(),
+      return ByteBufferUtils.equals(((ByteBufferExtendedCell) left).getQualifierByteBuffer(),
           ((ByteBufferExtendedCell) left).getQualifierPosition(), startsWith.length,
           startsWith, 0, startsWith.length);
     }
-    return left.getQualifierLength() >= startsWith.length
-        && Bytes.equals(left.getQualifierArray(), left.getQualifierOffset(),
+    return Bytes.equals(left.getQualifierArray(), left.getQualifierOffset(),
         startsWith.length, startsWith, 0, startsWith.length);
   }
 
