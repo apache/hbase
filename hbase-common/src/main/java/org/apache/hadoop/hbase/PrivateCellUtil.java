@@ -768,6 +768,9 @@ public final class PrivateCellUtil {
     if (startsWith == null || startsWith.length == 0) {
       throw new IllegalArgumentException("Cannot pass an empty startsWith");
     }
+    if (left.getQualifierLength() < startsWith.length) {
+      return false;
+    }
     if (left instanceof ByteBufferExtendedCell) {
       return ByteBufferUtils.equals(((ByteBufferExtendedCell) left).getQualifierByteBuffer(),
           ((ByteBufferExtendedCell) left).getQualifierPosition(), startsWith.length,
