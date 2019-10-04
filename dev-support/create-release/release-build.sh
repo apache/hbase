@@ -227,7 +227,7 @@ if [[ "$1" == "publish-release" ]]; then
   groupid=`sed -n 's/<groupId>\(.*\)<.*$/\1/p' pom.xml | tr '\n' ' '| awk '{print $2}'`
   # Convert groupid to a dir path for use below reaching into repo for jars.
   groupid_as_dir=`echo $groupid | sed -n 's/\./\//gp'`
-  pwd
+  echo "pwd=`pwd`, groupid_as_dir=${groupid_as_dir}"
   # Publish ${PROJECT} to Maven release repo
   echo "Publishing ${PROJECT} checkout at '$GIT_REF' ($git_hash)"
   echo "Publish version is $VERSION"
@@ -237,7 +237,7 @@ if [[ "$1" == "publish-release" ]]; then
     clean install -DskipTests \
     -Dcheckstyle.skip=true ${PUBLISH_PROFILES} \
     -Dmaven.repo.local="${tmp_repo}"
-  pushd "$tmp_repo/$groupid_as_dir"
+  pushd "${tmp_repo}/${groupid_as_dir}"
   # Remove any extra files generated during install
   # Remove extaneous files from module subdirs
   find $modules -type f | grep -v \.jar | grep -v \.pom | xargs rm
@@ -281,7 +281,7 @@ if [[ "$1" == "publish-release" ]]; then
   if ! is_dry_run; then
     nexus_upload=$NEXUS_ROOT/deployByRepositoryId/$staged_repo_id
     echo "Uplading files to $nexus_upload"
-    for file in $(find "${modules}" -type f)
+    for file in $(find ${modules} -type f)
     do
       # strip leading ./
       file_short=$(echo $file | sed -e "s/\.\///")
@@ -304,12 +304,7 @@ if [[ "$1" == "publish-release" ]]; then
   # Dump out email to send. Where we find vote.tmpl depends
   # on where this script is run from
   export PROJECT_TEXT=$(echo "${PROJECT}" | sed "s/-/ /g")
-  if test -f ../vote.tmpl ; then
-    eval "echo \"$(< ../vote.tmpl)\"" |tee vote.txt
-  else
-    # Presume in cwd.
-    eval "echo \"$(< ./vote.tmpl)\"" |tee vote.txt
-  fi
+  eval "echo \"$(< ${SELF}/vote.tmpl)\"" |tee vote.txt
   exit 0
 fi
 
