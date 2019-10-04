@@ -421,6 +421,8 @@ This will generate `HBCK2` usage describing commands and options.
 See <<hfile_tool>>.
 
 === WAL Tools
+For bulk replaying WAL files or _recovered.edits_ files, see
+<<walplayer>>. For reading/verifying individual files, read on.
 
 [[hlog_tool]]
 ==== FSHLog tool
@@ -878,6 +880,13 @@ The WAL can be replayed for a set of tables or all tables, and a timerange can b
 The output can optionally be mapped to another set of tables.
 
 WALPlayer can also generate HFiles for later bulk importing, in that case only a single table and no mapping can be specified.
+
+.WALPrettyPrinter/FSHLog Tool
+[NOTE]
+====
+To read or verify single WAL files or _recovered.edits_ files, since they share the WAL format,
+see <<_wal_tools>>.
+====
 
 Invoke via:
 
