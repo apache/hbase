@@ -20,6 +20,13 @@ package org.apache.hadoop.hbase.ipc;
 
 import static org.apache.hadoop.hbase.ipc.IPCUtil.toIOE;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.wrapException;
+import static org.apache.hadoop.hbase.ipc.NettyRpcClient.CLIENT_BUFFER_LOW_WATERMARK;
+import static org.apache.hadoop.hbase.ipc.NettyRpcClient.CLIENT_BUFFER_HIGH_WATERMARK;
+import static org.apache.hadoop.hbase.ipc.NettyRpcClient.CLIENT_CONNECT_MAX_RETRIES;
+import static org.apache.hadoop.hbase.ipc.NettyRpcClient.CLIENT_TCP_KEEPALIVE;
+import static org.apache.hadoop.hbase.ipc.NettyRpcClient.CLIENT_TCP_NODELAY;
+import static org.apache.hadoop.hbase.ipc.NettyRpcClient.DEFAULT_CLIENT_BUFFER_LOW_WATERMARK;
+import static org.apache.hadoop.hbase.ipc.NettyRpcClient.DEFAULT_CLIENT_BUFFER_HIGH_WATERMARK;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;

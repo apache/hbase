@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
+import org.apache.hbase.thirdparty.io.netty.channel.WriteBufferWaterMark;
 import org.apache.hbase.thirdparty.io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioSocketChannel;
 import org.apache.hbase.thirdparty.io.netty.util.concurrent.DefaultThreadFactory;
@@ -46,9 +47,21 @@ public class NettyRpcClient extends AbstractRpcClient<NettyRpcConnection> {
 
   private final boolean shutdownGroupWhenClose;
 
+  protected final WriteBufferWaterMark writeBufferWaterMark;
+
+  protected static final String CLIENT_CONNECT_MAX_RETRIES = "hbase.ipc.client.connect.max.retries";
+  protected static final String CLIENT_TCP_NODELAY = "hbase.ipc.client.tcpnodelay";
+  protected static final String CLIENT_TCP_KEEPALIVE = "hbase.ipc.client.tcpkeepalive";
+  protected static final String CLIENT_BUFFER_LOW_WATERMARK = "hbase.ipc.client.bufferlowwatermark";
+  protected static final String CLIENT_BUFFER_HIGH_WATERMARK = "hbase.ipc.client.bufferhighwatermark";
+
+  protected static final int DEFAULT_CLIENT_BUFFER_LOW_WATERMARK = 1024;
+  protected static final int DEFAULT_CLIENT_BUFFER_HIGH_WATERMARK = 64 * 1024;
+
   public NettyRpcClient(Configuration configuration, String clusterId, SocketAddress localAddress,
       MetricsConnection metrics) {
     super(configuration, clusterId, localAddress, metrics);
+    this.writeBufferWaterMark = new WriteBufferWaterMark(bufferLowWatermark, bufferHighWatermark);
     Pair<EventLoopGroup, Class<? extends Channel>> groupAndChannelClass = NettyRpcClientConfigHelper
         .getEventLoopConfig(conf);
     if (groupAndChannelClass == null) {

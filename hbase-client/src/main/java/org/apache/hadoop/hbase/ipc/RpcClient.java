@@ -34,15 +34,6 @@ import org.apache.hadoop.hbase.security.User;
 public interface RpcClient extends Closeable {
   String FAILED_SERVER_EXPIRY_KEY = "hbase.ipc.client.failed.servers.expiry";
   int FAILED_SERVER_EXPIRY_DEFAULT = 2000;
-
-  String CLIENT_CONNECT_MAX_RETRIES = "hbase.ipc.client.connect.max.retries";
-  String CLIENT_TCP_NODELAY = "hbase.ipc.client.tcpnodelay";
-  String CLIENT_TCP_KEEPALIVE = "hbase.ipc.client.tcpkeepalive";
-  String CLIENT_BUFFER_LOW_WATERMARK = "hbase.ipc.client.bufferlowwatermark";
-  String CLIENT_BUFFER_HIGH_WATERMARK = "hbase.ipc.client.bufferhighwatermark";
-  int DEFAULT_CLIENT_BUFFER_LOW_WATERMARK = 1024;
-  int DEFAULT_CLIENT_BUFFER_HIGH_WATERMARK = 64 * 1024;
-
   String IDLE_TIME = "hbase.ipc.client.connection.minIdleTimeBeforeClose";
   String IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY =
       "hbase.ipc.client.fallback-to-simple-auth-allowed";
