@@ -28,6 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelFutureListener;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
+import org.apache.hbase.thirdparty.io.netty.handler.codec.ByteToMessageDecoder;
 import org.apache.hbase.thirdparty.io.netty.handler.codec.CorruptedFrameException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
@@ -39,7 +40,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
  * @since 2.0.0
  */
 @InterfaceAudience.Private
-public class NettyRpcFrameDecoder extends AbstractBatchDecoder {
+public class NettyRpcFrameDecoder extends ByteToMessageDecoder {
 
   private static int FRAME_LENGTH_FIELD_LENGTH = 4;
 
