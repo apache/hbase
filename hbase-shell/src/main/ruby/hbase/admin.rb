@@ -533,10 +533,12 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Merge two regions
     def merge_region(region_a_name, region_b_name, force)
-      @admin.mergeRegionsAsync(region_a_name.to_java_bytes,
-                          region_b_name.to_java_bytes,
-                          java.lang.Boolean.valueOf(force))
-       return nil
+      @admin.mergeRegionsAsync(
+        region_a_name.to_java_bytes,
+        region_b_name.to_java_bytes,
+        java.lang.Boolean.valueOf(force)
+      )
+      return nil
     end
 
     #----------------------------------------------------------------------------------------------
