@@ -185,6 +185,7 @@ import org.apache.hadoop.hbase.replication.master.ReplicationHFileCleaner;
 import org.apache.hadoop.hbase.replication.master.ReplicationLogCleaner;
 import org.apache.hadoop.hbase.replication.master.ReplicationPeerConfigUpgrader;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationStatus;
+import org.apache.hadoop.hbase.rsgroup.RSGroupAdminEndpoint;
 import org.apache.hadoop.hbase.rsgroup.RSGroupBasedLoadBalancer;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfoManager;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
@@ -776,6 +777,17 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.splitOrMergeTracker = new SplitOrMergeTracker(zooKeeper, conf, this);
     this.splitOrMergeTracker.start();
 
+    // This is for backwards compatible. We do not need the CP for rs group now but if user want to
+    // load it, we need to enable rs group.
+    String[] cpClasses = conf.getStrings(MasterCoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
+    if (cpClasses != null) {
+      for (String cpClass : cpClasses) {
+        if (RSGroupAdminEndpoint.class.getName().equals(cpClass)) {
+          conf.setBoolean(RSGroupInfoManager.RS_GROUP_ENABLED, true);
+          break;
+        }
+      }
+    }
     this.rsGroupInfoManager = RSGroupInfoManager.create(this);
 
     this.replicationPeerManager = ReplicationPeerManager.create(zooKeeper, conf);
