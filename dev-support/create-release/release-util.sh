@@ -18,7 +18,7 @@
 #
 DRY_RUN=${DRY_RUN:-0}
 GPG="gpg --pinentry-mode loopback --no-tty --batch"
-YETUS_VERSION=0.9.0
+YETUS_VERSION=0.11.0
 
 function error {
   echo "$*"
