@@ -43,7 +43,7 @@ public class TestClusterRestart extends AbstractTestRestartCluster {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestClusterRestart.class);
 
-  private static final int NUM_REGIONS = 4;
+  private static final int NUM_REGIONS = 3;
 
   @Override
   protected boolean splitWALCoordinatedByZk() {

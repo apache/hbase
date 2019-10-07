@@ -86,7 +86,6 @@ public class TestRegionOpen {
     final TableName tableName = TableName.valueOf(TestRegionOpen.class.getSimpleName());
     ThreadPoolExecutor exec = getRS().getExecutorService()
         .getExecutorThreadPool(ExecutorType.RS_OPEN_PRIORITY_REGION);
-    HTU.waitTableAvailable(TableName.valueOf("hbase:rsgroup"));
     long completed = exec.getCompletedTaskCount();
 
     HTableDescriptor htd = new HTableDescriptor(tableName);
