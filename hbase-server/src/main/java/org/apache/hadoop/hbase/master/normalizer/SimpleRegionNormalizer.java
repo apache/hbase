@@ -118,7 +118,7 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
       mergeEnabled = masterRpcServices.isSplitOrMergeEnabled(null,
         RequestConverter.buildIsSplitOrMergeEnabledRequest(MasterSwitchType.MERGE)).getEnabled();
     } catch (ServiceException se) {
-      LOG.debug("Unable to determine whether split is enabled", se);
+      LOG.debug("Unable to determine whether merge is enabled", se);
     }
     if (!splitEnabled && !mergeEnabled) {
       LOG.debug("Both split and merge are disabled for table: " + table);
