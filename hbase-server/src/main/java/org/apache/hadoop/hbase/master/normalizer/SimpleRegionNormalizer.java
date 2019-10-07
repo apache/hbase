@@ -142,7 +142,7 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
       mergeEnabled = masterRpcServices.isSplitOrMergeEnabled(null,
         RequestConverter.buildIsSplitOrMergeEnabledRequest(MasterSwitchType.MERGE)).getEnabled();
     } catch (org.apache.hbase.thirdparty.com.google.protobuf.ServiceException e) {
-      LOG.debug("Unable to determine whether split is enabled", e);
+      LOG.debug("Unable to determine whether merge is enabled", e);
     }
     if (!mergeEnabled && !splitEnabled) {
       LOG.debug("Both split and merge are disabled for table: " + table);
