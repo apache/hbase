@@ -548,11 +548,11 @@ module Hbase
       @t_name = 'hbase_shell_merge'
       drop_test_table(@t_name)
       admin.create(@t_name, 'a', NUMREGIONS => 10, SPLITALGO => 'HexStringSplit')
-      r1 = command(:locate_region, @test_name, '')
-      r2 = command(:locate_region, @test_name, '1')
-      region_name1 = r1.getRegion.getRegionNameAsString
-      region_name2 = r2.getRegion.getRegionNameAsString
-      command(:merge_region, region_name1, region_name2, true)
+      r1 = command(:locate_region, @t_name, '')
+      r2 = command(:locate_region, @t_name, '1')
+      region1 = r1.getRegion.getRegionNameAsString
+      region2 = r2.getRegion.getRegionNameAsString
+      command(:merge_region, region1, region2, true)
     end
   end
 
