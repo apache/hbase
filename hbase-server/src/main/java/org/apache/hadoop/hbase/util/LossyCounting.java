@@ -19,7 +19,6 @@
 
 package org.apache.hadoop.hbase.util;
 
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,9 +26,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 
 /**
  * LossyCounting utility, bounded data structure that maintains approximate high frequency
@@ -44,17 +40,17 @@ import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class LossyCounting {
-  private static final Logger LOG = LoggerFactory.getLogger(LossyCounting.class);
   private long bucketSize;
-  private long currentTerm;
-  private double errorRate;
+  private int currentTerm;
   private Map<String, Integer> data;
   private long totalDataCount;
-  private String name;
+  private LossyCountingListener listener;
 
-  public LossyCounting(double errorRate, String name) {
-    this.errorRate = errorRate;
-    this.name = name;
+  public interface LossyCountingListener {
+    void sweep(String key);
+  }
+
+  public LossyCounting(double errorRate, LossyCountingListener listener) {
     if (errorRate < 0.0 || errorRate > 1.0) {
       throw new IllegalArgumentException(" Lossy Counting error rate should be within range [0,1]");
     }
@@ -62,51 +58,57 @@ public class LossyCounting {
     this.currentTerm = 1;
     this.totalDataCount = 0;
     this.data = new ConcurrentHashMap<>();
+    this.listener = listener;
     calculateCurrentTerm();
   }
 
-  public LossyCounting(String name) {
+  public LossyCounting(LossyCountingListener listener) {
     this(HBaseConfiguration.create().getDouble(HConstants.DEFAULT_LOSSY_COUNTING_ERROR_RATE, 0.02),
-        name);
+        listener);
   }
 
-  public Set<String> addByOne(String key) {
-    if (!data.containsKey(key)) {
-      data.put(key, 0);
+  private void addByOne(String key) {
+    //If entry exists, we update the entry by incrementing its frequency by one. Otherwise,
+    //we create a new entry starting with currentTerm so that it will not be pruned immediately
+    Integer i = data.get(key);
+    if (i == null) {
+      i = currentTerm != 0 ? currentTerm - 1 : 0;
     }
-    data.put(key, data.get(key) + 1);
+    data.put(key, i + 1);
+    //update totalDataCount and term
     totalDataCount++;
     calculateCurrentTerm();
-    Set<String> dataToBeSwept = new HashSet<>();
+  }
+
+  public void add(String key) {
+    addByOne(key);
     if(totalDataCount % bucketSize == 0) {
-      dataToBeSwept = sweep();
+      //sweep the entries at bucket boundaries
+      sweep();
     }
-    return dataToBeSwept;
   }
 
   /**
    * sweep low frequency data
    * @return Names of elements got swept
    */
-  private Set<String> sweep() {
-    Set<String> dataToBeSwept = new HashSet<>();
+  private void sweep() {
     for(Map.Entry<String, Integer> entry : data.entrySet()) {
-      if(entry.getValue() + errorRate < currentTerm) {
-        dataToBeSwept.add(entry.getKey());
+      if(entry.getValue() < currentTerm) {
+        String metric = entry.getKey();
+        data.remove(metric);
+        if (listener != null) {
+          listener.sweep(metric);
+        }
       }
     }
-    for(String key : dataToBeSwept) {
-      data.remove(key);
-    }
-    LOG.trace(String.format("%s swept %d elements.", name, dataToBeSwept.size()));
-    return dataToBeSwept;
   }
 
   /**
    * Calculate and set current term
    */
   private void calculateCurrentTerm() {
-    this.currentTerm = (int) Math.ceil(1.0 * totalDataCount / bucketSize);
+    this.currentTerm = (int) Math.ceil(1.0 * totalDataCount / (double) bucketSize);
   }
 
   public long getBucketSize(){
@@ -119,6 +121,10 @@ public class LossyCounting {
 
   public boolean contains(String key) {
     return data.containsKey(key);
+  }
+
+  public Set<String> getElements(){
+    return data.keySet();
   }
 
   public long getCurrentTerm() {

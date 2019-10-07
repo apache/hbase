@@ -24,7 +24,6 @@ import static org.junit.Assert.assertEquals;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 
-import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -33,18 +32,18 @@ public class TestLossyCounting {
 
   @Test
   public void testBucketSize() {
-    LossyCounting lossyCounting = new LossyCounting(0.01, "testBucketSize");
+    LossyCounting lossyCounting = new LossyCounting(0.01, null);
     assertEquals(100L, lossyCounting.getBucketSize());
-    LossyCounting lossyCounting2 = new LossyCounting("testBucketSize2");
+    LossyCounting lossyCounting2 = new LossyCounting(null);
     assertEquals(50L, lossyCounting2.getBucketSize());
   }
 
   @Test
   public void testAddByOne() {
-    LossyCounting lossyCounting = new LossyCounting(0.01, "testAddByOne");
+    LossyCounting lossyCounting = new LossyCounting(0.01, null);
     for(int i = 0; i < 100; i++){
       String key = "" + i;
-      lossyCounting.addByOne(key);
+      lossyCounting.add(key);
     }
     assertEquals(100L, lossyCounting.getDataSize());
     for(int i = 0; i < 100; i++){
@@ -55,26 +54,27 @@ public class TestLossyCounting {
 
   @Test
   public void testSweep1() {
-    LossyCounting lossyCounting = new LossyCounting(0.01, "testSweep1");
+    LossyCounting lossyCounting = new LossyCounting(0.01, null);
     for(int i = 0; i < 400; i++){
       String key = "" + i;
-      lossyCounting.addByOne(key);
+      lossyCounting.add(key);
     }
     assertEquals(4L, lossyCounting.getCurrentTerm());
-    assertEquals(0L, lossyCounting.getDataSize());
+    //if total rows added are proportional to bucket size
+    assertEquals(lossyCounting.getBucketSize() - 1, lossyCounting.getDataSize());
   }
 
   @Test
   public void testSweep2() {
-    LossyCounting lossyCounting = new LossyCounting(0.1, "testSweep2");
+    LossyCounting lossyCounting = new LossyCounting(0.1, null);
     for(int i = 0; i < 10; i++){
       String key = "" + i;
-      lossyCounting.addByOne(key);
+      lossyCounting.add(key);
     }
     assertEquals(10L, lossyCounting.getDataSize());
     for(int i = 0; i < 10; i++){
       String key = "1";
-      lossyCounting.addByOne(key);
+      lossyCounting.add(key);
     }
     assertEquals(1L, lossyCounting.getDataSize());
   }
