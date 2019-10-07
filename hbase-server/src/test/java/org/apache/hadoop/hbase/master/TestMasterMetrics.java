@@ -25,7 +25,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -91,7 +90,6 @@ public class TestMasterMetrics {
     cluster = TEST_UTIL.getHBaseCluster();
     LOG.info("Waiting for active/ready master");
     cluster.waitForActiveAndReadyMaster();
-    TEST_UTIL.waitTableAvailable(TableName.valueOf("hbase:rsgroup"));
     master = cluster.getMaster();
   }
 
@@ -133,7 +131,7 @@ public class TestMasterMetrics {
     MetricsMasterSource masterSource = master.getMasterMetrics().getMetricsSource();
     boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(TEST_UTIL.getConfiguration());
     metricsHelper.assertGauge("numRegionServers", 1 + (tablesOnMaster ? 1 : 0), masterSource);
-    metricsHelper.assertGauge("averageLoad", 2, masterSource);
+    metricsHelper.assertGauge("averageLoad", 1, masterSource);
     metricsHelper.assertGauge("numDeadRegionServers", 0, masterSource);
 
     metricsHelper.assertGauge("masterStartTime", master.getMasterStartTime(), masterSource);
