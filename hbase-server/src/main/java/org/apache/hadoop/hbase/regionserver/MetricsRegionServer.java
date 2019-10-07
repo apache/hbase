@@ -44,11 +44,12 @@ public class MetricsRegionServer {
       "hbase.regionserver.enable.table.latencies";
   public static final boolean RS_ENABLE_TABLE_METRICS_DEFAULT = true;
 
-  private MetricsRegionServerSource serverSource;
-  private MetricsRegionServerWrapper regionServerWrapper;
+  private final MetricsRegionServerSource serverSource;
+  private final MetricsRegionServerWrapper regionServerWrapper;
   private RegionServerTableMetrics tableMetrics;
   private final MetricsTable metricsTable;
   private MetricsRegionServerQuotaSource quotaSource;
+  private final MetricsUserAggregate userAggregate;
 
   private MetricRegistry metricRegistry;
   private Timer bulkLoadTimer;
@@ -59,9 +60,8 @@ public class MetricsRegionServer {
       MetricsTable metricsTable) {
     this(regionServerWrapper,
         CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
-            .createServer(regionServerWrapper),
-        createTableMetrics(conf),
-        metricsTable);
+            .createServer(regionServerWrapper), createTableMetrics(conf), metricsTable,
+        new MetricsUserAggregate(conf));
 
     // Create hbase-metrics module based metrics. The registry should already be registered by the
     // MetricsRegionServerSource
@@ -76,13 +76,13 @@ public class MetricsRegionServer {
   }
 
   MetricsRegionServer(MetricsRegionServerWrapper regionServerWrapper,
-                      MetricsRegionServerSource serverSource,
-                      RegionServerTableMetrics tableMetrics,
-                      MetricsTable metricsTable) {
+      MetricsRegionServerSource serverSource, RegionServerTableMetrics tableMetrics,
+      MetricsTable metricsTable, MetricsUserAggregate userAggregate) {
     this.regionServerWrapper = regionServerWrapper;
     this.serverSource = serverSource;
     this.tableMetrics = tableMetrics;
     this.metricsTable = metricsTable;
+    this.userAggregate = userAggregate;
   }
 
   /**
@@ -98,6 +98,11 @@ public class MetricsRegionServer {
   @VisibleForTesting
   public MetricsRegionServerSource getMetricsSource() {
     return serverSource;
+  }
+
+  @VisibleForTesting
+  public org.apache.hadoop.hbase.regionserver.MetricsUserAggregate getMetricsUserAggregate() {
+    return userAggregate;
   }
 
   public MetricsRegionServerWrapper getRegionServerWrapper() {
@@ -119,6 +124,7 @@ public class MetricsRegionServer {
       tableMetrics.updatePut(tn, t);
     }
     serverSource.updatePut(t);
+    userAggregate.updatePut(t);
   }
 
   public void updateDelete(TableName tn, long t) {
@@ -126,6 +132,7 @@ public class MetricsRegionServer {
       tableMetrics.updateDelete(tn, t);
     }
     serverSource.updateDelete(t);
+    userAggregate.updateDelete(t);
   }
 
   public void updateDeleteBatch(TableName tn, long t) {
@@ -154,6 +161,7 @@ public class MetricsRegionServer {
       serverSource.incrSlowGet();
     }
     serverSource.updateGet(t);
+    userAggregate.updateGet(t);
   }
 
   public void updateIncrement(TableName tn, long t) {
@@ -164,6 +172,7 @@ public class MetricsRegionServer {
       serverSource.incrSlowIncrement();
     }
     serverSource.updateIncrement(t);
+    userAggregate.updateIncrement(t);
   }
 
   public void updateAppend(TableName tn, long t) {
@@ -174,10 +183,12 @@ public class MetricsRegionServer {
       serverSource.incrSlowAppend();
     }
     serverSource.updateAppend(t);
+    userAggregate.updateAppend(t);
   }
 
   public void updateReplay(long t){
     serverSource.updateReplay(t);
+    userAggregate.updateReplay(t);
   }
 
   public void updateScanSize(TableName tn, long scanSize){
@@ -192,6 +203,7 @@ public class MetricsRegionServer {
       tableMetrics.updateScanTime(tn, t);
     }
     serverSource.updateScanTime(t);
+    userAggregate.updateScanTime(t);
   }
 
   public void updateSplitTime(long t) {

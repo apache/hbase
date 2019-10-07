@@ -24,7 +24,6 @@ import static org.junit.Assert.assertEquals;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -66,8 +65,23 @@ public class TestLossyCounting {
       lossyCounting.add(key);
     }
     assertEquals(4L, lossyCounting.getCurrentTerm());
-    //if total rows added are proportional to bucket size
+    waitForSweep(lossyCounting);
+
+    //Do last one sweep as some sweep will be skipped when first one was running
+    lossyCounting.sweep();
     assertEquals(lossyCounting.getBucketSize() - 1, lossyCounting.getDataSize());
+  }
+
+  private void waitForSweep(LossyCounting<Object> lossyCounting) {
+    //wait for sweep thread to complete
+    int retry = 0;
+    while (!lossyCounting.getSweepFuture().isDone() && retry < 10) {
+      try {
+        Thread.sleep(100);
+      } catch (InterruptedException e) {
+      }
+      retry++;
+    }
   }
 
   @Test
@@ -77,11 +91,13 @@ public class TestLossyCounting {
       String key = "" + i;
       lossyCounting.add(key);
     }
+    waitForSweep(lossyCounting);
     assertEquals(10L, lossyCounting.getDataSize());
     for(int i = 0; i < 10; i++){
       String key = "1";
       lossyCounting.add(key);
     }
+    waitForSweep(lossyCounting);
     assertEquals(1L, lossyCounting.getDataSize());
   }
 

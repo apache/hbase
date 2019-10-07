@@ -279,14 +279,13 @@ public class MetaTableMetrics implements RegionCoprocessor {
           .equals(TableName.META_TABLE_NAME)) {
       RegionCoprocessorEnvironment regionCoprocessorEnv = (RegionCoprocessorEnvironment) env;
       registry = regionCoprocessorEnv.getMetricRegistryForRegionServer();
-      LossyCounting.LossyCountingListener listener = new LossyCounting.LossyCountingListener(){
-        @Override public void sweep(String key) {
-          registry.remove(key);
-          metrics.remove(key);
-        }
-      };
-      clientMetricsLossyCounting = new LossyCounting("clientMetaMetrics",listener);
-      regionMetricsLossyCounting = new LossyCounting("regionMetaMetrics",listener);
+      LossyCounting.LossyCountingListener listener =
+          (LossyCounting.LossyCountingListener<String>) key -> {
+            registry.remove(key);
+            metrics.remove(key);
+          };
+      clientMetricsLossyCounting = new LossyCounting<String>("clientMetaMetrics",listener);
+      regionMetricsLossyCounting = new LossyCounting<String>("regionMetaMetrics",listener);
       // only be active mode when this region holds meta table.
       active = true;
     }
