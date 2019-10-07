@@ -547,6 +547,22 @@ public interface Region extends ConfigurationObserver {
   boolean bulkLoadHFiles(Collection<Pair<byte[], String>> familyPaths, boolean assignSeqId,
     BulkLoadListener bulkLoadListener, List<String> clusterIds) throws IOException;
 
+  /**
+   * Attempts to atomically load a group of hfiles.  This is critical for loading
+   * rows with multiple column families atomically. Deprecated - do not use.
+   *
+   * @param familyPaths List of Pair&lt;byte[] column family, String hfilePath&gt;
+   * @param assignSeqId
+   * @param bulkLoadListener Internal hooks enabling massaging/preparation of a
+   * file about to be bulk loaded
+   * @return true if successful, false if failed recoverably
+   * @throws IOException if failed unrecoverably.
+   * @deprecated Do not use, see HBASE-22380
+   */
+  @Deprecated
+  boolean bulkLoadHFiles(Collection<Pair<byte[], String>> familyPaths, boolean assignSeqId,
+    BulkLoadListener bulkLoadListener) throws IOException;
+
   ///////////////////////////////////////////////////////////////////////////
   // Coprocessors
 

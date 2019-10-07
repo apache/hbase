@@ -613,6 +613,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private final Durability durability;
   private final boolean regionStatsEnabled;
 
+  private static final List<String> EMPTY_CLUSTERID_LIST = new ArrayList<String>();
+
   /**
    * HRegion constructor. This constructor should only be used for testing and
    * extensions.  Instances of HRegion should be instantiated with the
@@ -5853,6 +5855,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       closeBulkRegionOperation();
     }
     return isSuccessful;
+  }
+
+  @Override
+  @Deprecated
+  public boolean bulkLoadHFiles(Collection<Pair<byte[], String>> familyPaths, boolean assignSeqId,
+      BulkLoadListener bulkLoadListener) throws IOException {
+    LOG.warn("Deprecated bulkLoadHFiles invoked. This does not pass through source cluster ids." +
+      " This is probably not what you want. See HBASE-22380.");
+    return bulkLoadHFiles(familyPaths, assignSeqId, bulkLoadListener, EMPTY_CLUSTERID_LIST);
   }
 
   @Override
