@@ -418,6 +418,22 @@ module Hbase
 
     #-------------------------------------------------------------------------------
 
+    define_test 'enable and disable tables by regex' do
+      @t1 = 't1'
+      @t2 = 't11'
+      @regex = 't1.*'
+      command(:create, @t1, 'f')
+      command(:create, @t2, 'f')
+      admin.disable_all(@regex)
+      assert(command(:is_disabled, @t1))
+      assert(command(:is_disabled, @t2))
+      admin.enable_all(@regex)
+      assert(command(:is_enabled, @t1))
+      assert(command(:is_enabled, @t2))
+    end
+
+    #-------------------------------------------------------------------------------
+
     define_test "list_regions should fail for disabled table" do
       drop_test_table(@create_test_name)
       admin.create(@create_test_name, 'a')
