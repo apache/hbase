@@ -424,7 +424,8 @@ public class TestHFileOutputFormat2  {
     // Set down this value or we OOME in eclipse.
     conf.setInt("mapreduce.task.io.sort.mb", 20);
     // Write a few files.
-    conf.setLong(HConstants.HREGION_MAX_FILESIZE, 64 * 1024);
+    long hregionMaxFilesize = 10 * 1024;
+    conf.setLong(HConstants.HREGION_MAX_FILESIZE, hregionMaxFilesize);
 
     Job job = new Job(conf, "testWritingPEData");
     setupRandomGeneratorMapper(job, false);
@@ -451,6 +452,26 @@ public class TestHFileOutputFormat2  {
     assertTrue(job.waitForCompletion(false));
     FileStatus [] files = fs.listStatus(testDir);
     assertTrue(files.length > 0);
+
+    //check output file num and size.
+    for (byte[] family : FAMILIES) {
+      long kvCount= 0;
+      RemoteIterator<LocatedFileStatus> iterator =
+              fs.listFiles(testDir.suffix("/" + new String(family)), true);
+      while (iterator.hasNext()) {
+        LocatedFileStatus keyFileStatus = iterator.next();
+        HFile.Reader reader =
+                HFile.createReader(fs, keyFileStatus.getPath(), new CacheConfig(conf), true, conf);
+        HFileScanner scanner = reader.getScanner(false, false, false);
+
+        kvCount += reader.getEntries();
+        scanner.seekTo();
+        long perKVSize = scanner.getCell().getSerializedSize();
+        assertTrue("Data size of each file should not be too large.",
+                perKVSize * reader.getEntries() <= hregionMaxFilesize);
+      }
+      assertEquals("Should write expected data in output file.", ROWSPERSPLIT, kvCount);
+    }
   }
 
   /**
