@@ -136,6 +136,7 @@ function cleanup {
 trap cleanup EXIT
 
 cat > "$ENVFILE" <<EOF
+PROJECT=$PROJECT
 DRY_RUN=$DRY_RUN
 SKIP_TAG=$SKIP_TAG
 RUNNING_IN_DOCKER=1
