@@ -390,15 +390,15 @@ module Hbase
     def drop_all(regex)
       pattern = Pattern.compile(regex.to_s)
       failed = java.util.ArrayList.new
-      admin.listTableNames(pattern).each do |table_name|
+      @admin.listTableNames(pattern).each do |table_name|
         begin
-          admin.deleteTable(table_name)
+          @admin.deleteTable(table_name)
         rescue java.io.IOException => e
           puts puts "table:#{table_name}, error:#{e.toString}"
           failed.add(table_name)
         end
       end
-      @failed
+      failed
     end
 
     #----------------------------------------------------------------------------------------------
