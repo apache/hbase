@@ -235,9 +235,9 @@ public class HFileOutputFormat2
       // Map of families to writers and how much has been output on the writer.
       private final Map<byte[], WriterLength> writers =
               new TreeMap<>(Bytes.BYTES_COMPARATOR);
-      private byte[] previousRow = HConstants.EMPTY_BYTE_ARRAY;
+      private final Map<byte[], byte[]> previousRows =
+              new TreeMap<>(Bytes.BYTES_COMPARATOR);
       private final long now = EnvironmentEdgeManager.currentTime();
-      private boolean rollRequested = false;
 
       @Override
       public void write(ImmutableBytesWritable row, V cell)
@@ -286,12 +286,9 @@ public class HFileOutputFormat2
           configureStoragePolicy(conf, fs, tableAndFamily, writerPath);
         }
 
-        if (wl != null && wl.written + length >= maxsize) {
-          this.rollRequested = true;
-        }
-
         // This can only happen once a row is finished though
-        if (rollRequested && Bytes.compareTo(this.previousRow, rowKey) != 0) {
+        if (wl != null && wl.written + length >= maxsize
+                && Bytes.compareTo(this.previousRows.get(family), rowKey) != 0) {
           rollWriters(wl);
         }
 
@@ -348,7 +345,7 @@ public class HFileOutputFormat2
         wl.written += length;
 
         // Copy the row so we know when a row transition.
-        this.previousRow = rowKey;
+        this.previousRows.put(family, rowKey);
       }
 
       private Path getTableRelativePath(byte[] tableNameBytes) {
@@ -368,7 +365,6 @@ public class HFileOutputFormat2
             closeWriter(wl);
           }
         }
-        this.rollRequested = false;
       }
 
       private void closeWriter(WriterLength wl) throws IOException {
