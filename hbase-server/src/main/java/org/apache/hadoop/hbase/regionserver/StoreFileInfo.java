@@ -101,6 +101,8 @@ public class StoreFileInfo {
   // timestamp on when the file was created, is 0 and ignored for reference or link files
   private long createdTimestamp;
 
+  private long size;
+
   /**
    * Create a Store File Info
    * @param conf the {@link Configuration} to use
@@ -109,6 +111,11 @@ public class StoreFileInfo {
    */
   public StoreFileInfo(final Configuration conf, final FileSystem fs, final Path initialPath)
       throws IOException {
+    this(conf, fs, null, initialPath);
+  }
+
+  private StoreFileInfo(final Configuration conf, final FileSystem fs,
+      final FileStatus fileStatus, final Path initialPath) throws IOException {
     assert fs != null;
     assert initialPath != null;
     assert conf != null;
@@ -136,7 +143,14 @@ public class StoreFileInfo {
               " reference to " + referencePath);
     } else if (isHFile(p)) {
       // HFile
-      this.createdTimestamp = fs.getFileStatus(initialPath).getModificationTime();
+      if (fileStatus != null) {
+        this.createdTimestamp = fileStatus.getModificationTime();
+        this.size = fileStatus.getLen();
+      } else {
+        FileStatus fStatus = fs.getFileStatus(initialPath);
+        this.createdTimestamp = fStatus.getModificationTime();
+        this.size = fStatus.getLen();
+      }
       this.reference = null;
       this.link = null;
     } else {
@@ -152,7 +166,7 @@ public class StoreFileInfo {
    */
   public StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus)
       throws IOException {
-    this(conf, fs, fileStatus.getPath());
+    this(conf, fs, fileStatus, fileStatus.getPath());
   }
 
   /**
@@ -205,6 +219,14 @@ public class StoreFileInfo {
     this.createdTimestamp = fileStatus.getModificationTime();
     this.reference = reference;
     this.link = link;
+  }
+
+  /**
+   * Size of the Hfile
+   * @return size
+   */
+  public long getSize() {
+    return size;
   }
 
   /**
