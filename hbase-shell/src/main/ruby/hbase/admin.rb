@@ -327,15 +327,15 @@ module Hbase
     def enable_all(regex)
       pattern = Pattern.compile(regex.to_s)
       failed = java.util.ArrayList.new
-      admin.listTableNames(pattern).each do |table_name|
+      @admin.listTableNames(pattern).each do |table_name|
         begin
-          admin.enableTable(table_name)
+          @admin.enableTable(table_name)
         rescue java.io.IOException => e
           puts "table:#{table_name}, error:#{e.toString}"
           failed.add(table_name)
         end
       end
-      @failed
+      failed
     end
 
     #----------------------------------------------------------------------------------------------
@@ -351,15 +351,15 @@ module Hbase
     def disable_all(regex)
       pattern = Pattern.compile(regex.to_s)
       failed = java.util.ArrayList.new
-      admin.listTableNames(pattern).each do |table_name|
+      @admin.listTableNames(pattern).each do |table_name|
         begin
-          admin.disableTable(table_name)
+          @admin.disableTable(table_name)
         rescue java.io.IOException => e
           puts "table:#{table_name}, error:#{e.toString}"
           failed.add(table_name)
         end
       end
-      @failed
+      failed
     end
 
     #---------------------------------------------------------------------------------------------
