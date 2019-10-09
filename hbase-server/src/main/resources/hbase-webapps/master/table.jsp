@@ -79,6 +79,8 @@
   }
 %>
 <%
+  final String ZEROKB = "0 KB";
+  final String ZEROMB = "0 MB";
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   Configuration conf = master.getConfiguration();
   String fqtn = request.getParameter("name");
@@ -209,9 +211,9 @@ if (fqtn != null && master.isInitialized()) {
       String hostAndPort = "";
       String readReq = "N/A";
       String writeReq = "N/A";
-      String fileSize = "N/A";
+      String fileSize = ZEROMB;
       String fileCount = "N/A";
-      String memSize = "N/A";
+      String memSize = ZEROMB;
       float locality = 0.0f;
 
       if (metaLocation != null) {
@@ -224,9 +226,15 @@ if (fqtn != null && master.isInitialized()) {
             RegionMetrics load = map.get(meta.getRegionName());
             readReq = String.format("%,1d", load.getReadRequestCount());
             writeReq = String.format("%,1d", load.getWriteRequestCount());
-            fileSize = StringUtils.byteDesc((long) load.getStoreFileSize().get(Size.Unit.BYTE));
+            double rSize = load.getStoreFileSize().get(Size.Unit.BYTE);
+            if (rSize > 0) {
+            fileSize = StringUtils.byteDesc((long) rSize);
+            }
             fileCount = String.format("%,1d", load.getStoreFileCount());
-            memSize = StringUtils.byteDesc((long) load.getMemStoreSize().get(Size.Unit.BYTE));
+            double mSize = load.getMemStoreSize().get(Size.Unit.BYTE);
+            if (mSize > 0) {
+            memSize = StringUtils.byteDesc((long)mSize);
+            }
             locality = load.getDataLocality();
           }
         }
@@ -439,6 +447,8 @@ if (fqtn != null && master.isInitialized()) {
   long totalSize = 0;
   long totalStoreFileCount = 0;
   long totalMemSize = 0;
+  String totalMemSizeStr = ZEROMB;
+  String totalSizeStr = ZEROMB;
   String urlRegionServer = null;
   Map<ServerName, Integer> regDistribution = new TreeMap<>();
   Map<ServerName, Integer> primaryRegDistribution = new TreeMap<>();
@@ -475,6 +485,12 @@ if (fqtn != null && master.isInitialized()) {
       regionsToLoad.put(regionInfo, load0);
     }
   }
+  if (totalSize > 0) {
+    totalSizeStr = StringUtils.byteDesc(totalSize*1024l*1024);
+  }
+  if (totalMemSize > 0) {
+    totalMemSizeStr = StringUtils.byteDesc(totalMemSize*1024l*1024);
+  }
 
   if(regions != null && regions.size() > 0) { %>
 <h2>Table Regions</h2>
@@ -485,9 +501,9 @@ if (fqtn != null && master.isInitialized()) {
 <th>Region Server</th>
 <th>ReadRequests<br>(<%= String.format("%,1d", totalReadReq)%>)</th>
 <th>WriteRequests<br>(<%= String.format("%,1d", totalWriteReq)%>)</th>
-<th>StorefileSize<br>(<%= StringUtils.byteDesc(totalSize*1024l*1024)%>)</th>
+<th>StorefileSize<br>(<%= totalSizeStr %>)</th>
 <th>Num.Storefiles<br>(<%= String.format("%,1d", totalStoreFileCount)%>)</th>
-<th>MemSize<br>(<%= StringUtils.byteDesc(totalMemSize*1024l*1024)%>)</th>
+<th>MemSize<br>(<%= totalMemSizeStr %>)</th>
 <th>Locality</th>
 <th>Start Key</th>
 <th>End Key</th>
@@ -517,17 +533,23 @@ if (fqtn != null && master.isInitialized()) {
     RegionMetrics load = hriEntry.getValue();
     String readReq = "N/A";
     String writeReq = "N/A";
-    String regionSize = "N/A";
+    String regionSize = ZEROMB;
     String fileCount = "N/A";
-    String memSize = "N/A";
+    String memSize = ZEROMB;
     float locality = 0.0f;
     String state = "N/A";
     if(load != null) {
       readReq = String.format("%,1d", load.getReadRequestCount());
       writeReq = String.format("%,1d", load.getWriteRequestCount());
-      regionSize = StringUtils.byteDesc((long) load.getStoreFileSize().get(Size.Unit.BYTE));
+      double rSize = load.getStoreFileSize().get(Size.Unit.BYTE);
+      if (rSize > 0) {
+      regionSize = StringUtils.byteDesc((long)rSize);
+      }
       fileCount = String.format("%,1d", load.getStoreFileCount());
-      memSize = StringUtils.byteDesc((long) load.getMemStoreSize().get(Size.Unit.BYTE));
+      double mSize = load.getMemStoreSize().get(Size.Unit.BYTE);
+      if (mSize > 0) {
+      memSize = StringUtils.byteDesc((long)mSize);
+      }
       locality = load.getDataLocality();
     }
 
@@ -649,7 +671,19 @@ if (withReplica) {
   </tr>
   <tr>
     <td>Size</td>
-    <td><%= StringUtils.TraditionalBinaryPrefix.long2String(totalStoreFileSizeMB * 1024 * 1024, "B", 2)%></td>
+    <td>
+      <%
+         if (totalStoreFileSizeMB > 0) {
+      %>
+        <%= StringUtils.TraditionalBinaryPrefix.
+        long2String(totalStoreFileSizeMB * 1024 * 1024, "B", 2)%></td>
+      <%
+         } else {
+      %>
+         0 MB </td>
+      <%
+         }
+      %>
     <td>Total size of store files</td>
   </tr>
 </table>

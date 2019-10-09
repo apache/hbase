@@ -37,7 +37,6 @@ HMaster master;
         org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 </%import>
 
-
 <%if (servers != null && servers.size() > 0)%>
 
 <%java>
@@ -162,24 +161,38 @@ Arrays.sort(serverNames);
 </thead>
 <tbody>
 <%java>
+final String ZEROMB = "0 MB";
+String usedHeapStr = ZEROMB;
+String maxHeapStr = ZEROMB;
+String memStoreSizeMBStr = ZEROMB;
 for (ServerName serverName: serverNames) {
-
     ServerMetrics sl = master.getServerManager().getLoad(serverName);
     if (sl != null) {
       long memStoreSizeMB = 0;
       for (RegionMetrics rl : sl.getRegionMetrics().values()) {
         memStoreSizeMB += rl.getMemStoreSize().get(Size.Unit.MEGABYTE);
       }
+      if (memStoreSizeMB > 0) {
+        memStoreSizeMBStr = TraditionalBinaryPrefix.long2String(memStoreSizeMB
+                                  * TraditionalBinaryPrefix.MEGA.value, "B", 1);
+      }
+
+      double usedHeapSizeMB = sl.getUsedHeapSize().get(Size.Unit.MEGABYTE);
+      if (usedHeapSizeMB > 0) {
+        usedHeapStr = TraditionalBinaryPrefix.long2String((long) usedHeapSizeMB
+                            * TraditionalBinaryPrefix.MEGA.value, "B", 1);
+      }
+      double maxHeapSizeMB = sl.getMaxHeapSize().get(Size.Unit.MEGABYTE);
+      if (maxHeapSizeMB > 0) {
+        maxHeapStr = TraditionalBinaryPrefix.long2String((long) maxHeapSizeMB
+                           * TraditionalBinaryPrefix.MEGA.value, "B", 1);
+      }
 </%java>
 <tr>
     <td><& serverNameLink; serverName=serverName; &></td>
-    <td><% TraditionalBinaryPrefix.long2String((long) sl.getUsedHeapSize().get(Size.Unit.MEGABYTE)
-      * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
-    <td><% TraditionalBinaryPrefix.long2String((long) sl.getMaxHeapSize().get(Size.Unit.MEGABYTE)
-      * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
-    <td><% TraditionalBinaryPrefix.long2String(memStoreSizeMB
-      * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
-
+    <td><% usedHeapStr %></td>
+    <td><% maxHeapStr %></td>
+    <td><% memStoreSizeMBStr %></td>
 </tr>
 <%java>
         }  else {
@@ -261,6 +274,12 @@ if (sl != null) {
 </thead>
 <tbody>
 <%java>
+final String ZEROKB = "0 KB";
+final String ZEROMB = "0 MB";
+String storeUncompressedSizeMBStr = ZEROMB;
+String storeFileSizeMBStr = ZEROMB;
+String totalStaticIndexSizeKBStr = ZEROKB;
+String totalStaticBloomSizeKBStr = ZEROKB;
 for (ServerName serverName: serverNames) {
 
 ServerMetrics sl = master.getServerManager().getLoad(serverName);
@@ -279,19 +298,31 @@ if (sl != null) {
     totalStaticIndexSizeKB += rl.getStoreFileUncompressedDataIndexSize().get(Size.Unit.KILOBYTE);
     totalStaticBloomSizeKB += rl.getBloomFilterSize().get(Size.Unit.KILOBYTE);
   }
+  if (storeUncompressedSizeMB > 0) {
+     storeUncompressedSizeMBStr = TraditionalBinaryPrefix.
+     long2String(storeUncompressedSizeMB * TraditionalBinaryPrefix.MEGA.value, "B", 1);
+  }
+  if (storeFileSizeMB > 0) {
+     storeFileSizeMBStr = TraditionalBinaryPrefix.
+     long2String(storeFileSizeMB * TraditionalBinaryPrefix.MEGA.value, "B", 1);
+  }
+  if (totalStaticIndexSizeKB > 0) {
+     totalStaticIndexSizeKBStr = TraditionalBinaryPrefix.
+     long2String(totalStaticIndexSizeKB * TraditionalBinaryPrefix.KILO.value, "B", 1);
+  }
+  if (totalStaticBloomSizeKB > 0) {
+     totalStaticBloomSizeKBStr = TraditionalBinaryPrefix.
+     long2String(totalStaticBloomSizeKB * TraditionalBinaryPrefix.KILO.value, "B", 1);
+  }
 </%java>
 <tr>
 <td><& serverNameLink; serverName=serverName; &></td>
 <td><% String.format("%,d", storeCount) %></td>
 <td><% String.format("%,d", storeFileCount) %></td>
-<td><% TraditionalBinaryPrefix.long2String(
-  storeUncompressedSizeMB * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
-<td><% TraditionalBinaryPrefix.long2String(storeFileSizeMB
-  * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
-<td><% TraditionalBinaryPrefix.long2String(totalStaticIndexSizeKB
-  * TraditionalBinaryPrefix.KILO.value, "B", 1) %></td>
-<td><% TraditionalBinaryPrefix.long2String(totalStaticBloomSizeKB
-  * TraditionalBinaryPrefix.KILO.value, "B", 1) %></td>
+<td><% storeUncompressedSizeMBStr %></td>
+<td><% storeFileSizeMBStr %></td>
+<td><% totalStaticIndexSizeKBStr %></td>
+<td><% totalStaticBloomSizeKBStr %></td>
 </tr>
 <%java>
         }  else {

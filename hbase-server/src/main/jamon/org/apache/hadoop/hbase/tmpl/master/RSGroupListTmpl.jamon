@@ -42,7 +42,6 @@ ServerManager serverManager;
 <%java>
 List<RSGroupInfo> groups = RSGroupTableAccessor.getAllRSGroupInfo(master.getConnection());
 </%java>
-
 <%if (groups != null && groups.size() > 0)%>
 
 <%java>
@@ -170,6 +169,10 @@ if (master.getServerManager() != null) {
 
 </tr>
 <%java>
+    final String ZEROMB = "0 MB";
+    String usedHeapStr = ZEROMB;
+    String maxHeapStr = ZEROMB;
+    String memstoreSizeStr = ZEROMB;
     for (RSGroupInfo rsGroupInfo: rsGroupInfos) {
       String rsGroupName = rsGroupInfo.getName();
       long usedHeap = 0;
@@ -184,15 +187,25 @@ if (master.getServerManager() != null) {
             rm -> rm.getMemStoreSize().get(Size.Unit.MEGABYTE)).sum();
         }
       }
+
+      if (usedHeap > 0) {
+        usedHeapStr = TraditionalBinaryPrefix.long2String(usedHeap
+                                      * TraditionalBinaryPrefix.MEGA.value, "B", 1);
+      }
+      if (maxHeap > 0) {
+        maxHeapStr = TraditionalBinaryPrefix.long2String(maxHeap
+                                      * TraditionalBinaryPrefix.MEGA.value, "B", 1);
+      }
+      if (memstoreSize > 0) {
+        memstoreSizeStr = TraditionalBinaryPrefix.long2String(memstoreSize
+                                      * TraditionalBinaryPrefix.MEGA.value, "B", 1);
+      }
 </%java>
 <tr>
     <td><& rsGroupLink; rsGroupName=rsGroupName; &></td>
-    <td><% TraditionalBinaryPrefix.long2String(usedHeap
-            * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
-    <td><% TraditionalBinaryPrefix.long2String(maxHeap
-            * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
-    <td><% TraditionalBinaryPrefix.long2String(memstoreSize
-            * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
+    <td><% usedHeapStr %></td>
+    <td><% maxHeapStr %></td>
+    <td><% memstoreSizeStr %></td>
 
 </tr>
 <%java>
@@ -259,6 +272,12 @@ if (master.getServerManager() != null) {
     <th>Bloom Size</th>
 </tr>
 <%java>
+    final String ZEROKB = "0 KB";
+    final String ZEROMB = "0 MB";
+    String uncompressedStorefileSizeStr = ZEROMB;
+    String storefileSizeStr = ZEROMB;
+    String indexSizeStr = ZEROKB;
+    String bloomSizeStr = ZEROKB;
     for (RSGroupInfo rsGroupInfo: rsGroupInfos) {
       String rsGroupName = rsGroupInfo.getName();
       int numStores = 0;
@@ -282,19 +301,31 @@ if (master.getServerManager() != null) {
           count++;
         }
       }
+       if (uncompressedStorefileSize > 0) {
+          uncompressedStorefileSizeStr = TraditionalBinaryPrefix.
+          long2String(uncompressedStorefileSize * TraditionalBinaryPrefix.MEGA.value, "B", 1);
+       }
+       if (storefileSize > 0) {
+           storefileSizeStr = TraditionalBinaryPrefix.
+           long2String(storefileSize * TraditionalBinaryPrefix.MEGA.value, "B", 1);
+       }
+       if (indexSize > 0) {
+          indexSizeStr = TraditionalBinaryPrefix.
+          long2String(indexSize * TraditionalBinaryPrefix.KILO.value, "B", 1);
+       }
+       if (bloomSize > 0) {
+           bloomSizeStr = TraditionalBinaryPrefix.
+           long2String(bloomSize * TraditionalBinaryPrefix.KILO.value, "B", 1);
+       }
 </%java>
 <tr>
 <td><& rsGroupLink; rsGroupName=rsGroupName; &></td>
 <td><% numStores %></td>
 <td><% numStorefiles %></td>
-<td><% TraditionalBinaryPrefix.long2String(
-    uncompressedStorefileSize * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
-<td><% TraditionalBinaryPrefix.long2String(
-    storefileSize * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
-<td><% TraditionalBinaryPrefix.long2String(
-    indexSize * TraditionalBinaryPrefix.KILO.value, "B", 1) %></td>
-<td><% TraditionalBinaryPrefix.long2String(
-    bloomSize * TraditionalBinaryPrefix.KILO.value, "B", 1) %></td>
+<td><% uncompressedStorefileSizeStr %></td>
+<td><% storefileSizeStr %></td>
+<td><% indexSizeStr %></td>
+<td><% bloomSizeStr %></td>
 </tr>
 <%java>
 }
