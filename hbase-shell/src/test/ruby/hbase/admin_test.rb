@@ -441,6 +441,10 @@ module Hbase
       admin.enable_all(@regex)
       assert(command(:is_enabled, @t1))
       assert(command(:is_enabled, @t2))
+      admin.disable_all(@regex)
+      admin.drop_all(@regex)
+      assert(!command(:exists, @t1))
+      assert(!command(:exists, @t2))
     end
 
     #-------------------------------------------------------------------------------
