@@ -574,6 +574,17 @@ module Hbase
     define_test "list regions should allow table name" do
       command(:list_regions, @test_name)
     end
+
+    define_test 'merge two regions' do
+      @t_name = 'hbase_shell_merge'
+      drop_test_table(@t_name)
+      admin.create(@t_name, 'a', NUMREGIONS => 10, SPLITALGO => 'HexStringSplit')
+      r1 = command(:locate_region, @t_name, '')
+      r2 = command(:locate_region, @t_name, '1')
+      region1 = r1.getRegion.getRegionNameAsString
+      region2 = r2.getRegion.getRegionNameAsString
+      command(:merge_region, region1, region2, true)
+    end
   end
 
   # Simple administration methods tests
