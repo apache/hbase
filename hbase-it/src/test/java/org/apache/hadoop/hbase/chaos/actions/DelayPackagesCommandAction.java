@@ -28,7 +28,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Action adds latency to communication on a random regionserver.
  */
-public class DelayPackagesCommandAction extends CommandAction {
+public class DelayPackagesCommandAction extends TCCommandAction {
   private static final Logger LOG = LoggerFactory.getLogger(DelayPackagesCommandAction.class);
   private long delay;
   private long duration;
@@ -40,8 +40,8 @@ public class DelayPackagesCommandAction extends CommandAction {
    * @param duration the time this issue persists in milliseconds
    * @param timeout the timeout for executing required commands on the region server in milliseconds
    */
-  public DelayPackagesCommandAction(long delay, long duration, long timeout) {
-    super(timeout);
+  public DelayPackagesCommandAction(long delay, long duration, long timeout, String network) {
+    super(timeout, network);
     this.delay = delay;
     this.duration = duration;
   }
@@ -51,21 +51,20 @@ public class DelayPackagesCommandAction extends CommandAction {
     ServerName server = PolicyBasedChaosMonkey.selectRandomItem(getCurrentServers());
     String hostname = server.getHostname();
 
-    String base = getConf().get("hbase.home.dir");
     try {
-      clusterManager.execSudoWithRetries(hostname, timeout, getCommand("add"));
+      clusterManager.execSudoWithRetries(hostname, timeout, getCommand(ADD));
       Thread.sleep(duration);
     } catch (InterruptedException e) {
       LOG.debug("Failed to run the command for the full duration", e);
     } finally {
-      clusterManager.execSudoWithRetries(hostname, timeout, getCommand("del"));
+      clusterManager.execSudoWithRetries(hostname, timeout, getCommand(DELETE));
     }
 
     LOG.info("Finished to execute DelayPackagesCommandAction");
   }
 
   private String getCommand(String operation){
-    return String.format("tc qdisc %s dev eth0 root netem delay %sms %sms",
-        operation, delay, delay/2);
+    return String.format("tc qdisc %s dev %s root netem delay %sms %sms",
+        operation, network, delay, delay/2);
   }
 }

@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
  *
  * Lose network packages on a random regionserver.
  */
-public class LosePackagesCommandAction extends CommandAction {
+public class LosePackagesCommandAction extends TCCommandAction {
   private static final Logger LOG = LoggerFactory.getLogger(LosePackagesCommandAction.class);
   private float ratio;
   private long duration;
@@ -41,8 +41,8 @@ public class LosePackagesCommandAction extends CommandAction {
    * @param duration the time this issue persists in milliseconds
    * @param timeout the timeout for executing required commands on the region server in milliseconds
    */
-  public LosePackagesCommandAction(float ratio, long duration, long timeout) {
-    super(timeout);
+  public LosePackagesCommandAction(float ratio, long duration, long timeout, String network) {
+    super(timeout, network);
     this.ratio = ratio;
     this.duration = duration;
   }
@@ -53,18 +53,18 @@ public class LosePackagesCommandAction extends CommandAction {
     String hostname = server.getHostname();
 
     try {
-      clusterManager.execSudoWithRetries(hostname, timeout, getCommand("add"));
+      clusterManager.execSudoWithRetries(hostname, timeout, getCommand(ADD));
       Thread.sleep(duration);
     } catch (InterruptedException e) {
       LOG.debug("Failed to run the command for the full duration", e);
     } finally {
-      clusterManager.execSudoWithRetries(hostname, timeout, getCommand("del"));
+      clusterManager.execSudoWithRetries(hostname, timeout, getCommand(DELETE));
     }
 
     LOG.info("Finished to execute LosePackagesCommandAction");
   }
 
   private String getCommand(String operation){
-    return String.format("tc qdisc %s dev eth0 root netem loss %s%%", operation, ratio * 100);
+    return String.format("tc qdisc %s dev %s root netem loss %s%%", operation, network, ratio * 100);
   }
 }

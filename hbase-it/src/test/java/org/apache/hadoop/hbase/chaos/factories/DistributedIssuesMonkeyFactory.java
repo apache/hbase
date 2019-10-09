@@ -46,6 +46,7 @@ public class DistributedIssuesMonkeyFactory extends MonkeyFactory {
   private long networkIssueDuration;
   private float networkIssueRation;
   private long networkIssueDelay;
+  private String networkIssueInterface;
   private long fillDiskTimeout;
   private String fillDiskPath;
   private long fillDiskFileSize;
@@ -57,15 +58,15 @@ public class DistributedIssuesMonkeyFactory extends MonkeyFactory {
     Action[] actions1 = new Action[] {
       new AddCPULoadAction(cpuLoadDuration, cpuLoadProcesses, networkIssueTimeout),
       new CorruptPackagesCommandAction(networkIssueRation, networkIssueDuration,
-          networkIssueTimeout),
+          networkIssueTimeout, networkIssueInterface),
       new DuplicatePackagesCommandAction(networkIssueRation, networkIssueDuration,
-          networkIssueTimeout),
+          networkIssueTimeout, networkIssueInterface),
       new LosePackagesCommandAction(networkIssueRation, networkIssueDuration,
-          networkIssueTimeout),
+          networkIssueTimeout, networkIssueInterface),
       new DelayPackagesCommandAction(networkIssueDelay, networkIssueDuration,
-          networkIssueTimeout),
+          networkIssueTimeout, networkIssueInterface),
       new ReorderPackagesCommandAction(networkIssueRation, networkIssueDuration,
-          networkIssueDelay, networkIssueTimeout),
+          networkIssueDelay, networkIssueTimeout, networkIssueInterface),
       new FillDiskCommandAction(fillDiskFileSize, fillDiskIssueduration, fillDiskPath,
           fillDiskTimeout)};
 
@@ -101,6 +102,9 @@ public class DistributedIssuesMonkeyFactory extends MonkeyFactory {
     networkIssueDelay = Long.parseLong(this.properties
         .getProperty(MonkeyConstants.NETWORK_ISSUE_DELAY,
             MonkeyConstants.DEFAULT_NETWORK_ISSUE_DELAY + ""));
+    networkIssueInterface = this.properties
+        .getProperty(MonkeyConstants.NETWORK_ISSUE_INTERFACE,
+            MonkeyConstants.DEFAULT_NETWORK_ISSUE_INTERFACE + "");
     fillDiskTimeout = Long.parseLong(this.properties
         .getProperty(MonkeyConstants.FILL_DISK_COMMAND_TIMEOUT,
             MonkeyConstants.DEFAULT_FILL_DISK_COMMAND_TIMEOUT + ""));

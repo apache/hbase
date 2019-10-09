@@ -162,11 +162,6 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
       LOG.info("Executing full command [" + cmd + "]");
       return new String[] { "/usr/bin/env", "bash", "-c", cmd };
     }
-
-    @Override
-    public void execute() throws IOException {
-      super.execute();
-    }
   }
 
   /**
@@ -193,11 +188,6 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
           timeOutInterval/1000f);
       LOG.info("Executing full command [" + cmd + "]");
       return new String[] { "/usr/bin/env", "bash", "-c", cmd };
-    }
-
-    @Override
-    public void execute() throws IOException {
-      super.execute();
     }
   }
 
@@ -341,7 +331,8 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
    */
   private Pair<Integer, String> exec(String hostname, ServiceType service, String... cmd)
     throws IOException {
-    LOG.info("Executing remote command: " + StringUtils.join(cmd, " ") + " , hostname:" + hostname);
+    LOG.info("Executing remote command: {} , hostname:{}", StringUtils.join(cmd, " "),
+        hostname);
 
     RemoteShell shell = new RemoteShell(hostname, getServiceUser(service), cmd);
     try {
@@ -354,8 +345,8 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
         + ", stdout: " + output);
     }
 
-    LOG.info("Executed remote command, exit code:" + shell.getExitCode()
-        + " , output:" + shell.getOutput());
+    LOG.info("Executed remote command, exit code:{} , output:{}", shell.getExitCode(),
+        shell.getOutput());
 
     return new Pair<>(shell.getExitCode(), shell.getOutput());
   }
@@ -373,7 +364,7 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
         retryCounter.sleepUntilNextRetry();
       } catch (InterruptedException ex) {
         // ignore
-        LOG.warn("Sleep Interrupted:" + ex);
+        LOG.warn("Sleep Interrupted:", ex);
       }
     }
   }
@@ -385,7 +376,8 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
    */
   public Pair<Integer, String> execSudo(String hostname, long timeout, String... cmd)
       throws IOException {
-    LOG.info("Executing remote command: " + StringUtils.join(cmd, " ") + " , hostname:" + hostname);
+    LOG.info("Executing remote command: {} , hostname:{}", StringUtils.join(cmd, " "),
+        hostname);
 
     RemoteSudoShell shell = new RemoteSudoShell(hostname, cmd, timeout);
     try {
@@ -398,8 +390,8 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
           + ", stdout: " + output);
     }
 
-    LOG.info("Executed remote command, exit code:" + shell.getExitCode()
-        + " , output:" + shell.getOutput());
+    LOG.info("Executed remote command, exit code:{} , output:{}", shell.getExitCode(),
+        shell.getOutput());
 
     return new Pair<>(shell.getExitCode(), shell.getOutput());
   }
@@ -417,7 +409,7 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
         retryCounter.sleepUntilNextRetry();
       } catch (InterruptedException ex) {
         // ignore
-        LOG.warn("Sleep Interrupted:" + ex);
+        LOG.warn("Sleep Interrupted:", ex);
       }
     }
   }

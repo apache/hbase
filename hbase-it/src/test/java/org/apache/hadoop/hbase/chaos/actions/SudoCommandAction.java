@@ -29,13 +29,13 @@ import org.slf4j.LoggerFactory;
 /**
  * Base class for performing Actions based on linux commands requiring sudo privileges
  */
-abstract public class CommandAction extends Action {
-  private static final Logger LOG = LoggerFactory.getLogger(CommandAction.class);
+abstract public class SudoCommandAction extends Action {
+  private static final Logger LOG = LoggerFactory.getLogger(SudoCommandAction.class);
 
   protected long timeout;
   protected HBaseClusterManager clusterManager;
 
-  public CommandAction(long timeout) {
+  public SudoCommandAction(long timeout) {
     this.timeout = timeout;
   }
 

@@ -28,7 +28,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Action that adds high cpu load to a random regionserver for a given duration
  */
-public class AddCPULoadAction extends CommandAction {
+public class AddCPULoadAction extends SudoCommandAction {
   protected static final Logger LOG = LoggerFactory.getLogger(AddCPULoadAction.class);
   private static final String CPU_LOAD_COMMAND =
       "seq 1 %s | xargs -I{} -n 1 -P %s timeout %s dd if=/dev/urandom of=/dev/null bs=1M " +
@@ -40,7 +40,7 @@ public class AddCPULoadAction extends CommandAction {
   /**
    * Add high load to cpu
    *
-   * @param duration  Duration that this thread should generate the load for in miliseconds
+   * @param duration  Duration that this thread should generate the load for in milliseconds
    * @param processes The number of parallel processes, should be equal to cpu threads for max load
    */
   public AddCPULoadAction(long duration, long processes, long timeout) {

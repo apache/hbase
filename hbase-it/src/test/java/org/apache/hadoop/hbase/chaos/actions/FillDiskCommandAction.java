@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
  *
  * Fill the disk on a random regionserver.
  */
-public class FillDiskCommandAction extends CommandAction {
+public class FillDiskCommandAction extends SudoCommandAction {
   private static final Logger LOG = LoggerFactory.getLogger(FillDiskCommandAction.class);
   private long size;
   private long duration;

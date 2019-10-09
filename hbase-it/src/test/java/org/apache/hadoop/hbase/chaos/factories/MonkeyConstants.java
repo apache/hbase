@@ -53,7 +53,8 @@ public interface MonkeyConstants {
   String NETWORK_ISSUE_COMMAND_TIMEOUT = "network.issue.command.timeout";
   String NETWORK_ISSUE_DURATION = "network.issueduration";
   String NETWORK_ISSUE_RATIO = "network.issue.ratio";
-  String NETWORK_ISSUE_DELAY = "networkissue.delay";
+  String NETWORK_ISSUE_DELAY = "network.issue.delay";
+  String NETWORK_ISSUE_INTERFACE = "network.issue.interface";
   //should be big enough to create the file
   String FILL_DISK_COMMAND_TIMEOUT = "fill.disk.command.timeout";
   String FILL_DISK_PATH = "fill.disk.path";
@@ -99,7 +100,8 @@ public interface MonkeyConstants {
   long DEFAULT_NETWORK_ISSUE_DURATION = 60 * 1000;
   float DEFAULT_NETWORK_ISSUE_RATIO = 0.1f;
   long DEFAULT_NETWORK_ISSUE_DELAY = 100;
-  long DEFAULT_FILL_DISK_COMMAND_TIMEOUT = 2 * 60 * 1000;
+  String DEFAULT_NETWORK_ISSUE_INTERFACE = "eth0";
+  long DEFAULT_FILL_DISK_COMMAND_TIMEOUT = 5 * 60 * 1000 + 30 * 1000;//duration + timeout
   String DEFAULT_FILL_DISK_PATH = "/tmp";
   long DEFAULT_FILL_DISK_FILE_SIZE = 0;
   long DEFAULT_FILL_DISK_ISSUE_DURATION = 5 * 60 * 1000;

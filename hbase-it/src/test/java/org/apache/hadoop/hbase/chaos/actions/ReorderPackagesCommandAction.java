@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
  *
  * Reorder network packages on a random regionserver.
  */
-public class ReorderPackagesCommandAction extends CommandAction {
+public class ReorderPackagesCommandAction extends TCCommandAction {
   private static final Logger LOG = LoggerFactory.getLogger(ReorderPackagesCommandAction.class);
   private float ratio;
   private long duration;
@@ -43,8 +43,8 @@ public class ReorderPackagesCommandAction extends CommandAction {
    * @param delay the delay between reordered and non-reordered packages in milliseconds
    * @param timeout the timeout for executing required commands on the region server in milliseconds
    */
-  public ReorderPackagesCommandAction(float ratio, long duration, long delay, long timeout) {
-    super(timeout);
+  public ReorderPackagesCommandAction(float ratio, long duration, long delay, long timeout, String network) {
+    super(timeout, network);
     this.ratio = ratio;
     this.duration = duration;
     this.delay = delay;
@@ -56,19 +56,19 @@ public class ReorderPackagesCommandAction extends CommandAction {
     String hostname = server.getHostname();
 
     try {
-      clusterManager.execSudoWithRetries(hostname, timeout, getCommand("add"));
+      clusterManager.execSudoWithRetries(hostname, timeout, getCommand(ADD));
       Thread.sleep(duration);
     } catch (InterruptedException e) {
       LOG.debug("Failed to run the command for the full duration", e);
     } finally {
-      clusterManager.execSudoWithRetries(hostname, timeout, getCommand("del"));
+      clusterManager.execSudoWithRetries(hostname, timeout, getCommand(DELETE));
     }
 
     LOG.info("Finished to execute ReorderPackagesCommandAction");
   }
 
   private String getCommand(String operation){
-    return String.format("tc qdisc %s dev eth0 root netem delay %sms reorder %s%% 50%",
-        operation, delay, ratio * 100);
+    return String.format("tc qdisc %s dev %s root netem delay %sms reorder %s%% 50%",
+        operation, network, delay, ratio * 100);
   }
 }

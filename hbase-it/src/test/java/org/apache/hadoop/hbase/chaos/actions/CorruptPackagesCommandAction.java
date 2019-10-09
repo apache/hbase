@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
  *
  * Corrupt network packages on a random regionserver.
  */
-public class CorruptPackagesCommandAction extends CommandAction {
+public class CorruptPackagesCommandAction extends TCCommandAction {
   private static final Logger LOG = LoggerFactory.getLogger(CorruptPackagesCommandAction.class);
   private float ratio;
   private long duration;
@@ -41,8 +41,8 @@ public class CorruptPackagesCommandAction extends CommandAction {
    * @param duration the time this issue persists in milliseconds
    * @param timeout the timeout for executing required commands on the region server in milliseconds
    */
-  public CorruptPackagesCommandAction(float ratio, long duration, long timeout) {
-    super(timeout);
+  public CorruptPackagesCommandAction(float ratio, long duration, long timeout, String network) {
+    super(timeout, network);
     this.ratio = ratio;
     this.duration = duration;
   }
@@ -53,18 +53,18 @@ public class CorruptPackagesCommandAction extends CommandAction {
     String hostname = server.getHostname();
 
     try {
-      clusterManager.execSudoWithRetries(hostname, timeout, getCommand("add"));
+      clusterManager.execSudoWithRetries(hostname, timeout, getCommand(ADD));
       Thread.sleep(duration);
     } catch (InterruptedException e) {
       LOG.debug("Failed to run the command for the full duration", e);
     } finally {
-      clusterManager.execSudoWithRetries(hostname, timeout, getCommand("del"));
+      clusterManager.execSudoWithRetries(hostname, timeout, getCommand(DELETE));
     }
 
     LOG.info("Finished to execute CorruptPackagesCommandAction");
   }
 
   private String getCommand(String operation){
-    return String.format("tc qdisc %s dev eth0 root netem corrupt %s%%", operation, ratio * 100);
+    return String.format("tc qdisc %s dev %s root netem corrupt %s%%", operation, network, ratio * 100);
   }
 }
