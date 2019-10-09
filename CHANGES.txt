@@ -109,6 +109,7 @@ Release Notes - HBase - Version 1.5.0 10/14/2019
     * [HBASE-23086] - TestShell failing on branch-1 and branch-1.4
     * [HBASE-23094] - Wrong log message in simpleRegionNormaliser while checking if merge is enabled.
     * [HBASE-23128] - Restore Region interface compatibility
+    * [HBASE-23139] - MapReduce jobs lauched from convenience distribution are nonfunctional
 
 ** New Feature
     * [HBASE-15666] - shaded dependencies for hbase-testing-util
