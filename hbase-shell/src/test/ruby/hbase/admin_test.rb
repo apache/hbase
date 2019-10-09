@@ -367,6 +367,17 @@ module Hbase
       assert(output.include?('0 row(s)'))
     end
 
+    define_test 'describe_namespace should return quota disabled' do
+      ns = 'ns'
+      quota_table = ::HBaseQuotasConstants::QUOTA_TABLE_NAME.to_s
+      drop_test_table(quota_table)
+      command(:create_namespace, ns)
+      output = capture_stdout { command(:describe_namespace, ns) }
+      # re-creating quota table otherwise other test case may fail
+      command(:create, quota_table, 'q', 'u')
+      assert(output.include?('Quota is disabled'))
+    end
+
     #-------------------------------------------------------------------------------
 
     define_test 'truncate should empty a table' do
