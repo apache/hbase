@@ -151,6 +151,7 @@ message BulkLoadDescriptor {
   repeated StoreDescriptor stores = 3;
   required int64 bulkload_seq_num = 4;
   repeated string cluster_ids = 5;
+  optional bool replicate = 6 [default = true];
 }
 
 /**
