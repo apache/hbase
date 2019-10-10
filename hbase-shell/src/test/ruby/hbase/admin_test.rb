@@ -107,6 +107,16 @@ module Hbase
         command(:flush, s.toString)
       end
     end
+    #-------------------------------------------------------------------------------
+    define_test 'compact all regions by server name' do
+      servers = admin.list_liveservers
+      servers.each do |s|
+        command(:compact_rs, s.to_s)
+        # major compact
+        command(:compact_rs, s.to_s, true)
+        break
+      end
+    end
 
     #-------------------------------------------------------------------------------
 
