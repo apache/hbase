@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
@@ -83,8 +84,11 @@ public class TestHRegionPartitioner {
 
     byte[][] families = { Bytes.toBytes("familyA"), Bytes.toBytes("familyB") };
 
-    UTIL.createTable(TableName.valueOf(name.getMethodName()), families, 1,
-        Bytes.toBytes("aa"), Bytes.toBytes("cc"), 5);
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    UTIL.createTable(tableName, families, 1, Bytes.toBytes("aa"), Bytes.toBytes("cc"), 5);
+
+    int numberOfRegions = MetaTableAccessor.getRegionCount(UTIL.getConfiguration(), tableName);
+    assertEquals(5, numberOfRegions);
 
     HRegionPartitioner<Long, Long> partitioner = new HRegionPartitioner<>();
     Configuration configuration = UTIL.getConfiguration();
