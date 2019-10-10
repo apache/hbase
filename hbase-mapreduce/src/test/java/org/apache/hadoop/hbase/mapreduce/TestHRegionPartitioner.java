@@ -87,11 +87,11 @@ public class TestHRegionPartitioner {
     TableName tableName = TableName.valueOf(name.getMethodName());
     UTIL.createTable(tableName, families, 1, Bytes.toBytes("aa"), Bytes.toBytes("cc"), 5);
 
-    int numberOfRegions = MetaTableAccessor.getRegionCount(UTIL.getConfiguration(), tableName);
+    Configuration configuration = UTIL.getConfiguration();
+    int numberOfRegions = MetaTableAccessor.getRegionCount(configuration, tableName);
     assertEquals(5, numberOfRegions);
 
     HRegionPartitioner<Long, Long> partitioner = new HRegionPartitioner<>();
-    Configuration configuration = UTIL.getConfiguration();
     configuration.set(TableOutputFormat.OUTPUT_TABLE, name.getMethodName());
     partitioner.setConf(configuration);
 
