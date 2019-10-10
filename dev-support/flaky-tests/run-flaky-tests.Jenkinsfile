@@ -73,7 +73,7 @@ pipeline {
     always {
       junit testResults: "**/surefire-reports/*.xml", allowEmptyResults: true
       // TODO compress these logs
-      archive 'includes.txt,**/surefire-reports/*,**/test-data/*,target/machine/*'
+      archiveArtifacts artifacts: 'includes.txt,**/surefire-reports/*,**/test-data/*,target/machine/*'
     }
   }
 }
