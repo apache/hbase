@@ -51,7 +51,7 @@ pipeline {
   post {
     always {
       // Has to be relative to WORKSPACE.
-      archive "includes,excludes,dashboard.html"
+      archiveArtifacts artifacts: "includes,excludes,dashboard.html"
       publishHTML target: [
         allowMissing: true,
         keepAll: true,
