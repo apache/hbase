@@ -175,9 +175,13 @@ echo "Follow the ref guide section on making a RC: Step 8 Build the binary tarba
 # N.B. Older JDK7 requires the TLSv1.2 in order to talk to maven central
 if mvn -Dhttps.protocols=TLSv1.2 -DskipTests -Prelease --batch-mode -Dmaven.repo.local="${m2_tarbuild}" clean install \
     assembly:single >"${working_dir}/srctarball_install.log" 2>&1; then
-  echo "Building a binary tarball from the source tarball succeeded."
-else
-  echo "Building a binary tarball from the source tarball failed. see srtarball_install.log for details."
-  exit 1
+  for artifact in "${unpack_dir}"/hbase-assembly/target/hbase-*-bin.tar.gz; do
+    if [ -f "${artifact}" ]; then
+      # TODO check the layout of the binary artifact we just made.
+      echo "Building a binary tarball from the source tarball succeeded."
+      exit 0
+    fi
+  done
 fi
-# TODO check the layout of the binary artifact we just made.
+echo "Building a binary tarball from the source tarball failed. see srtarball_install.log for details."
+exit 1
