@@ -65,6 +65,7 @@ public class DuplicatePackagesCommandAction extends TCCommandAction {
   }
 
   private String getCommand(String operation){
-    return String.format("tc qdisc %s dev %s root netem duplicate %s%%", operation, network, ratio * 100);
+    return String.format("tc qdisc %s dev %s root netem duplicate %s%%", operation, network,
+        ratio * 100);
   }
 }

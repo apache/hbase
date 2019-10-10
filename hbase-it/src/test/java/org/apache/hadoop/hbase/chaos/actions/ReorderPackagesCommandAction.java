@@ -43,7 +43,8 @@ public class ReorderPackagesCommandAction extends TCCommandAction {
    * @param delay the delay between reordered and non-reordered packages in milliseconds
    * @param timeout the timeout for executing required commands on the region server in milliseconds
    */
-  public ReorderPackagesCommandAction(float ratio, long duration, long delay, long timeout, String network) {
+  public ReorderPackagesCommandAction(float ratio, long duration, long delay, long timeout,
+      String network) {
     super(timeout, network);
     this.ratio = ratio;
     this.duration = duration;

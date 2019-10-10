@@ -65,6 +65,7 @@ public class CorruptPackagesCommandAction extends TCCommandAction {
   }
 
   private String getCommand(String operation){
-    return String.format("tc qdisc %s dev %s root netem corrupt %s%%", operation, network, ratio * 100);
+    return String.format("tc qdisc %s dev %s root netem corrupt %s%%", operation, network,
+        ratio * 100);
   }
 }
