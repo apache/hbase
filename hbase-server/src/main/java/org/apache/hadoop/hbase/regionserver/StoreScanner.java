@@ -23,7 +23,6 @@ import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
-import java.util.OptionalInt;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -351,11 +350,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
   // Used to instantiate a scanner for compaction in test
   @VisibleForTesting
-  StoreScanner(ScanInfo scanInfo, OptionalInt maxVersions, ScanType scanType,
+  StoreScanner(ScanInfo scanInfo, int maxVersions, ScanType scanType,
       List<? extends KeyValueScanner> scanners) throws IOException {
     // 0 is passed as readpoint because the test bypasses Store
-    this(null, maxVersions.isPresent() ? new Scan().readVersions(maxVersions.getAsInt())
-        : SCAN_FOR_COMPACTION, scanInfo, 0, 0L, false, scanType);
+    this(null, maxVersions > 0 ? new Scan().readVersions(maxVersions)
+      : SCAN_FOR_COMPACTION, scanInfo, 0, 0L, false, scanType);
     this.matcher = CompactionScanQueryMatcher.create(scanInfo, scanType, Long.MAX_VALUE,
       HConstants.OLDEST_TIMESTAMP, oldestUnexpiredTS, now, null, null, null);
     seekAllScanner(scanInfo, scanners);
