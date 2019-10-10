@@ -176,8 +176,8 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
             always {
               stash name: 'general-result', includes: "${OUTPUT_DIR_RELATIVE}/commentfile"
               // Has to be relative to WORKSPACE.
-              archive "${env.OUTPUT_DIR_RELATIVE}/*"
-              archive "${env.OUTPUT_DIR_RELATIVE}/**/*"
+              archiveArtifacts "${env.OUTPUT_DIR_RELATIVE}/*"
+              archiveArtifacts "${env.OUTPUT_DIR_RELATIVE}/**/*"
               publishHTML target: [
                 allowMissing: true,
                 keepAll: true,
@@ -257,8 +257,8 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
                 fi
 '''
               // Has to be relative to WORKSPACE.
-              archive "${env.OUTPUT_DIR_RELATIVE}/*"
-              archive "${env.OUTPUT_DIR_RELATIVE}/**/*"
+              archiveArtifacts "${env.OUTPUT_DIR_RELATIVE}/*"
+              archiveArtifacts "${env.OUTPUT_DIR_RELATIVE}/**/*"
               publishHTML target: [
                 allowMissing         : true,
                 keepAll              : true,
@@ -336,8 +336,8 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
                 fi
 '''
               // Has to be relative to WORKSPACE.
-              archive "${env.OUTPUT_DIR_RELATIVE}/*"
-              archive "${env.OUTPUT_DIR_RELATIVE}/**/*"
+              archiveArtifacts "${env.OUTPUT_DIR_RELATIVE}/*"
+              archiveArtifacts "${env.OUTPUT_DIR_RELATIVE}/**/*"
               publishHTML target: [
                 allowMissing         : true,
                 keepAll              : true,
@@ -422,8 +422,8 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
                 fi
 '''
               // Has to be relative to WORKSPACE.
-              archive "${env.OUTPUT_DIR_RELATIVE}/*"
-              archive "${env.OUTPUT_DIR_RELATIVE}/**/*"
+              archiveArtifacts "${env.OUTPUT_DIR_RELATIVE}/*"
+              archiveArtifacts "${env.OUTPUT_DIR_RELATIVE}/**/*"
               publishHTML target: [
                 allowMissing         : true,
                 keepAll              : true,
@@ -484,8 +484,8 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
           post {
             always {
               stash name: 'srctarball-result', includes: "output-srctarball/commentfile"
-              archive 'output-srctarball/*'
-              archive 'output-srctarball/**/*'
+              archiveArtifacts 'output-srctarball/*'
+              archiveArtifacts 'output-srctarball/**/*'
             }
           }
         }
