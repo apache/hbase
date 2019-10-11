@@ -2570,19 +2570,16 @@ public final class ProtobufUtil {
     ByteString encodedRegionName, Map<byte[], List<Path>> storeFiles,
     Map<String, Long> storeFilesSize, long bulkloadSeqId) {
     return toBulkLoadDescriptor(tableName, encodedRegionName, storeFiles,
-      storeFilesSize, bulkloadSeqId, null, true);
+      storeFilesSize, bulkloadSeqId, null);
   }
 
   public static WALProtos.BulkLoadDescriptor toBulkLoadDescriptor(TableName tableName,
       ByteString encodedRegionName, Map<byte[], List<Path>> storeFiles,
-      Map<String, Long> storeFilesSize, long bulkloadSeqId,
-      List<String> clusterIds, boolean replicate) {
+      Map<String, Long> storeFilesSize, long bulkloadSeqId, List<String> clusterIds) {
     BulkLoadDescriptor.Builder desc =
         BulkLoadDescriptor.newBuilder()
-          .setTableName(ProtobufUtil.toProtoTableName(tableName))
-          .setEncodedRegionName(encodedRegionName)
-          .setBulkloadSeqNum(bulkloadSeqId)
-          .setReplicate(replicate);
+        .setTableName(ProtobufUtil.toProtoTableName(tableName))
+        .setEncodedRegionName(encodedRegionName).setBulkloadSeqNum(bulkloadSeqId);
     if(clusterIds != null) {
       desc.addAllClusterIds(clusterIds);
     }

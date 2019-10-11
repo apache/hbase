@@ -296,7 +296,7 @@ public class SecureBulkLoadManager {
             //To enable access prior to staging
             return region.bulkLoadHFiles(familyPaths, true,
                 new SecureBulkLoadListener(fs, bulkToken, conf), request.getCopyFile(),
-              clusterIds, request.getReplicate());
+              clusterIds);
           } catch (Exception e) {
             LOG.error("Failed to complete bulk load", e);
           }

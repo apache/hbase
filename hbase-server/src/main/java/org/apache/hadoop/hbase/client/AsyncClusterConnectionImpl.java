@@ -109,13 +109,13 @@ class AsyncClusterConnectionImpl extends AsyncConnectionImpl implements AsyncClu
   @Override
   public CompletableFuture<Boolean> bulkLoad(TableName tableName,
     List<Pair<byte[], String>> familyPaths, byte[] row, boolean assignSeqNum, Token<?> userToken,
-    String bulkToken, boolean copyFiles, List<String> clusterIds, boolean replicate) {
+    String bulkToken, boolean copyFiles, List<String> clusterIds) {
     return callerFactory.<Boolean> single().table(tableName).row(row)
       .action((controller, loc, stub) -> ConnectionUtils
         .<Void, BulkLoadHFileRequest, BulkLoadHFileResponse, Boolean> call(controller, loc, stub,
           null,
           (rn, nil) -> RequestConverter.buildBulkLoadHFileRequest(familyPaths, rn, assignSeqNum,
-            userToken, bulkToken, copyFiles, clusterIds, replicate),
+            userToken, bulkToken, copyFiles, clusterIds),
           (s, c, req, done) -> s.bulkLoadHFile(c, req, done), (c, resp) -> resp.getLoaded()))
       .call();
   }

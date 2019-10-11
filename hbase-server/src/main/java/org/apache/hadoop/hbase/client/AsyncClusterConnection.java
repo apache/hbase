@@ -81,18 +81,17 @@ public interface AsyncClusterConnection extends AsyncConnection {
    * Defined as default here to avoid breaking callers who rely on the bulkLoad version that does
    * not expect additional clusterIds param.
    * @param tableName the target table
-   * @param familyPaths hdfs path for the the table family dirs containg files to be loaded.
-   * @param row row key.
-   * @param assignSeqNum seq num for the event on WAL.
-   * @param userToken user token.
-   * @param bulkToken bulk load token.
-   * @param copyFiles flag for copying the loaded hfiles.
+   * @param familyPaths hdfs path for the the table family dirs containg files to be loaded
+   * @param row row key
+   * @param assignSeqNum seq num for the event on WAL
+   * @param userToken user token
+   * @param bulkToken bulk load token
+   * @param copyFiles flag for copying the loaded hfiles
    * @param clusterIds list of cluster ids where the given bulk load has already been processed.
-   * @param replicate flags if the bulkload is targeted for replication.
    */
   CompletableFuture<Boolean> bulkLoad(TableName tableName, List<Pair<byte[], String>> familyPaths,
     byte[] row, boolean assignSeqNum, Token<?> userToken, String bulkToken, boolean copyFiles,
-    List<String> clusterIds, boolean replicate);
+    List<String> clusterIds);
 
   /**
    * Clean up after finishing bulk load, no matter success or not.

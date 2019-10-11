@@ -144,7 +144,7 @@ public class DummyAsyncClusterConnection implements AsyncClusterConnection {
   @Override
   public CompletableFuture<Boolean> bulkLoad(TableName tableName,
     List<Pair<byte[], String>> familyPaths, byte[] row, boolean assignSeqNum, Token<?> userToken,
-    String bulkToken, boolean copyFiles, List<String> clusterIds, boolean replicate) {
+    String bulkToken, boolean copyFiles, List<String> clusterIds) {
     return null;
   }
 

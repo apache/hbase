@@ -203,19 +203,18 @@ public class ReplicationSink {
           // Handle bulk load hfiles replication
           if (CellUtil.matchingQualifier(cell, WALEdit.BULK_LOAD)) {
             BulkLoadDescriptor bld = WALEdit.getBulkLoadDescriptor(cell);
-            if(bld.getReplicate()) {
-              if (bulkLoadsPerClusters == null) {
-                bulkLoadsPerClusters = new HashMap<>();
-              }
-              // Map of table name Vs list of pair of family and list of
-              // hfile paths from its namespace
-              Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap = bulkLoadsPerClusters.get(bld.getClusterIdsList());
-              if (bulkLoadHFileMap == null) {
-                bulkLoadHFileMap = new HashMap<>();
-                bulkLoadsPerClusters.put(bld.getClusterIdsList(), bulkLoadHFileMap);
-              }
-              buildBulkLoadHFileMap(bulkLoadHFileMap, table, bld);
+            if(bulkLoadsPerClusters == null) {
+              bulkLoadsPerClusters = new HashMap<>();
             }
+            // Map of table name Vs list of pair of family and list of
+            // hfile paths from its namespace
+            Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap =
+              bulkLoadsPerClusters.get(bld.getClusterIdsList());
+            if (bulkLoadHFileMap == null) {
+              bulkLoadHFileMap = new HashMap<>();
+              bulkLoadsPerClusters.put(bld.getClusterIdsList(), bulkLoadHFileMap);
+            }
+            buildBulkLoadHFileMap(bulkLoadHFileMap, table, bld);
           } else {
             // Handle wal replication
             if (isNewRowOrType(previousCell, cell)) {
