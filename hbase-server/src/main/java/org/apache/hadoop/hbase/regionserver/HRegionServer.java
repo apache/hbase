@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClockOutOfSyncException;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExecutorStatusChore;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
@@ -441,6 +442,9 @@ public class HRegionServer extends HasThread implements
 
   /** The health check chore. */
   private HealthCheckChore healthCheckChore;
+
+  /** The Executor status collect chore. */
+  private ExecutorStatusChore executorStatusChore;
 
   /** The nonce manager chore. */
   private ScheduledChore nonceManagerChore;
@@ -1922,6 +1926,14 @@ public class HRegionServer extends HasThread implements
       HConstants.DEFAULT_THREAD_WAKE_FREQUENCY);
       healthCheckChore = new HealthCheckChore(sleepTime, this, getConfiguration());
     }
+    // Executor status collect thread.
+    if (this.conf.getBoolean(HConstants.EXECUTOR_STATUS_COLLECT_ENABLED,
+        HConstants.DEFAULT_EXECUTOR_STATUS_COLLECT_ENABLED)) {
+      int sleepTime = this.conf.getInt(ExecutorStatusChore.WAKE_FREQ,
+          ExecutorStatusChore.DEFAULT_WAKE_FREQ);
+      executorStatusChore = new ExecutorStatusChore(sleepTime, this, this.getExecutorService(),
+          this.getRegionServerMetrics().getMetricsSource());
+    }
 
     this.walRoller = new LogRoller(this, this);
     this.flushThroughputController = FlushThroughputControllerFactory.create(this, conf);
@@ -1970,25 +1982,42 @@ public class HRegionServer extends HasThread implements
       conf.getInt("hbase.regionserver.executor.switch.rpc.throttle.threads", 1));
 
     Threads.setDaemonThreadRunning(this.walRoller.getThread(), getName() + ".logRoller",
-    uncaughtExceptionHandler);
+        uncaughtExceptionHandler);
     if (this.cacheFlusher != null) {
       this.cacheFlusher.start(uncaughtExceptionHandler);
     }
     Threads.setDaemonThreadRunning(this.procedureResultReporter,
       getName() + ".procedureResultReporter", uncaughtExceptionHandler);
 
-    if (this.compactionChecker != null) choreService.scheduleChore(compactionChecker);
-    if (this.periodicFlusher != null) choreService.scheduleChore(periodicFlusher);
-    if (this.healthCheckChore != null) choreService.scheduleChore(healthCheckChore);
-    if (this.nonceManagerChore != null) choreService.scheduleChore(nonceManagerChore);
-    if (this.storefileRefresher != null) choreService.scheduleChore(storefileRefresher);
-    if (this.movedRegionsCleaner != null) choreService.scheduleChore(movedRegionsCleaner);
-    if (this.fsUtilizationChore != null) choreService.scheduleChore(fsUtilizationChore);
+    if (this.compactionChecker != null) {
+      choreService.scheduleChore(compactionChecker);
+    }
+    if (this.periodicFlusher != null) {
+      choreService.scheduleChore(periodicFlusher);
+    }
+    if (this.healthCheckChore != null) {
+      choreService.scheduleChore(healthCheckChore);
+    }
+    if (this.executorStatusChore != null) {
+      choreService.scheduleChore(executorStatusChore);
+    }
+    if (this.nonceManagerChore != null) {
+      choreService.scheduleChore(nonceManagerChore);
+    }
+    if (this.storefileRefresher != null) {
+      choreService.scheduleChore(storefileRefresher);
+    }
+    if (this.movedRegionsCleaner != null) {
+      choreService.scheduleChore(movedRegionsCleaner);
+    }
+    if (this.fsUtilizationChore != null) {
+      choreService.scheduleChore(fsUtilizationChore);
+    }
 
     // Leases is not a Thread. Internally it runs a daemon thread. If it gets
     // an unhandled exception, it will just exit.
     Threads.setDaemonThreadRunning(this.leases.getThread(), getName() + ".leaseChecker",
-    uncaughtExceptionHandler);
+        uncaughtExceptionHandler);
 
     // Create the log splitting worker and start it
     // set a smaller retries to fast fail otherwise splitlogworker could be blocked for
@@ -2500,6 +2529,7 @@ public class HRegionServer extends HasThread implements
       choreService.cancelChore(compactionChecker);
       choreService.cancelChore(periodicFlusher);
       choreService.cancelChore(healthCheckChore);
+      choreService.cancelChore(executorStatusChore);
       choreService.cancelChore(storefileRefresher);
       choreService.cancelChore(movedRegionsCleaner);
       choreService.cancelChore(fsUtilizationChore);

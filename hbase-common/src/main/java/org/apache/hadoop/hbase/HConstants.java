@@ -1191,6 +1191,9 @@ public final class HConstants {
       "hbase.node.health.failure.threshold";
   public static final int DEFAULT_HEALTH_FAILURE_THRESHOLD = 3;
 
+  public static final String EXECUTOR_STATUS_COLLECT_ENABLED =
+      "hbase.executors.status.collect.enabled";
+  public static final boolean DEFAULT_EXECUTOR_STATUS_COLLECT_ENABLED = true;
 
   /**
    * Setting to activate, or not, the publication of the status by the master. Default
