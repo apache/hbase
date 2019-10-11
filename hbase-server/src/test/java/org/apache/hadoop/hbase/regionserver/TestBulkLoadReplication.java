@@ -119,7 +119,7 @@ public class TestBulkLoadReplication extends TestReplicationBase {
   private static final String PEER_ID1 = "1";
   private static final String PEER_ID3 = "3";
 
-  private static final AtomicInteger BULK_LOADS_COUNT = new AtomicInteger(0);
+  private static AtomicInteger BULK_LOADS_COUNT;
   private static CountDownLatch BULK_LOAD_LATCH;
 
   private static final HBaseTestingUtility UTIL3 = new HBaseTestingUtility();
@@ -184,6 +184,7 @@ public class TestBulkLoadReplication extends TestReplicationBase {
     setupCoprocessor(UTIL1, "cluster1");
     setupCoprocessor(UTIL2, "cluster2");
     setupCoprocessor(UTIL3, "cluster3");
+    BULK_LOADS_COUNT = new AtomicInteger(0);
   }
 
   private ReplicationPeerConfig getPeerConfigForCluster(HBaseTestingUtility util) {
@@ -194,12 +195,16 @@ public class TestBulkLoadReplication extends TestReplicationBase {
   private void setupCoprocessor(HBaseTestingUtility cluster, String name){
     cluster.getHBaseCluster().getRegions(tableName).forEach(r -> {
       try {
-        r.getCoprocessorHost()
-          .load(TestBulkLoadReplication.BulkReplicationTestObserver.class, 0,
-            cluster.getConfiguration());
-        TestBulkLoadReplication.BulkReplicationTestObserver cp = r.getCoprocessorHost()
-          .findCoprocessor(TestBulkLoadReplication.BulkReplicationTestObserver.class);
-        cp.clusterName = cluster.getClusterKey();
+        TestBulkLoadReplication.BulkReplicationTestObserver cp = r.getCoprocessorHost().
+          findCoprocessor(TestBulkLoadReplication.BulkReplicationTestObserver.class);
+        if(cp == null) {
+          r.getCoprocessorHost().
+            load(TestBulkLoadReplication.BulkReplicationTestObserver.class, 0,
+              cluster.getConfiguration());
+          cp = r.getCoprocessorHost().
+            findCoprocessor(TestBulkLoadReplication.BulkReplicationTestObserver.class);
+          cp.clusterName = cluster.getClusterKey();
+        }
       } catch (Exception e){
         LOG.error(e.getMessage(), e);
       }
