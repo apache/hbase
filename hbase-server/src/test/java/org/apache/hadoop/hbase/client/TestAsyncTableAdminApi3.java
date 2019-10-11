@@ -26,7 +26,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.regex.Pattern;
 import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
@@ -266,8 +265,8 @@ public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
     createTableWithDefaultConf(tableName, splitKeys);
 
     AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(META_TABLE_NAME);
-    List<HRegionLocation> regions =
-      AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName)).get();
+    List<HRegionLocation> regions = AsyncMetaTableAccessor
+      .getTableHRegionLocations(metaTable, tableName).get();
     assertEquals(
       "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size(),
       expectedRegions, regions.size());
@@ -277,8 +276,8 @@ public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
     // Enable table, use retain assignment to assign regions.
     admin.enableTable(tableName).join();
 
-    List<HRegionLocation> regions2 =
-      AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName)).get();
+    List<HRegionLocation> regions2 = AsyncMetaTableAccessor
+      .getTableHRegionLocations(metaTable, tableName).get();
     // Check the assignment.
     assertEquals(regions.size(), regions2.size());
     assertTrue(regions2.containsAll(regions));

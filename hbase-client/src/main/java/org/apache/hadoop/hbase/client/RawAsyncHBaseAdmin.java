@@ -659,7 +659,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         future.complete(false);
       } else {
         addListener(
-          AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName)),
+          AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, tableName),
           (locations, error1) -> {
             if (error1 != null) {
               future.completeExceptionally(error1);
@@ -793,9 +793,9 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       return connection.getLocator().getRegionLocation(tableName, null, null, operationTimeoutNs)
           .thenApply(loc -> Collections.singletonList(loc.getRegion()));
     } else {
-      return AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName))
-          .thenApply(
-            locs -> locs.stream().map(loc -> loc.getRegion()).collect(Collectors.toList()));
+      return AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, tableName)
+        .thenApply(
+          locs -> locs.stream().map(HRegionLocation::getRegion).collect(Collectors.toList()));
     }
   }
 
@@ -1021,7 +1021,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       return future;
     } else {
       // For non-meta table, we fetch all locations by scanning hbase:meta table
-      return AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName));
+      return AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, tableName);
     }
   }
 
