@@ -115,7 +115,11 @@ module Hbase
 
     # Requests to compact all regions on the regionserver
     def compact_regionserver(servername, major = false)
-      @admin.compactRegionServer(ServerName.valueOf(servername), major)
+      if major
+        @admin.majorCompactRegionServer(ServerName.valueOf(servername))
+      else
+        @admin.compactRegionServer(ServerName.valueOf(servername))
+      end
     end
 
     #----------------------------------------------------------------------------------------------
