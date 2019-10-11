@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockPriority;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializerIdManager;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.BucketCacheProtos;
@@ -41,12 +42,13 @@ final class BucketProtoUtils {
 
   static BucketCacheProtos.BucketCacheEntry toPB(BucketCache cache) {
     return BucketCacheProtos.BucketCacheEntry.newBuilder()
-        .setCacheCapacity(cache.getMaxSize())
-        .setIoClass(cache.ioEngine.getClass().getName())
-        .setMapClass(cache.backingMap.getClass().getName())
-        .putAllDeserializers(CacheableDeserializerIdManager.save())
-        .setBackingMap(BucketProtoUtils.toPB(cache.backingMap))
-        .build();
+      .setCacheCapacity(cache.getMaxSize())
+      .setIoClass(cache.ioEngine.getClass().getName())
+      .setMapClass(cache.backingMap.getClass().getName())
+      .putAllDeserializers(CacheableDeserializerIdManager.save())
+      .setBackingMap(BucketProtoUtils.toPB(cache.backingMap))
+      .setChecksum(ByteString.copyFrom(((PersistentIOEngine) cache.ioEngine).
+        calculateChecksum(cache.getAlgorithm()))).build();
   }
 
   private static BucketCacheProtos.BackingMap toPB(
