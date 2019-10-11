@@ -401,7 +401,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /** Saved state from replaying prepare flush cache */
   private PrepareFlushResult prepareFlushResult = null;
 
-  private volatile Optional<ConfigurationManager> configurationManager;
+  private volatile ConfigurationManager configurationManager;
 
   // Used for testing.
   private volatile Long timeoutForWriteLock = null;
@@ -852,7 +852,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       LOG.debug("Instantiated " + this +"; "+ storeHotnessProtector.toString());
     }
 
-    configurationManager = Optional.empty();
+    configurationManager = null;
 
     // disable stats tracking system tables, but check the config for everything else
     this.regionStatsEnabled = htd.getTableName().getNamespaceAsString().equals(
@@ -8693,7 +8693,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   @Override
   public void registerChildren(ConfigurationManager manager) {
-    configurationManager = Optional.of(manager);
+    configurationManager = manager;
     stores.values().forEach(manager::registerObserver);
   }
 
@@ -8702,7 +8702,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   @Override
   public void deregisterChildren(ConfigurationManager manager) {
-    stores.values().forEach(configurationManager.get()::deregisterObserver);
+    stores.values().forEach(configurationManager::deregisterObserver);
   }
 
   @Override

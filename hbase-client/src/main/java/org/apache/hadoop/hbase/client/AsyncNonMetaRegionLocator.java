@@ -145,7 +145,7 @@ class AsyncNonMetaRegionLocator {
       return allRequests.keySet().stream().filter(r -> !isPending(r)).findFirst();
     }
 
-    public void clearCompletedRequests(Optional<RegionLocations> locations) {
+    public void clearCompletedRequests(RegionLocations locations) {
       for (Iterator<Map.Entry<LocateRequest, CompletableFuture<RegionLocations>>> iter =
         allRequests.entrySet().iterator(); iter.hasNext();) {
         Map.Entry<LocateRequest, CompletableFuture<RegionLocations>> entry = iter.next();
@@ -156,15 +156,14 @@ class AsyncNonMetaRegionLocator {
     }
 
     private boolean tryComplete(LocateRequest req, CompletableFuture<RegionLocations> future,
-        Optional<RegionLocations> locations) {
+        RegionLocations locations) {
       if (future.isDone()) {
         return true;
       }
-      if (!locations.isPresent()) {
+      if (locations == null) {
         return false;
       }
-      RegionLocations locs = locations.get();
-      HRegionLocation loc = ObjectUtils.firstNonNull(locs.getRegionLocations());
+      HRegionLocation loc = ObjectUtils.firstNonNull(locations.getRegionLocations());
       // we should at least have one location available, otherwise the request should fail and
       // should not arrive here
       assert loc != null;
@@ -183,7 +182,7 @@ class AsyncNonMetaRegionLocator {
         completed = loc.getRegion().containsRow(req.row);
       }
       if (completed) {
-        future.complete(locs);
+        future.complete(locations);
         return true;
       } else {
         return false;
@@ -286,7 +285,7 @@ class AsyncNonMetaRegionLocator {
       RegionLocations addedLocs = addToCache(tableCache, locs);
       synchronized (tableCache) {
         tableCache.pendingRequests.remove(req);
-        tableCache.clearCompletedRequests(Optional.of(addedLocs));
+        tableCache.clearCompletedRequests(addedLocs);
         // Remove a complete locate request in a synchronized block, so the table cache must have
         // quota to send a candidate request.
         toSend = tableCache.getCandidate();
@@ -304,7 +303,7 @@ class AsyncNonMetaRegionLocator {
         if (future != null) {
           future.completeExceptionally(error);
         }
-        tableCache.clearCompletedRequests(Optional.empty());
+        tableCache.clearCompletedRequests(null);
         // Remove a complete locate request in a synchronized block, so the table cache must have
         // quota to send a candidate request.
         toSend = tableCache.getCandidate();
@@ -491,7 +490,7 @@ class AsyncNonMetaRegionLocator {
             }
             RegionLocations addedLocs = addToCache(tableCache, locs);
             synchronized (tableCache) {
-              tableCache.clearCompletedRequests(Optional.of(addedLocs));
+              tableCache.clearCompletedRequests(addedLocs);
             }
           }
         }
@@ -604,8 +603,9 @@ class AsyncNonMetaRegionLocator {
   }
 
   void updateCachedLocationOnError(HRegionLocation loc, Throwable exception) {
+    Optional<MetricsConnection> connectionMetrics = conn.getConnectionMetrics();
     AsyncRegionLocatorHelper.updateCachedLocationOnError(loc, exception, this::getCachedLocation,
-      this::addLocationToCache, this::removeLocationFromCache, conn.getConnectionMetrics());
+      this::addLocationToCache, this::removeLocationFromCache, connectionMetrics.orElse(null));
   }
 
   void clearCache(TableName tableName) {
