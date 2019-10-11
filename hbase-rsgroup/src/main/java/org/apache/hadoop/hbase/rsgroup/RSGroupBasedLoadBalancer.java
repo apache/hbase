@@ -19,7 +19,9 @@
 package org.apache.hadoop.hbase.rsgroup;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -28,11 +30,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -79,6 +81,18 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
   private volatile RSGroupInfoManager rsGroupInfoManager;
   private LoadBalancer internalBalancer;
 
+  /** Define the config key of if fallback group is enabled */
+  static final String ENABLE_FALLBACK_GROUP = "hbase.rsgroup.enable.fallback.groups";
+
+  /** Define the config key of fallback group */
+  static final String FALLBACK_GROUP = "hbase.rsgroup.fallback.groups";
+
+  /** Define the config key of interval to correct regions */
+  static final String CORRECT_REGIONS_INTERVAL = "hbase.rsgroup.correct.regions.interval";
+
+  private boolean fallbackGroupEnabled = false;
+  private List<String> fallbackGroups;
+  private RegionsCorrector regionsCorrector;
   /**
    * Used by reflection in {@link org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory}.
    */
@@ -111,9 +125,59 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
     this.masterServices = masterServices;
   }
 
+  public void initFallback() {
+    this.fallbackGroupEnabled = config.getBoolean(ENABLE_FALLBACK_GROUP, false);
+    this.fallbackGroups = Arrays.asList(
+        config.getStrings(FALLBACK_GROUP, RSGroupInfo.DEFAULT_GROUP));
+    if (fallbackGroupEnabled) {
+      // default correct interval is 10 minutes
+      int correctInterval = config.getInt(CORRECT_REGIONS_INTERVAL, 10 * 60 * 1000);
+      regionsCorrector = new RegionsCorrector(this, correctInterval, fallbackGroups);
+      masterServices.getChoreService().scheduleChore(regionsCorrector);
+    }
+  }
+
+  private class RegionsCorrector extends ScheduledChore {
+    RSGroupBasedLoadBalancer rblb;
+    List<String> fallbackGroups;
+
+    public RegionsCorrector(final RSGroupBasedLoadBalancer rblb, int correctInterval,
+        List<String> fallbackGroups) {
+      super("RSGroupRegionsCorrectorChore", rblb, correctInterval, correctInterval);
+      this.rblb = rblb;
+      this.fallbackGroups = fallbackGroups;
+      LOG.info(this.getName() + " runs every " + Duration.ofMillis(correctInterval));
+    }
+
+    @Override
+    protected void chore() {
+      try {
+        List<Address> fallbackGroupAddresses = new ArrayList<>();
+        for (String group : fallbackGroups) {
+          fallbackGroupAddresses.addAll(rblb.rsGroupInfoManager.getRSGroup(group).getServers());
+        }
+        List<ServerName> onlineServers = masterServices.getServerManager().getOnlineServersList();
+        Map<ServerName, List<RegionInfo>> fallbackServerRegions = new HashMap<>();
+        for (ServerName sn : onlineServers) {
+          if (fallbackGroupAddresses.contains(sn.getAddress())) {
+            fallbackServerRegions.put(sn,
+                masterServices.getAssignmentManager().getRegionStates().getServerNode(sn)
+                    .getRegionInfoList());
+          }
+        }
+        Pair<Map<ServerName, List<RegionInfo>>, List<RegionPlan>> correctedStateAndRegionPlans =
+            correctAssignments(fallbackServerRegions);
+        LOG.info("to correct plans {}", correctedStateAndRegionPlans.getSecond());
+        masterServices.executeRegionPlansWithThrottling(correctedStateAndRegionPlans.getSecond());
+      } catch (IOException e) {
+        LOG.warn("RegionsCorrector chore error", e);
+      }
+    }
+  }
+
   @Override
-  public List<RegionPlan> balanceCluster(TableName tableName, Map<ServerName, List<RegionInfo>>
-      clusterState) throws HBaseIOException {
+  public List<RegionPlan> balanceCluster(TableName tableName,
+      Map<ServerName, List<RegionInfo>> clusterState) throws HBaseIOException {
     return balanceCluster(clusterState);
   }
 
@@ -194,6 +258,20 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
     return assignments;
   }
 
+  private List<ServerName> getFallBackCandidates(List<ServerName> servers) {
+    RSGroupInfo info;
+    List<ServerName> serverNames = new ArrayList<>();
+    for (String fallbackGroup : fallbackGroups) {
+      try {
+        info = rsGroupInfoManager.getRSGroup(fallbackGroup);
+        serverNames.addAll(filterOfflineServers(info, servers));
+      } catch (IOException e) {
+        LOG.error("Get group info for {} failed", fallbackGroup, e);
+      }
+    }
+    return serverNames;
+  }
+
   @Override
   public Map<ServerName, List<RegionInfo>> retainAssignment(Map<RegionInfo, ServerName> regions,
     List<ServerName> servers) throws HBaseIOException {
@@ -208,20 +286,23 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
         }
         groupToRegion.put(groupName, region);
       }
-      for (String key : groupToRegion.keySet()) {
+      for (String group : groupToRegion.keySet()) {
         Map<RegionInfo, ServerName> currentAssignmentMap = new TreeMap<RegionInfo, ServerName>();
-        List<RegionInfo> regionList = groupToRegion.get(key);
-        RSGroupInfo info = rsGroupInfoManager.getRSGroup(key);
+        List<RegionInfo> regionList = groupToRegion.get(group);
+        RSGroupInfo info = rsGroupInfoManager.getRSGroup(group);
         List<ServerName> candidateList = filterOfflineServers(info, servers);
-        for (RegionInfo region : regionList) {
-          currentAssignmentMap.put(region, regions.get(region));
+        if (candidateList.size() == 0 && fallbackGroupEnabled) {
+          candidateList = getFallBackCandidates(servers);
         }
         if (candidateList.size() > 0) {
+          for (RegionInfo region : regionList) {
+            currentAssignmentMap.put(region, regions.get(region));
+          }
           assignments
             .putAll(this.internalBalancer.retainAssignment(currentAssignmentMap, candidateList));
         } else {
           if (LOG.isDebugEnabled()) {
-            LOG.debug("No available servers to assign regions: {}",
+            LOG.debug("No available servers for group {} to assign regions: {}", group,
               RegionInfo.getShortNameToLog(regionList));
           }
           assignments.computeIfAbsent(LoadBalancer.BOGUS_SERVER_NAME, s -> new ArrayList<>())
@@ -259,6 +340,10 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
       for (String groupKey : regionMap.keySet()) {
         RSGroupInfo info = rsGroupInfoManager.getRSGroup(groupKey);
         serverMap.putAll(groupKey, filterOfflineServers(info, servers));
+        if (serverMap.get(groupKey).size() == 0 && fallbackGroupEnabled) {
+          serverMap.putAll(groupKey, getFallBackCandidates(servers));
+        }
+
         if(serverMap.get(groupKey).size() < 1) {
           serverMap.put(groupKey, LoadBalancer.BOGUS_SERVER_NAME);
         }
@@ -370,6 +455,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
     }
     internalBalancer.setConf(config);
     internalBalancer.initialize();
+    initFallback();
   }
 
   public boolean isOnline() {
@@ -399,6 +485,11 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
 
   @Override
   public void stop(String why) {
+    LOG.info("Stopping RSGroupBasedLoadBalancer... {}", why);
+    if (regionsCorrector != null && masterServices != null
+        && masterServices.getChoreService() != null) {
+      masterServices.getChoreService().cancelChore(regionsCorrector);
+    }
   }
 
   @Override
