@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import org.apache.hadoop.hbase.Cell;
@@ -54,7 +53,7 @@ class FSWALEntry extends Entry {
   private final transient boolean inMemstore;
   private final transient RegionInfo regionInfo;
   private final transient Set<byte[]> familyNames;
-  private final transient Optional<ServerCall<?>> rpcCall;
+  private final transient ServerCall<?> rpcCall;
 
   FSWALEntry(final long txid, final WALKeyImpl key, final WALEdit edit, final RegionInfo regionInfo,
     final boolean inMemstore, ServerCall<?> rpcCall) {
@@ -69,7 +68,7 @@ class FSWALEntry extends Entry {
     } else {
       this.familyNames = Collections.<byte[]> emptySet();
     }
-    this.rpcCall = Optional.ofNullable(rpcCall);
+    this.rpcCall = rpcCall;
     if (rpcCall != null) {
       rpcCall.retainByWAL();
     }
@@ -135,6 +134,8 @@ class FSWALEntry extends Entry {
   }
 
   void release() {
-    rpcCall.ifPresent(ServerCall::releaseByWAL);
+    if (rpcCall != null) {
+      rpcCall.releaseByWAL();
+    }
   }
 }
