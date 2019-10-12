@@ -1203,6 +1203,11 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
 
     @Override
+    boolean isNeeded() {
+      return cluster.hasRegionReplicas;
+    }
+
+    @Override
     double cost() {
       if (!cluster.hasRegionReplicas) {
         return 0;
