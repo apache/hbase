@@ -946,7 +946,7 @@ public final class HConstants {
   /**
    * Pattern that matches a coprocessor specification. Form is:
    * <code>
-   *&lt;coprocessor jar file location> '|' &lt<class name> ['|' &lt;priority> ['|' &lt;arguments>]]
+   *&lt;coprocessor jar file location> '|' &lt;class name> ['|' &lt;priority> ['|' &lt;arguments>]]
    * </code>
    * ...where arguments are <code>&lt;KEY> '=' &lt;VALUE> [,...]</code>
    * <p>For example: <code>hdfs:///foo.jar|com.foo.FooRegionObserver|1001|arg1=1,arg2=2</code>
@@ -1137,6 +1137,9 @@ public final class HConstants {
       "hbase.node.health.failure.threshold";
   public static final int DEFAULT_HEALTH_FAILURE_THRESHOLD = 3;
 
+  public static final String EXECUTOR_STATUS_COLLECT_ENABLED =
+      "hbase.executors.status.collect.enabled";
+  public static final boolean DEFAULT_EXECUTOR_STATUS_COLLECT_ENABLED = true;
 
   /**
    * Setting to activate, or not, the publication of the status by the master. Default
