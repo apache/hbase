@@ -33,9 +33,9 @@ module Shell
             To disable compactions on all region servers
             hbase> compaction_switch false
             To enable compactions on specific region servers
-            hbase> compaction_switch true 'server2','server1'
+            hbase> compaction_switch true, 'server2','server1'
             To disable compactions on specific region servers
-            hbase> compaction_switch false 'server2','server1'
+            hbase> compaction_switch false, 'server2','server1'
           NOTE: A server name is its host, port plus startcode. For example:
           host187.example.com,60020,1289493121758
         EOF
