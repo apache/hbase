@@ -1059,4 +1059,9 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
   public void disableReplication(){
     this.replicate = false;
   }
+
+  @Override
+  public boolean isReplicationDisabled(){
+    return !this.replicate;
+  }
 }

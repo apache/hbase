@@ -32,6 +32,7 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -258,15 +259,23 @@ public class TestBulkLoadReplication extends TestReplicationBase {
     Path path = createMobFiles(UTIL3);
     ColumnFamilyDescriptor descriptor =
       new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(famName);
-    PartitionedMobCompactor compactor = new PartitionedMobCompactor(UTIL3.getConfiguration(),
-      UTIL3.getTestFileSystem(), tableName, descriptor, Executors.newFixedThreadPool(1));
-    BULK_LOAD_LATCH = new CountDownLatch(1);
-    BULK_LOADS_COUNT.set(0);
-    compactor.compact(Arrays.asList(UTIL3.getTestFileSystem().listStatus(path)), true);
-    assertTrue(BULK_LOAD_LATCH.await(1, TimeUnit.SECONDS));
-    Thread.sleep(400);
-    assertEquals(1, BULK_LOADS_COUNT.get());
-
+    ExecutorService pool = null;
+    try {
+      pool = Executors.newFixedThreadPool(1);
+      PartitionedMobCompactor compactor =
+        new PartitionedMobCompactor(UTIL3.getConfiguration(), UTIL3.getTestFileSystem(), tableName,
+          descriptor, pool);
+      BULK_LOAD_LATCH = new CountDownLatch(1);
+      BULK_LOADS_COUNT.set(0);
+      compactor.compact(Arrays.asList(UTIL3.getTestFileSystem().listStatus(path)), true);
+      assertTrue(BULK_LOAD_LATCH.await(1, TimeUnit.SECONDS));
+      Thread.sleep(400);
+      assertEquals(1, BULK_LOADS_COUNT.get());
+    } finally {
+      if(pool != null && !pool.isTerminated()) {
+        pool.shutdownNow();
+      }
+    }
   }
 
 
