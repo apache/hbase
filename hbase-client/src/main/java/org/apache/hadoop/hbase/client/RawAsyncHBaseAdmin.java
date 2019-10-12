@@ -3165,6 +3165,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         if (serverName == null) {
           future.completeExceptionally(
             new IllegalArgumentException(String.format("Null ServerName: %s", regionServerName)));
+        } else {
+          serverList.add(serverName);
         }
       }
       future.complete(serverList);
