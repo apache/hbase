@@ -18,10 +18,8 @@
 package org.apache.hadoop.hbase.master.snapshot;
 
 import java.io.IOException;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -35,7 +33,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
 /**
@@ -70,18 +68,10 @@ public class EnabledTableSnapshotHandler extends TakeSnapshotHandler {
    */
   @Override
   protected void snapshotRegions(List<Pair<RegionInfo, ServerName>> regions) throws IOException {
-    Set<String> regionServers = new HashSet<>(regions.size());
-    for (Pair<RegionInfo, ServerName> region : regions) {
-      if (region != null && region.getFirst() != null && region.getSecond() != null) {
-        RegionInfo hri = region.getFirst();
-        if (hri.isOffline() && (hri.isSplit() || hri.isSplitParent())) continue;
-        regionServers.add(region.getSecond().toString());
-      }
-    }
-
     // start the snapshot on the RS
     Procedure proc = coordinator.startProcedure(this.monitor, this.snapshot.getName(),
-      this.snapshot.toByteArray(), Lists.newArrayList(regionServers));
+      this.snapshot.toByteArray(), master.getServerManager().getOnlineServersList()
+            .stream().map(ServerName::toString).collect(Collectors.toList()));
     if (proc == null) {
       String msg = "Failed to submit distributed procedure for snapshot '"
           + snapshot.getName() + "'";
