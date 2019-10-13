@@ -2177,24 +2177,37 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
   }
 
   private long getTotalUmcompressedBytes(List<HStoreFile> files) {
-    return files.stream().filter(f -> f != null && f.getReader() != null)
-        .mapToLong(f -> f.getReader().getTotalUncompressedBytes()).sum();
+    return files.stream().filter(f -> f != null).mapToLong(f -> {
+      StoreFileReader reader = f.getReader();
+      if (reader == null) {
+        return 0;
+      } else {
+        return reader.getTotalUncompressedBytes();
+      }
+    }).sum();
   }
 
   private long getStorefilesSize(Collection<HStoreFile> files, Predicate<HStoreFile> predicate) {
     return files.stream().filter(f -> f != null && f.getReader() != null).filter(predicate)
-        .mapToLong(f -> f.getReader().length()).sum();
+        .mapToLong(f -> {
+          StoreFileReader reader = f.getReader();
+          if (reader == null) {
+            return 0;
+          } else {
+            return reader.length();
+          }
+        }).sum();
   }
 
   private long getStoreFileFieldSize(ToLongFunction<StoreFileReader> f) {
-    return this.storeEngine.getStoreFileManager().getStorefiles().stream().filter(sf -> {
-      if (sf.getReader() == null) {
-        LOG.warn("StoreFile {} has a null Reader", sf);
-        return false;
-      } else {
-        return true;
-      }
-    }).map(HStoreFile::getReader).mapToLong(f).sum();
+    return this.storeEngine.getStoreFileManager().getStorefiles().stream()
+        .map(HStoreFile::getReader).filter(reader -> {
+          if (reader == null) {
+            return false;
+          } else {
+            return true;
+          }
+        }).mapToLong(f).sum();
   }
 
   @Override
