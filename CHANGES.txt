@@ -1,5 +1,120 @@
 HBase Change Log
 
+Release Notes - HBase - Version 1.4.11
+
+** Sub-task
+    * [HBASE-22132] - Backport HBASE-22115 "HBase RPC aspires to grow an infinite tree of trace scopes; some other places are also unsafe" intent to branch-1
+    * [HBASE-22554] - Upgrade to surefire 2.22.2
+    * [HBASE-22627] - Port HBASE-22617 (Recovered WAL directories not getting cleaned up) to branch-1
+    * [HBASE-22706] - Backport HBASE-21292 "IdLock.getLockEntry() may hang if interrupted" to branch-1
+    * [HBASE-22719] - Add debug support for github PR pre commit job
+    * [HBASE-22728] - Upgrade jackson dependencies in branch-1
+    * [HBASE-22891] - Use HBaseQA in HBase-PreCommit-GitHub-PR job
+    * [HBASE-22988] - Backport HBASE-11062 "hbtop" to branch-1
+    * [HBASE-23101] - Backport HBASE-22380 to branch-1
+    * [HBASE-23110] - Backport HBASE-23054 "Remove synchronization block from MetaTableMetrics and fix LossyCounting algorithm" to branch-1
+
+** Bug
+    * [HBASE-22145] - windows hbase-env causes hbase cli/etc to ignore HBASE_OPTS
+    * [HBASE-22426] - Disable region split/merge switch doen't work when 'hbase.assignment.usezk' is set true
+    * [HBASE-22492] - HBase server doesn't preserve SASL sequence number on the network
+    * [HBASE-22520] - Avoid possible NPE in HalfStoreFileReader seekBefore()
+    * [HBASE-22538] - Prevent graceful_stop.sh from shutting down RS too early before finishing unloading regions
+    * [HBASE-22559] - [RPC] set guard against CALL_QUEUE_HANDLER_FACTOR_CONF_KEY
+    * [HBASE-22562] - PressureAwareThroughputController#skipControl never invoked
+    * [HBASE-22563] - Reduce retained jobs for Jenkins pipelines
+    * [HBASE-22571] - Javadoc Warnings related to @return tag
+    * [HBASE-22586] - Javadoc Warnings related to @param tag
+    * [HBASE-22601] - Misconfigured addition of peers leads to cluster shutdown.
+    * [HBASE-22603] - Javadoc Warnings related to @link tag
+    * [HBASE-22605] - Ref guide includes dev guidance only applicable to EOM versions
+    * [HBASE-22629] - Remove TestReplicationDroppedTables from branch-1
+    * [HBASE-22637] - fix flaky TestMetaTableMetrics test
+    * [HBASE-22649] - Encode StoreFile path URLs in the UI to handle scenarios where CF contains special characters (like # etc.)
+    * [HBASE-22653] - Do not run errorProne on JDK7
+    * [HBASE-22654] - apache-rat complains on branch-1
+    * [HBASE-22656] - [Metrics]  Tabe metrics 'BatchPut' and 'BatchDelete' are never updated
+    * [HBASE-22658] - region_mover.rb  should choose same rsgroup servers as target servers
+    * [HBASE-22686] - ZkSplitLogWorkerCoordination doesn't allow a regionserver to pick up all of the split work it is capable of
+    * [HBASE-22715] - All scan requests should be handled by scan handler threads in RWQueueRpcExecutor
+    * [HBASE-22720] - Incorrect link for hbase.unittests
+    * [HBASE-22730] - XML Parsing error on branch-1
+    * [HBASE-22735] - list_regions may throw an error if a region is RIT
+    * [HBASE-22773] - when set blockSize option in Performance Evaluation tool, error occurs:ERROR: Unrecognized option/command: --blockSize=131072
+    * [HBASE-22774] - [WAL] RegionGroupingStrategy loses its function after split
+    * [HBASE-22784] - OldWALs not cleared in a replication slave cluster (cyclic replication bw 2 clusters)
+    * [HBASE-22801] - Maven build issue on Github PRs
+    * [HBASE-22838] - assembly:single failure: user id or group id 'xxxxx' is too big
+    * [HBASE-22856] - HBASE-Find-Flaky-Tests fails with pip error
+    * [HBASE-22861] - [WAL] Merged region should get its WAL according to WALProvider.
+    * [HBASE-22866] - Multiple slf4j-log4j provider versions included in binary package (branch-1)
+    * [HBASE-22900] - No longer include multiple httpcore and httpclient versions in binary package
+    * [HBASE-22935] - TaskMonitor warns MonitoredRPCHandler task may be stuck when it recently started
+    * [HBASE-22937] - The RawBytesComparator in branch-1 have wrong comparison order
+    * [HBASE-22955] - Branches-1 precommit and nightly yetus jobs are using jdk8 for jdk7 jobs
+    * [HBASE-22981] - Remove unused flags for Yetus
+    * [HBASE-23007] - UnsatisfiedLinkError when using hbase-shaded packages under linux
+    * [HBASE-23015] - Replace Jackson with relocated gson everywhere but hbase-rest
+    * [HBASE-23019] - Handle --skip-errorprone on branch-1
+    * [HBASE-23056] - Block count is 0 when BucketCache using persistent IOEngine and retrieve from file
+    * [HBASE-23086] - TestShell failing on branch-1 and branch-1.4
+    * [HBASE-23094] - Wrong log message in simpleRegionNormaliser while checking if merge is enabled.
+    * [HBASE-23139] - MapReduce jobs lauched from convenience distribution are nonfunctional
+    * [HBASE-23153] - PrimaryRegionCountSkewCostFunction SLB function should implement CostFunction#isNeeded
+
+** New Feature
+    * [HBASE-15666] - shaded dependencies for hbase-testing-util
+
+** Improvement
+    * [HBASE-21996] - Set locale for javadoc
+    * [HBASE-22344] - Document deprecated public APIs
+    * [HBASE-22363] - Remove hardcoded number of read cache block buckets
+    * [HBASE-22464] - Improvements to hbase-vote script
+    * [HBASE-22593] - Add local Jenv file to gitignore
+    * [HBASE-22596] - [Chore] Separate the execution period between CompactionChecker and PeriodicMemStoreFlusher
+    * [HBASE-22604] - fix the link in the docs to "Understanding HBase and BigTable" by Jim R. Wilson
+    * [HBASE-22610] - [BucketCache] Rename "hbase.offheapcache.minblocksize"
+    * [HBASE-22616] - responseTooXXX logging for Multi should characterize the component ops
+    * [HBASE-22669] - Add unit tests for org.apache.hadoop.hbase.util.Strings
+    * [HBASE-22689] - Line break for fix version in documentation
+    * [HBASE-22692] - Rubocop definition is not used in the /bin directory
+    * [HBASE-22702] - [Log] 'Group not found for table' is chatty
+    * [HBASE-22724] - Add a emoji on the vote table for pre commit result on github
+    * [HBASE-22762] - Print the delta between phases in the split/merge/compact/flush transaction journals
+    * [HBASE-22785] - Reduce number of Checkstyle issues in client exceptions
+    * [HBASE-22786] - Fix Checkstyle issues in tests of hbase-client
+    * [HBASE-22804] - Provide an API to get list of successful regions and total expected regions in Canary
+    * [HBASE-22810] - Initialize an separate ThreadPoolExecutor for taking/restoring snapshot
+    * [HBASE-22828] - Log a region close journal
+    * [HBASE-22844] - Fix Checkstyle issues in client snapshot exceptions
+    * [HBASE-22872] - Don't create normalization plan unnecesarily when split and merge both are disabled
+    * [HBASE-22874] - Define a public interface for Canary and move existing implementation to LimitedPrivate
+    * [HBASE-22880] - [Backport] HBASE-22871 to branch-1
+    * [HBASE-22890] - Verify the files when RegionServer is starting and BucketCache is in file mode
+    * [HBASE-22912] - [Backport] HBASE-22867 to branch-1 to avoid ForkJoinPool to spawn thousands of threads
+    * [HBASE-22930] - Set unique name to longCompactions/shortCompactions threads
+    * [HBASE-22975] - Add read and write QPS metrics at server level and table level
+    * [HBASE-23058] - Should be "Column Family Name" in table.jsp
+    * [HBASE-23114] - Use archiveArtifacts in Jenkinsfiles
+    * [HBASE-23116] - LoadBalancer should log table name when balancing per table
+
+** Test
+    * [HBASE-22615] - Make TestChoreService more robust to timing
+    * [HBASE-22725] - Remove all remaining javadoc warnings
+
+** Wish
+    * [HBASE-22833] - MultiRowRangeFilter should provide a method for creating a filter which is functionally equivalent to multiple prefix filters
+
+** Task
+    * [HBASE-19230] - Write up fixVersion policy from dev discussion in refguide
+    * [HBASE-21606] - Document use of the meta table load metrics added in HBASE-19722
+    * [HBASE-22911] - fewer concurrent github PR builds
+    * [HBASE-22913] - Use Hadoop label for nightly builds
+    * [HBASE-22991] - Release 1.4.11
+    * [HBASE-23023] - upgrade shellcheck used to test in nightly and precommit
+    * [HBASE-23053] - Disable concurrent nightly builds
+
+
 Release Notes - HBase - Version 1.4.10 6/14/2019
 
 ** Sub-task
