@@ -32,7 +32,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
@@ -46,6 +45,7 @@ import org.apache.hadoop.hbase.ServerMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -103,6 +103,23 @@ import org.apache.hadoop.hbase.security.access.PermissionStorage;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.security.visibility.VisibilityController;
+import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos;
@@ -325,21 +342,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.Trans
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
-import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
-import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.zookeeper.KeeperException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Implements the master RPC services.
@@ -1742,13 +1744,10 @@ public class MasterRpcServices extends RSRpcServices
       master.checkInitialized();
       byte[] regionName = request.getRegion().getValue().toByteArray();
       TableName tableName = RegionInfo.getTable(regionName);
-      // TODO: support CompactType.MOB
       // if the region is a mob region, do the mob file compaction.
       if (MobUtils.isMobRegionName(tableName, regionName)) {
         checkHFileFormatVersionForMob();
-        //return compactMob(request, tableName);
-        //TODO: support CompactType.MOB
-        return super.compactRegion(controller, request);
+        return compactMob(request, tableName);
       } else {
         return super.compactRegion(controller, request);
       }
@@ -1791,6 +1790,57 @@ public class MasterRpcServices extends RSRpcServices
     }
   }
 
+  /**
+   * Compacts the mob files in the current table.
+   * @param request the request.
+   * @param tableName the current table name.
+   * @return The response of the mob file compaction.
+   * @throws IOException
+   */
+  private CompactRegionResponse compactMob(final CompactRegionRequest request,
+    TableName tableName) throws IOException {
+    if (!master.getTableStateManager().isTableState(tableName, TableState.State.ENABLED)) {
+      throw new DoNotRetryIOException("Table " + tableName + " is not enabled");
+    }
+    boolean allFiles = false;
+    List<ColumnFamilyDescriptor> compactedColumns = new ArrayList<>();
+    ColumnFamilyDescriptor[] hcds = master.getTableDescriptors().get(tableName).getColumnFamilies();
+    byte[] family = null;
+    if (request.hasFamily()) {
+      family = request.getFamily().toByteArray();
+      for (ColumnFamilyDescriptor hcd : hcds) {
+        if (Bytes.equals(family, hcd.getName())) {
+          if (!hcd.isMobEnabled()) {
+            LOG.error("Column family " + hcd.getNameAsString() + " is not a mob column family");
+            throw new DoNotRetryIOException("Column family " + hcd.getNameAsString()
+                    + " is not a mob column family");
+          }
+          compactedColumns.add(hcd);
+        }
+      }
+    } else {
+      for (ColumnFamilyDescriptor hcd : hcds) {
+        if (hcd.isMobEnabled()) {
+          compactedColumns.add(hcd);
+        }
+      }
+    }
+    if (compactedColumns.isEmpty()) {
+      LOG.error("No mob column families are assigned in the mob compaction");
+      throw new DoNotRetryIOException(
+              "No mob column families are assigned in the mob compaction");
+    }
+    if (request.hasMajor() && request.getMajor()) {
+      allFiles = true;
+    }
+    String familyLogMsg = (family != null) ? Bytes.toString(family) : "";
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("User-triggered mob compaction requested for table: "
+              + tableName.getNameAsString() + " for column family: " + familyLogMsg);
+    }
+    master.requestMobCompaction(tableName, compactedColumns, allFiles);
+    return CompactRegionResponse.newBuilder().build();
+  }
 
   @Override
   public IsBalancerEnabledResponse isBalancerEnabled(RpcController controller,

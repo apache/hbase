@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
@@ -135,7 +134,7 @@ public class StoreFileInfo {
       }
       if (LOG.isTraceEnabled()) LOG.trace(p + " is a " + reference.getFileRegion() +
               " reference to " + referencePath);
-    } else if (isHFile(p) || isMobFile(p)) {
+    } else if (isHFile(p)) {
       // HFile
       this.createdTimestamp = fs.getFileStatus(initialPath).getModificationTime();
       this.reference = null;
@@ -406,16 +405,6 @@ public class StoreFileInfo {
     return m.matches() && m.groupCount() > 0;
   }
 
-  public static boolean isMobFile(final Path path) {
-    String fileName = path.getName();
-    String[] parts = fileName.split(MobUtils.SEP);
-    if (parts.length != 2) {
-      return false;
-    }
-    Matcher m = HFILE_NAME_PATTERN.matcher(parts[0]);
-    Matcher mm = HFILE_NAME_PATTERN.matcher(parts[1]);
-    return m.matches() && mm.matches();
-  }
   /**
    * @param path Path to check.
    * @return True if the path has format of a del file.

@@ -47,7 +47,6 @@ public class TestMobFileName {
   private Date date;
   private String dateStr;
   private byte[] startKey;
-  private String regionName = "region";
 
   @Before
   public void setUp() {
@@ -60,32 +59,32 @@ public class TestMobFileName {
 
   @Test
   public void testHashCode() {
-    assertEquals(MobFileName.create(startKey, dateStr, uuid, regionName).hashCode(),
-        MobFileName.create(startKey, dateStr, uuid, regionName).hashCode());
-    assertNotSame(MobFileName.create(startKey, dateStr, uuid, regionName),
-        MobFileName.create(startKey, dateStr, uuid, regionName));
+    assertEquals(MobFileName.create(startKey, dateStr, uuid).hashCode(),
+        MobFileName.create(startKey, dateStr, uuid).hashCode());
+    assertNotSame(MobFileName.create(startKey, dateStr, uuid),
+        MobFileName.create(startKey, dateStr, uuid));
   }
 
   @Test
   public void testCreate() {
-    MobFileName mobFileName = MobFileName.create(startKey, dateStr, uuid, regionName);
+    MobFileName mobFileName = MobFileName.create(startKey, dateStr, uuid);
     assertEquals(mobFileName, MobFileName.create(mobFileName.getFileName()));
   }
 
   @Test
   public void testGet() {
-    MobFileName mobFileName = MobFileName.create(startKey, dateStr, uuid, regionName);
+    MobFileName mobFileName = MobFileName.create(startKey, dateStr, uuid);
     assertEquals(MD5Hash.getMD5AsHex(startKey, 0, startKey.length), mobFileName.getStartKey());
     assertEquals(dateStr, mobFileName.getDate());
     assertEquals(mobFileName.getFileName(), MD5Hash.getMD5AsHex(startKey, 0, startKey.length)
-        + dateStr + uuid+"_"+regionName);
+        + dateStr + uuid);
   }
 
   @Test
   public void testEquals() {
-    MobFileName mobFileName = MobFileName.create(startKey, dateStr, uuid, regionName);
+    MobFileName mobFileName = MobFileName.create(startKey, dateStr, uuid);
     assertTrue(mobFileName.equals(mobFileName));
     assertFalse(mobFileName.equals(this));
-    assertTrue(mobFileName.equals(MobFileName.create(startKey, dateStr, uuid, regionName)));
+    assertTrue(mobFileName.equals(MobFileName.create(startKey, dateStr, uuid)));
   }
 }

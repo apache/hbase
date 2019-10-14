@@ -45,13 +45,10 @@ public final class MobFileName {
   private final String startKey;
   private final String uuid;
   private final String fileName;
-  // Encoded region name
-  private final String regionName;
 
   private static final int STARTKEY_END_INDEX = 32;
   private static final int DATE_END_INDEX = 40;
   private static final int UUID_END_INDEX = 72;
-  public static final String REGION_SEP = "_";
 
   /**
    * @param startKey
@@ -60,14 +57,12 @@ public final class MobFileName {
    *          The string of the latest timestamp of cells in this file, the format is yyyymmdd.
    * @param uuid
    *          The uuid
-   * @param regionName region's name
    */
-  private MobFileName(byte[] startKey, String date, String uuid, String regionName) {
+  private MobFileName(byte[] startKey, String date, String uuid) {
     this.startKey = MD5Hash.getMD5AsHex(startKey, 0, startKey.length);
     this.uuid = uuid;
     this.date = date;
-    this.regionName = regionName;
-    this.fileName = this.startKey + this.date + this.uuid + REGION_SEP + this.regionName;
+    this.fileName = this.startKey + this.date + this.uuid;
   }
 
   /**
@@ -77,14 +72,12 @@ public final class MobFileName {
    *          The string of the latest timestamp of cells in this file, the format is yyyymmdd.
    * @param uuid
    *          The uuid
-   * @param regionName region's name
    */
-  private MobFileName(String startKey, String date, String uuid, String regionName) {
+  private MobFileName(String startKey, String date, String uuid) {
     this.startKey = startKey;
     this.uuid = uuid;
     this.date = date;
-    this.regionName = regionName;
-    this.fileName = this.startKey + this.date + this.uuid + REGION_SEP + this.regionName;
+    this.fileName = this.startKey + this.date + this.uuid;
   }
 
   /**
@@ -97,8 +90,8 @@ public final class MobFileName {
    * @param uuid The uuid.
    * @return An instance of a MobFileName.
    */
-  public static MobFileName create(byte[] startKey, String date, String uuid, String regionName) {
-    return new MobFileName(startKey, date, uuid, regionName);
+  public static MobFileName create(byte[] startKey, String date, String uuid) {
+    return new MobFileName(startKey, date, uuid);
   }
 
   /**
@@ -111,8 +104,8 @@ public final class MobFileName {
    * @param uuid The uuid.
    * @return An instance of a MobFileName.
    */
-  public static MobFileName create(String startKey, String date, String uuid, String regionName) {
-    return new MobFileName(startKey, date, uuid, regionName);
+  public static MobFileName create(String startKey, String date, String uuid) {
+    return new MobFileName(startKey, date, uuid);
   }
 
   /**
@@ -126,8 +119,7 @@ public final class MobFileName {
     String startKey = fileName.substring(0, STARTKEY_END_INDEX);
     String date = fileName.substring(STARTKEY_END_INDEX, DATE_END_INDEX);
     String uuid = fileName.substring(DATE_END_INDEX, UUID_END_INDEX);
-    String regionName = fileName.substring(UUID_END_INDEX+1);
-    return new MobFileName(startKey, date, uuid, regionName);
+    return new MobFileName(startKey, date, uuid);
   }
 
   /**
@@ -156,13 +148,6 @@ public final class MobFileName {
     return startKey;
   }
 
-  /**
-   * Gets region name
-   * @return region name
-   */
-  public String getRegionName() {
-    return regionName;
-  }
   /**
    * Gets the date string. Its format is yyyymmdd.
    * @return The date string.

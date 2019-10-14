@@ -402,7 +402,7 @@ public class BaseTestHBaseFsck {
     String startKey = mobFileName.getStartKey();
     String date = mobFileName.getDate();
     return MobFileName.create(startKey, date,
-                              TEST_UTIL.getRandomUUID().toString().replaceAll("-", ""), "fakeregion")
+                              TEST_UTIL.getRandomUUID().toString().replaceAll("-", ""))
       .getFileName();
   }
 

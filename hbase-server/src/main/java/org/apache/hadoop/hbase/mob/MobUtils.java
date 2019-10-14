@@ -23,22 +23,23 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.RejectedExecutionHandler;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HConstants;
@@ -48,10 +49,8 @@ import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
-import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.MobCompactPartitionPolicy;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
@@ -63,6 +62,10 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.master.locking.LockManager;
+import org.apache.hadoop.hbase.mob.compactions.MobCompactor;
+import org.apache.hadoop.hbase.mob.compactions.PartitionedMobCompactionRequest.CompactionPartitionId;
+import org.apache.hadoop.hbase.mob.compactions.PartitionedMobCompactor;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
@@ -71,7 +74,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.HFileArchiveUtil;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,7 +87,8 @@ import org.slf4j.LoggerFactory;
 public final class MobUtils {
 
   private static final Logger LOG = LoggerFactory.getLogger(MobUtils.class);
-  public static final String SEP = "_";
+  private final static long WEEKLY_THRESHOLD_MULTIPLIER = 7;
+  private final static long MONTHLY_THRESHOLD_MULTIPLIER = 4 * WEEKLY_THRESHOLD_MULTIPLIER;
 
   private static final ThreadLocal<SimpleDateFormat> LOCAL_FORMAT =
       new ThreadLocal<SimpleDateFormat>() {
@@ -92,6 +97,13 @@ public final class MobUtils {
       return new SimpleDateFormat("yyyyMMdd");
     }
   };
+
+  private static final byte[] REF_DELETE_MARKER_TAG_BYTES;
+  static {
+    List<Tag> tags = new ArrayList<>();
+    tags.add(MobConstants.MOB_REF_TAG);
+    REF_DELETE_MARKER_TAG_BYTES = TagUtil.fromList(tags);
+  }
 
   /**
    * Private constructor to keep this class from being instantiated.
@@ -118,6 +130,44 @@ public final class MobUtils {
     return LOCAL_FORMAT.get().parse(dateString);
   }
 
+  /**
+   * Get the first day of the input date's month
+   * @param calendar Calendar object
+   * @param date The date to find out its first day of that month
+   * @return The first day in the month
+   */
+  public static Date getFirstDayOfMonth(final Calendar calendar, final Date date) {
+
+    calendar.setTime(date);
+    calendar.set(Calendar.HOUR_OF_DAY, 0);
+    calendar.set(Calendar.MINUTE, 0);
+    calendar.set(Calendar.SECOND, 0);
+    calendar.set(Calendar.MILLISECOND, 0);
+    calendar.set(Calendar.DAY_OF_MONTH, 1);
+
+    Date firstDayInMonth = calendar.getTime();
+    return firstDayInMonth;
+  }
+
+  /**
+   * Get the first day of the input date's week
+   * @param calendar Calendar object
+   * @param date The date to find out its first day of that week
+   * @return The first day in the week
+   */
+  public static Date getFirstDayOfWeek(final Calendar calendar, final Date date) {
+
+    calendar.setTime(date);
+    calendar.set(Calendar.HOUR_OF_DAY, 0);
+    calendar.set(Calendar.MINUTE, 0);
+    calendar.set(Calendar.SECOND, 0);
+    calendar.set(Calendar.MILLISECOND, 0);
+    calendar.setFirstDayOfWeek(Calendar.MONDAY);
+    calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
+
+    Date firstDayInWeek = calendar.getTime();
+    return firstDayInWeek;
+  }
 
   /**
    * Whether the current cell is a mob reference cell.
@@ -321,23 +371,6 @@ public final class MobUtils {
   }
 
   /**
-   * Gets region encoded name from a MOB file name
-   * @param name name of a MOB file
-   * @return encoded region name
-   *
-   */
-  public static String getEncodedRegionNameFromMobFileName(String mobFileName)
-  {
-    int index = mobFileName.lastIndexOf(MobFileName.REGION_SEP);
-    if (index > 0) {
-      return mobFileName.substring(index+1);
-    } else {
-      return null;
-    }
-  }
-
-
-  /**
    * Gets the root dir of the mob files under the qualified HBase root dir.
    * It's {rootDir}/mobdir.
    * @param rootDir The qualified path of HBase root directory.
@@ -454,6 +487,15 @@ public final class MobUtils {
     return Bytes.equals(regionName, getMobRegionInfo(tableName).getRegionName());
   }
 
+  /**
+   * Gets the working directory of the mob compaction.
+   * @param root The root directory of the mob compaction.
+   * @param jobName The current job name.
+   * @return The directory of the mob compaction for the current job.
+   */
+  public static Path getCompactionWorkingPath(Path root, String jobName) {
+    return new Path(root, jobName);
+  }
 
   /**
    * Archives the mob files.
@@ -470,40 +512,6 @@ public final class MobUtils {
     HFileArchiver.archiveStoreFiles(conf, fs, getMobRegionInfo(tableName), tableDir, family,
         storeFiles);
   }
-
-  /**
-   * Archives the mob files.
-   * @param conf The current configuration.
-   * @param tableName The table name.
-   * @param family The name of the column family.
-   * @param storeFiles The files to be archived.
-   * @throws IOException
-   */
-  public static void removeMobFiles(Configuration conf, TableName tableName,
-    byte[] family, List<Path> storeFiles) throws IOException {
-
-    if (storeFiles.size() == 0) {
-      // nothing to remove
-      LOG.debug("Skipping archiving old MOB file: collection is empty");
-      return;
-    }
-    Path mobTableDir = FSUtils.getTableDir(MobUtils.getMobHome(conf), tableName);
-    FileSystem fs = storeFiles.get(0).getFileSystem(conf);
-    Path storeArchiveDir = HFileArchiveUtil.getStoreArchivePath(conf, getMobRegionInfo(tableName),
-      mobTableDir, family);
-
-    for (Path p: storeFiles) {
-      Path archiveFilePath = new Path(storeArchiveDir, p.getName());
-      if (fs.exists(archiveFilePath)) {
-        LOG.info(" MOB Cleaner skip archiving: " + p);
-        continue;
-      }
-      LOG.info(" MOB Cleaner archiving: " + p);
-      HFileArchiver.archiveStoreFile(conf, fs, getMobRegionInfo(tableName), mobTableDir, family, p);
-    }
-  }
-
-
 
   /**
    * Creates a mob reference KeyValue.
@@ -553,43 +561,91 @@ public final class MobUtils {
   public static StoreFileWriter createWriter(Configuration conf, FileSystem fs,
       ColumnFamilyDescriptor family, String date, Path basePath, long maxKeyCount,
       Compression.Algorithm compression, String startKey, CacheConfig cacheConfig,
-      Encryption.Context cryptoContext, boolean isCompaction, String regionName)
+      Encryption.Context cryptoContext, boolean isCompaction)
       throws IOException {
     MobFileName mobFileName = MobFileName.create(startKey, date,
-        UUID.randomUUID().toString().replaceAll("-", ""), regionName);
+        UUID.randomUUID().toString().replaceAll("-", ""));
     return createWriter(conf, fs, family, mobFileName, basePath, maxKeyCount, compression,
         cacheConfig, cryptoContext, isCompaction);
   }
 
+  /**
+   * Creates a writer for the ref file in temp directory.
+   * @param conf The current configuration.
+   * @param fs The current file system.
+   * @param family The descriptor of the current column family.
+   * @param basePath The basic path for a temp directory.
+   * @param maxKeyCount The key count.
+   * @param cacheConfig The current cache config.
+   * @param cryptoContext The encryption context.
+   * @param isCompaction If the writer is used in compaction.
+   * @return The writer for the mob file.
+   * @throws IOException
+   */
+  public static StoreFileWriter createRefFileWriter(Configuration conf, FileSystem fs,
+    ColumnFamilyDescriptor family, Path basePath, long maxKeyCount, CacheConfig cacheConfig,
+    Encryption.Context cryptoContext, boolean isCompaction)
+    throws IOException {
+    return createWriter(conf, fs, family,
+      new Path(basePath, UUID.randomUUID().toString().replaceAll("-", "")), maxKeyCount,
+      family.getCompactionCompressionType(), cacheConfig, cryptoContext,
+      HStore.getChecksumType(conf), HStore.getBytesPerChecksum(conf), family.getBlocksize(),
+      family.getBloomFilterType(), isCompaction);
+  }
 
-//  /**
-//   * Creates a writer for the mob file in temp directory.
-//   * @param conf The current configuration.
-//   * @param fs The current file system.
-//   * @param family The descriptor of the current column family.
-//   * @param date The date string, its format is yyyymmmdd.
-//   * @param basePath The basic path for a temp directory.
-//   * @param maxKeyCount The key count.
-//   * @param compression The compression algorithm.
-//   * @param startKey The start key.
-//   * @param cacheConfig The current cache config.
-//   * @param cryptoContext The encryption context.
-//   * @param isCompaction If the writer is used in compaction.
-//   * @return The writer for the mob file.
-//   * @throws IOException
-//   */
-//  public static StoreFileWriter createWriter(Configuration conf, FileSystem fs,
-//      ColumnFamilyDescriptor family, String date, Path basePath, long maxKeyCount,
-//      Compression.Algorithm compression, byte[] startKey, CacheConfig cacheConfig,
-//      Encryption.Context cryptoContext, boolean isCompaction)
-//      throws IOException {
-//    MobFileName mobFileName = MobFileName.create(startKey, date,
-//        UUID.randomUUID().toString().replaceAll("-", ""));
-//    return createWriter(conf, fs, family, mobFileName, basePath, maxKeyCount, compression,
-//      cacheConfig, cryptoContext, isCompaction);
-//  }
+  /**
+   * Creates a writer for the mob file in temp directory.
+   * @param conf The current configuration.
+   * @param fs The current file system.
+   * @param family The descriptor of the current column family.
+   * @param date The date string, its format is yyyymmmdd.
+   * @param basePath The basic path for a temp directory.
+   * @param maxKeyCount The key count.
+   * @param compression The compression algorithm.
+   * @param startKey The start key.
+   * @param cacheConfig The current cache config.
+   * @param cryptoContext The encryption context.
+   * @param isCompaction If the writer is used in compaction.
+   * @return The writer for the mob file.
+   * @throws IOException
+   */
+  public static StoreFileWriter createWriter(Configuration conf, FileSystem fs,
+      ColumnFamilyDescriptor family, String date, Path basePath, long maxKeyCount,
+      Compression.Algorithm compression, byte[] startKey, CacheConfig cacheConfig,
+      Encryption.Context cryptoContext, boolean isCompaction)
+      throws IOException {
+    MobFileName mobFileName = MobFileName.create(startKey, date,
+        UUID.randomUUID().toString().replaceAll("-", ""));
+    return createWriter(conf, fs, family, mobFileName, basePath, maxKeyCount, compression,
+      cacheConfig, cryptoContext, isCompaction);
+  }
 
-
+  /**
+   * Creates a writer for the del file in temp directory.
+   * @param conf The current configuration.
+   * @param fs The current file system.
+   * @param family The descriptor of the current column family.
+   * @param date The date string, its format is yyyymmmdd.
+   * @param basePath The basic path for a temp directory.
+   * @param maxKeyCount The key count.
+   * @param compression The compression algorithm.
+   * @param startKey The start key.
+   * @param cacheConfig The current cache config.
+   * @param cryptoContext The encryption context.
+   * @return The writer for the del file.
+   * @throws IOException
+   */
+  public static StoreFileWriter createDelFileWriter(Configuration conf, FileSystem fs,
+      ColumnFamilyDescriptor family, String date, Path basePath, long maxKeyCount,
+      Compression.Algorithm compression, byte[] startKey, CacheConfig cacheConfig,
+      Encryption.Context cryptoContext)
+      throws IOException {
+    String suffix = UUID
+      .randomUUID().toString().replaceAll("-", "") + "_del";
+    MobFileName mobFileName = MobFileName.create(startKey, date, suffix);
+    return createWriter(conf, fs, family, mobFileName, basePath, maxKeyCount, compression,
+      cacheConfig, cryptoContext, true);
+  }
 
   /**
    * Creates a writer for the mob file in temp directory.
@@ -771,8 +827,70 @@ public final class MobUtils {
     return TableName.valueOf(Bytes.add(tableName, MobConstants.MOB_TABLE_LOCK_SUFFIX));
   }
 
+  /**
+   * Performs the mob compaction.
+   * @param conf the Configuration
+   * @param fs the file system
+   * @param tableName the table the compact
+   * @param hcd the column descriptor
+   * @param pool the thread pool
+   * @param allFiles Whether add all mob files into the compaction.
+   */
+  public static void doMobCompaction(Configuration conf, FileSystem fs, TableName tableName,
+                                     ColumnFamilyDescriptor hcd, ExecutorService pool, boolean allFiles, LockManager.MasterLock lock)
+      throws IOException {
+    String className = conf.get(MobConstants.MOB_COMPACTOR_CLASS_KEY,
+        PartitionedMobCompactor.class.getName());
+    // instantiate the mob compactor.
+    MobCompactor compactor = null;
+    try {
+      compactor = ReflectionUtils.instantiateWithCustomCtor(className, new Class[] {
+        Configuration.class, FileSystem.class, TableName.class, ColumnFamilyDescriptor.class,
+        ExecutorService.class }, new Object[] { conf, fs, tableName, hcd, pool });
+    } catch (Exception e) {
+      throw new IOException("Unable to load configured mob file compactor '" + className + "'", e);
+    }
+    // compact only for mob-enabled column.
+    // obtain a write table lock before performing compaction to avoid race condition
+    // with major compaction in mob-enabled column.
+    try {
+      lock.acquire();
+      compactor.compact(allFiles);
+    } catch (Exception e) {
+      LOG.error("Failed to compact the mob files for the column " + hcd.getNameAsString()
+          + " in the table " + tableName.getNameAsString(), e);
+    } finally {
+      lock.release();
+    }
+  }
 
-
+  /**
+   * Creates a thread pool.
+   * @param conf the Configuration
+   * @return A thread pool.
+   */
+  public static ExecutorService createMobCompactorThreadPool(Configuration conf) {
+    int maxThreads = conf.getInt(MobConstants.MOB_COMPACTION_THREADS_MAX,
+        MobConstants.DEFAULT_MOB_COMPACTION_THREADS_MAX);
+    if (maxThreads == 0) {
+      maxThreads = 1;
+    }
+    final SynchronousQueue<Runnable> queue = new SynchronousQueue<>();
+    ThreadPoolExecutor pool = new ThreadPoolExecutor(1, maxThreads, 60, TimeUnit.SECONDS, queue,
+      Threads.newDaemonThreadFactory("MobCompactor"), new RejectedExecutionHandler() {
+        @Override
+        public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
+          try {
+            // waiting for a thread to pick up instead of throwing exceptions.
+            queue.put(r);
+          } catch (InterruptedException e) {
+            throw new RejectedExecutionException(e);
+          }
+        }
+      });
+    ((ThreadPoolExecutor) pool).allowCoreThreadTimeOut(true);
+    return pool;
+  }
 
   /**
    * Checks whether this table has mob-enabled columns.
@@ -787,143 +905,6 @@ public final class MobUtils {
       }
     }
     return false;
-  }
-
-  /**
-   * Get list of Mob column families (if any exists)
-   * @param htd table descriptor
-   * @return list of Mob column families
-   */
-  public static List<ColumnFamilyDescriptor> getMobColumnFamilies(TableDescriptor htd){
-
-    List<ColumnFamilyDescriptor> fams = new ArrayList<ColumnFamilyDescriptor>();
-    ColumnFamilyDescriptor[] hcds = htd.getColumnFamilies();
-    for (ColumnFamilyDescriptor hcd : hcds) {
-      if (hcd.isMobEnabled()) {
-        fams.add(hcd);
-      }
-    }
-    return fams;
-  }
-
-  /**
-   * Performs housekeeping file cleaning (called by MOB Cleaner chore)
-   * @param conf configuration
-   * @param table table name
-   * @throws IOException
-   */
-  public static void cleanupObsoleteMobFiles(Configuration conf, TableName table)
-      throws IOException {
-
-    try (final Connection conn = ConnectionFactory.createConnection(conf);
-        final Admin admin = conn.getAdmin();) {
-      TableDescriptor htd = admin.getDescriptor(table);
-      List<ColumnFamilyDescriptor> list = getMobColumnFamilies(htd);
-      if (list.size() == 0) {
-        LOG.info("Skipping non-MOB table [" + table + "]");
-        return;
-      }
-      Path rootDir = FSUtils.getRootDir(conf);
-      Path tableDir = FSUtils.getTableDir(rootDir, table);
-      // How safe is this call?
-      List<Path> regionDirs = FSUtils.getRegionDirs(FileSystem.get(conf), tableDir);
-
-      Set<String> allActiveMobFileName = new HashSet<String>();
-      FileSystem fs = FileSystem.get(conf);
-      for (Path regionPath: regionDirs) {
-        for (ColumnFamilyDescriptor hcd: list) {
-          String family = hcd.getNameAsString();
-          Path storePath = new Path(regionPath, family);
-          boolean succeed = false;
-          Set<String> regionMobs = new HashSet<String>();
-          while(!succeed) {
-            //TODO handle FNFE
-            RemoteIterator<LocatedFileStatus> rit = fs.listLocatedStatus(storePath);
-            List<Path> storeFiles = new ArrayList<Path>();
-            // Load list of store files first
-            while(rit.hasNext()) {
-              Path p = rit.next().getPath();
-              if (fs.isFile(p)) {
-                storeFiles.add(p);
-              }
-            }
-            try {
-              for(Path pp: storeFiles) {
-                HStoreFile sf = new HStoreFile(fs, pp, conf, CacheConfig.DISABLED,
-                  BloomType.NONE, true);
-                sf.initReader();
-                byte[] mobRefData = sf.getMetadataValue(HStoreFile.MOB_FILE_REFS);
-                byte[] mobCellCountData = sf.getMetadataValue(HStoreFile.MOB_CELLS_COUNT);
-                byte[] bulkloadMarkerData = sf.getMetadataValue(HStoreFile.BULKLOAD_TASK_KEY);
-                if (mobRefData == null && (mobCellCountData != null ||
-                    bulkloadMarkerData == null)) {
-                  LOG.info("Found old store file with no MOB_FILE_REFS: " + pp
-                    +" - can not proceed until all old files will be MOB-compacted");
-                  return;
-                } else if (mobRefData == null) {
-                  LOG.info("Skipping file without MOB references (can be bulkloaded file):"+ pp);
-                  continue;
-                }
-                String[] mobs = new String(mobRefData).split(",");
-                regionMobs.addAll(Arrays.asList(mobs));
-              }
-            } catch (FileNotFoundException e) {
-              //TODO
-              LOG.warn(e.getMessage());
-              continue;
-            }
-            succeed = true;
-          }
-          // Add MOB refs for current region/family
-          allActiveMobFileName.addAll(regionMobs);
-        } // END column families
-      }//END regions
-
-      // Now scan MOB directories and find MOB files with no references to them
-      long now = System.currentTimeMillis();
-      long minAgeToArchive = conf.getLong(MobConstants.MOB_MINIMUM_FILE_AGE_TO_ARCHIVE_KEY,
-                              MobConstants.DEFAULT_MOB_MINIMUM_FILE_AGE_TO_ARCHIVE);
-      for (ColumnFamilyDescriptor hcd: list) {
-          List<Path> toArchive = new ArrayList<Path>();
-          String family = hcd.getNameAsString();
-          Path dir = getMobFamilyPath(conf, table, family);
-          RemoteIterator<LocatedFileStatus> rit = fs.listLocatedStatus(dir);
-          while(rit.hasNext()) {
-            LocatedFileStatus lfs = rit.next();
-            Path p = lfs.getPath();
-            if (!allActiveMobFileName.contains(p.getName())) {
-              // MOB is not in a list of active references, but it can be too
-              // fresh, skip it in this case
-              /*DEBUG*/ LOG.debug(" Age=" + (now - fs.getFileStatus(p).getModificationTime()) +
-                " MOB file="+ p);
-              if (now - fs.getFileStatus(p).getModificationTime() > minAgeToArchive) {
-                toArchive.add(p);
-              } else {
-                LOG.debug(" Skipping fresh file: " + p);
-              }
-            }
-          }
-          LOG.info(" MOB Cleaner found "+ toArchive.size()+" files for family="+family);
-          removeMobFiles(conf, table, family.getBytes(), toArchive);
-          LOG.info(" MOB Cleaner archived "+ toArchive.size()+" files");
-      }
-    }
-  }
-
-
-
-
-  public static long getNumberOfMobFiles(Configuration conf, TableName tableName, String family)
-      throws IOException {
-    FileSystem fs = FileSystem.get(conf);
-    Path dir = getMobFamilyPath(conf, tableName, family);
-    FileStatus[] stat = fs.listStatus(dir);
-    for (FileStatus st: stat) {
-      LOG.info(" MOB Directory content: "+ st.getPath());
-    }
-    LOG.info(" MOB Directory content total files: "+ stat.length);
-
-    return stat.length;
   }
 
   /**
@@ -942,6 +923,14 @@ public final class MobUtils {
     }
   }
 
+  /**
+   * Creates a mob ref delete marker.
+   * @param cell The current delete marker.
+   * @return A delete marker with the ref tag.
+   */
+  public static Cell createMobRefDeleteMarker(Cell cell) {
+    return PrivateCellUtil.createCell(cell, TagUtil.concatTags(REF_DELETE_MARKER_TAG_BYTES, cell));
+  }
 
   /**
    * Checks if the mob file is expired.
@@ -973,89 +962,86 @@ public final class MobUtils {
     return false;
   }
 
+  /**
+   * fill out partition id based on compaction policy and date, threshold...
+   * @param id Partition id to be filled out
+   * @param firstDayOfCurrentMonth The first day in the current month
+   * @param firstDayOfCurrentWeek The first day in the current week
+   * @param dateStr Date string from the mob file
+   * @param policy Mob compaction policy
+   * @param calendar Calendar object
+   * @param threshold Mob compaciton threshold configured
+   * @return true if the file needs to be excluded from compaction
+   */
+  public static boolean fillPartitionId(final CompactionPartitionId id,
+      final Date firstDayOfCurrentMonth, final Date firstDayOfCurrentWeek, final String dateStr,
+      final MobCompactPartitionPolicy policy, final Calendar calendar, final long threshold) {
 
-//TODO : remove below after analysis
+    boolean skipCompcation = false;
+    id.setThreshold(threshold);
+    if (threshold <= 0) {
+      id.setDate(dateStr);
+      return skipCompcation;
+    }
 
-//  /**
-//   * fill out partition id based on compaction policy and date, threshold...
-//   * @param id Partition id to be filled out
-//   * @param firstDayOfCurrentMonth The first day in the current month
-//   * @param firstDayOfCurrentWeek The first day in the current week
-//   * @param dateStr Date string from the mob file
-//   * @param policy Mob compaction policy
-//   * @param calendar Calendar object
-//   * @param threshold Mob compaciton threshold configured
-//   * @return true if the file needs to be excluded from compaction
-//   */
-//  public static boolean fillPartitionId(final CompactionPartitionId id,
-//      final Date firstDayOfCurrentMonth, final Date firstDayOfCurrentWeek, final String dateStr,
-//      final MobCompactPartitionPolicy policy, final Calendar calendar, final long threshold) {
-//
-//    boolean skipCompcation = false;
-//    id.setThreshold(threshold);
-//    if (threshold <= 0) {
-//      id.setDate(dateStr);
-//      return skipCompcation;
-//    }
-//
-//    long finalThreshold;
-//    Date date;
-//    try {
-//      date = MobUtils.parseDate(dateStr);
-//    } catch (ParseException e)  {
-//      LOG.warn("Failed to parse date " + dateStr, e);
-//      id.setDate(dateStr);
-//      return true;
-//    }
-//
-//    /* The algorithm works as follows:
-//     *    For monthly policy:
-//     *       1). If the file's date is in past months, apply 4 * 7 * threshold
-//     *       2). If the file's date is in past weeks, apply 7 * threshold
-//     *       3). If the file's date is in current week, exclude it from the compaction
-//     *    For weekly policy:
-//     *       1). If the file's date is in past weeks, apply 7 * threshold
-//     *       2). If the file's date in currently, apply threshold
-//     *    For daily policy:
-//     *       1). apply threshold
-//     */
-//    if (policy == MobCompactPartitionPolicy.MONTHLY) {
-//      if (date.before(firstDayOfCurrentMonth)) {
-//        // Check overflow
-//        if (threshold < (Long.MAX_VALUE / MONTHLY_THRESHOLD_MULTIPLIER)) {
-//          finalThreshold = MONTHLY_THRESHOLD_MULTIPLIER * threshold;
-//        } else {
-//          finalThreshold = Long.MAX_VALUE;
-//        }
-//        id.setThreshold(finalThreshold);
-//
-//        // set to the date for the first day of that month
-//        id.setDate(MobUtils.formatDate(MobUtils.getFirstDayOfMonth(calendar, date)));
-//        return skipCompcation;
-//      }
-//    }
-//
-//    if ((policy == MobCompactPartitionPolicy.MONTHLY) ||
-//        (policy == MobCompactPartitionPolicy.WEEKLY)) {
-//      // Check if it needs to apply weekly multiplier
-//      if (date.before(firstDayOfCurrentWeek)) {
-//        // Check overflow
-//        if (threshold < (Long.MAX_VALUE / WEEKLY_THRESHOLD_MULTIPLIER)) {
-//          finalThreshold = WEEKLY_THRESHOLD_MULTIPLIER * threshold;
-//        } else {
-//          finalThreshold = Long.MAX_VALUE;
-//        }
-//        id.setThreshold(finalThreshold);
-//
-//        id.setDate(MobUtils.formatDate(MobUtils.getFirstDayOfWeek(calendar, date)));
-//        return skipCompcation;
-//      } else if (policy == MobCompactPartitionPolicy.MONTHLY) {
-//        skipCompcation = true;
-//      }
-//    }
-//
-//    // Rest is daily
-//    id.setDate(dateStr);
-//    return skipCompcation;
-//  }
+    long finalThreshold;
+    Date date;
+    try {
+      date = MobUtils.parseDate(dateStr);
+    } catch (ParseException e)  {
+      LOG.warn("Failed to parse date " + dateStr, e);
+      id.setDate(dateStr);
+      return true;
+    }
+
+    /* The algorithm works as follows:
+     *    For monthly policy:
+     *       1). If the file's date is in past months, apply 4 * 7 * threshold
+     *       2). If the file's date is in past weeks, apply 7 * threshold
+     *       3). If the file's date is in current week, exclude it from the compaction
+     *    For weekly policy:
+     *       1). If the file's date is in past weeks, apply 7 * threshold
+     *       2). If the file's date in currently, apply threshold
+     *    For daily policy:
+     *       1). apply threshold
+     */
+    if (policy == MobCompactPartitionPolicy.MONTHLY) {
+      if (date.before(firstDayOfCurrentMonth)) {
+        // Check overflow
+        if (threshold < (Long.MAX_VALUE / MONTHLY_THRESHOLD_MULTIPLIER)) {
+          finalThreshold = MONTHLY_THRESHOLD_MULTIPLIER * threshold;
+        } else {
+          finalThreshold = Long.MAX_VALUE;
+        }
+        id.setThreshold(finalThreshold);
+
+        // set to the date for the first day of that month
+        id.setDate(MobUtils.formatDate(MobUtils.getFirstDayOfMonth(calendar, date)));
+        return skipCompcation;
+      }
+    }
+
+    if ((policy == MobCompactPartitionPolicy.MONTHLY) ||
+        (policy == MobCompactPartitionPolicy.WEEKLY)) {
+      // Check if it needs to apply weekly multiplier
+      if (date.before(firstDayOfCurrentWeek)) {
+        // Check overflow
+        if (threshold < (Long.MAX_VALUE / WEEKLY_THRESHOLD_MULTIPLIER)) {
+          finalThreshold = WEEKLY_THRESHOLD_MULTIPLIER * threshold;
+        } else {
+          finalThreshold = Long.MAX_VALUE;
+        }
+        id.setThreshold(finalThreshold);
+
+        id.setDate(MobUtils.formatDate(MobUtils.getFirstDayOfWeek(calendar, date)));
+        return skipCompcation;
+      } else if (policy == MobCompactPartitionPolicy.MONTHLY) {
+        skipCompcation = true;
+      }
+    }
+
+    // Rest is daily
+    id.setDate(dateStr);
+    return skipCompcation;
+  }
 }
