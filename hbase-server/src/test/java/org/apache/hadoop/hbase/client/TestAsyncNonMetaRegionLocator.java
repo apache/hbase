@@ -399,4 +399,14 @@ public class TestAsyncNonMetaRegionLocator {
     assertArrayEquals(loc.getRegion().getStartKey(), EMPTY_START_ROW);
     assertArrayEquals(loc.getRegion().getEndKey(), EMPTY_END_ROW);
   }
+
+  @Test
+  public void testConcurrentUpdateCachedLocationOnError() throws Exception {
+    createSingleRegionTable();
+    HRegionLocation loc =
+        getDefaultRegionLocation(TABLE_NAME, EMPTY_START_ROW, RegionLocateType.CURRENT, false)
+            .get();
+    IntStream.range(0, 100).parallel()
+        .forEach(i -> LOCATOR.updateCachedLocationOnError(loc, new NotServingRegionException()));
+  }
 }
