@@ -449,6 +449,17 @@ module Hbase
 
     #-------------------------------------------------------------------------------
 
+    define_test 'delete_all_snapshot by regex' do
+      drop_test_table(@create_test_name)
+      admin.create(@create_test_name, 'a')
+      command(:snapshot, @create_test_name, 's1')
+      admin.delete_all_snapshot('s1.*')
+      output = capture_stdout { command(:list_snapshots) }
+      assert(output.include?('0 row'))
+    end
+
+    #-------------------------------------------------------------------------------
+
     define_test "list_regions should fail for disabled table" do
       drop_test_table(@create_test_name)
       admin.create(@create_test_name, 'a')
