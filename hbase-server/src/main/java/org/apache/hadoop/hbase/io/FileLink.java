@@ -319,7 +319,7 @@ public class FileLink {
           if (!(ioe instanceof FileNotFoundException)) throw re;
         }
       }
-      throw new FileNotFoundException("Unable to open link: " + fileLink);
+      throw new FileNotFoundException(this.fileLink.toString());
     }
 
     @Override
@@ -363,7 +363,7 @@ public class FileLink {
 
   @Override
   public String toString() {
-    StringBuilder str = new StringBuilder(getClass().getName());
+    StringBuilder str = new StringBuilder(getClass().getSimpleName());
     str.append(" locations=[");
     for (int i = 0; i < locations.length; ++i) {
       if (i > 0) str.append(", ");
@@ -394,7 +394,7 @@ public class FileLink {
         return locations[i];
       }
     }
-    throw new FileNotFoundException("Unable to open link: " + this);
+    throw new FileNotFoundException(toString());
   }
 
   /**
@@ -412,7 +412,7 @@ public class FileLink {
         // Try another file location
       }
     }
-    throw new FileNotFoundException("Unable to open link: " + this);
+    throw new FileNotFoundException(toString());
   }
 
   /**
