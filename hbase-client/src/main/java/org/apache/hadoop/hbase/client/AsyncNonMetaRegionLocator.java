@@ -540,6 +540,9 @@ class AsyncNonMetaRegionLocator {
     byte[] startKey = loc.getRegion().getStartKey();
     for (;;) {
       RegionLocations oldLocs = tableCache.cache.get(startKey);
+      if (oldLocs == null) {
+        return;
+      }
       HRegionLocation oldLoc = oldLocs.getRegionLocation(loc.getRegion().getReplicaId());
       if (!canUpdateOnError(loc, oldLoc)) {
         return;
