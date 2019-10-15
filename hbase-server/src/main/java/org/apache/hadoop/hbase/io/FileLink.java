@@ -362,7 +362,7 @@ public class FileLink {
 
   @Override
   public String toString() {
-    StringBuilder str = new StringBuilder(getClass().getName());
+    StringBuilder str = new StringBuilder(getClass().getSimpleName());
     str.append(" locations=[");
     for (int i = 0; i < locations.length; ++i) {
       if (i > 0) str.append(", ");
@@ -393,7 +393,7 @@ public class FileLink {
         return locations[i];
       }
     }
-    throw new FileNotFoundException("Unable to open link: " + this);
+    throw new FileNotFoundException(toString());
   }
 
   /**
@@ -416,7 +416,7 @@ public class FileLink {
   }
 
   /**
-   * Handle exceptions which are threw when access locations of file link
+   * Handle exceptions which are thrown when access locations of file link
    * @param fileLink the file link
    * @param newException the exception caught by access the current location
    * @param previousException the previous exception caught by access the other locations
@@ -436,7 +436,7 @@ public class FileLink {
     if (newException instanceof FileNotFoundException) {
       // Try another file location
       if (previousException == null) {
-        previousException = new FileNotFoundException("Unable to open link: " + fileLink);
+        previousException = new FileNotFoundException(fileLink.toString());
       }
     } else if (newException instanceof AccessControlException) {
       // Try another file location
