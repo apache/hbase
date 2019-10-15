@@ -863,19 +863,6 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       }
     }
 
-    int[] removeRegion(int[] regions, int regionIndex) {
-      //TODO: this maybe costly. Consider using linked lists
-      int[] newRegions = new int[regions.length - 1];
-      int i = 0;
-      for (i = 0; i < regions.length; i++) {
-        if (regions[i] == regionIndex) {
-          break;
-        }
-        newRegions[i] = regions[i];
-      }
-      System.arraycopy(regions, i+1, newRegions, i, newRegions.length - i);
-      return newRegions;
-    }
 
     int[] addRegion(int[] regions, int regionIndex) {
       int[] newRegions = new int[regions.length + 1];
@@ -1644,6 +1631,28 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     } else {
       return new HashMap<>();
     }
+  }
+
+  /**
+   * Returns a new array with the region at <code>regionIndex</code>
+   * removed (unless regionIndex > regions.length and then we just
+   * return <code>regions</code>).
+   */
+  static int[] removeRegion(int[] regions, int regionIndex) {
+    if (regionIndex >= regions.length) {
+      return regions;
+    }
+    //TODO: this maybe costly. Consider using linked lists
+    int[] newRegions = new int[regions.length - 1];
+    int i = 0;
+    for (; i < regions.length; i++) {
+      if (regions[i] == regionIndex) {
+        break;
+      }
+      newRegions[i] = regions[i];
+    }
+    System.arraycopy(regions, i+1, newRegions, i, newRegions.length - i);
+    return newRegions;
   }
 
   @Override

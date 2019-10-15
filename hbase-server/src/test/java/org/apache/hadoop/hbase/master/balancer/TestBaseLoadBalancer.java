@@ -566,4 +566,26 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     assertEquals(1, cluster.regionLocations[r43].length);
     assertEquals(-1, cluster.regionLocations[r43][0]);
   }
+
+  @Test
+  public void testRemoveRegion() {
+    int [] regions = new int [] {0, 1, 2};
+    int [] result = BaseLoadBalancer.removeRegion(regions, 0);
+    assertTrue(result.length == 2);
+    assertTrue(result[0] == 1);
+    assertTrue(result[1] == 2);
+    result = BaseLoadBalancer.removeRegion(regions, 1);
+    assertTrue(result.length == 2);
+    assertTrue(result[0] == 0);
+    assertTrue(result[1] == 2);
+    result = BaseLoadBalancer.removeRegion(regions, 2);
+    assertTrue(result.length == 2);
+    assertTrue(result[0] == 0);
+    assertTrue(result[1] == 1);
+    result = BaseLoadBalancer.removeRegion(regions, regions.length);
+    assertTrue(result.length == 3);
+    assertTrue(result[0] == 0);
+    assertTrue(result[1] == 1);
+    assertTrue(result[2] == 2);
+  }
 }
