@@ -45,6 +45,9 @@ Release Notes - HBase - Version 1.3.6
     * [HBASE-22981] - Remove unused flags for Yetus
     * [HBASE-23015] - Replace Jackson with relocated gson everywhere but hbase-rest
     * [HBASE-23019] - Handle --skip-errorprone on branch-1
+    * [HBASE-23094] - Wrong log message in simpleRegionNormaliser while checking if merge is enabled.
+    * [HBASE-23128] - Restore Region interface compatibility
+    * [HBASE-23139] - MapReduce jobs lauched from convenience distribution are nonfunctional
 
 ** Improvement
     * [HBASE-21996] - Set locale for javadoc
@@ -68,6 +71,8 @@ Release Notes - HBase - Version 1.3.6
     * [HBASE-22872] - Don't create normalization plan unnecesarily when split and merge both are disabled
     * [HBASE-22874] - Define a public interface for Canary and move existing implementation to LimitedPrivate
     * [HBASE-22930] - Set unique name to longCompactions/shortCompactions threads
+    * [HBASE-23114] - Use archiveArtifacts in Jenkinsfiles
+    * [HBASE-23174] - Upgrade jackson and jackson-databind to 2.9.10 (branch-1)
 
 ** Test
     * [HBASE-22615] - Make TestChoreService more robust to timing
@@ -79,6 +84,7 @@ Release Notes - HBase - Version 1.3.6
     * [HBASE-22913] - Use Hadoop label for nightly builds
     * [HBASE-23012] - Release 1.3.6
     * [HBASE-23023] - upgrade shellcheck used to test in nightly and precommit
+    * [HBASE-23053] - Disable concurrent nightly builds
 
 
 
