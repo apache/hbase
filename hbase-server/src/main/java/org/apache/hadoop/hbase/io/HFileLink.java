@@ -70,6 +70,9 @@ public class HFileLink extends FileLink {
    * Region name is ([a-f0-9]+), so '-' is an invalid character for the region name.
    * HFile is ([0-9a-f]+(?:_SeqId_[0-9]+_)?) covering the plain hfiles (uuid)
    * and the bulk loaded (_SeqId_[0-9]+_) hfiles.
+   *
+   * <p>Here is an example name: /hbase/test/0123/cf/testtb=4567-abcd where 'testtb' is table name
+   * and '4567' is region name and 'abcd' is filename.
    */
   public static final String LINK_NAME_REGEX =
     String.format("(?:(?:%s=)?)%s=%s-%s",
