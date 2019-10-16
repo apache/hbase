@@ -479,6 +479,11 @@ public interface Table extends Closeable {
     return checkAndMutate(row, family, qualifier, op, value, mutations);
   }
 
+  default Boolean[] checkAndRowMutate(final List<CheckAndRowMutate> checkAndRowMutates)
+      throws IOException {
+    throw new NotImplementedException("Add an implementation!");
+  }
+
   /**
    * Atomically checks if a row/family/qualifier value matches the expected value. If it does, it
    * adds the Put/Delete/RowMutations.

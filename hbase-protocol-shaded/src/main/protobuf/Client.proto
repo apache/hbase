@@ -92,6 +92,16 @@ message Get {
   optional bool load_column_families_on_demand = 14; /* DO NOT add defaults to load_column_families_on_demand. */
 }
 
+message CheckAndRowMutate {
+  required bytes row = 1;
+  required bytes family = 2;
+  required bytes qualifier = 3;
+  required CompareType compare_type = 4;
+  required Comparator comparator = 5;
+  optional TimeRange time_range = 6;
+  required MutationProto mutation = 7;
+}
+
 message Result {
   // Result includes the Cells or else it just has a count of Cells
   // that are carried otherwise.
@@ -443,6 +453,7 @@ message Action {
   optional MutationProto mutation = 2;
   optional Get get = 3;
   optional CoprocessorServiceCall service_call = 4;
+  optional CheckAndRowMutate checkAndRowMutate = 5;
 }
 
 /**

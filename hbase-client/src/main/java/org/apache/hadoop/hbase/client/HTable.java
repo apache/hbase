@@ -1193,6 +1193,25 @@ public class HTable implements Table {
   }
 
   @Override
+  public Boolean [] checkAndRowMutate(final List<CheckAndRowMutate> checkAndRowMutates)
+      throws IOException {
+    try {
+      Object[] r1 = new Object[checkAndRowMutates.size()];
+      batch((List<? extends Row>)checkAndRowMutates, r1, readRpcTimeoutMs);
+      // Translate.
+      Boolean [] results = new Boolean[r1.length];
+      int i = 0;
+      for (Object obj: r1) {
+        // Batch ensures if there is a failure we get an exception instead
+        results[i++] = ((Result)obj).getExists();
+      }
+      return results;
+    } catch (InterruptedException e) {
+      throw (InterruptedIOException)new InterruptedIOException().initCause(e);
+    }
+  }
+
+  @Override
   public RegionLocator getRegionLocator() {
     return this.locator;
   }
