@@ -58,4 +58,17 @@ public class TestCallRunner {
     cr.run();
     Mockito.verify(mockCall, Mockito.times(1)).cleanup();
   }
+
+  @Test
+  public void testCallRunnerDrop() {
+    RpcServerInterface mockRpcServer = Mockito.mock(RpcServerInterface.class);
+    Mockito.when(mockRpcServer.isStarted()).thenReturn(true);
+    ServerCall mockCall = Mockito.mock(ServerCall.class);
+    Mockito.when(mockCall.disconnectSince()).thenReturn(1L);
+
+    CallRunner cr = new CallRunner(mockRpcServer, mockCall);
+    cr.setStatus(new MonitoredRPCHandlerImpl());
+    cr.drop();
+    Mockito.verify(mockCall, Mockito.times(1)).cleanup();
+  }
 }

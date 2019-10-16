@@ -166,7 +166,7 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
   }
 
   @Override
-  public synchronized void cleanup() {
+  public void cleanup() {
     release(0b01);
   }
 
