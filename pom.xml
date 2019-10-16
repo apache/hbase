@@ -2923,6 +2923,12 @@
               <artifactId>hamcrest-core</artifactId>
               <version>${hamcrest.version}</version>
             </additionalDependency>
+            <!-- javadoc tooling requires jsr305 due to references to it from things we rely on -->
+            <additionalDependency>
+              <groupId>com.google.code.findbugs</groupId>
+              <artifactId>jsr305</artifactId>
+              <version>3.0.2</version>
+            </additionalDependency>
           </additionalDependencies>
         </configuration>
         <reportSets>
