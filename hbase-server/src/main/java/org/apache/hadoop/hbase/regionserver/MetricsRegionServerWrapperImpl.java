@@ -697,9 +697,9 @@ class MetricsRegionServerWrapperImpl
 
         // If we've time traveled keep the last requests per second.
         if ((currentTime - lastRan) > 0) {
-          long currentRequestCount = getTotalRequestCount();
-          requestsPerSecond =
-              (currentRequestCount - lastRequestCount) / ((currentTime - lastRan) / 1000.0);
+          long currentRequestCount = getTotalRowActionRequestCount();
+          requestsPerSecond = (currentRequestCount - lastRequestCount) /
+              ((currentTime - lastRan) / 1000.0);
           lastRequestCount = currentRequestCount;
 
           long intervalReadRequestsCount = tempReadRequestsCount - lastReadRequestsCount;
