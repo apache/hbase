@@ -88,6 +88,7 @@ public class CallRunner {
    * Cleanup after ourselves... let go of references.
    */
   private void cleanup() {
+    this.call.cleanup();
     this.call = null;
     this.rpcServer = null;
   }
