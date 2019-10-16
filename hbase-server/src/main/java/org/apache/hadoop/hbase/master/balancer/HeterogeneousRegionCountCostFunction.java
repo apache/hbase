@@ -15,6 +15,7 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
@@ -82,6 +83,7 @@ public class HeterogeneousRegionCountCostFunction extends StochasticLoadBalancer
    * This is a cache, used to not go through all the limitPerRule map when searching for limit
    */
   private final Map<ServerName, Integer> limitPerRS;
+  private final Configuration conf;
   private int defaultNumberOfRegions;
 
   /**
@@ -92,6 +94,7 @@ public class HeterogeneousRegionCountCostFunction extends StochasticLoadBalancer
 
   HeterogeneousRegionCountCostFunction(final Configuration conf) {
     super(conf);
+    this.conf = conf;
     this.limitPerRS = new HashMap<>();
     this.limitPerRule = new HashMap<>();
     this.setMultiplier(conf.getFloat(REGION_COUNT_SKEW_COST_KEY, DEFAULT_REGION_COUNT_SKEW_COST));
@@ -152,7 +155,12 @@ public class HeterogeneousRegionCountCostFunction extends StochasticLoadBalancer
    * used to load the rule files.
    */
   void loadRules() {
-    final List<String> lines = HeterogeneousRegionCountCostFunction.readFile(this.rulesPath);
+    final List<String> lines = readFile(this.rulesPath);
+    if (null == lines) {
+      LOG.warn("cannot load rules file, keeping latest rules file which has "
+          + this.limitPerRule.size() + " rules");
+      return;
+    }
 
     LOG.info("loading rules file '" + this.rulesPath + "'");
     this.limitPerRule.clear();
@@ -186,28 +194,52 @@ public class HeterogeneousRegionCountCostFunction extends StochasticLoadBalancer
   /**
    * used to read the rule files from either HDFS or local FS
    */
-  private static List<String> readFile(final String filename) {
-    final List<String> records = new ArrayList<>();
+  private List<String> readFile(final String filename) {
 
     if (null == filename) {
-      return records;
+      return null;
     }
 
-    final Configuration conf = new Configuration();
-    final Path path = new Path(filename);
     try {
-      final FileSystem fs = FileSystem.get(conf);
-      final BufferedReader reader = new BufferedReader(new InputStreamReader(fs.open(path)));
-
-      String line;
-      while ((line = reader.readLine()) != null) {
-        records.add(line);
+      if (filename.startsWith("file:")) {
+        return readFileFromLocalFS(filename);
       }
-      reader.close();
-      return records;
-    } catch (final IOException e) {
+      return readFileFromHDFS(filename);
+    } catch (IOException e) {
       LOG.error("cannot read rules file located at ' " + filename + " ':" + e.getMessage());
+      return null;
     }
+  }
+
+  /**
+   * used to read the rule files from HDFS
+   */
+  private List<String> readFileFromHDFS(final String filename) throws IOException {
+
+    final Path path = new Path(filename);
+    final FileSystem fs = FileSystem.get(this.conf);
+    final BufferedReader reader = new BufferedReader(new InputStreamReader(fs.open(path)));
+
+    return readLines(reader);
+  }
+
+  /**
+   * used to read the rule files from local FS
+   */
+  private List<String> readFileFromLocalFS(final String filename) throws IOException {
+
+    BufferedReader reader = new BufferedReader(new FileReader(filename));
+    return readLines(reader);
+  }
+
+  private List<String> readLines(BufferedReader reader) throws IOException {
+    final List<String> records = new ArrayList<>();
+
+    String line;
+    while ((line = reader.readLine()) != null) {
+      records.add(line);
+    }
+    reader.close();
     return records;
   }
 

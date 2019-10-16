@@ -26,10 +26,13 @@ import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -47,7 +50,6 @@ public class TestStochasticLoadBalancerHeterogeneousCostRules extends BalancerTe
   static final String DEFAULT_RULES_TMP_LOCATION = "/tmp/hbase-balancer.rules";
   static Configuration conf;
   private HeterogeneousRegionCountCostFunction costFunction;
-  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   @BeforeClass
   public static void beforeAllTests() throws Exception {
@@ -113,5 +115,47 @@ public class TestStochasticLoadBalancerHeterogeneousCostRules extends BalancerTe
     this.costFunction = new HeterogeneousRegionCountCostFunction(conf);
     this.costFunction.loadRules();
     Assert.assertEquals(0, this.costFunction.getNumberOfRulesLoaded());
+  }
+
+  @Test
+  public void testNoOverride() throws IOException {
+    createSimpleRulesFile(Arrays.asList("^server1$ 10", "^server2 21"));
+    this.costFunction = new HeterogeneousRegionCountCostFunction(conf);
+    this.costFunction.loadRules();
+    Assert.assertEquals(2, this.costFunction.getNumberOfRulesLoaded());
+
+    // loading malformed configuration does not overload current
+    cleanup();
+    this.costFunction.loadRules();
+    Assert.assertEquals(2, this.costFunction.getNumberOfRulesLoaded());
+  }
+
+  @Test
+  public void testLoadingFomHDFS() throws Exception {
+
+    HBaseTestingUtility hBaseTestingUtility = new HBaseTestingUtility();
+    hBaseTestingUtility.startMiniDFSCluster(3);
+
+    MiniDFSCluster cluster = hBaseTestingUtility.getDFSCluster();
+    DistributedFileSystem fs = cluster.getFileSystem();
+
+    String path = cluster.getURI() + DEFAULT_RULES_TMP_LOCATION;
+
+    // writing file
+    FSDataOutputStream stream = fs.create(new org.apache.hadoop.fs.Path(path));
+    stream.write("server1 10".getBytes());
+    stream.flush();
+    stream.close();
+
+    Configuration configuration = hBaseTestingUtility.getConfiguration();
+
+    // start costFunction
+    configuration.set(
+      HeterogeneousRegionCountCostFunction.HBASE_MASTER_BALANCER_HETEROGENEOUS_RULES_FILE, path);
+    this.costFunction = new HeterogeneousRegionCountCostFunction(configuration);
+    this.costFunction.loadRules();
+    Assert.assertEquals(1, this.costFunction.getNumberOfRulesLoaded());
+
+    hBaseTestingUtility.shutdownMiniCluster();
   }
 }
