@@ -452,26 +452,21 @@ public class TestHFileBlock {
           HFileBlock.Writer hbw = new HFileBlock.Writer(dataBlockEncoder, meta);
           long totalSize = 0;
           final List<Integer> encodedSizes = new ArrayList<>();
-          final List<ByteBuffer> encodedBlocks = new ArrayList<>();
+          final List<ByteBuff> encodedBlocks = new ArrayList<>();
           for (int blockId = 0; blockId < numBlocks; ++blockId) {
             hbw.startWriting(BlockType.DATA);
             writeTestKeyValues(hbw, blockId, includesMemstoreTS, includesTag);
             hbw.writeHeaderAndData(os);
             int headerLen = HConstants.HFILEBLOCK_HEADER_SIZE;
-            byte[] encodedResultWithHeader = hbw.cloneUncompressedBufferWithHeader().array();
-            final int encodedSize = encodedResultWithHeader.length - headerLen;
+            ByteBuff encodedResultWithHeader = hbw.cloneUncompressedBufferWithHeader();
+            final int encodedSize = encodedResultWithHeader.limit() - headerLen;
             if (encoding != DataBlockEncoding.NONE) {
               // We need to account for the two-byte encoding algorithm ID that
               // comes after the 24-byte block header but before encoded KVs.
               headerLen += DataBlockEncoding.ID_SIZE;
             }
-            byte[] encodedDataSection =
-                new byte[encodedResultWithHeader.length - headerLen];
-            System.arraycopy(encodedResultWithHeader, headerLen,
-                encodedDataSection, 0, encodedDataSection.length);
-            final ByteBuffer encodedBuf =
-                ByteBuffer.wrap(encodedDataSection);
             encodedSizes.add(encodedSize);
+            ByteBuff encodedBuf = encodedResultWithHeader.position(headerLen).slice();
             encodedBlocks.add(encodedBuf);
             totalSize += hbw.getOnDiskSizeWithHeader();
           }
@@ -521,12 +516,11 @@ public class TestHFileBlock {
               actualBuffer = actualBuffer.slice();
             }
 
-            ByteBuffer expectedBuffer = encodedBlocks.get(blockId);
-            expectedBuffer.rewind();
+            ByteBuff expectedBuff = encodedBlocks.get(blockId);
+            expectedBuff.rewind();
 
             // test if content matches, produce nice message
-            assertBuffersEqual(new SingleByteBuff(expectedBuffer), actualBuffer, algo, encoding,
-                pread);
+            assertBuffersEqual(expectedBuff, actualBuffer, algo, encoding, pread);
 
             // test serialized blocks
             for (boolean reuseBuffer : new boolean[] { false, true }) {
@@ -882,8 +876,10 @@ public class TestHFileBlock {
       hbw.writeHeaderAndData(os);
       totalSize += hbw.getOnDiskSizeWithHeader();
 
-      if (cacheOnWrite)
-        expectedContents.add(hbw.cloneUncompressedBufferWithHeader());
+      if (cacheOnWrite) {
+        ByteBuff buff = hbw.cloneUncompressedBufferWithHeader();
+        expectedContents.add(buff.asSubByteBuffer(buff.capacity()));
+      }
 
       if (detailedLogging) {
         LOG.info("Written block #" + i + " of type " + bt
