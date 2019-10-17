@@ -250,8 +250,16 @@ public class StoreFileInfo {
     } else if (this.reference != null) {
       // HFile Reference
       Path referencePath = getReferredToFile(this.getPath());
-      in = new FSDataInputStreamWrapper(fs, referencePath,
-          doDropBehind);
+      try {
+        in = new FSDataInputStreamWrapper(fs, referencePath, doDropBehind);
+      } catch (FileNotFoundException fnfe) {
+        // Intercept the exception so can insert more info about the Reference; otherwise
+        // exception just complains about some random file -- operator doesn't realize it
+        // other end of a Reference
+        FileNotFoundException newFnfe = new FileNotFoundException(toString());
+        newFnfe.initCause(fnfe);
+        throw newFnfe;
+      }
       status = fs.getFileStatus(referencePath);
     } else {
       in = new FSDataInputStreamWrapper(fs, this.getPath(),
