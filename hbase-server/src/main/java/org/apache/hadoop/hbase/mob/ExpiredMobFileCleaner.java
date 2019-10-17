@@ -57,7 +57,8 @@ public class ExpiredMobFileCleaner extends Configured implements Tool {
    * @param tableName The current table name.
    * @param family The current family.
    */
-  public void cleanExpiredMobFiles(String tableName, ColumnFamilyDescriptor family) throws IOException {
+  public void cleanExpiredMobFiles(String tableName, ColumnFamilyDescriptor family)
+      throws IOException {
     Configuration conf = getConf();
     TableName tn = TableName.valueOf(tableName);
     FileSystem fs = FileSystem.get(conf);
@@ -67,7 +68,7 @@ public class ExpiredMobFileCleaner extends Configured implements Tool {
     copyOfConf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0f);
     CacheConfig cacheConfig = new CacheConfig(copyOfConf);
     MobUtils.cleanExpiredMobFiles(fs, conf, tn, family, cacheConfig,
-        EnvironmentEdgeManager.currentTime());
+      EnvironmentEdgeManager.currentTime());
   }
 
   public static void main(String[] args) throws Exception {

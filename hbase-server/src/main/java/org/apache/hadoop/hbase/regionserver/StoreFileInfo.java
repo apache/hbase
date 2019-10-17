@@ -30,15 +30,16 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Describe a StoreFile (hfile, reference, link)
@@ -141,7 +142,7 @@ public class StoreFileInfo {
       }
       if (LOG.isTraceEnabled()) LOG.trace(p + " is a " + reference.getFileRegion() +
               " reference to " + referencePath);
-    } else if (isHFile(p)) {
+    } else if (isHFile(p) || isMobFile(p) || isMobRefFile(p)) {
       // HFile
       if (fileStatus != null) {
         this.createdTimestamp = fileStatus.getModificationTime();
@@ -436,6 +437,30 @@ public class StoreFileInfo {
     return m.matches() && m.groupCount() > 0;
   }
 
+  public static boolean isMobFile(final Path path) {
+    String fileName = path.getName();
+    String[] parts = fileName.split(MobUtils.SEP);
+    if (parts.length != 2) {
+      return false;
+    }
+    Matcher m = HFILE_NAME_PATTERN.matcher(parts[0]);
+    Matcher mm = HFILE_NAME_PATTERN.matcher(parts[1]);
+    return m.matches() && mm.matches();
+  }
+
+  public static boolean isMobRefFile(final Path path) {
+    String fileName = path.getName();
+    int lastIndex = fileName.lastIndexOf(MobUtils.SEP);
+    if (lastIndex < 0) {
+      return false;
+    }
+    String[] parts = new String[2];
+    parts[0] = fileName.substring(0, lastIndex);
+    parts[1] = fileName.substring(lastIndex + 1);
+    String name = parts[0] + "." + parts[1];
+    Matcher  m = REF_NAME_PATTERN.matcher(name);
+    return m.matches() && m.groupCount() > 1;
+  }
   /**
    * @param path Path to check.
    * @return True if the path has format of a del file.

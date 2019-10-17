@@ -395,9 +395,8 @@ public class HMaster extends HRegionServer implements MasterServices {
   private LogCleaner logCleaner;
   private HFileCleaner hfileCleaner;
   private ReplicationBarrierCleaner replicationBarrierCleaner;
-  private ExpiredMobFileCleanerChore expiredMobFileCleanerChore;
-  private MobCompactionChore mobCompactChore;
-  private MasterMobCompactionThread mobCompactThread;
+  private MobFileCleanerChore mobFileCleanerChore;
+  private MobFileCompactionChore mobFileCompactionChore;
   // used to synchronize the mobCompactionStates
   private final IdLock mobCompactionLock = new IdLock();
   // save the information of mob compactions in tables.
@@ -1300,14 +1299,18 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   private void initMobCleaner() {
-    this.expiredMobFileCleanerChore = new ExpiredMobFileCleanerChore(this);
-    getChoreService().scheduleChore(expiredMobFileCleanerChore);
+    this.mobFileCleanerChore = new MobFileCleanerChore(this);
+    getChoreService().scheduleChore(mobFileCleanerChore);
 
     int mobCompactionPeriod = conf.getInt(MobConstants.MOB_COMPACTION_CHORE_PERIOD,
-        MobConstants.DEFAULT_MOB_COMPACTION_CHORE_PERIOD);
-    this.mobCompactChore = new MobCompactionChore(this, mobCompactionPeriod);
-    getChoreService().scheduleChore(mobCompactChore);
-    this.mobCompactThread = new MasterMobCompactionThread(this);
+      MobConstants.DEFAULT_MOB_COMPACTION_CHORE_PERIOD);
+
+    if (mobCompactionPeriod > 0) {
+      this.mobFileCompactionChore = new MobFileCompactionChore(this);
+      getChoreService().scheduleChore(mobFileCompactionChore);
+    } else {
+      LOG.info("The period is " + mobCompactionPeriod + " seconds, MobCompactionChore is disabled");
+    }
   }
 
   /**
@@ -1495,9 +1498,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       }
     }
     stopChores();
-    if (this.mobCompactThread != null) {
-      this.mobCompactThread.close();
-    }
+
     super.stopServiceThreads();
     if (cleanerPool != null) {
       cleanerPool.shutdownNow();
@@ -1618,8 +1619,8 @@ public class HMaster extends HRegionServer implements MasterServices {
   private void stopChores() {
     ChoreService choreService = getChoreService();
     if (choreService != null) {
-      choreService.cancelChore(this.expiredMobFileCleanerChore);
-      choreService.cancelChore(this.mobCompactChore);
+      choreService.cancelChore(this.mobFileCleanerChore);
+      choreService.cancelChore(this.mobFileCompactionChore);
       choreService.cancelChore(this.balancerChore);
       choreService.cancelChore(this.normalizerChore);
       choreService.cancelChore(this.clusterStatusChore);
@@ -3442,17 +3443,6 @@ public class HMaster extends HRegionServer implements MasterServices {
         mobCompactionLock.releaseLockEntry(lockEntry);
       }
     }
-  }
-
-  /**
-   * Requests mob compaction.
-   * @param tableName The table the compact.
-   * @param columns The compacted columns.
-   * @param allFiles Whether add all mob files into the compaction.
-   */
-  public void requestMobCompaction(TableName tableName,
-                                   List<ColumnFamilyDescriptor> columns, boolean allFiles) throws IOException {
-    mobCompactThread.requestMobCompaction(conf, fs, tableName, columns, allFiles);
   }
 
   /**

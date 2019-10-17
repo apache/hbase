@@ -1126,7 +1126,7 @@ public abstract class FSUtils extends CommonFSUtils {
 
     @Override
     protected boolean accept(Path p, @CheckForNull Boolean isDir) {
-      if (!StoreFileInfo.isHFile(p)) {
+      if (!StoreFileInfo.isHFile(p) && !StoreFileInfo.isMobFile(p)) {
         return false;
       }
 

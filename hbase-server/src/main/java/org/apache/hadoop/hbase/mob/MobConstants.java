@@ -43,7 +43,7 @@ public final class MobConstants {
   public static final String MOB_REGION_NAME = ".mob";
   public static final byte[] MOB_REGION_NAME_BYTES = Bytes.toBytes(MOB_REGION_NAME);
 
-  public static final String MOB_CLEANER_PERIOD = "hbase.master.mob.ttl.cleaner.period";
+  public static final String MOB_CLEANER_PERIOD = "hbase.master.mob.cleaner.period";
   public static final int DEFAULT_MOB_CLEANER_PERIOD = 24 * 60 * 60; // one day
 
   public static final String MOB_CACHE_EVICT_PERIOD = "hbase.mob.cache.evict.period";
@@ -55,33 +55,23 @@ public final class MobConstants {
   public static final long DEFAULT_MOB_CACHE_EVICT_PERIOD = 3600L;
 
   public final static String TEMP_DIR_NAME = ".tmp";
-  public final static String BULKLOAD_DIR_NAME = ".bulkload";
   public final static byte[] MOB_TABLE_LOCK_SUFFIX = Bytes.toBytes(".mobLock");
-  public final static String EMPTY_STRING = "";
+
   /**
-   * If the size of a mob file is less than this value, it's regarded as a small file and needs to
-   * be merged in mob compaction. The default value is 1280MB.
+   * The max number of a MOB table regions that is allowed in a batch of the mob compaction.
+   * By setting this number to a custom value, users can control the overall effect
+   * of a major compaction of a large MOB-enabled table.
    */
-  public static final String MOB_COMPACTION_MERGEABLE_THRESHOLD =
-    "hbase.mob.compaction.mergeable.threshold";
-  public static final long DEFAULT_MOB_COMPACTION_MERGEABLE_THRESHOLD = 10 * 128 * 1024 * 1024;
-  /**
-   * The max number of del files that is allowed in the mob file compaction. In the mob
-   * compaction, when the number of existing del files is larger than this value, they are merged
-   * until number of del files is not larger this value. The default value is 3.
-   */
-  public static final String MOB_DELFILE_MAX_COUNT = "hbase.mob.delfile.max.count";
-  public static final int DEFAULT_MOB_DELFILE_MAX_COUNT = 3;
-  /**
-   * The max number of the mob files that is allowed in a batch of the mob compaction.
-   * The mob compaction merges the small mob files to bigger ones. If the number of the
-   * small files is very large, it could lead to a "too many opened file handlers" in the merge.
-   * And the merge has to be split into batches. This value limits the number of mob files
-   * that are selected in a batch of the mob compaction. The default value is 100.
-   */
-  public static final String MOB_COMPACTION_BATCH_SIZE =
+
+  public static final String MOB_MAJOR_COMPACTION_REGION_BATCH_SIZE =
     "hbase.mob.compaction.batch.size";
-  public static final int DEFAULT_MOB_COMPACTION_BATCH_SIZE = 100;
+
+  /**
+   * Default is 0 - means no limit - all regions of a MOB table will be compacted at once
+   */
+
+  public static final int DEFAULT_MOB_MAJOR_COMPACTION_REGION_BATCH_SIZE = 0;
+
   /**
    * The period that MobCompactionChore runs. The unit is second.
    * The default value is one week.
@@ -91,12 +81,68 @@ public final class MobConstants {
   public static final int DEFAULT_MOB_COMPACTION_CHORE_PERIOD =
     24 * 60 * 60 * 7; // a week
   public static final String MOB_COMPACTOR_CLASS_KEY = "hbase.mob.compactor.class";
+
   /**
-   * The max number of threads used in MobCompactor.
+   * Mob compaction type: "full", "generational"
+   * "full" - run full major compaction (during migration)
+   * "generational" - optimized version
    */
-  public static final String MOB_COMPACTION_THREADS_MAX =
-    "hbase.mob.compaction.threads.max";
-  public static final int DEFAULT_MOB_COMPACTION_THREADS_MAX = 1;
+  public final static String MOB_COMPACTION_TYPE_KEY = "hbase.mob.compaction.type";
+
+  public final static String DEFAULT_MOB_COMPACTION_TYPE = "full";
+
+  public final static String GENERATIONAL_MOB_COMPACTION_TYPE = "generational";
+
+  public final static String FULL_MOB_COMPACTION_TYPE = "full";
+
+
+  /**
+   * Maximum size of a MOB compaction selection
+   */
+  public static final String MOB_COMPACTION_MAX_SELECTION_SIZE_KEY =
+      "hbase.mob.compactions.max.selection.size";
+  /**
+   * Default maximum selection size = 1GB
+   */
+  public static final long DEFAULT_MOB_COMPACTION_MAX_SELECTION_SIZE = 1024 * 1024 * 1024;
+
+
+  /**
+   * Minimum number of MOB files eligible for compaction
+   */
+  public static final String MOB_COMPACTION_MIN_FILES_KEY = "hbase.mob.compactions.min.files";
+
+  public static final int DEFAULT_MOB_COMPACTION_MIN_FILES = 3;
+
+  /**
+   * Maximum number of MOB files (in one selection) eligible for compaction
+   */
+
+  public static final String MOB_COMPACTION_MAX_FILES_KEY = "hbase.mob.compactions.max.files";
+
+  public static final int DEFAULT_MOB_COMPACTION_MAX_FILES = 100;
+
+  /**
+   * Maximum number of MOB files allowed in MOB compaction (per region)
+   */
+
+  public static final String MOB_COMPACTION_MAX_TOTAL_FILES_KEY =
+                                        "hbase.mob.compactions.max.total.files";
+
+  public static final int DEFAULT_MOB_COMPACTION_MAX_TOTAL_FILES = 1000;
+
+  public static final String MOB_DISCARD_MISS_KEY = "hbase.mob.discard.miss";
+
+  public static final boolean DEFAULT_MOB_DISCARD_MISS = false;
+
+  /**
+   * Minimum age required for MOB file to be archived
+   */
+  public static final String MOB_MINIMUM_FILE_AGE_TO_ARCHIVE_KEY =
+      "mob.minimum.file.age.to.archive";
+
+  public static final long DEFAULT_MOB_MINIMUM_FILE_AGE_TO_ARCHIVE = 3600000; // 1 hour
+
   private MobConstants() {
 
   }
