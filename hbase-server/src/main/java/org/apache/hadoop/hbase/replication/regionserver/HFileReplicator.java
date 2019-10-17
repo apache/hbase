@@ -91,17 +91,19 @@ public class HFileReplicator {
   private ThreadPoolExecutor exec;
   private int maxCopyThreads;
   private int copiesPerThread;
+  private List<String> sourceClusterIds;
 
   public HFileReplicator(Configuration sourceClusterConf,
       String sourceBaseNamespaceDirPath, String sourceHFileArchiveDirPath,
       Map<String, List<Pair<byte[], List<String>>>> tableQueueMap, Configuration conf,
-      AsyncClusterConnection connection) throws IOException {
+      AsyncClusterConnection connection, List<String> sourceClusterIds) throws IOException {
     this.sourceClusterConf = sourceClusterConf;
     this.sourceBaseNamespaceDirPath = sourceBaseNamespaceDirPath;
     this.sourceHFileArchiveDirPath = sourceHFileArchiveDirPath;
     this.bulkLoadHFileMap = tableQueueMap;
     this.conf = conf;
     this.connection = connection;
+    this.sourceClusterIds = sourceClusterIds;
 
     userProvider = UserProvider.instantiate(conf);
     fsDelegationToken = new FsDelegationToken(userProvider, "renewer");
@@ -156,6 +158,8 @@ public class HFileReplicator {
     BulkLoadHFilesTool loader = new BulkLoadHFilesTool(conf);
     // Set the staging directory which will be used by BulkLoadHFilesTool for loading the data
     loader.setBulkToken(stagingDir.toString());
+    //updating list of cluster ids where this bulkload event has already been processed
+    loader.setClusterIds(sourceClusterIds);
     for (int count = 0; !queue.isEmpty(); count++) {
       if (count != 0) {
         LOG.warn("Error occurred while replicating HFiles, retry attempt " + count + " with " +

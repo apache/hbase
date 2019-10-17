@@ -294,9 +294,8 @@ public class HFileWriterImpl implements HFile.Writer {
     if (blockWriter != null) {
       throw new IllegalStateException("finishInit called twice");
     }
-
-    blockWriter = new HFileBlock.Writer(blockEncoder, hFileContext);
-
+    blockWriter = new HFileBlock.Writer(blockEncoder, hFileContext,
+        cacheConf.getByteBuffAllocator());
     // Data block index writer
     boolean cacheIndexesOnWrite = cacheConf.shouldCacheIndexesOnWrite();
     dataBlockIndexWriter = new HFileBlockIndex.BlockIndexWriter(blockWriter,
@@ -546,8 +545,13 @@ public class HFileWriterImpl implements HFile.Writer {
   private void doCacheOnWrite(long offset) {
     cacheConf.getBlockCache().ifPresent(cache -> {
       HFileBlock cacheFormatBlock = blockWriter.getBlockForCaching(cacheConf);
-      cache.cacheBlock(new BlockCacheKey(name, offset, true, cacheFormatBlock.getBlockType()),
-          cacheFormatBlock);
+      try {
+        cache.cacheBlock(new BlockCacheKey(name, offset, true, cacheFormatBlock.getBlockType()),
+            cacheFormatBlock);
+      } finally {
+        // refCnt will auto increase when block add to Cache, see RAMCache#putIfAbsent
+        cacheFormatBlock.release();
+      }
     });
   }
 
@@ -764,6 +768,7 @@ public class HFileWriterImpl implements HFile.Writer {
 
   @Override
   public void beforeShipped() throws IOException {
+    this.blockWriter.beforeShipped();
     // Add clone methods for every cell
     if (this.lastCell != null) {
       this.lastCell = KeyValueUtil.toNewKeyCell(this.lastCell);

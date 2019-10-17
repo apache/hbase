@@ -176,22 +176,46 @@
 
         <tr>
         <%java>
+            final String ZEROMB = "0 MB";
+            final String ZEROKB = "0 KB";
+            String uncompressedStorefileSizeStr = ZEROMB;
+            String storefileSizeStr = ZEROMB;
+            String indexSizeStr = ZEROKB;
+            String bloomSizeStr = ZEROKB;
             RegionLoad load = regionServer.createRegionLoad(r.getEncodedName());
             String displayName = RegionInfoDisplay.getRegionNameAsStringForDisplay(r,
               regionServer.getConfiguration());
+             if (load != null) {
+             long uncompressedStorefileSize  = load.getStoreUncompressedSizeMB();
+             long storefileSize  = load.getStorefileSizeMB();
+             long indexSize  = load.getTotalStaticIndexSizeKB();
+             long bloomSize  = load.getTotalStaticBloomSizeKB();
+             if (uncompressedStorefileSize > 0) {
+                uncompressedStorefileSizeStr = TraditionalBinaryPrefix.long2String(
+                    uncompressedStorefileSize * TraditionalBinaryPrefix.MEGA.value, "B", 1);
+             }
+             if (storefileSize > 0) {
+                storefileSizeStr = TraditionalBinaryPrefix.long2String(storefileSize
+                             * TraditionalBinaryPrefix.MEGA.value, "B", 1);
+             }
+             if(indexSize > 0) {
+               indexSizeStr = TraditionalBinaryPrefix.long2String(indexSize
+                                              * TraditionalBinaryPrefix.KILO.value, "B", 1);
+             }
+             if (bloomSize > 0) {
+               bloomSizeStr = TraditionalBinaryPrefix.long2String(bloomSize
+                                              * TraditionalBinaryPrefix.KILO.value, "B", 1);
+              }
+           }
         </%java>
             <td><a href="region.jsp?name=<% r.getEncodedName() %>"><% displayName %></a></td>
             <%if load != null %>
             <td><% String.format("%,1d", load.getStores()) %></td>
             <td><% String.format("%,1d", load.getStorefiles()) %></td>
-            <td><% TraditionalBinaryPrefix.long2String(load.getStoreUncompressedSizeMB()
-                * TraditionalBinaryPrefix.MEGA.value, "B", 1)%></td>
-            <td><% TraditionalBinaryPrefix.long2String(load.getStorefileSizeMB()
-                * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
-            <td><% TraditionalBinaryPrefix.long2String(load.getTotalStaticIndexSizeKB()
-                * TraditionalBinaryPrefix.KILO.value, "B", 1) %></td>
-            <td><% TraditionalBinaryPrefix.long2String(load.getTotalStaticBloomSizeKB()
-                * TraditionalBinaryPrefix.KILO.value, "B", 1) %></td>
+            <td><% uncompressedStorefileSizeStr %></td>
+            <td><% storefileSizeStr %></td>
+            <td><% indexSizeStr %></td>
+            <td><% bloomSizeStr %></td>
             <td><% load.getDataLocality() %></td>
             </%if>
         </tr>
@@ -267,14 +291,22 @@
 
         <tr>
         <%java>
+            final String ZEROMB = "0 MB";
+            String memStoreSizeMBStr = ZEROMB;
             RegionLoad load = regionServer.createRegionLoad(r.getEncodedName());
             String displayName = RegionInfoDisplay.getRegionNameAsStringForDisplay(r,
               regionServer.getConfiguration());
+              if (load != null) {
+              long memStoreSizeMB = load.getMemStoreSizeMB();
+              if (memStoreSizeMB > 0) {
+              memStoreSizeMBStr = TraditionalBinaryPrefix.long2String(
+                         memStoreSizeMB * TraditionalBinaryPrefix.MEGA.value, "B", 1);
+               }
+             }
         </%java>
             <td><a href="region.jsp?name=<% r.getEncodedName() %>"><% displayName %></a></td>
             <%if load != null %>
-            <td><% TraditionalBinaryPrefix.long2String(
-                load.getMemStoreSizeMB() * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
+            <td><% memStoreSizeMBStr %></td>
             </%if>
         </tr>
         </%for>

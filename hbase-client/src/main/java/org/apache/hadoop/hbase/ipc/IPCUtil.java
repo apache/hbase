@@ -180,8 +180,8 @@ class IPCUtil {
       return (IOException) new SocketTimeoutException(
         "Call to " + addr + " failed because " + error).initCause(error);
     } else if (error instanceof ConnectionClosingException) {
-      return (IOException) new ConnectionClosingException(
-        "Call to " + addr + " failed on local exception: " + error).initCause(error);
+      return new ConnectionClosingException("Call to " + addr + " failed on local exception: "
+        + error, error);
     } else if (error instanceof ServerTooBusyException) {
       // we already have address in the exception message
       return (IOException) error;
@@ -195,22 +195,22 @@ class IPCUtil {
           | InvocationTargetException | NoSuchMethodException | SecurityException e) {
         // just ignore, will just new a DoNotRetryIOException instead below
       }
-      return (IOException) new DoNotRetryIOException(
-        "Call to " + addr + " failed on local exception: " + error).initCause(error);
+      return new DoNotRetryIOException("Call to " + addr + " failed on local exception: "
+        + error, error);
     } else if (error instanceof ConnectionClosedException) {
-      return (IOException) new ConnectionClosedException(
-        "Call to " + addr + " failed on local exception: " + error).initCause(error);
+      return new ConnectionClosedException("Call to " + addr + " failed on local exception: "
+        + error, error);
     } else if (error instanceof CallTimeoutException) {
-      return (IOException) new CallTimeoutException(
-        "Call to " + addr + " failed on local exception: " + error).initCause(error);
+      return new CallTimeoutException("Call to " + addr + " failed on local exception: "
+        + error, error);
     } else if (error instanceof ClosedChannelException) {
       // ClosedChannelException does not have a constructor which takes a String but it is a
       // connection exception so we keep its original type
       return (IOException) error;
     } else if (error instanceof TimeoutException) {
       // TimeoutException is not an IOException, let's convert it to TimeoutIOException.
-      return (IOException) new TimeoutIOException(
-        "Call to " + addr + " failed on local exception: " + error).initCause(error);
+      return new TimeoutIOException("Call to " + addr + " failed on local exception: "
+        + error, error);
     } else {
       // try our best to keep the original exception type
       if (error instanceof IOException) {
@@ -224,8 +224,8 @@ class IPCUtil {
           // just ignore, will just new an IOException instead below
         }
       }
-      return (IOException) new HBaseIOException(
-        "Call to " + addr + " failed on local exception: " + error).initCause(error);
+      return new HBaseIOException("Call to " + addr + " failed on local exception: "
+        + error, error);
     }
   }
 

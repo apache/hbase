@@ -1470,8 +1470,8 @@
     <httpclient.version>4.5.3</httpclient.version>
     <httpcore.version>4.4.6</httpcore.version>
     <metrics-core.version>3.2.6</metrics-core.version>
-    <jackson.version>2.9.9</jackson.version>
-    <jackson.databind.version>2.9.9.2</jackson.databind.version>
+    <jackson.version>2.9.10</jackson.version>
+    <jackson.databind.version>2.9.10</jackson.databind.version>
     <jaxb-api.version>2.2.12</jaxb-api.version>
     <jetty.version>9.3.27.v20190418</jetty.version>
     <servlet.api.version>3.1.0</servlet.api.version>
@@ -1485,7 +1485,7 @@
     <hamcrest.version>1.3</hamcrest.version>
     <htrace.version>4.2.0-incubating</htrace.version>
     <log4j.version>1.2.17</log4j.version>
-    <mockito-core.version>2.1.0</mockito-core.version>
+    <mockito-core.version>2.28.2</mockito-core.version>
     <!--Internally we use a different version of protobuf. See hbase-protocol-shaded-->
     <external.protobuf.version>2.5.0</external.protobuf.version>
     <protobuf.plugin.version>0.5.0</protobuf.plugin.version>
@@ -1505,7 +1505,7 @@
     <bouncycastle.version>1.60</bouncycastle.version>
     <kerby.version>1.0.1</kerby.version>
     <commons-crypto.version>1.0.0</commons-crypto.version>
-    <curator.version>4.0.0</curator.version>
+    <curator.version>4.2.0</curator.version>
     <!-- Plugin Dependencies -->
     <apache.rat.version>0.12</apache.rat.version>
     <asciidoctor.plugin.version>1.5.5</asciidoctor.plugin.version>
@@ -1531,7 +1531,7 @@
     <surefire.version>2.22.2</surefire.version>
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
-    <hbase-thirdparty.version>2.2.1</hbase-thirdparty.version>
+    <hbase-thirdparty.version>3.1.1</hbase-thirdparty.version>
     <!-- Intraproject jar naming properties -->
     <!-- TODO this is pretty ugly, but works for the moment.
       Modules are pretty heavy-weight things, so doing this work isn't too bad. -->
@@ -1564,12 +1564,12 @@
     <hbase-surefire.argLine>-enableassertions -Dhbase.build.id=${build.id} -Xmx${surefire.Xmx}
       -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
       -Djava.awt.headless=true -Djdk.net.URLClassPath.disableClassPathURLCheck=true
-      -Dorg.apache.hbase.thirdparty.io.netty.leakDetection.level=paranoid
+      -Dorg.apache.hbase.thirdparty.io.netty.leakDetection.level=advanced
     </hbase-surefire.argLine>
     <hbase-surefire.cygwin-argLine>-enableassertions -Xmx${surefire.cygwinXmx}
       -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
       "-Djava.library.path=${hadoop.library.path};${java.library.path}"
-      -Dorg.apache.hbase.thirdparty.io.netty.leakDetection.level=paranoid
+      -Dorg.apache.hbase.thirdparty.io.netty.leakDetection.level=advanced
     </hbase-surefire.cygwin-argLine>
     <!-- Surefire argLine defaults to Linux, cygwin argLine is used in the os.windows profile -->
     <argLine>${hbase-surefire.argLine}</argLine>
@@ -2250,6 +2250,11 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hbase.thirdparty</groupId>
+        <artifactId>hbase-shaded-gson</artifactId>
+        <version>${hbase-thirdparty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase.thirdparty</groupId>
         <artifactId>hbase-shaded-miscellaneous</artifactId>
         <version>${hbase-thirdparty.version}</version>
       </dependency>
@@ -2497,6 +2502,13 @@
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-enforcer-plugin</artifactId>
             <version>${enforcer.version}</version>
+            <dependencies>
+              <dependency>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>extra-enforcer-rules</artifactId>
+                <version>${extra.enforcer.version}</version>
+              </dependency>
+            </dependencies>
             <configuration>
               <rules>
                 <enforceBytecodeVersion>
@@ -2508,6 +2520,9 @@
   Non-release builds can temporarily build with a newer JDK version by setting the
   'compileSource' property (eg. mvn -DcompileSource=1.8 clean package).
                 </message>
+                <ignoreClasses>
+                  <ignoreClass>module-info</ignoreClass>
+                </ignoreClasses>
               </enforceBytecodeVersion>
             </rules>
           </configuration>

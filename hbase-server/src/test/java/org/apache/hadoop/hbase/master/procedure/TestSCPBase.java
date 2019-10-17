@@ -24,6 +24,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -154,7 +155,7 @@ public class TestSCPBase {
           rs.getRegionServer().getServerName());
         if (contains(regionInfos, r.getRegionInfo())) {
           LOG.error("Am exiting");
-          fail("Crashed replica regions should not be assigned to same region server");
+          fail("Replica regions should be assigned to different region servers");
         } else {
           regionInfos.add(r.getRegionInfo());
         }

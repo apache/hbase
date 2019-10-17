@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.io.ByteBuffInputStream;
 import org.apache.hadoop.hbase.io.ByteBufferWriterDataOutputStream;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.encoding.EncodingState;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
@@ -53,6 +54,7 @@ import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.MultiByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
+import org.apache.hadoop.hbase.regionserver.ShipperListener;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -761,7 +763,7 @@ public class HFileBlock implements Cacheable {
    * </ol>
    * <p>
    */
-  static class Writer {
+  static class Writer implements ShipperListener {
     private enum State {
       INIT,
       WRITING,
@@ -840,15 +842,35 @@ public class HFileBlock implements Cacheable {
     /** Meta data that holds information about the hfileblock**/
     private HFileContext fileContext;
 
+    private final ByteBuffAllocator allocator;
+
+    @Override
+    public void beforeShipped() {
+      if (getEncodingState() != null) {
+        getEncodingState().beforeShipped();
+      }
+    }
+
+    EncodingState getEncodingState() {
+      return dataBlockEncodingCtx.getEncodingState();
+    }
+
     /**
      * @param dataBlockEncoder data block encoding algorithm to use
      */
+    @VisibleForTesting
     public Writer(HFileDataBlockEncoder dataBlockEncoder, HFileContext fileContext) {
+      this(dataBlockEncoder, fileContext, ByteBuffAllocator.HEAP);
+    }
+
+    public Writer(HFileDataBlockEncoder dataBlockEncoder, HFileContext fileContext,
+        ByteBuffAllocator allocator) {
       if (fileContext.getBytesPerChecksum() < HConstants.HFILEBLOCK_HEADER_SIZE) {
         throw new RuntimeException("Unsupported value of bytesPerChecksum. " +
             " Minimum is " + HConstants.HFILEBLOCK_HEADER_SIZE + " but the configured value is " +
             fileContext.getBytesPerChecksum());
       }
+      this.allocator = allocator;
       this.dataBlockEncoder = dataBlockEncoder != null?
           dataBlockEncoder: NoOpDataBlockEncoder.INSTANCE;
       this.dataBlockEncodingCtx = this.dataBlockEncoder.
@@ -997,6 +1019,18 @@ public class HFileBlock implements Cacheable {
       offset = Bytes.putByte(dest, offset, fileContext.getChecksumType().getCode());
       offset = Bytes.putInt(dest, offset, fileContext.getBytesPerChecksum());
       Bytes.putInt(dest, offset, onDiskDataSize);
+    }
+
+    private void putHeader(ByteBuff buff, int onDiskSize,
+        int uncompressedSize, int onDiskDataSize) {
+      buff.rewind();
+      blockType.write(buff);
+      buff.putInt(onDiskSize - HConstants.HFILEBLOCK_HEADER_SIZE);
+      buff.putInt(uncompressedSize - HConstants.HFILEBLOCK_HEADER_SIZE);
+      buff.putLong(prevOffset);
+      buff.put(fileContext.getChecksumType().getCode());
+      buff.putInt(fileContext.getBytesPerChecksum());
+      buff.putInt(onDiskDataSize);
     }
 
     private void putHeader(ByteArrayOutputStream dest, int onDiskSize,
@@ -1157,19 +1191,19 @@ public class HFileBlock implements Cacheable {
      * cache. Can be called in the "writing" state or the "block ready" state.
      * Returns only the header and data, does not include checksum data.
      *
-     * @return Returns a copy of uncompressed block bytes for caching on write
+     * @return Returns an uncompressed block ByteBuff for caching on write
      */
-    @VisibleForTesting
-    ByteBuffer cloneUncompressedBufferWithHeader() {
+    ByteBuff cloneUncompressedBufferWithHeader() {
       expectState(State.BLOCK_READY);
-      byte[] uncompressedBlockBytesWithHeader = baosInMemory.toByteArray();
+      ByteBuff bytebuff = allocator.allocate(baosInMemory.size());
+      baosInMemory.toByteBuff(bytebuff);
       int numBytes = (int) ChecksumUtil.numBytes(
           onDiskBlockBytesWithHeader.size(),
           fileContext.getBytesPerChecksum());
-      putHeader(uncompressedBlockBytesWithHeader, 0,
-        onDiskBlockBytesWithHeader.size() + numBytes,
-        baosInMemory.size(), onDiskBlockBytesWithHeader.size());
-      return ByteBuffer.wrap(uncompressedBlockBytesWithHeader);
+      putHeader(bytebuff, onDiskBlockBytesWithHeader.size() + numBytes,
+          baosInMemory.size(), onDiskBlockBytesWithHeader.size());
+      bytebuff.rewind();
+      return bytebuff;
     }
 
     /**
@@ -1178,9 +1212,12 @@ public class HFileBlock implements Cacheable {
      * include checksum data.
      * @return Returns a copy of block bytes for caching on write
      */
-    private ByteBuffer cloneOnDiskBufferWithHeader() {
+    private ByteBuff cloneOnDiskBufferWithHeader() {
       expectState(State.BLOCK_READY);
-      return ByteBuffer.wrap(onDiskBlockBytesWithHeader.toByteArray());
+      ByteBuff bytebuff = allocator.allocate(onDiskBlockBytesWithHeader.size());
+      onDiskBlockBytesWithHeader.toByteBuff(bytebuff);
+      bytebuff.rewind();
+      return bytebuff;
     }
 
     private void expectState(State expectedState) {
@@ -1233,24 +1270,24 @@ public class HFileBlock implements Cacheable {
                                 .build();
       // Build the HFileBlock.
       HFileBlockBuilder builder = new HFileBlockBuilder();
-      ByteBuffer buffer;
+      ByteBuff buff;
       if (cacheConf.shouldCacheCompressed(blockType.getCategory())) {
-        buffer = cloneOnDiskBufferWithHeader();
+        buff = cloneOnDiskBufferWithHeader();
       } else {
-        buffer = cloneUncompressedBufferWithHeader();
+        buff = cloneUncompressedBufferWithHeader();
       }
       return builder.withBlockType(blockType)
           .withOnDiskSizeWithoutHeader(getOnDiskSizeWithoutHeader())
           .withUncompressedSizeWithoutHeader(getUncompressedSizeWithoutHeader())
           .withPrevBlockOffset(prevOffset)
-          .withByteBuff(ByteBuff.wrap(buffer))
+          .withByteBuff(buff)
           .withFillHeader(FILL_HEADER)
           .withOffset(startOffset)
           .withNextBlockOnDiskSize(UNSET)
           .withOnDiskDataSizeWithHeader(onDiskBlockBytesWithHeader.size() + onDiskChecksum.length)
           .withHFileContext(newContext)
           .withByteBuffAllocator(cacheConf.getByteBuffAllocator())
-          .withShared(!buffer.hasArray())
+          .withShared(!buff.hasArray())
           .build();
     }
   }

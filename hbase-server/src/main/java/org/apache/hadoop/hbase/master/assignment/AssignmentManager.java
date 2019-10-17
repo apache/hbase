@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.DoNotRetryRegionException;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
@@ -1964,10 +1965,22 @@ public class AssignmentManager {
       LOG.debug("Processing assignQueue; systemServersCount=" + serversForSysTables.size() +
           ", allServersCount=" + servers.size());
       processAssignmentPlans(regions, null, systemHRIs,
-          serversForSysTables.isEmpty()? servers: serversForSysTables);
+          serversForSysTables.isEmpty() && !containsBogusAssignments(regions, systemHRIs) ?
+              servers: serversForSysTables);
     }
 
     processAssignmentPlans(regions, retainMap, userHRIs, servers);
+  }
+
+  private boolean containsBogusAssignments(Map<RegionInfo, RegionStateNode> regions,
+      List<RegionInfo> hirs) {
+    for (RegionInfo ri : hirs) {
+      if (regions.get(ri).getRegionLocation() != null &&
+          regions.get(ri).getRegionLocation().equals(LoadBalancer.BOGUS_SERVER_NAME)){
+        return true;
+      }
+    }
+    return false;
   }
 
   private void processAssignmentPlans(final HashMap<RegionInfo, RegionStateNode> regions,
@@ -2025,7 +2038,16 @@ public class AssignmentManager {
       for (RegionInfo hri: entry.getValue()) {
         final RegionStateNode regionNode = regions.get(hri);
         regionNode.setRegionLocation(server);
-        events[evcount++] = regionNode.getProcedureEvent();
+        if (server.equals(LoadBalancer.BOGUS_SERVER_NAME) && regionNode.isSystemTable()) {
+          assignQueueLock.lock();
+          try {
+            pendingAssignQueue.add(regionNode);
+          } finally {
+            assignQueueLock.unlock();
+          }
+        }else {
+          events[evcount++] = regionNode.getProcedureEvent();
+        }
       }
     }
     ProcedureEvent.wakeEvents(getProcedureScheduler(), events);
@@ -2087,4 +2109,41 @@ public class AssignmentManager {
     }
     return rsReportsSnapshot;
   }
+
+  /**
+   * Provide regions state count for given table.
+   * e.g howmany regions of give table are opened/closed/rit etc
+   *
+   * @param tableName TableName
+   * @return region states count
+   */
+  public RegionStatesCount getRegionStatesCount(TableName tableName) {
+    int openRegionsCount = 0;
+    int closedRegionCount = 0;
+    int ritCount = 0;
+    int splitRegionCount = 0;
+    int totalRegionCount = 0;
+    if (!isTableDisabled(tableName)) {
+      final List<RegionState> states = regionStates.getTableRegionStates(tableName);
+      for (RegionState regionState : states) {
+        if (regionState.isOpened()) {
+          openRegionsCount++;
+        } else if (regionState.isClosed()) {
+          closedRegionCount++;
+        } else if (regionState.isSplit()) {
+          splitRegionCount++;
+        }
+      }
+      totalRegionCount = states.size();
+      ritCount = totalRegionCount - openRegionsCount - splitRegionCount;
+    }
+    return new RegionStatesCount.RegionStatesCountBuilder()
+      .setOpenRegions(openRegionsCount)
+      .setClosedRegions(closedRegionCount)
+      .setSplitRegions(splitRegionCount)
+      .setRegionsInTransition(ritCount)
+      .setTotalRegions(totalRegionCount)
+      .build();
+  }
+
 }

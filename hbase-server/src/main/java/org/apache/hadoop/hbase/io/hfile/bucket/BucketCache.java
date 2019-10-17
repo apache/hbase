@@ -238,6 +238,16 @@ public class BucketCache implements BlockCache, HeapSize {
   /** In-memory bucket size */
   private float memoryFactor;
 
+  private static final String FILE_VERIFY_ALGORITHM =
+    "hbase.bucketcache.persistent.file.integrity.check.algorithm";
+  private static final String DEFAULT_FILE_VERIFY_ALGORITHM = "MD5";
+
+  /**
+   * Use {@link java.security.MessageDigest} class's encryption algorithms to check
+   * persistent file integrity, default algorithm is MD5
+   * */
+  private String algorithm;
+
   public BucketCache(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
       int writerThreadNum, int writerQLen, String persistencePath) throws IOException {
     this(ioEngineName, capacity, blockSize, bucketSizes, writerThreadNum, writerQLen,
@@ -247,6 +257,7 @@ public class BucketCache implements BlockCache, HeapSize {
   public BucketCache(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
       int writerThreadNum, int writerQLen, String persistencePath, int ioErrorsTolerationDuration,
       Configuration conf) throws IOException {
+    this.algorithm = conf.get(FILE_VERIFY_ALGORITHM, DEFAULT_FILE_VERIFY_ALGORITHM);
     this.ioEngine = getIOEngineFromName(ioEngineName, capacity, persistencePath);
     this.writerThreads = new WriterThread[writerThreadNum];
     long blockNumCapacity = capacity / blockSize;
@@ -1083,6 +1094,7 @@ public class BucketCache implements BlockCache, HeapSize {
       }
       parsePB(BucketCacheProtos.BucketCacheEntry.parseDelimitedFrom(in));
       bucketAllocator = new BucketAllocator(cacheCapacity, bucketSizes, backingMap, realCacheSize);
+      blockNumber.add(backingMap.size());
     }
   }
 
@@ -1131,6 +1143,13 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   private void parsePB(BucketCacheProtos.BucketCacheEntry proto) throws IOException {
+    if (proto.hasChecksum()) {
+      ((PersistentIOEngine) ioEngine).verifyFileIntegrity(proto.getChecksum().toByteArray(),
+        algorithm);
+    } else {
+      // if has not checksum, it means the persistence file is old format
+      LOG.info("Persistent file is old format, it does not support verifying file integrity!");
+    }
     verifyCapacityAndClasses(proto.getCacheCapacity(), proto.getIoClass(), proto.getMapClass());
     backingMap = BucketProtoUtils.fromPB(proto.getDeserializersMap(), proto.getBackingMap());
   }
@@ -1233,6 +1252,10 @@ public class BucketCache implements BlockCache, HeapSize {
   @Override
   public long getCurrentSize() {
     return this.bucketAllocator.getUsedSize();
+  }
+
+  protected String getAlgorithm() {
+    return algorithm;
   }
 
   /**

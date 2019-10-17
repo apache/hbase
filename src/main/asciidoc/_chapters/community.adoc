@@ -88,9 +88,6 @@ NOTE: End-of-life releases are not included in this list.
 | 1.4
 | Andrew Purtell
 
-| 2.0
-| Michael Stack
-
 | 2.1
 | Duo Zhang
 

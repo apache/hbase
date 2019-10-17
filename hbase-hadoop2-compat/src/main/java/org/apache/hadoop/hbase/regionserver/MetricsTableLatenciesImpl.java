@@ -20,6 +20,8 @@ import java.util.HashMap;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.metrics2.MetricHistogram;
+import org.apache.hadoop.metrics2.MetricsCollector;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -170,5 +172,16 @@ public class MetricsTableLatenciesImpl extends BaseSourceImpl implements Metrics
   @Override
   public void updateScanTime(String tableName, long t) {
     getOrCreateTableHistogram(tableName).updateScanTime(t);
+  }
+
+  @Override
+  public void getMetrics(MetricsCollector metricsCollector, boolean all) {
+    MetricsRecordBuilder mrb = metricsCollector.addRecord(metricsName);
+    // source is registered in supers constructor, sometimes called before the whole initialization.
+    metricsRegistry.snapshot(mrb, all);
+    if (metricsAdapter != null) {
+      // snapshot MetricRegistry as well
+      metricsAdapter.snapshotAllMetrics(registry, mrb);
+    }
   }
 }

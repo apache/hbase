@@ -75,11 +75,23 @@ public interface AsyncClusterConnection extends AsyncConnection {
   CompletableFuture<String> prepareBulkLoad(TableName tableName);
 
   /**
-   * Securely bulk load a list of HFiles.
-   * @param row used to locate the region
+   * Securely bulk load a list of HFiles, passing additional list of clusters ids tracking clusters
+   * where the given bulk load has already been processed (important for bulk loading replication).
+   * <p/>
+   * Defined as default here to avoid breaking callers who rely on the bulkLoad version that does
+   * not expect additional clusterIds param.
+   * @param tableName the target table
+   * @param familyPaths hdfs path for the the table family dirs containg files to be loaded
+   * @param row row key
+   * @param assignSeqNum seq num for the event on WAL
+   * @param userToken user token
+   * @param bulkToken bulk load token
+   * @param copyFiles flag for copying the loaded hfiles
+   * @param clusterIds list of cluster ids where the given bulk load has already been processed.
    */
   CompletableFuture<Boolean> bulkLoad(TableName tableName, List<Pair<byte[], String>> familyPaths,
-      byte[] row, boolean assignSeqNum, Token<?> userToken, String bulkToken, boolean copyFiles);
+    byte[] row, boolean assignSeqNum, Token<?> userToken, String bulkToken, boolean copyFiles,
+    List<String> clusterIds);
 
   /**
    * Clean up after finishing bulk load, no matter success or not.

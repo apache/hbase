@@ -706,6 +706,10 @@ public class CatalogJanitor extends ScheduledChore {
           // This should never happen but if it does, will mess up below.
           continue;
         }
+        // Skip split parent region
+        if (location.getRegion().isSplitParent()) {
+          continue;
+        }
         // skip the offline regions which belong to disabled table.
         if (isTableDisabled(location.getRegion())) {
           continue;

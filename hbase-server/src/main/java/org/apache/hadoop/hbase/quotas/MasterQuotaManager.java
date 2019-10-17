@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -703,21 +704,64 @@ public class MasterQuotaManager implements RegionStateListener {
     return copy;
   }
 
-  int pruneEntriesOlderThan(long timeToPruneBefore) {
+  int pruneEntriesOlderThan(long timeToPruneBefore, QuotaObserverChore quotaObserverChore) {
     if (regionSizes == null) {
       return 0;
     }
     int numEntriesRemoved = 0;
-    Iterator<Entry<RegionInfo,SizeSnapshotWithTimestamp>> iterator =
+    Iterator<Entry<RegionInfo, SizeSnapshotWithTimestamp>> iterator =
         regionSizes.entrySet().iterator();
     while (iterator.hasNext()) {
-      long currentEntryTime = iterator.next().getValue().getTime();
-      if (currentEntryTime < timeToPruneBefore) {
+      RegionInfo regionInfo = iterator.next().getKey();
+      long currentEntryTime = regionSizes.get(regionInfo).getTime();
+      // do not prune the entries if table is in violation and
+      // violation policy is disable to avoid cycle of enable/disable.
+      // Please refer HBASE-22012 for more details.
+      // prune entries older than time.
+      if (currentEntryTime < timeToPruneBefore && !isInViolationAndPolicyDisable(
+          regionInfo.getTable(), quotaObserverChore)) {
         iterator.remove();
         numEntriesRemoved++;
       }
     }
     return numEntriesRemoved;
+  }
+
+  /**
+   * Method to check if a table is in violation and policy set on table is DISABLE.
+   *
+   * @param tableName          tableName to check.
+   * @param quotaObserverChore QuotaObserverChore instance
+   * @return returns true if table is in violation and policy is disable else false.
+   */
+  private boolean isInViolationAndPolicyDisable(TableName tableName,
+      QuotaObserverChore quotaObserverChore) {
+    boolean isInViolationAtTable = false;
+    boolean isInViolationAtNamespace = false;
+    SpaceViolationPolicy tablePolicy = null;
+    SpaceViolationPolicy namespacePolicy = null;
+    // Get Current Snapshot for the given table
+    SpaceQuotaSnapshot tableQuotaSnapshot = quotaObserverChore.getTableQuotaSnapshot(tableName);
+    SpaceQuotaSnapshot namespaceQuotaSnapshot =
+        quotaObserverChore.getNamespaceQuotaSnapshot(tableName.getNamespaceAsString());
+    if (tableQuotaSnapshot != null) {
+      // check if table in violation
+      isInViolationAtTable = tableQuotaSnapshot.getQuotaStatus().isInViolation();
+      Optional<SpaceViolationPolicy> policy = tableQuotaSnapshot.getQuotaStatus().getPolicy();
+      if (policy.isPresent()) {
+        tablePolicy = policy.get();
+      }
+    }
+    if (namespaceQuotaSnapshot != null) {
+      // check namespace in violation
+      isInViolationAtNamespace = namespaceQuotaSnapshot.getQuotaStatus().isInViolation();
+      Optional<SpaceViolationPolicy> policy = namespaceQuotaSnapshot.getQuotaStatus().getPolicy();
+      if (policy.isPresent()) {
+        namespacePolicy = policy.get();
+      }
+    }
+    return (tablePolicy == SpaceViolationPolicy.DISABLE && isInViolationAtTable) || (
+        namespacePolicy == SpaceViolationPolicy.DISABLE && isInViolationAtNamespace);
   }
 
   public void processFileArchivals(FileArchiveNotificationRequest request, Connection conn,
@@ -739,6 +783,15 @@ public class MasterQuotaManager implements RegionStateListener {
           conn, conf, fs, tn);
       notifier.addArchivedFiles(filesWithSize);
     }
+  }
+
+  /**
+   * Removes each region size entry where the RegionInfo references the provided TableName.
+   *
+   * @param tableName tableName.
+   */
+  public void removeRegionSizesForTable(TableName tableName) {
+    regionSizes.keySet().removeIf(regionInfo -> regionInfo.getTable().equals(tableName));
   }
 }
 

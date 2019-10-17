@@ -31,6 +31,7 @@ message BucketCacheEntry {
   required string map_class = 3;
   map<int32, string> deserializers = 4;
   required BackingMap backing_map = 5;
+  optional bytes checksum = 6;
 }
 
 message BackingMap {

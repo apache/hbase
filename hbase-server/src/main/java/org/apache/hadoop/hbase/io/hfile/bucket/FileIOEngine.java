@@ -43,10 +43,9 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
  * IO engine that stores data to a file on the local file system.
  */
 @InterfaceAudience.Private
-public class FileIOEngine implements IOEngine {
+public class FileIOEngine extends PersistentIOEngine {
   private static final Logger LOG = LoggerFactory.getLogger(FileIOEngine.class);
   public static final String FILE_DELIMITER = ",";
-  private final String[] filePaths;
   private final FileChannel[] fileChannels;
   private final RandomAccessFile[] rafs;
   private final ReentrantLock[] channelLocks;
@@ -59,9 +58,9 @@ public class FileIOEngine implements IOEngine {
 
   public FileIOEngine(long capacity, boolean maintainPersistence, String... filePaths)
       throws IOException {
+    super(filePaths);
     this.sizePerFile = capacity / filePaths.length;
     this.capacity = this.sizePerFile * filePaths.length;
-    this.filePaths = filePaths;
     this.fileChannels = new FileChannel[filePaths.length];
     if (!maintainPersistence) {
       for (String filePath : filePaths) {
@@ -90,7 +89,12 @@ public class FileIOEngine implements IOEngine {
               + StringUtils.byteDesc(sizePerFile);
           LOG.warn(msg);
         }
-        rafs[i].setLength(sizePerFile);
+        File file = new File(filePath);
+        // setLength() method will change file's last modified time. So if don't do
+        // this check, wrong time will be used when calculating checksum.
+        if (file.length() != sizePerFile) {
+          rafs[i].setLength(sizePerFile);
+        }
         fileChannels[i] = rafs[i].getChannel();
         channelLocks[i] = new ReentrantLock();
         LOG.info("Allocating cache " + StringUtils.byteDesc(sizePerFile)

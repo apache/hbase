@@ -44,11 +44,13 @@ import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.regionserver.LastSequenceId;
 import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WAL.Reader;
@@ -221,9 +223,11 @@ public class WALSplitter {
           "Splitting log file " + logfile.getPath() + "into a temporary staging area.");
     Reader logFileReader = null;
     this.fileBeingSplit = logfile;
+    long startTS = EnvironmentEdgeManager.currentTime();
     try {
       long logLength = logfile.getLen();
-      LOG.info("Splitting WAL={}, length={}", logPath, logLength);
+      LOG.info("Splitting WAL={}, size={} ({} bytes)", logPath, StringUtils.humanSize(logLength),
+          logLength);
       status.setStatus("Opening log file");
       if (reporter != null && !reporter.progress()) {
         progress_failed = true;
@@ -234,6 +238,8 @@ public class WALSplitter {
         LOG.warn("Nothing to split in WAL={}", logPath);
         return true;
       }
+      long openCost = EnvironmentEdgeManager.currentTime() - startTS;
+      LOG.info("Open WAL={} cost {} ms", logPath, openCost);
       int numOpenedFilesBeforeReporting = conf.getInt("hbase.splitlog.report.openedfiles", 3);
       int numOpenedFilesLastCheck = 0;
       outputSink.setReporter(reporter);
@@ -241,6 +247,7 @@ public class WALSplitter {
       outputSinkStarted = true;
       Entry entry;
       Long lastFlushedSequenceId = -1L;
+      startTS = EnvironmentEdgeManager.currentTime();
       while ((entry = getNextLogLine(logFileReader, logPath, skipErrors)) != null) {
         byte[] region = entry.getKey().getEncodedRegionName();
         String encodedRegionNameAsStr = Bytes.toString(region);
@@ -324,11 +331,13 @@ public class WALSplitter {
           progress_failed = outputSink.finishWritingAndClose() == null;
         }
       } finally {
-        String msg =
-            "Processed " + editsCount + " edits across " + outputSink.getNumberOfRecoveredRegions()
-                + " regions; edits skipped=" + editsSkipped + "; log file=" + logPath +
-                ", length=" + logfile.getLen() + // See if length got updated post lease recovery
-                ", corrupted=" + isCorrupted + ", progress failed=" + progress_failed;
+        long processCost = EnvironmentEdgeManager.currentTime() - startTS;
+        // See if length got updated post lease recovery
+        String msg = "Processed " + editsCount + " edits across " +
+            outputSink.getNumberOfRecoveredRegions() + " regions cost " + processCost +
+            " ms; edits skipped=" + editsSkipped + "; WAL=" + logPath + ", size=" +
+            StringUtils.humanSize(logfile.getLen()) + ", length=" + logfile.getLen() +
+            ", corrupted=" + isCorrupted + ", progress failed=" + progress_failed;
         LOG.info(msg);
         status.markComplete(msg);
       }
@@ -377,11 +386,8 @@ public class WALSplitter {
       if (!skipErrors || e instanceof InterruptedIOException) {
         throw e; // Don't mark the file corrupted if interrupted, or not skipErrors
       }
-      CorruptedLogFileException t =
-        new CorruptedLogFileException("skipErrors=true Could not open wal " +
-            path + " ignoring");
-      t.initCause(e);
-      throw t;
+      throw new CorruptedLogFileException("skipErrors=true Could not open wal "
+        + path + " ignoring", e);
     }
     return in;
   }
@@ -405,11 +411,8 @@ public class WALSplitter {
       if (!skipErrors) {
         throw e;
       }
-      CorruptedLogFileException t =
-          new CorruptedLogFileException("skipErrors=true Ignoring exception" + " while parsing wal "
-              + path + ". Marking as corrupted");
-      t.initCause(e);
-      throw t;
+      throw new CorruptedLogFileException("skipErrors=true Ignoring exception"
+        + " while parsing wal " + path + ". Marking as corrupted", e);
     }
   }
 
@@ -570,5 +573,16 @@ public class WALSplitter {
     CorruptedLogFileException(String s) {
       super(s);
     }
+
+    /**
+     * CorruptedLogFileException with cause
+     *
+     * @param message the message for this exception
+     * @param cause the cause for this exception
+     */
+    CorruptedLogFileException(String message, Throwable cause) {
+      super(message, cause);
+    }
+
   }
 }

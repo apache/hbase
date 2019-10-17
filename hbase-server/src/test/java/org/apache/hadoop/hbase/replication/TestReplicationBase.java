@@ -170,7 +170,7 @@ public class TestReplicationBase {
     htable1.put(puts);
   }
 
-  private static void setupConfig(HBaseTestingUtility util, String znodeParent) {
+  protected static void setupConfig(HBaseTestingUtility util, String znodeParent) {
     Configuration conf = util.getConfiguration();
     conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, znodeParent);
     // We don't want too many edits per batch sent to the ReplicationEndpoint to trigger

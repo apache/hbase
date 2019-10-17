@@ -19,24 +19,31 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -220,5 +227,34 @@ public class TestSpaceQuotaBasicFunctioning {
     p.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
         Bytes.toBytes("reject"));
     helper.verifyViolation(policy, tn, p);
+  }
+
+  @Test
+  public void testDisablePolicyQuotaAndViolate() throws Exception {
+    TableName tableName = helper.createTable();
+    helper.setQuotaLimit(tableName, SpaceViolationPolicy.DISABLE, 1L);
+    helper.writeData(tableName, SpaceQuotaHelperForTests.ONE_MEGABYTE * 2L);
+    TEST_UTIL.getConfiguration()
+        .setLong("hbase.master.quotas.region.report.retention.millis", 100);
+
+    HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
+    MasterQuotaManager quotaManager = master.getMasterQuotaManager();
+
+    // Make sure the master has report for the table.
+    Waiter.waitFor(TEST_UTIL.getConfiguration(), 30 * 1000, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        Map<RegionInfo, Long> regionSizes = quotaManager.snapshotRegionSizes();
+        List<RegionInfo> tableRegions =
+            MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), tableName);
+        return regionSizes.containsKey(tableRegions.get(0));
+      }
+    });
+
+    // Check if disabled table region report present in the map after retention period expired.
+    // It should be present after retention period expired.
+    final long regionSizes = quotaManager.snapshotRegionSizes().keySet().stream()
+        .filter(k -> k.getTable().equals(tableName)).count();
+    Assert.assertTrue(regionSizes > 0);
   }
 }

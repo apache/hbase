@@ -403,7 +403,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /** Saved state from replaying prepare flush cache */
   private PrepareFlushResult prepareFlushResult = null;
 
-  private volatile Optional<ConfigurationManager> configurationManager;
+  private volatile ConfigurationManager configurationManager;
 
   // Used for testing.
   private volatile Long timeoutForWriteLock = null;
@@ -854,7 +854,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       LOG.debug("Instantiated " + this +"; "+ storeHotnessProtector.toString());
     }
 
-    configurationManager = Optional.empty();
+    configurationManager = null;
 
     // disable stats tracking system tables, but check the config for everything else
     this.regionStatsEnabled = htd.getTableName().getNamespaceAsString().equals(
@@ -2877,8 +2877,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         wal.abortCacheFlush(this.getRegionInfo().getEncodedNameAsBytes());
       }
       DroppedSnapshotException dse = new DroppedSnapshotException("region: " +
-          Bytes.toStringBinary(getRegionInfo().getRegionName()));
-      dse.initCause(t);
+        Bytes.toStringBinary(getRegionInfo().getRegionName()), t);
       status.abort("Flush failed: " + StringUtils.stringifyException(t));
 
       // Callers for flushcache() should catch DroppedSnapshotException and abort the region server.
@@ -4084,6 +4083,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         requestFlushIfNeeded();
       }
     } finally {
+      if (rsServices != null && rsServices.getMetrics() != null) {
+        rsServices.getMetrics().updateWriteQueryMeter(this.htableDescriptor.
+          getTableName(), batchOp.size());
+      }
       batchOp.closeRegionOperation();
     }
     return batchOp.retCodeDetails;
@@ -5983,8 +5986,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // is reached, it will throw out an Error. This Error needs to be caught so it can
       // go ahead to process the minibatch with lock acquired.
       LOG.warn("Error to get row lock for " + Bytes.toStringBinary(row) + ", cause: " + error);
-      IOException ioe = new IOException();
-      ioe.initCause(error);
+      IOException ioe = new IOException(error);
       TraceUtil.addTimelineAnnotation("Error getting row lock");
       throw ioe;
     } finally {
@@ -6144,7 +6146,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   public Map<byte[], List<Path>> bulkLoadHFiles(Collection<Pair<byte[], String>> familyPaths, boolean assignSeqId,
       BulkLoadListener bulkLoadListener) throws IOException {
-    return bulkLoadHFiles(familyPaths, assignSeqId, bulkLoadListener, false);
+    return bulkLoadHFiles(familyPaths, assignSeqId, bulkLoadListener, false, null);
   }
 
   /**
@@ -6189,11 +6191,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param bulkLoadListener Internal hooks enabling massaging/preparation of a
    * file about to be bulk loaded
    * @param copyFile always copy hfiles if true
+   * @param  clusterIds ids from clusters that had already handled the given bulkload event.
    * @return Map from family to List of store file paths if successful, null if failed recoverably
    * @throws IOException if failed unrecoverably.
    */
   public Map<byte[], List<Path>> bulkLoadHFiles(Collection<Pair<byte[], String>> familyPaths,
-      boolean assignSeqId, BulkLoadListener bulkLoadListener, boolean copyFile) throws IOException {
+      boolean assignSeqId, BulkLoadListener bulkLoadListener,
+        boolean copyFile, List<String> clusterIds) throws IOException {
     long seqId = -1;
     Map<byte[], List<Path>> storeFiles = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     Map<String, Long> storeFilesSizes = new HashMap<>();
@@ -6368,8 +6372,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           WALProtos.BulkLoadDescriptor loadDescriptor =
               ProtobufUtil.toBulkLoadDescriptor(this.getRegionInfo().getTable(),
                   UnsafeByteOperations.unsafeWrap(this.getRegionInfo().getEncodedNameAsBytes()),
-                  storeFiles,
-                storeFilesSizes, seqId);
+                  storeFiles, storeFilesSizes, seqId, clusterIds);
           WALUtil.writeBulkLoadMarkerAndSync(this.wal, this.getReplicationScope(), getRegionInfo(),
               loadDescriptor, mvcc);
         } catch (IOException ioe) {
@@ -6613,6 +6616,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
       if (!outResults.isEmpty()) {
         readRequestsCount.increment();
+      }
+      if (rsServices != null && rsServices.getMetrics() != null) {
+        rsServices.getMetrics().updateReadQueryMeter(getRegionInfo().getTable());
       }
 
       // If the size limit was reached it means a partial Result is being returned. Returning a
@@ -7743,6 +7749,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
           // STEP 11. Release row lock(s)
           releaseRowLocks(acquiredRowLocks);
+
+          if (rsServices != null && rsServices.getMetrics() != null) {
+            rsServices.getMetrics().updateWriteQueryMeter(this.htableDescriptor.
+              getTableName(), mutations.size());
+          }
         }
         success = true;
       } finally {
@@ -7897,6 +7908,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         if (rsServices != null && rsServices.getNonceManager() != null) {
           rsServices.getNonceManager().addMvccToOperationContext(nonceGroup, nonce,
             writeEntry.getWriteNumber());
+        }
+        if (rsServices != null && rsServices.getMetrics() != null) {
+          rsServices.getMetrics().updateWriteQueryMeter(this.htableDescriptor.
+            getTableName());
         }
         writeEntry = null;
       } finally {
@@ -8719,7 +8734,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   @Override
   public void registerChildren(ConfigurationManager manager) {
-    configurationManager = Optional.of(manager);
+    configurationManager = manager;
     stores.values().forEach(manager::registerObserver);
   }
 
@@ -8728,7 +8743,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   @Override
   public void deregisterChildren(ConfigurationManager manager) {
-    stores.values().forEach(configurationManager.get()::deregisterObserver);
+    stores.values().forEach(configurationManager::deregisterObserver);
   }
 
   @Override

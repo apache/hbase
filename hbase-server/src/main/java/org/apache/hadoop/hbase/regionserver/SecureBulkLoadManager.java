@@ -43,8 +43,8 @@ import org.apache.hadoop.hbase.regionserver.HRegion.BulkLoadListener;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenIdentifier;
+import org.apache.hadoop.hbase.security.token.ClientTokenUtil;
 import org.apache.hadoop.hbase.security.token.FsDelegationToken;
-import org.apache.hadoop.hbase.security.token.TokenUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSHDFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -214,7 +214,12 @@ public class SecureBulkLoadManager {
   }
 
   public Map<byte[], List<Path>> secureBulkLoadHFiles(final HRegion region,
-      final BulkLoadHFileRequest request) throws IOException {
+    final BulkLoadHFileRequest request) throws IOException {
+    return secureBulkLoadHFiles(region, request, null);
+  }
+
+  public Map<byte[], List<Path>> secureBulkLoadHFiles(final HRegion region,
+      final BulkLoadHFileRequest request, List<String> clusterIds) throws IOException {
     final List<Pair<byte[], String>> familyPaths = new ArrayList<>(request.getFamilyPathCount());
     for(ClientProtos.BulkLoadHFileRequest.FamilyPath el : request.getFamilyPathList()) {
       familyPaths.add(new Pair<>(el.getFamily().toByteArray(), el.getPath()));
@@ -231,7 +236,7 @@ public class SecureBulkLoadManager {
     final UserGroupInformation ugi = user.getUGI();
     if (userProvider.isHadoopSecurityEnabled()) {
       try {
-        Token<AuthenticationTokenIdentifier> tok = TokenUtil.obtainToken(conn).get();
+        Token<AuthenticationTokenIdentifier> tok = ClientTokenUtil.obtainToken(conn).get();
         if (tok != null) {
           boolean b = ugi.addToken(tok);
           LOG.debug("token added " + tok + " for user " + ugi + " return=" + b);
@@ -290,7 +295,8 @@ public class SecureBulkLoadManager {
             //We call bulkLoadHFiles as requesting user
             //To enable access prior to staging
             return region.bulkLoadHFiles(familyPaths, true,
-                new SecureBulkLoadListener(fs, bulkToken, conf), request.getCopyFile());
+                new SecureBulkLoadListener(fs, bulkToken, conf), request.getCopyFile(),
+              clusterIds);
           } catch (Exception e) {
             LOG.error("Failed to complete bulk load", e);
           }

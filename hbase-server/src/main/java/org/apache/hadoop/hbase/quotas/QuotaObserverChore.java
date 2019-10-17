@@ -472,7 +472,7 @@ public class QuotaObserverChore extends ScheduledChore {
   void pruneOldRegionReports() {
     final long now = EnvironmentEdgeManager.currentTime();
     final long pruneTime = now - regionReportLifetimeMillis;
-    final int numRemoved = quotaManager.pruneEntriesOlderThan(pruneTime);
+    final int numRemoved = quotaManager.pruneEntriesOlderThan(pruneTime,this);
     if (LOG.isTraceEnabled()) {
       LOG.trace("Removed " + numRemoved + " old region size reports that were older than "
           + pruneTime + ".");

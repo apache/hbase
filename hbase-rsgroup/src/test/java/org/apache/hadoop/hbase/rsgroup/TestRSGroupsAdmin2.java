@@ -618,14 +618,15 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
   }
 
   private Pair<ServerName, RegionStateNode> randomlySetRegionState(RSGroupInfo groupInfo,
-      RegionState.State state, TableName... tableNames) throws IOException {
+    RegionState.State state, TableName... tableNames) throws IOException {
     Preconditions.checkArgument(tableNames.length == 1 || tableNames.length == 2,
-        "only support one or two tables");
-    Map<ServerName, List<String>> assignMap = getTableServerRegionMap().get(tableNames[0]);
-    if(tableNames.length == 2) {
-      Map<ServerName, List<String>> assignMap2 = getTableServerRegionMap().get(tableNames[1]);
-      assignMap2.forEach((k ,v) -> {
-        if(!assignMap.containsKey(k)) {
+      "only support one or two tables");
+    Map<TableName, Map<ServerName, List<String>>> tableServerRegionMap = getTableServerRegionMap();
+    Map<ServerName, List<String>> assignMap = tableServerRegionMap.get(tableNames[0]);
+    if (tableNames.length == 2) {
+      Map<ServerName, List<String>> assignMap2 = tableServerRegionMap.get(tableNames[1]);
+      assignMap2.forEach((k, v) -> {
+        if (!assignMap.containsKey(k)) {
           assignMap.remove(k);
         }
       });
@@ -633,8 +634,10 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     String toCorrectRegionName = null;
     ServerName srcServer = null;
     for (ServerName server : assignMap.keySet()) {
-      toCorrectRegionName = assignMap.get(server).size() >= 1 &&
-          !groupInfo.containsServer(server.getAddress()) ? assignMap.get(server).get(0) : null;
+      toCorrectRegionName =
+        assignMap.get(server).size() >= 1 && !groupInfo.containsServer(server.getAddress())
+          ? assignMap.get(server).get(0)
+          : null;
       if (toCorrectRegionName != null) {
         srcServer = server;
         break;
@@ -642,10 +645,9 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     }
     assert srcServer != null;
     RegionInfo toCorrectRegionInfo = TEST_UTIL.getMiniHBaseCluster().getMaster()
-        .getAssignmentManager().getRegionInfo(Bytes.toBytesBinary(toCorrectRegionName));
-    RegionStateNode rsn =
-        TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
-            .getRegionStateNode(toCorrectRegionInfo);
+      .getAssignmentManager().getRegionInfo(Bytes.toBytesBinary(toCorrectRegionName));
+    RegionStateNode rsn = TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
+      .getRegionStates().getRegionStateNode(toCorrectRegionInfo);
     rsn.setState(state);
     return new Pair<>(srcServer, rsn);
   }

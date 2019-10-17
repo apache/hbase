@@ -172,11 +172,11 @@ public class TransitRegionStateProcedure
 
   private void queueAssign(MasterProcedureEnv env, RegionStateNode regionNode)
       throws ProcedureSuspendedException {
-    // Here the assumption is that, the region must be in CLOSED state, so the region location
-    // will be null. And if we fail to open the region and retry here, the forceNewPlan will be
-    // true, and also we will set the region location to null.
     boolean retain = false;
-    if (!forceNewPlan) {
+    if (forceNewPlan) {
+      // set the region location to null if forceNewPlan is true
+      regionNode.setRegionLocation(null);
+    } else {
       if (assignCandidate != null) {
         retain = assignCandidate.equals(regionNode.getLastHost());
         regionNode.setRegionLocation(assignCandidate);
@@ -398,6 +398,12 @@ public class TransitRegionStateProcedure
   // Should be called with RegionStateNode locked
   public void serverCrashed(MasterProcedureEnv env, RegionStateNode regionNode,
       ServerName serverName) throws IOException {
+    // force to assign to a new candidate server
+    // AssignmentManager#regionClosedAbnormally will set region location to null
+    // TODO: the forceNewPlan flag not be persistent so if master crash then the flag will be lost.
+    // But assign to old server is not big deal because it not effect correctness.
+    // See HBASE-23035 for more details.
+    forceNewPlan = true;
     if (remoteProc != null) {
       // this means we are waiting for the sub procedure, so wake it up
       remoteProc.serverCrashed(env, regionNode, serverName);
@@ -545,8 +551,13 @@ public class TransitRegionStateProcedure
   // anything. See the comment in executeFromState to find out why we need this assumption.
   public static TransitRegionStateProcedure assign(MasterProcedureEnv env, RegionInfo region,
       @Nullable ServerName targetServer) {
-    return setOwner(env,
-      new TransitRegionStateProcedure(env, region, targetServer, false, TransitionType.ASSIGN));
+    return assign(env, region, false, targetServer);
+  }
+
+  public static TransitRegionStateProcedure assign(MasterProcedureEnv env, RegionInfo region,
+      boolean forceNewPlan, @Nullable ServerName targetServer) {
+    return setOwner(env, new TransitRegionStateProcedure(env, region, targetServer, forceNewPlan,
+        TransitionType.ASSIGN));
   }
 
   public static TransitRegionStateProcedure unassign(MasterProcedureEnv env, RegionInfo region) {

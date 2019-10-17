@@ -231,6 +231,19 @@ message LiveServerInfo {
   required ServerLoad server_load = 2;
 }
 
+message RegionStatesCount {
+  required uint32 open_regions = 1;
+  required uint32 split_regions = 2;
+  required uint32 closed_regions = 3;
+  required uint32 regions_in_transition = 4;
+  required uint32 total_regions = 5;
+}
+
+message TableRegionStatesCount {
+  required TableName table_name = 1;
+  required RegionStatesCount region_states_count = 2;
+}
+
 message ClusterStatus {
   optional HBaseVersionFileContent hbase_version = 1;
   repeated LiveServerInfo live_servers = 2;
@@ -243,6 +256,7 @@ message ClusterStatus {
   optional bool balancer_on = 9;
   optional int32 master_info_port = 10 [default = -1];
   repeated ServerName servers_name = 11;
+  repeated TableRegionStatesCount table_region_states_count = 12;
 }
 
 enum Option {
@@ -257,4 +271,5 @@ enum Option {
   BALANCER_ON = 8;
   MASTER_INFO_PORT = 9;
   SERVERS_NAME = 10;
+  TABLE_TO_REGIONS_COUNT = 11;
 }

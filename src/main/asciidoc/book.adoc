@@ -86,6 +86,7 @@ include::_chapters/pv2.adoc[]
 include::_chapters/amv2.adoc[]
 include::_chapters/zookeeper.adoc[]
 include::_chapters/community.adoc[]
+include::_chapters/hbtop.adoc[]
 
 = Appendix
 
