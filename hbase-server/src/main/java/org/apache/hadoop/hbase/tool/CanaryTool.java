@@ -1479,8 +1479,7 @@ public class CanaryTool implements Tool, Canary {
 
     private void checkWriteTableDistribution() throws IOException {
       if (!admin.tableExists(writeTableName)) {
-        int numberOfServers =
-            admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().size();
+        int numberOfServers = admin.getRegionServers().size();
         if (numberOfServers == 0) {
           throw new IllegalStateException("No live regionservers");
         }
@@ -1492,9 +1491,9 @@ public class CanaryTool implements Tool, Canary {
       }
 
       ClusterMetrics status =
-          admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS, Option.MASTER));
-      int numberOfServers = status.getLiveServerMetrics().size();
-      if (status.getLiveServerMetrics().containsKey(status.getMasterName())) {
+          admin.getClusterMetrics(EnumSet.of(Option.SERVERS_NAME, Option.MASTER));
+      int numberOfServers = status.getServersName().size();
+      if (status.getServersName().contains(status.getMasterName())) {
         numberOfServers -= 1;
       }
 
@@ -1795,8 +1794,7 @@ public class CanaryTool implements Tool, Canary {
         }
 
         // get any live regionservers not serving any regions
-        for (ServerName rs: this.admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
-          .getLiveServerMetrics().keySet()) {
+        for (ServerName rs: this.admin.getRegionServers()) {
           String rsName = rs.getHostname();
           if (!rsAndRMap.containsKey(rsName)) {
             rsAndRMap.put(rsName, Collections.<RegionInfo> emptyList());
