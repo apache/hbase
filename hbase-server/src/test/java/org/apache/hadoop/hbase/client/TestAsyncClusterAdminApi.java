@@ -265,6 +265,7 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
 
     // Check RegionLoad matches the regionLoad from ClusterStatus
     ClusterMetrics clusterStatus = admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).get();
+    assertEquals(servers.size(), clusterStatus.getLiveServerMetrics().size());
     for (Map.Entry<ServerName, ServerMetrics> entry :
       clusterStatus.getLiveServerMetrics().entrySet()) {
       ServerName sn = entry.getKey();

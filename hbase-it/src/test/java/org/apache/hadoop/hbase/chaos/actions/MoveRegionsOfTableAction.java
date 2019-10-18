@@ -21,10 +21,8 @@ package org.apache.hadoop.hbase.chaos.actions;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.List;
 import org.apache.commons.lang3.RandomUtils;
-import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -90,8 +88,7 @@ public class MoveRegionsOfTableAction extends Action {
   }
 
   static ServerName [] getServers(Admin admin) throws IOException {
-    Collection<ServerName> serversList =
-        admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().keySet();
+    Collection<ServerName> serversList = admin.getRegionServers();
     return serversList.toArray(new ServerName[serversList.size()]);
   }
 
