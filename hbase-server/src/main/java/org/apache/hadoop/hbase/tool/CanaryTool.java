@@ -269,7 +269,7 @@ public class CanaryTool implements Tool, Canary {
   public static class RegionStdOutSink extends StdOutSink {
     private Map<String, AtomicLong> perTableReadLatency = new HashMap<>();
     private AtomicLong writeLatency = new AtomicLong();
-    private final Map<String, RegionTaskResult> regionMap = new ConcurrentHashMap<>();
+    private final Map<String, List<RegionTaskResult>> regionMap = new ConcurrentHashMap<>();
 
     public void publishReadFailure(ServerName serverName, HRegionInfo region, Exception e) {
       incReadFailureCount();
@@ -285,10 +285,13 @@ public class CanaryTool implements Tool, Canary {
 
     public void publishReadTiming(ServerName serverName, HRegionInfo region,
         HColumnDescriptor column, long msTime) {
+      RegionTaskResult rtr = new RegionTaskResult(region, region.getTable(), serverName, column);
+      rtr.setReadSuccess();
+      rtr.setReadLatency(msTime);
+      List<RegionTaskResult> rtrs = regionMap.get(region.getRegionNameAsString());
+      rtrs.add(rtr);
+      // Note that read success count will be equal to total column family read successes.
       incReadSuccessCount();
-      RegionTaskResult res = this.regionMap.get(region.getRegionNameAsString());
-      res.setReadSuccess();
-      res.setReadLatency(msTime);
       LOG.info("Read from {} on {} {} in {}ms", region.getRegionNameAsString(), serverName,
           column.getNameAsString(), msTime);
     }
@@ -307,10 +310,13 @@ public class CanaryTool implements Tool, Canary {
 
     public void publishWriteTiming(ServerName serverName, HRegionInfo region,
         HColumnDescriptor column, long msTime) {
+      RegionTaskResult rtr = new RegionTaskResult(region, region.getTable(), serverName, column);
+      rtr.setWriteSuccess();
+      rtr.setWriteLatency(msTime);
+      List<RegionTaskResult> rtrs = regionMap.get(region.getRegionNameAsString());
+      rtrs.add(rtr);
+      // Note that write success count will be equal to total column family write successes.
       incWriteSuccessCount();
-      RegionTaskResult res = this.regionMap.get(region.getRegionNameAsString());
-      res.setWriteSuccess();
-      res.setWriteLatency(msTime);
       LOG.info("Write to {} on {} {} in {}ms",
         region.getRegionNameAsString(), serverName, column.getNameAsString(), msTime);
     }
@@ -333,7 +339,7 @@ public class CanaryTool implements Tool, Canary {
       return this.writeLatency;
     }
 
-    public Map<String, RegionTaskResult> getRegionMap() {
+    public Map<String, List<RegionTaskResult>> getRegionMap() {
       return this.regionMap;
     }
 
@@ -1042,15 +1048,17 @@ public class CanaryTool implements Tool, Canary {
     private HRegionInfo region;
     private TableName tableName;
     private ServerName serverName;
+    private HColumnDescriptor column;
     private AtomicLong readLatency = null;
     private AtomicLong writeLatency = null;
     private boolean readSuccess = false;
     private boolean writeSuccess = false;
 
-    public RegionTaskResult(HRegionInfo region, TableName tableName, ServerName serverName) {
+    public RegionTaskResult(HRegionInfo region, TableName tableName, ServerName serverName, HColumnDescriptor column) {
       this.region = region;
       this.tableName = tableName;
       this.serverName = serverName;
+      this.column = column;
     }
 
     public HRegionInfo getRegionInfo() {
@@ -1075,6 +1083,14 @@ public class CanaryTool implements Tool, Canary {
 
     public String getServerNameAsString() {
       return this.serverName.getServerName();
+    }
+
+    public HColumnDescriptor getColumnFamily() {
+      return this.column;
+    }
+
+    public String getColumnFamilyNameAsString() {
+      return this.column.getNameAsString();
     }
 
     public long getReadLatency() {
@@ -1568,9 +1584,8 @@ public class CanaryTool implements Tool, Canary {
           HRegionInfo region = location.getRegionInfo();
           tasks.add(new RegionTask(admin.getConnection(), region, rs, (RegionStdOutSink)sink,
               taskType, rawScanEnabled, rwLatency));
-          Map<String, RegionTaskResult> regionMap = ((RegionStdOutSink) sink).getRegionMap();
-          regionMap.put(region.getRegionNameAsString(), new RegionTaskResult(region,
-              region.getTable(), rs));
+          Map<String, List<RegionTaskResult>> regionMap = ((RegionStdOutSink) sink).getRegionMap();
+          regionMap.put(region.getRegionNameAsString(), new ArrayList<RegionTaskResult>());
         }
         return executor.invokeAll(tasks);
       }
