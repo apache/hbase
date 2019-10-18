@@ -104,6 +104,7 @@ public class TestClientClusterMetrics {
         defaults.getLiveServerMetrics().size());
     Assert.assertEquals(origin.getMasterInfoPort(), defaults.getMasterInfoPort());
     Assert.assertEquals(origin.getServersName().size(), defaults.getServersName().size());
+    Assert.assertEquals(ADMIN.getRegionServers().size(), defaults.getServersName().size());
   }
 
   @Test
