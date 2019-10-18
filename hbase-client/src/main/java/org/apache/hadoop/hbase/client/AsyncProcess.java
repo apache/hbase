@@ -326,7 +326,8 @@ class AsyncProcess {
     ConnectionConfiguration connConf =
       hc.getConfiguration() == conf
         ? hc.getConnectionConfiguration()
-        : new ConnectionConfiguration(conf); // Slow: parse conf in ConnectionConfiguration constructor
+        // Slow: parse conf in ConnectionConfiguration constructor
+        : new ConnectionConfiguration(conf);
     if (connConf == null) {
       // Slow: parse conf in ConnectionConfiguration constructor
       connConf = new ConnectionConfiguration(conf);
@@ -350,19 +351,23 @@ class AsyncProcess {
 
     this.maxTotalConcurrentTasks =
       globalAsyncProcess == null
-        ? conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS, HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS)
+        ? conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
+              HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS)
         : globalAsyncProcess.maxTotalConcurrentTasks;
     this.maxConcurrentTasksPerServer =
       globalAsyncProcess == null
-        ? conf.getInt(HConstants.HBASE_CLIENT_MAX_PERSERVER_TASKS, HConstants.DEFAULT_HBASE_CLIENT_MAX_PERSERVER_TASKS)
+        ? conf.getInt(HConstants.HBASE_CLIENT_MAX_PERSERVER_TASKS,
+              HConstants.DEFAULT_HBASE_CLIENT_MAX_PERSERVER_TASKS)
         : globalAsyncProcess.maxConcurrentTasksPerServer;
     this.maxConcurrentTasksPerRegion =
       globalAsyncProcess == null
-        ? conf.getInt(HConstants.HBASE_CLIENT_MAX_PERREGION_TASKS, HConstants.DEFAULT_HBASE_CLIENT_MAX_PERREGION_TASKS)
+        ? conf.getInt(HConstants.HBASE_CLIENT_MAX_PERREGION_TASKS,
+              HConstants.DEFAULT_HBASE_CLIENT_MAX_PERREGION_TASKS)
         : globalAsyncProcess.maxConcurrentTasksPerRegion;
     this.maxHeapSizePerRequest =
       globalAsyncProcess == null
-        ? conf.getLong(HBASE_CLIENT_MAX_PERREQUEST_HEAPSIZE, DEFAULT_HBASE_CLIENT_MAX_PERREQUEST_HEAPSIZE)
+        ? conf.getLong(HBASE_CLIENT_MAX_PERREQUEST_HEAPSIZE,
+              DEFAULT_HBASE_CLIENT_MAX_PERREQUEST_HEAPSIZE)
         : globalAsyncProcess.maxHeapSizePerRequest;
     this.maxHeapSizeSubmit =
       globalAsyncProcess == null
@@ -414,7 +419,8 @@ class AsyncProcess {
 
     this.thresholdToLogUndoneTaskDetails =
       globalAsyncProcess == null
-        ? conf.getInt(THRESHOLD_TO_LOG_UNDONE_TASK_DETAILS, DEFAULT_THRESHOLD_TO_LOG_UNDONE_TASK_DETAILS)
+        ? conf.getInt(THRESHOLD_TO_LOG_UNDONE_TASK_DETAILS,
+              DEFAULT_THRESHOLD_TO_LOG_UNDONE_TASK_DETAILS)
         : globalAsyncProcess.thresholdToLogUndoneTaskDetails;
   }
 
