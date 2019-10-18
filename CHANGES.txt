@@ -15,6 +15,7 @@ Release Notes - HBase - Version 1.4.11
     * [HBASE-23110] - Backport HBASE-23054 "Remove synchronization block from MetaTableMetrics and fix LossyCounting algorithm" to branch-1
 
 ** Bug
+    * [HBASE-19663] - javadoc creation needs jsr305
     * [HBASE-22145] - windows hbase-env causes hbase cli/etc to ignore HBASE_OPTS
     * [HBASE-22426] - Disable region split/merge switch doen't work when 'hbase.assignment.usezk' is set true
     * [HBASE-22492] - HBase server doesn't preserve SASL sequence number on the network
