@@ -32,6 +32,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -146,6 +147,10 @@ public class TestCanaryTool {
     String[] args = { "-writeSniffing", "-t", "10000", "testCanaryRegionTaskResult" };
     assertEquals(0, ToolRunner.run(testingUtility.getConfiguration(), canary, args));
 
+    assertTrue("canary should expect to scan at least 1 region",
+      sink.getTotalExpectedRegions() > 0);
+    assertTrue("there should be no read failures", sink.getReadFailureCount() == 0);
+    assertTrue("there should be no write failures", sink.getWriteFailureCount() == 0);
     assertTrue("verify read success count > 0", sink.getReadSuccessCount() > 0);
     assertTrue("verify write success count > 0", sink.getWriteSuccessCount() > 0);
     verify(sink, atLeastOnce()).publishReadTiming(isA(ServerName.class), isA(RegionInfo.class),
@@ -153,27 +158,29 @@ public class TestCanaryTool {
     verify(sink, atLeastOnce()).publishWriteTiming(isA(ServerName.class), isA(RegionInfo.class),
       isA(ColumnFamilyDescriptor.class), anyLong());
 
-    assertTrue("canary should expect to scan at least 1 region",
-        sink.getTotalExpectedRegions() > 0);
-    Map<String, CanaryTool.RegionTaskResult> regionMap = sink.getRegionMap();
+    assertEquals("canary region success count should equal total expected regions",
+      sink.getReadSuccessCount() + sink.getWriteSuccessCount(), sink.getTotalExpectedRegions());
+    Map<String, List<CanaryTool.RegionTaskResult>> regionMap = sink.getRegionMap();
     assertFalse("verify region map has size > 0", regionMap.isEmpty());
 
     for (String regionName : regionMap.keySet()) {
-      CanaryTool.RegionTaskResult res = regionMap.get(regionName);
-      assertNotNull("verify each expected region has a RegionTaskResult object in the map", res);
-      assertNotNull("verify getRegionNameAsString()", regionName);
-      assertNotNull("verify getRegionInfo()", res.getRegionInfo());
-      assertNotNull("verify getTableName()", res.getTableName());
-      assertNotNull("verify getTableNameAsString()", res.getTableNameAsString());
-      assertNotNull("verify getServerName()", res.getServerName());
-      assertNotNull("verify getServerNameAsString()", res.getServerNameAsString());
+      for (CanaryTool.RegionTaskResult res: regionMap.get(regionName)) {
+        assertNotNull("verify getRegionNameAsString()", regionName);
+        assertNotNull("verify getRegionInfo()", res.getRegionInfo());
+        assertNotNull("verify getTableName()", res.getTableName());
+        assertNotNull("verify getTableNameAsString()", res.getTableNameAsString());
+        assertNotNull("verify getServerName()", res.getServerName());
+        assertNotNull("verify getServerNameAsString()", res.getServerNameAsString());
+        assertNotNull("verify getColumnFamily()", res.getColumnFamily());
+        assertNotNull("verify getColumnFamilyNameAsString()", res.getColumnFamilyNameAsString());
 
-      if (regionName.contains(CanaryTool.DEFAULT_WRITE_TABLE_NAME.getNameAsString())) {
-        assertTrue("write to region " + regionName + " succeeded", res.isWriteSuccess());
-        assertTrue("write took some time", res.getWriteLatency() > -1);
-      } else {
-        assertTrue("read from region " + regionName + " succeeded", res.isReadSuccess());
-        assertTrue("read took some time", res.getReadLatency() > -1);
+        if (regionName.contains(CanaryTool.DEFAULT_WRITE_TABLE_NAME.getNameAsString())) {
+          assertTrue("write to region " + regionName + " succeeded", res.isWriteSuccess());
+          assertTrue("write took some time", res.getWriteLatency() > -1);
+        } else {
+          assertTrue("read from region " + regionName + " succeeded", res.isReadSuccess());
+          assertTrue("read took some time", res.getReadLatency() > -1);
+        }
       }
     }
   }
