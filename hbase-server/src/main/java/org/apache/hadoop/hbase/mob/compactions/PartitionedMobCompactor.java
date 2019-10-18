@@ -827,7 +827,9 @@ public class PartitionedMobCompactor extends MobCompactor {
       throws IOException {
     // bulkload the ref file
     try {
-      BulkLoadHFiles.create(conf).bulkLoad(tableName, bulkloadDirectory);
+      BulkLoadHFiles bulkLoader = BulkLoadHFiles.create(conf);
+      bulkLoader.disableReplication();
+      bulkLoader.bulkLoad(tableName, bulkloadDirectory);
     } catch (Exception e) {
       throw new IOException(e);
     }

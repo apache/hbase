@@ -568,7 +568,7 @@ public final class RequestConverter {
       final byte[] regionName, boolean assignSeqNum,
       final Token<?> userToken, final String bulkToken) {
     return buildBulkLoadHFileRequest(familyPaths, regionName, assignSeqNum, userToken, bulkToken,
-        false, null);
+        false, null, true);
   }
 
   /**
@@ -585,7 +585,7 @@ public final class RequestConverter {
   public static BulkLoadHFileRequest buildBulkLoadHFileRequest(
       final List<Pair<byte[], String>> familyPaths, final byte[] regionName, boolean assignSeqNum,
         final Token<?> userToken, final String bulkToken, boolean copyFiles,
-          List<String> clusterIds) {
+          List<String> clusterIds, boolean replicate) {
     RegionSpecifier region = RequestConverter.buildRegionSpecifier(
       RegionSpecifierType.REGION_NAME, regionName);
 
@@ -626,6 +626,7 @@ public final class RequestConverter {
     if (clusterIds != null) {
       request.addAllClusterIds(clusterIds);
     }
+    request.setReplicate(replicate);
     return request.build();
   }
 

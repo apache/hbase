@@ -132,6 +132,7 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
   private String bulkToken;
 
   private List<String> clusterIds = new ArrayList<>();
+  private boolean replicate = true;
 
   public BulkLoadHFilesTool(Configuration conf) {
     // make a copy, just to be sure we're not overriding someone else's config
@@ -379,7 +380,8 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
           .collect(Collectors.toList());
       CompletableFuture<Collection<LoadQueueItem>> future = new CompletableFuture<>();
       FutureUtils.addListener(conn.bulkLoad(tableName, familyPaths, first, assignSeqIds,
-        fsDelegationToken.getUserToken(), bulkToken, copyFiles, clusterIds), (loaded, error) -> {
+        fsDelegationToken.getUserToken(), bulkToken, copyFiles, clusterIds, replicate),
+        (loaded, error) -> {
           if (error != null) {
             LOG.error("Encountered unrecoverable error from region server", error);
             if (getConf().getBoolean(RETRY_ON_IO_EXCEPTION, false) &&
@@ -1051,5 +1053,15 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
     Configuration conf = HBaseConfiguration.create();
     int ret = ToolRunner.run(conf, new BulkLoadHFilesTool(conf), args);
     System.exit(ret);
+  }
+
+  @Override
+  public void disableReplication(){
+    this.replicate = false;
+  }
+
+  @Override
+  public boolean isReplicationDisabled(){
+    return !this.replicate;
   }
 }
