@@ -48,7 +48,24 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+/**
+ * This class is used for testing only. The main purpose is to emulate 
+ * random failures during MOB compaction process. 
+ * Example of usage:
+ * <pre>{@code 
+ * public class SomeTest {
+ * 
+ *   public void initConfiguration(Configuration conf){
+ *     conf.set(MobStoreEngine.DEFAULT_MOB_COMPACTOR_CLASS_KEY,
+         FaultyMobStoreCompactor.class.getName());
+       conf.setDouble("injected.fault.probability", 0.1);  
+ *   }
+ * } 
+ * }</pre>
+ * @see org.apache.hadoop.hbase.mob.TestMobCompaction on how to use and configure
+ * this class. 
+ *
+ */
 @InterfaceAudience.Private
 public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
 

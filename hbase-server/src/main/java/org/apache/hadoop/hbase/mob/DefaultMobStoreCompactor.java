@@ -80,7 +80,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
 
   /*
    *  MOB file reference set thread local variable. It contains set of
-   *  to a MOB file names, which newly compacted store file has references to.
+   *  a MOB file names, which newly compacted store file has references to.
    *  This variable is populated during compaction and the content of it is
    *  written into meta section of a newly created store file at the final step
    *  of compaction process. 
@@ -875,10 +875,6 @@ final class OutputMobWriters {
 
   void incrementMobCountForOutputWriter(StoreFileWriter writer, int val) {
     String key = writer.getPath().getName();
-    Long count = mapMobCounts.get(key);
-    if (count == null) {
-      count = 0L;
-    }
-    mapMobCounts.put(key,  count + val);
+    mapMobCounts.compute(key, (k,v) -> v == null? val: v + val);
   }
 }

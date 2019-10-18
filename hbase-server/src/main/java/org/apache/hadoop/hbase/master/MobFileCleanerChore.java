@@ -166,7 +166,7 @@ public class MobFileCleanerChore extends ScheduledChore {
                 byte[] mobRefData = sf.getMetadataValue(HStoreFile.MOB_FILE_REFS);
                 byte[] bulkloadMarkerData = sf.getMetadataValue(HStoreFile.BULKLOAD_TASK_KEY);
                 if (mobRefData == null && bulkloadMarkerData == null) {
-                  LOG.info("Found old store file with no MOB_FILE_REFS: {} - "
+                  LOG.warn("Found old store file with no MOB_FILE_REFS: {} - "
                     + "can not proceed until all old files will be MOB-compacted.", pp);
                   return;
                 } else if (mobRefData == null && bulkloadMarkerData != null) {
