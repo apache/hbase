@@ -24,6 +24,9 @@ import java.io.IOException;
 import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -279,7 +282,7 @@ public class TestMobCompaction {
         Thread.sleep(1000);
       }
 
-      MobUtils.getNumberOfMobFiles(conf, table.getName(), new String(fam));
+      getNumberOfMobFiles(conf, table.getName(), new String(fam));
       LOG.info("Waiting for write thread to finish ...");
       writeData.join();
       // Cleanup again
@@ -302,6 +305,19 @@ public class TestMobCompaction {
     LOG.info("MOB Stress Test finished OK");
     printStats(count);
 
+  }
+  
+  private  long getNumberOfMobFiles(Configuration conf, TableName tableName, String family)
+      throws IOException {
+    FileSystem fs = FileSystem.get(conf);
+    Path dir = MobUtils.getMobFamilyPath(conf, tableName, family);
+    FileStatus[] stat = fs.listStatus(dir);
+    for (FileStatus st : stat) {
+      LOG.debug("MOB Directory content: {}", st.getPath());
+    }
+    LOG.debug("MOB Directory content total files: {}", stat.length);
+
+    return stat.length;
   }
 
   public void printStats(long loaded) {

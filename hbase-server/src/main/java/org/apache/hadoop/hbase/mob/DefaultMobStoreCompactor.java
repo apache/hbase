@@ -553,8 +553,8 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     Set<String> mobSet = new HashSet<String>();
     for (HStoreFile sf: storeFiles) {
       byte[] value = sf.getMetadataValue(HStoreFile.MOB_FILE_REFS);
-      if (value != null) {
-        String s = new String(value);
+      if (value != null && value.length > 1) {
+        String s = Bytes.toString(value);
         String[] all = s.split(",");
         Collections.addAll(mobSet, all);
       }

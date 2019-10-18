@@ -164,19 +164,21 @@ public class MobFileCleanerChore extends ScheduledChore {
                     new HStoreFile(fs, pp, conf, CacheConfig.DISABLED, BloomType.NONE, true);
                 sf.initReader();
                 byte[] mobRefData = sf.getMetadataValue(HStoreFile.MOB_FILE_REFS);
-                byte[] mobCellCountData = sf.getMetadataValue(HStoreFile.MOB_CELLS_COUNT);
                 byte[] bulkloadMarkerData = sf.getMetadataValue(HStoreFile.BULKLOAD_TASK_KEY);
-                if (mobRefData == null
-                    && (mobCellCountData != null || bulkloadMarkerData == null)) {
+                if (mobRefData == null && bulkloadMarkerData == null) {
                   LOG.info("Found old store file with no MOB_FILE_REFS: {} - "
                     + "can not proceed until all old files will be MOB-compacted.", pp);
                   return;
-                } else if (mobRefData == null) {
-                  LOG.info("Skipping file without MOB references (can be bulkloaded file):{}", pp);
+                } else if (mobRefData == null && bulkloadMarkerData != null) {
+                  LOG.info("Skipping file without MOB references (bulkloaded file):{}", pp);
                   continue;
                 }
-                String[] mobs = new String(mobRefData).split(",");
-                regionMobs.addAll(Arrays.asList(mobs));
+                if (mobRefData.length > 1) {
+                  // if length = 1 means NULL, that there are no MOB references
+                  // in this store file, but the file was created by new MOB code
+                  String[] mobs = new String(mobRefData).split(",");
+                  regionMobs.addAll(Arrays.asList(mobs));
+                }
               }
             } catch (FileNotFoundException e) {
               // TODO

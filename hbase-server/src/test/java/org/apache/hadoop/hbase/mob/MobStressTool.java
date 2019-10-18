@@ -29,7 +29,7 @@ import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class MobStressTool extends AbstractHBaseTool {
   private static final Logger LOG = LoggerFactory.getLogger(MobStressTool.class);

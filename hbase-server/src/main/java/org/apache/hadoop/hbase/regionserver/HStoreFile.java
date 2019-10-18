@@ -110,6 +110,9 @@ public class HStoreFile implements StoreFile {
 
   /** Key for the number of mob cells in metadata */
   public static final byte[] MOB_CELLS_COUNT = Bytes.toBytes("MOB_CELLS_COUNT");
+  
+  /** Null data */
+  public static final byte[] NULL_VALUE = new byte[] {0};
 
   /** Key for the list of MOB file references */
   public static final byte[] MOB_FILE_REFS = Bytes.toBytes("MOB_FILE_REFS");

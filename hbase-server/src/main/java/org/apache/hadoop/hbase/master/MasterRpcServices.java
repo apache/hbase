@@ -1746,8 +1746,8 @@ public class MasterRpcServices extends RSRpcServices
       // if the region is a mob region, do the mob file compaction.
       if (MobUtils.isMobRegionName(tableName, regionName)) {
         checkHFileFormatVersionForMob();
-        //return compactMob(request, tableName);
         //TODO: support CompactType.MOB
+        LOG.warn("CompactType.MOB is not supported yet, will run regular compaction.");
         return super.compactRegion(controller, request);
       } else {
         return super.compactRegion(controller, request);

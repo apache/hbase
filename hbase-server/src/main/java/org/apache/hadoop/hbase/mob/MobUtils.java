@@ -687,20 +687,6 @@ public final class MobUtils {
     return fams;
   }
 
-
-  public static long getNumberOfMobFiles(Configuration conf, TableName tableName, String family)
-      throws IOException {
-    FileSystem fs = FileSystem.get(conf);
-    Path dir = getMobFamilyPath(conf, tableName, family);
-    FileStatus[] stat = fs.listStatus(dir);
-    for (FileStatus st : stat) {
-      LOG.info("MOB Directory content: {}", st.getPath());
-    }
-    LOG.info("MOB Directory content total files: {}", stat.length);
-
-    return stat.length;
-  }
-
   /**
    * Indicates whether return null value when the mob file is missing or corrupt.
    * The information is set in the attribute "empty.value.on.mobcell.miss" of scan.
