@@ -571,7 +571,12 @@ public class CatalogJanitor extends ScheduledChore {
         return true;
       }
       this.report.count++;
-      RegionInfo regionInfo = metaTableConsistencyCheck(r);
+      RegionInfo regionInfo = null;
+      try {
+        regionInfo = metaTableConsistencyCheck(r);
+      } catch(Throwable t) {
+        LOG.warn("Failed consistency check on {}", Bytes.toStringBinary(r.getRow()), t);
+      }
       if (regionInfo != null) {
         LOG.trace(regionInfo.toString());
         if (regionInfo.isSplitParent()) { // splitParent means split and offline.
@@ -695,8 +700,14 @@ public class CatalogJanitor extends ScheduledChore {
       if (locations == null) {
         return;
       }
+      if (locations.getRegionLocations() == null) {
+        return;
+      }
       // Check referenced servers are known/online.
       for (HRegionLocation location: locations.getRegionLocations()) {
+        if (location == null) {
+          continue;
+        }
         ServerName sn = location.getServerName();
         if (sn == null) {
           continue;
