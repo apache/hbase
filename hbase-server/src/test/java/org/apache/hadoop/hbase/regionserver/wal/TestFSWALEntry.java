@@ -22,8 +22,11 @@ import static org.junit.Assert.assertEquals;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.CellBuilderType;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -48,20 +51,51 @@ public class TestFSWALEntry {
     List<Cell> cells = new ArrayList<>();
     assertEquals(0, FSWALEntry.collectFamilies(cells).size());
 
-    cells.add(CellUtil.createCell(family0, family0, family0));
+    cells.add(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+      .setRow(family0).setFamily(family0).setQualifier(family0)
+      .setTimestamp(HConstants.LATEST_TIMESTAMP)
+      .setType(KeyValue.Type.Maximum.getCode())
+      .setValue(HConstants.EMPTY_BYTE_ARRAY)
+      .build());
     assertEquals(1, FSWALEntry.collectFamilies(cells).size());
 
-    cells.add(CellUtil.createCell(family1, family1, family1));
+    cells.add(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+      .setRow(family1).setFamily(family1).setQualifier(family1)
+      .setTimestamp(HConstants.LATEST_TIMESTAMP)
+      .setType(KeyValue.Type.Maximum.getCode())
+      .setValue(HConstants.EMPTY_BYTE_ARRAY)
+      .build());
     assertEquals(2, FSWALEntry.collectFamilies(cells).size());
 
-    cells.add(CellUtil.createCell(family0, family0, family0));
-    cells.add(CellUtil.createCell(family1, family1, family1));
+    cells.add(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+      .setRow(family0).setFamily(family0).setQualifier(family0)
+      .setTimestamp(HConstants.LATEST_TIMESTAMP)
+      .setType(KeyValue.Type.Maximum.getCode())
+      .setValue(HConstants.EMPTY_BYTE_ARRAY)
+      .build());
+    cells.add(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+      .setRow(family1).setFamily(family1).setQualifier(family1)
+      .setTimestamp(HConstants.LATEST_TIMESTAMP)
+      .setType(KeyValue.Type.Maximum.getCode())
+      .setValue(HConstants.EMPTY_BYTE_ARRAY)
+      .build());
     assertEquals(2, FSWALEntry.collectFamilies(cells).size());
 
-    cells.add(CellUtil.createCell(family2, family2, family2));
+    cells.add(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+      .setRow(family2).setFamily(family2).setQualifier(family2)
+      .setTimestamp(HConstants.LATEST_TIMESTAMP)
+      .setType(KeyValue.Type.Maximum.getCode())
+      .setValue(HConstants.EMPTY_BYTE_ARRAY)
+      .build());
     assertEquals(3, FSWALEntry.collectFamilies(cells).size());
 
-    cells.add(CellUtil.createCell(WALEdit.METAFAMILY, WALEdit.METAFAMILY, WALEdit.METAFAMILY));
+    cells.add(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+      .setRow(WALEdit.METAFAMILY).setFamily(WALEdit.METAFAMILY)
+      .setQualifier(WALEdit.METAFAMILY)
+      .setTimestamp(HConstants.LATEST_TIMESTAMP)
+      .setType(KeyValue.Type.Maximum.getCode())
+      .setValue(HConstants.EMPTY_BYTE_ARRAY)
+      .build());
     assertEquals(3, FSWALEntry.collectFamilies(cells).size());
   }
 }

@@ -687,8 +687,12 @@ public final class ProtobufUtil {
           if (qv.hasTags()) {
             tags = qv.getTags().toByteArray();
           }
-          consumer.accept(mutation, CellUtil.createCell(mutation.getRow(), family, qualifier, qv.getTimestamp(),
-                  KeyValue.Type.Put, value, tags));
+          consumer.accept(mutation, ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+            .setRow(mutation.getRow()).setFamily(family)
+            .setQualifier(qualifier).setTimestamp(qv.getTimestamp())
+            .setType(KeyValue.Type.Put.getCode()).setValue(value)
+            .setTags(tags).setSequenceId(0)
+            .build());
         }
       }
     }

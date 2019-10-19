@@ -598,7 +598,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
 
     @Override
     public byte[] getTagsArray() {
-      return CellUtil.cloneTags(this);
+      return PrivateCellUtil.cloneTags(this);
     }
 
     @Override

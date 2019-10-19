@@ -283,7 +283,7 @@ public class TestSyncTable {
         Cell sourceCell = sourceCells[j];
         Cell targetCell = targetCells[j];
         try {
-          if (!CellUtil.matchingRow(sourceCell, targetCell)) {
+          if (!CellUtil.matchingRows(sourceCell, targetCell)) {
             Assert.fail("Rows don't match");
           }
           if (!CellUtil.matchingFamily(sourceCell, targetCell)) {
@@ -384,7 +384,7 @@ public class TestSyncTable {
           Cell sourceCell = sourceCells[j];
           Cell targetCell = targetCells[j];
           try {
-            if (!CellUtil.matchingRow(sourceCell, targetCell)) {
+            if (!CellUtil.matchingRows(sourceCell, targetCell)) {
               Assert.fail("Rows don't match");
             }
             if (!CellUtil.matchingFamily(sourceCell, targetCell)) {

@@ -76,6 +76,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -2366,12 +2367,24 @@ public class TestHRegion {
     region = initHRegion(tableName, null, null, false, Durability.SYNC_WAL, hLog,
         COLUMN_FAMILY_BYTES);
 
-    Cell originalCell = CellUtil.createCell(row, COLUMN_FAMILY_BYTES, qual1,
-      System.currentTimeMillis(), KeyValue.Type.Put.getCode(), value1);
+    Cell originalCell = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+      .setRow(row)
+      .setFamily(COLUMN_FAMILY_BYTES)
+      .setQualifier(qual1)
+      .setTimestamp(System.currentTimeMillis())
+      .setType(KeyValue.Type.Put.getCode())
+      .setValue(value1)
+      .build();
     final long originalSize = originalCell.getSerializedSize();
 
-    Cell addCell = CellUtil.createCell(row, COLUMN_FAMILY_BYTES, qual1,
-      System.currentTimeMillis(), KeyValue.Type.Put.getCode(), Bytes.toBytes("xxxxxxxxxx"));
+    Cell addCell = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+      .setRow(row)
+      .setFamily(COLUMN_FAMILY_BYTES)
+      .setQualifier(qual1)
+      .setTimestamp(System.currentTimeMillis())
+      .setType(KeyValue.Type.Put.getCode())
+      .setValue(Bytes.toBytes("xxxxxxxxxx"))
+      .build();
     final long addSize = addCell.getSerializedSize();
 
     LOG.info("originalSize:" + originalSize

@@ -22,7 +22,11 @@ import java.io.IOException;
 import java.util.Locale;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
@@ -31,7 +35,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -128,7 +131,14 @@ public class CompressionTest {
         .create();
     // Write any-old Cell...
     final byte [] rowKey = Bytes.toBytes("compressiontestkey");
-    Cell c = CellUtil.createCell(rowKey, Bytes.toBytes("compressiontestval"));
+    Cell c = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+      .setRow(rowKey)
+      .setFamily(HConstants.EMPTY_BYTE_ARRAY)
+      .setQualifier(HConstants.EMPTY_BYTE_ARRAY)
+      .setTimestamp(HConstants.LATEST_TIMESTAMP)
+      .setType(KeyValue.Type.Maximum.getCode())
+      .setValue(Bytes.toBytes("compressiontestval"))
+      .build();
     writer.append(c);
     writer.appendFileInfo(Bytes.toBytes("compressioninfokey"), Bytes.toBytes("compressioninfoval"));
     writer.close();

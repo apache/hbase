@@ -958,7 +958,34 @@ public final class PrivateCellUtil {
       return tagsIterator(((ByteBufferExtendedCell) cell).getTagsByteBuffer(),
         ((ByteBufferExtendedCell) cell).getTagsPosition(), tagsLength);
     }
-    return CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength());
+
+    return new Iterator<Tag>() {
+      private int offset = cell.getTagsOffset();
+      private int pos = offset;
+      private int endOffset = offset + cell.getTagsLength() - 1;
+
+      @Override
+      public boolean hasNext() {
+        return this.pos < endOffset;
+      }
+
+      @Override
+      public Tag next() {
+        if (hasNext()) {
+          byte[] tags = cell.getTagsArray();
+          int curTagLen = Bytes.readAsInt(tags, this.pos, Tag.TAG_LENGTH_SIZE);
+          Tag tag = new ArrayBackedTag(tags, pos, curTagLen + TAG_LENGTH_SIZE);
+          this.pos += Bytes.SIZEOF_SHORT + curTagLen;
+          return tag;
+        }
+        return null;
+      }
+
+      @Override
+      public void remove() {
+        throw new UnsupportedOperationException();
+      }
+    };
   }
 
   public static Iterator<Tag> tagsIterator(final ByteBuffer tags, final int offset,
@@ -1501,7 +1528,7 @@ public final class PrivateCellUtil {
 
     @Override
     public byte[] getTagsArray() {
-      return CellUtil.cloneTags(this);
+      return PrivateCellUtil.cloneTags(this);
     }
 
     @Override

@@ -40,8 +40,10 @@ import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -287,12 +289,14 @@ public class TestBulkLoad {
       hFileFactory.withFileContext(new HFileContext());
       HFile.Writer writer = hFileFactory.create();
       try {
-        writer.append(new KeyValue(CellUtil.createCell(randomBytes,
-            family,
-            randomBytes,
-            0L,
-            KeyValue.Type.Put.getCode(),
-            randomBytes)));
+        writer.append(new KeyValue(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+          .setRow(randomBytes)
+          .setFamily(family)
+          .setQualifier(randomBytes)
+          .setTimestamp(0L)
+          .setType(KeyValue.Type.Put.getCode())
+          .setValue(randomBytes)
+          .build()));
       } finally {
         writer.close();
       }
