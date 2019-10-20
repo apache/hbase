@@ -631,164 +631,89 @@ public class TestHFile  {
     assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) == 0);
   }
 
+  private Cell getCell(byte[] row, byte[] family, byte[] qualifier) {
+    return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+      .setRow(row)
+      .setFamily(family)
+      .setQualifier(qualifier)
+      .setTimestamp(HConstants.LATEST_TIMESTAMP)
+      .setType(KeyValue.Type.Maximum.getCode())
+      .setValue(HConstants.EMPTY_BYTE_ARRAY)
+      .build();
+  }
+
   @Test
   public void testGetShortMidpoint() {
-    Cell left = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-      .setRow(Bytes.toBytes("a")).setFamily(Bytes.toBytes("a"))
-      .setQualifier(Bytes.toBytes("a"))
-      .setTimestamp(HConstants.LATEST_TIMESTAMP)
-      .setType(KeyValue.Type.Maximum.getCode())
-      .setValue(HConstants.EMPTY_BYTE_ARRAY).build();
-    Cell right = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-      .setRow(Bytes.toBytes("a")).setFamily(Bytes.toBytes("a"))
-      .setQualifier(Bytes.toBytes("a"))
-      .setTimestamp(HConstants.LATEST_TIMESTAMP)
-      .setType(KeyValue.Type.Maximum.getCode())
-      .setValue(HConstants.EMPTY_BYTE_ARRAY).build();
+    Cell left = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
+    Cell right = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
     Cell mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
-    assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) <= 0);
-    assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) <= 0);
-
-    left = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-      .setRow(Bytes.toBytes("a")).setFamily(Bytes.toBytes("a"))
-      .setQualifier(Bytes.toBytes("a"))
-      .setTimestamp(HConstants.LATEST_TIMESTAMP)
-      .setType(KeyValue.Type.Maximum.getCode())
-      .setValue(HConstants.EMPTY_BYTE_ARRAY).build();
-    right = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-      .setRow(Bytes.toBytes("b")).setFamily(Bytes.toBytes("a"))
-      .setQualifier(Bytes.toBytes("a"))
-      .setTimestamp(HConstants.LATEST_TIMESTAMP)
-      .setType(KeyValue.Type.Maximum.getCode())
-      .setValue(HConstants.EMPTY_BYTE_ARRAY).build();
+    assertTrue(PrivateCellUtil
+      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) <= 0);
+    assertTrue(PrivateCellUtil
+      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) <= 0);
+    left = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
+    right = getCell(Bytes.toBytes("b"), Bytes.toBytes("a"), Bytes.toBytes("a"));
     mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
-    assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
-    assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) <= 0);
-
-    left = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-      .setRow(Bytes.toBytes("g")).setFamily(Bytes.toBytes("a"))
-      .setQualifier(Bytes.toBytes("a"))
-      .setTimestamp(HConstants.LATEST_TIMESTAMP)
-      .setType(KeyValue.Type.Maximum.getCode())
-      .setValue(HConstants.EMPTY_BYTE_ARRAY).build();
-    right = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-      .setRow(Bytes.toBytes("i")).setFamily(Bytes.toBytes("a"))
-      .setQualifier(Bytes.toBytes("a"))
-      .setTimestamp(HConstants.LATEST_TIMESTAMP)
-      .setType(KeyValue.Type.Maximum.getCode())
-      .setValue(HConstants.EMPTY_BYTE_ARRAY).build();
+    assertTrue(PrivateCellUtil
+      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
+    assertTrue(PrivateCellUtil
+      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) <= 0);
+    left = getCell(Bytes.toBytes("g"), Bytes.toBytes("a"), Bytes.toBytes("a"));
+    right = getCell(Bytes.toBytes("i"), Bytes.toBytes("a"), Bytes.toBytes("a"));
     mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
-    assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
-    assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) <= 0);
-
-    left = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-      .setRow(Bytes.toBytes("a")).setFamily(Bytes.toBytes("a"))
-      .setQualifier(Bytes.toBytes("a"))
-      .setTimestamp(HConstants.LATEST_TIMESTAMP)
-      .setType(KeyValue.Type.Maximum.getCode())
-      .setValue(HConstants.EMPTY_BYTE_ARRAY).build();
-    right = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-      .setRow(Bytes.toBytes("bbbbbbb")).setFamily(Bytes.toBytes("a"))
-      .setQualifier(Bytes.toBytes("a"))
-      .setTimestamp(HConstants.LATEST_TIMESTAMP)
-      .setType(KeyValue.Type.Maximum.getCode())
-      .setValue(HConstants.EMPTY_BYTE_ARRAY).build();
+    assertTrue(PrivateCellUtil
+      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
+    assertTrue(PrivateCellUtil
+      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) <= 0);
+    left = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
+    right = getCell(Bytes.toBytes("bbbbbbb"), Bytes.toBytes("a"), Bytes.toBytes("a"));
     mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
-    assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
-    assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) < 0);
+    assertTrue(PrivateCellUtil
+      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
+    assertTrue(PrivateCellUtil
+      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) < 0);
     assertEquals(1, mid.getRowLength());
-
-    left = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-      .setRow(Bytes.toBytes("a")).setFamily(Bytes.toBytes("a"))
-      .setQualifier(Bytes.toBytes("a"))
-      .setTimestamp(HConstants.LATEST_TIMESTAMP)
-      .setType(KeyValue.Type.Maximum.getCode())
-      .setValue(HConstants.EMPTY_BYTE_ARRAY).build();
-    right = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-      .setRow(Bytes.toBytes("a")).setFamily(Bytes.toBytes("b"))
-      .setQualifier(Bytes.toBytes("a"))
-      .setTimestamp(HConstants.LATEST_TIMESTAMP)
-      .setType(KeyValue.Type.Maximum.getCode())
-      .setValue(HConstants.EMPTY_BYTE_ARRAY).build();
+    left = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
+    right = getCell(Bytes.toBytes("b"), Bytes.toBytes("a"), Bytes.toBytes("a"));
     mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
-    assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
-    assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) <= 0);
-
-    left = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-      .setRow(Bytes.toBytes("a")).setFamily(Bytes.toBytes("a"))
-      .setQualifier(Bytes.toBytes("a"))
-      .setTimestamp(HConstants.LATEST_TIMESTAMP)
-      .setType(KeyValue.Type.Maximum.getCode())
-      .setValue(HConstants.EMPTY_BYTE_ARRAY).build();
-    right = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-      .setRow(Bytes.toBytes("a")).setFamily(Bytes.toBytes("aaaaaaaa"))
-      .setQualifier(Bytes.toBytes("b"))
-      .setTimestamp(HConstants.LATEST_TIMESTAMP)
-      .setType(KeyValue.Type.Maximum.getCode())
-      .setValue(HConstants.EMPTY_BYTE_ARRAY).build();
+    assertTrue(PrivateCellUtil
+      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
+    assertTrue(PrivateCellUtil
+      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) <= 0);
+    left = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
+    right = getCell(Bytes.toBytes("a"), Bytes.toBytes("aaaaaaaa"), Bytes.toBytes("b"));
     mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
-    assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
-    assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) < 0);
+    assertTrue(PrivateCellUtil
+      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
+    assertTrue(PrivateCellUtil
+      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) < 0);
     assertEquals(2, mid.getFamilyLength());
-
-    left = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-      .setRow(Bytes.toBytes("a")).setFamily(Bytes.toBytes("a"))
-      .setQualifier(Bytes.toBytes("a"))
-      .setTimestamp(HConstants.LATEST_TIMESTAMP)
-      .setType(KeyValue.Type.Maximum.getCode())
-      .setValue(HConstants.EMPTY_BYTE_ARRAY).build();
-    right = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-      .setRow(Bytes.toBytes("a")).setFamily(Bytes.toBytes("a"))
-      .setQualifier(Bytes.toBytes("aaaaaaaaa"))
-      .setTimestamp(HConstants.LATEST_TIMESTAMP)
-      .setType(KeyValue.Type.Maximum.getCode())
-      .setValue(HConstants.EMPTY_BYTE_ARRAY).build();
+    left = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
+    right = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("aaaaaaaaa"));
     mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
-    assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
-    assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) < 0);
+    assertTrue(PrivateCellUtil
+      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
+    assertTrue(PrivateCellUtil
+      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) < 0);
     assertEquals(2, mid.getQualifierLength());
-
-    left = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-      .setRow(Bytes.toBytes("a")).setFamily(Bytes.toBytes("a"))
-      .setQualifier(Bytes.toBytes("a"))
-      .setTimestamp(HConstants.LATEST_TIMESTAMP)
-      .setType(KeyValue.Type.Maximum.getCode())
-      .setValue(HConstants.EMPTY_BYTE_ARRAY).build();
-    right = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-      .setRow(Bytes.toBytes("a")).setFamily(Bytes.toBytes("a"))
-      .setQualifier(Bytes.toBytes("b"))
-      .setTimestamp(HConstants.LATEST_TIMESTAMP)
-      .setType(KeyValue.Type.Maximum.getCode())
-      .setValue(HConstants.EMPTY_BYTE_ARRAY).build();
+    left = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
+    right = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("b"));
     mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
-    assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
-    assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) <= 0);
+    assertTrue(PrivateCellUtil
+      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
+    assertTrue(PrivateCellUtil
+      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) <= 0);
     assertEquals(1, mid.getQualifierLength());
 
     // Assert that if meta comparator, it returns the right cell -- i.e. no
     // optimization done.
-    left = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-      .setRow(Bytes.toBytes("g")).setFamily(Bytes.toBytes("a"))
-      .setQualifier(Bytes.toBytes("a"))
-      .setTimestamp(HConstants.LATEST_TIMESTAMP)
-      .setType(KeyValue.Type.Maximum.getCode())
-      .setValue(HConstants.EMPTY_BYTE_ARRAY).build();
-    right = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-      .setRow(Bytes.toBytes("i")).setFamily(Bytes.toBytes("a"))
-      .setQualifier(Bytes.toBytes("a"))
-      .setTimestamp(HConstants.LATEST_TIMESTAMP)
-      .setType(KeyValue.Type.Maximum.getCode())
-      .setValue(HConstants.EMPTY_BYTE_ARRAY).build();
+    left = getCell(Bytes.toBytes("g"), Bytes.toBytes("a"), Bytes.toBytes("a"));
+    right = getCell(Bytes.toBytes("i"), Bytes.toBytes("a"), Bytes.toBytes("a"));
     mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.META_COMPARATOR, left, right);
-    assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
-    assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) == 0);
-
-    /**
-     * See HBASE-7845
-     */
-    byte[] rowA = Bytes.toBytes("rowA");
-    byte[] rowB = Bytes.toBytes("rowB");
-
+    assertTrue(PrivateCellUtil
+      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
+    assertTrue(PrivateCellUtil
+      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) == 0);
     byte[] family = Bytes.toBytes("family");
     byte[] qualA = Bytes.toBytes("qfA");
     byte[] qualB = Bytes.toBytes("qfB");
