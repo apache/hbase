@@ -1580,7 +1580,6 @@ public class MetaTableAccessor {
       Put putParent = makePutFromRegionInfo(RegionInfoBuilder.newBuilder(parent)
                         .setOffline(true)
                         .setSplit(true).build(), time);
-      addRegionStateToPut(putParent, State.SPLIT);
       addDaughtersToPut(putParent, splitA, splitB);
 
       // Puts for daughters
