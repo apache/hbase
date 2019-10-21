@@ -1583,9 +1583,13 @@ public class HRegionServer extends HasThread implements
       float initialCountPercentage = conf.getFloat(MemStoreLAB.CHUNK_POOL_INITIALSIZE_KEY,
           MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT);
       int chunkSize = conf.getInt(MemStoreLAB.CHUNK_SIZE_KEY, MemStoreLAB.CHUNK_SIZE_DEFAULT);
+      float indexChunkPercentage = conf.getFloat(MemStoreLAB.INDEX_CHUNK_PERCENTAGE_KEY,
+          MemStoreLAB.INDEX_CHUNK_PERCENTAGE_DEFAULT);
+      int indexChunksize = conf.getInt(MemStoreLAB.INDEX_CHUNK_SIZE_KEY,
+          MemStoreLAB.INDEX_CHUNK_SIZE_DEFAULT);
       // init the chunkCreator
       ChunkCreator.initialize(chunkSize, offheap, globalMemStoreSize, poolSizePercentage,
-        initialCountPercentage, this.hMemManager);
+        initialCountPercentage, indexChunkPercentage, indexChunksize, this.hMemManager);
     }
   }
 

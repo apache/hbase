@@ -280,6 +280,9 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
   // If the percentage of its remaining free space is above the INDEX_CHUNK_UNUSED_SPACE
   // threshold, then we will use index chunks (which are smaller) instead.
   private ChunkCreator.ChunkType useIndexChunks(int numOfCells) {
+    if (!ChunkCreator.getInstance().hasIndexChunkPool()) {
+      return ChunkCreator.ChunkType.DATA_CHUNK;
+    }
     int dataChunkSize = ChunkCreator.getInstance().getChunkSize();
     int numOfCellsInChunk = calcNumOfCellsInChunk(dataChunkSize);
     int cellsInLastChunk = numOfCells % numOfCellsInChunk;

@@ -232,7 +232,8 @@ public class TestMemStoreChunkPool {
     final int chunkSize = 40;
     final int valSize = 7;
     ChunkCreator oldCreator = ChunkCreator.getInstance();
-    ChunkCreator newCreator = new ChunkCreator(chunkSize, false, 400, 1, 0.5f, null, 0);
+    ChunkCreator newCreator = new ChunkCreator(chunkSize, false, 400, 1, 0.5f, 0,
+        MemStoreLAB.INDEX_CHUNK_SIZE_DEFAULT, null);
     assertEquals(initialCount, newCreator.getPoolSize());
     assertEquals(maxCount, newCreator.getMaxCount());
     ChunkCreator.instance = newCreator;// Replace the global ref with the new one we created.

@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A memstore-local allocation buffer.
@@ -52,8 +52,8 @@ public interface MemStoreLAB {
 
   String CHUNK_SIZE_KEY = "hbase.hregion.memstore.mslab.chunksize";
   int CHUNK_SIZE_DEFAULT = 2048 * 1024;
-  String INDEX_CHUNK_PERCENTAGE_KEY = "hbase.hregion.memstore.mslab.indexchunksize";
-  float INDEX_CHUNK_PERCENTAGE_DEFAULT = 0.1f;
+  String INDEX_CHUNK_SIZE_KEY = "hbase.hregion.memstore.mslab.indexchunksize";
+  int INDEX_CHUNK_SIZE_DEFAULT = (int) (CHUNK_SIZE_DEFAULT * 0.1f);
   String MAX_ALLOC_KEY = "hbase.hregion.memstore.mslab.max.allocation";
   int MAX_ALLOC_DEFAULT = 256 * 1024; // allocs bigger than this don't go through
                                                    // allocator
@@ -61,8 +61,14 @@ public interface MemStoreLAB {
   // MSLAB pool related configs
   String CHUNK_POOL_MAXSIZE_KEY = "hbase.hregion.memstore.chunkpool.maxsize";
   String CHUNK_POOL_INITIALSIZE_KEY = "hbase.hregion.memstore.chunkpool.initialsize";
+
+  /**
+   * Should set this to 0, if we don't use IndexType#CHUNK_MAP, or there will be a memory wasteful
+   */
+  String INDEX_CHUNK_PERCENTAGE_KEY = "hbase.hregion.memstore.chunkpool.indexchunkpercent";
   float POOL_MAX_SIZE_DEFAULT = 1.0f;
   float POOL_INITIAL_SIZE_DEFAULT = 0.0f;
+  float INDEX_CHUNK_PERCENTAGE_DEFAULT = 0.1f;
 
   /**
    * Allocates slice in this LAB and copy the passed Cell into this area. Returns new Cell instance

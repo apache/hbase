@@ -377,7 +377,7 @@ public class MemStoreLABImpl implements MemStoreLAB {
   */
   @Override
   public Chunk getNewExternalChunk(int size) {
-    int allocSize = size + ChunkCreator.getInstance().SIZEOF_CHUNK_HEADER;
+    int allocSize = size + ChunkCreator.SIZEOF_CHUNK_HEADER;
     if (allocSize <= ChunkCreator.getInstance().getChunkSize()) {
       return getNewExternalChunk(ChunkCreator.ChunkType.DATA_CHUNK);
     } else {
