@@ -27,7 +27,6 @@
   import="java.util.Set"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv"
-  import="org.apache.hadoop.hbase.master.procedure.ProcedureDescriber"
   import="org.apache.hadoop.hbase.procedure2.LockedResource"
   import="org.apache.hadoop.hbase.procedure2.Procedure"
   import="org.apache.hadoop.hbase.procedure2.ProcedureExecutor"
@@ -91,7 +90,7 @@
         <td><%= new Date(proc.getSubmittedTime()) %></td>
         <td><%= new Date(proc.getLastUpdate()) %></td>
         <td><%= escapeXml(proc.isFailed() ? proc.getException().unwrapRemoteIOException().getMessage() : "") %></td>
-        <td><%= escapeXml(ProcedureDescriber.describeParameters(proc)) %></td>
+        <td><%= escapeXml(proc.toString()) %></td>
       </tr>
     <% } %>
   </table>
@@ -214,7 +213,7 @@
       case EXCLUSIVE:
     %>
     <p>Lock type: EXCLUSIVE</p>
-    <p>Owner procedure: <%= escapeXml(ProcedureDescriber.describe(lockedResource.getExclusiveLockOwnerProcedure())) %></p>
+    <p>Owner procedure: <%= escapeXml(lockedResource.getExclusiveLockOwnerProcedure().toStringDetails()) %></p>
     <%
         break;
       case SHARED:
@@ -233,7 +232,7 @@
         <table class="table table-striped" width="90%" >
         <% for (Procedure<?> proc : procedures) { %>
          <tr>
-            <td><%= escapeXml(ProcedureDescriber.describe(proc)) %></td>
+            <td><%= escapeXml(proc.toStringDetails()) %></td>
           </tr>
         <% } %>
         </table>
