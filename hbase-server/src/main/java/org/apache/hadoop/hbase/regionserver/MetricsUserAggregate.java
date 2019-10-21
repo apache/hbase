@@ -18,110 +18,22 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.IOException;
-import java.util.Optional;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.security.UserProvider;
-import org.apache.hadoop.hbase.util.LossyCounting;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 @InterfaceAudience.Private
-public class MetricsUserAggregate {
+public interface MetricsUserAggregate {
 
-  /** Provider for mapping principal names to Users */
-  private final UserProvider userProvider;
+  void updatePut(long t);
 
-  private final MetricsUserAggregateSource source;
-  private final LossyCounting userMetricLossyCounting;
+  void updateDelete(long t);
 
-  public MetricsUserAggregate(Configuration conf) {
-    source = CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
-        .getUserAggregate();
-    userMetricLossyCounting = new LossyCounting<MetricsUserSource>("userMetrics",
-        (LossyCounting.LossyCountingListener<MetricsUserSource>) key -> source.deregister(key));
-    this.userProvider = UserProvider.instantiate(conf);
-  }
+  void updateGet(long t);
 
-  /**
-   * Returns the active user to which authorization checks should be applied.
-   * If we are in the context of an RPC call, the remote user is used,
-   * otherwise the currently logged in user is used.
-   */
-  private String getActiveUser() {
-    Optional<User> user = RpcServer.getRequestUser();
-    if (!user.isPresent()) {
-      // for non-rpc handling, fallback to system user
-      try {
-        user = Optional.of(userProvider.getCurrent());
-      } catch (IOException ignore) {
-      }
-    }
-    return user.isPresent() ? user.get().getShortName() : null;
-  }
+  void updateIncrement(long t);
 
-  @VisibleForTesting
-  MetricsUserAggregateSource getSource() {
-    return source;
-  }
+  void updateAppend(long t);
 
-  public void updatePut(long t) {
-    String user = getActiveUser();
-    if (user != null) {
-      getOrCreateMetricsUser(user).updatePut(t);
-    }
-  }
+  void updateReplay(long t);
 
-  public void updateDelete(long t) {
-    String user = getActiveUser();
-    if (user != null) {
-      getOrCreateMetricsUser(user).updateDelete(t);
-    }
-  }
-
-  public void updateGet(long t) {
-    String user = getActiveUser();
-    if (user != null) {
-      getOrCreateMetricsUser(user).updateGet(t);
-    }
-  }
-
-  public void updateIncrement(long t) {
-    String user = getActiveUser();
-    if (user != null) {
-      getOrCreateMetricsUser(user).updateIncrement(t);
-    }
-  }
-
-  public void updateAppend(long t) {
-    String user = getActiveUser();
-    if (user != null) {
-      getOrCreateMetricsUser(user).updateAppend(t);
-    }
-  }
-
-  public void updateReplay(long t) {
-    String user = getActiveUser();
-    if (user != null) {
-      getOrCreateMetricsUser(user).updateReplay(t);
-    }
-  }
-
-  public void updateScanTime(long t) {
-    String user = getActiveUser();
-    if (user != null) {
-      getOrCreateMetricsUser(user).updateScanTime(t);
-    }
-  }
-
-  private MetricsUserSource getOrCreateMetricsUser(String user) {
-    MetricsUserSource userSource = source.getOrCreateMetricsUser(user);
-    userMetricLossyCounting.add(userSource);
-    return userSource;
-  }
+  void updateScanTime(long t);
 }

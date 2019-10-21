@@ -49,7 +49,7 @@ public class TestMetricsUserAggregate {
 
   private MetricsRegionServerWrapperStub wrapper;
   private MetricsRegionServer rsm;
-  private MetricsUserAggregate userAgg;
+  private MetricsUserAggregateImpl userAgg;
   private TableName tableName = TableName.valueOf("testUserAggregateMetrics");
 
   @BeforeClass
@@ -60,8 +60,9 @@ public class TestMetricsUserAggregate {
   @Before
   public void setUp() {
     wrapper = new MetricsRegionServerWrapperStub();
-    rsm = new MetricsRegionServer(wrapper, HBaseConfiguration.create(), null);
-    userAgg = rsm.getMetricsUserAggregate();
+    Configuration conf = HBaseConfiguration.create();
+    rsm = new MetricsRegionServer(wrapper,conf , null);
+    userAgg = (MetricsUserAggregateImpl)rsm.getMetricsUserAggregate();
   }
 
   private void doOperations() {

@@ -61,7 +61,7 @@ public class MetricsRegionServer {
     this(regionServerWrapper,
         CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
             .createServer(regionServerWrapper), createTableMetrics(conf), metricsTable,
-        new MetricsUserAggregate(conf));
+        MetricsUserAggregateFactory.getMetricsUserAggregate(conf));
 
     // Create hbase-metrics module based metrics. The registry should already be registered by the
     // MetricsRegionServerSource
