@@ -21,6 +21,11 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
@@ -43,6 +48,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.cleaner.DirScanPool;
@@ -50,9 +56,11 @@ import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveTestingUtil;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
@@ -67,6 +75,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.mockito.ArgumentCaptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -126,6 +135,34 @@ public class TestHFileArchiving {
   public static void cleanupTest() throws Exception {
     UTIL.shutdownMiniCluster();
     POOL.shutdownNow();
+  }
+
+  @Test
+  public void testArchiveStoreFilesDifferentFileSystems() throws IOException {
+    FileSystem mockedFileSystem = mock(FileSystem.class);
+    UTIL.getConfiguration().set(CommonFSUtils.HBASE_WAL_DIR, "mockFS://mockDir");
+    Path filePath = new Path("/mockFile");
+    when(mockedFileSystem.getScheme()).thenReturn("mockFS");
+    when(mockedFileSystem.mkdirs(any())).thenReturn(true);
+    when(mockedFileSystem.exists(any())).thenReturn(true);
+    RegionInfo mockedRegion = mock(RegionInfo.class);
+    TableName tableName = TableName.valueOf("mockTable");
+    when(mockedRegion.getTable()).thenReturn(tableName);
+    when(mockedRegion.getEncodedName()).thenReturn("mocked-region-encoded-name");
+    Path tableDir = new Path("mockFS://mockDir/tabledir");
+    byte[] family = Bytes.toBytes("testfamily");
+    HStoreFile mockedFile = mock(HStoreFile.class);
+    List<HStoreFile> list = new ArrayList<>();
+    list.add(mockedFile);
+    when(mockedFile.getPath()).thenReturn(filePath);
+    when(mockedFileSystem.rename(any(),any())).thenReturn(true);
+    HFileArchiver.archiveStoreFiles(UTIL.getConfiguration(), mockedFileSystem, mockedRegion,
+      tableDir, family, list);
+    ArgumentCaptor<Path> pathCaptor = ArgumentCaptor.forClass(Path.class);
+    verify(mockedFileSystem, times(2)).rename(pathCaptor.capture(), any());
+    assertTrue(pathCaptor.getAllValues().get(0).toString().
+      equals("/mockDir/archive/data/default/mockTable/"
+        + "mocked-region-encoded-name/testfamily/mockFile"));
   }
 
   @Test

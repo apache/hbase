@@ -38,9 +38,11 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
@@ -314,9 +316,15 @@ public class HFileArchiver {
     // build the archive path
     if (regionInfo == null || family == null) throw new IOException(
         "Need to have a region and a family to archive from.");
-
-    Path storeArchiveDir = HFileArchiveUtil.getStoreArchivePath(conf, regionInfo, tableDir, family);
-
+    String workingDir = conf.get(CommonFSUtils.HBASE_WAL_DIR);
+    Path rootDir = null;
+    if(workingDir == null || !workingDir.startsWith(fs.getScheme())){
+      workingDir = conf.get(HConstants.HBASE_DIR);
+    }
+    workingDir = workingDir.substring(workingDir.lastIndexOf("/"));
+    rootDir = new Path(workingDir);
+    Path storeArchiveDir = HFileArchiveUtil.
+      getStoreArchivePathForRootDir(rootDir, regionInfo, family);
     // make sure we don't archive if we can't and that the archive dir exists
     if (!fs.mkdirs(storeArchiveDir)) {
       throw new IOException("Could not make archive directory (" + storeArchiveDir + ") for store:"
