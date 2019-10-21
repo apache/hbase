@@ -426,7 +426,7 @@ public final class CellUtil {
   }
 
   public static boolean matchingRow(final Cell left, final byte[] buf, final int offset,
-    final int length) {
+      final int length) {
     return PrivateCellUtil.matchingRows(left, buf, offset, length);
   }
 
