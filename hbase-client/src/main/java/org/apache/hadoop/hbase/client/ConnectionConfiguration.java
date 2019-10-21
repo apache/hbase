@@ -42,6 +42,8 @@ public class ConnectionConfiguration {
   private final int replicaCallTimeoutMicroSecondScan;
   private final int retries;
   private final int maxKeyValueSize;
+  private final int rpcTimeout;
+  private final long pause;
 
   /**
    * Constructor
@@ -71,9 +73,14 @@ public class ConnectionConfiguration {
         conf.getInt("hbase.client.replicaCallTimeout.scan", 1000000); // 1000 ms
 
     this.retries = conf.getInt(
-       HConstants.HBASE_CLIENT_RETRIES_NUMBER, HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
+        HConstants.HBASE_CLIENT_RETRIES_NUMBER, HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
 
     this.maxKeyValueSize = conf.getInt(MAX_KEYVALUE_SIZE_KEY, MAX_KEYVALUE_SIZE_DEFAULT);
+
+    this.rpcTimeout = conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
+        HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
+
+    this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE, HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
   }
 
   /**
@@ -92,6 +99,8 @@ public class ConnectionConfiguration {
     this.replicaCallTimeoutMicroSecondScan = 1000000;
     this.retries = HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER;
     this.maxKeyValueSize = MAX_KEYVALUE_SIZE_DEFAULT;
+    this.rpcTimeout = HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
+    this.pause = HConstants.DEFAULT_HBASE_CLIENT_PAUSE;
   }
 
   public long getWriteBufferSize() {
@@ -128,5 +137,13 @@ public class ConnectionConfiguration {
 
   public long getScannerMaxResultSize() {
     return scannerMaxResultSize;
+  }
+
+  public int getRpcTimeout() {
+    return rpcTimeout;
+  }
+
+  public long getPause() {
+    return pause;
   }
 }

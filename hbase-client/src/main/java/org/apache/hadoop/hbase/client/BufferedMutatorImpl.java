@@ -19,7 +19,6 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
@@ -90,16 +89,17 @@ public class BufferedMutatorImpl implements BufferedMutator {
     this.pool = params.getPool();
     this.listener = params.getListener();
 
-    ConnectionConfiguration tableConf = new ConnectionConfiguration(conf);
+    ConnectionConfiguration connConf = conn.getConnectionConfiguration();
+    if (connConf == null) {
+      // Slow: parse conf in ConnectionConfiguration constructor
+      connConf = new ConnectionConfiguration(conf);
+    }
     this.writeBufferSize = params.getWriteBufferSize() != BufferedMutatorParams.UNSET ?
-        params.getWriteBufferSize() : tableConf.getWriteBufferSize();
+        params.getWriteBufferSize() : connConf.getWriteBufferSize();
     this.maxKeyValueSize = params.getMaxKeyValueSize() != BufferedMutatorParams.UNSET ?
-        params.getMaxKeyValueSize() : tableConf.getMaxKeyValueSize();
-    this.rpcTimeout = conn.getConfiguration().getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
-            HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
-    this.operationTimeout = conn.getConfiguration().getInt(
-        HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
-                 HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
+        params.getMaxKeyValueSize() : connConf.getMaxKeyValueSize();
+    this.rpcTimeout = connConf.getRpcTimeout();
+    this.operationTimeout = connConf.getOperationTimeout();
     // puts need to track errors globally due to how the APIs currently work.
     ap = new AsyncProcess(connection, conf, pool, rpcCallerFactory, true, rpcFactory, rpcTimeout);
   }

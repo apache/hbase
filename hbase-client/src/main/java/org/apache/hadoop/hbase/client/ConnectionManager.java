@@ -657,14 +657,11 @@ class ConnectionManager {
       this.managed = managed;
       this.connectionConfig = new ConnectionConfiguration(conf);
       this.closed = false;
-      this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
-          HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
+      this.pause = connectionConfig.getPause();
       this.useMetaReplicas = conf.getBoolean(HConstants.USE_META_REPLICAS,
           HConstants.DEFAULT_USE_META_REPLICAS);
       this.numTries = connectionConfig.getRetriesNumber();
-      this.rpcTimeout = conf.getInt(
-          HConstants.HBASE_RPC_TIMEOUT_KEY,
-          HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
+      this.rpcTimeout = connectionConfig.getRpcTimeout();
       if (conf.getBoolean(CLIENT_NONCES_ENABLED_KEY, true)) {
         synchronized (nonceGeneratorCreateLock) {
           if (ConnectionManager.nonceGenerator == null) {
