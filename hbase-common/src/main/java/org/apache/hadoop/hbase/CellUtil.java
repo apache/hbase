@@ -425,6 +425,11 @@ public final class CellUtil {
     return PrivateCellUtil.matchingRows(left, buf, 0, buf.length);
   }
 
+  public static boolean matchingRow(final Cell left, final byte[] buf, final int offset,
+    final int length) {
+    return PrivateCellUtil.matchingRows(left, buf, offset, length);
+  }
+
   public static boolean matchingFamily(final Cell left, final Cell right) {
     byte lfamlength = left.getFamilyLength();
     byte rfamlength = right.getFamilyLength();
