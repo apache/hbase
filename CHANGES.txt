@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release Notes - HBase - Version 1.3.6
+Release Notes - HBase - Version 1.3.6 10/19/2019
 
 ** Sub-task
     * [HBASE-22132] - Backport HBASE-22115 "HBase RPC aspires to grow an infinite tree of trace scopes; some other places are also unsafe" intent to branch-1
