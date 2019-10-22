@@ -89,7 +89,8 @@ public class FSDataInputStreamWrapper implements Closeable {
   // reads without hbase checksum verification.
   private AtomicInteger hbaseChecksumOffCount = new AtomicInteger(-1);
 
-  private Boolean instanceOfCanUnbuffer = null;
+  @VisibleForTesting
+  protected Boolean instanceOfCanUnbuffer = null;
   // Using reflection to get org.apache.hadoop.fs.CanUnbuffer#unbuffer method to avoid compilation
   // errors against Hadoop pre 2.6.4 and 2.7.1 versions.
   private Method unbuffer = null;
@@ -248,6 +249,30 @@ public class FSDataInputStreamWrapper implements Closeable {
   }
 
   /**
+   *
+   * @param clazz the class which need to check whether implements
+   *  org.apache.hadoop.fs.CanUnbuffer
+   * @return is implements CanUnbuffer true: Yes, false: No
+   */
+  @VisibleForTesting
+  public boolean isImplementsCanUnbuffer(Class<?> clazz){
+    Class<?>[] interfaces = clazz.getInterfaces();
+    if (interfaces.length != 0) {
+      for (Class<?> clz : interfaces) {
+        if (clz.getCanonicalName().toString().equals("org.apache.hadoop.fs.CanUnbuffer")) {
+          return true;
+        }
+      }
+    }
+    Class<?> superClz = clazz.getSuperclass();
+    if (superClz.getCanonicalName().equals(Object.class.getCanonicalName())){
+      return false;
+    } else {
+      return isImplementsCanUnbuffer(superClz);
+    }
+  }
+
+  /**
    * This will free sockets and file descriptors held by the stream only when the stream implements
    * org.apache.hadoop.fs.CanUnbuffer. NOT THREAD SAFE. Must be called only when all the clients
    * using this stream to read the blocks have finished reading. If by chance the stream is
@@ -270,22 +295,18 @@ public class FSDataInputStreamWrapper implements Closeable {
       if (this.instanceOfCanUnbuffer == null) {
         // To ensure we compute whether the stream is instance of CanUnbuffer only once.
         this.instanceOfCanUnbuffer = false;
-        Class<?>[] streamInterfaces = streamClass.getInterfaces();
-        for (Class c : streamInterfaces) {
-          if (c.getCanonicalName().toString().equals("org.apache.hadoop.fs.CanUnbuffer")) {
-            try {
-              this.unbuffer = streamClass.getDeclaredMethod("unbuffer");
-            } catch (NoSuchMethodException | SecurityException e) {
-              if (isLogTraceEnabled) {
-                LOG.trace("Failed to find 'unbuffer' method in class " + streamClass
-                    + " . So there may be a TCP socket connection "
-                    + "left open in CLOSE_WAIT state.", e);
-              }
-              return;
+        if (isImplementsCanUnbuffer(streamClass)) {
+          try {
+            this.unbuffer = streamClass.getDeclaredMethod("unbuffer");
+          } catch (NoSuchMethodException | SecurityException e) {
+            if (isLogTraceEnabled) {
+              LOG.trace("Failed to find 'unbuffer' method in class " + streamClass
+                  + " . So there may be a TCP socket connection "
+                  + "left open in CLOSE_WAIT state.", e);
             }
-            this.instanceOfCanUnbuffer = true;
-            break;
+            return;
           }
+          this.instanceOfCanUnbuffer = true;
         }
       }
       if (this.instanceOfCanUnbuffer) {
