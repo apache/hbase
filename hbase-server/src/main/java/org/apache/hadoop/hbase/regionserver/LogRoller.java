@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -27,8 +27,8 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
@@ -56,7 +56,6 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 public class LogRoller extends HasThread implements Closeable {
   private static final Logger LOG = LoggerFactory.getLogger(LogRoller.class);
   private final ConcurrentMap<WAL, Boolean> walNeedsRoll = new ConcurrentHashMap<>();
-  private final Server server;
   protected final RegionServerServices services;
   private volatile long lastRollTime = System.currentTimeMillis();
   // Period to roll log.
@@ -99,16 +98,14 @@ public class LogRoller extends HasThread implements Closeable {
     }
   }
 
-  /** @param server */
-  public LogRoller(final Server server, final RegionServerServices services) {
+  public LogRoller(RegionServerServices services) {
     super("LogRoller");
-    this.server = server;
     this.services = services;
-    this.rollPeriod = this.server.getConfiguration().
+    this.rollPeriod = this.services.getConfiguration().
       getLong("hbase.regionserver.logroll.period", 3600000);
-    this.threadWakeFrequency = this.server.getConfiguration().
+    this.threadWakeFrequency = this.services.getConfiguration().
       getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
-    this.checkLowReplicationInterval = this.server.getConfiguration().getLong(
+    this.checkLowReplicationInterval = this.services.getConfiguration().getLong(
         "hbase.regionserver.hlog.check.lowreplication.interval", 30 * 1000);
   }
 
@@ -144,7 +141,7 @@ public class LogRoller extends HasThread implements Closeable {
         LOG.warn("Failed to shutdown wal", e);
       }
     }
-    server.abort(reason, cause);
+    this.services.abort(reason, cause);
   }
 
   @Override
@@ -183,12 +180,22 @@ public class LogRoller extends HasThread implements Closeable {
           WAL wal = entry.getKey();
           // reset the flag in front to avoid missing roll request before we return from rollWriter.
           walNeedsRoll.put(wal, Boolean.FALSE);
-            // Force the roll if the logroll.period is elapsed or if a roll was requested.
-            // The returned value is an array of actual region names.
-            byte[][]   regionsToFlush = wal.rollWriter(periodic || entry.getValue().booleanValue());
+          // Force the roll if the logroll.period is elapsed or if a roll was requested.
+          // The returned value is an array of actual region names.
+          byte[][] regionsToFlush = wal.rollWriter(periodic || entry.getValue().booleanValue());
           if (regionsToFlush != null) {
             for (byte[] r : regionsToFlush) {
-              scheduleFlush(Bytes.toString(r));
+              try {
+                scheduleFlush(Bytes.toString(r));
+              } catch (NotOnlineException e) {
+                if (wal instanceof AbstractFSWAL) {
+                  LOG.warn(e.toString() + " ... running a purge of sequenceidaccounting");
+                  AbstractFSWAL awal = (AbstractFSWAL)wal;
+                  awal.purge(r);
+                } else {
+                  LOG.warn(e.toString());
+                }
+              }
             }
           }
         }
@@ -207,18 +214,26 @@ public class LogRoller extends HasThread implements Closeable {
   }
 
   /**
+   * Used internally. Thrown if we failed to schedule a flush because Region was
+   * not online.
+   */
+  private class NotOnlineException extends HBaseIOException {
+    NotOnlineException(String message) {
+      super(message);
+    }
+  }
+
+  /**
    * @param encodedRegionName Encoded name of region to flush.
    */
-  private void scheduleFlush(String encodedRegionName) {
-    HRegion r = (HRegion) this.services.getRegion(encodedRegionName);
+  private void scheduleFlush(String encodedRegionName) throws NotOnlineException {
+    HRegion r = (HRegion)this.services.getRegion(encodedRegionName);
     if (r == null) {
-      LOG.warn("Failed to schedule flush of {}, because it is not online on us", encodedRegionName);
-      return;
+      throw new NotOnlineException(encodedRegionName);
     }
     FlushRequester requester = this.services.getFlushRequester();
     if (requester == null) {
-      LOG.warn("Failed to schedule flush of {}, region={}, because FlushRequester is null",
-        encodedRegionName, r);
+      LOG.warn("Failed to schedule flush of {} because FlushRequester is null", encodedRegionName);
       return;
     }
     // force flushing all stores to clean old logs

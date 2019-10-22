@@ -2606,6 +2606,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     byte[] encodedRegionName = getRegionInfo().getEncodedNameAsBytes();
     try {
       if (wal != null) {
+        // Get the next sequenceid. The method will not return until mvcc has caught up to the
+        // returned flushOpSeqId. This means all edits have been committed up to this point.
+        // This must be done before we call wal#startCacheFlush else edits may complete AFTER
+        // the call to startCacheFlush.
+        flushOpSeqId = getNextSequenceId(wal);
         Long earliestUnflushedSequenceIdForTheRegion =
             wal.startCacheFlush(encodedRegionName, flushedFamilyNamesToSeq);
         if (earliestUnflushedSequenceIdForTheRegion == null) {
@@ -2616,7 +2621,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               new FlushResultImpl(FlushResult.Result.CANNOT_FLUSH, msg, false),
               myseqid);
         }
-        flushOpSeqId = getNextSequenceId(wal);
         // Back up 1, minus 1 from oldest sequence id in memstore to get last 'flushed' edit
         flushedSeqId =
             earliestUnflushedSequenceIdForTheRegion.longValue() == HConstants.NO_SEQNUM?
@@ -2686,7 +2690,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
     }
     MemStoreSize mss = this.memStoreSizing.getMemStoreSize();
-    LOG.info("Flushing " + storesToFlush.size() + "/" + stores.size() + " column families," +
+    LOG.info("Flushing " + this.getRegionInfo().getEncodedName() + " " +
+        storesToFlush.size() + "/" + stores.size() + " column families," +
         " dataSize=" + StringUtils.byteDesc(mss.getDataSize()) +
         " heapSize=" + StringUtils.byteDesc(mss.getHeapSize()) +
         ((perCfExtras != null && perCfExtras.length() > 0)? perCfExtras.toString(): "") +

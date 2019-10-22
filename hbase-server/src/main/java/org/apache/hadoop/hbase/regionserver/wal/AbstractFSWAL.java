@@ -261,8 +261,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   private static final class WalProps {
 
     /**
-     * Map the encoded region name to the highest sequence id. Contain all the regions it has
-     * entries of
+     * Map the encoded region name to the highest sequence id.
+     * Contains all the regions it has an entry for.
      */
     public final Map<byte[], Long> encodedName2HighestSequenceId;
 
@@ -498,6 +498,15 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     this.sequenceIdAccounting.abortCacheFlush(encodedRegionName);
   }
 
+  /**
+   * Temporary. To be removed. Used debugging an accounting problem in
+   * this.sequenceIdAccounting. Called when we are asked to force flush
+   * a region already closed.
+   */
+  public void purge(byte [] encodedRegionName) {
+    this.sequenceIdAccounting.purge(encodedRegionName);
+  }
+
   @Override
   public long getEarliestMemStoreSeqNum(byte[] encodedRegionName) {
     // Used by tests. Deprecated as too subtle for general usage.
@@ -610,9 +619,9 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   }
 
   /**
-   * If the number of un-archived WAL files is greater than maximum allowed, check the first
-   * (oldest) WAL file, and returns those regions which should be flushed so that it can be
-   * archived.
+   * If the number of un-archived WAL files ('live' WALs) is greater than maximum allowed,
+   * check the first (oldest) WAL, and return those regions which should be flushed so that
+   * it can be let-go/'archived'.
    * @return regions (encodedRegionNames) to flush in order to archive oldest WAL file.
    */
   byte[][] findRegionsToForceFlush() throws IOException {
@@ -888,10 +897,6 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   /**
    * updates the sequence number of a specific store. depending on the flag: replaces current seq
    * number if the given seq id is bigger, or even if it is lower than existing one
-   * @param encodedRegionName
-   * @param familyName
-   * @param sequenceid
-   * @param onlyIfGreater
    */
   @Override
   public void updateStore(byte[] encodedRegionName, byte[] familyName, Long sequenceid,

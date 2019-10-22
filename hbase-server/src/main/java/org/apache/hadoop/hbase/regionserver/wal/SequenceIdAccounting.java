@@ -37,13 +37,11 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
- * <p>
- * Accounting of sequence ids per region and then by column family. So we can our accounting
+ * Accounting of sequence ids per region and then by column family. So we can keep our accounting
  * current, call startCacheFlush and then finishedCacheFlush or abortCacheFlush so this instance can
  * keep abreast of the state of sequence id persistence. Also call update per append.
- * </p>
  * <p>
- * For the implementation, we assume that all the {@code encodedRegionName} passed in is gotten by
+ * For the implementation, we assume that all the {@code encodedRegionName} passed in are gotten by
  * {@link org.apache.hadoop.hbase.client.RegionInfo#getEncodedNameAsBytes()}. So it is safe to use
  * it as a hash key. And for family name, we use {@link ImmutableByteArray} as key. This is because
  * hash based map is much faster than RBTree or CSLM and here we are on the critical write path. See
@@ -52,8 +50,8 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
  */
 @InterfaceAudience.Private
 class SequenceIdAccounting {
-
   private static final Logger LOG = LoggerFactory.getLogger(SequenceIdAccounting.class);
+
   /**
    * This lock ties all operations on {@link SequenceIdAccounting#flushingSequenceIds} and
    * {@link #lowestUnflushedSequenceIds} Maps. {@link #lowestUnflushedSequenceIds} has the
@@ -109,7 +107,6 @@ class SequenceIdAccounting {
 
   /**
    * Returns the lowest unflushed sequence id for the region.
-   * @param encodedRegionName
    * @return Lowest outstanding unflushed sequenceid for <code>encodedRegionName</code>. Will
    * return {@link HConstants#NO_SEQNUM} when none.
    */
@@ -124,8 +121,6 @@ class SequenceIdAccounting {
   }
 
   /**
-   * @param encodedRegionName
-   * @param familyName
    * @return Lowest outstanding unflushed sequenceid for <code>encodedRegionname</code> and
    *         <code>familyName</code>. Returned sequenceid may be for an edit currently being
    *         flushed.
@@ -333,6 +328,37 @@ class SequenceIdAccounting {
   void completeCacheFlush(final byte[] encodedRegionName) {
     synchronized (tieLock) {
       this.flushingSequenceIds.remove(encodedRegionName);
+    }
+  }
+
+  /**
+   * Workaround while there is a bug in accounting.
+   * TO BE REMOVED. Called when we try to flush a Region that has been closed.
+   */
+  void purge(byte [] encodeRegionName) {
+    Map<ImmutableByteArray, Long> flushingSequenceId = null;
+    Map<ImmutableByteArray, Long> lowestUnflushedSequenceId = null;
+    Long highestSequenceId = null;
+    synchronized (tieLock) {
+      flushingSequenceId = this.flushingSequenceIds.remove(encodeRegionName);
+      lowestUnflushedSequenceId = this.lowestUnflushedSequenceIds.remove(encodeRegionName);
+      highestSequenceId = this.highestSequenceIds.remove(encodeRegionName);
+    }
+    String name = Bytes.toString(encodeRegionName);
+    printByteLongMapWARN(flushingSequenceId, "FlushingSequenceIds", name);
+    printByteLongMapWARN(lowestUnflushedSequenceId, "LowestUnflushedSequenceId", name);
+    if (highestSequenceId != null) {
+      LOG.warn("PURGE {} HighestSequenceId leftover {}", name, highestSequenceId);
+    }
+  }
+
+  private static void printByteLongMapWARN(Map<ImmutableByteArray, Long> m,
+      String label, String encodedRegionNameStr) {
+    if (m != null && !m.isEmpty()) {
+      for (Map.Entry<ImmutableByteArray, Long> e : m.entrySet()) {
+        LOG.warn("PURGE {} {} leftover {} {} {}", encodedRegionNameStr,
+            label, e.getKey().toStringUtf8(), e.getValue());
+      }
     }
   }
 
