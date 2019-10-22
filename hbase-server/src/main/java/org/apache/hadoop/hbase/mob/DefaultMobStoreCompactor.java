@@ -256,7 +256,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     }
 
     boolean discardMobMiss =
-        conf.getBoolean(MobConstants.MOB_DISCARD_MISS_KEY, MobConstants.DEFAULT_MOB_DISCARD_MISS);
+        conf.getBoolean(MobConstants.MOB_UNSAFE_DISCARD_MISS_KEY, MobConstants.DEFAULT_MOB_DISCARD_MISS);
     FileSystem fs = FileSystem.get(conf);
 
     // Since scanner.next() can return 'false' but still be delivering data,
@@ -340,7 +340,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
                   StoreFileWriter stw = mobWriters.getOutputWriterForInputFile(fName);
                   if (stw != null) {
                     stw.append(mobCell);
-                    mobWriters.incrementMobCountForOutputWriter(stw, 1);
+                    mobWriters.incrementMobCountForOutputWriter(stw);
                   } // else leave mob cell in a MOB file which is not in compaction selections
                 } else {
                   mobFileWriter.append(mobCell);
@@ -873,8 +873,8 @@ final class OutputMobWriters {
     return mapMobCounts.get(writer.getPath().getName());
   }
 
-  void incrementMobCountForOutputWriter(StoreFileWriter writer, int val) {
+  void incrementMobCountForOutputWriter(StoreFileWriter writer) {
     String key = writer.getPath().getName();
-    mapMobCounts.compute(key, (k,v) -> v == null? val: v + val);
+    mapMobCounts.compute(key, (k,v) -> v == null? 1: v + 1);
   }
 }

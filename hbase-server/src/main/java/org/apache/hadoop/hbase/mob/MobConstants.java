@@ -64,7 +64,7 @@ public final class MobConstants {
    */
 
   public static final String MOB_MAJOR_COMPACTION_REGION_BATCH_SIZE =
-    "hbase.mob.compaction.batch.size";
+    "hbase.mob.major.compaction.region.batch.size";
 
   /**
    * Default is 0 - means no limit - all regions of a MOB table will be compacted at once
@@ -115,7 +115,10 @@ public final class MobConstants {
   public static final int DEFAULT_MOB_COMPACTION_MIN_FILES = 3;
 
   /**
-   * Maximum number of MOB files (in one selection) eligible for compaction
+   * Maximum number of MOB files (in one compaction selection per region) eligible for compaction.
+   * If the number of a files in compaction selection is very large, it could lead 
+   * to a "too many opened file handlers" error in a file system or can degrade overall I/O
+   * performance.
    */
 
   public static final String MOB_COMPACTION_MAX_FILES_KEY = "hbase.mob.compactions.max.files";
@@ -131,7 +134,11 @@ public final class MobConstants {
 
   public static final int DEFAULT_MOB_COMPACTION_MAX_TOTAL_FILES = 1000;
 
-  public static final String MOB_DISCARD_MISS_KEY = "hbase.mob.discard.miss";
+  /**
+   * Use this configuration option with caution, only during upgrade procedure
+   * to handle missing MOB cells during compaction.
+   */
+  public static final String MOB_UNSAFE_DISCARD_MISS_KEY = "hbase.unsafe.mob.discard.miss";
 
   public static final boolean DEFAULT_MOB_DISCARD_MISS = false;
 
@@ -141,7 +148,7 @@ public final class MobConstants {
   public static final String MOB_MINIMUM_FILE_AGE_TO_ARCHIVE_KEY =
       "mob.minimum.file.age.to.archive";
 
-  public static final long DEFAULT_MOB_MINIMUM_FILE_AGE_TO_ARCHIVE = 3600000; // 1 hour
+  public static final long DEFAULT_MOB_MINIMUM_FILE_AGE_TO_ARCHIVE = 24*3600000; // 1 day
 
   private MobConstants() {
 
