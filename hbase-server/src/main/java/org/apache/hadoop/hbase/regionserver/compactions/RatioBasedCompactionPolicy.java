@@ -105,8 +105,8 @@ public class RatioBasedCompactionPolicy extends SortedCompactionPolicy {
       } else {
         LOG.debug("Major compaction triggered on store " + regionInfo
           + "; time since last major compaction " + (now - lowTimestamp) + "ms");
+          result = true;
       }
-      result = true;
     }
     return result;
   }
