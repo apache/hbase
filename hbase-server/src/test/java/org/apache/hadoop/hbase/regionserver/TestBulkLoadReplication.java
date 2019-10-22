@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -122,8 +123,8 @@ public class TestBulkLoadReplication extends TestReplicationBase {
   private static AtomicInteger BULK_LOADS_COUNT;
   private static CountDownLatch BULK_LOAD_LATCH;
 
-  private static final HBaseTestingUtility UTIL3 = new HBaseTestingUtility();
-  private static final Configuration CONF3 = UTIL3.getConfiguration();
+  protected static final HBaseTestingUtility UTIL3 = new HBaseTestingUtility();
+  protected static final Configuration CONF3 = UTIL3.getConfiguration();
 
   private static final Path BULK_LOAD_BASE_DIR = new Path("/bulk_dir");
 
@@ -220,7 +221,7 @@ public class TestBulkLoadReplication extends TestReplicationBase {
     UTIL3.getAdmin().removeReplicationPeer(PEER_ID2);
   }
 
-  private static void setupBulkLoadConfigsForCluster(Configuration config,
+  protected static void setupBulkLoadConfigsForCluster(Configuration config,
     String clusterReplicationId) throws Exception {
     config.setBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY, true);
     config.set(REPLICATION_CLUSTER_ID, clusterReplicationId);
@@ -238,13 +239,16 @@ public class TestBulkLoadReplication extends TestReplicationBase {
     Table peer3TestTable = UTIL3.getConnection().getTable(TestReplicationBase.tableName);
     byte[] row = Bytes.toBytes("001");
     byte[] value = Bytes.toBytes("v1");
-    assertBulkLoadConditions(row, value, UTIL1, peer1TestTable, peer2TestTable, peer3TestTable);
+    assertBulkLoadConditions(tableName, row, value, UTIL1, peer1TestTable,
+        peer2TestTable, peer3TestTable);
     row = Bytes.toBytes("002");
     value = Bytes.toBytes("v2");
-    assertBulkLoadConditions(row, value, UTIL2, peer1TestTable, peer2TestTable, peer3TestTable);
+    assertBulkLoadConditions(tableName, row, value, UTIL2, peer1TestTable,
+        peer2TestTable, peer3TestTable);
     row = Bytes.toBytes("003");
     value = Bytes.toBytes("v3");
-    assertBulkLoadConditions(row, value, UTIL3, peer1TestTable, peer2TestTable, peer3TestTable);
+    assertBulkLoadConditions(tableName, row, value, UTIL3, peer1TestTable,
+        peer2TestTable, peer3TestTable);
     //Additional wait to make sure no extra bulk load happens
     Thread.sleep(400);
     //We have 3 bulk load events (1 initiated on each cluster).
@@ -278,18 +282,18 @@ public class TestBulkLoadReplication extends TestReplicationBase {
   }
 
 
-  private void assertBulkLoadConditions(byte[] row, byte[] value,
+  protected void assertBulkLoadConditions(TableName tableName, byte[] row, byte[] value,
       HBaseTestingUtility utility, Table...tables) throws Exception {
     BULK_LOAD_LATCH = new CountDownLatch(3);
-    bulkLoadOnCluster(row, value, utility);
+    bulkLoadOnCluster(tableName, row, value, utility);
     assertTrue(BULK_LOAD_LATCH.await(1, TimeUnit.MINUTES));
     assertTableHasValue(tables[0], row, value);
     assertTableHasValue(tables[1], row, value);
     assertTableHasValue(tables[2], row, value);
   }
 
-  private void bulkLoadOnCluster(byte[] row, byte[] value,
-      HBaseTestingUtility cluster) throws Exception {
+  protected void bulkLoadOnCluster(TableName tableName, byte[] row, byte[] value,
+                                 HBaseTestingUtility cluster) throws Exception {
     String bulkLoadFilePath = createHFileForFamilies(row, value, cluster.getConfiguration());
     copyToHdfs(bulkLoadFilePath, cluster.getDFSCluster());
     BulkLoadHFilesTool bulkLoadHFilesTool = new BulkLoadHFilesTool(cluster.getConfiguration());
@@ -302,11 +306,17 @@ public class TestBulkLoadReplication extends TestReplicationBase {
     cluster.getFileSystem().copyFromLocalFile(new Path(bulkLoadFilePath), bulkLoadDir);
   }
 
-  private void assertTableHasValue(Table table, byte[] row, byte[] value) throws Exception {
+  protected void assertTableHasValue(Table table, byte[] row, byte[] value) throws Exception {
     Get get = new Get(row);
     Result result = table.get(get);
     assertTrue(result.advance());
     assertEquals(Bytes.toString(value), Bytes.toString(result.value()));
+  }
+
+  protected void assertTableNoValue(Table table, byte[] row, byte[] value) throws Exception {
+    Get get = new Get(row);
+    Result result = table.get(get);
+    assertTrue(result.isEmpty());
   }
 
   private String createHFileForFamilies(byte[] row, byte[] value,
