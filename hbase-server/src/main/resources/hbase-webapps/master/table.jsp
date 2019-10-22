@@ -368,8 +368,7 @@ if (fqtn != null && master.isInitialized()) {
   </tr>
 <%
     }
- if ( quota != null) {
-  if (quota.hasThrottle()) {
+  if (quota != null && quota.hasThrottle()) {
     List<ThrottleSettings> throttles = QuotaSettingsFactory.fromTableThrottles(table.getName(), quota.getThrottle());
     if (throttles.size() > 0) {
 %>
@@ -402,7 +401,6 @@ if (fqtn != null && master.isInitialized()) {
 <%
     }
    }
-  }
  }
 %>
 </table>
