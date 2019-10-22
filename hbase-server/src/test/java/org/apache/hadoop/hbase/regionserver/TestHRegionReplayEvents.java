@@ -45,7 +45,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -1659,8 +1661,14 @@ public class TestHRegionReplayEvents {
       hFileFactory.withFileContext(new HFileContext());
       HFile.Writer writer = hFileFactory.create();
       try {
-        writer.append(new KeyValue(CellUtil.createCell(valueBytes, family, valueBytes, 0L,
-          KeyValue.Type.Put.getCode(), valueBytes)));
+        writer.append(new KeyValue(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+          .setRow(valueBytes)
+          .setFamily(family)
+          .setQualifier(valueBytes)
+          .setTimestamp(0L)
+          .setType(KeyValue.Type.Put.getCode())
+          .setValue(valueBytes)
+          .build()));
       } finally {
         writer.close();
       }

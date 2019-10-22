@@ -1291,7 +1291,7 @@ public final class ThriftUtilities {
             .setTimestamp(cell.getTimestamp())
             .setValue(CellUtil.cloneValue(cell));
         if (cell.getTagsLength() != 0) {
-          columnValue.setTags(CellUtil.cloneTags(cell));
+          columnValue.setTags(PrivateCellUtil.cloneTags(cell));
         }
         out.addToColumnValues(columnValue);
       }
@@ -1356,7 +1356,7 @@ public final class ThriftUtilities {
             .setTimestamp(cell.getTimestamp())
             .setValue(CellUtil.cloneValue(cell));
         if (cell.getTagsLength() != 0) {
-          columnValue.setTags(CellUtil.cloneTags(cell));
+          columnValue.setTags(PrivateCellUtil.cloneTags(cell));
         }
         out.addToColumns(columnValue);
       }
