@@ -29,7 +29,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -5630,7 +5629,7 @@ public class TestHRegion {
       TEST_UTIL.getConfiguration(), rss, null);
 
     verify(wal, times(1)).appendMarker(any(RegionInfo.class), any(WALKeyImpl.class),
-      editCaptor.capture(), anyBoolean());
+      editCaptor.capture());
 
     WALEdit edit = editCaptor.getValue();
     assertNotNull(edit);
@@ -5712,16 +5711,16 @@ public class TestHRegion {
           return 1L;
         }
       });
-    when(wal.appendMarker(any(RegionInfo.class), any(WALKeyImpl.class), any(WALEdit.class),
-      anyBoolean())).thenAnswer(new Answer<Long>() {
-        @Override
-        public Long answer(InvocationOnMock invocation) throws Throwable {
-          WALKeyImpl key = invocation.getArgument(1);
-          MultiVersionConcurrencyControl.WriteEntry we = key.getMvcc().begin();
-          key.setWriteEntry(we);
-          return 1L;
-        }
-      });
+    when(wal.appendMarker(any(RegionInfo.class), any(WALKeyImpl.class), any(WALEdit.class))).
+        thenAnswer(new Answer<Long>() {
+          @Override
+          public Long answer(InvocationOnMock invocation) throws Throwable {
+            WALKeyImpl key = invocation.getArgument(1);
+            MultiVersionConcurrencyControl.WriteEntry we = key.getMvcc().begin();
+            key.setWriteEntry(we);
+            return 1L;
+          }
+        });
     return wal;
   }
 
@@ -5754,8 +5753,8 @@ public class TestHRegion {
     region.close(false);
 
     // 2 times, one for region open, the other close region
-    verify(wal, times(2)).appendMarker(any(RegionInfo.class), (WALKeyImpl) any(WALKeyImpl.class),
-      editCaptor.capture(), anyBoolean());
+    verify(wal, times(2)).appendMarker(any(RegionInfo.class),
+        (WALKeyImpl) any(WALKeyImpl.class), editCaptor.capture());
 
     WALEdit edit = editCaptor.getAllValues().get(1);
     assertNotNull(edit);
