@@ -22,9 +22,13 @@ package org.apache.hadoop.hbase.regionserver;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 
-@InterfaceAudience.Private public class MetricsUserAggregateFactory {
-  public static String METRIC_USER_ENABLED_CONF = "hbase.regionserver.user.metrics.enabled";
-  public static boolean DEFAULT_METRIC_USER_ENABLED_CONF = true;
+@InterfaceAudience.Private
+public class MetricsUserAggregateFactory {
+  private MetricsUserAggregateFactory() {
+
+  }
+  public static final String METRIC_USER_ENABLED_CONF = "hbase.regionserver.user.metrics.enabled";
+  public static final boolean DEFAULT_METRIC_USER_ENABLED_CONF = true;
 
   public static MetricsUserAggregate getMetricsUserAggregate(Configuration conf) {
     if (conf.getBoolean(METRIC_USER_ENABLED_CONF, DEFAULT_METRIC_USER_ENABLED_CONF)) {

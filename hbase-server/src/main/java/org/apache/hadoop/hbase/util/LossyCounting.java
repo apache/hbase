@@ -110,7 +110,6 @@ public class LossyCounting<T> {
 
   /**
    * sweep low frequency data
-   * @return Names of elements got swept
    */
   @VisibleForTesting
   public void sweep() {
