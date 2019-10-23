@@ -493,7 +493,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   public CompletableFuture<List<TableDescriptor>> listTableDescriptors(Pattern pattern,
       boolean includeSysTables) {
     Preconditions.checkNotNull(pattern,
-      "pattern is null. If you don't specify a pattern, use listTables(boolean) instead");
+      "pattern is null. If you don't specify a pattern, "
+          + "use listTableDescriptors(boolean) instead");
     return getTableDescriptors(RequestConverter.buildGetTableDescriptorsRequest(pattern,
       includeSysTables));
   }
@@ -501,7 +502,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<List<TableDescriptor>> listTableDescriptors(List<TableName> tableNames) {
     Preconditions.checkNotNull(tableNames,
-      "tableNames is null. If you don't specify tableNames, " + "use listTables(boolean) instead");
+      "tableNames is null. If you don't specify tableNames, "
+          + "use listTableDescriptors(boolean) instead");
     if (tableNames.isEmpty()) {
       return CompletableFuture.completedFuture(Collections.emptyList());
     }

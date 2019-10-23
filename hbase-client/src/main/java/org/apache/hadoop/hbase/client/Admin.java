@@ -125,6 +125,14 @@ public interface Admin extends Abortable, Closeable {
   List<TableDescriptor> listTableDescriptors() throws IOException;
 
   /**
+   * List all tables including system tables.
+   *
+   * @return a list of TableDescriptors
+   * @throws IOException if a remote or network exception occurs
+   */
+  List<TableDescriptor> listTableDescriptors(boolean includeSysTables) throws IOException;
+
+  /**
    * List all the userspace tables that match the given pattern.
    *
    * @param pattern The compiled regular expression to match against
