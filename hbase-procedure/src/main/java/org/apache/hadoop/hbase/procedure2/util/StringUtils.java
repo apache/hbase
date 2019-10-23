@@ -27,7 +27,7 @@ public final class StringUtils {
 
   public static String humanTimeDiff(long timeDiff) {
     if (timeDiff < 1000) {
-      return String.format("%dmsec", timeDiff);
+      return String.format("%d msec", timeDiff);
     }
 
     StringBuilder buf = new StringBuilder();
@@ -39,36 +39,36 @@ public final class StringUtils {
 
     if (hours != 0){
       buf.append(hours);
-      buf.append("hrs, ");
+      buf.append(" hrs, ");
     }
     if (minutes != 0){
       buf.append(minutes);
-      buf.append("mins, ");
+      buf.append(" mins, ");
     }
     if (hours > 0 || minutes > 0) {
       buf.append(seconds);
-      buf.append("sec");
+      buf.append(" sec");
     } else {
-      buf.append(String.format("%.4fsec", seconds));
+      buf.append(String.format("%.4f sec", seconds));
     }
     return buf.toString();
   }
 
   public static String humanSize(double size) {
     if (size >= (1L << 40)) {
-      return String.format("%.1fT", size / (1L << 40));
+      return String.format("%.1f T", size / (1L << 40));
     }
 
     if (size >= (1L << 30)) {
-      return String.format("%.1fG", size / (1L << 30));
+      return String.format("%.1f G", size / (1L << 30));
     }
 
     if (size >= (1L << 20)) {
-      return String.format("%.1fM", size / (1L << 20));
+      return String.format("%.1f M", size / (1L << 20));
     }
 
     if (size >= (1L << 10)) {
-      return String.format("%.1fK", size / (1L << 10));
+      return String.format("%.1f K", size / (1L << 10));
     }
 
     return String.format("%.0f", size);
