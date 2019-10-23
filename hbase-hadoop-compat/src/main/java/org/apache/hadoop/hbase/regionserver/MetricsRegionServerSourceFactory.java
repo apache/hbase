@@ -45,6 +45,18 @@ public interface MetricsRegionServerSourceFactory {
   MetricsRegionSource createRegion(MetricsRegionWrapper wrapper);
 
   /**
+   * Create a MetricsUserSource from a user
+   * @return A metrics user source
+   */
+  MetricsUserSource createUser(String shortUserName);
+
+  /**
+   * Return the singleton instance for MetricsUserAggregateSource
+   * @return A metrics user aggregate source
+   */
+  MetricsUserAggregateSource getUserAggregate();
+
+  /**
    * Create a MetricsTableSource from a MetricsTableWrapper.
    *
    * @param table The table name
