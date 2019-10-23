@@ -49,6 +49,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   private Runnable runnable;
   private long numStoreFiles;
   private long storeRefCount;
+  private long maxStoreFileRefCount;
   private long memstoreSize;
   private long storeFileSize;
   private long maxStoreFileAge;
@@ -123,6 +124,11 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   @Override
   public long getStoreRefCount() {
     return storeRefCount;
+  }
+
+  @Override
+  public long getMaxStoreFileRefCount() {
+    return maxStoreFileRefCount;
   }
 
   @Override
@@ -228,6 +234,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
     public void run() {
       long tempNumStoreFiles = 0;
       int tempStoreRefCount = 0;
+      int tempMaxStoreFileRefCount = 0;
       long tempMemstoreSize = 0;
       long tempStoreFileSize = 0;
       long tempMaxStoreFileAge = 0;
@@ -235,13 +242,16 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
       long tempNumReferenceFiles = 0;
       long tempMaxCompactionQueueSize = 0;
       long tempMaxFlushQueueSize = 0;
-
       long avgAgeNumerator = 0;
       long numHFiles = 0;
       if (region.stores != null) {
         for (HStore store : region.stores.values()) {
           tempNumStoreFiles += store.getStorefilesCount();
-          tempStoreRefCount += store.getStoreRefCount();
+          int currentStoreRefCount = store.getStoreRefCount();
+          tempStoreRefCount += currentStoreRefCount;
+          int currentMaxStoreFileRefCount = store.getMaxStoreFileRefCount();
+          tempMaxStoreFileRefCount = Math.max(tempMaxStoreFileRefCount,
+            currentMaxStoreFileRefCount);
           tempMemstoreSize += store.getMemStoreSize().getDataSize();
           tempStoreFileSize += store.getStorefilesSize();
           OptionalLong storeMaxStoreFileAge = store.getMaxStoreFileAge();
@@ -269,6 +279,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
 
       numStoreFiles = tempNumStoreFiles;
       storeRefCount = tempStoreRefCount;
+      maxStoreFileRefCount = tempMaxStoreFileRefCount;
       memstoreSize = tempMemstoreSize;
       storeFileSize = tempStoreFileSize;
       maxStoreFileAge = tempMaxStoreFileAge;

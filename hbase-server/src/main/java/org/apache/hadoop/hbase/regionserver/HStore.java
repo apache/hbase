@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.OptionalDouble;
+import java.util.OptionalInt;
 import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -2672,4 +2673,20 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
       .filter(sf -> sf.getReader() != null).filter(HStoreFile::isHFile)
       .mapToInt(HStoreFile::getRefCount).sum();
   }
+
+  /**
+   * @return get maximum ref count of storeFile among all HStore Files
+   *   for the HStore
+   */
+  public int getMaxStoreFileRefCount() {
+    OptionalInt maxStoreFileRefCount = this.storeEngine.getStoreFileManager()
+      .getStorefiles()
+      .stream()
+      .filter(sf -> sf.getReader() != null)
+      .filter(HStoreFile::isHFile)
+      .mapToInt(HStoreFile::getRefCount)
+      .max();
+    return maxStoreFileRefCount.isPresent() ? maxStoreFileRefCount.getAsInt() : 0;
+  }
+
 }

@@ -145,6 +145,12 @@ message RegionLoad {
 
   /** the number of references active on the store */
   optional int32 store_ref_count = 21 [default = 0];
+
+  /**
+   *  The max number of references active on single store file among all store files
+   *  that belong to given region
+   */
+  optional int32 max_store_file_ref_count = 22 [default = 0];
 }
 
 /* Server-level protobufs */
