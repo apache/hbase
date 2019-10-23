@@ -141,7 +141,7 @@ public class ThriftAdmin implements Admin {
 
   @Override
   public List<TableDescriptor> listTableDescriptors(boolean includeSysTables) throws IOException {
-    return listTableDescriptors(includeSysTables);
+    return listTableDescriptors(null, includeSysTables);
   }
 
   @Override
