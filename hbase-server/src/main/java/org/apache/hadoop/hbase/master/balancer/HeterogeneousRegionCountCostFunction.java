@@ -50,6 +50,8 @@ import org.slf4j.LoggerFactory;
  * <li>hbase.master.balancer.stochastic.heterogeneousRegionCountRulesFile</li>
  * <li>hbase.master.balancer.stochastic.heterogeneousRegionCountDefault</li>
  * </ul>
+ *
+ * The rule file can be located on local FS or hdfs, depending on the prefix (file//: or hdfs://).
  */
 @InterfaceAudience.Private
 public class HeterogeneousRegionCountCostFunction extends StochasticLoadBalancer.CostFunction {
@@ -71,7 +73,7 @@ public class HeterogeneousRegionCountCostFunction extends StochasticLoadBalancer
    */
   private static final String REGION_COUNT_SKEW_COST_KEY =
       "hbase.master.balancer.stochastic.heterogeneousRegionCountCost";
-  private static final float DEFAULT_REGION_COUNT_SKEW_COST = 5000;
+  private static final float DEFAULT_REGION_COUNT_SKEW_COST = 500;
   private final String rulesPath;
 
   /**
