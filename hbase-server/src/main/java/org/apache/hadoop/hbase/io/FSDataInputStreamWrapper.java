@@ -25,6 +25,7 @@ import java.lang.reflect.Method;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.fs.CanUnbuffer;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -249,30 +250,6 @@ public class FSDataInputStreamWrapper implements Closeable {
   }
 
   /**
-   *
-   * @param clazz the class which need to check whether implements
-   *  org.apache.hadoop.fs.CanUnbuffer
-   * @return is implements CanUnbuffer true: Yes, false: No
-   */
-  @VisibleForTesting
-  public boolean isImplementsCanUnbuffer(Class<?> clazz){
-    Class<?>[] interfaces = clazz.getInterfaces();
-    if (interfaces.length != 0) {
-      for (Class<?> clz : interfaces) {
-        if (clz.getCanonicalName().toString().equals("org.apache.hadoop.fs.CanUnbuffer")) {
-          return true;
-        }
-      }
-    }
-    Class<?> superClz = clazz.getSuperclass();
-    if (superClz.getCanonicalName().equals(Object.class.getCanonicalName())){
-      return false;
-    } else {
-      return isImplementsCanUnbuffer(superClz);
-    }
-  }
-
-  /**
    * This will free sockets and file descriptors held by the stream only when the stream implements
    * org.apache.hadoop.fs.CanUnbuffer. NOT THREAD SAFE. Must be called only when all the clients
    * using this stream to read the blocks have finished reading. If by chance the stream is
@@ -295,7 +272,7 @@ public class FSDataInputStreamWrapper implements Closeable {
       if (this.instanceOfCanUnbuffer == null) {
         // To ensure we compute whether the stream is instance of CanUnbuffer only once.
         this.instanceOfCanUnbuffer = false;
-        if (isImplementsCanUnbuffer(streamClass)) {
+        if (CanUnbuffer.class.isAssignableFrom(streamClass)) {
           try {
             this.unbuffer = streamClass.getDeclaredMethod("unbuffer");
           } catch (NoSuchMethodException | SecurityException e) {
