@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.io;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -53,7 +53,7 @@ public class TestFSDataInputStreamWrapper {
       new FSDataInputStreamWrapper(new FSDataInputStream(pc));
     fsdisw1.unbuffer();
     // parent class should be true
-    assertEquals(true, fsdisw1.instanceOfCanUnbuffer);
+    assertTrue(((ParentClass)pc).getIsCallUnbuffer());
     fsdisw1.close();
 
     InputStream cc1 = new ChildClass1();
@@ -61,7 +61,7 @@ public class TestFSDataInputStreamWrapper {
       new FSDataInputStreamWrapper(new FSDataInputStream(cc1));
     fsdisw2.unbuffer();
     // child1 class should be true
-    assertEquals(true, fsdisw2.instanceOfCanUnbuffer);
+    assertTrue(((ChildClass1)cc1).getIsCallUnbuffer());
     fsdisw2.close();
   }
 
@@ -69,9 +69,15 @@ public class TestFSDataInputStreamWrapper {
       implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
                  HasEnhancedByteBufferAccess, CanUnbuffer {
 
+    public boolean isCallUnbuffer = false;
+
+    public boolean getIsCallUnbuffer(){
+      return isCallUnbuffer;
+    }
+
     @Override
     public void unbuffer() {
-
+      isCallUnbuffer =  true;
     }
 
     @Override
@@ -127,7 +133,7 @@ public class TestFSDataInputStreamWrapper {
   private class ChildClass1 extends ParentClass{
     @Override
     public void unbuffer() {
-
+      isCallUnbuffer = true;
     }
   }
 }

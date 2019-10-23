@@ -90,8 +90,7 @@ public class FSDataInputStreamWrapper implements Closeable {
   // reads without hbase checksum verification.
   private AtomicInteger hbaseChecksumOffCount = new AtomicInteger(-1);
 
-  @VisibleForTesting
-  protected Boolean instanceOfCanUnbuffer = null;
+  private Boolean instanceOfCanUnbuffer = null;
   // Using reflection to get org.apache.hadoop.fs.CanUnbuffer#unbuffer method to avoid compilation
   // errors against Hadoop pre 2.6.4 and 2.7.1 versions.
   private Method unbuffer = null;
