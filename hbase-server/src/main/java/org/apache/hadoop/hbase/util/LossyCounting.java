@@ -22,6 +22,10 @@ package org.apache.hadoop.hbase.util;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -29,7 +33,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * LossyCounting utility, bounded data structure that maintains approximate high frequency
@@ -43,18 +47,20 @@ import org.slf4j.LoggerFactory;
  */
 
 @InterfaceAudience.Private
-public class LossyCounting {
+public class LossyCounting<T> {
   private static final Logger LOG = LoggerFactory.getLogger(LossyCounting.class);
+  private final ExecutorService executor;
   private long bucketSize;
   private int currentTerm;
   private double errorRate;
-  private Map<String, Integer> data;
+  private Map<T, Integer> data;
   private long totalDataCount;
-  private String name;
+  private final String name;
   private LossyCountingListener listener;
+  private static AtomicReference<Future> fut = new AtomicReference<>(null);
 
-  public interface LossyCountingListener {
-    void sweep(String key);
+  public interface LossyCountingListener<T> {
+    void sweep(T key);
   }
 
   public LossyCounting(double errorRate, String name, LossyCountingListener listener) {
@@ -69,6 +75,7 @@ public class LossyCounting {
     this.data = new ConcurrentHashMap<>();
     this.listener = listener;
     calculateCurrentTerm();
+    executor = Executors.newSingleThreadExecutor();
   }
 
   public LossyCounting(String name, LossyCountingListener listener) {
@@ -76,7 +83,7 @@ public class LossyCounting {
         name, listener);
   }
 
-  private void addByOne(String key) {
+  private void addByOne(T key) {
     //If entry exists, we update the entry by incrementing its frequency by one. Otherwise,
     //we create a new entry starting with currentTerm so that it will not be pruned immediately
     data.put(key, data.getOrDefault(key, currentTerm != 0 ? currentTerm - 1 : 0) + 1);
@@ -86,23 +93,29 @@ public class LossyCounting {
     calculateCurrentTerm();
   }
 
-  public void add(String key) {
+  public void add(T key) {
     addByOne(key);
     if(totalDataCount % bucketSize == 0) {
       //sweep the entries at bucket boundaries
-      sweep();
+      //run Sweep
+      Future future = fut.get();
+      if (future != null && !future.isDone()){
+        return;
+      }
+      future = executor.submit(new SweepRunnable());
+      fut.set(future);
     }
   }
 
 
   /**
    * sweep low frequency data
-   * @return Names of elements got swept
    */
-  private void sweep() {
-    for(Map.Entry<String, Integer> entry : data.entrySet()) {
+  @VisibleForTesting
+  public void sweep() {
+    for(Map.Entry<T, Integer> entry : data.entrySet()) {
       if(entry.getValue() < currentTerm) {
-        String metric = entry.getKey();
+        T metric = entry.getKey();
         data.remove(metric);
         if (listener != null) {
           listener.sweep(metric);
@@ -126,16 +139,33 @@ public class LossyCounting {
     return data.size();
   }
 
-  public boolean contains(String key) {
+  public boolean contains(T key) {
     return data.containsKey(key);
   }
 
-  public Set<String> getElements(){
+  public Set<T> getElements(){
     return data.keySet();
   }
 
   public long getCurrentTerm() {
     return currentTerm;
+  }
+
+  class SweepRunnable implements Runnable {
+    @Override public void run() {
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Starting sweep of lossyCounting-" + name);
+      }
+      try {
+        sweep();
+      } catch (Exception exception) {
+        LOG.debug("Error while sweeping of lossyCounting-{}", name, exception);
+      }
+    }
+  }
+
+  @VisibleForTesting public Future getSweepFuture() {
+    return fut.get();
   }
 }
 
