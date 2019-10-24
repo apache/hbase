@@ -16,17 +16,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.hbase.replication;
 
+import static org.apache.hadoop.hbase.replication.TestReplicationEndpoint.ReplicationEndpointForTest;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.mockito.internal.verification.VerificationModeFactory.times;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.TreeMap;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -63,26 +79,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mockito.Mockito;
 import org.mockito.ArgumentCaptor;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.TreeMap;
-import java.util.UUID;
-
-import static org.apache.hadoop.hbase.replication.TestReplicationEndpoint.ReplicationEndpointForTest;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import static org.mockito.internal.verification.VerificationModeFactory.times;
+import org.mockito.Mockito;
 
 @Category(MediumTests.class)
 public class TestReplicationSource {
@@ -114,8 +112,12 @@ public class TestReplicationSource {
 
   @Before
   public void setup() throws IOException {
-    if (!FS.exists(logDir)) FS.mkdirs(logDir);
-    if (!FS.exists(oldLogDir)) FS.mkdirs(oldLogDir);
+    if (!FS.exists(logDir)) {
+      FS.mkdirs(logDir);
+    }
+    if (!FS.exists(oldLogDir)) {
+      FS.mkdirs(oldLogDir);
+    }
 
     ReplicationEndpointForTest.contructedCount.set(0);
     ReplicationEndpointForTest.startedCount.set(0);
@@ -126,8 +128,12 @@ public class TestReplicationSource {
 
   @After
   public void tearDown() throws IOException {
-    if (FS.exists(oldLogDir)) FS.delete(oldLogDir, true);
-    if (FS.exists(logDir)) FS.delete(logDir, true);
+    if (FS.exists(oldLogDir)) {
+      FS.delete(oldLogDir, true);
+    }
+    if (FS.exists(logDir)) {
+      FS.delete(logDir, true);
+    }
   }
 
   @AfterClass
@@ -224,8 +230,9 @@ public class TestReplicationSource {
 
   }
 
-  private void appendEntries(WALProvider.Writer writer, int numEntries, boolean closeAfterAppends) throws IOException {
-    for(int i = 0; i < numEntries; i++) {
+  private void appendEntries(WALProvider.Writer writer, int numEntries, boolean closeAfterAppends)
+          throws IOException {
+    for (int i = 0; i < numEntries; i++) {
       byte[] b = Bytes.toBytes(Integer.toString(i));
       KeyValue kv = new KeyValue(b,b,b);
       WALEdit edit = new WALEdit();
@@ -255,7 +262,7 @@ public class TestReplicationSource {
     return reader.getPosition();
   }
 
-  private static class Mocks {
+  private static final class Mocks {
     private final ReplicationSourceManager manager = mock(ReplicationSourceManager.class);
     private final ReplicationQueues queues = mock(ReplicationQueues.class);
     private final ReplicationPeers peers = mock(ReplicationPeers.class);
@@ -268,7 +275,8 @@ public class TestReplicationSource {
       when(context.getReplicationPeer()).thenReturn(peer);
     }
 
-    ReplicationSource createReplicationSourceWithMocks(ReplicationEndpoint endpoint) throws IOException {
+    ReplicationSource createReplicationSourceWithMocks(ReplicationEndpoint endpoint)
+            throws IOException {
       final ReplicationSource source = new ReplicationSource();
       endpoint.init(context);
       source.init(conf, FS, manager, queues, peers, mock(Stoppable.class),
@@ -317,7 +325,8 @@ public class TestReplicationSource {
     ArgumentCaptor<Path> pathCaptor = ArgumentCaptor.forClass(Path.class);
     ArgumentCaptor<Long> positionCaptor = ArgumentCaptor.forClass(Long.class);
     verify(mocks.manager, times(1))
-      .logPositionAndCleanOldLogs(pathCaptor.capture(), anyString(), positionCaptor.capture(), anyBoolean(), anyBoolean());
+        .logPositionAndCleanOldLogs(pathCaptor.capture(), anyString(), positionCaptor.capture(),
+              anyBoolean(), anyBoolean());
     assertTrue(endpoint.lastEntries.size() == 5);
     assertThat(pathCaptor.getValue(), is(log2));
     assertThat(positionCaptor.getValue(), is(pos));
@@ -352,7 +361,8 @@ public class TestReplicationSource {
     ArgumentCaptor<Long> positionCaptor = ArgumentCaptor.forClass(Long.class);
 
     verify(mocks.manager, times(1))
-      .logPositionAndCleanOldLogs(pathCaptor.capture(), anyString(), positionCaptor.capture(), anyBoolean(), anyBoolean());
+            .logPositionAndCleanOldLogs(pathCaptor.capture(), anyString(), positionCaptor.capture(),
+                    anyBoolean(), anyBoolean());
     assertThat(pathCaptor.getValue(), is(log2));
     assertThat(positionCaptor.getValue(), is(startPos));
   }
@@ -362,7 +372,8 @@ public class TestReplicationSource {
     Mocks mocks = new Mocks();
     // set table cfs to filter all cells out
     final TableName replicatedTable = TableName.valueOf("replicated_table");
-    final Map<TableName, List<String>> cfs = Collections.singletonMap(replicatedTable, Collections.<String>emptyList());
+    final Map<TableName, List<String>> cfs =
+            Collections.singletonMap(replicatedTable, Collections.<String>emptyList());
     when(mocks.peer.getTableCFs()).thenReturn(cfs);
 
     WALFactory wals = new WALFactory(TEST_UTIL.getConfiguration(), null, "test");
@@ -391,9 +402,10 @@ public class TestReplicationSource {
     ArgumentCaptor<Path> pathCaptor = ArgumentCaptor.forClass(Path.class);
     ArgumentCaptor<Long> positionCaptor = ArgumentCaptor.forClass(Long.class);
 
-    // all old wals should be removed by updating wal position, even if no cfs replicated doesn't exist
+    // all old wals should be removed by updating wal position, even if all cells are filtered out.
     verify(mocks.manager, times(1))
-      .logPositionAndCleanOldLogs(pathCaptor.capture(), anyString(), positionCaptor.capture(), anyBoolean(), anyBoolean());
+        .logPositionAndCleanOldLogs(pathCaptor.capture(), anyString(), positionCaptor.capture(),
+              anyBoolean(), anyBoolean());
     assertThat(pathCaptor.getValue(), is(log2));
     assertThat(positionCaptor.getValue(), is(pos));
   }
@@ -401,7 +413,6 @@ public class TestReplicationSource {
   /**
    * Tests that recovered queues are preserved on a regionserver shutdown.
    * See HBASE-18192
-   * @throws Exception
    */
   @Test
   public void testServerShutdownRecoveredQueue() throws Exception {

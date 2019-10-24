@@ -68,7 +68,6 @@ import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
-import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.mapreduce.Job;
 import org.junit.Before;
 import org.junit.Test;
@@ -832,7 +831,8 @@ public class TestReplicationSmallTests extends TestReplicationBase {
       Path currentWalPath = DefaultWALProvider.getCurrentFileName(wal);
       String walGroupId = DefaultWALProvider.getWALPrefixFromWALName(currentWalPath.getName());
       Path emptyWalPath = new Path(currentWalPath.getParent(), walGroupId + "." + ts);
-      WALFactory.createWALWriter(utility1.getTestFileSystem(), emptyWalPath, utility1.getConfiguration()).close();
+      WALFactory.createWALWriter(utility1.getTestFileSystem(),
+              emptyWalPath, utility1.getConfiguration()).close();
       emptyWalPaths.add(emptyWalPath);
     }
 

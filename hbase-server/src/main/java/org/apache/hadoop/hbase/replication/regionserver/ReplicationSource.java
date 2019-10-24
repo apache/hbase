@@ -607,7 +607,8 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
           shipEdits(entryBatch);
           manager.releaseBufferQuota(entryBatch.getHeapSizeExcludeBulkLoad());
           if (!entryBatch.hasMoreEntries()) {
-            LOG.debug("Finished recovering queue for group " + walGroupId + " of peer " + peerClusterZnode);
+            LOG.debug("Finished recovering queue for group "
+                    + walGroupId + " of peer " + peerClusterZnode);
             metrics.incrCompletedRecoveryQueue();
             setWorkerState(WorkerState.FINISHED);
           }
