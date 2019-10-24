@@ -42,7 +42,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.PriorityBlockingQueue;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -360,8 +359,9 @@ public class TestWALEntryStream {
 
     // start up a batcher
     ReplicationSourceManager mockSourceManager = Mockito.mock(ReplicationSourceManager.class);
-    ReplicationSourceWALReaderThread batcher = new ReplicationSourceWALReaderThread(mockSourceManager, getQueueInfo(),walQueue, 0,
-        fs, conf, getDummyFilter(), new MetricsSource("1"));
+    ReplicationSourceWALReaderThread batcher =
+            new ReplicationSourceWALReaderThread(mockSourceManager, getQueueInfo(),walQueue, 0,
+                    fs, conf, getDummyFilter(), new MetricsSource("1"));
     Path walPath = walQueue.peek();
     batcher.start();
     WALEntryBatch entryBatch = batcher.take();
@@ -386,8 +386,8 @@ public class TestWALEntryStream {
     appendEntriesToLog(2);
 
     long position;
-    try (WALEntryStream entryStream =
-                 new WALEntryStream(new PriorityBlockingQueue<>(walQueue), fs, conf, new MetricsSource("1"))) {
+    try (WALEntryStream entryStream = new WALEntryStream(new PriorityBlockingQueue<>(walQueue),
+            fs, conf, new MetricsSource("1"))) {
       entryStream.next();
       entryStream.next();
       entryStream.next();
@@ -397,8 +397,9 @@ public class TestWALEntryStream {
     }
 
     ReplicationSourceManager mockSourceManager = mock(ReplicationSourceManager.class);
-    ReplicationSourceWALReaderThread reader = new ReplicationSourceWALReaderThread(mockSourceManager,
-            getQueueInfo("1-1"), walQueue, 0, fs, conf, getDummyFilter(), new MetricsSource("1"));
+    ReplicationSourceWALReaderThread reader =
+            new ReplicationSourceWALReaderThread(mockSourceManager, getQueueInfo("1-1"),
+                    walQueue, 0, fs, conf, getDummyFilter(), new MetricsSource("1"));
     Path walPath = walQueue.toArray(new Path[2])[1];
     reader.start();
     WALEntryBatch entryBatch = reader.take();
@@ -433,7 +434,7 @@ public class TestWALEntryStream {
     for (Map.Entry<String, byte[]> entry : deserializedKey.getExtendedAttributes().entrySet()) {
       assertArrayEquals(key.getExtendedAttribute(entry.getKey()), entry.getValue());
     }
- }
+  }
 
   @Test
   public void testReplicationSourceWALReaderThreadWithFilter() throws Exception {
@@ -448,8 +449,9 @@ public class TestWALEntryStream {
 
     Path firstWAL = walQueue.peek();
     ReplicationSourceManager mockSourceManager = mock(ReplicationSourceManager.class);
-    final ReplicationSourceWALReaderThread reader = new ReplicationSourceWALReaderThread(mockSourceManager,
-            getQueueInfo(), walQueue, 0, fs, conf, filter, new MetricsSource("1"));
+    final ReplicationSourceWALReaderThread reader =
+            new ReplicationSourceWALReaderThread(mockSourceManager, getQueueInfo(), walQueue,
+                    0, fs, conf, filter, new MetricsSource("1"));
     reader.start();
 
     // reader won't put any batch, even if EOF reached.
@@ -470,8 +472,8 @@ public class TestWALEntryStream {
     WALEntryBatch entryBatch = reader.take();
 
     Path lastWAL= walQueue.peek();
-    WALEntryStream entryStream =
-            new WALEntryStream(new PriorityBlockingQueue<>(walQueue), fs, conf, new MetricsSource("1"));
+    WALEntryStream entryStream = new WALEntryStream(new PriorityBlockingQueue<>(walQueue),
+            fs, conf, new MetricsSource("1"));
     entryStream.hasNext();
     long positionToBeLogged = entryStream.getPosition();
 
@@ -564,5 +566,4 @@ public class TestWALEntryStream {
       currentPath = newPath;
     }
   }
-
 }

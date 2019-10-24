@@ -131,9 +131,10 @@ public class ReplicationSourceWALReaderThread extends Thread {
             Threads.sleep(sleepForRetries);
             continue;
           }
-          WALEntryBatch batch = new WALEntryBatch(replicationBatchCountCapacity, replicationBatchSizeCapacity);
+          WALEntryBatch batch =
+                  new WALEntryBatch(replicationBatchCountCapacity, replicationBatchSizeCapacity);
           boolean hasNext;
-          while (hasNext = entryStream.hasNext()) {
+          while ((hasNext = entryStream.hasNext()) != true) {
             Entry entry = entryStream.next();
             entry = filterEntry(entry);
             if (entry != null) {
@@ -150,7 +151,8 @@ public class ReplicationSourceWALReaderThread extends Thread {
           }
 
           if (LOG.isTraceEnabled()) {
-            LOG.trace(String.format("Read %s WAL entries eligible for replication", batch.getNbEntries()));
+            LOG.trace(String.format("Read %s WAL entries eligible for replication",
+                    batch.getNbEntries()));
           }
 
           updateBatch(entryStream, batch, hasNext);
@@ -193,7 +195,7 @@ public class ReplicationSourceWALReaderThread extends Thread {
 
   private boolean checkIfWALRolled(WALEntryBatch batch) {
     return currentPath == null && batch.lastWalPath != null
-    || currentPath != null && !currentPath.equals(batch.lastWalPath);
+      || currentPath != null && !currentPath.equals(batch.lastWalPath);
   }
 
   private void resetStream(WALEntryStream stream) throws IOException {
@@ -280,7 +282,8 @@ public class ReplicationSourceWALReaderThread extends Thread {
     private long heapSizeExcludeBulkLoad;
 
     /**
-     * @param maxNbEntries
+     * @param maxNbEntries the number of entries a batch can have
+     * @param maxSizeBytes max (heap) size of each batch
      */
     private WALEntryBatch(int maxNbEntries, long maxSizeBytes) {
       this.walEntries = new ArrayList<>(maxNbEntries);
