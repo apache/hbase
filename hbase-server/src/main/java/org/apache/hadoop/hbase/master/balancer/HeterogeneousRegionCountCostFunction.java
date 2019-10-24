@@ -50,8 +50,7 @@ import org.slf4j.LoggerFactory;
  * <li>hbase.master.balancer.stochastic.heterogeneousRegionCountRulesFile</li>
  * <li>hbase.master.balancer.stochastic.heterogeneousRegionCountDefault</li>
  * </ul>
- *
- * The rule file can be located on local FS or hdfs, depending on the prefix (file//: or hdfs://).
+ * The rule file can be located on local FS or HDFS, depending on the prefix (file//: or hdfs://).
  */
 @InterfaceAudience.Private
 public class HeterogeneousRegionCountCostFunction extends StochasticLoadBalancer.CostFunction {
@@ -100,17 +99,15 @@ public class HeterogeneousRegionCountCostFunction extends StochasticLoadBalancer
     this.limitPerRS = new HashMap<>();
     this.limitPerRule = new HashMap<>();
     this.setMultiplier(conf.getFloat(REGION_COUNT_SKEW_COST_KEY, DEFAULT_REGION_COUNT_SKEW_COST));
-
     this.rulesPath = conf.get(HBASE_MASTER_BALANCER_HETEROGENEOUS_RULES_FILE);
-
     this.defaultNumberOfRegions =
         conf.getInt(HBASE_MASTER_BALANCER_HETEROGENEOUS_RULES_DEFAULT, 200);
+
     if (this.defaultNumberOfRegions < 0) {
       LOG.warn("invalid configuration '" + HBASE_MASTER_BALANCER_HETEROGENEOUS_RULES_DEFAULT
           + "'. Setting default to 200");
       this.defaultNumberOfRegions = 200;
     }
-
     if (conf.getFloat(StochasticLoadBalancer.RegionCountSkewCostFunction.REGION_COUNT_SKEW_COST_KEY,
       StochasticLoadBalancer.RegionCountSkewCostFunction.DEFAULT_REGION_COUNT_SKEW_COST) > 0) {
       LOG.warn("regionCountCost is not set to 0, "
@@ -130,18 +127,14 @@ public class HeterogeneousRegionCountCostFunction extends StochasticLoadBalancer
 
   @Override
   protected double cost() {
-
     double cost = 0;
-
     final double targetUsage = ((double) this.cluster.numRegions / (double) this.totalCapacity);
 
     for (int i = 0; i < this.cluster.numServers; i++) {
-
       // retrieve capacity for each RS
       final ServerName sn = this.cluster.servers[i];
       final double limit = this.limitPerRS.getOrDefault(sn, defaultNumberOfRegions);
       final double nbrRegions = this.cluster.regionsPerServer[i].length;
-
       final double usage = nbrRegions / limit;
       if (usage > targetUsage) {
         // cost is the number of regions above the local limit
@@ -149,8 +142,8 @@ public class HeterogeneousRegionCountCostFunction extends StochasticLoadBalancer
         cost += localCost;
       }
     }
-    return cost / (double) this.cluster.numServers;
 
+    return cost / (double) this.cluster.numServers;
   }
 
   /**
@@ -171,11 +164,9 @@ public class HeterogeneousRegionCountCostFunction extends StochasticLoadBalancer
         if (line.length() == 0) {
           continue;
         }
-
         if (line.startsWith("#")) {
           continue;
         }
-
         final String[] splits = line.split(" ");
         if (splits.length != 2) {
           throw new IOException(
@@ -189,7 +180,6 @@ public class HeterogeneousRegionCountCostFunction extends StochasticLoadBalancer
         LOG.error("error on line: " + e);
       }
     }
-
     this.rebuildCache();
   }
 
@@ -197,11 +187,9 @@ public class HeterogeneousRegionCountCostFunction extends StochasticLoadBalancer
    * used to read the rule files from either HDFS or local FS
    */
   private List<String> readFile(final String filename) {
-
     if (null == filename) {
       return null;
     }
-
     try {
       if (filename.startsWith("file:")) {
         return readFileFromLocalFS(filename);
@@ -217,11 +205,9 @@ public class HeterogeneousRegionCountCostFunction extends StochasticLoadBalancer
    * used to read the rule files from HDFS
    */
   private List<String> readFileFromHDFS(final String filename) throws IOException {
-
     final Path path = new Path(filename);
     final FileSystem fs = FileSystem.get(this.conf);
     final BufferedReader reader = new BufferedReader(new InputStreamReader(fs.open(path)));
-
     return readLines(reader);
   }
 
@@ -229,14 +215,12 @@ public class HeterogeneousRegionCountCostFunction extends StochasticLoadBalancer
    * used to read the rule files from local FS
    */
   private List<String> readFileFromLocalFS(final String filename) throws IOException {
-
     BufferedReader reader = new BufferedReader(new FileReader(filename));
     return readLines(reader);
   }
 
   private List<String> readLines(BufferedReader reader) throws IOException {
     final List<String> records = new ArrayList<>();
-
     String line;
     while ((line = reader.readLine()) != null) {
       records.add(line);
@@ -249,25 +233,19 @@ public class HeterogeneousRegionCountCostFunction extends StochasticLoadBalancer
    * Rebuild cache matching ServerNames and their capacity.
    */
   private void rebuildCache() {
-
     LOG.debug("Rebuilding cache of capacity for each RS");
-
     this.limitPerRS.clear();
     this.totalCapacity = 0;
-
     if (null == this.cluster) {
       return;
     }
-
     for (int i = 0; i < this.cluster.numServers; i++) {
       final ServerName sn = this.cluster.servers[i];
       final int capacity = this.findLimitForRS(sn);
       LOG.debug(sn.getHostname() + " can hold " + capacity + " regions");
       this.totalCapacity += capacity;
     }
-
     overallUsage = (double) this.cluster.numRegions / (double) this.totalCapacity;
-
     LOG.info("Cluster can hold " + this.cluster.numRegions + "/" + this.totalCapacity + " regions ("
         + Math.round(overallUsage * 100) + "%)");
     if (overallUsage >= 1) {
@@ -281,7 +259,6 @@ public class HeterogeneousRegionCountCostFunction extends StochasticLoadBalancer
    * @return the limit
    */
   int findLimitForRS(final ServerName serverName) {
-
     boolean matched = false;
     int limit = -1;
     for (final Map.Entry<Pattern, Integer> entry : this.limitPerRule.entrySet()) {
@@ -291,14 +268,11 @@ public class HeterogeneousRegionCountCostFunction extends StochasticLoadBalancer
         break;
       }
     }
-
     if (!matched) {
       limit = this.defaultNumberOfRegions;
     }
-
     // Feeding cache
     this.limitPerRS.put(serverName, limit);
-
     return limit;
   }
 
