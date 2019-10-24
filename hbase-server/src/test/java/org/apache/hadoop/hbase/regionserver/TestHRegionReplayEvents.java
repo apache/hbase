@@ -27,7 +27,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -1164,8 +1163,8 @@ public class TestHRegionReplayEvents {
 
     // test for region open and close
     secondaryRegion = HRegion.openHRegion(secondaryHri, htd, walSecondary, CONF, rss, null);
-    verify(walSecondary, times(0)).append(any(RegionInfo.class), any(WALKeyImpl.class),
-      any(WALEdit.class), anyBoolean());
+    verify(walSecondary, times(0)).appendData(any(RegionInfo.class), any(WALKeyImpl.class),
+      any(WALEdit.class));
 
     // test for replay prepare flush
     putDataByReplay(secondaryRegion, 0, 10, cq, families);
@@ -1180,12 +1179,12 @@ public class TestHRegionReplayEvents {
           primaryRegion.getRegionInfo().getRegionName()))
       .build());
 
-    verify(walSecondary, times(0)).append(any(RegionInfo.class), any(WALKeyImpl.class),
-      any(WALEdit.class), anyBoolean());
+    verify(walSecondary, times(0)).appendData(any(RegionInfo.class), any(WALKeyImpl.class),
+      any(WALEdit.class));
 
     secondaryRegion.close();
-    verify(walSecondary, times(0)).append(any(RegionInfo.class), any(WALKeyImpl.class),
-      any(WALEdit.class), anyBoolean());
+    verify(walSecondary, times(0)).appendData(any(RegionInfo.class), any(WALKeyImpl.class),
+      any(WALEdit.class));
   }
 
   /**

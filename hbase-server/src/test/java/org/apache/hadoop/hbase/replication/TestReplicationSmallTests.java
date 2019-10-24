@@ -423,7 +423,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     long now = EnvironmentEdgeManager.currentTime();
     edit.add(new KeyValue(rowName, famName, qualifier, now, value));
     WALKeyImpl walKey = new WALKeyImpl(hri.getEncodedNameAsBytes(), tableName, now, mvcc, scopes);
-    wal.append(hri, walKey, edit, true);
+    wal.appendData(hri, walKey, edit);
     wal.sync();
 
     Get get = new Get(rowName);

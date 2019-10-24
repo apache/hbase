@@ -83,7 +83,7 @@ public final class ProtobufLogTestHelper {
       throws IOException {
     for (int i = 0; i < recordCount; i++) {
       WAL.Entry entry = generateEdit(i, hri, tableName, row, columnCount, timestamp, mvcc);
-      wal.append(hri, entry.getKey(), entry.getEdit(), true);
+      wal.appendData(hri, entry.getKey(), entry.getEdit());
     }
     wal.sync();
   }

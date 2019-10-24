@@ -51,4 +51,8 @@ public final class ImmutableByteArray {
   public String toStringUtf8() {
     return Bytes.toString(b);
   }
+
+  public String toStringBinary() {
+    return Bytes.toStringBinary(b);
+  }
 }
