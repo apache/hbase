@@ -365,6 +365,11 @@ public class RegionLoad implements RegionMetrics {
     return metrics.getStoreRefCount();
   }
 
+  @Override
+  public int getMaxStoreFileRefCount() {
+    return metrics.getMaxStoreFileRefCount();
+  }
+
   /**
    * @see java.lang.Object#toString()
    */
