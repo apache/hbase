@@ -879,6 +879,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
 
     MonitoredTask status = TaskMonitor.get().createStatus("Initializing region " + this);
+    status.enableStatusJournal(true);
     long nextSeqId = -1;
     try {
       nextSeqId = initializeRegionInternals(reporter, status);
@@ -890,6 +891,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         status.abort("Exception during region " + getRegionInfo().getRegionNameAsString() +
           " initialization.");
       }
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Region open journal:\n" + status.prettyPrintJournal());
+      }
+      status.cleanup();
     }
   }
 
@@ -1478,7 +1483,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     MonitoredTask status = TaskMonitor.get().createStatus(
         "Closing region " + this +
         (abort ? " due to abort" : ""));
-    status.enableStatusJournal(false);
+    status.enableStatusJournal(true);
     status.setStatus("Waiting for close lock");
     try {
       synchronized (closeLock) {
