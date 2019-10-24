@@ -134,7 +134,7 @@ public class ReplicationSourceWALReaderThread extends Thread {
           WALEntryBatch batch =
                   new WALEntryBatch(replicationBatchCountCapacity, replicationBatchSizeCapacity);
           boolean hasNext;
-          while ((hasNext = entryStream.hasNext()) != true) {
+          while ((hasNext = entryStream.hasNext()) == true) {
             Entry entry = entryStream.next();
             entry = filterEntry(entry);
             if (entry != null) {
