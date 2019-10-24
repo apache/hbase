@@ -120,7 +120,7 @@ public abstract class SortedCompactionPolicy extends CompactionPolicy {
    * @return When to run next major compaction
    */
   public long getNextMajorCompactTime(final Collection<StoreFile> filesToCompact) {
-    // default = 24hrs
+    // default = 7days
     long ret = comConf.getMajorCompactionPeriod();
     if (ret > 0) {
       // default = 20% = +/- 4.8 hrs
