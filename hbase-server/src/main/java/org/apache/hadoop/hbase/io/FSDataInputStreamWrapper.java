@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.io;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.Method;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.io.IOUtils;
@@ -88,6 +87,11 @@ public class FSDataInputStreamWrapper implements Closeable {
   // In the case of a checksum failure, do these many succeeding
   // reads without hbase checksum verification.
   private AtomicInteger hbaseChecksumOffCount = new AtomicInteger(-1);
+
+  private Boolean instanceOfCanUnbuffer = null;
+  // Using reflection to get org.apache.hadoop.fs.CanUnbuffer#unbuffer method to avoid compilation
+  // errors against Hadoop pre 2.6.4 and 2.7.1 versions.
+  private CanUnbuffer unbuffer = null;
 
   public FSDataInputStreamWrapper(FileSystem fs, Path path) throws IOException {
     this(fs, path, false, -1L);
@@ -262,8 +266,16 @@ public class FSDataInputStreamWrapper implements Closeable {
       // 2.6.4+ and 2.7.1+ versions only so check whether the stream object implements the
       // CanUnbuffer interface or not and based on that call the unbuffer api.
       final Class<? extends InputStream> streamClass = wrappedStream.getClass();
-      if (CanUnbuffer.class.isAssignableFrom(streamClass)) {
-        ((CanUnbuffer) wrappedStream).unbuffer();
+      if (this.instanceOfCanUnbuffer == null) {
+        // To ensure we compute whether the stream is instance of CanUnbuffer only once.
+        this.instanceOfCanUnbuffer = false;
+        if (CanUnbuffer.class.isAssignableFrom(streamClass)) {
+          this.unbuffer = (CanUnbuffer) wrappedStream;
+          this.instanceOfCanUnbuffer = true;
+        }
+      }
+      if (this.instanceOfCanUnbuffer) {
+        this.unbuffer.unbuffer();
       } else {
         if (isLogTraceEnabled) {
           LOG.trace("Failed to find 'unbuffer' method in class " + streamClass);
