@@ -132,6 +132,12 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
+  public List<TableDescriptor> listTableDescriptors(boolean includeSysTables)
+      throws IOException {
+    return get(admin.listTableDescriptors(includeSysTables));
+  }
+
+  @Override
   public List<TableDescriptor> listTableDescriptors(Pattern pattern, boolean includeSysTables)
       throws IOException {
     return get(admin.listTableDescriptors(pattern, includeSysTables));
