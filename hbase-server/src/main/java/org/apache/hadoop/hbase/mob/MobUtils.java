@@ -25,9 +25,12 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import org.apache.hadoop.conf.Configuration;
@@ -733,5 +736,43 @@ public final class MobUtils {
     }
     return false;
   }
+  
+  /**
+   * Gets encoded region name from a MOB file name
+   * @param mobFileName MOB file name
+   * @return encoded region name or null
+   */
+  public static String getEncodedRegionName(String mobFileName) {
+    int index = mobFileName.lastIndexOf(MobFileName.REGION_SEP);
+    if (index < 0) {
+      return null;
+    }
+    return mobFileName.substring(index+1);
+  }
 
+  /**
+   * Get list of referenced MOB files from a given collection
+   * of store files
+   * @param storeFiles store files
+   * @param mobDir MOB file directory
+   * @return list of MOB file paths
+   */
+  
+  public static List<Path> getReferencedMobFiles(Collection<HStoreFile> storeFiles, Path mobDir) {
+
+    Set<String> mobSet = new HashSet<String>();
+    for (HStoreFile sf : storeFiles) {
+      byte[] value = sf.getMetadataValue(HStoreFile.MOB_FILE_REFS);
+      if (value != null && value.length > 1) {
+        String s = Bytes.toString(value);
+        String[] all = s.split(",");
+        Collections.addAll(mobSet, all);
+      }
+    }
+    List<Path> retList = new ArrayList<Path>();
+    for (String name : mobSet) {
+      retList.add(new Path(mobDir, name));
+    }
+    return retList;
+  }
 }

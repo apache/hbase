@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -169,7 +170,9 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
         .equals(MobConstants.GENERATIONAL_MOB_COMPACTION_TYPE)) {
       if (request.isMajor() && request.getPriority() == HStore.PRIORITY_USER) {
         // Compact MOBs
-        List<Path> mobFiles = getReferencedMobFiles(request.getFiles());
+        Path mobDir = MobUtils.getMobFamilyPath(conf, store.getTableName(),
+          store.getColumnFamilyName());
+        List<Path> mobFiles = MobUtils.getReferencedMobFiles(request.getFiles(), mobDir);
         if (mobFiles.size() > 0) {
           Generations gens = Generations.build(mobFiles, conf);
           List<CompactionSelection> list = gens.getCompactionSelections();
@@ -274,6 +277,12 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     Path path = MobUtils.getMobFamilyPath(conf, store.getTableName(), store.getColumnFamilyName());
     byte[] fileName = null;
     StoreFileWriter mobFileWriter = null;
+    /*
+     * mobCells are used only to decide if we need to commit or abort major MOB output file. 
+     * This file is present in both: regular and generational compaction. In regular compaction - 
+     * it is the only MOB file output, in generational compaction it is the output for new MOB cells,
+     *  which come from store files - not from MOB files.
+     */
     long mobCells = 0;
     long cellsCountCompactedToMob = 0, cellsCountCompactedFromMob = 0;
     long cellsSizeCompactedToMob = 0, cellsSizeCompactedFromMob = 0;
@@ -333,7 +342,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
               }
 
               if (mobCell.getValueLength() > mobSizeThreshold) {
-                // put the mob data back to the store file
+                // put the mob data back to the MOB store file
                 PrivateCellUtil.setSequenceId(mobCell, c.getSequenceId());
                 if (generationalMob) {
                   //TODO: verify fName
@@ -341,33 +350,44 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
                   if (stw != null) {
                     stw.append(mobCell);
                     mobWriters.incrementMobCountForOutputWriter(stw);
-                  } // else leave mob cell in a MOB file which is not in compaction selections
+                    byte[] fname = Bytes.toBytes(stw.getPath().getName());
+                    // Update MOB reference with new MOB file
+                    writer.append(MobUtils.createMobRefCell(mobCell, fname,
+                      this.mobStore.getRefCellTags()));
+                  } else {
+                    // else leave mob cell in a MOB file which is not in compaction selections
+                    // write MOB cell reference to output store
+                    // add MOB file reference to mobRefSet
+                    writer.append(mobCell);
+                    mobRefSet.get().add(fName);
+                  }
                 } else {
                   mobFileWriter.append(mobCell);
                   mobCells++;
-                }
-                writer.append(MobUtils.createMobRefCell(mobCell, fileName,
-                  this.mobStore.getRefCellTags()));
-                cellsCountCompactedFromMob++;
-                cellsSizeCompactedFromMob += mobCell.getValueLength();
+                  writer.append(MobUtils.createMobRefCell(mobCell, fileName,
+                    this.mobStore.getRefCellTags()));
+                }                
               } else {
-
                 // If MOB value is less than threshold, append it directly to a store file
                 PrivateCellUtil.setSequenceId(mobCell, c.getSequenceId());
                 writer.append(mobCell);
+                cellsCountCompactedFromMob++;
+                cellsSizeCompactedFromMob += mobCell.getValueLength();
               }
-
             } else {
               // Not a MOB reference cell
               int size = c.getValueLength();
               if (size > mobSizeThreshold) {
                 // This MOB cell comes from a regular store file
-                // therefore we store it in original mob output
+                // therefore we store it into original mob output
                 mobFileWriter.append(c);
                 writer
                     .append(MobUtils.createMobRefCell(c, fileName, this.mobStore.getRefCellTags()));
                 mobCells++;
+                cellsCountCompactedToMob++;
+                cellsSizeCompactedToMob += c.getValueLength();
               } else {
+                // Not a MOB cell, write it directly to a store file
                 writer.append(c);
               }
             }
@@ -384,7 +404,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
                 // If the value size is larger than the threshold, it's regarded as a mob. Since
                 // its value is already in the mob file, directly write this cell to the store file
                 writer.append(c);
-                // Add MOB reference to a set
+                // Add MOB reference to a MOB reference set
                 mobRefSet.get().add(MobUtils.getMobFileName(c));
               } else {
                 // If the value is not larger than the threshold, it's not regarded a mob. Retrieve
@@ -475,7 +495,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
       throw new InterruptedIOException(
           "Interrupted while control throughput of compacting " + compactionName);
     } catch (IOException t) {
-      LOG.error("Mob compaction failed for region: " + store.getRegionInfo().getEncodedName());
+      LOG.error("Mob compaction failed for region:{} ", store.getRegionInfo().getEncodedName());
       throw t;
     } finally {
       // Clone last cell in the final because writer will append last cell when committing. If
@@ -487,16 +507,24 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
         // Remove all MOB references because compaction failed
         mobRefSet.get().clear();
         // Abort writer
+        LOG.debug("Aborting writer for {} because of compaction failure", 
+          mobFileWriter.getPath());
         abortWriter(mobFileWriter);
         //Check if other writers exist
         if (mobWriters != null) {
           for(StoreFileWriter w: mobWriters.getOutputWriters()) {
+            LOG.debug("Aborting writer for {} because of compaction failure", 
+              w.getPath());
             abortWriter(w);
           }
         }
       }
     }
     // Commit or abort major mob writer
+    // If IOException happens during below operation, some 
+    // MOB files can be committed partially, but corresponding 
+    // store file won't be committed, therefore these MOB files
+    // become orphans and will be deleted during next MOB cleaning chore cycle
     if (mobFileWriter != null) {
       if (mobCells > 0) {
         // If the mob file is not empty, commit it.
@@ -505,6 +533,10 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
         mobStore.commitFile(mobFileWriter.getPath(), path);
       } else {
         // If the mob file is empty, delete it instead of committing.
+        LOG.debug("Aborting writer for {} because there are no MOB cells", 
+          mobFileWriter.getPath());
+        // Remove MOB file from reference set
+        mobRefSet.get().remove(mobFileWriter.getPath().getName());
         abortWriter(mobFileWriter);
       }
     }
@@ -518,6 +550,9 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
           w.close();
           mobStore.commitFile(w.getPath(), path);
         } else {
+          LOG.debug("Aborting writer for {} because there are no MOB cells", w.getPath());
+          // Remove MOB file from reference set
+          mobRefSet.get().remove(w.getPath().getName());
           abortWriter(w);
         }
       }
@@ -547,24 +582,6 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     return newFiles;
   }
 
-  private List<Path> getReferencedMobFiles(Collection<HStoreFile> storeFiles) {
-    Path mobDir = MobUtils.getMobFamilyPath(conf, store.getTableName(),
-      store.getColumnFamilyName());
-    Set<String> mobSet = new HashSet<String>();
-    for (HStoreFile sf: storeFiles) {
-      byte[] value = sf.getMetadataValue(HStoreFile.MOB_FILE_REFS);
-      if (value != null && value.length > 1) {
-        String s = Bytes.toString(value);
-        String[] all = s.split(",");
-        Collections.addAll(mobSet, all);
-      }
-    }
-    List<Path> retList = new ArrayList<Path>();
-    for(String name: mobSet) {
-      retList.add(new Path(mobDir, name));
-    }
-    return retList;
-  }
 }
 
 final class FileSelection implements Comparable<FileSelection> {
@@ -581,10 +598,9 @@ final class FileSelection implements Comparable<FileSelection> {
   }
 
   public  String getEncodedRegionName() {
-    String fileName = path.getName();
-    String[] parts = fileName.split("_");
-    if (parts.length == 2) {
-      return parts[1];
+    String name = MobUtils.getEncodedRegionName(path.getName());
+    if (name != null) {
+      return name;
     } else {
       return NULL_REGION;
     }
@@ -664,12 +680,7 @@ final class Generations {
     Map <String, ArrayList<FileSelection>> map = new HashMap<String, ArrayList<FileSelection>>();
     for(Path p: files) {
       String key = getRegionNameFromFileName(p.getName());
-      ArrayList<FileSelection> list = map.get(key);
-      if (list == null) {
-        list = new ArrayList<FileSelection>();
-        map.put(key, list);
-      }
-      list.add(new FileSelection(p, conf));
+      map.computeIfAbsent(key, k -> new ArrayList<FileSelection>()).add(new FileSelection(p, conf));
     }
 
     List<Generation> gens = new ArrayList<Generation>();
@@ -691,12 +702,12 @@ final class Generations {
     return new Generations(gens, conf);
   }
 
-  static String getRegionNameFromFileName(String name) {
-    int index = name.lastIndexOf("_");
-    if (index < 0) {
+  static String getRegionNameFromFileName(String mobFileName) {
+    String name = MobUtils.getEncodedRegionName(mobFileName);
+    if (name == null) {
       return Generation.GEN0;
     }
-    return name.substring(index+1);
+    return name;
   }
 }
 
@@ -832,7 +843,7 @@ final class OutputMobWriters {
   /*
    * Output file name -> MOB counter
    */
-  private Map<String, Long> mapMobCounts = new HashMap<String, Long>();
+  private Map<String, MutableLong> mapMobCounts = new HashMap<String, MutableLong>();
   /*
    * List of compaction selections
    */
@@ -853,7 +864,7 @@ final class OutputMobWriters {
   void initOutputWriters(List<StoreFileWriter> writers) {
     for (int i = 0; i < writers.size(); i++) {
       StoreFileWriter sw = writers.get(i);
-      mapMobCounts.put(sw.getPath().getName(), 0L);
+      mapMobCounts.put(sw.getPath().getName(), new MutableLong(0L));
       CompactionSelection cs = compSelections.get(i);
       for (FileSelection fs: cs.getFiles()) {
         writerMap.put(fs.getPath().getName(), sw);
@@ -870,11 +881,16 @@ final class OutputMobWriters {
   }
 
   long getMobCountForOutputWriter(StoreFileWriter writer) {
-    return mapMobCounts.get(writer.getPath().getName());
+    return mapMobCounts.get(writer.getPath().getName()).longValue();
   }
 
   void incrementMobCountForOutputWriter(StoreFileWriter writer) {
     String key = writer.getPath().getName();
-    mapMobCounts.compute(key, (k,v) -> v == null? 1: v + 1);
+    MutableLong v = mapMobCounts.get(key);
+    if (v == null) {
+      mapMobCounts.put(key, new MutableLong(1L));
+    } else {
+      v.add(1);
+    }
   }
 }
