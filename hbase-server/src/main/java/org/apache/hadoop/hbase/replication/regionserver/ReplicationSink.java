@@ -179,7 +179,7 @@ public class ReplicationSink {
       for (WALEntry entry : entries) {
         TableName table = TableName.valueOf(entry.getKey().getTableName().toByteArray());
         if (this.walEntrySinkFilter != null) {
-          if (this.walEntrySinkFilter.filter(table, entry.getKey().getWriteTime())) {
+          if (this.walEntrySinkFilter.filter(entry)) {
             // Skip Cells in CellScanner associated with this entry.
             int count = entry.getAssociatedCellCount();
             for (int i = 0; i < count; i++) {

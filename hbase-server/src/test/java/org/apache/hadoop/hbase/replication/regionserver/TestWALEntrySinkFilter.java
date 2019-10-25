@@ -181,7 +181,8 @@ public class TestWALEntrySinkFilter {
     }
 
     @Override
-    public boolean filter(TableName table, long writeTime) {
+    public boolean filter(AdminProtos.WALEntry entry) {
+      long writeTime = entry.getKey().getWriteTime();
       boolean b = writeTime <= BOUNDARY;
       if (b) {
         FILTERED.incrementAndGet();

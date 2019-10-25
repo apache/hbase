@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncConnection;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -51,9 +51,8 @@ public interface WALEntrySinkFilter {
   void init(AsyncConnection conn);
 
   /**
-   * @param table Table edit is destined for.
-   * @param writeTime Time at which the edit was created on the source.
+   * @param entry WALEntry.
    * @return True if we are to filter out the edit.
    */
-  boolean filter(TableName table, long writeTime);
+  boolean filter(WALEntry entry);
 }
