@@ -275,7 +275,14 @@ public class FSDataInputStreamWrapper implements Closeable {
         }
       }
       if (this.instanceOfCanUnbuffer) {
-        this.unbuffer.unbuffer();
+        try {
+          this.unbuffer.unbuffer();
+        } catch (IllegalArgumentException | UnsupportedOperationException e){
+          if (isLogTraceEnabled) {
+            LOG.trace("Failed to invoke 'unbuffer' method in class " + streamClass
+                + " . So there may be the stream does not support unbuffering.", e);
+          }
+        }
       } else {
         if (isLogTraceEnabled) {
           LOG.trace("Failed to find 'unbuffer' method in class " + streamClass);
