@@ -434,12 +434,10 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     }
   }
 
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NP_NULL_ON_SOME_PATH_EXCEPTION",
-      justification = "Will never be null")
   @Override
-  public long append(final RegionInfo hri, final WALKeyImpl key, final WALEdit edits,
-      final boolean inMemstore) throws IOException {
-    return stampSequenceIdAndPublishToRingBuffer(hri, key, edits, inMemstore,
+  protected long append(final RegionInfo hri, final WALKeyImpl key, final WALEdit edits,
+    final boolean inMemstore, boolean closeRegion) throws IOException {
+    return stampSequenceIdAndPublishToRingBuffer(hri, key, edits, inMemstore, closeRegion,
       disruptor.getRingBuffer());
   }
 
@@ -1096,7 +1094,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
      */
     void append(final FSWALEntry entry) throws Exception {
       try {
-        FSHLog.this.append(writer, entry);
+        FSHLog.this.appendEntry(writer, entry);
       } catch (Exception e) {
         String msg = "Append sequenceId=" + entry.getKey().getSequenceId()
             + ", requesting roll of WAL";

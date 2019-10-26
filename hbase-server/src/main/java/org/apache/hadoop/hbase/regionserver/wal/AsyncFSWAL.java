@@ -434,7 +434,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       FSWALEntry entry = iter.next();
       boolean appended;
       try {
-        appended = append(writer, entry);
+        appended = appendEntry(writer, entry);
       } catch (IOException e) {
         throw new AssertionError("should not happen", e);
       }
@@ -564,10 +564,10 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   }
 
   @Override
-  public long append(RegionInfo hri, WALKeyImpl key, WALEdit edits, boolean inMemstore)
-      throws IOException {
-    long txid =
-      stampSequenceIdAndPublishToRingBuffer(hri, key, edits, inMemstore, waitingConsumePayloads);
+  protected long append(RegionInfo hri, WALKeyImpl key, WALEdit edits, boolean inMemstore,
+    boolean closeRegion) throws IOException {
+    long txid = stampSequenceIdAndPublishToRingBuffer(hri, key, edits, inMemstore, closeRegion,
+      waitingConsumePayloads);
     if (shouldScheduleConsumer()) {
       consumeExecutor.execute(consumer);
     }

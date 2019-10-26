@@ -558,9 +558,9 @@ public class TestWALEntryStream {
   }
 
   private void appendToLog(String key) throws IOException {
-    final long txid = log.append(info,
+    final long txid = log.appendData(info,
       new WALKeyImpl(info.getEncodedNameAsBytes(), tableName, System.currentTimeMillis(),
-          mvcc, scopes), getWALEdit(key), true);
+          mvcc, scopes), getWALEdit(key));
     log.sync(txid);
   }
 
@@ -582,8 +582,8 @@ public class TestWALEntryStream {
   }
 
   private long appendToLog(int count) throws IOException {
-    return log.append(info, new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
-      System.currentTimeMillis(), mvcc, scopes), getWALEdits(count), true);
+    return log.appendData(info, new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
+      System.currentTimeMillis(), mvcc, scopes), getWALEdits(count));
   }
 
   private WALEdit getWALEdits(int count) {
