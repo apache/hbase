@@ -98,8 +98,8 @@ public class TestWALRootDir {
     WALEdit edit = new WALEdit();
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("1"),
         System.currentTimeMillis(), value));
-    long txid = log.append(regionInfo,
-        getWalKey(System.currentTimeMillis(), regionInfo, 0), edit, true);
+    long txid =
+      log.appendData(regionInfo, getWalKey(System.currentTimeMillis(), regionInfo, 0), edit);
     log.sync(txid);
     assertEquals("Expect 1 log have been created", 1,
         getWALFiles(walFs, walRootDir).size());
@@ -109,8 +109,7 @@ public class TestWALRootDir {
         HConstants.HREGION_LOGDIR_NAME)).size());
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("2"),
         System.currentTimeMillis(), value));
-    txid = log.append(regionInfo, getWalKey(System.currentTimeMillis(), regionInfo, 1),
-        edit, true);
+    txid = log.appendData(regionInfo, getWalKey(System.currentTimeMillis(), regionInfo, 1), edit);
     log.sync(txid);
     log.rollWriter();
     log.shutdown();

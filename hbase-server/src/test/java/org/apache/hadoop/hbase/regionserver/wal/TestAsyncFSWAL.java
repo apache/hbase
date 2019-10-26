@@ -196,7 +196,7 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
                 SequenceId.NO_SEQUENCE_ID, timestamp, WALKey.EMPTY_UUIDS, HConstants.NO_NONCE,
                 HConstants.NO_NONCE, mvcc, scopes);
             try {
-              wal.append(ri, key, cols, true);
+              wal.append(ri, key, cols, true, false);
             } catch (IOException e) {
               // should not happen
               throw new UncheckedIOException(e);

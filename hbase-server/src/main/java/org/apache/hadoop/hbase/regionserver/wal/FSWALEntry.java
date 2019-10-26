@@ -51,14 +51,16 @@ class FSWALEntry extends Entry {
   // they are only in memory and held here while passing over the ring buffer.
   private final transient long txid;
   private final transient boolean inMemstore;
+  private final transient boolean closeRegion;
   private final transient RegionInfo regionInfo;
   private final transient Set<byte[]> familyNames;
   private final transient ServerCall<?> rpcCall;
 
   FSWALEntry(final long txid, final WALKeyImpl key, final WALEdit edit, final RegionInfo regionInfo,
-    final boolean inMemstore, ServerCall<?> rpcCall) {
+    final boolean inMemstore, boolean closeRegion, ServerCall<?> rpcCall) {
     super(key, edit);
     this.inMemstore = inMemstore;
+    this.closeRegion = closeRegion;
     this.regionInfo = regionInfo;
     this.txid = txid;
     if (inMemstore) {
@@ -96,6 +98,10 @@ class FSWALEntry extends Entry {
 
   boolean isInMemStore() {
     return this.inMemstore;
+  }
+
+  boolean isCloseRegion() {
+    return closeRegion;
   }
 
   RegionInfo getRegionInfo() {
