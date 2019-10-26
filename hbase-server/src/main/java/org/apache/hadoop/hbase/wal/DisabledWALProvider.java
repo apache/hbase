@@ -161,8 +161,18 @@ class DisabledWALProvider implements WALProvider {
     }
 
     @Override
-    public long append(RegionInfo info, WALKeyImpl key, WALEdit edits, boolean inMemstore)
-        throws IOException {
+    public long appendData(RegionInfo info, WALKeyImpl key, WALEdit edits) throws IOException {
+      return append(info, key, edits, true, false);
+    }
+
+    @Override
+    public long appendMarker(RegionInfo info, WALKeyImpl key, WALEdit edits, boolean closeRegion)
+      throws IOException {
+      return append(info, key, edits, false, closeRegion);
+    }
+
+    private long append(RegionInfo info, WALKeyImpl key, WALEdit edits, boolean inMemstore,
+      boolean closeRegion) throws IOException {
       WriteEntry writeEntry = key.getMvcc().begin();
       if (!edits.isReplay()) {
         for (Cell cell : edits.getCells()) {

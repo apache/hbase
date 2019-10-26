@@ -59,20 +59,19 @@ public class WALUtil {
   }
 
   /**
-   * Write the marker that a compaction has succeeded and is about to be committed.
-   * This provides info to the HMaster to allow it to recover the compaction if this regionserver
-   * dies in the middle. It also prevents the compaction from finishing if this regionserver has
-   * already lost its lease on the log.
-   *
-   * <p>This write is for internal use only. Not for external client consumption.
+   * Write the marker that a compaction has succeeded and is about to be committed. This provides
+   * info to the HMaster to allow it to recover the compaction if this regionserver dies in the
+   * middle. It also prevents the compaction from finishing if this regionserver has already lost
+   * its lease on the log.
+   * <p/>
+   * This write is for internal use only. Not for external client consumption.
    * @param mvcc Used by WAL to get sequence Id for the waledit.
    */
   public static WALKeyImpl writeCompactionMarker(WAL wal,
-      NavigableMap<byte[], Integer> replicationScope, RegionInfo hri, final CompactionDescriptor c,
-      MultiVersionConcurrencyControl mvcc)
-  throws IOException {
+    NavigableMap<byte[], Integer> replicationScope, RegionInfo hri, final CompactionDescriptor c,
+    MultiVersionConcurrencyControl mvcc) throws IOException {
     WALKeyImpl walKey =
-        writeMarker(wal, replicationScope, hri, WALEdit.createCompaction(hri, c), mvcc, null);
+      writeMarker(wal, replicationScope, hri, WALEdit.createCompaction(hri, c), false, mvcc, null);
     if (LOG.isTraceEnabled()) {
       LOG.trace("Appended compaction marker " + TextFormat.shortDebugString(c));
     }
@@ -81,14 +80,14 @@ public class WALUtil {
 
   /**
    * Write a flush marker indicating a start / abort or a complete of a region flush
-   *
-   * <p>This write is for internal use only. Not for external client consumption.
+   * <p/>
+   * This write is for internal use only. Not for external client consumption.
    */
   public static WALKeyImpl writeFlushMarker(WAL wal, NavigableMap<byte[], Integer> replicationScope,
-      RegionInfo hri, final FlushDescriptor f, boolean sync, MultiVersionConcurrencyControl mvcc)
-          throws IOException {
-    WALKeyImpl walKey = doFullAppendTransaction(wal, replicationScope, hri,
-        WALEdit.createFlushWALEdit(hri, f), mvcc, null, sync);
+    RegionInfo hri, final FlushDescriptor f, boolean sync, MultiVersionConcurrencyControl mvcc)
+    throws IOException {
+    WALKeyImpl walKey = doFullMarkerAppendTransaction(wal, replicationScope, hri,
+      WALEdit.createFlushWALEdit(hri, f), false, mvcc, null, sync);
     if (LOG.isTraceEnabled()) {
       LOG.trace("Appended flush marker " + TextFormat.shortDebugString(f));
     }
@@ -96,15 +95,15 @@ public class WALUtil {
   }
 
   /**
-   * Write a region open marker indicating that the region is opened.
-   * This write is for internal use only. Not for external client consumption.
+   * Write a region open marker indicating that the region is opened. This write is for internal use
+   * only. Not for external client consumption.
    */
   public static WALKeyImpl writeRegionEventMarker(WAL wal,
-      NavigableMap<byte[], Integer> replicationScope, RegionInfo hri,
-      final RegionEventDescriptor r, final MultiVersionConcurrencyControl mvcc)
-  throws IOException {
-    WALKeyImpl walKey = writeMarker(wal, replicationScope, hri,
-        WALEdit.createRegionEventWALEdit(hri, r), mvcc, null);
+    NavigableMap<byte[], Integer> replicationScope, RegionInfo hri, final RegionEventDescriptor r,
+    final MultiVersionConcurrencyControl mvcc) throws IOException {
+    WALKeyImpl walKey =
+      writeMarker(wal, replicationScope, hri, WALEdit.createRegionEventWALEdit(hri, r),
+        r.getEventType() == RegionEventDescriptor.EventType.REGION_CLOSE, mvcc, null);
     if (LOG.isTraceEnabled()) {
       LOG.trace("Appended region event marker " + TextFormat.shortDebugString(r));
     }
@@ -122,11 +121,11 @@ public class WALUtil {
    * @throws IOException We will throw an IOException if we can not append to the HLog.
    */
   public static WALKeyImpl writeBulkLoadMarkerAndSync(final WAL wal,
-      final NavigableMap<byte[], Integer> replicationScope, final RegionInfo hri,
-      final WALProtos.BulkLoadDescriptor desc, final MultiVersionConcurrencyControl mvcc)
-          throws IOException {
-    WALKeyImpl walKey =
-        writeMarker(wal, replicationScope, hri, WALEdit.createBulkLoadEvent(hri, desc), mvcc, null);
+    final NavigableMap<byte[], Integer> replicationScope, final RegionInfo hri,
+    final WALProtos.BulkLoadDescriptor desc, final MultiVersionConcurrencyControl mvcc)
+    throws IOException {
+    WALKeyImpl walKey = writeMarker(wal, replicationScope, hri,
+      WALEdit.createBulkLoadEvent(hri, desc), false, mvcc, null);
     if (LOG.isTraceEnabled()) {
       LOG.trace("Appended Bulk Load marker " + TextFormat.shortDebugString(desc));
     }
@@ -134,36 +133,32 @@ public class WALUtil {
   }
 
   private static WALKeyImpl writeMarker(final WAL wal,
-                                        final NavigableMap<byte[], Integer> replicationScope,
-                                        final RegionInfo hri,
-                                        final WALEdit edit,
-                                        final MultiVersionConcurrencyControl mvcc,
-                                        final Map<String, byte[]> extendedAttributes)
-  throws IOException {
+    final NavigableMap<byte[], Integer> replicationScope, final RegionInfo hri, final WALEdit edit,
+    boolean closeRegion, final MultiVersionConcurrencyControl mvcc,
+    final Map<String, byte[]> extendedAttributes) throws IOException {
     // If sync == true in below, then timeout is not used; safe to pass UNSPECIFIED_TIMEOUT
-    return doFullAppendTransaction(wal, replicationScope, hri,
-        edit, mvcc, extendedAttributes, true);
+    return doFullMarkerAppendTransaction(wal, replicationScope, hri, edit, closeRegion, mvcc,
+      extendedAttributes, true);
   }
 
   /**
-   * A 'full' WAL transaction involves starting an mvcc transaction followed by an append,
-   * an optional sync, and then a call to complete the mvcc transaction. This method does it all.
-   * Good for case of adding a single edit or marker to the WAL.
-   *
-   * <p>This write is for internal use only. Not for external client consumption.
+   * A 'full' WAL transaction involves starting an mvcc transaction followed by an append, an
+   * optional sync, and then a call to complete the mvcc transaction. This method does it all. Good
+   * for case of adding a single edit or marker to the WAL.
+   * <p/>
+   * This write is for internal use only. Not for external client consumption.
    * @return WALKeyImpl that was added to the WAL.
    */
-  public static WALKeyImpl doFullAppendTransaction(final WAL wal,
-      final NavigableMap<byte[], Integer> replicationScope, final RegionInfo hri,
-      final WALEdit edit, final MultiVersionConcurrencyControl mvcc,
-      final Map<String, byte[]> extendedAttributes, final boolean sync)
-  throws IOException {
+  private static WALKeyImpl doFullMarkerAppendTransaction(final WAL wal,
+    final NavigableMap<byte[], Integer> replicationScope, final RegionInfo hri, final WALEdit edit,
+    boolean closeRegion, final MultiVersionConcurrencyControl mvcc,
+    final Map<String, byte[]> extendedAttributes, final boolean sync) throws IOException {
     // TODO: Pass in current time to use?
     WALKeyImpl walKey = new WALKeyImpl(hri.getEncodedNameAsBytes(), hri.getTable(),
-        System.currentTimeMillis(), mvcc, replicationScope, extendedAttributes);
+      System.currentTimeMillis(), mvcc, replicationScope, extendedAttributes);
     long trx = MultiVersionConcurrencyControl.NONE;
     try {
-      trx = wal.append(hri, walKey, edit, false);
+      trx = wal.appendMarker(hri, walKey, edit, closeRegion);
       if (sync) {
         wal.sync(trx);
       }

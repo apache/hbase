@@ -166,8 +166,8 @@ public class TestLogRollingNoCluster {
           for(byte[] fam : htd.getColumnFamilyNames()) {
             scopes.put(fam, 0);
           }
-          final long txid = wal.append(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(),
-              TableName.META_TABLE_NAME, now, mvcc, scopes), edit, true);
+          final long txid = wal.appendData(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(),
+            TableName.META_TABLE_NAME, now, mvcc, scopes), edit);
           Threads.sleep(ThreadLocalRandom.current().nextInt(5));
           wal.sync(txid);
         }

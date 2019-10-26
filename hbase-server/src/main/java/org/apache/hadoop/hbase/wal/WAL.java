@@ -56,7 +56,7 @@ public interface WAL extends Closeable, WALFileLengthProvider {
   /**
    * Roll the log writer. That is, start writing log messages to a new file.
    *
-   * <p>
+   * <p/>
    * The implementation is synchronized in order to make sure there's one rollWriter
    * running at any given time.
    *
@@ -69,7 +69,7 @@ public interface WAL extends Closeable, WALFileLengthProvider {
   /**
    * Roll the log writer. That is, start writing log messages to a new file.
    *
-   * <p>
+   * <p/>
    * The implementation is synchronized in order to make sure there's one rollWriter
    * running at any given time.
    *
@@ -97,44 +97,59 @@ public interface WAL extends Closeable, WALFileLengthProvider {
   void close() throws IOException;
 
   /**
-   * Append a set of edits to the WAL. The WAL is not flushed/sync'd after this transaction
-   * completes BUT on return this edit must have its region edit/sequence id assigned
-   * else it messes up our unification of mvcc and sequenceid.  On return <code>key</code> will
-   * have the region edit/sequence id filled in.
+   * Append a set of data edits to the WAL. 'Data' here means that the content in the edits will
+   * also be added to memstore.
+   * <p/>
+   * The WAL is not flushed/sync'd after this transaction completes BUT on return this edit must
+   * have its region edit/sequence id assigned else it messes up our unification of mvcc and
+   * sequenceid. On return <code>key</code> will have the region edit/sequence id filled in.
    * @param info the regioninfo associated with append
    * @param key Modified by this call; we add to it this edits region edit/sequence id.
    * @param edits Edits to append. MAY CONTAIN NO EDITS for case where we want to get an edit
-   * sequence id that is after all currently appended edits.
-   * @param inMemstore Always true except for case where we are writing a compaction completion
-   * record into the WAL; in this case the entry is just so we can finish an unfinished compaction
-   * -- it is not an edit for memstore.
+   *          sequence id that is after all currently appended edits.
    * @return Returns a 'transaction id' and <code>key</code> will have the region edit/sequence id
-   * in it.
+   *         in it.
+   * @see #appendMarker(RegionInfo, WALKeyImpl, WALEdit, boolean)
    */
-  long append(RegionInfo info, WALKeyImpl key, WALEdit edits, boolean inMemstore) throws IOException;
+  long appendData(RegionInfo info, WALKeyImpl key, WALEdit edits) throws IOException;
+
+  /**
+   * Append a marker edit to the WAL. A marker could be a FlushDescriptor, a compaction marker, or
+   * region event marker. The difference here is that, a marker will not be added to memstore.
+   * <p/>
+   * The WAL is not flushed/sync'd after this transaction completes BUT on return this edit must
+   * have its region edit/sequence id assigned else it messes up our unification of mvcc and
+   * sequenceid. On return <code>key</code> will have the region edit/sequence id filled in.
+   * @param info the regioninfo associated with append
+   * @param key Modified by this call; we add to it this edits region edit/sequence id.
+   * @param edits Edits to append. MAY CONTAIN NO EDITS for case where we want to get an edit
+   *          sequence id that is after all currently appended edits.
+   * @param closeRegion Whether this is a region close marker, i.e, the last wal edit for this
+   *          region on this region server. The WAL implementation should remove all the related
+   *          stuff, for example, the sequence id accounting.
+   * @return Returns a 'transaction id' and <code>key</code> will have the region edit/sequence id
+   *         in it.
+   * @see #appendData(RegionInfo, WALKeyImpl, WALEdit)
+   */
+  long appendMarker(RegionInfo info, WALKeyImpl key, WALEdit edits, boolean closeRegion)
+    throws IOException;
 
   /**
    * updates the seuence number of a specific store.
    * depending on the flag: replaces current seq number if the given seq id is bigger,
    * or even if it is lower than existing one
-   * @param encodedRegionName
-   * @param familyName
-   * @param sequenceid
-   * @param onlyIfGreater
    */
   void updateStore(byte[] encodedRegionName, byte[] familyName, Long sequenceid,
       boolean onlyIfGreater);
 
   /**
    * Sync what we have in the WAL.
-   * @throws IOException
    */
   void sync() throws IOException;
 
   /**
    * Sync the WAL if the txId was not already sync'd.
    * @param txid Transaction id to sync to.
-   * @throws IOException
    */
   void sync(long txid) throws IOException;
 
