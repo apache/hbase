@@ -63,12 +63,12 @@ public class FaultyFSLog extends FSHLog {
   }
 
   @Override
-  public long append(RegionInfo info, WALKeyImpl key,
-      WALEdit edits, boolean inMemstore) throws IOException {
+  protected long append(RegionInfo info, WALKeyImpl key, WALEdit edits, boolean inMemstore,
+    boolean closeRegion) throws IOException {
     if (this.ft == FailureType.APPEND) {
       throw new IOException("append");
     }
-    return super.append(info, key, edits, inMemstore);
+    return super.append(info, key, edits, inMemstore, closeRegion);
   }
 }
 

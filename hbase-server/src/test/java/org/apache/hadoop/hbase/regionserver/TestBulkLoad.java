@@ -115,7 +115,7 @@ public class TestBulkLoad {
     storeFileName = (new Path(storeFileName)).getName();
     List<String> storeFileNames = new ArrayList<>();
     storeFileNames.add(storeFileName);
-    when(log.append(any(), any(),
+    when(log.appendMarker(any(), any(),
             argThat(bulkLogWalEdit(WALEdit.BULK_LOAD, tableName.toBytes(),
                     familyName, storeFileNames)),
             anyBoolean())).thenAnswer(new Answer() {
@@ -142,7 +142,7 @@ public class TestBulkLoad {
 
   @Test
   public void shouldBulkLoadSingleFamilyHLog() throws IOException {
-    when(log.append(any(),
+    when(log.appendMarker(any(),
             any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD)),
             anyBoolean())).thenAnswer(new Answer() {
               @Override
@@ -162,7 +162,7 @@ public class TestBulkLoad {
 
   @Test
   public void shouldBulkLoadManyFamilyHLog() throws IOException {
-    when(log.append(any(),
+    when(log.appendMarker(any(),
             any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD)),
             anyBoolean())).thenAnswer(new Answer() {
               @Override
@@ -183,7 +183,7 @@ public class TestBulkLoad {
 
   @Test
   public void shouldBulkLoadManyFamilyHLogEvenWhenTableNameNamespaceSpecified() throws IOException {
-    when(log.append(any(),
+    when(log.appendMarker(any(),
             any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD)),
             anyBoolean())).thenAnswer(new Answer() {
               @Override

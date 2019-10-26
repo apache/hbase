@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ImmutableByteArray;
@@ -182,6 +183,30 @@ class SequenceIdAccounting {
         m.putIfAbsent(ImmutableByteArray.wrap(familyName), l);
       }
     }
+  }
+
+  /**
+   * Clear all the records of the given region as it is going to be closed.
+   * <p/>
+   * We will call this once we get the region close marker. We need this because that, if we use
+   * Durability.ASYNC_WAL, after calling startCacheFlush, we may still get some ongoing wal entries
+   * that has not been processed yet, this will lead to orphan records in the
+   * lowestUnflushedSequenceIds and then cause too many WAL files.
+   * <p/>
+   * See HBASE-23157 for more details.
+   */
+  void onRegionClose(byte[] encodedRegionName) {
+    synchronized (tieLock) {
+      this.lowestUnflushedSequenceIds.remove(encodedRegionName);
+      Map<ImmutableByteArray, Long> flushing = this.flushingSequenceIds.remove(encodedRegionName);
+      if (flushing != null) {
+        LOG.warn("Still have flushing records when closing {}, {}",
+          Bytes.toString(encodedRegionName),
+          flushing.entrySet().stream().map(e -> e.getKey().toString() + "->" + e.getValue())
+            .collect(Collectors.joining(",", "{", "}")));
+      }
+    }
+    this.highestSequenceIds.remove(encodedRegionName);
   }
 
   /**
@@ -364,7 +389,7 @@ class SequenceIdAccounting {
         Long currentId = tmpMap.get(e.getKey());
         if (currentId != null && currentId.longValue() < e.getValue().longValue()) {
           String errorStr = Bytes.toString(encodedRegionName) + " family "
-              + e.getKey().toStringUtf8() + " acquired edits out of order current memstore seq="
+              + e.getKey().toString() + " acquired edits out of order current memstore seq="
               + currentId + ", previous oldest unflushed id=" + e.getValue();
           LOG.error(errorStr);
           Runtime.getRuntime().halt(1);
