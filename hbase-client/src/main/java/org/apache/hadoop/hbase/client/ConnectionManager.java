@@ -669,8 +669,17 @@ class ConnectionManager {
       this.managed = managed;
       this.connectionConfig = new ConnectionConfiguration(conf);
       this.closed = false;
-      this.pause = connectionConfig.getPause();
-      this.pauseForCQTBE = connectionConfig.getPauseForCQTBE();
+      this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
+          HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
+      long configuredPauseForCQTBE = conf.getLong(HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE, pause);
+      if (configuredPauseForCQTBE < pause) {
+        LOG.warn("The " + HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE + " setting: "
+            + configuredPauseForCQTBE + " is smaller than " + HConstants.HBASE_CLIENT_PAUSE
+            + ", will use " + pause + " instead.");
+        this.pauseForCQTBE = pause;
+      } else {
+        this.pauseForCQTBE = configuredPauseForCQTBE;
+      }
       this.useMetaReplicas = conf.getBoolean(HConstants.USE_META_REPLICAS,
           HConstants.DEFAULT_USE_META_REPLICAS);
       this.metaReplicaCallTimeoutScanInMicroSecond =

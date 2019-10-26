@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants; // Needed for write rpc timeout
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
@@ -111,32 +112,32 @@ public class BufferedMutatorImpl implements BufferedMutator {
     this.pool = params.getPool();
     this.listener = params.getListener();
 
-    ConnectionConfiguration connConf = conn.getConnectionConfiguration();
-    if (connConf == null) {
-      // Slow: parse conf in ConnectionConfiguration constructor
-      connConf = new ConnectionConfiguration(conf);
-    }
+    ConnectionConfiguration tableConf = new ConnectionConfiguration(conf);
     this.writeBufferSize = params.getWriteBufferSize() != BufferedMutatorParams.UNSET ?
-        params.getWriteBufferSize() : connConf.getWriteBufferSize();
+        params.getWriteBufferSize() : tableConf.getWriteBufferSize();
 
     // Set via the setter because it does value validation and starts/stops the TimerTask
     long newWriteBufferPeriodicFlushTimeoutMs =
             params.getWriteBufferPeriodicFlushTimeoutMs() != UNSET
                     ? params.getWriteBufferPeriodicFlushTimeoutMs()
-                    : connConf.getWriteBufferPeriodicFlushTimeoutMs();
+                    : tableConf.getWriteBufferPeriodicFlushTimeoutMs();
     long newWriteBufferPeriodicFlushTimerTickMs =
             params.getWriteBufferPeriodicFlushTimerTickMs() != UNSET
                     ? params.getWriteBufferPeriodicFlushTimerTickMs()
-                    : connConf.getWriteBufferPeriodicFlushTimerTickMs();
+                    : tableConf.getWriteBufferPeriodicFlushTimerTickMs();
     this.setWriteBufferPeriodicFlush(
             newWriteBufferPeriodicFlushTimeoutMs,
             newWriteBufferPeriodicFlushTimerTickMs);
 
     this.maxKeyValueSize = params.getMaxKeyValueSize() != BufferedMutatorParams.UNSET ?
-        params.getMaxKeyValueSize() : connConf.getMaxKeyValueSize();
+        params.getMaxKeyValueSize() : tableConf.getMaxKeyValueSize();
 
-    this.writeRpcTimeout = connConf.getWriteRpcTimeout();
-    this.operationTimeout = connConf.getOperationTimeout();
+    this.writeRpcTimeout = conn.getConfiguration().getInt(HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY,
+        conn.getConfiguration().getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
+            HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
+    this.operationTimeout = conn.getConfiguration().getInt(
+        HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
+        HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
     // puts need to track errors globally due to how the APIs currently work.
     ap = new AsyncProcess(connection, conf, pool, rpcCallerFactory, true, rpcFactory, writeRpcTimeout);
   }
