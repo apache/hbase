@@ -166,6 +166,13 @@ public class ClusterStatus extends VersionedWritable {
   }
 
   /**
+   * @return map of the names of region servers on the live list with associated ServerLoad
+   */
+  public Map<ServerName, ServerLoad> getLiveServersLoad() {
+    return Collections.unmodifiableMap(liveServers);
+  }
+
+  /**
    * @return the average cluster load
    */
   public double getAverageLoad() {

@@ -55,6 +55,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   private long numReferenceFiles;
   private long maxFlushQueueSize;
   private long maxCompactionQueueSize;
+  private int maxStoreFileRefCount;
 
   private ScheduledFuture<?> regionMetricsUpdateTask;
 
@@ -121,6 +122,11 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   @Override
   public long getStoreRefCount() {
     return storeRefCount;
+  }
+
+  @Override
+  public int getMaxStoreFileRefCount() {
+    return maxStoreFileRefCount;
   }
 
   @Override
@@ -216,6 +222,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
     public void run() {
       long tempNumStoreFiles = 0;
       int tempStoreRefCount = 0;
+      int tempMaxStoreFileRefCount = 0;
       long tempMemstoreSize = 0;
       long tempStoreFileSize = 0;
       long tempMaxStoreFileAge = 0;
@@ -247,13 +254,18 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
 
           if (store instanceof HStore) {
             // Cast here to avoid interface changes to Store
-            tempStoreRefCount += ((HStore)store).getStoreRefCount();
+            HStore hStore = ((HStore) store);
+            tempStoreRefCount += hStore.getStoreRefCount();
+            int currentMaxStoreFileRefCount = hStore.getMaxStoreFileRefCount();
+            tempMaxStoreFileRefCount = Math.max(tempMaxStoreFileRefCount,
+              currentMaxStoreFileRefCount);
           }
         }
       }
 
       numStoreFiles = tempNumStoreFiles;
       storeRefCount = tempStoreRefCount;
+      maxStoreFileRefCount = tempMaxStoreFileRefCount;
       memstoreSize = tempMemstoreSize;
       storeFileSize = tempStoreFileSize;
       maxStoreFileAge = tempMaxStoreFileAge;

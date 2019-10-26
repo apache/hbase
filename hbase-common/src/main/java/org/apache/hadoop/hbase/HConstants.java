@@ -1341,6 +1341,13 @@ public final class HConstants {
   // User defined Default TTL config key
   public static final String DEFAULT_SNAPSHOT_TTL_CONFIG_KEY = "hbase.master.snapshot.ttl";
 
+  // Regions Recovery based on high storeFileRefCount threshold value
+  public static final String STORE_FILE_REF_COUNT_THRESHOLD =
+    "hbase.regions.recovery.store.file.ref.count";
+
+  // default -1 indicates there is no threshold on high storeRefCount
+  public static final int DEFAULT_STORE_FILE_REF_COUNT_THRESHOLD = -1;
+
   /**
    * Configurations for master executor services.
    */

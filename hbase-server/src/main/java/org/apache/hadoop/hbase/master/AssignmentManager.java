@@ -843,6 +843,16 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   /**
+   * Retrieve HRegionInfo for given region name
+   *
+   * @param regionName Region name in byte[]
+   * @return HRegionInfo
+   */
+  public HRegionInfo getRegionInfo(final byte[] regionName) {
+    return regionStates.getRegionInfo(regionName);
+  }
+
+  /**
    * This call is invoked only (1) master assign meta;
    * (2) during failover mode startup, zk assignment node processing.
    * The locker is set in the caller. It returns true if the region

@@ -3631,6 +3631,28 @@ public final class ClusterStatusProtos {
      * </pre>
      */
     int getStoreRefCount();
+
+    // optional int32 max_store_file_ref_count = 22 [default = 0];
+    /**
+     * <code>optional int32 max_store_file_ref_count = 22 [default = 0];</code>
+     *
+     * <pre>
+     **
+     *  The max number of references active on single store file among all store files
+     *  that belong to given region
+     * </pre>
+     */
+    boolean hasMaxStoreFileRefCount();
+    /**
+     * <code>optional int32 max_store_file_ref_count = 22 [default = 0];</code>
+     *
+     * <pre>
+     **
+     *  The max number of references active on single store file among all store files
+     *  that belong to given region
+     * </pre>
+     */
+    int getMaxStoreFileRefCount();
   }
   /**
    * Protobuf type {@code hbase.pb.RegionLoad}
@@ -3787,6 +3809,11 @@ public final class ClusterStatusProtos {
             case 168: {
               bitField0_ |= 0x00020000;
               storeRefCount_ = input.readInt32();
+              break;
+            }
+            case 176: {
+              bitField0_ |= 0x00040000;
+              maxStoreFileRefCount_ = input.readInt32();
               break;
             }
           }
@@ -4330,6 +4357,34 @@ public final class ClusterStatusProtos {
       return storeRefCount_;
     }
 
+    // optional int32 max_store_file_ref_count = 22 [default = 0];
+    public static final int MAX_STORE_FILE_REF_COUNT_FIELD_NUMBER = 22;
+    private int maxStoreFileRefCount_;
+    /**
+     * <code>optional int32 max_store_file_ref_count = 22 [default = 0];</code>
+     *
+     * <pre>
+     **
+     *  The max number of references active on single store file among all store files
+     *  that belong to given region
+     * </pre>
+     */
+    public boolean hasMaxStoreFileRefCount() {
+      return ((bitField0_ & 0x00040000) == 0x00040000);
+    }
+    /**
+     * <code>optional int32 max_store_file_ref_count = 22 [default = 0];</code>
+     *
+     * <pre>
+     **
+     *  The max number of references active on single store file among all store files
+     *  that belong to given region
+     * </pre>
+     */
+    public int getMaxStoreFileRefCount() {
+      return maxStoreFileRefCount_;
+    }
+
     private void initFields() {
       regionSpecifier_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
       stores_ = 0;
@@ -4350,6 +4405,7 @@ public final class ClusterStatusProtos {
       lastMajorCompactionTs_ = 0L;
       storeCompleteSequenceId_ = java.util.Collections.emptyList();
       storeRefCount_ = 0;
+      maxStoreFileRefCount_ = 0;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -4433,6 +4489,9 @@ public final class ClusterStatusProtos {
       }
       if (((bitField0_ & 0x00020000) == 0x00020000)) {
         output.writeInt32(21, storeRefCount_);
+      }
+      if (((bitField0_ & 0x00040000) == 0x00040000)) {
+        output.writeInt32(22, maxStoreFileRefCount_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -4518,6 +4577,10 @@ public final class ClusterStatusProtos {
       if (((bitField0_ & 0x00020000) == 0x00020000)) {
         size += com.google.protobuf.CodedOutputStream
           .computeInt32Size(21, storeRefCount_);
+      }
+      if (((bitField0_ & 0x00040000) == 0x00040000)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt32Size(22, maxStoreFileRefCount_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -4633,6 +4696,11 @@ public final class ClusterStatusProtos {
         result = result && (getStoreRefCount()
             == other.getStoreRefCount());
       }
+      result = result && (hasMaxStoreFileRefCount() == other.hasMaxStoreFileRefCount());
+      if (hasMaxStoreFileRefCount()) {
+        result = result && (getMaxStoreFileRefCount()
+            == other.getMaxStoreFileRefCount());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -4722,6 +4790,10 @@ public final class ClusterStatusProtos {
       if (hasStoreRefCount()) {
         hash = (37 * hash) + STORE_REF_COUNT_FIELD_NUMBER;
         hash = (53 * hash) + getStoreRefCount();
+      }
+      if (hasMaxStoreFileRefCount()) {
+        hash = (37 * hash) + MAX_STORE_FILE_REF_COUNT_FIELD_NUMBER;
+        hash = (53 * hash) + getMaxStoreFileRefCount();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -4880,6 +4952,8 @@ public final class ClusterStatusProtos {
         }
         storeRefCount_ = 0;
         bitField0_ = (bitField0_ & ~0x00040000);
+        maxStoreFileRefCount_ = 0;
+        bitField0_ = (bitField0_ & ~0x00080000);
         return this;
       }
 
@@ -4993,6 +5067,10 @@ public final class ClusterStatusProtos {
           to_bitField0_ |= 0x00020000;
         }
         result.storeRefCount_ = storeRefCount_;
+        if (((from_bitField0_ & 0x00080000) == 0x00080000)) {
+          to_bitField0_ |= 0x00040000;
+        }
+        result.maxStoreFileRefCount_ = maxStoreFileRefCount_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -5088,6 +5166,9 @@ public final class ClusterStatusProtos {
         }
         if (other.hasStoreRefCount()) {
           setStoreRefCount(other.getStoreRefCount());
+        }
+        if (other.hasMaxStoreFileRefCount()) {
+          setMaxStoreFileRefCount(other.getMaxStoreFileRefCount());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -6424,6 +6505,63 @@ public final class ClusterStatusProtos {
       public Builder clearStoreRefCount() {
         bitField0_ = (bitField0_ & ~0x00040000);
         storeRefCount_ = 0;
+        onChanged();
+        return this;
+      }
+
+      // optional int32 max_store_file_ref_count = 22 [default = 0];
+      private int maxStoreFileRefCount_ ;
+      /**
+       * <code>optional int32 max_store_file_ref_count = 22 [default = 0];</code>
+       *
+       * <pre>
+       **
+       *  The max number of references active on single store file among all store files
+       *  that belong to given region
+       * </pre>
+       */
+      public boolean hasMaxStoreFileRefCount() {
+        return ((bitField0_ & 0x00080000) == 0x00080000);
+      }
+      /**
+       * <code>optional int32 max_store_file_ref_count = 22 [default = 0];</code>
+       *
+       * <pre>
+       **
+       *  The max number of references active on single store file among all store files
+       *  that belong to given region
+       * </pre>
+       */
+      public int getMaxStoreFileRefCount() {
+        return maxStoreFileRefCount_;
+      }
+      /**
+       * <code>optional int32 max_store_file_ref_count = 22 [default = 0];</code>
+       *
+       * <pre>
+       **
+       *  The max number of references active on single store file among all store files
+       *  that belong to given region
+       * </pre>
+       */
+      public Builder setMaxStoreFileRefCount(int value) {
+        bitField0_ |= 0x00080000;
+        maxStoreFileRefCount_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional int32 max_store_file_ref_count = 22 [default = 0];</code>
+       *
+       * <pre>
+       **
+       *  The max number of references active on single store file among all store files
+       *  that belong to given region
+       * </pre>
+       */
+      public Builder clearMaxStoreFileRefCount() {
+        bitField0_ = (bitField0_ & ~0x00080000);
+        maxStoreFileRefCount_ = 0;
         onChanged();
         return this;
       }
@@ -14845,7 +14983,7 @@ public final class ClusterStatusProtos {
       "e\030\001 \002(\014\022\023\n\013sequence_id\030\002 \002(\004\"p\n\026RegionSt" +
       "oreSequenceIds\022 \n\030last_flushed_sequence_" +
       "id\030\001 \002(\004\0224\n\021store_sequence_id\030\002 \003(\0132\031.hb" +
-      "ase.pb.StoreSequenceId\"\360\004\n\nRegionLoad\0223\n" +
+      "ase.pb.StoreSequenceId\"\225\005\n\nRegionLoad\0223\n" +
       "\020region_specifier\030\001 \002(\0132\031.hbase.pb.Regio" +
       "nSpecifier\022\016\n\006stores\030\002 \001(\r\022\022\n\nstorefiles",
       "\030\003 \001(\r\022\"\n\032store_uncompressed_size_MB\030\004 \001" +
@@ -14861,38 +14999,38 @@ public final class ClusterStatusProtos {
       "\002\022#\n\030last_major_compaction_ts\030\021 \001(\004:\0010\022=" +
       "\n\032store_complete_sequence_id\030\022 \003(\0132\031.hba" +
       "se.pb.StoreSequenceId\022\032\n\017store_ref_count" +
-      "\030\025 \001(\005:\0010\"T\n\023ReplicationLoadSink\022\032\n\022ageO" +
-      "fLastAppliedOp\030\001 \002(\004\022!\n\031timeStampsOfLast" +
-      "AppliedOp\030\002 \002(\004\"\225\001\n\025ReplicationLoadSourc" +
-      "e\022\016\n\006peerID\030\001 \002(\t\022\032\n\022ageOfLastShippedOp\030" +
-      "\002 \002(\004\022\026\n\016sizeOfLogQueue\030\003 \002(\r\022 \n\030timeSta" +
-      "mpOfLastShippedOp\030\004 \002(\004\022\026\n\016replicationLa" +
-      "g\030\005 \002(\004\"\212\003\n\nServerLoad\022\032\n\022number_of_requ",
-      "ests\030\001 \001(\004\022 \n\030total_number_of_requests\030\002" +
-      " \001(\004\022\024\n\014used_heap_MB\030\003 \001(\r\022\023\n\013max_heap_M" +
-      "B\030\004 \001(\r\022*\n\014region_loads\030\005 \003(\0132\024.hbase.pb" +
-      ".RegionLoad\022+\n\014coprocessors\030\006 \003(\0132\025.hbas" +
-      "e.pb.Coprocessor\022\031\n\021report_start_time\030\007 " +
-      "\001(\004\022\027\n\017report_end_time\030\010 \001(\004\022\030\n\020info_ser" +
-      "ver_port\030\t \001(\r\0227\n\016replLoadSource\030\n \003(\0132\037" +
-      ".hbase.pb.ReplicationLoadSource\0223\n\014replL" +
-      "oadSink\030\013 \001(\0132\035.hbase.pb.ReplicationLoad" +
-      "Sink\"a\n\016LiveServerInfo\022$\n\006server\030\001 \002(\0132\024",
-      ".hbase.pb.ServerName\022)\n\013server_load\030\002 \002(" +
-      "\0132\024.hbase.pb.ServerLoad\"\250\003\n\rClusterStatu" +
-      "s\0228\n\rhbase_version\030\001 \001(\0132!.hbase.pb.HBas" +
-      "eVersionFileContent\022.\n\014live_servers\030\002 \003(" +
-      "\0132\030.hbase.pb.LiveServerInfo\022*\n\014dead_serv" +
-      "ers\030\003 \003(\0132\024.hbase.pb.ServerName\022;\n\025regio" +
-      "ns_in_transition\030\004 \003(\0132\034.hbase.pb.Region" +
-      "InTransition\022\'\n\ncluster_id\030\005 \001(\0132\023.hbase" +
-      ".pb.ClusterId\0222\n\023master_coprocessors\030\006 \003" +
-      "(\0132\025.hbase.pb.Coprocessor\022$\n\006master\030\007 \001(",
-      "\0132\024.hbase.pb.ServerName\022,\n\016backup_master" +
-      "s\030\010 \003(\0132\024.hbase.pb.ServerName\022\023\n\013balance" +
-      "r_on\030\t \001(\010BF\n*org.apache.hadoop.hbase.pr" +
-      "otobuf.generatedB\023ClusterStatusProtosH\001\240" +
-      "\001\001"
+      "\030\025 \001(\005:\0010\022#\n\030max_store_file_ref_count\030\026 " +
+      "\001(\005:\0010\"T\n\023ReplicationLoadSink\022\032\n\022ageOfLa" +
+      "stAppliedOp\030\001 \002(\004\022!\n\031timeStampsOfLastApp" +
+      "liedOp\030\002 \002(\004\"\225\001\n\025ReplicationLoadSource\022\016" +
+      "\n\006peerID\030\001 \002(\t\022\032\n\022ageOfLastShippedOp\030\002 \002" +
+      "(\004\022\026\n\016sizeOfLogQueue\030\003 \002(\r\022 \n\030timeStampO" +
+      "fLastShippedOp\030\004 \002(\004\022\026\n\016replicationLag\030\005",
+      " \002(\004\"\212\003\n\nServerLoad\022\032\n\022number_of_request" +
+      "s\030\001 \001(\004\022 \n\030total_number_of_requests\030\002 \001(" +
+      "\004\022\024\n\014used_heap_MB\030\003 \001(\r\022\023\n\013max_heap_MB\030\004" +
+      " \001(\r\022*\n\014region_loads\030\005 \003(\0132\024.hbase.pb.Re" +
+      "gionLoad\022+\n\014coprocessors\030\006 \003(\0132\025.hbase.p" +
+      "b.Coprocessor\022\031\n\021report_start_time\030\007 \001(\004" +
+      "\022\027\n\017report_end_time\030\010 \001(\004\022\030\n\020info_server" +
+      "_port\030\t \001(\r\0227\n\016replLoadSource\030\n \003(\0132\037.hb" +
+      "ase.pb.ReplicationLoadSource\0223\n\014replLoad" +
+      "Sink\030\013 \001(\0132\035.hbase.pb.ReplicationLoadSin",
+      "k\"a\n\016LiveServerInfo\022$\n\006server\030\001 \002(\0132\024.hb" +
+      "ase.pb.ServerName\022)\n\013server_load\030\002 \002(\0132\024" +
+      ".hbase.pb.ServerLoad\"\250\003\n\rClusterStatus\0228" +
+      "\n\rhbase_version\030\001 \001(\0132!.hbase.pb.HBaseVe" +
+      "rsionFileContent\022.\n\014live_servers\030\002 \003(\0132\030" +
+      ".hbase.pb.LiveServerInfo\022*\n\014dead_servers" +
+      "\030\003 \003(\0132\024.hbase.pb.ServerName\022;\n\025regions_" +
+      "in_transition\030\004 \003(\0132\034.hbase.pb.RegionInT" +
+      "ransition\022\'\n\ncluster_id\030\005 \001(\0132\023.hbase.pb" +
+      ".ClusterId\0222\n\023master_coprocessors\030\006 \003(\0132",
+      "\025.hbase.pb.Coprocessor\022$\n\006master\030\007 \001(\0132\024" +
+      ".hbase.pb.ServerName\022,\n\016backup_masters\030\010" +
+      " \003(\0132\024.hbase.pb.ServerName\022\023\n\013balancer_o" +
+      "n\030\t \001(\010BF\n*org.apache.hadoop.hbase.proto" +
+      "buf.generatedB\023ClusterStatusProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -14928,7 +15066,7 @@ public final class ClusterStatusProtos {
           internal_static_hbase_pb_RegionLoad_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_RegionLoad_descriptor,
-              new java.lang.String[] { "RegionSpecifier", "Stores", "Storefiles", "StoreUncompressedSizeMB", "StorefileSizeMB", "MemstoreSizeMB", "StorefileIndexSizeMB", "ReadRequestsCount", "WriteRequestsCount", "TotalCompactingKVs", "CurrentCompactedKVs", "RootIndexSizeKB", "TotalStaticIndexSizeKB", "TotalStaticBloomSizeKB", "CompleteSequenceId", "DataLocality", "LastMajorCompactionTs", "StoreCompleteSequenceId", "StoreRefCount", });
+              new java.lang.String[] { "RegionSpecifier", "Stores", "Storefiles", "StoreUncompressedSizeMB", "StorefileSizeMB", "MemstoreSizeMB", "StorefileIndexSizeMB", "ReadRequestsCount", "WriteRequestsCount", "TotalCompactingKVs", "CurrentCompactedKVs", "RootIndexSizeKB", "TotalStaticIndexSizeKB", "TotalStaticBloomSizeKB", "CompleteSequenceId", "DataLocality", "LastMajorCompactionTs", "StoreCompleteSequenceId", "StoreRefCount", "MaxStoreFileRefCount", });
           internal_static_hbase_pb_ReplicationLoadSink_descriptor =
             getDescriptor().getMessageTypes().get(5);
           internal_static_hbase_pb_ReplicationLoadSink_fieldAccessorTable = new

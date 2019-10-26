@@ -97,6 +97,11 @@ public class TestMetricsRegionSourceImpl {
     }
 
     @Override
+    public int getMaxStoreFileRefCount() {
+      return 0;
+    }
+
+    @Override
     public long getMemstoreSize() {
       return 0;
     }
