@@ -250,7 +250,7 @@ public class TestWALLockup {
       LOG.info("SET throwing of exception on append");
       dodgyWAL.throwException = true;
       // This append provokes a WAL roll request
-      dodgyWAL.append(region.getRegionInfo(), key, edit, true);
+      dodgyWAL.appendData(region.getRegionInfo(), key, edit);
       boolean exception = false;
       try {
         dodgyWAL.sync(false);

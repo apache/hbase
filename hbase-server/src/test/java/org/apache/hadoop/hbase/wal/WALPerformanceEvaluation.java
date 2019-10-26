@@ -184,7 +184,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
             RegionInfo hri = region.getRegionInfo();
             final WALKeyImpl logkey =
                 new WALKeyImpl(hri.getEncodedNameAsBytes(), hri.getTable(), now, mvcc, scopes);
-            wal.append(hri, logkey, walEdit, true);
+            wal.appendData(hri, logkey, walEdit);
             if (!this.noSync) {
               if (++lastSync >= this.syncInterval) {
                 wal.sync();

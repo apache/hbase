@@ -207,9 +207,8 @@ public class TestLogRollAbort {
         kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), tableName.getName()));
         NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
         scopes.put(Bytes.toBytes("column"), 0);
-        log.append(regionInfo, new WALKeyImpl(regionInfo.getEncodedNameAsBytes(), tableName,
-            System.currentTimeMillis(), mvcc, scopes),
-          kvs, true);
+        log.appendData(regionInfo, new WALKeyImpl(regionInfo.getEncodedNameAsBytes(), tableName,
+          System.currentTimeMillis(), mvcc, scopes), kvs);
       }
       // Send the data to HDFS datanodes and close the HDFS writer
       log.sync();
