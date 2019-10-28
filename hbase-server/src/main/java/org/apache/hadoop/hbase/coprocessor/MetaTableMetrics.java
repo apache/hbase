@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.util.LossyCounting;
 public class MetaTableMetrics extends BaseRegionObserver {
 
   private MetricRegistry registry;
-  private LossyCounting clientMetricsLossyCounting, regionMetricsLossyCounting;
+  private LossyCounting<String> clientMetricsLossyCounting, regionMetricsLossyCounting;
   private boolean active = false;
   private Set<String> metrics = new HashSet<String>();
 
@@ -251,14 +251,15 @@ public class MetaTableMetrics extends BaseRegionObserver {
         .equals(TableName.META_TABLE_NAME)) {
       RegionCoprocessorEnvironment regionCoprocessorEnv = (RegionCoprocessorEnvironment) env;
       registry = regionCoprocessorEnv.getMetricRegistryForRegionServer();
-      LossyCounting.LossyCountingListener listener = new LossyCounting.LossyCountingListener(){
-        @Override public void sweep(String key) {
-          registry.remove(key);
-          metrics.remove(key);
-        }
+      LossyCounting.LossyCountingListener<String> listener =
+        new LossyCounting.LossyCountingListener<String>() {
+          @Override public void sweep(String key) {
+            registry.remove(key);
+            metrics.remove(key);
+          }
       };
-      clientMetricsLossyCounting = new LossyCounting(listener);
-      regionMetricsLossyCounting = new LossyCounting(listener);
+      clientMetricsLossyCounting = new LossyCounting<String>("clientMetaMetrics",listener);
+      regionMetricsLossyCounting = new LossyCounting<String>("regionMetaMetrics",listener);
       // only be active mode when this region holds meta table.
       active = true;
     }

@@ -31,16 +31,26 @@ public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServer
   public static enum FactoryStorage {
     INSTANCE;
     private Object aggLock = new Object();
-    private MetricsRegionAggregateSourceImpl aggImpl;
+    private MetricsRegionAggregateSourceImpl regionAggImpl;
+    private MetricsUserAggregateSourceImpl userAggImpl;
     private MetricsTableAggregateSourceImpl tblAggImpl;
   }
 
-  private synchronized MetricsRegionAggregateSourceImpl getAggregate() {
+  private synchronized MetricsRegionAggregateSourceImpl getRegionAggregate() {
     synchronized (FactoryStorage.INSTANCE.aggLock) {
-      if (FactoryStorage.INSTANCE.aggImpl == null) {
-        FactoryStorage.INSTANCE.aggImpl = new MetricsRegionAggregateSourceImpl();
+      if (FactoryStorage.INSTANCE.regionAggImpl == null) {
+        FactoryStorage.INSTANCE.regionAggImpl = new MetricsRegionAggregateSourceImpl();
       }
-      return FactoryStorage.INSTANCE.aggImpl;
+      return FactoryStorage.INSTANCE.regionAggImpl;
+    }
+  }
+
+  public synchronized MetricsUserAggregateSourceImpl getUserAggregate() {
+    synchronized (FactoryStorage.INSTANCE.aggLock) {
+      if (FactoryStorage.INSTANCE.userAggImpl == null) {
+        FactoryStorage.INSTANCE.userAggImpl = new MetricsUserAggregateSourceImpl();
+      }
+      return FactoryStorage.INSTANCE.userAggImpl;
     }
   }
 
@@ -61,7 +71,7 @@ public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServer
 
   @Override
   public MetricsRegionSource createRegion(MetricsRegionWrapper wrapper) {
-    return new MetricsRegionSourceImpl(wrapper, getAggregate());
+    return new MetricsRegionSourceImpl(wrapper, getRegionAggregate());
   }
 
   @Override
@@ -71,5 +81,11 @@ public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServer
 
   public MetricsIOSource createIO(MetricsIOWrapper wrapper) {
     return new MetricsIOSourceImpl(wrapper);
+  }
+
+  @Override
+  public org.apache.hadoop.hbase.regionserver.MetricsUserSource createUser(String shortUserName) {
+    return new org.apache.hadoop.hbase.regionserver.MetricsUserSourceImpl(shortUserName,
+        getUserAggregate());
   }
 }
