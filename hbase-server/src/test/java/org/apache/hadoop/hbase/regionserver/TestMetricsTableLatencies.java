@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.TableName;
@@ -32,8 +33,8 @@ import org.junit.experimental.categories.Category;
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestMetricsTableLatencies {
 
-  public static MetricsAssertHelper HELPER =
-      CompatibilityFactory.getInstance(MetricsAssertHelper.class);
+  private static MetricsAssertHelper HELPER =
+    CompatibilityFactory.getInstance(MetricsAssertHelper.class);
 
   @Test
   public void testTableWrapperAggregateMetrics() throws IOException {
