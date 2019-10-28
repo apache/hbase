@@ -37,6 +37,7 @@ public class TestMetricsUserSourceImpl {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMetricsUserSourceImpl.class);
 
+  @SuppressWarnings("SelfComparison")
   @Test
   public void testCompareToHashCodeEquals() throws Exception {
     MetricsRegionServerSourceFactory fact
