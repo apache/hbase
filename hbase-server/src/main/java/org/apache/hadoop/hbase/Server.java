@@ -78,8 +78,7 @@ public interface Server extends Abortable, Stoppable {
   /**
    * @return Return the FileSystem object used (can return null!).
    */
-  // TODO: On Master, return Master's. On RegionServer, return RegionServers. The FileSystems
-  // may differ. TODO.
+  // TODO: Distinguish between "dataFs" and "walFs".
   default FileSystem getFileSystem() {
     // This default is pretty dodgy!
     Configuration c = getConfiguration();

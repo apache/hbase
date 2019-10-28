@@ -121,7 +121,7 @@ public class TestRegionServerNoMaster {
     while (true) {
       sn = MetaTableLocator.getMetaRegionLocation(zkw);
       if (sn != null && sn.equals(hrs.getServerName())
-          && hrs.onlineRegions.containsKey(
+          && hrs.getOnlineRegions().containsKey(
               HRegionInfo.FIRST_META_REGIONINFO.getEncodedName())) {
         break;
       }
