@@ -64,8 +64,8 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -229,7 +229,7 @@ public abstract class TestReplicationSourceManager {
     return utility.getMiniHBaseCluster().getRegionServerThreads()
         .stream().map(JVMClusterUtil.RegionServerThread::getRegionServer)
         .findAny()
-        .map(HRegionServer::getReplicationSourceService)
+        .map(RegionServerServices::getReplicationSourceService)
         .map(r -> (Replication)r)
         .map(Replication::getReplicationManager)
         .get();
@@ -546,7 +546,7 @@ public abstract class TestReplicationSourceManager {
     }
     return utility.getMiniHBaseCluster().getRegionServerThreads()
         .stream().map(JVMClusterUtil.RegionServerThread::getRegionServer)
-        .map(HRegionServer::getReplicationSourceService)
+        .map(RegionServerServices::getReplicationSourceService)
         .map(r -> (Replication)r)
         .map(Replication::getReplicationManager)
         .mapToLong(ReplicationSourceManager::getSizeOfLatestPath)
