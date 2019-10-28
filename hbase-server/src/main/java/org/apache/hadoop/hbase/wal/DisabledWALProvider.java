@@ -224,7 +224,7 @@ class DisabledWALProvider implements WALProvider {
     }
 
     @Override
-    public void completeCacheFlush(final byte[] encodedRegionName) {
+    public void completeCacheFlush(final byte[] encodedRegionName, long maxFlushedSeqId) {
     }
 
     @Override
