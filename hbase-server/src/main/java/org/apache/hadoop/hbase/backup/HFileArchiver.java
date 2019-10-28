@@ -316,13 +316,19 @@ public class HFileArchiver {
     // build the archive path
     if (regionInfo == null || family == null) throw new IOException(
         "Need to have a region and a family to archive from.");
+    //NOTE: This extra check is needed for the exceptional scenario where we archive wal edits
+    // replayed, when hbase.region.archive.recovered.edits is on. Since WALs may be configured to
+    // use different FS than root dir, we need to make sure to pick the proper FS when deciding
+    // on the archiving path.
+    //1) If no wal dir setting, wals and root dir are on same FS, so good to go with the root dir;
+    //2) When we have wal dir set it will only be on different FS if "scheme://authority" is
+    // defined on wal path. In this case, if this is a proper store file archiving call, the passed
+    // FS scheme will be different from the wal dir one, and you should pick root dir as base.
     String workingDir = conf.get(CommonFSUtils.HBASE_WAL_DIR);
-    Path rootDir = null;
     if(workingDir == null || !workingDir.startsWith(fs.getScheme())){
       workingDir = conf.get(HConstants.HBASE_DIR);
     }
-    workingDir = workingDir.substring(workingDir.lastIndexOf("/"));
-    rootDir = new Path(workingDir);
+    Path rootDir = new Path(workingDir);
     Path storeArchiveDir = HFileArchiveUtil.
       getStoreArchivePathForRootDir(rootDir, regionInfo, family);
     // make sure we don't archive if we can't and that the archive dir exists

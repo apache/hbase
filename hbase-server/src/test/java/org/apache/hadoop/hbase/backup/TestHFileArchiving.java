@@ -138,10 +138,37 @@ public class TestHFileArchiving {
   }
 
   @Test
-  public void testArchiveStoreFilesDifferentFileSystems() throws IOException {
+  public void testArchiveStoreFilesDifferentFileSystemsWallWithSchemaPlainRoot() throws Exception {
+    String walDir = "mockFS://mockFSAuthority:9876/mockDir/wals/";
+    testArchiveStoreFilesDifferentFileSystems(walDir, "/hbase", walDir);
+  }
+
+  @Test
+  public void testArchiveStoreFilesDifferentFileSystemsWallNullRootWithSchema() throws Exception {
+    String rootDir = "testFS://test:5432/hbase/";
+    testArchiveStoreFilesDifferentFileSystems(null, rootDir, rootDir);
+  }
+
+  @Test
+  public void testArchiveStoreFilesDifferentFileSystemsWallNullPlainRoot() throws Exception {
+    String rootDir = "/hbase/";
+    testArchiveStoreFilesDifferentFileSystems(null, rootDir, rootDir);
+  }
+
+  @Test
+  public void testArchiveStoreFilesDifferentFileSystemsWallAndRootSame() throws Exception {
+    String rootDir = "/hbase/";
+    testArchiveStoreFilesDifferentFileSystems("/hbase/wals/", rootDir, rootDir);
+  }
+
+  private void testArchiveStoreFilesDifferentFileSystems(String walDir, String rootDir,
+      String expectedBase) throws IOException {
     FileSystem mockedFileSystem = mock(FileSystem.class);
-    UTIL.getConfiguration().set(CommonFSUtils.HBASE_WAL_DIR, "mockFS://mockDir");
-    Path filePath = new Path("/mockFile");
+    Configuration conf = new Configuration(UTIL.getConfiguration());
+    if(walDir != null)
+      conf.set(CommonFSUtils.HBASE_WAL_DIR, walDir);
+    conf.set(HConstants.HBASE_DIR, rootDir);
+    Path filePath = new Path("/mockDir/wals/mockFile");
     when(mockedFileSystem.getScheme()).thenReturn("mockFS");
     when(mockedFileSystem.mkdirs(any())).thenReturn(true);
     when(mockedFileSystem.exists(any())).thenReturn(true);
@@ -156,13 +183,13 @@ public class TestHFileArchiving {
     list.add(mockedFile);
     when(mockedFile.getPath()).thenReturn(filePath);
     when(mockedFileSystem.rename(any(),any())).thenReturn(true);
-    HFileArchiver.archiveStoreFiles(UTIL.getConfiguration(), mockedFileSystem, mockedRegion,
+    HFileArchiver.archiveStoreFiles(conf, mockedFileSystem, mockedRegion,
       tableDir, family, list);
     ArgumentCaptor<Path> pathCaptor = ArgumentCaptor.forClass(Path.class);
     verify(mockedFileSystem, times(2)).rename(pathCaptor.capture(), any());
-    assertTrue(pathCaptor.getAllValues().get(0).toString().
-      equals("/mockDir/archive/data/default/mockTable/"
-        + "mocked-region-encoded-name/testfamily/mockFile"));
+    String expectedDir = expectedBase +
+      "archive/data/default/mockTable/mocked-region-encoded-name/testfamily/mockFile";
+    assertTrue(pathCaptor.getAllValues().get(0).toString().equals(expectedDir));
   }
 
   @Test
