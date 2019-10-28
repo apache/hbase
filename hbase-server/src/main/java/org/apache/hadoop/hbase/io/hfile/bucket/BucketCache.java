@@ -72,7 +72,9 @@ import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.IdReadWriteLock;
-import org.apache.hadoop.hbase.util.IdReadWriteLock.ReferenceType;
+import org.apache.hadoop.hbase.util.IdReadWriteLockSoftOrWeakRef;
+import org.apache.hadoop.hbase.util.IdReadWriteLockSoftOrWeakRef.ReferenceType;
+import org.apache.hadoop.hbase.util.IdReadWriteLockStrongRef;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -112,6 +114,10 @@ public class BucketCache implements BlockCache, HeapSize {
   static final String EXTRA_FREE_FACTOR_CONFIG_NAME = "hbase.bucketcache.extrafreefactor";
   static final String ACCEPT_FACTOR_CONFIG_NAME = "hbase.bucketcache.acceptfactor";
   static final String MIN_FACTOR_CONFIG_NAME = "hbase.bucketcache.minfactor";
+
+  /** Use strong reference for offsetLock or not */
+  private static final String STRONG_REF_KEY = "hbase.bucketcache.offsetlock.usestrongref";
+  private static final boolean STRONG_REF_DEFAULT = false;
 
   /** Priority buckets */
   @VisibleForTesting
@@ -199,10 +205,9 @@ public class BucketCache implements BlockCache, HeapSize {
    * A ReentrantReadWriteLock to lock on a particular block identified by offset.
    * The purpose of this is to avoid freeing the block which is being read.
    * <p>
-   * Key set of offsets in BucketCache is limited so soft reference is the best choice here.
    */
   @VisibleForTesting
-  transient final IdReadWriteLock<Long> offsetLock = new IdReadWriteLock<>(ReferenceType.SOFT);
+  transient final IdReadWriteLock<Long> offsetLock;
 
   private final NavigableSet<BlockCacheKey> blocksByHFile = new ConcurrentSkipListSet<>((a, b) -> {
     int nameComparison = a.getHfileName().compareTo(b.getHfileName());
@@ -257,6 +262,12 @@ public class BucketCache implements BlockCache, HeapSize {
   public BucketCache(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
       int writerThreadNum, int writerQLen, String persistencePath, int ioErrorsTolerationDuration,
       Configuration conf) throws IOException {
+    boolean useStrongRef = conf.getBoolean(STRONG_REF_KEY, STRONG_REF_DEFAULT);
+    if (useStrongRef) {
+      this.offsetLock = new IdReadWriteLockStrongRef<>();
+    } else {
+      this.offsetLock = new IdReadWriteLockSoftOrWeakRef<>(ReferenceType.SOFT);
+    }
     this.algorithm = conf.get(FILE_VERIFY_ALGORITHM, DEFAULT_FILE_VERIFY_ALGORITHM);
     this.ioEngine = getIOEngineFromName(ioEngineName, capacity, persistencePath);
     this.writerThreads = new WriterThread[writerThreadNum];
@@ -277,7 +288,7 @@ public class BucketCache implements BlockCache, HeapSize {
 
     LOG.info("Instantiating BucketCache with acceptableFactor: " + acceptableFactor + ", minFactor: " + minFactor +
         ", extraFreeFactor: " + extraFreeFactor + ", singleFactor: " + singleFactor + ", multiFactor: " + multiFactor +
-        ", memoryFactor: " + memoryFactor);
+        ", memoryFactor: " + memoryFactor + ", useStrongRef: " + useStrongRef);
 
     this.cacheCapacity = capacity;
     this.persistencePath = persistencePath;
