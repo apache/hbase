@@ -204,6 +204,8 @@ public class WALProcedureStore extends ProcedureStoreBase {
 
   // Variables used for UI display
   private CircularFifoQueue<SyncMetrics> syncMetricsQueue;
+  private int syncMetricsQueueSize = 0;
+  private int syncMetricsQueueIndex = 0;
 
   public static class SyncMetrics {
     private long timestamp;
@@ -303,8 +305,8 @@ public class WALProcedureStore extends ProcedureStoreBase {
     useHsync = conf.getBoolean(USE_HSYNC_CONF_KEY, DEFAULT_USE_HSYNC);
 
     // WebUI
-    syncMetricsQueue = new CircularFifoQueue<>(
-      conf.getInt(STORE_WAL_SYNC_STATS_COUNT, DEFAULT_SYNC_STATS_COUNT));
+    syncMetricsQueueSize = conf.getInt(STORE_WAL_SYNC_STATS_COUNT, DEFAULT_SYNC_STATS_COUNT);
+    syncMetricsQueue = new CircularFifoQueue<>(syncMetricsQueueSize);
 
     // Init sync thread
     syncThread = new Thread("WALProcedureStoreSyncThread") {
@@ -848,14 +850,24 @@ public class WALProcedureStore extends ProcedureStoreBase {
                       StringUtils.humanSize(syncedPerSec)));
           }
 
-          // update webui circular buffers (TODO: get rid of allocations)
-          final SyncMetrics syncMetrics = new SyncMetrics();
+          // update webui circular buffers
+          SyncMetrics syncMetrics = null;
+          if (syncMetricsQueue.isAtFullCapacity()) {
+            if (syncMetricsQueueIndex == syncMetricsQueueSize) {
+              syncMetricsQueueIndex = 0;
+            }
+            syncMetrics = syncMetricsQueue.get(syncMetricsQueueIndex);
+            syncMetricsQueueIndex ++;
+          } else {
+            syncMetrics = new SyncMetrics();
+            syncMetricsQueue.add(syncMetrics);
+          }
+
           syncMetrics.timestamp = currentTs;
           syncMetrics.syncWaitMs = syncWaitMs;
           syncMetrics.syncedEntries = slotIndex;
           syncMetrics.totalSyncedBytes = totalSyncedToStore;
           syncMetrics.syncedPerSec = syncedPerSec;
-          syncMetricsQueue.add(syncMetrics);
 
           // sync
           inSync.set(true);
