@@ -855,11 +855,15 @@ public final class MobUtils {
     // with major compaction in mob-enabled column.
     try {
       lock.acquire();
+      LOG.info("start MOB compaction of files for table='{}', column='{}', allFiles={}, " +
+          "compactor='{}'", tableName, hcd.getNameAsString(), allFiles, compactor.getClass());
       compactor.compact(allFiles);
     } catch (Exception e) {
       LOG.error("Failed to compact the mob files for the column " + hcd.getNameAsString()
           + " in the table " + tableName.getNameAsString(), e);
     } finally {
+      LOG.info("end MOB compaction of files for table='{}', column='{}', allFiles={}, " +
+          "compactor='{}'", tableName, hcd.getNameAsString(), allFiles, compactor.getClass());
       lock.release();
     }
   }
