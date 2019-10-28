@@ -97,4 +97,5 @@ public interface BulkLoadHFiles {
   static BulkLoadHFiles create(Configuration conf) {
     return new BulkLoadHFilesTool(conf);
   }
+
 }

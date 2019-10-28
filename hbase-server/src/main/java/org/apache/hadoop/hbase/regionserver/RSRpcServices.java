@@ -2402,7 +2402,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         }
         try {
           map = region.bulkLoadHFiles(familyPaths, request.getAssignSeqNum(), null,
-              request.getCopyFile(), clusterIds);
+              request.getCopyFile(), clusterIds, request.getReplicate());
         } finally {
           if (region.getCoprocessorHost() != null) {
             region.getCoprocessorHost().postBulkLoadHFile(familyPaths, map);

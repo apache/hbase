@@ -24,10 +24,16 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
@@ -42,6 +48,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -54,14 +61,21 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.mob.MobConstants;
+import org.apache.hadoop.hbase.mob.MobFileName;
+import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.mob.compactions.PartitionedMobCompactor;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.TestReplicationBase;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.tool.BulkLoadHFilesTool;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.After;
@@ -77,14 +91,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Integration test for bulk load replication. Defines two clusters, with two way replication.
- * Performs a bulk load on cluster defined by UTIL1 first, asserts the Cell on the bulk loaded file
- * gets into the related table in UTIL1, then also validates the same got replicated to cluster
- * UTIL2. Then, bulk loads another file into UTIL2, and checks if related values are present on
- * UTIL2, and also gets replicated to UTIL1.
- * It also defines a preBulkLoad coprocessor that is added to all test table regions on each of the
- * clusters, in order to count amount of times bulk load actually gets invoked. This is to certify
- * we are not entered in the infinite loop condition addressed by HBASE-22380.
+ * Integration test for bulk load replication. Defines three clusters, with the following
+ * replication topology: "1 <-> 2 <-> 3" (active-active between 1 and 2, and active-active between
+ * 2 and 3).
+ *
+ * For each of defined test clusters, it performs a bulk load, asserting values on bulk loaded file
+ * gets replicated to other two peers. Since we are doing 3 bulk loads, with the given replication
+ * topology all these bulk loads should get replicated only once on each peer. To assert this,
+ * this test defines a preBulkLoad coprocessor and adds it to all test table regions, on each of the
+ * clusters. This CP counts the amount of times bulk load actually gets invoked, certifying
+ * we are not entering the infinite loop condition addressed by HBASE-22380.
  */
 @Category({ ReplicationTests.class, MediumTests.class})
 public class TestBulkLoadReplication extends TestReplicationBase {
@@ -103,11 +119,14 @@ public class TestBulkLoadReplication extends TestReplicationBase {
   private static final String PEER_ID1 = "1";
   private static final String PEER_ID3 = "3";
 
-  private static final AtomicInteger BULK_LOADS_COUNT = new AtomicInteger(0);
+  private static AtomicInteger BULK_LOADS_COUNT;
   private static CountDownLatch BULK_LOAD_LATCH;
 
   private static final HBaseTestingUtility UTIL3 = new HBaseTestingUtility();
   private static final Configuration CONF3 = UTIL3.getConfiguration();
+
+  private static final Path BULK_LOAD_BASE_DIR = new Path("/bulk_dir");
+
   private static Table htable3;
 
   @Rule
@@ -132,7 +151,9 @@ public class TestBulkLoadReplication extends TestReplicationBase {
     UTIL3.startMiniCluster(NUM_SLAVES1);
 
     TableDescriptor table = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName).setMaxVersions(100)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName)
+        .setMobEnabled(true)
+        .setMobThreshold(4000)
         .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(noRepfamName)).build();
 
@@ -147,6 +168,9 @@ public class TestBulkLoadReplication extends TestReplicationBase {
   @Before
   @Override
   public void setUpBase() throws Exception {
+    //"super.setUpBase()" already sets replication from 1->2,
+    //then on the subsequent lines, sets 2->1, 2->3 and 3->2.
+    //So we have following topology: "1 <-> 2 <->3"
     super.setUpBase();
     ReplicationPeerConfig peer1Config = getPeerConfigForCluster(UTIL1);
     ReplicationPeerConfig peer2Config = getPeerConfigForCluster(UTIL2);
@@ -157,9 +181,10 @@ public class TestBulkLoadReplication extends TestReplicationBase {
     UTIL2.getAdmin().addReplicationPeer(PEER_ID3, peer3Config);
     //adds cluster2 as a remote peer on cluster3
     UTIL3.getAdmin().addReplicationPeer(PEER_ID2, peer2Config);
-    setupCoprocessor(UTIL1);
-    setupCoprocessor(UTIL2);
-    setupCoprocessor(UTIL3);
+    setupCoprocessor(UTIL1, "cluster1");
+    setupCoprocessor(UTIL2, "cluster2");
+    setupCoprocessor(UTIL3, "cluster3");
+    BULK_LOADS_COUNT = new AtomicInteger(0);
   }
 
   private ReplicationPeerConfig getPeerConfigForCluster(HBaseTestingUtility util) {
@@ -167,12 +192,19 @@ public class TestBulkLoadReplication extends TestReplicationBase {
       .setClusterKey(util.getClusterKey()).setSerial(isSerialPeer()).build();
   }
 
-  private void setupCoprocessor(HBaseTestingUtility cluster){
+  private void setupCoprocessor(HBaseTestingUtility cluster, String name){
     cluster.getHBaseCluster().getRegions(tableName).forEach(r -> {
       try {
-        r.getCoprocessorHost()
-          .load(TestBulkLoadReplication.BulkReplicationTestObserver.class, 0,
-            cluster.getConfiguration());
+        TestBulkLoadReplication.BulkReplicationTestObserver cp = r.getCoprocessorHost().
+          findCoprocessor(TestBulkLoadReplication.BulkReplicationTestObserver.class);
+        if(cp == null) {
+          r.getCoprocessorHost().
+            load(TestBulkLoadReplication.BulkReplicationTestObserver.class, 0,
+              cluster.getConfiguration());
+          cp = r.getCoprocessorHost().
+            findCoprocessor(TestBulkLoadReplication.BulkReplicationTestObserver.class);
+          cp.clusterName = cluster.getClusterKey();
+        }
       } catch (Exception e){
         LOG.error(e.getMessage(), e);
       }
@@ -221,6 +253,31 @@ public class TestBulkLoadReplication extends TestReplicationBase {
     assertEquals(9, BULK_LOADS_COUNT.get());
   }
 
+  @Test
+  public void testPartionedMOBCompactionBulkLoadDoesntReplicate() throws Exception {
+    Path path = createMobFiles(UTIL3);
+    ColumnFamilyDescriptor descriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(famName);
+    ExecutorService pool = null;
+    try {
+      pool = Executors.newFixedThreadPool(1);
+      PartitionedMobCompactor compactor =
+        new PartitionedMobCompactor(UTIL3.getConfiguration(), UTIL3.getTestFileSystem(), tableName,
+          descriptor, pool);
+      BULK_LOAD_LATCH = new CountDownLatch(1);
+      BULK_LOADS_COUNT.set(0);
+      compactor.compact(Arrays.asList(UTIL3.getTestFileSystem().listStatus(path)), true);
+      assertTrue(BULK_LOAD_LATCH.await(1, TimeUnit.SECONDS));
+      Thread.sleep(400);
+      assertEquals(1, BULK_LOADS_COUNT.get());
+    } finally {
+      if(pool != null && !pool.isTerminated()) {
+        pool.shutdownNow();
+      }
+    }
+  }
+
+
   private void assertBulkLoadConditions(byte[] row, byte[] value,
       HBaseTestingUtility utility, Table...tables) throws Exception {
     BULK_LOAD_LATCH = new CountDownLatch(3);
@@ -236,11 +293,11 @@ public class TestBulkLoadReplication extends TestReplicationBase {
     String bulkLoadFilePath = createHFileForFamilies(row, value, cluster.getConfiguration());
     copyToHdfs(bulkLoadFilePath, cluster.getDFSCluster());
     BulkLoadHFilesTool bulkLoadHFilesTool = new BulkLoadHFilesTool(cluster.getConfiguration());
-    bulkLoadHFilesTool.bulkLoad(tableName, new Path("/bulk_dir"));
+    bulkLoadHFilesTool.bulkLoad(tableName, BULK_LOAD_BASE_DIR);
   }
 
   private void copyToHdfs(String bulkLoadFilePath, MiniDFSCluster cluster) throws Exception {
-    Path bulkLoadDir = new Path("/bulk_dir/f");
+    Path bulkLoadDir = new Path(BULK_LOAD_BASE_DIR, "f");
     cluster.getFileSystem().mkdirs(bulkLoadDir);
     cluster.getFileSystem().copyFromLocalFile(new Path(bulkLoadFilePath), bulkLoadDir);
   }
@@ -281,22 +338,53 @@ public class TestBulkLoadReplication extends TestReplicationBase {
     return hFileLocation.getAbsoluteFile().getAbsolutePath();
   }
 
+  private Path createMobFiles(HBaseTestingUtility util) throws IOException {
+    Path testDir = FSUtils.getRootDir(util.getConfiguration());
+    Path mobTestDir = new Path(testDir, MobConstants.MOB_DIR_NAME);
+    Path basePath = new Path(new Path(mobTestDir, tableName.getNameAsString()), "f");
+    HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
+    MobFileName mobFileName = null;
+    byte[] mobFileStartRow = new byte[32];
+    for (byte rowKey : Bytes.toBytes("01234")) {
+      mobFileName = MobFileName.create(mobFileStartRow, MobUtils.formatDate(new Date()),
+        UUID.randomUUID().toString().replaceAll("-", ""));
+      StoreFileWriter mobFileWriter =
+        new StoreFileWriter.Builder(util.getConfiguration(),
+          new CacheConfig(util.getConfiguration()), util.getTestFileSystem()).withFileContext(meta)
+          .withFilePath(new Path(basePath, mobFileName.getFileName())).build();
+      long now = System.currentTimeMillis();
+      try {
+        for (int i = 0; i < 10; i++) {
+          byte[] key = Bytes.add(Bytes.toBytes(rowKey), Bytes.toBytes(i));
+          byte[] dummyData = new byte[5000];
+          new Random().nextBytes(dummyData);
+          mobFileWriter.append(
+            new KeyValue(key, famName, Bytes.toBytes("1"), now, KeyValue.Type.Put, dummyData));
+        }
+      } finally {
+        mobFileWriter.close();
+      }
+    }
+    return basePath;
+  }
+
   public static class BulkReplicationTestObserver implements RegionCoprocessor {
+
+    String clusterName;
+    AtomicInteger bulkLoadCounts = new AtomicInteger();
 
     @Override
     public Optional<RegionObserver> getRegionObserver() {
       return Optional.of(new RegionObserver() {
-        @Override
-        public void preBulkLoadHFile(ObserverContext<RegionCoprocessorEnvironment> ctx,
-          List<Pair<byte[], String>> familyPaths) throws IOException {
-            BULK_LOADS_COUNT.incrementAndGet();
-        }
 
         @Override
         public void postBulkLoadHFile(ObserverContext<RegionCoprocessorEnvironment> ctx,
           List<Pair<byte[], String>> stagingFamilyPaths, Map<byte[], List<Path>> finalPaths)
             throws IOException {
           BULK_LOAD_LATCH.countDown();
+          BULK_LOADS_COUNT.incrementAndGet();
+          LOG.debug("Another file bulk loaded. Total for {}: {}", clusterName,
+            bulkLoadCounts.addAndGet(1));
         }
       });
     }
