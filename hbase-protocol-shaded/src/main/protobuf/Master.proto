@@ -585,6 +585,36 @@ message GetProceduresResponse {
   repeated Procedure procedure = 1;
 }
 
+message IsActiveRequest {
+}
+
+message IsActiveResponse {
+  required bool is_master_active = 1;
+  required uint64 start_code = 2;
+}
+
+message GetMetaLocationsRequest {
+}
+
+message GetMetaLocationsResponse {
+  repeated RegionLocation locations = 1;
+}
+
+message GetPortInfoRequest {
+}
+
+message GetPortInfoResponse {
+  required uint32 info_port = 1;
+  required uint32 master_port = 2;
+}
+
+message GetClusterIdRequest {
+}
+
+message GetClusterIdResponse {
+    required string cluster_id = 1;
+}
+
 message GetLocksRequest {
 }
 
@@ -706,6 +736,19 @@ service MasterService {
   /** Return cluster status. */
   rpc GetClusterStatus(GetClusterStatusRequest)
     returns(GetClusterStatusResponse);
+
+  /** Returns whether this master is active or not. Served on both active/standby masters.*/
+  rpc IsActive(IsActiveRequest) returns(IsActiveResponse);
+
+  /** Used by client to get the location of meta replica(s). Served on both active/standby masters.*/
+  rpc GetMetaLocations(GetMetaLocationsRequest)
+    returns(GetMetaLocationsResponse);
+
+  /** Returns the ClusterId UUID for this cluster */
+  rpc GetClusterId(GetClusterIdRequest) returns(GetClusterIdResponse);
+
+  /** Returns the port numbers used by HMaster instances. Served on both active/standby masters.*/
+  rpc GetPortInfo(GetPortInfoRequest) returns(GetPortInfoResponse);
 
   /** return true if master is available */
   rpc IsMasterRunning(IsMasterRunningRequest) returns(IsMasterRunningResponse);

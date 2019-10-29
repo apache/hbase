@@ -44,18 +44,8 @@ class DoNothingAsyncRegistry implements AsyncRegistry {
   }
 
   @Override
-  public CompletableFuture<Integer> getCurrentNrHRS() {
-    return CompletableFuture.completedFuture(0);
-  }
-
-  @Override
   public CompletableFuture<ServerName> getMasterAddress() {
     return CompletableFuture.completedFuture(null);
-  }
-
-  @Override
-  public CompletableFuture<Integer> getMasterInfoPort() {
-    return CompletableFuture.completedFuture(0);
   }
 
   @Override

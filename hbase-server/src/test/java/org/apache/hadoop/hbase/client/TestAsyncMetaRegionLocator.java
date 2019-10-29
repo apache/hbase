@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.apache.hadoop.hbase.client.RegionReplicaTestHelper.testLocator;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -45,43 +46,56 @@ public class TestAsyncMetaRegionLocator {
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  private static AsyncRegistry REGISTRY;
-
-  private static AsyncMetaRegionLocator LOCATOR;
-
   @BeforeClass
   public static void setUp() throws Exception {
     TEST_UTIL.getConfiguration().set(BaseLoadBalancer.TABLES_ON_MASTER, "none");
     TEST_UTIL.getConfiguration().setInt(HConstants.META_REPLICAS_NUM, 3);
     TEST_UTIL.startMiniCluster(3);
-    REGISTRY = AsyncRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
-    RegionReplicaTestHelper
-      .waitUntilAllMetaReplicasHavingRegionLocation(TEST_UTIL.getConfiguration(), REGISTRY, 3);
+    try (AsyncRegistry registry = AsyncRegistryFactory.getRegistry(TEST_UTIL.getConfiguration())) {
+      RegionReplicaTestHelper
+          .waitUntilAllMetaReplicasHavingRegionLocation(TEST_UTIL.getConfiguration(), registry, 3);
+    }
     TEST_UTIL.getAdmin().balancerSwitch(false, true);
-    LOCATOR = new AsyncMetaRegionLocator(REGISTRY);
   }
 
   @AfterClass
   public static void tearDown() throws Exception {
-    IOUtils.closeQuietly(REGISTRY);
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test
-  public void test() throws Exception {
+  private void verifyLocator(AsyncMetaRegionLocator locator) throws Exception {
     testLocator(TEST_UTIL, TableName.META_TABLE_NAME, new Locator() {
 
       @Override
       public void updateCachedLocationOnError(HRegionLocation loc, Throwable error)
           throws Exception {
-        LOCATOR.updateCachedLocationOnError(loc, error);
+        locator.updateCachedLocationOnError(loc, error);
       }
 
       @Override
       public RegionLocations getRegionLocations(TableName tableName, int replicaId, boolean reload)
           throws Exception {
-        return LOCATOR.getRegionLocations(replicaId, reload).get();
+        return locator.getRegionLocations(replicaId, reload).get();
       }
     });
+  }
+
+  @Test
+  public void testZkAsyncRegistry() throws Exception {
+    try (ZKAsyncRegistry registry = new ZKAsyncRegistry(TEST_UTIL.getConfiguration())) {
+      verifyLocator(new AsyncMetaRegionLocator(registry));
+    }
+  }
+
+  @Test
+  public void testHMasterAsyncRegistry() throws Exception {
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    String masterHostName =
+        TEST_UTIL.getMiniHBaseCluster().getMaster().getServerName().getHostname();
+    int masterPort = TEST_UTIL.getMiniHBaseCluster().getMaster().getServerName().getPort();
+    conf.set(HMasterAsyncRegistry.CONF_KEY, masterHostName + ":" + masterPort);
+    try (HMasterAsyncRegistry registry = new HMasterAsyncRegistry((conf))) {
+      verifyLocator(new AsyncMetaRegionLocator(registry));
+    }
   }
 }

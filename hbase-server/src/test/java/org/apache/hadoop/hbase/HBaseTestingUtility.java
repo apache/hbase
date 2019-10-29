@@ -213,6 +213,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   private volatile AsyncClusterConnection asyncConnection;
 
+  // Tracks any other connections created with custom  client config. Used for testing clients with custom
+  // configurations. Tracked here so that they can be cleaned up on close() / restart.
+  private List<AsyncClusterConnection> customConnections = Collections.synchronizedList(new ArrayList<>());
+
   /** Filesystem URI used for map-reduce mini-cluster setup */
   private static String FS_URI;
 
@@ -1252,6 +1256,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       this.asyncConnection.close();
       this.asyncConnection = null;
     }
+    for (AsyncClusterConnection connection: customConnections) {
+        Closeables.close(connection, true);
+    }
+    customConnections.clear();
     this.hbaseCluster =
         new MiniHBaseCluster(this.conf, option.getNumMasters(), option.getNumRegionServers(),
             option.getRsPorts(), option.getMasterClass(), option.getRsClass());
@@ -3067,6 +3075,19 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     return this.asyncConnection.toConnection();
   }
 
+  /**
+   * Creates a new Connection instance for this mini cluster with a given input config. Use it wisely since
+   * connection creation is expensive. For all practical purposes @link(getConnection()) should be good enough. This
+   * helper should only used if one wants to test a custom client side configuration that differs from the conf used to
+   * spawn the mini-cluster.
+   */
+  public AsyncClusterConnection getCustomConnection(Configuration conf) throws IOException {
+    User user = UserProvider.instantiate(conf).getCurrent();
+    AsyncClusterConnection connection = ClusterConnectionFactory.createAsyncClusterConnection(conf, null, user);
+    customConnections.add(connection);
+    return connection;
+  }
+
   public AsyncClusterConnection getAsyncConnection() throws IOException {
     if (this.asyncConnection == null) {
       initConnection();
@@ -3077,6 +3098,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   public void closeConnection() throws IOException {
     Closeables.close(hbaseAdmin, true);
     Closeables.close(asyncConnection, true);
+    for (AsyncClusterConnection connection: customConnections) {
+      Closeables.close(connection, true);
+    }
     this.hbaseAdmin = null;
     this.asyncConnection = null;
   }

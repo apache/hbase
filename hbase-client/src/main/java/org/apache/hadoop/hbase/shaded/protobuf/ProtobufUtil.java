@@ -3188,6 +3188,7 @@ public final class ProtobufUtil {
   }
 
   public static HBaseProtos.RegionLocation toRegionLocation(HRegionLocation loc) {
+    if (loc == null) return null;
     HBaseProtos.RegionLocation.Builder builder = HBaseProtos.RegionLocation.newBuilder();
     builder.setRegionInfo(toRegionInfo(loc.getRegion()));
     if (loc.getServerName() != null) {

@@ -26,7 +26,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Implementations hold cluster information such as this cluster's id, location of hbase:meta, etc..
- * All stuffs that may be related to zookeeper at client side are placed here.
  * <p>
  * Internal use only.
  */
@@ -46,19 +45,9 @@ interface AsyncRegistry extends Closeable {
   CompletableFuture<String> getClusterId();
 
   /**
-   * Get the number of 'running' regionservers.
-   */
-  CompletableFuture<Integer> getCurrentNrHRS();
-
-  /**
    * Get the address of HMaster.
    */
   CompletableFuture<ServerName> getMasterAddress();
-
-  /**
-   * Get the info port of HMaster.
-   */
-  CompletableFuture<Integer> getMasterInfoPort();
 
   /**
    * Closes this instance and releases any system resources associated with it

@@ -210,11 +210,6 @@ class ZKAsyncRegistry implements AsyncRegistry {
     return future;
   }
 
-  @Override
-  public CompletableFuture<Integer> getCurrentNrHRS() {
-    return zk.exists(znodePaths.rsZNode).thenApply(s -> s != null ? s.getNumChildren() : 0);
-  }
-
   private static ZooKeeperProtos.Master getMasterProto(byte[] data) throws IOException {
     if (data == null || data.length == 0) {
       return null;
@@ -235,12 +230,6 @@ class ZKAsyncRegistry implements AsyncRegistry {
           return ServerName.valueOf(snProto.getHostName(), snProto.getPort(),
             snProto.getStartCode());
         });
-  }
-
-  @Override
-  public CompletableFuture<Integer> getMasterInfoPort() {
-    return getAndConvert(znodePaths.masterAddressZNode, ZKAsyncRegistry::getMasterProto)
-        .thenApply(proto -> proto != null ? proto.getInfoPort() : 0);
   }
 
   @Override

@@ -84,11 +84,8 @@ public class TestZKAsyncRegistry {
     String expectedClusterId = TEST_UTIL.getHBaseCluster().getMaster().getClusterId();
     assertEquals("Expected " + expectedClusterId + ", found=" + clusterId, expectedClusterId,
       clusterId);
-    assertEquals(TEST_UTIL.getHBaseCluster().getClusterMetrics().getLiveServerMetrics().size(),
-      REGISTRY.getCurrentNrHRS().get().intValue());
     assertEquals(TEST_UTIL.getHBaseCluster().getMaster().getServerName(),
       REGISTRY.getMasterAddress().get());
-    assertEquals(-1, REGISTRY.getMasterInfoPort().get().intValue());
     RegionReplicaTestHelper
       .waitUntilAllMetaReplicasHavingRegionLocation(TEST_UTIL.getConfiguration(), REGISTRY, 3);
     RegionLocations locs = REGISTRY.getMetaRegionLocation().get();

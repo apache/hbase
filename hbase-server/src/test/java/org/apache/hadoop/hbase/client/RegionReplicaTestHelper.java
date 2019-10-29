@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
+import org.apache.hadoop.hbase.master.MetaRegionLocationCache;
 
 final class RegionReplicaTestHelper {
 
@@ -89,6 +90,13 @@ final class RegionReplicaTestHelper {
       .map(t -> t.getRegionServer().getServerName()).filter(sn -> !sn.equals(serverName)).findAny()
       .get();
     util.getAdmin().move(regionInfo.getEncodedNameAsBytes(), newServerName);
+    if (regionInfo.isMetaRegion()) {
+      // Invalidate the meta cache forcefully to avoid test races. Otherwise there might be a
+      // delay in master receiving the change event and the cache could be stale in that window.
+      MetaRegionLocationCache metaCache =
+          util.getMiniHBaseCluster().getMaster().getMetaRegionLocationCache();
+      metaCache.invalidateMetaReplica(replicaId);
+    }
     util.waitFor(30000, new ExplainingPredicate<Exception>() {
 
       @Override

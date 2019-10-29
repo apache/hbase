@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MetaRegionsNotAvailableException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.Server;
@@ -184,14 +185,20 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ExecProced
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ExecProcedureResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FixMetaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FixMetaResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterIdRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterIdResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterStatusRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterStatusResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetCompletedSnapshotsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetCompletedSnapshotsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetLocksRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMetaLocationsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMetaLocationsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetLocksResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetNamespaceDescriptorRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetNamespaceDescriptorResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetPortInfoRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetPortInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedureResultRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedureResultResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProceduresRequest;
@@ -205,6 +212,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableNa
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableStateRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.HbckService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsActiveRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsActiveResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsBalancerEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsBalancerEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledRequest;
@@ -971,6 +980,53 @@ public class MasterRpcServices extends RSRpcServices
       master.checkInitialized();
       response.setClusterStatus(ClusterMetricsBuilder.toClusterStatus(
         master.getClusterMetrics(ClusterMetricsBuilder.toOptions(req.getOptionsList()))));
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return response.build();
+  }
+
+  @Override
+  public GetMetaLocationsResponse getMetaLocations(
+      RpcController controller, GetMetaLocationsRequest req) throws ServiceException {
+    GetMetaLocationsResponse.Builder response = GetMetaLocationsResponse.newBuilder();
+    try {
+      // We skip the master init check since this RPC is served on both the active and standby
+      // masters as long as their cache is populated.
+      response.addAllLocations(master.getMetaRegionLocationCache().getCachedMetaRegionLocations());
+    } catch (MetaRegionsNotAvailableException e) {
+      throw new ServiceException(e);
+    }
+    return response.build();
+  }
+
+  @Override
+  public IsActiveResponse isActive(RpcController controller, IsActiveRequest req)
+      throws ServiceException {
+    IsActiveResponse.Builder response = IsActiveResponse.newBuilder();
+    response.setIsMasterActive(master.isActiveMaster());
+    response.setStartCode(master.getStartcode());
+    return response.build();
+  }
+
+  @Override
+  public GetPortInfoResponse getPortInfo(RpcController controller, GetPortInfoRequest req)
+      throws ServiceException {
+    GetPortInfoResponse.Builder response = GetPortInfoResponse.newBuilder();
+    response.setMasterPort(
+        master.getConfiguration().getInt(HConstants.MASTER_PORT, HConstants.DEFAULT_MASTER_PORT));
+    response.setInfoPort(master.getConfiguration().getInt(HConstants.MASTER_INFO_PORT,
+        HConstants.DEFAULT_MASTER_INFOPORT));
+    return response.build();
+  }
+
+  @Override
+  public GetClusterIdResponse getClusterId(RpcController controller, GetClusterIdRequest req)
+      throws ServiceException {
+    GetClusterIdResponse.Builder response = GetClusterIdResponse.newBuilder();
+    try {
+      master.checkInitialized();
+      response.setClusterId(master.getClusterId());
     } catch (IOException e) {
       throw new ServiceException(e);
     }

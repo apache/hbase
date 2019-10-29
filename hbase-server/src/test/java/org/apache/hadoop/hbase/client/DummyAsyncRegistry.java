@@ -40,17 +40,7 @@ public class DummyAsyncRegistry implements AsyncRegistry {
   }
 
   @Override
-  public CompletableFuture<Integer> getCurrentNrHRS() {
-    return null;
-  }
-
-  @Override
   public CompletableFuture<ServerName> getMasterAddress() {
-    return null;
-  }
-
-  @Override
-  public CompletableFuture<Integer> getMasterInfoPort() {
     return null;
   }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,29 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.client;
+package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.util.ReflectionUtils;
+
+import java.io.IOException;
 
 /**
- * Get instance of configured Registry.
+ * Thrown by master when meta region locations are not cached whatever reason.
+ * Client is expected to retry when running into this.
  */
 @InterfaceAudience.Private
-final class AsyncRegistryFactory {
+public class MetaRegionsNotAvailableException extends IOException  {
+    private static final long serialVersionUID = (1L << 14) - 1L;
 
-  public static final String REGISTRY_IMPL_CONF_KEY = "hbase.client.registry.impl";
-
-  private AsyncRegistryFactory() {
-  }
-
-  /**
-   * @return The cluster registry implementation to use.
-   */
-  static AsyncRegistry getRegistry(Configuration conf) {
-    Class<? extends AsyncRegistry> clazz =
-        conf.getClass(REGISTRY_IMPL_CONF_KEY, ZKAsyncRegistry.class, AsyncRegistry.class);
-    return ReflectionUtils.newInstance(clazz, conf);
-  }
+    public MetaRegionsNotAvailableException(String msg) {
+        super(msg);
+    }
 }

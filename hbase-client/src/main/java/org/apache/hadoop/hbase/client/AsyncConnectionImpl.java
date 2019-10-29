@@ -394,4 +394,7 @@ class AsyncConnectionImpl implements AsyncConnection {
   Optional<MetricsConnection> getConnectionMetrics() {
     return metrics;
   }
+
+  @VisibleForTesting
+  AsyncRegistry getRegistry() { return registry; }
 }
