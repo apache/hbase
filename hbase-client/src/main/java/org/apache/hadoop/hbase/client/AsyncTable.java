@@ -448,6 +448,24 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
   }
 
   /**
+   * Batch checkAndRowMutates the specified data into the table.
+   * @param checkAndRowMutates The list of rows to apply.
+   * @return A list of {@link CompletableFuture}s that represent the result for
+   *         each checkAndRowMutate.
+   */
+  List<CompletableFuture<Boolean>> checkAndRowMutate(List<CheckAndRowMutate> checkAndRowMutates);
+
+  /**
+   * A simple version of batch checkAndRowMutate. It will fail if there are any failures.
+   * @param checkAndRowMutates list of things to checkAndRowMutate.
+   * @return A {@link CompletableFuture} that always returns null when complete normally.
+   */
+  default CompletableFuture<List<Boolean>> checkAndRowMutateAll(
+      List<CheckAndRowMutate> checkAndRowMutates) {
+    return allOf(checkAndRowMutate(checkAndRowMutates));
+  }
+
+  /**
    * Method that does a batch call on Deletes, Gets, Puts, Increments, Appends and RowMutations. The
    * ordering of execution of the actions is not defined. Meaning if you do a Put and a Get in the
    * same {@link #batch} call, you will not necessarily be guaranteed that the Get returns what the

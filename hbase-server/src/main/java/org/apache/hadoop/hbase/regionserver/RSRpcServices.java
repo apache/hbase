@@ -898,6 +898,23 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             default:
               throw new DoNotRetryIOException("Unsupported mutate type: " + type.name());
           }
+        } else if (action.hasCheckAndRowMutate()) {
+          ClientProtos.CheckAndRowMutate checkAndRowMutate = action.getCheckAndRowMutate();
+          byte[] row = checkAndRowMutate.getRow().toByteArray();
+          byte[] family = checkAndRowMutate.getFamily().toByteArray();
+          byte[] qualifier = checkAndRowMutate.getQualifier().toByteArray();
+          CompareOperator compareOp =
+              CompareOperator.valueOf(checkAndRowMutate.getCompareType().name());
+          ByteArrayComparable comparator =
+              ProtobufUtil.toComparator(checkAndRowMutate.getComparator());
+          TimeRange timeRange = checkAndRowMutate.hasTimeRange() ?
+              ProtobufUtil.toTimeRange(checkAndRowMutate.getTimeRange()) :
+              TimeRange.allTime();
+          Mutation mutation = ProtobufUtil.toMutation(checkAndRowMutate.getMutation());
+          boolean result = region.checkAndMutate(row, family,
+              qualifier, compareOp, comparator, timeRange, mutation);
+          r = new Result();
+          r.setExists(result);
         } else {
           throw new HBaseIOException("Unexpected Action type");
         }

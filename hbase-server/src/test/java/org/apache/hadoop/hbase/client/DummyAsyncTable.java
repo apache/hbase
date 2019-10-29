@@ -140,6 +140,12 @@ public class DummyAsyncTable<C extends ScanResultConsumerBase> implements AsyncT
   }
 
   @Override
+  public List<CompletableFuture<Boolean>> checkAndRowMutate(
+      List<CheckAndRowMutate> checkAndRowMutates) {
+    return null;
+  }
+
+  @Override
   public <T> List<CompletableFuture<T>> batch(List<? extends Row> actions) {
     return null;
   }

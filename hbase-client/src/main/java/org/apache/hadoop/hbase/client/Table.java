@@ -294,6 +294,19 @@ public interface Table extends Closeable {
   }
 
   /**
+   * Batch checkAndRowMutates the specified data into the table.
+   *
+   * @param checkAndRowMutates The list of rows to apply.
+   * @throws IOException if a remote or network exception occurs.
+   */
+
+  default boolean[] checkAndRowMutate(final List<CheckAndRowMutate> checkAndRowMutates)
+      throws IOException {
+    throw new NotImplementedException("Add an implementation!");
+  }
+
+
+  /**
    * Atomically checks if a row/family/qualifier value matches the expected value. If it does, it
    * adds the Put/Delete/RowMutations.
    * <p>

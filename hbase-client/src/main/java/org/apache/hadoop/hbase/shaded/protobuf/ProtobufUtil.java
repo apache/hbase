@@ -64,6 +64,7 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.CheckAndRowMutate;
 import org.apache.hadoop.hbase.client.ClientUtil;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -89,6 +90,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
@@ -3346,6 +3348,32 @@ public final class ProtobufUtil {
       .setRegionsInTransition(regionsInTransition)
       .setTotalRegions(totalRegions)
       .build();
+  }
+
+  public static ClientProtos.CheckAndRowMutate toCheckAndRowMutate(
+      final CheckAndRowMutate checkAndRowMutate) throws IOException {
+    ClientProtos.CheckAndRowMutate.Builder builder =
+        ClientProtos.CheckAndRowMutate.newBuilder();
+    builder.setRow(UnsafeByteOperations.unsafeWrap(checkAndRowMutate.getRow()))
+        .setFamily(UnsafeByteOperations.unsafeWrap(checkAndRowMutate.getFamily()))
+        .setQualifier(UnsafeByteOperations.unsafeWrap(checkAndRowMutate.getQualifier() == null ?
+            HConstants.EMPTY_BYTE_ARRAY : checkAndRowMutate.getQualifier()))
+        .setComparator(ProtobufUtil.toComparator(
+            new BinaryComparator(checkAndRowMutate.getValue())))
+        .setCompareType(HBaseProtos.CompareType.valueOf(checkAndRowMutate.getOp().name()))
+        .setTimeRange(ProtobufUtil.toTimeRange(checkAndRowMutate.getTimeRange()));
+    MutationProto.Builder mutationBuilder = MutationProto.newBuilder();
+    MutationType mutateType = null;
+    Mutation mutation = checkAndRowMutate.getMutation();
+    if (mutation instanceof Put) {
+      mutateType = MutationType.PUT;
+    } else if (mutation instanceof Delete) {
+      mutateType = MutationType.DELETE;
+    } else {
+      throw new DoNotRetryIOException(mutation.getClass().getName() + " is not support");
+    }
+    builder.setMutation(ProtobufUtil.toMutation(mutateType, mutation, mutationBuilder));
+    return builder.build();
   }
 
 }

@@ -220,6 +220,12 @@ class TableOverAsyncTable implements Table {
     FutureUtils.get(table.deleteAll(deletes));
   }
 
+  @Override
+  public boolean [] checkAndRowMutate(final List<CheckAndRowMutate> checkAndRowMutates)
+      throws IOException {
+    return Booleans.toArray(FutureUtils.get(table.checkAndRowMutateAll(checkAndRowMutates)));
+  }
+
   private static final class CheckAndMutateBuilderImpl implements CheckAndMutateBuilder {
 
     private final AsyncTable.CheckAndMutateBuilder builder;

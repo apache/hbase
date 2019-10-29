@@ -485,6 +485,14 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
   }
 
   @Override
+  public List<CompletableFuture<Boolean>> checkAndRowMutate(
+      List<CheckAndRowMutate> checkAndRowMutates) {
+    return batch(checkAndRowMutates, readRpcTimeoutNs).stream()
+        .<CompletableFuture<Boolean>> map(f -> f.thenApply(r -> ((Result)r).getExists()))
+        .collect(toList());
+  }
+
+  @Override
   public <T> List<CompletableFuture<T>> batch(List<? extends Row> actions) {
     return batch(actions, rpcTimeoutNs);
   }

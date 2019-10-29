@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Action;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.CheckAndRowMutate;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -697,6 +698,9 @@ public final class RequestConverter {
               .setRequest(value)));
       } else if (row instanceof RowMutations) {
         rowMutationsList.add(action);
+      } else if (row instanceof CheckAndRowMutate) {
+        builder.addAction(actionBuilder.setCheckAndRowMutate(
+            ProtobufUtil.toCheckAndRowMutate((CheckAndRowMutate)row)));
       } else {
         throw new DoNotRetryIOException("Multi doesn't support " + row.getClass().getName());
       }
@@ -820,6 +824,9 @@ public final class RequestConverter {
               .setRequest(value)));
       } else if (row instanceof RowMutations) {
         rowMutationsList.add(action);
+      } else if (row instanceof CheckAndRowMutate) {
+        builder.addAction(actionBuilder.setCheckAndRowMutate(
+            ProtobufUtil.toCheckAndRowMutate((CheckAndRowMutate)row)));
       } else {
         throw new DoNotRetryIOException("Multi doesn't support " + row.getClass().getName());
       }
