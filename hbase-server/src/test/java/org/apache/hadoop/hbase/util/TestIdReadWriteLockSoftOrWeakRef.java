@@ -64,7 +64,8 @@ public class TestIdReadWriteLockSoftOrWeakRef {
 
   @Parameterized.Parameters
   public static Iterable<Object[]> data() {
-    return Arrays.asList(new Object[][] { { new IdReadWriteLockSoftOrWeakRef<Long>(ReferenceType.WEAK) },
+    return Arrays.asList(new Object[][] {
+      { new IdReadWriteLockSoftOrWeakRef<Long>(ReferenceType.WEAK) },
       { new IdReadWriteLockSoftOrWeakRef<Long>(ReferenceType.SOFT) } });
   }
 
