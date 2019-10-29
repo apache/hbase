@@ -1578,6 +1578,8 @@ public class HRegionServer extends HasThread implements
     byte[] name = r.getRegionInfo().getRegionName();
     int stores = 0;
     int storefiles = 0;
+    int storeRefCount = 0;
+    int maxStoreFileRefCount = 0;
     int storeUncompressedSizeMB = 0;
     int storefileSizeMB = 0;
     int memstoreSizeMB = (int) (r.getMemstoreSize() / 1024 / 1024);
@@ -1591,6 +1593,13 @@ public class HRegionServer extends HasThread implements
     stores += storeList.size();
     for (Store store : storeList) {
       storefiles += store.getStorefilesCount();
+      if (store instanceof HStore) {
+        HStore hStore = (HStore) store;
+        int currentStoreRefCount = hStore.getStoreRefCount();
+        storeRefCount += currentStoreRefCount;
+        int currentMaxStoreFileRefCount = hStore.getMaxStoreFileRefCount();
+        maxStoreFileRefCount = Math.max(maxStoreFileRefCount, currentMaxStoreFileRefCount);
+      }
       storeUncompressedSizeMB += (int) (store.getStoreSizeUncompressed() / 1024 / 1024);
       storefileSizeMB += (int) (store.getStorefilesSize() / 1024 / 1024);
       storefileIndexSizeMB += (int) (store.getStorefilesIndexSize() / 1024 / 1024);
@@ -1617,6 +1626,8 @@ public class HRegionServer extends HasThread implements
     regionLoadBldr.setRegionSpecifier(regionSpecifier.build())
       .setStores(stores)
       .setStorefiles(storefiles)
+      .setStoreRefCount(storeRefCount)
+      .setMaxStoreFileRefCount(maxStoreFileRefCount)
       .setStoreUncompressedSizeMB(storeUncompressedSizeMB)
       .setStorefileSizeMB(storefileSizeMB)
       .setMemstoreSizeMB(memstoreSizeMB)

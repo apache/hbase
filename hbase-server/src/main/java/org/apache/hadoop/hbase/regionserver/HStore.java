@@ -2868,4 +2868,22 @@ public class HStore implements Store {
     }
     return refCount;
   }
+
+  /**
+   * @return get maximum ref count of storeFile among all HStore Files
+   *   for the HStore
+   */
+  public int getMaxStoreFileRefCount() {
+    int maxStoreFileRefCount = 0;
+    for (StoreFile store : storeEngine.getStoreFileManager().getStorefiles()) {
+      if (store.isHFile()) {
+        StoreFile.Reader storeReader = store.getReader();
+        if (storeReader != null) {
+          maxStoreFileRefCount = Math.max(maxStoreFileRefCount, storeReader.getRefCount());
+        }
+      }
+    }
+    return maxStoreFileRefCount;
+  }
+
 }

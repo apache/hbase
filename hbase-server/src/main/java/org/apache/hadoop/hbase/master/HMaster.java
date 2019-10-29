@@ -117,6 +117,7 @@ import org.apache.hadoop.hbase.master.procedure.DeleteNamespaceProcedure;
 import org.apache.hadoop.hbase.master.procedure.DeleteTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.DisableTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.EnableTableProcedure;
+import org.apache.hadoop.hbase.master.procedure.MasterDDLOperationHelper;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler.ProcedureEvent;
@@ -301,6 +302,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   // manager of assignment nodes in zookeeper
   AssignmentManager assignmentManager;
+
+  private RegionsRecoveryChore regionsRecoveryChore = null;
 
   // buffer for "fatal error" notices from region servers
   // in the cluster. This is only used for assisting
@@ -1261,6 +1264,20 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       getMasterFileSystem().getFileSystem(), archiveDir, cleanerPool, params);
     getChoreService().scheduleChore(hfileCleaner);
 
+    // Regions Reopen based on very high storeFileRefCount is considered enabled
+    // only if hbase.regions.recovery.store.file.ref.count has value > 0
+    final int maxStoreFileRefCount = conf.getInt(
+      HConstants.STORE_FILE_REF_COUNT_THRESHOLD,
+      HConstants.DEFAULT_STORE_FILE_REF_COUNT_THRESHOLD);
+    if (maxStoreFileRefCount > 0) {
+      this.regionsRecoveryChore = new RegionsRecoveryChore(this, conf, this);
+      getChoreService().scheduleChore(this.regionsRecoveryChore);
+    } else {
+      LOG.info("Reopening regions with very high storeFileRefCount is disabled. "
+        + "Provide threshold value > 0 for " + HConstants.STORE_FILE_REF_COUNT_THRESHOLD
+        + " to enable it.\"");
+    }
+
     final boolean isSnapshotChoreEnabled = this.snapshotCleanupTracker
         .isSnapshotCleanupEnabled();
     this.snapshotCleanerChore = new SnapshotCleanerChore(this, conf, getSnapshotManager());
@@ -1409,6 +1426,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       choreService.cancelChore(this.replicationZKLockCleanerChore);
       choreService.cancelChore(this.replicationZKNodeCleanerChore);
       choreService.cancelChore(this.snapshotCleanerChore);
+      choreService.cancelChore(this.regionsRecoveryChore);
     }
   }
 
@@ -3261,6 +3279,46 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
         itr.remove();
       }
     }
+  }
+
+  /**
+   * Reopen regions provided in the argument
+   *
+   * @param tableName The current table name
+   * @param hRegionInfos List of HRegionInfo of the regions to reopen
+   * @param nonceGroup Identifier for the source of the request, a client or process
+   * @param nonce A unique identifier for this operation from the client or process identified by
+   *   <code>nonceGroup</code> (the source must ensure each operation gets a unique id).
+   * @return procedure Id
+   * @throws IOException if reopening region fails while running procedure
+   */
+  long reopenRegions(final TableName tableName, final List<HRegionInfo> hRegionInfos,
+      final long nonceGroup, final long nonce)
+      throws IOException {
+
+    return MasterProcedureUtil
+      .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+
+        @Override
+        protected void run() throws IOException {
+          boolean areAllRegionsReopened = MasterDDLOperationHelper.reOpenAllRegions(
+            procedureExecutor.getEnvironment(), tableName, hRegionInfos);
+          if (areAllRegionsReopened) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("All required regions reopened for table: " + tableName);
+            }
+          } else {
+            LOG.warn("Error while reopening regions of table: " + tableName);
+          }
+        }
+
+        @Override
+        protected String getDescription() {
+          return "ReopenTableRegionsProcedure";
+        }
+
+      });
+
   }
 
   @Override
