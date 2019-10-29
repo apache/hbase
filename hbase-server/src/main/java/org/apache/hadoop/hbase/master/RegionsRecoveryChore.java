@@ -52,11 +52,6 @@ public class RegionsRecoveryChore extends ScheduledChore {
 
   private static final String REGIONS_RECOVERY_CHORE_NAME = "RegionsRecoveryChore";
 
-  private static final String REGIONS_RECOVERY_INTERVAL =
-    "hbase.master.regions.recovery.check.interval";
-
-  private static final int DEFAULT_REGIONS_RECOVERY_INTERVAL = 1200 * 1000; // Default 20 min ?
-
   private static final String ERROR_REOPEN_REIONS_MSG =
     "Error reopening regions with high storeRefCount. ";
 
@@ -76,8 +71,8 @@ public class RegionsRecoveryChore extends ScheduledChore {
   RegionsRecoveryChore(final Stoppable stopper, final Configuration configuration,
       final HMaster hMaster) {
 
-    super(REGIONS_RECOVERY_CHORE_NAME, stopper, configuration.getInt(REGIONS_RECOVERY_INTERVAL,
-      DEFAULT_REGIONS_RECOVERY_INTERVAL));
+    super(REGIONS_RECOVERY_CHORE_NAME, stopper, configuration.getInt(
+      HConstants.REGIONS_RECOVERY_INTERVAL, HConstants.DEFAULT_REGIONS_RECOVERY_INTERVAL));
     this.hMaster = hMaster;
     this.storeFileRefCountThreshold = configuration.getInt(
       HConstants.STORE_FILE_REF_COUNT_THRESHOLD,
@@ -169,6 +164,22 @@ public class RegionsRecoveryChore extends ScheduledChore {
     tableToReopenRegionsMap.putIfAbsent(tableName, new ArrayList<>());
     tableToReopenRegionsMap.get(tableName).add(regionName);
 
+  }
+
+  // hashcode/equals implementation to ensure at-most one object of RegionsRecoveryChore
+  // is scheduled at a time - RegionsRecoveryConfigManager
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    return o != null && getClass() == o.getClass();
+  }
+
+  @Override
+  public int hashCode() {
+    return 31;
   }
 
 }
