@@ -43,11 +43,9 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.master.locking.LockManager;
-import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.ExpiredMobFileCleaner;
+import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
-import org.apache.hadoop.hbase.procedure2.LockType;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -60,7 +58,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * The Class ExpiredMobFileCleanerChore for running cleaner regularly to remove the expired
- * mob files.
+ * and obsolete (files which have no active references to) mob files.
  */
 @InterfaceAudience.Private
 public class MobFileCleanerChore extends ScheduledChore {
@@ -77,6 +75,26 @@ public class MobFileCleanerChore extends ScheduledChore {
     this.master = master;
     cleaner = new ExpiredMobFileCleaner();
     cleaner.setConf(master.getConfiguration());
+    checkObsoleteConfigurations();
+  }
+  
+  private void checkObsoleteConfigurations() {
+    Configuration conf = master.getConfiguration();
+    if (conf.get("hbase.master.mob.ttl.cleaner.period") != null) {
+      LOG.warn("'hbase.master.mob.ttl.cleaner.period' is obsolete and not used anymore.");
+    }
+    if (conf.get("hbase.mob.compaction.mergeable.threshold") != null) {
+      LOG.warn("'hbase.mob.compaction.mergeable.threshold' is obsolete and not used anymore.");
+    }
+    if (conf.get("hbase.mob.delfile.max.count") != null) {
+      LOG.warn("'hbase.mob.delfile.max.count' is obsolete and not used anymore.");
+    }
+    if (conf.get("hbase.mob.compaction.threads.max") != null) {
+      LOG.warn("'hbase.mob.compaction.threads.max' is obsolete and not used anymore.");
+    }
+    if (conf.get("hbase.mob.compaction.batch.size") != null) {
+      LOG.warn("'hbase.mob.compaction.batch.size' is obsolete and not used anymore.");
+    }
   }
 
   @VisibleForTesting

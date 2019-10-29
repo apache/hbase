@@ -187,9 +187,18 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
 
   /**
    * Performs compaction on a column family with the mob flag enabled.
-   * This is for when the mob threshold size has changed or if the mob
-   * column family mode has been toggled via an alter table statement.
-   * Compacts the files by the following rules.
+   * This is for when MOB compaction is explicitly requested (by User).
+   * There are two modes of a MOB compaction:<br>
+   * <p>
+   * <ul>
+   * <li>1. General mode - when all data is compacted into a single MOB file.
+   * <li>2. Generational mode - when MOB files are collected (and compacted) by generations,<br> 
+   * which are defined by history of a region splits. The oldest generations are compacted first.<br>
+   * In this mode the output of a compaction process will contain  multiple MOB files. The main <br>
+   * idea behind generational compaction is to limit maximum size of a MOB file and to limit I/O <br>
+   * write/read amplification during MOB compaction.
+   * </ul>
+   * The basic algorithm of compaction is the following: <br>
    * 1. If the Put cell has a mob reference tag, the cell's value is the path of the mob file.
    * <ol>
    * <li>
@@ -307,9 +316,10 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
         throw e;
       }
       if (compactMOBs) {
-        // Add the only reference we get for compact MOB case
+        // Add the only reference we get for compact MOB general (not generational) case
         // because new store file will have only one MOB reference
-        // in this case - of newly compacted MOB file
+        // in this case - of a newly compacted MOB file. In generational compaction mode,
+        // this reference is present as well along with (potentially) many others.
         mobRefSet.get().add(mobFileWriter.getPath().getName());
       }
       do {
@@ -329,7 +339,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
                 mobCell = mobStore.resolve(c, true, false).getCell();
               } catch (FileNotFoundException fnfe) {
                 if (discardMobMiss) {
-                  LOG.error("Missing MOB cell: file=" + pp + " not found");
+                  LOG.debug("Missing MOB cell: file={} not found cell={}", pp, c);
                   continue;
                 } else {
                   throw fnfe;
@@ -339,6 +349,8 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
               if (discardMobMiss && mobCell.getValueLength() == 0) {
                 LOG.error("Missing MOB cell value: file=" + pp + " cell=" + mobCell);
                 continue;
+              } else if (mobCell.getValueLength() == 0) {
+                LOG.warn("Found 0 length MOB cell in a file={} cell={}", pp, mobCell);
               }
 
               if (mobCell.getValueLength() > mobSizeThreshold) {

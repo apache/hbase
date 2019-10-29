@@ -42,6 +42,15 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/** 
+ * Periodic MOB compaction chore. 
+ * It runs MOB compaction on region servers in parallel, thus
+ * utilizing distributed cluster resources. To avoid possible major
+ * compaction storms, one can specify maximum number regions to be compacted 
+ * in parallel by setting configuration parameter: <br>
+ * 'hbase.mob.major.compaction.region.batch.size', which by default is 0 (unlimited). 
+ * 
+ */
 @InterfaceAudience.Private
 public class MobFileCompactionChore extends ScheduledChore {
 

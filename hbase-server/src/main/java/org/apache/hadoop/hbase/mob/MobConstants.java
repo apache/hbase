@@ -142,14 +142,6 @@ public final class MobConstants {
 
   public static final boolean DEFAULT_MOB_DISCARD_MISS = false;
 
-  /**
-   * Minimum age required for MOB file to be archived
-   */
-  public static final String MOB_MINIMUM_FILE_AGE_TO_ARCHIVE_KEY =
-      "mob.minimum.file.age.to.archive";
-
-  public static final long DEFAULT_MOB_MINIMUM_FILE_AGE_TO_ARCHIVE = 24*3600000; // 1 day
-
   private MobConstants() {
 
   }
