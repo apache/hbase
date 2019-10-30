@@ -40,7 +40,7 @@ ServerManager serverManager;
     org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 </%import>
 <%java>
-List<RSGroupInfo> groups = RSGroupTableAccessor.getAllRSGroupInfo(master.getConnection());
+List<RSGroupInfo> groups = master.getRSGroupInfoManager().listRSGroups();
 </%java>
 <%if (groups != null && groups.size() > 0)%>
 
