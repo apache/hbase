@@ -72,8 +72,8 @@ import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.IdReadWriteLock;
-import org.apache.hadoop.hbase.util.IdReadWriteLockSoftOrWeakRef;
-import org.apache.hadoop.hbase.util.IdReadWriteLockSoftOrWeakRef.ReferenceType;
+import org.apache.hadoop.hbase.util.IdReadWriteLockWithObjectPool;
+import org.apache.hadoop.hbase.util.IdReadWriteLockWithObjectPool.ReferenceType;
 import org.apache.hadoop.hbase.util.IdReadWriteLockStrongRef;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -266,7 +266,7 @@ public class BucketCache implements BlockCache, HeapSize {
     if (useStrongRef) {
       this.offsetLock = new IdReadWriteLockStrongRef<>();
     } else {
-      this.offsetLock = new IdReadWriteLockSoftOrWeakRef<>(ReferenceType.SOFT);
+      this.offsetLock = new IdReadWriteLockWithObjectPool<>(ReferenceType.SOFT);
     }
     this.algorithm = conf.get(FILE_VERIFY_ALGORITHM, DEFAULT_FILE_VERIFY_ALGORITHM);
     this.ioEngine = getIOEngineFromName(ioEngineName, capacity, persistencePath);

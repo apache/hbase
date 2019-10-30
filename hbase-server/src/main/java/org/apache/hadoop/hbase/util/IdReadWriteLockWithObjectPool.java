@@ -26,7 +26,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 @InterfaceAudience.Private
-public class IdReadWriteLockSoftOrWeakRef<T> implements IdReadWriteLock<T>{
+public class IdReadWriteLockWithObjectPool<T> extends IdReadWriteLock<T>{
   // The number of lock we want to easily support. It's not a maximum.
   private static final int NB_CONCURRENT_LOCKS = 1000;
   /**
@@ -36,17 +36,17 @@ public class IdReadWriteLockSoftOrWeakRef<T> implements IdReadWriteLock<T>{
   private final ObjectPool<T, ReentrantReadWriteLock> lockPool;
   private final ReferenceType refType;
 
-  public IdReadWriteLockSoftOrWeakRef() {
+  public IdReadWriteLockWithObjectPool() {
     this(ReferenceType.WEAK);
   }
 
   /**
-   * Constructor of IdReadWriteLockSoftOrWeakRef
+   * Constructor of IdReadWriteLockWithObjectPool
    * @param referenceType type of the reference used in lock pool, {@link ReferenceType#WEAK} by
    *          default. Use {@link ReferenceType#SOFT} if the key set is limited and the locks will
    *          be reused with a high frequency
    */
-  public IdReadWriteLockSoftOrWeakRef(ReferenceType referenceType) {
+  public IdReadWriteLockWithObjectPool(ReferenceType referenceType) {
     this.refType = referenceType;
     switch (referenceType) {
       case SOFT:
@@ -95,22 +95,6 @@ public class IdReadWriteLockSoftOrWeakRef<T> implements IdReadWriteLock<T>{
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="DM_GC", justification="Intentional")
   private void gc() {
     System.gc();
-  }
-
-  @VisibleForTesting
-  @Override
-  public void waitForWaiters(T id, int numWaiters) throws InterruptedException {
-    for (ReentrantReadWriteLock readWriteLock;;) {
-      readWriteLock = lockPool.get(id);
-      if (readWriteLock != null) {
-        synchronized (readWriteLock) {
-          if (readWriteLock.getQueueLength() >= numWaiters) {
-            return;
-          }
-        }
-      }
-      Thread.sleep(50);
-    }
   }
 
   @VisibleForTesting

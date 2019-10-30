@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.util;
 
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.yetus.audience.InterfaceAudience;
 
 
@@ -40,7 +41,21 @@ import org.apache.yetus.audience.InterfaceAudience;
  * For write lock, use lock.writeLock()
  */
 @InterfaceAudience.Private
-public interface IdReadWriteLock<T> {
-  public ReentrantReadWriteLock getLock(T id);
-  public void waitForWaiters(T id, int numWaiters) throws InterruptedException;
+public abstract class IdReadWriteLock<T> {
+  public abstract ReentrantReadWriteLock getLock(T id);
+
+  @VisibleForTesting
+  public void waitForWaiters(T id, int numWaiters) throws InterruptedException {
+    for (ReentrantReadWriteLock readWriteLock;;) {
+      readWriteLock = getLock(id);
+      if (readWriteLock != null) {
+        synchronized (readWriteLock) {
+          if (readWriteLock.getQueueLength() >= numWaiters) {
+            return;
+          }
+        }
+      }
+      Thread.sleep(50);
+    }
+  }
 }

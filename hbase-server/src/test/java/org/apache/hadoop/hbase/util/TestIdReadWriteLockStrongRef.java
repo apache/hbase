@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,32 +17,33 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import java.util.concurrent.ConcurrentHashMap;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+@Category({ SmallTests.class })
+public class TestIdReadWriteLockStrongRef {
 
-@InterfaceAudience.Private
-public class IdReadWriteLockStrongRef<T> extends IdReadWriteLock<T> {
+  private static final Logger LOG = LoggerFactory.getLogger(TestIdReadWriteLockStrongRef.class);
 
-  final ConcurrentHashMap<T, ReentrantReadWriteLock> map = new ConcurrentHashMap<>();
+  public IdReadWriteLockStrongRef<Long> idLock = new IdReadWriteLockStrongRef<>();
 
-  @VisibleForTesting
-  @Override
-  public ReentrantReadWriteLock getLock(T id) {
-    ReentrantReadWriteLock existing = map.get(id);
-    if (existing != null) {
-      return existing;
-    }
-
-    ReentrantReadWriteLock newLock = new ReentrantReadWriteLock();
-    existing = map.putIfAbsent(id, newLock);
-    if (existing == null) {
-      return newLock;
-    } else {
-      return existing;
-    }
+  @Test
+  public void testGetLock() throws Exception {
+    Long offset_1 = 1L;
+    Long offset_2 = 2L;
+    ReentrantReadWriteLock offsetLock_1 = idLock.getLock(offset_1);
+    ReentrantReadWriteLock offsetLock_2 = idLock.getLock(offset_1);
+    Assert.assertEquals(offsetLock_1,offsetLock_2);
+    ReentrantReadWriteLock offsetLock_3 = idLock.getLock(offset_2);
+    Assert.assertNotEquals(offsetLock_1,offsetLock_3);
   }
 
 }
+
