@@ -32,7 +32,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public interface RSGroupInfoManager {
 
-  static final String RS_GROUP_ENABLED = "hbase.balancer.rsgroup.enabled";
+  public static final String RS_GROUP_ENABLED = "hbase.balancer.rsgroup.enabled";
 
   void start();
 
