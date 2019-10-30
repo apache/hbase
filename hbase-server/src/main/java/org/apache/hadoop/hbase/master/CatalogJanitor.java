@@ -570,7 +570,12 @@ public class CatalogJanitor extends ScheduledChore {
         return true;
       }
       this.report.count++;
-      RegionInfo regionInfo = metaTableConsistencyCheck(r);
+      RegionInfo regionInfo = null;
+      try {
+        regionInfo = metaTableConsistencyCheck(r);
+      } catch(Throwable t) {
+        LOG.warn("Failed consistency check on {}", Bytes.toStringBinary(r.getRow()), t);
+      }
       if (regionInfo != null) {
         LOG.trace(regionInfo.toString());
         if (regionInfo.isSplitParent()) { // splitParent means split and offline.

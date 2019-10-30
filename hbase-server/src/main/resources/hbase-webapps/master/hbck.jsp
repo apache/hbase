@@ -78,7 +78,7 @@
 
   <div class="row">
     <div class="page-header">
-  <p><span>This page displays two reports. Only the report titles show if reports are empty.</span></p>
+  <p><span>This page displays two reports: the 'HBCK Chore Report' and the 'CatalogJanitor Consistency Issues' report. Only titles show if there are no problems to report. Note some conditions are transitory as regions migrate.</span></p>
     </div>
   </div>
   <div class="row">
