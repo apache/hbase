@@ -23,6 +23,7 @@ import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
@@ -55,6 +56,19 @@ public class TokenUtil {
   public static CompletableFuture<Token<AuthenticationTokenIdentifier>> obtainToken(
       AsyncConnection conn) {
     return ClientTokenUtil.obtainToken(conn);
+  }
+
+  /**
+   * It was removed in HBase-2.0 but added again as spark code relies on this method to obtain
+   * delegation token
+   * @deprecated Since 2.0.0.
+   */
+  @Deprecated
+  public static Token<AuthenticationTokenIdentifier> obtainToken(Configuration conf)
+      throws IOException {
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      return obtainToken(connection);
+    }
   }
 
   /**
