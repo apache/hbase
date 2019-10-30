@@ -39,6 +39,7 @@ public class DelayPackagesCommandAction extends TCCommandAction {
    * @param delay the latency wil be delay +/-50% in milliseconds
    * @param duration the time this issue persists in milliseconds
    * @param timeout the timeout for executing required commands on the region server in milliseconds
+   * @param network network interface the regionserver uses for communication
    */
   public DelayPackagesCommandAction(long delay, long duration, long timeout, String network) {
     super(timeout, network);

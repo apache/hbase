@@ -66,8 +66,8 @@ public interface MonkeyConstants {
    * A Set of prefixes which encompasses all of the configuration properties for the ChaosMonky.
    */
   Set<String> MONKEY_CONFIGURATION_KEY_PREFIXES = new HashSet<>(
-      Arrays.asList("sdm.", "move.", "restart.", "batch.", "rolling.", "compact.",
-          "unbalance.", "decrease."));
+      Arrays.asList("sdm.", "move.", "restart.", "batch.", "rolling.", "compact.", "unbalance.",
+          "decrease.", "decrease.", "graceful.", "cpu.", "network.", "fill.", "data."));
 
   long DEFAULT_PERIODIC_ACTION1_PERIOD = 60 * 1000;
   long DEFAULT_PERIODIC_ACTION2_PERIOD = 90 * 1000;

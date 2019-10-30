@@ -23,20 +23,21 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Action deletes region server data.
+ * Action deletes HFiles with a certain chance.
  */
 public class DeleteDataFilesAction extends Action {
   private static final Logger LOG = LoggerFactory.getLogger(DeleteDataFilesAction.class);
   private float chance;
 
   /**
-   * Delets region server data file switch a certain chance
-   * @param chance chance to corrupt any give data file (0.5 => 50%)
+   * Delets HFiles with a certain chance
+   * @param chance chance to delete any give data file (0.5 => 50%)
    */
   public DeleteDataFilesAction(float chance) {
     this.chance = chance * 100;
@@ -47,9 +48,13 @@ public class DeleteDataFilesAction extends Action {
     LOG.info("Start deleting data files");
     FileSystem fs = CommonFSUtils.getRootDirFileSystem(getConf());
     Path rootDir = CommonFSUtils.getRootDir(getConf());
-    RemoteIterator<LocatedFileStatus> iterator =  fs.listFiles(rootDir, true);
+    Path defaultDir = rootDir.suffix("/data/default");
+    RemoteIterator<LocatedFileStatus> iterator =  fs.listFiles(defaultDir, true);
     while (iterator.hasNext()){
       LocatedFileStatus status = iterator.next();
+      if(!HFile.isHFileFormat(fs, status.getPath())){
+        continue;
+      }
       if(RandomUtils.nextFloat(0, 100) > chance){
         continue;
       }

@@ -40,6 +40,7 @@ public class DuplicatePackagesCommandAction extends TCCommandAction {
    * @param ratio the ratio of packages duplicated
    * @param duration the time this issue persists in milliseconds
    * @param timeout the timeout for executing required commands on the region server in milliseconds
+   * @param network network interface the regionserver uses for communication
    */
   public DuplicatePackagesCommandAction(float ratio, long duration, long timeout, String network) {
     super(timeout, network);

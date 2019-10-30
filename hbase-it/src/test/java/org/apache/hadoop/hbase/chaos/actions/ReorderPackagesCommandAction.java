@@ -42,6 +42,7 @@ public class ReorderPackagesCommandAction extends TCCommandAction {
    * @param duration the time this issue persists in milliseconds
    * @param delay the delay between reordered and non-reordered packages in milliseconds
    * @param timeout the timeout for executing required commands on the region server in milliseconds
+   * @param network network interface the regionserver uses for communication
    */
   public ReorderPackagesCommandAction(float ratio, long duration, long delay, long timeout,
       String network) {
