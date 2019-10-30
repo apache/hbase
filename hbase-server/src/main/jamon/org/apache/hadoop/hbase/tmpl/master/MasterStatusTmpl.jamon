@@ -52,6 +52,7 @@ org.apache.hadoop.hbase.master.RegionState;
 org.apache.hadoop.hbase.master.ServerManager;
 org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 org.apache.hadoop.hbase.quotas.QuotaUtil;
+org.apache.hadoop.hbase.rsgroup.RSGroupInfoManager;
 org.apache.hadoop.hbase.security.access.PermissionStorage;
 org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
 org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
@@ -224,7 +225,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
           <& AssignmentManagerStatusTmpl; assignmentManager=master.getAssignmentManager()&>
         </%if>
         <%if !master.isInMaintenanceMode() %>
-          <%if master.getMasterCoprocessorHost().findCoprocessor("RSGroupAdminEndpoint") != null %>
+          <%if master.getConfiguration().getBoolean(RSGroupInfoManager.RS_GROUP_ENABLED, false) %>
             <section>
               <h2><a name="rsgroup">RSGroup</a></h2>
               <& RSGroupListTmpl; master= master; serverManager= serverManager&>
