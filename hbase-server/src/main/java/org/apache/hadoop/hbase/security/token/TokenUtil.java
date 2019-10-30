@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
@@ -43,6 +44,19 @@ import org.slf4j.LoggerFactory;
 public class TokenUtil {
   // This class is referenced indirectly by User out in common; instances are created by reflection
   private static final Logger LOG = LoggerFactory.getLogger(TokenUtil.class);
+
+  /**
+   * It was removed in HBase-2.0 but added again as spark code relies on this method to obtain
+   * delegation token
+   * @deprecated Since 2.0.0.
+   */
+  @Deprecated
+  public static Token<AuthenticationTokenIdentifier> obtainToken(Configuration conf)
+      throws IOException {
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      return obtainToken(connection);
+    }
+  }
 
   /**
    * See {@link ClientTokenUtil#obtainToken(org.apache.hadoop.hbase.client.Connection)}.
