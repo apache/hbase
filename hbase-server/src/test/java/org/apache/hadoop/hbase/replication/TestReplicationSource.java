@@ -230,8 +230,7 @@ public class TestReplicationSource {
 
   }
 
-  private void appendEntries(WALProvider.Writer writer, int numEntries, boolean closeAfterAppends)
-          throws IOException {
+  private void appendEntries(WALProvider.Writer writer, int numEntries) throws IOException {
     for (int i = 0; i < numEntries; i++) {
       byte[] b = Bytes.toBytes(Integer.toString(i));
       KeyValue kv = new KeyValue(b,b,b);
@@ -245,13 +244,7 @@ public class TestReplicationSource {
       writer.append(new WAL.Entry(key, edit));
       writer.sync(false);
     }
-    if (closeAfterAppends) {
-      writer.close();
-    }
-  }
-
-  private void appendEntries(WALProvider.Writer writer, int numEntries) throws IOException {
-    appendEntries(writer, numEntries, true);
+    writer.close();
   }
 
   private long getPosition(WALFactory wals, Path log2, int numEntries) throws IOException {
@@ -384,7 +377,7 @@ public class TestReplicationSource {
     WALProvider.Writer writer2 = WALFactory.createWALWriter(FS, log2, TEST_UTIL.getConfiguration());
 
     appendEntries(writer1, 3);
-    appendEntries(writer2, 2, false);
+    appendEntries(writer2, 2);
     final long pos = getPosition(wals, log2, 2);
 
     final ReplicationEndpointForTest endpoint = new ReplicationEndpointForTest();
