@@ -531,6 +531,9 @@ public class ReplicationSource implements ReplicationSourceInterface {
 
   @Override
   public void startup() {
+    if (metrics != null) {
+      metrics.initMetric();
+    }
     // mark we are running now
     this.sourceRunning = true;
     initThread = new Thread(this::initialize);

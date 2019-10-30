@@ -47,7 +47,7 @@ public class MetricsSource implements BaseSource {
   private String id;
   private long timeStampNextToReplicate;
 
-  private final MetricsReplicationSourceSource singleSourceSource;
+  private MetricsReplicationSourceSource singleSourceSource;
   private final MetricsReplicationSourceSource globalSourceSource;
   private Map<String, MetricsReplicationSourceSource> singleSourceSourceByTable;
 
@@ -438,5 +438,11 @@ public class MetricsSource implements BaseSource {
   @VisibleForTesting
   public Map<String, MetricsReplicationSourceSource> getSingleSourceSourceByTable() {
     return singleSourceSourceByTable;
+  }
+
+  public void initMetric() {
+    singleSourceSource =
+        CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class)
+            .getSource(id);
   }
 }
