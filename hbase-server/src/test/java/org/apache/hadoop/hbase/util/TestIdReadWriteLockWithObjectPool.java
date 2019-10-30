@@ -53,7 +53,8 @@ public class TestIdReadWriteLockWithObjectPool {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestIdReadWriteLockWithObjectPool.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestIdReadWriteLockWithObjectPool.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestIdReadWriteLockWithObjectPool.class);
 
   private static final int NUM_IDS = 16;
   private static final int NUM_THREADS = 128;

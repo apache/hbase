@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.util;
 
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 
 /**

@@ -17,18 +17,24 @@
  */
 package org.apache.hadoop.hbase.util;
 
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Assert;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Category({ SmallTests.class })
 public class TestIdReadWriteLockStrongRef {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestIdReadWriteLockStrongRef.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestIdReadWriteLockStrongRef.class);
 
