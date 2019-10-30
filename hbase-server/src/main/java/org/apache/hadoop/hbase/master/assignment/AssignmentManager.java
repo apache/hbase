@@ -991,8 +991,8 @@ public class AssignmentManager implements ServerListener {
         final RegionInfo hri = getMetaRegionFromName(regionName);
         if (hri == null) {
           if (LOG.isTraceEnabled()) {
-            LOG.trace("Skip online report for region=" + Bytes.toStringBinary(regionName) +
-              " while meta is loading");
+            LOG.trace("Skip online report for region={} while meta is loading from server={}",
+                Bytes.toStringBinary(regionName), serverName);
           }
           continue;
         }
@@ -1035,7 +1035,8 @@ public class AssignmentManager implements ServerListener {
                     " but state has otherwise AND NO procedure is running");
                 }
               } catch (UnexpectedStateException e) {
-                LOG.warn(regionNode.toString() + " reported unexpteced OPEN: " + e.getMessage(), e);
+                LOG.warn("{} reported unexpteced OPEN: {} sever={}", regionNode.toString(),
+                    e.getMessage(), serverName, e);
               }
             }
           } else if (!regionNode.isInState(State.CLOSING, State.SPLITTING)) {
@@ -1054,7 +1055,8 @@ public class AssignmentManager implements ServerListener {
       //See HBASE-21421, we can count on reportRegionStateTransition calls
       //We only log a warming here. It could be a network lag.
       LOG.warn("Failed to checkOnlineRegionsReport, maybe due to network lag, "
-          + "if this message continues, be careful of double assign", e);
+          + "if this message continues, be careful of double assign. report from server={}",
+          serverName, e);
     }
   }
 
