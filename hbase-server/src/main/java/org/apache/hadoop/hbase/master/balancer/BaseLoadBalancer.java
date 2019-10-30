@@ -142,6 +142,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     int[]   serverIndexToRackIndex;      //serverIndex -> rack index
 
     int[][] regionsPerServer;            //serverIndex -> region list
+    int[]   serverIndexToRegionsOffset;  //serverIndex -> offset of region list
     int[][] regionsPerHost;              //hostIndex -> list of regions
     int[][] regionsPerRack;              //rackIndex -> region list
     int[][] primariesOfRegionsPerServer; //serverIndex -> sorted list of regions by primary region index
@@ -276,6 +277,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       serverIndexToHostIndex = new int[numServers];
       serverIndexToRackIndex = new int[numServers];
       regionsPerServer = new int[numServers][];
+      serverIndexToRegionsOffset = new int[numServers];
       regionsPerHost = new int[numHosts][];
       regionsPerRack = new int[numRacks][];
       primariesOfRegionsPerServer = new int[numServers][];
@@ -321,7 +323,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
       for (Entry<ServerName, List<RegionInfo>> entry : clusterState.entrySet()) {
         int serverIndex = serversToIndex.get(entry.getKey().getHostAndPort());
-        regionPerServerIndex = 0;
+        regionPerServerIndex = serverIndexToRegionsOffset[serverIndex];
 
         int hostIndex = hostsToIndex.get(entry.getKey().getHostname());
         serverIndexToHostIndex[serverIndex] = hostIndex;
@@ -334,6 +336,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
           regionsPerServer[serverIndex][regionPerServerIndex++] = regionIndex;
           regionIndex++;
         }
+        serverIndexToRegionsOffset[serverIndex] = regionPerServerIndex;
       }
 
       for (RegionInfo region : unassignedRegions) {
