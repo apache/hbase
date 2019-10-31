@@ -66,7 +66,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.mapreduce.Job;
 import org.junit.Before;
@@ -830,9 +829,8 @@ public class TestReplicationSmallTests extends TestReplicationBase {
       WAL wal = utility1.getHBaseCluster().getRegionServer(i).getWAL(regionInfo);
       Path currentWalPath = DefaultWALProvider.getCurrentFileName(wal);
       String walGroupId = DefaultWALProvider.getWALPrefixFromWALName(currentWalPath.getName());
-      Path emptyWalPath = new Path(currentWalPath.getParent(), walGroupId + "." + ts);
-      WALFactory.createWALWriter(utility1.getTestFileSystem(),
-              emptyWalPath, utility1.getConfiguration()).close();
+      Path emptyWalPath = new Path(utility1.getDataTestDir(), walGroupId + "." + ts);
+      utility1.getTestFileSystem().create(emptyWalPath).close();
       emptyWalPaths.add(emptyWalPath);
     }
 
@@ -881,10 +879,10 @@ public class TestReplicationSmallTests extends TestReplicationBase {
           for (ReplicationSourceInterface rsi : replicationService.getReplicationManager()
               .getSources()) {
             ReplicationSource source = (ReplicationSource) rsi;
-            if (!invert && !emptyWalPaths.get(i).equals(source.getCurrentPath())) {
+            if (!invert && !emptyWalPaths.get(i).equals(source.getCurrentReadPath())) {
               return false;
             }
-            if (invert && emptyWalPaths.get(i).equals(source.getCurrentPath())) {
+            if (invert && emptyWalPaths.get(i).equals(source.getCurrentReadPath())) {
               return false;
             }
           }
