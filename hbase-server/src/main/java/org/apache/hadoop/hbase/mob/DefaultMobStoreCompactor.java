@@ -411,33 +411,11 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
           } else if (MobUtils.isMobReferenceCell(c)) {
             // Not a major MOB compaction, Put MOB reference
             if (MobUtils.hasValidMobRefCellValue(c)) {
-              int size = MobUtils.getMobValueLength(c);
-              if (size > mobSizeThreshold) {
-                // If the value size is larger than the threshold, it's regarded as a mob. Since
-                // its value is already in the mob file, directly write this cell to the store file
-                writer.append(c);
-                // Add MOB reference to a MOB reference set
-                mobRefSet.get().add(MobUtils.getMobFileName(c));
-              } else {
-                // If the value is not larger than the threshold, it's not regarded a mob. Retrieve
-                // the mob cell from the mob file, and write it back to the store file.
-                mobCell = mobStore.resolve(c, true, false).getCell();
-                if (mobCell.getValueLength() != 0) {
-                  // put the mob data back to the store file
-                  PrivateCellUtil.setSequenceId(mobCell, c.getSequenceId());
-                  writer.append(mobCell);
-                  cellsCountCompactedFromMob++;
-                  cellsSizeCompactedFromMob += mobCell.getValueLength();
-                } else {
-                  // If the value of a file is empty, there might be issues when retrieving,
-                  // directly write the cell to the store file, and leave it to be handled by the
-                  // next compaction.
-                  LOG.error("Empty value for: " + c);
-                  writer.append(c);
-                  // Add MOB reference to a set
-                  mobRefSet.get().add(MobUtils.getMobFileName(c));
-                }
-              }
+              // We do not check mobSizeThreshold during normal compaction,
+              // leaving it to a MOB compaction run
+              writer.append(c);
+              // Add MOB reference to a MOB reference set
+              mobRefSet.get().add(MobUtils.getMobFileName(c));              
             } else {
               // TODO ????
               LOG.error("Corrupted MOB reference: " + c);
