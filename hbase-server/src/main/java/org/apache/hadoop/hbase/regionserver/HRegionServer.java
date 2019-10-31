@@ -1928,7 +1928,7 @@ public class HRegionServer extends HasThread implements
       healthCheckChore = new HealthCheckChore(sleepTime, this, getConfiguration());
     }
 
-    this.walRoller = new LogRoller(this, this);
+    this.walRoller = new LogRoller(this);
     this.flushThroughputController = FlushThroughputControllerFactory.create(this, conf);
     this.procedureResultReporter = new RemoteProcedureResultReporter(this);
 
