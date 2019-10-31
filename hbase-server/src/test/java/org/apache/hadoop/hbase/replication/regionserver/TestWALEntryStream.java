@@ -42,6 +42,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -359,6 +360,7 @@ public class TestWALEntryStream {
 
     // start up a batcher
     ReplicationSourceManager mockSourceManager = Mockito.mock(ReplicationSourceManager.class);
+    when(mockSourceManager.getTotalBufferUsed()).thenReturn(new AtomicLong(0));
     ReplicationSourceWALReaderThread batcher =
             new ReplicationSourceWALReaderThread(mockSourceManager, getQueueInfo(),walQueue, 0,
                     fs, conf, getDummyFilter(), new MetricsSource("1"));
@@ -397,6 +399,7 @@ public class TestWALEntryStream {
     }
 
     ReplicationSourceManager mockSourceManager = mock(ReplicationSourceManager.class);
+    when(mockSourceManager.getTotalBufferUsed()).thenReturn(new AtomicLong(0));
     ReplicationSourceWALReaderThread reader =
             new ReplicationSourceWALReaderThread(mockSourceManager, getQueueInfo("1-1"),
                     walQueue, 0, fs, conf, getDummyFilter(), new MetricsSource("1"));
@@ -449,6 +452,7 @@ public class TestWALEntryStream {
 
     Path firstWAL = walQueue.peek();
     ReplicationSourceManager mockSourceManager = mock(ReplicationSourceManager.class);
+    when(mockSourceManager.getTotalBufferUsed()).thenReturn(new AtomicLong(0));
     final ReplicationSourceWALReaderThread reader =
             new ReplicationSourceWALReaderThread(mockSourceManager, getQueueInfo(), walQueue,
                     0, fs, conf, filter, new MetricsSource("1"));
