@@ -549,7 +549,12 @@ public class ReplicationSource implements ReplicationSourceInterface {
     terminate(reason, cause, true);
   }
 
-  public void terminate(String reason, Exception cause, boolean join) {
+  @Override
+  public void terminate(String reason, Exception cause, boolean clearMetrics) {
+    terminate(reason, cause, clearMetrics, true);
+  }
+
+  public void terminate(String reason, Exception cause, boolean clearMetrics, boolean join) {
     if (cause == null) {
       LOG.info("{} Closing source {} because: {}", logPeerId(), this.queueId, reason);
     } else {
@@ -595,7 +600,9 @@ public class ReplicationSource implements ReplicationSourceInterface {
     if (this.replicationEndpoint != null) {
       this.replicationEndpoint.stop();
     }
-    metrics.clear();
+    if (clearMetrics) {
+      metrics.clear();
+    }
     if (join) {
       for (ReplicationSourceShipper worker : workers) {
         Threads.shutdown(worker, this.sleepForRetries);
@@ -611,7 +618,9 @@ public class ReplicationSource implements ReplicationSourceInterface {
         }
       }
     }
-    this.metrics.clear();
+    if (clearMetrics) {
+      this.metrics.clear();
+    }
   }
 
   @Override
