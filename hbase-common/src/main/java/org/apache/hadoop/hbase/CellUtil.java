@@ -756,7 +756,7 @@ public final class CellUtil {
 
   /**
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Instead use
-   *             {@link #matchingRows(Cell, byte[]))}
+   *   {@link #matchingRows(Cell, byte[])}
    */
   @Deprecated
   public static boolean matchingRow(final Cell left, final byte[] buf) {
@@ -894,8 +894,15 @@ public final class CellUtil {
   }
 
   public static boolean matchingColumn(final Cell left, final byte[] fam, final byte[] qual) {
-    if (!matchingFamily(left, fam)) return false;
-    return matchingQualifier(left, qual);
+    return matchingFamily(left, fam) && matchingQualifier(left, qual);
+  }
+
+  /**
+   * @return True if matching column family and the qualifier starts with <code>qual</code>
+   */
+  public static boolean matchingColumnFamilyAndQualifierPrefix(final Cell left, final byte[] fam,
+      final byte[] qual) {
+    return matchingFamily(left, fam) && PrivateCellUtil.qualifierStartsWith(left, qual);
   }
 
   /**
