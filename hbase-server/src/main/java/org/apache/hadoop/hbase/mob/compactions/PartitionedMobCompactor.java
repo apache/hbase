@@ -848,6 +848,7 @@ public class PartitionedMobCompactor extends MobCompactor {
     // bulkload the ref file
     try {
       LoadIncrementalHFiles bulkload = new LoadIncrementalHFiles(conf);
+      bulkload.disableReplication();
       bulkload.doBulkLoad(bulkloadDirectory, connection.getAdmin(), table,
           connection.getRegionLocator(table.getName()));
     } catch (Exception e) {
