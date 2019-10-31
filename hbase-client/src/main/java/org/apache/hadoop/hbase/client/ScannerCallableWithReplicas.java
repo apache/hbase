@@ -94,7 +94,12 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
   }
 
   public void setClose() {
-    currentScannerCallable.setClose();
+    if(currentScannerCallable != null) {
+      currentScannerCallable.setClose();
+    } else {
+      LOG.warn("Calling close on ScannerCallable reference that is already null, "
+        + "which shouldn't happen.");
+    }
   }
 
   public void setRenew(boolean val) {
@@ -136,6 +141,10 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
       Result[] r = currentScannerCallable.call(timeout);
       currentScannerCallable = null;
       return r;
+    } else if(currentScannerCallable == null) {
+      LOG.warn("Another call received, but our ScannerCallable is already null. "
+        + "This shouldn't happen, but there's not much to do, so logging and returning null.");
+      return null;
     }
     // We need to do the following:
     //1. When a scan goes out to a certain replica (default or not), we need to
