@@ -418,7 +418,7 @@ public class ProtobufLogReader extends ReaderBase {
               "current position and original position match at {}", originalPosition);
             seekOnFs(0);
           } else {
-            LOG.debug("Reached the end of file at position {}", originalPosition);
+            LOG.info("Reached the end of file at position {}", originalPosition);
           }
         } else {
           // Else restore our position to original location in hope that next time through we will
