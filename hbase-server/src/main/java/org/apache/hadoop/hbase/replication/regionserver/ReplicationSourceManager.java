@@ -380,7 +380,8 @@ public class ReplicationSourceManager implements ReplicationListener {
       ReplicationSourceInterface toRemove = this.sources.put(peerId, src);
       if (toRemove != null) {
         LOG.info("Terminate replication source for " + toRemove.getPeerId());
-        toRemove.terminate(terminateMessage);
+        // Do not clear metrics
+        toRemove.terminate(terminateMessage, null, false);
       }
       for (SortedSet<String> walsByGroup : walsById.get(peerId).values()) {
         walsByGroup.forEach(wal -> {
