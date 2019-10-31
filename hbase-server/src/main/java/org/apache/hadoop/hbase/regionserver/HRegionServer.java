@@ -1944,7 +1944,7 @@ public class HRegionServer extends HasThread implements
           this.getRegionServerMetrics().getMetricsSource());
     }
 
-    this.walRoller = new LogRoller(this, this);
+    this.walRoller = new LogRoller(this);
     this.flushThroughputController = FlushThroughputControllerFactory.create(this, conf);
     this.procedureResultReporter = new RemoteProcedureResultReporter(this);
 

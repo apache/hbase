@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -74,7 +73,7 @@ class ReplicationSourceWALActionListener implements WALActionsListener {
     }
     // For replay, or if all the cells are markers, do not need to store replication scope.
     if (logEdit.isReplay() ||
-      logEdit.getCells().stream().allMatch(c -> CellUtil.matchingFamily(c, WALEdit.METAFAMILY))) {
+      logEdit.getCells().stream().allMatch(c -> WALEdit.isMetaEditFamily(c))) {
       ((WALKeyImpl) logKey).clearReplicationScope();
     }
   }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -204,11 +204,10 @@ public class TestWALLockup {
   @Test
   public void testLockupWhenSyncInMiddleOfZigZagSetup() throws IOException {
     // Mocked up server and regionserver services. Needed below.
-    Server server = Mockito.mock(Server.class);
-    Mockito.when(server.getConfiguration()).thenReturn(CONF);
-    Mockito.when(server.isStopped()).thenReturn(false);
-    Mockito.when(server.isAborted()).thenReturn(false);
     RegionServerServices services = Mockito.mock(RegionServerServices.class);
+    Mockito.when(services.getConfiguration()).thenReturn(CONF);
+    Mockito.when(services.isStopped()).thenReturn(false);
+    Mockito.when(services.isAborted()).thenReturn(false);
 
     // OK. Now I have my mocked up Server & RegionServerServices and dodgy WAL, go ahead with test.
     FileSystem fs = FileSystem.get(CONF);
@@ -217,7 +216,7 @@ public class TestWALLockup {
     dodgyWAL.init();
     Path originalWAL = dodgyWAL.getCurrentFileName();
     // I need a log roller running.
-    LogRoller logRoller = new LogRoller(server, services);
+    LogRoller logRoller = new LogRoller(services);
     logRoller.addWAL(dodgyWAL);
     // There is no 'stop' once a logRoller is running.. it just dies.
     logRoller.start();
@@ -294,7 +293,7 @@ public class TestWALLockup {
       }
     } finally {
       // To stop logRoller, its server has to say it is stopped.
-      Mockito.when(server.isStopped()).thenReturn(true);
+      Mockito.when(services.isStopped()).thenReturn(true);
       Closeables.close(logRoller, true);
       try {
         if (region != null) {
@@ -380,18 +379,17 @@ public class TestWALLockup {
     }
 
     // Mocked up server and regionserver services. Needed below.
-    final Server server = Mockito.mock(Server.class);
-    Mockito.when(server.getConfiguration()).thenReturn(CONF);
-    Mockito.when(server.isStopped()).thenReturn(false);
-    Mockito.when(server.isAborted()).thenReturn(false);
     RegionServerServices services = Mockito.mock(RegionServerServices.class);
+    Mockito.when(services.getConfiguration()).thenReturn(CONF);
+    Mockito.when(services.isStopped()).thenReturn(false);
+    Mockito.when(services.isAborted()).thenReturn(false);
 
     // OK. Now I have my mocked up Server & RegionServerServices and dodgy WAL, go ahead with test.
     FileSystem fs = FileSystem.get(CONF);
     Path rootDir = new Path(dir + getName());
     final DodgyFSLog dodgyWAL = new DodgyFSLog(fs, rootDir, getName(), CONF);
     // I need a log roller running.
-    LogRoller logRoller = new LogRoller(server, services);
+    LogRoller logRoller = new LogRoller(services);
     logRoller.addWAL(dodgyWAL);
     // There is no 'stop' once a logRoller is running.. it just dies.
     logRoller.start();
@@ -432,7 +430,7 @@ public class TestWALLockup {
 
     } finally {
       // To stop logRoller, its server has to say it is stopped.
-      Mockito.when(server.isStopped()).thenReturn(true);
+      Mockito.when(services.isStopped()).thenReturn(true);
       if (logRoller != null) {
         logRoller.close();
       }
