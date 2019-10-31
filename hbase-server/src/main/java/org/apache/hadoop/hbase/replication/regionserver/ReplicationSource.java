@@ -146,6 +146,8 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     FINISHED  // The worker is done processing a recovered queue
   }
 
+  private AtomicLong totalBufferUsed;
+
   /**
    * Instantiation method used by region servers
    *
@@ -191,6 +193,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     defaultBandwidth = this.conf.getLong("replication.source.per.peer.node.bandwidth", 0);
     currentBandwidth = getCurrentBandwidth();
     this.throttler = new ReplicationThrottler((double) currentBandwidth / 10.0);
+    this.totalBufferUsed = manager.getTotalBufferUsed();
     LOG.info("peerClusterZnode=" + peerClusterZnode + ", ReplicationSource : " + peerId
         + ", currentBandwidth=" + this.currentBandwidth);
   }
@@ -613,7 +616,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
         try {
           WALEntryBatch entryBatch = entryReader.take();
           shipEdits(entryBatch);
-          manager.releaseBufferQuota(entryBatch.getHeapSizeExcludeBulkLoad());
+          releaseBufferQuota((int) entryBatch.getHeapSize());
           if (!entryBatch.hasMoreEntries()) {
             LOG.debug("Finished recovering queue for group "
                     + walGroupId + " of peer " + peerClusterZnode);
@@ -689,6 +692,18 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     }
 
     /**
+     * get batchEntry size excludes bulk load file sizes.
+     * Uses ReplicationSourceWALReader's static method.
+     */
+    private int getBatchEntrySizeExcludeBulkLoad(WALEntryBatch entryBatch) {
+      int totalSize = 0;
+      for(Entry entry : entryBatch.getWalEntries()) {
+        totalSize += entryReader.getEntrySizeExcludeBulkLoad(entry);
+      }
+      return  totalSize;
+    }
+
+    /**
      * Do the shipping logic
      */
     protected void shipEdits(WALEntryBatch entryBatch) {
@@ -704,7 +719,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
         return;
       }
       int currentSize = (int) entryBatch.getHeapSize();
-      int sizeExcludeBulkLoad = (int) entryBatch.getHeapSizeExcludeBulkLoad();
+      int sizeExcludeBulkLoad = getBatchEntrySizeExcludeBulkLoad(entryBatch);
       while (isWorkerActive()) {
         try {
           checkBandwidthChangeAndResetThrottler();
@@ -983,6 +998,10 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
      */
     public WorkerState getWorkerState() {
       return state;
+    }
+
+    private void releaseBufferQuota(int size) {
+      totalBufferUsed.addAndGet(-size);
     }
   }
 }

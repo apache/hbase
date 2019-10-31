@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -123,9 +124,10 @@ public class TestGlobalReplicationThrottler {
       public void run() {
         Replication replication = (Replication) utility1.getMiniHBaseCluster()
             .getRegionServer(0).getReplicationSourceService();
+        AtomicLong bufferUsed = replication.getReplicationManager().getTotalBufferUsed();
         testQuotaPass = true;
         while (!Thread.interrupted()) {
-          long size = replication.getReplicationManager().getTotalBufferUsed();
+          long size = bufferUsed.get();
           //the reason here doing "numOfPeer + 1" is because by using method addEntryToBatch(), even the
           // batch size (after added last entry) exceeds quota, it still keeps the last one in the batch
           // so total used buffer size can be one "replication.total.buffer.quota" larger than expected

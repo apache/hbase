@@ -43,6 +43,7 @@ import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -266,6 +267,7 @@ public class TestReplicationSource {
     private Mocks() {
       when(peers.getStatusOfPeer(anyString())).thenReturn(true);
       when(context.getReplicationPeer()).thenReturn(peer);
+      when(manager.getTotalBufferUsed()).thenReturn(new AtomicLong(0));
     }
 
     ReplicationSource createReplicationSourceWithMocks(ReplicationEndpoint endpoint)

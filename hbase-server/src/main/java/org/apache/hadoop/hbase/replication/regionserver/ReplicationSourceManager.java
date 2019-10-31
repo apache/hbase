@@ -121,7 +121,6 @@ public class ReplicationSourceManager implements ReplicationListener {
   private final Random rand;
   private final boolean replicationForBulkLoadDataEnabled;
 
-  private long totalBufferQuota;
   private AtomicLong totalBufferUsed = new AtomicLong();
 
   /**
@@ -176,8 +175,6 @@ public class ReplicationSourceManager implements ReplicationListener {
     replicationForBulkLoadDataEnabled =
         conf.getBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY,
           HConstants.REPLICATION_BULKLOAD_ENABLE_DEFAULT);
-    totalBufferQuota = conf.getLong(HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_KEY,
-            HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_DFAULT);
   }
 
   /**
@@ -192,7 +189,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    * @param holdLogInZK if true then the log is retained in ZK
    */
   public synchronized void logPositionAndCleanOldLogs(Path log, String id, long position,
-      boolean queueRecovered, boolean holdLogInZK) {
+    boolean queueRecovered, boolean holdLogInZK) {
     String fileName = log.getName();
     this.replicationQueues.setLogPosition(id, fileName, position);
     if (holdLogInZK) {
@@ -461,27 +458,8 @@ public class ReplicationSourceManager implements ReplicationListener {
   }
 
   @VisibleForTesting
-  public long getTotalBufferUsed() {
-    return totalBufferUsed.get();
-  }
-
-  /**
-   * @param size delta size for grown buffer
-   * @return true if total buffer size limit reached, after adding size
-   */
-  public boolean acquireBufferQuota(long size) {
-    return totalBufferUsed.addAndGet(size) >= totalBufferQuota;
-  }
-
-  public void releaseBufferQuota(long size) {
-    totalBufferUsed.addAndGet(-size);
-  }
-
-  /**
-   * @return true if total buffer size limit reached
-   */
-  public boolean isBufferQuotaReached() {
-    return totalBufferUsed.get() >= totalBufferQuota;
+  public AtomicLong getTotalBufferUsed() {
+    return totalBufferUsed;
   }
 
   /**
