@@ -37,6 +37,8 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
@@ -737,4 +739,76 @@ public class TestScannersFromClientSide {
       }
     }
   }
+
+  @Test
+  public void testScannerWithPartialResults() throws Exception {
+    TableName tableName = TableName.valueOf("testScannerWithPartialResults");
+    try (Table table = TEST_UTIL.createMultiRegionTable(tableName,
+      Bytes.toBytes("c"), 4)) {
+      List<Put> puts = new ArrayList<>();
+      byte[] largeArray = new byte[10000];
+      Put put = new Put(Bytes.toBytes("aaaa0"));
+      put.addColumn(Bytes.toBytes("c"), Bytes.toBytes("1"), Bytes.toBytes("1"));
+      put.addColumn(Bytes.toBytes("c"), Bytes.toBytes("2"), Bytes.toBytes("2"));
+      put.addColumn(Bytes.toBytes("c"), Bytes.toBytes("3"), Bytes.toBytes("3"));
+      put.addColumn(Bytes.toBytes("c"), Bytes.toBytes("4"), Bytes.toBytes("4"));
+      puts.add(put);
+      put = new Put(Bytes.toBytes("aaaa1"));
+      put.addColumn(Bytes.toBytes("c"), Bytes.toBytes("1"), Bytes.toBytes("1"));
+      put.addColumn(Bytes.toBytes("c"), Bytes.toBytes("2"), largeArray);
+      put.addColumn(Bytes.toBytes("c"), Bytes.toBytes("3"), largeArray);
+      puts.add(put);
+      table.put(puts);
+      Scan scan = new Scan();
+      scan.addFamily(Bytes.toBytes("c"));
+      scan.setAttribute(Scan.SCAN_ATTRIBUTES_TABLE_NAME, tableName.getName());
+      scan.setMaxResultSize(10001);
+      scan.setStopRow(Bytes.toBytes("bbbb"));
+      scan.setFilter(new LimitKVsReturnFilter());
+      ResultScanner rs = table.getScanner(scan);
+      Result result;
+      int expectedKvNumber = 6;
+      int returnedKvNumber = 0;
+      while((result = rs.next()) != null){
+        returnedKvNumber += result.listCells().size();
+      }
+      rs.close();
+      assertEquals(expectedKvNumber, returnedKvNumber);
+    }
+  }
+
+  public static class LimitKVsReturnFilter extends FilterBase {
+
+    private static int total = 0;
+
+    @Override
+    public ReturnCode filterKeyValue(Cell v) throws IOException {
+      if(total>=6) {
+        total++;
+        return ReturnCode.SKIP;
+      }
+      total++;
+      return ReturnCode.INCLUDE;
+    }
+
+    @Override
+    public boolean filterAllRemaining() throws IOException {
+      if(total<7) {
+        return false;
+      }
+      total++;
+      return true;
+    }
+
+    @Override
+    public String toString() {
+      return this.getClass().getSimpleName();
+    }
+
+    public static LimitKVsReturnFilter parseFrom(final byte [] pbBytes)
+      throws DeserializationException {
+      return new LimitKVsReturnFilter();
+    }
+  }
+
 }
