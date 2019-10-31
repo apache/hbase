@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.snapshot;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -140,8 +141,15 @@ public class TestSnapshotHFileCleaner {
     builder.addRegionV2();
     builder.corruptOneRegionManifest();
 
-    fs.delete(SnapshotDescriptionUtils.getWorkingSnapshotDir(rootDir, TEST_UTIL.getConfiguration()),
-      true);
+    long period = Long.MAX_VALUE;
+    SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, period, 10000000,
+        "test-snapshot-file-cache-refresh", new SnapshotFiles());
+    try {
+      cache.getSnapshotsInProgress();
+    } finally {
+      fs.delete(SnapshotDescriptionUtils.getWorkingSnapshotDir(rootDir,
+          TEST_UTIL.getConfiguration()), true);
+    }
   }
 
   /**
@@ -159,7 +167,29 @@ public class TestSnapshotHFileCleaner {
     builder.consolidate();
     builder.corruptDataManifest();
 
-    fs.delete(SnapshotDescriptionUtils.getWorkingSnapshotDir(rootDir,
+    long period = Long.MAX_VALUE;
+    SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, period, 10000000,
+        "test-snapshot-file-cache-refresh", new SnapshotFiles());
+    try {
+      cache.getSnapshotsInProgress();
+    } finally {
+      fs.delete(SnapshotDescriptionUtils.getWorkingSnapshotDir(rootDir,
           TEST_UTIL.getConfiguration()), true);
+    }
+  }
+
+  @Test
+  public void testMissedTmpSnapshot() throws IOException {
+    SnapshotTestingUtils.SnapshotMock snapshotMock =
+        new SnapshotTestingUtils.SnapshotMock(TEST_UTIL.getConfiguration(), fs, rootDir);
+    SnapshotTestingUtils.SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV2(
+        SNAPSHOT_NAME_STR, TABLE_NAME_STR);
+    builder.addRegionV2();
+    builder.missOneRegionSnapshotFile();
+    long period = Long.MAX_VALUE;
+    SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, period, 10000000,
+        "test-snapshot-file-cache-refresh", new SnapshotFiles());
+    cache.getSnapshotsInProgress();
+    assertTrue(fs.exists(builder.getSnapshotsDir()));
   }
 }

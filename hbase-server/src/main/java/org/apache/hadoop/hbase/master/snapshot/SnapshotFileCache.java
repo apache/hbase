@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -40,6 +41,7 @@ import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
@@ -176,6 +178,7 @@ public class SnapshotFileCache implements Stoppable {
   public synchronized Iterable<FileStatus> getUnreferencedFiles(Iterable<FileStatus> files,
       final SnapshotManager snapshotManager) throws IOException {
     List<FileStatus> unReferencedFiles = Lists.newArrayList();
+    List<String> snapshotsInProgress = null;
     boolean refreshed = false;
     Lock lock = null;
     if (snapshotManager != null) {
@@ -195,6 +198,12 @@ public class SnapshotFileCache implements Stoppable {
             refreshed = true;
           }
           if (cache.contains(fileName)) {
+            continue;
+          }
+          if (snapshotsInProgress == null) {
+            snapshotsInProgress = getSnapshotsInProgress();
+          }
+          if (snapshotsInProgress.contains(fileName)) {
             continue;
           }
           unReferencedFiles.add(file);
@@ -249,6 +258,24 @@ public class SnapshotFileCache implements Stoppable {
     // set the snapshots we are tracking
     this.snapshots.clear();
     this.snapshots.putAll(newSnapshots);
+  }
+
+  @VisibleForTesting
+  List<String> getSnapshotsInProgress() throws IOException {
+    List<String> snapshotInProgress = Lists.newArrayList();
+    // only add those files to the cache, but not to the known snapshots
+    Path snapshotTmpDir = new Path(snapshotDir, SnapshotDescriptionUtils.SNAPSHOT_TMP_DIR_NAME);
+    FileStatus[] running = FSUtils.listStatus(fs, snapshotTmpDir);
+    if (running != null) {
+      for (FileStatus run : running) {
+        try {
+          snapshotInProgress.addAll(fileInspector.filesUnderSnapshot(run.getPath()));
+        } catch (CorruptedSnapshotException cse) {
+          LOG.debug("Corrupted in-progress snapshot file exception, ignored.", cse);
+        }
+      }
+    }
+    return snapshotInProgress;
   }
 
   /**
