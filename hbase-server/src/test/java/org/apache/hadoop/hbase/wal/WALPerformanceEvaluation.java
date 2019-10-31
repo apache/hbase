@@ -321,7 +321,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
       final HRegion[] regions = new HRegion[numRegions];
       final Runnable[] benchmarks = new Runnable[numRegions];
       final MockRegionServerServices mockServices = new MockRegionServerServices(getConf());
-      final LogRoller roller = new LogRoller(mockServices, mockServices);
+      final LogRoller roller = new LogRoller(mockServices);
       Threads.setDaemonThreadRunning(roller.getThread(), "WALPerfEval.logRoller");
 
       try {

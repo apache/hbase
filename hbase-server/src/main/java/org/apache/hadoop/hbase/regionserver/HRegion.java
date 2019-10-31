@@ -1700,7 +1700,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
       status.setStatus("Writing region close event to WAL");
       // Always write close marker to wal even for read only table. This is not a big problem as we
-      // do not write any data into the region.
+      // do not write any data into the region; it is just a meta edit in the WAL file.
       if (!abort && wal != null && getRegionServerServices() != null &&
         RegionReplicaUtil.isDefaultReplica(getRegionInfo())) {
         writeRegionCloseMarker(wal);
@@ -2642,7 +2642,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
     }
     MemStoreSize mss = this.memStoreSizing.getMemStoreSize();
-    LOG.info("Flushing " + storesToFlush.size() + "/" + stores.size() + " column families," +
+    LOG.info("Flushing " + this.getRegionInfo().getEncodedName() + " " +
+        storesToFlush.size() + "/" + stores.size() + " column families," +
         " dataSize=" + StringUtils.byteDesc(mss.getDataSize()) +
         " heapSize=" + StringUtils.byteDesc(mss.getHeapSize()) +
         ((perCfExtras != null && perCfExtras.length() > 0)? perCfExtras.toString(): "") +
@@ -4768,7 +4769,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           for (Cell cell: val.getCells()) {
             // Check this edit is for me. Also, guard against writing the special
             // METACOLUMN info such as HBASE::CACHEFLUSH entries
-            if (CellUtil.matchingFamily(cell, WALEdit.METAFAMILY)) {
+            if (WALEdit.isMetaEditFamily(cell)) {
               // if region names don't match, skipp replaying compaction marker
               if (!checkRowWithinBoundary) {
                 //this is a special edit, we should handle it

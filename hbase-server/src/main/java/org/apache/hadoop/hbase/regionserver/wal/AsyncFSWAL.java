@@ -558,9 +558,9 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   }
 
   @Override
-  protected long append(RegionInfo hri, WALKeyImpl key, WALEdit edits, boolean inMemstore,
-    boolean closeRegion) throws IOException {
-    long txid = stampSequenceIdAndPublishToRingBuffer(hri, key, edits, inMemstore, closeRegion,
+  protected long append(RegionInfo hri, WALKeyImpl key, WALEdit edits, boolean inMemstore)
+      throws IOException {
+    long txid = stampSequenceIdAndPublishToRingBuffer(hri, key, edits, inMemstore,
       waitingConsumePayloads);
     if (shouldScheduleConsumer()) {
       consumeExecutor.execute(consumer);

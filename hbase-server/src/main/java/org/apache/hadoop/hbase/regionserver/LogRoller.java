@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -28,7 +28,6 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
@@ -56,7 +55,6 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 public class LogRoller extends HasThread implements Closeable {
   private static final Logger LOG = LoggerFactory.getLogger(LogRoller.class);
   private final ConcurrentMap<WAL, Boolean> walNeedsRoll = new ConcurrentHashMap<>();
-  private final Server server;
   protected final RegionServerServices services;
   private volatile long lastRollTime = System.currentTimeMillis();
   // Period to roll log.
@@ -99,16 +97,14 @@ public class LogRoller extends HasThread implements Closeable {
     }
   }
 
-  /** @param server */
-  public LogRoller(final Server server, final RegionServerServices services) {
+  public LogRoller(RegionServerServices services) {
     super("LogRoller");
-    this.server = server;
     this.services = services;
-    this.rollPeriod = this.server.getConfiguration().
+    this.rollPeriod = this.services.getConfiguration().
       getLong("hbase.regionserver.logroll.period", 3600000);
-    this.threadWakeFrequency = this.server.getConfiguration().
+    this.threadWakeFrequency = this.services.getConfiguration().
       getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
-    this.checkLowReplicationInterval = this.server.getConfiguration().getLong(
+    this.checkLowReplicationInterval = this.services.getConfiguration().getLong(
         "hbase.regionserver.hlog.check.lowreplication.interval", 30 * 1000);
   }
 
@@ -144,7 +140,7 @@ public class LogRoller extends HasThread implements Closeable {
         LOG.warn("Failed to shutdown wal", e);
       }
     }
-    server.abort(reason, cause);
+    this.services.abort(reason, cause);
   }
 
   @Override
@@ -156,7 +152,7 @@ public class LogRoller extends HasThread implements Closeable {
       periodic = (now - this.lastRollTime) > this.rollPeriod;
       if (periodic) {
         // Time for periodic roll, fall through
-        LOG.debug("Wal roll period {} ms elapsed", this.rollPeriod);
+        LOG.debug("WAL roll period {} ms elapsed", this.rollPeriod);
       } else {
         synchronized (this) {
           if (walNeedsRoll.values().stream().anyMatch(Boolean::booleanValue)) {
@@ -183,9 +179,9 @@ public class LogRoller extends HasThread implements Closeable {
           WAL wal = entry.getKey();
           // reset the flag in front to avoid missing roll request before we return from rollWriter.
           walNeedsRoll.put(wal, Boolean.FALSE);
-            // Force the roll if the logroll.period is elapsed or if a roll was requested.
-            // The returned value is an array of actual region names.
-            byte[][]   regionsToFlush = wal.rollWriter(periodic || entry.getValue().booleanValue());
+          // Force the roll if the logroll.period is elapsed or if a roll was requested.
+          // The returned value is an array of actual region names.
+          byte[][] regionsToFlush = wal.rollWriter(periodic || entry.getValue().booleanValue());
           if (regionsToFlush != null) {
             for (byte[] r : regionsToFlush) {
               scheduleFlush(Bytes.toString(r));

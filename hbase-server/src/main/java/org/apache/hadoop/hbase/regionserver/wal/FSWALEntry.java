@@ -40,7 +40,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUti
 /**
  * A WAL Entry for {@link AbstractFSWAL} implementation.  Immutable.
  * A subclass of {@link Entry} that carries extra info across the ring buffer such as
- * region sequence id (we want to use this later, just before we write the WAL to ensure region
+ * region sequenceid (we want to use this later, just before we write the WAL to ensure region
  * edits maintain order).  The extra info added here is not 'serialized' as part of the WALEdit
  * hence marked 'transient' to underline this fact.  It also adds mechanism so we can wait on
  * the assign of the region sequence id.  See #stampRegionSequenceId().
@@ -50,17 +50,32 @@ class FSWALEntry extends Entry {
   // The below data members are denoted 'transient' just to highlight these are not persisted;
   // they are only in memory and held here while passing over the ring buffer.
   private final transient long txid;
+
+  /**
+   * If false, means this is a meta edit written by the hbase system itself. It was not in
+   * memstore. HBase uses these edit types to note in the log operational transitions such
+   * as compactions, flushes, or region open/closes.
+   */
   private final transient boolean inMemstore;
+
+  /**
+   * Set if this is a meta edit and it is of close region type.
+   */
   private final transient boolean closeRegion;
+
   private final transient RegionInfo regionInfo;
   private final transient Set<byte[]> familyNames;
   private final transient ServerCall<?> rpcCall;
 
+  /**
+   * @param inMemstore If true, then this is a data edit, one that came from client. If false, it
+   *   is a meta edit made by the hbase system itself and is for the WAL only.
+   */
   FSWALEntry(final long txid, final WALKeyImpl key, final WALEdit edit, final RegionInfo regionInfo,
-    final boolean inMemstore, boolean closeRegion, ServerCall<?> rpcCall) {
+    final boolean inMemstore, ServerCall<?> rpcCall) {
     super(key, edit);
     this.inMemstore = inMemstore;
-    this.closeRegion = closeRegion;
+    this.closeRegion = !inMemstore && edit.isRegionCloseMarker();
     this.regionInfo = regionInfo;
     this.txid = txid;
     if (inMemstore) {
@@ -68,7 +83,7 @@ class FSWALEntry extends Entry {
       Set<byte[]> families = edit.getFamilies();
       this.familyNames = families != null ? families : collectFamilies(edit.getCells());
     } else {
-      this.familyNames = Collections.<byte[]> emptySet();
+      this.familyNames = Collections.emptySet();
     }
     this.rpcCall = rpcCall;
     if (rpcCall != null) {
@@ -83,7 +98,7 @@ class FSWALEntry extends Entry {
     } else {
       Set<byte[]> set = new TreeSet<>(Bytes.BYTES_COMPARATOR);
       for (Cell cell: cells) {
-        if (!CellUtil.matchingFamily(cell, WALEdit.METAFAMILY)) {
+        if (!WALEdit.isMetaEditFamily(cell)) {
           set.add(CellUtil.cloneFamily(cell));
         }
       }
@@ -94,7 +109,7 @@ class FSWALEntry extends Entry {
   @Override
   public String toString() {
     return "sequence=" + this.txid + ", " + super.toString();
-  };
+  }
 
   boolean isInMemStore() {
     return this.inMemstore;
