@@ -559,6 +559,75 @@ public class TestSimpleRpcScheduler {
     }
   }
 
+  @Test
+  public void testMetaRWScanQueues() throws Exception {
+    Configuration schedConf = HBaseConfiguration.create();
+    schedConf.setFloat(RpcExecutor.CALL_QUEUE_HANDLER_FACTOR_CONF_KEY, 1.0f);
+    schedConf.setFloat(MetaRWQueueRpcExecutor.META_CALL_QUEUE_READ_SHARE_CONF_KEY, 0.7f);
+    schedConf.setFloat(MetaRWQueueRpcExecutor.META_CALL_QUEUE_SCAN_SHARE_CONF_KEY, 0.5f);
+
+    PriorityFunction priority = mock(PriorityFunction.class);
+    when(priority.getPriority(any(), any(), any())).thenReturn(HConstants.HIGH_QOS);
+
+    RpcScheduler scheduler = new SimpleRpcScheduler(schedConf, 3, 3, 1, priority,
+        HConstants.QOS_THRESHOLD);
+    try {
+      scheduler.start();
+
+      CallRunner putCallTask = mock(CallRunner.class);
+      ServerCall putCall = mock(ServerCall.class);
+      putCall.param = RequestConverter.buildMutateRequest(
+          Bytes.toBytes("abc"), new Put(Bytes.toBytes("row")));
+      RequestHeader putHead = RequestHeader.newBuilder().setMethodName("mutate").build();
+      when(putCallTask.getRpcCall()).thenReturn(putCall);
+      when(putCall.getHeader()).thenReturn(putHead);
+      when(putCall.getParam()).thenReturn(putCall.param);
+
+      CallRunner getCallTask = mock(CallRunner.class);
+      ServerCall getCall = mock(ServerCall.class);
+      RequestHeader getHead = RequestHeader.newBuilder().setMethodName("get").build();
+      when(getCallTask.getRpcCall()).thenReturn(getCall);
+      when(getCall.getHeader()).thenReturn(getHead);
+
+      CallRunner scanCallTask = mock(CallRunner.class);
+      ServerCall scanCall = mock(ServerCall.class);
+      scanCall.param = ScanRequest.newBuilder().build();
+      RequestHeader scanHead = RequestHeader.newBuilder().setMethodName("scan").build();
+      when(scanCallTask.getRpcCall()).thenReturn(scanCall);
+      when(scanCall.getHeader()).thenReturn(scanHead);
+      when(scanCall.getParam()).thenReturn(scanCall.param);
+
+      ArrayList<Integer> work = new ArrayList<>();
+      doAnswerTaskExecution(putCallTask, work, 1, 1000);
+      doAnswerTaskExecution(getCallTask, work, 2, 1000);
+      doAnswerTaskExecution(scanCallTask, work, 3, 1000);
+
+      // There are 3 queues: [puts], [gets], [scans]
+      // so the calls will be interleaved
+      scheduler.dispatch(putCallTask);
+      scheduler.dispatch(putCallTask);
+      scheduler.dispatch(putCallTask);
+      scheduler.dispatch(getCallTask);
+      scheduler.dispatch(getCallTask);
+      scheduler.dispatch(getCallTask);
+      scheduler.dispatch(scanCallTask);
+      scheduler.dispatch(scanCallTask);
+      scheduler.dispatch(scanCallTask);
+
+      while (work.size() < 6) {
+        Thread.sleep(100);
+      }
+
+      for (int i = 0; i < work.size() - 2; i += 3) {
+        assertNotEquals(work.get(i + 0), work.get(i + 1));
+        assertNotEquals(work.get(i + 0), work.get(i + 2));
+        assertNotEquals(work.get(i + 1), work.get(i + 2));
+      }
+    } finally {
+      scheduler.stop();
+    }
+  }
+
   // Get mocked call that has the CallRunner sleep for a while so that the fast
   // path isn't hit.
   private CallRunner getMockedCallRunner(long timestamp, final long sleepTime) throws IOException {
