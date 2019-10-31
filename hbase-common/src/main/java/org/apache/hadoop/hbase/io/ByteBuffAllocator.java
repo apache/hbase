@@ -254,6 +254,14 @@ public class ByteBuffAllocator {
     return maxBufCount;
   }
 
+  public static long getHeapAllocationBytes(ByteBuffAllocator... allocators) {
+    long heapAllocBytes = 0;
+    for (ByteBuffAllocator alloc : Sets.newHashSet(allocators)) {
+      heapAllocBytes += alloc.getHeapAllocationBytes();
+    }
+    return heapAllocBytes;
+  }
+
   public static double getHeapAllocationRatio(ByteBuffAllocator... allocators) {
     double heapDelta = 0.0, poolDelta = 0.0;
     long heapAllocBytes, poolAllocBytes;
