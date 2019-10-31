@@ -65,8 +65,8 @@ public class ReplicationSourceWALReaderThread extends Thread {
   // max count of each batch - multiply by number of batches in queue to get total
   private int replicationBatchCountCapacity;
   // position in the WAL to start reading at
-  private long currentPosition;
-  private Path currentPath;
+  private long lastReadPosition;
+  private Path lastReadPath;
   private WALEntryFilter filter;
   private long sleepForRetries;
   //Indicates whether this particular worker is running
@@ -95,8 +95,8 @@ public class ReplicationSourceWALReaderThread extends Thread {
       FileSystem fs, Configuration conf, WALEntryFilter filter, MetricsSource metrics) {
     this.replicationQueueInfo = replicationQueueInfo;
     this.logQueue = logQueue;
-    this.currentPath = logQueue.peek();
-    this.currentPosition = startPosition;
+    this.lastReadPath = logQueue.peek();
+    this.lastReadPosition = startPosition;
     this.fs = fs;
     this.conf = conf;
     this.filter = filter;
@@ -125,7 +125,7 @@ public class ReplicationSourceWALReaderThread extends Thread {
     int sleepMultiplier = 1;
     while (isReaderRunning()) { // we only loop back here if something fatal happened to our stream
       try (WALEntryStream entryStream =
-          new WALEntryStream(logQueue, fs, conf, currentPosition, metrics)) {
+          new WALEntryStream(logQueue, fs, conf, lastReadPosition, metrics)) {
         while (isReaderRunning()) { // loop here to keep reusing stream while we can
           if (manager.isBufferQuotaReached()) {
             Threads.sleep(sleepForRetries);
@@ -194,13 +194,13 @@ public class ReplicationSourceWALReaderThread extends Thread {
   }
 
   private boolean checkIfWALRolled(WALEntryBatch batch) {
-    return currentPath == null && batch.lastWalPath != null
-      || currentPath != null && !currentPath.equals(batch.lastWalPath);
+    return lastReadPath == null && batch.lastWalPath != null
+      || lastReadPath != null && !lastReadPath.equals(batch.lastWalPath);
   }
 
   private void resetStream(WALEntryStream stream) throws IOException {
-    currentPosition = stream.getPosition();
-    currentPath = stream.getCurrentPath();
+    lastReadPosition = stream.getPosition();
+    lastReadPath = stream.getCurrentPath();
     stream.reset(); // reuse stream
   }
 
@@ -213,13 +213,17 @@ public class ReplicationSourceWALReaderThread extends Thread {
       try {
         if (fs.getFileStatus(logQueue.peek()).getLen() == 0) {
           LOG.warn("Forcing removal of 0 length log in queue: " + logQueue.peek());
-          logQueue.remove();
-          currentPosition = 0;
+          lastReadPath = logQueue.remove();
+          lastReadPosition = 0;
         }
       } catch (IOException ioe) {
         LOG.warn("Couldn't get file length information about log " + logQueue.peek());
       }
     }
+  }
+
+  public Path getCurrentPath() {
+    return logQueue.peek();
   }
 
   private Entry filterEntry(Entry entry) {

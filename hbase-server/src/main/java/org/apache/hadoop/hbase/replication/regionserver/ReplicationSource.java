@@ -446,9 +446,17 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
   }
 
   @VisibleForTesting
-  public long getLastLoggedPosition() {
+  public Path getCurrentReadPath() {
     for (ReplicationSourceShipperThread worker : workerThreads.values()) {
-      return worker.getLastLoggedPosition();
+      return worker.getCurrentReadPath();
+    }
+    return null;
+  }
+
+  @VisibleForTesting
+  public long getCurrentPosition() {
+    for (ReplicationSourceShipperThread worker : workerThreads.values()) {
+      return worker.getCurrentPosition();
     }
     return 0;
   }
@@ -487,7 +495,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     for (Map.Entry<String, ReplicationSourceShipperThread> entry : workerThreads.entrySet()) {
       String walGroupId = entry.getKey();
       ReplicationSourceShipperThread worker = entry.getValue();
-      long position = worker.getLastLoggedPosition();
+      long position = worker.getCurrentPosition();
       Path currentPath = worker.getCurrentPath();
       sb.append("walGroup [").append(walGroupId).append("]: ");
       if (currentPath != null) {
@@ -541,7 +549,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
           .withQueueSize(queueSize)
           .withWalGroup(walGroupId)
           .withCurrentPath(currentPath)
-          .withCurrentPosition(worker.getLastLoggedPosition())
+          .withCurrentPosition(worker.getCurrentPosition())
           .withFileSize(fileSize)
           .withAgeOfLastShippedOp(ageOfLastShippedOp)
           .withReplicationDelay(replicationDelay);
@@ -561,7 +569,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     // Last position in the log that we sent to ZooKeeper
     private long lastLoggedPosition = -1;
     // Path of the current log
-    private volatile Path currentPath;
+    private volatile Path lastLoggedPath;
     // Current state of the worker thread
     private WorkerState state;
     ReplicationSourceWALReaderThread entryReader;
@@ -686,7 +694,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     protected void shipEdits(WALEntryBatch entryBatch) {
       List<Entry> entries = entryBatch.getWalEntries();
       long lastReadPosition = entryBatch.getLastWalPosition();
-      currentPath = entryBatch.getLastWalPath();
+      lastLoggedPath = entryBatch.getLastWalPath();
       int sleepMultiplier = 0;
       if (entries.isEmpty()) {
         updateLogPosition(lastReadPosition);
@@ -777,7 +785,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     }
 
     private void updateLogPosition(long lastReadPosition) {
-      manager.logPositionAndCleanOldLogs(currentPath, peerClusterZnode, lastReadPosition,
+      manager.logPositionAndCleanOldLogs(lastLoggedPath, peerClusterZnode, lastReadPosition,
         this.replicationQueueInfo.isQueueRecovered(), false);
       lastLoggedPosition = lastReadPosition;
     }
@@ -926,11 +934,15 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
       return path;
     }
 
-    public Path getCurrentPath() {
-      return currentPath;
+    public Path getCurrentReadPath() {
+      return entryReader.getCurrentPath();
     }
 
-    public long getLastLoggedPosition() {
+    public Path getCurrentPath() {
+      return lastLoggedPath;
+    }
+
+    public long getCurrentPosition() {
       return lastLoggedPosition;
     }
 
