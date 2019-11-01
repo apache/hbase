@@ -288,24 +288,49 @@ class AsyncProcess {
 
     this.id = COUNTER.incrementAndGet();
 
-    this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
-        HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
-    this.numTries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
-        HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
+    ConnectionConfiguration connConf =
+      hc.getConfiguration() == conf
+        ? hc.getConnectionConfiguration()
+        // Slow: parse conf in ConnectionConfiguration constructor
+        : new ConnectionConfiguration(conf);
+    if (connConf == null) {
+      // Slow: parse conf in ConnectionConfiguration constructor
+      connConf = new ConnectionConfiguration(conf);
+    }
+
+    this.pause = connConf.getPause();
+    this.numTries = connConf.getRetriesNumber();
     this.rpcTimeout = rpcTimeout;
-    this.operationTimeout = conf.getInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
-        HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
-    this.primaryCallTimeoutMicroseconds = conf.getInt(PRIMARY_CALL_TIMEOUT_KEY, 10000);
+    this.operationTimeout = connConf.getOperationTimeout();
 
-    this.maxTotalConcurrentTasks = conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
-      HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS);
-    this.maxConcurrentTasksPerServer = conf.getInt(HConstants.HBASE_CLIENT_MAX_PERSERVER_TASKS,
-          HConstants.DEFAULT_HBASE_CLIENT_MAX_PERSERVER_TASKS);
-    this.maxConcurrentTasksPerRegion = conf.getInt(HConstants.HBASE_CLIENT_MAX_PERREGION_TASKS,
-          HConstants.DEFAULT_HBASE_CLIENT_MAX_PERREGION_TASKS);
+    // Parse config once and reuse config values of hc's AsyncProcess in AsyncProcess for put
+    // Can be null when constructing hc's AsyncProcess or it's not reusable
+    AsyncProcess globalAsyncProcess = hc.getConfiguration() == conf ? hc.getAsyncProcess() : null;
 
+    this.primaryCallTimeoutMicroseconds =
+      globalAsyncProcess == null
+        ? conf.getInt(PRIMARY_CALL_TIMEOUT_KEY, 10000)
+        : globalAsyncProcess.primaryCallTimeoutMicroseconds;
+
+    this.maxTotalConcurrentTasks =
+      globalAsyncProcess == null
+        ? conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
+              HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS)
+        : globalAsyncProcess.maxTotalConcurrentTasks;
+    this.maxConcurrentTasksPerServer =
+      globalAsyncProcess == null
+        ? conf.getInt(HConstants.HBASE_CLIENT_MAX_PERSERVER_TASKS,
+              HConstants.DEFAULT_HBASE_CLIENT_MAX_PERSERVER_TASKS)
+        : globalAsyncProcess.maxConcurrentTasksPerServer;
+    this.maxConcurrentTasksPerRegion =
+      globalAsyncProcess == null
+        ? conf.getInt(HConstants.HBASE_CLIENT_MAX_PERREGION_TASKS,
+              HConstants.DEFAULT_HBASE_CLIENT_MAX_PERREGION_TASKS)
+        : globalAsyncProcess.maxConcurrentTasksPerRegion;
     this.startLogErrorsCnt =
-        conf.getInt(START_LOG_ERRORS_AFTER_COUNT_KEY, DEFAULT_START_LOG_ERRORS_AFTER_COUNT);
+      globalAsyncProcess == null
+        ? conf.getInt(START_LOG_ERRORS_AFTER_COUNT_KEY, DEFAULT_START_LOG_ERRORS_AFTER_COUNT)
+        : globalAsyncProcess.startLogErrorsCnt;
 
     if (this.maxTotalConcurrentTasks <= 0) {
       throw new IllegalArgumentException("maxTotalConcurrentTasks=" + maxTotalConcurrentTasks);
@@ -335,8 +360,10 @@ class AsyncProcess {
     this.rpcFactory = rpcFactory;
 
     this.thresholdToLogUndoneTaskDetails =
-        conf.getInt(THRESHOLD_TO_LOG_UNDONE_TASK_DETAILS,
-          DEFAULT_THRESHOLD_TO_LOG_UNDONE_TASK_DETAILS);
+      globalAsyncProcess == null
+        ? conf.getInt(THRESHOLD_TO_LOG_UNDONE_TASK_DETAILS,
+              DEFAULT_THRESHOLD_TO_LOG_UNDONE_TASK_DETAILS)
+        : globalAsyncProcess.thresholdToLogUndoneTaskDetails;
   }
 
   public void setRpcTimeout(int rpcTimeout) {
