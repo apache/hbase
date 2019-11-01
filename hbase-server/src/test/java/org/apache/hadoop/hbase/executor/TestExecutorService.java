@@ -231,9 +231,11 @@ public class TestExecutorService {
     executorService.startExecutorService(ExecutorType.MASTER_SNAPSHOT_OPERATIONS, 1);
 
     CountDownLatch latch = new CountDownLatch(1);
+    final AtomicInteger counter = new AtomicInteger(0);
     executorService.submit(new EventHandler(server, EventType.C_M_SNAPSHOT_TABLE) {
       @Override
       public void process() throws IOException {
+        counter.incrementAndGet();
         try {
           latch.await();
         } catch (InterruptedException e) {
@@ -242,9 +244,19 @@ public class TestExecutorService {
       }
     });
 
+    // The EventHandler will increment counter when it starts.
+    int maxTries = 10;
+    int sleepInterval = 10;
+    int tries = 0;
+    while (counter.get() < 1 && tries < maxTries) {
+      LOG.info("Waiting for event handlers to start...");
+      Thread.sleep(sleepInterval);
+      tries++;
+    }
+
     int activeCount = executorService.getExecutor(ExecutorType.MASTER_SNAPSHOT_OPERATIONS)
         .getThreadPoolExecutor().getActiveCount();
-    Assert.assertEquals(activeCount, 1);
+    Assert.assertEquals(1, activeCount);
     latch.countDown();
     Waiter.waitFor(conf, 3000, () -> {
       int count = executorService.getExecutor(ExecutorType.MASTER_SNAPSHOT_OPERATIONS)
