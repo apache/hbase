@@ -492,7 +492,8 @@ public class CanaryTool implements Tool, Canary {
           sink.publishReadTiming(serverName, region, column, stopWatch.getTime());
         } catch (Exception e) {
           sink.publishReadFailure(serverName, region, column, e);
-          sink.updateReadFailures(region.getRegionNameAsString(), serverName.getHostname());
+          sink.updateReadFailures(region == null? "NULL": region.getRegionNameAsString(),
+              serverName == null? "NULL": serverName.getHostname());
         } finally {
           if (rs != null) {
             rs.close();
@@ -1579,6 +1580,10 @@ public class CanaryTool implements Tool, Canary {
       try (RegionLocator regionLocator =
                admin.getConnection().getRegionLocator(tableDesc.getTableName())) {
         for (HRegionLocation location: regionLocator.getAllRegionLocations()) {
+          if (location == null) {
+            LOG.warn("Null location");
+            continue;
+          }
           ServerName rs = location.getServerName();
           RegionInfo region = location.getRegion();
           tasks.add(new RegionTask(admin.getConnection(), region, rs, (RegionStdOutSink)sink,
@@ -1795,6 +1800,10 @@ public class CanaryTool implements Tool, Canary {
           try (RegionLocator regionLocator =
                    this.admin.getConnection().getRegionLocator(tableDesc.getTableName())) {
             for (HRegionLocation location : regionLocator.getAllRegionLocations()) {
+              if (location == null) {
+                LOG.warn("Null location");
+                continue;
+              }
               ServerName rs = location.getServerName();
               String rsName = rs.getHostname();
               RegionInfo r = location.getRegion();
