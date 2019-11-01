@@ -11,6 +11,8 @@
 
 package org.apache.hadoop.hbase.client;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -27,6 +29,7 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Private
 public class ConnectionConfiguration {
+  static final Log LOG = LogFactory.getLog(ConnectionConfiguration.class);
 
   public static final String WRITE_BUFFER_SIZE_KEY = "hbase.client.write.buffer";
   public static final long WRITE_BUFFER_SIZE_DEFAULT = 2097152;
@@ -43,6 +46,10 @@ public class ConnectionConfiguration {
   private final int metaReplicaCallTimeoutMicroSecondScan;
   private final int retries;
   private final int maxKeyValueSize;
+  private final int readRpcTimeout;
+  private final int writeRpcTimeout;
+  private final long pause;
+  private final long pauseForCQTBE;
 
   /**
    * Constructor
@@ -75,9 +82,28 @@ public class ConnectionConfiguration {
             HConstants.HBASE_CLIENT_META_REPLICA_SCAN_TIMEOUT_DEFAULT);
 
     this.retries = conf.getInt(
-       HConstants.HBASE_CLIENT_RETRIES_NUMBER, HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
+        HConstants.HBASE_CLIENT_RETRIES_NUMBER, HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
 
     this.maxKeyValueSize = conf.getInt(MAX_KEYVALUE_SIZE_KEY, MAX_KEYVALUE_SIZE_DEFAULT);
+
+    this.readRpcTimeout = conf.getInt(HConstants.HBASE_RPC_READ_TIMEOUT_KEY,
+        conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
+            HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
+
+    this.writeRpcTimeout = conf.getInt(HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY,
+        conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
+            HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
+
+    this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE, HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
+    long configuredPauseForCQTBE = conf.getLong(HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE, pause);
+    if (configuredPauseForCQTBE < pause) {
+      LOG.warn("The " + HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE + " setting: "
+          + configuredPauseForCQTBE + " is smaller than " + HConstants.HBASE_CLIENT_PAUSE
+          + ", will use " + pause + " instead.");
+      this.pauseForCQTBE = pause;
+    } else {
+      this.pauseForCQTBE = configuredPauseForCQTBE;
+    }
   }
 
   /**
@@ -98,6 +124,10 @@ public class ConnectionConfiguration {
         HConstants.HBASE_CLIENT_META_REPLICA_SCAN_TIMEOUT_DEFAULT;
     this.retries = HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER;
     this.maxKeyValueSize = MAX_KEYVALUE_SIZE_DEFAULT;
+    this.readRpcTimeout = HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
+    this.writeRpcTimeout = HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
+    this.pause = HConstants.DEFAULT_HBASE_CLIENT_PAUSE;
+    this.pauseForCQTBE = HConstants.DEFAULT_HBASE_CLIENT_PAUSE;
   }
 
   public long getWriteBufferSize() {
@@ -138,5 +168,21 @@ public class ConnectionConfiguration {
 
   public long getScannerMaxResultSize() {
     return scannerMaxResultSize;
+  }
+
+  public int getReadRpcTimeout() {
+    return readRpcTimeout;
+  }
+
+  public int getWriteRpcTimeout() {
+    return writeRpcTimeout;
+  }
+
+  public long getPause() {
+    return pause;
+  }
+
+  public long getPauseForCQTBE() {
+    return pauseForCQTBE;
   }
 }
