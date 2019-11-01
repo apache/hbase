@@ -23,7 +23,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
-
 /**
  * Allows multiple concurrent clients to lock on a numeric id with ReentrantReadWriteLock. The
  * intended usage for read lock is as follows:
