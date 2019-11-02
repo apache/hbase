@@ -47,9 +47,7 @@ public class TestMetricsUserSourceImpl {
     assertTrue(one.compareTo(two) != 0);
     assertTrue(two.compareTo(one) != 0);
     assertTrue(two.compareTo(one) != one.compareTo(two));
-    assertTrue(two.compareTo(two) == 0);
   }
-
 
   @Test (expected = RuntimeException.class)
   public void testNoGetRegionServerMetricsSourceImpl() throws Exception {
