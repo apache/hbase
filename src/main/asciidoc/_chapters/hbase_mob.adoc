@@ -198,3 +198,116 @@ hbase> major_compact 't1', 'c1’, ‘MOB’
 
 These commands are also available via `Admin.compact` and
 `Admin.majorCompact` methods.
+
+=== MOB architecture
+
+This section is derived from information found in
+link:https://issues.apache.org/jira/browse/HBASE-11339[HBASE-11339]. For more information see
+the attachment on that issue
+"link:https://issues.apache.org/jira/secure/attachment/12724468/HBase%20MOB%20Design-v5.pdf[Base MOB Design-v5.pdf]".
+
+==== Overview
+The MOB feature reduces the overall IO load for configured column families by storing values that
+are larger than the configured threshold outside of the normal regions to avoid splits, merges, and
+most importantly normal compactions.
+
+When a cell is first written to a region it is stored in the WAL and memstore regardless of value
+size. When memstores from a column family configured to use MOB are eventually flushed two hfiles
+are written simultaneously. Cells with a value smaller than the threshold size are written to a
+normal region hfile. Cells with a value larger than the threshold are written into a special MOB
+hfile and also have a MOB reference cell written into the normal region HFile.
+
+MOB reference cells have the same key as the cell they are based on. The value of the reference cell
+is made up of two pieces of metadata: the size of the actual value and the MOB hfile that contains
+the original cell. In addition to any tags originally written to HBase, the reference cell prepends
+two additional tags. The first is a marker tag that says the cell is a MOB reference. This can be
+used later to scan specifically just for reference cells. The second stores the namespace and table
+at the time the MOB hfile is written out. This tag is used to optimize how the MOB system finds
+the underlying value in MOB hfiles after a series of HBase snapshot operations (ref HBASE-12332).
+Note that tags are only available within HBase servers and by default are not sent over RPCs.
+
+All MOB hfiles for a given table are managed within a logical region that does not directly serve
+requests. When these MOB hfiles are created from a flush or MOB compaction they are placed in a
+dedicated mob data area under the hbase root directory specific to the namespace, table, mob
+logical region, and column family. In general that means a path structured like:
+
+----
+%HBase Root Dir%/mobdir/data/%namespace%/%table%/%logical region%/%column family%/
+----
+
+With default configs, an example table named 'some_table' in the
+default namespace with a MOB enabled column family named 'foo' this HDFS directory would be
+
+----
+/hbase/mobdir/data/default/some_table/372c1b27e3dc0b56c3a031926e5efbe9/foo/
+----
+
+These MOB hfiles are maintained by special chores in the HBase Master rather than by any individual
+Region Server. Specifically those chores take care of enforcing TTLs and compacting them. Note that
+this compaction is primarily a matter of controlling the total number of files in HDFS because our
+operational assumptions for MOB data is that it will seldom update or delete.
+
+When a given MOB hfile is no longer needed as a result of our compaction process it is archived just
+like any normal hfile. Because the table's mob region is independent of all the normal regions it
+can coexist with them in the regular archive storage area:
+
+----
+/hbase/archive/data/default/some_table/372c1b27e3dc0b56c3a031926e5efbe9/foo/
+----
+
+The same hfile cleaning chores that take care of eventually deleting unneeded archived files from
+normal regions thus also will take care of these MOB hfiles.
+
+=== MOB Troubleshooting
+
+==== Retrieving MOB metadata through the HBase Shell
+
+While working on troubleshooting failures in the MOB system you can retrieve some of the internal
+information through the HBase shell by specifying special attributes on a scan.
+
+----
+hbase(main):112:0> scan 'some_table', {STARTROW => '00012-example-row-key', LIMIT => 1,
+hbase(main):113:1*     CACHE_BLOCKS => false, ATTRIBUTES => { 'hbase.mob.scan.raw' => '1',
+hbase(main):114:2*     'hbase.mob.scan.ref.only' => '1' } }
+----
+
+The MOB internal information is stored as four bytes for the size of the underlying cell value and
+then a UTF8 string with the name of the MOB HFile that contains the underlying cell value. Note that
+by default the entirety of this serialized structure will be passed through the HBase shell's binary
+string converter. That means the bytes that make up the value size will most likely be written as
+escaped non-printable byte values, e.g. '\x03', unless they happen to correspond to ASCII
+characters.
+
+Let's look at a specific example:
+
+----
+hbase(main):112:0> scan 'some_table', {STARTROW => '00012-example-row-key', LIMIT => 1,
+hbase(main):113:1*     CACHE_BLOCKS => false, ATTRIBUTES => { 'hbase.mob.scan.raw' => '1',
+hbase(main):114:2*     'hbase.mob.scan.ref.only' => '1' } }
+ROW                        COLUMN+CELL
+ 00012-example-row-key     column=foo:bar, timestamp=1511179764, value=\x00\x02|\x94d41d8cd98f00b204
+                           e9800998ecf8427e19700118ffd9c244fe69488bbc9f2c77d24a3e6a
+1 row(s) in 0.0130 seconds
+----
+
+In this case the first four bytes are `\x00\x02|\x94` which corresponds to the bytes
+`[0x00, 0x02, 0x7C, 0x94]`. (Note that the third byte was printed as the ASCII character '|'.)
+Decoded as an integer this gives us an underlying value size of 162,964 bytes.
+
+The remaining bytes give us an HFile name,
+'d41d8cd98f00b204e9800998ecf8427e19700118ffd9c244fe69488bbc9f2c77d24a3e6a'. This HFile will most
+likely be stored in the designated MOB storage area for this specific table. However, the file could
+also be in the archive area if this table is from a restored snapshot. Furthermore, if the table is
+from a cloned snapshot of a different table then the file could be in either the active or archive
+area of that source table. As mentioned in the explanation of MOB reference cells above, the Region
+Server will use a server side tag to optimize looking at the mob and archive area of the correct
+original table when finding the MOB HFile. Since your scan is client side it can't retrieve that tag
+and you'll either need to already know the lineage of your table or you'll need to search across all
+tables.
+
+Assuming you are authenticated as a user with HBase superuser rights, you can search for it:
+----
+$> hdfs dfs -find /hbase -name \
+    d41d8cd98f00b204e9800998ecf8427e19700118ffd9c244fe69488bbc9f2c77d24a3e6a
+/hbase/mobdir/data/default/some_table/372c1b27e3dc0b56c3a031926e5efbe9/foo/d41d8cd98f00b204e9800998ecf8427e19700118ffd9c244fe69488bbc9f2c77d24a3e6a
+----
