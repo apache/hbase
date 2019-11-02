@@ -492,7 +492,7 @@ public class CanaryTool implements Tool, Canary {
           sink.publishReadTiming(serverName, region, column, stopWatch.getTime());
         } catch (Exception e) {
           sink.publishReadFailure(serverName, region, column, e);
-          sink.updateReadFailures(region == null? "NULL": region.getRegionNameAsString(),
+          sink.updateReadFailures(region.getRegionNameAsString(),
               serverName == null? "NULL": serverName.getHostname());
         } finally {
           if (rs != null) {
