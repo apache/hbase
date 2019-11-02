@@ -508,7 +508,7 @@ public class HFileLink extends FileLink {
     return new Path(new Path(regionDir, familyPath.getName()), linkName);
   }
 
-  static Pair<TableName, String> parseBackReferenceName(String name) {
+  public static Pair<TableName, String> parseBackReferenceName(String name) {
     int separatorIndex = name.indexOf('.');
     String linkRegionName = name.substring(0, separatorIndex);
     String tableSubstr = name.substring(separatorIndex + 1)
