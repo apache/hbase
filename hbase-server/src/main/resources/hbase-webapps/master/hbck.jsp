@@ -109,7 +109,7 @@
       <p>
         <span>
         There are three cases: 1. Master thought this region opened, but no regionserver reported it (Fix: use assigns
-        command; 2. Master thought this region opened on Server1, but regionserver reported Server2 (Fix:
+        command); 2. Master thought this region opened on Server1, but regionserver reported Server2 (Fix:
         need to check the server is still exist. If not, schedule SCP for it. If exist, restart Server2 and Server1):
         3. More than one regionservers reported opened this region (Fix: restart the RegionServers).
         Notice: the reported online regionservers may be not right when there are regions in transition.
