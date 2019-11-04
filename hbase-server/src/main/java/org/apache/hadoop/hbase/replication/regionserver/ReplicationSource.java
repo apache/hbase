@@ -449,17 +449,17 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
   }
 
   @VisibleForTesting
-  public Path getCurrentReadPath() {
+  public Path getLastLoggedPath() {
     for (ReplicationSourceShipperThread worker : workerThreads.values()) {
-      return worker.getCurrentReadPath();
+      return worker.getLastLoggedPath();
     }
     return null;
   }
 
   @VisibleForTesting
-  public long getCurrentPosition() {
+  public long getLastLoggedPosition() {
     for (ReplicationSourceShipperThread worker : workerThreads.values()) {
-      return worker.getCurrentPosition();
+      return worker.getLastLoggedPosition();
     }
     return 0;
   }
@@ -498,8 +498,8 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     for (Map.Entry<String, ReplicationSourceShipperThread> entry : workerThreads.entrySet()) {
       String walGroupId = entry.getKey();
       ReplicationSourceShipperThread worker = entry.getValue();
-      long position = worker.getCurrentPosition();
-      Path currentPath = worker.getCurrentPath();
+      long position = worker.getLastLoggedPosition();
+      Path currentPath = worker.getLastLoggedPath();
       sb.append("walGroup [").append(walGroupId).append("]: ");
       if (currentPath != null) {
         sb.append("currently replicating from: ").append(currentPath).append(" at position: ")
@@ -534,7 +534,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
       int queueSize = queues.get(walGroupId).size();
       replicationDelay =
           ReplicationLoad.calculateReplicationDelay(ageOfLastShippedOp, lastTimeStamp, queueSize);
-      Path currentPath = worker.getCurrentPath();
+      Path currentPath = worker.getLastLoggedPath();
       fileSize = -1;
       if (currentPath != null) {
         try {
@@ -552,7 +552,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
           .withQueueSize(queueSize)
           .withWalGroup(walGroupId)
           .withCurrentPath(currentPath)
-          .withCurrentPosition(worker.getCurrentPosition())
+          .withCurrentPosition(worker.getLastLoggedPosition())
           .withFileSize(fileSize)
           .withAgeOfLastShippedOp(ageOfLastShippedOp)
           .withReplicationDelay(replicationDelay);
@@ -812,7 +812,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
         public void uncaughtException(final Thread t, final Throwable e) {
           RSRpcServices.exitIfOOME(e);
           LOG.error("Unexpected exception in ReplicationSourceWorkerThread," + " currentPath="
-              + getCurrentPath(), e);
+              + getLastLoggedPath(), e);
           stopper.stop("Unexpected exception in ReplicationSourceWorkerThread");
         }
       };
@@ -949,15 +949,15 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
       return path;
     }
 
-    public Path getCurrentReadPath() {
-      return entryReader.getCurrentPath();
+    public Path getCurrentPath() {
+      return this.entryReader.getCurrentPath();
     }
 
-    public Path getCurrentPath() {
+    public Path getLastLoggedPath() {
       return lastLoggedPath;
     }
 
-    public long getCurrentPosition() {
+    public long getLastLoggedPosition() {
       return lastLoggedPosition;
     }
 

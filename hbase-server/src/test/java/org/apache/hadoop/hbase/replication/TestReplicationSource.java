@@ -348,7 +348,7 @@ public class TestReplicationSource {
 
     Waiter.waitFor(conf, 20000, new Waiter.Predicate<Exception>() {
       @Override public boolean evaluate() throws Exception {
-        return log2.equals(source.getCurrentPath()) && source.getCurrentPosition() >= startPos;
+        return log2.equals(source.getLastLoggedPath()) && source.getLastLoggedPosition() >= startPos;
       }
     });
 
@@ -390,7 +390,7 @@ public class TestReplicationSource {
     Waiter.waitFor(conf, 20000, new Waiter.Predicate<Exception>() {
       @Override public boolean evaluate() throws Exception {
         // wait until reader read all cells
-        return log2.equals(source.getCurrentPath()) && source.getCurrentPosition() >= pos;
+        return log2.equals(source.getLastLoggedPath()) && source.getLastLoggedPosition() >= pos;
       }
     });
 
