@@ -879,10 +879,10 @@ public class TestReplicationSmallTests extends TestReplicationBase {
           for (ReplicationSourceInterface rsi : replicationService.getReplicationManager()
               .getSources()) {
             ReplicationSource source = (ReplicationSource) rsi;
-            if (!invert && !emptyWalPaths.get(i).equals(source.getCurrentReadPath())) {
+            if (!invert && !emptyWalPaths.get(i).equals(source.getCurrentPath())) {
               return false;
             }
-            if (invert && emptyWalPaths.get(i).equals(source.getCurrentReadPath())) {
+            if (invert && emptyWalPaths.get(i).equals(source.getCurrentPath())) {
               return false;
             }
           }
