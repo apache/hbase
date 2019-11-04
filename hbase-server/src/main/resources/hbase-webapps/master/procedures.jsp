@@ -68,6 +68,7 @@
           <h1>Procedures</h1>
       </div>
   </div>
+  <p>We do not list Procedures that have completed SUCCESSfully; their number makes it hard to spot the problematics.</p>
   <table class="table table-striped" width="90%" >
     <tr>
         <th>Id</th>
@@ -80,7 +81,12 @@
         <th>Errors</th>
         <th>Parameters</th>
     </tr>
-    <% for (Procedure<?> proc : procedures) { %>
+    <% for (Procedure<?> proc : procedures) { 
+      // Don't show SUCCESS procedures.
+      if (proc.isSuccess()) {
+        continue;
+      }
+    %>
       <tr>
         <td><%= proc.getProcId() %></td>
         <td><%= proc.hasParent() ? proc.getParentProcId() : "" %></td>
