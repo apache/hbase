@@ -1150,6 +1150,8 @@ Here are those configurations:
 | hbase.master.balancer.stochastic.moveCost
 | hbase.master.balancer.stochastic.maxMovePercent
 | hbase.master.balancer.stochastic.tableSkewCost
+| hbase.master.regions.recovery.check.interval
+| hbase.regions.recovery.store.file.ref.count
 |===
 
 ifdef::backend-docbook[]
