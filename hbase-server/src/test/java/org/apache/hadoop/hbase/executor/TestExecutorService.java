@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
@@ -231,11 +232,11 @@ public class TestExecutorService {
     executorService.startExecutorService(ExecutorType.MASTER_SNAPSHOT_OPERATIONS, 1);
 
     CountDownLatch latch = new CountDownLatch(1);
-    final AtomicInteger counter = new AtomicInteger(0);
+    CountDownLatch waitForEventToStart = new CountDownLatch(1);
     executorService.submit(new EventHandler(server, EventType.C_M_SNAPSHOT_TABLE) {
       @Override
       public void process() throws IOException {
-        counter.incrementAndGet();
+        waitForEventToStart.countDown();
         try {
           latch.await();
         } catch (InterruptedException e) {
@@ -244,16 +245,8 @@ public class TestExecutorService {
       }
     });
 
-    // The EventHandler will increment counter when it starts.
-    int maxTries = 10;
-    int sleepInterval = 10;
-    int tries = 0;
-    while (counter.get() < 1 && tries < maxTries) {
-      LOG.info("Waiting for event handlers to start...");
-      Thread.sleep(sleepInterval);
-      tries++;
-    }
-
+    //Wait EventHandler to start
+    waitForEventToStart.await(10, TimeUnit.SECONDS);
     int activeCount = executorService.getExecutor(ExecutorType.MASTER_SNAPSHOT_OPERATIONS)
         .getThreadPoolExecutor().getActiveCount();
     Assert.assertEquals(1, activeCount);
