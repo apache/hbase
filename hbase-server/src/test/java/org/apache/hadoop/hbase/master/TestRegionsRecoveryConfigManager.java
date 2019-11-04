@@ -130,7 +130,7 @@ public class TestRegionsRecoveryConfigManager {
    */
   private static class StoppableImplementation implements Stoppable {
 
-    private volatile boolean stop = false;
+    private boolean stop = false;
 
     @Override
     public void stop(String why) {
