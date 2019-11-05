@@ -73,24 +73,18 @@ public class VerifyingRSGroupAdminClient extends RSGroupAdminClient {
   }
 
   @Override
-  public RSGroupInfo getRSGroupInfo(String groupName) throws IOException {
+  public RSGroupInfo getRSGroup(String groupName) throws IOException {
     return wrapped.getRSGroupInfo(groupName);
   }
 
   @Override
-  public RSGroupInfo getRSGroupInfoOfTable(TableName tableName) throws IOException {
-    return wrapped.getRSGroupInfoOfTable(tableName);
+  public RSGroupInfo getRSGroup(TableName tableName) throws IOException {
+    return wrapped.getRSGroup(tableName);
   }
 
   @Override
-  public void moveServers(Set<Address> servers, String targetGroup) throws IOException {
-    wrapped.moveServers(servers, targetGroup);
-    verify();
-  }
-
-  @Override
-  public void moveTables(Set<TableName> tables, String targetGroup) throws IOException {
-    wrapped.moveTables(tables, targetGroup);
+  public void moveToRSGroup(Set<Address> servers, String targetGroup) throws IOException {
+    wrapped.moveToRSGroup(servers, targetGroup);
     verify();
   }
 
@@ -111,20 +105,19 @@ public class VerifyingRSGroupAdminClient extends RSGroupAdminClient {
   }
 
   @Override
-  public RSGroupInfo getRSGroupOfServer(Address hostPort) throws IOException {
-    return wrapped.getRSGroupOfServer(hostPort);
+  public RSGroupInfo getRSGroup(Address hostPort) throws IOException {
+    return wrapped.getRSGroup(hostPort);
   }
 
   @Override
-  public void moveServersAndTables(Set<Address> servers, Set<TableName> tables, String targetGroup)
-          throws IOException {
-    wrapped.moveServersAndTables(servers, tables, targetGroup);
+  public void removeRSGroup(Set<Address> servers) throws IOException {
+    wrapped.removeRSGroup(servers);
     verify();
   }
 
   @Override
-  public void removeServers(Set<Address> servers) throws IOException {
-    wrapped.removeServers(servers);
+  public void setRSGroup(Set<TableName> tables, String groupName) throws IOException{
+    wrapped.setRSGroup(tables, groupName);
     verify();
   }
 

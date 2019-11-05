@@ -42,9 +42,12 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@RunWith(Parameterized.class)
 @Category({ MediumTests.class })
 public class TestRSGroupsBalance extends TestRSGroupsBase {
 
@@ -80,7 +83,8 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
     String newGroupName = getGroupName(name.getMethodName());
     addGroup(newGroupName, 3);
 
-    final TableName tableName = TableName.valueOf(tablePrefix + "_ns", name.getMethodName());
+    final TableName tableName = TableName.valueOf(tablePrefix + "_ns",
+        getNameWithoutIndex(name.getMethodName()));
     admin.createNamespace(NamespaceDescriptor.create(tableName.getNamespaceAsString())
       .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, newGroupName).build());
     final TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
@@ -151,13 +155,12 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
 
   @Test
   public void testMisplacedRegions() throws Exception {
-    String namespace = tablePrefix + "_" + name.getMethodName();
+    String namespace = tablePrefix + "_" + getNameWithoutIndex(name.getMethodName());
     TEST_UTIL.getAdmin().createNamespace(NamespaceDescriptor.create(namespace).build());
-    final TableName tableName =
-        TableName.valueOf(namespace, tablePrefix + "_" + name.getMethodName());
-    LOG.info(name.getMethodName());
+    final TableName tableName = TableName.valueOf(namespace, tablePrefix + "_" +
+        getNameWithoutIndex(name.getMethodName()));
 
-    final RSGroupInfo rsGroupInfo = addGroup(name.getMethodName(), 1);
+    final RSGroupInfo rsGroupInfo = addGroup(getGroupName(name.getMethodName()), 1);
 
     TEST_UTIL.createMultiRegionTable(tableName, new byte[] { 'f' }, 15);
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);

@@ -40,12 +40,14 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshotView;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.UserPermission;
@@ -1381,7 +1383,7 @@ public interface AsyncAdmin {
    * @param newTableName name of the new table where the table will be created
    * @param preserveSplits True if the splits should be preserved
    */
-  CompletableFuture<Void>  cloneTableSchema(final TableName tableName,
+  CompletableFuture<Void> cloneTableSchema(final TableName tableName,
       final TableName newTableName, final boolean preserveSplits);
 
   /**
@@ -1507,4 +1509,80 @@ public interface AsyncAdmin {
    */
   CompletableFuture<Boolean> isSnapshotCleanupEnabled();
 
+  /**
+   * Creates a new RegionServer group with the given name
+   * @param groupName the name of the group
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<Void> addRSGroup(String groupName);
+
+  /**
+   * Get group info for the given group name
+   * @param groupName the group name
+   * @return group info
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<RSGroupInfo> getRSGroup(String groupName);
+
+  /**
+   * Get group info for the given hostPort
+   * @param hostPort HostPort to get RSGroupInfo for
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<RSGroupInfo> getRSGroup(Address hostPort);
+
+  /**
+   * Get group info for the given table
+   * @param tableName table name to get RSGroupInfo for
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<RSGroupInfo> getRSGroup(TableName tableName);
+
+  /**
+   * Lists current set of RegionServer groups
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<List<RSGroupInfo>> listRSGroups();
+
+  /**
+   * Remove RegionServer group associated with the given name
+   * @param groupName the group name
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<Void> removeRSGroup(String groupName);
+
+  /**
+   * Remove decommissioned servers from group
+   *  1. Sometimes we may find the server aborted due to some hardware failure and we must offline
+   *     the server for repairing. Or we need to move some servers to join other clusters.
+   *     So we need to remove these servers from the group.
+   *  2. Dead/recovering/live servers will be disallowed.
+   * @param servers set of servers to remove
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<Void> removeRSGroup(Set<Address> servers);
+
+  /**
+   * Move given set of servers to the specified target RegionServer group
+   * @param servers set of servers to move
+   * @param groupName the group to move servers to
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<Void> moveToRSGroup(Set<Address> servers, String groupName);
+
+  /**
+   * Set the RegionServer group for tables
+   * @param tables tables to set group for
+   * @param groupName group name for tables
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<Void> setRSGroup(Set<TableName> tables, String groupName);
+
+  /**
+   * Balance regions in the given RegionServer group
+   * @param groupName the group name
+   * @return boolean Whether balance ran or not
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<Boolean> balanceRSGroup(String groupName);
 }

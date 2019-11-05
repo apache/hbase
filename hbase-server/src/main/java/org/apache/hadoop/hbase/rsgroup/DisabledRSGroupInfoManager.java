@@ -57,8 +57,7 @@ class DisabledRSGroupInfoManager implements RSGroupInfoManager {
   }
 
   @Override
-  public Set<Address> moveServers(Set<Address> servers, String srcGroup, String dstGroup)
-    throws IOException {
+  public void moveServers(Set<Address> servers, String targetGroupName) throws IOException {
     throw new DoNotRetryIOException("RSGroup is disabled");
   }
 
@@ -106,5 +105,15 @@ class DisabledRSGroupInfoManager implements RSGroupInfoManager {
   @Override
   public RSGroupInfo getRSGroupForTable(TableName tableName) throws IOException {
     return null;
+  }
+
+  @Override
+  public boolean balanceRSGroup(String groupName) throws IOException {
+    throw new DoNotRetryIOException("RSGroup is disabled");
+  }
+
+  @Override
+  public void setRSGroup(Set<TableName> tables, String groupName) throws IOException {
+    throw new DoNotRetryIOException("RSGroup is disabled");
   }
 }

@@ -20,12 +20,16 @@ package org.apache.hadoop.hbase.rsgroup;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Group user API interface used between client and server.
+ *
+ * @deprecated Keep it here only for tests, using {@link Admin} instead.
  */
+@Deprecated
 @InterfaceAudience.Private
 public interface RSGroupAdmin {
   /**

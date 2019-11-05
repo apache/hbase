@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshotView;
@@ -56,6 +57,7 @@ import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.UserPermission;
@@ -958,6 +960,56 @@ class AdminOverAsyncAdmin implements Admin {
   @Override
   public boolean isSnapshotCleanupEnabled() throws IOException {
     return get(admin.isSnapshotCleanupEnabled());
+  }
+
+  @Override
+  public RSGroupInfo getRSGroup(String groupName) throws IOException {
+    return get(admin.getRSGroup(groupName));
+  }
+
+  @Override
+  public void moveToRSGroup(Set<Address> servers, String groupName) throws IOException {
+    get(admin.moveToRSGroup(servers, groupName));
+  }
+
+  @Override
+  public void addRSGroup(String groupName) throws IOException {
+    get(admin.addRSGroup(groupName));
+  }
+
+  @Override
+  public void removeRSGroup(String groupName) throws IOException {
+    get(admin.removeRSGroup(groupName));
+  }
+
+  @Override
+  public boolean balanceRSGroup(String groupName) throws IOException {
+    return get(admin.balanceRSGroup(groupName));
+  }
+
+  @Override
+  public List<RSGroupInfo> listRSGroups() throws IOException {
+    return get(admin.listRSGroups());
+  }
+
+  @Override
+  public RSGroupInfo getRSGroup(Address hostPort) throws IOException {
+    return get(admin.getRSGroup(hostPort));
+  }
+
+  @Override
+  public void removeRSGroup(Set<Address> servers) throws IOException {
+    get(admin.removeRSGroup(servers));
+  }
+
+  @Override
+  public RSGroupInfo getRSGroup(TableName tableName) throws IOException {
+    return get(admin.getRSGroup(tableName));
+  }
+
+  @Override
+  public void setRSGroup(Set<TableName> tables, String groupName) throws IOException {
+    get(admin.setRSGroup(tables, groupName));
   }
 
 }

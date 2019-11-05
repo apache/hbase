@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.quotas.QuotaTableUtil;
-import org.apache.hadoop.hbase.quotas.QuotaUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
@@ -45,11 +44,14 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
+@RunWith(Parameterized.class)
 @Category({ MediumTests.class })
 public class TestRSGroupsBasics extends TestRSGroupsBase {
 
@@ -81,10 +83,12 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
 
   @Test
   public void testBasicStartUp() throws IOException {
-    RSGroupInfo defaultInfo = rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP);
+    RSGroupInfo defaultInfo = rsGroupAdmin.getRSGroup(RSGroupInfo.DEFAULT_GROUP);
     assertEquals(NUM_SLAVES_BASE, defaultInfo.getServers().size());
     // Assignment of meta and rsgroup regions.
     int count = master.getAssignmentManager().getRegionStates().getRegionAssignments().size();
+    LOG.info("regions assignments are" +
+        master.getAssignmentManager().getRegionStates().getRegionAssignments().toString());
     // 2 (meta and rsgroup)
     assertEquals(2, count);
   }
@@ -165,6 +169,7 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
 
     // clone
     admin.cloneSnapshot(snapshotName, clonedTableName);
+    admin.deleteSnapshot(snapshotName);
   }
 
   @Test
@@ -206,7 +211,7 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
     assertEquals(0, notClearedServers.size());
 
     // the stopped region server gets cleared and removed from the group
-    Set<Address> newGroupServers = rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getServers();
+    Set<Address> newGroupServers = rsGroupAdmin.getRSGroup(newGroup.getName()).getServers();
     assertFalse(newGroupServers.contains(serverToStop.getAddress()));
     assertEquals(serverCountToMoveToNewGroup - 1 /* 1 stopped */, newGroupServers.size());
   }
@@ -244,34 +249,20 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
     assertEquals(serverCountToMoveToDeadServerGroup, notClearedServers.size());
 
     Set<Address> ServersInDeadServerGroup =
-        rsGroupAdmin.getRSGroupInfo(deadServerGroup.getName()).getServers();
+        rsGroupAdmin.getRSGroup(deadServerGroup.getName()).getServers();
     assertEquals(serverCountToMoveToDeadServerGroup, ServersInDeadServerGroup.size());
     assertTrue(ServersInDeadServerGroup.contains(serverToStop.getAddress()));
   }
 
   @Test
   public void testRSGroupsWithHBaseQuota() throws Exception {
-    TEST_UTIL.getConfiguration().setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
-    restartHBaseCluster();
-    try {
-      TEST_UTIL.waitFor(90000, new Waiter.Predicate<Exception>() {
-        @Override
-        public boolean evaluate() throws Exception {
-          return admin.isTableAvailable(QuotaTableUtil.QUOTA_TABLE_NAME);
-        }
-      });
-    } finally {
-      TEST_UTIL.getConfiguration().setBoolean(QuotaUtil.QUOTA_CONF_KEY, false);
-      restartHBaseCluster();
-    }
-  }
-
-  private void restartHBaseCluster() throws Exception {
-    LOG.info("\n\nShutting down cluster");
-    TEST_UTIL.shutdownMiniHBaseCluster();
-    LOG.info("\n\nSleeping a bit");
-    Thread.sleep(2000);
-    TEST_UTIL.restartHBaseCluster(NUM_SLAVES_BASE - 1);
-    initialize();
+    toggleQuotaCheckAndRestartMiniCluster(true);
+    TEST_UTIL.waitFor(90000, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return admin.isTableAvailable(QuotaTableUtil.QUOTA_TABLE_NAME);
+      }
+    });
+    toggleQuotaCheckAndRestartMiniCluster(false);
   }
 }

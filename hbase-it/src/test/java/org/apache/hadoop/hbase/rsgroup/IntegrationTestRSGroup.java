@@ -82,7 +82,7 @@ public class IntegrationTestRSGroup extends TestRSGroupsBase {
         LOG.info("Waiting for cleanup to finish "+ rsGroupAdmin.listRSGroups());
         //Might be greater since moving servers back to default
         //is after starting a server
-        return rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().size()
+        return rsGroupAdmin.getRSGroup(RSGroupInfo.DEFAULT_GROUP).getServers().size()
             >= NUM_SLAVES_BASE;
       }
     });
@@ -93,7 +93,7 @@ public class IntegrationTestRSGroup extends TestRSGroupsBase {
         LOG.info("Waiting for regionservers to be registered "+ rsGroupAdmin.listRSGroups());
         //Might be greater since moving servers back to default
         //is after starting a server
-        return rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().size()
+        return rsGroupAdmin.getRSGroup(RSGroupInfo.DEFAULT_GROUP).getServers().size()
             == getNumServers();
       }
     });
