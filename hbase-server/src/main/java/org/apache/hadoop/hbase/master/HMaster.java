@@ -3800,7 +3800,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   public static void decorateMasterConfiguration(Configuration conf) {
     String plugins = conf.get(HBASE_MASTER_LOGCLEANER_PLUGINS);
     String cleanerClass = ReplicationLogCleaner.class.getCanonicalName();
-    if (!plugins.contains(cleanerClass)) {
+    if (plugins == null || !plugins.contains(cleanerClass)) {
       conf.set(HBASE_MASTER_LOGCLEANER_PLUGINS, plugins + "," + cleanerClass);
     }
     if (ReplicationUtils.isReplicationForBulkLoadDataEnabled(conf)) {
