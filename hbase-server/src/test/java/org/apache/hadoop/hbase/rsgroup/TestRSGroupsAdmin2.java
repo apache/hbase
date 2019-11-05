@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
-import static org.apache.hadoop.hbase.rsgroup.RSGroupAdminServer.DEFAULT_MAX_RETRY_VALUE;
 import static org.apache.hadoop.hbase.util.Threads.sleep;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -55,12 +54,15 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
+@RunWith(Parameterized.class)
 @Category({ LargeTests.class })
 public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
 
@@ -128,7 +130,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     }
     final ServerName targetServer = tmpTargetServer;
     // move target server to group
-    rsGroupAdmin.moveServers(Sets.newHashSet(targetServer.getAddress()), newGroup.getName());
+    rsGroupAdmin.moveToRSGroup(Sets.newHashSet(targetServer.getAddress()), newGroup.getName());
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
@@ -162,14 +164,14 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     int initNumGroups = rsGroupAdmin.listRSGroups().size();
     RSGroupInfo appInfo = addGroup(getGroupName(name.getMethodName()), 1);
     RSGroupInfo adminInfo = addGroup(getGroupName(name.getMethodName()), 1);
-    RSGroupInfo dInfo = rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP);
+    RSGroupInfo dInfo = rsGroupAdmin.getRSGroup(RSGroupInfo.DEFAULT_GROUP);
     Assert.assertEquals(initNumGroups + 2, rsGroupAdmin.listRSGroups().size());
     assertEquals(1, adminInfo.getServers().size());
     assertEquals(1, appInfo.getServers().size());
     assertEquals(getNumServers() - 2, dInfo.getServers().size());
-    rsGroupAdmin.moveServers(appInfo.getServers(), RSGroupInfo.DEFAULT_GROUP);
+    rsGroupAdmin.moveToRSGroup(appInfo.getServers(), RSGroupInfo.DEFAULT_GROUP);
     rsGroupAdmin.removeRSGroup(appInfo.getName());
-    rsGroupAdmin.moveServers(adminInfo.getServers(), RSGroupInfo.DEFAULT_GROUP);
+    rsGroupAdmin.moveToRSGroup(adminInfo.getServers(), RSGroupInfo.DEFAULT_GROUP);
     rsGroupAdmin.removeRSGroup(adminInfo.getName());
     Assert.assertEquals(rsGroupAdmin.listRSGroups().size(), initNumGroups);
   }
@@ -180,14 +182,14 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     addGroup("bar", 3);
     rsGroupAdmin.addRSGroup("foo");
 
-    RSGroupInfo barGroup = rsGroupAdmin.getRSGroupInfo("bar");
-    RSGroupInfo fooGroup = rsGroupAdmin.getRSGroupInfo("foo");
+    RSGroupInfo barGroup = rsGroupAdmin.getRSGroup("bar");
+    RSGroupInfo fooGroup = rsGroupAdmin.getRSGroup("foo");
     assertEquals(3, barGroup.getServers().size());
     assertEquals(0, fooGroup.getServers().size());
 
     // test fail bogus server move
     try {
-      rsGroupAdmin.moveServers(Sets.newHashSet(Address.fromString("foo:9999")), "foo");
+      rsGroupAdmin.moveToRSGroup(Sets.newHashSet(Address.fromString("foo:9999")), "foo");
       fail("Bogus servers shouldn't have been successfully moved.");
     } catch (IOException ex) {
       String exp = "Source RSGroup for server foo:9999 does not exist.";
@@ -197,34 +199,34 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
 
     // test success case
     LOG.info("moving servers " + barGroup.getServers() + " to group foo");
-    rsGroupAdmin.moveServers(barGroup.getServers(), fooGroup.getName());
+    rsGroupAdmin.moveToRSGroup(barGroup.getServers(), fooGroup.getName());
 
-    barGroup = rsGroupAdmin.getRSGroupInfo("bar");
-    fooGroup = rsGroupAdmin.getRSGroupInfo("foo");
+    barGroup = rsGroupAdmin.getRSGroup("bar");
+    fooGroup = rsGroupAdmin.getRSGroup("foo");
     assertEquals(0, barGroup.getServers().size());
     assertEquals(3, fooGroup.getServers().size());
 
     LOG.info("moving servers " + fooGroup.getServers() + " to group default");
-    rsGroupAdmin.moveServers(fooGroup.getServers(), RSGroupInfo.DEFAULT_GROUP);
+    rsGroupAdmin.moveToRSGroup(fooGroup.getServers(), RSGroupInfo.DEFAULT_GROUP);
 
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return getNumServers() == rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP)
+        return getNumServers() == rsGroupAdmin.getRSGroup(RSGroupInfo.DEFAULT_GROUP)
           .getServers().size();
       }
     });
 
-    fooGroup = rsGroupAdmin.getRSGroupInfo("foo");
+    fooGroup = rsGroupAdmin.getRSGroup("foo");
     assertEquals(0, fooGroup.getServers().size());
 
     // test group removal
     LOG.info("Remove group " + barGroup.getName());
     rsGroupAdmin.removeRSGroup(barGroup.getName());
-    Assert.assertEquals(null, rsGroupAdmin.getRSGroupInfo(barGroup.getName()));
+    Assert.assertEquals(null, rsGroupAdmin.getRSGroup(barGroup.getName()));
     LOG.info("Remove group " + fooGroup.getName());
     rsGroupAdmin.removeRSGroup(fooGroup.getName());
-    Assert.assertEquals(null, rsGroupAdmin.getRSGroupInfo(fooGroup.getName()));
+    Assert.assertEquals(null, rsGroupAdmin.getRSGroup(fooGroup.getName()));
   }
 
   @Test
@@ -236,7 +238,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
 
     // remove online servers
     try {
-      rsGroupAdmin.removeServers(Sets.newHashSet(targetServer.getAddress()));
+      rsGroupAdmin.removeRSGroup(Sets.newHashSet(targetServer.getAddress()));
       fail("Online servers shouldn't have been successfully removed.");
     } catch (IOException ex) {
       String exp =
@@ -267,7 +269,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     });
 
     try {
-      rsGroupAdmin.removeServers(Sets.newHashSet(targetServer.getAddress()));
+      rsGroupAdmin.removeRSGroup(Sets.newHashSet(targetServer.getAddress()));
       fail("Dead servers shouldn't have been successfully removed.");
     } catch (IOException ex) {
       String exp = "Server " + targetServer.getAddress() + " is on the dead servers list," +
@@ -287,8 +289,8 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     assertEquals(1, admin.listDecommissionedRegionServers().size());
 
     assertTrue(newGroup.getServers().contains(targetServer.getAddress()));
-    rsGroupAdmin.removeServers(Sets.newHashSet(targetServer.getAddress()));
-    Set<Address> newGroupServers = rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getServers();
+    rsGroupAdmin.removeRSGroup(Sets.newHashSet(targetServer.getAddress()));
+    Set<Address> newGroupServers = rsGroupAdmin.getRSGroup(newGroup.getName()).getServers();
     assertFalse(newGroupServers.contains(targetServer.getAddress()));
     assertEquals(2, newGroupServers.size());
 
@@ -320,7 +322,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     for (ServerName server : admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
       .getLiveServerMetrics().keySet()) {
       if (!newGroup.containsServer(server.getAddress()) &&
-        !rsGroupAdmin.getRSGroupInfo("master").containsServer(server.getAddress())) {
+        !rsGroupAdmin.getRSGroup("master").containsServer(server.getAddress())) {
         targetServer = server;
         break;
       }
@@ -328,14 +330,15 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
 
     LOG.debug("Print group info : " + rsGroupAdmin.listRSGroups());
     int oldDefaultGroupServerSize =
-      rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().size();
+      rsGroupAdmin.getRSGroup(RSGroupInfo.DEFAULT_GROUP).getServers().size();
     int oldDefaultGroupTableSize =
-      rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getTables().size();
+      rsGroupAdmin.getRSGroup(RSGroupInfo.DEFAULT_GROUP).getTables().size();
 
     // test fail bogus server move
     try {
-      rsGroupAdmin.moveServersAndTables(Sets.newHashSet(Address.fromString("foo:9999")),
-        Sets.newHashSet(tableName), newGroup.getName());
+      rsGroupAdmin.moveToRSGroup(Sets.newHashSet(Address.fromString("foo:9999")),
+          newGroup.getName());
+      rsGroupAdmin.setRSGroup(Sets.newHashSet(tableName), newGroup.getName());
       fail("Bogus servers shouldn't have been successfully moved.");
     } catch (IOException ex) {
       String exp = "Source RSGroup for server foo:9999 does not exist.";
@@ -344,18 +347,19 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     }
 
     // test move when src = dst
-    rsGroupAdmin.moveServersAndTables(Sets.newHashSet(targetServer.getAddress()),
-      Sets.newHashSet(tableName), RSGroupInfo.DEFAULT_GROUP);
+    rsGroupAdmin.moveToRSGroup(Sets.newHashSet(targetServer.getAddress()),
+        RSGroupInfo.DEFAULT_GROUP);
+    rsGroupAdmin.setRSGroup(Sets.newHashSet(tableName), RSGroupInfo.DEFAULT_GROUP);
 
     // verify default group info
     Assert.assertEquals(oldDefaultGroupServerSize,
-      rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().size());
+      rsGroupAdmin.getRSGroup(RSGroupInfo.DEFAULT_GROUP).getServers().size());
     Assert.assertEquals(oldDefaultGroupTableSize,
-      rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getTables().size());
+      rsGroupAdmin.getRSGroup(RSGroupInfo.DEFAULT_GROUP).getTables().size());
 
     // verify new group info
-    Assert.assertEquals(1, rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getServers().size());
-    Assert.assertEquals(0, rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getTables().size());
+    Assert.assertEquals(1, rsGroupAdmin.getRSGroup(newGroup.getName()).getServers().size());
+    Assert.assertEquals(0, rsGroupAdmin.getRSGroup(newGroup.getName()).getTables().size());
 
     // get all region to move targetServer
     List<String> regionList = getTableRegionMap().get(tableName);
@@ -381,38 +385,39 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
 
     // move targetServer and table to newGroup
     LOG.info("moving server and table to newGroup");
-    rsGroupAdmin.moveServersAndTables(Sets.newHashSet(targetServer.getAddress()),
-      Sets.newHashSet(tableName), newGroup.getName());
+    rsGroupAdmin.moveToRSGroup(Sets.newHashSet(targetServer.getAddress()),
+        newGroup.getName());
+    rsGroupAdmin.setRSGroup(Sets.newHashSet(tableName), newGroup.getName());
 
     // verify group change
     Assert.assertEquals(newGroup.getName(),
-      rsGroupAdmin.getRSGroupInfoOfTable(tableName).getName());
+      rsGroupAdmin.getRSGroup(tableName).getName());
 
     // verify servers' not exist in old group
     Set<Address> defaultServers =
-      rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers();
+      rsGroupAdmin.getRSGroup(RSGroupInfo.DEFAULT_GROUP).getServers();
     assertFalse(defaultServers.contains(targetServer.getAddress()));
 
     // verify servers' exist in new group
-    Set<Address> newGroupServers = rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getServers();
+    Set<Address> newGroupServers = rsGroupAdmin.getRSGroup(newGroup.getName()).getServers();
     assertTrue(newGroupServers.contains(targetServer.getAddress()));
 
     // verify tables' not exist in old group
     Set<TableName> defaultTables =
-      rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getTables();
+      rsGroupAdmin.getRSGroup(RSGroupInfo.DEFAULT_GROUP).getTables();
     assertFalse(defaultTables.contains(tableName));
 
     // verify tables' exist in new group
-    Set<TableName> newGroupTables = rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getTables();
+    Set<TableName> newGroupTables = rsGroupAdmin.getRSGroup(newGroup.getName()).getTables();
     assertTrue(newGroupTables.contains(tableName));
 
     // verify that all region still assgin on targetServer
     // TODO: uncomment after we reimplement moveServersAndTables, now the implementation is
-    // moveServers first and then moveTables, so the region will be moved to other region servers.
+    // moveToRSGroup first and then moveTables, so the region will be moved to other region servers.
     // Assert.assertEquals(5, getTableServerRegionMap().get(tableName).get(targetServer).size());
 
-    assertTrue(observer.preMoveServersAndTables);
-    assertTrue(observer.postMoveServersAndTables);
+    assertTrue(observer.preMoveServersCalled);
+    assertTrue(observer.postMoveServersCalled);
   }
 
   @Test
@@ -420,17 +425,17 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     // create groups and assign servers
     rsGroupAdmin.addRSGroup("foo");
 
-    RSGroupInfo fooGroup = rsGroupAdmin.getRSGroupInfo("foo");
+    RSGroupInfo fooGroup = rsGroupAdmin.getRSGroup("foo");
     assertEquals(0, fooGroup.getServers().size());
-    RSGroupInfo defaultGroup = rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP);
+    RSGroupInfo defaultGroup = rsGroupAdmin.getRSGroup(RSGroupInfo.DEFAULT_GROUP);
 
     // test remove all servers from default
     try {
-      rsGroupAdmin.moveServers(defaultGroup.getServers(), fooGroup.getName());
-      fail(RSGroupAdminServer.KEEP_ONE_SERVER_IN_DEFAULT_ERROR_MESSAGE);
+      rsGroupAdmin.moveToRSGroup(defaultGroup.getServers(), fooGroup.getName());
+      fail(RSGroupInfoManagerImpl.KEEP_ONE_SERVER_IN_DEFAULT_ERROR_MESSAGE);
     } catch (ConstraintException ex) {
       assertTrue(
-        ex.getMessage().contains(RSGroupAdminServer.KEEP_ONE_SERVER_IN_DEFAULT_ERROR_MESSAGE));
+        ex.getMessage().contains(RSGroupInfoManagerImpl.KEEP_ONE_SERVER_IN_DEFAULT_ERROR_MESSAGE));
     }
 
     // test success case, remove one server from default ,keep at least one server
@@ -438,35 +443,35 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
       Address serverInDefaultGroup = defaultGroup.getServers().iterator().next();
       LOG.info("moving server " + serverInDefaultGroup + " from group default to group " +
         fooGroup.getName());
-      rsGroupAdmin.moveServers(Sets.newHashSet(serverInDefaultGroup), fooGroup.getName());
+      rsGroupAdmin.moveToRSGroup(Sets.newHashSet(serverInDefaultGroup), fooGroup.getName());
     }
 
-    fooGroup = rsGroupAdmin.getRSGroupInfo("foo");
+    fooGroup = rsGroupAdmin.getRSGroup("foo");
     LOG.info("moving servers " + fooGroup.getServers() + " to group default");
-    rsGroupAdmin.moveServers(fooGroup.getServers(), RSGroupInfo.DEFAULT_GROUP);
+    rsGroupAdmin.moveToRSGroup(fooGroup.getServers(), RSGroupInfo.DEFAULT_GROUP);
 
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return getNumServers() == rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP)
+        return getNumServers() == rsGroupAdmin.getRSGroup(RSGroupInfo.DEFAULT_GROUP)
           .getServers().size();
       }
     });
 
-    fooGroup = rsGroupAdmin.getRSGroupInfo("foo");
+    fooGroup = rsGroupAdmin.getRSGroup("foo");
     assertEquals(0, fooGroup.getServers().size());
 
     // test group removal
     LOG.info("Remove group " + fooGroup.getName());
     rsGroupAdmin.removeRSGroup(fooGroup.getName());
-    Assert.assertEquals(null, rsGroupAdmin.getRSGroupInfo(fooGroup.getName()));
+    Assert.assertEquals(null, rsGroupAdmin.getRSGroup(fooGroup.getName()));
   }
 
   @Test
   public void testFailedMoveBeforeRetryExhaustedWhenMoveServer() throws Exception {
     String groupName = getGroupName(name.getMethodName());
     rsGroupAdmin.addRSGroup(groupName);
-    final RSGroupInfo newGroup = rsGroupAdmin.getRSGroupInfo(groupName);
+    final RSGroupInfo newGroup = rsGroupAdmin.getRSGroup(groupName);
     Pair<ServerName, RegionStateNode> gotPair = createTableWithRegionSplitting(newGroup,
         10);
 
@@ -482,7 +487,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     Thread t2 = new Thread(() -> {
       LOG.info("thread2 start running, to move regions");
       try {
-        rsGroupAdmin.moveServers(Sets.newHashSet(movedServer.getAddress()), newGroup.getName());
+        rsGroupAdmin.moveToRSGroup(Sets.newHashSet(movedServer.getAddress()), newGroup.getName());
       } catch (IOException e) {
         LOG.error("move server error", e);
       }
@@ -512,7 +517,8 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
       // wait until there is only left the region we changed state and recover its state.
       // wait time is set according to the number of max retries, all except failed regions will be
       // moved in one retry, and will sleep 1s until next retry.
-      while (System.currentTimeMillis() - current <= DEFAULT_MAX_RETRY_VALUE * 1000) {
+      while (System.currentTimeMillis() - current <=
+          RSGroupInfoManagerImpl.DEFAULT_MAX_RETRY_VALUE * 1000) {
         List<RegionInfo> regions = getRegions.apply(owner);
         LOG.debug("server table region size is:{}", regions.size());
         assert regions.size() >= 1;
@@ -600,7 +606,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
 
   @Test
   public void testFailedMoveServersAndRepair() throws Exception{
-    // This UT calls moveServers() twice to test the idempotency of it.
+    // This UT calls moveToRSGroup() twice to test the idempotency of it.
     // The first time, movement fails because a region is made in SPLITTING state
     // which will not be moved.
     // The second time, the region state is OPEN and check if all
@@ -616,7 +622,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
 
     // move server to newGroup and check regions
     try {
-      rsGroupAdmin.moveServers(Sets.newHashSet(srcServer.getAddress()), newGroup.getName());
+      rsGroupAdmin.moveToRSGroup(Sets.newHashSet(srcServer.getAddress()), newGroup.getName());
       fail("should get IOException when retry exhausted but there still exists failed moved "
           + "regions");
     }catch (Exception e){
@@ -632,7 +638,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
 
     // retry move server to newGroup and check if all regions on srcServer was moved
     rsn.setState(RegionState.State.OPEN);
-    rsGroupAdmin.moveServers(Sets.newHashSet(srcServer.getAddress()), newGroup.getName());
+    rsGroupAdmin.moveToRSGroup(Sets.newHashSet(srcServer.getAddress()), newGroup.getName());
     assertEquals(master.getAssignmentManager().getRegionsOnServer(srcServer).size(), 0);
   }
 
@@ -661,8 +667,8 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
 
     // move server and table to newGroup and check regions
     try {
-      rsGroupAdmin.moveServersAndTables(Sets.newHashSet(srcServer.getAddress()),
-          Sets.newHashSet(table2), newGroup.getName());
+      rsGroupAdmin.moveToRSGroup(Sets.newHashSet(srcServer.getAddress()), newGroup.getName());
+      rsGroupAdmin.setRSGroup(Sets.newHashSet(table2), newGroup.getName());
       fail("should get IOException when retry exhausted but there still exists failed moved "
           + "regions");
     }catch (Exception e){
@@ -679,8 +685,8 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     // retry moveServersAndTables to newGroup and check if all regions on srcServer belongs to
     // table2
     rsn.setState(RegionState.State.OPEN);
-    rsGroupAdmin.moveServersAndTables(Sets.newHashSet(srcServer.getAddress()),
-        Sets.newHashSet(table2), newGroup.getName());
+    rsGroupAdmin.moveToRSGroup(Sets.newHashSet(srcServer.getAddress()), newGroup.getName());
+    rsGroupAdmin.setRSGroup(Sets.newHashSet(table2), newGroup.getName());
     for(RegionInfo regionsInfo : master.getAssignmentManager().getRegionsOnServer(srcServer)){
       assertEquals(regionsInfo.getTable(), table2);
     }

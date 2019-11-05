@@ -25,11 +25,7 @@ import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.HasMasterServices;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.security.UserProvider;
-import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * @deprecated Keep it here only for compatibility with old client, all the logics have been moved
@@ -42,8 +38,6 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor {
   // Only instance of RSGroupInfoManager. RSGroup aware load balancers ask for this instance on
   // their setup.
   private MasterServices master;
-  private RSGroupInfoManager groupInfoManager;
-  private RSGroupAdminServer groupAdminServer;
   private RSGroupAdminServiceImpl groupAdminService = new RSGroupAdminServiceImpl();
 
   @Override
@@ -51,19 +45,8 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor {
     if (!(env instanceof HasMasterServices)) {
       throw new IOException("Does not implement HMasterServices");
     }
-
     master = ((HasMasterServices) env).getMasterServices();
-    groupInfoManager = master.getRSGroupInfoManager();
-    groupAdminServer = new RSGroupAdminServer(master, groupInfoManager);
-    AccessChecker accessChecker = ((HasMasterServices) env).getMasterServices().getAccessChecker();
-
-    // set the user-provider.
-    UserProvider userProvider = UserProvider.instantiate(env.getConfiguration());
-    groupAdminService.initialize(master, groupAdminServer, accessChecker, userProvider);
-  }
-
-  @Override
-  public void stop(CoprocessorEnvironment env) {
+    groupAdminService.initialize(master);
   }
 
   @Override
@@ -72,11 +55,7 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor {
   }
 
   RSGroupInfoManager getGroupInfoManager() {
-    return groupInfoManager;
+    return master.getRSGroupInfoManager();
   }
 
-  @VisibleForTesting
-  RSGroupAdminServiceImpl getGroupAdminService() {
-    return groupAdminService;
-  }
 }
