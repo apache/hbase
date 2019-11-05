@@ -66,6 +66,7 @@ public class MobFileCleanerChore extends ScheduledChore {
   private static final Logger LOG = LoggerFactory.getLogger(MobFileCleanerChore.class);
   private final HMaster master;
   private ExpiredMobFileCleaner cleaner;
+  private long minAgeToArchive;
 
   public MobFileCleanerChore(HMaster master) {
     super(master.getServerName() + "-ExpiredMobFileCleanerChore", master, master.getConfiguration()
@@ -75,6 +76,8 @@ public class MobFileCleanerChore extends ScheduledChore {
     this.master = master;
     cleaner = new ExpiredMobFileCleaner();
     cleaner.setConf(master.getConfiguration());
+    this.minAgeToArchive = master.getConfiguration().getLong(MobConstants.MIN_AGE_TO_ARCHIVE_KEY, 
+      MobConstants.DEFAULT_MIN_AGE_TO_ARCHIVE);
     checkObsoleteConfigurations();
   }
   
@@ -149,7 +152,7 @@ public class MobFileCleanerChore extends ScheduledChore {
       // exist at the time cleaning procedure begins and will be examined.
       // So, if MOB file creation time is greater than this maxTimeToArchive,
       // this will be skipped and won't be archived.
-      long maxCreationTimeToArchive = EnvironmentEdgeManager.currentTime() - 3600000;
+      long maxCreationTimeToArchive = EnvironmentEdgeManager.currentTime() - minAgeToArchive;
       LOG.info("Only MOB files whose creation time less than {} will be archived", 
         maxCreationTimeToArchive);
       Path rootDir = FSUtils.getRootDir(conf);

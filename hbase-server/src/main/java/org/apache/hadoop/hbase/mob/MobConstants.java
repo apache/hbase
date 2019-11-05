@@ -141,6 +141,13 @@ public final class MobConstants {
   public static final String MOB_UNSAFE_DISCARD_MISS_KEY = "hbase.unsafe.mob.discard.miss";
 
   public static final boolean DEFAULT_MOB_DISCARD_MISS = false;
+  
+  /**
+   * Minimum MOB file age to archive, default (3600000 - 1h)
+   */
+  public static final String MIN_AGE_TO_ARCHIVE_KEY = "hbase.mob.min.age.archive";
+  
+  public static final long DEFAULT_MIN_AGE_TO_ARCHIVE = 3600000;
 
   private MobConstants() {
 

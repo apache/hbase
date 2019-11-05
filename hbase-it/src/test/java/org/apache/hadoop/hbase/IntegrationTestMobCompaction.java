@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,158 +15,204 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.mob;
+
+package org.apache.hadoop.hbase;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeepDeletedCells;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.MobFileCleanerChore;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.mob.FaultyMobStoreCompactor;
+import org.apache.hadoop.hbase.mob.MobConstants;
+import org.apache.hadoop.hbase.mob.MobStoreEngine;
+import org.apache.hadoop.hbase.mob.MobUtils;
+
+import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.util.ToolRunner;
+import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+
 /**
-    Reproduction for MOB data loss
-
- 1. Settings: Region Size 200 MB,  Flush threshold 800 KB.
- 2. Insert 10 Million records
- 3. MOB Compaction and Archiver
-      a) Trigger MOB Compaction (every 2 minutes)
-      b) Trigger major compaction (every 2 minutes)
-      c) Trigger archive cleaner (every 3 minutes)
- 4. Validate MOB data after complete data load.
-
+ * An integration test to detect regressions in HBASE-22749. Test creates 
+ * MOB-enabled table, and runs in parallel, the following tasks: loads data,
+ * runs MOB compactions, runs MOB cleaning chore. The failure injections into MOB 
+ * compaction cycle is implemented via specific sub-class of DefaultMobStoreCompactor -
+ * FaultyMobStoreCompactor. The probability of failure is controlled by command-line
+ * argument 'failprob'.
+ * @see <a href="https://issues.apache.org/jira/browse/HBASE-22749">HBASE-22749</a>
  */
 @SuppressWarnings("deprecation")
-@Category(LargeTests.class)
-public class TestMobCompaction {
-  private static final Logger LOG = LoggerFactory.getLogger(TestMobCompaction.class);
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMobCompaction.class);
-  @Rule
-  public TestName testName = new TestName();
 
-  private HBaseTestingUtility HTU;
-
-  private final static String famStr = "f1";
-  private final static byte[] fam = Bytes.toBytes(famStr);
-  private final static byte[] qualifier = Bytes.toBytes("q1");
-  private final static long mobLen = 10;
-  private final static byte[] mobVal = Bytes
+@Category(IntegrationTests.class)
+public class IntegrationTestMobCompaction extends IntegrationTestBase {
+  protected static final Logger LOG = LoggerFactory.getLogger(IntegrationTestMobCompaction.class);
+  
+  protected static final String REGIONSERVER_COUNT_KEY = "servers";
+  protected static final String ROWS_COUNT_KEY = "rows";
+  protected static final String FAILURE_PROB_KEY = "failprob";
+  
+  protected static final int DEFAULT_REGIONSERVER_COUNT = 3;
+  protected static final int DEFAULT_ROWS_COUNT = 5000000; 
+  protected static final double DEFAULT_FAILURE_PROB = 0.1;
+  
+  protected static int regionServerCount = DEFAULT_REGIONSERVER_COUNT;
+  protected static long rowsToLoad = DEFAULT_ROWS_COUNT;
+  protected static double failureProb = DEFAULT_FAILURE_PROB;
+  
+  protected static String famStr = "f1";
+  protected static byte[] fam = Bytes.toBytes(famStr);
+  protected static byte[] qualifier = Bytes.toBytes("q1");
+  protected static long mobLen = 10;
+  protected static byte[] mobVal = Bytes
       .toBytes("01234567890123456789012345678901234567890123456789012345678901234567890123456789");
 
-  private Configuration conf;
-  private HTableDescriptor hdt;
-  private HColumnDescriptor hcd;
-  private Admin admin;
-  private long count = 5000000;
-  private double failureProb = 0.1;
-  private Table table = null;
-  private MobFileCleanerChore chore = new MobFileCleanerChore();
+  private static Configuration conf;
+  private static HTableDescriptor hdt;
+  private static HColumnDescriptor hcd;
+  private static Admin admin;
+  private static Table table = null;
+  private static MobFileCleanerChore chore;
 
   private static volatile boolean run = true;
-
-  public TestMobCompaction() {
-
-  }
-
-  public void init(Configuration conf, long numRows) throws IOException {
-    this.conf = conf;
-    this.count = numRows;
-    printConf();
-    hdt = createTableDescriptor("testMobCompactTable");
-    Connection conn = ConnectionFactory.createConnection(this.conf);
-    this.admin = conn.getAdmin();
-    this.hcd = new HColumnDescriptor(fam);
-    this.hcd.setMobEnabled(true);
-    this.hcd.setMobThreshold(mobLen);
-    this.hcd.setMaxVersions(1);
-    this.hdt.addFamily(hcd);
-    if (admin.tableExists(hdt.getTableName())) {
-      admin.disableTable(hdt.getTableName());
-      admin.deleteTable(hdt.getTableName());
-    }
-    admin.createTable(hdt);
-    table = conn.getTable(hdt.getTableName());
-  }
-
-  private void printConf() {
-    LOG.info("To run stress test, please change HBase configuration as following:");
-    LOG.info("hfile.format.version=3");
-    LOG.info("hbase.master.hfilecleaner.ttl=0");
-    LOG.info("hbase.hregion.max.filesize=200000000");
-    LOG.info("hbase.client.retries.number=100");
-    LOG.info("hbase.hregion.memstore.flush.size=800000");
-    LOG.info("hbase.hstore.blockingStoreFiles=150");
-    LOG.info("hbase.hstore.compaction.throughput.lower.bound=50000000");
-    LOG.info("hbase.hstore.compaction.throughput.higher.bound=100000000");
-    LOG.info("hbase.master.mob.cleaner.period=0");
-    LOG.info("hbase.mob.default.compactor=org.apache.hadoop.hbase.mob.FaultyMobStoreCompactor");
-    LOG.warn("injected.fault.probability=x, where x is between 0. and 1.");
-
-  }
-
-  private HTableDescriptor createTableDescriptor(final String name, final int minVersions,
-      final int versions, final int ttl, KeepDeletedCells keepDeleted) {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
-    return htd;
-  }
-
-  private HTableDescriptor createTableDescriptor(final String name) {
-    return createTableDescriptor(name, HColumnDescriptor.DEFAULT_MIN_VERSIONS, 1,
-      HConstants.FOREVER, HColumnDescriptor.DEFAULT_KEEP_DELETED);
-  }
-
+  
+  @Override
   @Before
   public void setUp() throws Exception {
-    HTU = new HBaseTestingUtility();
-    hdt = HTU.createTableDescriptor("testMobCompactTable");
-    conf = HTU.getConfiguration();
+    util = getTestingUtil(getConf());
+    conf = util.getConfiguration();
+    // Initialize with test-specific configuration values
+    initConf(conf);
+    regionServerCount =
+        conf.getInt(REGIONSERVER_COUNT_KEY, DEFAULT_REGIONSERVER_COUNT);
+    LOG.info("Initializing cluster with {} region servers.", regionServerCount);
+    util.initializeCluster(regionServerCount);
+    admin = util.getAdmin();
 
-    initConf();
+    createTestTable();
 
-    // HTU.getConfiguration().setInt("hbase.mob.compaction.chore.period", 0);
-    HTU.startMiniCluster();
-    admin = HTU.getAdmin();
+    LOG.info("Cluster initialized and ready");
+  }
 
+  private void createTestTable() throws IOException {
+    // Create test table
+    hdt = util.createTableDescriptor("testMobCompactTable");
     hcd = new HColumnDescriptor(fam);
     hcd.setMobEnabled(true);
     hcd.setMobThreshold(mobLen);
     hcd.setMaxVersions(1);
     hdt.addFamily(hcd);
-    table = HTU.createTable(hdt, null);
+    table = util.createTable(hdt, null);
+  }
+  
+  @After
+  public void tearDown() throws IOException {
+    LOG.info("Cleaning up after test.");
+    if(util.isDistributedCluster()) {
+      deleteTablesIfAny();
+      // TODO
+    }
+    LOG.info("Restoring cluster.");
+    util.restoreCluster();
+    LOG.info("Cluster restored.");
   }
 
-  private void initConf() {
+  @Override
+  public void setUpMonkey() throws Exception {
+    // Sorry, no Monkey
+  }
+
+  private void deleteTablesIfAny() throws IOException {
+    if (table != null) {  
+      util.deleteTableIfAny(table.getName());
+    }
+  }
+ 
+ 
+
+  @Override
+  public void setUpCluster() throws Exception {
+    util = getTestingUtil(getConf());
+    LOG.debug("Initializing/checking cluster has {} servers",regionServerCount);
+    util.initializeCluster(regionServerCount);
+    LOG.debug("Done initializing/checking cluster");
+  }
+
+  /**
+   *
+   * @return status of CLI execution
+   */
+  @Override
+  public int runTestFromCommandLine() throws Exception {
+    testMobCompaction();
+    return 0;
+  }
+
+  @Override
+  public TableName getTablename() {
+    // That is only valid when Monkey is CALM (no monkey)
+    return null;
+  }
+
+  @Override
+  protected Set<String> getColumnFamilies() {
+    // That is only valid when Monkey is CALM (no monkey)
+    return null;
+  }
+
+  @Override
+  protected void addOptions() {
+    addOptWithArg(REGIONSERVER_COUNT_KEY,
+      "Total number of region servers. Default: '" + DEFAULT_REGIONSERVER_COUNT + "'");
+    addOptWithArg(ROWS_COUNT_KEY,
+      "Total number of data rows to load. Default: '" + DEFAULT_ROWS_COUNT + "'");
+    addOptWithArg(FAILURE_PROB_KEY,
+      "Probability of a failure of a region MOB compaction request. Default: '" 
+    + DEFAULT_FAILURE_PROB + "'");
+  }
+
+  @Override
+  protected void processOptions(CommandLine cmd) {
+    super.processOptions(cmd);
+    
+    regionServerCount =
+        Integer.parseInt(cmd.getOptionValue(REGIONSERVER_COUNT_KEY,
+          Integer.toString(DEFAULT_REGIONSERVER_COUNT)));
+    rowsToLoad =
+        Long.parseLong(cmd.getOptionValue(ROWS_COUNT_KEY,
+          Long.toString(DEFAULT_ROWS_COUNT)));
+    failureProb = Double.parseDouble(cmd.getOptionValue(FAILURE_PROB_KEY,
+      Double.toString(DEFAULT_FAILURE_PROB)));
+    
+    LOG.info(MoreObjects.toStringHelper("Parsed Options")
+      .add(REGIONSERVER_COUNT_KEY, regionServerCount)
+      .add(ROWS_COUNT_KEY, rowsToLoad)
+      .add(FAILURE_PROB_KEY, failureProb)
+      .toString());
+  }
+
+  private static void initConf(Configuration conf) {
 
     conf.setInt("hfile.format.version", 3);
     conf.setLong(TimeToLiveHFileCleaner.TTL_CONF_KEY, 0);
@@ -180,14 +225,12 @@ public class TestMobCompaction {
     conf.setDouble("injected.fault.probability", failureProb);
     conf.set(MobStoreEngine.DEFAULT_MOB_COMPACTOR_CLASS_KEY,
       FaultyMobStoreCompactor.class.getName());
+    conf.setBoolean("hbase.table.sanity.checks", false);
+    conf.setLong(MobConstants.MIN_AGE_TO_ARCHIVE_KEY, 20000);
 
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    HTU.shutdownMiniCluster();
-  }
-
+  }  
+  
+  
   class MajorCompaction implements Runnable {
 
     @Override
@@ -211,6 +254,9 @@ public class TestMobCompaction {
       while (run) {
         try {
           LOG.info("MOB cleanup chore started ...");
+          if (chore == null) {
+            chore = new MobFileCleanerChore();
+          }
           chore.cleanupObsoleteMobFiles(conf, table.getName());
           LOG.info("MOB cleanup chore finished");
 
@@ -269,7 +315,7 @@ public class TestMobCompaction {
 
     try {
 
-      Thread writeData = new Thread(new WriteData(count));
+      Thread writeData = new Thread(new WriteData(rowsToLoad));
       writeData.start();
 
       Thread majorcompact = new Thread(new MajorCompaction());
@@ -288,10 +334,10 @@ public class TestMobCompaction {
       // Cleanup again
       chore.cleanupObsoleteMobFiles(conf, table.getName());
 
-      if (HTU != null) {
+      if (util != null) {
         LOG.info("Archive cleaner started ...");
         // Call archive cleaner again
-        HTU.getMiniHBaseCluster().getMaster().getHFileCleaner().choreForTesting();
+        util.getMiniHBaseCluster().getMaster().getHFileCleaner().choreForTesting();
         LOG.info("Archive cleaner finished");
       }
 
@@ -303,7 +349,7 @@ public class TestMobCompaction {
       admin.deleteTable(hdt.getTableName());
     }
     LOG.info("MOB Stress Test finished OK");
-    printStats(count);
+    printStats(rowsToLoad);
 
   }
   
@@ -341,15 +387,27 @@ public class TestMobCompaction {
         }
         counter++;
       }
-      assertEquals(count, counter);
+      assertEquals(rowsToLoad, counter);
     } catch (Exception e) {
       e.printStackTrace();
       LOG.error("MOB Stress Test FAILED");
-      if (HTU != null) {
+      if (util != null) {
         assertTrue(false);
       } else {
         System.exit(-1);
       }
     }
+  }  
+    
+  /**
+   *
+   * @param args argument list
+   */
+  public static void main(String[] args) throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    initConf(conf);
+    IntegrationTestingUtility.setUseDistributedCluster(conf);
+    int status = ToolRunner.run(conf, new IntegrationTestMobCompaction(), args);
+    System.exit(status);
   }
 }
