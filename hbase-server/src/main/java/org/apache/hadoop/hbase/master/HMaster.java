@@ -416,6 +416,8 @@ public class HMaster extends HRegionServer implements MasterServices {
   private MasterProcedureManagerHost mpmHost;
 
   private RegionsRecoveryChore regionsRecoveryChore = null;
+
+  private RegionsRecoveryConfigManager regionsRecoveryConfigManager = null;
   // it is assigned after 'initialized' guard set to true, so should be volatile
   private volatile MasterQuotaManager quotaManager;
   private SpaceQuotaSnapshotNotifier spaceQuotaSnapshotNotifier;
@@ -1131,6 +1133,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     configurationManager.registerObserver(this.cleanerPool);
     configurationManager.registerObserver(this.hfileCleaner);
     configurationManager.registerObserver(this.logCleaner);
+    configurationManager.registerObserver(this.regionsRecoveryConfigManager);
     // Set master as 'initialized'.
     setInitialized(true);
 
@@ -1456,6 +1459,8 @@ public class HMaster extends HRegionServer implements MasterServices {
           "Provide threshold value > 0 for {} to enable it.",
         HConstants.STORE_FILE_REF_COUNT_THRESHOLD);
     }
+
+    this.regionsRecoveryConfigManager = new RegionsRecoveryConfigManager(this);
 
     replicationBarrierCleaner = new ReplicationBarrierCleaner(conf, this, getConnection(),
       replicationPeerManager);
