@@ -348,7 +348,8 @@ public class TestReplicationSource {
 
     Waiter.waitFor(conf, 20000, new Waiter.Predicate<Exception>() {
       @Override public boolean evaluate() throws Exception {
-        return log2.equals(source.getLastLoggedPath()) && source.getLastLoggedPosition() >= startPos;
+        return log2.equals(source.getLastLoggedPath())
+                && source.getLastLoggedPosition() >= startPos;
       }
     });
 
