@@ -777,6 +777,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
           if (throttler.isEnabled()) {
             throttler.addPushSize(sizeExcludeBulkLoad);
           }
+          releaseBufferQuota(sizeExcludeBulkLoad);
           totalReplicatedEdits.addAndGet(entries.size());
           totalReplicatedOperations.addAndGet(entryBatch.getNbOperations());
           // FIXME check relationship between wal group and overall
