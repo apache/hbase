@@ -1772,7 +1772,8 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void preDecommissionRegionServers(List<ServerName> servers, boolean offload) throws IOException {
+  public void preDecommissionRegionServers(List<ServerName> servers, boolean offload)
+      throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
@@ -1781,7 +1782,8 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void postDecommissionRegionServers(List<ServerName> servers, boolean offload) throws IOException {
+  public void postDecommissionRegionServers(List<ServerName> servers, boolean offload)
+      throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {

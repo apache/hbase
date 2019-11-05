@@ -37,6 +37,7 @@ import "Quota.proto";
 import "Replication.proto";
 import "Snapshot.proto";
 import "AccessControl.proto";
+import "RSGroupAdmin.proto";
 
 /* Column-level protobufs */
 
@@ -1085,6 +1086,24 @@ service MasterService {
   /** returns a list of namespace names */
   rpc ListNamespaces(ListNamespacesRequest)
     returns(ListNamespacesResponse);
+
+  rpc MoveServers(MoveServersRequest)
+    returns (MoveServersResponse);
+
+  rpc AddRSGroup(AddRSGroupRequest)
+    returns (AddRSGroupResponse);
+
+  rpc RemoveRSGroup(RemoveRSGroupRequest)
+    returns (RemoveRSGroupResponse);
+
+  rpc BalanceRSGroup(BalanceRSGroupRequest)
+    returns (BalanceRSGroupResponse);
+
+  rpc ListRSGroupInfos(ListRSGroupInfosRequest)
+    returns (ListRSGroupInfosResponse);
+
+  rpc RemoveServers(RemoveServersRequest)
+    returns (RemoveServersResponse);
 }
 
 // HBCK Service definitions.
