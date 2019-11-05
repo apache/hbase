@@ -1348,6 +1348,11 @@ public final class HConstants {
   // default -1 indicates there is no threshold on high storeRefCount
   public static final int DEFAULT_STORE_FILE_REF_COUNT_THRESHOLD = -1;
 
+  public static final String REGIONS_RECOVERY_INTERVAL =
+    "hbase.master.regions.recovery.check.interval";
+
+  public static final int DEFAULT_REGIONS_RECOVERY_INTERVAL = 1200 * 1000; // Default 20 min
+
   /**
    * Configurations for master executor services.
    */
