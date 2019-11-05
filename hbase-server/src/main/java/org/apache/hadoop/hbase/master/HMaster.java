@@ -305,6 +305,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   private RegionsRecoveryChore regionsRecoveryChore = null;
 
+  private RegionsRecoveryConfigManager regionsRecoveryConfigManager = null;
+
   // buffer for "fatal error" notices from region servers
   // in the cluster. This is only used for assisting
   // operations/debugging.
@@ -912,6 +914,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     configurationManager.registerObserver(this.cleanerPool);
     configurationManager.registerObserver(this.hfileCleaner);
     configurationManager.registerObserver(this.logCleaner);
+    configurationManager.registerObserver(this.regionsRecoveryConfigManager);
 
     // Set master as 'initialized'.
     setInitialized(true);
@@ -1288,6 +1291,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
         LOG.trace("Snapshot Cleaner Chore is disabled. Not starting up the chore..");
       }
     }
+
+    this.regionsRecoveryConfigManager = new RegionsRecoveryConfigManager(this);
 
     serviceStarted = true;
     if (LOG.isTraceEnabled()) {
