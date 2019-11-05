@@ -188,7 +188,7 @@ if [ -d "$HBASE_HOME/hbase-server/target/hbase-webapps" ]; then
 fi
 
 #add the hbase jars for each module
-for f in $HBASE_HOME/hbase-jars/hbase*.jar; do
+for f in $HBASE_HOME/lib/hbase*.jar; do
 	if [[ $f = *sources.jar ]]
   then
     : # Skip sources.jar
