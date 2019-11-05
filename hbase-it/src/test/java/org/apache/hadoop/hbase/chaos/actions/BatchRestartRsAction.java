@@ -21,14 +21,19 @@ package org.apache.hadoop.hbase.chaos.actions;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Restarts a ratio of the running regionservers at the same time
  */
 public class BatchRestartRsAction extends RestartActionBaseAction {
   float ratio; //ratio of regionservers to restart
+  private static final Logger LOG =
+          LoggerFactory.getLogger(BatchRestartRsAction.class);
 
   public BatchRestartRsAction(long sleepTime, float ratio) {
     super(sleepTime);

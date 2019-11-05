@@ -20,10 +20,15 @@ package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Action to dump the cluster status.
  */
 public class DumpClusterStatusAction extends Action {
+  private static final Logger LOG =
+          LoggerFactory.getLogger(DumpClusterStatusAction.class);
 
   @Override
   public void init(ActionContext context) throws IOException {

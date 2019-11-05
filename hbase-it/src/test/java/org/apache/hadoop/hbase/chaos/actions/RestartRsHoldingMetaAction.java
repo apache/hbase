@@ -20,11 +20,16 @@ package org.apache.hadoop.hbase.chaos.actions;
 
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ServerName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
 * Action that tries to restart the HRegionServer holding Meta.
 */
 public class RestartRsHoldingMetaAction extends RestartActionBaseAction {
+  private static final Logger LOG =
+          LoggerFactory.getLogger(RestartRsHoldingMetaAction.class);
+
   public RestartRsHoldingMetaAction(long sleepTime) {
     super(sleepTime);
   }

@@ -21,11 +21,15 @@ package org.apache.hadoop.hbase.chaos.actions;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
 * Action that tries to take a snapshot of a table.
 */
 public class SnapshotTableAction extends Action {
+  private static final Logger LOG =
+          LoggerFactory.getLogger(SnapshotTableAction.class);
   private final TableName tableName;
   private final long sleepTime;
 
