@@ -401,7 +401,7 @@ public class TestWALEntryStream {
     ReplicationSourceManager mockSourceManager = mock(ReplicationSourceManager.class);
     when(mockSourceManager.getTotalBufferUsed()).thenReturn(new AtomicLong(0));
     ReplicationSourceWALReaderThread reader =
-            new ReplicationSourceWALReaderThread(mockSourceManager, getQueueInfo("1-1"),
+            new ReplicationSourceWALReaderThread(mockSourceManager, getRecoveredQueueInfo(),
                     walQueue, 0, fs, conf, getDummyFilter(), new MetricsSource("1"));
     Path walPath = walQueue.toArray(new Path[2])[1];
     reader.start();
@@ -550,6 +550,10 @@ public class TestWALEntryStream {
         return entry;
       }
     };
+  }
+
+  private ReplicationQueueInfo getRecoveredQueueInfo() {
+    return getQueueInfo("1-1");
   }
 
   private ReplicationQueueInfo getQueueInfo() {
