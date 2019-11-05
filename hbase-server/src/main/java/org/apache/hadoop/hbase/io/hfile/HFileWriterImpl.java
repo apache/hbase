@@ -242,15 +242,26 @@ public class HFileWriterImpl implements HFile.Writer {
     }
     if (lastCell != null) {
       int keyComp = PrivateCellUtil.compareKeyIgnoresMvcc(comparator, lastCell, cell);
-
       if (keyComp > 0) {
-        throw new IOException("Added a key not lexically larger than"
-            + " previous. Current cell = " + cell + ", lastCell = " + lastCell);
+        String message = getLexicalErrorMessage(cell);
+        throw new IOException(message);
       } else if (keyComp == 0) {
         isDuplicateKey = true;
       }
     }
     return isDuplicateKey;
+  }
+
+  private String getLexicalErrorMessage(Cell cell) {
+    StringBuilder sb = new StringBuilder();
+    sb.append("Added a key not lexically larger than previous. Current cell = ");
+    sb.append(cell);
+    sb.append(", lastCell = ");
+    sb.append(lastCell);
+    //file context includes HFile path and optionally table and CF of file being written
+    sb.append("fileContext=");
+    sb.append(hFileContext);
+    return sb.toString();
   }
 
   /** Checks the given value for validity. */

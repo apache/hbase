@@ -47,7 +47,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilder;
+import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
@@ -81,6 +84,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -324,6 +328,48 @@ public class TestHFile  {
       return;
     }
     fail("Should have thrown exception");
+  }
+
+  @Test
+  public void testCorruptOutOfOrderHFileWrite() throws IOException {
+    Path path = new Path(ROOT_DIR, testName.getMethodName());
+    FSDataOutputStream mockedOutputStream = Mockito.mock(FSDataOutputStream.class);
+    String columnFamily = "MyColumnFamily";
+    String tableName = "MyTableName";
+    HFileContext fileContext = new HFileContextBuilder()
+        .withHFileName(testName.getMethodName() + "HFile")
+        .withBlockSize(minBlockSize)
+        .withColumnFamily(Bytes.toBytes(columnFamily))
+        .withTableName(Bytes.toBytes(tableName))
+        .withHBaseCheckSum(false)
+        .withCompression(Compression.Algorithm.NONE)
+        .withCompressTags(false)
+        .build();
+    HFileWriterImpl writer = new HFileWriterImpl(conf, cacheConf, path, mockedOutputStream,
+        CellComparator.getInstance(), fileContext);
+    CellBuilder cellBuilder = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
+    byte[] row = Bytes.toBytes("foo");
+    byte[] qualifier = Bytes.toBytes("qualifier");
+    byte[] cf = Bytes.toBytes(columnFamily);
+    byte[] val = Bytes.toBytes("fooVal");
+    long firstTS = 100L;
+    long secondTS = 101L;
+    Cell firstCell = cellBuilder.setRow(row).setValue(val).setTimestamp(firstTS)
+        .setQualifier(qualifier).setFamily(cf).setType(Cell.Type.Put).build();
+    Cell secondCell= cellBuilder.setRow(row).setValue(val).setTimestamp(secondTS)
+        .setQualifier(qualifier).setFamily(cf).setType(Cell.Type.Put).build();
+    //second Cell will sort "higher" than the first because later timestamps should come first
+    writer.append(firstCell);
+    try {
+      writer.append(secondCell);
+    } catch(IOException ie){
+      String message = ie.getMessage();
+      Assert.assertTrue(message.contains("not lexically larger"));
+      Assert.assertTrue(message.contains(tableName));
+      Assert.assertTrue(message.contains(columnFamily));
+      return;
+    }
+    Assert.fail("Exception wasn't thrown even though Cells were appended in the wrong order!");
   }
 
   public static void truncateFile(FileSystem fs, Path src, Path dst) throws IOException {
