@@ -56,7 +56,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 // online. In new master, RSGroupInfoManagerImpl gets the data from zk and waits for the expected
 // assignment with a timeout.
 @Category(MediumTests.class)
-public class TestRSGroupsOfflineMode {
+public class TestRSGroupsOfflineMode extends TestRSGroupsBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -106,7 +106,7 @@ public class TestRSGroupsOfflineMode {
   @Test
   public void testOffline() throws Exception, InterruptedException {
     // Table should be after group table name so it gets assigned later.
-    final TableName failoverTable = TableName.valueOf(name.getMethodName());
+    final TableName failoverTable = TableName.valueOf(getNameWithoutIndex(name.getMethodName()));
     TEST_UTIL.createTable(failoverTable, Bytes.toBytes("f"));
     final HRegionServer killRS = ((MiniHBaseCluster) cluster).getRegionServer(0);
     final HRegionServer groupRS = ((MiniHBaseCluster) cluster).getRegionServer(1);
@@ -139,7 +139,7 @@ public class TestRSGroupsOfflineMode {
       }
     });
     // Move table to group and wait.
-    groupAdmin.moveTables(Sets.newHashSet(RSGroupInfoManagerImpl.RSGROUP_TABLE_NAME), newGroup);
+    groupAdmin.setRSGroup(Sets.newHashSet(RSGroupInfoManagerImpl.RSGROUP_TABLE_NAME), newGroup);
     LOG.info("Waiting for move table...");
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override

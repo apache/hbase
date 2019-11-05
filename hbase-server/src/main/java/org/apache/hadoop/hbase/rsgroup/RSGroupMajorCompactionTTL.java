@@ -19,11 +19,11 @@
 package org.apache.hadoop.hbase.rsgroup;
 
 import java.util.Arrays;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.util.compaction.MajorCompactorTTL;
@@ -31,6 +31,7 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLineParser;
@@ -58,9 +59,9 @@ public class RSGroupMajorCompactionTTL extends MajorCompactorTTL {
       throws Exception {
 
     Connection conn = ConnectionFactory.createConnection(conf);
-    RSGroupAdmin rsGroupAdmin = new RSGroupAdminClient(conn);
+    Admin admin = conn.getAdmin();
 
-    RSGroupInfo rsGroupInfo = rsGroupAdmin.getRSGroupInfo(rsgroup);
+    RSGroupInfo rsGroupInfo = admin.getRSGroup(rsgroup);
     if (rsGroupInfo == null) {
       LOG.error("Invalid rsgroup specified: " + rsgroup);
       throw new IllegalArgumentException("Invalid rsgroup specified: " + rsgroup);

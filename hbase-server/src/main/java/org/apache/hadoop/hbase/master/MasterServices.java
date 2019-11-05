@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfoManager;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
+import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
@@ -545,4 +546,12 @@ public interface MasterServices extends Server {
    * @return the {@link RSGroupInfoManager}
    */
   RSGroupInfoManager getRSGroupInfoManager();
+
+  /**
+   * Queries the state of the {@link LoadBalancerTracker}. If the balancer is not initialized,
+   * false is returned.
+   *
+   * @return The state of the load balancer, or false if the load balancer isn't defined.
+   */
+  boolean isBalancerOn();
 }

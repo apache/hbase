@@ -41,7 +41,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.net.Address;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.VersionInfo;
@@ -52,12 +52,15 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
-@Category({ LargeTests.class })
+@RunWith(Parameterized.class)
+@Category({ MediumTests.class })
 public class TestRSGroupsKillRS extends TestRSGroupsBase {
 
   @ClassRule
@@ -89,7 +92,8 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
   @Test
   public void testKillRS() throws Exception {
     RSGroupInfo appInfo = addGroup("appInfo", 1);
-    final TableName tableName = TableName.valueOf(tablePrefix + "_ns", name.getMethodName());
+    final TableName tableName = TableName.valueOf(tablePrefix + "_ns",
+        getNameWithoutIndex(name.getMethodName()));
     admin.createNamespace(NamespaceDescriptor.create(tableName.getNamespaceAsString())
       .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, appInfo.getName()).build());
     final TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
@@ -129,8 +133,8 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
     });
     Set<Address> newServers = Sets.newHashSet();
     newServers
-      .add(rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().iterator().next());
-    rsGroupAdmin.moveServers(newServers, appInfo.getName());
+      .add(rsGroupAdmin.getRSGroup(RSGroupInfo.DEFAULT_GROUP).getServers().iterator().next());
+    rsGroupAdmin.moveToRSGroup(newServers, appInfo.getName());
 
     // Make sure all the table's regions get reassigned
     // disabling the table guarantees no conflicting assign/unassign (ie SSH) happens
@@ -162,12 +166,12 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
     TEST_UTIL.loadTable(t, Bytes.toBytes("f"));
     Set<TableName> toAddTables = new HashSet<>();
     toAddTables.add(tableName);
-    rsGroupAdmin.moveTables(toAddTables, groupName);
-    assertTrue(rsGroupAdmin.getRSGroupInfo(groupName).getTables().contains(tableName));
+    rsGroupAdmin.setRSGroup(toAddTables, groupName);
+    assertTrue(rsGroupAdmin.getRSGroup(groupName).getTables().contains(tableName));
     TEST_UTIL.waitTableAvailable(tableName, 30000);
 
     // check my_group servers and table regions
-    Set<Address> servers = rsGroupAdmin.getRSGroupInfo(groupName).getServers();
+    Set<Address> servers = rsGroupAdmin.getRSGroup(groupName).getServers();
     assertEquals(2, servers.size());
     LOG.debug("group servers {}", servers);
     for (RegionInfo tr :
@@ -198,7 +202,7 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
 
     // case 1: stop all the regionservers in my_group, and restart a regionserver in my_group,
     // and then check if all table regions are online
-    for(Address addr : rsGroupAdmin.getRSGroupInfo(groupName).getServers()) {
+    for(Address addr : rsGroupAdmin.getRSGroup(groupName).getServers()) {
       TEST_UTIL.getMiniHBaseCluster().stopRegionServer(getServerName(addr));
     }
     // better wait for a while for region reassign
@@ -225,7 +229,7 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
     assertEquals(NUM_SLAVES_BASE - gsn.size(),
         TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size());
     ServerName newServer = master.getServerManager().getOnlineServersList().get(0);
-    rsGroupAdmin.moveServers(Sets.newHashSet(newServer.getAddress()), groupName);
+    rsGroupAdmin.moveToRSGroup(Sets.newHashSet(newServer.getAddress()), groupName);
     // wait and check if table regions are online
     TEST_UTIL.waitTableAvailable(tableName, 30000);
   }
@@ -240,14 +244,14 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
     // move hbase:meta to meta_group
     Set<TableName> toAddTables = new HashSet<>();
     toAddTables.add(TableName.META_TABLE_NAME);
-    rsGroupAdmin.moveTables(toAddTables, groupName);
-    assertTrue(
-        rsGroupAdmin.getRSGroupInfo(groupName).getTables().contains(TableName.META_TABLE_NAME));
+    rsGroupAdmin.setRSGroup(toAddTables, groupName);
+    assertTrue(rsGroupAdmin.getRSGroup(groupName).getTables().contains(TableName.META_TABLE_NAME));
+    TEST_UTIL.waitTableAvailable(tableName, 30000);
 
     // restart the regionserver in meta_group, and lower its version
     String originVersion = "";
     Set<Address> servers = new HashSet<>();
-    for(Address addr : rsGroupAdmin.getRSGroupInfo(groupName).getServers()) {
+    for(Address addr : rsGroupAdmin.getRSGroup(groupName).getServers()) {
       servers.add(addr);
       TEST_UTIL.getMiniHBaseCluster().stopRegionServer(getServerName(addr));
       originVersion = master.getRegionServerVersion(getServerName(addr));
