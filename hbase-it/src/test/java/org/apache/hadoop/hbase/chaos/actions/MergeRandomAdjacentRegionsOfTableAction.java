@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
  */
 public class MergeRandomAdjacentRegionsOfTableAction extends Action {
   private static final Logger LOG =
-          LoggerFactory.getLogger(MergeRandomAdjacentRegionsOfTableAction.class);
+        LoggerFactory.getLogger(MergeRandomAdjacentRegionsOfTableAction.class);
   private final TableName tableName;
   private final long sleepTime;
 

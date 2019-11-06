@@ -26,7 +26,7 @@ import org.slf4j.LoggerFactory;
 */
 public class ForceBalancerAction extends Action {
   private static final Logger LOG =
-          LoggerFactory.getLogger(ForceBalancerAction.class);
+        LoggerFactory.getLogger(ForceBalancerAction.class);
 
   @Override
   public void perform() throws Exception {

@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
 */
 public class RestartRsHoldingTableAction extends RestartActionBaseAction {
   private static final Logger LOG =
-          LoggerFactory.getLogger(RestartRsHoldingTableAction.class);
+        LoggerFactory.getLogger(RestartRsHoldingTableAction.class);
 
   private final RegionLocator locator;
 

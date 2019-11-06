@@ -37,7 +37,7 @@ public class CompactRandomRegionOfTableAction extends Action {
   private final long sleepTime;
   private final TableName tableName;
   private static final Logger LOG =
-          LoggerFactory.getLogger(CompactRandomRegionOfTableAction.class);
+        LoggerFactory.getLogger(CompactRandomRegionOfTableAction.class);
 
   public CompactRandomRegionOfTableAction(
       TableName tableName, float majorRatio) {

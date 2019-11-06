@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory;
  */
 public class RollingBatchSuspendResumeRsAction extends Action {
   private static final Logger LOG =
-      LoggerFactory.getLogger(RollingBatchSuspendResumeRsAction.class);
+        LoggerFactory.getLogger(RollingBatchSuspendResumeRsAction.class);
   private float ratio;
   private long sleepTime;
   private int maxSuspendedServers; // number of maximum suspended servers at any given time.

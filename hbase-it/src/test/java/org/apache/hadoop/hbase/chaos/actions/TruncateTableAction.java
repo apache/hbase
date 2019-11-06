@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
  */
 public class TruncateTableAction extends Action {
   private static final Logger LOG =
-          LoggerFactory.getLogger(TruncateTableAction.class);
+        LoggerFactory.getLogger(TruncateTableAction.class);
   private final TableName tableName;
   private final Random random;
 

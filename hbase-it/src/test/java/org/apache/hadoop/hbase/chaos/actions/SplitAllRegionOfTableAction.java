@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
 
 public class SplitAllRegionOfTableAction extends Action {
   private static final Logger LOG =
-          LoggerFactory.getLogger(SplitAllRegionOfTableAction.class);
+        LoggerFactory.getLogger(SplitAllRegionOfTableAction.class);
   private static final int DEFAULT_MAX_SPLITS = 3;
   private static final String MAX_SPLIT_KEY = "hbase.chaosmonkey.action.maxFullTableSplits";
 

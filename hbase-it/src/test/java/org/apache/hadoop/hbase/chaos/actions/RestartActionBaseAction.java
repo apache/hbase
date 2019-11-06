@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
 */
 public class RestartActionBaseAction extends Action {
   private static final Logger LOG =
-          LoggerFactory.getLogger(RestartActionBaseAction.class);
+        LoggerFactory.getLogger(RestartActionBaseAction.class);
   long sleepTime; // how long should we sleep
 
   public RestartActionBaseAction(long sleepTime) {

@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
 */
 public class FlushTableAction extends Action {
   private static final Logger LOG =
-          LoggerFactory.getLogger(FlushTableAction.class);
+        LoggerFactory.getLogger(FlushTableAction.class);
   private final long sleepTime;
   private final TableName tableName;
 

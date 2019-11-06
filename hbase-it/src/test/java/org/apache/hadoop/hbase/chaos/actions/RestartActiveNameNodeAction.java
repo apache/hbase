@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory;
  */
 public class RestartActiveNameNodeAction extends RestartActionBaseAction {
   private static final Logger LOG =
-          LoggerFactory.getLogger(RestartActiveNameNodeAction.class);
+        LoggerFactory.getLogger(RestartActiveNameNodeAction.class);
 
   // Value taken from org.apache.hadoop.ha.ActiveStandbyElector.java, variable :- LOCK_FILENAME
   private static final String ACTIVE_NN_LOCK_NAME = "ActiveStandbyElectorLock";
