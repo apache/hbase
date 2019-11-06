@@ -89,7 +89,7 @@ public class TestMobCompaction {
   private HTableDescriptor hdt;
   private HColumnDescriptor hcd;
   private Admin admin;
-  private long count = 5000000;
+  private long count = 100000;
   private double failureProb = 0.1;
   private Table table = null;
   private MobFileCleanerChore chore = new MobFileCleanerChore();

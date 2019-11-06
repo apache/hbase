@@ -76,8 +76,6 @@ public class MobFileCleanerChore extends ScheduledChore {
     this.master = master;
     cleaner = new ExpiredMobFileCleaner();
     cleaner.setConf(master.getConfiguration());
-    this.minAgeToArchive = master.getConfiguration().getLong(MobConstants.MIN_AGE_TO_ARCHIVE_KEY, 
-      MobConstants.DEFAULT_MIN_AGE_TO_ARCHIVE);
     checkObsoleteConfigurations();
   }
   
@@ -138,6 +136,8 @@ public class MobFileCleanerChore extends ScheduledChore {
   public void cleanupObsoleteMobFiles(Configuration conf, TableName table)
       throws IOException {
 
+    this.minAgeToArchive = conf.getLong(MobConstants.MIN_AGE_TO_ARCHIVE_KEY, 
+      MobConstants.DEFAULT_MIN_AGE_TO_ARCHIVE);
     try (final Connection conn = ConnectionFactory.createConnection(conf);
         final Admin admin = conn.getAdmin();) {
       TableDescriptor htd = admin.getDescriptor(table);
