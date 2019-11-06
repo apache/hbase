@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * <p>
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -105,10 +105,10 @@ public class StressAssignmentManagerMonkeyFactory extends MonkeyFactory {
         MonkeyConstants.GRACEFUL_RESTART_RS_SLEEP_TIME,
         MonkeyConstants.DEFAULT_GRACEFUL_RESTART_RS_SLEEP_TIME + ""));
     rollingBatchSuspendRSSleepTime = Long.parseLong(this.properties.getProperty(
-        MonkeyConstants.ROLLING_BATCH_RESTART_RS_SLEEP_TIME,
-        MonkeyConstants.DEFAULT_ROLLING_BATCH_RESTART_RS_SLEEP_TIME + ""));
+        MonkeyConstants.ROLLING_BATCH_SUSPEND_RS_SLEEP_TIME,
+        MonkeyConstants.DEFAULT_ROLLING_BATCH_SUSPEND_RS_SLEEP_TIME+ ""));
     rollingBatchSuspendtRSRatio = Float.parseFloat(this.properties.getProperty(
-        MonkeyConstants.ROLLING_BATCH_RESTART_RS_RATIO,
-        MonkeyConstants.DEFAULT_ROLLING_BATCH_RESTART_RS_RATIO + ""));
+        MonkeyConstants.ROLLING_BATCH_SUSPEND_RS_RATIO,
+        MonkeyConstants.DEFAULT_ROLLING_BATCH_SUSPEND_RS_RATIO + ""));
   }
 }
