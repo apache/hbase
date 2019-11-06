@@ -23,9 +23,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.master.MobFileCompactionChore;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -36,8 +34,7 @@ import org.slf4j.LoggerFactory;
 
 /**
   * Mob file compaction chore in batch mode test.
-  * 1. Enables batch mode for regular MOB compaction, 
-  *    Sets batch size to 7 regions.
+  * 1. Use default (non-batch) mode for regular MOB compaction, 
   * 2. Disables periodic MOB compactions, sets minimum age to archive to 10 sec   
   * 3. Creates MOB table with 20 regions
   * 4. Loads MOB data (randomized keys, 1000 rows), flushes data.
@@ -52,45 +49,32 @@ import org.slf4j.LoggerFactory;
  */
 @SuppressWarnings("deprecation")
 @Category(LargeTests.class)
-public class TestMobCompactionRegionBatchMode extends TestMobCompactionBase{
+public class TestMobCompactionRegularMode extends TestMobCompactionBase{
   private static final Logger LOG = 
-      LoggerFactory.getLogger(TestMobCompactionRegionBatchMode.class);
+      LoggerFactory.getLogger(TestMobCompactionRegularMode.class);
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMobCompactionRegionBatchMode.class);
+      HBaseClassTestRule.forClass(TestMobCompactionRegularMode.class);
   @Rule
   public TestName testName = new TestName();
 
-  private int batchSize = 7;
-  private MobFileCompactionChore compactionChore;
 
-  public TestMobCompactionRegionBatchMode() {
+  public TestMobCompactionRegularMode() {
   }
  
-  @Before
-  public void setUp() throws Exception {
-    super.setUp();
-    compactionChore = new MobFileCompactionChore(conf, batchSize);
-  }
-
-  protected void initConf() {
-    super.initConf();
-    conf.setInt(MobConstants.MOB_MAJOR_COMPACTION_REGION_BATCH_SIZE, batchSize);
-  }
-
   @Test
   public void testMobFileCompactionBatchMode() throws InterruptedException, IOException {
-    LOG.info("MOB compaction chore batch mode started");
+    LOG.info("MOB compaction regular mode started");
     baseTestMobFileCompaction();
-    LOG.info("MOB compaction chore batch mode finished OK");
+    LOG.info("MOB compaction regular mode finished OK");
  
   }
 
   @Override
   protected void mobCompact(Admin admin, HTableDescriptor hdt, HColumnDescriptor hcd)
       throws IOException, InterruptedException {
-    // Major compact with batch mode enabled
-    compactionChore.performMajorCompactionInBatches(admin, hdt, hcd);    
+    // Major compact MOB table
+    admin.majorCompact(hdt.getTableName(), hcd.getName());    
   }
   
 }
