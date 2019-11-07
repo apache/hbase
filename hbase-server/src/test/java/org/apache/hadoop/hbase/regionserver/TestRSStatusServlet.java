@@ -110,7 +110,7 @@ public class TestRSStatusServlet {
 
     MetricsRegionServer rms = Mockito.mock(MetricsRegionServer.class);
     Mockito.doReturn(new MetricsRegionServerWrapperStub()).when(rms).getRegionServerWrapper();
-    Mockito.doReturn(rms).when(rs).getRegionServerMetrics();
+    Mockito.doReturn(rms).when(rs).getMetrics();
 
     MetricsHBaseServer ms = Mockito.mock(MetricsHBaseServer.class);
     Mockito.doReturn(new MetricsHBaseServerWrapperStub()).when(ms).getHBaseServerWrapper();
