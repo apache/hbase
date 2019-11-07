@@ -294,13 +294,6 @@ dependencies.
 [[load_coprocessor_in_shell]]
 ==== Using HBase Shell
 
-. Disable the table using HBase Shell:
-+
-[source]
-----
-hbase> disable 'users'
-----
-
 . Load the Coprocessor, using a command like the following:
 +
 [source]
@@ -330,12 +323,6 @@ observers registered at the same hook using priorities. This field can be left b
 case the framework will assign a default priority value.
 * Arguments (Optional): This field is passed to the Coprocessor implementation. This is optional.
 
-. Enable the table.
-+
-----
-hbase(main):003:0> enable 'users'
-----
-
 . Verify that the coprocessor loaded:
 +
 ----
@@ -356,7 +343,6 @@ String path = "hdfs://<namenode>:<port>/user/<hadoop-user>/coprocessor.jar";
 Configuration conf = HBaseConfiguration.create();
 Connection connection = ConnectionFactory.createConnection(conf);
 Admin admin = connection.getAdmin();
-admin.disableTable(tableName);
 HTableDescriptor hTableDescriptor = new HTableDescriptor(tableName);
 HColumnDescriptor columnFamily1 = new HColumnDescriptor("personalDet");
 columnFamily1.setMaxVersions(3);
@@ -368,7 +354,6 @@ hTableDescriptor.setValue("COPROCESSOR$1", path + "|"
 + RegionObserverExample.class.getCanonicalName() + "|"
 + Coprocessor.PRIORITY_USER);
 admin.modifyTable(tableName, hTableDescriptor);
-admin.enableTable(tableName);
 ----
 
 ==== Using the Java API (HBase 0.96+ only)
@@ -383,7 +368,6 @@ Path path = new Path("hdfs://<namenode>:<port>/user/<hadoop-user>/coprocessor.ja
 Configuration conf = HBaseConfiguration.create();
 Connection connection = ConnectionFactory.createConnection(conf);
 Admin admin = connection.getAdmin();
-admin.disableTable(tableName);
 HTableDescriptor hTableDescriptor = new HTableDescriptor(tableName);
 HColumnDescriptor columnFamily1 = new HColumnDescriptor("personalDet");
 columnFamily1.setMaxVersions(3);
@@ -394,7 +378,6 @@ hTableDescriptor.addFamily(columnFamily2);
 hTableDescriptor.addCoprocessor(RegionObserverExample.class.getCanonicalName(), path,
 Coprocessor.PRIORITY_USER, null);
 admin.modifyTable(tableName, hTableDescriptor);
-admin.enableTable(tableName);
 ----
 
 WARNING: There is no guarantee that the framework will load a given Coprocessor successfully.
@@ -406,25 +389,11 @@ verifies whether the given class is actually contained in the jar file.
 
 ==== Using HBase Shell
 
-. Disable the table.
-+
-[source]
-----
-hbase> disable 'users'
-----
-
 . Alter the table to remove the coprocessor.
 +
 [source]
 ----
 hbase> alter 'users', METHOD => 'table_att_unset', NAME => 'coprocessor$1'
-----
-
-. Enable the table.
-+
-[source]
-----
-hbase> enable 'users'
 ----
 
 ==== Using the Java API
@@ -440,7 +409,6 @@ String path = "hdfs://<namenode>:<port>/user/<hadoop-user>/coprocessor.jar";
 Configuration conf = HBaseConfiguration.create();
 Connection connection = ConnectionFactory.createConnection(conf);
 Admin admin = connection.getAdmin();
-admin.disableTable(tableName);
 HTableDescriptor hTableDescriptor = new HTableDescriptor(tableName);
 HColumnDescriptor columnFamily1 = new HColumnDescriptor("personalDet");
 columnFamily1.setMaxVersions(3);
@@ -449,7 +417,6 @@ HColumnDescriptor columnFamily2 = new HColumnDescriptor("salaryDet");
 columnFamily2.setMaxVersions(3);
 hTableDescriptor.addFamily(columnFamily2);
 admin.modifyTable(tableName, hTableDescriptor);
-admin.enableTable(tableName);
 ----
 
 In HBase 0.96 and newer, you can instead use the `removeCoprocessor()` method of the

@@ -59,11 +59,9 @@ attribute can have one of four values.
  * _EAGER_: This is _BASIC_ policy plus in-memory compaction of flushes (much like the on-disk compactions done to hfiles); on compaction we apply on-disk rules eliminating versions, duplicates, ttl'd cells, etc.
  * _ADAPTIVE_: Adaptive compaction adapts to the workload. It applies either index compaction or data compaction based on the ratio of duplicate cells in the data.  Experimental.
 
-To enable _BASIC_ on the _info_ column family in the table _radish_, disable the table and add the attribute to the _info_ column family, and then reenable:
+To enable _BASIC_ on the _info_ column family in the table _radish_, add the attribute to the _info_ column family:
 [source,ruby]
 ----
-hbase(main):002:0> disable 'radish'
-Took 0.5570 seconds
 hbase(main):003:0> alter 'radish', {NAME => 'info', IN_MEMORY_COMPACTION => 'BASIC'}
 Updating all regions with the new schema...
 All regions updated.
@@ -77,8 +75,6 @@ COLUMN FAMILIES DESCRIPTION
 'IN_MEMORY_COMPACTION' => 'BASIC'}}
 1 row(s)
 Took 0.0239 seconds
-hbase(main):005:0> enable 'radish'
-Took 0.7537 seconds
 ----
 Note how the IN_MEMORY_COMPACTION attribute shows as part of the _METADATA_ map.
 
