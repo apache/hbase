@@ -23,13 +23,18 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.junit.Assert;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** This action is too specific to put in ChaosMonkey; put it here */
 public class UnbalanceKillAndRebalanceAction extends Action {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(UnbalanceKillAndRebalanceAction.class);
   /** Fractions of servers to get regions and live and die respectively; from all other
    * servers, HOARD_FRC_OF_REGIONS will be removed to the above randomly */
   private static final double FRC_SERVERS_THAT_HOARD_AND_LIVE = 0.1;
