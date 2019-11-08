@@ -25,6 +25,8 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Action the adds a column family to a table.
@@ -32,6 +34,7 @@ import org.apache.hadoop.hbase.client.Admin;
 public class AddColumnAction extends Action {
   private final TableName tableName;
   private Admin admin;
+  private static final Logger LOG = LoggerFactory.getLogger(AddColumnAction.class);
 
   public AddColumnAction(TableName tableName) {
     this.tableName = tableName;

@@ -26,6 +26,8 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Action that tries to adjust the bloom filter setting on all the columns of a
@@ -34,6 +36,7 @@ import org.apache.hadoop.hbase.regionserver.BloomType;
 public class ChangeBloomFilterAction extends Action {
   private final long sleepTime;
   private final TableName tableName;
+  private static final Logger LOG = LoggerFactory.getLogger(ChangeBloomFilterAction.class);
 
   public ChangeBloomFilterAction(TableName tableName) {
     this(-1, tableName);

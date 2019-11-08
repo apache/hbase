@@ -26,6 +26,8 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Action that changes the encoding on a column family from a list of tables.
@@ -35,6 +37,7 @@ public class ChangeEncodingAction extends Action {
 
   private Admin admin;
   private Random random;
+  private static final Logger LOG = LoggerFactory.getLogger(ChangeEncodingAction.class);
 
   public ChangeEncodingAction(TableName tableName) {
     this.tableName = tableName;

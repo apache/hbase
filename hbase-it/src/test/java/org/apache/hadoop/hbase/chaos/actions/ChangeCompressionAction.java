@@ -27,6 +27,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.io.compress.Compressor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Action that changes the compression algorithm on a column family from a list of tables.
@@ -36,6 +38,7 @@ public class ChangeCompressionAction extends Action {
 
   private Admin admin;
   private Random random;
+  private static final Logger LOG = LoggerFactory.getLogger(ChangeCompressionAction.class);
 
   public ChangeCompressionAction(TableName tableName) {
     this.tableName = tableName;
