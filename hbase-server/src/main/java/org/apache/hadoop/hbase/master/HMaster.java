@@ -386,6 +386,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   /** jetty server for master to redirect requests to regionserver infoServer */
   private org.mortbay.jetty.Server masterJettyServer;
 
+  // Cached clusterId on stand by masters to serve clusterID requests from clients.
+  private final CachedClusterId cachedClusterId;
+
   public static class RedirectServlet extends HttpServlet {
     private static final long serialVersionUID = 2894774810058302473L;
     private final int regionServerInfoPort;
@@ -521,6 +524,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     } else {
       activeMasterManager = null;
     }
+    cachedClusterId = new CachedClusterId(conf);
   }
 
   // return the actual infoPort, -1 means disable info server.
@@ -3428,5 +3432,12 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       }
     }
     return replicationLoadSourceMap;
+  }
+
+  public String getClusterId() {
+    if (activeMaster) {
+      return super.getClusterId();
+    }
+    return cachedClusterId.getFromCacheOrFetch();
   }
 }
