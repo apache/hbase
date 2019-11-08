@@ -26,6 +26,8 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.client.Admin;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Region that queues a compaction of a random region from the table.
@@ -34,6 +36,8 @@ public class CompactRandomRegionOfTableAction extends Action {
   private final int majorRatio;
   private final long sleepTime;
   private final TableName tableName;
+  private static final Logger LOG =
+      LoggerFactory.getLogger(CompactRandomRegionOfTableAction.class);
 
   public CompactRandomRegionOfTableAction(
       TableName tableName, float majorRatio) {

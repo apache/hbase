@@ -32,8 +32,9 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Restarts a ratio of the regionservers in a rolling fashion. At each step, either kills a
- * server, or starts one, sleeping randomly (0-sleepTime) in between steps. The parameter maxDeadServers
- * limits the maximum number of servers that can be down at the same time during rolling restarts.
+ * server, or starts one, sleeping randomly (0-sleepTime) in between steps.
+ * The parameter maxDeadServers limits the maximum number of servers that
+ * can be down at the same time during rolling restarts.
  */
 public class RollingBatchRestartRsAction extends BatchRestartRsAction {
   private static final Logger LOG = LoggerFactory.getLogger(RollingBatchRestartRsAction.class);
@@ -81,27 +82,27 @@ public class RollingBatchRestartRsAction extends BatchRestartRsAction {
       ServerName server;
 
       switch (action) {
-      case KILL:
-         server = serversToBeKilled.remove();
-        try {
-          killRs(server);
-        } catch (org.apache.hadoop.util.Shell.ExitCodeException e) {
-          // We've seen this in test runs where we timeout but the kill went through. HBASE-9743
-          // So, add to deadServers even if exception so the start gets called.
-          LOG.info("Problem killing but presume successful; code=" + e.getExitCode(), e);
-        }
-        deadServers.add(server);
-        break;
-      case START:
-        try {
-          server = deadServers.remove();
-          startRs(server);
-        } catch (org.apache.hadoop.util.Shell.ExitCodeException e) {
-          // The start may fail but better to just keep going though we may lose server.
-          //
-          LOG.info("Problem starting, will retry; code=" + e.getExitCode(), e);
-        }
-        break;
+        case KILL:
+          server = serversToBeKilled.remove();
+          try {
+            killRs(server);
+          } catch (org.apache.hadoop.util.Shell.ExitCodeException e) {
+            // We've seen this in test runs where we timeout but the kill went through. HBASE-9743
+            // So, add to deadServers even if exception so the start gets called.
+            LOG.info("Problem killing but presume successful; code=" + e.getExitCode(), e);
+          }
+          deadServers.add(server);
+          break;
+        case START:
+          try {
+            server = deadServers.remove();
+            startRs(server);
+          } catch (org.apache.hadoop.util.Shell.ExitCodeException e) {
+            // The start may fail but better to just keep going though we may lose server.
+            //
+            LOG.info("Problem starting, will retry; code=" + e.getExitCode(), e);
+          }
+          break;
       }
 
       sleep(RandomUtils.nextInt(0, (int)sleepTime));

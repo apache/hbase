@@ -21,14 +21,19 @@ package org.apache.hadoop.hbase.chaos.actions;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ServerName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
 * Action that tries to unbalance the regions of a cluster.
 */
 public class UnbalanceRegionsAction extends Action {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(UnbalanceRegionsAction.class);
   private double fractionOfRegions;
   private double fractionOfServers;
 
