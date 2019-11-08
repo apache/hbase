@@ -1310,7 +1310,12 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
             compressedBlock.release();
           }
         }
-        validateBlockType(cachedBlock, expectedBlockType);
+        try {
+          validateBlockType(cachedBlock, expectedBlockType);
+        } catch (IOException e) {
+          returnAndEvictBlock(cache, cacheKey, cachedBlock);
+          throw e;
+        }
 
         if (expectedDataBlockEncoding == null) {
           return cachedBlock;
@@ -1344,8 +1349,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
                 + expectedDataBlockEncoding + ", actual: " + actualDataBlockEncoding + ", path="
                 + path);
             // This is an error scenario. so here we need to release the block.
-            cachedBlock.release();
-            cache.evictBlock(cacheKey);
+            returnAndEvictBlock(cache, cacheKey, cachedBlock);
           }
           return null;
         }
@@ -1353,6 +1357,11 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       }
     }
     return null;
+  }
+
+  private void returnAndEvictBlock(BlockCache cache, BlockCacheKey cacheKey, Cacheable block) {
+    block.release();
+    cache.evictBlock(cacheKey);
   }
 
   /**
@@ -1484,7 +1493,9 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
               // type in the cache key, and we expect it to match on a cache hit.
               if (cachedBlock.getDataBlockEncoding() != dataBlockEncoder.getDataBlockEncoding()) {
                 // Remember to release the block when in exceptional path.
-                cachedBlock.release();
+                cacheConf.getBlockCache().ifPresent(cache -> {
+                  returnAndEvictBlock(cache, cacheKey, cachedBlock);
+                });
                 throw new IOException("Cached block under key " + cacheKey + " "
                     + "has wrong encoding: " + cachedBlock.getDataBlockEncoding() + " (expected: "
                     + dataBlockEncoder.getDataBlockEncoding() + "), path=" + path);
