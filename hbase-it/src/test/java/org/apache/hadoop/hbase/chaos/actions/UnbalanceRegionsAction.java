@@ -33,7 +33,7 @@ import org.slf4j.LoggerFactory;
 */
 public class UnbalanceRegionsAction extends Action {
   private static final Logger LOG =
-        LoggerFactory.getLogger(UnbalanceRegionsAction.class);
+      LoggerFactory.getLogger(UnbalanceRegionsAction.class);
   private double fractionOfRegions;
   private double fractionOfServers;
 

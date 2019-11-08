@@ -33,7 +33,7 @@ import org.slf4j.LoggerFactory;
 public class BatchRestartRsAction extends RestartActionBaseAction {
   float ratio; //ratio of regionservers to restart
   private static final Logger LOG =
-        LoggerFactory.getLogger(BatchRestartRsAction.class);
+      LoggerFactory.getLogger(BatchRestartRsAction.class);
 
   public BatchRestartRsAction(long sleepTime, float ratio) {
     super(sleepTime);

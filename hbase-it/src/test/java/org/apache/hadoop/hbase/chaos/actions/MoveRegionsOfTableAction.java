@@ -37,7 +37,7 @@ import org.slf4j.LoggerFactory;
 */
 public class MoveRegionsOfTableAction extends Action {
   private static final Logger LOG =
-        LoggerFactory.getLogger(MoveRegionsOfTableAction.class);
+      LoggerFactory.getLogger(MoveRegionsOfTableAction.class);
   private final long sleepTime;
   private final TableName tableName;
   private final long maxTime;

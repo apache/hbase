@@ -28,7 +28,7 @@ import org.slf4j.LoggerFactory;
 */
 public class RestartRsHoldingMetaAction extends RestartActionBaseAction {
   private static final Logger LOG =
-        LoggerFactory.getLogger(RestartRsHoldingMetaAction.class);
+      LoggerFactory.getLogger(RestartRsHoldingMetaAction.class);
 
   public RestartRsHoldingMetaAction(long sleepTime) {
     super(sleepTime);

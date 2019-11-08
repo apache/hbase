@@ -28,7 +28,7 @@ import org.slf4j.LoggerFactory;
  */
 public class DumpClusterStatusAction extends Action {
   private static final Logger LOG =
-        LoggerFactory.getLogger(DumpClusterStatusAction.class);
+      LoggerFactory.getLogger(DumpClusterStatusAction.class);
 
   @Override
   public void init(ActionContext context) throws IOException {

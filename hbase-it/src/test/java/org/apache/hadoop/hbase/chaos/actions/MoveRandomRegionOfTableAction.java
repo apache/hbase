@@ -33,7 +33,7 @@ import org.slf4j.LoggerFactory;
 */
 public class MoveRandomRegionOfTableAction extends Action {
   private static final Logger LOG =
-        LoggerFactory.getLogger(MoveRandomRegionOfTableAction.class);
+      LoggerFactory.getLogger(MoveRandomRegionOfTableAction.class);
   private final long sleepTime;
   private final TableName tableName;
 

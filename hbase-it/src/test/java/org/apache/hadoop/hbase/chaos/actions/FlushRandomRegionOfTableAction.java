@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
 */
 public class FlushRandomRegionOfTableAction extends Action {
   private static final Logger LOG =
-        LoggerFactory.getLogger(FlushRandomRegionOfTableAction.class);
+      LoggerFactory.getLogger(FlushRandomRegionOfTableAction.class);
   private final long sleepTime;
   private final TableName tableName;
 

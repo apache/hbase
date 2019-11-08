@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
 */
 public class SnapshotTableAction extends Action {
   private static final Logger LOG =
-        LoggerFactory.getLogger(SnapshotTableAction.class);
+      LoggerFactory.getLogger(SnapshotTableAction.class);
   private final TableName tableName;
   private final long sleepTime;
 
