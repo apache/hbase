@@ -101,7 +101,7 @@ public class SplitWALCallable implements RSProcedureCallable {
 
   private void splitWal() throws IOException {
     SplitLogWorker.TaskExecutor.Status status =
-        SplitLogWorker.splitLog(walPath, null, rs.getConfiguration(), rs, rs, rs.walFactory);
+        SplitLogWorker.splitLog(walPath, null, rs.getConfiguration(), rs, rs, rs.getWalFactory());
     if (status != SplitLogWorker.TaskExecutor.Status.DONE) {
       throw new IOException("Split WAL " + walPath + " failed at server ");
     }
