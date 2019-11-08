@@ -25,6 +25,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -58,9 +59,15 @@ import org.apache.hadoop.hbase.thrift.generated.TIncrement;
 import org.apache.hadoop.hbase.thrift.generated.TRegionInfo;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.thrift.generated.TScan;
+import org.apache.hadoop.hbase.thrift.generated.TThriftServerType;
+import org.apache.hadoop.hbase.thrift2.HBaseThrift2TestingUtility;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.TableDescriptorChecker;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.thrift.protocol.TBinaryProtocol;
+import org.apache.thrift.protocol.TProtocol;
+import org.apache.thrift.transport.TSocket;
+import org.apache.thrift.transport.TTransport;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -870,5 +877,33 @@ public class TestThriftServer {
       int scannerId, ThriftHBaseServiceHandler handler) throws Exception {
     handler.scannerGet(scannerId);
     handler.scannerClose(scannerId);
+  }
+
+  @Test
+  public void testGetThriftServerType() throws Exception {
+    ThriftHBaseServiceHandler handler =
+        new ThriftHBaseServiceHandler(UTIL.getConfiguration(),
+            UserProvider.instantiate(UTIL.getConfiguration()));
+    assertEquals(TThriftServerType.ONE, handler.getThriftServerType());
+  }
+
+  @Test
+  public void testGetThriftServerOneType() throws Exception {
+    // start a thrift2 server
+    HBaseThrift2TestingUtility THRIFT2_TEST_UTIL =
+        new HBaseThrift2TestingUtility();
+
+    LOG.info("Starting HBase Thrift Server Two");
+    THRIFT2_TEST_UTIL.startThriftServer(UTIL.getConfiguration());
+    try (TTransport transport = new TSocket(InetAddress.getLocalHost().getHostName(),
+        THRIFT2_TEST_UTIL.getServerPort())){
+      TProtocol protocol = new TBinaryProtocol(transport);
+      // This is our thrift client.
+      Hbase.Client client = new Hbase.Client(protocol);
+      // open the transport
+      transport.open();
+      assertEquals(TThriftServerType.TWO.name(), client.getThriftServerType().name());
+    }
+    THRIFT2_TEST_UTIL.stopThriftServer();
   }
 }

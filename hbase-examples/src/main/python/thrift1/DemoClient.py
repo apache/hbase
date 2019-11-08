@@ -66,6 +66,11 @@ def demo_client(host, port, is_framed_transport):
   # Connect!
   transport.open()
 
+  # Check Thrift Server Type
+  serverType = client.getThriftServerType()
+  if serverType != 1:
+    raise Exception("Mismatch between client and server, server type is %s" %serverType)
+
   t = "demo_table"
 
   #
