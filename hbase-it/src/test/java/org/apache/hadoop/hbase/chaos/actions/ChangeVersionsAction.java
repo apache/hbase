@@ -25,6 +25,8 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Action that changes the number of versions on a column family from a list of tables.
@@ -33,6 +35,7 @@ import org.apache.hadoop.hbase.client.Admin;
  */
 public class ChangeVersionsAction extends Action {
   private final TableName tableName;
+  private static final Logger LOG = LoggerFactory.getLogger(ChangeVersionsAction.class);
 
   private Admin admin;
   private Random random;

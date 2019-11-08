@@ -22,6 +22,8 @@ import org.apache.commons.lang.math.RandomUtils;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Action that queues a table compaction.
@@ -30,6 +32,7 @@ public class CompactTableAction extends Action {
   private final TableName tableName;
   private final int majorRatio;
   private final long sleepTime;
+  private static final Logger LOG = LoggerFactory.getLogger(CompactTableAction.class);
 
   public CompactTableAction(TableName tableName, float majorRatio) {
     this(-1, tableName, majorRatio);
