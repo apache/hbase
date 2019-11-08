@@ -66,7 +66,7 @@ public class Action {
   public static final String START_DATANODE_TIMEOUT_KEY =
     "hbase.chaosmonkey.action.startdatanodetimeout";
 
-  protected static final Logger LOG = LoggerFactory.getLogger(Action.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Action.class);
 
   protected static final long KILL_MASTER_TIMEOUT_DEFAULT = PolicyBasedChaosMonkey.TIMEOUT;
   protected static final long START_MASTER_TIMEOUT_DEFAULT = PolicyBasedChaosMonkey.TIMEOUT;
@@ -248,9 +248,11 @@ public class Action {
   }
 
   /**
-   * Apply a transform to all columns in a given table. If there are no columns in a table or if the context is stopping does nothing.
+   * Apply a transform to all columns in a given table. If there are no columns in a table
+   * or if the context is stopping does nothing.
    * @param tableName the table to modify
-   * @param transform the modification to perform. Callers will have the column name as a string and a column family builder available to them
+   * @param transform the modification to perform. Callers will have the
+   *                  column name as a string and a column family builder available to them
    */
   protected void modifyAllTableColumns(TableName tableName, BiConsumer<String, ColumnFamilyDescriptorBuilder> transform) throws IOException {
     HBaseTestingUtility util = this.context.getHBaseIntegrationTestingUtility();
@@ -278,7 +280,8 @@ public class Action {
   }
 
   /**
-   * Apply a transform to all columns in a given table. If there are no columns in a table or if the context is stopping does nothing.
+   * Apply a transform to all columns in a given table.
+   * If there are no columns in a table or if the context is stopping does nothing.
    * @param tableName the table to modify
    * @param transform the modification to perform on each column family descriptor builder
    */
