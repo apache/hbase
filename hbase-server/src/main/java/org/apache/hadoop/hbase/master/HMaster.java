@@ -444,6 +444,9 @@ public class HMaster extends HRegionServer implements MasterServices {
   private final boolean maintenanceMode;
   static final String MAINTENANCE_MODE = "hbase.master.maintenance_mode";
 
+  // Cached clusterId on stand by masters to serve clusterID requests from clients.
+  private final CachedClusterId cachedClusterId;
+
   public static class RedirectServlet extends HttpServlet {
     private static final long serialVersionUID = 2894774810058302473L;
     private final int regionServerInfoPort;
@@ -564,6 +567,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       } else {
         this.activeMasterManager = null;
       }
+      cachedClusterId = new CachedClusterId(conf);
     } catch (Throwable t) {
       // Make sure we log the exception. HMaster is often started via reflection and the
       // cause of failed startup is lost.
@@ -3790,5 +3794,12 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   public SnapshotQuotaObserverChore getSnapshotQuotaObserverChore() {
     return this.snapshotQuotaChore;
+  }
+
+  public String getClusterId() {
+    if (activeMaster) {
+      return super.getClusterId();
+    }
+    return cachedClusterId.getFromCacheOrFetch();
   }
 }
