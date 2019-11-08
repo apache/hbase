@@ -128,6 +128,8 @@ import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetHDFSBlockDistRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetHDFSBlockDistResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
@@ -136,6 +138,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerIn
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetStoreFileRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetStoreFileResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ServerInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WarmupRegionRequest;
@@ -1822,6 +1825,19 @@ public final class ProtobufUtil {
       throw getRemoteException(se);
     }
     return getRegionInfos(response);
+  }
+
+  public static List<HDFSBlocksDistribution> getHDFSBlockDistribution(
+      final RpcController controller, final AdminService.BlockingInterface admin)
+      throws IOException {
+    GetHDFSBlockDistRequest request = RequestConverter.buildGetHDFSBlockDistRequest();
+    GetHDFSBlockDistResponse response;
+    try {
+      response = admin.getBlockDistribution(controller, request);
+    } catch (ServiceException se) {
+      throw getRemoteException(se);
+    }
+    return response.getRegionHDFSBlockDistList();
   }
 
   /**

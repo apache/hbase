@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.MultiActionResultTooLarge;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -168,6 +169,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUti
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesResponse;
@@ -183,6 +185,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProc
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProceduresResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetHDFSBlockDistRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetHDFSBlockDistResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
@@ -193,6 +197,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerIn
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetStoreFileRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetStoreFileResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.HostAndWeight;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionRequest.RegionOpenInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionResponse;
@@ -3810,6 +3815,38 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
       regionServer.getRegionServerCoprocessorHost().postExecuteProcedures();
       return ExecuteProceduresResponse.getDefaultInstance();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  @QosPriority(priority=HConstants.ADMIN_QOS)
+  public GetHDFSBlockDistResponse getBlockDistribution(RpcController controller,
+      GetHDFSBlockDistRequest request) throws ServiceException {
+
+    try {
+      checkOpen();
+      requestCount.increment();
+
+      GetHDFSBlockDistResponse.Builder builder = GetHDFSBlockDistResponse.newBuilder();
+      for (HRegion region : regionServer.getRegions()) {
+        HDFSBlocksDistribution hdfsBlockDistribution = region.getHDFSBlocksDistribution();
+        AdminProtos.HDFSBlocksDistribution.Builder hdfsBlkDist =
+            AdminProtos.HDFSBlocksDistribution.newBuilder();
+        hdfsBlkDist.setRegion(RequestConverter.
+            buildRegionSpecifier(RegionSpecifier.RegionSpecifierType.REGION_NAME,
+            region.getRegionInfo().getRegionName()));
+        hdfsBlkDist.setUniqueBlocksTotalWeight(hdfsBlockDistribution.getUniqueBlocksTotalWeight());
+        for (HDFSBlocksDistribution.HostAndWeight hostAndWeight :
+            hdfsBlockDistribution.getTopHostsWithWeights()) {
+          HostAndWeight.Builder hostnWeight = HostAndWeight.newBuilder();
+          hostnWeight.setHost(hostAndWeight.getHost()).setWeight(hostAndWeight.getWeight());
+          hdfsBlkDist.addHostandweight(hostnWeight);
+        }
+        builder.addRegionHDFSBlockDist(hdfsBlkDist);
+      }
+      return builder.build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }

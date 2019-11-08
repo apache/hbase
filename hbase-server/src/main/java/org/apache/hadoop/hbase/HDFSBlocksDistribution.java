@@ -28,6 +28,7 @@ import java.util.TreeSet;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 
 /**
  * Data structure to describe the distribution of HDFS blocks among hosts.
@@ -244,4 +245,14 @@ public class HDFSBlocksDistribution {
     return orderedHosts.descendingSet().toArray(new HostAndWeight[orderedHosts.size()]);
   }
 
+  public static HDFSBlocksDistribution convertBlockDistribution(
+      AdminProtos.HDFSBlocksDistribution pblockDist) {
+    HDFSBlocksDistribution blockDist = new HDFSBlocksDistribution();
+    for (AdminProtos.HostAndWeight pHostAndWeight : pblockDist.getHostandweightList()) {
+      blockDist.addHostsAndBlockWeight(new String[] {pHostAndWeight.getHost()},
+          pHostAndWeight.getWeight());
+    }
+    blockDist.uniqueBlocksTotalWeight = pblockDist.getUniqueBlocksTotalWeight();
+    return blockDist;
+  }
 }

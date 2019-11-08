@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompac
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearRegionBlockCacheRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetHDFSBlockDistRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadRequest;
@@ -1934,4 +1935,12 @@ public final class RequestConverter {
     return IsSnapshotCleanupEnabledRequest.newBuilder().build();
   }
 
+  /**
+   * Create a protocol buffer GetHDFSBlockDistRequest for all regions/regions on a server.
+   *
+   * @return a protocol buffer GetHDFSBlockDistRequest
+   */
+  public static GetHDFSBlockDistRequest buildGetHDFSBlockDistRequest() {
+    return GetHDFSBlockDistRequest.newBuilder().build();
+  }
 }

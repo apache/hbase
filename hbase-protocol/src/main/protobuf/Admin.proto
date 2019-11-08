@@ -255,6 +255,24 @@ message UpdateConfigurationRequest {
 message UpdateConfigurationResponse {
 }
 
+message GetHDFSBlockDistRequest {
+}
+
+message HostAndWeight {
+  required string host = 1;
+  required uint64 weight = 2;
+}
+
+message HDFSBlocksDistribution {
+  required RegionSpecifier region = 1;
+  required uint64 uniqueBlocksTotalWeight = 2;
+  repeated HostAndWeight hostandweight = 3;
+}
+
+message GetHDFSBlockDistResponse {
+  repeated HDFSBlocksDistribution regionHDFSBlockDist = 1;
+}
+
 service AdminService {
   rpc GetRegionInfo(GetRegionInfoRequest)
     returns(GetRegionInfoResponse);
@@ -306,4 +324,7 @@ service AdminService {
 
   rpc UpdateConfiguration(UpdateConfigurationRequest)
     returns(UpdateConfigurationResponse);
+
+  rpc GetBlockDistribution(GetHDFSBlockDistRequest)
+    returns(GetHDFSBlockDistResponse);
 }

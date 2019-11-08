@@ -280,6 +280,24 @@ message ExecuteProceduresRequest {
 message ExecuteProceduresResponse {
 }
 
+message GetHDFSBlockDistRequest {
+}
+
+message HostAndWeight {
+  required string host = 1;
+  required uint64 weight = 2;
+}
+
+message HDFSBlocksDistribution {
+  required RegionSpecifier region = 1;
+  required uint64 uniqueBlocksTotalWeight = 2;
+  repeated HostAndWeight hostandweight = 3;
+}
+
+message GetHDFSBlockDistResponse {
+  repeated HDFSBlocksDistribution regionHDFSBlockDist = 1;
+}
+
 service AdminService {
   rpc GetRegionInfo(GetRegionInfoRequest)
     returns(GetRegionInfoResponse);
@@ -344,4 +362,7 @@ service AdminService {
 
   rpc ExecuteProcedures(ExecuteProceduresRequest)
     returns(ExecuteProceduresResponse);
+
+  rpc GetBlockDistribution(GetHDFSBlockDistRequest)
+    returns(GetHDFSBlockDistResponse);
 }
