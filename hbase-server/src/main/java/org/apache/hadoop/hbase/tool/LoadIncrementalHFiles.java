@@ -80,7 +80,10 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
+import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.io.hfile.ReaderContext;
+import org.apache.hadoop.hbase.io.hfile.ReaderContextBuilder;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -727,7 +730,6 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     Optional<byte[]> first, last;
     try (HFile.Reader hfr = HFile.createReader(hfilePath.getFileSystem(getConf()), hfilePath,
       CacheConfig.DISABLED, true, getConf())) {
-      hfr.loadFileInfo();
       first = hfr.getFirstRowKey();
       last = hfr.getLastRowKey();
     } catch (FileNotFoundException fnfe) {
@@ -868,7 +870,6 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
             LOG.info("Setting compression " + reader.getFileContext().getCompression().name() +
                 " for family " + builder.getNameAsString());
           }
-          reader.loadFileInfo();
           byte[] first = reader.getFirstRowKey().get();
           byte[] last = reader.getLastRowKey().get();
 
@@ -1102,8 +1103,11 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     HalfStoreFileReader halfReader = null;
     StoreFileWriter halfWriter = null;
     try {
-      halfReader = new HalfStoreFileReader(fs, inFile, cacheConf, reference, true,
-          new AtomicInteger(0), true, conf);
+      ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, inFile).build();
+      HFileInfo hfile = new HFileInfo(context, conf);
+      halfReader =
+        new HalfStoreFileReader(context, hfile, cacheConf, reference, new AtomicInteger(0), conf);
+      hfile.initMetaAndIndex(halfReader.getHFileReader());
       Map<byte[], byte[]> fileInfo = halfReader.loadFileInfo();
 
       int blocksize = familyDescriptor.getBlocksize();
@@ -1148,7 +1152,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       return false;
     }
 
-    return !HFile.isReservedFileInfoKey(key);
+    return !HFileInfo.isReservedFileInfoKey(key);
   }
 
   private boolean isCreateTable() {

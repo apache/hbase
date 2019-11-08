@@ -92,7 +92,6 @@ public class TestHFileReaderImpl {
         new BucketCache("offheap", 128 * 1024 * 1024, 64 * 1024, bucketSizes, 5, 64 * 100, null);
 
     HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf, bucketcache), true, conf);
-    reader.loadFileInfo();
 
     // warm cache
     HFileScanner scanner = reader.getScanner(true, true);

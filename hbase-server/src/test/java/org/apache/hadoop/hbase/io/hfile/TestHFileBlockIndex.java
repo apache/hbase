@@ -208,13 +208,14 @@ public class TestHFileBlockIndex {
                         .withIncludesTags(useTags)
                         .withCompression(compr)
                         .build();
-    HFileBlock.FSReader blockReader = new HFileBlock.FSReaderImpl(istream,
-        fs.getFileStatus(path).getLen(), meta, ByteBuffAllocator.HEAP);
+    ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, path).build();
+    HFileBlock.FSReader blockReader = new HFileBlock.FSReaderImpl(context, meta,
+        ByteBuffAllocator.HEAP);
 
     BlockReaderWrapper brw = new BlockReaderWrapper(blockReader);
     HFileBlockIndex.BlockIndexReader indexReader =
         new HFileBlockIndex.CellBasedKeyBlockIndexReader(
-            CellComparatorImpl.COMPARATOR, numLevels, brw);
+            CellComparatorImpl.COMPARATOR, numLevels);
 
     indexReader.readRootIndex(blockReader.blockRange(rootIndexOffset,
         fileSize).nextBlockWithBlockType(BlockType.ROOT_INDEX), numRootEntries);
@@ -230,7 +231,7 @@ public class TestHFileBlockIndex {
       KeyValue.KeyOnlyKeyValue keyOnlyKey = new KeyValue.KeyOnlyKeyValue(key, 0, key.length);
       HFileBlock b =
           indexReader.seekToDataBlock(keyOnlyKey, null, true,
-            true, false, null);
+            true, false, null, brw);
       if (PrivateCellUtil.compare(CellComparatorImpl.COMPARATOR, keyOnlyKey, firstKeyInFile, 0,
         firstKeyInFile.length) < 0) {
         assertTrue(b == null);

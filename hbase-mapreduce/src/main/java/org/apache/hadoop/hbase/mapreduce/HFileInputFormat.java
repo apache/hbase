@@ -91,7 +91,6 @@ public class HFileInputFormat extends FileInputFormat<NullWritable, Cell> {
 
       // The file info must be loaded before the scanner can be used.
       // This seems like a bug in HBase, but it's easily worked around.
-      this.in.loadFileInfo();
       this.scanner = in.getScanner(false, false);
 
     }

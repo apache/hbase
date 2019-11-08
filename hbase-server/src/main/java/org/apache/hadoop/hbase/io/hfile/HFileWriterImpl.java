@@ -34,18 +34,14 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl.MetaCellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.CellComparatorImpl.MetaCellComparator;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.BlockWritable;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
@@ -54,7 +50,9 @@ import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.Writable;
-
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -82,7 +80,7 @@ public class HFileWriterImpl implements HFile.Writer {
   protected final boolean closeOutputStream;
 
   /** A "file info" block: a key-value map of file-wide metadata. */
-  protected FileInfo fileInfo = new HFile.FileInfo();
+  protected HFileInfo fileInfo = new HFileInfo();
 
   /** Total # of key/value entries, i.e. how many times add() was called. */
   protected long entryCount = 0;
@@ -196,7 +194,7 @@ public class HFileWriterImpl implements HFile.Writer {
 
   /**
    * Add to the file info. All added key/value pairs can be obtained using
-   * {@link HFile.Reader#loadFileInfo()}.
+   * {@link HFile.Reader#getHFileInfo()}.
    *
    * @param k Key
    * @param v Value
@@ -791,27 +789,27 @@ public class HFileWriterImpl implements HFile.Writer {
       // Make a copy. The copy is stuffed into our fileinfo map. Needs a clean
       // byte buffer. Won't take a tuple.
       byte [] lastKey = PrivateCellUtil.getCellKeySerializedAsKeyValueKey(this.lastCell);
-      fileInfo.append(FileInfo.LASTKEY, lastKey, false);
+      fileInfo.append(HFileInfo.LASTKEY, lastKey, false);
     }
 
     // Average key length.
     int avgKeyLen =
         entryCount == 0 ? 0 : (int) (totalKeyLength / entryCount);
-    fileInfo.append(FileInfo.AVG_KEY_LEN, Bytes.toBytes(avgKeyLen), false);
-    fileInfo.append(FileInfo.CREATE_TIME_TS, Bytes.toBytes(hFileContext.getFileCreateTime()),
+    fileInfo.append(HFileInfo.AVG_KEY_LEN, Bytes.toBytes(avgKeyLen), false);
+    fileInfo.append(HFileInfo.CREATE_TIME_TS, Bytes.toBytes(hFileContext.getFileCreateTime()),
       false);
 
     // Average value length.
     int avgValueLen =
         entryCount == 0 ? 0 : (int) (totalValueLength / entryCount);
-    fileInfo.append(FileInfo.AVG_VALUE_LEN, Bytes.toBytes(avgValueLen), false);
+    fileInfo.append(HFileInfo.AVG_VALUE_LEN, Bytes.toBytes(avgValueLen), false);
     if (hFileContext.isIncludesTags()) {
       // When tags are not being written in this file, MAX_TAGS_LEN is excluded
       // from the FileInfo
-      fileInfo.append(FileInfo.MAX_TAGS_LEN, Bytes.toBytes(this.maxTagsLength), false);
+      fileInfo.append(HFileInfo.MAX_TAGS_LEN, Bytes.toBytes(this.maxTagsLength), false);
       boolean tagsCompressed = (hFileContext.getDataBlockEncoding() != DataBlockEncoding.NONE)
         && hFileContext.isCompressTags();
-      fileInfo.append(FileInfo.TAGS_COMPRESSED, Bytes.toBytes(tagsCompressed), false);
+      fileInfo.append(HFileInfo.TAGS_COMPRESSED, Bytes.toBytes(tagsCompressed), false);
     }
   }
 

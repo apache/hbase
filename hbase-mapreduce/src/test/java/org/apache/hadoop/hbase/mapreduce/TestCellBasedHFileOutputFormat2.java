@@ -394,7 +394,7 @@ public class TestCellBasedHFileOutputFormat2  {
       // open as HFile Reader and pull out TIMERANGE FileInfo.
       HFile.Reader rd =
           HFile.createReader(fs, file[0].getPath(), new CacheConfig(conf), true, conf);
-      Map<byte[],byte[]> finfo = rd.loadFileInfo();
+      Map<byte[],byte[]> finfo = rd.getHFileInfo();
       byte[] range = finfo.get("TIMERANGE".getBytes("UTF-8"));
       assertNotNull(range);
 
@@ -1159,7 +1159,7 @@ public class TestCellBasedHFileOutputFormat2  {
         // compression
         Path dataFilePath = fs.listStatus(f.getPath())[0].getPath();
         Reader reader = HFile.createReader(fs, dataFilePath, new CacheConfig(conf), true, conf);
-        Map<byte[], byte[]> fileInfo = reader.loadFileInfo();
+        Map<byte[], byte[]> fileInfo = reader.getHFileInfo();
 
         byte[] bloomFilter = fileInfo.get(BLOOM_FILTER_TYPE_KEY);
         if (bloomFilter == null) bloomFilter = Bytes.toBytes("NONE");

@@ -332,7 +332,7 @@ public class TestHStore {
 
     // Verify that compression and encoding settings are respected
     HFile.Reader reader = HFile.createReader(fs, path, new CacheConfig(conf), true, conf);
-    assertEquals(hcd.getCompressionType(), reader.getCompressionAlgorithm());
+    assertEquals(hcd.getCompressionType(), reader.getTrailer().getCompressionCodec());
     assertEquals(hcd.getDataBlockEncoding(), reader.getDataBlockEncoding());
     reader.close();
   }

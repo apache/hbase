@@ -65,6 +65,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
+import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.IOTests;
@@ -110,6 +111,20 @@ public class TestHFile  {
     conf = TEST_UTIL.getConfiguration();
     cacheConf = new CacheConfig(conf);
     fs = TEST_UTIL.getTestFileSystem();
+  }
+
+  public static Reader createReaderFromStream(ReaderContext context, CacheConfig cacheConf,
+      Configuration conf) throws IOException {
+    HFileInfo fileInfo = new HFileInfo(context, conf);
+    Reader preadReader = HFile.createReader(context, fileInfo, cacheConf, conf);
+    fileInfo.initMetaAndIndex(preadReader);
+    preadReader.close();
+    context = new ReaderContextBuilder()
+        .withFileSystemAndPath(context.getFileSystem(), context.getFilePath())
+        .withReaderType(ReaderType.STREAM)
+        .build();
+    Reader streamReader = HFile.createReader(context, fileInfo, cacheConf,  conf);
+    return streamReader;
   }
 
   private ByteBuffAllocator initAllocator(boolean reservoirEnabled, int bufSize, int bufCount,
@@ -301,7 +316,6 @@ public class TestHFile  {
         HFile.getWriterFactory(conf, cacheConf).withPath(fs, f).withFileContext(context).create();
     w.close();
     Reader r = HFile.createReader(fs, f, cacheConf, true, conf);
-    r.loadFileInfo();
     assertFalse(r.getFirstKey().isPresent());
     assertFalse(r.getLastKey().isPresent());
   }
@@ -317,7 +331,7 @@ public class TestHFile  {
 
     try {
       Reader r = HFile.createReader(fs, f, cacheConf, true, conf);
-    } catch (CorruptHFileException che) {
+    } catch (CorruptHFileException | IllegalArgumentException che) {
       // Expected failure
       return;
     }
@@ -355,8 +369,8 @@ public class TestHFile  {
     truncateFile(fs, w.getPath(), trunc);
 
     try {
-      Reader r = HFile.createReader(fs, trunc, cacheConf, true, conf);
-    } catch (CorruptHFileException che) {
+      HFile.createReader(fs, trunc, cacheConf, true, conf);
+    } catch (CorruptHFileException | IllegalArgumentException che) {
       // Expected failure
       return;
     }
@@ -460,11 +474,10 @@ public class TestHFile  {
     writeRecords(writer, useTags);
     fout.close();
     FSDataInputStream fin = fs.open(ncHFile);
-    Reader reader = HFile.createReaderFromStream(ncHFile, fs.open(ncHFile),
-      fs.getFileStatus(ncHFile).getLen(), cacheConf, conf);
+    ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, ncHFile).build();
+    Reader reader = createReaderFromStream(context, cacheConf, conf);
     System.out.println(cacheConf.toString());
     // Load up the index.
-    reader.loadFileInfo();
     // Get a scanner that caches and that does not use pread.
     HFileScanner scanner = reader.getScanner(true, false);
     // Align scanner at start of the file.
@@ -552,16 +565,13 @@ public class TestHFile  {
     someTestingWithMetaBlock(writer);
     writer.close();
     fout.close();
-    FSDataInputStream fin = fs.open(mFile);
-    Reader reader = HFile.createReaderFromStream(mFile, fs.open(mFile),
-        this.fs.getFileStatus(mFile).getLen(), cacheConf, conf);
-    reader.loadFileInfo();
+    ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, mFile).build();
+    Reader reader = createReaderFromStream(context, cacheConf, conf);
     // No data -- this should return false.
     assertFalse(reader.getScanner(false, false).seekTo());
     someReadingWithMetaBlock(reader);
     fs.delete(mFile, true);
     reader.close();
-    fin.close();
   }
 
   // test meta blocks for hfiles
@@ -588,7 +598,6 @@ public class TestHFile  {
       writer.close();
       fout.close();
       Reader reader = HFile.createReader(fs, mFile, cacheConf, true, conf);
-      reader.loadFileInfo();
       assertNull(reader.getMetaBlock("non-existant", false));
     }
   }
