@@ -20,6 +20,17 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
+import com.codahale.metrics.ConsoleReporter;
+import com.codahale.metrics.Counter;
+import com.codahale.metrics.Gauge;
+import com.codahale.metrics.Histogram;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricFilter;
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.ScheduledReporter;
+import com.codahale.metrics.Snapshot;
+import com.codahale.metrics.Timer;
+
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.IOException;
@@ -55,7 +66,6 @@ import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
-import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
@@ -67,6 +77,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
@@ -80,17 +91,6 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.OptionGroup;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.PosixParser;
-
-import com.codahale.metrics.ConsoleReporter;
-import com.codahale.metrics.Counter;
-import com.codahale.metrics.Gauge;
-import com.codahale.metrics.Histogram;
-import com.codahale.metrics.Meter;
-import com.codahale.metrics.MetricFilter;
-import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.ScheduledReporter;
-import com.codahale.metrics.Snapshot;
-import com.codahale.metrics.Timer;
 
 /**
  * Implements pretty-printing functionality for {@link HFile}s.
@@ -315,7 +315,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
 
     HFile.Reader reader = HFile.createReader(fs, file, CacheConfig.DISABLED, true, getConf());
 
-    Map<byte[], byte[]> fileInfo = reader.loadFileInfo();
+    Map<byte[], byte[]> fileInfo = reader.getHFileInfo();
 
     KeyValueStatsCollector fileStats = null;
 
@@ -539,22 +539,22 @@ public class HFilePrettyPrinter extends Configured implements Tool {
           || Bytes.equals(e.getKey(), HStoreFile.DELETE_FAMILY_COUNT)
           || Bytes.equals(e.getKey(), HStoreFile.EARLIEST_PUT_TS)
           || Bytes.equals(e.getKey(), HFileWriterImpl.MAX_MEMSTORE_TS_KEY)
-          || Bytes.equals(e.getKey(), FileInfo.CREATE_TIME_TS)
+          || Bytes.equals(e.getKey(), HFileInfo.CREATE_TIME_TS)
           || Bytes.equals(e.getKey(), HStoreFile.BULKLOAD_TIME_KEY)) {
         out.println(Bytes.toLong(e.getValue()));
       } else if (Bytes.equals(e.getKey(), HStoreFile.TIMERANGE_KEY)) {
         TimeRangeTracker timeRangeTracker = TimeRangeTracker.parseFrom(e.getValue());
         out.println(timeRangeTracker.getMin() + "...." + timeRangeTracker.getMax());
-      } else if (Bytes.equals(e.getKey(), FileInfo.AVG_KEY_LEN)
-          || Bytes.equals(e.getKey(), FileInfo.AVG_VALUE_LEN)
+      } else if (Bytes.equals(e.getKey(), HFileInfo.AVG_KEY_LEN)
+          || Bytes.equals(e.getKey(), HFileInfo.AVG_VALUE_LEN)
           || Bytes.equals(e.getKey(), HFileWriterImpl.KEY_VALUE_VERSION)
-          || Bytes.equals(e.getKey(), FileInfo.MAX_TAGS_LEN)) {
+          || Bytes.equals(e.getKey(), HFileInfo.MAX_TAGS_LEN)) {
         out.println(Bytes.toInt(e.getValue()));
       } else if (Bytes.equals(e.getKey(), HStoreFile.MAJOR_COMPACTION_KEY)
-          || Bytes.equals(e.getKey(), FileInfo.TAGS_COMPRESSED)
+          || Bytes.equals(e.getKey(), HFileInfo.TAGS_COMPRESSED)
           || Bytes.equals(e.getKey(), HStoreFile.EXCLUDE_FROM_MINOR_COMPACTION_KEY)) {
         out.println(Bytes.toBoolean(e.getValue()));
-      } else if (Bytes.equals(e.getKey(), FileInfo.LASTKEY)) {
+      } else if (Bytes.equals(e.getKey(), HFileInfo.LASTKEY)) {
         out.println(new KeyValue.KeyOnlyKeyValue(e.getValue()).toString());
       } else {
         out.println(Bytes.toStringBinary(e.getValue()));

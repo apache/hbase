@@ -23,21 +23,21 @@ import java.nio.ByteBuffer;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.HFileInfo;
+import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.io.hfile.ReaderContext;
+import org.apache.hadoop.hbase.regionserver.StoreFileReader;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.PrivateCellUtil;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.io.hfile.HFileScanner;
-import org.apache.hadoop.hbase.regionserver.StoreFileReader;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * A facade for a {@link org.apache.hadoop.hbase.io.hfile.HFile.Reader} that serves up
@@ -67,44 +67,18 @@ public class HalfStoreFileReader extends StoreFileReader {
   private boolean firstKeySeeked = false;
 
   /**
-   * Creates a half file reader for a normal hfile.
-   * @param fs fileystem to read from
-   * @param p path to hfile
-   * @param cacheConf
-   * @param r original reference file (contains top or bottom)
-   * @param conf Configuration
-   * @throws IOException
-   */
-  public HalfStoreFileReader(FileSystem fs, Path p, CacheConfig cacheConf, Reference r,
-      boolean isPrimaryReplicaStoreFile, AtomicInteger refCount, boolean shared, Configuration conf)
-      throws IOException {
-    super(fs, p, cacheConf, isPrimaryReplicaStoreFile, refCount, shared, conf);
-    // This is not actual midkey for this half-file; its just border
-    // around which we split top and bottom.  Have to look in files to find
-    // actual last and first keys for bottom and top halves.  Half-files don't
-    // have an actual midkey themselves. No midkey is how we indicate file is
-    // not splittable.
-    this.splitkey = r.getSplitKey();
-    this.splitCell = new KeyValue.KeyOnlyKeyValue(this.splitkey, 0, this.splitkey.length);
-    // Is it top or bottom half?
-    this.top = Reference.isTopFileRegion(r.getFileRegion());
-  }
-
-  /**
    * Creates a half file reader for a hfile referred to by an hfilelink.
-   * @param fs fileystem to read from
-   * @param p path to hfile
-   * @param in {@link FSDataInputStreamWrapper}
-   * @param size Full size of the hfile file
-   * @param cacheConf
+   * @param context Reader context info
+   * @param fileInfo HFile info
+   * @param cacheConf CacheConfig
    * @param r original reference file (contains top or bottom)
+   * @param refCount reference count
    * @param conf Configuration
-   * @throws IOException
    */
-  public HalfStoreFileReader(final FileSystem fs, final Path p, final FSDataInputStreamWrapper in,
-      long size, final CacheConfig cacheConf, final Reference r, boolean isPrimaryReplicaStoreFile,
-      AtomicInteger refCount, boolean shared, final Configuration conf) throws IOException {
-    super(fs, p, in, size, cacheConf, isPrimaryReplicaStoreFile, refCount, shared, conf);
+  public HalfStoreFileReader(final ReaderContext context, final HFileInfo fileInfo,
+      final CacheConfig cacheConf, final Reference r,
+      AtomicInteger refCount, final Configuration conf) throws IOException {
+    super(context, fileInfo, cacheConf, refCount, conf);
     // This is not actual midkey for this half-file; its just border
     // around which we split top and bottom.  Have to look in files to find
     // actual last and first keys for bottom and top halves.  Half-files don't

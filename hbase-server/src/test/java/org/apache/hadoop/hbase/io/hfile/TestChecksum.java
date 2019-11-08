@@ -98,7 +98,13 @@ public class TestChecksum {
 
     FSDataInputStreamWrapper is = new FSDataInputStreamWrapper(fs, path);
     meta = new HFileContextBuilder().withHBaseCheckSum(true).build();
-    HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(is, totalSize, (HFileSystem) fs, path,
+    ReaderContext context = new ReaderContextBuilder()
+        .withInputStreamWrapper(is)
+        .withFileSize(totalSize)
+        .withFileSystem((HFileSystem) fs)
+        .withFilePath(path)
+        .build();
+    HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(context,
         meta, ByteBuffAllocator.HEAP);
     HFileBlock b = hbr.readBlockData(0, -1, false, false, true);
     assertTrue(!b.isSharedMem());
@@ -145,7 +151,13 @@ public class TestChecksum {
 
       FSDataInputStreamWrapper is = new FSDataInputStreamWrapper(fs, path);
       meta = new HFileContextBuilder().withHBaseCheckSum(true).build();
-      HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(is, totalSize, (HFileSystem) fs, path,
+      ReaderContext context = new ReaderContextBuilder()
+          .withInputStreamWrapper(is)
+          .withFileSize(totalSize)
+          .withFileSystem((HFileSystem) fs)
+          .withFilePath(path)
+          .build();
+      HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(context,
           meta, ByteBuffAllocator.HEAP);
       HFileBlock b = hbr.readBlockData(0, -1, false, false, true);
       assertTrue(!b.isSharedMem());
@@ -216,7 +228,13 @@ public class TestChecksum {
               .withIncludesTags(useTags)
               .withHBaseCheckSum(true)
               .build();
-        HFileBlock.FSReader hbr = new CorruptedFSReaderImpl(is, totalSize, fs, path, meta);
+        ReaderContext context = new ReaderContextBuilder()
+           .withInputStreamWrapper(is)
+           .withFileSize(totalSize)
+           .withFileSystem(fs)
+           .withFilePath(path)
+           .build();
+        HFileBlock.FSReader hbr = new CorruptedFSReaderImpl(context, meta);
         HFileBlock b = hbr.readBlockData(0, -1, pread, false, true);
         b.sanityCheck();
         assertEquals(4936, b.getUncompressedSizeWithoutHeader());
@@ -261,7 +279,13 @@ public class TestChecksum {
         HFileSystem newfs = new HFileSystem(TEST_UTIL.getConfiguration(), false);
         assertEquals(false, newfs.useHBaseChecksum());
         is = new FSDataInputStreamWrapper(newfs, path);
-        hbr = new CorruptedFSReaderImpl(is, totalSize, newfs, path, meta);
+        context = new ReaderContextBuilder()
+            .withInputStreamWrapper(is)
+            .withFileSize(totalSize)
+            .withFileSystem(newfs)
+            .withFilePath(path)
+            .build();
+        hbr = new CorruptedFSReaderImpl(context, meta);
         b = hbr.readBlockData(0, -1, pread, false, true);
         is.close();
         b.sanityCheck();
@@ -342,9 +366,14 @@ public class TestChecksum {
                .withHBaseCheckSum(true)
                .withBytesPerCheckSum(bytesPerChecksum)
                .build();
+        ReaderContext context = new ReaderContextBuilder()
+            .withInputStreamWrapper(new FSDataInputStreamWrapper(is, nochecksum))
+            .withFileSize(totalSize)
+            .withFileSystem(hfs)
+            .withFilePath(path)
+            .build();
         HFileBlock.FSReader hbr =
-            new HFileBlock.FSReaderImpl(new FSDataInputStreamWrapper(is, nochecksum), totalSize,
-                hfs, path, meta, ByteBuffAllocator.HEAP);
+            new HFileBlock.FSReaderImpl(context, meta, ByteBuffAllocator.HEAP);
         HFileBlock b = hbr.readBlockData(0, -1, pread, false, true);
         assertTrue(b.getBufferReadOnly() instanceof SingleByteBuff);
         is.close();
@@ -384,9 +413,8 @@ public class TestChecksum {
      */
     boolean corruptDataStream = false;
 
-    public CorruptedFSReaderImpl(FSDataInputStreamWrapper istream, long fileSize, FileSystem fs,
-        Path path, HFileContext meta) throws IOException {
-      super(istream, fileSize, (HFileSystem) fs, path, meta, ByteBuffAllocator.HEAP);
+    public CorruptedFSReaderImpl(ReaderContext context, HFileContext meta) throws IOException {
+      super(context, meta, ByteBuffAllocator.HEAP);
     }
 
     @Override

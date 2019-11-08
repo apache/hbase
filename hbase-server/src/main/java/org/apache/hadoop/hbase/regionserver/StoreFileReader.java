@@ -30,8 +30,6 @@ import java.util.SortedSet;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -39,13 +37,15 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
+import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.io.hfile.ReaderContext;
+import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
@@ -81,43 +81,31 @@ public class StoreFileReader {
   // store file. It is decremented when the scan on the store file is
   // done. All StoreFileReader for the same StoreFile will share this counter.
   private final AtomicInteger refCount;
+  private final ReaderContext context;
 
-  // indicate that whether this StoreFileReader is shared, i.e., used for pread. If not, we will
-  // close the internal reader when readCompleted is called.
-  @VisibleForTesting
-  final boolean shared;
-
-  private StoreFileReader(HFile.Reader reader, AtomicInteger refCount, boolean shared) {
+  private StoreFileReader(HFile.Reader reader, AtomicInteger refCount, ReaderContext context) {
     this.reader = reader;
     bloomFilterType = BloomType.NONE;
     this.refCount = refCount;
-    this.shared = shared;
+    this.context = context;
   }
 
-  public StoreFileReader(FileSystem fs, Path path, CacheConfig cacheConf,
-      boolean primaryReplicaStoreFile, AtomicInteger refCount, boolean shared, Configuration conf)
-      throws IOException {
-    this(HFile.createReader(fs, path, cacheConf, primaryReplicaStoreFile, conf), refCount, shared);
+  public StoreFileReader(ReaderContext context, HFileInfo fileInfo, CacheConfig cacheConf,
+      AtomicInteger refCount, Configuration conf) throws IOException {
+    this(HFile.createReader(context, fileInfo, cacheConf, conf), refCount, context);
   }
 
-  public StoreFileReader(FileSystem fs, Path path, FSDataInputStreamWrapper in, long size,
-      CacheConfig cacheConf, boolean primaryReplicaStoreFile, AtomicInteger refCount,
-      boolean shared, Configuration conf) throws IOException {
-    this(HFile.createReader(fs, path, in, size, cacheConf, primaryReplicaStoreFile, conf), refCount,
-        shared);
-  }
-
-  void copyFields(StoreFileReader reader) {
-    this.generalBloomFilter = reader.generalBloomFilter;
-    this.deleteFamilyBloomFilter = reader.deleteFamilyBloomFilter;
-    this.bloomFilterType = reader.bloomFilterType;
-    this.sequenceID = reader.sequenceID;
-    this.timeRange = reader.timeRange;
-    this.lastBloomKey = reader.lastBloomKey;
-    this.bulkLoadResult = reader.bulkLoadResult;
-    this.lastBloomKeyOnlyKV = reader.lastBloomKeyOnlyKV;
-    this.skipResetSeqId = reader.skipResetSeqId;
-    this.prefixLength = reader.prefixLength;
+  void copyFields(StoreFileReader storeFileReader) throws IOException {
+    this.generalBloomFilter = storeFileReader.generalBloomFilter;
+    this.deleteFamilyBloomFilter = storeFileReader.deleteFamilyBloomFilter;
+    this.bloomFilterType = storeFileReader.bloomFilterType;
+    this.sequenceID = storeFileReader.sequenceID;
+    this.timeRange = storeFileReader.timeRange;
+    this.lastBloomKey = storeFileReader.lastBloomKey;
+    this.bulkLoadResult = storeFileReader.bulkLoadResult;
+    this.lastBloomKeyOnlyKV = storeFileReader.lastBloomKeyOnlyKV;
+    this.skipResetSeqId = storeFileReader.skipResetSeqId;
+    this.prefixLength = storeFileReader.prefixLength;
   }
 
   public boolean isPrimaryReplicaReader() {
@@ -131,7 +119,7 @@ public class StoreFileReader {
   StoreFileReader() {
     this.refCount = new AtomicInteger(0);
     this.reader = null;
-    this.shared = false;
+    this.context = null;
   }
 
   public CellComparator getComparator() {
@@ -177,7 +165,7 @@ public class StoreFileReader {
    */
   void readCompleted() {
     refCount.decrementAndGet();
-    if (!shared) {
+    if (context.getReaderType() == ReaderType.STREAM) {
       try {
         reader.close(false);
       } catch (IOException e) {
@@ -492,7 +480,7 @@ public class StoreFileReader {
   }
 
   public Map<byte[], byte[]> loadFileInfo() throws IOException {
-    Map<byte [], byte []> fi = reader.loadFileInfo();
+    Map<byte [], byte []> fi = reader.getHFileInfo();
 
     byte[] b = fi.get(BLOOM_FILTER_TYPE_KEY);
     if (b != null) {
@@ -699,5 +687,9 @@ public class StoreFileReader {
 
   public int getPrefixLength() {
     return prefixLength;
+  }
+
+  public ReaderContext getReaderContext() {
+    return this.context;
   }
 }
