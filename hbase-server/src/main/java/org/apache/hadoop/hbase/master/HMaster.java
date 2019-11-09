@@ -3869,4 +3869,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     return cachedClusterId.getFromCacheOrFetch();
   }
 
+  public ServerName getActiveMaster() {
+    return activeMasterManager.getActiveMasterServerName();
+  }
 }
