@@ -27,9 +27,9 @@
 
 <%
 Configuration conf = (Configuration)getServletContext().getAttribute("hbase.conf");
+String serverType = (String)getServletContext().getAttribute("hbase.thrift.server.type");
 long startcode = conf.getLong("startcode", System.currentTimeMillis());
 String listenPort = conf.get("hbase.regionserver.thrift.port", "9090");
-String serverInfo = listenPort + "," + String.valueOf(startcode);
 ImplType implType = ImplType.getServerImpl(conf);
 String framed = implType.isAlwaysFramed()
     ? "true" : conf.get("hbase.regionserver.thrift.framed", "false");
@@ -120,6 +120,11 @@ String compact = conf.get("hbase.regionserver.thrift.compact", "false");
             <td>Framed Transport</td>
             <td><%= framed %></td>
             <td>Thrift RPC engine uses framed transport</td>
+        </tr>
+        <tr>
+            <td>Thrift Server Type</td>
+            <td><%= serverType %></td>
+            <td>The type of this Thrift server</td>
         </tr>
     </table>
     </section>
