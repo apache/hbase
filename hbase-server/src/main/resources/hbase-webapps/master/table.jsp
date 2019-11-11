@@ -140,10 +140,10 @@ if (fqtn != null && master.isInitialized()) {
   try {
   table = master.getConnection().getTable(TableName.valueOf(fqtn));
   if (table.getDescriptor().getRegionReplication() > 1) {
-    tableHeader = "<h2>Table Regions</h2><table id=\"tableRegionTable\" class=\"tablesorter table table-striped\" style=\"table-layout: fixed; word-wrap: break-word;\"><thead><tr><th>Name</th><th>Region Server</th><th>ReadRequests</th><th>WriteRequests</th><th>StorefileSize</th><th>Num.Storefiles</th><th>MemSize</th><th>Locality</th><th>Start Key</th><th>End Key</th><th>ReplicaID</th></tr></thead>";
+    tableHeader = "<h2>Table Regions</h2><table id=\"tableRegionTable\" class=\"tablesorter table table-striped\" style=\"table-layout: fixed; word-wrap: break-word;\"><thead><tr><th>Name</th><th>Region Server</th><th>ReadRequests</th><th>WriteRequests</th><th>StorefileSize</th><th>Num.Storefiles</th><th>MemSize</th><th>Locality</th><th>Start Key</th><th>End Key</th><th>Num. Compacting Cells</th><th>Num. Compacted Cells</th><th>Remaining Cells</th><th>Compaction Progress</th><th>ReplicaID</th></tr></thead>";
     withReplica = true;
   } else {
-    tableHeader = "<h2>Table Regions</h2><table id=\"tableRegionTable\" class=\"tablesorter table table-striped\" style=\"table-layout: fixed; word-wrap: break-word;\"><thead><tr><th>Name</th><th>Region Server</th><th>ReadRequests</th><th>WriteRequests</th><th>StorefileSize</th><th>Num.Storefiles</th><th>MemSize</th><th>Locality</th><th>Start Key</th><th>End Key</th></tr></thead>";
+    tableHeader = "<h2>Table Regions</h2><table id=\"tableRegionTable\" class=\"tablesorter table table-striped\" style=\"table-layout: fixed; word-wrap: break-word;\"><thead><tr><th>Name</th><th>Region Server</th><th>ReadRequests</th><th>WriteRequests</th><th>StorefileSize</th><th>Num.Storefiles</th><th>MemSize</th><th>Locality</th><th>Start Key</th><th>End Key</th><th>Num. Compacting Cells</th><th>Num. Compacted Cells</th><th>Remaining Cells</th><th>Compaction Progress</th></tr></thead>";
   }
   if ( !readOnly && action != null ) {
 %>
@@ -215,7 +215,11 @@ if (fqtn != null && master.isInitialized()) {
       String fileCount = "N/A";
       String memSize = ZEROMB;
       float locality = 0.0f;
-
+      long compactingCells = 0;
+      long compactedCells = 0;
+      long remainingCells = 0;
+      String compactionProgress = "";
+      
       if (metaLocation != null) {
         ServerMetrics sl = master.getServerManager().getLoad(metaLocation);
         // The host name portion should be safe, but I don't know how we handle IDNs so err on the side of failing safely.
@@ -236,6 +240,13 @@ if (fqtn != null && master.isInitialized()) {
             memSize = StringUtils.byteDesc((long)mSize);
             }
             locality = load.getDataLocality();
+            compactingCells = load.getCompactingCellCount();
+            compactedCells = load.getCompactedCellCount();
+            remainingCells = compactingCells - compactedCells;
+            if (compactingCells > 0) {
+              compactionProgress = String.format("%.2f", 100 * ((float)
+                compactedCells / compactingCells)) + "%";
+            }
           }
         }
       }
@@ -251,6 +262,10 @@ if (fqtn != null && master.isInitialized()) {
     <td><%= locality%></td>
     <td><%= escapeXml(Bytes.toString(meta.getStartKey())) %></td>
     <td><%= escapeXml(Bytes.toString(meta.getEndKey())) %></td>
+    <td><%= compactingCells%></td>
+    <td><%= compactedCells%></td>
+    <td><%= remainingCells%></td>
+    <td><%= compactionProgress%></td>
 <%
       if (withReplica) {
 %>
@@ -446,6 +461,8 @@ if (fqtn != null && master.isInitialized()) {
   long totalSize = 0;
   long totalStoreFileCount = 0;
   long totalMemSize = 0;
+  long totalCompactingCells = 0;
+  long totalCompactedCells = 0;
   String totalMemSizeStr = ZEROMB;
   String totalSizeStr = ZEROMB;
   String urlRegionServer = null;
@@ -471,6 +488,8 @@ if (fqtn != null && master.isInitialized()) {
           totalStoreFileCount += regionMetrics.getStoreFileCount();
           totalMemSize += regionMetrics.getMemStoreSize().get(Size.Unit.MEGABYTE);
           totalStoreFileSizeMB += regionMetrics.getStoreFileSize().get(Size.Unit.MEGABYTE);
+          totalCompactingCells += regionMetrics.getCompactingCellCount();
+          totalCompactedCells += regionMetrics.getCompactedCellCount();
         } else {
           RegionMetrics load0 = getEmptyRegionMetrics(regionInfo);
           regionsToLoad.put(regionInfo, load0);
@@ -490,6 +509,11 @@ if (fqtn != null && master.isInitialized()) {
   if (totalMemSize > 0) {
     totalMemSizeStr = StringUtils.byteDesc(totalMemSize*1024l*1024);
   }
+  String percentDone = "";
+  if  (totalCompactingCells > 0) {
+       percentDone = String.format("%.2f", 100 *
+          ((float) totalCompactedCells / totalCompactingCells)) + "%";
+  }
 
   if(regions != null && regions.size() > 0) { %>
 <h2>Table Regions</h2>
@@ -507,6 +531,10 @@ if (fqtn != null && master.isInitialized()) {
 <th>Start Key</th>
 <th>End Key</th>
 <th>Region State</th>
+<th>Num. Compacting Cells<br>(<%= String.format("%,1d", totalCompactingCells)%>)</th>
+<th>Num. Compacted Cells<br>(<%= String.format("%,1d", totalCompactedCells)%>)</th>
+<th>Remaining Cells<br>(<%= String.format("%,1d", totalCompactingCells-totalCompactedCells)%>)</th>
+<th>Compaction Progress<br>(<%= percentDone %>)</th>
 <%
   if (withReplica) {
 %>
@@ -537,6 +565,10 @@ if (fqtn != null && master.isInitialized()) {
     String memSize = ZEROMB;
     float locality = 0.0f;
     String state = "N/A";
+    long compactingCells = 0;
+    long compactedCells = 0;
+    long remainingCells = 0;
+    String compactionProgress = "";
     if(load != null) {
       readReq = String.format("%,1d", load.getReadRequestCount());
       writeReq = String.format("%,1d", load.getWriteRequestCount());
@@ -550,6 +582,13 @@ if (fqtn != null && master.isInitialized()) {
       memSize = StringUtils.byteDesc((long)mSize);
       }
       locality = load.getDataLocality();
+      compactingCells = load.getCompactingCellCount();
+      compactedCells = load.getCompactedCellCount();
+      remainingCells = compactingCells - compactedCells;
+      if (compactingCells > 0) {
+        compactionProgress = String.format("%.2f", 100 * ((float)
+          compactedCells / compactingCells)) + "%";
+      }
     }
 
     if (stateMap.containsKey(regionInfo.getEncodedName())) {
@@ -599,6 +638,10 @@ if (fqtn != null && master.isInitialized()) {
   <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getStartKey()))%></td>
   <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getEndKey()))%></td>
   <td><%= state%></td>
+  <td><%= String.format("%,d", compactingCells)%></td>
+  <td><%= String.format("%,d", compactingCells)%></td>
+  <td><%= String.format("%,d", remainingCells)%></td>
+  <td><%= compactionProgress%></td>
   <%
   if (withReplica) {
   %>
