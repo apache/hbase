@@ -159,10 +159,7 @@
 if ( fqtn != null ) {
   table = new HTable(conf, fqtn);
   if (table.getTableDescriptor().getRegionReplication() > 1) {
-    tableHeader = "<h2>Table Regions</h2><table id=\"tableRegionTable\" class=\"tablesorter table table-striped\" style=\"table-layout: fixed; word-wrap: break-word;\"><thead><tr><th>Name</th><th>Region Server</th><th>ReadRequests</th><th>WriteRequests</th><th>StorefileSize</th><th>Num.Storefiles</th><th>MemSize</th><th>Locality</th><th>Start Key</th><th>End Key</th><th>ReplicaID</th></tr></thead>";
     withReplica = true;
-  } else {
-    tableHeader = "<h2>Table Regions</h2><table id=\"tableRegionTable\" class=\"tablesorter table table-striped\" style=\"table-layout: fixed; word-wrap: break-word;\"><thead><tr><th>Name</th><th>Region Server</th><th>ReadRequests</th><th>WriteRequests</th><th>StorefileSize</th><th>Num.Storefiles</th><th>MemSize</th><th>Locality</th><th>Start Key</th><th>End Key</th></tr></thead>";
   }
   if ( !readOnly && action != null ) { 
 %>
@@ -213,70 +210,168 @@ if ( fqtn != null ) {
 <%
   if(fqtn.equals(TableName.META_TABLE_NAME.getNameAsString())) {
 %>
-<%= tableHeader %>
-<tbody>
-<%
-  // NOTE: Presumes meta with one or more replicas
-  for (int j = 0; j < numMetaReplicas; j++) {
-    HRegionInfo meta = RegionReplicaUtil.getRegionInfoForReplica(
-                            HRegionInfo.FIRST_META_REGIONINFO, j);
-    ServerName metaLocation = metaTableLocator.waitMetaRegionLocation(master.getZooKeeper(), j, 1);
-    for (int i = 0; i < 1; i++) {
-      String url = "";
-      String readReq = "N/A";
-      String writeReq = "N/A";
-      String fileSize = "N/A";
-      String fileCount = "N/A";
-      String memSize = "N/A";
-      float locality = 0.0f;
+<h2>Table Regions</h2>
+<div class="tabbable">
+  <ul class="nav nav-pills">
+    <li class="active">
+      <a href="#metaTab_baseStats" data-toggle="tab">Base Stats</a>
+    </li>
+    <li class="">
+      <a href="#metaTab_compactStats" data-toggle="tab">Compactions</a>
+    </li>
+  </ul>
+  <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
+    <div class="tab-pane active" id="metaTab_baseStats">
+      <table id="tableRegionTable" class="tablesorter table table-striped">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Region Server</th>
+            <th>ReadRequests</th>
+            <th>WriteRequests</th>
+            <th>StorefileSize</th>
+            <th>Num.Storefiles</th>
+            <th>MemSize</th>
+            <th>Locality</th>
+            <th>Start Key</th>
+            <th>End Key</th>
+            <%
+              if (withReplica) {
+            %>
+            <th>ReplicaID</th>
+            <%
+              }
+            %>
+          </tr>
+        </thead>
+        <tbody>
+        <%
+          // NOTE: Presumes meta with one or more replicas
+          for (int j = 0; j < numMetaReplicas; j++) {
+            HRegionInfo meta = RegionReplicaUtil.getRegionInfoForReplica(
+                                    HRegionInfo.FIRST_META_REGIONINFO, j);
+            ServerName metaLocation = metaTableLocator.waitMetaRegionLocation(master.getZooKeeper(), j, 1);
+            for (int i = 0; i < 1; i++) {
+              String url = "";
+              String readReq = "N/A";
+              String writeReq = "N/A";
+              String fileSize = "N/A";
+              String fileCount = "N/A";
+              String memSize = "N/A";
+              float locality = 0.0f;
 
-      if (metaLocation != null) {
-        ServerLoad sl = master.getServerManager().getLoad(metaLocation);
-        // The host name portion should be safe, but I don't know how we handle IDNs so err on the side of failing safely.
-        url = "//" + URLEncoder.encode(metaLocation.getHostname()) + ":" + master.getRegionServerInfoPort(metaLocation) + "/";
-        if (sl != null) {
-          Map<byte[], RegionLoad> map = sl.getRegionsLoad();
-          if (map.containsKey(meta.getRegionName())) {
-            RegionLoad load = map.get(meta.getRegionName());
-            readReq = String.format("%,1d", load.getReadRequestsCount());
-            writeReq = String.format("%,1d", load.getWriteRequestsCount());
-            fileSize = StringUtils.byteDesc(load.getStorefileSizeMB()*1024l*1024);
-            fileCount = String.format("%,1d", load.getStorefiles());
-            memSize = StringUtils.byteDesc(load.getMemStoreSizeMB()*1024l*1024);
-            locality = load.getDataLocality();
-          }
-        }
-      }
-%>
-<tr>
-  <%
-  String metaLocationString = metaLocation != null ?
-      StringEscapeUtils.escapeHtml(metaLocation.getHostname().toString())
-        + ":" + master.getRegionServerInfoPort(metaLocation) :
-      "(null)";
-  %>
-  <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
-    <td><a href="<%= url %>"><%= metaLocationString %></a></td>
-    <td><%= readReq%></td>
-    <td><%= writeReq%></td>
-    <td><%= fileSize%></td>
-    <td><%= fileCount%></td>
-    <td><%= memSize%></td>
-    <td><%= locality%></td>
-    <td><%= escapeXml(Bytes.toString(meta.getStartKey())) %></td>
-    <td><%= escapeXml(Bytes.toString(meta.getEndKey())) %></td>
-<%
-      if (withReplica) {
-%>
-    <td><%= meta.getReplicaId() %></td>
-<%
-      }
-%>
-</tr>
-<%  } %>
-<%} %>
-</tbody>
-</table>
+              if (metaLocation != null) {
+                ServerLoad sl = master.getServerManager().getLoad(metaLocation);
+                // The host name portion should be safe, but I don't know how we handle IDNs so err on the side of failing safely.
+                url = "//" + URLEncoder.encode(metaLocation.getHostname()) + ":" + master.getRegionServerInfoPort(metaLocation) + "/";
+                if (sl != null) {
+                  Map<byte[], RegionLoad> map = sl.getRegionsLoad();
+                  if (map.containsKey(meta.getRegionName())) {
+                    RegionLoad load = map.get(meta.getRegionName());
+                    readReq = String.format("%,1d", load.getReadRequestsCount());
+                    writeReq = String.format("%,1d", load.getWriteRequestsCount());
+                    fileSize = StringUtils.byteDesc(load.getStorefileSizeMB()*1024l*1024);
+                    fileCount = String.format("%,1d", load.getStorefiles());
+                    memSize = StringUtils.byteDesc(load.getMemStoreSizeMB()*1024l*1024);
+                    locality = load.getDataLocality();
+                  }
+                }
+              }
+        %>
+          <tr>
+            <%
+            String metaLocationString = metaLocation != null ?
+                StringEscapeUtils.escapeHtml(metaLocation.getHostname().toString())
+                  + ":" + master.getRegionServerInfoPort(metaLocation) :
+                "(null)";
+            %>
+            <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
+            <td><a href="<%= url %>"><%= metaLocationString %></a></td>
+            <td><%= readReq%></td>
+            <td><%= writeReq%></td>
+            <td><%= fileSize%></td>
+            <td><%= fileCount%></td>
+            <td><%= memSize%></td>
+            <td><%= locality%></td>
+            <td><%= escapeXml(Bytes.toString(meta.getStartKey())) %></td>
+            <td><%= escapeXml(Bytes.toString(meta.getEndKey())) %></td>
+          <%
+                if (withReplica) {
+          %>
+              <td><%= meta.getReplicaId() %></td>
+          <%
+                }
+          %>
+          </tr>
+          <%  } %>
+          <%} %>
+        </tbody>
+      </table>
+    </div>
+    <div class="tab-pane" id="metaTab_compactStats">
+      <table id="metaTableCompactStatsTable" class="tablesorter table table-striped">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Region Server</th>
+            <th>Num. Compacting KVs</th>
+            <th>Num. Compacted KVs</th>
+            <th>Remaining KVs</th>
+            <th>Compaction Progress</th>
+          </tr>
+        </thead>
+        <tbody>
+        <%
+          // NOTE: Presumes meta with one or more replicas
+          for (int j = 0; j < numMetaReplicas; j++) {
+            HRegionInfo meta = RegionReplicaUtil.getRegionInfoForReplica(
+                                    HRegionInfo.FIRST_META_REGIONINFO, j);
+            ServerName metaLocation = metaTableLocator.waitMetaRegionLocation(master.getZooKeeper(), j, 1);
+            for (int i = 0; i < 1; i++) {
+              String url = "";
+              long compactingKVs = 0;
+              long compactedKVs = 0;
+              String compactionProgress = "";
+
+              if (metaLocation != null) {
+                ServerLoad sl = master.getServerManager().getLoad(metaLocation);
+                // The host name portion should be safe, but I don't know how we handle IDNs so err on the side of failing safely.
+                url = "//" + URLEncoder.encode(metaLocation.getHostname()) + ":" + master.getRegionServerInfoPort(metaLocation) + "/";
+                if (sl != null) {
+                  Map<byte[], RegionLoad> map = sl.getRegionsLoad();
+                  if (map.containsKey(meta.getRegionName())) {
+                    RegionLoad load = map.get(meta.getRegionName());
+                    compactingKVs = load.getTotalCompactingKVs();
+                    compactedKVs = load.getCurrentCompactedKVs();
+                    if (compactingKVs > 0) {
+                      compactionProgress = String.format("%.2f", 100 * ((float)
+                        compactedKVs / compactingKVs)) + "%";
+                    }
+                  }
+                }
+              }
+        %>
+          <tr>
+            <%
+            String metaLocationString = metaLocation != null ?
+                StringEscapeUtils.escapeHtml(metaLocation.getHostname().toString())
+                  + ":" + master.getRegionServerInfoPort(metaLocation) :
+                "(null)";
+            %>
+            <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
+            <td><a href="<%= url %>"><%= metaLocationString %></a></td>
+            <td><%= String.format("%,1d", compactingKVs)%></td>
+            <td><%= String.format("%,1d", compactedKVs)%></td>
+            <td><%= String.format("%,1d", compactingKVs - compactedKVs)%></td>
+            <td><%= compactionProgress%></td>
+          </tr>
+        <%  } %>
+        <%} %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
 <%} else {
   Admin admin = master.getConnection().getAdmin();
   try { %>
@@ -363,6 +458,9 @@ if ( fqtn != null ) {
   long totalSize = 0;
   long totalStoreFileCount = 0;
   long totalMemSize = 0;
+  long totalCompactingKVs = 0;
+  long totalCompactedKVs = 0;
+  String percentDone = "";
   String urlRegionServer = null;
   Map<ServerName, Integer> regDistribution = new TreeMap<ServerName, Integer>();
   Map<ServerName, Integer> primaryRegDistribution = new TreeMap<ServerName, Integer>();
@@ -388,6 +486,8 @@ if ( fqtn != null ) {
           totalStoreFileCount += regionload.getStorefiles();
           totalMemSize += regionload.getMemStoreSizeMB();
           totalStoreFileSizeMB += regionload.getStorefileSizeMB();
+          totalCompactingKVs += regionload.getTotalCompactingKVs();
+          totalCompactedKVs += regionload.getCurrentCompactedKVs();
         } else {
           RegionLoad load0 = new RegionLoad(ClusterStatusProtos.RegionLoad.newBuilder().setRegionSpecifier(HBaseProtos.RegionSpecifier.newBuilder().setValue(ByteString.copyFrom(regionInfo.getRegionName())).build()).build());
           regionsToLoad.put(regionInfo, load0);
@@ -401,121 +501,209 @@ if ( fqtn != null ) {
       regionsToLoad.put(regionInfo, load0);
     }
   }
+  if  (totalCompactingKVs > 0) {
+    percentDone = String.format("%.2f", 100 *
+      ((float) totalCompactedKVs / totalCompactingKVs)) + "%";
+  }
 
   if(regions != null && regions.size() > 0) { %>
 <h2>Table Regions</h2>
-<table id="regionServerDetailsTable" class="tablesorter table table-striped">
-<thead>
-<tr>
-<th>Name(<%= String.format("%,1d", regions.size())%>)</th>
-<th>Region Server</th>
-<th>ReadRequests<br>(<%= String.format("%,1d", totalReadReq)%>)</th>
-<th>WriteRequests<br>(<%= String.format("%,1d", totalWriteReq)%>)</th>
-<th>StorefileSize<br>(<%= StringUtils.byteDesc(totalSize*1024l*1024)%>)</th>
-<th>Num.Storefiles<br>(<%= String.format("%,1d", totalStoreFileCount)%>)</th>
-<th>MemSize<br>(<%= StringUtils.byteDesc(totalMemSize*1024l*1024)%>)</th>
-<th>Locality</th>
-<th>Start Key</th>
-<th>End Key</th>
-<%
-  if (withReplica) {
-%>
-<th>ReplicaID</th>
-<%
-  }
-%>
-</thead>
-</tr>
-<tbody>
+<div class="tabbable">
+  <ul class="nav nav-pills">
+    <li class="active">
+      <a href="#tab_baseStats" data-toggle="tab">Base Stats</a>
+    </li>
+    <li class="">
+      <a href="#tab_compactStats" data-toggle="tab">Compactions</a>
+    </li>
+  </ul>
+  <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
+    <div class="tab-pane active" id="tab_baseStats">
+      <table id="regionServerDetailsTable" class="tablesorter table table-striped">
+        <thead>
+          <tr>
+            <th>Name(<%= String.format("%,1d", regions.size())%>)</th>
+            <th>Region Server</th>
+            <th>ReadRequests<br>(<%= String.format("%,1d", totalReadReq)%>)</th>
+            <th>WriteRequests<br>(<%= String.format("%,1d", totalWriteReq)%>)</th>
+            <th>StorefileSize<br>(<%= StringUtils.byteDesc(totalSize*1024l*1024)%>)</th>
+            <th>Num.Storefiles<br>(<%= String.format("%,1d", totalStoreFileCount)%>)</th>
+            <th>MemSize<br>(<%= StringUtils.byteDesc(totalMemSize*1024l*1024)%>)</th>
+            <th>Locality</th>
+            <th>Start Key</th>
+            <th>End Key</th>
+            <%
+              if (withReplica) {
+            %>
+            <th>ReplicaID</th>
+            <%
+              }
+            %>
+          </tr>
+        </thead>
+        <tbody>
+        <%
+          List<Map.Entry<HRegionInfo, RegionLoad>> entryList = new ArrayList<Map.Entry<HRegionInfo, RegionLoad>>(regionsToLoad.entrySet());
+          numRegions = regions.size();
+          int numRegionsRendered = 0;
+          // render all regions
+          if (numRegionsToRender < 0) {
+            numRegionsToRender = numRegions;
+          }
+          for (Map.Entry<HRegionInfo, RegionLoad> hriEntry : entryList) {
+            HRegionInfo regionInfo = hriEntry.getKey();
+            ServerName addr = regions.get(regionInfo);
+            RegionLoad load = hriEntry.getValue();
+            String readReq = "N/A";
+            String writeReq = "N/A";
+            String regionSize = "N/A";
+            String fileCount = "N/A";
+            String memSize = "N/A";
+            float locality = 0.0f;
+            if(load != null) {
+              readReq = String.format("%,1d", load.getReadRequestsCount());
+              writeReq = String.format("%,1d", load.getWriteRequestsCount());
+              regionSize = StringUtils.byteDesc(load.getStorefileSizeMB()*1024l*1024);
+              fileCount = String.format("%,1d", load.getStorefiles());
+              memSize = StringUtils.byteDesc(load.getMemStoreSizeMB()*1024l*1024);
+              locality = load.getDataLocality();
+            }
 
-<%
-  List<Map.Entry<HRegionInfo, RegionLoad>> entryList = new ArrayList<Map.Entry<HRegionInfo, RegionLoad>>(regionsToLoad.entrySet());
-  numRegions = regions.size();
-  int numRegionsRendered = 0;
-  // render all regions
-  if (numRegionsToRender < 0) {
-    numRegionsToRender = numRegions;
-  }
-  for (Map.Entry<HRegionInfo, RegionLoad> hriEntry : entryList) {
-	HRegionInfo regionInfo = hriEntry.getKey();
-	ServerName addr = regions.get(regionInfo);
-    RegionLoad load = hriEntry.getValue();
-    String readReq = "N/A";
-    String writeReq = "N/A";
-    String regionSize = "N/A";
-    String fileCount = "N/A";
-    String memSize = "N/A";
-    float locality = 0.0f;
-    if(load != null) {
-      readReq = String.format("%,1d", load.getReadRequestsCount());
-      writeReq = String.format("%,1d", load.getWriteRequestsCount());
-      regionSize = StringUtils.byteDesc(load.getStorefileSizeMB()*1024l*1024);
-      fileCount = String.format("%,1d", load.getStorefiles());
-      memSize = StringUtils.byteDesc(load.getMemStoreSizeMB()*1024l*1024);
-      locality = load.getDataLocality();
-    }
+            if (addr != null) {
+              ServerLoad sl = master.getServerManager().getLoad(addr);
+              // This port might be wrong if RS actually ended up using something else.
+              urlRegionServer =
+                  "//" + URLEncoder.encode(addr.getHostname()) + ":" + master.getRegionServerInfoPort(addr) + "/";
+              if(sl != null) {
+                Integer i = regDistribution.get(addr);
+                if (null == i) i = Integer.valueOf(0);
+                regDistribution.put(addr, i + 1);
+                if (withReplica && RegionReplicaUtil.isDefaultReplica(regionInfo.getReplicaId())) {
+                  i = primaryRegDistribution.get(addr);
+                  if (null == i) i = Integer.valueOf(0);
+                  primaryRegDistribution.put(addr, i+1);
+                }
+              }
+            }
+            if (numRegionsRendered < numRegionsToRender) {
+              numRegionsRendered++;
+        %>
+        <tr>
+          <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getRegionName())) %></td>
+          <%
+          if (urlRegionServer != null) {
+          %>
+          <td>
+             <a href="<%= urlRegionServer %>"><%= StringEscapeUtils.escapeHtml(addr.getHostname().toString()) + ":" + master.getRegionServerInfoPort(addr) %></a>
+          </td>
+          <%
+          } else {
+          %>
+          <td class="undeployed-region">not deployed</td>
+          <%
+          }
+          %>
+          <td><%= readReq%></td>
+          <td><%= writeReq%></td>
+          <td><%= regionSize%></td>
+          <td><%= fileCount%></td>
+          <td><%= memSize%></td>
+          <td><%= locality%></td>
+          <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getStartKey()))%></td>
+          <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getEndKey()))%></td>
+          <%
+          if (withReplica) {
+          %>
+          <td><%= regionInfo.getReplicaId() %></td>
+          <%
+          }
+          %>
+        </tr>
+        <% } %>
+        <% } %>
+        </tbody>
+      </table>
+      <% if (numRegions > numRegionsRendered) {
+           String allRegionsUrl = "?name=" + URLEncoder.encode(fqtn,"UTF-8") + "&numRegions=all";
+      %>
+        <p>This table has <b><%= numRegions %></b> regions in total, in order to improve the page load time,
+           only <b><%= numRegionsRendered %></b> regions are displayed here, <a href="<%= allRegionsUrl %>">click
+           here</a> to see all regions.</p>
+      <% } %>
+    </div>
+    <div class="tab-pane" id="tab_compactStats">
+      <table id="tableCompactStatsTable" class="tablesorter table table-striped">
+        <thead>
+          <tr>
+            <th>Name(<%= String.format("%,1d", regions.size())%>)</th>
+            <th>Region Server</th>
+            <th>Num. Compacting KVs<br>(<%= String.format("%,1d", totalCompactingKVs)%>)</th>
+            <th>Num. Compacted KVs<br>(<%= String.format("%,1d", totalCompactedKVs)%>)</th>
+            <th>Remaining KVs<br>(<%= String.format("%,1d", totalCompactingKVs - totalCompactedKVs)%>)</th>
+            <th>Compaction Progress<br>(<%= percentDone %>)</th>
+          </tr>
+        </thead>
+        <tbody>
+        <%
+          numRegionsRendered = 0;
+          for (Map.Entry<HRegionInfo, RegionLoad> hriEntry : entryList) {
+            HRegionInfo regionInfo = hriEntry.getKey();
+            ServerName addr = regions.get(regionInfo);
+            RegionLoad load = hriEntry.getValue();
+            long compactingKVs = 0;
+            long compactedKVs = 0;
+            String compactionProgress = "";
+            if(load != null) {
+              compactingKVs = load.getTotalCompactingKVs();
+              compactedKVs = load.getCurrentCompactedKVs();
+              if (compactingKVs > 0) {
+                compactionProgress = String.format("%.2f", 100 * ((float)
+                  compactedKVs / compactingKVs)) + "%";
+              }
+            }
 
-    if (addr != null) {
-      ServerLoad sl = master.getServerManager().getLoad(addr);
-      // This port might be wrong if RS actually ended up using something else.
-      urlRegionServer =
-          "//" + URLEncoder.encode(addr.getHostname()) + ":" + master.getRegionServerInfoPort(addr) + "/";
-      if(sl != null) {
-        Integer i = regDistribution.get(addr);
-        if (null == i) i = Integer.valueOf(0);
-        regDistribution.put(addr, i + 1);
-        if (withReplica && RegionReplicaUtil.isDefaultReplica(regionInfo.getReplicaId())) {
-          i = primaryRegDistribution.get(addr);
-          if (null == i) i = Integer.valueOf(0);
-          primaryRegDistribution.put(addr, i+1);
-        }
-      }
-    }
-    if (numRegionsRendered < numRegionsToRender) {
-      numRegionsRendered++;
-%>
-<tr>
-  <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getRegionName())) %></td>
-  <%
-  if (urlRegionServer != null) {
-  %>
-  <td>
-     <a href="<%= urlRegionServer %>"><%= StringEscapeUtils.escapeHtml(addr.getHostname().toString()) + ":" + master.getRegionServerInfoPort(addr) %></a>
-  </td>
-  <%
-  } else {
-  %>
-  <td class="undeployed-region">not deployed</td>
-  <%
-  }
-  %>
-  <td><%= readReq%></td>
-  <td><%= writeReq%></td>
-  <td><%= regionSize%></td>
-  <td><%= fileCount%></td>
-  <td><%= memSize%></td>
-  <td><%= locality%></td>
-  <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getStartKey()))%></td>
-  <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getEndKey()))%></td>
-  <%
-  if (withReplica) {
-  %>
-  <td><%= regionInfo.getReplicaId() %></td>
-  <%
-  }
-  %>
-</tr>
-<% } %>
-<% } %>
-</tbody>
-</table>
-<% if (numRegions > numRegionsRendered) {
-     String allRegionsUrl = "?name=" + URLEncoder.encode(fqtn,"UTF-8") + "&numRegions=all";
-%>
-  <p>This table has <b><%= numRegions %></b> regions in total, in order to improve the page load time,
-     only <b><%= numRegionsRendered %></b> regions are displayed here, <a href="<%= allRegionsUrl %>">click
-     here</a> to see all regions.</p>
-<% } %>
+            if (addr != null) {
+              // This port might be wrong if RS actually ended up using something else.
+              urlRegionServer =
+                  "//" + URLEncoder.encode(addr.getHostname()) + ":" + master.getRegionServerInfoPort(addr) + "/";
+            }
+            if (numRegionsRendered < numRegionsToRender) {
+              numRegionsRendered++;
+        %>
+        <tr>
+          <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getRegionName())) %></td>
+          <%
+          if (urlRegionServer != null) {
+          %>
+          <td>
+             <a href="<%= urlRegionServer %>"><%= StringEscapeUtils.escapeHtml(addr.getHostname().toString()) + ":" + master.getRegionServerInfoPort(addr) %></a>
+          </td>
+          <%
+          } else {
+          %>
+          <td class="undeployed-region">not deployed</td>
+          <%
+          }
+          %>
+          <td><%= String.format("%,1d", compactingKVs)%></td>
+          <td><%= String.format("%,1d", compactedKVs)%></td>
+          <td><%= String.format("%,1d", compactingKVs - compactedKVs)%></td>
+          <td><%= compactionProgress%></td>
+        </tr>
+        <% } %>
+        <% } %>
+        </tbody>
+      </table>
+      <% if (numRegions > numRegionsRendered) {
+           String allRegionsUrl = "?name=" + URLEncoder.encode(fqtn,"UTF-8") + "&numRegions=all";
+      %>
+      <p>This table has <b><%= numRegions %></b> regions in total, in order to improve the page load time,
+        only <b><%= numRegionsRendered %></b> regions are displayed here, <a href="<%= allRegionsUrl %>">click
+        here</a> to see all regions.</p>
+      <% } %>
+    </div>
+  </div>
+</div>
 <h2>Regions by Region Server</h2>
 <%
 if (withReplica) {
@@ -652,6 +840,8 @@ $(document).ready(function()
         $("#regionServerTable").tablesorter();
         $("#regionServerDetailsTable").tablesorter();
         $("#tableRegionTable").tablesorter();
+        $("#tableCompactStatsTable").tablesorter();
+        $("#metaTableCompactStatsTable").tablesorter();
     } 
 );
 </script>
