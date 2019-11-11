@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -165,6 +166,7 @@ public class TestHStore {
    */
   @Before
   public void setUp() throws IOException {
+    qualifiers.clear();
     qualifiers.add(qf1);
     qualifiers.add(qf3);
     qualifiers.add(qf5);
@@ -1702,6 +1704,16 @@ public class TestHStore {
     store.updateSpaceQuotaAfterFileReplacement(sizeStore, regionInfo2, null, Arrays.asList(sf4));
 
     assertEquals(8192L, sizeStore.getRegionSize(regionInfo2).getSize());
+  }
+
+  @Test
+  public void testHFileContextSetWithCFAndTable() throws Exception {
+    init(this.name.getMethodName());
+    StoreFileWriter writer = store.createWriterInTmp(10000L,
+        Compression.Algorithm.NONE, false, true, false, true);
+    HFileContext hFileContext = writer.getHFileWriter().getFileContext();
+    assertArrayEquals(family, hFileContext.getColumnFamily());
+    assertArrayEquals(table, hFileContext.getTableName());
   }
 
   private HStoreFile mockStoreFileWithLength(long length) {

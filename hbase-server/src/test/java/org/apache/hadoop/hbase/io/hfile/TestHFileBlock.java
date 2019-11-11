@@ -957,7 +957,8 @@ public class TestHFileBlock {
       long expected = hfileBlockExpectedSize + byteBufferExpectedSize + hfileMetaSize;
       assertEquals("Block data size: " + size + ", byte buffer expected " +
           "size: " + byteBufferExpectedSize + ", HFileBlock class expected " +
-          "size: " + hfileBlockExpectedSize + ";", expected,
+          "size: " + hfileBlockExpectedSize + " HFileContext class expected size: "
+              + hfileMetaSize + "; ", expected,
           block.heapSize());
     }
   }

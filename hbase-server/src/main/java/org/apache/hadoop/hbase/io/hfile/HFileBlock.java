@@ -1266,6 +1266,8 @@ public class HFileBlock implements Cacheable {
                                 .withCompressTags(fileContext.isCompressTags())
                                 .withIncludesMvcc(fileContext.isIncludesMvcc())
                                 .withIncludesTags(fileContext.isIncludesTags())
+                                .withColumnFamily(fileContext.getColumnFamily())
+                                .withTableName(fileContext.getTableName())
                                 .build();
       // Build the HFileBlock.
       HFileBlockBuilder builder = new HFileBlockBuilder();
