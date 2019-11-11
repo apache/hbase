@@ -62,19 +62,19 @@ public class TestHistogramImpl {
     Snapshot snapshot = histogram.snapshot();
 
     assertEquals(100, snapshot.getCount());
-    assertEquals(50, snapshot.getMedian());
+    assertEquals(49, snapshot.getMedian());
     assertEquals(49, snapshot.getMean());
     assertEquals(0, snapshot.getMin());
     assertEquals(99, snapshot.getMax());
-    assertEquals(25, snapshot.get25thPercentile());
-    assertEquals(75, snapshot.get75thPercentile());
-    assertEquals(90, snapshot.get90thPercentile());
-    assertEquals(95, snapshot.get95thPercentile());
-    assertEquals(98, snapshot.get98thPercentile());
-    assertEquals(99, snapshot.get99thPercentile());
-    assertEquals(99, snapshot.get999thPercentile());
+    assertEquals(24, snapshot.get25thPercentile());
+    assertEquals(74, snapshot.get75thPercentile());
+    assertEquals(89, snapshot.get90thPercentile());
+    assertEquals(94, snapshot.get95thPercentile());
+    assertEquals(97, snapshot.get98thPercentile());
+    assertEquals(98, snapshot.get99thPercentile());
+    assertEquals(98, snapshot.get999thPercentile());
 
-    assertEquals(51, snapshot.getCountAtOrBelow(50));
+    assertEquals(100, snapshot.getCountAtOrBelow(50));
 
     // check that histogram is reset.
     assertEquals(100, histogram.getCount()); // count does not reset
@@ -99,5 +99,23 @@ public class TestHistogramImpl {
     assertEquals(198, snapshot.get98thPercentile());
     assertEquals(199, snapshot.get99thPercentile());
     assertEquals(199, snapshot.get999thPercentile());
+
+    IntStream.range(500, 1000).forEach(histogram::update);
+
+    snapshot = histogram.snapshot();
+
+    assertEquals(500, snapshot.getCount());
+    assertEquals(749, snapshot.getMedian());
+    assertEquals(749, snapshot.getMean());
+    assertEquals(500, snapshot.getMin());
+    assertEquals(999, snapshot.getMax());
+    assertEquals(624, snapshot.get25thPercentile());
+    assertEquals(874, snapshot.get75thPercentile());
+    assertEquals(949, snapshot.get90thPercentile());
+    assertEquals(974, snapshot.get95thPercentile());
+    assertEquals(989, snapshot.get98thPercentile());
+    assertEquals(994, snapshot.get99thPercentile());
+    assertEquals(998, snapshot.get999thPercentile());
+
   }
 }
