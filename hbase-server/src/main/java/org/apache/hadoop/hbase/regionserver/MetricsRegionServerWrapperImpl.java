@@ -18,10 +18,13 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.OptionalDouble;
 import java.util.OptionalLong;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -115,6 +118,8 @@ class MetricsRegionServerWrapperImpl
   private volatile long mobFileCacheCount = 0;
   private volatile long blockedRequestsCount = 0L;
   private volatile long averageRegionSize = 0L;
+  protected volatile Map<String, ArrayList<Long>> requestsCountCache = new
+      ConcurrentHashMap<String, ArrayList<Long>>();
 
   private ScheduledExecutorService executor;
   private Runnable runnable;
@@ -664,9 +669,6 @@ class MetricsRegionServerWrapperImpl
   public class RegionServerMetricsWrapperRunnable implements Runnable {
 
     private long lastRan = 0;
-    private long lastRequestCount = 0;
-    private long lastReadRequestsCount = 0;
-    private long lastWriteRequestsCount = 0;
     private long lastStoreFileSize = 0;
 
     @Override
@@ -681,8 +683,7 @@ class MetricsRegionServerWrapperImpl
         long tempMaxStoreFileAge = 0, tempNumReferenceFiles = 0;
         long avgAgeNumerator = 0, numHFiles = 0;
         long tempMinStoreFileAge = Long.MAX_VALUE;
-        long tempReadRequestsCount = 0, tempFilteredReadRequestsCount = 0,
-          tempWriteRequestsCount = 0, tempCpRequestsCount = 0;
+        long tempFilteredReadRequestsCount = 0, tempCpRequestsCount = 0;
         long tempCheckAndMutateChecksFailed = 0;
         long tempCheckAndMutateChecksPassed = 0;
         long tempStorefileIndexSize = 0;
@@ -709,13 +710,53 @@ class MetricsRegionServerWrapperImpl
         long tempMobScanCellsSize = 0;
         long tempBlockedRequestsCount = 0;
         int regionCount = 0;
+
+        long tempReadRequestsCount = 0;
+        long tempWriteRequestsCount = 0;
+        long tempRequestsPerSecond = 0;
+        long currentReadRequestsCount = 0;
+        long currentWriteRequestsCount = 0;
+        long lastReadRequestsCount = 0;
+        long lastWriteRequestsCount = 0;
+        long readRequestsDelta = 0;
+        long writeRequestsDelta = 0;
+        long totalReadRequestsDelta = 0;
+        long totalWriteRequestsDelta = 0;
+        String encodedRegionName;
+        ArrayList<String> hregions = new ArrayList<String>();
         for (HRegion r : regionServer.getOnlineRegionsLocalContext()) {
+          encodedRegionName = r.getRegionInfo().getEncodedName();
+          hregions.add(encodedRegionName);
+          currentReadRequestsCount = r.getReadRequestsCount();
+          currentWriteRequestsCount = r.getWriteRequestsCount();
+          if (requestsCountCache.containsKey(encodedRegionName)) {
+            lastReadRequestsCount = requestsCountCache.get(encodedRegionName).get(0);
+            lastWriteRequestsCount = requestsCountCache.get(encodedRegionName).get(1);
+            readRequestsDelta = currentReadRequestsCount - lastReadRequestsCount;
+            writeRequestsDelta = currentWriteRequestsCount - lastWriteRequestsCount;
+            totalReadRequestsDelta += readRequestsDelta;
+            totalWriteRequestsDelta += writeRequestsDelta;
+            tempRequestsPerSecond += readRequestsDelta + writeRequestsDelta;
+            //Update cache for our next comparision
+            requestsCountCache.get(encodedRegionName).set(0,currentReadRequestsCount);
+            requestsCountCache.get(encodedRegionName).set(1,currentWriteRequestsCount);
+          } else {
+            // List[0] -> readRequestCount
+            // List[1] -> writeRequestCount
+            ArrayList<Long> requests = new ArrayList<Long>(2);
+            requests.add(currentReadRequestsCount);
+            requests.add(currentWriteRequestsCount);
+            requestsCountCache.put(encodedRegionName, requests);
+            totalReadRequestsDelta += currentReadRequestsCount;
+            totalWriteRequestsDelta += currentWriteRequestsCount;
+            tempRequestsPerSecond += currentReadRequestsCount + currentWriteRequestsCount;
+          }
+          tempReadRequestsCount += r.getReadRequestsCount();
+          tempWriteRequestsCount += r.getWriteRequestsCount();
           tempNumMutationsWithoutWAL += r.getNumMutationsWithoutWAL();
           tempDataInMemoryWithoutWAL += r.getDataInMemoryWithoutWAL();
-          tempReadRequestsCount += r.getReadRequestsCount();
           tempCpRequestsCount += r.getCpRequestsCount();
           tempFilteredReadRequestsCount += r.getFilteredReadRequestsCount();
-          tempWriteRequestsCount += r.getWriteRequestsCount();
           tempCheckAndMutateChecksFailed += r.getCheckAndMutateChecksFailed();
           tempCheckAndMutateChecksPassed += r.getCheckAndMutateChecksPassed();
           tempBlockedRequestsCount += r.getBlockedRequestsCount();
@@ -778,6 +819,10 @@ class MetricsRegionServerWrapperImpl
           }
           regionCount++;
         }
+
+        //Removing regions from cache that are moved/closed/transitioned to another RS.
+        requestsCountCache.entrySet().removeIf(e -> !hregions.contains(e.getKey()));
+
         float localityIndex = hdfsBlocksDistribution.getBlockLocalityIndex(
             regionServer.getServerName().getHostname());
         tempPercentFileLocal = Double.isNaN(tempBlockedRequestsCount) ? 0 : (localityIndex * 100);
@@ -797,13 +842,10 @@ class MetricsRegionServerWrapperImpl
         }
         // If we've time traveled keep the last requests per second.
         if ((currentTime - lastRan) > 0) {
-          long currentRequestCount = getTotalRowActionRequestCount();
-          requestsPerSecond = (currentRequestCount - lastRequestCount) /
-              ((currentTime - lastRan) / 1000.0);
-          lastRequestCount = currentRequestCount;
+          requestsPerSecond = tempRequestsPerSecond / ((currentTime - lastRan) / 1000.0);
 
-          long intervalReadRequestsCount = tempReadRequestsCount - lastReadRequestsCount;
-          long intervalWriteRequestsCount = tempWriteRequestsCount - lastWriteRequestsCount;
+          long intervalReadRequestsCount = totalReadRequestsDelta;
+          long intervalWriteRequestsCount = totalWriteRequestsDelta;
 
           double readRequestsRatePerMilliSecond = (double)intervalReadRequestsCount / period;
           double writeRequestsRatePerMilliSecond = (double)intervalWriteRequestsCount / period;
@@ -814,8 +856,6 @@ class MetricsRegionServerWrapperImpl
           long intervalStoreFileSize = tempStoreFileSize - lastStoreFileSize;
           storeFileSizeGrowthRate = (double)intervalStoreFileSize * 1000.0 / period;
 
-          lastReadRequestsCount = tempReadRequestsCount;
-          lastWriteRequestsCount = tempWriteRequestsCount;
           lastStoreFileSize = tempStoreFileSize;
         }
 

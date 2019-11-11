@@ -371,7 +371,9 @@ public class HRegionServer extends HasThread implements
   /** region server process name */
   public static final String REGIONSERVER = "regionserver";
 
+
   private MetricsRegionServer metricsRegionServer;
+  MetricsRegionServerWrapperImpl metricsRegionServerImpl;
   private SpanReceiverHost spanReceiverHost;
 
   /**
@@ -1535,8 +1537,9 @@ public class HRegionServer extends HasThread implements
       // Init in here rather than in constructor after thread name has been set
       final MetricsTable metricsTable =
           new MetricsTable(new MetricsTableWrapperAggregateImpl(this));
+      this.metricsRegionServerImpl = new MetricsRegionServerWrapperImpl(this);
       this.metricsRegionServer = new MetricsRegionServer(
-          new MetricsRegionServerWrapperImpl(this), conf, metricsTable);
+          metricsRegionServerImpl, conf, metricsTable);
       // Now that we have a metrics source, start the pause monitor
       this.pauseMonitor = new JvmPauseMonitor(conf, getMetrics().getMetricsSource());
       pauseMonitor.start();
@@ -3238,6 +3241,7 @@ public class HRegionServer extends HasThread implements
   @Override
   public boolean removeRegion(final HRegion r, ServerName destination) {
     HRegion toReturn = this.onlineRegions.remove(r.getRegionInfo().getEncodedName());
+    metricsRegionServerImpl.requestsCountCache.remove(r.getRegionInfo().getEncodedName());
     if (destination != null) {
       long closeSeqNum = r.getMaxFlushedSeqId();
       if (closeSeqNum == HConstants.NO_SEQNUM) {
