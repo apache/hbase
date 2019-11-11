@@ -868,7 +868,15 @@ public class ZKAssign {
     try {
       rt = RegionTransition.createRegionTransition(
           endState, region.getRegionName(), serverName, payload);
-      if(!ZKUtil.setData(zkw, node, rt.toByteArray(), stat.getVersion())) {
+      boolean isDataSet;
+      try {
+        isDataSet = ZKUtil.setData(zkw, node, rt.toByteArray(), stat.getVersion());
+      } catch (KeeperException.BadVersionException e) {
+        isDataSet = false;
+        LOG.error("Received BadVersionException from ZK for " + encoded
+          + ", version: " + stat.getVersion());
+      }
+      if (!isDataSet) {
         LOG.warn(zkw.prefix("Attempt to transition the " +
         "unassigned node for " + encoded +
         " from " + beginState + " to " + endState + " failed, " +

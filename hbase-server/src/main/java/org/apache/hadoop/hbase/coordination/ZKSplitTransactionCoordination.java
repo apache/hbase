@@ -40,6 +40,9 @@ public class ZKSplitTransactionCoordination implements SplitTransactionCoordinat
   private CoordinatedStateManager coordinationManager;
   private final ZooKeeperWatcher watcher;
 
+  // max wait for split transaction - 100 times in a loop with 100 ms of thread sleep each time
+  private static final int SPLIT_WAIT_TIMEOUT = 100;
+
   private static final Log LOG = LogFactory.getLog(ZKSplitTransactionCoordination.class);
 
   public ZKSplitTransactionCoordination(CoordinatedStateManager coordinationProvider,
@@ -163,6 +166,10 @@ public class ZKSplitTransactionCoordination implements SplitTransactionCoordinat
         }
         Thread.sleep(100);
         spins++;
+        if (spins > SPLIT_WAIT_TIMEOUT) {
+          throw new IOException("Waiting time for Split Transaction exceeded for region: "
+            + parent.getRegionInfo().getRegionNameAsString());
+        }
         byte[] data = ZKAssign.getDataNoWatch(watcher, node, stat);
         if (data == null) {
           throw new IOException("Data is null, splitting node " + node + " no longer exists");
@@ -222,9 +229,14 @@ public class ZKSplitTransactionCoordination implements SplitTransactionCoordinat
     // Tell master about split by updating zk. If we fail, abort.
     if (coordinationManager.getServer() != null) {
       try {
-        zstd.setZnodeVersion(transitionSplittingNode(parent.getRegionInfo(), a.getRegionInfo(),
+        int newNodeVersion = transitionSplittingNode(parent.getRegionInfo(), a.getRegionInfo(),
           b.getRegionInfo(), coordinationManager.getServer().getServerName(), zstd,
-          RS_ZK_REGION_SPLITTING, RS_ZK_REGION_SPLIT));
+          RS_ZK_REGION_SPLITTING, RS_ZK_REGION_SPLIT);
+        if (newNodeVersion == -1) {
+          throw new IOException("Notifying master of RS split failed for region: "
+            + parent.getRegionInfo().getRegionNameAsString());
+        }
+        zstd.setZnodeVersion(newNodeVersion);
 
         int spins = 0;
         // Now wait for the master to process the split. We know it's done
