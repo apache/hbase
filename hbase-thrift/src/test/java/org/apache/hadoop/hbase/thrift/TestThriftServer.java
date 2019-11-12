@@ -887,6 +887,9 @@ public class TestThriftServer {
     assertEquals(TThriftServerType.ONE, handler.getThriftServerType());
   }
 
+  /**
+   * Verify that thrift client calling thrift2 server can get the thrift2 server type correctly.
+   */
   @Test
   public void testGetThriftServerOneType() throws Exception {
     // start a thrift2 server

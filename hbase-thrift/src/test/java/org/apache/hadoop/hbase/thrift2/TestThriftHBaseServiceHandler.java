@@ -1705,6 +1705,9 @@ public class TestThriftHBaseServiceHandler {
     assertEquals(TThriftServerType.TWO, handler.getThriftServerType());
   }
 
+  /**
+   * Verify that thrift2 client calling thrift server can get the thrift server type correctly.
+   */
   @Test
   public void testGetThriftServerOneType() throws Exception {
 
