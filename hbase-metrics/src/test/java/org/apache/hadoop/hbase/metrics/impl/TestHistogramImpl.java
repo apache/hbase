@@ -100,7 +100,9 @@ public class TestHistogramImpl {
     assertEquals(199, snapshot.get99thPercentile());
     assertEquals(199, snapshot.get999thPercentile());
 
-    IntStream.range(500, 1000).forEach(histogram::update);
+    for (int i = 500; i < 1000; i++) {
+      histogram.update(i);
+    }
 
     snapshot = histogram.snapshot();
 
