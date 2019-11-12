@@ -92,7 +92,7 @@ public class TestActiveMasterManager {
     ActiveMasterManager activeMasterManager =
       dummyMaster.getActiveMasterManager();
     assertFalse(activeMasterManager.clusterHasActiveMaster.get());
-    assertEquals(null, activeMasterManager.getActiveMasterServerName());
+    assertFalse(activeMasterManager.getActiveMasterServerName().isPresent());
 
     // First test becoming the active master uninterrupted
     MonitoredTask status = Mockito.mock(MonitoredTask.class);
@@ -101,7 +101,7 @@ public class TestActiveMasterManager {
     activeMasterManager.blockUntilBecomingActiveMaster(100, status);
     assertTrue(activeMasterManager.clusterHasActiveMaster.get());
     assertMaster(zk, master);
-    assertMaster(zk, activeMasterManager.getActiveMasterServerName());
+    assertMaster(zk, activeMasterManager.getActiveMasterServerName().get());
 
     // Now pretend master restart
     DummyMaster secondDummyMaster = new DummyMaster(zk,master);
@@ -111,8 +111,8 @@ public class TestActiveMasterManager {
     activeMasterManager.blockUntilBecomingActiveMaster(100, status);
     assertTrue(activeMasterManager.clusterHasActiveMaster.get());
     assertMaster(zk, master);
-    assertMaster(zk, activeMasterManager.getActiveMasterServerName());
-    assertMaster(zk, secondActiveMasterManager.getActiveMasterServerName());
+    assertMaster(zk, activeMasterManager.getActiveMasterServerName().get());
+    assertMaster(zk, secondActiveMasterManager.getActiveMasterServerName().get());
   }
 
   /**
@@ -140,7 +140,7 @@ public class TestActiveMasterManager {
     ActiveMasterManager activeMasterManager =
       ms1.getActiveMasterManager();
     assertFalse(activeMasterManager.clusterHasActiveMaster.get());
-    assertEquals(activeMasterManager.getActiveMasterServerName(), null);
+    assertFalse(activeMasterManager.getActiveMasterServerName().isPresent());
 
     // First test becoming the active master uninterrupted
     ClusterStatusTracker clusterStatusTracker =
@@ -150,7 +150,7 @@ public class TestActiveMasterManager {
         Mockito.mock(MonitoredTask.class));
     assertTrue(activeMasterManager.clusterHasActiveMaster.get());
     assertMaster(zk, firstMasterAddress);
-    assertMaster(zk, activeMasterManager.getActiveMasterServerName());
+    assertMaster(zk, activeMasterManager.getActiveMasterServerName().get());
 
     // New manager will now try to become the active master in another thread
     WaitToBeMasterThread t = new WaitToBeMasterThread(zk, secondMasterAddress);
@@ -169,7 +169,7 @@ public class TestActiveMasterManager {
     // But secondary one should not be the active master
     assertFalse(t.isActiveMaster);
     // Verify the active master ServerName is populated in standby master.
-    assertEquals(firstMasterAddress, t.manager.getActiveMasterServerName());
+    assertEquals(firstMasterAddress, t.manager.getActiveMasterServerName().get());
 
     // Close the first server and delete it's master node
     ms1.stop("stopping first server");
@@ -198,7 +198,7 @@ public class TestActiveMasterManager {
 
     assertTrue(t.manager.clusterHasActiveMaster.get());
     assertTrue(t.isActiveMaster);
-    assertEquals(secondMasterAddress, t.manager.getActiveMasterServerName());
+    assertEquals(secondMasterAddress, t.manager.getActiveMasterServerName().get());
 
     LOG.info("Deleting master node");
 
