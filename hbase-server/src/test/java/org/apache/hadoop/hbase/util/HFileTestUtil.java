@@ -104,6 +104,7 @@ public class HFileTestUtil {
     HFileContext meta = new HFileContextBuilder()
         .withIncludesTags(withTag)
         .withDataBlockEncoding(encoding)
+        .withColumnFamily(family)
         .build();
     HFile.Writer writer = HFile.getWriterFactory(configuration, new CacheConfig(configuration))
         .withPath(fs, path)

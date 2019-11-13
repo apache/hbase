@@ -32,6 +32,8 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -44,7 +46,10 @@ import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
+import org.junit.Assert;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 
 /**
  * test hfile features.
@@ -95,6 +100,44 @@ public class TestHFile extends HBaseTestCase {
     assertNull(r.getLastKey());
   }
 
+  @Test
+  public void testCorruptOutOfOrderHFileWrite() throws IOException {
+    Path path = new Path(ROOT_DIR, "testCorruptOutOfOrderHFileWrite");
+    FSDataOutputStream mockedOutputStream = Mockito.mock(FSDataOutputStream.class);
+    String columnFamily = "MyColumnFamily";
+    String tableName = "MyTableName";
+    HFileContext fileContext = new HFileContextBuilder()
+        .withHFileName("testCorruptOutOfOrderHFileWriteHFile")
+        .withBlockSize(minBlockSize)
+        .withColumnFamily(Bytes.toBytes(columnFamily))
+        .withTableName(Bytes.toBytes(tableName))
+        .withHBaseCheckSum(false)
+        .withCompression(Compression.Algorithm.NONE)
+        .withCompressTags(false)
+        .build();
+    HFileWriterV3 writer = new HFileWriterV3(conf, cacheConf, fs, path, mockedOutputStream,
+        new KeyValue.KVComparator(), fileContext);
+    byte[] row = Bytes.toBytes("foo");
+    byte[] qualifier = Bytes.toBytes("qualifier");
+    byte[] cf = Bytes.toBytes(columnFamily);
+    byte[] val = Bytes.toBytes("fooVal");
+    long firstTS = 100L;
+    long secondTS = 101L;
+    Cell firstCell = CellUtil.createCell(row,cf, qualifier, firstTS, Type.Put.getCode(), val);
+    Cell secondCell= CellUtil.createCell(row,cf, qualifier, secondTS, Type.Put.getCode(), val);
+    //second Cell will sort "higher" than the first because later timestamps should come first
+    writer.append(firstCell);
+    try {
+      writer.append(secondCell);
+    } catch(IOException ie){
+      String message = ie.getMessage();
+      Assert.assertTrue(message.contains("not lexically larger"));
+      Assert.assertTrue(message.contains(tableName));
+      Assert.assertTrue(message.contains(columnFamily));
+      return;
+    }
+    Assert.fail("Exception wasn't thrown even though Cells were appended in the wrong order!");
+  }
   /**
    * Create 0-length hfile and show that it fails
    */
