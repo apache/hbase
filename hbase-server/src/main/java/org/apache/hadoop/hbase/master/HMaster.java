@@ -1243,6 +1243,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     this.logCleaner = new LogCleaner(cleanerInterval, this, conf,
       getMasterFileSystem().getOldLogDir().getFileSystem(conf),
       getMasterFileSystem().getOldLogDir(), cleanerPool);
+    getChoreService().scheduleChore(logCleaner);
    //start the hfile archive cleaner thread
     Path archiveDir = HFileArchiveUtil.getArchivePath(conf);
     Map<String, Object> params = new HashMap<String, Object>();
