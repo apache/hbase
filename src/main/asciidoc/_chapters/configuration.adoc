@@ -201,7 +201,7 @@ The following table summarizes the versions of Hadoop supported with each versio
 Based on the version of HBase, you should select the most appropriate version of Hadoop.
 You can use Apache Hadoop, or a vendor's distribution of Hadoop.
 No distinction is made here.
-See link:https://wiki.apache.org/hadoop/Distributions%20and%20Commercial%20Support[the Hadoop wiki] for information about vendors of Hadoop.
+See link:https://cwiki.apache.org/confluence/display/HADOOP2/Distributions+and+Commercial+Support[the Hadoop wiki] for information about vendors of Hadoop.
 
 .Hadoop 2.x is recommended.
 [TIP]
