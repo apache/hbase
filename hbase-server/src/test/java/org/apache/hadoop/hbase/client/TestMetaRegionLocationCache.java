@@ -21,7 +21,6 @@ import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import org.apache.commons.io.IOUtils;
@@ -48,7 +47,7 @@ import org.junit.experimental.categories.Category;
 public class TestMetaRegionLocationCache {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAsyncMetaRegionLocator.class);
+      HBaseClassTestRule.forClass(TestMetaRegionLocationCache.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static AsyncRegistry REGISTRY;
@@ -84,7 +83,7 @@ public class TestMetaRegionLocationCache {
   // Verifies that the cached meta locations in the given master are in sync with what is in ZK.
   private void verifyCachedMetaLocations(HMaster master) throws Exception {
     List<HRegionLocation> metaHRLs =
-        master.getMetaRegionLocationCache().getCachedMetaRegionLocations().get();
+        master.getMetaRegionLocationCache().getMetaRegionLocations().get();
     assertTrue(metaHRLs != null);
     assertFalse(metaHRLs.isEmpty());
     ZKWatcher zk = master.getZooKeeper();

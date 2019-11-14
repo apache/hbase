@@ -80,6 +80,7 @@ import org.apache.hadoop.hbase.client.PackagePrivateFieldAccessor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionLoadStats;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -3053,13 +3054,14 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Get the Meta region servername from the passed data bytes. Can handle both old and new style
+   * Get the Meta region state from the passed data bytes. Can handle both old and new style
    * server names.
    * @param data protobuf serialized data with meta server name.
-   * @return Servername instance correpsonding to the serialized data.
+   * @param replicaId replica ID for this region
+   * @return RegionState instance corresponding to the serialized data.
    * @throws DeserializationException if the data is invalid.
    */
-  public static ServerName parseMetaServerNameFrom(final byte[] data)
+  public static RegionState parseMetaRegionStateFrom(final byte[] data, int replicaId)
       throws DeserializationException {
     RegionState.State state = RegionState.State.OPEN;
     ServerName serverName;
@@ -3082,7 +3084,11 @@ public final class ProtobufUtil {
       // old style of meta region location?
       serverName = parseServerNameFrom(data);
     }
-    return serverName;
+    if (serverName == null) {
+      state = RegionState.State.OFFLINE;
+    }
+    return new RegionState(RegionReplicaUtil.getRegionInfoForReplica(
+        RegionInfoBuilder.FIRST_META_REGIONINFO, replicaId), state, serverName);
   }
 
   /**

@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.types.CopyOnWriteArrayMap;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.RetryCounterFactory;
@@ -38,6 +37,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
  * A cache of meta region location metadata. Registers a listener on ZK to track changes to the
@@ -56,7 +56,6 @@ public class MetaRegionLocationCache extends ZKListener {
   private final RetryCounterFactory retryCounterFactory =
       new RetryCounterFactory(MAX_ZK_META_FETCH_RETRIES, SLEEP_INTERVAL_MS_BETWEEN_RETRIES);
 
-  private final ZKWatcher watcher;
   // Cached meta region locations indexed by replica ID.
   // CopyOnWriteArrayMap ensures synchronization during updates and a consistent snapshot during
   // client requests. Even though CopyOnWriteArrayMap copies the data structure for every write,
@@ -73,7 +72,6 @@ public class MetaRegionLocationCache extends ZKListener {
 
   MetaRegionLocationCache(ZKWatcher zkWatcher) {
     super(zkWatcher);
-    watcher = zkWatcher;
     cachedMetaLocations = new CopyOnWriteArrayMap<>();
     watcher.registerListener(this);
     // Populate the initial snapshot of data from meta znodes.
@@ -121,16 +119,15 @@ public class MetaRegionLocationCache extends ZKListener {
    */
   private HRegionLocation getMetaRegionLocation(int replicaId)
       throws KeeperException {
-    ServerName serverName = null;
+    RegionState metaRegionState;
     try {
       byte[] data = ZKUtil.getDataAndWatch(watcher,
           watcher.getZNodePaths().getZNodeForReplica(replicaId));
-      serverName = ProtobufUtil.parseMetaServerNameFrom(data);
+      metaRegionState = ProtobufUtil.parseMetaRegionStateFrom(data, replicaId);
     } catch (DeserializationException e) {
       throw ZKUtil.convert(e);
     }
-    return new HRegionLocation(RegionReplicaUtil.getRegionInfoForReplica(
-        RegionInfoBuilder.FIRST_META_REGIONINFO, replicaId), serverName);
+    return new HRegionLocation(metaRegionState.getRegion(), metaRegionState.getServerName());
   }
 
   private void updateMetaLocation(String path, ZNodeOpType opType) {
@@ -177,7 +174,7 @@ public class MetaRegionLocationCache extends ZKListener {
   /**
    * @return List of HRegionLocations for meta replica(s), null if the cache is empty.
    */
-  public Optional<List<HRegionLocation>> getCachedMetaRegionLocations() {
+  public Optional<List<HRegionLocation>> getMetaRegionLocations() {
     ConcurrentNavigableMap<Integer, HRegionLocation> snapshot =
         cachedMetaLocations.tailMap(cachedMetaLocations.firstKey());
     if (snapshot == null || snapshot.isEmpty()) {
