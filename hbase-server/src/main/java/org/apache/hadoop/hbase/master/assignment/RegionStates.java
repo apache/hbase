@@ -112,9 +112,8 @@ public class RegionStates {
   // ==========================================================================
   @VisibleForTesting
   RegionStateNode createRegionStateNode(RegionInfo regionInfo) {
-    RegionStateNode newNode = new RegionStateNode(regionInfo, regionInTransition);
-    RegionStateNode oldNode = regionsMap.putIfAbsent(regionInfo.getRegionName(), newNode);
-    return oldNode != null ? oldNode : newNode;
+    return regionsMap.computeIfAbsent(regionInfo.getRegionName(),
+      key -> new RegionStateNode(regionInfo, regionInTransition));
   }
 
   public RegionStateNode getOrCreateRegionStateNode(RegionInfo regionInfo) {
@@ -556,7 +555,7 @@ public class RegionStates {
       // Add online servers with no assignment for the table.
       for (Map<ServerName, List<RegionInfo>> table : result.values()) {
         for (ServerName serverName : serverMap.keySet()) {
-          table.putIfAbsent(serverName, new ArrayList<>());
+          table.computeIfAbsent(serverName, key -> new ArrayList<>());
         }
       }
     } else {
@@ -677,13 +676,7 @@ public class RegionStates {
 
   public RegionFailedOpen addToFailedOpen(final RegionStateNode regionNode) {
     final byte[] key = regionNode.getRegionInfo().getRegionName();
-    RegionFailedOpen node = regionFailedOpen.get(key);
-    if (node == null) {
-      RegionFailedOpen newNode = new RegionFailedOpen(regionNode);
-      RegionFailedOpen oldNode = regionFailedOpen.putIfAbsent(key, newNode);
-      node = oldNode != null ? oldNode : newNode;
-    }
-    return node;
+    return regionFailedOpen.computeIfAbsent(key, (k) -> new RegionFailedOpen(regionNode));
   }
 
   public RegionFailedOpen getFailedOpen(final RegionInfo regionInfo) {
@@ -714,13 +707,7 @@ public class RegionStates {
    * to {@link #getServerNode(ServerName)} where we can.
    */
   public ServerStateNode getOrCreateServer(final ServerName serverName) {
-    ServerStateNode node = serverMap.get(serverName);
-    if (node == null) {
-      node = new ServerStateNode(serverName);
-      ServerStateNode oldNode = serverMap.putIfAbsent(serverName, node);
-      node = oldNode != null ? oldNode : node;
-    }
-    return node;
+    return serverMap.computeIfAbsent(serverName, key -> new ServerStateNode(key));
   }
 
   public void removeServer(final ServerName serverName) {

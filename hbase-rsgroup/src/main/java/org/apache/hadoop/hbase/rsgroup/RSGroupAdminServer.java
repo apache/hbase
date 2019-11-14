@@ -575,32 +575,36 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     Map<TableName, Map<ServerName, List<RegionInfo>>> result = Maps.newHashMap();
     RSGroupInfo rsGroupInfo = getRSGroupInfo(groupName);
     Map<TableName, Map<ServerName, List<RegionInfo>>> assignments = Maps.newHashMap();
-    for(Map.Entry<RegionInfo, ServerName> entry:
+    for (Map.Entry<RegionInfo, ServerName> entry:
         master.getAssignmentManager().getRegionStates().getRegionAssignments().entrySet()) {
       TableName currTable = entry.getKey().getTable();
       ServerName currServer = entry.getValue();
       RegionInfo currRegion = entry.getKey();
       if (rsGroupInfo.getTables().contains(currTable)) {
-        assignments.putIfAbsent(currTable, new HashMap<>());
-        assignments.get(currTable).putIfAbsent(currServer, new ArrayList<>());
-        assignments.get(currTable).get(currServer).add(currRegion);
+        assignments.computeIfAbsent(currTable, key -> new HashMap<>())
+            .computeIfAbsent(currServer, key -> new ArrayList<>())
+            .add(currRegion);
       }
     }
 
     Map<ServerName, List<RegionInfo>> serverMap = Maps.newHashMap();
-    for(ServerName serverName: master.getServerManager().getOnlineServers().keySet()) {
-      if(rsGroupInfo.getServers().contains(serverName.getAddress())) {
+    for (ServerName serverName: master.getServerManager().getOnlineServers().keySet()) {
+      if (rsGroupInfo.getServers().contains(serverName.getAddress())) {
         serverMap.put(serverName, Collections.emptyList());
       }
     }
 
     // add all tables that are members of the group
-    for(TableName tableName : rsGroupInfo.getTables()) {
-      if(assignments.containsKey(tableName)) {
-        result.put(tableName, new HashMap<>());
-        result.get(tableName).putAll(serverMap);
-        result.get(tableName).putAll(assignments.get(tableName));
-        LOG.debug("Adding assignments for {}: {}", tableName, assignments.get(tableName));
+    for (TableName tableName : rsGroupInfo.getTables()) {
+      if (assignments.containsKey(tableName)) {
+        Map<ServerName, List<RegionInfo>> tableResults = new HashMap<>(serverMap);
+
+        Map<ServerName, List<RegionInfo>> tableAssignments = assignments.get(tableName);
+        tableResults.putAll(tableAssignments);
+
+        result.put(tableName, tableResults);
+
+        LOG.debug("Adding assignments for {}: {}", tableName, tableAssignments);
       }
     }
 
