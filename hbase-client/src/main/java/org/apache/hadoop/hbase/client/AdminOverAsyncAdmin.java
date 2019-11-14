@@ -968,8 +968,8 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
-  public void moveToRSGroup(Set<Address> servers, String groupName) throws IOException {
-    get(admin.moveToRSGroup(servers, groupName));
+  public void moveServersToRSGroup(Set<Address> servers, String groupName) throws IOException {
+    get(admin.moveServersToRSGroup(servers, groupName));
   }
 
   @Override
@@ -998,8 +998,8 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
-  public void removeRSGroup(Set<Address> servers) throws IOException {
-    get(admin.removeRSGroup(servers));
+  public void removeServersFromRSGroup(Set<Address> servers) throws IOException {
+    get(admin.removeServersFromRSGroup(servers));
   }
 
   @Override

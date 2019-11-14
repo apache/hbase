@@ -289,6 +289,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.AddR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.AddRSGroupResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.BalanceRSGroupRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.BalanceRSGroupResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoOfServerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoOfServerResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoOfTableRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoOfTableResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.ListRSGroupInfosRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.ListRSGroupInfosResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.MoveServersRequest;
@@ -3894,7 +3900,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> moveToRSGroup(Set<Address> servers, String groupName) {
+  public CompletableFuture<Void> moveServersToRSGroup(Set<Address> servers, String groupName) {
     return this.<Void> newMasterCaller()
         .action((controller, stub) -> this.
             <MoveServersRequest, MoveServersResponse, Void> call(controller, stub,
@@ -3948,27 +3954,23 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<RSGroupInfo> getRSGroup(Address hostPort) {
-    CompletableFuture<RSGroupInfo> future = new CompletableFuture<>();
-    addListener(listRSGroups(), (groups, err) -> {
-      if (err != null) {
-        future.completeExceptionally(err);
-        return;
-      }
-      for (RSGroupInfo rsGroupInfo : groups) {
-        if (rsGroupInfo.getServers().contains(hostPort)){
-          future.complete(rsGroupInfo);
-          return;
-        }
-      }
-      future.complete(null);
-    });
-    return future;
+    return this.<RSGroupInfo> newMasterCaller()
+      .action(((controller, stub) -> this
+        .<GetRSGroupInfoOfServerRequest, GetRSGroupInfoOfServerResponse, RSGroupInfo> call(
+          controller, stub,
+          GetRSGroupInfoOfServerRequest.newBuilder()
+            .setServer(HBaseProtos.ServerName.newBuilder().setHostName(hostPort.getHostname())
+              .setPort(hostPort.getPort()).build())
+            .build(),
+          (s, c, req, done) -> s.getRSGroupInfoOfServer(c, req, done),
+          resp -> resp.hasRSGroupInfo() ? ProtobufUtil.toGroupInfo(resp.getRSGroupInfo()) : null)))
+      .call();
   }
 
   @Override
-  public CompletableFuture<Void> removeRSGroup(Set<Address> servers) {
+  public CompletableFuture<Void> removeServersFromRSGroup(Set<Address> servers) {
     return this.<Void> newMasterCaller()
-        .action((controller, stub) -> this.
+      .action((controller, stub) -> this.
             <RemoveServersRequest, RemoveServersResponse, Void> call(controller, stub,
                 RequestConverter.buildRemoveServersRequest(servers),
               (s, c, req, done) -> s.removeServers(c, req, done), resp -> null))
@@ -4019,49 +4021,24 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<RSGroupInfo> getRSGroup(TableName table) {
-    CompletableFuture<RSGroupInfo> future = new CompletableFuture<>();
-    addListener(getDescriptor(table), (td, err) -> {
-      if (err != null) {
-        // return null instead of err to keep compatible with old semantics
-        // todo: need to change both this and UTs
-        future.complete(null);
-        return;
-      }
-      addListener(listRSGroups(), (groups, err2) -> {
-        if (err2 != null) {
-          future.completeExceptionally(err2);
-          return;
-        }
-        for (RSGroupInfo rsGroupInfo : groups) {
-          if (rsGroupInfo.getTables().contains(table)) {
-            future.complete(rsGroupInfo);
-            return;
-          }
-        }
-        future.complete(null);
-      });
-    });
-    return future;
+    return this.<RSGroupInfo> newMasterCaller().action(((controller, stub) -> this
+      .<GetRSGroupInfoOfTableRequest, GetRSGroupInfoOfTableResponse, RSGroupInfo> call(controller,
+        stub,
+        GetRSGroupInfoOfTableRequest.newBuilder().setTableName(ProtobufUtil.toProtoTableName(table))
+          .build(),
+        (s, c, req, done) -> s.getRSGroupInfoOfTable(c, req, done),
+        resp -> resp.hasRSGroupInfo() ? ProtobufUtil.toGroupInfo(resp.getRSGroupInfo()) : null)))
+      .call();
   }
 
   @Override
   public CompletableFuture<RSGroupInfo> getRSGroup(String groupName) {
-    CompletableFuture<RSGroupInfo> future = new CompletableFuture<>();
-    addListener(listRSGroups(), (groups, err) -> {
-      if (err != null) {
-        future.completeExceptionally(err);
-        return;
-      }
-      for (RSGroupInfo rsGroupInfo : groups) {
-        if (rsGroupInfo.getName().equals(groupName)){
-          future.complete(rsGroupInfo);
-          return;
-        }
-      }
-      future.complete(null);
-    });
-    return future;
+    return this.<RSGroupInfo> newMasterCaller()
+      .action(((controller, stub) -> this
+        .<GetRSGroupInfoRequest, GetRSGroupInfoResponse, RSGroupInfo> call(controller, stub,
+          GetRSGroupInfoRequest.newBuilder().setRSGroupName(groupName).build(),
+          (s, c, req, done) -> s.getRSGroupInfo(c, req, done),
+          resp -> resp.hasRSGroupInfo() ? ProtobufUtil.toGroupInfo(resp.getRSGroupInfo()) : null)))
+      .call();
   }
-
-
 }

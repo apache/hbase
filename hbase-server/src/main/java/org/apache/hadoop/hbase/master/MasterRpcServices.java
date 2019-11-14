@@ -309,6 +309,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.AddR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.AddRSGroupResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.BalanceRSGroupRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.BalanceRSGroupResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoOfServerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoOfServerResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoOfTableRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoOfTableResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.ListRSGroupInfosRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.ListRSGroupInfosResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.MoveServersRequest;
@@ -2861,6 +2867,94 @@ public class MasterRpcServices extends RSRpcServices implements MasterService.Bl
   }
 
   @Override
+  public GetRSGroupInfoResponse getRSGroupInfo(RpcController controller,
+    GetRSGroupInfoRequest request) throws ServiceException {
+    String groupName = request.getRSGroupName();
+    LOG.info(
+      master.getClientIdAuditPrefix() + " initiates rsgroup info retrieval, group=" + groupName);
+    try {
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preGetRSGroupInfo(groupName);
+      }
+      RSGroupInfo rsGroupInfo = master.getRSGroupInfoManager().getRSGroup(groupName);
+      GetRSGroupInfoResponse resp;
+      if (rsGroupInfo != null) {
+        resp = GetRSGroupInfoResponse.newBuilder()
+          .setRSGroupInfo(ProtobufUtil.toProtoGroupInfo(rsGroupInfo)).build();
+      } else {
+        resp = GetRSGroupInfoResponse.getDefaultInstance();
+      }
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postGetRSGroupInfo(groupName);
+      }
+      return resp;
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public GetRSGroupInfoOfTableResponse getRSGroupInfoOfTable(RpcController controller,
+    GetRSGroupInfoOfTableRequest request) throws ServiceException {
+    TableName tableName = ProtobufUtil.toTableName(request.getTableName());
+    LOG.info(
+      master.getClientIdAuditPrefix() + " initiates rsgroup info retrieval, table=" + tableName);
+    try {
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preGetRSGroupInfoOfTable(tableName);
+      }
+      GetRSGroupInfoOfTableResponse resp;
+      TableDescriptor td = master.getTableDescriptors().get(tableName);
+      if (td == null) {
+        resp = GetRSGroupInfoOfTableResponse.getDefaultInstance();
+      } else {
+        RSGroupInfo rsGroupInfo = null;
+        if (td.getRegionServerGroup().isPresent()) {
+          rsGroupInfo = master.getRSGroupInfoManager().getRSGroup(td.getRegionServerGroup().get());
+        }
+        if (rsGroupInfo == null) {
+          rsGroupInfo = master.getRSGroupInfoManager().getRSGroup(RSGroupInfo.DEFAULT_GROUP);
+        }
+        resp = GetRSGroupInfoOfTableResponse.newBuilder()
+          .setRSGroupInfo(ProtobufUtil.toProtoGroupInfo(rsGroupInfo)).build();
+      }
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postGetRSGroupInfoOfTable(tableName);
+      }
+      return resp;
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public GetRSGroupInfoOfServerResponse getRSGroupInfoOfServer(RpcController controller,
+    GetRSGroupInfoOfServerRequest request) throws ServiceException {
+    Address hp =
+      Address.fromParts(request.getServer().getHostName(), request.getServer().getPort());
+    LOG.info(master.getClientIdAuditPrefix() + " initiates rsgroup info retrieval, server=" + hp);
+    try {
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preGetRSGroupInfoOfServer(hp);
+      }
+      RSGroupInfo rsGroupInfo = master.getRSGroupInfoManager().getRSGroupOfServer(hp);
+      GetRSGroupInfoOfServerResponse resp;
+      if (rsGroupInfo != null) {
+        resp = GetRSGroupInfoOfServerResponse.newBuilder()
+          .setRSGroupInfo(ProtobufUtil.toProtoGroupInfo(rsGroupInfo)).build();
+      } else {
+        resp = GetRSGroupInfoOfServerResponse.getDefaultInstance();
+      }
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postGetRSGroupInfoOfServer(hp);
+      }
+      return resp;
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
   public MoveServersResponse moveServers(RpcController controller, MoveServersRequest request)
       throws ServiceException {
     Set<Address> hostPorts = Sets.newHashSet();
@@ -3009,5 +3103,4 @@ public class MasterRpcServices extends RSRpcServices implements MasterService.Bl
     }
     return builder.build();
   }
-
 }

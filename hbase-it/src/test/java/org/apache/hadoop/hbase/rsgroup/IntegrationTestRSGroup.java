@@ -41,7 +41,7 @@ public class IntegrationTestRSGroup extends TestRSGroupsBase {
 
   @Before
   public void beforeMethod() throws Exception {
-    if(!initialized) {
+    if (!initialized) {
       LOG.info("Setting up IntegrationTestRSGroup");
       LOG.info("Initializing cluster with " + NUM_SLAVES_BASE + " servers");
       TEST_UTIL = new IntegrationTestingUtility();
@@ -49,16 +49,15 @@ public class IntegrationTestRSGroup extends TestRSGroupsBase {
         RSGroupBasedLoadBalancer.class.getName());
       TEST_UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
         RSGroupAdminEndpoint.class.getName());
-      ((IntegrationTestingUtility)TEST_UTIL).initializeCluster(NUM_SLAVES_BASE);
-      //set shared configs
-      admin = TEST_UTIL.getAdmin();
-      cluster = TEST_UTIL.getHBaseClusterInterface();
-      rsGroupAdmin = new VerifyingRSGroupAdminClient(new RSGroupAdminClient(TEST_UTIL.getConnection()),
-          TEST_UTIL.getConfiguration());
+      ((IntegrationTestingUtility) TEST_UTIL).initializeCluster(NUM_SLAVES_BASE);
+      // set shared configs
+      ADMIN = TEST_UTIL.getAdmin();
+      CLUSTER = TEST_UTIL.getHBaseClusterInterface();
+      RS_GROUP_ADMIN_CLIENT = new RSGroupAdminClient(TEST_UTIL.getConnection());
       LOG.info("Done initializing cluster");
       initialized = true;
-      //cluster may not be clean
-      //cleanup when initializing
+      // cluster may not be clean
+      // cleanup when initializing
       afterMethod();
     }
   }
@@ -70,7 +69,7 @@ public class IntegrationTestRSGroup extends TestRSGroupsBase {
     deleteTableIfNecessary();
     deleteNamespaceIfNecessary();
     deleteGroups();
-    admin.balancerSwitch(true, true);
+    ADMIN.balancerSwitch(true, true);
 
     LOG.info("Restoring the cluster");
     ((IntegrationTestingUtility)TEST_UTIL).restoreCluster();
@@ -79,10 +78,10 @@ public class IntegrationTestRSGroup extends TestRSGroupsBase {
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        LOG.info("Waiting for cleanup to finish "+ rsGroupAdmin.listRSGroups());
+        LOG.info("Waiting for cleanup to finish "+ ADMIN.listRSGroups());
         //Might be greater since moving servers back to default
         //is after starting a server
-        return rsGroupAdmin.getRSGroup(RSGroupInfo.DEFAULT_GROUP).getServers().size()
+        return ADMIN.getRSGroup(RSGroupInfo.DEFAULT_GROUP).getServers().size()
             >= NUM_SLAVES_BASE;
       }
     });
@@ -90,10 +89,10 @@ public class IntegrationTestRSGroup extends TestRSGroupsBase {
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        LOG.info("Waiting for regionservers to be registered "+ rsGroupAdmin.listRSGroups());
+        LOG.info("Waiting for regionservers to be registered "+ ADMIN.listRSGroups());
         //Might be greater since moving servers back to default
         //is after starting a server
-        return rsGroupAdmin.getRSGroup(RSGroupInfo.DEFAULT_GROUP).getServers().size()
+        return ADMIN.getRSGroup(RSGroupInfo.DEFAULT_GROUP).getServers().size()
             == getNumServers();
       }
     });
