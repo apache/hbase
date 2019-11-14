@@ -120,8 +120,9 @@ public class ServerCrashProcedure
     final MasterServices services = env.getMasterServices();
     final AssignmentManager am = env.getAssignmentManager();
     updateProgress(true);
-    // HBASE-14802
-    // If we have not yet notified that we are processing a dead server, we should do now.
+    // HBASE-14802 If we have not yet notified that we are processing a dead server, do so now.
+    // This adds server to the DeadServer processing list but not to the DeadServers list.
+    // Server gets removed from processing list below on procedure successful finish.
     if (!notifiedDeadServer) {
       services.getServerManager().getDeadServers().notifyServer(serverName);
       notifiedDeadServer = true;
@@ -175,12 +176,14 @@ public class ServerCrashProcedure
           setNextState(ServerCrashState.SERVER_CRASH_GET_REGIONS);
           break;
         case SERVER_CRASH_GET_REGIONS:
-          this.regionsOnCrashedServer =
-            services.getAssignmentManager().getRegionsOnServer(serverName);
+          this.regionsOnCrashedServer = getRegionsOnCrashedServer(env);
           // Where to go next? Depends on whether we should split logs at all or
           // if we should do distributed log splitting.
           if (regionsOnCrashedServer != null) {
             LOG.info("{} had {} regions", serverName, regionsOnCrashedServer.size());
+            if (LOG.isTraceEnabled()) {
+              this.regionsOnCrashedServer.stream().forEach(ri -> LOG.trace(ri.getShortNameToLog()));
+            }
           }
           if (!this.shouldSplitWal) {
             setNextState(ServerCrashState.SERVER_CRASH_ASSIGN);
@@ -240,6 +243,13 @@ public class ServerCrashProcedure
       LOG.warn("Failed state=" + state + ", retry " + this + "; cycles=" + getCycles(), e);
     }
     return Flow.HAS_MORE_STATE;
+  }
+
+  /**
+   * @return List of Regions on crashed server.
+   */
+  List<RegionInfo> getRegionsOnCrashedServer(MasterProcedureEnv env) {
+    return env.getMasterServices().getAssignmentManager().getRegionsOnServer(serverName);
   }
 
   private void cleanupSplitDir(MasterProcedureEnv env) {
