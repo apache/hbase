@@ -46,15 +46,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class TestSCPBase {
-
   private static final Logger LOG = LoggerFactory.getLogger(TestSCPBase.class);
+  static final int RS_COUNT = 3;
 
   protected HBaseTestingUtility util;
 
   protected void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
     conf.set("hbase.balancer.tablesOnMaster", "none");
-    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, RS_COUNT);
     conf.setInt(HConstants.HBASE_CLIENT_SERVERSIDE_RETRIES_MULTIPLIER, 3);
     conf.setBoolean("hbase.split.writer.creation.bounded", true);
     conf.setInt("hbase.regionserver.hlog.splitlog.writer.threads", 8);

@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -70,6 +71,7 @@ import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
+import org.apache.hadoop.hbase.master.procedure.HBCKServerCrashProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil.NonceProcedureRunnable;
@@ -2556,17 +2558,26 @@ public class MasterRpcServices extends RSRpcServices
     List<HBaseProtos.ServerName> serverNames = request.getServerNameList();
     List<Long> pids = new ArrayList<>();
     try {
-      for (HBaseProtos.ServerName serverName : serverNames) {
-        ServerName server = ProtobufUtil.toServerName(serverName);
+      for (HBaseProtos.ServerName sn: serverNames) {
+        ServerName serverName = ProtobufUtil.toServerName(sn);
         LOG.info("{} schedule ServerCrashProcedure for {}",
-            master.getClientIdAuditPrefix(), server);
-        if (shouldSubmitSCP(server)) {
-          master.getServerManager().moveFromOnlineToDeadServers(server);
-          ProcedureExecutor<MasterProcedureEnv> procExec = this.master.getMasterProcedureExecutor();
-          pids.add(procExec.submitProcedure(new ServerCrashProcedure(procExec.getEnvironment(),
-            server, true, containMetaWals(server))));
+            this.master.getClientIdAuditPrefix(), serverName);
+        if (shouldSubmitSCP(serverName)) {
+          final boolean containsMetaWALs = containMetaWals(serverName);
+          long pid = this.master.getServerManager().expireServer(serverName,
+                  new Function<ServerName, Long>() {
+                @Override
+                public Long apply(ServerName serverName) {
+                  ProcedureExecutor<MasterProcedureEnv> procExec =
+                    master.getMasterProcedureExecutor();
+                  return procExec.submitProcedure(
+                      new HBCKServerCrashProcedure(procExec.getEnvironment(),
+                        serverName, true, containsMetaWALs));
+                }
+            });
+          pids.add(pid);
         } else {
-          pids.add(-1L);
+          pids.add(Procedure.NO_PROC_ID);
         }
       }
       return MasterProtos.ScheduleServerCrashProcedureResponse.newBuilder().addAllPid(pids).build();
