@@ -1494,7 +1494,7 @@ public class AssignmentManager {
     boolean carryingMeta;
     long pid;
     ServerStateNode serverNode = regionStates.getServerNode(serverName);
-    if(serverNode == null){
+    if (serverNode == null) {
       LOG.info("Skip to add SCP for {} since this server should be OFFLINE already", serverName);
       return -1;
     }
@@ -1504,7 +1504,7 @@ public class AssignmentManager {
       rsReports.remove(serverName);
     }
 
-    // we hold the write lock here for fencing on reportRegionStateTransition. Once we set the
+    // We hold the write lock here for fencing on reportRegionStateTransition. Once we set the
     // server state to CRASHED, we will no longer accept the reportRegionStateTransition call from
     // this server. This is used to simplify the implementation for TRSP and SCP, where we can make
     // sure that, the region list fetched by SCP will not be changed any more.
