@@ -236,4 +236,18 @@ public final class ReplicationUtils {
     }
     return sleepMultiplier < maxRetriesMultiplier;
   }
+
+  /**
+   * Get the adaptive timeout value when performing a retry
+   */
+  public static int getAdaptiveTimeout(final int initialValue, final int retries) {
+    int ntries = retries;
+    if (ntries >= HConstants.RETRY_BACKOFF.length) {
+      ntries = HConstants.RETRY_BACKOFF.length - 1;
+    }
+    if (ntries < 0) {
+      ntries = 0;
+    }
+    return initialValue * HConstants.RETRY_BACKOFF[ntries];
+  }
 }
