@@ -165,8 +165,9 @@ public class TestHFileArchiving {
       String expectedBase) throws IOException {
     FileSystem mockedFileSystem = mock(FileSystem.class);
     Configuration conf = new Configuration(UTIL.getConfiguration());
-    if(walDir != null)
+    if(walDir != null) {
       conf.set(CommonFSUtils.HBASE_WAL_DIR, walDir);
+    }
     conf.set(HConstants.HBASE_DIR, rootDir);
     Path filePath = new Path("/mockDir/wals/mockFile");
     when(mockedFileSystem.getScheme()).thenReturn("mockFS");
