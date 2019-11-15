@@ -291,10 +291,10 @@ if (fqtn != null && master.isInitialized()) {
           </tr>
         <%  } %>
         <%} %>
-      </tbody>
-    </table>
+        </tbody>
+      </table>
     </div>
-		<div class="tab-pane" id="metaTab_compactStats">
+    <div class="tab-pane" id="metaTab_compactStats">
       <table id="metaTableCompactStatsTable" class="tablesorter table table-striped">
         <thead>
           <tr>
@@ -770,18 +770,18 @@ if (fqtn != null && master.isInitialized()) {
         <tr>
           <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getRegionName())) %></td>
           <%
-		      if (urlRegionServer != null) {
-		      %>
-		      <td>
-		         <a href="<%= urlRegionServer %>"><%= addr == null? "-": StringEscapeUtils.escapeHtml4(addr.getHostname().toString()) + ":" + master.getRegionServerInfoPort(addr) %></a>
-		      </td>
-		      <%
-		      } else {
-		      %>
-		      <td class="undeployed-region">not deployed</td>
-		      <%
-		      }
-		      %>
+          if (urlRegionServer != null) {
+          %>
+          <td>
+            <a href="<%= urlRegionServer %>"><%= addr == null? "-": StringEscapeUtils.escapeHtml4(addr.getHostname().toString()) + ":" + master.getRegionServerInfoPort(addr) %></a>
+          </td>
+          <%
+          } else {
+          %>
+          <td class="undeployed-region">not deployed</td>
+          <%
+          }
+          %>
           <td><%= String.format("%,1d", compactingCells)%></td>
           <td><%= String.format("%,1d", compactedCells)%></td>
           <td><%= String.format("%,1d", compactingCells - compactedCells)%></td>
