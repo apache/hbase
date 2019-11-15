@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RSGroupTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
@@ -46,14 +47,11 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
 /**
  * Testcase for HBASE-22819
  */
-@RunWith(Parameterized.class)
-@Category({ MediumTests.class })
+@Category({ RSGroupTests.class, MediumTests.class })
 public class TestMigrateRSGroupInfo extends TestRSGroupsBase {
 
   @ClassRule
@@ -109,10 +107,9 @@ public class TestMigrateRSGroupInfo extends TestRSGroupsBase {
 
   @Test
   public void testMigrate() throws IOException, InterruptedException {
-    setAdmin();
     String groupName = getNameWithoutIndex(name.getMethodName());
     addGroup(groupName, TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().size() - 1);
-    RSGroupInfo rsGroupInfo = rsGroupAdmin.getRSGroup(groupName);
+    RSGroupInfo rsGroupInfo = ADMIN.getRSGroup(groupName);
     assertTrue(rsGroupInfo.getTables().isEmpty());
     for (int i = 0; i < NUM_TABLES; i++) {
       rsGroupInfo.addTable(TableName.valueOf(TABLE_NAME_PREFIX + i));
@@ -130,7 +127,7 @@ public class TestMigrateRSGroupInfo extends TestRSGroupsBase {
     // wait until we can get the rs group info for a table
     TEST_UTIL.waitFor(30000, () -> {
       try {
-        rsGroupAdmin.getRSGroup(TableName.valueOf(TABLE_NAME_PREFIX + 0));
+        RS_GROUP_ADMIN_CLIENT.getRSGroupInfoOfTable(TableName.valueOf(TABLE_NAME_PREFIX + 0));
         return true;
       } catch (IOException e) {
         return false;
@@ -139,7 +136,7 @@ public class TestMigrateRSGroupInfo extends TestRSGroupsBase {
     // confirm that before migrating, we could still get the correct rs group for a table.
     for (int i = 0; i < NUM_TABLES; i++) {
       RSGroupInfo info =
-        rsGroupAdmin.getRSGroup(TableName.valueOf(TABLE_NAME_PREFIX + i));
+        RS_GROUP_ADMIN_CLIENT.getRSGroupInfoOfTable(TableName.valueOf(TABLE_NAME_PREFIX + i));
       assertEquals(rsGroupInfo.getName(), info.getName());
       assertEquals(NUM_TABLES, info.getTables().size());
     }
@@ -175,7 +172,7 @@ public class TestMigrateRSGroupInfo extends TestRSGroupsBase {
     // make sure we could still get the correct rs group info after migration
     for (int i = 0; i < NUM_TABLES; i++) {
       RSGroupInfo info =
-        rsGroupAdmin.getRSGroup(TableName.valueOf(TABLE_NAME_PREFIX + i));
+        RS_GROUP_ADMIN_CLIENT.getRSGroupInfoOfTable(TableName.valueOf(TABLE_NAME_PREFIX + i));
       assertEquals(rsGroupInfo.getName(), info.getName());
       assertEquals(NUM_TABLES, info.getTables().size());
     }
