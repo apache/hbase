@@ -1559,7 +1559,7 @@ public interface AsyncAdmin {
    * @param servers set of servers to remove
    * @throws IOException if a remote or network exception occurs
    */
-  CompletableFuture<Void> removeRSGroup(Set<Address> servers);
+  CompletableFuture<Void> removeServersFromRSGroup(Set<Address> servers);
 
   /**
    * Move given set of servers to the specified target RegionServer group
@@ -1567,7 +1567,7 @@ public interface AsyncAdmin {
    * @param groupName the group to move servers to
    * @throws IOException if a remote or network exception occurs
    */
-  CompletableFuture<Void> moveToRSGroup(Set<Address> servers, String groupName);
+  CompletableFuture<Void> moveServersToRSGroup(Set<Address> servers, String groupName);
 
   /**
    * Set the RegionServer group for tables

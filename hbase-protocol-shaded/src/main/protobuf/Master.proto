@@ -1087,6 +1087,15 @@ service MasterService {
   rpc ListNamespaces(ListNamespacesRequest)
     returns(ListNamespacesResponse);
 
+  rpc GetRSGroupInfo(GetRSGroupInfoRequest)
+    returns (GetRSGroupInfoResponse);
+
+  rpc GetRSGroupInfoOfTable(GetRSGroupInfoOfTableRequest)
+    returns (GetRSGroupInfoOfTableResponse);
+
+  rpc GetRSGroupInfoOfServer(GetRSGroupInfoOfServerRequest)
+    returns (GetRSGroupInfoOfServerResponse);
+
   rpc MoveServers(MoveServersRequest)
     returns (MoveServersResponse);
 
