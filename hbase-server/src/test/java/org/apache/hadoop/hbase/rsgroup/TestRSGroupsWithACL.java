@@ -26,13 +26,11 @@ import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.security.User;
@@ -96,8 +94,6 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
   private static User USER_GROUP_WRITE;
 
   private static byte[] TEST_FAMILY = Bytes.toBytes("f1");
-
-  private static RSGroupAdminEndpoint rsGroupAdminEndpoint;
   private static HMaster master;
   private static AccessChecker accessChecker;
   private static UserProvider userProvider;
@@ -106,17 +102,14 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
   public static void setupBeforeClass() throws Exception {
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
-    conf.set(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, RSGroupBasedLoadBalancer.class.getName());
     // Enable security
     enableSecurity(conf);
     // Verify enableSecurity sets up what we require
     verifyConfiguration(conf);
     // Enable rsgroup
-    configureRSGroupAdminEndpoint(conf);
+    conf.setBoolean(RSGroupInfoManager.RS_GROUP_ENABLED, true);
 
     TEST_UTIL.startMiniCluster();
-    rsGroupAdminEndpoint = (RSGroupAdminEndpoint) TEST_UTIL.getMiniHBaseCluster().getMaster()
-        .getMasterCoprocessorHost().findCoprocessor(RSGroupAdminEndpoint.class.getName());
     // Wait for the ACL table to become available
     TEST_UTIL.waitUntilAllRegionsAssigned(PermissionStorage.ACL_TABLE_NAME);
 
@@ -214,16 +207,6 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
   public static void tearDownAfterClass() throws Exception {
     cleanUp();
     TEST_UTIL.shutdownMiniCluster();
-  }
-
-  private static void configureRSGroupAdminEndpoint(Configuration conf) {
-    String currentCoprocessors = conf.get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
-    String coprocessors = RSGroupAdminEndpoint.class.getName();
-    if (currentCoprocessors != null) {
-      coprocessors += "," + currentCoprocessors;
-    }
-    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, coprocessors);
-    conf.set(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, RSGroupBasedLoadBalancer.class.getName());
   }
 
   @Test

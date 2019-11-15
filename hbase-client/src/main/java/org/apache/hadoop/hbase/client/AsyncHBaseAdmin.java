@@ -858,8 +858,8 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> moveToRSGroup(Set<Address> servers, String groupName) {
-    return wrap(rawAdmin.moveToRSGroup(servers, groupName));
+  public CompletableFuture<Void> moveServersToRSGroup(Set<Address> servers, String groupName) {
+    return wrap(rawAdmin.moveServersToRSGroup(servers, groupName));
   }
 
   @Override
@@ -888,8 +888,8 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> removeRSGroup(Set<Address> servers) {
-    return wrap(rawAdmin.removeRSGroup(servers));
+  public CompletableFuture<Void> removeServersFromRSGroup(Set<Address> servers) {
+    return wrap(rawAdmin.removeServersFromRSGroup(servers));
   }
 
   @Override

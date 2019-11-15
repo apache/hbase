@@ -1178,7 +1178,7 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public void moveToRSGroup(Set<Address> servers, String targetGroup) {
+  public void moveServersToRSGroup(Set<Address> servers, String targetGroup) {
     throw new NotImplementedException("moveToRSGroup not supported in ThriftAdmin");
   }
 
@@ -1208,7 +1208,7 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public void removeRSGroup(Set<Address> servers) {
+  public void removeServersFromRSGroup(Set<Address> servers) {
     throw new NotImplementedException("removeRSGroup not supported in ThriftAdmin");
   }
 

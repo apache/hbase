@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RSGroupTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -42,13 +43,10 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@RunWith(Parameterized.class)
-@Category({ MediumTests.class })
+@Category({ RSGroupTests.class, MediumTests.class })
 public class TestRSGroupsBalance extends TestRSGroupsBase {
 
   @ClassRule
@@ -83,15 +81,15 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
     String newGroupName = getGroupName(name.getMethodName());
     addGroup(newGroupName, 3);
 
-    final TableName tableName = TableName.valueOf(tablePrefix + "_ns",
-        getNameWithoutIndex(name.getMethodName()));
-    admin.createNamespace(NamespaceDescriptor.create(tableName.getNamespaceAsString())
+    final TableName tableName =
+      TableName.valueOf(TABLE_PREFIX + "_ns", getNameWithoutIndex(name.getMethodName()));
+    ADMIN.createNamespace(NamespaceDescriptor.create(tableName.getNamespaceAsString())
       .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, newGroupName).build());
     final TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).build();
     byte[] startKey = Bytes.toBytes("aaaaa");
     byte[] endKey = Bytes.toBytes("zzzzz");
-    admin.createTable(desc, startKey, endKey, 6);
+    ADMIN.createTable(desc, startKey, endKey, 6);
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
@@ -106,9 +104,9 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
     // make assignment uneven, move all regions to one server
     Map<ServerName, List<String>> assignMap = getTableServerRegionMap().get(tableName);
     final ServerName first = assignMap.entrySet().iterator().next().getKey();
-    for (RegionInfo region : admin.getRegions(tableName)) {
+    for (RegionInfo region : ADMIN.getRegions(tableName)) {
       if (!assignMap.get(first).contains(region.getRegionNameAsString())) {
-        admin.move(region.getEncodedNameAsBytes(), first);
+        ADMIN.move(region.getEncodedNameAsBytes(), first);
       }
     }
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
@@ -127,18 +125,18 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
     });
 
     // balance the other group and make sure it doesn't affect the new group
-    admin.balancerSwitch(true, true);
-    rsGroupAdmin.balanceRSGroup(RSGroupInfo.DEFAULT_GROUP);
+    ADMIN.balancerSwitch(true, true);
+    ADMIN.balanceRSGroup(RSGroupInfo.DEFAULT_GROUP);
     assertEquals(6, getTableServerRegionMap().get(tableName).get(first).size());
 
     // disable balance, balancer will not be run and return false
-    admin.balancerSwitch(false, true);
-    assertFalse(rsGroupAdmin.balanceRSGroup(newGroupName));
+    ADMIN.balancerSwitch(false, true);
+    assertFalse(ADMIN.balanceRSGroup(newGroupName));
     assertEquals(6, getTableServerRegionMap().get(tableName).get(first).size());
 
     // enable balance
-    admin.balancerSwitch(true, true);
-    rsGroupAdmin.balanceRSGroup(newGroupName);
+    ADMIN.balancerSwitch(true, true);
+    ADMIN.balanceRSGroup(newGroupName);
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
@@ -150,35 +148,35 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
         return true;
       }
     });
-    admin.balancerSwitch(false, true);
+    ADMIN.balancerSwitch(false, true);
   }
 
   @Test
   public void testMisplacedRegions() throws Exception {
-    String namespace = tablePrefix + "_" + getNameWithoutIndex(name.getMethodName());
+    String namespace = TABLE_PREFIX + "_" + getNameWithoutIndex(name.getMethodName());
     TEST_UTIL.getAdmin().createNamespace(NamespaceDescriptor.create(namespace).build());
-    final TableName tableName = TableName.valueOf(namespace, tablePrefix + "_" +
-        getNameWithoutIndex(name.getMethodName()));
+    final TableName tableName =
+      TableName.valueOf(namespace, TABLE_PREFIX + "_" + getNameWithoutIndex(name.getMethodName()));
 
     final RSGroupInfo rsGroupInfo = addGroup(getGroupName(name.getMethodName()), 1);
 
     TEST_UTIL.createMultiRegionTable(tableName, new byte[] { 'f' }, 15);
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
     TEST_UTIL.getAdmin().modifyNamespace(NamespaceDescriptor.create(namespace)
-        .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, rsGroupInfo.getName()).build());
+      .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, rsGroupInfo.getName()).build());
 
-    admin.balancerSwitch(true, true);
-    assertTrue(rsGroupAdmin.balanceRSGroup(rsGroupInfo.getName()));
-    admin.balancerSwitch(false, true);
-    assertTrue(observer.preBalanceRSGroupCalled);
-    assertTrue(observer.postBalanceRSGroupCalled);
+    ADMIN.balancerSwitch(true, true);
+    assertTrue(ADMIN.balanceRSGroup(rsGroupInfo.getName()));
+    ADMIN.balancerSwitch(false, true);
+    assertTrue(OBSERVER.preBalanceRSGroupCalled);
+    assertTrue(OBSERVER.postBalanceRSGroupCalled);
 
     TEST_UTIL.waitFor(60000, new Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
         ServerName serverName =
-            ServerName.valueOf(rsGroupInfo.getServers().iterator().next().toString(), 1);
-        return admin.getConnection().getAdmin().getRegions(serverName).size() == 15;
+          ServerName.valueOf(rsGroupInfo.getServers().iterator().next().toString(), 1);
+        return ADMIN.getConnection().getAdmin().getRegions(serverName).size() == 15;
       }
     });
   }

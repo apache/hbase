@@ -15,25 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.rsgroup;
+package org.apache.hadoop.hbase.testclassification;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.testclassification.RSGroupTests;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
-
-@Category({ RSGroupTests.class, MediumTests.class })
-public class TestEnableRSGroups extends EnableRSGroupsTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestEnableRSGroups.class);
-
-  @Override
-  protected void enableRSGroup(Configuration conf) {
-    conf.setBoolean(RSGroupInfoManager.RS_GROUP_ENABLED, true);
-  }
-
+/**
+ * Tag the tests related to rs group feature.
+ */
+public interface RSGroupTests {
 }
