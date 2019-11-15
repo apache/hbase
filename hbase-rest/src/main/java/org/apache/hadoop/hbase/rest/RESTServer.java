@@ -19,14 +19,12 @@
 package org.apache.hadoop.hbase.rest;
 
 import java.lang.management.ManagementFactory;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.EnumSet;
+import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
 
 import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.hadoop.hbase.rest.filter.SecurityHeadersFilter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -135,6 +133,18 @@ public class RESTServer implements Constants {
       holder.setInitParameters(restCsrfParams);
       ctxHandler.addFilter(holder, PATH_SPEC_ANY, EnumSet.allOf(DispatcherType.class));
     }
+  }
+
+  private void addSecurityHeadersFilter(ServletContextHandler ctxHandler) {
+    FilterHolder holder = new FilterHolder();
+    holder.setName("security");
+    holder.setClassName(SecurityHeadersFilter.class.getName());
+    Map<String, String> params = new HashMap<>();
+    params.put("xframeoptions", conf.get("hbase.http.filter.xframeoptions.mode",
+        "DENY"));
+    holder.setInitParameters(params);
+    ctxHandler.addFilter(SecurityHeadersFilter.class, PATH_SPEC_ANY,
+        EnumSet.allOf(DispatcherType.class));
   }
 
   // login the server principal (if using secure Hadoop)
@@ -349,6 +359,7 @@ public class RESTServer implements Constants {
       ctxHandler.addFilter(filter, PATH_SPEC_ANY, EnumSet.of(DispatcherType.REQUEST));
     }
     addCSRFFilter(ctxHandler, conf);
+    addSecurityHeadersFilter(ctxHandler);
     HttpServerUtil.constrainHttpMethods(ctxHandler, servlet.getConfiguration()
         .getBoolean(REST_HTTP_ALLOW_OPTIONS_METHOD, REST_HTTP_ALLOW_OPTIONS_METHOD_DEFAULT));
 
