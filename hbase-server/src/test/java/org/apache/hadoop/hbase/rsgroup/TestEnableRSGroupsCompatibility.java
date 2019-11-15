@@ -19,21 +19,27 @@ package org.apache.hadoop.hbase.rsgroup;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RSGroupTests;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
+/**
+ * Test enable RSGroup using the old coprocessor way, to make sure that we keep compatible with old
+ * config way.
+ */
 @Category({ RSGroupTests.class, MediumTests.class })
-public class TestEnableRSGroups extends EnableRSGroupsTestBase {
+public class TestEnableRSGroupsCompatibility extends EnableRSGroupsTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestEnableRSGroups.class);
+    HBaseClassTestRule.forClass(TestEnableRSGroupsCompatibility.class);
 
   @Override
   protected void enableRSGroup(Configuration conf) {
-    conf.setBoolean(RSGroupInfoManager.RS_GROUP_ENABLED, true);
+    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, RSGroupAdminEndpoint.class.getName());
+    conf.set(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, RSGroupBasedLoadBalancer.class.getName());
   }
-
 }

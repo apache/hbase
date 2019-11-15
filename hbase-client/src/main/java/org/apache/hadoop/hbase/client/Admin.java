@@ -2315,7 +2315,7 @@ public interface Admin extends Abortable, Closeable {
    * @param servers set of servers to remove
    * @throws IOException if a remote or network exception occurs
    */
-  void removeRSGroup(Set<Address> servers) throws IOException;
+  void removeServersFromRSGroup(Set<Address> servers) throws IOException;
 
   /**
    * Move given set of servers to the specified target RegionServer group
@@ -2323,7 +2323,7 @@ public interface Admin extends Abortable, Closeable {
    * @param targetGroup the group to move servers to
    * @throws IOException if a remote or network exception occurs
    */
-  void moveToRSGroup(Set<Address> servers, String targetGroup) throws IOException;
+  void moveServersToRSGroup(Set<Address> servers, String targetGroup) throws IOException;
 
   /**
    * Set the RegionServer group for tables
