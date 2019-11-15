@@ -181,17 +181,21 @@ public class TestReplicationBarrierCleaner {
     RegionInfo region11 =
       RegionInfoBuilder.newBuilder(tableName1).setEndKey(Bytes.toBytes(1)).build();
     addBarrier(region11, 10, 20, 30, 40, 50, 60);
+    fillCatalogFamily(region11);
     RegionInfo region12 =
       RegionInfoBuilder.newBuilder(tableName1).setStartKey(Bytes.toBytes(1)).build();
     addBarrier(region12, 20, 30, 40, 50, 60, 70);
+    fillCatalogFamily(region12);
 
     TableName tableName2 = TableName.valueOf(name.getMethodName() + "_2");
     RegionInfo region21 =
       RegionInfoBuilder.newBuilder(tableName2).setEndKey(Bytes.toBytes(1)).build();
     addBarrier(region21, 100, 200, 300, 400);
+    fillCatalogFamily(region21);
     RegionInfo region22 =
       RegionInfoBuilder.newBuilder(tableName2).setStartKey(Bytes.toBytes(1)).build();
     addBarrier(region22, 200, 300, 400, 500, 600);
+    fillCatalogFamily(region22);
 
     @SuppressWarnings("unchecked")
     ReplicationPeerManager peerManager =
@@ -283,6 +287,25 @@ public class TestReplicationBarrierCleaner {
     }
     verify(queueStorage, times(1)).removeLastSequenceIds(peerId,
       Arrays.asList(region.getEncodedName()));
+  }
+
+  @Test
+  public void testDeleteRowForDeletedRegionNoPeers() throws IOException {
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    RegionInfo region = RegionInfoBuilder.newBuilder(tableName).build();
+    addBarrier(region, 40, 50, 60);
+
+    ReplicationPeerManager peerManager = mock(ReplicationPeerManager.class);
+    ReplicationBarrierCleaner cleaner = create(peerManager);
+    cleaner.chore();
+
+    verify(peerManager, times(1)).getSerialPeerIdsBelongsTo(tableName);
+    // There are no peers, and no catalog family for this region either, so we should remove the
+    // barriers. And since there is no catalog family, after we delete the barrier family, the whole
+    // row is deleted.
+    try (Table table = UTIL.getConnection().getTable(TableName.META_TABLE_NAME)) {
+      assertFalse(table.exists(new Get(region.getRegionName())));
+    }
   }
 
   private static class WarnOnlyStoppable implements Stoppable {
