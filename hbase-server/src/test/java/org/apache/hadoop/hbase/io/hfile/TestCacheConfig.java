@@ -326,7 +326,7 @@ public class TestCacheConfig {
     assertTrue(blockCache instanceof CombinedBlockCache);
     // TODO: Assert sizes allocated are right and proportions.
     CombinedBlockCache cbc = (CombinedBlockCache) blockCache;
-    FirstLevelBlockCache lbc = cbc.l1Cache;
+    FirstLevelBlockCache lbc = (FirstLevelBlockCache)cbc.l1Cache;
     assertEquals(lruExpectedSize, lbc.getMaxSize());
     BlockCache bc = cbc.l2Cache;
     // getMaxSize comes back in bytes but we specified size in MB

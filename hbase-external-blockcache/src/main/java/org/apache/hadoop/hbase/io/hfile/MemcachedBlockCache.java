@@ -157,6 +157,11 @@ public class MemcachedBlockCache implements BlockCache {
   }
 
   @Override
+  public boolean containsBlock(BlockCacheKey cacheKey) {
+    return client.get(cacheKey.toString(), tc) != null;
+  }
+
+  @Override
   public boolean evictBlock(BlockCacheKey cacheKey) {
     try {
       cacheStats.evict();

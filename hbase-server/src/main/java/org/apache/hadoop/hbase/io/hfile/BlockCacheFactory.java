@@ -25,6 +25,7 @@ import java.util.concurrent.ForkJoinPool;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.hfile.BlockCache.CacheLevel;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -63,6 +64,8 @@ public final class BlockCacheFactory {
   public static final String BUCKET_CACHE_WRITER_THREADS_KEY = "hbase.bucketcache.writer.threads";
 
   public static final String BUCKET_CACHE_WRITER_QUEUE_KEY = "hbase.bucketcache.writer.queuelength";
+
+  public static final String BUCKET_CACHE_COMPOSITE_KEY =  "hbase.bucketcache.composite.enabled";
 
   /**
    * A comma-delimited array of values for use as bucket sizes.
@@ -110,29 +113,35 @@ public final class BlockCacheFactory {
           + "we will remove the deprecated config.", DEPRECATED_BLOCKCACHE_BLOCKSIZE_KEY,
         BLOCKCACHE_BLOCKSIZE_KEY);
     }
-    FirstLevelBlockCache l1Cache = createFirstLevelCache(conf);
+    BlockCache l1Cache = createFirstLevelCache(conf);
     if (l1Cache == null) {
       return null;
     }
-    boolean useExternal = conf.getBoolean(EXTERNAL_BLOCKCACHE_KEY, EXTERNAL_BLOCKCACHE_DEFAULT);
-    if (useExternal) {
-      BlockCache l2CacheInstance = createExternalBlockcache(conf);
-      return l2CacheInstance == null ?
-          l1Cache :
-          new InclusiveCombinedBlockCache(l1Cache, l2CacheInstance);
+    if (conf.getBoolean(EXTERNAL_BLOCKCACHE_KEY, EXTERNAL_BLOCKCACHE_DEFAULT)) {
+      BlockCache l2Cache = createExternalBlockcache(conf);
+      return l2Cache == null ? l1Cache : new InclusiveCombinedBlockCache(
+          (FirstLevelBlockCache)l1Cache, l2Cache);
     } else {
       // otherwise use the bucket cache.
-      BucketCache bucketCache = createBucketCache(conf);
-      if (!conf.getBoolean("hbase.bucketcache.combinedcache.enabled", true)) {
-        // Non combined mode is off from 2.0
-        LOG.warn(
-            "From HBase 2.0 onwards only combined mode of LRU cache and bucket cache is available");
+      BucketCache l2Cache = createBucketCache(conf, CacheLevel.L2);
+      if (conf.getBoolean(BUCKET_CACHE_COMPOSITE_KEY, false)) {
+        return l2Cache == null ? l1Cache : new CompositeBucketCache((BucketCache)l1Cache, l2Cache);
+      } else {
+        if (!conf.getBoolean("hbase.bucketcache.combinedcache.enabled", true)) {
+          // Non combined mode is off from 2.0
+          LOG.warn("From HBase 2.0 onwards only combined mode of LRU cache and bucket"
+              + " cache is available");
+        }
+        return l2Cache == null ? l1Cache : new CombinedBlockCache(
+            (FirstLevelBlockCache)l1Cache, l2Cache);
       }
-      return bucketCache == null ? l1Cache : new CombinedBlockCache(l1Cache, bucketCache);
     }
   }
 
-  private static FirstLevelBlockCache createFirstLevelCache(final Configuration c) {
+  private static BlockCache createFirstLevelCache(final Configuration c) {
+    if (c.getBoolean(BUCKET_CACHE_COMPOSITE_KEY, false)) {
+      return createBucketCache(c, CacheLevel.L1);
+    }
     final long cacheSize = MemorySizeUtil.getOnHeapCacheSize(c);
     if (cacheSize < 0) {
       return null;
@@ -200,28 +209,48 @@ public final class BlockCacheFactory {
 
   }
 
-  private static BucketCache createBucketCache(Configuration c) {
-    // Check for L2.  ioengine name must be non-null.
-    String bucketCacheIOEngineName = c.get(BUCKET_CACHE_IOENGINE_KEY, null);
+  private static BucketCache createBucketCache(Configuration c, CacheLevel level) {
+    // Check for ioengine name must be non-null.
+    String bucketCacheIOEngineName;
+    int writerThreads;
+    int writerQueueLen;
+    String persistentPath;
+    switch(level) {
+      case L1:
+        bucketCacheIOEngineName = c.get(CompositeBucketCache.IOENGINE_L1, null);
+        writerThreads = c.getInt(CompositeBucketCache.WRITER_THREADS_L1,
+            DEFAULT_BUCKET_CACHE_WRITER_THREADS);
+        writerQueueLen = c.getInt(CompositeBucketCache.WRITER_QUEUE_LENGTH_L1,
+            DEFAULT_BUCKET_CACHE_WRITER_QUEUE);
+        persistentPath = c.get(CompositeBucketCache.PERSISTENT_PATH_L1);
+        break;
+      case L2:
+      default:
+        bucketCacheIOEngineName = c.get(CompositeBucketCache.IOENGINE_L2,
+            c.get(BUCKET_CACHE_IOENGINE_KEY, null));
+        writerThreads = c.getInt(CompositeBucketCache.WRITER_THREADS_L2,
+            c.getInt(BUCKET_CACHE_WRITER_THREADS_KEY, DEFAULT_BUCKET_CACHE_WRITER_THREADS));
+        writerQueueLen = c.getInt(CompositeBucketCache.WRITER_QUEUE_LENGTH_L2,
+            c.getInt(BUCKET_CACHE_WRITER_QUEUE_KEY, DEFAULT_BUCKET_CACHE_WRITER_QUEUE));
+        persistentPath = c.get(CompositeBucketCache.PERSISTENT_PATH_L2,
+            c.get(BUCKET_CACHE_PERSISTENT_PATH_KEY));
+        break;
+    }
     if (bucketCacheIOEngineName == null || bucketCacheIOEngineName.length() <= 0) {
       return null;
     }
 
     int blockSize = c.getInt(BLOCKCACHE_BLOCKSIZE_KEY, HConstants.DEFAULT_BLOCKSIZE);
-    final long bucketCacheSize = MemorySizeUtil.getBucketCacheSize(c);
+    final long bucketCacheSize = MemorySizeUtil.getBucketCacheSize(c, level);
     if (bucketCacheSize <= 0) {
       throw new IllegalStateException("bucketCacheSize <= 0; Check " +
           BUCKET_CACHE_SIZE_KEY + " setting and/or server java heap size");
     }
+
     if (c.get("hbase.bucketcache.percentage.in.combinedcache") != null) {
       LOG.warn("Configuration 'hbase.bucketcache.percentage.in.combinedcache' is no longer "
           + "respected. See comments in http://hbase.apache.org/book.html#_changes_of_note");
     }
-    int writerThreads = c.getInt(BUCKET_CACHE_WRITER_THREADS_KEY,
-        DEFAULT_BUCKET_CACHE_WRITER_THREADS);
-    int writerQueueLen = c.getInt(BUCKET_CACHE_WRITER_QUEUE_KEY,
-        DEFAULT_BUCKET_CACHE_WRITER_QUEUE);
-    String persistentPath = c.get(BUCKET_CACHE_PERSISTENT_PATH_KEY);
     String[] configuredBucketSizes = c.getStrings(BUCKET_CACHE_BUCKETS_KEY);
     int [] bucketSizes = null;
     if (configuredBucketSizes != null) {
@@ -248,7 +277,7 @@ public final class BlockCacheFactory {
       // Bucket cache logs its stats on creation internal to the constructor.
       bucketCache = new BucketCache(bucketCacheIOEngineName,
           bucketCacheSize, blockSize, bucketSizes, writerThreads, writerQueueLen, persistentPath,
-          ioErrorsTolerationDuration, c);
+          ioErrorsTolerationDuration, level, c);
     } catch (IOException ioex) {
       LOG.error("Can't instantiate bucket cache", ioex); throw new RuntimeException(ioex);
     }

@@ -161,9 +161,9 @@ class MetricsRegionServerWrapperImpl
     if (this.cacheStats != null) {
       if (this.cacheStats instanceof CombinedBlockCache.CombinedCacheStats) {
         l1Stats = ((CombinedBlockCache.CombinedCacheStats) this.cacheStats)
-          .getLruCacheStats();
+          .getL1CacheStats();
         l2Stats = ((CombinedBlockCache.CombinedCacheStats) this.cacheStats)
-          .getBucketCacheStats();
+          .getL2CacheStats();
       } else {
         l1Stats = this.cacheStats;
       }

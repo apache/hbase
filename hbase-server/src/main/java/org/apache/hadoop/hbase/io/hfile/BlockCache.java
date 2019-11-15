@@ -28,6 +28,10 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public interface BlockCache extends Iterable<CachedBlock> {
+  public enum CacheLevel {
+    L1, L2
+  }
+
   /**
    * Add block to cache.
    * @param cacheKey The block's cache key.
@@ -132,4 +136,6 @@ public interface BlockCache extends Iterable<CachedBlock> {
    * @return The list of sub blockcaches that make up this one; returns null if no sub caches.
    */
   BlockCache [] getBlockCaches();
+
+  boolean containsBlock(BlockCacheKey cacheKey);
 }

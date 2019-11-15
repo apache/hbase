@@ -218,9 +218,7 @@ public class BucketCache implements BlockCache, HeapSize {
   });
 
   /** Statistics thread schedule pool (for heavy debugging, could remove) */
-  private transient final ScheduledExecutorService scheduleThreadPool =
-    Executors.newScheduledThreadPool(1,
-      new ThreadFactoryBuilder().setNameFormat("BucketCacheStatsExecutor").setDaemon(true).build());
+  private transient final ScheduledExecutorService scheduleThreadPool;
 
   // Allocate or free space for the block
   private transient BucketAllocator bucketAllocator;
@@ -253,15 +251,27 @@ public class BucketCache implements BlockCache, HeapSize {
    * */
   private String algorithm;
 
+  @VisibleForTesting
   public BucketCache(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
       int writerThreadNum, int writerQLen, String persistencePath) throws IOException {
     this(ioEngineName, capacity, blockSize, bucketSizes, writerThreadNum, writerQLen,
-        persistencePath, DEFAULT_ERROR_TOLERATION_DURATION, HBaseConfiguration.create());
+        persistencePath, DEFAULT_ERROR_TOLERATION_DURATION, CacheLevel.L2,
+        HBaseConfiguration.create());
+  }
+
+  @VisibleForTesting
+  public BucketCache(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
+      int writerThreadNum, int writerQLen, String persistencePath, int ioErrorsTolerationDuration,
+      Configuration conf) throws IOException {
+    this(ioEngineName, capacity, blockSize, bucketSizes, writerThreadNum, writerQLen,
+        persistencePath, ioErrorsTolerationDuration, CacheLevel.L2, conf);
   }
 
   public BucketCache(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
       int writerThreadNum, int writerQLen, String persistencePath, int ioErrorsTolerationDuration,
-      Configuration conf) throws IOException {
+      CacheLevel level, Configuration conf) throws IOException {
+    scheduleThreadPool = Executors.newScheduledThreadPool(1, new ThreadFactoryBuilder()
+        .setNameFormat("BucketCacheStatsExecutor-" + level).setDaemon(true).build());
     boolean useStrongRef = conf.getBoolean(STRONG_REF_KEY, STRONG_REF_DEFAULT);
     if (useStrongRef) {
       this.offsetLock = new IdReadWriteLockStrongRef<>();
@@ -286,9 +296,10 @@ public class BucketCache implements BlockCache, HeapSize {
 
     sanityCheckConfigs();
 
-    LOG.info("Instantiating BucketCache with acceptableFactor: " + acceptableFactor + ", minFactor: " + minFactor +
-        ", extraFreeFactor: " + extraFreeFactor + ", singleFactor: " + singleFactor + ", multiFactor: " + multiFactor +
-        ", memoryFactor: " + memoryFactor + ", useStrongRef: " + useStrongRef);
+    LOG.info("Instantiating BucketCache with acceptableFactor: {}, minFactor: {},"
+        + " extraFreeFactor: {}, singleFactor: {}, multiFactor: {}, memoryFactor: {},"
+        + " useStrongRef: {}, cacheLevel: {}", acceptableFactor, minFactor, extraFreeFactor,
+        singleFactor, multiFactor, memoryFactor, useStrongRef, level);
 
     this.cacheCapacity = capacity;
     this.persistencePath = persistencePath;
@@ -326,11 +337,10 @@ public class BucketCache implements BlockCache, HeapSize {
     // every five minutes.
     this.scheduleThreadPool.scheduleAtFixedRate(new StatisticsThread(this),
         statThreadPeriod, statThreadPeriod, TimeUnit.SECONDS);
-    LOG.info("Started bucket cache; ioengine=" + ioEngineName +
-        ", capacity=" + StringUtils.byteDesc(capacity) +
-      ", blockSize=" + StringUtils.byteDesc(blockSize) + ", writerThreadNum=" +
-        writerThreadNum + ", writerQLen=" + writerQLen + ", persistencePath=" +
-      persistencePath + ", bucketAllocator=" + this.bucketAllocator.getClass().getName());
+    LOG.info("Started bucket cache; cacheLevel={}, ioengine={}, capacity={}, blockSize={},"
+        + " writerThreadNum={}, writerQLen={}, persistencePath={}, bucketAllocator={}",
+        level, ioEngineName, StringUtils.byteDesc(capacity), StringUtils.byteDesc(blockSize),
+        writerThreadNum, writerQLen, persistencePath, this.bucketAllocator.getClass().getName());
   }
 
   private void sanityCheckConfigs() {
@@ -1524,6 +1534,11 @@ public class BucketCache implements BlockCache, HeapSize {
   @Override
   public BlockCache[] getBlockCaches() {
     return null;
+  }
+
+  @Override
+  public boolean containsBlock(BlockCacheKey cacheKey) {
+    return ramCache.containsKey(cacheKey) || backingMap.containsKey(cacheKey);
   }
 
   @VisibleForTesting

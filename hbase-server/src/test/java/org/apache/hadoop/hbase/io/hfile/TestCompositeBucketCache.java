@@ -1,4 +1,5 @@
 /**
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,9 +18,6 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_IOENGINE_KEY;
-import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_SIZE_KEY;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -29,18 +27,22 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({SmallTests.class})
-public class TestCombinedBlockCache extends TestCompositeBlockCache {
+public class TestCompositeBucketCache extends TestCompositeBlockCache {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCombinedBlockCache.class);
+      HBaseClassTestRule.forClass(TestCompositeBucketCache.class);
 
   @Test
   public void testMultiThreadGetAndEvictBlock() throws Exception {
     Configuration conf = UTIL.getConfiguration();
-    conf.set(BUCKET_CACHE_IOENGINE_KEY, "offheap");
-    conf.setInt(BUCKET_CACHE_SIZE_KEY, 32);
+    conf.setBoolean(BlockCacheFactory.BUCKET_CACHE_COMPOSITE_KEY, true);
+    conf.set(CompositeBucketCache.IOENGINE_L1, "offheap");
+    conf.set(CompositeBucketCache.IOENGINE_L2, "offheap");
+    conf.setInt(CompositeBucketCache.CACHESIZE_L1, 32);
+    conf.setInt(CompositeBucketCache.CACHESIZE_L2, 32);
     BlockCache blockCache = BlockCacheFactory.createBlockCache(conf);
-    Assert.assertTrue(blockCache instanceof CombinedBlockCache);
+    Assert.assertTrue(blockCache instanceof CompositeBucketCache);
     TestLruBlockCache.testMultiThreadGetAndEvictBlockInternal(blockCache);
   }
+
 }

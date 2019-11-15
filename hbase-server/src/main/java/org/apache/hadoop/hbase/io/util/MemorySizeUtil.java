@@ -17,17 +17,21 @@
  */
 package org.apache.hadoop.hbase.io.util;
 
+import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_SIZE_KEY;
+
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryType;
 import java.lang.management.MemoryUsage;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.hfile.BlockCache.CacheLevel;
+import org.apache.hadoop.hbase.io.hfile.CompositeBucketCache;
+import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
-import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * Util class to calculate memory size for memstore, block cache(L1, L2) of RS.
@@ -237,9 +241,19 @@ public class MemorySizeUtil {
    * @param conf used to read config for bucket cache size. (< 1 is treated as % and > is treated as MiB)
    * @return the number of bytes to use for bucket cache, negative if disabled.
    */
-  public static long getBucketCacheSize(final Configuration conf) {
+  public static long getBucketCacheSize(final Configuration conf, final CacheLevel level) {
     // Size configured in MBs
-    float bucketCacheSize = conf.getFloat(HConstants.BUCKET_CACHE_SIZE_KEY, 0F);
+    float bucketCacheSize;
+    switch(level) {
+      case L1:
+        bucketCacheSize = conf.getFloat(CompositeBucketCache.CACHESIZE_L1, 0F);
+        break;
+      case L2:
+      default:
+        bucketCacheSize = conf.getFloat(CompositeBucketCache.CACHESIZE_L2,
+            conf.getFloat(BUCKET_CACHE_SIZE_KEY, 0F));
+        break;
+    }
     if (bucketCacheSize < 1) {
       throw new IllegalArgumentException("Bucket Cache should be minimum 1 MB in size."
           + "Configure 'hbase.bucketcache.size' with > 1 value");

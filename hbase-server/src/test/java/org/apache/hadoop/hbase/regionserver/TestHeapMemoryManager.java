@@ -738,6 +738,11 @@ public class TestHeapMemoryManager {
     public void setTestBlockSize(long testBlockSize) {
       this.testBlockSize = testBlockSize;
     }
+
+    @Override
+    public boolean containsBlock(BlockCacheKey cacheKey) {
+      return false;
+    }
   }
 
   private static class MemstoreFlusherStub implements FlushRequester {

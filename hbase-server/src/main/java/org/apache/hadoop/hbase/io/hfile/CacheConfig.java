@@ -371,6 +371,10 @@ public class CacheConfig {
     return blockCache instanceof CombinedBlockCache;
   }
 
+  public boolean isCompositeBucketCache() {
+    return blockCache instanceof CompositeBucketCache;
+  }
+
   public ByteBuffAllocator getByteBuffAllocator() {
     return this.byteBuffAllocator;
   }
