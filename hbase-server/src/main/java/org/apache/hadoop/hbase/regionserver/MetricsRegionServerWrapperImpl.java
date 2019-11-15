@@ -118,7 +118,7 @@ class MetricsRegionServerWrapperImpl
   private volatile long mobFileCacheCount = 0;
   private volatile long blockedRequestsCount = 0L;
   private volatile long averageRegionSize = 0L;
-  public volatile Map<String, ArrayList<Long>> requestsCountCache = new
+  protected volatile Map<String, ArrayList<Long>> requestsCountCache = new
       ConcurrentHashMap<String, ArrayList<Long>>();
 
   private ScheduledExecutorService executor;
@@ -711,17 +711,17 @@ class MetricsRegionServerWrapperImpl
         long tempBlockedRequestsCount = 0;
         int regionCount = 0;
 
-        long tempReadRequestsCount = 0l;
-        long tempWriteRequestsCount = 0l;
-        long tempRequestsPerSecond = 0l;
-        long currentReadRequestsCount = 0l;
-        long currentWriteRequestsCount = 0l;
-        long lastReadRequestsCount = 0l;
-        long lastWriteRequestsCount = 0l;
-        long readRequestsDelta = 0l;
-        long writeRequestsDelta = 0l;
-        long totalReadRequestsDelta = 0l;
-        long totalWriteRequestsDelta = 0l;
+        long tempReadRequestsCount = 0;
+        long tempWriteRequestsCount = 0;
+        long tempRequestsPerSecond = 0;
+        long currentReadRequestsCount = 0;
+        long currentWriteRequestsCount = 0;
+        long lastReadRequestsCount = 0;
+        long lastWriteRequestsCount = 0;
+        long readRequestsDelta = 0;
+        long writeRequestsDelta = 0;
+        long totalReadRequestsDelta = 0;
+        long totalWriteRequestsDelta = 0;
         String encodedRegionName;
         ArrayList<String> hregions = new ArrayList<String>();
         for (HRegion r : regionServer.getOnlineRegionsLocalContext()) {
