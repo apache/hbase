@@ -27,9 +27,12 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class SecurityHeadersFilter implements Filter {
   private static final Logger LOG =
       LoggerFactory.getLogger(SecurityHeadersFilter.class);

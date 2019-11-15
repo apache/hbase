@@ -135,7 +135,7 @@ public class RESTServer implements Constants {
     }
   }
 
-  private void addSecurityHeadersFilter(ServletContextHandler ctxHandler) {
+  private void addSecurityHeadersFilter(ServletContextHandler ctxHandler, Configuration conf) {
     FilterHolder holder = new FilterHolder();
     holder.setName("security");
     holder.setClassName(SecurityHeadersFilter.class.getName());
@@ -143,8 +143,7 @@ public class RESTServer implements Constants {
     params.put("xframeoptions", conf.get("hbase.http.filter.xframeoptions.mode",
         "DENY"));
     holder.setInitParameters(params);
-    ctxHandler.addFilter(SecurityHeadersFilter.class, PATH_SPEC_ANY,
-        EnumSet.allOf(DispatcherType.class));
+    ctxHandler.addFilter(holder, PATH_SPEC_ANY, EnumSet.allOf(DispatcherType.class));
   }
 
   // login the server principal (if using secure Hadoop)
@@ -359,7 +358,7 @@ public class RESTServer implements Constants {
       ctxHandler.addFilter(filter, PATH_SPEC_ANY, EnumSet.of(DispatcherType.REQUEST));
     }
     addCSRFFilter(ctxHandler, conf);
-    addSecurityHeadersFilter(ctxHandler);
+    addSecurityHeadersFilter(ctxHandler, conf);
     HttpServerUtil.constrainHttpMethods(ctxHandler, servlet.getConfiguration()
         .getBoolean(REST_HTTP_ALLOW_OPTIONS_METHOD, REST_HTTP_ALLOW_OPTIONS_METHOD_DEFAULT));
 
