@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -33,6 +34,7 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
@@ -153,6 +155,7 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
 
   @Test
   public void testMisplacedRegions() throws Exception {
+    master.getConfiguration().setBoolean(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, true);
     final TableName tableName = TableName.valueOf(tablePrefix + "_testMisplacedRegions");
     LOG.info("testMisplacedRegions");
 
@@ -180,4 +183,36 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
     });
   }
 
+  @Test
+  public void testGeneratePlanByGroup() throws Exception {
+    master.getConfiguration().setBoolean(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, false);
+    final TableName tableName = TableName.valueOf(tablePrefix + "_testGeneratePlanByGroup");
+    final RSGroupInfo groupInfo = addGroup("testGeneratePlanByGroup", 1);
+    Address address = groupInfo.getServers().iterator().next();
+    ServerName serverName = getServerName(address);
+
+    TEST_UTIL.createMultiRegionTable(tableName, new byte[] { 'f' }, 15);
+    TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
+
+    rsGroupAdminEndpoint.getGroupInfoManager().moveTables(Sets.newHashSet(tableName),
+      groupInfo.getName());
+
+    admin.balancerSwitch(true, true);
+    // since currently there are no Regions on the target group, balanceRSGroup will return false
+    assertFalse(rsGroupAdmin.balanceRSGroup(groupInfo.getName()));
+    assertTrue(rsGroupAdmin.balanceRSGroup(RSGroupInfo.DEFAULT_GROUP));
+    // after balance the default group, region will move to testGeneratePlanByGroup
+    assertEquals(15, master.getAssignmentManager().getRegionStates().getServerNode(serverName)
+        .getRegionCount());
+    admin.balancerSwitch(false, true);
+    assertTrue(observer.preBalanceRSGroupCalled);
+    assertTrue(observer.postBalanceRSGroupCalled);
+
+    TEST_UTIL.waitFor(60000, new Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return admin.getConnection().getAdmin().getRegions(serverName).size() == 15;
+      }
+    });
+  }
 }

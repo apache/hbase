@@ -31,6 +31,7 @@ import java.util.function.Function;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -44,11 +45,11 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
+import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
 /**
@@ -475,16 +476,21 @@ public class RSGroupAdminServer implements RSGroupAdmin {
         return false;
       }
 
-      //We balance per group instead of per table
+      boolean isByTable = master.getConfiguration().getBoolean(
+          HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, false);
       List<RegionPlan> plans = new ArrayList<>();
-      for(Map.Entry<TableName, Map<ServerName, List<RegionInfo>>> tableMap:
-          getRSGroupAssignmentsByTable(groupName).entrySet()) {
-        LOG.info("Creating partial plan for table {} : {}", tableMap.getKey(), tableMap.getValue());
-        List<RegionPlan> partialPlans = balancer.balanceCluster(tableMap.getValue());
-        LOG.info("Partial plan for table {} : {}", tableMap.getKey(), partialPlans);
-        if (partialPlans != null) {
-          plans.addAll(partialPlans);
+      if (isByTable) {
+        for(Map.Entry<TableName, Map<ServerName, List<RegionInfo>>> tableMap:
+            getRSGroupAssignmentsByTable(groupName).entrySet()) {
+          LOG.info("Creating partial plan for table {} : {}", tableMap.getKey(), tableMap.getValue());
+          List<RegionPlan> partialPlans = balancer.balanceCluster(tableMap.getValue());
+          LOG.info("Partial plan for table {} : {}", tableMap.getKey(), partialPlans);
+          if (partialPlans != null) {
+            plans.addAll(partialPlans);
+          }
         }
+      } else {
+        plans = balancer.balanceCluster(getAssignmentsByGroup(groupName));
       }
       boolean balancerRan = !plans.isEmpty();
       if (balancerRan) {
@@ -604,6 +610,22 @@ public class RSGroupAdminServer implements RSGroupAdmin {
       }
     }
 
+    return result;
+  }
+
+  private Map<ServerName, List<RegionInfo>> getAssignmentsByGroup(String groupName)
+      throws IOException {
+    Map<ServerName, List<RegionInfo>> result = Maps.newHashMap();
+    RSGroupInfo rsGroupInfo = getRSGroupInfo(groupName);
+    Set<Address> groupServers = rsGroupInfo.getServers();
+    RegionStates states = master.getAssignmentManager().getRegionStates();
+    for (ServerName serverName: master.getServerManager().getOnlineServers().keySet()) {
+      if (groupServers.contains(serverName.getAddress())) { // belong to our group
+        List<RegionInfo> regions = new ArrayList<>();
+        regions.addAll(states.getServerNode(serverName).getRegionInfoList());
+        result.put(serverName, regions);
+      }
+    }
     return result;
   }
 
