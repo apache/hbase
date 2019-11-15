@@ -99,13 +99,22 @@ public class ReplicationBarrierCleaner extends ScheduledChore {
           peerIds = peerManager.getSerialPeerIdsBelongsTo(tableName);
         }
         if (peerIds.isEmpty()) {
-          // no serial replication, only keep the newest barrier
-          Cell cell = result.getColumnLatestCell(HConstants.REPLICATION_BARRIER_FAMILY,
-            HConstants.SEQNUM_QUALIFIER);
-          metaTable.delete(new Delete(regionName).addFamily(HConstants.REPLICATION_BARRIER_FAMILY,
-            cell.getTimestamp() - 1));
+          // no serial replication
+          // check if the region has already been removed, i.e, no catalog family
+          if (metaTable.exists(new Get(regionName).addFamily(HConstants.CATALOG_FAMILY))) {
+            // exists, then only keep the newest barrier
+            Cell cell = result.getColumnLatestCell(HConstants.REPLICATION_BARRIER_FAMILY,
+              HConstants.SEQNUM_QUALIFIER);
+            metaTable.delete(new Delete(regionName).addFamily(HConstants.REPLICATION_BARRIER_FAMILY,
+              cell.getTimestamp() - 1));
+            deletedBarriers += barriers.length - 1;
+          } else {
+            // not exists, delete all the barriers
+            metaTable
+              .delete(new Delete(regionName).addFamily(HConstants.REPLICATION_BARRIER_FAMILY));
+            deletedBarriers += barriers.length;
+          }
           cleanedRows++;
-          deletedBarriers += barriers.length - 1;
           continue;
         }
         String encodedRegionName = RegionInfo.encodeRegionName(regionName);
