@@ -38,11 +38,11 @@ import org.junit.experimental.categories.Category;
  * Validate no negative value in requestsPerSecond metric.
  */
 @Category({ RegionServerTests.class, MediumTests.class })
-public class TestMetricsRequestPerSecond {
+public class TestRequestsPerSecondMetric {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMetricsRequestPerSecond.class);
+      HBaseClassTestRule.forClass(TestRequestsPerSecondMetric.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final long METRICS_PERIOD = 2000L;
@@ -62,7 +62,7 @@ public class TestMetricsRequestPerSecond {
   }
 
   @Test
-  public void testNoNegativeRequestPerSecond() throws IOException, InterruptedException {
+  public void testNoNegativeSignAtRequestsPerSecond() throws IOException, InterruptedException {
     final TableName TABLENAME = TableName.valueOf("t");
     final String FAMILY = "f";
     Admin admin = UTIL.getAdmin();
