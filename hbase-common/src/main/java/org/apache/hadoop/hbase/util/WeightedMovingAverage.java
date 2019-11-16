@@ -24,17 +24,17 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Different from SMA {@link SimpleMovingAverage}, WeightedMovingAverage gives each data different
  * weight. And it is based on {@link WindowMovingAverage}, such that it only focus on the last N.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 public class WeightedMovingAverage extends WindowMovingAverage {
   private int[] coefficient;
   private int denominator;
 
-  public WeightedMovingAverage() {
-    this(DEFAULT_SIZE);
+  public WeightedMovingAverage(String label) {
+    this(label, DEFAULT_SIZE);
   }
 
-  public WeightedMovingAverage(int size) {
-    super(size);
+  public WeightedMovingAverage(String label, int size) {
+    super(label, size);
     int length = getNumberOfStatistics();
     denominator = length * (length + 1) / 2;
     coefficient = new int[length];

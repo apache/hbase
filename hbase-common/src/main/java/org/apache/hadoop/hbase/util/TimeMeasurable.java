@@ -24,7 +24,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Methods that implement this interface can be measured elapsed time.
  * It works together with {@link MovingAverage} to take effect.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 public interface TimeMeasurable<T> {
 
   /**
