@@ -735,7 +735,9 @@ public class CatalogJanitor extends ScheduledChore {
           continue;
         }
         RegionState rs = this.services.getAssignmentManager().getRegionStates().getRegionState(ri);
-        if (rs.isClosedOrAbnormallyClosed()) {
+        if (rs == null) {
+          LOG.warn("Null RegionState for {} ", ri);
+        } else if (rs.isClosedOrAbnormallyClosed()) {
           // If closed against an 'Unknown Server', that is should be fine.
           continue;
         }

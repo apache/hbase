@@ -71,7 +71,9 @@ public class ReplicationBarrierCleaner extends ScheduledChore {
   }
 
   @Override
-  protected void chore() {
+  // Public so can be run out of MasterRpcServices
+  // TODO: No ensuring chore run is exclusive.
+  public void chore() {
     long totalRows = 0;
     long cleanedRows = 0;
     long deletedRows = 0;
@@ -168,11 +170,9 @@ public class ReplicationBarrierCleaner extends ScheduledChore {
       LOG.warn("Failed to clean up replication barrier", e);
     }
     if (totalRows > 0) {
-      LOG.info(
-        "Cleanup replication barriers: totalRows {}, " +
-          "cleanedRows {}, deletedRows {}, deletedBarriers {}, deletedLastPushedSeqIds {}",
-        totalRows, cleanedRows, deletedRows, deletedBarriers, deletedLastPushedSeqIds);
+      LOG.info("TotalRows={}, cleanedRows={}, deletedRows={}, deletedBarriers={}, " +
+          "deletedLastPushedSeqIds={}", totalRows, cleanedRows, deletedRows,
+          deletedBarriers, deletedLastPushedSeqIds);
     }
   }
-
 }

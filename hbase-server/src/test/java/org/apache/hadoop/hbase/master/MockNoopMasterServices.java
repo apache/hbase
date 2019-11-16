@@ -467,4 +467,7 @@ public class MockNoopMasterServices implements MasterServices {
   public List<RegionPlan> executeRegionPlansWithThrottling(List<RegionPlan> plans) {
     return null;
   }
+
+  @Override
+  public void runReplicationBarrierCleaner() {}
 }
