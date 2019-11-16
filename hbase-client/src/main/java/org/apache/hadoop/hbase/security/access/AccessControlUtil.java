@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.HConstants;
@@ -56,6 +57,7 @@ public class AccessControlUtil {
    * @param qualifier optional qualifier
    * @param actions the permissions to be granted
    * @return A {@link AccessControlProtos} GrantRequest
+   * @throws NullPointerException if {@code tableName} is {@code null}
    */
   public static AccessControlProtos.GrantRequest buildGrantRequest(
       String username, TableName tableName, byte[] family, byte[] qualifier,
@@ -67,9 +69,9 @@ public class AccessControlUtil {
     for (AccessControlProtos.Permission.Action a : actions) {
       permissionBuilder.addAction(a);
     }
-    if (tableName == null) {
-      throw new NullPointerException("TableName cannot be null");
-    }
+
+    Objects.requireNonNull(tableName, "TableName cannot be null");
+
     permissionBuilder.setTableName(ProtobufUtil.toProtoTableName(tableName));
 
     if (family != null) {

@@ -31,6 +31,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Objects;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.regex.Matcher;
@@ -230,13 +231,13 @@ public class MetaTableAccessor {
    * Callers should call close on the returned {@link Table} instance.
    * @param connection connection we're using to access Meta
    * @return An {@link Table} for <code>hbase:meta</code>
+   * @throws NullPointerException if {@code connection} is {@code null}
    */
   public static Table getMetaHTable(final Connection connection)
   throws IOException {
     // We used to pass whole CatalogTracker in here, now we just pass in Connection
-    if (connection == null) {
-      throw new NullPointerException("No connection");
-    } else if (connection.isClosed()) {
+    Objects.requireNonNull(connection, "Connection cannot be null");
+    if (connection.isClosed()) {
       throw new IOException("connection is closed");
     }
     return connection.getTable(TableName.META_TABLE_NAME);
