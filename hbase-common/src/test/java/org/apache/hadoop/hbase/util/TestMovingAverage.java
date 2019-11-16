@@ -22,8 +22,10 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Assert;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category(SmallTests.class)
 public class TestMovingAverage {
@@ -32,12 +34,15 @@ public class TestMovingAverage {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMovingAverage.class);
 
+  @Rule
+  public TestName name = new TestName();
+
   private long[] data = {1, 12, 13, 24, 25, 26, 37, 38, 39, 40};
   private double delta = 0.1;
 
   @Test
   public void testSimpleMovingAverage() throws Exception {
-    MovingAverage<?> algorithm = new SimpleMovingAverage();
+    MovingAverage<?> algorithm = new SimpleMovingAverage(name.getMethodName());
     int index = 0;
     // [1, 12, 13, 24]
     int bound = 4;
@@ -67,7 +72,7 @@ public class TestMovingAverage {
   @Test
   public void testWindowMovingAverage() throws Exception {
     // Default size is 5.
-    MovingAverage<?> algorithm = new WindowMovingAverage();
+    MovingAverage<?> algorithm = new WindowMovingAverage(name.getMethodName());
     int index = 0;
     // [1, 12, 13, 24]
     int bound = 4;
@@ -97,7 +102,7 @@ public class TestMovingAverage {
   @Test
   public void testWeightedMovingAverage() throws Exception {
     // Default size is 5.
-    MovingAverage<?> algorithm = new WeightedMovingAverage();
+    MovingAverage<?> algorithm = new WeightedMovingAverage(name.getMethodName());
     int index = 0;
     // [1, 12, 13, 24]
     int bound = 4;
@@ -127,7 +132,7 @@ public class TestMovingAverage {
   @Test
   public void testExponentialMovingAverage() throws Exception {
     // [1, 12, 13, 24, 25, 26, 37, 38, 39, 40]
-    MovingAverage<?> algorithm = new ExponentialMovingAverage();
+    MovingAverage<?> algorithm = new ExponentialMovingAverage(name.getMethodName());
     int index = 0;
     int bound = 5;
     for (; index < bound; index++) {

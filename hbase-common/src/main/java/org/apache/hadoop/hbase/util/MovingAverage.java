@@ -29,9 +29,15 @@ import org.slf4j.LoggerFactory;
  * <br>
  * In different situation, different {@link MovingAverage} algorithm can be used based on needs.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 public abstract class MovingAverage<T> {
   private final static Logger LOG = LoggerFactory.getLogger(MovingAverage.class);
+
+  protected final String label;
+
+  protected MovingAverage(String label) {
+    this.label = label;
+  }
 
   /**
    * Mark start time of an execution.
@@ -57,12 +63,12 @@ public abstract class MovingAverage<T> {
    */
   public T measure(TimeMeasurable<T> measurable) {
     long startTime = start();
-    LOG.debug("Start to measure at: {} ns.", startTime);
+    LOG.trace("{} - start to measure at: {} ns.", label, startTime);
     // Here may throw exceptions which should be taken care by caller, not here.
     // If exception occurs, this time wouldn't count.
     T result = measurable.measure();
     long elapsed = stop(startTime);
-    LOG.debug("Elapse: {} ns.", elapsed);
+    LOG.trace("{} - elapse: {} ns.", label, elapsed);
     updateMostRecentTime(elapsed);
     return result;
   }
