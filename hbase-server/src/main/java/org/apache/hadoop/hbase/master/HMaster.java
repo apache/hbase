@@ -3805,6 +3805,14 @@ public class HMaster extends HRegionServer implements MasterServices {
     return this.hbckChore;
   }
 
+  @Override
+  public void runReplicationBarrierCleaner() {
+    ReplicationBarrierCleaner rbc = this.replicationBarrierCleaner;
+    if (rbc != null) {
+      rbc.chore();
+    }
+  }
+
   public SnapshotQuotaObserverChore getSnapshotQuotaObserverChore() {
     return this.snapshotQuotaChore;
   }

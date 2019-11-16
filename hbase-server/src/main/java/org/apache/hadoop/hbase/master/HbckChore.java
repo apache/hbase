@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -122,7 +122,6 @@ public class HbckChore extends ScheduledChore {
       LOG.warn("hbckChore is either disabled or is already running. Can't run the chore");
       return;
     }
-    running = true;
     regionInfoMap.clear();
     disabledTableRegions.clear();
     splitParentRegions.clear();
@@ -130,14 +129,19 @@ public class HbckChore extends ScheduledChore {
     orphanRegionsOnFS.clear();
     inconsistentRegions.clear();
     checkingStartTimestamp = EnvironmentEdgeManager.currentTime();
-    loadRegionsFromInMemoryState();
-    loadRegionsFromRSReport();
+    running = true;
     try {
-      loadRegionsFromFS();
-    } catch (IOException e) {
-      LOG.warn("Failed to load the regions from filesystem", e);
+      loadRegionsFromInMemoryState();
+      loadRegionsFromRSReport();
+      try {
+        loadRegionsFromFS();
+      } catch (IOException e) {
+        LOG.warn("Failed to load the regions from filesystem", e);
+      }
+      saveCheckResultToSnapshot();
+    } catch (Throwable t) {
+      LOG.warn("Unexpected", t);
     }
-    saveCheckResultToSnapshot();
     running = false;
   }
 
@@ -262,6 +266,11 @@ public class HbckChore extends ScheduledChore {
       List<Path> regionDirs = FSUtils.getRegionDirs(fs, tableDir);
       for (Path regionDir : regionDirs) {
         String encodedRegionName = regionDir.getName();
+        if (encodedRegionName == null) {
+          LOG.warn("Failed get of encoded name from {}",
+              regionDir == null? "NULL": regionDir.toString());
+          continue;
+        }
         HbckRegionInfo hri = regionInfoMap.get(encodedRegionName);
         if (hri == null) {
           orphanRegionsOnFS.put(encodedRegionName, regionDir);
