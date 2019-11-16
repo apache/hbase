@@ -575,7 +575,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     Map<TableName, Map<ServerName, List<RegionInfo>>> result = Maps.newHashMap();
     RSGroupInfo rsGroupInfo = getRSGroupInfo(groupName);
     Map<TableName, Map<ServerName, List<RegionInfo>>> assignments = Maps.newHashMap();
-    for (Map.Entry<RegionInfo, ServerName> entry:
+    for(Map.Entry<RegionInfo, ServerName> entry:
         master.getAssignmentManager().getRegionStates().getRegionAssignments().entrySet()) {
       TableName currTable = entry.getKey().getTable();
       ServerName currServer = entry.getValue();
@@ -588,8 +588,8 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     }
 
     Map<ServerName, List<RegionInfo>> serverMap = Maps.newHashMap();
-    for (ServerName serverName: master.getServerManager().getOnlineServers().keySet()) {
-      if (rsGroupInfo.getServers().contains(serverName.getAddress())) {
+    for(ServerName serverName: master.getServerManager().getOnlineServers().keySet()) {
+      if(rsGroupInfo.getServers().contains(serverName.getAddress())) {
         serverMap.put(serverName, Collections.emptyList());
       }
     }
