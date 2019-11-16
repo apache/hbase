@@ -23,12 +23,13 @@ import org.apache.yetus.audience.InterfaceAudience;
 /**
  * SMA measure the overall average execution time of a specific method.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 public class SimpleMovingAverage extends MovingAverage {
   private double averageTime = 0.0;
   protected long count = 0;
 
-  public SimpleMovingAverage() {
+  public SimpleMovingAverage(String label) {
+    super(label);
     this.averageTime = 0.0;
     this.count = 0;
   }

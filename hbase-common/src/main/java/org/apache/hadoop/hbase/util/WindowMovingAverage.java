@@ -24,7 +24,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Instead of calculate a whole time average, this class focus on the last N.
  * The last N is stored in a circle array.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 public class WindowMovingAverage extends MovingAverage {
   protected final static int DEFAULT_SIZE = 5;
 
@@ -35,11 +35,12 @@ public class WindowMovingAverage extends MovingAverage {
   // If it travels a round.
   protected boolean oneRound;
 
-  public WindowMovingAverage() {
-    this(DEFAULT_SIZE);
+  public WindowMovingAverage(String label) {
+    this(label, DEFAULT_SIZE);
   }
 
-  public WindowMovingAverage(int size) {
+  public WindowMovingAverage(String label, int size) {
+    super(label);
     this.lastN = new long[size <= 0 ? DEFAULT_SIZE : size];
     this.mostRecent = -1;
     this.oneRound = false;

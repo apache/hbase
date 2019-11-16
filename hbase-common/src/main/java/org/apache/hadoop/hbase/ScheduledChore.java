@@ -81,7 +81,9 @@ public abstract class ScheduledChore implements Runnable {
    */
   private final Stoppable stopper;
 
-  private final MovingAverage<Void> timeMeasurement = new WindowMovingAverage();
+  private final MovingAverage<Void> timeMeasurement;
+  private static final long FIVE_MINUTES_IN_NANOS = TimeUnit.MINUTES.toNanos(5L);
+  private long lastLog = System.nanoTime();
 
   interface ChoreServicer {
     /**
@@ -122,11 +124,7 @@ public abstract class ScheduledChore implements Runnable {
   @InterfaceAudience.Private
   @VisibleForTesting
   protected ScheduledChore() {
-    this.name = null;
-    this.stopper = null;
-    this.period = 0;
-    this.initialDelay = DEFAULT_INITIAL_DELAY;
-    this.timeUnit = DEFAULT_TIME_UNIT;
+    this("TestChore", null, 0, DEFAULT_INITIAL_DELAY, DEFAULT_TIME_UNIT);
   }
 
   /**
@@ -167,6 +165,7 @@ public abstract class ScheduledChore implements Runnable {
     this.period = period;
     this.initialDelay = initialDelay < 0 ? 0 : initialDelay;
     this.timeUnit = unit;
+    this.timeMeasurement = new WindowMovingAverage(name);
   }
 
   /**
@@ -191,8 +190,11 @@ public abstract class ScheduledChore implements Runnable {
             chore();
             return null;
           });
-          LOG.info(String.format("%s average execution time: %.2f ns.", getName(),
-            timeMeasurement.getAverageTime()));
+          if (LOG.isInfoEnabled() && (System.nanoTime() - lastLog > FIVE_MINUTES_IN_NANOS)) {
+            LOG.info("{} average execution time: {} ns.", getName(),
+                (long)(timeMeasurement.getAverageTime()));
+            lastLog = System.nanoTime();
+          }
         }
       } catch (Throwable t) {
         if (LOG.isErrorEnabled()) LOG.error("Caught error", t);
