@@ -24,26 +24,26 @@ import org.apache.yetus.audience.InterfaceAudience;
  * EMA is similar to {@link WeightedMovingAverage} in weighted, but the weighting factor decrease
  * exponentially. It brings benefits that it is more sensitive, and can see the trends easily.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 public class ExponentialMovingAverage extends WindowMovingAverage {
   private double alpha;
   private double previousAverage;
   private double currentAverage;
 
-  public ExponentialMovingAverage() {
-    this(DEFAULT_SIZE);
+  public ExponentialMovingAverage(String label) {
+    this(label, DEFAULT_SIZE);
   }
 
-  public ExponentialMovingAverage(double alpha) {
-    this(DEFAULT_SIZE, alpha);
+  public ExponentialMovingAverage(String label, double alpha) {
+    this(label, DEFAULT_SIZE, alpha);
   }
 
-  public ExponentialMovingAverage(int size) {
-    this(size, (double) 2 / (1 + size));
+  public ExponentialMovingAverage(String label, int size) {
+    this(label, size, (double) 2 / (1 + size));
   }
 
-  public ExponentialMovingAverage(int size, double alpha) {
-    super(size);
+  public ExponentialMovingAverage(String label, int size, double alpha) {
+    super(label, size);
     this.previousAverage = -1.0;
     this.currentAverage = 0.0;
     this.alpha = alpha;
