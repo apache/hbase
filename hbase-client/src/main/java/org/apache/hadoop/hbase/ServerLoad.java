@@ -412,6 +412,10 @@ public class ServerLoad implements ServerMetrics {
     return metrics.getRegionMetrics();
   }
 
+  @Override public Map<byte[], UserMetrics> getUserMetrics() {
+    return metrics.getUserMetrics();
+  }
+
   @Override
   public Set<String> getCoprocessorNames() {
     return metrics.getCoprocessorNames();

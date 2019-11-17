@@ -17,12 +17,15 @@
  */
 package org.apache.hadoop.hbase.hbtop.screen.top;
 
+import static org.apache.commons.lang3.time.DateFormatUtils.ISO_8601_EXTENDED_TIME_FORMAT;
+
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
-import org.apache.commons.lang3.time.DateFormatUtils;
+
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.hbtop.Record;
@@ -56,6 +59,7 @@ public class TopScreenModel {
   private List<Record> records;
 
   private final List<RecordFilter> filters = new ArrayList<>();
+  private final List<RecordFilter> pushDownFilters = new ArrayList<>();
   private final List<String> filterHistories = new ArrayList<>();
 
   private boolean ascendingSort;
@@ -88,6 +92,7 @@ public class TopScreenModel {
     if (initialFilters != null) {
       filters.addAll(initialFilters);
     }
+    decomposePushDownFilter();
   }
 
   public void setSortFieldAndFields(Field sortField, List<Field> fields) {
@@ -113,7 +118,7 @@ public class TopScreenModel {
   }
 
   private void refreshSummary(ClusterMetrics clusterMetrics) {
-    String currentTime = DateFormatUtils.ISO_8601_EXTENDED_TIME_FORMAT
+    String currentTime = ISO_8601_EXTENDED_TIME_FORMAT
       .format(System.currentTimeMillis());
     String version = clusterMetrics.getHBaseVersion();
     String clusterId = clusterMetrics.getClusterId();
@@ -130,7 +135,7 @@ public class TopScreenModel {
   }
 
   private void refreshRecords(ClusterMetrics clusterMetrics) {
-    List<Record> records = currentMode.getRecords(clusterMetrics);
+    List<Record> records = currentMode.getRecords(clusterMetrics, pushDownFilters);
 
     // Filter and sort
     records = records.stream()
@@ -153,13 +158,13 @@ public class TopScreenModel {
     if (filter == null) {
       return false;
     }
-
     filters.add(filter);
     filterHistories.add(filterString);
     return true;
   }
 
   public void clearFilters() {
+    pushDownFilters.clear();
     filters.clear();
   }
 
@@ -202,5 +207,19 @@ public class TopScreenModel {
 
   public List<String> getFilterHistories() {
     return Collections.unmodifiableList(filterHistories);
+  }
+
+  private void decomposePushDownFilter() {
+    pushDownFilters.clear();
+    for (RecordFilter filter : filters) {
+      if (!fields.contains(filter.getField())) {
+        pushDownFilters.add(filter);
+      }
+    }
+    filters.removeAll(pushDownFilters);
+  }
+
+  public Collection<? extends RecordFilter> getPushDownFilters() {
+    return pushDownFilters;
   }
 }
