@@ -18,9 +18,14 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.Collections;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.hadoop.metrics2.MetricHistogram;
+import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -57,6 +62,48 @@ public class MetricsUserSourceImpl implements MetricsUserSource {
   private final MetricsUserAggregateSourceImpl agg;
   private final DynamicMetricsRegistry registry;
 
+  private ConcurrentHashMap<String, ClientMetrics> clientMetricsMap;
+
+  static class ClientMetricsImpl implements ClientMetrics {
+    private final String hostName;
+    final LongAdder readRequestsCount = new LongAdder();
+    final LongAdder writeRequestsCount = new LongAdder();
+    final LongAdder filteredRequestsCount = new LongAdder();
+
+    public ClientMetricsImpl(String hostName) {
+      this.hostName = hostName;
+    }
+
+    @Override public void incrementReadRequest() {
+      readRequestsCount.increment();
+    }
+
+    @Override public void incrementWriteRequest() {
+      writeRequestsCount.increment();
+    }
+
+    @Override public String getHostName() {
+      return hostName;
+    }
+
+    @Override public long getReadRequestsCount() {
+      return readRequestsCount.sum();
+    }
+
+    @Override public long getWriteRequestsCount() {
+      return writeRequestsCount.sum();
+    }
+
+    @Override public void incrementFilteredReadRequests() {
+      filteredRequestsCount.increment();
+
+    }
+
+    @Override public long getFilteredReadRequests() {
+      return filteredRequestsCount.sum();
+    }
+  }
+
   public MetricsUserSourceImpl(String user, MetricsUserAggregateSourceImpl agg) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Creating new MetricsUserSourceImpl for user " + user);
@@ -77,7 +124,7 @@ public class MetricsUserSourceImpl implements MetricsUserSource {
     userIncrementKey = userNamePrefix + MetricsRegionServerSource.INCREMENT_KEY;
     userAppendKey = userNamePrefix + MetricsRegionServerSource.APPEND_KEY;
     userReplayKey = userNamePrefix + MetricsRegionServerSource.REPLAY_KEY;
-
+    clientMetricsMap = new ConcurrentHashMap<>();
     agg.register(this);
   }
 
@@ -204,4 +251,27 @@ public class MetricsUserSourceImpl implements MetricsUserSource {
   public void updateScanTime(long t) {
     scanTimeHisto.add(t);
   }
+
+  @Override public void getMetrics(MetricsCollector metricsCollector, boolean all) {
+    MetricsRecordBuilder mrb = metricsCollector.addRecord(this.userNamePrefix);
+    registry.snapshot(mrb, all);
+  }
+
+  @Override public Map<String, ClientMetrics> getClientMetrics() {
+    return Collections.unmodifiableMap(clientMetricsMap);
+  }
+
+  @Override public ClientMetrics getOrCreateMetricsClient(String client) {
+    ClientMetrics source = clientMetricsMap.get(client);
+    if (source != null) {
+      return source;
+    }
+    source = new ClientMetricsImpl(client);
+    ClientMetrics prev = clientMetricsMap.putIfAbsent(client, source);
+    if (prev != null) {
+      return prev;
+    }
+    return source;
+  }
+
 }

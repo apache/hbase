@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.apache.commons.lang3.time.FastDateFormat;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
@@ -37,6 +38,8 @@ import org.apache.hadoop.hbase.ServerMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Size;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.UserMetrics;
+import org.apache.hadoop.hbase.UserMetricsBuilder;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.hbtop.field.Field;
 import org.apache.hadoop.hbase.hbtop.screen.top.Summary;
@@ -54,6 +57,9 @@ public final class TestUtils {
 
     // host1
     List<RegionMetrics> regionMetricsList = new ArrayList<>();
+    List<UserMetrics> userMetricsList = new ArrayList<>();
+    userMetricsList.add(createUserMetrics("FOO",1,2, 4));
+    userMetricsList.add(createUserMetrics("BAR",2,3, 3));
     regionMetricsList.add(createRegionMetrics(
       "table1,,1.00000000000000000000000000000000.",
       100, 50, 100,
@@ -73,10 +79,13 @@ public final class TestUtils {
     ServerName host1 = ServerName.valueOf("host1.apache.com", 1000, 1);
     serverMetricsMap.put(host1, createServerMetrics(host1, 100,
       new Size(100, Size.Unit.MEGABYTE), new Size(200, Size.Unit.MEGABYTE), 100,
-      regionMetricsList));
+      regionMetricsList, userMetricsList));
 
     // host2
     regionMetricsList.clear();
+    userMetricsList.clear();
+    userMetricsList.add(createUserMetrics("FOO",5,7, 3));
+    userMetricsList.add(createUserMetrics("BAR",4,8, 4));
     regionMetricsList.add(createRegionMetrics(
       "table1,1,4.00000000000000000000000000000003.",
       100, 50, 100,
@@ -96,7 +105,7 @@ public final class TestUtils {
     ServerName host2 = ServerName.valueOf("host2.apache.com", 1001, 2);
     serverMetricsMap.put(host2, createServerMetrics(host2, 200,
       new Size(16, Size.Unit.GIGABYTE), new Size(32, Size.Unit.GIGABYTE), 200,
-      regionMetricsList));
+      regionMetricsList, userMetricsList));
 
     ServerName host3 = ServerName.valueOf("host3.apache.com", 1002, 3);
     return ClusterMetricsBuilder.newBuilder()
@@ -115,6 +124,15 @@ public final class TestUtils {
           .build(),
           RegionState.State.OFFLINE, host3)))
       .build();
+  }
+
+  private static UserMetrics createUserMetrics(String user, long readRequestCount,
+      long writeRequestCount, long filteredReadRequestsCount) {
+    return UserMetricsBuilder.newBuilder(Bytes.toBytes(user)).addClientMetris(
+        new UserMetricsBuilder.ClientMetricsImpl("CLIENT_A_" + user, readRequestCount,
+            writeRequestCount, filteredReadRequestsCount)).addClientMetris(
+        new UserMetricsBuilder.ClientMetricsImpl("CLIENT_B_" + user, readRequestCount,
+            writeRequestCount, filteredReadRequestsCount)).build();
   }
 
   private static RegionMetrics createRegionMetrics(String regionName, long readRequestCount,
@@ -139,14 +157,15 @@ public final class TestUtils {
 
   private static ServerMetrics createServerMetrics(ServerName serverName, long reportTimestamp,
     Size usedHeapSize, Size maxHeapSize, long requestCountPerSecond,
-    List<RegionMetrics> regionMetricsList) {
+    List<RegionMetrics> regionMetricsList, List<UserMetrics> userMetricsList) {
 
     return ServerMetricsBuilder.newBuilder(serverName)
       .setReportTimestamp(reportTimestamp)
       .setUsedHeapSize(usedHeapSize)
       .setMaxHeapSize(maxHeapSize)
       .setRequestCountPerSecond(requestCountPerSecond)
-      .setRegionMetrics(regionMetricsList).build();
+      .setRegionMetrics(regionMetricsList)
+      .setUserMetrics(userMetricsList).build();
   }
 
   public static void assertRecordsInRegionMode(List<Record> records) {
@@ -316,10 +335,78 @@ public final class TestUtils {
     }
   }
 
+  public static void assertRecordsInUserMode(List<Record> records) {
+    assertThat(records.size(), is(2));
+    for (Record record : records) {
+      String user = record.get(Field.USER).asString();
+      switch (user) {
+        //readRequestPerSecond and writeRequestPerSecond will be zero
+        // because there is no change or new metrics during refresh
+        case "FOO":
+          assertRecordInUserMode(record, 0L, 0L, 0L);
+          break;
+        case "BAR":
+          assertRecordInUserMode(record, 0L, 0L, 0L);
+          break;
+        default:
+          fail();
+      }
+    }
+  }
+
+  public static void assertRecordsInClientMode(List<Record> records) {
+    assertThat(records.size(), is(4));
+    for (Record record : records) {
+      String client = record.get(Field.CLIENT).asString();
+      switch (client) {
+      //readRequestPerSecond and writeRequestPerSecond will be zero
+      // because there is no change or new metrics during refresh
+        case "CLIENT_A_FOO":
+          assertRecordInClientMode(record, 0L, 0L, 0L);
+          break;
+        case "CLIENT_A_BAR":
+          assertRecordInClientMode(record, 0L, 0L, 0L);
+          break;
+        case "CLIENT_B_FOO":
+          assertRecordInClientMode(record, 0L, 0L, 0L);
+          break;
+        case "CLIENT_B_BAR":
+          assertRecordInClientMode(record, 0L, 0L, 0L);
+          break;
+        default:
+          fail();
+      }
+    }
+  }
+
+  private static void assertRecordInUserMode(Record record, long readRequestCountPerSecond,
+      long writeCountRequestPerSecond, long filteredReadRequestsCount) {
+    assertThat(record.size(), is(6));
+    assertThat(record.get(Field.READ_REQUEST_COUNT_PER_SECOND).asLong(),
+        is(readRequestCountPerSecond));
+    assertThat(record.get(Field.WRITE_REQUEST_COUNT_PER_SECOND).asLong(),
+        is(writeCountRequestPerSecond));
+    assertThat(record.get(Field.FILTERED_READ_REQUEST_COUNT_PER_SECOND).asLong(),
+        is(filteredReadRequestsCount));
+    assertThat(record.get(Field.CLIENT_COUNT).asInt(), is(2));
+  }
+
+  private static void assertRecordInClientMode(Record record, long readRequestCountPerSecond,
+      long writeCountRequestPerSecond, long filteredReadRequestsCount) {
+    assertThat(record.size(), is(6));
+    assertThat(record.get(Field.READ_REQUEST_COUNT_PER_SECOND).asLong(),
+        is(readRequestCountPerSecond));
+    assertThat(record.get(Field.WRITE_REQUEST_COUNT_PER_SECOND).asLong(),
+        is(writeCountRequestPerSecond));
+    assertThat(record.get(Field.FILTERED_READ_REQUEST_COUNT_PER_SECOND).asLong(),
+        is(filteredReadRequestsCount));
+    assertThat(record.get(Field.USER_COUNT).asInt(), is(1));
+  }
+
   private static void assertRecordInTableMode(Record record, long requestCountPerSecond,
-    long readRequestCountPerSecond, long filteredReadRequestCountPerSecond,
-    long writeCountRequestPerSecond, Size storeFileSize, Size uncompressedStoreFileSize,
-    int numStoreFiles, Size memStoreSize, int regionCount) {
+      long readRequestCountPerSecond, long filteredReadRequestCountPerSecond,
+      long writeCountRequestPerSecond, Size storeFileSize, Size uncompressedStoreFileSize,
+      int numStoreFiles, Size memStoreSize, int regionCount) {
     assertThat(record.size(), is(11));
     assertThat(record.get(Field.REQUEST_COUNT_PER_SECOND).asLong(),
       is(requestCountPerSecond));

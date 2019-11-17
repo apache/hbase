@@ -57,7 +57,11 @@ public enum Field {
     FieldValueType.STRING),
   REGION_COUNT("#REGION", "Region Count", false, false, FieldValueType.INTEGER),
   USED_HEAP_SIZE("UHEAP", "Used Heap Size", false, false, FieldValueType.SIZE),
-  MAX_HEAP_SIZE("MHEAP", "Max Heap Size", false, false, FieldValueType.SIZE);
+  USER("USER", "user Name", true, true, FieldValueType.STRING),
+  MAX_HEAP_SIZE("MHEAP", "Max Heap Size", false, false, FieldValueType.SIZE),
+  CLIENT_COUNT("#CLIENT", "Client Count", false, false, FieldValueType.INTEGER),
+  USER_COUNT("#USER", "User Count", false, false, FieldValueType.INTEGER),
+  CLIENT("CLIENT", "Client Hostname", true, true, FieldValueType.STRING);
 
   private final String header;
   private final String description;
