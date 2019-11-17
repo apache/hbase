@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 /**
-Provides HBase <a href="http://wiki.apache.org/hadoop/HadoopMapReduce">MapReduce</a>
+Provides HBase <a href="https://cwiki.apache.org/confluence/display/HADOOP2/HadoopMapReduce">MapReduce</a>
 Input/OutputFormats, a table indexing MapReduce job, and utility methods.
 
 <p>See <a href="http://hbase.apache.org/book.html#mapreduce">HBase and MapReduce</a>

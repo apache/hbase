@@ -321,7 +321,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   /**
    * Compression types supported in hbase.
    * LZO is not bundled as part of the hbase distribution.
-   * See <a href="http://wiki.apache.org/hadoop/UsingLzoCompression">LZO Compression</a>
+   * See <a href="http://hbase.apache.org/book.html#lzo.compression">LZO Compression</a>
    * for how to enable it.
    * @param value Compression type setting.
    * @return this (for chained invocation)
@@ -371,7 +371,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   /**
    * Compression types supported in hbase.
    * LZO is not bundled as part of the hbase distribution.
-   * See <a href="http://wiki.apache.org/hadoop/UsingLzoCompression">LZO Compression</a>
+   * See <a href="http://hbase.apache.org/book.html#lzo.compression">LZO Compression</a>
    * for how to enable it.
    * @param value Compression type setting.
    * @return this (for chained invocation)
