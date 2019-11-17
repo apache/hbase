@@ -184,19 +184,10 @@ if [ -d "$HBASE_HOME/hbase-server/target/hbase-webapps" ]; then
     add_to_cp_if_exists "${HBASE_HOME}/hbase-rest/target"
   else
     add_to_cp_if_exists "${HBASE_HOME}/hbase-server/target"
+    # Needed for GetJavaProperty check below
+    add_to_cp_if_exists "${HBASE_HOME}/hbase-server/target/classes"
   fi
 fi
-
-#add the hbase jars for each module
-for f in $HBASE_HOME/hbase-jars/hbase*.jar; do
-	if [[ $f = *sources.jar ]]
-  then
-    : # Skip sources.jar
-  elif [ -f $f ]
-  then
-    CLASSPATH=${CLASSPATH}:$f;
-  fi
-done
 
 #If avail, add Hadoop to the CLASSPATH and to the JAVA_LIBRARY_PATH
 # Allow this functionality to be disabled
@@ -318,7 +309,15 @@ fi
 
 #If configured and available, add Hadoop to the CLASSPATH and to the JAVA_LIBRARY_PATH
 if [ -n "${HADOOP_IN_PATH}" ] && [ -f "${HADOOP_IN_PATH}" ]; then
-  HADOOP_JAVA_LIBRARY_PATH=$(HADOOP_CLASSPATH="$CLASSPATH" "${HADOOP_IN_PATH}" \
+  # If built hbase, temporarily add hbase-server*.jar to classpath for GetJavaProperty
+  # Exclude hbase-server*-tests.jar
+  temporary_cp=
+  for f in "${HBASE_HOME}"/lib/hbase-server*.jar; do
+    if [[ ! "${f}" =~ ^.*\-tests\.jar$ ]]; then
+      temporary_cp=":$f"
+    fi
+  done
+  HADOOP_JAVA_LIBRARY_PATH=$(HADOOP_CLASSPATH="$CLASSPATH${temporary_cp}" "${HADOOP_IN_PATH}" \
                              org.apache.hadoop.hbase.util.GetJavaProperty java.library.path)
   if [ -n "$HADOOP_JAVA_LIBRARY_PATH" ]; then
     JAVA_LIBRARY_PATH=$(append_path "${JAVA_LIBRARY_PATH}" "$HADOOP_JAVA_LIBRARY_PATH")

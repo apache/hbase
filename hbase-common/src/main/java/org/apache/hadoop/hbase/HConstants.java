@@ -1191,6 +1191,9 @@ public final class HConstants {
       "hbase.node.health.failure.threshold";
   public static final int DEFAULT_HEALTH_FAILURE_THRESHOLD = 3;
 
+  public static final String EXECUTOR_STATUS_COLLECT_ENABLED =
+      "hbase.executors.status.collect.enabled";
+  public static final boolean DEFAULT_EXECUTOR_STATUS_COLLECT_ENABLED = true;
 
   /**
    * Setting to activate, or not, the publication of the status by the master. Default
@@ -1470,6 +1473,18 @@ public final class HConstants {
 
   // User defined Default TTL config key
   public static final String DEFAULT_SNAPSHOT_TTL_CONFIG_KEY = "hbase.master.snapshot.ttl";
+
+  // Regions Recovery based on high storeFileRefCount threshold value
+  public static final String STORE_FILE_REF_COUNT_THRESHOLD =
+    "hbase.regions.recovery.store.file.ref.count";
+
+  // default -1 indicates there is no threshold on high storeRefCount
+  public static final int DEFAULT_STORE_FILE_REF_COUNT_THRESHOLD = -1;
+
+  public static final String REGIONS_RECOVERY_INTERVAL =
+    "hbase.master.regions.recovery.check.interval";
+
+  public static final int DEFAULT_REGIONS_RECOVERY_INTERVAL = 1200 * 1000; // Default 20 min
 
   /**
    * Configurations for master executor services.

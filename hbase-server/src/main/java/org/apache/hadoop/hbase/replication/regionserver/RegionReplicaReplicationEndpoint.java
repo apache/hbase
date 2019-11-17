@@ -142,7 +142,8 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
    * operations (e.g. flush) and use the user HTD flag to decide whether or not replicate the
    * memstore.
    */
-  private boolean requiresReplication(Optional<TableDescriptor> tableDesc, Entry entry) {
+  private boolean requiresReplication(Optional<TableDescriptor> tableDesc,
+      Entry entry) {
     // empty edit does not need to be replicated
     if (entry.getEdit().isEmpty() || !tableDesc.isPresent()) {
       return false;

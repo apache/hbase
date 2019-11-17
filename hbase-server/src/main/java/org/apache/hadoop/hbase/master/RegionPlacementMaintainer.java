@@ -21,7 +21,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -33,7 +32,6 @@ import java.util.TreeMap;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -204,9 +202,7 @@ public class RegionPlacementMaintainer implements Closeable {
 
     // Get the all the region servers
     List<ServerName> servers = new ArrayList<>();
-    servers.addAll(
-      FutureUtils.get(getConnection().getAdmin().getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)))
-        .getLiveServerMetrics().keySet());
+    servers.addAll(FutureUtils.get(getConnection().getAdmin().getRegionServers()));
 
     LOG.info("Start to generate assignment plan for " + numRegions +
         " regions from table " + tableName + " with " +

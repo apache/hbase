@@ -91,11 +91,25 @@ public class HFilePerformanceEvaluation {
   }
 
   static Cell createCell(final byte [] keyRow) {
-    return CellUtil.createCell(keyRow);
+    return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+      .setRow(keyRow)
+      .setFamily(HConstants.EMPTY_BYTE_ARRAY)
+      .setQualifier(HConstants.EMPTY_BYTE_ARRAY)
+      .setTimestamp(HConstants.LATEST_TIMESTAMP)
+      .setType(KeyValue.Type.Maximum.getCode())
+      .setValue(HConstants.EMPTY_BYTE_ARRAY)
+      .build();
   }
 
   static Cell createCell(final byte [] keyRow, final byte [] value) {
-    return CellUtil.createCell(keyRow, value);
+    return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+      .setRow(keyRow)
+      .setFamily(HConstants.EMPTY_BYTE_ARRAY)
+      .setQualifier(HConstants.EMPTY_BYTE_ARRAY)
+      .setTimestamp(HConstants.LATEST_TIMESTAMP)
+      .setType(KeyValue.Type.Maximum.getCode())
+      .setValue(value)
+      .build();
   }
 
   /**
@@ -404,7 +418,6 @@ public class HFilePerformanceEvaluation {
     @Override
     void setUp() throws Exception {
       reader = HFile.createReader(this.fs, this.mf, new CacheConfig(this.conf), true, this.conf);
-      this.reader.loadFileInfo();
     }
 
     @Override

@@ -1192,9 +1192,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * regions on a cluster.
    */
   static class RegionCountSkewCostFunction extends CostFunction {
-    private static final String REGION_COUNT_SKEW_COST_KEY =
+    static final String REGION_COUNT_SKEW_COST_KEY =
         "hbase.master.balancer.stochastic.regionCountCost";
-    private static final float DEFAULT_REGION_COUNT_SKEW_COST = 500;
+    static final float DEFAULT_REGION_COUNT_SKEW_COST = 500;
 
     private double[] stats = null;
 
@@ -1234,6 +1234,11 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       // Load multiplier should be the greatest as primary regions serve majority of reads/writes.
       this.setMultiplier(conf.getFloat(PRIMARY_REGION_COUNT_SKEW_COST_KEY,
         DEFAULT_PRIMARY_REGION_COUNT_SKEW_COST));
+    }
+
+    @Override
+    boolean isNeeded() {
+      return cluster.hasRegionReplicas;
     }
 
     @Override

@@ -135,10 +135,10 @@ public class TestWALRecordReader {
     long ts = System.currentTimeMillis();
     WALEdit edit = new WALEdit();
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("1"), ts, value));
-    log.append(info, getWalKeyImpl(ts, scopes), edit, true);
+    log.appendData(info, getWalKeyImpl(ts, scopes), edit);
     edit = new WALEdit();
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("2"), ts+1, value));
-    log.append(info, getWalKeyImpl(ts+1, scopes), edit, true);
+    log.appendData(info, getWalKeyImpl(ts+1, scopes), edit);
     log.sync();
     LOG.info("Before 1st WAL roll " + log.toString());
     log.rollWriter();
@@ -149,10 +149,10 @@ public class TestWALRecordReader {
 
     edit = new WALEdit();
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("3"), ts1+1, value));
-    log.append(info, getWalKeyImpl(ts1+1, scopes), edit, true);
+    log.appendData(info, getWalKeyImpl(ts1+1, scopes), edit);
     edit = new WALEdit();
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("4"), ts1+2, value));
-    log.append(info, getWalKeyImpl(ts1+2, scopes), edit, true);
+    log.appendData(info, getWalKeyImpl(ts1+2, scopes), edit);
     log.sync();
     log.shutdown();
     walfactory.shutdown();
@@ -193,7 +193,7 @@ public class TestWALRecordReader {
     WALEdit edit = new WALEdit();
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("1"),
         System.currentTimeMillis(), value));
-    long txid = log.append(info, getWalKeyImpl(System.currentTimeMillis(), scopes), edit, true);
+    long txid = log.appendData(info, getWalKeyImpl(System.currentTimeMillis(), scopes), edit);
     log.sync(txid);
 
     Thread.sleep(1); // make sure 2nd log gets a later timestamp
@@ -201,9 +201,8 @@ public class TestWALRecordReader {
     log.rollWriter();
 
     edit = new WALEdit();
-    edit.add(new KeyValue(rowName, family, Bytes.toBytes("2"),
-        System.currentTimeMillis(), value));
-    txid = log.append(info, getWalKeyImpl(System.currentTimeMillis(), scopes), edit, true);
+    edit.add(new KeyValue(rowName, family, Bytes.toBytes("2"), System.currentTimeMillis(), value));
+    txid = log.appendData(info, getWalKeyImpl(System.currentTimeMillis(), scopes), edit);
     log.sync(txid);
     log.shutdown();
     walfactory.shutdown();
@@ -253,17 +252,15 @@ public class TestWALRecordReader {
     WAL log = walfactory.getWAL(info);
     byte [] value = Bytes.toBytes("value");
     WALEdit edit = new WALEdit();
-    edit.add(new KeyValue(rowName, family, Bytes.toBytes("1"),
-        System.currentTimeMillis(), value));
-    long txid = log.append(info, getWalKeyImpl(System.currentTimeMillis(), scopes), edit, true);
+    edit.add(new KeyValue(rowName, family, Bytes.toBytes("1"), System.currentTimeMillis(), value));
+    long txid = log.appendData(info, getWalKeyImpl(System.currentTimeMillis(), scopes), edit);
     log.sync(txid);
 
     Thread.sleep(10); // make sure 2nd edit gets a later timestamp
 
     edit = new WALEdit();
-    edit.add(new KeyValue(rowName, family, Bytes.toBytes("2"),
-        System.currentTimeMillis(), value));
-    txid = log.append(info, getWalKeyImpl(System.currentTimeMillis(), scopes), edit, true);
+    edit.add(new KeyValue(rowName, family, Bytes.toBytes("2"), System.currentTimeMillis(), value));
+    txid = log.appendData(info, getWalKeyImpl(System.currentTimeMillis(), scopes), edit);
     log.sync(txid);
     log.shutdown();
 

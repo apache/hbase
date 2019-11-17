@@ -21,20 +21,23 @@ package org.apache.hadoop.hbase.chaos.actions;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.List;
+
 import org.apache.commons.lang3.RandomUtils;
-import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.factories.MonkeyConstants;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
 * Action that tries to move every region of a table.
 */
 public class MoveRegionsOfTableAction extends Action {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(MoveRegionsOfTableAction.class);
   private final long sleepTime;
   private final TableName tableName;
   private final long maxTime;
@@ -88,8 +91,7 @@ public class MoveRegionsOfTableAction extends Action {
   }
 
   static ServerName [] getServers(Admin admin) throws IOException {
-    Collection<ServerName> serversList =
-        admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().keySet();
+    Collection<ServerName> serversList = admin.getRegionServers();
     return serversList.toArray(new ServerName[serversList.size()]);
   }
 

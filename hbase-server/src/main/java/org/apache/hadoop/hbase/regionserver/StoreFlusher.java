@@ -127,9 +127,6 @@ abstract class StoreFlusher {
         hasMore = scanner.next(kvs, scannerContext);
         if (!kvs.isEmpty()) {
           for (Cell c : kvs) {
-            // If we know that this KV is going to be included always, then let us
-            // set its memstoreTS to 0. This will help us save space when writing to
-            // disk.
             sink.append(c);
             if (control) {
               throughputController.control(flushName, c.getSerializedSize());

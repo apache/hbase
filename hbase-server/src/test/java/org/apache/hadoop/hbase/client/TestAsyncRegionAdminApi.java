@@ -335,6 +335,26 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
       assertEquals("Last compaction state, expected=disabled actual=enabled",
           false, p.getValue());
     }
+    ServerName serverName = TEST_UTIL.getHBaseCluster().getRegionServer(0)
+        .getServerName();
+    List<String> serverNameList = new ArrayList<String>();
+    serverNameList.add(serverName.getServerName());
+    CompletableFuture<Map<ServerName, Boolean>> listCompletableFuture3 =
+        admin.compactionSwitch(false, serverNameList);
+    Map<ServerName, Boolean> pairs3 = listCompletableFuture3.get();
+    assertEquals(pairs3.entrySet().size(), 1);
+    for (Map.Entry<ServerName, Boolean> p : pairs3.entrySet()) {
+      assertEquals("Last compaction state, expected=enabled actual=disabled",
+          true, p.getValue());
+    }
+    CompletableFuture<Map<ServerName, Boolean>> listCompletableFuture4 =
+        admin.compactionSwitch(true, serverNameList);
+    Map<ServerName, Boolean> pairs4 = listCompletableFuture4.get();
+    assertEquals(pairs4.entrySet().size(), 1);
+    for (Map.Entry<ServerName, Boolean> p : pairs4.entrySet()) {
+      assertEquals("Last compaction state, expected=disabled actual=enabled",
+          false, p.getValue());
+    }
   }
 
   @Test

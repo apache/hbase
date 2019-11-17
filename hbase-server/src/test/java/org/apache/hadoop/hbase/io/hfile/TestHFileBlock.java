@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
+import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -379,11 +380,17 @@ public class TestHFileBlock {
 
         FSDataInputStream is = fs.open(path);
         meta = new HFileContextBuilder()
-        .withHBaseCheckSum(true)
-        .withIncludesMvcc(includesMemstoreTS)
-        .withIncludesTags(includesTag)
-        .withCompression(algo).build();
-        HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(is, totalSize, meta, alloc);
+            .withHBaseCheckSum(true)
+            .withIncludesMvcc(includesMemstoreTS)
+            .withIncludesTags(includesTag)
+            .withCompression(algo).build();
+        ReaderContext context = new ReaderContextBuilder()
+            .withInputStreamWrapper(new FSDataInputStreamWrapper(is))
+            .withFileSize(totalSize)
+            .withFilePath(path)
+            .withFileSystem(fs)
+            .build();
+        HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(context, meta, alloc);
         HFileBlock b = hbr.readBlockData(0, -1, pread, false, true);
         is.close();
         assertEquals(0, HFile.getAndResetChecksumFailuresCount());
@@ -396,7 +403,13 @@ public class TestHFileBlock {
 
         if (algo == GZ) {
           is = fs.open(path);
-          hbr = new HFileBlock.FSReaderImpl(is, totalSize, meta, alloc);
+          ReaderContext readerContext = new ReaderContextBuilder()
+              .withInputStreamWrapper(new FSDataInputStreamWrapper(is))
+              .withFileSize(totalSize)
+              .withFilePath(path)
+              .withFileSystem(fs)
+              .build();
+          hbr = new HFileBlock.FSReaderImpl(readerContext, meta, alloc);
           b = hbr.readBlockData(0,
             2173 + HConstants.HFILEBLOCK_HEADER_SIZE + b.totalChecksumBytes(), pread, false, true);
           assertEquals(expected, b);
@@ -452,26 +465,21 @@ public class TestHFileBlock {
           HFileBlock.Writer hbw = new HFileBlock.Writer(dataBlockEncoder, meta);
           long totalSize = 0;
           final List<Integer> encodedSizes = new ArrayList<>();
-          final List<ByteBuffer> encodedBlocks = new ArrayList<>();
+          final List<ByteBuff> encodedBlocks = new ArrayList<>();
           for (int blockId = 0; blockId < numBlocks; ++blockId) {
             hbw.startWriting(BlockType.DATA);
             writeTestKeyValues(hbw, blockId, includesMemstoreTS, includesTag);
             hbw.writeHeaderAndData(os);
             int headerLen = HConstants.HFILEBLOCK_HEADER_SIZE;
-            byte[] encodedResultWithHeader = hbw.cloneUncompressedBufferWithHeader().array();
-            final int encodedSize = encodedResultWithHeader.length - headerLen;
+            ByteBuff encodedResultWithHeader = hbw.cloneUncompressedBufferWithHeader();
+            final int encodedSize = encodedResultWithHeader.limit() - headerLen;
             if (encoding != DataBlockEncoding.NONE) {
               // We need to account for the two-byte encoding algorithm ID that
               // comes after the 24-byte block header but before encoded KVs.
               headerLen += DataBlockEncoding.ID_SIZE;
             }
-            byte[] encodedDataSection =
-                new byte[encodedResultWithHeader.length - headerLen];
-            System.arraycopy(encodedResultWithHeader, headerLen,
-                encodedDataSection, 0, encodedDataSection.length);
-            final ByteBuffer encodedBuf =
-                ByteBuffer.wrap(encodedDataSection);
             encodedSizes.add(encodedSize);
+            ByteBuff encodedBuf = encodedResultWithHeader.position(headerLen).slice();
             encodedBlocks.add(encodedBuf);
             totalSize += hbw.getOnDiskSizeWithHeader();
           }
@@ -484,8 +492,14 @@ public class TestHFileBlock {
                 .withIncludesMvcc(includesMemstoreTS)
                 .withIncludesTags(includesTag)
                 .build();
+          ReaderContext context = new ReaderContextBuilder()
+              .withInputStreamWrapper(new FSDataInputStreamWrapper(is))
+              .withFileSize(totalSize)
+              .withFilePath(path)
+              .withFileSystem(fs)
+              .build();
           HFileBlock.FSReaderImpl hbr =
-              new HFileBlock.FSReaderImpl(is, totalSize, meta, alloc);
+              new HFileBlock.FSReaderImpl(context, meta, alloc);
           hbr.setDataBlockEncoder(dataBlockEncoder);
           hbr.setIncludesMemStoreTS(includesMemstoreTS);
           HFileBlock blockFromHFile, blockUnpacked;
@@ -521,12 +535,11 @@ public class TestHFileBlock {
               actualBuffer = actualBuffer.slice();
             }
 
-            ByteBuffer expectedBuffer = encodedBlocks.get(blockId);
-            expectedBuffer.rewind();
+            ByteBuff expectedBuff = encodedBlocks.get(blockId);
+            expectedBuff.rewind();
 
             // test if content matches, produce nice message
-            assertBuffersEqual(new SingleByteBuff(expectedBuffer), actualBuffer, algo, encoding,
-                pread);
+            assertBuffersEqual(expectedBuff, actualBuffer, algo, encoding, pread);
 
             // test serialized blocks
             for (boolean reuseBuffer : new boolean[] { false, true }) {
@@ -615,8 +628,14 @@ public class TestHFileBlock {
                               .withIncludesMvcc(includesMemstoreTS)
                               .withIncludesTags(includesTag)
                               .withCompression(algo).build();
+          ReaderContext context = new ReaderContextBuilder()
+              .withInputStreamWrapper(new FSDataInputStreamWrapper(is))
+              .withFileSize(totalSize)
+              .withFilePath(path)
+              .withFileSystem(fs)
+              .build();
           HFileBlock.FSReader hbr =
-              new HFileBlock.FSReaderImpl(is, totalSize, meta, alloc);
+              new HFileBlock.FSReaderImpl(context, meta, alloc);
           long curOffset = 0;
           for (int i = 0; i < NUM_TEST_BLOCKS; ++i) {
             if (!pread) {
@@ -813,8 +832,13 @@ public class TestHFileBlock {
                           .withIncludesTags(includesTag)
                           .withCompression(compressAlgo)
                           .build();
-      HFileBlock.FSReader hbr =
-          new HFileBlock.FSReaderImpl(is, fileSize, meta, alloc);
+      ReaderContext context = new ReaderContextBuilder()
+          .withInputStreamWrapper(new FSDataInputStreamWrapper(is))
+          .withFileSize(fileSize)
+          .withFilePath(path)
+          .withFileSystem(fs)
+          .build();
+      HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(context, meta, alloc);
 
       Executor exec = Executors.newFixedThreadPool(NUM_READER_THREADS);
       ExecutorCompletionService<Boolean> ecs = new ExecutorCompletionService<>(exec);
@@ -882,8 +906,10 @@ public class TestHFileBlock {
       hbw.writeHeaderAndData(os);
       totalSize += hbw.getOnDiskSizeWithHeader();
 
-      if (cacheOnWrite)
-        expectedContents.add(hbw.cloneUncompressedBufferWithHeader());
+      if (cacheOnWrite) {
+        ByteBuff buff = hbw.cloneUncompressedBufferWithHeader();
+        expectedContents.add(buff.asSubByteBuffer(buff.capacity()));
+      }
 
       if (detailedLogging) {
         LOG.info("Written block #" + i + " of type " + bt
@@ -931,7 +957,8 @@ public class TestHFileBlock {
       long expected = hfileBlockExpectedSize + byteBufferExpectedSize + hfileMetaSize;
       assertEquals("Block data size: " + size + ", byte buffer expected " +
           "size: " + byteBufferExpectedSize + ", HFileBlock class expected " +
-          "size: " + hfileBlockExpectedSize + ";", expected,
+          "size: " + hfileBlockExpectedSize + " HFileContext class expected size: "
+              + hfileMetaSize + "; ", expected,
           block.heapSize());
     }
   }

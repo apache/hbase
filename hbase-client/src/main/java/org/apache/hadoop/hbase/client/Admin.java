@@ -125,6 +125,14 @@ public interface Admin extends Abortable, Closeable {
   List<TableDescriptor> listTableDescriptors() throws IOException;
 
   /**
+   * List all userspace tables and whether or not include system tables.
+   *
+   * @return a list of TableDescriptors
+   * @throws IOException if a remote or network exception occurs
+   */
+  List<TableDescriptor> listTableDescriptors(boolean includeSysTables) throws IOException;
+
+  /**
    * List all the userspace tables that match the given pattern.
    *
    * @param pattern The compiled regular expression to match against
@@ -1054,7 +1062,7 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   default Collection<ServerName> getRegionServers() throws IOException {
-    return getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().keySet();
+    return getClusterMetrics(EnumSet.of(Option.SERVERS_NAME)).getServersName();
   }
 
   /**

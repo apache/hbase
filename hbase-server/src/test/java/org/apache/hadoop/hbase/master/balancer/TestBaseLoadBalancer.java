@@ -473,7 +473,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     // sharing same host and port
     List<ServerName> servers = getListOfServerNames(randomServers(10, 10));
     List<RegionInfo> regions = randomRegions(101);
-    Map<ServerName, List<RegionInfo>> clusterState = new HashMap<>();
+    Map<ServerName, List<RegionInfo>> clusterState = new TreeMap<>();
 
     assignRegions(regions, servers, clusterState);
 
@@ -491,6 +491,13 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     BaseLoadBalancer.Cluster cluster = new Cluster(clusterState, null, null, null);
     assertEquals(101 + 9, cluster.numRegions);
     assertEquals(10, cluster.numServers); // only 10 servers because they share the same host + port
+
+    // test move
+    ServerName sn = oldServers.get(0);
+    int r0 = ArrayUtils.indexOf(cluster.regions, clusterState.get(sn).get(0));
+    int f0 = cluster.serversToIndex.get(sn.getHostAndPort());
+    int t0 = cluster.serversToIndex.get(servers.get(1).getHostAndPort());
+    cluster.doAction(new MoveRegionAction(r0, f0, t0));
   }
 
   private void assignRegions(List<RegionInfo> regions, List<ServerName> servers,

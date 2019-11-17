@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,7 +35,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -124,9 +123,8 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
 
   @Test
   public void testBrokenWriter() throws Exception {
-    Server server = mock(Server.class);
-    when(server.getConfiguration()).thenReturn(CONF);
     RegionServerServices services = mock(RegionServerServices.class);
+    when(services.getConfiguration()).thenReturn(CONF);
     TableDescriptor td = TableDescriptorBuilder.newBuilder(TableName.valueOf("table"))
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
     RegionInfo ri = RegionInfoBuilder.newBuilder(td.getTableName()).build();
@@ -138,7 +136,7 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
     long timestamp = System.currentTimeMillis();
     String testName = currentTest.getMethodName();
     AtomicInteger failedCount = new AtomicInteger(0);
-    try (LogRoller roller = new LogRoller(server, services);
+    try (LogRoller roller = new LogRoller(services);
         AsyncFSWAL wal = new AsyncFSWAL(FS, CommonFSUtils.getWALRootDir(CONF), DIR.toString(),
             testName, CONF, null, true, null, null, GROUP, CHANNEL_CLASS) {
 

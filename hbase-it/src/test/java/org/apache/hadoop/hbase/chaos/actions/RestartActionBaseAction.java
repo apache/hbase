@@ -22,11 +22,15 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.Threads;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
 * Base class for restarting HBaseServer's
 */
 public class RestartActionBaseAction extends Action {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RestartActionBaseAction.class);
   long sleepTime; // how long should we sleep
 
   public RestartActionBaseAction(long sleepTime) {

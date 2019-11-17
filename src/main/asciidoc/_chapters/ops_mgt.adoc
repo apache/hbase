@@ -3618,3 +3618,26 @@ have auto normalization turned on …..…..….
 server=hbase-test-rc-5.openstacklocal,16020,1469419333913}
 2016-07-26 07:39:46,246 DEBUG [AM.ZK.Worker-pool2-t278] master.RegionStates: Onlined d6b5625df331cfec84dce4f1122c567f on hbase-test-rc-5.openstacklocal,16020,1469419333913 {ENCODED => d6b5625df331cfec84dce4f1122c567f, NAME => 'table_h2osxu3wat,154717,1469518785661.d6b5625df331cfec84dce4f1122c567f.', STARTKEY => '154717', ENDKEY => '3'}
 ----
+
+
+
+[[auto_reopen_regions]]
+== Auto Region Reopen
+
+We can leak store reader references if a coprocessor or core function somehow
+opens a scanner, or wraps one, and then does not take care to call close on the
+scanner or the wrapped instance. Leaked store files can not be removed even
+after it is invalidated via compaction.
+A reasonable mitigation for a reader reference
+leak would be a fast reopen of the region on the same server.
+This will release all resources, like the refcount, leases, etc.
+The clients should gracefully ride over this like any other region in
+transition.
+By default this auto reopen of region feature would be disabled.
+To enabled it, please provide high ref count value for config
+`hbase.regions.recovery.store.file.ref.count`.
+
+Please refer to config descriptions for
+`hbase.master.regions.recovery.check.interval` and
+`hbase.regions.recovery.store.file.ref.count`.
+

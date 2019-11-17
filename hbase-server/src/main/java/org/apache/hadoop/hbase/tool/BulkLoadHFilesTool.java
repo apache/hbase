@@ -49,6 +49,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -77,7 +78,10 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
+import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.io.hfile.ReaderContext;
+import org.apache.hadoop.hbase.io.hfile.ReaderContextBuilder;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
@@ -93,7 +97,6 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.HashMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
@@ -132,6 +135,7 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
   private String bulkToken;
 
   private List<String> clusterIds = new ArrayList<>();
+  private boolean replicate = true;
 
   public BulkLoadHFilesTool(Configuration conf) {
     // make a copy, just to be sure we're not overriding someone else's config
@@ -173,7 +177,7 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
       return false;
     }
 
-    return !HFile.isReservedFileInfoKey(key);
+    return !HFileInfo.isReservedFileInfoKey(key);
   }
 
   /**
@@ -379,7 +383,8 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
           .collect(Collectors.toList());
       CompletableFuture<Collection<LoadQueueItem>> future = new CompletableFuture<>();
       FutureUtils.addListener(conn.bulkLoad(tableName, familyPaths, first, assignSeqIds,
-        fsDelegationToken.getUserToken(), bulkToken, copyFiles, clusterIds), (loaded, error) -> {
+        fsDelegationToken.getUserToken(), bulkToken, copyFiles, clusterIds, replicate),
+        (loaded, error) -> {
           if (error != null) {
             LOG.error("Encountered unrecoverable error from region server", error);
             if (getConf().getBoolean(RETRY_ON_IO_EXCEPTION, false) &&
@@ -580,7 +585,6 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
     Optional<byte[]> first, last;
     try (HFile.Reader hfr = HFile.createReader(hfilePath.getFileSystem(getConf()), hfilePath,
       CacheConfig.DISABLED, true, getConf())) {
-      hfr.loadFileInfo();
       first = hfr.getFirstRowKey();
       last = hfr.getLastRowKey();
     } catch (FileNotFoundException fnfe) {
@@ -670,8 +674,12 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
     HalfStoreFileReader halfReader = null;
     StoreFileWriter halfWriter = null;
     try {
-      halfReader = new HalfStoreFileReader(fs, inFile, cacheConf, reference, true,
-        new AtomicInteger(0), true, conf);
+      ReaderContext context = new ReaderContextBuilder()
+          .withFileSystemAndPath(fs, inFile).build();
+      HFileInfo hfile = new HFileInfo(context, conf);
+      halfReader = new HalfStoreFileReader(context, hfile, cacheConf, reference,
+        new AtomicInteger(0), conf);
+      hfile.initMetaAndIndex(halfReader.getHFileReader());
       Map<byte[], byte[]> fileInfo = halfReader.loadFileInfo();
 
       int blocksize = familyDescriptor.getBlocksize();
@@ -784,7 +792,6 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
             LOG.info("Setting compression " + reader.getFileContext().getCompression().name() +
               " for family " + builder.getNameAsString());
           }
-          reader.loadFileInfo();
           byte[] first = reader.getFirstRowKey().get();
           byte[] last = reader.getLastRowKey().get();
 
@@ -1051,5 +1058,15 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
     Configuration conf = HBaseConfiguration.create();
     int ret = ToolRunner.run(conf, new BulkLoadHFilesTool(conf), args);
     System.exit(ret);
+  }
+
+  @Override
+  public void disableReplication(){
+    this.replicate = false;
+  }
+
+  @Override
+  public boolean isReplicationDisabled(){
+    return !this.replicate;
   }
 }

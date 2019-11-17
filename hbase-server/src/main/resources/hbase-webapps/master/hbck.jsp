@@ -78,7 +78,7 @@
 
   <div class="row">
     <div class="page-header">
-  <p><span>This page displays two reports. Only the report titles show if reports are empty.</span></p>
+  <p><span>This page displays two reports: the 'HBCK Chore Report' and the 'CatalogJanitor Consistency Issues' report. Only titles show if there are no problems to report. Note some conditions are transitory as regions migrate.</span></p>
     </div>
   </div>
   <div class="row">
@@ -109,7 +109,7 @@
       <p>
         <span>
         There are three cases: 1. Master thought this region opened, but no regionserver reported it (Fix: use assigns
-        command; 2. Master thought this region opened on Server1, but regionserver reported Server2 (Fix:
+        command); 2. Master thought this region opened on Server1, but regionserver reported Server2 (Fix:
         need to check the server is still exist. If not, schedule SCP for it. If exist, restart Server2 and Server1):
         3. More than one regionservers reported opened this region (Fix: restart the RegionServers).
         Notice: the reported online regionservers may be not right when there are regions in transition.

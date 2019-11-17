@@ -21,29 +21,19 @@ package org.apache.hadoop.hbase;
 import static org.apache.hadoop.hbase.KeyValue.COLUMN_FAMILY_DELIMITER;
 import static org.apache.hadoop.hbase.KeyValue.COLUMN_FAMILY_DELIM_ARRAY;
 import static org.apache.hadoop.hbase.KeyValue.getDelimiter;
-import static org.apache.hadoop.hbase.Tag.TAG_LENGTH_SIZE;
 
-import java.io.DataOutput;
-import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
-import java.util.Optional;
 
 import org.apache.hadoop.hbase.KeyValue.Type;
-import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
-import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceAudience.Private;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Utility methods helpful for slinging {@link Cell} instances. Some methods below are for internal
@@ -57,48 +47,6 @@ public final class CellUtil {
    * Private constructor to keep this class from being instantiated.
    */
   private CellUtil() {
-  }
-
-  /******************* ByteRange *******************************/
-
-  /**
-   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0.
-   */
-  @Deprecated
-  public static ByteRange fillRowRange(Cell cell, ByteRange range) {
-    return PrivateCellUtil.fillRowRange(cell, range);
-  }
-
-  /**
-   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0.
-   */
-  @Deprecated
-  public static ByteRange fillFamilyRange(Cell cell, ByteRange range) {
-    return PrivateCellUtil.fillFamilyRange(cell, range);
-  }
-
-  /**
-   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0.
-   */
-  @Deprecated
-  public static ByteRange fillQualifierRange(Cell cell, ByteRange range) {
-    return PrivateCellUtil.fillQualifierRange(cell, range);
-  }
-
-  /**
-   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0.
-   */
-  @Deprecated
-  public static ByteRange fillValueRange(Cell cell, ByteRange range) {
-    return PrivateCellUtil.fillValueRange(cell, range);
-  }
-
-  /**
-   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0.
-   */
-  @Deprecated
-  public static ByteRange fillTagRange(Cell cell, ByteRange range) {
-    return PrivateCellUtil.fillTagRange(cell, range);
   }
 
   /***************** get individual arrays for tests ************/
@@ -125,28 +73,6 @@ public final class CellUtil {
     byte[] output = new byte[cell.getValueLength()];
     copyValueTo(cell, output, 0);
     return output;
-  }
-
-  /**
-   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0.
-   *             Use {@link RawCell#cloneTags()}
-   */
-  @Deprecated
-  public static byte[] cloneTags(Cell cell) {
-    return PrivateCellUtil.cloneTags(cell);
-  }
-
-  /**
-   * Returns tag value in a new byte array. If server-side, use {@link Tag#getValueArray()} with
-   * appropriate {@link Tag#getValueOffset()} and {@link Tag#getValueLength()} instead to save on
-   * allocations.
-   * @param cell
-   * @return tag value in a new byte array.
-   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0
-   */
-  @Deprecated
-  public static byte[] getTagArray(Cell cell) {
-    return PrivateCellUtil.cloneTags(cell);
   }
 
   /**
@@ -372,228 +298,6 @@ public final class CellUtil {
   }
 
   /**
-   * Copies the tags info into the tag portion of the cell
-   * @param cell
-   * @param destination
-   * @param destinationOffset
-   * @return position after tags
-   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0.
-   */
-  @Deprecated
-  public static int copyTagTo(Cell cell, byte[] destination, int destinationOffset) {
-    return PrivateCellUtil.copyTagsTo(cell, destination, destinationOffset);
-  }
-
-  /**
-   * Copies the tags info into the tag portion of the cell
-   * @param cell
-   * @param destination
-   * @param destinationOffset
-   * @return position after tags
-   * @deprecated As of HBase-2.0. Will be removed in 3.0.
-   */
-  @Deprecated
-  public static int copyTagTo(Cell cell, ByteBuffer destination, int destinationOffset) {
-    return PrivateCellUtil.copyTagsTo(cell, destination, destinationOffset);
-  }
-
-  /********************* misc *************************************/
-
-  @Private
-  /**
-   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0.
-   */
-  @Deprecated
-  public static byte getRowByte(Cell cell, int index) {
-    return PrivateCellUtil.getRowByte(cell, index);
-  }
-
-  /**
-   * @deprecated As of HBase-2.0. Will be removed in 3.0.
-   */
-  @Deprecated
-  public static ByteBuffer getValueBufferShallowCopy(Cell cell) {
-    return PrivateCellUtil.getValueBufferShallowCopy(cell);
-  }
-
-  /**
-   * @param cell
-   * @return cell's qualifier wrapped into a ByteBuffer.
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   */
-  @Deprecated
-  public static ByteBuffer getQualifierBufferShallowCopy(Cell cell) {
-    // No usage of this in code.
-    ByteBuffer buffer = ByteBuffer.wrap(cell.getQualifierArray(), cell.getQualifierOffset(),
-      cell.getQualifierLength());
-    return buffer;
-  }
-
-  /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use {@link CellBuilder}
-   *             instead
-   */
-  @Deprecated
-  public static Cell createCell(final byte[] row, final byte[] family, final byte[] qualifier,
-      final long timestamp, final byte type, final byte[] value) {
-    return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-            .setRow(row)
-            .setFamily(family)
-            .setQualifier(qualifier)
-            .setTimestamp(timestamp)
-            .setType(type)
-            .setValue(value)
-            .build();
-  }
-
-  /**
-   * Creates a cell with deep copy of all passed bytes.
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use {@link CellBuilder}
-   *             instead
-   */
-  @Deprecated
-  public static Cell createCell(final byte[] rowArray, final int rowOffset, final int rowLength,
-      final byte[] familyArray, final int familyOffset, final int familyLength,
-      final byte[] qualifierArray, final int qualifierOffset, final int qualifierLength) {
-    // See createCell(final byte [] row, final byte [] value) for why we default Maximum type.
-    return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-            .setRow(rowArray, rowOffset, rowLength)
-            .setFamily(familyArray, familyOffset, familyLength)
-            .setQualifier(qualifierArray, qualifierOffset, qualifierLength)
-            .setTimestamp(HConstants.LATEST_TIMESTAMP)
-            .setType(KeyValue.Type.Maximum.getCode())
-            .setValue(HConstants.EMPTY_BYTE_ARRAY, 0, HConstants.EMPTY_BYTE_ARRAY.length)
-            .build();
-  }
-
-  /**
-   * Marked as audience Private as of 1.2.0.
-   * Creating a Cell with a memstoreTS/mvcc is an internal
-   * implementation detail not for public use.
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use
-   *             {@link ExtendedCellBuilder} instead
-   */
-  @InterfaceAudience.Private
-  @Deprecated
-  public static Cell createCell(final byte[] row, final byte[] family, final byte[] qualifier,
-      final long timestamp, final byte type, final byte[] value, final long memstoreTS) {
-    return createCell(row, family, qualifier, timestamp, type, value, null, memstoreTS);
-  }
-
-  /**
-   * Marked as audience Private as of 1.2.0.
-   * Creating a Cell with tags and a memstoreTS/mvcc is an
-   * internal implementation detail not for public use.
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use
-   *             {@link ExtendedCellBuilder} instead
-   */
-  @InterfaceAudience.Private
-  @Deprecated
-  public static Cell createCell(final byte[] row, final byte[] family, final byte[] qualifier,
-      final long timestamp, final byte type, final byte[] value, byte[] tags,
-      final long memstoreTS) {
-    return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-            .setRow(row)
-            .setFamily(family)
-            .setQualifier(qualifier)
-            .setTimestamp(timestamp)
-            .setType(type)
-            .setValue(value)
-            .setTags(tags)
-            .setSequenceId(memstoreTS)
-            .build();
-  }
-
-  /**
-   * Marked as audience Private as of 1.2.0.
-   * Creating a Cell with tags is an internal implementation detail not for public use.
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use
-   *             {@link ExtendedCellBuilder} instead
-   */
-  @InterfaceAudience.Private
-  @Deprecated
-  public static Cell createCell(final byte[] row, final byte[] family, final byte[] qualifier,
-      final long timestamp, Type type, final byte[] value, byte[] tags) {
-    return createCell(row, family, qualifier, timestamp, type.getCode(), value, tags, 0);
-  }
-
-  /**
-   * Create a Cell with specific row. Other fields defaulted.
-   * @param row
-   * @return Cell with passed row but all other fields are arbitrary
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use {@link CellBuilder}
-   *             instead
-   */
-  @Deprecated
-  public static Cell createCell(final byte[] row) {
-    return createCell(row, HConstants.EMPTY_BYTE_ARRAY);
-  }
-
-  /**
-   * Create a Cell with specific row and value. Other fields are defaulted.
-   * @param row
-   * @param value
-   * @return Cell with passed row and value but all other fields are arbitrary
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use {@link CellBuilder}
-   *             instead
-   */
-  @Deprecated
-  public static Cell createCell(final byte[] row, final byte[] value) {
-    // An empty family + empty qualifier + Type.Minimum is used as flag to indicate last on row.
-    // See the CellComparator and KeyValue comparator. Search for compareWithoutRow.
-    // Lets not make a last-on-row key as default but at same time, if you are making a key
-    // without specifying type, etc., flag it as weird by setting type to be Maximum.
-    return createCell(row, HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY,
-      HConstants.LATEST_TIMESTAMP, KeyValue.Type.Maximum.getCode(), value);
-  }
-
-  /**
-   * Create a Cell with specific row.  Other fields defaulted.
-   * @param row
-   * @param family
-   * @param qualifier
-   * @return Cell with passed row but all other fields are arbitrary
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Use {@link CellBuilder} instead
-   */
-  @Deprecated
-  public static Cell createCell(final byte [] row, final byte [] family, final byte [] qualifier) {
-    // See above in createCell(final byte [] row, final byte [] value) why we set type to Maximum.
-    return createCell(row, family, qualifier,
-        HConstants.LATEST_TIMESTAMP, KeyValue.Type.Maximum.getCode(), HConstants.EMPTY_BYTE_ARRAY);
-  }
-
-  /**
-   * Note : Now only CPs can create cell with tags using the CP environment
-   * @return A new cell which is having the extra tags also added to it.
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *
-   */
-  @Deprecated
-  public static Cell createCell(Cell cell, List<Tag> tags) {
-    return PrivateCellUtil.createCell(cell, tags);
-  }
-
-  /**
-   * Now only CPs can create cell with tags using the CP environment
-   * @return A new cell which is having the extra tags also added to it.
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   */
-  @Deprecated
-  public static Cell createCell(Cell cell, byte[] tags) {
-    return PrivateCellUtil.createCell(cell, tags);
-  }
-
-  /**
-   * Now only CPs can create cell with tags using the CP environment
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   */
-  @Deprecated
-  public static Cell createCell(Cell cell, byte[] value, byte[] tags) {
-    return PrivateCellUtil.createCell(cell, value, tags);
-  }
-
-  /**
    * @param cellScannerables
    * @return CellScanner interface over <code>cellIterables</code>
    */
@@ -714,27 +418,6 @@ public final class CellUtil {
     };
   }
 
-  /**
-   * @param left
-   * @param right
-   * @return True if the rows in <code>left</code> and <code>right</code> Cells match
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Instead use {@link #matchingRows(Cell, Cell)}
-   */
-  @Deprecated
-  public static boolean matchingRow(final Cell left, final Cell right) {
-    return matchingRows(left, right);
-  }
-
-  /**
-   *  @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Instead use {@link #matchingRows(Cell, byte[])}
-   */
-  @Deprecated
-  public static boolean matchingRow(final Cell left, final byte[] buf) {
-    return matchingRows(left, buf);
-  }
-
   public static boolean matchingRows(final Cell left, final byte[] buf) {
     if (buf == null) {
       return left.getRowLength() == 0;
@@ -774,16 +457,7 @@ public final class CellUtil {
     if (buf == null) {
       return left.getFamilyLength() == 0;
     }
-    return matchingFamily(left, buf, 0, buf.length);
-  }
-
-  /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   */
-  @Deprecated
-  public static boolean matchingFamily(final Cell left, final byte[] buf, final int offset,
-      final int length) {
-    return PrivateCellUtil.matchingFamily(left, buf, offset, length);
+    return PrivateCellUtil.matchingFamily(left, buf, 0, buf.length);
   }
 
   public static boolean matchingQualifier(final Cell left, final Cell right) {
@@ -821,38 +495,19 @@ public final class CellUtil {
     if (buf == null) {
       return left.getQualifierLength() == 0;
     }
-    return matchingQualifier(left, buf, 0, buf.length);
-  }
-
-  /**
-   * Finds if the qualifier part of the cell and the KV serialized
-   * byte[] are equal
-   * @param left
-   * @param buf the serialized keyvalue format byte[]
-   * @param offset the offset of the qualifier in the byte[]
-   * @param length the length of the qualifier in the byte[]
-   * @return true if the qualifier matches, false otherwise
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   */
-  @Deprecated
-  public static boolean matchingQualifier(final Cell left, final byte[] buf, final int offset,
-      final int length) {
-    return PrivateCellUtil.matchingQualifier(left, buf, offset, length);
+    return PrivateCellUtil.matchingQualifier(left, buf, 0, buf.length);
   }
 
   public static boolean matchingColumn(final Cell left, final byte[] fam, final byte[] qual) {
-    if (!matchingFamily(left, fam))
-      return false;
-    return matchingQualifier(left, qual);
+    return matchingFamily(left, fam) && matchingQualifier(left, qual);
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   * @return True if matching column family and the qualifier starts with <code>qual</code>
    */
-  @Deprecated
-  public static boolean matchingColumn(final Cell left, final byte[] fam, final int foffset,
-      final int flength, final byte[] qual, final int qoffset, final int qlength) {
-    return PrivateCellUtil.matchingColumn(left, fam, foffset, flength, qual, qoffset, qlength);
+  public static boolean matchingColumnFamilyAndQualifierPrefix(final Cell left, final byte[] fam,
+      final byte[] qual) {
+    return matchingFamily(left, fam) && PrivateCellUtil.qualifierStartsWith(left, qual);
   }
 
   public static boolean matchingColumn(final Cell left, final Cell right) {
@@ -908,210 +563,11 @@ public final class CellUtil {
   }
 
   /**
-   * @return True if a delete type, a {@link KeyValue.Type#Delete} or a
-   *         {KeyValue.Type#DeleteFamily} or a
-   *         {@link KeyValue.Type#DeleteColumn} KeyValue type.
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   */
-  @Deprecated
-  public static boolean isDelete(final byte type) {
-    return Type.Delete.getCode() <= type
-        && type <= Type.DeleteFamily.getCode();
-  }
-
-  /**
-   * @return True if this cell is a {@link KeyValue.Type#Delete} type.
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   */
-  @Deprecated
-  public static boolean isDeleteType(Cell cell) {
-    return cell.getTypeByte() == Type.Delete.getCode();
-  }
-
-  /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   */
-  @Deprecated
-  public static boolean isDeleteFamily(final Cell cell) {
-    return cell.getTypeByte() == Type.DeleteFamily.getCode();
-  }
-
-  /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   */
-  @Deprecated
-  public static boolean isDeleteFamilyVersion(final Cell cell) {
-    return cell.getTypeByte() == Type.DeleteFamilyVersion.getCode();
-  }
-
-  /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   */
-  @Deprecated
-  public static boolean isDeleteColumns(final Cell cell) {
-    return cell.getTypeByte() == Type.DeleteColumn.getCode();
-  }
-
-  /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   */
-  @Deprecated
-  public static boolean isDeleteColumnVersion(final Cell cell) {
-    return cell.getTypeByte() == Type.Delete.getCode();
-  }
-
-  /**
-   *
-   * @return True if this cell is a delete family or column type.
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   */
-  @Deprecated
-  public static boolean isDeleteColumnOrFamily(Cell cell) {
-    int t = cell.getTypeByte();
-    return t == Type.DeleteColumn.getCode() || t == Type.DeleteFamily.getCode();
-  }
-
-  /**
    * @return True if this cell is a Put.
    */
   @SuppressWarnings("deprecation")
   public static boolean isPut(Cell cell) {
     return cell.getTypeByte() == Type.Put.getCode();
-  }
-
-  /**
-   * Estimate based on keyvalue's serialization format in the RPC layer. Note that there is an extra
-   * SIZEOF_INT added to the size here that indicates the actual length of the cell for cases where
-   * cell's are serialized in a contiguous format (For eg in RPCs).
-   * @param cell
-   * @return Estimate of the <code>cell</code> size in bytes plus an extra SIZEOF_INT indicating the
-   *         actual cell length.
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   */
-  @Deprecated
-  public static int estimatedSerializedSizeOf(final Cell cell) {
-    return PrivateCellUtil.estimatedSerializedSizeOf(cell);
-  }
-
-  /**
-   * Calculates the serialized key size. We always serialize in the KeyValue's serialization
-   * format.
-   * @param cell the cell for which the key size has to be calculated.
-   * @return the key size
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   */
-  @Deprecated
-  public static int estimatedSerializedSizeOfKey(final Cell cell) {
-    return PrivateCellUtil.estimatedSerializedSizeOfKey(cell);
-  }
-
-  /**
-   * This is an estimate of the heap space occupied by a cell. When the cell is of type
-   * {@link HeapSize} we call {@link HeapSize#heapSize()} so cell can give a correct value. In other
-   * cases we just consider the bytes occupied by the cell components ie. row, CF, qualifier,
-   * timestamp, type, value and tags.
-   * @param cell
-   * @return estimate of the heap space
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   */
-  @Deprecated
-  public static long estimatedHeapSizeOf(final Cell cell) {
-    return cell.heapSize();
-  }
-
-  /********************* tags *************************************/
-  /**
-   * Util method to iterate through the tags
-   *
-   * @param tags
-   * @param offset
-   * @param length
-   * @return iterator for the tags
-   * @deprecated As of 2.0.0 and will be removed in 3.0.0
-   *             Instead use {@link PrivateCellUtil#tagsIterator(Cell)}
-   */
-  @Deprecated
-  public static Iterator<Tag> tagsIterator(final byte[] tags, final int offset, final int length) {
-    return new Iterator<Tag>() {
-      private int pos = offset;
-      private int endOffset = offset + length - 1;
-
-      @Override
-      public boolean hasNext() {
-        return this.pos < endOffset;
-      }
-
-      @Override
-      public Tag next() {
-        if (hasNext()) {
-          int curTagLen = Bytes.readAsInt(tags, this.pos, Tag.TAG_LENGTH_SIZE);
-          Tag tag = new ArrayBackedTag(tags, pos, curTagLen + TAG_LENGTH_SIZE);
-          this.pos += Bytes.SIZEOF_SHORT + curTagLen;
-          return tag;
-        }
-        return null;
-      }
-
-      @Override
-      public void remove() {
-        throw new UnsupportedOperationException();
-      }
-    };
-  }
-
-  /**
-   * @param cell The Cell
-   * @return Tags in the given Cell as a List
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Use {@link RawCell#getTags()}
-   */
-  @Deprecated
-  public static List<Tag> getTags(Cell cell) {
-    return PrivateCellUtil.getTags(cell);
-  }
-
-  /**
-   * Retrieve Cell's first tag, matching the passed in type
-   *
-   * @param cell The Cell
-   * @param type Type of the Tag to retrieve
-   * @return null if there is no tag of the passed in tag type
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Use {@link RawCell#getTag(byte)}
-   */
-  @Deprecated
-  public static Tag getTag(Cell cell, byte type) {
-    Optional<Tag> tag = PrivateCellUtil.getTag(cell, type);
-    if (tag.isPresent()) {
-      return tag.get();
-    } else {
-      return null;
-    }
-  }
-
-  /**
-   * Returns true if the first range start1...end1 overlaps with the second range
-   * start2...end2, assuming the byte arrays represent row keys
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   */
-  @Deprecated
-  public static boolean overlappingKeys(final byte[] start1, final byte[] end1,
-      final byte[] start2, final byte[] end2) {
-    return PrivateCellUtil.overlappingKeys(start1, end1, start2, end2);
-  }
-
-  /**
-   * Sets the given seqId to the cell.
-   * Marked as audience Private as of 1.2.0.
-   * Setting a Cell sequenceid is an internal implementation detail not for general public use.
-   * @param cell
-   * @param seqId
-   * @throws IOException when the passed cell is not of type {@link ExtendedCell}
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   */
-  @Deprecated
-  public static void setSequenceId(Cell cell, long seqId) throws IOException {
-    PrivateCellUtil.setSequenceId(cell, seqId);
   }
 
   /**
@@ -1142,80 +598,6 @@ public final class CellUtil {
   }
 
   /**
-   * Sets the given timestamp to the cell iff current timestamp is
-   * {@link HConstants#LATEST_TIMESTAMP}.
-   * @param cell
-   * @param ts
-   * @return True if cell timestamp is modified.
-   * @throws IOException when the passed cell is not of type {@link ExtendedCell}
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   */
-  @Deprecated
-  public static boolean updateLatestStamp(Cell cell, long ts) throws IOException {
-    return PrivateCellUtil.updateLatestStamp(cell, ts);
-  }
-
-  /**
-   * Sets the given timestamp to the cell iff current timestamp is
-   * {@link HConstants#LATEST_TIMESTAMP}.
-   * @param cell
-   * @param ts buffer containing the timestamp value
-   * @param tsOffset offset to the new timestamp
-   * @return True if cell timestamp is modified.
-   * @throws IOException when the passed cell is not of type {@link ExtendedCell}
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   */
-  @Deprecated
-  public static boolean updateLatestStamp(Cell cell, byte[] ts, int tsOffset) throws IOException {
-    return PrivateCellUtil.updateLatestStamp(cell, Bytes.toLong(ts, tsOffset));
-  }
-
-
-  /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   */
-  @Deprecated
-  public static int writeFlatKey(Cell cell, OutputStream out) throws IOException {
-    return PrivateCellUtil.writeFlatKey(cell, out);
-  }
-
-  /**
-   * Writes the row from the given cell to the output stream excluding the common prefix
-   * @param out The dataoutputstream to which the data has to be written
-   * @param cell The cell whose contents has to be written
-   * @param rlength the row length
-   * @throws IOException
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   */
-  @Deprecated
-  public static void writeRowSkippingBytes(DataOutputStream out, Cell cell, short rlength,
-      int commonPrefix) throws IOException {
-    PrivateCellUtil.writeRowSkippingBytes(out, cell, rlength, commonPrefix);
-  }
-
-  /**
-   * Writes the qualifier from the given cell to the output stream excluding the common prefix
-   * @param out The dataoutputstream to which the data has to be written
-   * @param cell The cell whose contents has to be written
-   * @param qlength the qualifier length
-   * @throws IOException
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   */
-  @Deprecated
-  public static void writeQualifierSkippingBytes(DataOutputStream out, Cell cell,
-      int qlength, int commonPrefix) throws IOException {
-    if (cell instanceof ByteBufferExtendedCell) {
-      ByteBufferUtils.copyBufferToStream((DataOutput)out,
-          ((ByteBufferExtendedCell) cell).getQualifierByteBuffer(),
-          ((ByteBufferExtendedCell) cell).getQualifierPosition() + commonPrefix,
-          qlength - commonPrefix);
-    } else {
-      out.write(cell.getQualifierArray(), cell.getQualifierOffset() + commonPrefix,
-        qlength - commonPrefix);
-    }
-  }
-
-  /**
    * @param cell
    * @return The Key portion of the passed <code>cell</code> as a String.
    */
@@ -1241,53 +623,6 @@ public final class CellUtil {
     sb.append("/seqid=");
     sb.append(cell.getSequenceId());
     return sb.toString();
-  }
-
-  /**
-   * This method exists just to encapsulate how we serialize keys.  To be replaced by a factory
-   * that we query to figure what the Cell implementation is and then, what serialization engine
-   * to use and further, how to serialize the key for inclusion in hfile index. TODO.
-   * @param cell
-   * @return The key portion of the Cell serialized in the old-school KeyValue way or null if
-   * passed a null <code>cell</code>
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   */
-  @Deprecated
-  public static byte [] getCellKeySerializedAsKeyValueKey(final Cell cell) {
-    return PrivateCellUtil.getCellKeySerializedAsKeyValueKey(cell);
-  }
-
-  /**
-   * Write rowkey excluding the common part.
-   * @param cell
-   * @param rLen
-   * @param commonPrefix
-   * @param out
-   * @throws IOException
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   */
-  @Deprecated
-  public static void writeRowKeyExcludingCommon(Cell cell, short rLen, int commonPrefix,
-      DataOutputStream out) throws IOException {
-    PrivateCellUtil.writeRowKeyExcludingCommon(cell, rLen, commonPrefix, out);
-  }
-
-  /**
-   * Find length of common prefix in keys of the cells, considering key as byte[] if serialized in
-   * {@link KeyValue}. The key format is &lt;2 bytes rk len&gt;&lt;rk&gt;&lt;1 byte cf
-   * len&gt;&lt;cf&gt;&lt;qualifier&gt;&lt;8 bytes timestamp&gt;&lt;1 byte type&gt;
-   * @param c1 the cell
-   * @param c2 the cell
-   * @param bypassFamilyCheck when true assume the family bytes same in both cells. Pass it as true
-   *          when dealing with Cells in same CF so as to avoid some checks
-   * @param withTsType when true check timestamp and type bytes also.
-   * @return length of common prefix
-   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0
-   */
-  @Deprecated
-  public static int findCommonPrefixInFlatKey(Cell c1, Cell c2, boolean bypassFamilyCheck,
-      boolean withTsType) {
-    return PrivateCellUtil.findCommonPrefixInFlatKey(c1, c2, bypassFamilyCheck, withTsType);
   }
 
   /** Returns a string representation of the cell */
@@ -1322,17 +657,6 @@ public final class CellUtil {
     return builder.toString();
   }
 
-  /***************** special cases ****************************/
-
-  /**
-   * special case for Cell.equals
-   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0
-   */
-  @Deprecated
-  public static boolean equalsIgnoreMvccVersion(Cell a, Cell b) {
-    return PrivateCellUtil.equalsIgnoreMvccVersion(a, b);
-  }
-
   /**************** equals ****************************/
 
   public static boolean equals(Cell a, Cell b) {
@@ -1342,14 +666,6 @@ public final class CellUtil {
 
   public static boolean matchingTimestamp(Cell a, Cell b) {
     return CellComparator.getInstance().compareTimestamps(a.getTimestamp(), b.getTimestamp()) == 0;
-  }
-
-  /**
-   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0
-   */
-  @Deprecated
-  public static boolean matchingType(Cell a, Cell b) {
-    return PrivateCellUtil.matchingType(a, b);
   }
 
   /**
@@ -1447,35 +763,6 @@ public final class CellUtil {
     }
     return Bytes.compareTo(left.getQualifierArray(), left.getQualifierOffset(),
       left.getQualifierLength(), right, rOffset, rLength);
-  }
-
-  /**
-   * Used when a cell needs to be compared with a key byte[] such as cases of finding the index from
-   * the index block, bloom keys from the bloom blocks This byte[] is expected to be serialized in
-   * the KeyValue serialization format If the KeyValue (Cell's) serialization format changes this
-   * method cannot be used.
-   * @param comparator the cell comparator
-   * @param left the cell to be compared
-   * @param key the serialized key part of a KeyValue
-   * @param offset the offset in the key byte[]
-   * @param length the length of the key byte[]
-   * @return an int greater than 0 if left is greater than right lesser than 0 if left is lesser
-   *         than right equal to 0 if left is equal to right
-   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0
-   */
-  @VisibleForTesting
-  @Deprecated
-  public static final int compare(CellComparator comparator, Cell left, byte[] key, int offset,
-      int length) {
-    // row
-    short rrowlength = Bytes.toShort(key, offset);
-    int c = comparator.compareRows(left, key, offset + Bytes.SIZEOF_SHORT, rrowlength);
-    if (c != 0) return c;
-
-    // Compare the rest of the two KVs without making any assumptions about
-    // the common prefix. This function will not compare rows anyway, so we
-    // don't need to tell it that the common prefix includes the row.
-    return PrivateCellUtil.compareWithoutRow(comparator, left, key, offset, length, rrowlength);
   }
 
   /**

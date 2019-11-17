@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.hbase.util.MovingAverage;
+import org.apache.hadoop.hbase.util.WindowMovingAverage;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,6 +81,10 @@ public abstract class ScheduledChore implements Runnable {
    */
   private final Stoppable stopper;
 
+  private final MovingAverage<Void> timeMeasurement;
+  private static final long FIVE_MINUTES_IN_NANOS = TimeUnit.MINUTES.toNanos(5L);
+  private long lastLog = System.nanoTime();
+
   interface ChoreServicer {
     /**
      * Cancel any ongoing schedules that this chore has with the implementer of this interface.
@@ -118,11 +124,7 @@ public abstract class ScheduledChore implements Runnable {
   @InterfaceAudience.Private
   @VisibleForTesting
   protected ScheduledChore() {
-    this.name = null;
-    this.stopper = null;
-    this.period = 0;
-    this.initialDelay = DEFAULT_INITIAL_DELAY;
-    this.timeUnit = DEFAULT_TIME_UNIT;
+    this("TestChore", null, 0, DEFAULT_INITIAL_DELAY, DEFAULT_TIME_UNIT);
   }
 
   /**
@@ -163,6 +165,7 @@ public abstract class ScheduledChore implements Runnable {
     this.period = period;
     this.initialDelay = initialDelay < 0 ? 0 : initialDelay;
     this.timeUnit = unit;
+    this.timeMeasurement = new WindowMovingAverage(name);
   }
 
   /**
@@ -183,7 +186,15 @@ public abstract class ScheduledChore implements Runnable {
         if (!initialChoreComplete) {
           initialChoreComplete = initialChore();
         } else {
-          chore();
+          timeMeasurement.measure(() -> {
+            chore();
+            return null;
+          });
+          if (LOG.isInfoEnabled() && (System.nanoTime() - lastLog > FIVE_MINUTES_IN_NANOS)) {
+            LOG.info("{} average execution time: {} ns.", getName(),
+                (long)(timeMeasurement.getAverageTime()));
+            lastLog = System.nanoTime();
+          }
         }
       } catch (Throwable t) {
         if (LOG.isErrorEnabled()) LOG.error("Caught error", t);

@@ -267,7 +267,8 @@ public class TestBulkLoadHFilesSplitRecovery {
   private static AsyncClusterConnection mockAndInjectError(AsyncClusterConnection conn) {
     AsyncClusterConnection errConn = spy(conn);
     doReturn(failedFuture(new IOException("injecting bulk load error"))).when(errConn)
-      .bulkLoad(any(), anyList(), any(), anyBoolean(), any(), any(), anyBoolean(), anyList());
+      .bulkLoad(any(), anyList(), any(), anyBoolean(), any(), any(), anyBoolean(), anyList(),
+        anyBoolean());
     return errConn;
   }
 

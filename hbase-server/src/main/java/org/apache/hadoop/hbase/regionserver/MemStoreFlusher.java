@@ -711,7 +711,7 @@ class MemStoreFlusher implements FlushRequester {
           try {
             flushType = isAboveHighWaterMark();
             while (flushType != FlushType.NORMAL && !server.isStopped()) {
-              server.cacheFlusher.setFlushType(flushType);
+              server.getMemStoreFlusher().setFlushType(flushType);
               if (!blocked) {
                 startTime = EnvironmentEdgeManager.currentTime();
                 if (!server.getRegionServerAccounting().isOffheap()) {
@@ -769,7 +769,7 @@ class MemStoreFlusher implements FlushRequester {
       } else {
         flushType = isAboveLowWaterMark();
         if (flushType != FlushType.NORMAL) {
-          server.cacheFlusher.setFlushType(flushType);
+          server.getMemStoreFlusher().setFlushType(flushType);
           wakeupFlushThread();
         }
       }

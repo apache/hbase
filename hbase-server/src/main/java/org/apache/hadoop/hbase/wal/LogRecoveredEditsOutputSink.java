@@ -362,7 +362,7 @@ public class LogRecoveredEditsOutputSink extends OutputSink {
     // We make the assumption that most cells will be kept.
     ArrayList<Cell> keptCells = new ArrayList<>(logEntry.getEdit().getCells().size());
     for (Cell cell : logEntry.getEdit().getCells()) {
-      if (CellUtil.matchingFamily(cell, WALEdit.METAFAMILY)) {
+      if (WALEdit.isMetaEditFamily(cell)) {
         keptCells.add(cell);
       } else {
         byte[] family = CellUtil.cloneFamily(cell);

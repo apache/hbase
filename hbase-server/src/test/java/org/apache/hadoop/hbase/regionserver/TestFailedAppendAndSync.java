@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
@@ -161,18 +160,17 @@ public class TestFailedAppendAndSync {
   @Test
   public void testLockupAroundBadAssignSync() throws IOException {
     // Make up mocked server and services.
-    Server server = mock(Server.class);
-    when(server.getConfiguration()).thenReturn(CONF);
-    when(server.isStopped()).thenReturn(false);
-    when(server.isAborted()).thenReturn(false);
     RegionServerServices services = mock(RegionServerServices.class);
+    when(services.getConfiguration()).thenReturn(CONF);
+    when(services.isStopped()).thenReturn(false);
+    when(services.isAborted()).thenReturn(false);
     // OK. Now I have my mocked up Server and RegionServerServices and my dodgy WAL, go ahead with
     // the test.
     FileSystem fs = FileSystem.get(CONF);
     Path rootDir = new Path(dir + getName());
     DodgyFSLog dodgyWAL = new DodgyFSLog(fs, rootDir, getName(), CONF);
     dodgyWAL.init();
-    LogRoller logRoller = new LogRoller(server, services);
+    LogRoller logRoller = new LogRoller(services);
     logRoller.addWAL(dodgyWAL);
     logRoller.start();
 
@@ -227,7 +225,7 @@ public class TestFailedAppendAndSync {
       // to just continue.
 
       // So, should be no abort at this stage. Verify.
-      Mockito.verify(server, Mockito.atLeast(0)).abort(Mockito.anyString(),
+      Mockito.verify(services, Mockito.atLeast(0)).abort(Mockito.anyString(),
         Mockito.any(Throwable.class));
       try {
         dodgyWAL.throwAppendException = false;
@@ -243,7 +241,7 @@ public class TestFailedAppendAndSync {
       // happens. If it don't we'll timeout the whole test. That is fine.
       while (true) {
         try {
-          Mockito.verify(server, Mockito.atLeast(1)).abort(Mockito.anyString(),
+          Mockito.verify(services, Mockito.atLeast(1)).abort(Mockito.anyString(),
             Mockito.any(Throwable.class));
           break;
         } catch (WantedButNotInvoked t) {
@@ -252,7 +250,7 @@ public class TestFailedAppendAndSync {
       }
     } finally {
       // To stop logRoller, its server has to say it is stopped.
-      Mockito.when(server.isStopped()).thenReturn(true);
+      Mockito.when(services.isStopped()).thenReturn(true);
       if (logRoller != null) logRoller.close();
       if (region != null) {
         try {
