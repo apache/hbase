@@ -37,6 +37,10 @@ public class ChainWALEntryFilter implements WALEntryFilter {
   private final WALEntryFilter[] filters;
   private WALCellFilter[] cellFilters;
 
+  // To allow the empty entries to get filtered, we want to this optional flag to decide
+  // if we want to filter the entries which have no cells or all cells got filtered though WALCellFilter
+  private boolean filterEmptyEntry = false;
+
   public ChainWALEntryFilter(WALEntryFilter...filters) {
     this.filters = filters;
     initCellFilters();
@@ -68,14 +72,14 @@ public class ChainWALEntryFilter implements WALEntryFilter {
 
   @Override
   public Entry filter(Entry entry) {
+    if (entry == null) {
+      return null;
+    }
     for (WALEntryFilter filter : filters) {
-      if (entry == null) {
-        return null;
-      }
       entry = filter.filter(entry);
     }
     filterCells(entry);
-    if (entry.getEdit().isEmpty()) {
+    if (filterEmptyEntry && entry.getEdit().isEmpty()) {
       return null;
     }
     return entry;
@@ -96,5 +100,9 @@ public class ChainWALEntryFilter implements WALEntryFilter {
       }
     }
     return cell;
+  }
+
+  public void setFilterEmptyEntry(boolean filterEmptyEntry) {
+    this.filterEmptyEntry = filterEmptyEntry;
   }
 }

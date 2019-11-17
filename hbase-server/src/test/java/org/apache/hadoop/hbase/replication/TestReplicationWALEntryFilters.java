@@ -195,6 +195,9 @@ public class TestReplicationWALEntryFilters {
     assertEquals(userEntry2, filterSomeCells.filter(userEntry2));
 
     ChainWALEntryFilter filterAllCells = new ChainWALEntryFilter(new FilterAllCellsWALCellFilter());
+    assertEquals(createEntry(null), filterAllCells.filter(userEntry));
+    // let's set the filter empty entry flag to true now for the above case
+    filterAllCells.setFilterEmptyEntry(true);
     // since WALCellFilter filter all cells, whole entry should be filtered
     assertEquals(null, filterAllCells.filter(userEntry));
   }
