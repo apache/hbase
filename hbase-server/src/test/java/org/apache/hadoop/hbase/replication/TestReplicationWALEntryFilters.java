@@ -156,6 +156,50 @@ public class TestReplicationWALEntryFilters {
   };
 
   @Test
+  public void testChainWALEntryWithCellFilter() {
+    Entry userEntry = createEntry(null, a, b, c);
+    ChainWALEntryFilter filterSomeCells = new ChainWALEntryFilter(new FilterSomeCellsWALCellFilter());
+    // since WALCellFilter filter cells with rowkey 'a'
+    assertEquals(createEntry(null, b, c), filterSomeCells.filter(userEntry));
+
+    Entry userEntry2 = createEntry(null, b, c, d);
+    // since there is no cell to get filtered, nothing should get filtered
+    assertEquals(userEntry2, filterSomeCells.filter(userEntry2));
+
+    ChainWALEntryFilter filterAllCells = new ChainWALEntryFilter(new FilterAllCellsWALCellFilter());
+    // since WALCellFilter filter all cells
+    assertEquals(createEntry(null), filterAllCells.filter(userEntry));
+  }
+
+  public static class FilterSomeCellsWALCellFilter implements WALEntryFilter, WALCellFilter {
+    @Override
+    public Entry filter(Entry entry) {
+      return entry;
+    }
+
+    @Override
+    public Cell filterCell(Entry entry, Cell cell) {
+      if (Bytes.toString(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()).equals("a")) {
+        return null;
+      } else {
+        return cell;
+      }
+    }
+  }
+
+  public static class FilterAllCellsWALCellFilter implements WALEntryFilter, WALCellFilter {
+    @Override
+    public Entry filter(Entry entry) {
+      return entry;
+    }
+
+    @Override
+    public Cell filterCell(Entry entry, Cell cell) {
+      return null;
+    }
+  }
+
+  @Test
   public void testChainWALEntryFilter() {
     Entry userEntry = createEntry(null, a, b, c);
 
