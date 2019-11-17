@@ -43,7 +43,7 @@ _backup-masters_::
 
 _hadoop-metrics2-hbase.properties_::
   Used to connect HBase Hadoop's Metrics2 framework.
-  See the link:https://wiki.apache.org/hadoop/HADOOP-6728-MetricsV2[Hadoop Wiki entry] for more information on Metrics2.
+  See the link:https://cwiki.apache.org/confluence/display/HADOOP2/HADOOP-6728-MetricsV2[Hadoop Wiki entry] for more information on Metrics2.
   Contains only commented-out examples by default.
 
 _hbase-env.cmd_ and _hbase-env.sh_::
@@ -143,7 +143,7 @@ NOTE: You must set `JAVA_HOME` on each node of your cluster. _hbase-env.sh_ prov
 [[os]]
 .Operating System Utilities
 ssh::
-  HBase uses the Secure Shell (ssh) command and utilities extensively to communicate between cluster nodes. Each server in the cluster must be running `ssh` so that the Hadoop and HBase daemons can be managed. You must be able to connect to all nodes via SSH, including the local node, from the Master as well as any backup Master, using a shared key rather than a password. You can see the basic methodology for such a set-up in Linux or Unix systems at "<<passwordless.ssh.quickstart>>". If your cluster nodes use OS X, see the section, link:https://wiki.apache.org/hadoop/Running_Hadoop_On_OS_X_10.5_64-bit_%28Single-Node_Cluster%29[SSH: Setting up Remote Desktop and Enabling Self-Login] on the Hadoop wiki.
+  HBase uses the Secure Shell (ssh) command and utilities extensively to communicate between cluster nodes. Each server in the cluster must be running `ssh` so that the Hadoop and HBase daemons can be managed. You must be able to connect to all nodes via SSH, including the local node, from the Master as well as any backup Master, using a shared key rather than a password. You can see the basic methodology for such a set-up in Linux or Unix systems at "<<passwordless.ssh.quickstart>>". If your cluster nodes use OS X, see the section, link:https://cwiki.apache.org/confluence/pages/viewpage.action?pageId=120730246#RunningHadoopOnOSX10.564-bit(Single-NodeCluster)-SSH:SettingupRemoteDesktopandEnablingSelf-Login[SSH: Setting up Remote Desktop and Enabling Self-Login] on the Hadoop wiki.
 
 DNS::
   HBase uses the local hostname to self-report its IP address.

@@ -139,7 +139,7 @@ Referential Integrity::
 
 Secondary Indexes::
   You can use a coprocessor to maintain secondary indexes. For more information, see
-  link:https://wiki.apache.org/hadoop/Hbase/SecondaryIndexing[SecondaryIndexing].
+  link:https://cwiki.apache.org/confluence/display/HADOOP2/Hbase+SecondaryIndexing[SecondaryIndexing].
 
 
 ==== Types of Observer Coprocessor

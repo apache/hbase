@@ -67,7 +67,7 @@ import org.slf4j.LoggerFactory;
  * the create it will do a getChildren("/") and see "x-222-1", "x-542-30",
  * "x-352-109", x-333-110". The process will know that the original create
  * succeeded an the znode it created is "x-352-109".
- * @see "http://wiki.apache.org/hadoop/ZooKeeper/ErrorHandling"
+ * @see "https://cwiki.apache.org/confluence/display/HADOOP2/ZooKeeper+ErrorHandling"
  */
 @InterfaceAudience.Private
 public class RecoverableZooKeeper {
