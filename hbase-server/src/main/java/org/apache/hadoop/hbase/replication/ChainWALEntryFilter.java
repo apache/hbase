@@ -75,6 +75,9 @@ public class ChainWALEntryFilter implements WALEntryFilter {
       entry = filter.filter(entry);
     }
     filterCells(entry);
+    if (entry.getEdit().isEmpty()) {
+      return null;
+    }
     return entry;
   }
 
