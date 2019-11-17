@@ -143,6 +143,10 @@ public final class RecordFilter {
     this.value = Objects.requireNonNull(value);
   }
 
+  public Field getField() {
+    return field;
+  }
+
   public boolean execute(Record record) {
     FieldValue fieldValue = record.get(field);
     if (fieldValue == null) {

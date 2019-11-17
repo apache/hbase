@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.Map;
+
 import org.apache.hadoop.hbase.metrics.BaseSource;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -59,4 +61,6 @@ public interface MetricsUserAggregateSource extends BaseSource {
   MetricsUserSource getOrCreateMetricsUser(String user);
 
   void deregister(MetricsUserSource toRemove);
+
+  Map<String, MetricsUserSource> getUserSources();
 }

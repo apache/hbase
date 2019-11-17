@@ -65,6 +65,7 @@ public class FilterDisplayModeScreenView extends AbstractScreenView {
     if (!filters.isEmpty()) {
       filtersString = String.join(" + ",
         filters.stream().map(f -> String.format("'%s'", f)).collect(Collectors.toList()));
+
     }
 
     getTerminalPrinter(row).startBold().print("<Enter> to resume, filters: " + filtersString)

@@ -27,7 +27,8 @@ public abstract class ModeTestBase {
 
   @Test
   public void testGetRecords() {
-    List<Record> records = getMode().getRecords(TestUtils.createDummyClusterMetrics());
+    List<Record> records = getMode().getRecords(TestUtils.createDummyClusterMetrics(),
+        null);
     assertRecords(records);
   }
 
@@ -36,7 +37,8 @@ public abstract class ModeTestBase {
 
   @Test
   public void testDrillDown() {
-    List<Record> records = getMode().getRecords(TestUtils.createDummyClusterMetrics());
+    List<Record> records = getMode().getRecords(TestUtils.createDummyClusterMetrics(),
+        null);
     for (Record record : records) {
       assertDrillDown(record, getMode().drillDown(record));
     }

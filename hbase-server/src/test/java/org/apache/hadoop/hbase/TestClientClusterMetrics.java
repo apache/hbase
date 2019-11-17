@@ -18,28 +18,41 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.security.PrivilegedAction;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.AsyncAdmin;
 import org.apache.hadoop.hbase.client.AsyncConnection;
+import org.apache.hadoop.hbase.client.ClusterConnectionFactory;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionStatesCount;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.filter.FilterAllFilter;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
@@ -267,8 +280,7 @@ public class TestClientClusterMetrics {
     UTIL.deleteTable(TABLE_NAME);
   }
 
-  @Test
-  public void testMasterAndBackupMastersStatus() throws Exception {
+  @Test public void testMasterAndBackupMastersStatus() throws Exception {
     // get all the master threads
     List<MasterThread> masterThreads = CLUSTER.getMasterThreads();
     int numActive = 0;
@@ -291,6 +303,130 @@ public class TestClientClusterMetrics {
     ClusterMetrics metrics = ADMIN.getClusterMetrics(options);
     Assert.assertTrue(metrics.getMasterName().equals(activeName));
     Assert.assertEquals(MASTERS - 1, metrics.getBackupMasterNames().size());
+  }
+
+  @Test public void testUserMetrics() throws Exception {
+    Configuration conf = UTIL.getConfiguration();
+    User userFoo = User.createUserForTesting(conf, "FOO", new String[0]);
+    User userBar = User.createUserForTesting(conf, "BAR", new String[0]);
+    User userTest = User.createUserForTesting(conf, "TEST", new String[0]);
+    UTIL.createTable(TABLE_NAME, CF);
+    Thread.sleep(5000);
+    long writeMetaMetricBeforeNextuser = getMetaMetrics().getWriteRequestCount();
+    userFoo.runAs(new PrivilegedAction<Void>() {
+      @Override public Void run() {
+        try {
+          doPut();
+        } catch (IOException e) {
+          Assert.fail("Exception:" + e.getMessage());
+        }
+        return null;
+      }
+    });
+    waitForUsersMetrics(1);
+    long writeMetaMetricForUserFoo =
+        getMetaMetrics().getWriteRequestCount() - writeMetaMetricBeforeNextuser;
+    long readMetaMetricBeforeNextuser = getMetaMetrics().getReadRequestCount();
+    userBar.runAs(new PrivilegedAction<Void>() {
+      @Override public Void run() {
+        try {
+          doGet();
+        } catch (IOException e) {
+          Assert.fail("Exception:" + e.getMessage());
+        }
+        return null;
+      }
+    });
+    waitForUsersMetrics(2);
+    long readMetaMetricForUserBar =
+        getMetaMetrics().getReadRequestCount() - readMetaMetricBeforeNextuser;
+    long filteredMetaReqeust = getMetaMetrics().getFilteredReadRequestCount();
+    userTest.runAs(new PrivilegedAction<Void>() {
+      @Override public Void run() {
+        try {
+          Table table = createConnection(UTIL.getConfiguration()).getTable(TABLE_NAME);
+          for (Result result : table.getScanner(new Scan().setFilter(new FilterAllFilter()))) {
+            Assert.fail("Should have filtered all rows");
+          }
+        } catch (IOException e) {
+          Assert.fail("Exception:" + e.getMessage());
+        }
+        return null;
+      }
+    });
+    waitForUsersMetrics(3);
+    long filteredMetaReqeustForTestUser = getMetaMetrics().getFilteredReadRequestCount() - filteredMetaReqeust;
+    Map<byte[], UserMetrics> userMap =
+        ADMIN.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().values()
+            .iterator().next().getUserMetrics();
+    for (byte[] user : userMap.keySet()) {
+      switch (Bytes.toString(user)) {
+        case "FOO":
+          Assert.assertEquals(1,
+              userMap.get(user).getWriteRequestCount() - writeMetaMetricForUserFoo);
+          break;
+        case "BAR":
+          Assert
+              .assertEquals(1, userMap.get(user).getReadRequestCount() - readMetaMetricForUserBar);
+          Assert.assertEquals(0, userMap.get(user).getWriteRequestCount());
+          break;
+        case "TEST":
+          Assert.assertEquals(1, userMap.get(user).getFilteredReadRequests() - filteredMetaReqeustForTestUser);
+          Assert.assertEquals(0, userMap.get(user).getWriteRequestCount());
+          break;
+        default:
+          //current user
+          Assert.assertEquals(UserProvider.instantiate(conf).getCurrent().getName(),
+              Bytes.toString(user));
+          //Read/write count because of Meta operations
+          Assert.assertTrue(userMap.get(user).getReadRequestCount() > 1);
+          break;
+      }
+    }
+    UTIL.deleteTable(TABLE_NAME);
+  }
+
+  private RegionMetrics getMetaMetrics() throws IOException {
+    for (ServerMetrics serverMetrics : ADMIN.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
+        .getLiveServerMetrics().values()) {
+      RegionMetrics metaMetrics = serverMetrics.getRegionMetrics()
+          .get(RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName());
+      if (metaMetrics != null) {
+        return metaMetrics;
+      }
+    }
+    Assert.fail("Should have find meta metrics");
+    return null;
+  }
+
+  private void waitForUsersMetrics(int noOfUsers) throws Exception {
+    Waiter.waitFor(CLUSTER.getConfiguration(), 10 * 1000, 100, new Predicate<Exception>() {
+      @Override public boolean evaluate() throws Exception {
+        Map<byte[], UserMetrics> metrics =
+            ADMIN.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().values()
+                .iterator().next().getUserMetrics();
+        Assert.assertNotNull(metrics);
+        //including current user + noOfUsers
+        return metrics.keySet().size() > noOfUsers;
+      }
+    });
+  }
+
+  private void doPut() throws IOException {
+    Table table = createConnection(UTIL.getConfiguration()).getTable(TABLE_NAME);
+    table.put(new Put(Bytes.toBytes("a")).addColumn(CF, Bytes.toBytes("col1"), Bytes.toBytes("1")));
+
+  }
+
+  private void doGet() throws IOException {
+    Table table = createConnection(UTIL.getConfiguration()).getTable(TABLE_NAME);
+    table.get(new Get(Bytes.toBytes("a")).addColumn(CF, Bytes.toBytes("col1")));
+
+  }
+
+  private Connection createConnection(Configuration conf) throws IOException {
+    User user = UserProvider.instantiate(conf).getCurrent();
+    return ClusterConnectionFactory.createAsyncClusterConnection(conf, null, user).toConnection();
   }
 
   @Test

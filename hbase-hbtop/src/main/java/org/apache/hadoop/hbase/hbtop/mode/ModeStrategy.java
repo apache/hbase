@@ -21,6 +21,7 @@ import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.List;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.hbtop.Record;
+import org.apache.hadoop.hbase.hbtop.RecordFilter;
 import org.apache.hadoop.hbase.hbtop.field.Field;
 import org.apache.hadoop.hbase.hbtop.field.FieldInfo;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -33,6 +34,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 interface ModeStrategy {
   List<FieldInfo> getFieldInfos();
   Field getDefaultSortField();
-  List<Record> getRecords(ClusterMetrics clusterMetrics);
+  List<Record> getRecords(ClusterMetrics clusterMetrics, List<RecordFilter> pushDownFilters);
   @Nullable DrillDownInfo drillDown(Record selectedRecord);
 }

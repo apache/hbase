@@ -18,10 +18,30 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.Map;
+
+import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public interface MetricsUserSource extends Comparable<MetricsUserSource> {
+
+  //These client metrics will be reported through clusterStatus and hbtop only
+  interface ClientMetrics {
+    void incrementReadRequest();
+
+    void incrementWriteRequest();
+
+    String getHostName();
+
+    long getReadRequestsCount();
+
+    long getWriteRequestsCount();
+
+    void incrementFilteredReadRequests();
+
+    long getFilteredReadRequests();
+  }
 
   String getUser();
 
@@ -42,4 +62,21 @@ public interface MetricsUserSource extends Comparable<MetricsUserSource> {
   void updateReplay(long t);
 
   void updateScanTime(long t);
+
+  void getMetrics(MetricsCollector metricsCollector, boolean all);
+
+  /**
+   * Metrics collected at client level for a user(needed for reporting through clusterStatus
+   * and  hbtop currently)
+   * @return metrics per hostname
+   */
+  Map<String, ClientMetrics> getClientMetrics();
+
+  /**
+   * Create a instance of ClientMetrics if not present otherwise return the previous one
+   *
+   * @param hostName hostname of the client
+   * @return Instance of ClientMetrics
+   */
+  ClientMetrics getOrCreateMetricsClient(String hostName);
 }

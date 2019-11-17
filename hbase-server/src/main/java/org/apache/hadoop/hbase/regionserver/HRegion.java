@@ -844,7 +844,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // TODO: revisit if coprocessors should load in other cases
       this.coprocessorHost = new RegionCoprocessorHost(this, rsServices, conf);
       this.metricsRegionWrapper = new MetricsRegionWrapperImpl(this);
-      this.metricsRegion = new MetricsRegion(this.metricsRegionWrapper);
+      this.metricsRegion = new MetricsRegion(this.metricsRegionWrapper, conf);
     } else {
       this.metricsRegionWrapper = null;
       this.metricsRegion = null;
@@ -6623,6 +6623,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
       if (!outResults.isEmpty()) {
         readRequestsCount.increment();
+        if (metricsRegion != null) {
+          metricsRegion.updateReadRequestCount();
+        }
       }
       if (rsServices != null && rsServices.getMetrics() != null) {
         rsServices.getMetrics().updateReadQueryMeter(getRegionInfo().getTable());
@@ -6950,6 +6953,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     protected void incrementCountOfRowsFilteredMetric(ScannerContext scannerContext) {
       filteredReadRequestsCount.increment();
+      if (metricsRegion != null) {
+        metricsRegion.updateFilteredRecords();
+      }
 
       if (scannerContext == null || !scannerContext.isTrackingMetrics()) return;
 

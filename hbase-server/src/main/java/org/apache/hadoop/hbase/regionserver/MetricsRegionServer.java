@@ -101,7 +101,7 @@ public class MetricsRegionServer {
   }
 
   @VisibleForTesting
-  public org.apache.hadoop.hbase.regionserver.MetricsUserAggregate getMetricsUserAggregate() {
+  public MetricsUserAggregate getMetricsUserAggregate() {
     return userAggregate;
   }
 

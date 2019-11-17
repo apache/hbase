@@ -153,6 +153,32 @@ message RegionLoad {
   optional int32 max_store_file_ref_count = 22 [default = 0];
 }
 
+message UserLoad {
+
+  /** short user name */
+  required string userName = 1;
+
+  /** Metrics for all clients of a user */
+  repeated ClientMetrics clientMetrics = 2;
+
+
+}
+
+message ClientMetrics {
+  /** client host name */
+  required string hostName = 1;
+
+  /** the current total read requests made from a client */
+  optional uint64 read_requests_count = 2;
+
+  /** the current total write requests made from a client */
+  optional uint64 write_requests_count = 3;
+
+  /** the current total filtered requests made from a client */
+  optional uint64 filtered_requests_count = 4;
+
+}
+
 /* Server-level protobufs */
 
 message ReplicationLoadSink {
@@ -219,6 +245,11 @@ message ServerLoad {
    * The replicationLoadSink for the replication Sink status of this region server.
    */
   optional ReplicationLoadSink replLoadSink = 11;
+
+  /**
+   * The metrics for each user on this region server
+   */
+  repeated UserLoad userLoads = 12;
 }
 
 message LiveServerInfo {

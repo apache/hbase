@@ -56,6 +56,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Function;
 import javax.management.MalformedObjectNameException;
 import javax.servlet.http.HttpServlet;
+
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
@@ -209,6 +210,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.Coprocesso
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionLoad;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.UserLoad;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.Coprocessor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.Coprocessor.Builder;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair;
@@ -1355,7 +1357,14 @@ public class HRegionServer extends HasThread implements
     } else {
       serverLoad.setInfoServerPort(-1);
     }
-
+    MetricsUserAggregateSource userSource =
+        metricsRegionServer.getMetricsUserAggregate().getSource();
+    if (userSource != null) {
+      Map<String, MetricsUserSource> userMetricMap = userSource.getUserSources();
+      for (Entry<String, MetricsUserSource> entry : userMetricMap.entrySet()) {
+        serverLoad.addUserLoads(createUserLoad(entry.getKey(), entry.getValue()));
+      }
+    }
     // for the replicationLoad purpose. Only need to get from one executorService
     // either source or sink will get the same info
     ReplicationSourceService rsources = getReplicationSourceService();
@@ -1691,6 +1700,19 @@ public class HRegionServer extends HasThread implements
     r.setCompleteSequenceId(regionLoadBldr);
 
     return regionLoadBldr.build();
+  }
+
+  private UserLoad createUserLoad(String user, MetricsUserSource userSource) {
+    UserLoad.Builder userLoadBldr = UserLoad.newBuilder();
+    userLoadBldr.setUserName(user);
+    userSource.getClientMetrics().values().stream().map(
+        clientMetrics -> ClusterStatusProtos.ClientMetrics.newBuilder()
+            .setHostName(clientMetrics.getHostName())
+            .setWriteRequestsCount(clientMetrics.getWriteRequestsCount())
+            .setFilteredRequestsCount(clientMetrics.getFilteredReadRequests())
+            .setReadRequestsCount(clientMetrics.getReadRequestsCount()).build())
+        .forEach(userLoadBldr::addClientMetrics);
+    return userLoadBldr.build();
   }
 
   public RegionLoad createRegionLoad(final String encodedRegionName) throws IOException {

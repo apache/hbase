@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Objects;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.hbtop.Record;
+import org.apache.hadoop.hbase.hbtop.RecordFilter;
 import org.apache.hadoop.hbase.hbtop.field.Field;
 import org.apache.hadoop.hbase.hbtop.field.FieldInfo;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -35,7 +36,9 @@ public enum Mode {
   NAMESPACE("Namespace", "Record per Namespace", new NamespaceModeStrategy()),
   TABLE("Table", "Record per Table", new TableModeStrategy()),
   REGION("Region", "Record per Region", new RegionModeStrategy()),
-  REGION_SERVER("RegionServer", "Record per RegionServer", new RegionServerModeStrategy());
+  REGION_SERVER("RegionServer", "Record per RegionServer", new RegionServerModeStrategy()),
+  USER("User", "Record per user", new UserModeStrategy()),
+  CLIENT("Client", "Record per client", new ClientModeStrategy());
 
   private final String header;
   private final String description;
@@ -55,8 +58,9 @@ public enum Mode {
     return description;
   }
 
-  public List<Record> getRecords(ClusterMetrics clusterMetrics) {
-    return modeStrategy.getRecords(clusterMetrics);
+  public List<Record> getRecords(ClusterMetrics clusterMetrics,
+      List<RecordFilter> pushDownFilters) {
+    return modeStrategy.getRecords(clusterMetrics, pushDownFilters);
   }
 
   public List<FieldInfo> getFieldInfos() {

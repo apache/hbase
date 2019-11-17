@@ -65,16 +65,11 @@ public final class TableModeStrategy implements ModeStrategy {
     return Field.REQUEST_COUNT_PER_SECOND;
   }
 
-  @Override
-  public List<Record> getRecords(ClusterMetrics clusterMetrics) {
+  @Override public List<Record> getRecords(ClusterMetrics clusterMetrics,
+      List<RecordFilter> pushDownFilters) {
     // Get records from RegionModeStrategy and add REGION_COUNT field
-    List<Record> records = regionModeStrategy.getRecords(clusterMetrics).stream()
-      .map(record ->
-        Record.ofEntries(fieldInfos.stream()
-          .filter(fi -> record.containsKey(fi.getField()))
-          .map(fi -> Record.entry(fi.getField(), record.get(fi.getField())))))
-      .map(record -> Record.builder().putAll(record).put(Field.REGION_COUNT, 1).build())
-      .collect(Collectors.toList());
+    List<Record> records = regionModeStrategy.selectModeFieldsAndAddCountField(fieldInfos,
+        regionModeStrategy.getRecords(clusterMetrics, pushDownFilters), Field.REGION_COUNT);
 
     // Aggregation by NAMESPACE field and TABLE field
     return records.stream()

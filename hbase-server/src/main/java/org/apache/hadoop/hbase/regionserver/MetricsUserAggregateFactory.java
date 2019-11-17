@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -27,6 +26,7 @@ public class MetricsUserAggregateFactory {
   private MetricsUserAggregateFactory() {
 
   }
+
   public static final String METRIC_USER_ENABLED_CONF = "hbase.regionserver.user.metrics.enabled";
   public static final boolean DEFAULT_METRIC_USER_ENABLED_CONF = true;
 
@@ -36,6 +36,10 @@ public class MetricsUserAggregateFactory {
     } else {
       //NoOpMetricUserAggregate
       return new MetricsUserAggregate() {
+        @Override public MetricsUserAggregateSource getSource() {
+          return null;
+        }
+
         @Override public void updatePut(long t) {
 
         }
@@ -61,6 +65,14 @@ public class MetricsUserAggregateFactory {
         }
 
         @Override public void updateScanTime(long t) {
+
+        }
+
+        @Override public void updateFilteredReadRequests() {
+
+        }
+
+        @Override public void updateReadRequestCount() {
 
         }
       };
