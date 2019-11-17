@@ -828,10 +828,12 @@ public class ProcedureExecutor<TEnvironment> {
       return;
     }
 
-    Procedure<TEnvironment> proc =
-      new FailedProcedure<>(procId.longValue(), procName, procOwner, nonceKey, exception);
+    completed.computeIfAbsent(procId, (key) -> {
+      Procedure<TEnvironment> proc = new FailedProcedure<>(procId.longValue(),
+          procName, procOwner, nonceKey, exception);
 
-    completed.putIfAbsent(procId, new CompletedProcedureRetainer<>(proc));
+      return new CompletedProcedureRetainer<>(proc);
+    });
   }
 
   // ==========================================================================

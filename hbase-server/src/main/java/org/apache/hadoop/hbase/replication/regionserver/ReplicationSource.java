@@ -305,24 +305,30 @@ public class ReplicationSource implements ReplicationSourceInterface {
   }
 
   private void tryStartNewShipper(String walGroupId, PriorityBlockingQueue<Path> queue) {
-    ReplicationSourceShipper worker = createNewShipper(walGroupId, queue);
-    ReplicationSourceShipper extant = workerThreads.putIfAbsent(walGroupId, worker);
-    if (extant != null) {
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("{} Someone has beat us to start a worker thread for wal group {}", logPeerId(),
-          walGroupId);
+    workerThreads.compute(walGroupId, (key, value) -> {
+      if (value != null) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(
+              "{} Someone has beat us to start a worker thread for wal group {}",
+              logPeerId(), key);
+        }
+        return value;
+      } else {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("{} Starting up worker for wal group {}", logPeerId(), key);
+        }
+        ReplicationSourceShipper worker = createNewShipper(walGroupId, queue);
+        ReplicationSourceWALReader walReader =
+            createNewWALReader(walGroupId, queue, worker.getStartPosition());
+        Threads.setDaemonThreadRunning(
+            walReader, Thread.currentThread().getName()
+                + ".replicationSource.wal-reader." + walGroupId + "," + queueId,
+            this::uncaughtException);
+        worker.setWALReader(walReader);
+        worker.startup(this::uncaughtException);
+        return worker;
       }
-    } else {
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("{} Starting up worker for wal group {}", logPeerId(), walGroupId);
-      }
-      ReplicationSourceWALReader walReader =
-        createNewWALReader(walGroupId, queue, worker.getStartPosition());
-      Threads.setDaemonThreadRunning(walReader, Thread.currentThread().getName() +
-        ".replicationSource.wal-reader." + walGroupId + "," + queueId, this::uncaughtException);
-      worker.setWALReader(walReader);
-      worker.startup(this::uncaughtException);
-    }
+    });
   }
 
   @Override
