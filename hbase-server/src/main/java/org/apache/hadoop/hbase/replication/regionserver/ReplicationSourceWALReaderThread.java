@@ -157,11 +157,6 @@ public class ReplicationSourceWALReaderThread extends Thread {
             }
           }
 
-          if (LOG.isTraceEnabled()) {
-            LOG.trace(String.format("Read %s WAL entries eligible for replication",
-                    batch.getNbEntries()));
-          }
-
           updateBatch(entryStream, batch, hasNext);
           if (isShippable(batch)) {
             sleepMultiplier = 1;
@@ -192,8 +187,20 @@ public class ReplicationSourceWALReaderThread extends Thread {
   }
 
   private void updateBatch(WALEntryStream entryStream, WALEntryBatch batch, boolean moreData) {
+    logMessage(batch);
     batch.updatePosition(entryStream);
     batch.setMoreEntries(!replicationQueueInfo.isQueueRecovered() || moreData);
+  }
+
+  private void logMessage(WALEntryBatch batch) {
+    if (LOG.isTraceEnabled()) {
+      if (batch.isEmpty()) {
+        LOG.trace("Didn't read any new entries from WAL");
+      } else {
+        LOG.trace(String.format("Read %s WAL entries eligible for replication",
+                batch.getNbEntries()));
+      }
+    }
   }
 
   private boolean isShippable(WALEntryBatch batch) {
