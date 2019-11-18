@@ -407,7 +407,15 @@ class BitSetNode {
     int wordIndex = bitmapIndex >> ADDRESS_BITS_PER_WORD;
     long value = (1L << bitmapIndex);
 
-    modified[wordIndex] |= value;
+    try {
+      modified[wordIndex] |= value;
+    } catch (ArrayIndexOutOfBoundsException aioobe) {
+      // We've gotten a AIOOBE in here; add detail to help debug.
+      ArrayIndexOutOfBoundsException aioobe2 =
+          new ArrayIndexOutOfBoundsException("pid=" + procId + ", deleted=" + isDeleted);
+      aioobe2.initCause(aioobe);
+      throw aioobe2;
+    }
     if (isDeleted) {
       deleted[wordIndex] |= value;
     } else {
