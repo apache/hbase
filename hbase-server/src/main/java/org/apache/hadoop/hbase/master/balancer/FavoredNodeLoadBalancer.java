@@ -19,10 +19,7 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -40,6 +37,7 @@ import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.SnapshotOfRegionAssignmentFromMeta;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodesPlan.Position;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.util.Pair;
 
 /**
@@ -223,6 +221,11 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer {
           " Falling back to regular assignment");
       return super.randomAssignment(regionInfo, servers);
     }
+  }
+
+  @Override
+  public Set<Address> getServersInDefaultOrGroup(HRegionInfo region) throws HBaseIOException {
+    return null;
   }
 
   private Pair<Map<ServerName, List<HRegionInfo>>, List<HRegionInfo>>

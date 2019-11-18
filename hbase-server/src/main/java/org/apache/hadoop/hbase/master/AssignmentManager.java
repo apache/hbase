@@ -89,6 +89,7 @@ import org.apache.hadoop.hbase.master.handler.ClosedRegionHandler;
 import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
 import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
 import org.apache.hadoop.hbase.master.handler.OpenedRegionHandler;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
@@ -2645,9 +2646,30 @@ public class AssignmentManager extends ZooKeeperListener {
             for (ServerName server : getExcludedServersForSystemTable()) {
               regionsShouldMove.addAll(getCarryingSystemTables(server));
             }
+
+            Set<Address> serverbygroup = new HashSet<>();
+            Set<Address> remainservers = new HashSet<>();
+            Set<Address> excludedAddresses = new HashSet<>();
+
             if (!regionsShouldMove.isEmpty()) {
               List<RegionPlan> plans = new ArrayList<>();
+              List<ServerName> names = getExcludedServersForSystemTable();
+
               for (HRegionInfo regionInfo : regionsShouldMove) {
+                serverbygroup = balancer.getServersInDefaultOrGroup(regionInfo);
+                excludedAddresses = getAddressFromServerName(names);
+                if (serverbygroup != null) {
+                  for (Address address : serverbygroup) {
+                    if ( !excludedAddresses.contains(address) &&
+                            getAddressFromServerName(serverManager.getOnlineServersList())
+                                    .contains(address)) {
+                      remainservers.add(address);
+                    }
+                  }
+                  if (remainservers.size() == 0) {
+                    continue;
+                  }
+                }
                 RegionPlan plan = getRegionPlan(regionInfo, true);
                 if (regionInfo.isMetaRegion()) {
                   // Must move meta region first.
@@ -2668,6 +2690,16 @@ public class AssignmentManager extends ZooKeeperListener {
     }).start();
   }
 
+  public HashSet<Address> getAddressFromServerName(List<ServerName> servernames) {
+    HashSet<Address> addresses = new HashSet<>();
+    if (servernames == null) {
+      return addresses;
+    }
+    for (ServerName servername : servernames) {
+      addresses.add(servername.getAddress());
+    }
+    return addresses;
+  }
 
   /**
    * Unassigns the specified region.
