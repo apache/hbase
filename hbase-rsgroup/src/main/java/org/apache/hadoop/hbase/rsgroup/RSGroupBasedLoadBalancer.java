@@ -274,6 +274,20 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
     return this.internalBalancer.randomAssignment(region, filteredServers);
   }
 
+  public  Set<Address> getServersInDefaultOrGroup(HRegionInfo region) throws HBaseIOException {
+    try{
+      String groupName = infoManager.getRSGroupOfTable(region.getTable());
+      if (groupName == null) {
+        groupName = RSGroupInfo.DEFAULT_GROUP;
+      }
+      RSGroupInfo info = infoManager.getRSGroup(groupName);
+      Set<Address> serversInGroup = info.getServers();
+      return serversInGroup;
+    } catch (Exception e) {
+      throw new HBaseIOException("Failed to get servers ", e);
+    }
+  }
+
   private void generateGroupMaps(
     List<HRegionInfo> regions,
     List<ServerName> servers,

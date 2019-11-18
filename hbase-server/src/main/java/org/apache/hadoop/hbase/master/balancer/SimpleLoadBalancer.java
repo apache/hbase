@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Random;
 import java.util.TreeMap;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -38,6 +39,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.RegionPlan;
 
 import com.google.common.collect.MinMaxPriorityQueue;
+import org.apache.hadoop.hbase.net.Address;
 
 /**
  * Makes decisions about the placement and movement of Regions across
@@ -418,6 +420,11 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
         serversUnderloaded + " less loaded servers");
 
     return regionsToReturn;
+  }
+
+  @Override
+  public Set<Address> getServersInDefaultOrGroup(HRegionInfo region) throws HBaseIOException {
+    return null;
   }
 
   /**

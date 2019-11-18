@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
@@ -31,6 +32,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.net.Address;
 
 /**
  * Makes decisions about the placement and movement of Regions across
@@ -126,6 +128,15 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
   ServerName randomAssignment(
     HRegionInfo regionInfo, List<ServerName> servers
   ) throws HBaseIOException;
+
+  /**
+   * Get all the servers of this region's rs_group，and now only used in RSGroupBasedLoadBalancer
+   * @param region
+   * @return Set of Address
+   * @throws HBaseIOException
+   */
+  Set<Address> getServersInDefaultOrGroup(
+          HRegionInfo region) throws HBaseIOException;
 
   /**
    * Initialize the load balancer. Must be called after setters.

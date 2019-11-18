@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Map.Entry;
 import java.util.Random;
 
@@ -52,6 +53,9 @@ import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.Locality
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.MoveRegionAction;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.SwapRegionsAction;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.net.Address;
+import org.apache.hadoop.hbase.HBaseIOException;
+
 
 import com.google.common.base.Optional;
 
@@ -460,6 +464,11 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
           + step + " different configurations in " + (endTime - startTime)
           + "ms, and did not find anything with a computed cost less than " + initCost);
     }
+    return null;
+  }
+
+  @Override
+  public Set<Address> getServersInDefaultOrGroup(HRegionInfo region) throws HBaseIOException {
     return null;
   }
 
