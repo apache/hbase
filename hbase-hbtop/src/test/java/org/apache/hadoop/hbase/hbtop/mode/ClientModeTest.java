@@ -49,7 +49,6 @@ public class ClientModeTest extends ModeTestBase {
     assertThat(drillDownInfo.getNextMode(), is(Mode.USER));
     assertThat(drillDownInfo.getInitialFilters().size(), is(1));
     String client = currentRecord.get(Field.CLIENT).asString();
-
     switch (client) {
       case "CLIENT_A_FOO":
         assertThat(drillDownInfo.getInitialFilters().get(0).toString(), is("CLIENT==CLIENT_A_FOO"));
@@ -59,14 +58,14 @@ public class ClientModeTest extends ModeTestBase {
         assertThat(drillDownInfo.getInitialFilters().get(0).toString(), is("CLIENT==CLIENT_B_FOO"));
         break;
 
-       case "CLIENT_A_BAR":
+      case "CLIENT_A_BAR":
         assertThat(drillDownInfo.getInitialFilters().get(0).toString(), is("CLIENT==CLIENT_A_BAR"));
         break;
-       case "CLIENT_B_BAR":
+      case "CLIENT_B_BAR":
         assertThat(drillDownInfo.getInitialFilters().get(0).toString(), is("CLIENT==CLIENT_B_BAR"));
         break;
 
-       default:
+      default:
         fail();
     }
   }

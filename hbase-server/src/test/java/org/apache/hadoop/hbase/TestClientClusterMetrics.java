@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.client.Result;
@@ -307,11 +306,11 @@ public class TestClientClusterMetrics {
 
   @Test public void testUserMetrics() throws Exception {
     Configuration conf = UTIL.getConfiguration();
-    User userFoo = User.createUserForTesting(conf, "FOO", new String[0]);
-    User userBar = User.createUserForTesting(conf, "BAR", new String[0]);
-    User userTest = User.createUserForTesting(conf, "TEST", new String[0]);
+    User userFoo = User.createUserForTesting(conf, "FOO_USER_METRIC_TEST", new String[0]);
+    User userBar = User.createUserForTesting(conf, "BAR_USER_METRIC_TEST", new String[0]);
+    User userTest = User.createUserForTesting(conf, "TEST_USER_METRIC_TEST", new String[0]);
     UTIL.createTable(TABLE_NAME, CF);
-    Thread.sleep(5000);
+    waitForUsersMetrics(0);
     long writeMetaMetricBeforeNextuser = getMetaMetrics().getWriteRequestCount();
     userFoo.runAs(new PrivilegedAction<Void>() {
       @Override public Void run() {
@@ -355,23 +354,25 @@ public class TestClientClusterMetrics {
       }
     });
     waitForUsersMetrics(3);
-    long filteredMetaReqeustForTestUser = getMetaMetrics().getFilteredReadRequestCount() - filteredMetaReqeust;
+    long filteredMetaReqeustForTestUser =
+        getMetaMetrics().getFilteredReadRequestCount() - filteredMetaReqeust;
     Map<byte[], UserMetrics> userMap =
         ADMIN.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().values()
             .iterator().next().getUserMetrics();
     for (byte[] user : userMap.keySet()) {
       switch (Bytes.toString(user)) {
-        case "FOO":
+        case "FOO_USER_METRIC_TEST":
           Assert.assertEquals(1,
               userMap.get(user).getWriteRequestCount() - writeMetaMetricForUserFoo);
           break;
-        case "BAR":
+        case "BAR_USER_METRIC_TEST":
           Assert
               .assertEquals(1, userMap.get(user).getReadRequestCount() - readMetaMetricForUserBar);
           Assert.assertEquals(0, userMap.get(user).getWriteRequestCount());
           break;
-        case "TEST":
-          Assert.assertEquals(1, userMap.get(user).getFilteredReadRequests() - filteredMetaReqeustForTestUser);
+        case "TEST_USER_METRIC_TEST":
+          Assert.assertEquals(1,
+              userMap.get(user).getFilteredReadRequests() - filteredMetaReqeustForTestUser);
           Assert.assertEquals(0, userMap.get(user).getWriteRequestCount());
           break;
         default:
@@ -400,6 +401,8 @@ public class TestClientClusterMetrics {
   }
 
   private void waitForUsersMetrics(int noOfUsers) throws Exception {
+    //Sleep for metrics to get updated on master
+    Thread.sleep(5000);
     Waiter.waitFor(CLUSTER.getConfiguration(), 10 * 1000, 100, new Predicate<Exception>() {
       @Override public boolean evaluate() throws Exception {
         Map<byte[], UserMetrics> metrics =

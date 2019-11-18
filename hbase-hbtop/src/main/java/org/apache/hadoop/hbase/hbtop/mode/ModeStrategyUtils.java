@@ -24,7 +24,6 @@ import java.util.stream.Stream;
 import org.apache.hadoop.hbase.hbtop.Record;
 import org.apache.hadoop.hbase.hbtop.RecordFilter;
 import org.apache.hadoop.hbase.hbtop.field.Field;
-import org.apache.hadoop.hbase.hbtop.field.FieldInfo;
 
 public final class ModeStrategyUtils {
   private ModeStrategyUtils() {

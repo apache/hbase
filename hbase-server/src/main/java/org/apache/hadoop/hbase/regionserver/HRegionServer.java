@@ -1706,7 +1706,7 @@ public class HRegionServer extends HasThread implements
     UserLoad.Builder userLoadBldr = UserLoad.newBuilder();
     userLoadBldr.setUserName(user);
     userSource.getClientMetrics().values().stream().map(
-        clientMetrics -> ClusterStatusProtos.ClientMetrics.newBuilder()
+      clientMetrics -> ClusterStatusProtos.ClientMetrics.newBuilder()
             .setHostName(clientMetrics.getHostName())
             .setWriteRequestsCount(clientMetrics.getWriteRequestsCount())
             .setFilteredRequestsCount(clientMetrics.getFilteredReadRequests())

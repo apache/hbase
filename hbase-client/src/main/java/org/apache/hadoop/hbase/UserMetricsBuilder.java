@@ -36,7 +36,7 @@ public final class UserMetricsBuilder {
   public static UserMetrics toUserMetrics(ClusterStatusProtos.UserLoad userLoad) {
     UserMetricsBuilder builder = UserMetricsBuilder.newBuilder(userLoad.getUserName().getBytes());
     userLoad.getClientMetricsList().stream().map(
-        clientMetrics -> new ClientMetricsImpl(clientMetrics.getHostName(),
+      clientMetrics -> new ClientMetricsImpl(clientMetrics.getHostName(),
             clientMetrics.getReadRequestsCount(), clientMetrics.getWriteRequestsCount(),
             clientMetrics.getFilteredRequestsCount())).forEach(builder::addClientMetris);
     return builder.build();
@@ -46,7 +46,7 @@ public final class UserMetricsBuilder {
     ClusterStatusProtos.UserLoad.Builder builder =
         ClusterStatusProtos.UserLoad.newBuilder().setUserName(userMetrics.getNameAsString());
     userMetrics.getClientMetrics().values().stream().map(
-        clientMetrics -> ClusterStatusProtos.ClientMetrics.newBuilder()
+      clientMetrics -> ClusterStatusProtos.ClientMetrics.newBuilder()
             .setHostName(clientMetrics.getHostName())
             .setWriteRequestsCount(clientMetrics.getWriteRequestsCount())
             .setReadRequestsCount(clientMetrics.getReadRequestsCount())

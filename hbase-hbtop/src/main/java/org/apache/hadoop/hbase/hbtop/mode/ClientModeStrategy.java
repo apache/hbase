@@ -76,7 +76,7 @@ import org.apache.yetus.audience.InterfaceAudience;
     for (ServerMetrics serverMetrics : clusterMetrics.getLiveServerMetrics().values()) {
       long lastReportTimestamp = serverMetrics.getLastReportTimestamp();
       serverMetrics.getUserMetrics().values().forEach(um -> um.getClientMetrics().values().forEach(
-          clientMetrics -> ret.add(
+        clientMetrics -> ret.add(
               createRecord(um.getNameAsString(), clientMetrics, lastReportTimestamp,
                   serverMetrics.getServerName().getServerName()))));
     }
