@@ -136,7 +136,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
  *                             columns: info:merge0001, info:merge0002. You make also see 'mergeA',
  *                             and 'mergeB'. This is old form replaced by the new format that allows
  *                             for more than two parents to be merged at a time.
- * TODO: Add rep_barrier for serial replication explaination.
+ * TODO: Add rep_barrier for serial replication explaination. See SerialReplicationChecker.
  * </pre>
  * </p>
  * <p>
@@ -607,6 +607,7 @@ public class MetaTableAccessor {
    * @param excludeOfflinedSplitParents don't return split parents
    * @return Return list of regioninfos and server addresses.
    */
+  // What happens here when 1M regions in hbase:meta? This won't scale?
   public static List<Pair<RegionInfo, ServerName>> getTableRegionsAndLocations(
       Connection connection, @Nullable final TableName tableName,
       final boolean excludeOfflinedSplitParents) throws IOException {
@@ -1928,6 +1929,9 @@ public class MetaTableAccessor {
     return put;
   }
 
+  /**
+   * See class comment on SerialReplicationChecker
+   */
   public static void addReplicationBarrier(Put put, long openSeqNum) throws IOException {
     put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
       .setRow(put.getRow())

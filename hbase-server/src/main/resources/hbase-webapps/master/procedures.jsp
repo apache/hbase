@@ -81,11 +81,14 @@
         <th>Errors</th>
         <th>Parameters</th>
     </tr>
-    <% for (Procedure<?> proc : procedures) { 
+    <%
+      int displayCount = 0;
+      for (Procedure<?> proc : procedures) {
       // Don't show SUCCESS procedures.
       if (proc.isSuccess()) {
         continue;
       }
+      displayCount++;
     %>
       <tr>
         <td><%= proc.getProcId() %></td>
@@ -99,7 +102,61 @@
         <td><%= escapeXml(proc.toString()) %></td>
       </tr>
     <% } %>
+    <%
+    if (displayCount > 0) {
+    %>
+      <p><%= displayCount %> procedure(s).</p>
+    <%
+    }
+    %>
   </table>
+</div>
+<br />
+<div class="container-fluid content">
+  <div class="row">
+      <div class="page-header">
+          <h1>Locks</h1>
+      </div>
+  </div>
+    <%
+    if (lockedResources.size() > 0) {
+    %>
+    <p><%= lockedResources.size() %> lock(s).</p>
+    <%
+    }
+    %>
+  <% for (LockedResource lockedResource : lockedResources) { %>
+    <h2><%= lockedResource.getResourceType() %>: <%= lockedResource.getResourceName() %></h2>
+    <%
+      switch (lockedResource.getLockType()) {
+      case EXCLUSIVE:
+    %>
+    <p>Lock type: EXCLUSIVE</p>
+    <p>Owner procedure: <%= escapeXml(lockedResource.getExclusiveLockOwnerProcedure().toStringDetails()) %></p>
+    <%
+        break;
+      case SHARED:
+    %>
+    <p>Lock type: SHARED</p>
+    <p>Number of shared locks: <%= lockedResource.getSharedLockCount() %></p>
+    <%
+        break;
+      }
+
+      List<Procedure<?>> waitingProcedures = lockedResource.getWaitingProcedures();
+
+      if (!waitingProcedures.isEmpty()) {
+    %>
+        <h3>Waiting procedures</h3>
+        <table class="table table-striped" width="90%" >
+        <% for (Procedure<?> proc : procedures) { %>
+         <tr>
+            <td><%= escapeXml(proc.toStringDetails()) %></td>
+          </tr>
+        <% } %>
+        </table>
+    <% } %>
+  <% } %>
 </div>
 <br />
 <div class="container-fluid content">
@@ -206,44 +263,5 @@
   </div>
 </div>
 <br />
-<div class="container-fluid content">
-  <div class="row">
-      <div class="page-header">
-          <h1>Locks</h1>
-      </div>
-  </div>
-  <% for (LockedResource lockedResource : lockedResources) { %>
-    <h2><%= lockedResource.getResourceType() %>: <%= lockedResource.getResourceName() %></h2>
-    <%
-      switch (lockedResource.getLockType()) {
-      case EXCLUSIVE:
-    %>
-    <p>Lock type: EXCLUSIVE</p>
-    <p>Owner procedure: <%= escapeXml(lockedResource.getExclusiveLockOwnerProcedure().toStringDetails()) %></p>
-    <%
-        break;
-      case SHARED:
-    %>
-    <p>Lock type: SHARED</p>
-    <p>Number of shared locks: <%= lockedResource.getSharedLockCount() %></p>
-    <%
-        break;
-      }
-
-      List<Procedure<?>> waitingProcedures = lockedResource.getWaitingProcedures();
-
-      if (!waitingProcedures.isEmpty()) {
-    %>
-        <h3>Waiting procedures</h3>
-        <table class="table table-striped" width="90%" >
-        <% for (Procedure<?> proc : procedures) { %>
-         <tr>
-            <td><%= escapeXml(proc.toStringDetails()) %></td>
-          </tr>
-        <% } %>
-        </table>
-    <% } %>
-  <% } %>
-</div>
 
 <jsp:include page="footer.jsp" />

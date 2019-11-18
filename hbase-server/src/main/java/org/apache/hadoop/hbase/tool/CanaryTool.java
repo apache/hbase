@@ -277,13 +277,15 @@ public class CanaryTool implements Tool, Canary {
 
     public void publishReadFailure(ServerName serverName, RegionInfo region, Exception e) {
       incReadFailureCount();
-      LOG.error("Read from {} on {} failed", region.getRegionNameAsString(), serverName, e);
+      LOG.error("Read from {} on serverName={} failed",
+          region.getRegionNameAsString(), serverName, e);
     }
 
     public void publishReadFailure(ServerName serverName, RegionInfo region,
         ColumnFamilyDescriptor column, Exception e) {
       incReadFailureCount();
-      LOG.error("Read from {} on {} {} failed", region.getRegionNameAsString(), serverName,
+      LOG.error("Read from {} on serverName={}, columnFamily={} failed",
+          region.getRegionNameAsString(), serverName,
           column.getNameAsString(), e);
     }
 
