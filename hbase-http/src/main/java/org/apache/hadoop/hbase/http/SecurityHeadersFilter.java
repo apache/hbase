@@ -52,6 +52,8 @@ public class SecurityHeadersFilter implements Filter {
     httpResponse.addHeader("X-XSS-Protection", "1; mode=block");
     httpResponse.addHeader("X-Frame-Options",
         filterConfig.getInitParameter("xframeoptions"));
+    httpResponse.addHeader("Strict-Transport-Security",
+        filterConfig.getInitParameter("hsts"));
     chain.doFilter(request, response);
   }
 

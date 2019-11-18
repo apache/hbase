@@ -597,7 +597,10 @@ public class HttpServer implements FilterContainer {
 
     addGlobalFilter("safety", QuotingInputFilter.class.getName(), null);
     Map<String, String> params = new HashMap<>();
-    params.put("xframeoptions", conf.get("hbase.http.filter.xframeoptions.mode", "DENY"));
+    params.put("xframeoptions", conf.get("hbase.http.filter.xframeoptions.mode",
+        "DENY"));
+    params.put("hsts", conf.get("hbase.http.filter.hsts.value",
+        "max-age=31536000"));
     addGlobalFilter("securityheaders",
             SecurityHeadersFilter.class.getName(), params);
     final FilterInitializer[] initializers = getFilterInitializers(conf);

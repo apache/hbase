@@ -142,6 +142,8 @@ public class RESTServer implements Constants {
     Map<String, String> params = new HashMap<>();
     params.put("xframeoptions", conf.get("hbase.http.filter.xframeoptions.mode",
         "DENY"));
+    params.put("hsts", conf.get("hbase.http.filter.hsts.value",
+        "max-age=31536000"));
     holder.setInitParameters(params);
     ctxHandler.addFilter(holder, PATH_SPEC_ANY, EnumSet.allOf(DispatcherType.class));
   }
