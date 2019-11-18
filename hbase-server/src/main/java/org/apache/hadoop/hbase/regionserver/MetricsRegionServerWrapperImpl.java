@@ -713,7 +713,6 @@ class MetricsRegionServerWrapperImpl
 
         long tempReadRequestsCount = 0;
         long tempWriteRequestsCount = 0;
-        long tempRequestsPerSecond = 0;
         long currentReadRequestsCount = 0;
         long currentWriteRequestsCount = 0;
         long lastReadRequestsCount = 0;
@@ -736,7 +735,6 @@ class MetricsRegionServerWrapperImpl
             writeRequestsDelta = currentWriteRequestsCount - lastWriteRequestsCount;
             totalReadRequestsDelta += readRequestsDelta;
             totalWriteRequestsDelta += writeRequestsDelta;
-            tempRequestsPerSecond += readRequestsDelta + writeRequestsDelta;
             //Update cache for our next comparision
             requestsCountCache.get(encodedRegionName).set(0,currentReadRequestsCount);
             requestsCountCache.get(encodedRegionName).set(1,currentWriteRequestsCount);
@@ -749,7 +747,6 @@ class MetricsRegionServerWrapperImpl
             requestsCountCache.put(encodedRegionName, requests);
             totalReadRequestsDelta += currentReadRequestsCount;
             totalWriteRequestsDelta += currentWriteRequestsCount;
-            tempRequestsPerSecond += currentReadRequestsCount + currentWriteRequestsCount;
           }
           tempReadRequestsCount += r.getReadRequestsCount();
           tempWriteRequestsCount += r.getWriteRequestsCount();
@@ -842,13 +839,11 @@ class MetricsRegionServerWrapperImpl
         }
         // If we've time traveled keep the last requests per second.
         if ((currentTime - lastRan) > 0) {
-          requestsPerSecond = tempRequestsPerSecond / ((currentTime - lastRan) / 1000.0);
+          requestsPerSecond = (totalReadRequestsDelta + totalWriteRequestsDelta) /
+              ((currentTime - lastRan) / 1000.0);
 
-          long intervalReadRequestsCount = totalReadRequestsDelta;
-          long intervalWriteRequestsCount = totalWriteRequestsDelta;
-
-          double readRequestsRatePerMilliSecond = (double)intervalReadRequestsCount / period;
-          double writeRequestsRatePerMilliSecond = (double)intervalWriteRequestsCount / period;
+          double readRequestsRatePerMilliSecond = (double)totalReadRequestsDelta / period;
+          double writeRequestsRatePerMilliSecond = (double)totalWriteRequestsDelta / period;
 
           readRequestsRatePerSecond = readRequestsRatePerMilliSecond * 1000.0;
           writeRequestsRatePerSecond = writeRequestsRatePerMilliSecond * 1000.0;
