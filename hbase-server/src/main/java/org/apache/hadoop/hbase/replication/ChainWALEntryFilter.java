@@ -27,6 +27,8 @@ import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import static org.apache.hadoop.hbase.HConstants.HBASE_REPLICATION_WAL_FILTER_EMPTY_ENTRY;
+
 /**
  * A {@link WALEntryFilter} which contains multiple filters and applies them
  * in chain order
@@ -36,17 +38,25 @@ public class ChainWALEntryFilter implements WALEntryFilter {
 
   private final WALEntryFilter[] filters;
   private WALCellFilter[] cellFilters;
+  private ReplicationPeerConfig peerConfig;
 
   // To allow the empty entries to get filtered, we want to this optional flag to decide
   // if we want to filter the entries which have no cells or all cells got filtered though WALCellFilter
-  private boolean filterEmptyEntry = false;
+  private String filterEmptyEntry;
 
   public ChainWALEntryFilter(WALEntryFilter...filters) {
     this.filters = filters;
     initCellFilters();
   }
 
-  public ChainWALEntryFilter(List<WALEntryFilter> filters) {
+  public ChainWALEntryFilter(List<WALEntryFilter> filters, ReplicationPeer replicationPeer) {
+    if (replicationPeer != null) {
+        peerConfig = replicationPeer.getPeerConfig();
+        if (peerConfig != null) {
+          filterEmptyEntry = peerConfig.getConfiguration().get(HBASE_REPLICATION_WAL_FILTER_EMPTY_ENTRY);
+        }
+    }
+
     ArrayList<WALEntryFilter> rawFilters = new ArrayList<>(filters.size());
     // flatten the chains
     for (WALEntryFilter filter : filters) {
@@ -72,14 +82,15 @@ public class ChainWALEntryFilter implements WALEntryFilter {
 
   @Override
   public Entry filter(Entry entry) {
-    if (entry == null) {
-      return null;
-    }
+
     for (WALEntryFilter filter : filters) {
+      if (entry == null) {
+        return null;
+      }
       entry = filter.filter(entry);
     }
     filterCells(entry);
-    if (filterEmptyEntry && entry.getEdit().isEmpty()) {
+    if (shouldFilterEmptyEntry() && entry != null && entry.getEdit().isEmpty()) {
       return null;
     }
     return entry;
@@ -102,7 +113,8 @@ public class ChainWALEntryFilter implements WALEntryFilter {
     return cell;
   }
 
-  public void setFilterEmptyEntry(boolean filterEmptyEntry) {
-    this.filterEmptyEntry = filterEmptyEntry;
+  public boolean shouldFilterEmptyEntry() {
+    return (filterEmptyEntry != null
+        && filterEmptyEntry.equalsIgnoreCase("true"));
   }
 }

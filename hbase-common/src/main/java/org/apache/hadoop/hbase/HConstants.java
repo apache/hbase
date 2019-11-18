@@ -1295,6 +1295,9 @@ public final class HConstants {
   /** Configuration key for SplitLog manager timeout */
   public static final String HBASE_SPLITLOG_MANAGER_TIMEOUT = "hbase.splitlog.manager.timeout";
 
+  /** To allow the empty entries to get filtered  which have no cells or all cells got filtered though WALCellFilter */
+  public static final String HBASE_REPLICATION_WAL_FILTER_EMPTY_ENTRY = "hbase.replication.wal.filteremptyentry";
+
   /**
    * Configuration keys for Bucket cache
    */

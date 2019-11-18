@@ -48,6 +48,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.mockito.Mockito;
 
 @Category({ ReplicationTests.class, SmallTests.class })
 public class TestReplicationWALEntryFilters {
@@ -195,11 +196,12 @@ public class TestReplicationWALEntryFilters {
     assertEquals(userEntry2, filterSomeCells.filter(userEntry2));
 
     ChainWALEntryFilter filterAllCells = new ChainWALEntryFilter(new FilterAllCellsWALCellFilter());
-    assertEquals(createEntry(null), filterAllCells.filter(userEntry));
+    ChainWALEntryFilter spyFilterAllCells = Mockito.spy(filterAllCells);
+    assertEquals(createEntry(null), spyFilterAllCells.filter(userEntry));
     // let's set the filter empty entry flag to true now for the above case
-    filterAllCells.setFilterEmptyEntry(true);
+    Mockito.doReturn(true).when(spyFilterAllCells).shouldFilterEmptyEntry();
     // since WALCellFilter filter all cells, whole entry should be filtered
-    assertEquals(null, filterAllCells.filter(userEntry));
+    assertEquals(null, spyFilterAllCells.filter(userEntry));
   }
 
   @Test

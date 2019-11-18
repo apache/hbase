@@ -41,15 +41,16 @@ public abstract class BaseReplicationEndpoint extends AbstractService
   public static final String REPLICATION_WALENTRYFILTER_CONFIG_KEY
       = "hbase.replication.source.custom.walentryfilters";
   protected Context ctx;
+  private ReplicationPeer replicationPeer;
 
   @Override
   public void init(Context context) throws IOException {
     this.ctx = context;
 
     if (this.ctx != null){
-      ReplicationPeer peer = this.ctx.getReplicationPeer();
-      if (peer != null){
-        peer.registerPeerConfigListener(this);
+      replicationPeer = this.ctx.getReplicationPeer();
+      if (replicationPeer != null){
+        replicationPeer.registerPeerConfigListener(this);
       } else {
         LOG.warn("Not tracking replication peer config changes for Peer Id " + this.ctx.getPeerId() +
             " because there's no such peer");
@@ -91,7 +92,7 @@ public abstract class BaseReplicationEndpoint extends AbstractService
         }
       }
     }
-    return filters.isEmpty() ? null : new ChainWALEntryFilter(filters);
+    return filters.isEmpty() ? null : new ChainWALEntryFilter(filters, this.replicationPeer);
   }
 
   /** Returns a WALEntryFilter for checking the scope. Subclasses can
