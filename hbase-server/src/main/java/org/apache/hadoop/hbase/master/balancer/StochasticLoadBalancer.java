@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.SwapRegi
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.net.Address;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 import com.google.common.base.Optional;
 
