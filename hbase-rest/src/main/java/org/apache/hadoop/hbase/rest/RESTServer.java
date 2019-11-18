@@ -19,7 +19,11 @@
 package org.apache.hadoop.hbase.rest;
 
 import java.lang.management.ManagementFactory;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 
 import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
