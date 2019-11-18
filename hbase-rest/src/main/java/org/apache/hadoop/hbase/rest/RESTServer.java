@@ -24,7 +24,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 
 import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.hadoop.hbase.rest.filter.SecurityHeadersFilter;
+import org.apache.hadoop.hbase.http.SecurityHeadersFilter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;

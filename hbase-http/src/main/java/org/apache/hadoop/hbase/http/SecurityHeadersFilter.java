@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.rest.filter;
+package org.apache.hadoop.hbase.http;
 
 import java.io.IOException;
 import javax.servlet.Filter;

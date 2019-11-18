@@ -598,8 +598,8 @@ public class HttpServer implements FilterContainer {
     addGlobalFilter("safety", QuotingInputFilter.class.getName(), null);
     Map<String, String> params = new HashMap<>();
     params.put("xframeoptions", conf.get("hbase.http.filter.xframeoptions.mode", "DENY"));
-    addGlobalFilter("clickjackingprevention",
-            ClickjackingPreventionFilter.class.getName(), params);
+    addGlobalFilter("securityheaders",
+            SecurityHeadersFilter.class.getName(), params);
     final FilterInitializer[] initializers = getFilterInitializers(conf);
     if (initializers != null) {
       conf = new Configuration(conf);
