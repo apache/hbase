@@ -69,7 +69,7 @@ public class TestHbckChore extends TestAssignmentManagerBase {
   @Test
   public void testForMeta() {
     byte[] metaRegionNameAsBytes = RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName();
-    String metaRegionName = RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName();
+    String metaRegionName = RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionNameAsString();
     List<ServerName> serverNames = master.getServerManager().getOnlineServersList();
     assertEquals(NSERVERS, serverNames.size());
 
@@ -96,7 +96,7 @@ public class TestHbckChore extends TestAssignmentManagerBase {
   public void testForUserTable() throws Exception {
     TableName tableName = TableName.valueOf("testForUserTable");
     RegionInfo hri = createRegionInfo(tableName, 1);
-    String regionName = hri.getEncodedName();
+    String regionName = hri.getRegionNameAsString();
     rsDispatcher.setMockRsExecutor(new GoodRsExecutor());
     Future<byte[]> future = submitProcedure(createAssignProcedure(hri));
     waitOnFuture(future);
@@ -154,7 +154,7 @@ public class TestHbckChore extends TestAssignmentManagerBase {
   public void testForDisabledTable() throws Exception {
     TableName tableName = TableName.valueOf("testForDisabledTable");
     RegionInfo hri = createRegionInfo(tableName, 1);
-    String regionName = hri.getEncodedName();
+    String regionName = hri.getRegionNameAsString();
     rsDispatcher.setMockRsExecutor(new GoodRsExecutor());
     Future<byte[]> future = submitProcedure(createAssignProcedure(hri));
     waitOnFuture(future);

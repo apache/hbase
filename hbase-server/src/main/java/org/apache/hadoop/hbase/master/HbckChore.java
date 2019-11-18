@@ -190,10 +190,10 @@ public class HbckChore extends ScheduledChore {
       RegionInfo regionInfo = regionState.getRegion();
       if (master.getTableStateManager()
           .isTableState(regionInfo.getTable(), TableState.State.DISABLED)) {
-        disabledTableRegions.add(regionInfo.getEncodedName());
+        disabledTableRegions.add(regionInfo.getRegionNameAsString());
       }
       if (regionInfo.isSplitParent()) {
-        splitParentRegions.add(regionInfo.getEncodedName());
+        splitParentRegions.add(regionInfo.getRegionNameAsString());
       }
       HbckRegionInfo.MetaEntry metaEntry =
           new HbckRegionInfo.MetaEntry(regionInfo, regionState.getServerName(),
@@ -212,7 +212,7 @@ public class HbckChore extends ScheduledChore {
         String encodedRegionName = RegionInfo.encodeRegionName(regionName);
         HbckRegionInfo hri = regionInfoMap.get(encodedRegionName);
         if (hri == null) {
-          orphanRegionsOnRS.put(encodedRegionName, serverName);
+          orphanRegionsOnRS.put(RegionInfo.getRegionNameAsString(regionName), serverName);
           continue;
         }
         hri.addServer(hri.getMetaEntry(), serverName);
@@ -223,7 +223,6 @@ public class HbckChore extends ScheduledChore {
         numRegions, rsReports.size(), orphanRegionsOnFS.size());
 
     for (Map.Entry<String, HbckRegionInfo> entry : regionInfoMap.entrySet()) {
-      String encodedRegionName = entry.getKey();
       HbckRegionInfo hri = entry.getValue();
       ServerName locationInMeta = hri.getMetaEntry().getRegionServer();
       if (hri.getDeployedOn().size() == 0) {
@@ -231,21 +230,24 @@ public class HbckChore extends ScheduledChore {
           continue;
         }
         // skip the offline region which belong to disabled table.
-        if (disabledTableRegions.contains(encodedRegionName)) {
+        if (disabledTableRegions.contains(hri.getRegionNameAsString())) {
           continue;
         }
         // skip the split parent regions
-        if (splitParentRegions.contains(encodedRegionName)) {
+        if (splitParentRegions.contains(hri.getRegionNameAsString())) {
           continue;
         }
         // Master thought this region opened, but no regionserver reported it.
-        inconsistentRegions.put(encodedRegionName, new Pair<>(locationInMeta, new LinkedList<>()));
+        inconsistentRegions.put(hri.getRegionNameAsString(),
+            new Pair<>(locationInMeta, new LinkedList<>()));
       } else if (hri.getDeployedOn().size() > 1) {
         // More than one regionserver reported opened this region
-        inconsistentRegions.put(encodedRegionName, new Pair<>(locationInMeta, hri.getDeployedOn()));
+        inconsistentRegions.put(hri.getRegionNameAsString(),
+            new Pair<>(locationInMeta, hri.getDeployedOn()));
       } else if (!hri.getDeployedOn().get(0).equals(locationInMeta)) {
         // Master thought this region opened on Server1, but regionserver reported Server2
-        inconsistentRegions.put(encodedRegionName, new Pair<>(locationInMeta, hri.getDeployedOn()));
+        inconsistentRegions.put(hri.getRegionNameAsString(),
+            new Pair<>(locationInMeta, hri.getDeployedOn()));
       }
     }
   }
