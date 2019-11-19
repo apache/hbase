@@ -70,19 +70,22 @@ import org.slf4j.LoggerFactory;
 /**
  * Start the HBase Thrift HTTP server on a random port through the command-line
  * interface and talk to it from client side with SPNEGO security enabled.
+ *
+ * Supplemental test to TestThriftSpnegoHttpServer which falls back to the original
+ * Kerberos principal and keytab configuration properties, not the separate
+ * SPNEGO-specific properties.
  */
 @Category({ClientTests.class, LargeTests.class})
-public class TestThriftSpnegoHttpServer extends TestThriftHttpServer {
+public class TestThriftSpnegoHttpFallbackServer extends TestThriftHttpServer {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestThriftSpnegoHttpServer.class);
+    HBaseClassTestRule.forClass(TestThriftSpnegoHttpFallbackServer.class);
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(TestThriftSpnegoHttpServer.class);
+    LoggerFactory.getLogger(TestThriftSpnegoHttpFallbackServer.class);
 
   private static SimpleKdcServer kdc;
   private static File serverKeytab;
-  private static File spnegoServerKeytab;
   private static File clientKeytab;
 
   private static String clientPrincipal;
@@ -120,11 +123,11 @@ public class TestThriftSpnegoHttpServer extends TestThriftHttpServer {
     conf.set(Constants.THRIFT_KERBEROS_PRINCIPAL_KEY, serverPrincipal);
     conf.set(Constants.THRIFT_KEYTAB_FILE_KEY, serverKeytab.getAbsolutePath());
 
-    HBaseKerberosUtils.setSecuredConfiguration(conf, serverPrincipal, spnegoServerPrincipal);
-    conf.set("hadoop.proxyuser.hbase.hosts", "*");
-    conf.set("hadoop.proxyuser.hbase.groups", "*");
-    conf.set(Constants.THRIFT_SPNEGO_PRINCIPAL_KEY, spnegoServerPrincipal);
-    conf.set(Constants.THRIFT_SPNEGO_KEYTAB_FILE_KEY, spnegoServerKeytab.getAbsolutePath());
+    HBaseKerberosUtils.setSecuredConfiguration(conf, spnegoServerPrincipal,
+      spnegoServerPrincipal);
+    conf.set("hadoop.proxyuser.HTTP.hosts", "*");
+    conf.set("hadoop.proxyuser.HTTP.groups", "*");
+    conf.set(Constants.THRIFT_KERBEROS_PRINCIPAL_KEY, spnegoServerPrincipal);
   }
 
   @BeforeClass
@@ -142,11 +145,9 @@ public class TestThriftSpnegoHttpServer extends TestThriftHttpServer {
     serverPrincipal = "hbase/" + HConstants.LOCALHOST + "@" + kdc.getKdcConfig().getKdcRealm();
     serverKeytab = new File(keytabDir, serverPrincipal.replace('/', '_') + ".keytab");
 
-    // Setup separate SPNEGO keytab
     spnegoServerPrincipal = "HTTP/" + HConstants.LOCALHOST + "@" + kdc.getKdcConfig().getKdcRealm();
-    spnegoServerKeytab = new File(keytabDir, spnegoServerPrincipal.replace('/', '_') + ".keytab");
-    kdc.createAndExportPrincipals(spnegoServerKeytab, spnegoServerPrincipal);
-    kdc.createAndExportPrincipals(serverKeytab, serverPrincipal);
+    // Add SPNEGO principal to server keytab
+    kdc.createAndExportPrincipals(serverKeytab, serverPrincipal, spnegoServerPrincipal);
 
     TEST_UTIL.getConfiguration().setBoolean(Constants.USE_HTTP_CONF_KEY, true);
     addSecurityConfigurations(TEST_UTIL.getConfiguration());
@@ -172,8 +173,8 @@ public class TestThriftSpnegoHttpServer extends TestThriftHttpServer {
   protected void talkToThriftServer(String url, int customHeaderSize) throws Exception {
     // Close httpClient and THttpClient automatically on any failures
     try (
-        CloseableHttpClient httpClient = createHttpClient();
-        THttpClient tHttpClient = new THttpClient(url, httpClient)
+      CloseableHttpClient httpClient = createHttpClient();
+      THttpClient tHttpClient = new THttpClient(url, httpClient)
     ) {
       tHttpClient.open();
       if (customHeaderSize > 0) {
@@ -202,7 +203,7 @@ public class TestThriftSpnegoHttpServer extends TestThriftHttpServer {
     // Get a TGT for the subject (might have many, different encryption types). The first should
     // be the default encryption type.
     Set<KerberosTicket> privateCredentials =
-        clientSubject.getPrivateCredentials(KerberosTicket.class);
+      clientSubject.getPrivateCredentials(KerberosTicket.class);
     assertFalse("Found no private credentials in the clientSubject.",
       privateCredentials.isEmpty());
     KerberosTicket tgt = privateCredentials.iterator().next();
@@ -220,19 +221,19 @@ public class TestThriftSpnegoHttpServer extends TestThriftHttpServer {
         Oid oid = new Oid("1.2.840.113554.1.2.2");
         GSSName gssClient = gssManager.createName(clientPrincipalName, GSSName.NT_USER_NAME);
         GSSCredential credential = gssManager.createCredential(gssClient,
-            GSSCredential.DEFAULT_LIFETIME, oid, GSSCredential.INITIATE_ONLY);
+          GSSCredential.DEFAULT_LIFETIME, oid, GSSCredential.INITIATE_ONLY);
 
         Lookup<AuthSchemeProvider> authRegistry = RegistryBuilder.<AuthSchemeProvider>create()
-            .register(AuthSchemes.SPNEGO, new SPNegoSchemeFactory(true, true))
-            .build();
+          .register(AuthSchemes.SPNEGO, new SPNegoSchemeFactory(true, true))
+          .build();
 
         BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
         credentialsProvider.setCredentials(AuthScope.ANY, new KerberosCredentials(credential));
 
         return HttpClients.custom()
-            .setDefaultAuthSchemeRegistry(authRegistry)
-            .setDefaultCredentialsProvider(credentialsProvider)
-            .build();
+          .setDefaultAuthSchemeRegistry(authRegistry)
+          .setDefaultCredentialsProvider(credentialsProvider)
+          .build();
       }
     });
   }

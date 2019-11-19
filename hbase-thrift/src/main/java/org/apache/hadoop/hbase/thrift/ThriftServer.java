@@ -61,6 +61,8 @@ import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_QOP_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SELECTOR_NUM;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SERVER_SOCKET_READ_TIMEOUT_DEFAULT;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SERVER_SOCKET_READ_TIMEOUT_KEY;
+import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SPNEGO_KEYTAB_FILE_KEY;
+import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SPNEGO_PRINCIPAL_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_ENABLED_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_EXCLUDE_CIPHER_SUITES_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_EXCLUDE_PROTOCOLS_KEY;
@@ -172,6 +174,7 @@ public class ThriftServer  extends Configured implements Tool {
   protected ThriftMetrics metrics;
   protected HBaseServiceHandler hbaseServiceHandler;
   protected UserGroupInformation serviceUGI;
+  protected UserGroupInformation httpUGI;
   protected boolean httpEnabled;
 
   protected SaslUtil.QualityOfProtection qop;
@@ -210,8 +213,19 @@ public class ThriftServer  extends Configured implements Tool {
           conf.get(THRIFT_DNS_INTERFACE_KEY, "default"),
           conf.get(THRIFT_DNS_NAMESERVER_KEY, "default")));
       userProvider.login(THRIFT_KEYTAB_FILE_KEY, THRIFT_KERBEROS_PRINCIPAL_KEY, host);
+
+      // Setup the SPNEGO user for HTTP if configured
+      String spnegoPrincipal = getSpengoPrincipal(conf, host);
+      String spnegoKeytab = getSpnegoKeytab(conf);
+      UserGroupInformation.setConfiguration(conf);
+      // login the SPNEGO principal using UGI to avoid polluting the login user
+      this.httpUGI = UserGroupInformation.loginUserFromKeytabAndReturnUGI(spnegoPrincipal,
+        spnegoKeytab);
     }
     this.serviceUGI = userProvider.getCurrent().getUGI();
+    if (httpUGI == null) {
+      this.httpUGI = serviceUGI;
+    }
 
     this.listenPort = conf.getInt(PORT_CONF_KEY, DEFAULT_LISTEN_PORT);
     this.metrics = createThriftMetrics(conf);
@@ -247,6 +261,37 @@ public class ThriftServer  extends Configured implements Tool {
     }
     registerFilters(conf);
     pauseMonitor.start();
+  }
+
+  private String getSpengoPrincipal(Configuration conf, String host) throws IOException {
+    String principal = conf.get(THRIFT_SPNEGO_PRINCIPAL_KEY);
+    if (principal == null) {
+      // We cannot use the Hadoop configuration deprecation handling here since
+      // the THRIFT_KERBEROS_PRINCIPAL_KEY config is still valid for regular Kerberos
+      // communication. The preference should be to use the THRIFT_SPNEGO_PRINCIPAL_KEY
+      // config so that THRIFT_KERBEROS_PRINCIPAL_KEY doesn't control both backend
+      // Kerberos principal and SPNEGO principal.
+      LOG.info("Using deprecated {} config for SPNEGO principal. Use {} instead.",
+        THRIFT_KERBEROS_PRINCIPAL_KEY, THRIFT_SPNEGO_PRINCIPAL_KEY);
+      principal = conf.get(THRIFT_KERBEROS_PRINCIPAL_KEY);
+    }
+    // Handle _HOST in principal value
+    return org.apache.hadoop.security.SecurityUtil.getServerPrincipal(principal, host);
+  }
+
+  private String getSpnegoKeytab(Configuration conf) {
+    String keytab = conf.get(THRIFT_SPNEGO_KEYTAB_FILE_KEY);
+    if (keytab == null) {
+      // We cannot use the Hadoop configuration deprecation handling here since
+      // the THRIFT_KEYTAB_FILE_KEY config is still valid for regular Kerberos
+      // communication. The preference should be to use the THRIFT_SPNEGO_KEYTAB_FILE_KEY
+      // config so that THRIFT_KEYTAB_FILE_KEY doesn't control both backend
+      // Kerberos keytab and SPNEGO keytab.
+      LOG.info("Using deprecated {} config for SPNEGO keytab. Use {} instead.",
+        THRIFT_KEYTAB_FILE_KEY, THRIFT_SPNEGO_KEYTAB_FILE_KEY);
+      keytab = conf.get(THRIFT_KEYTAB_FILE_KEY);
+    }
+    return keytab;
   }
 
   protected void startInfoServer() throws IOException {
@@ -316,11 +361,10 @@ public class ThriftServer  extends Configured implements Tool {
    * Create a Servlet for the http server
    * @param protocolFactory protocolFactory
    * @return the servlet
-   * @throws IOException IOException
    */
-  protected TServlet createTServlet(TProtocolFactory protocolFactory) throws IOException {
-    return new ThriftHttpServlet(processor, protocolFactory, serviceUGI,
-        conf, hbaseServiceHandler, securityEnabled, doAsEnabled);
+  protected TServlet createTServlet(TProtocolFactory protocolFactory) {
+    return new ThriftHttpServlet(processor, protocolFactory, serviceUGI, httpUGI,
+        hbaseServiceHandler, securityEnabled, doAsEnabled);
   }
 
   /**
