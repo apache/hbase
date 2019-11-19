@@ -27,6 +27,7 @@ import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
@@ -1019,19 +1020,18 @@ public abstract class CommonFSUtils {
   }
 
   /**
-   * If our FileSystem version includes the StreamCapabilities class, check if
-   * the given stream has a particular capability.
+   * If our FileSystem version includes the StreamCapabilities class, check if the given stream has
+   * a particular capability.
    * @param stream capabilities are per-stream instance, so check this one specifically. must not be
-   *        null
+   *          null
    * @param capability what to look for, per Hadoop Common's FileSystem docs
    * @return true if there are no StreamCapabilities. false if there are, but this stream doesn't
    *         implement it. return result of asking the stream otherwise.
+   * @throws NullPointerException if {@code stream} is {@code null}
    */
   public static boolean hasCapability(FSDataOutputStream stream, String capability) {
     // be consistent whether or not StreamCapabilities is present
-    if (stream == null) {
-      throw new NullPointerException("stream parameter must not be null.");
-    }
+    Objects.requireNonNull(stream, "stream cannot be null");
     // If o.a.h.fs.StreamCapabilities doesn't exist, assume everyone does everything
     // otherwise old versions of Hadoop will break.
     boolean result = true;

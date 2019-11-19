@@ -21,6 +21,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.LinkedList;
+import java.util.ArrayDeque;
+import java.util.Objects;
 import java.util.Queue;
 
 import org.apache.hadoop.hbase.Cell;
@@ -163,8 +165,7 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
 
   @Override
   public void append(Cell cell) throws IOException {
-    if (cell == null)
-      throw new NullPointerException();
+    Objects.requireNonNull(cell);
 
     enqueueReadyChunk(false);
 

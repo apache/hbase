@@ -46,7 +46,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
@@ -269,9 +271,7 @@ public class HStoreFile implements StoreFile {
 
   @Override
   public boolean isMajorCompactionResult() {
-    if (this.majorCompaction == null) {
-      throw new NullPointerException("This has not been set yet");
-    }
+    Preconditions.checkState(this.majorCompaction != null, "Major compation has not been set yet");
     return this.majorCompaction.get();
   }
 

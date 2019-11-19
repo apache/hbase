@@ -43,6 +43,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.RandomAccess;
 import java.util.Set;
@@ -7281,13 +7282,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param rsServices An interface we can request flushes against.
    * @param reporter An interface we can report progress against.
    * @return new HRegion
+   * @throws NullPointerException if {@code info} is {@code null}
    */
   public static HRegion openHRegion(final Configuration conf, final FileSystem fs,
       final Path rootDir, final Path tableDir, final RegionInfo info, final TableDescriptor htd,
       final WAL wal, final RegionServerServices rsServices,
       final CancelableProgressable reporter)
       throws IOException {
-    if (info == null) throw new NullPointerException("Passed region info is null");
+    Objects.requireNonNull(info, "RegionInfo cannot be null");
     if (LOG.isDebugEnabled()) {
       LOG.debug("Opening region: " + info);
     }
@@ -7360,12 +7362,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param info Info for region to be opened.
    * @param htd the table descriptor
    * @return new HRegion
+   * @throws NullPointerException if {@code info} is {@code null}
    */
   public static HRegion openReadOnlyFileSystemHRegion(final Configuration conf, final FileSystem fs,
       final Path tableDir, RegionInfo info, final TableDescriptor htd) throws IOException {
-    if (info == null) {
-      throw new NullPointerException("Passed region info is null");
-    }
+    Objects.requireNonNull(info, "RegionInfo cannot be null");
     if (LOG.isDebugEnabled()) {
       LOG.debug("Opening region (readOnly filesystem): " + info);
     }
@@ -7383,7 +7384,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       final CancelableProgressable reporter)
       throws IOException {
 
-    if (info == null) throw new NullPointerException("Passed region info is null");
+    Objects.requireNonNull(info, "RegionInfo cannot be null");
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("HRegion.Warming up region: " + info);
