@@ -81,12 +81,15 @@ public class HBCKServerCrashProcedure extends ServerCrashProcedure {
       LOG.warn("Failed get of all regions; continuing", ioe);
     }
     if (ps == null || ps.isEmpty()) {
+      LOG.warn("No regions found in hbase:meta");
       return ris;
     }
     List<RegionInfo> aggregate = ris == null || ris.isEmpty()?
         new ArrayList<>(): new ArrayList<>(ris);
+    int before = aggregate.size();
     ps.stream().filter(p -> p.getSecond() != null && p.getSecond().equals(getServerName())).
         forEach(p -> aggregate.add(p.getFirst()));
+    LOG.info("Found {} mentions of {} in hbase:meta", aggregate.size() - before, getServerName());
     return aggregate;
   }
 }
