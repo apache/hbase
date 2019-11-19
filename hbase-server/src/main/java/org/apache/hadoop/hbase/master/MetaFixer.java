@@ -29,7 +29,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
@@ -99,11 +98,13 @@ class MetaFixer {
       HRegion.createRegionDir(configuration, ri, FSUtils.getRootDir(configuration));
       // If an error here, then we'll have a region in the filesystem but not
       // in hbase:meta (if the below fails). Should be able to rerun the fix.
-      // The second call to createRegionDir will just go through. Idempotent.
-      Put put = MetaTableAccessor.makePutFromRegionInfo(ri, HConstants.LATEST_TIMESTAMP);
-      MetaTableAccessor.putsToMetaTable(this.masterServices.getConnection(),
-          Collections.singletonList(put));
-      LOG.info("Fixed hole by adding {}; region is NOT assigned (assign to online).", ri);
+      // Add to hbase:meta and then update in-memory state so it knows of new
+      // Region; addRegionToMeta adds region and adds a state column set to CLOSED.
+      MetaTableAccessor.addRegionToMeta(this.masterServices.getConnection(), ri);
+      this.masterServices.getAssignmentManager().getRegionStates().
+          updateRegionState(ri, RegionState.State.CLOSED);
+      LOG.info("Fixed hole by adding {} in CLOSED state; region NOT assigned (assign to ONLINE).",
+          ri);
     }
   }
 
