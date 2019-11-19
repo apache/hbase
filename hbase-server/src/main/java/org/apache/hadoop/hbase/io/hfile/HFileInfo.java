@@ -29,6 +29,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -122,12 +123,13 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
    *          with the reserved prefix
    * @return this file info object
    * @throws IOException if the key or value is invalid
+   * @throws NullPointerException if {@code key} or {@code value} is {@code null}
    */
   public HFileInfo append(final byte[] k, final byte[] v,
       final boolean checkPrefix) throws IOException {
-    if (k == null || v == null) {
-      throw new NullPointerException("Key nor value may be null");
-    }
+    Objects.requireNonNull(k, "key cannot be null");
+    Objects.requireNonNull(v, "value cannot be null");
+
     if (checkPrefix && isReservedFileInfoKey(k)) {
       throw new IOException("Keys with a " + HFileInfo.RESERVED_PREFIX
           + " are reserved");

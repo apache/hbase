@@ -135,7 +135,7 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
@@ -716,11 +716,9 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       }
     }
 
-    if (zkPermissionWatcher == null) {
-      throw new NullPointerException("ZKPermissionWatcher is null");
-    } else if (accessChecker == null) {
-      throw new NullPointerException("AccessChecker is null");
-    }
+    Preconditions.checkState(zkPermissionWatcher != null, "ZKPermissionWatcher is null");
+    Preconditions.checkState(accessChecker != null, "AccessChecker is null");
+
     // set the user-provider.
     this.userProvider = UserProvider.instantiate(env.getConfiguration());
     tableAcls = new MapMaker().weakValues().makeMap();
