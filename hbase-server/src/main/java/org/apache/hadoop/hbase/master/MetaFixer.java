@@ -100,10 +100,9 @@ class MetaFixer {
       // If an error here, then we'll have a region in the filesystem but not
       // in hbase:meta (if the below fails). Should be able to rerun the fix.
       // The second call to createRegionDir will just go through. Idempotent.
-      Put put = MetaTableAccessor.makePutFromRegionInfo(ri, HConstants.LATEST_TIMESTAMP);
-      MetaTableAccessor.putsToMetaTable(this.masterServices.getConnection(),
-          Collections.singletonList(put));
-      LOG.info("Fixed hole by adding {}; region is NOT assigned (assign to online).", ri);
+      MetaTableAccessor.addRegionToMeta(this.masterServices.getConnection(), ri);
+      LOG.info("Fixed hole by adding {} in CLOSED state; region NOT assigned (assign to ONLINE).",
+          ri);
     }
   }
 
