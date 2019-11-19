@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.master.balancer.FavoredStochasticBalancer;
+import org.apache.hadoop.hbase.master.procedure.HBCKServerCrashProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
@@ -1485,14 +1486,14 @@ public class AssignmentManager {
   }
 
   public long submitServerCrash(ServerName serverName, boolean shouldSplitWal) {
-    boolean carryingMeta;
-    long pid;
+    // If serverNode is not known, its an 'Unknown Server' case.
     ServerStateNode serverNode = regionStates.getServerNode(serverName);
     if (serverNode == null) {
-      LOG.info("Skip to add SCP for {} since this server should be OFFLINE already", serverName);
-      return -1;
+      LOG.warn("Unknown {}", serverName);
     }
 
+    boolean carryingMeta;
+    long pid;
     // Remove the in-memory rsReports result
     synchronized (rsReports) {
       rsReports.remove(serverName);
@@ -1502,26 +1503,38 @@ public class AssignmentManager {
     // server state to CRASHED, we will no longer accept the reportRegionStateTransition call from
     // this server. This is used to simplify the implementation for TRSP and SCP, where we can make
     // sure that, the region list fetched by SCP will not be changed any more.
-    serverNode.writeLock().lock();
+    if (serverNode != null) {
+      serverNode.writeLock().lock();
+    }
     try {
       ProcedureExecutor<MasterProcedureEnv> procExec = this.master.getMasterProcedureExecutor();
       carryingMeta = isCarryingMeta(serverName);
-      if (!serverNode.isInState(ServerState.ONLINE)) {
+      if (serverNode != null && !serverNode.isInState(ServerState.ONLINE)) {
         LOG.info(
           "Skip to add SCP for {} with meta= {}, " +
               "since there should be a SCP is processing or already done for this server node",
           serverName, carryingMeta);
         return -1;
       } else {
-        serverNode.setState(ServerState.CRASHED);
-        pid = procExec.submitProcedure(new ServerCrashProcedure(procExec.getEnvironment(),
-            serverName, shouldSplitWal, carryingMeta));
+        if (serverNode != null) {
+          serverNode.setState(ServerState.CRASHED);
+        }
+        // If serverNode == null, then 'Unknown Server'. Schedule HBCKSCP instead.
+        // It scours Master in-memory state AND hbase;meta for references to
+        // serverName just-in-case. An SCP that is scheduled when the server is
+        // 'Unknown' probably originated externally with HBCK2 fix-it tool.
+        MasterProcedureEnv mpe = procExec.getEnvironment();
+        pid = procExec.submitProcedure(serverNode != null?
+          new ServerCrashProcedure(mpe, serverName, shouldSplitWal, carryingMeta):
+          new HBCKServerCrashProcedure(mpe, serverName, shouldSplitWal, carryingMeta));
         LOG.info(
-          "Added {} to dead servers which carryingMeta={}, submitted ServerCrashProcedure pid={}",
+          "Added {} to dead servers, carryingMeta={}, submitted ServerCrashProcedure pid={}",
           serverName, carryingMeta, pid);
       }
     } finally {
-      serverNode.writeLock().unlock();
+      if (serverNode != null) {
+        serverNode.writeLock().unlock();
+      }
     }
     return pid;
   }
