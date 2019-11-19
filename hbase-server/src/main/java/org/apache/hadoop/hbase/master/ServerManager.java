@@ -33,7 +33,6 @@ import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClockOutOfSyncException;
@@ -532,32 +531,18 @@ public class ServerManager {
 
   /**
    * Expire the passed server. Add it to list of dead servers and queue a shutdown processing.
-   * @return True if we queued a ServerCrashProcedure else false if we did not (could happen for
-   *         many reasons including the fact that its this server that is going down or we already
-   *         have queued an SCP for this server or SCP processing is currently disabled because we
-   *         are in startup phase).
+   * @return pid if we queued a ServerCrashProcedure else {@link Procedure#NO_PROC_ID} if we did
+   *         not (could happen for many reasons including the fact that its this server that is
+   *         going down or we already have queued an SCP for this server or SCP processing is
+   *         currently disabled because we are in startup phase).
    */
-  public boolean expireServer(final ServerName serverName) {
-    return expireServer(serverName, new Function<ServerName, Long>() {
-      @Override
-      public Long apply(ServerName serverName) {
-        return master.getAssignmentManager().submitServerCrash(serverName, true);
-      }
-    }) != Procedure.NO_PROC_ID;
+  @VisibleForTesting // Redo test so we can make this protected.
+  public synchronized long expireServer(final ServerName serverName) {
+    return expireServer(serverName, false);
+
   }
 
-  /**
-   * Expire the passed server. Add it to list of dead servers and queue a shutdown processing.
-   * Used when expireServer is externally invoked by hbck2.
-   * @param function Takes ServerName and returns pid. See default implementation which queues
-   *                 an SCP via the AssignmentManager.
-   * @return True if we queued a ServerCrashProcedure else false if we did not (could happen for
-   *         many reasons including the fact that its this server that is going down or we already
-   *         have queued an SCP for this server or SCP processing is currently disabled because we
-   *         are in startup phase).
-   */
-  synchronized long expireServer(final ServerName serverName,
-      Function<ServerName, Long> function) {
+  synchronized long expireServer(final ServerName serverName, boolean force) {
     // THIS server is going down... can't handle our own expiration.
     if (serverName.equals(master.getServerName())) {
       if (!(master.isAborted() || master.isStopped())) {
@@ -582,10 +567,7 @@ public class ServerManager {
       return Procedure.NO_PROC_ID;
     }
     LOG.info("Processing expiration of " + serverName + " on " + this.master.getServerName());
-    long pid = function.apply(serverName);
-    if (pid <= 0) {
-      return Procedure.NO_PROC_ID;
-    }
+    long pid = master.getAssignmentManager().submitServerCrash(serverName, true, force);
     // Tell our listeners that a server was removed
     if (!this.listeners.isEmpty()) {
       this.listeners.stream().forEach(l -> l.serverRemoved(serverName));
