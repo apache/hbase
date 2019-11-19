@@ -316,8 +316,8 @@ public class HFileOutputFormat2
                                     .withCompression(compression)
                                     .withChecksumType(HStore.getChecksumType(conf))
                                     .withBytesPerCheckSum(HStore.getBytesPerChecksum(conf))
-                                    .withBlockSize(blockSize);
-
+                                    .withBlockSize(blockSize)
+                                    .withColumnFamily(family);
         if (HFile.getFormatVersion(conf) >= HFile.MIN_FORMAT_VERSION_WITH_TAGS) {
           contextBuilder.withIncludesTags(true);
         }

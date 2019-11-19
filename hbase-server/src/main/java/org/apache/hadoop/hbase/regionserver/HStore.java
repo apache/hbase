@@ -1158,6 +1158,9 @@ public class HStore implements Store {
                                 .withDataBlockEncoding(family.getDataBlockEncoding())
                                 .withEncryptionContext(cryptoContext)
                                 .withCreateTime(EnvironmentEdgeManager.currentTime())
+                                .withColumnFamily(family.getName())
+                                .withTableName(region.getTableDesc().
+                                    getTableName().getName())
                                 .build();
     return hFileContext;
   }

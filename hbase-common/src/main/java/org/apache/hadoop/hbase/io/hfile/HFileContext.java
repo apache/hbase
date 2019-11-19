@@ -57,6 +57,8 @@ public class HFileContext implements HeapSize, Cloneable {
   private Encryption.Context cryptoContext = Encryption.Context.NONE;
   private long fileCreateTime;
   private String hfileName;
+  private byte[] columnFamily;
+  private byte[] tableName;
 
   //Empty constructor.  Go with setters
   public HFileContext() {
@@ -79,12 +81,15 @@ public class HFileContext implements HeapSize, Cloneable {
     this.cryptoContext = context.cryptoContext;
     this.fileCreateTime = context.fileCreateTime;
     this.hfileName = context.hfileName;
+    this.columnFamily = context.columnFamily;
+    this.tableName = context.tableName;
   }
 
   public HFileContext(boolean useHBaseChecksum, boolean includesMvcc, boolean includesTags,
-      Compression.Algorithm compressAlgo, boolean compressTags, ChecksumType checksumType,
-      int bytesPerChecksum, int blockSize, DataBlockEncoding encoding,
-      Encryption.Context cryptoContext, long fileCreateTime, String hfileName) {
+               Compression.Algorithm compressAlgo, boolean compressTags, ChecksumType checksumType,
+               int bytesPerChecksum, int blockSize, DataBlockEncoding encoding,
+               Encryption.Context cryptoContext, long fileCreateTime, String hfileName,
+               byte[] columnFamily, byte[] tableName) {
     this.usesHBaseChecksum = useHBaseChecksum;
     this.includesMvcc =  includesMvcc;
     this.includesTags = includesTags;
@@ -99,6 +104,8 @@ public class HFileContext implements HeapSize, Cloneable {
     this.cryptoContext = cryptoContext;
     this.fileCreateTime = fileCreateTime;
     this.hfileName = hfileName;
+    this.columnFamily = columnFamily;
+    this.tableName = tableName;
   }
 
   /**
@@ -194,6 +201,14 @@ public class HFileContext implements HeapSize, Cloneable {
     return this.hfileName;
   }
 
+  public byte[] getColumnFamily() {
+    return this.columnFamily;
+  }
+
+  public byte[] getTableName() {
+    return this.tableName;
+  }
+
   /**
    * HeapSize implementation
    * NOTE : The heapsize should be altered as and when new state variable are added
@@ -207,7 +222,15 @@ public class HFileContext implements HeapSize, Cloneable {
         2 * Bytes.SIZEOF_INT +
         // usesHBaseChecksum, includesMvcc, includesTags and compressTags
         4 * Bytes.SIZEOF_BOOLEAN +
+        //column family, table name byte arrays
+        2 * ClassSize.ARRAY + 2 * ClassSize.REFERENCE +
         Bytes.SIZEOF_LONG);
+    if (this.columnFamily != null){
+      size += ClassSize.sizeOf(this.columnFamily, this.columnFamily.length);
+    }
+    if (this.tableName != null){
+      size += ClassSize.sizeOf(this.tableName, this.tableName.length);
+    }
     return size;
   }
 
@@ -233,9 +256,17 @@ public class HFileContext implements HeapSize, Cloneable {
     sb.append(" includesTags=");      sb.append(includesTags);
     sb.append(" compressAlgo=");      sb.append(compressAlgo);
     sb.append(" compressTags=");      sb.append(compressTags);
-    sb.append(" cryptoContext=[ ");   sb.append(cryptoContext);      sb.append(" ]");
+    sb.append(" cryptoContext=[ ");   sb.append(cryptoContext);
+    sb.append(" ]");
+    if (tableName != null) {
+      sb.append(", tableName=");
+      sb.append(Bytes.toString(tableName));
+    }
+    if (columnFamily != null) {
+      sb.append(", columnFamily=");
+      sb.append(Bytes.toString(columnFamily));
+    }
     sb.append(" ]");
     return sb.toString();
   }
-
 }

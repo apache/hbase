@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -144,6 +145,7 @@ public class TestStore {
    */
   @Before
   public void setUp() throws IOException {
+    qualifiers.clear();
     qualifiers.add(qf1);
     qualifiers.add(qf3);
     qualifiers.add(qf5);
@@ -1447,6 +1449,16 @@ public class TestStore {
           , Bytes.equals(actualValue, value));
       }
     }
+  }
+
+  @Test
+  public void testHFileContextSetWithCFAndTable() throws Exception {
+    init(this.name.getMethodName());
+    StoreFile.Writer writer = store.createWriterInTmp(10000L,
+        Compression.Algorithm.NONE, false, true, false, true);
+    HFileContext hFileContext = writer.getHFileWriter().getFileContext();
+    assertArrayEquals(family, hFileContext.getColumnFamily());
+    assertArrayEquals(table, hFileContext.getTableName());
   }
 
   private MyStore initMyStore(String methodName, Configuration conf, MyStoreHook hook) throws IOException {
