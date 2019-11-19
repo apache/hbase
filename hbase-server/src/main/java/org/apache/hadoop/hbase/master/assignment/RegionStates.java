@@ -714,6 +714,9 @@ public class RegionStates {
     serverMap.remove(serverName);
   }
 
+  /**
+   * @return Pertinent ServerStateNode or NULL if none found.
+   */
   @VisibleForTesting
   public ServerStateNode getServerNode(final ServerName serverName) {
     return serverMap.get(serverName);
