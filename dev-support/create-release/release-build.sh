@@ -126,7 +126,7 @@ if [ -z "$VERSION" ]; then
 fi
 
 # Profiles for publishing snapshots and release to Maven Central
-PUBLISH_PROFILES="-Papache-release -Prelease"
+PUBLISH_PROFILES="-P apache-release,release"
 
 # This is a band-aid fix to avoid the failure of Maven nightly snapshot in some Jenkins
 # machines by explicitly calling /usr/sbin/lsof. Please see SPARK-22377 and the discussion
@@ -210,7 +210,7 @@ if [[ "$1" == "publish-snapshot" ]]; then
   fi
   # Coerce the requested version
   $MVN versions:set -DnewVersion=$VERSION
-  $MVN --settings $tmp_settings -DskipTests $PUBLISH_PROFILES deploy
+  $MVN --settings $tmp_settings -DskipTests "$PUBLISH_PROFILES" deploy
   cd ..
   exit 0
 fi
@@ -235,12 +235,12 @@ if [[ "$1" == "publish-release" ]]; then
   $MVN versions:set -DnewVersion=$VERSION
   MAVEN_OPTS="${MAVEN_OPTS}" ${MVN} --settings $tmp_settings \
     clean install -DskipTests \
-    -Dcheckstyle.skip=true ${PUBLISH_PROFILES} \
+    -Dcheckstyle.skip=true "${PUBLISH_PROFILES}" \
     -Dmaven.repo.local="${tmp_repo}"
   pushd "${tmp_repo}/${groupid_as_dir}"
   # Remove any extra files generated during install
   # Remove extaneous files from module subdirs
-  find $modules -type f | grep -v \.jar | grep -v \.pom | xargs rm
+  find $modules -type f | grep -v \.jar | grep -v \.pom | xargs rm -rf
 
   # Using Nexus API documented here:
   # https://support.sonatype.com/entries/39720203-Uploading-to-a-Staging-Repository-via-REST-API
@@ -280,7 +280,7 @@ if [[ "$1" == "publish-release" ]]; then
 
   if ! is_dry_run; then
     nexus_upload=$NEXUS_ROOT/deployByRepositoryId/$staged_repo_id
-    echo "Uplading files to $nexus_upload"
+    echo "Uploading files to $nexus_upload"
     for file in $(find ${modules} -type f)
     do
       # strip leading ./
