@@ -39,25 +39,32 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 /**
  * A cache of meta region location metadata. Registers a listener on ZK to track changes to the
  * meta table znodes. Clients are expected to retry if the meta information is stale. This class
- * is thread-safe.
+ * is thread-safe (a single instance of this class can be shared by multiple threads without race
+ * conditions).
  */
 @InterfaceAudience.Private
 public class MetaRegionLocationCache extends ZKListener {
 
   private static final Logger LOG = LoggerFactory.getLogger(MetaRegionLocationCache.class);
 
-  // Maximum number of times we retry when ZK operation times out.
+  /**
+   * Maximum number of times we retry when ZK operation times out.
+   */
   private static final int MAX_ZK_META_FETCH_RETRIES = 10;
-  // Sleep interval ms between ZK operation retries.
+  /**
+   * Sleep interval ms between ZK operation retries.
+   */
   private static final int SLEEP_INTERVAL_MS_BETWEEN_RETRIES = 1000;
   private final RetryCounterFactory retryCounterFactory =
       new RetryCounterFactory(MAX_ZK_META_FETCH_RETRIES, SLEEP_INTERVAL_MS_BETWEEN_RETRIES);
 
-  // Cached meta region locations indexed by replica ID.
-  // CopyOnWriteArrayMap ensures synchronization during updates and a consistent snapshot during
-  // client requests. Even though CopyOnWriteArrayMap copies the data structure for every write,
-  // that should be OK since the size of the list is often small and mutations are not too often
-  // and we do not need to block client requests while mutations are in progress.
+  /**
+   * Cached meta region locations indexed by replica ID.
+   * CopyOnWriteArrayMap ensures synchronization during updates and a consistent snapshot during
+   * client requests. Even though CopyOnWriteArrayMap copies the data structure for every write,
+   * that should be OK since the size of the list is often small and mutations are not too often
+   * and we do not need to block client requests while mutations are in progress.
+   */
   private final CopyOnWriteArrayMap<Integer, HRegionLocation> cachedMetaLocations;
 
   private enum ZNodeOpType {
@@ -77,28 +84,36 @@ public class MetaRegionLocationCache extends ZKListener {
     populateInitialMetaLocations();
   }
 
+  /**
+   * Populates the current snapshot of meta locations from ZK. If no meta znodes exist, it registers
+   * a watcher on base znode to check for any CREATE/DELETE events on the children.
+   */
   private void populateInitialMetaLocations() {
     RetryCounter retryCounter = retryCounterFactory.create();
     List<String> znodes = null;
-    do {
+    while (retryCounter.shouldRetry()) {
       try {
-        znodes = watcher.getMetaReplicaNodes();
+        znodes = watcher.getMetaReplicaNodesAndWatch();
         break;
       } catch (KeeperException ke) {
-        LOG.debug("Error populating intial meta locations", ke);
+        LOG.debug("Error populating initial meta locations", ke);
+        if (!retryCounter.shouldRetry()) {
+          // Retries exhausted and watchers not set. This is not a desirable state since the cache
+          // could remain stale forever. Propagate the exception.
+          watcher.abort("Error populating meta locations", ke);
+          return;
+        }
         try {
           retryCounter.sleepUntilNextRetry();
         } catch (InterruptedException ie) {
-          LOG.error("Interrupted while populating intial meta locations", ie);
+          Thread.currentThread().interrupt();
           return;
         }
-        if (!retryCounter.shouldRetry()) {
-          LOG.error("Error populating intial meta locations. Retries exhausted. Last error: ", ke);
-          break;
-        }
       }
-    } while (retryCounter.shouldRetry());
+    }
     if (znodes == null) {
+      // No meta znodes exist at this point but we registered a watcher on the base znode to listen
+      // for updates. They will be handled via nodeChildrenChanged().
       return;
     }
     for (String znode: znodes) {
@@ -135,7 +150,7 @@ public class MetaRegionLocationCache extends ZKListener {
     int replicaId = watcher.getZNodePaths().getMetaReplicaIdFromPath(path);
     RetryCounter retryCounter = retryCounterFactory.create();
     HRegionLocation location = null;
-    do {
+    while (retryCounter.shouldRetry()) {
       try {
         if (opType == ZNodeOpType.DELETED) {
           if (!ZKUtil.watchAndCheckExists(watcher, path)) {
@@ -149,18 +164,18 @@ public class MetaRegionLocationCache extends ZKListener {
         break;
       } catch (KeeperException e) {
         LOG.debug("Error getting meta location for path {}", path, e);
-        if (retryCounter.shouldRetry()) {
-          try {
-            retryCounter.sleepUntilNextRetry();
-          } catch (InterruptedException ie) {
-            LOG.error("Interrupted while updating meta location for path {}", path, ie);
-            return;
-          }
-        } else {
-          LOG.error("Error getting meta location for path {}. Retries exhausted.", path, e);
+        if (!retryCounter.shouldRetry()) {
+          LOG.warn("Error getting meta location for path {}. Retries exhausted.", path, e);
+          break;
+        }
+        try {
+          retryCounter.sleepUntilNextRetry();
+        } catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
+          return;
         }
       }
-    } while (retryCounter.shouldRetry());
+    }
     if (location == null) {
       cachedMetaLocations.remove(replicaId);
       return;
@@ -169,12 +184,13 @@ public class MetaRegionLocationCache extends ZKListener {
   }
 
   /**
-   * @return List of HRegionLocations for meta replica(s), null if the cache is empty.
+   * @return Optional list of HRegionLocations for meta replica(s), null if the cache is empty.
+   *
    */
   public Optional<List<HRegionLocation>> getMetaRegionLocations() {
     ConcurrentNavigableMap<Integer, HRegionLocation> snapshot =
         cachedMetaLocations.tailMap(cachedMetaLocations.firstKey());
-    if (snapshot == null || snapshot.isEmpty()) {
+    if (snapshot.isEmpty()) {
       // This could be possible if the master has not successfully initialized yet or meta region
       // is stuck in some weird state.
       return Optional.empty();
@@ -207,5 +223,15 @@ public class MetaRegionLocationCache extends ZKListener {
   @Override
   public void nodeDataChanged(String path) {
     updateMetaLocation(path, ZNodeOpType.CHANGED);
+  }
+
+  @Override
+  public void nodeChildrenChanged(String path) {
+    if (!path.equals(watcher.getZNodePaths().baseZNode)) {
+      return;
+    }
+    // Can get triggered for *any* children change, but that is OK. It does not happen once the
+    // initial set of meta znodes are populated.
+    populateInitialMetaLocations();
   }
 }

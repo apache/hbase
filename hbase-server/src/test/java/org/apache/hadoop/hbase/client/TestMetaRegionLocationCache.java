@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import java.util.ArrayList;
@@ -30,7 +29,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState;
-import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
@@ -54,7 +52,6 @@ public class TestMetaRegionLocationCache {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    TEST_UTIL.getConfiguration().set(BaseLoadBalancer.TABLES_ON_MASTER, "none");
     TEST_UTIL.getConfiguration().setInt(HConstants.META_REPLICAS_NUM, 3);
     TEST_UTIL.startMiniCluster(3);
     REGISTRY = AsyncRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
@@ -84,7 +81,6 @@ public class TestMetaRegionLocationCache {
   private void verifyCachedMetaLocations(HMaster master) throws Exception {
     List<HRegionLocation> metaHRLs =
         master.getMetaRegionLocationCache().getMetaRegionLocations().get();
-    assertTrue(metaHRLs != null);
     assertFalse(metaHRLs.isEmpty());
     ZKWatcher zk = master.getZooKeeper();
     List<String> metaZnodes = zk.getMetaReplicaNodes();
