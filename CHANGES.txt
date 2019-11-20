@@ -1,5 +1,29 @@
 HBase Change Log
 
+Release Notes - HBase - Version 1.4.12
+
+** Bug
+    * [HBASE-18439] - Subclasses of o.a.h.h.chaos.actions.Action all use the same logger
+    * [HBASE-23149] - hbase shouldPerformMajorCompaction logic is not correct
+    * [HBASE-23185] - High cpu usage because getTable()#put() gets config value every time
+    * [HBASE-23261] - Region stuck in transition while splitting
+    * [HBASE-23273] - Table header is not correct on table.jsp when table name is hbase:meta
+    * [HBASE-23287] - WALs not aged off of HDFS because LogCleaner is not added to choreService
+
+** Improvement
+    * [HBASE-22701] - Better handle invalid local directory for DynamicClassLoader
+    * [HBASE-23207] - Log a region open journal
+    * [HBASE-23228] - Allow for jdk8 specific modules on branch-1 in precommit/nightly testing
+    * [HBASE-23245] - All MutableHistogram implementations should remove maxExpected
+    * [HBASE-23323] - Release 1.4.12
+
+** Task
+    * [HBASE-23219] - Re-enable ZKLess tests for branch-1 (Revert HBASE-14622)
+    * [HBASE-23227] - Upgrade jackson-databind to 2.9.10.1 to avoid recent CVEs
+    * [HBASE-23236] - Upgrade to yetus 0.11.1
+    * [HBASE-23250] - Log message about CleanerChore delegate initialization should be at INFO
+
+
 Release Notes - HBase - Version 1.4.11 10/24/2019
 
 ** Sub-task
