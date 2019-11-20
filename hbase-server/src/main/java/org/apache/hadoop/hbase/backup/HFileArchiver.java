@@ -309,20 +309,16 @@ public class HFileArchiver {
    * store files, but supporting WAL dir and store files on different FileSystems added the need for
    * extra validation of the passed FileSystem instance and the path where the archiving edits
    * should be placed.
-   *
-   *
-   *
-   * @param conf
-   * @param fs
-   * @param regionInfo
-   * @param family
-   * @param replayedEdits
-   * @throws IOException
-   * @throws FailedArchiveException
+   * @param conf {@link Configuration} to determine the archive directory.
+   * @param fs the filesystem used for storing WAL files.
+   * @param regionInfo {@link RegionInfo} a pseudo region representation for the archiving logic.
+   * @param family a pseudo familiy representation for the archiving logic.
+   * @param replayedEdits the recovered edits to be archived.
+   * @throws IOException if files can't be achived due to some internal error.
    */
   public static void archiveRecoveredEdits(Configuration conf, FileSystem fs, RegionInfo regionInfo,
     byte[] family, Collection<HStoreFile> replayedEdits)
-    throws IOException, FailedArchiveException {
+    throws IOException {
     String workingDir = conf.get(CommonFSUtils.HBASE_WAL_DIR);
     //Expects the WAL dir FS. If hbase.wal.dir is null, then WAL FS must be same one for StoreFiles
     if(workingDir == null){
