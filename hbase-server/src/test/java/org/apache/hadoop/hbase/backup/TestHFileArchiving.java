@@ -30,6 +30,7 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -140,35 +141,33 @@ public class TestHFileArchiving {
   @Test
   public void testArchiveStoreFilesDifferentFileSystemsWallWithSchemaPlainRoot() throws Exception {
     String walDir = "mockFS://mockFSAuthority:9876/mockDir/wals/";
-    testArchiveStoreFilesDifferentFileSystems(walDir, "/hbase", walDir);
-  }
-
-  @Test
-  public void testArchiveStoreFilesDifferentFileSystemsWallNullRootWithSchema() throws Exception {
-    String rootDir = "testFS://test:5432/hbase/";
-    testArchiveStoreFilesDifferentFileSystems(null, rootDir, rootDir);
+    String baseDir = FSUtils.getRootDir(UTIL.getConfiguration()).toString() + "/";
+    testArchiveStoreFilesDifferentFileSystems(walDir, baseDir,
+      HFileArchiver::archiveStoreFiles);
   }
 
   @Test
   public void testArchiveStoreFilesDifferentFileSystemsWallNullPlainRoot() throws Exception {
-    String rootDir = "/hbase/";
-    testArchiveStoreFilesDifferentFileSystems(null, rootDir, rootDir);
+    String baseDir = FSUtils.getRootDir(UTIL.getConfiguration()).toString() + "/";
+    testArchiveStoreFilesDifferentFileSystems(null, baseDir,
+      HFileArchiver::archiveStoreFiles);
   }
 
   @Test
   public void testArchiveStoreFilesDifferentFileSystemsWallAndRootSame() throws Exception {
-    String rootDir = "/hbase/";
-    testArchiveStoreFilesDifferentFileSystems("/hbase/wals/", rootDir, rootDir);
+    String baseDir = FSUtils.getRootDir(UTIL.getConfiguration()).toString() + "/";
+    testArchiveStoreFilesDifferentFileSystems("/hbase/wals/", baseDir,
+      HFileArchiver::archiveStoreFiles);
   }
 
-  private void testArchiveStoreFilesDifferentFileSystems(String walDir, String rootDir,
-      String expectedBase) throws IOException {
+  private void testArchiveStoreFilesDifferentFileSystems(String walDir, String expectedBase,
+    ArchivingFunction<Configuration, FileSystem, RegionInfo, Path, byte[],
+      Collection<HStoreFile>> archivingFunction) throws IOException {
     FileSystem mockedFileSystem = mock(FileSystem.class);
     Configuration conf = new Configuration(UTIL.getConfiguration());
     if(walDir != null) {
       conf.set(CommonFSUtils.HBASE_WAL_DIR, walDir);
     }
-    conf.set(HConstants.HBASE_DIR, rootDir);
     Path filePath = new Path("/mockDir/wals/mockFile");
     when(mockedFileSystem.getScheme()).thenReturn("mockFS");
     when(mockedFileSystem.mkdirs(any())).thenReturn(true);
@@ -184,13 +183,60 @@ public class TestHFileArchiving {
     list.add(mockedFile);
     when(mockedFile.getPath()).thenReturn(filePath);
     when(mockedFileSystem.rename(any(),any())).thenReturn(true);
-    HFileArchiver.archiveStoreFiles(conf, mockedFileSystem, mockedRegion,
-      tableDir, family, list);
+    archivingFunction.apply(conf, mockedFileSystem, mockedRegion, tableDir, family, list);
     ArgumentCaptor<Path> pathCaptor = ArgumentCaptor.forClass(Path.class);
     verify(mockedFileSystem, times(2)).rename(pathCaptor.capture(), any());
     String expectedDir = expectedBase +
       "archive/data/default/mockTable/mocked-region-encoded-name/testfamily/mockFile";
     assertTrue(pathCaptor.getAllValues().get(0).toString().equals(expectedDir));
+  }
+
+  @FunctionalInterface
+  private interface ArchivingFunction<Configuration, FS, Region, Dir, Family, Files> {
+    void apply(Configuration config, FS fs, Region region, Dir dir, Family family, Files files)
+      throws IOException;
+  }
+
+  @Test
+  public void testArchiveRecoveredEditsWalDirNull() throws Exception {
+    testArchiveRecoveredEditsWalDirNullOrSame(null);
+  }
+
+  @Test
+  public void testArchiveRecoveredEditsWalDirSameFsStoreFiles() throws Exception {
+    testArchiveRecoveredEditsWalDirNullOrSame("/wal-dir");
+  }
+
+  private void testArchiveRecoveredEditsWalDirNullOrSame(String walDir) throws Exception {
+    String originalRootDir = UTIL.getConfiguration().get(HConstants.HBASE_DIR);
+    try {
+      String baseDir = "mockFS://mockFSAuthority:9876/hbase/";
+      UTIL.getConfiguration().set(HConstants.HBASE_DIR, baseDir);
+      testArchiveStoreFilesDifferentFileSystems(walDir, baseDir,
+        (conf, fs, region, dir, family, list) -> HFileArchiver
+          .archiveRecoveredEdits(conf, fs, region, family, list));
+    } finally {
+      UTIL.getConfiguration().set(HConstants.HBASE_DIR, originalRootDir);
+    }
+  }
+
+  @Test(expected = IOException.class)
+  public void testArchiveRecoveredEditsWrongFS() throws Exception {
+    String baseDir = FSUtils.getRootDir(UTIL.getConfiguration()).toString() + "/";
+    //Internally, testArchiveStoreFilesDifferentFileSystems will pass a "mockedFS"
+    // to HFileArchiver.archiveRecoveredEdits, but since wal-dir is supposedly on same FS
+    // as root dir it would lead to conflicting FSes and an IOException is expected.
+    testArchiveStoreFilesDifferentFileSystems("/wal-dir", baseDir,
+      (conf, fs, region, dir, family, list) -> HFileArchiver
+        .archiveRecoveredEdits(conf, fs, region, family, list));
+  }
+
+  @Test
+  public void testArchiveRecoveredEditsWalDirDifferentFS() throws Exception {
+    String walDir = "mockFS://mockFSAuthority:9876/mockDir/wals/";
+    testArchiveStoreFilesDifferentFileSystems(walDir, walDir,
+      (conf, fs, region, dir, family, list) ->
+        HFileArchiver.archiveRecoveredEdits(conf, fs, region, family, list));
   }
 
   @Test
