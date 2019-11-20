@@ -35,7 +35,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Validate no negative value in requestsPerSecond metric.
+ * Validate requestsPerSecond metric.
  */
 @Category({ RegionServerTests.class, MediumTests.class })
 public class TestRequestsPerSecondMetric {
@@ -61,7 +61,21 @@ public class TestRequestsPerSecondMetric {
     UTIL.shutdownMiniCluster();
   }
 
+
   @Test
+  /**
+   * This test will confirm no negative value in requestsPerSecond metric during any region
+   * transition(close region/remove region/move region).
+   * Firstly, load 2000 random rows for 25 regions and will trigger a metric.
+   * Now, metricCache will have a current read and write requests count.
+   * Next, we disable a table and all of its 25 regions will be closed.
+   * As part of region close, his metric will also be removed from metricCache.
+   * prior to HBASE-23237, we do not remove/reset his metric so we incorrectly compute
+   * (currentRequestCount - lastRequestCount) which result into negative value.
+   *
+   * @throws IOException
+   * @throws InterruptedException
+   */
   public void testNoNegativeSignAtRequestsPerSecond() throws IOException, InterruptedException {
     final TableName TABLENAME = TableName.valueOf("t");
     final String FAMILY = "f";

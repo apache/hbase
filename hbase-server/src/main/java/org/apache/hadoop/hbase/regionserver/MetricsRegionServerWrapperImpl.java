@@ -118,7 +118,7 @@ class MetricsRegionServerWrapperImpl
   private volatile long mobFileCacheCount = 0;
   private volatile long blockedRequestsCount = 0L;
   private volatile long averageRegionSize = 0L;
-  protected volatile Map<String, ArrayList<Long>> requestsCountCache = new
+  protected final Map<String, ArrayList<Long>> requestsCountCache = new
       ConcurrentHashMap<String, ArrayList<Long>>();
 
   private ScheduledExecutorService executor;
@@ -722,10 +722,8 @@ class MetricsRegionServerWrapperImpl
         long totalReadRequestsDelta = 0;
         long totalWriteRequestsDelta = 0;
         String encodedRegionName;
-        ArrayList<String> hregions = new ArrayList<String>();
         for (HRegion r : regionServer.getOnlineRegionsLocalContext()) {
           encodedRegionName = r.getRegionInfo().getEncodedName();
-          hregions.add(encodedRegionName);
           currentReadRequestsCount = r.getReadRequestsCount();
           currentWriteRequestsCount = r.getWriteRequestsCount();
           if (requestsCountCache.containsKey(encodedRegionName)) {
@@ -816,9 +814,6 @@ class MetricsRegionServerWrapperImpl
           }
           regionCount++;
         }
-
-        //Removing regions from cache that are moved/closed/transitioned to another RS.
-        requestsCountCache.entrySet().removeIf(e -> !hregions.contains(e.getKey()));
 
         float localityIndex = hdfsBlocksDistribution.getBlockLocalityIndex(
             regionServer.getServerName().getHostname());
