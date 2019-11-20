@@ -189,7 +189,7 @@ public class HRegionFileSystem {
    * @param familyName The name of column family.
    * @param policyName The name of the storage policy
    */
-  public void setStoragePolicy(String familyName, String policyName) throws IOException{
+  public void setStoragePolicy(String familyName, String policyName) throws IOException {
     if (this.fs instanceof HFileSystem) {
       FSUtils.setStoragePolicy(((HFileSystem) this.fs).getBackingFs(), getStoreDir(familyName), policyName);
     } else {
