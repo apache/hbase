@@ -3434,6 +3434,10 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     return replicationLoadSourceMap;
   }
 
+  public ServerName getActiveMaster() {
+    return activeMasterManager.getActiveMasterServerName();
+  }
+
   public String getClusterId() {
     if (activeMaster) {
       return super.getClusterId();
