@@ -3769,7 +3769,10 @@ public class HMaster extends HRegionServer implements MasterServices {
     return this.hbckChore;
   }
 
-  @Override
+  public Optional<ServerName> getActiveMaster() {
+    return activeMasterManager.getActiveMasterServerName();
+  }
+
   public void runReplicationBarrierCleaner() {
     ReplicationBarrierCleaner rbc = this.replicationBarrierCleaner;
     if (rbc != null) {
