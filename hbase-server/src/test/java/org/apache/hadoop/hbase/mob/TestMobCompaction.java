@@ -22,6 +22,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -43,7 +44,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.MobFileCleanerChore;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
@@ -67,7 +68,7 @@ import org.slf4j.LoggerFactory;
 
  */
 @SuppressWarnings("deprecation")
-@Category(LargeTests.class)
+@Category(IntegrationTests.class)
 public class TestMobCompaction {
   private static final Logger LOG = LoggerFactory.getLogger(TestMobCompaction.class);
   @ClassRule
@@ -89,7 +90,7 @@ public class TestMobCompaction {
   private HTableDescriptor hdt;
   private HColumnDescriptor hcd;
   private Admin admin;
-  private long count = 100000;
+  private long count = 1000000;
   private double failureProb = 0.1;
   private Table table = null;
   private MobFileCleanerChore chore = new MobFileCleanerChore();
@@ -178,8 +179,14 @@ public class TestMobCompaction {
     conf.setInt("hbase.hstore.compaction.throughput.lower.bound", 52428800);
     conf.setInt("hbase.hstore.compaction.throughput.higher.bound", 2 * 52428800);
     conf.setDouble("injected.fault.probability", failureProb);
-    conf.set(MobStoreEngine.DEFAULT_MOB_COMPACTOR_CLASS_KEY,
-      FaultyMobStoreCompactor.class.getName());
+    //conf.set(MobStoreEngine.DEFAULT_MOB_COMPACTOR_CLASS_KEY,
+    //  FaultyMobStoreCompactor.class.getName());
+    conf.setLong(MobConstants.MOB_COMPACTION_CHORE_PERIOD, 0);
+    conf.setLong(MobConstants.MOB_CLEANER_PERIOD, 0);
+    conf.setLong(MobConstants.MIN_AGE_TO_ARCHIVE_KEY, 20000);
+    conf.set(MobConstants.MOB_COMPACTION_TYPE_KEY, 
+      MobConstants.IO_OPTIMIZED_MOB_COMPACTION_TYPE);
+    conf.setLong(MobConstants.MOB_COMPACTION_MAX_FILE_SIZE_KEY, 1000000);
 
   }
 
@@ -236,8 +243,12 @@ public class TestMobCompaction {
 
         // BufferedMutator bm = admin.getConnection().getBufferedMutator(table.getName());
         // Put Operation
+        Random r = new Random();
         for (int i = 0; i < rows; i++) {
-          Put p = new Put(Bytes.toBytes(i));
+          //Put p = new Put(Bytes.toBytes(i));
+          byte[] key = new byte[16];
+          r.nextBytes(key);
+          Put p = new Put(key);
           p.addColumn(fam, qualifier, mobVal);
           table.put(p);
 
@@ -287,6 +298,7 @@ public class TestMobCompaction {
       writeData.join();
       // Cleanup again
       chore.cleanupObsoleteMobFiles(conf, table.getName());
+      getNumberOfMobFiles(conf, table.getName(), new String(fam));
 
       if (HTU != null) {
         LOG.info("Archive cleaner started ...");
@@ -312,10 +324,12 @@ public class TestMobCompaction {
     FileSystem fs = FileSystem.get(conf);
     Path dir = MobUtils.getMobFamilyPath(conf, tableName, family);
     FileStatus[] stat = fs.listStatus(dir);
+    long size = 0;
     for (FileStatus st : stat) {
-      LOG.debug("MOB Directory content: {}", st.getPath());
+      LOG.debug("MOB Directory content: {} len={}", st.getPath(), st.getLen());
+      size+= st.getLen();
     }
-    LOG.debug("MOB Directory content total files: {}", stat.length);
+    LOG.debug("MOB Directory content total files: {}, total size={}", stat.length, size);
 
     return stat.length;
   }

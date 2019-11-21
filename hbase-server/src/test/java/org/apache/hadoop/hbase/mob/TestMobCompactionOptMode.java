@@ -33,8 +33,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
-  * Mob file compaction chore in a regular non-batch mode test.
-  * 1. Uses default (non-batch) mode for regular MOB compaction, 
+  * Mob file compaction chore in a generational non-batch mode test.
+  * 1. Uses default (non-batch) mode for regular MOB compaction, sets generational mode ON
   * 2. Disables periodic MOB compactions, sets minimum age to archive to 10 sec   
   * 3. Creates MOB table with 20 regions
   * 4. Loads MOB data (randomized keys, 1000 rows), flushes data.
@@ -49,24 +49,32 @@ import org.slf4j.LoggerFactory;
  */
 @SuppressWarnings("deprecation")
 @Category(LargeTests.class)
-public class TestMobCompactionRegularMode extends TestMobCompactionBase{
+public class TestMobCompactionOptMode extends TestMobCompactionBase{
   private static final Logger LOG = 
-      LoggerFactory.getLogger(TestMobCompactionRegularMode.class);
+      LoggerFactory.getLogger(TestMobCompactionOptMode.class);
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMobCompactionRegularMode.class);
+      HBaseClassTestRule.forClass(TestMobCompactionOptMode.class);
   @Rule
   public TestName testName = new TestName();
 
 
-  public TestMobCompactionRegularMode() {
+  public TestMobCompactionOptMode() {
+  }
+ 
+  @Override
+  protected void initConf() {
+    super.initConf();
+    conf.set(MobConstants.MOB_COMPACTION_TYPE_KEY, 
+      MobConstants.IO_OPTIMIZED_MOB_COMPACTION_TYPE);
+    conf.setLong(MobConstants.MOB_COMPACTION_MAX_FILE_SIZE_KEY, 1000000);
   }
   
   @Test
   public void testMobFileCompactionBatchMode() throws InterruptedException, IOException {
-    LOG.info("MOB compaction regular mode started");
+    LOG.info("MOB compaction generational (non-batch) mode started");
     baseTestMobFileCompaction();
-    LOG.info("MOB compaction regular mode finished OK");
+    LOG.info("MOB compaction generational (non-batch) mode finished OK");
  
   }
 

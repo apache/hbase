@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.hfile.HFileWriterImpl;
 import org.apache.hadoop.hbase.util.BloomContext;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
@@ -171,6 +172,9 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     }
   }
 
+  public long getPos() throws IOException {
+    return ((HFileWriterImpl) writer).getPos();
+  }
   /**
    * Writes meta data.
    * Call before {@link #close()} since its written as meta data to this file.

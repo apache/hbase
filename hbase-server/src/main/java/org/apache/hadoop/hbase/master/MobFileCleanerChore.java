@@ -181,6 +181,7 @@ public class MobFileCleanerChore extends ScheduledChore {
             }
             try {
               for (Path pp : storeFiles) {
+                /*DEBUG*/LOG.debug("DDDD Store file: {}", pp);
                 HStoreFile sf =
                     new HStoreFile(fs, pp, conf, CacheConfig.DISABLED, BloomType.NONE, true);
                 sf.initReader();
@@ -200,6 +201,7 @@ public class MobFileCleanerChore extends ScheduledChore {
                   // if length = 1 means NULL, that there are no MOB references
                   // in this store file, but the file was created by new MOB code
                   String[] mobs = new String(mobRefData).split(",");
+                  /*DEBUG*/LOG.debug("DDDD found: {} mob refs: ", mobs.length, Arrays.toString(mobs));
                   regionMobs.addAll(Arrays.asList(mobs));
                 }
               }
@@ -218,6 +220,9 @@ public class MobFileCleanerChore extends ScheduledChore {
         LOG.warn("Found too many active MOB files: {}, this may result in high memory pressure.", 
           allActiveMobFileName.size());
       }
+      /*DEBUG*/LOG.debug("DDDD Found: {} active mob refs", allActiveMobFileName.size());
+      allActiveMobFileName.stream().forEach(LOG::debug);
+
       // Now scan MOB directories and find MOB files with no references to them
       for (ColumnFamilyDescriptor hcd : list) {
         List<Path> toArchive = new ArrayList<Path>();
@@ -238,6 +243,8 @@ public class MobFileCleanerChore extends ScheduledChore {
             } else {
               LOG.info("Skipping fresh file: {}", p);
             }
+          } else {
+            LOG.info("Keepeing active MOB file: {}", p);
           }
         }
         LOG.info(" MOB Cleaner found {} files for family={}", toArchive.size() , family);

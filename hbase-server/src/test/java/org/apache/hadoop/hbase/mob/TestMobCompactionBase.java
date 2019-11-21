@@ -129,7 +129,6 @@ public abstract class TestMobCompactionBase {
     conf.setLong(MobConstants.MIN_AGE_TO_ARCHIVE_KEY, minAgeToArchive);
     // Set compacted file discharger interval to a half minAgeToArchive
     conf.setLong("hbase.hfile.compaction.discharger.interval", minAgeToArchive/2);
-    //conf.setInt(MobConstants.MOB_MAJOR_COMPACTION_REGION_BATCH_SIZE, 7);
   }
 
   private void loadData(int num) {

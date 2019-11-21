@@ -561,57 +561,6 @@ public final class MobUtils {
     return w;
   }
 
-  /**
-   * Commits the mob file.
-   * @param conf The current configuration.
-   * @param fs The current file system.
-   * @param sourceFile The path where the mob file is saved.
-   * @param targetPath The directory path where the source file is renamed to.
-   * @param cacheConfig The current cache config.
-   * @return The target file path the source file is renamed to.
-   * @throws IOException
-   */
-  public static Path commitFile(Configuration conf, FileSystem fs, final Path sourceFile,
-      Path targetPath, CacheConfig cacheConfig) throws IOException {
-    if (sourceFile == null) {
-      return null;
-    }
-    Path dstPath = new Path(targetPath, sourceFile.getName());
-    validateMobFile(conf, fs, sourceFile, cacheConfig, true);
-    String msg = "Renaming flushed file from " + sourceFile + " to " + dstPath;
-    LOG.info(msg);
-    Path parent = dstPath.getParent();
-    if (!fs.exists(parent)) {
-      fs.mkdirs(parent);
-    }
-    if (!fs.rename(sourceFile, dstPath)) {
-      throw new IOException("Failed rename of " + sourceFile + " to " + dstPath);
-    }
-    return dstPath;
-  }
-
-  /**
-   * Validates a mob file by opening and closing it.
-   * @param conf The current configuration.
-   * @param fs The current file system.
-   * @param path The path where the mob file is saved.
-   * @param cacheConfig The current cache config.
-   */
-  private static void validateMobFile(Configuration conf, FileSystem fs, Path path,
-      CacheConfig cacheConfig, boolean primaryReplica) throws IOException {
-    HStoreFile storeFile = null;
-    try {
-      storeFile = new HStoreFile(fs, path, conf, cacheConfig, BloomType.NONE, primaryReplica);
-      storeFile.initReader();
-    } catch (IOException e) {
-      LOG.error("Failed to open mob file[" + path + "], keep it in temp directory.", e);
-      throw e;
-    } finally {
-      if (storeFile != null) {
-        storeFile.closeStoreFile(false);
-      }
-    }
-  }
 
   /**
    * Indicates whether the current mob ref cell has a valid value. A mob ref cell has a mob
@@ -645,17 +594,6 @@ public final class MobUtils {
   public static String getMobFileName(Cell cell) {
     return Bytes.toString(cell.getValueArray(), cell.getValueOffset() + Bytes.SIZEOF_INT,
       cell.getValueLength() - Bytes.SIZEOF_INT);
-  }
-
-  /**
-   * Gets the table name used in the table lock. The table lock name is a dummy one, it's not a
-   * table name. It's tableName + ".mobLock".
-   * @param tn The table name.
-   * @return The table name used in table lock.
-   */
-  public static TableName getTableLockName(TableName tn) {
-    byte[] tableName = tn.getName();
-    return TableName.valueOf(Bytes.add(tableName, MobConstants.MOB_TABLE_LOCK_SUFFIX));
   }
 
   /**

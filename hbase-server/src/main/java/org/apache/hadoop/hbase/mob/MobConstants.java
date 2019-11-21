@@ -55,7 +55,6 @@ public final class MobConstants {
   public static final long DEFAULT_MOB_CACHE_EVICT_PERIOD = 3600L;
 
   public final static String TEMP_DIR_NAME = ".tmp";
-  public final static byte[] MOB_TABLE_LOCK_SUFFIX = Bytes.toBytes(".mobLock");
 
   /**
    * The max number of a MOB table regions that is allowed in a batch of the mob compaction.
@@ -83,15 +82,15 @@ public final class MobConstants {
   public static final String MOB_COMPACTOR_CLASS_KEY = "hbase.mob.compactor.class";
 
   /**
-   * Mob compaction type: "full", "generational"
+   * Mob compaction type: "full", "io_optimized"
    * "full" - run full major compaction (during migration)
-   * "generational" - optimized version
+   * "io_optimized" - optimized version for use  case with infrequent updates/deletes
    */
   public final static String MOB_COMPACTION_TYPE_KEY = "hbase.mob.compaction.type";
 
   public final static String DEFAULT_MOB_COMPACTION_TYPE = "full";
 
-  public final static String GENERATIONAL_MOB_COMPACTION_TYPE = "generational";
+  public final static String IO_OPTIMIZED_MOB_COMPACTION_TYPE = "optimized";
 
   public final static String FULL_MOB_COMPACTION_TYPE = "full";
 
@@ -99,40 +98,12 @@ public final class MobConstants {
   /**
    * Maximum size of a MOB compaction selection
    */
-  public static final String MOB_COMPACTION_MAX_SELECTION_SIZE_KEY =
-      "hbase.mob.compactions.max.selection.size";
+  public static final String MOB_COMPACTION_MAX_FILE_SIZE_KEY =
+      "hbase.mob.compactions.max.file.size";
   /**
    * Default maximum selection size = 1GB
    */
-  public static final long DEFAULT_MOB_COMPACTION_MAX_SELECTION_SIZE = 1024 * 1024 * 1024;
-
-
-  /**
-   * Minimum number of MOB files eligible for compaction
-   */
-  public static final String MOB_COMPACTION_MIN_FILES_KEY = "hbase.mob.compactions.min.files";
-
-  public static final int DEFAULT_MOB_COMPACTION_MIN_FILES = 3;
-
-  /**
-   * Maximum number of MOB files (in one compaction selection per region) eligible for compaction.
-   * If the number of a files in compaction selection is very large, it could lead 
-   * to a "too many opened file handlers" error in a file system or can degrade overall I/O
-   * performance.
-   */
-
-  public static final String MOB_COMPACTION_MAX_FILES_KEY = "hbase.mob.compactions.max.files";
-
-  public static final int DEFAULT_MOB_COMPACTION_MAX_FILES = 100;
-
-  /**
-   * Maximum number of MOB files allowed in MOB compaction (per region)
-   */
-
-  public static final String MOB_COMPACTION_MAX_TOTAL_FILES_KEY =
-                                        "hbase.mob.compactions.max.total.files";
-
-  public static final int DEFAULT_MOB_COMPACTION_MAX_TOTAL_FILES = 1000;
+  public static final long DEFAULT_MOB_COMPACTION_MAX_FILE_SIZE = 1024 * 1024 * 1024;
 
   /**
    * Use this configuration option with caution, only during upgrade procedure
@@ -147,7 +118,7 @@ public final class MobConstants {
    */
   public static final String MIN_AGE_TO_ARCHIVE_KEY = "hbase.mob.min.age.archive";
   
-  public static final long DEFAULT_MIN_AGE_TO_ARCHIVE = 3600000;
+  public static final long DEFAULT_MIN_AGE_TO_ARCHIVE = 3600000; // 1h
 
   private MobConstants() {
 

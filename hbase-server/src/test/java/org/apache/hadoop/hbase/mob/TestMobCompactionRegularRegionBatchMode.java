@@ -35,7 +35,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
-  * Mob file compaction chore in batch mode test.
+  * Mob file compaction chore in a regular batch mode test.
   * 1. Enables batch mode for regular MOB compaction, 
   *    Sets batch size to 7 regions.
   * 2. Disables periodic MOB compactions, sets minimum age to archive to 10 sec   
@@ -52,19 +52,19 @@ import org.slf4j.LoggerFactory;
  */
 @SuppressWarnings("deprecation")
 @Category(LargeTests.class)
-public class TestMobCompactionRegionBatchMode extends TestMobCompactionBase{
+public class TestMobCompactionRegularRegionBatchMode extends TestMobCompactionBase{
   private static final Logger LOG = 
-      LoggerFactory.getLogger(TestMobCompactionRegionBatchMode.class);
+      LoggerFactory.getLogger(TestMobCompactionRegularRegionBatchMode.class);
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMobCompactionRegionBatchMode.class);
+      HBaseClassTestRule.forClass(TestMobCompactionRegularRegionBatchMode.class);
   @Rule
   public TestName testName = new TestName();
 
   private int batchSize = 7;
   private MobFileCompactionChore compactionChore;
 
-  public TestMobCompactionRegionBatchMode() {
+  public TestMobCompactionRegularRegionBatchMode() {
   }
  
   @Before
@@ -80,9 +80,9 @@ public class TestMobCompactionRegionBatchMode extends TestMobCompactionBase{
 
   @Test
   public void testMobFileCompactionBatchMode() throws InterruptedException, IOException {
-    LOG.info("MOB compaction chore batch mode started");
+    LOG.info("MOB compaction chore regular batch mode started");
     baseTestMobFileCompaction();
-    LOG.info("MOB compaction chore batch mode finished OK");
+    LOG.info("MOB compaction chore regular batch mode finished OK");
  
   }
 
