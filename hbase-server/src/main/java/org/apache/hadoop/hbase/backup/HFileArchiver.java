@@ -319,11 +319,7 @@ public class HFileArchiver {
   public static void archiveRecoveredEdits(Configuration conf, FileSystem fs, RegionInfo regionInfo,
     byte[] family, Collection<HStoreFile> replayedEdits)
     throws IOException {
-    String workingDir = conf.get(CommonFSUtils.HBASE_WAL_DIR);
-    //Expects the WAL dir FS. If hbase.wal.dir is null, then WAL FS must be same one for StoreFiles
-    if(workingDir == null){
-      workingDir = conf.get(HConstants.HBASE_DIR);
-    }
+    String workingDir = conf.get(CommonFSUtils.HBASE_WAL_DIR, conf.get(HConstants.HBASE_DIR));
     //extra sanity checks for the right FS
     Path path = new Path(workingDir);
     if(path.isAbsoluteAndSchemeAuthorityNull()){
