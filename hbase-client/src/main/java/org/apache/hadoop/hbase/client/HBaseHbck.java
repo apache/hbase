@@ -26,6 +26,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -98,11 +100,25 @@ public class HBaseHbck implements Hbck {
   public TableState setTableStateInMeta(TableState state) throws IOException {
     try {
       GetTableStateResponse response = hbck.setTableStateInMeta(
-          rpcControllerFactory.newController(),
-          RequestConverter.buildSetTableStateInMetaRequest(state));
+        rpcControllerFactory.newController(),
+        RequestConverter.buildSetTableStateInMetaRequest(state));
       return TableState.convert(state.getTableName(), response.getTableState());
     } catch (ServiceException se) {
       LOG.debug("table={}, state={}", state.getTableName(), state.getState(), se);
+      throw new IOException(se);
+    }
+  }
+
+  @Override
+  public RegionState setRegionStateInMeta(RegionState state) throws IOException {
+    try {
+      LOG.trace("RegionInfo from state: {}", state.getRegion().getEncodedName());
+      MasterProtos.GetRegionStateResponse response = hbck.setRegionStateInMeta(
+        rpcControllerFactory.newController(),
+        RequestConverter.buildSetRegionStateInMetaRequest(state));
+      return RegionState.convert(response.getRegionState());
+    } catch (ServiceException se) {
+      LOG.debug("region={}, state={}", state.getRegion().getRegionName(), state.getState(), se);
       throw new IOException(se);
     }
   }

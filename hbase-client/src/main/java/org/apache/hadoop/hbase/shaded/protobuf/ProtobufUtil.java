@@ -2226,6 +2226,14 @@ public final class ProtobufUtil {
         .setQualifier(UnsafeByteOperations.unsafeWrap(tableName.getQualifier())).build();
   }
 
+  public static HBaseProtos.RegionInfo toProtoRegionInfo(
+    org.apache.hadoop.hbase.client.RegionInfo regionInfo) {
+    return HBaseProtos.RegionInfo.newBuilder()
+      .setRegionId(regionInfo.getRegionId())
+      .setRegionEncodedName(regionInfo.getEncodedName())
+      .setTableName(toProtoTableName(regionInfo.getTable())).build();
+  }
+
   public static List<TableName> toTableNameList(List<HBaseProtos.TableName> tableNamesList) {
     if (tableNamesList == null) {
       return new ArrayList<>();
@@ -3183,6 +3191,9 @@ public final class ProtobufUtil {
     .setSplit(split);
     if (proto.hasOffline()) {
       rib.setOffline(proto.getOffline());
+    }
+    if (proto.hasRegionEncodedName()) {
+      rib.setEncodedName(proto.getRegionEncodedName());
     }
     return rib.build();
   }

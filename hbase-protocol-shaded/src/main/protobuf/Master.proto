@@ -517,6 +517,10 @@ message GetTableStateResponse {
   required TableState table_state = 1;
 }
 
+message GetRegionStateResponse {
+  required RegionState region_state = 1;
+}
+
 
 message GetClusterStatusRequest {
   repeated Option options = 1;
@@ -1090,6 +1094,11 @@ message SetTableStateInMetaRequest {
   required TableState table_state = 2;
 }
 
+message SetRegionStateInMetaRequest {
+  required RegionInfo region_info = 1;
+  required RegionState region_state = 2;
+}
+
 /** Like Admin's AssignRegionRequest except it can
  * take one or more Regions at a time.
  */
@@ -1151,6 +1160,10 @@ service HbckService {
   /** Update state of the table in meta only*/
   rpc SetTableStateInMeta(SetTableStateInMetaRequest)
     returns(GetTableStateResponse);
+
+  /** Update state of the table in meta only*/
+  rpc SetRegionStateInMeta(SetRegionStateInMetaRequest)
+    returns(GetRegionStateResponse);
 
   /**
    * Assign regions.

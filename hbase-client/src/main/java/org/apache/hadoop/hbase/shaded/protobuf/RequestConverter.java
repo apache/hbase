@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -112,6 +113,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableCata
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterStatusRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetNamespaceDescriptorRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetRegionStateInMetaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetSchemaAlterStatusRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableNamesRequest;
@@ -1442,6 +1444,16 @@ public final class RequestConverter {
   public static SetTableStateInMetaRequest buildSetTableStateInMetaRequest(final TableState state) {
     return SetTableStateInMetaRequest.newBuilder().setTableState(state.convert())
         .setTableName(ProtobufUtil.toProtoTableName(state.getTableName())).build();
+  }
+
+  /**
+   * Creates a protocol buffer SetRegionStateInMetaRequest
+   * @param state region state to update in Meta
+   * @return a SetRegionStateInMetaRequest
+   */
+  public static SetRegionStateInMetaRequest buildSetRegionStateInMetaRequest(final RegionState state) {
+    return SetRegionStateInMetaRequest.newBuilder().setRegionState(state.convert())
+      .setRegionInfo(ProtobufUtil.toProtoRegionInfo(state.getRegion())).build();
   }
 
   /**
