@@ -33,6 +33,7 @@ public class MetaRWQueueRpcExecutor extends RWQueueRpcExecutor {
       "hbase.ipc.server.metacallqueue.read.ratio";
   public static final String META_CALL_QUEUE_SCAN_SHARE_CONF_KEY =
       "hbase.ipc.server.metacallqueue.scan.ratio";
+  public static final float DEFAULT_META_CALL_QUEUE_READ_SHARE = 0.9f;
 
   public MetaRWQueueRpcExecutor(final String name, final int handlerCount, final int maxQueueLength,
       final PriorityFunction priority, final Configuration conf, final Abortable abortable) {
@@ -41,7 +42,7 @@ public class MetaRWQueueRpcExecutor extends RWQueueRpcExecutor {
 
   @Override
   protected float getReadShare(final Configuration conf) {
-    return conf.getFloat(META_CALL_QUEUE_READ_SHARE_CONF_KEY, 0.9f);
+    return conf.getFloat(META_CALL_QUEUE_READ_SHARE_CONF_KEY, DEFAULT_META_CALL_QUEUE_READ_SHARE);
   }
 
   @Override

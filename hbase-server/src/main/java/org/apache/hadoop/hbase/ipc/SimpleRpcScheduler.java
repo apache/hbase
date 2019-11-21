@@ -101,7 +101,8 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
     }
 
     float metaCallqReadShare =
-        conf.getFloat(MetaRWQueueRpcExecutor.META_CALL_QUEUE_READ_SHARE_CONF_KEY, 0.9f);
+        conf.getFloat(MetaRWQueueRpcExecutor.META_CALL_QUEUE_READ_SHARE_CONF_KEY,
+            MetaRWQueueRpcExecutor.DEFAULT_META_CALL_QUEUE_READ_SHARE);
     if (metaCallqReadShare > 0) {
       // different read/write handler for meta, at least 1 read handler and 1 write handler
       this.priorityExecutor =
