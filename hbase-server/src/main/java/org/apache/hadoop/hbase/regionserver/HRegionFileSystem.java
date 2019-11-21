@@ -191,7 +191,9 @@ public class HRegionFileSystem {
    */
   public void setStoragePolicy(String familyName, String policyName) throws IOException {
     if (this.fs instanceof HFileSystem) {
-      FSUtils.setStoragePolicy(((HFileSystem) this.fs).getBackingFs(), getStoreDir(familyName), policyName);
+      FSUtils.setStoragePolicy(
+          ((HFileSystem) this.fs).getBackingFs(),
+          getStoreDir(familyName), policyName);
     } else {
       FSUtils.setStoragePolicy(this.fs, getStoreDir(familyName), policyName);
     }
