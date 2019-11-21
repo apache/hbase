@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,21 +17,19 @@
  */
 package org.apache.hadoop.hbase;
 
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Random;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -419,6 +416,51 @@ public class TestHBaseTestingUtility {
     }
     
     hbt.shutdownMiniMapReduceCluster();
+  }
+
+  @Test
+  public void testOverridingOfDefaultPorts() throws Exception {
+    // confirm that default port properties being overridden to random
+    Configuration defaultConfig = HBaseConfiguration.create();
+    defaultConfig.setInt(HConstants.MASTER_INFO_PORT, HConstants.DEFAULT_MASTER_INFOPORT);
+    defaultConfig.setInt(HConstants.REGIONSERVER_INFO_PORT,
+            HConstants.DEFAULT_REGIONSERVER_INFOPORT);
+    HBaseTestingUtility htu = new HBaseTestingUtility(defaultConfig);
+    try {
+      MiniHBaseCluster defaultCluster = htu.startMiniCluster();
+      final String masterHostPort =
+              defaultCluster.getMaster().getServerName().getAddress().toString();
+      assertNotEquals(HConstants.DEFAULT_MASTER_INFOPORT,
+              defaultCluster.getConfiguration().getInt(HConstants.MASTER_INFO_PORT, 0));
+      assertNotEquals(HConstants.DEFAULT_REGIONSERVER_INFOPORT,
+              defaultCluster.getConfiguration().getInt(HConstants.REGIONSERVER_INFO_PORT, 0));
+      assertEquals(masterHostPort,
+              defaultCluster.getConfiguration().get(HConstants.MASTER_ADDRS_KEY));
+    } finally {
+      htu.shutdownMiniCluster();
+    }
+
+    // confirm that nonDefault (custom) port settings are NOT overridden
+    Configuration altConfig = HBaseConfiguration.create();
+    final int nonDefaultMasterInfoPort = 3333;
+    final int nonDefaultRegionServerPort = 4444;
+    altConfig.setInt(HConstants.MASTER_INFO_PORT, nonDefaultMasterInfoPort);
+    altConfig.setInt(HConstants.REGIONSERVER_INFO_PORT, nonDefaultRegionServerPort);
+    altConfig.setBoolean(LocalHBaseCluster.ASSIGN_RANDOM_PORTS, false);
+    htu = new HBaseTestingUtility(altConfig);
+    try {
+      MiniHBaseCluster customCluster = htu.startMiniCluster();
+      final String masterHostPort =
+              customCluster.getMaster().getServerName().getAddress().toString();
+      assertEquals(nonDefaultMasterInfoPort,
+              customCluster.getConfiguration().getInt(HConstants.MASTER_INFO_PORT, 0));
+      assertEquals(nonDefaultRegionServerPort,
+              customCluster.getConfiguration().getInt(HConstants.REGIONSERVER_INFO_PORT, 0));
+      assertEquals(masterHostPort,
+              customCluster.getConfiguration().get(HConstants.MASTER_ADDRS_KEY));
+    } finally {
+      htu.shutdownMiniCluster();
+    }
   }
 }
 
