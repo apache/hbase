@@ -18,43 +18,32 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
-/**
- * Allows multiple concurrent clients to lock on a numeric id with ReentrantReadWriteLock. The
- * intended usage for read lock is as follows:
- *
- * <pre>
- * ReentrantReadWriteLock lock = idReadWriteLock.getLock(id);
- * try {
- *   lock.readLock().lock();
- *   // User code.
- * } finally {
- *   lock.readLock().unlock();
- * }
- * </pre>
- *
- * For write lock, use lock.writeLock()
- */
 @InterfaceAudience.Private
-public abstract class IdReadWriteLock<T> {
-  public abstract ReentrantReadWriteLock getLock(T id);
+public class IdReadWriteLockStrongRef<T> extends IdReadWriteLock<T> {
+
+  final ConcurrentHashMap<T, ReentrantReadWriteLock> map = new ConcurrentHashMap<>();
 
   @VisibleForTesting
-  public void waitForWaiters(T id, int numWaiters) throws InterruptedException {
-    for (ReentrantReadWriteLock readWriteLock;;) {
-      readWriteLock = getLock(id);
-      if (readWriteLock != null) {
-        synchronized (readWriteLock) {
-          if (readWriteLock.getQueueLength() >= numWaiters) {
-            return;
-          }
-        }
-      }
-      Thread.sleep(50);
+  @Override
+  public ReentrantReadWriteLock getLock(T id) {
+    ReentrantReadWriteLock existing = map.get(id);
+    if (existing != null) {
+      return existing;
+    }
+
+    ReentrantReadWriteLock newLock = new ReentrantReadWriteLock();
+    existing = map.putIfAbsent(id, newLock);
+    if (existing == null) {
+      return newLock;
+    } else {
+      return existing;
     }
   }
+
 }
