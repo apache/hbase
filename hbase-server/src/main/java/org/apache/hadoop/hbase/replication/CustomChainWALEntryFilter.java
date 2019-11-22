@@ -18,11 +18,13 @@
 package org.apache.hadoop.hbase.replication;
 
 import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import java.util.List;
 
 /**
  * A {@link ChainWALEntryFilter} for providing more flexible options
- * */
+ */
 public class CustomChainWALEntryFilter extends ChainWALEntryFilter {
 
   private boolean filterEmptyEntry = false;
@@ -53,8 +55,10 @@ public class CustomChainWALEntryFilter extends ChainWALEntryFilter {
    * To allow the empty entries to get filtered, we want to set this optional flag to decide
    * if we want to filter the entries which have no cells or all cells got filtered
    * though {@link WALCellFilter}.
+   *
    * @param filterEmptyEntry flag
    */
+  @VisibleForTesting
   public void setFilterEmptyEntry(final boolean filterEmptyEntry) {
     this.filterEmptyEntry = filterEmptyEntry;
   }
