@@ -132,7 +132,7 @@ public class RegionStateStore {
       if (regionInfo == null) continue;
 
       final int replicaId = regionInfo.getReplicaId();
-      final State state = getRegionState(result, replicaId);
+      final State state = getRegionState(result, replicaId, regionInfo);
 
       final ServerName lastHost = hrl.getServerName();
       final ServerName regionLocation = getRegionServer(result, replicaId);
@@ -347,7 +347,7 @@ public class RegionStateStore {
    * @return the region state, or null if unknown.
    */
   @VisibleForTesting
-  public static State getRegionState(final Result r, int replicaId) {
+  public static State getRegionState(final Result r, int replicaId, RegionInfo regionInfo) {
     Cell cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY, getStateColumn(replicaId));
     if (cell == null || cell.getValueLength() == 0) {
       return null;
@@ -357,9 +357,10 @@ public class RegionStateStore {
         cell.getValueLength());
     try {
       return State.valueOf(state);
-    }
-    catch (IllegalArgumentException e) {
-      LOG.debug("BAD value {} in hbase:meta info:state column", state);
+    } catch (IllegalArgumentException e) {
+      LOG.warn("BAD value {} in hbase:meta info:state column for region {} , " +
+              "Consider using HBCK2 setRegionState ENCODED_REGION_NAME STATE",
+          state, regionInfo.getEncodedName());
       return null;
     }
   }
