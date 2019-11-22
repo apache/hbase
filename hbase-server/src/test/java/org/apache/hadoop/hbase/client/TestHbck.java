@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.TableProcedureInterface;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -180,6 +181,23 @@ public class TestHbck {
       hbck.setTableStateInMeta(new TableState(TABLE_NAME, TableState.State.ENABLED));
     assertTrue("Incorrect previous state! expeced=DISABLED, found=" + prevState.getState(),
       prevState.isDisabled());
+  }
+
+  @Test
+  public void testSetRegionStateInMEta() throws Exception {
+    Hbck hbck = getHbck();
+    try(Admin admin = TEST_UTIL.getAdmin()){
+      RegionInfo region = admin.getRegions(TABLE_NAME).get(0);
+      AssignmentManager am = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager();
+      RegionState prevState = am.getRegionStates().getRegionState(region);
+      RegionState newState = RegionState.createForTesting(region,
+        RegionState.State.CLOSED);
+      RegionState result = hbck.setRegionStateInMeta(newState);
+      assertEquals(prevState.getState(), result.getState());
+      RegionState cachedState = am.getRegionStates().getRegionState(region.getEncodedName());
+      assertEquals(newState.getState(), cachedState.getState());
+      hbck.setRegionStateInMeta(prevState);
+    }
   }
 
   @Test

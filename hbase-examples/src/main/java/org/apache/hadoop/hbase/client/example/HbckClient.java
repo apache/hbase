@@ -99,7 +99,6 @@ public class HbckClient {
         }
       };
       RegionState state = RegionState.createForTesting(info, RegionState.State.valueOf(args[1]));
-      System.out.println(">>>> " + state.getRegion().getEncodedName());
       RegionState result = conn.getHbck().get().setRegionStateInMeta(state);
       System.out.println("Successfully changed region from state " + result.getState().name() +
         " to state " + args[1]);
