@@ -23,16 +23,21 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.MultithreadedTestUtil;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MetaRegionLocationCache;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.junit.AfterClass;
@@ -115,6 +120,59 @@ public class TestMetaRegionLocationCache {
     for (JVMClusterUtil.MasterThread masterThread:
         TEST_UTIL.getMiniHBaseCluster().getMasterThreads()) {
       verifyCachedMetaLocations(masterThread.getMaster());
+    }
+  }
+
+  /**
+   * Tests MetaRegionLocationCache's init procedure to make sure that it correctly watches the base
+   * znode for notifications.
+   */
+  @Test public void testMetaRegionLocationCache() throws Exception {
+    final String parentZnodeName = "/randomznodename";
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, parentZnodeName);
+    ServerName sn = ServerName.valueOf("localhost", 1234, 5678);
+    try (ZKWatcher zkWatcher = new ZKWatcher(conf, null, null, true)) {
+      // A thread that repeatedly creates and drops an unrelated child znode. This is to simulate
+      // some ZK activity in the background.
+      MultithreadedTestUtil.TestContext ctx = new MultithreadedTestUtil.TestContext(conf);
+      ctx.addThread(new MultithreadedTestUtil.RepeatingTestThread(ctx) {
+        @Override public void doAnAction() throws Exception {
+          final String testZnode = parentZnodeName + "/child";
+          ZKUtil.createNodeIfNotExistsAndWatch(zkWatcher, testZnode, testZnode.getBytes());
+          ZKUtil.deleteNode(zkWatcher, testZnode);
+        }
+      });
+      ctx.startThreads();
+      try {
+        MetaRegionLocationCache metaCache = new MetaRegionLocationCache(zkWatcher);
+        // meta znodes do not exist at this point, cache should be empty.
+        assertFalse(metaCache.getMetaRegionLocations().isPresent());
+        // Set the meta locations for a random meta replicas, simulating an active hmaster meta
+        // assignment.
+        for (int i = 0; i < 3; i++) {
+          // Updates the meta znodes.
+          MetaTableLocator.setMetaLocation(zkWatcher, sn, i, RegionState.State.OPEN);
+        }
+        // Wait until the meta cache is populated.
+        int iters = 0;
+        while (iters++ < 10) {
+          if (metaCache.getMetaRegionLocations().isPresent()
+            && metaCache.getMetaRegionLocations().get().size() == 3) {
+            break;
+          }
+          Thread.sleep(1000);
+        }
+        List<HRegionLocation> metaLocations = metaCache.getMetaRegionLocations().get();
+        assertEquals(3, metaLocations.size());
+        for (HRegionLocation location : metaLocations) {
+          assertEquals(sn, location.getServerName());
+        }
+      } finally {
+        // clean up.
+        ctx.stop();
+        ZKUtil.deleteChildrenRecursively(zkWatcher, parentZnodeName);
+      }
     }
   }
 }

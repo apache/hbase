@@ -356,21 +356,28 @@ public class TestProtobufUtil {
   @Test
   public void testMetaRegionState() throws Exception {
     ServerName serverName = ServerName.valueOf("localhost", 1234, 5678);
+    // New region state style.
     for (RegionState.State state: RegionState.State.values()) {
       RegionState regionState =
-        new RegionState(RegionInfoBuilder.FIRST_META_REGIONINFO, state, serverName);
+          new RegionState(RegionInfoBuilder.FIRST_META_REGIONINFO, state, serverName);
       MetaRegionServer metars = MetaRegionServer.newBuilder()
-        .setServer(org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.toServerName(serverName))
-        .setRpcVersion(HConstants.RPC_CURRENT_VERSION)
-        .setState(state.convert()).build();
+          .setServer(org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.toServerName(serverName))
+          .setRpcVersion(HConstants.RPC_CURRENT_VERSION)
+          .setState(state.convert()).build();
       // Serialize
       byte[] data = ProtobufUtil.prependPBMagic(metars.toByteArray());
       ProtobufUtil.prependPBMagic(data);
       // Deserialize
       RegionState regionStateNew =
-        org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.parseMetaRegionStateFrom(data, 1);
+          org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.parseMetaRegionStateFrom(data, 1);
       assertEquals(regionState.getServerName(), regionStateNew.getServerName());
       assertEquals(regionState.getState(), regionStateNew.getState());
     }
+    // old style.
+    RegionState rs =
+        org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.parseMetaRegionStateFrom(
+            serverName.getVersionedBytes(), 1);
+    assertEquals(serverName, rs.getServerName());
+    assertEquals(rs.getState(), RegionState.State.OPEN);
   }
 }

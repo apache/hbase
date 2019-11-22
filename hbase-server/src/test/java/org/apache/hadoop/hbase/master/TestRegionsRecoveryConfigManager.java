@@ -120,7 +120,7 @@ public class TestRegionsRecoveryConfigManager {
 
   // Make it public so that JVMClusterUtil can access it.
   public static class TestHMaster extends HMaster {
-    public TestHMaster(Configuration conf) throws IOException, KeeperException {
+    public TestHMaster(Configuration conf) throws InterruptedException, IOException {
       super(conf);
     }
   }

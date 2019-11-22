@@ -515,7 +515,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    * the master becomes the active one.
    */
   public HMaster(final Configuration conf)
-      throws IOException, KeeperException {
+      throws InterruptedException, IOException {
     super(conf);
     TraceUtil.initTracer(conf);
     try {

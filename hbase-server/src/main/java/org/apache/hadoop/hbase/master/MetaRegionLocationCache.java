@@ -74,7 +74,7 @@ public class MetaRegionLocationCache extends ZKListener {
     DELETED
   };
 
-  MetaRegionLocationCache(ZKWatcher zkWatcher) {
+  public MetaRegionLocationCache(ZKWatcher zkWatcher) throws InterruptedException {
     super(zkWatcher);
     cachedMetaLocations = new CopyOnWriteArrayMap<>();
     watcher.registerListener(this);
@@ -88,12 +88,12 @@ public class MetaRegionLocationCache extends ZKListener {
    * Populates the current snapshot of meta locations from ZK. If no meta znodes exist, it registers
    * a watcher on base znode to check for any CREATE/DELETE events on the children.
    */
-  private void populateInitialMetaLocations() {
+  private void populateInitialMetaLocations() throws InterruptedException {
     RetryCounter retryCounter = retryCounterFactory.create();
     List<String> znodes = null;
     while (retryCounter.shouldRetry()) {
       try {
-        znodes = watcher.getMetaReplicaNodesAndWatch();
+        znodes = watcher.getMetaReplicaNodesAndWatchChildren();
         break;
       } catch (KeeperException ke) {
         LOG.debug("Error populating initial meta locations", ke);
@@ -103,12 +103,7 @@ public class MetaRegionLocationCache extends ZKListener {
           watcher.abort("Error populating meta locations", ke);
           return;
         }
-        try {
-          retryCounter.sleepUntilNextRetry();
-        } catch (InterruptedException ie) {
-          Thread.currentThread().interrupt();
-          return;
-        }
+        retryCounter.sleepUntilNextRetry();
       }
     }
     if (znodes == null) {
@@ -232,6 +227,11 @@ public class MetaRegionLocationCache extends ZKListener {
     }
     // Can get triggered for *any* children change, but that is OK. It does not happen once the
     // initial set of meta znodes are populated.
-    populateInitialMetaLocations();
+    try {
+      populateInitialMetaLocations();
+    } catch (InterruptedException ie) {
+      LOG.warn("Interrupted while initializing meta region cache", ie);
+      Thread.currentThread().interrupt();
+    }
   }
 }

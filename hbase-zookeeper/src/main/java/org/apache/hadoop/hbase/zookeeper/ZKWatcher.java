@@ -23,10 +23,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CountDownLatch;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.AuthUtil;
@@ -80,10 +78,6 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
 
   // listeners to be notified
   private final List<ZKListener> listeners = new CopyOnWriteArrayList<>();
-
-  // Used by ZKUtil:waitForZKConnectionIfAuthenticating to wait for SASL
-  // negotiation to complete
-  private CountDownLatch saslLatch = new CountDownLatch(1);
 
   private final Configuration conf;
 
@@ -391,7 +385,7 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
    * Same as {@link #getMetaReplicaNodes()} except that this also registers a watcher on base znode
    * for subsequent CREATE/DELETE operations on child nodes.
    */
-  public List<String> getMetaReplicaNodesAndWatch() throws KeeperException {
+  public List<String> getMetaReplicaNodesAndWatchChildren() throws KeeperException {
     List<String> childrenOfBaseNode =
         ZKUtil.listChildrenAndWatchForNewChildren(this, znodePaths.baseZNode);
     return filterMetaReplicaNodes(childrenOfBaseNode);

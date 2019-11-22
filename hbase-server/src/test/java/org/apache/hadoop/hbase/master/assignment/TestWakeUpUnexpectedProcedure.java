@@ -198,7 +198,7 @@ public class TestWakeUpUnexpectedProcedure {
 
   public static final class HMasterForTest extends HMaster {
 
-    public HMasterForTest(Configuration conf) throws IOException, KeeperException {
+    public HMasterForTest(Configuration conf) throws InterruptedException, IOException {
       super(conf);
     }
 

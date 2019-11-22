@@ -65,7 +65,7 @@ public class TestCloseAnOpeningRegion {
 
   public static final class MockHMaster extends HMaster {
 
-    public MockHMaster(Configuration conf) throws IOException, KeeperException {
+    public MockHMaster(Configuration conf) throws InterruptedException, IOException {
       super(conf);
     }
 

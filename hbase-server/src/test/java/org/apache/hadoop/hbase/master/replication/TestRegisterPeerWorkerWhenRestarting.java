@@ -53,7 +53,7 @@ public class TestRegisterPeerWorkerWhenRestarting extends SyncReplicationTestBas
 
   public static final class HMasterForTest extends HMaster {
 
-    public HMasterForTest(Configuration conf) throws IOException, KeeperException {
+    public HMasterForTest(Configuration conf) throws IOException, InterruptedException {
       super(conf);
     }
 
