@@ -21,6 +21,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.codec.binary.Hex;
@@ -194,11 +195,14 @@ public class TestFiltersWithBinaryComponentComparator {
             Put row = new Put(key);
             if (c%2==0) {
               row.addColumn(family, qf, Bytes.toBytes("abc"));
-              LOG.info("added row:" + Hex.encodeHex(key) + "with value 'abc'");
-            }
-            else {
+              if (LOG.isInfoEnabled()) {
+                LOG.info("added row: {} with value 'abc'", Arrays.toString(Hex.encodeHex(key)));
+              }
+            } else {
               row.addColumn(family, qf, Bytes.toBytes("xyz"));
-              LOG.info("added row:" + Hex.encodeHex(key) + "with value 'xyz'");
+              if (LOG.isInfoEnabled()) {
+                LOG.info("added row: {} with value 'xyz'", Arrays.toString(Hex.encodeHex(key)));
+              }
             }
           }
         }
