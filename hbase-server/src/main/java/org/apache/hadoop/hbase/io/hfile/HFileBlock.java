@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.io.ByteBuffInputStream;
 import org.apache.hadoop.hbase.io.ByteBufferWriterDataOutputStream;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.encoding.EncodingState;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
@@ -48,6 +49,7 @@ import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.MultiByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
+import org.apache.hadoop.hbase.regionserver.ShipperListener;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -833,7 +835,7 @@ public class HFileBlock implements Cacheable {
    * </ol>
    * <p>
    */
-  static class Writer {
+  static class Writer implements ShipperListener {
     private enum State {
       INIT,
       WRITING,
@@ -911,6 +913,17 @@ public class HFileBlock implements Cacheable {
     private long prevOffset;
     /** Meta data that holds information about the hfileblock**/
     private HFileContext fileContext;
+
+    @Override
+    public void beforeShipped() {
+      if (getEncodingState() != null) {
+        getEncodingState().beforeShipped();
+      }
+    }
+
+    EncodingState getEncodingState() {
+      return dataBlockEncodingCtx.getEncodingState();
+    }
 
     /**
      * @param dataBlockEncoder data block encoding algorithm to use

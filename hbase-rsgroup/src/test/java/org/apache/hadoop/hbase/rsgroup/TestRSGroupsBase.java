@@ -40,8 +40,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.RegionMetrics;
-import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -64,6 +62,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoRequest;
@@ -102,7 +101,7 @@ public abstract class TestRSGroupsBase {
     return RSGroupTestingUtil.addRSGroup(rsGroupAdmin, groupName, serverCount);
   }
 
-  void removeGroup(String groupName) throws IOException {
+  protected void removeGroup(String groupName) throws IOException {
     RSGroupInfo RSGroupInfo = rsGroupAdmin.getRSGroupInfo(groupName);
     rsGroupAdmin.moveTables(RSGroupInfo.getTables(), RSGroupInfo.DEFAULT_GROUP);
     rsGroupAdmin.moveServers(RSGroupInfo.getServers(), RSGroupInfo.DEFAULT_GROUP);
@@ -135,7 +134,7 @@ public abstract class TestRSGroupsBase {
     }
   }
 
-  public Map<TableName, List<String>> getTableRegionMap() throws IOException {
+  protected Map<TableName, List<String>> getTableRegionMap() throws IOException {
     Map<TableName, List<String>> map = Maps.newTreeMap();
     Map<TableName, Map<ServerName, List<String>>> tableServerRegionMap
         = getTableServerRegionMap();
@@ -150,28 +149,17 @@ public abstract class TestRSGroupsBase {
     return map;
   }
 
-  public Map<TableName, Map<ServerName, List<String>>> getTableServerRegionMap()
-      throws IOException {
+  protected Map<TableName, Map<ServerName, List<String>>> getTableServerRegionMap()
+    throws IOException {
     Map<TableName, Map<ServerName, List<String>>> map = Maps.newTreeMap();
-    ClusterMetrics status = TEST_UTIL.getHBaseClusterInterface().getClusterMetrics();
-    for (Map.Entry<ServerName, ServerMetrics> entry : status.getLiveServerMetrics().entrySet()) {
-      ServerName serverName = entry.getKey();
-      for(RegionMetrics rl : entry.getValue().getRegionMetrics().values()) {
-        TableName tableName = null;
-        try {
-          tableName = RegionInfo.getTable(rl.getRegionName());
-        } catch (IllegalArgumentException e) {
-          LOG.warn("Failed parse a table name from regionname=" +
-            Bytes.toStringBinary(rl.getRegionName()));
-          continue;
-        }
-        if(!map.containsKey(tableName)) {
-          map.put(tableName, new TreeMap<>());
-        }
-        if(!map.get(tableName).containsKey(serverName)) {
-          map.get(tableName).put(serverName, new LinkedList<>());
-        }
-        map.get(tableName).get(serverName).add(rl.getNameAsString());
+    Admin admin = TEST_UTIL.getAdmin();
+    ClusterMetrics metrics =
+      admin.getClusterMetrics(EnumSet.of(ClusterMetrics.Option.LIVE_SERVERS));
+    for (ServerName serverName : metrics.getLiveServerMetrics().keySet()) {
+      for (RegionInfo region : admin.getRegions(serverName)) {
+        TableName tableName = region.getTable();
+        map.computeIfAbsent(tableName, k -> new TreeMap<>())
+          .computeIfAbsent(serverName, k -> new ArrayList<>()).add(region.getRegionNameAsString());
       }
     }
     return map;

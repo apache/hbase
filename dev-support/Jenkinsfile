@@ -21,16 +21,17 @@ pipeline {
     }
   }
   triggers {
-    cron('H */12 * * *')  // Run every 12 hours. See https://jenkins.io/doc/book/pipeline/syntax/#cron-syntax
+    cron('@daily')
   }
   options {
     buildDiscarder(logRotator(numToKeepStr: '15'))
     timeout (time: 9, unit: 'HOURS')
     timestamps()
     skipDefaultCheckout()
+    disableConcurrentBuilds()
   }
   environment {
-    YETUS_RELEASE = '0.11.0'
+    YETUS_RELEASE = '0.11.1'
     // where we'll write everything from different steps. Need a copy here so the final step can check for success/failure.
     OUTPUT_DIR_RELATIVE_GENERAL = 'output-general'
     OUTPUT_DIR_RELATIVE_JDK7 = 'output-jdk7'
@@ -238,8 +239,8 @@ pipeline {
             always {
               stash name: 'general-result', includes: "${OUTPUT_DIR_RELATIVE}/commentfile"
               // Has to be relative to WORKSPACE.
-              archive "${env.OUTPUT_DIR_RELATIVE}/*"
-              archive "${env.OUTPUT_DIR_RELATIVE}/**/*"
+              archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/*"
+              archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/**/*"
               publishHTML target: [
                 allowMissing: true,
                 keepAll: true,
@@ -319,8 +320,8 @@ pipeline {
                 fi
 '''
               // Has to be relative to WORKSPACE.
-              archive "${env.OUTPUT_DIR_RELATIVE}/*"
-              archive "${env.OUTPUT_DIR_RELATIVE}/**/*"
+              archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/*"
+              archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/**/*"
               publishHTML target: [
                 allowMissing         : true,
                 keepAll              : true,
@@ -399,8 +400,8 @@ pipeline {
                 fi
 '''
               // Has to be relative to WORKSPACE.
-              archive "${env.OUTPUT_DIR_RELATIVE}/*"
-              archive "${env.OUTPUT_DIR_RELATIVE}/**/*"
+              archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/*"
+              archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/**/*"
               publishHTML target: [
                 allowMissing         : true,
                 keepAll              : true,
@@ -486,8 +487,8 @@ pipeline {
                 fi
 '''
               // Has to be relative to WORKSPACE.
-              archive "${env.OUTPUT_DIR_RELATIVE}/*"
-              archive "${env.OUTPUT_DIR_RELATIVE}/**/*"
+              archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/*"
+              archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/**/*"
               publishHTML target: [
                 allowMissing         : true,
                 keepAll              : true,
@@ -619,10 +620,10 @@ pipeline {
           post {
             always {
               stash name: 'srctarball-result', includes: "output-srctarball/commentfile,output-integration/commentfile"
-              archive 'output-srctarball/*'
-              archive 'output-srctarball/**/*'
-              archive 'output-integration/*'
-              archive 'output-integration/**/*'
+              archiveArtifacts artifacts: 'output-srctarball/*'
+              archiveArtifacts artifacts: 'output-srctarball/**/*'
+              archiveArtifacts artifacts: 'output-integration/*'
+              archiveArtifacts artifacts: 'output-integration/**/*'
             }
           }
         }

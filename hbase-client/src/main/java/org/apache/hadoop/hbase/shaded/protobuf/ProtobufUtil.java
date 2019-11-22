@@ -78,6 +78,7 @@ import org.apache.hadoop.hbase.client.PackagePrivateFieldAccessor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionLoadStats;
+import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
@@ -2552,16 +2553,19 @@ public final class ProtobufUtil {
     ByteString encodedRegionName, Map<byte[], List<Path>> storeFiles,
     Map<String, Long> storeFilesSize, long bulkloadSeqId) {
     return toBulkLoadDescriptor(tableName, encodedRegionName, storeFiles,
-      storeFilesSize, bulkloadSeqId, null);
+      storeFilesSize, bulkloadSeqId, null, true);
   }
 
   public static WALProtos.BulkLoadDescriptor toBulkLoadDescriptor(TableName tableName,
       ByteString encodedRegionName, Map<byte[], List<Path>> storeFiles,
-      Map<String, Long> storeFilesSize, long bulkloadSeqId, List<String> clusterIds) {
+      Map<String, Long> storeFilesSize, long bulkloadSeqId,
+      List<String> clusterIds, boolean replicate) {
     BulkLoadDescriptor.Builder desc =
         BulkLoadDescriptor.newBuilder()
-        .setTableName(ProtobufUtil.toProtoTableName(tableName))
-        .setEncodedRegionName(encodedRegionName).setBulkloadSeqNum(bulkloadSeqId);
+          .setTableName(ProtobufUtil.toProtoTableName(tableName))
+          .setEncodedRegionName(encodedRegionName)
+          .setBulkloadSeqNum(bulkloadSeqId)
+          .setReplicate(replicate);
     if(clusterIds != null) {
       desc.addAllClusterIds(clusterIds);
     }
@@ -3229,4 +3233,51 @@ public final class ProtobufUtil {
       .setTo(timeRange.getMax())
       .build();
   }
+
+  public static ClusterStatusProtos.RegionStatesCount toTableRegionStatesCount(
+      RegionStatesCount regionStatesCount) {
+    int openRegions = 0;
+    int splitRegions = 0;
+    int closedRegions = 0;
+    int regionsInTransition = 0;
+    int totalRegions = 0;
+    if (regionStatesCount != null) {
+      openRegions = regionStatesCount.getOpenRegions();
+      splitRegions = regionStatesCount.getSplitRegions();
+      closedRegions = regionStatesCount.getClosedRegions();
+      regionsInTransition = regionStatesCount.getRegionsInTransition();
+      totalRegions = regionStatesCount.getTotalRegions();
+    }
+    return ClusterStatusProtos.RegionStatesCount.newBuilder()
+      .setOpenRegions(openRegions)
+      .setSplitRegions(splitRegions)
+      .setClosedRegions(closedRegions)
+      .setRegionsInTransition(regionsInTransition)
+      .setTotalRegions(totalRegions)
+      .build();
+  }
+
+  public static RegionStatesCount toTableRegionStatesCount(
+    ClusterStatusProtos.RegionStatesCount regionStatesCount) {
+    int openRegions = 0;
+    int splitRegions = 0;
+    int closedRegions = 0;
+    int regionsInTransition = 0;
+    int totalRegions = 0;
+    if (regionStatesCount != null) {
+      closedRegions = regionStatesCount.getClosedRegions();
+      regionsInTransition = regionStatesCount.getRegionsInTransition();
+      openRegions = regionStatesCount.getOpenRegions();
+      splitRegions = regionStatesCount.getSplitRegions();
+      totalRegions = regionStatesCount.getTotalRegions();
+    }
+    return new RegionStatesCount.RegionStatesCountBuilder()
+      .setOpenRegions(openRegions)
+      .setSplitRegions(splitRegions)
+      .setClosedRegions(closedRegions)
+      .setRegionsInTransition(regionsInTransition)
+      .setTotalRegions(totalRegions)
+      .build();
+  }
+
 }

@@ -18,11 +18,8 @@ package org.apache.hadoop.hbase.quotas.policies;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Objects;
 
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.quotas.SpaceLimitingException;
@@ -58,33 +55,22 @@ public class DefaultViolationPolicyEnforcement extends AbstractViolationPolicyEn
   }
 
   @Override
-  public void checkBulkLoad(FileSystem fs, List<String> paths) throws SpaceLimitingException {
+  public long computeBulkLoadSize(FileSystem fs, List<String> paths) throws SpaceLimitingException {
     // Compute the amount of space that could be used to save some arithmetic in the for-loop
     final long sizeAvailableForBulkLoads = quotaSnapshot.getLimit() - quotaSnapshot.getUsage();
     long size = 0L;
     for (String path : paths) {
-      size += addSingleFile(fs, path);
+      try {
+        size += getFileSize(fs, path);
+      } catch (IOException e) {
+        throw new SpaceLimitingException(
+            getPolicyName(), "Colud not verify length of file to bulk load: " + path, e);
+      }
       if (size > sizeAvailableForBulkLoads) {
-        break;
+        throw new SpaceLimitingException(getPolicyName(), "Bulk load of " + paths
+            + " is disallowed because the file(s) exceed the limits of a space quota.");
       }
     }
-    if (size > sizeAvailableForBulkLoads) {
-      throw new SpaceLimitingException(getPolicyName(), "Bulk load of " + paths
-          + " is disallowed because the file(s) exceed the limits of a space quota.");
-    }
-  }
-
-  private long addSingleFile(FileSystem fs, String path) throws SpaceLimitingException {
-    final FileStatus status;
-    try {
-      status = fs.getFileStatus(new Path(Objects.requireNonNull(path)));
-    } catch (IOException e) {
-      throw new SpaceLimitingException(
-          getPolicyName(), "Could not verify length of file to bulk load", e);
-    }
-    if (!status.isFile()) {
-      throw new IllegalArgumentException(path + " is not a file.");
-    }
-    return status.getLen();
+    return size;
   }
 }

@@ -85,6 +85,7 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
@@ -1214,13 +1215,8 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     int mobCompactionPeriod = conf.getInt(MobConstants.MOB_COMPACTION_CHORE_PERIOD,
         MobConstants.DEFAULT_MOB_COMPACTION_CHORE_PERIOD);
-    if (mobCompactionPeriod > 0) {
-      this.mobCompactChore = new MobCompactionChore(this, mobCompactionPeriod);
-      getChoreService().scheduleChore(mobCompactChore);
-    } else {
-      LOG
-        .info("The period is " + mobCompactionPeriod + " seconds, MobCompactionChore is disabled");
-    }
+    this.mobCompactChore = new MobCompactionChore(this, mobCompactionPeriod);
+    getChoreService().scheduleChore(mobCompactChore);
     this.mobCompactThread = new MasterMobCompactionThread(this);
   }
 
@@ -2703,6 +2699,24 @@ public class HMaster extends HRegionServer implements MasterServices {
           }
           break;
         }
+        case TABLE_TO_REGIONS_COUNT: {
+          if (isActiveMaster() && isInitialized() && assignmentManager != null) {
+            try {
+              Map<TableName, RegionStatesCount> tableRegionStatesCountMap = new HashMap<>();
+              Map<String, TableDescriptor> tableDescriptorMap = getTableDescriptors().getAll();
+              for (TableDescriptor tableDescriptor : tableDescriptorMap.values()) {
+                TableName tableName = tableDescriptor.getTableName();
+                RegionStatesCount regionStatesCount = assignmentManager
+                  .getRegionStatesCount(tableName);
+                tableRegionStatesCountMap.put(tableName, regionStatesCount);
+              }
+              builder.setTableRegionStatesCount(tableRegionStatesCountMap);
+            } catch (IOException e) {
+              LOG.error("Error while populating TABLE_TO_REGIONS_COUNT for Cluster Metrics..", e);
+            }
+          }
+          break;
+        }
       }
     }
     return builder.build();
@@ -3652,7 +3666,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (cpHost != null) {
       cpHost.preListReplicationPeers(regex);
     }
-    LOG.info(getClientIdAuditPrefix() + " list replication peers, regex=" + regex);
+    LOG.debug("{} list replication peers, regex={}", getClientIdAuditPrefix(), regex);
     Pattern pattern = regex == null ? null : Pattern.compile(regex);
     List<ReplicationPeerDescription> peers =
       this.replicationPeerManager.listPeers(pattern);
@@ -3855,5 +3869,9 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   public HbckChore getHbckChore() {
     return this.hbckChore;
+  }
+
+  public SnapshotQuotaObserverChore getSnapshotQuotaObserverChore() {
+    return this.snapshotQuotaChore;
   }
 }

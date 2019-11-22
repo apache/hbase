@@ -31,7 +31,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.NavigableSet;
-import java.util.OptionalInt;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -944,7 +943,7 @@ public class TestStoreScanner {
         200, /* timeToPurgeDeletes */
         CellComparator.getInstance(), false);
       try (StoreScanner scanner =
-          new StoreScanner(scanInfo, OptionalInt.of(2), ScanType.COMPACT_DROP_DELETES, scanners)) {
+          new StoreScanner(scanInfo, 2, ScanType.COMPACT_DROP_DELETES, scanners)) {
         List<Cell> results = new ArrayList<>();
         results = new ArrayList<>();
         assertEquals(true, scanner.next(results));
@@ -972,8 +971,8 @@ public class TestStoreScanner {
     List<KeyValueScanner> scanners = scanFixture(kvs);
     ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, 1, 500, KeepDeletedCells.FALSE,
         HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.getInstance(), false);
-    try (StoreScanner storeScanner = new StoreScanner(scanInfo, OptionalInt.empty(),
-        ScanType.COMPACT_RETAIN_DELETES, scanners)) {
+    try (StoreScanner storeScanner = new StoreScanner(scanInfo, -1,
+      ScanType.COMPACT_RETAIN_DELETES, scanners)) {
       assertFalse(storeScanner.isScanUsePread());
     }
   }

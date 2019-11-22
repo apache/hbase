@@ -614,6 +614,10 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
         LOG.debug("Table {} not enabled", tableName);
         return false;
       }
+      if (TableName.isMetaTableName(tableName)) {
+        // meta table is always available
+        return true;
+      }
       List<Pair<RegionInfo, ServerName>> locations =
         MetaTableAccessor.getTableRegionsAndLocations(this, tableName, true);
 

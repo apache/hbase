@@ -25,14 +25,19 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.RegionStateListener;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.namespace.NamespaceAuditor;
@@ -42,11 +47,17 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.collect.HashMultimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.FileArchiveNotificationRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.FileArchiveNotificationRequest.FileWithSize;
 
 /**
  * Master Quota Manager.
@@ -560,21 +571,62 @@ public class MasterQuotaManager implements RegionStateListener {
     return copy;
   }
 
-  int pruneEntriesOlderThan(long timeToPruneBefore) {
+  int pruneEntriesOlderThan(long timeToPruneBefore, QuotaObserverChore quotaObserverChore) {
     if (regionSizes == null) {
       return 0;
     }
     int numEntriesRemoved = 0;
-    Iterator<Entry<RegionInfo,SizeSnapshotWithTimestamp>> iterator =
+    Iterator<Entry<RegionInfo, SizeSnapshotWithTimestamp>> iterator =
         regionSizes.entrySet().iterator();
     while (iterator.hasNext()) {
-      long currentEntryTime = iterator.next().getValue().getTime();
-      if (currentEntryTime < timeToPruneBefore) {
+      RegionInfo regionInfo = iterator.next().getKey();
+      long currentEntryTime = regionSizes.get(regionInfo).getTime();
+      // do not prune the entries if table is in violation and
+      // violation policy is disable to avoid cycle of enable/disable.
+      // Please refer HBASE-22012 for more details.
+      // prune entries older than time.
+      if (currentEntryTime < timeToPruneBefore && !isInViolationAndPolicyDisable(
+          regionInfo.getTable(), quotaObserverChore)) {
         iterator.remove();
         numEntriesRemoved++;
       }
     }
     return numEntriesRemoved;
+  }
+
+  /**
+   * Method to check if a table is in violation and policy set on table is DISABLE.
+   *
+   * @param tableName          tableName to check.
+   * @param quotaObserverChore QuotaObserverChore instance
+   * @return returns true if table is in violation and policy is disable else false.
+   */
+  private boolean isInViolationAndPolicyDisable(TableName tableName,
+      QuotaObserverChore quotaObserverChore) {
+    boolean isInViolationAtTable = false;
+    boolean isInViolationAtNamespace = false;
+    SpaceViolationPolicy tablePolicy = null;
+    SpaceViolationPolicy namespacePolicy = null;
+    // Get Current Snapshot for the given table
+    SpaceQuotaSnapshot tableQuotaSnapshot = quotaObserverChore.getTableQuotaSnapshot(tableName);
+    SpaceQuotaSnapshot namespaceQuotaSnapshot =
+        quotaObserverChore.getNamespaceQuotaSnapshot(tableName.getNamespaceAsString());
+    if (tableQuotaSnapshot != null) {
+      // check if table in violation
+      isInViolationAtTable = tableQuotaSnapshot.getQuotaStatus().isInViolation();
+      if (isInViolationAtTable) {
+        tablePolicy = tableQuotaSnapshot.getQuotaStatus().getPolicy();
+      }
+    }
+    if (namespaceQuotaSnapshot != null) {
+      // check namespace in violation
+      isInViolationAtNamespace = namespaceQuotaSnapshot.getQuotaStatus().isInViolation();
+      if (isInViolationAtNamespace) {
+        namespacePolicy = namespaceQuotaSnapshot.getQuotaStatus().getPolicy();
+      }
+    }
+    return (tablePolicy == SpaceViolationPolicy.DISABLE && isInViolationAtTable) || (
+        namespacePolicy == SpaceViolationPolicy.DISABLE && isInViolationAtNamespace);
   }
 
   /**
@@ -584,6 +636,27 @@ public class MasterQuotaManager implements RegionStateListener {
    */
   public void removeRegionSizesForTable(TableName tableName) {
     regionSizes.keySet().removeIf(regionInfo -> regionInfo.getTable().equals(tableName));
+  }
+
+  public void processFileArchivals(FileArchiveNotificationRequest request, Connection conn,
+      Configuration conf, FileSystem fs) throws IOException {
+    final HashMultimap<TableName,Entry<String,Long>> archivedFilesByTable = HashMultimap.create();
+    // Group the archived files by table
+    for (FileWithSize fileWithSize : request.getArchivedFilesList()) {
+      TableName tn = ProtobufUtil.toTableName(fileWithSize.getTableName());
+      archivedFilesByTable.put(
+          tn, Maps.immutableEntry(fileWithSize.getName(), fileWithSize.getSize()));
+    }
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Grouped archived files by table: " + archivedFilesByTable);
+    }
+    // Report each set of files to the appropriate object
+    for (TableName tn : archivedFilesByTable.keySet()) {
+      final Set<Entry<String,Long>> filesWithSize = archivedFilesByTable.get(tn);
+      final FileArchiverNotifier notifier = FileArchiverNotifierFactoryImpl.getInstance().get(
+          conn, conf, fs, tn);
+      notifier.addArchivedFiles(filesWithSize);
+    }
   }
 }
 

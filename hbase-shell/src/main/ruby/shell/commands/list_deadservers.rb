@@ -37,7 +37,7 @@ module Shell
           formatter.row([server.toString])
         end
 
-        formatter.footer(now, servers.size)
+        formatter.footer(servers.size)
       end
     end
   end

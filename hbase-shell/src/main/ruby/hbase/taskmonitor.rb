@@ -146,7 +146,7 @@ module Hbase
                  setCellWidth('Description', descriptionWidth),
                  setCellWidth('Status', statusWidth)]
 
-        line = format('| %s | %s | %s | %s | %s |', cells)
+        line = format('| %s | %s | %s | %s | %s |', *cells)
 
         puts(rowSeparator)
         puts(line)
@@ -159,7 +159,7 @@ module Hbase
                    setCellWidth(t.description, descriptionWidth),
                    setCellWidth(format('%s (since %d seconds ago)', t.status, Time.now - t.statustime), statusWidth)]
 
-          line = format('| %s | %s | %s | %s | %s |', cells)
+          line = format('| %s | %s | %s | %s | %s |', *cells)
 
           puts(rowSeparator)
           puts(line)

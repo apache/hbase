@@ -34,14 +34,19 @@ import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.mob.ManualMobMaintHFileCleaner;
+import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.AfterClass;
@@ -97,6 +102,44 @@ public class TestHFileCleaner {
         + " with create time:" + createTime, cleaner.isFileDeletable(fs.getFileStatus(file)));
   }
 
+  @Test
+  public void testManualMobCleanerStopsMobRemoval() throws IOException {
+    FileSystem fs = UTIL.getDFSCluster().getFileSystem();
+    Path root = UTIL.getDataTestDirOnTestFS();
+    TableName table = TableName.valueOf("testManualMobCleanerStopsMobRemoval");
+    Path mob = HFileArchiveUtil.getRegionArchiveDir(root, table,
+        MobUtils.getMobRegionInfo(table).getEncodedName());
+    Path family= new Path(mob, "family");
+
+    Path file = new Path(family, "someHFileThatWouldBeAUUID");
+    fs.createNewFile(file);
+    assertTrue("Test file not created!", fs.exists(file));
+
+    ManualMobMaintHFileCleaner cleaner = new ManualMobMaintHFileCleaner();
+
+    assertFalse("Mob File shouldn't have been deletable. check path. '"+file+"'",
+        cleaner.isFileDeletable(fs.getFileStatus(file)));
+  }
+
+  @Test
+  public void testManualMobCleanerLetsNonMobGo() throws IOException {
+    FileSystem fs = UTIL.getDFSCluster().getFileSystem();
+    Path root = UTIL.getDataTestDirOnTestFS();
+    TableName table = TableName.valueOf("testManualMobCleanerLetsNonMobGo");
+    Path nonmob = HFileArchiveUtil.getRegionArchiveDir(root, table,
+        new HRegionInfo(table).getEncodedName());
+    Path family= new Path(nonmob, "family");
+
+    Path file = new Path(family, "someHFileThatWouldBeAUUID");
+    fs.createNewFile(file);
+    assertTrue("Test file not created!", fs.exists(file));
+
+    ManualMobMaintHFileCleaner cleaner = new ManualMobMaintHFileCleaner();
+
+    assertTrue("Non-Mob File should have been deletable. check path. '"+file+"'",
+        cleaner.isFileDeletable(fs.getFileStatus(file)));
+  }
+
   /**
    * @param file to check
    * @return loggable information about the file
@@ -115,7 +158,8 @@ public class TestHFileCleaner {
     // set TTL
     long ttl = 2000;
     conf.set(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS,
-      "org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner");
+        "org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner," +
+        "org.apache.hadoop.hbase.mob.ManualMobMaintHFileCleaner");
     conf.setLong(TimeToLiveHFileCleaner.TTL_CONF_KEY, ttl);
     Server server = new DummyServer();
     Path archivedHfileDir =

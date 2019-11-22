@@ -22,7 +22,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -113,20 +112,19 @@ public class TestBulkLoad {
     storeFileName = (new Path(storeFileName)).getName();
     List<String> storeFileNames = new ArrayList<>();
     storeFileNames.add(storeFileName);
-    when(log.append(any(), any(),
-            argThat(bulkLogWalEdit(WALEdit.BULK_LOAD, tableName.toBytes(),
-                    familyName, storeFileNames)),
-            anyBoolean())).thenAnswer(new Answer() {
-              @Override
-              public Object answer(InvocationOnMock invocation) {
-                WALKeyImpl walKey = invocation.getArgument(1);
-                MultiVersionConcurrencyControl mvcc = walKey.getMvcc();
-                if (mvcc != null) {
-                  MultiVersionConcurrencyControl.WriteEntry we = mvcc.begin();
-                  walKey.setWriteEntry(we);
-                }
-                return 01L;
-              };
+    when(log.appendMarker(any(), any(), argThat(
+        bulkLogWalEdit(WALEdit.BULK_LOAD, tableName.toBytes(), familyName, storeFileNames)))).
+        thenAnswer(new Answer() {
+          @Override
+          public Object answer(InvocationOnMock invocation) {
+            WALKeyImpl walKey = invocation.getArgument(1);
+            MultiVersionConcurrencyControl mvcc = walKey.getMvcc();
+            if (mvcc != null) {
+              MultiVersionConcurrencyControl.WriteEntry we = mvcc.begin();
+              walKey.setWriteEntry(we);
+            }
+            return 01L;
+          };
     });
     testRegionWithFamiliesAndSpecifiedTableName(tableName, family1)
         .bulkLoadHFiles(familyPaths, false, null);
@@ -140,9 +138,8 @@ public class TestBulkLoad {
 
   @Test
   public void shouldBulkLoadSingleFamilyHLog() throws IOException {
-    when(log.append(any(),
-            any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD)),
-            anyBoolean())).thenAnswer(new Answer() {
+    when(log.appendMarker(any(),
+            any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD)))).thenAnswer(new Answer() {
               @Override
               public Object answer(InvocationOnMock invocation) {
                 WALKeyImpl walKey = invocation.getArgument(1);
@@ -160,9 +157,8 @@ public class TestBulkLoad {
 
   @Test
   public void shouldBulkLoadManyFamilyHLog() throws IOException {
-    when(log.append(any(),
-            any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD)),
-            anyBoolean())).thenAnswer(new Answer() {
+    when(log.appendMarker(any(),
+            any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD)))).thenAnswer(new Answer() {
               @Override
               public Object answer(InvocationOnMock invocation) {
                 WALKeyImpl walKey = invocation.getArgument(1);
@@ -181,9 +177,8 @@ public class TestBulkLoad {
 
   @Test
   public void shouldBulkLoadManyFamilyHLogEvenWhenTableNameNamespaceSpecified() throws IOException {
-    when(log.append(any(),
-            any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD)),
-            anyBoolean())).thenAnswer(new Answer() {
+    when(log.appendMarker(any(),
+            any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD)))).thenAnswer(new Answer() {
               @Override
               public Object answer(InvocationOnMock invocation) {
                 WALKeyImpl walKey = invocation.getArgument(1);

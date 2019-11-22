@@ -43,9 +43,12 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, LargeTests.class})
 public class TestCatalogJanitorCluster {
+  private static final Logger LOG = LoggerFactory.getLogger(TestCatalogJanitorCluster.class);
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestCatalogJanitorCluster.class);
@@ -129,6 +132,18 @@ public class TestCatalogJanitorCluster {
     gc = janitor.scan();
     report = janitor.getLastReport();
     assertFalse(report.isEmpty());
+    assertEquals(0, report.getUnknownServers().size());
+    // Test what happens if we blow away an info:server row, if it is null. Should not kill CJ
+    // and we should log the row that had the problem. HBASE-23192. Just make sure we don't
+    // break if this happens.
+    LOG.info("Make null info:server");
+    Put emptyInfoServerPut = new Put(t1Ri1.getRegionName());
+    emptyInfoServerPut.addColumn(MetaTableAccessor.getCatalogFamily(),
+        MetaTableAccessor.getServerColumn(0), Bytes.toBytes(""));
+    MetaTableAccessor.putsToMetaTable(TEST_UTIL.getConnection(), Arrays.asList(emptyInfoServerPut));
+    gc = janitor.scan();
+    report = janitor.getLastReport();
+    assertEquals(0, report.getUnknownServers().size());
     // Finally, make an empty regioninfo in t1.
     RegionInfo t1Ri2 = t1Ris.get(2);
     Put pEmptyRI = new Put(t1Ri2.getRegionName());

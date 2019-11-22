@@ -24,7 +24,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -58,7 +57,6 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -193,22 +191,6 @@ public class TestMasterOperationsForRegionReplicas {
           assertNotNull(state);
         }
       }
-      validateFromSnapshotFromMeta(TEST_UTIL, tableName, numRegions, numReplica,
-        ADMIN.getConnection());
-      // Now shut the whole cluster down, and verify the assignments are kept so that the
-      // availability constraints are met. MiniHBaseCluster chooses arbitrary ports on each
-      // restart. This messes with our being able to test that we retain locality. Therefore,
-      // figure current cluster ports and pass them in on next cluster start so new cluster comes
-      // up at same coordinates -- and the assignment retention logic has a chance to cut in.
-      List<Integer> rsports = new ArrayList<>();
-      for (JVMClusterUtil.RegionServerThread rst : TEST_UTIL.getHBaseCluster()
-        .getLiveRegionServerThreads()) {
-        rsports.add(rst.getRegionServer().getRpcServer().getListenerAddress().getPort());
-      }
-      TEST_UTIL.shutdownMiniHBaseCluster();
-      TEST_UTIL.startMiniHBaseCluster(1, numSlaves, rsports);
-      TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
-      TEST_UTIL.waitUntilNoRegionsInTransition();
       validateFromSnapshotFromMeta(TEST_UTIL, tableName, numRegions, numReplica,
         ADMIN.getConnection());
 

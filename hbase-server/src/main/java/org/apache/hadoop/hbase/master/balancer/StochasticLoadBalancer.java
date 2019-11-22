@@ -301,9 +301,11 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     if (total <= 0 || sumMultiplier <= 0
         || (sumMultiplier > 0 && (total / sumMultiplier) < minCostNeedBalance)) {
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Skipping load balancing because balanced cluster; " + "total cost is " + total
-          + ", sum multiplier is " + sumMultiplier + " min cost which need balance is "
-          + minCostNeedBalance);
+        final String loadBalanceTarget =
+            isByTable ? String.format("table (%s)", tableName) : "cluster";
+        LOG.trace("Skipping load balancing because the {} is balanced. Total cost: {}, "
+            + "Sum multiplier: {}, Minimum cost needed for balance: {}", loadBalanceTarget, total,
+            sumMultiplier, minCostNeedBalance);
       }
       return false;
     }
@@ -1183,6 +1185,11 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       // Load multiplier should be the greatest as primary regions serve majority of reads/writes.
       this.setMultiplier(conf.getFloat(PRIMARY_REGION_COUNT_SKEW_COST_KEY,
         DEFAULT_PRIMARY_REGION_COUNT_SKEW_COST));
+    }
+
+    @Override
+    boolean isNeeded() {
+      return cluster.hasRegionReplicas;
     }
 
     @Override

@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
@@ -990,8 +991,8 @@ public class AssignmentManager implements ServerListener {
         final RegionInfo hri = getMetaRegionFromName(regionName);
         if (hri == null) {
           if (LOG.isTraceEnabled()) {
-            LOG.trace("Skip online report for region=" + Bytes.toStringBinary(regionName) +
-              " while meta is loading");
+            LOG.trace("Skip online report for region={} while meta is loading from server={}",
+                Bytes.toStringBinary(regionName), serverName);
           }
           continue;
         }
@@ -1034,7 +1035,8 @@ public class AssignmentManager implements ServerListener {
                     " but state has otherwise AND NO procedure is running");
                 }
               } catch (UnexpectedStateException e) {
-                LOG.warn(regionNode.toString() + " reported unexpteced OPEN: " + e.getMessage(), e);
+                LOG.warn("{} reported unexpteced OPEN: {} sever={}", regionNode.toString(),
+                    e.getMessage(), serverName, e);
               }
             }
           } else if (!regionNode.isInState(State.CLOSING, State.SPLITTING)) {
@@ -1053,7 +1055,8 @@ public class AssignmentManager implements ServerListener {
       //See HBASE-21421, we can count on reportRegionStateTransition calls
       //We only log a warming here. It could be a network lag.
       LOG.warn("Failed to checkOnlineRegionsReport, maybe due to network lag, "
-          + "if this message continues, be careful of double assign", e);
+          + "if this message continues, be careful of double assign. report from server={}",
+          serverName, e);
     }
   }
 
@@ -1911,4 +1914,41 @@ public class AssignmentManager implements ServerListener {
     }
     return rsReportsSnapshot;
   }
+
+  /**
+   * Provide regions state count for given table.
+   * e.g howmany regions of give table are opened/closed/rit etc
+   *
+   * @param tableName TableName
+   * @return region states count
+   */
+  public RegionStatesCount getRegionStatesCount(TableName tableName) {
+    int openRegionsCount = 0;
+    int closedRegionCount = 0;
+    int ritCount = 0;
+    int splitRegionCount = 0;
+    int totalRegionCount = 0;
+    if (!isTableDisabled(tableName)) {
+      final List<RegionState> states = regionStates.getTableRegionStates(tableName);
+      for (RegionState regionState : states) {
+        if (regionState.isOpened()) {
+          openRegionsCount++;
+        } else if (regionState.isClosed()) {
+          closedRegionCount++;
+        } else if (regionState.isSplit()) {
+          splitRegionCount++;
+        }
+      }
+      totalRegionCount = states.size();
+      ritCount = totalRegionCount - openRegionsCount - splitRegionCount;
+    }
+    return new RegionStatesCount.RegionStatesCountBuilder()
+      .setOpenRegions(openRegionsCount)
+      .setClosedRegions(closedRegionCount)
+      .setSplitRegions(splitRegionCount)
+      .setRegionsInTransition(ritCount)
+      .setTotalRegions(totalRegionCount)
+      .build();
+  }
+
 }

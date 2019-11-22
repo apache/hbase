@@ -33,6 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
@@ -160,15 +161,24 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
   public void testNeedBalance() {
     float minCost = conf.getFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 0.05f);
     conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 1.0f);
-    loadBalancer.setConf(conf);
-    for (int[] mockCluster : clusterStateMocks) {
-      Map<ServerName, List<RegionInfo>> servers = mockClusterServers(mockCluster);
-      List<RegionPlan> plans = loadBalancer.balanceCluster(servers);
-      assertNull(plans);
+    try {
+      // Test with/without per table balancer.
+      boolean[] perTableBalancerConfigs = {true, false};
+      for (boolean isByTable : perTableBalancerConfigs) {
+        conf.setBoolean(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, isByTable);
+        loadBalancer.setConf(conf);
+        for (int[] mockCluster : clusterStateMocks) {
+          Map<ServerName, List<RegionInfo>> servers = mockClusterServers(mockCluster);
+          List<RegionPlan> plans = loadBalancer.balanceCluster(servers);
+          assertNull(plans);
+        }
+      }
+    } finally {
+      // reset config
+      conf.unset(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE);
+      conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", minCost);
+      loadBalancer.setConf(conf);
     }
-    // reset config
-    conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", minCost);
-    loadBalancer.setConf(conf);
   }
 
   @Test

@@ -295,8 +295,17 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Enables all tables matching the given regex
     def enable_all(regex)
-      regex = regex.to_s
-      @admin.enableTables(Pattern.compile(regex))
+      pattern = Pattern.compile(regex.to_s)
+      failed = java.util.ArrayList.new
+      @admin.listTableNames(pattern).each do |table_name|
+        begin
+          @admin.enableTable(table_name)
+        rescue java.io.IOException => e
+          puts "table:#{table_name}, error:#{e.toString}"
+          failed.add(table_name)
+        end
+      end
+      failed
     end
 
     #----------------------------------------------------------------------------------------------
@@ -311,7 +320,16 @@ module Hbase
     # Disables all tables matching the given regex
     def disable_all(regex)
       pattern = Pattern.compile(regex.to_s)
-      @admin.disableTables(pattern).map { |t| t.getTableName.getNameAsString }
+      failed = java.util.ArrayList.new
+      @admin.listTableNames(pattern).each do |table_name|
+        begin
+          @admin.disableTable(table_name)
+        rescue java.io.IOException => e
+          puts "table:#{table_name}, error:#{e.toString}"
+          failed.add(table_name)
+        end
+      end
+      failed
     end
 
     #---------------------------------------------------------------------------------------------
@@ -341,7 +359,15 @@ module Hbase
     # Drops a table
     def drop_all(regex)
       pattern = Pattern.compile(regex.to_s)
-      failed = @admin.deleteTables(pattern).map { |t| t.getTableName.getNameAsString }
+      failed = java.util.ArrayList.new
+      @admin.listTableNames(pattern).each do |table_name|
+        begin
+          @admin.deleteTable(table_name)
+        rescue java.io.IOException => e
+          puts puts "table:#{table_name}, error:#{e.toString}"
+          failed.add(table_name)
+        end
+      end
       failed
     end
 
@@ -592,16 +618,21 @@ module Hbase
       # Table should exist
       raise(ArgumentError, "Can't find a table: #{table_name}") unless exists?(table_name)
 
-      status = Pair.new
       begin
-        status = @admin.getAlterStatus(org.apache.hadoop.hbase.TableName.valueOf(table_name))
-        if status.getSecond != 0
-          puts "#{status.getSecond - status.getFirst}/#{status.getSecond} regions updated."
+        cluster_metrics = @admin.getClusterMetrics
+        table_region_status = cluster_metrics
+                              .getTableRegionStatesCount
+                              .get(org.apache.hadoop.hbase.TableName.valueOf(table_name))
+        if table_region_status.getTotalRegions != 0
+          updated_regions = table_region_status.getTotalRegions -
+                            table_region_status.getRegionsInTransition -
+                            table_region_status.getClosedRegions
+          puts "#{updated_regions}/#{table_region_status.getTotalRegions} regions updated."
         else
           puts 'All regions updated.'
         end
         sleep 1
-      end while !status.nil? && status.getFirst != 0
+      end while !table_region_status.nil? && table_region_status.getRegionsInTransition != 0
       puts 'Done.'
     end
 

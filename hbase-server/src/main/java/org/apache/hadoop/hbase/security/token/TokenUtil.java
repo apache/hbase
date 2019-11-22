@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.security.User;
@@ -64,10 +65,25 @@ public class TokenUtil {
 
   /**
    * Obtain and return an authentication token for the current user.
-   * @param conn The HBase cluster connection
-   * @throws IOException if a remote error or serialization problem occurs.
-   * @return the authentication token instance
+   * It was removed in HBase-2.0 but added again as spark code relies on this method to obtain
+   * delegation token
+   * @deprecated Since 2.0.0.
    */
+  @Deprecated
+  public static Token<AuthenticationTokenIdentifier> obtainToken(Configuration conf)
+      throws IOException {
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      return obtainToken(connection);
+    }
+  }
+
+  /**
+   * See {@link ClientTokenUtil#obtainToken(org.apache.hadoop.hbase.client.Connection)}.
+   * @deprecated External users should not use this method. Please post on
+   *   the HBase dev mailing list if you need this method. Internal
+   *   HBase code should use {@link ClientTokenUtil} instead.
+   */
+  @Deprecated
   public static Token<AuthenticationTokenIdentifier> obtainToken(
       Connection conn) throws IOException {
     Table meta = null;

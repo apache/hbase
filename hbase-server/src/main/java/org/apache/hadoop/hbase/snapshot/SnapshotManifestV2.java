@@ -126,7 +126,11 @@ public final class SnapshotManifestV2 {
       if (storeFile.isReference()) {
         sfManifest.setReference(storeFile.getReference().convert());
       }
-      sfManifest.setFileSize(storeFile.getReferencedFileStatus(fs).getLen());
+      if (!storeFile.isReference() && !storeFile.isLink()) {
+        sfManifest.setFileSize(storeFile.getSize());
+      } else {
+        sfManifest.setFileSize(storeFile.getReferencedFileStatus(fs).getLen());
+      }
       family.addStoreFiles(sfManifest.build());
     }
   }

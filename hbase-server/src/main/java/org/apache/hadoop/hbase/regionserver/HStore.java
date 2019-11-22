@@ -29,6 +29,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.OptionalDouble;
@@ -81,6 +82,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.InvalidHFileException;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.quotas.RegionSizeStore;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
@@ -108,6 +110,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableCollection;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.IterableUtils;
@@ -306,7 +309,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     // update the storeSize in the completeCompaction(..) finally (just like compaction) , so
     // no need calculate the storeSize twice.
     this.storeSize.addAndGet(getStorefilesSize(hStoreFiles, sf -> true));
-    this.totalUncompressedBytes.addAndGet(getTotalUmcompressedBytes(hStoreFiles));
+    this.totalUncompressedBytes.addAndGet(getTotalUncompressedBytes(hStoreFiles));
     this.storeEngine.getStoreFileManager().loadFiles(hStoreFiles);
 
     // Initialize checksum type from name. The names are CRC32, CRC32C, etc.
@@ -344,8 +347,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     // Check if in-memory-compaction configured. Note MemoryCompactionPolicy is an enum!
     MemoryCompactionPolicy inMemoryCompaction = null;
     if (this.getTableName().isSystemTable()) {
-      inMemoryCompaction = MemoryCompactionPolicy.valueOf(
-          conf.get("hbase.systemtables.compacting.memstore.type", "NONE"));
+      inMemoryCompaction = MemoryCompactionPolicy
+        .valueOf(conf.get("hbase.systemtables.compacting.memstore.type", "NONE").toUpperCase());
     } else {
       inMemoryCompaction = family.getInMemoryCompaction();
     }
@@ -1498,9 +1501,48 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
       synchronized (filesCompacting) {
         filesCompacting.removeAll(compactedFiles);
       }
+
+      // These may be null when the RS is shutting down. The space quota Chores will fix the Region
+      // sizes later so it's not super-critical if we miss these.
+      RegionServerServices rsServices = region.getRegionServerServices();
+      if (rsServices != null && rsServices.getRegionServerSpaceQuotaManager() != null) {
+        updateSpaceQuotaAfterFileReplacement(
+            rsServices.getRegionServerSpaceQuotaManager().getRegionSizeStore(), getRegionInfo(),
+            compactedFiles, result);
+      }
     } finally {
       this.lock.writeLock().unlock();
     }
+  }
+
+  /**
+   * Updates the space quota usage for this region, removing the size for files compacted away
+   * and adding in the size for new files.
+   *
+   * @param sizeStore The object tracking changes in region size for space quotas.
+   * @param regionInfo The identifier for the region whose size is being updated.
+   * @param oldFiles Files removed from this store's region.
+   * @param newFiles Files added to this store's region.
+   */
+  void updateSpaceQuotaAfterFileReplacement(
+      RegionSizeStore sizeStore, RegionInfo regionInfo, Collection<HStoreFile> oldFiles,
+      Collection<HStoreFile> newFiles) {
+    long delta = 0;
+    if (oldFiles != null) {
+      for (HStoreFile compactedFile : oldFiles) {
+        if (compactedFile.isHFile()) {
+          delta -= compactedFile.getReader().length();
+        }
+      }
+    }
+    if (newFiles != null) {
+      for (HStoreFile newFile : newFiles) {
+        if (newFile.isHFile()) {
+          delta += newFile.getReader().length();
+        }
+      }
+    }
+    sizeStore.incrementRegionSize(regionInfo, delta);
   }
 
   /**
@@ -2109,40 +2151,46 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
       HStoreFile::isHFile);
   }
 
-  private long getTotalUmcompressedBytes(List<HStoreFile> files) {
-    return files.stream().filter(f -> f != null && f.getReader() != null)
-        .mapToLong(f -> f.getReader().getTotalUncompressedBytes()).sum();
+  private long getTotalUncompressedBytes(List<HStoreFile> files) {
+    return files.stream()
+      .mapToLong(file -> getStorefileFieldSize(file, StoreFileReader::getTotalUncompressedBytes))
+      .sum();
   }
 
   private long getStorefilesSize(Collection<HStoreFile> files, Predicate<HStoreFile> predicate) {
-    return files.stream().filter(f -> f != null && f.getReader() != null).filter(predicate)
-        .mapToLong(f -> f.getReader().length()).sum();
+    return files.stream().filter(predicate)
+      .mapToLong(file -> getStorefileFieldSize(file, StoreFileReader::length)).sum();
   }
 
-  private long getStoreFileFieldSize(ToLongFunction<StoreFileReader> f) {
-    return this.storeEngine.getStoreFileManager().getStorefiles().stream().filter(sf -> {
-      if (sf.getReader() == null) {
-        LOG.warn("StoreFile {} has a null Reader", sf);
-        return false;
-      } else {
-        return true;
-      }
-    }).map(HStoreFile::getReader).mapToLong(f).sum();
+  private long getStorefileFieldSize(HStoreFile file, ToLongFunction<StoreFileReader> f) {
+    if (file == null) {
+      return 0L;
+    }
+    StoreFileReader reader = file.getReader();
+    if (reader == null) {
+      return 0L;
+    }
+    return f.applyAsLong(reader);
+  }
+
+  private long getStorefilesFieldSize(ToLongFunction<StoreFileReader> f) {
+    return this.storeEngine.getStoreFileManager().getStorefiles().stream()
+      .mapToLong(file -> getStorefileFieldSize(file, f)).sum();
   }
 
   @Override
   public long getStorefilesRootLevelIndexSize() {
-    return getStoreFileFieldSize(StoreFileReader::indexSize);
+    return getStorefilesFieldSize(StoreFileReader::indexSize);
   }
 
   @Override
   public long getTotalStaticIndexSize() {
-    return getStoreFileFieldSize(StoreFileReader::getUncompressedDataIndexSize);
+    return getStorefilesFieldSize(StoreFileReader::getUncompressedDataIndexSize);
   }
 
   @Override
   public long getTotalStaticBloomSize() {
-    return getStoreFileFieldSize(StoreFileReader::getTotalBloomSize);
+    return getStorefilesFieldSize(StoreFileReader::getTotalBloomSize);
   }
 
   @Override
@@ -2550,18 +2598,23 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
   /**
    * Archives and removes the compacted files
    * @param compactedfiles The compacted files in this store that are not active in reads
-   * @throws IOException
    */
   private void removeCompactedfiles(Collection<HStoreFile> compactedfiles, boolean storeClosing)
       throws IOException {
     final List<HStoreFile> filesToRemove = new ArrayList<>(compactedfiles.size());
+    final List<Long> storeFileSizes = new ArrayList<>(compactedfiles.size());
     for (final HStoreFile file : compactedfiles) {
       synchronized (file) {
         try {
           StoreFileReader r = file.getReader();
           if (r == null) {
             LOG.debug("The file {} was closed but still not archived", file);
+            // HACK: Temporarily re-open the reader so we can get the size of the file. Ideally,
+            // we should know the size of an HStoreFile without having to ask the HStoreFileReader
+            // for that.
+            long length = getStoreFileSize(file);
             filesToRemove.add(file);
+            storeFileSizes.add(length);
             continue;
           }
 
@@ -2585,10 +2638,14 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
             // Even if deleting fails we need not bother as any new scanners won't be
             // able to use the compacted file as the status is already compactedAway
             LOG.trace("Closing and archiving the file {}", file);
+            // Copy the file size before closing the reader
+            final long length = r.length();
             r.close(true);
             file.closeStreamReaders(true);
             // Just close and return
             filesToRemove.add(file);
+            // Only add the length if we successfully added the file to `filesToRemove`
+            storeFileSizes.add(length);
           } else {
             LOG.info("Can't archive compacted file " + file.getPath()
                 + " because of either isCompactedAway=" + file.isCompactedAway()
@@ -2624,9 +2681,12 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
           // FileNotFoundException when we attempt to re-archive them in the next go around.
           Collection<Path> failedFiles = fae.getFailedFiles();
           Iterator<HStoreFile> iter = filesToRemove.iterator();
+          Iterator<Long> sizeIter = storeFileSizes.iterator();
           while (iter.hasNext()) {
+            sizeIter.next();
             if (failedFiles.contains(iter.next().getPath())) {
               iter.remove();
+              sizeIter.remove();
             }
           }
           if (!filesToRemove.isEmpty()) {
@@ -2639,7 +2699,34 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     if (!filesToRemove.isEmpty()) {
       // Clear the compactedfiles from the store file manager
       clearCompactedfiles(filesToRemove);
+      // Try to send report of this archival to the Master for updating quota usage faster
+      reportArchivedFilesForQuota(filesToRemove, storeFileSizes);
     }
+  }
+
+  /**
+   * Computes the length of a store file without succumbing to any errors along the way. If an
+   * error is encountered, the implementation returns {@code 0} instead of the actual size.
+   *
+   * @param file The file to compute the size of.
+   * @return The size in bytes of the provided {@code file}.
+   */
+  long getStoreFileSize(HStoreFile file) {
+    long length = 0;
+    try {
+      file.initReader();
+      length = file.getReader().length();
+    } catch (IOException e) {
+      LOG.trace("Failed to open reader when trying to compute store file size, ignoring", e);
+    } finally {
+      try {
+        file.closeStoreFile(
+            file.getCacheConf() != null ? file.getCacheConf().shouldEvictOnClose() : true);
+      } catch (IOException e) {
+        LOG.trace("Failed to close reader after computing store file size, ignoring", e);
+      }
+    }
+    return length;
   }
 
   public Long preFlushSeqIDEstimation() {
@@ -2663,5 +2750,32 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
 
   public int getCurrentParallelPutCount() {
     return currentParallelPutCount.get();
+  }
+
+  void reportArchivedFilesForQuota(List<? extends StoreFile> archivedFiles, List<Long> fileSizes) {
+    // Sanity check from the caller
+    if (archivedFiles.size() != fileSizes.size()) {
+      throw new RuntimeException("Coding error: should never see lists of varying size");
+    }
+    RegionServerServices rss = this.region.getRegionServerServices();
+    if (rss == null) {
+      return;
+    }
+    List<Entry<String,Long>> filesWithSizes = new ArrayList<>(archivedFiles.size());
+    Iterator<Long> fileSizeIter = fileSizes.iterator();
+    for (StoreFile storeFile : archivedFiles) {
+      final long fileSize = fileSizeIter.next();
+      if (storeFile.isHFile() && fileSize != 0) {
+        filesWithSizes.add(Maps.immutableEntry(storeFile.getPath().getName(), fileSize));
+      }
+    }
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Files archived: " + archivedFiles + ", reporting the following to the Master: "
+          + filesWithSizes);
+    }
+    boolean success = rss.reportFileArchivalForQuotas(getTableName(), filesWithSizes);
+    if (!success) {
+      LOG.warn("Failed to report archival of files: " + filesWithSizes);
+    }
   }
 }

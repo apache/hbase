@@ -34,9 +34,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -110,6 +108,8 @@ public class SpaceQuotaHelperForTests {
     conf.setInt(SpaceQuotaRefresherChore.POLICY_REFRESHER_CHORE_PERIOD_KEY, 1000);
     conf.setInt(SnapshotQuotaObserverChore.SNAPSHOT_QUOTA_CHORE_DELAY_KEY, 1000);
     conf.setInt(SnapshotQuotaObserverChore.SNAPSHOT_QUOTA_CHORE_PERIOD_KEY, 1000);
+    conf.setInt(RegionSizeReportingChore.REGION_SIZE_REPORTING_CHORE_PERIOD_KEY, 1000);
+    conf.setInt(RegionSizeReportingChore.REGION_SIZE_REPORTING_CHORE_DELAY_KEY, 1000);
     // The period at which we check for compacted files that should be deleted from HDFS
     conf.setInt("hbase.hfile.compaction.discharger.interval", 5 * 1000);
     conf.setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
@@ -326,6 +326,44 @@ public class SpaceQuotaHelperForTests {
   }
 
   /**
+   * Bulk-loads a number of files with a number of rows to the given table.
+   */
+//  ClientServiceCallable<Boolean> generateFileToLoad(
+//      TableName tn, int numFiles, int numRowsPerFile) throws Exception {
+//    Connection conn = testUtil.getConnection();
+//    FileSystem fs = testUtil.getTestFileSystem();
+//    Configuration conf = testUtil.getConfiguration();
+//    Path baseDir = new Path(fs.getHomeDirectory(), testName.getMethodName() + "_files");
+//    fs.mkdirs(baseDir);
+//    final List<Pair<byte[], String>> famPaths = new ArrayList<>();
+//    for (int i = 1; i <= numFiles; i++) {
+//      Path hfile = new Path(baseDir, "file" + i);
+//      TestHRegionServerBulkLoad.createHFile(
+//          fs, hfile, Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("my"),
+//          Bytes.toBytes("file"), numRowsPerFile);
+//      famPaths.add(new Pair<>(Bytes.toBytes(SpaceQuotaHelperForTests.F1), hfile.toString()));
+//    }
+//
+//    // bulk load HFiles
+//    Table table = conn.getTable(tn);
+//    final String bulkToken = new SecureBulkLoadClient(conf, table).prepareBulkLoad(conn);
+//    return new ClientServiceCallable<Boolean>(
+//        conn, tn, Bytes.toBytes("row"), new RpcControllerFactory(conf).newController(),
+//        HConstants.PRIORITY_UNSET) {
+//      @Override
+//     public Boolean rpcCall() throws Exception {
+//        SecureBulkLoadClient secureClient = null;
+//        byte[] regionName = getLocation().getRegion().getRegionName();
+//        try (Table table = conn.getTable(getTableName())) {
+//          secureClient = new SecureBulkLoadClient(conf, table);
+//          return secureClient.secureBulkLoadHFiles(getStub(), famPaths, regionName,
+//                true, null, bulkToken);
+//        }
+//      }
+//    };
+//  }
+
+  /**
    * Removes all quotas defined in the HBase quota table.
    */
   void removeAllQuotas() throws Exception {
@@ -380,14 +418,14 @@ public class SpaceQuotaHelperForTests {
   /**
    * Waits 30seconds for the HBase quota table to exist.
    */
-  void waitForQuotaTable(Connection conn) throws IOException {
+  public void waitForQuotaTable(Connection conn) throws IOException {
     waitForQuotaTable(conn, 30_000);
   }
 
   /**
    * Waits {@code timeout} milliseconds for the HBase quota table to exist.
    */
-  void waitForQuotaTable(Connection conn, long timeout) throws IOException {
+  public void waitForQuotaTable(Connection conn, long timeout) throws IOException {
     testUtil.waitFor(timeout, 1000, new Predicate<IOException>() {
       @Override
       public boolean evaluate() throws IOException {
@@ -566,8 +604,8 @@ public class SpaceQuotaHelperForTests {
     }
 
     // Create the table
-    HTableDescriptor tableDesc = new HTableDescriptor(tn);
-    tableDesc.addFamily(new HColumnDescriptor(F1));
+    TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tn)
+        .addColumnFamily(ColumnFamilyDescriptorBuilder.of(F1)).build();
 
     admin.createTable(tableDesc);
     return tn;

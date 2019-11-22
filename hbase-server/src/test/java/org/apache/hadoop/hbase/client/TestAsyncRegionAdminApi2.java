@@ -24,7 +24,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
@@ -77,7 +76,7 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
 
     AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(META_TABLE_NAME);
     List<HRegionLocation> regionLocations =
-        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName)).get();
+        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, tableName).get();
     int originalCount = regionLocations.size();
 
     initSplitMergeSwitch();
@@ -108,7 +107,7 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
 
     AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(META_TABLE_NAME);
     List<HRegionLocation> regionLocations =
-        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName)).get();
+        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, tableName).get();
     int originalCount = regionLocations.size();
 
     initSplitMergeSwitch();
@@ -152,8 +151,8 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
     createTableWithDefaultConf(tableName, splitRows);
 
     AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(META_TABLE_NAME);
-    List<HRegionLocation> regionLocations =
-        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName)).get();
+    List<HRegionLocation> regionLocations = AsyncMetaTableAccessor
+      .getTableHRegionLocations(metaTable, tableName).get();
     RegionInfo regionA;
     RegionInfo regionB;
 
@@ -163,16 +162,16 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
     regionB = regionLocations.get(1).getRegion();
     admin.mergeRegions(regionA.getRegionName(), regionB.getRegionName(), false).get();
 
-    regionLocations =
-        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName)).get();
+    regionLocations = AsyncMetaTableAccessor
+      .getTableHRegionLocations(metaTable, tableName).get();
     assertEquals(2, regionLocations.size());
     // merge with encoded name
     regionA = regionLocations.get(0).getRegion();
     regionB = regionLocations.get(1).getRegion();
     admin.mergeRegions(regionA.getRegionName(), regionB.getRegionName(), false).get();
 
-    regionLocations =
-        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName)).get();
+    regionLocations = AsyncMetaTableAccessor
+      .getTableHRegionLocations(metaTable, tableName).get();
     assertEquals(1, regionLocations.size());
   }
 
@@ -192,8 +191,8 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
     createTableWithDefaultConf(tableName);
 
     AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(META_TABLE_NAME);
-    List<HRegionLocation> regionLocations =
-        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName)).get();
+    List<HRegionLocation> regionLocations = AsyncMetaTableAccessor
+      .getTableHRegionLocations(metaTable, tableName).get();
     assertEquals(1, regionLocations.size());
 
     AsyncTable<?> table = ASYNC_CONN.getTable(tableName);
@@ -222,9 +221,8 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
     int count = 0;
     for (int i = 0; i < 45; i++) {
       try {
-        regionLocations =
-            AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName))
-                .get();
+        regionLocations = AsyncMetaTableAccessor
+          .getTableHRegionLocations(metaTable, tableName).get();
         count = regionLocations.size();
         if (count >= 2) {
           break;
@@ -237,4 +235,3 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
     assertEquals(2, count);
   }
 }
-

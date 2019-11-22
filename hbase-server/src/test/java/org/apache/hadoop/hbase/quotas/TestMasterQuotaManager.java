@@ -73,18 +73,19 @@ public class TestMasterQuotaManager {
 
     assertEquals(5, manager.snapshotRegionSizes().size());
 
+    QuotaObserverChore chore = mock(QuotaObserverChore.class);
     // Prune nothing
-    assertEquals(0, manager.pruneEntriesOlderThan(0));
+    assertEquals(0, manager.pruneEntriesOlderThan(0, chore));
     assertEquals(5, manager.snapshotRegionSizes().size());
-    assertEquals(0, manager.pruneEntriesOlderThan(10));
+    assertEquals(0, manager.pruneEntriesOlderThan(10, chore));
     assertEquals(5, manager.snapshotRegionSizes().size());
 
     // Prune the elements at time1
-    assertEquals(2, manager.pruneEntriesOlderThan(15));
+    assertEquals(2, manager.pruneEntriesOlderThan(15, chore));
     assertEquals(3, manager.snapshotRegionSizes().size());
 
     // Prune the elements at time2
-    assertEquals(2, manager.pruneEntriesOlderThan(30));
+    assertEquals(2, manager.pruneEntriesOlderThan(30, chore));
     assertEquals(1, manager.snapshotRegionSizes().size());
   }
 }

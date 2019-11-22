@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ImmutableByteArray;
@@ -37,13 +38,11 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
- * <p>
- * Accounting of sequence ids per region and then by column family. So we can our accounting
+ * Accounting of sequence ids per region and then by column family. So we can keep our accounting
  * current, call startCacheFlush and then finishedCacheFlush or abortCacheFlush so this instance can
  * keep abreast of the state of sequence id persistence. Also call update per append.
- * </p>
  * <p>
- * For the implementation, we assume that all the {@code encodedRegionName} passed in is gotten by
+ * For the implementation, we assume that all the {@code encodedRegionName} passed in are gotten by
  * {@link org.apache.hadoop.hbase.client.RegionInfo#getEncodedNameAsBytes()}. So it is safe to use
  * it as a hash key. And for family name, we use {@link ImmutableByteArray} as key. This is because
  * hash based map is much faster than RBTree or CSLM and here we are on the critical write path. See
@@ -52,8 +51,8 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
  */
 @InterfaceAudience.Private
 class SequenceIdAccounting {
-
   private static final Logger LOG = LoggerFactory.getLogger(SequenceIdAccounting.class);
+
   /**
    * This lock ties all operations on {@link SequenceIdAccounting#flushingSequenceIds} and
    * {@link #lowestUnflushedSequenceIds} Maps. {@link #lowestUnflushedSequenceIds} has the
@@ -109,7 +108,6 @@ class SequenceIdAccounting {
 
   /**
    * Returns the lowest unflushed sequence id for the region.
-   * @param encodedRegionName
    * @return Lowest outstanding unflushed sequenceid for <code>encodedRegionName</code>. Will
    * return {@link HConstants#NO_SEQNUM} when none.
    */
@@ -124,8 +122,6 @@ class SequenceIdAccounting {
   }
 
   /**
-   * @param encodedRegionName
-   * @param familyName
    * @return Lowest outstanding unflushed sequenceid for <code>encodedRegionname</code> and
    *         <code>familyName</code>. Returned sequenceid may be for an edit currently being
    *         flushed.
@@ -181,6 +177,30 @@ class SequenceIdAccounting {
         m.putIfAbsent(ImmutableByteArray.wrap(familyName), l);
       }
     }
+  }
+
+  /**
+   * Clear all the records of the given region as it is going to be closed.
+   * <p/>
+   * We will call this once we get the region close marker. We need this because that, if we use
+   * Durability.ASYNC_WAL, after calling startCacheFlush, we may still get some ongoing wal entries
+   * that has not been processed yet, this will lead to orphan records in the
+   * lowestUnflushedSequenceIds and then cause too many WAL files.
+   * <p/>
+   * See HBASE-23157 for more details.
+   */
+  void onRegionClose(byte[] encodedRegionName) {
+    synchronized (tieLock) {
+      this.lowestUnflushedSequenceIds.remove(encodedRegionName);
+      Map<ImmutableByteArray, Long> flushing = this.flushingSequenceIds.remove(encodedRegionName);
+      if (flushing != null) {
+        LOG.warn("Still have flushing records when closing {}, {}",
+          Bytes.toString(encodedRegionName),
+          flushing.entrySet().stream().map(e -> e.getKey().toString() + "->" + e.getValue())
+            .collect(Collectors.joining(",", "{", "}")));
+      }
+    }
+    this.highestSequenceIds.remove(encodedRegionName);
   }
 
   /**
@@ -363,7 +383,7 @@ class SequenceIdAccounting {
         Long currentId = tmpMap.get(e.getKey());
         if (currentId != null && currentId.longValue() < e.getValue().longValue()) {
           String errorStr = Bytes.toString(encodedRegionName) + " family "
-              + e.getKey().toStringUtf8() + " acquired edits out of order current memstore seq="
+              + e.getKey().toString() + " acquired edits out of order current memstore seq="
               + currentId + ", previous oldest unflushed id=" + e.getValue();
           LOG.error(errorStr);
           Runtime.getRuntime().halt(1);

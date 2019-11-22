@@ -101,6 +101,11 @@ module Hbase
       assert(list.count > 0)
     end
 
+    define_test 'list_deadservers should return exact count of dead servers' do
+      output = capture_stdout { command(:list_deadservers) }
+      assert(output.include?('0 row(s)'))
+    end
+
     #-------------------------------------------------------------------------------
 
     define_test "flush should work" do
@@ -109,6 +114,13 @@ module Hbase
       servers.each do |s|
         command(:flush, s.toString)
       end
+    end
+
+    #-------------------------------------------------------------------------------
+
+    define_test 'alter_status should work' do
+      output = capture_stdout { command(:alter_status, @test_name) }
+      assert(output.include?('1/1 regions updated'))
     end
 
     #-------------------------------------------------------------------------------
@@ -322,6 +334,26 @@ module Hbase
       $TEST_CLUSTER.getConfiguration.setBoolean("hbase.client.truncatetable.support", false)
       admin.truncate_preserve(@create_test_name, $TEST_CLUSTER.getConfiguration)
       assert_equal(splits, table(@create_test_name)._get_splits_internal())
+    end
+
+    #-------------------------------------------------------------------------------
+
+    define_test 'enable and disable tables by regex' do
+      @t1 = 't1'
+      @t2 = 't11'
+      @regex = 't1.*'
+      command(:create, @t1, 'f')
+      command(:create, @t2, 'f')
+      admin.disable_all(@regex)
+      assert(command(:is_disabled, @t1))
+      assert(command(:is_disabled, @t2))
+      admin.enable_all(@regex)
+      assert(command(:is_enabled, @t1))
+      assert(command(:is_enabled, @t2))
+      admin.disable_all(@regex)
+      admin.drop_all(@regex)
+      assert(!command(:exists, @t1))
+      assert(!command(:exists, @t2))
     end
 
     #-------------------------------------------------------------------------------
