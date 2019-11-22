@@ -77,6 +77,9 @@ class MetaFixer {
     }
     fixHoles(report);
     fixOverlaps(report);
+    // Run the ReplicationBarrierCleaner here; it may clear out rep_barrier rows which
+    // can help cleaning up damaged hbase:meta.
+    this.masterServices.runReplicationBarrierCleaner();
   }
 
   /**

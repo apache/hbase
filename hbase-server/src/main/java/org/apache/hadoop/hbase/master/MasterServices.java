@@ -522,4 +522,8 @@ public interface MasterServices extends Server {
    */
   List<RegionPlan> executeRegionPlansWithThrottling(List<RegionPlan> plans);
 
+  /**
+   * Run the ReplicationBarrierChore.
+   */
+  void runReplicationBarrierCleaner();
 }

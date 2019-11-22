@@ -48,7 +48,6 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public class ReplicationBarrierCleaner extends ScheduledChore {
-
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationBarrierCleaner.class);
 
   private static final String REPLICATION_BARRIER_CLEANER_INTERVAL =
@@ -71,7 +70,9 @@ public class ReplicationBarrierCleaner extends ScheduledChore {
   }
 
   @Override
-  protected void chore() {
+  // Public so can be run out of MasterRpcServices. Synchronized so only one
+  // running instance at a time.
+  public synchronized void chore() {
     long totalRows = 0;
     long cleanedRows = 0;
     long deletedRows = 0;
@@ -168,11 +169,9 @@ public class ReplicationBarrierCleaner extends ScheduledChore {
       LOG.warn("Failed to clean up replication barrier", e);
     }
     if (totalRows > 0) {
-      LOG.info(
-        "Cleanup replication barriers: totalRows {}, " +
-          "cleanedRows {}, deletedRows {}, deletedBarriers {}, deletedLastPushedSeqIds {}",
-        totalRows, cleanedRows, deletedRows, deletedBarriers, deletedLastPushedSeqIds);
+      LOG.info("TotalRows={}, cleanedRows={}, deletedRows={}, deletedBarriers={}, " +
+          "deletedLastPushedSeqIds={}", totalRows, cleanedRows, deletedRows,
+          deletedBarriers, deletedLastPushedSeqIds);
     }
   }
-
 }
