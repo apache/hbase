@@ -37,6 +37,7 @@ ServerManager serverManager;
     org.apache.hadoop.hbase.master.ServerManager;
     org.apache.hadoop.hbase.net.Address;
     org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
+    org.apache.hadoop.util.StringUtils;
     org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 </%import>
 <%java>
@@ -139,7 +140,7 @@ if (master.getServerManager() != null) {
     <td><% tables %></td>
     <td><% requestsPerSecond %></td>
     <td><% numRegionsOnline %></td>
-    <td><% avgLoad %></td>
+    <td><% StringUtils.limitDecimalTo2(avgLoad) %></td>
 </tr>
 <%java>
 }
