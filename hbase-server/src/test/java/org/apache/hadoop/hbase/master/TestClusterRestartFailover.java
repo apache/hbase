@@ -116,7 +116,7 @@ public class TestClusterRestartFailover extends AbstractTestRestartCluster {
         .filter(p -> (p instanceof ServerCrashProcedure) &&
             ((ServerCrashProcedure) p).getServerName().equals(SERVER_FOR_TEST)).findAny();
     assertTrue("Should have one SCP for " + SERVER_FOR_TEST, procedure.isPresent());
-    assertFalse("Submit the SCP for the same serverName " + SERVER_FOR_TEST + " which should fail",
+    assertTrue("Submit the SCP for the same serverName " + SERVER_FOR_TEST + " which should fail",
       UTIL.getHBaseCluster().getMaster().getServerManager().expireServer(SERVER_FOR_TEST) ==
           Procedure.NO_PROC_ID);
 
