@@ -17,14 +17,17 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import java.util.List;
 
 /**
  * A {@link ChainWALEntryFilter} for providing more flexible options
  */
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
 public class CustomChainWALEntryFilter extends ChainWALEntryFilter {
 
   private boolean filterEmptyEntry = false;
