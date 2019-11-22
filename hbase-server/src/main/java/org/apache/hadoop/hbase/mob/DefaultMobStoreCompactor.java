@@ -182,16 +182,10 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     FileSystem fs = mobFiles.get(0).getFileSystem(this.conf);
     HashMap<String, Long> map = mobLengthMap.get();
     map.clear();
-    long maxMobFileSize = conf.getLong(MobConstants.MOB_COMPACTION_MAX_FILE_SIZE_KEY, 
-      MobConstants.DEFAULT_MOB_COMPACTION_MAX_FILE_SIZE);
     for (Path p: mobFiles) {
       FileStatus st = fs.getFileStatus(p);
       long size = st.getLen();
-      /*DEBUG*/   
-      if (size > 2 * maxMobFileSize) {
-        LOG.debug("DDDD FOUND BIG ref MOB size={} file={}", size, p.getName());
-      }
-
+      LOG.info("Ref MOB file={} size={}", p, size);
       map.put(p.getName(), fs.getFileStatus(p).getLen());
     }
   }
@@ -251,7 +245,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     mobRefSet.get().clear();
     boolean isUserRequest = userRequest.get();
     boolean compactMOBs = major && isUserRequest;
-    boolean ioOptimizedMob = conf.get(MobConstants.MOB_COMPACTION_TYPE_KEY,
+    boolean ioOptimizedMode = conf.get(MobConstants.MOB_COMPACTION_TYPE_KEY,
       MobConstants.DEFAULT_MOB_COMPACTION_TYPE)
         .equals(MobConstants.IO_OPTIMIZED_MOB_COMPACTION_TYPE);
 
@@ -261,8 +255,8 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
 
     long maxMobFileSize = conf.getLong(MobConstants.MOB_COMPACTION_MAX_FILE_SIZE_KEY, 
       MobConstants.DEFAULT_MOB_COMPACTION_MAX_FILE_SIZE);
-    LOG.info("Compact MOB={} optimized={} maximum MOB file size={}", compactMOBs, 
-      ioOptimizedMob, maxMobFileSize);
+    LOG.info("Compact MOB={} optimized={} maximum MOB file size={} major={}", compactMOBs, 
+      ioOptimizedMode, maxMobFileSize, major);
     
     FileSystem fs = FileSystem.get(conf);
 
@@ -299,16 +293,13 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     Cell mobCell = null;
     try {
         
-      mobFileWriter = newMobWriter(fd, compactMOBs);
+      mobFileWriter = newMobWriter(fd);
       fileName = Bytes.toBytes(mobFileWriter.getPath().getName());
 
       do {
         hasMore = scanner.next(cells, scannerContext);
-        if (LOG.isDebugEnabled()) {
-          now = EnvironmentEdgeManager.currentTime();
-        }
+        now = EnvironmentEdgeManager.currentTime();
         for (Cell c : cells) {
-
           if (compactMOBs) {
             if (MobUtils.isMobReferenceCell(c)) {
               String fName = MobUtils.getMobFileName(c);
@@ -337,7 +328,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
               if (mobCell.getValueLength() > mobSizeThreshold) {
                 // put the mob data back to the MOB store file
                 PrivateCellUtil.setSequenceId(mobCell, c.getSequenceId());
-                if (!ioOptimizedMob) {
+                if (!ioOptimizedMode) {
                   mobFileWriter.append(mobCell);
                   mobCells++;
                   writer.append(MobUtils.createMobRefCell(mobCell, fileName,
@@ -369,9 +360,10 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
                     long len = getLength(mobFileWriter);
                     
                     if (len > maxMobFileSize) {
-                      LOG.debug("DDDD Output File Length={} file=", len, new String(fileName));
+                      LOG.debug("Closing output MOB File, length={} file={}", 
+                        len, Bytes.toString(fileName));
                       commitOrAbortMobWriter(mobFileWriter, fd.maxSeqId, mobCells, major);
-                      mobFileWriter = newMobWriter(fd, compactMOBs);
+                      mobFileWriter = newMobWriter(fd);
                       fileName = Bytes.toBytes(mobFileWriter.getPath().getName());
                       mobCells = 0;
                     }
@@ -402,16 +394,13 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
                 mobCells++;
                 cellsCountCompactedToMob++;
                 cellsSizeCompactedToMob += c.getValueLength();
-                if (ioOptimizedMob) {
+                if (ioOptimizedMode) {
                   // Update total size of the output (we do not take into account 
                   // file compression yet)
                   long len = getLength(mobFileWriter);
-                  if (len > 2 * maxMobFileSize) {
-                    LOG.debug("DDDD Output MOB size={} file={}", len, fileName);
-                  }
                   if (len > maxMobFileSize) {
                     commitOrAbortMobWriter(mobFileWriter, fd.maxSeqId, mobCells, major);
-                    mobFileWriter = newMobWriter(fd, compactMOBs);
+                    mobFileWriter = newMobWriter(fd);
                     fileName = Bytes.toBytes(mobFileWriter.getPath().getName());
                     mobCells = 0;
                   }         
@@ -454,8 +443,15 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
             writer.append(reference);
             cellsCountCompactedToMob++;
             cellsSizeCompactedToMob += c.getValueLength();
-            // Add ref we get for compact MOB case
-            mobRefSet.get().add(mobFileWriter.getPath().getName());
+            if (ioOptimizedMode) {
+              long len = getLength(mobFileWriter);
+              if (len > maxMobFileSize) {
+                commitOrAbortMobWriter(mobFileWriter, fd.maxSeqId, mobCells, major);
+                mobFileWriter = newMobWriter(fd);
+                fileName = Bytes.toBytes(mobFileWriter.getPath().getName());
+                mobCells = 0;
+              }         
+            }
           }
 
           int len = c.getSerializedSize();
@@ -537,17 +533,14 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
   }
 
 
-  private StoreFileWriter newMobWriter(FileDetails fd, boolean compactMOBs) 
+  private StoreFileWriter newMobWriter(FileDetails fd/*, boolean compactMOBs*/) 
       throws IOException {
     try {
       StoreFileWriter mobFileWriter = mobStore.createWriterInTmp(new Date(fd.latestPutTs), 
         fd.maxKeyCount, compactionCompression, store.getRegionInfo().getStartKey(), true);
-      LOG.debug("DDDD New MOB created={}", mobFileWriter.getPath().getName());
-
-      if (compactMOBs) {
-        // Add reference we get for compact MOB
-        mobRefSet.get().add(mobFileWriter.getPath().getName());
-      }
+      LOG.debug("New MOB writer created={}", mobFileWriter.getPath().getName());
+      // Add reference we get for compact MOB
+      mobRefSet.get().add(mobFileWriter.getPath().getName());
       return mobFileWriter;
     } catch (IOException e) {
       // Bailing out
@@ -564,7 +557,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     // MOB files can be committed partially, but corresponding 
     // store file won't be committed, therefore these MOB files
     // become orphans and will be deleted during next MOB cleaning chore cycle
-    LOG.debug("DDDD Commit or Abort size={} mobCells={} major={} file={}",
+    LOG.debug("Commit or abort size={} mobCells={} major={} file={}",
       mobFileWriter.getPos(), mobCells, major, mobFileWriter.getPath().getName());
     Path path = MobUtils.getMobFamilyPath(conf, store.getTableName(), store.getColumnFamilyName());
     if (mobFileWriter != null) {

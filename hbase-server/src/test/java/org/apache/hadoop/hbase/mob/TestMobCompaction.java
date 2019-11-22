@@ -22,7 +22,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -44,11 +43,12 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.MobFileCleanerChore;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
-import org.apache.hadoop.hbase.testclassification.IntegrationTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -68,7 +68,7 @@ import org.slf4j.LoggerFactory;
 
  */
 @SuppressWarnings("deprecation")
-@Category(IntegrationTests.class)
+@Category(LargeTests.class)
 public class TestMobCompaction {
   private static final Logger LOG = LoggerFactory.getLogger(TestMobCompaction.class);
   @ClassRule
@@ -90,7 +90,7 @@ public class TestMobCompaction {
   private HTableDescriptor hdt;
   private HColumnDescriptor hcd;
   private Admin admin;
-  private long count = 1000000;
+  private long count = 500000;
   private double failureProb = 0.1;
   private Table table = null;
   private MobFileCleanerChore chore = new MobFileCleanerChore();
@@ -179,11 +179,11 @@ public class TestMobCompaction {
     conf.setInt("hbase.hstore.compaction.throughput.lower.bound", 52428800);
     conf.setInt("hbase.hstore.compaction.throughput.higher.bound", 2 * 52428800);
     conf.setDouble("injected.fault.probability", failureProb);
-    //conf.set(MobStoreEngine.DEFAULT_MOB_COMPACTOR_CLASS_KEY,
-    //  FaultyMobStoreCompactor.class.getName());
+//    conf.set(MobStoreEngine.DEFAULT_MOB_COMPACTOR_CLASS_KEY,
+//      FaultyMobStoreCompactor.class.getName());
     conf.setLong(MobConstants.MOB_COMPACTION_CHORE_PERIOD, 0);
     conf.setLong(MobConstants.MOB_CLEANER_PERIOD, 0);
-    conf.setLong(MobConstants.MIN_AGE_TO_ARCHIVE_KEY, 20000);
+    conf.setLong(MobConstants.MIN_AGE_TO_ARCHIVE_KEY, 120000);
     conf.set(MobConstants.MOB_COMPACTION_TYPE_KEY, 
       MobConstants.IO_OPTIMIZED_MOB_COMPACTION_TYPE);
     conf.setLong(MobConstants.MOB_COMPACTION_MAX_FILE_SIZE_KEY, 1000000);
@@ -241,31 +241,23 @@ public class TestMobCompaction {
     public void run() {
       try {
 
-        // BufferedMutator bm = admin.getConnection().getBufferedMutator(table.getName());
         // Put Operation
-        Random r = new Random();
         for (int i = 0; i < rows; i++) {
-          //Put p = new Put(Bytes.toBytes(i));
-          byte[] key = new byte[16];
-          r.nextBytes(key);
+          byte[] key = Bytes.toBytes(i);
           Put p = new Put(key);
-          p.addColumn(fam, qualifier, mobVal);
+          p.addColumn(fam, qualifier, Bytes.add(key,mobVal));
           table.put(p);
-
-          // bm.mutate(p);
           if (i % 10000 == 0) {
             LOG.info("LOADED=" + i);
             try {
               Thread.sleep(500);
             } catch (InterruptedException ee) {
-
             }
           }
           if (i % 100000 == 0) {
             printStats(i);
           }
         }
-        // bm.flush();
         admin.flush(table.getName());
         run = false;
       } catch (Exception e) {
@@ -275,6 +267,7 @@ public class TestMobCompaction {
     }
   }
 
+  @Ignore
   @Test
   public void testMobCompaction() throws InterruptedException, IOException {
 
@@ -349,12 +342,25 @@ public class TestMobCompaction {
       ResultScanner scanner = table.getScanner(fam);
       int counter = 0;
       while ((result = scanner.next()) != null) {
-        assertTrue(Arrays.equals(result.getValue(fam, qualifier), mobVal));
+        byte[] key = result.getRow();
+        assertTrue(Arrays.equals(result.getValue(fam, qualifier), 
+          Bytes.add(key,mobVal)));
         if (counter % 10000 == 0) {
-          LOG.info("GET=" + counter);
+          LOG.info("GET=" + counter+" key=" + Bytes.toInt(key));
         }
         counter++;
       }
+      
+//      for (int i=0; i < count; i++) {
+//        byte[] key = Bytes.toBytes(i);
+//        Get get = new Get(key);
+//        Result res = table.get(get);
+//        assertTrue(Arrays.equals(res.getValue(fam, qualifier), 
+//          Bytes.add(key,mobVal)));
+//        if (i % 1000 == 0) {
+//          LOG.info("GET=" + i);
+//        }
+//      }
       assertEquals(count, counter);
     } catch (Exception e) {
       e.printStackTrace();
