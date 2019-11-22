@@ -1910,7 +1910,10 @@ public class MetaTableAccessor {
         .setQualifier(HConstants.REGIONINFO_QUALIFIER)
         .setTimestamp(p.getTimestamp())
         .setType(Type.Put)
-        .setValue(RegionInfo.toByteArray(hri))
+        // Serialize the Default Replica HRI otherwise scan of hbase:meta
+        // shows an info:regioninfo value with encoded name and region
+        // name that differs from that of the hbase;meta row.
+        .setValue(RegionInfo.toByteArray(RegionReplicaUtil.getRegionInfoForDefaultReplica(hri)))
         .build());
     return p;
   }
