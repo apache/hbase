@@ -18,7 +18,12 @@
 
 package org.apache.hadoop.hbase.http;
 
-import java.io.IOException;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -26,16 +31,18 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletResponse;
-
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class SecurityHeadersFilter implements Filter {
   private static final Logger LOG =
       LoggerFactory.getLogger(SecurityHeadersFilter.class);
+  private static final String DEFAULT_XFRAMEOPTIONS = "DENY";
+  private static final String DEFAULT_HSTS = "max-age=63072000;includeSubDomains;preload";
+  private static final String DEFAULT_CSP =
+      "default-src https: data: 'unsafe-inline' 'unsafe-eval'";
   private FilterConfig filterConfig;
 
   @Override
@@ -54,10 +61,23 @@ public class SecurityHeadersFilter implements Filter {
         filterConfig.getInitParameter("xframeoptions"));
     httpResponse.addHeader("Strict-Transport-Security",
         filterConfig.getInitParameter("hsts"));
+    httpResponse.addHeader("Content-Security-Policy",
+        filterConfig.getInitParameter("csp"));
     chain.doFilter(request, response);
   }
 
   @Override
   public void destroy() {
+  }
+
+  public static Map<String, String> getDefaultParameters(Configuration conf) {
+    Map<String, String> params = new HashMap<>();
+    params.put("xframeoptions", conf.get("hbase.http.filter.xframeoptions.mode",
+        DEFAULT_XFRAMEOPTIONS));
+    params.put("hsts", conf.get("hbase.http.filter.hsts.value",
+        DEFAULT_HSTS));
+    params.put("csp", conf.get("hbase.http.filter.csp.value",
+        DEFAULT_CSP));
+    return params;
   }
 }

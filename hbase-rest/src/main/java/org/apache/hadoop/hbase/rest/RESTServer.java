@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.rest;
 import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -143,11 +142,7 @@ public class RESTServer implements Constants {
     FilterHolder holder = new FilterHolder();
     holder.setName("security");
     holder.setClassName(SecurityHeadersFilter.class.getName());
-    Map<String, String> params = new HashMap<>();
-    params.put("xframeoptions", conf.get("hbase.http.filter.xframeoptions.mode",
-        "DENY"));
-    params.put("hsts", conf.get("hbase.http.filter.hsts.value",
-        "max-age=31536000"));
+    Map<String, String> params = SecurityHeadersFilter.getDefaultParameters(conf);
     holder.setInitParameters(params);
     ctxHandler.addFilter(holder, PATH_SPEC_ANY, EnumSet.allOf(DispatcherType.class));
   }
