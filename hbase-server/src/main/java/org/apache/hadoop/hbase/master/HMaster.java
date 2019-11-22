@@ -3869,4 +3869,11 @@ public class HMaster extends HRegionServer implements MasterServices {
     return cachedClusterId.getFromCacheOrFetch();
   }
 
+  @Override
+  public void runReplicationBarrierCleaner() {
+    ReplicationBarrierCleaner rbc = this.replicationBarrierCleaner;
+    if (rbc != null) {
+      rbc.chore();
+    }
+  }
 }
