@@ -352,8 +352,16 @@ public class RegionStateStore {
     if (cell == null || cell.getValueLength() == 0) {
       return null;
     }
-    return State.valueOf(Bytes.toString(cell.getValueArray(), cell.getValueOffset(),
-        cell.getValueLength()));
+
+    String state = Bytes.toString(cell.getValueArray(), cell.getValueOffset(),
+        cell.getValueLength());
+    try {
+      return State.valueOf(state);
+    }
+    catch (IllegalArgumentException e) {
+      LOG.debug("BAD value {} in hbase:meta info:state column", state);
+      return null;
+    }
   }
 
   private static byte[] getStateColumn(int replicaId) {
