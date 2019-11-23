@@ -17,21 +17,21 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hbase.thirdparty.io.netty.util.Timeout;
-
-import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors;
-import org.apache.hbase.thirdparty.com.google.protobuf.Message;
-import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-
 import java.io.IOException;
-
+import java.util.Optional;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.htrace.core.Span;
 import org.apache.htrace.core.Tracer;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.io.netty.util.Timeout;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /** A call waiting for a value. */
 @InterfaceAudience.Private
@@ -56,7 +56,7 @@ class Call {
   final int timeout; // timeout in millisecond for this call; 0 means infinite.
   final int priority;
   final MetricsConnection.CallStats callStats;
-  final RpcCallback<Call> callback;
+  private final RpcCallback<Call> callback;
   final Span span;
   Timeout timeoutTask;
 
@@ -76,10 +76,24 @@ class Call {
     this.span = Tracer.getCurrentSpan();
   }
 
+  /**
+   * Builds a simplified {@link #toString()} that includes just the id and method name.
+   */
+  public String toShortString() {
+    return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
+      .append("id", id)
+      .append("methodName", md.getName())
+      .toString();
+  }
+
   @Override
   public String toString() {
-    return "callId: " + this.id + " methodName: " + this.md.getName() + " param {"
-        + (this.param != null ? ProtobufUtil.getShortTextFormat(this.param) : "") + "}";
+    return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
+      .appendSuper(toShortString())
+      .append("param", Optional.ofNullable(param)
+        .map(ProtobufUtil::getShortTextFormat)
+        .orElse(""))
+      .toString();
   }
 
   /**
