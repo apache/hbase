@@ -1945,8 +1945,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   /** @return the WAL {@link HRegionFileSystem} used by this region */
-  HRegionFileSystem getRegionWALFileSystem() throws IOException {
-    return new HRegionFileSystem(conf, getWalFileSystem(),
+  HRegionWALFileSystem getRegionWALFileSystem() throws IOException {
+    return new HRegionWALFileSystem(conf, getWalFileSystem(),
         FSUtils.getWALTableDir(conf, htableDescriptor.getTableName()), fs.getRegionInfo());
   }
 
@@ -4640,7 +4640,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       for (Path file : files) {
         fakeStoreFiles.add(new HStoreFile(walFS, file, this.conf, null, null, true));
       }
-      getRegionWALFileSystem().removeStoreFiles(fakeFamilyName, fakeStoreFiles);
+      getRegionWALFileSystem().archiveRecoveredEdits(fakeFamilyName, fakeStoreFiles);
     } else {
       for (Path file : Iterables.concat(files, filesUnderWrongRegionWALDir)) {
         if (!walFS.delete(file, false)) {

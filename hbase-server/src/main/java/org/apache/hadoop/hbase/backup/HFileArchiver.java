@@ -38,9 +38,11 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
@@ -295,8 +297,45 @@ public class HFileArchiver {
    */
   public static void archiveStoreFiles(Configuration conf, FileSystem fs, RegionInfo regionInfo,
       Path tableDir, byte[] family, Collection<HStoreFile> compactedFiles)
-      throws IOException, FailedArchiveException {
+      throws IOException {
+    Path storeArchiveDir = HFileArchiveUtil.getStoreArchivePath(conf, regionInfo, tableDir, family);
+    archive(fs, regionInfo, family, compactedFiles, storeArchiveDir);
+  }
 
+  /**
+   * Archive recovered edits using existing logic for archiving store files. This is currently only
+   * relevant when <b>hbase.region.archive.recovered.edits</b> is true, as recovered edits shouldn't
+   * be kept after replay. In theory, we could use very same method available for archiving
+   * store files, but supporting WAL dir and store files on different FileSystems added the need for
+   * extra validation of the passed FileSystem instance and the path where the archiving edits
+   * should be placed.
+   * @param conf {@link Configuration} to determine the archive directory.
+   * @param fs the filesystem used for storing WAL files.
+   * @param regionInfo {@link RegionInfo} a pseudo region representation for the archiving logic.
+   * @param family a pseudo familiy representation for the archiving logic.
+   * @param replayedEdits the recovered edits to be archived.
+   * @throws IOException if files can't be achived due to some internal error.
+   */
+  public static void archiveRecoveredEdits(Configuration conf, FileSystem fs, RegionInfo regionInfo,
+    byte[] family, Collection<HStoreFile> replayedEdits)
+    throws IOException {
+    String workingDir = conf.get(CommonFSUtils.HBASE_WAL_DIR, conf.get(HConstants.HBASE_DIR));
+    //extra sanity checks for the right FS
+    Path path = new Path(workingDir);
+    if(path.isAbsoluteAndSchemeAuthorityNull()){
+      //no schema specified on wal dir value, so it's on same FS as StoreFiles
+      path = new Path(conf.get(HConstants.HBASE_DIR));
+    }
+    if(path.toUri().getScheme()!=null && !path.toUri().getScheme().equals(fs.getScheme())){
+      throw new IOException("Wrong file system! Should be " + path.toUri().getScheme() +
+        ", but got " +  fs.getScheme());
+    }
+    path = HFileArchiveUtil.getStoreArchivePathForRootDir(path, regionInfo, family);
+    archive(fs, regionInfo, family, replayedEdits, path);
+  }
+
+  private static void archive(FileSystem fs, RegionInfo regionInfo, byte[] family,
+    Collection<HStoreFile> compactedFiles, Path storeArchiveDir) throws IOException {
     // sometimes in testing, we don't have rss, so we need to check for that
     if (fs == null) {
       LOG.warn("Passed filesystem is null, so just deleting files without archiving for {}," +
@@ -314,9 +353,6 @@ public class HFileArchiver {
     // build the archive path
     if (regionInfo == null || family == null) throw new IOException(
         "Need to have a region and a family to archive from.");
-
-    Path storeArchiveDir = HFileArchiveUtil.getStoreArchivePath(conf, regionInfo, tableDir, family);
-
     // make sure we don't archive if we can't and that the archive dir exists
     if (!fs.mkdirs(storeArchiveDir)) {
       throw new IOException("Could not make archive directory (" + storeArchiveDir + ") for store:"
