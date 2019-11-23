@@ -149,7 +149,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
 
     public void sendCall(final Call call) throws IOException {
       if (callsToWrite.size() >= maxQueueSize) {
-        throw new IOException("Can't add the call " + call.id
+        throw new IOException("Can't add " + call.toShortString()
             + " to the write queue. callsToWrite.size()=" + callsToWrite.size());
       }
       callsToWrite.offer(call);
@@ -161,7 +161,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       // By removing the call from the expected call list, we make the list smaller, but
       // it means as well that we don't know how many calls we cancelled.
       calls.remove(call.id);
-      call.setException(new CallCancelledException("Call id=" + call.id + ", waitTime="
+      call.setException(new CallCancelledException(call.toShortString() + ", waitTime="
           + (EnvironmentEdgeManager.currentTime() - call.getStartTime()) + ", rpcTimeout="
           + call.timeout));
     }
@@ -193,9 +193,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
           } catch (IOException e) {
             // exception here means the call has not been added to the pendingCalls yet, so we need
             // to fail it by our own.
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("call write error for call #" + call.id, e);
-            }
+            LOG.debug("call write error for {}", call.toShortString());
             call.setException(e);
             closeConn(e);
           }
@@ -628,7 +626,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         call.callStats.setRequestSizeBytes(write(this.out, requestHeader, call.param, cellBlock));
       } catch (Throwable t) {
         if(LOG.isTraceEnabled()) {
-          LOG.trace("Error while writing call, call_id:" + call.id, t);
+          LOG.trace("Error while writing {}", call.toShortString());
         }
         IOException e = IPCUtil.toIOE(t);
         closeConn(e);
