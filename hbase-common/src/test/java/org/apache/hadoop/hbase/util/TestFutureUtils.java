@@ -80,6 +80,8 @@ public class TestFutureUtils {
         startsWith("org.apache.hadoop.hbase.util.TestFutureUtils.testRecordStackTrace"));
       assertTrue(Stream.of(elements)
         .anyMatch(element -> element.toString().contains("--------Future.get--------")));
+    } catch (Throwable t) {
+      throw new AssertionError("Caught unexpected Throwable", t);
     }
   }
 }
