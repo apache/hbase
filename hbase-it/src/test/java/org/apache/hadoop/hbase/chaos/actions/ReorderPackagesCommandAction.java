@@ -70,7 +70,7 @@ public class ReorderPackagesCommandAction extends TCCommandAction {
   }
 
   private String getCommand(String operation){
-    return String.format("tc qdisc %s dev %s root netem delay %sms reorder %s%% 50%",
+    return String.format("tc qdisc %s dev %s root netem delay %sms reorder %s%% 50%%",
         operation, network, delay, ratio * 100);
   }
 }
