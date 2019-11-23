@@ -1448,13 +1448,14 @@ public final class RequestConverter {
 
   /**
    * Creates a protocol buffer SetRegionStateInMetaRequest
-   * @param state region state to update in Meta
+   * @param states list of regions states to update in Meta
    * @return a SetRegionStateInMetaRequest
    */
   public static SetRegionStateInMetaRequest buildSetRegionStateInMetaRequest(
-      final RegionState state) {
-    return SetRegionStateInMetaRequest.newBuilder().setRegionState(state.convert())
-      .setRegionInfo(ProtobufUtil.toProtoRegionInfo(state.getRegion())).build();
+      final List<RegionState> states) {
+    final SetRegionStateInMetaRequest.Builder builder = SetRegionStateInMetaRequest.newBuilder();
+    states.forEach(s -> builder.addStates(s.convert()));
+    return builder.build();
   }
 
   /**

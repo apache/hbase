@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
@@ -111,15 +112,20 @@ public class HBaseHbck implements Hbck {
   }
 
   @Override
-  public RegionState setRegionStateInMeta(RegionState state) throws IOException {
+  public List<RegionState> setRegionStateInMeta(List<RegionState> states) throws IOException {
     try {
-      LOG.trace("RegionInfo from state: {}", state.getRegion().getEncodedName());
-      MasterProtos.GetRegionStateResponse response = hbck.setRegionStateInMeta(
+      if(LOG.isDebugEnabled()) {
+        states.forEach(s ->
+          LOG.debug("region={}, state={}", s.getRegion().getRegionName(), s.getState())
+        );
+      }
+      MasterProtos.GetRegionStateInMetaResponse response = hbck.setRegionStateInMeta(
         rpcControllerFactory.newController(),
-        RequestConverter.buildSetRegionStateInMetaRequest(state));
-      return RegionState.convert(response.getRegionState());
+        RequestConverter.buildSetRegionStateInMetaRequest(states));
+      final List<RegionState> result = new ArrayList<>();
+      response.getStatesList().forEach( s -> result.add(RegionState.convert(s)));
+      return result;
     } catch (ServiceException se) {
-      LOG.debug("region={}, state={}", state.getRegion().getRegionName(), state.getState(), se);
       throw new IOException(se);
     }
   }

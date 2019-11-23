@@ -198,6 +198,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedu
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedureResultResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProceduresRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProceduresResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetRegionStateInMetaResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetSchemaAlterStatusRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetSchemaAlterStatusResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
@@ -277,6 +278,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetNormali
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetNormalizerRunningResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetRegionStateInMetaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos
     .SetSnapshotCleanupRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos
@@ -2470,33 +2472,36 @@ public class MasterRpcServices extends RSRpcServices
    * Update state of the region in meta only. This is required by hbck in some situations to cleanup
    * stuck assign/ unassign regions procedures for the table.
    *
-   * @return previous state of the region
+   * @return previous states of the regions
    */
   @Override
-  public MasterProtos.GetRegionStateResponse setRegionStateInMeta(RpcController controller,
-    MasterProtos.SetRegionStateInMetaRequest request) throws ServiceException {
-    try {
-      RegionInfo info = this.master.getAssignmentManager().
-        loadRegionFromMeta(request.getRegionInfo().getRegionEncodedName());
-      LOG.trace("region info loaded from meta table: {}", info);
-      RegionState prevState = this.master.getAssignmentManager().getRegionStates().
-        getRegionState(info);
-      RegionState newState = RegionState.convert(request.getRegionState());
-      LOG.info("{} set region={} state from {} to {}", master.getClientIdAuditPrefix(),
-        info, prevState.getState(), newState.getState());
-      Put metaPut = MetaTableAccessor.makePutFromRegionInfo(info, System.currentTimeMillis());
-      metaPut.addColumn(HConstants.CATALOG_FAMILY,
-        HConstants.STATE_QUALIFIER, Bytes.toBytes(newState.getState().name()));
-      List<Put> putList = new ArrayList<>();
-      putList.add(metaPut);
-      MetaTableAccessor.putsToMetaTable(this.master.getConnection(), putList);
-      //Loads from meta again to refresh AM cache with the new region state
-      this.master.getAssignmentManager().loadRegionFromMeta(info.getEncodedName());
-      return MasterProtos.GetRegionStateResponse.newBuilder().
-        setRegionState(prevState.convert()).build();
-    } catch (Exception e) {
-      throw new ServiceException(e);
+  public GetRegionStateInMetaResponse setRegionStateInMeta(RpcController controller,
+    SetRegionStateInMetaRequest request) throws ServiceException {
+    final GetRegionStateInMetaResponse.Builder builder = GetRegionStateInMetaResponse.newBuilder();
+    for(ClusterStatusProtos.RegionState s : request.getStatesList()) {
+      try {
+        RegionInfo info = this.master.getAssignmentManager().
+          loadRegionFromMeta(s.getRegionInfo().getRegionEncodedName());
+        LOG.trace("region info loaded from meta table: {}", info);
+        RegionState prevState = this.master.getAssignmentManager().getRegionStates().
+          getRegionState(info);
+        RegionState newState = RegionState.convert(s);
+        LOG.info("{} set region={} state from {} to {}", master.getClientIdAuditPrefix(), info,
+          prevState.getState(), newState.getState());
+        Put metaPut = MetaTableAccessor.makePutFromRegionInfo(info, System.currentTimeMillis());
+        metaPut.addColumn(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER,
+          Bytes.toBytes(newState.getState().name()));
+        List<Put> putList = new ArrayList<>();
+        putList.add(metaPut);
+        MetaTableAccessor.putsToMetaTable(this.master.getConnection(), putList);
+        //Loads from meta again to refresh AM cache with the new region state
+        this.master.getAssignmentManager().loadRegionFromMeta(info.getEncodedName());
+        builder.addStates(prevState.convert());
+      } catch (Exception e) {
+        throw new ServiceException(e);
+      }
     }
+    return builder.build();
   }
 
   /**

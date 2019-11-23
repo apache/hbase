@@ -3153,6 +3153,7 @@ public final class ProtobufUtil {
     builder.setOffline(info.isOffline());
     builder.setSplit(info.isSplit());
     builder.setReplicaId(info.getReplicaId());
+    builder.setRegionEncodedName(info.getEncodedName());
     return builder.build();
   }
 
