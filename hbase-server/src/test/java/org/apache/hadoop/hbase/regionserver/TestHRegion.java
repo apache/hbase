@@ -147,9 +147,11 @@ import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Threads;
@@ -675,6 +677,60 @@ public class TestHRegion {
     Cell keyValue = results.get(0);
     Assert.assertTrue(Bytes.compareTo(CellUtil.cloneRow(keyValue), Bytes.toBytes("r2")) == 0);
     scanner1.close();
+  }
+
+  @Test
+  public void testArchiveRecoveredEditsReplay() throws Exception {
+    byte[] family = Bytes.toBytes("family");
+    this.region = initHRegion(tableName, method, CONF, family);
+    final WALFactory wals = new WALFactory(CONF, method);
+    try {
+      Path regiondir = region.getRegionFileSystem().getRegionDir();
+      FileSystem fs = region.getRegionFileSystem().getFileSystem();
+      byte[] regionName = region.getRegionInfo().getEncodedNameAsBytes();
+
+      Path recoveredEditsDir = new Path(regiondir, HConstants.RECOVERED_EDITS_DIR);
+
+      long maxSeqId = 1050;
+      long minSeqId = 1000;
+
+      for (long i = minSeqId; i <= maxSeqId; i += 10) {
+        Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", i));
+        fs.create(recoveredEdits);
+        WALProvider.Writer writer = wals.createRecoveredEditsWriter(fs, recoveredEdits);
+
+        long time = System.nanoTime();
+        WALEdit edit = new WALEdit();
+        edit.add(new KeyValue(row, family, Bytes.toBytes(i), time, KeyValue.Type.Put, Bytes
+          .toBytes(i)));
+        writer.append(new WAL.Entry(new WALKeyImpl(regionName, tableName, i, time,
+          HConstants.DEFAULT_CLUSTER_ID), edit));
+
+        writer.close();
+      }
+      MonitoredTask status = TaskMonitor.get().createStatus(method);
+      Map<byte[], Long> maxSeqIdInStores = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+      for (HStore store : region.getStores()) {
+        maxSeqIdInStores.put(Bytes.toBytes(store.getColumnFamilyName()), minSeqId - 1);
+      }
+      CONF.set("hbase.region.archive.recovered.edits", "true");
+      CONF.set(CommonFSUtils.HBASE_WAL_DIR, "/custom_wal_dir");
+      long seqId = region.replayRecoveredEditsIfAny(maxSeqIdInStores, null, status);
+      assertEquals(maxSeqId, seqId);
+      region.getMVCC().advanceTo(seqId);
+      String fakeFamilyName = recoveredEditsDir.getName();
+      Path rootDir = new Path(CONF.get(HConstants.HBASE_DIR));
+      Path storeArchiveDir = HFileArchiveUtil.getStoreArchivePathForRootDir(rootDir,
+        region.getRegionInfo(), Bytes.toBytes(fakeFamilyName));
+      FileStatus[] list = TEST_UTIL.getTestFileSystem().listStatus(storeArchiveDir);
+      assertEquals(6, list.length);
+    } finally {
+      CONF.set("hbase.region.archive.recovered.edits", "false");
+      CONF.set(CommonFSUtils.HBASE_WAL_DIR, "");
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
+      this.region = null;
+      wals.close();
+    }
   }
 
   @Test
