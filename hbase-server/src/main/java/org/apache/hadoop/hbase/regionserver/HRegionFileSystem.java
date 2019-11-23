@@ -80,10 +80,10 @@ public class HRegionFileSystem {
 
   private final RegionInfo regionInfo;
   //regionInfo for interacting with FS (getting encodedName, etc)
-  private final RegionInfo regionInfoForFs;
-  private final Configuration conf;
+  final RegionInfo regionInfoForFs;
+  final Configuration conf;
   private final Path tableDir;
-  private final FileSystem fs;
+  final FileSystem fs;
   private final Path regionDir;
 
   /**
