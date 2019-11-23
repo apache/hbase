@@ -230,7 +230,7 @@ class IPCUtil {
   }
 
   static void setCancelled(Call call) {
-    call.setException(new CallCancelledException("Call id=" + call.id + ", waitTime="
+    call.setException(new CallCancelledException(call.toShortString() + ", waitTime="
         + (EnvironmentEdgeManager.currentTime() - call.getStartTime()) + ", rpcTimeout="
         + call.timeout));
   }
