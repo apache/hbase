@@ -69,19 +69,22 @@ import org.slf4j.LoggerFactory;
 /**
  * Start the HBase Thrift HTTP server on a random port through the command-line
  * interface and talk to it from client side with SPNEGO security enabled.
+ *
+ * Supplemental test to TestThriftSpnegoHttpServer which falls back to the original
+ * Kerberos principal and keytab configuration properties, not the separate
+ * SPNEGO-specific properties.
  */
 @Category({ClientTests.class, LargeTests.class})
-public class TestThriftSpnegoHttpServer extends TestThriftHttpServer {
+public class TestThriftSpnegoHttpFallbackServer extends TestThriftHttpServer {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestThriftSpnegoHttpServer.class);
+    HBaseClassTestRule.forClass(TestThriftSpnegoHttpFallbackServer.class);
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(TestThriftSpnegoHttpServer.class);
+    LoggerFactory.getLogger(TestThriftSpnegoHttpFallbackServer.class);
 
   private static SimpleKdcServer kdc;
   private static File serverKeytab;
-  private static File spnegoServerKeytab;
   private static File clientKeytab;
 
   private static String clientPrincipal;
@@ -112,36 +115,33 @@ public class TestThriftSpnegoHttpServer extends TestThriftHttpServer {
     KerberosName.setRules("DEFAULT");
 
     HBaseKerberosUtils.setKeytabFileForTesting(serverKeytab.getAbsolutePath());
-    HBaseKerberosUtils.setPrincipalForTesting(serverPrincipal);
+    HBaseKerberosUtils.setPrincipalForTesting(spnegoServerPrincipal);
     HBaseKerberosUtils.setSecuredConfiguration(conf);
 
     // if we drop support for hadoop-2.4.0 and hadoop-2.4.1,
     // the following key should be changed.
     // 1) DFS_NAMENODE_USER_NAME_KEY -> DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY
     // 2) DFS_DATANODE_USER_NAME_KEY -> DFS_DATANODE_KERBEROS_PRINCIPAL_KEY
-    conf.set(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, serverPrincipal);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, spnegoServerPrincipal);
     conf.set(DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY, serverKeytab.getAbsolutePath());
-    conf.set(DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY, serverPrincipal);
+    conf.set(DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY, spnegoServerPrincipal);
     conf.set(DFSConfigKeys.DFS_DATANODE_KEYTAB_FILE_KEY, serverKeytab.getAbsolutePath());
 
     conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
 
     conf.set(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY, spnegoServerPrincipal);
     conf.set(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY,
-        spnegoServerKeytab.getAbsolutePath());
+        serverKeytab.getAbsolutePath());
 
     conf.setBoolean("ignore.secure.ports.for.testing", true);
 
     conf.setBoolean(ThriftServerRunner.THRIFT_SUPPORT_PROXYUSER_KEY, true);
     conf.setBoolean(ThriftServerRunner.USE_HTTP_CONF_KEY, true);
-    conf.set("hadoop.proxyuser.hbase.hosts", "*");
-    conf.set("hadoop.proxyuser.hbase.groups", "*");
+    conf.set("hadoop.proxyuser.HTTP.hosts", "*");
+    conf.set("hadoop.proxyuser.HTTP.groups", "*");
 
-    conf.set(ThriftServerRunner.THRIFT_KERBEROS_PRINCIPAL_KEY, serverPrincipal);
+    conf.set(ThriftServerRunner.THRIFT_KERBEROS_PRINCIPAL_KEY, spnegoServerPrincipal);
     conf.set(ThriftServerRunner.THRIFT_KEYTAB_FILE_KEY, serverKeytab.getAbsolutePath());
-    conf.set(ThriftServerRunner.THRIFT_SPNEGO_PRINCIPAL_KEY, spnegoServerPrincipal);
-    conf.set(ThriftServerRunner.THRIFT_SPNEGO_KEYTAB_FILE_KEY,
-      spnegoServerKeytab.getAbsolutePath());
   }
 
   @BeforeClass
@@ -159,11 +159,9 @@ public class TestThriftSpnegoHttpServer extends TestThriftHttpServer {
     serverPrincipal = "hbase/" + HConstants.LOCALHOST + "@" + kdc.getKdcConfig().getKdcRealm();
     serverKeytab = new File(keytabDir, serverPrincipal.replace('/', '_') + ".keytab");
 
-    // Setup separate SPNEGO keytab
     spnegoServerPrincipal = "HTTP/" + HConstants.LOCALHOST + "@" + kdc.getKdcConfig().getKdcRealm();
-    spnegoServerKeytab = new File(keytabDir, spnegoServerPrincipal.replace('/', '_') + ".keytab");
-    kdc.createAndExportPrincipals(spnegoServerKeytab, spnegoServerPrincipal);
-    kdc.createAndExportPrincipals(serverKeytab, serverPrincipal);
+    // Add SPNEGO principal to server keytab
+    kdc.createAndExportPrincipals(serverKeytab, serverPrincipal, spnegoServerPrincipal);
 
     TEST_UTIL.getConfiguration().setBoolean(ThriftServerRunner.USE_HTTP_CONF_KEY, true);
     addSecurityConfigurations(TEST_UTIL.getConfiguration());

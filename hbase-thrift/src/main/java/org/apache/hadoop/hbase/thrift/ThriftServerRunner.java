@@ -224,6 +224,7 @@ public class ThriftServerRunner implements Runnable {
   private final ThriftMetrics metrics;
   private final HBaseHandler hbaseHandler;
   private final UserGroupInformation serviceUGI;
+  private UserGroupInformation httpUGI;
 
   private SaslUtil.QualityOfProtection qop;
   private String host;
@@ -349,8 +350,19 @@ public class ThriftServerRunner implements Runnable {
         conf.get(THRIFT_DNS_INTERFACE_KEY, "default"),
         conf.get(THRIFT_DNS_NAMESERVER_KEY, "default")));
       userProvider.login(THRIFT_KEYTAB_FILE_KEY, THRIFT_KERBEROS_PRINCIPAL_KEY, host);
+
+      // Setup the SPNEGO user for HTTP if configured
+      String spnegoPrincipal = getSpengoPrincipal(conf, host);
+      String spnegoKeytab = getSpnegoKeytab(conf);
+      UserGroupInformation.setConfiguration(conf);
+      // login the SPNEGO principal using UGI to avoid polluting the login user
+      this.httpUGI = UserGroupInformation.loginUserFromKeytabAndReturnUGI(spnegoPrincipal,
+        spnegoKeytab);
     }
     this.serviceUGI = userProvider.getCurrent().getUGI();
+    if (httpUGI == null) {
+      this.httpUGI = serviceUGI;
+    }
 
     this.conf = HBaseConfiguration.create(conf);
     this.listenPort = conf.getInt(PORT_CONF_KEY, DEFAULT_LISTEN_PORT);
@@ -385,6 +397,38 @@ public class ThriftServerRunner implements Runnable {
         throw new IOException("Thrift server must run in secure mode to support authentication");
       }
     }
+  }
+
+
+  private String getSpengoPrincipal(Configuration conf, String host) throws IOException {
+    String principal = conf.get(THRIFT_SPNEGO_PRINCIPAL_KEY);
+    if (principal == null) {
+      // We cannot use the Hadoop configuration deprecation handling here since
+      // the THRIFT_KERBEROS_PRINCIPAL_KEY config is still valid for regular Kerberos
+      // communication. The preference should be to use the THRIFT_SPNEGO_PRINCIPAL_KEY
+      // config so that THRIFT_KERBEROS_PRINCIPAL_KEY doesn't control both backend
+      // Kerberos principal and SPNEGO principal.
+      LOG.info("Using deprecated {} config for SPNEGO principal. Use {} instead.",
+        THRIFT_KERBEROS_PRINCIPAL_KEY, THRIFT_SPNEGO_PRINCIPAL_KEY);
+      principal = conf.get(THRIFT_KERBEROS_PRINCIPAL_KEY);
+    }
+    // Handle _HOST in principal value
+    return org.apache.hadoop.security.SecurityUtil.getServerPrincipal(principal, host);
+  }
+
+  private String getSpnegoKeytab(Configuration conf) {
+    String keytab = conf.get(THRIFT_SPNEGO_KEYTAB_FILE_KEY);
+    if (keytab == null) {
+      // We cannot use the Hadoop configuration deprecation handling here since
+      // the THRIFT_KEYTAB_FILE_KEY config is still valid for regular Kerberos
+      // communication. The preference should be to use the THRIFT_SPNEGO_KEYTAB_FILE_KEY
+      // config so that THRIFT_KEYTAB_FILE_KEY doesn't control both backend
+      // Kerberos keytab and SPNEGO keytab.
+      LOG.info("Using deprecated {} config for SPNEGO keytab. Use {} instead.",
+        THRIFT_KEYTAB_FILE_KEY, THRIFT_SPNEGO_KEYTAB_FILE_KEY);
+      keytab = conf.get(THRIFT_KEYTAB_FILE_KEY);
+    }
+    return keytab;
   }
 
   private void checkHttpSecurity(QualityOfProtection qop, Configuration conf) {
@@ -448,7 +492,7 @@ public class ThriftServerRunner implements Runnable {
     TProtocolFactory protocolFactory = new TBinaryProtocol.Factory();
     TProcessor processor = new Hbase.Processor<>(handler);
     TServlet thriftHttpServlet = new ThriftHttpServlet(processor, protocolFactory, serviceUGI,
-        conf, hbaseHandler, securityEnabled, doAsEnabled);
+        httpUGI, hbaseHandler, securityEnabled, doAsEnabled);
 
     // Set the default max thread number to 100 to limit
     // the number of concurrent requests so that Thrfit HTTP server doesn't OOM easily.
