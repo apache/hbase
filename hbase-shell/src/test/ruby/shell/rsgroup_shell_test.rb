@@ -57,6 +57,9 @@ module Hbase
       assert_equal(1, @rsgroup_admin.getRSGroupInfo(group_name).getServers.count)
       assert_equal(group_name, @rsgroup_admin.getRSGroupOfServer(hostport).getName)
 
+      output = capture_stdout { @shell.command(:balance_rsgroup, group_name) }
+      assert(output.include?("Couldn't run the balancer"))
+
       @shell.command('move_tables_rsgroup',
                      group_name,
                      [table_name])

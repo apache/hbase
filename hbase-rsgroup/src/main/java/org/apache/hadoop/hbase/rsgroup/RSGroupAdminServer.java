@@ -70,6 +70,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
   /** Define the default number of retries */
   //made package private for testing
   static final int DEFAULT_MAX_RETRY_VALUE = 50;
+  static final int DEFAULT_MIN_SERVER_REQUIRED = 2;
 
   private int moveMaxRetry;
 
@@ -460,6 +461,15 @@ public class RSGroupAdminServer implements RSGroupAdmin {
       if (getRSGroupInfo(groupName) == null) {
         throw new ConstraintException("RSGroup does not exist: "+groupName);
       }
+
+      int regionserversSize = getRSGroupInfo(groupName).getServers().size();
+      if (regionserversSize < DEFAULT_MIN_SERVER_REQUIRED) {
+        LOG.debug("Not running balancer because {} group contains {} regionserver."
+          + " Require minimum {} regionservers", groupName, regionserversSize,
+          DEFAULT_MIN_SERVER_REQUIRED);
+        return false;
+      }
+
       // Only allow one balance run at at time.
       Map<String, RegionState> groupRIT = rsGroupGetRegionsInTransition(groupName);
       if (groupRIT.size() > 0) {

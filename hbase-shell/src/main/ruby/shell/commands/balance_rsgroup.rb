@@ -35,7 +35,8 @@ EOF
         if ret
           puts 'Ran the balancer.'
         else
-          puts "Couldn't run the balancer."
+          puts "Couldn't run the balancer. Possibly region-in-transitions or processing
+           dead regionservers or group have less than 2 regionservers. Please check the master log."
         end
         ret
       end
