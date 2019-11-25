@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.assignment;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.List;
@@ -99,7 +100,8 @@ public class TestRegionStateStore {
         getAssignmentManager().getRegionStateStore();
 
     // add the BAD_STATE which does not exist in enum RegionState.State
-    Put put = new Put(regions.get(0).getRegionInfo().getRegionName(), EnvironmentEdgeManager.currentTime());
+    Put put = new Put(regions.get(0).getRegionInfo().getRegionName(),
+        EnvironmentEdgeManager.currentTime());
     put.addColumn(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER,
         Bytes.toBytes("BAD_STATE"));
 
@@ -110,9 +112,11 @@ public class TestRegionStateStore {
     final AtomicBoolean visitorCalled = new AtomicBoolean(false);
     regionStateStore.visitMetaForRegion(encodedName, new RegionStateStore.RegionStateVisitor() {
       @Override
-      public void visitRegionState(Result result, RegionInfo regionInfo, RegionState.State state,
-                                   ServerName regionLocation, ServerName lastHost, long openSeqNum) {
+      public void visitRegionState(Result result, RegionInfo regionInfo,
+                                   RegionState.State state, ServerName regionLocation,
+                                   ServerName lastHost, long openSeqNum) {
         assertEquals(encodedName, regionInfo.getEncodedName());
+        assertNull(state);
         visitorCalled.set(true);
       }
     });
