@@ -50,6 +50,7 @@
   import="org.apache.hadoop.hbase.client.RegionLocator"
   import="org.apache.hadoop.hbase.client.RegionReplicaUtil"
   import="org.apache.hadoop.hbase.client.Table"
+  import="org.apache.hadoop.hbase.http.InfoServer"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.master.RegionState"
   import="org.apache.hadoop.hbase.master.assignment.RegionStates"
@@ -109,7 +110,7 @@
   Table table;
   boolean withReplica = false;
   boolean showFragmentation = conf.getBoolean("hbase.master.ui.fragmentation.enabled", false);
-  boolean readOnly = conf.getBoolean("hbase.master.ui.readonly", false);
+  boolean readOnly = !InfoServer.canUserModifyUI(request, getServletContext(), conf);
   int numMetaReplicas = conf.getInt(HConstants.META_REPLICAS_NUM,
                         HConstants.DEFAULT_META_REPLICA_NUM);
   Map<String, Integer> frags = null;
