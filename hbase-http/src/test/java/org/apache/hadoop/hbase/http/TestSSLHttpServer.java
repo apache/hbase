@@ -95,7 +95,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
         .trustStore(sslConf.get("ssl.server.truststore.location"),
             HBaseConfiguration.getPassword(sslConf, "ssl.server.truststore.password", null),
             sslConf.get("ssl.server.truststore.type", "jks")).build();
-    server.addServlet("echo", "/echo", TestHttpServer.EchoServlet.class);
+    server.addUnprivilegedServlet("echo", "/echo", TestHttpServer.EchoServlet.class);
     server.start();
     baseUrl = new URL("https://"
         + NetUtils.getHostPortString(server.getConnectorAddress(0)));

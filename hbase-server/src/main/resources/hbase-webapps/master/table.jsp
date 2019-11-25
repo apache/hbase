@@ -22,18 +22,21 @@
   import="static org.apache.commons.lang3.StringEscapeUtils.escapeXml"
   import="java.util.ArrayList"
   import="java.util.Collection"
-  import="java.util.Collections"
   import="java.util.LinkedHashMap"
   import="java.util.List"
   import="java.util.Map"
   import="java.util.TreeMap"
-  import=" java.util.concurrent.TimeUnit"
+  import="java.util.concurrent.TimeUnit"
   import="org.apache.commons.lang3.StringEscapeUtils"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.HColumnDescriptor"
   import="org.apache.hadoop.hbase.HConstants"
   import="org.apache.hadoop.hbase.HRegionLocation"
+  import="org.apache.hadoop.hbase.RegionMetrics"
+  import="org.apache.hadoop.hbase.RegionMetricsBuilder"
+  import="org.apache.hadoop.hbase.ServerMetrics"
   import="org.apache.hadoop.hbase.ServerName"
+  import="org.apache.hadoop.hbase.Size"
   import="org.apache.hadoop.hbase.TableName"
   import="org.apache.hadoop.hbase.TableNotFoundException"
   import="org.apache.hadoop.hbase.client.AsyncAdmin"
@@ -45,6 +48,7 @@
   import="org.apache.hadoop.hbase.client.RegionLocator"
   import="org.apache.hadoop.hbase.client.RegionReplicaUtil"
   import="org.apache.hadoop.hbase.client.Table"
+  import="org.apache.hadoop.hbase.http.InfoServer"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.quotas.QuotaTableUtil"
   import="org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot"
@@ -57,10 +61,6 @@
 <%@ page import="org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos" %>
 <%@ page import="org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas" %>
 <%@ page import="org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota" %>
-<%@ page import="org.apache.hadoop.hbase.ServerMetrics" %>
-<%@ page import="org.apache.hadoop.hbase.RegionMetrics" %>
-<%@ page import="org.apache.hadoop.hbase.Size" %>
-<%@ page import="org.apache.hadoop.hbase.RegionMetricsBuilder" %>
 <%!
   /**
    * @return An empty region load stamped with the passed in <code>regionInfo</code>
@@ -86,7 +86,7 @@
   String tableHeader;
   boolean withReplica = false;
   boolean showFragmentation = conf.getBoolean("hbase.master.ui.fragmentation.enabled", false);
-  boolean readOnly = conf.getBoolean("hbase.master.ui.readonly", false);
+  boolean readOnly = !InfoServer.canUserModifyUI(request, getServletContext(), conf);
   int numMetaReplicas = conf.getInt(HConstants.META_REPLICAS_NUM,
                         HConstants.DEFAULT_META_REPLICA_NUM);
   Map<String, Integer> frags = null;

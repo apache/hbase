@@ -109,7 +109,7 @@ public class TestSpnegoHttpServer extends HttpServerFunctionalTest {
     Configuration conf = buildSpnegoConfiguration(serverPrincipal, infoServerKeytab);
 
     server = createTestServerWithSecurity(conf);
-    server.addServlet("echo", "/echo", EchoServlet.class);
+    server.addUnprivilegedServlet("echo", "/echo", EchoServlet.class);
     server.addJerseyResourcePackage(JerseyResource.class.getPackage().getName(), "/jersey/*");
     server.start();
     baseUrl = getServerURL(server);
@@ -253,7 +253,7 @@ public class TestSpnegoHttpServer extends HttpServerFunctionalTest {
     // Intentionally skip keytab and principal
 
     HttpServer customServer = createTestServerWithSecurity(conf);
-    customServer.addServlet("echo", "/echo", EchoServlet.class);
+    customServer.addUnprivilegedServlet("echo", "/echo", EchoServlet.class);
     customServer.addJerseyResourcePackage(JerseyResource.class.getPackage().getName(), "/jersey/*");
     customServer.start();
   }
