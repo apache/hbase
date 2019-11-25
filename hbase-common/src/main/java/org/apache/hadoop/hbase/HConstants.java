@@ -171,6 +171,11 @@ public final class HConstants {
   /** Configuration key for master web API port */
   public static final String MASTER_INFO_PORT = "hbase.master.info.port";
 
+  /** Configuration key for the list of master host:ports **/
+  public static final String MASTER_ADDRS_KEY = "hbase.master.addrs";
+
+  public static final String MASTER_ADDRS_DEFAULT =  "localhost:" + DEFAULT_MASTER_PORT;
+
   /** Parameter name for the master type being backup (waits for primary to go inactive). */
   public static final String MASTER_TYPE_BACKUP = "hbase.master.backup";
 
@@ -1480,6 +1485,11 @@ public final class HConstants {
 
   // default -1 indicates there is no threshold on high storeRefCount
   public static final int DEFAULT_STORE_FILE_REF_COUNT_THRESHOLD = -1;
+
+  public static final String REGIONS_RECOVERY_INTERVAL =
+    "hbase.master.regions.recovery.check.interval";
+
+  public static final int DEFAULT_REGIONS_RECOVERY_INTERVAL = 1200 * 1000; // Default 20 min
 
   /**
    * Configurations for master executor services.

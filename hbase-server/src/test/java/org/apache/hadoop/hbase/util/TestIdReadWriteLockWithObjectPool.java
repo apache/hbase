@@ -35,7 +35,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.apache.hadoop.hbase.util.IdReadWriteLock.ReferenceType;
+import org.apache.hadoop.hbase.util.IdReadWriteLockWithObjectPool.ReferenceType;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -47,25 +47,27 @@ import org.slf4j.LoggerFactory;
 @RunWith(Parameterized.class)
 @Category({MiscTests.class, MediumTests.class})
 // Medium as it creates 100 threads; seems better to run it isolated
-public class TestIdReadWriteLock {
+public class TestIdReadWriteLockWithObjectPool {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestIdReadWriteLock.class);
+      HBaseClassTestRule.forClass(TestIdReadWriteLockWithObjectPool.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestIdReadWriteLock.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestIdReadWriteLockWithObjectPool.class);
 
   private static final int NUM_IDS = 16;
   private static final int NUM_THREADS = 128;
   private static final int NUM_SECONDS = 15;
 
   @Parameterized.Parameter
-  public IdReadWriteLock<Long> idLock;
+  public IdReadWriteLockWithObjectPool<Long> idLock;
 
   @Parameterized.Parameters
   public static Iterable<Object[]> data() {
-    return Arrays.asList(new Object[][] { { new IdReadWriteLock<Long>(ReferenceType.WEAK) },
-      { new IdReadWriteLock<Long>(ReferenceType.SOFT) } });
+    return Arrays.asList(new Object[][] {
+      { new IdReadWriteLockWithObjectPool<Long>(ReferenceType.WEAK) },
+      { new IdReadWriteLockWithObjectPool<Long>(ReferenceType.SOFT) } });
   }
 
   private Map<Long, String> idOwner = new ConcurrentHashMap<>();

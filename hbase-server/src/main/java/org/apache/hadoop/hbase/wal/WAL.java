@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -80,7 +80,7 @@ public interface WAL extends Closeable, WALFileLengthProvider {
    *         can clean logs. Returns null if nothing to flush. Names are actual
    *         region names as returned by {@link RegionInfo#getEncodedName()}
    */
-  byte[][] rollWriter(boolean force) throws FailedLogCloseException, IOException;
+  byte[][] rollWriter(boolean force) throws IOException;
 
   /**
    * Stop accepting new writes. If we have unsynced writes still in buffer, sync them.
@@ -98,7 +98,7 @@ public interface WAL extends Closeable, WALFileLengthProvider {
 
   /**
    * Append a set of data edits to the WAL. 'Data' here means that the content in the edits will
-   * also be added to memstore.
+   * also have transitioned through the memstore.
    * <p/>
    * The WAL is not flushed/sync'd after this transaction completes BUT on return this edit must
    * have its region edit/sequence id assigned else it messes up our unification of mvcc and
@@ -109,13 +109,16 @@ public interface WAL extends Closeable, WALFileLengthProvider {
    *          sequence id that is after all currently appended edits.
    * @return Returns a 'transaction id' and <code>key</code> will have the region edit/sequence id
    *         in it.
-   * @see #appendMarker(RegionInfo, WALKeyImpl, WALEdit, boolean)
+   * @see #appendMarker(RegionInfo, WALKeyImpl, WALEdit)
    */
   long appendData(RegionInfo info, WALKeyImpl key, WALEdit edits) throws IOException;
 
   /**
-   * Append a marker edit to the WAL. A marker could be a FlushDescriptor, a compaction marker, or
-   * region event marker. The difference here is that, a marker will not be added to memstore.
+   * Append an operational 'meta' event marker edit to the WAL. A marker meta edit could
+   * be a FlushDescriptor, a compaction marker, or a region event marker; e.g. region open
+   * or region close. The difference between a 'marker' append and a 'data' append as in
+   * {@link #appendData(RegionInfo, WALKeyImpl, WALEdit)}is that a marker will not have
+   * transitioned through the memstore.
    * <p/>
    * The WAL is not flushed/sync'd after this transaction completes BUT on return this edit must
    * have its region edit/sequence id assigned else it messes up our unification of mvcc and
@@ -124,15 +127,11 @@ public interface WAL extends Closeable, WALFileLengthProvider {
    * @param key Modified by this call; we add to it this edits region edit/sequence id.
    * @param edits Edits to append. MAY CONTAIN NO EDITS for case where we want to get an edit
    *          sequence id that is after all currently appended edits.
-   * @param closeRegion Whether this is a region close marker, i.e, the last wal edit for this
-   *          region on this region server. The WAL implementation should remove all the related
-   *          stuff, for example, the sequence id accounting.
    * @return Returns a 'transaction id' and <code>key</code> will have the region edit/sequence id
    *         in it.
    * @see #appendData(RegionInfo, WALKeyImpl, WALEdit)
    */
-  long appendMarker(RegionInfo info, WALKeyImpl key, WALEdit edits, boolean closeRegion)
-    throws IOException;
+  long appendMarker(RegionInfo info, WALKeyImpl key, WALEdit edits) throws IOException;
 
   /**
    * updates the seuence number of a specific store.

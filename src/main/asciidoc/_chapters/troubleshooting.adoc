@@ -1288,7 +1288,7 @@ If you have a DNS server, you can set `hbase.zookeeper.dns.interface` and `hbase
 
 ZooKeeper is the cluster's "canary in the mineshaft". It'll be the first to notice issues if any so making sure its happy is the short-cut to a humming cluster.
 
-See the link:https://wiki.apache.org/hadoop/ZooKeeper/Troubleshooting[ZooKeeper Operating Environment Troubleshooting] page.
+See the link:https://cwiki.apache.org/confluence/display/HADOOP2/ZooKeeper+Troubleshooting[ZooKeeper Operating Environment Troubleshooting] page.
 It has suggestions and tools for checking disk and networking performance; i.e.
 the operating environment your ZooKeeper and HBase are running in.
 

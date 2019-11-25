@@ -1471,7 +1471,7 @@
     <httpcore.version>4.4.6</httpcore.version>
     <metrics-core.version>3.2.6</metrics-core.version>
     <jackson.version>2.9.10</jackson.version>
-    <jackson.databind.version>2.9.10</jackson.databind.version>
+    <jackson.databind.version>2.9.10.1</jackson.databind.version>
     <jaxb-api.version>2.2.12</jaxb-api.version>
     <jetty.version>9.3.27.v20190418</jetty.version>
     <servlet.api.version>3.1.0</servlet.api.version>

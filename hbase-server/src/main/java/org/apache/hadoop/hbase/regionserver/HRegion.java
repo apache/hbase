@@ -43,6 +43,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.RandomAccess;
 import java.util.Set;
@@ -1737,7 +1738,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
       status.setStatus("Writing region close event to WAL");
       // Always write close marker to wal even for read only table. This is not a big problem as we
-      // do not write any data into the region.
+      // do not write any data into the region; it is just a meta edit in the WAL file.
       if (!abort && wal != null && getRegionServerServices() != null &&
         RegionReplicaUtil.isDefaultReplica(getRegionInfo())) {
         writeRegionCloseMarker(wal);
@@ -1956,8 +1957,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   /** @return the WAL {@link HRegionFileSystem} used by this region */
-  HRegionFileSystem getRegionWALFileSystem() throws IOException {
-    return new HRegionFileSystem(conf, getWalFileSystem(),
+  HRegionWALFileSystem getRegionWALFileSystem() throws IOException {
+    return new HRegionWALFileSystem(conf, getWalFileSystem(),
         FSUtils.getWALTableDir(conf, htableDescriptor.getTableName()), fs.getRegionInfo());
   }
 
@@ -2005,7 +2006,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           continue;
         }
         if (majorCompactionOnly) {
-          byte[] val = reader.loadFileInfo().get(MAJOR_COMPACTION_KEY);
+          byte[] val = reader.getHFileInfo().get(MAJOR_COMPACTION_KEY);
           if (val == null || !Bytes.toBoolean(val)) {
             continue;
           }
@@ -2720,7 +2721,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
     }
     MemStoreSize mss = this.memStoreSizing.getMemStoreSize();
-    LOG.info("Flushing " + storesToFlush.size() + "/" + stores.size() + " column families," +
+    LOG.info("Flushing " + this.getRegionInfo().getEncodedName() + " " +
+        storesToFlush.size() + "/" + stores.size() + " column families," +
         " dataSize=" + StringUtils.byteDesc(mss.getDataSize()) +
         " heapSize=" + StringUtils.byteDesc(mss.getHeapSize()) +
         ((perCfExtras != null && perCfExtras.length() > 0)? perCfExtras.toString(): "") +
@@ -4679,7 +4681,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       for (Path file : files) {
         fakeStoreFiles.add(new HStoreFile(walFS, file, this.conf, null, null, true));
       }
-      getRegionWALFileSystem().removeStoreFiles(fakeFamilyName, fakeStoreFiles);
+      getRegionWALFileSystem().archiveRecoveredEdits(fakeFamilyName, fakeStoreFiles);
     } else {
       for (Path file : Iterables.concat(files, filesUnderWrongRegionWALDir)) {
         if (!walFS.delete(file, false)) {
@@ -4869,7 +4871,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           for (Cell cell: val.getCells()) {
             // Check this edit is for me. Also, guard against writing the special
             // METACOLUMN info such as HBASE::CACHEFLUSH entries
-            if (CellUtil.matchingFamily(cell, WALEdit.METAFAMILY)) {
+            if (WALEdit.isMetaEditFamily(cell)) {
               // if region names don't match, skipp replaying compaction marker
               if (!checkRowWithinBoundary) {
                 //this is a special edit, we should handle it
@@ -7321,13 +7323,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param rsServices An interface we can request flushes against.
    * @param reporter An interface we can report progress against.
    * @return new HRegion
+   * @throws NullPointerException if {@code info} is {@code null}
    */
   public static HRegion openHRegion(final Configuration conf, final FileSystem fs,
       final Path rootDir, final Path tableDir, final RegionInfo info, final TableDescriptor htd,
       final WAL wal, final RegionServerServices rsServices,
       final CancelableProgressable reporter)
       throws IOException {
-    if (info == null) throw new NullPointerException("Passed region info is null");
+    Objects.requireNonNull(info, "RegionInfo cannot be null");
     if (LOG.isDebugEnabled()) {
       LOG.debug("Opening region: " + info);
     }
@@ -7402,12 +7405,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param info Info for region to be opened.
    * @param htd the table descriptor
    * @return new HRegion
+   * @throws NullPointerException if {@code info} is {@code null}
    */
   public static HRegion openReadOnlyFileSystemHRegion(final Configuration conf, final FileSystem fs,
       final Path tableDir, RegionInfo info, final TableDescriptor htd) throws IOException {
-    if (info == null) {
-      throw new NullPointerException("Passed region info is null");
-    }
+    Objects.requireNonNull(info, "RegionInfo cannot be null");
     if (LOG.isDebugEnabled()) {
       LOG.debug("Opening region (readOnly filesystem): " + info);
     }
@@ -7425,7 +7427,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       final CancelableProgressable reporter)
       throws IOException {
 
-    if (info == null) throw new NullPointerException("Passed region info is null");
+    Objects.requireNonNull(info, "RegionInfo cannot be null");
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("HRegion.Warming up region: " + info);

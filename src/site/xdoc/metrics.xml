@@ -34,7 +34,7 @@ under the License.
       </section>
       <section name="Setup">
       <p>First read up on Hadoop <a href="http://hadoop.apache.org/core/docs/stable/api/org/apache/hadoop/metrics/package-summary.html">metrics</a>.
-      If you are using ganglia, the <a href="http://wiki.apache.org/hadoop/GangliaMetrics">GangliaMetrics</a>
+      If you are using ganglia, the <a href="https://cwiki.apache.org/confluence/display/HADOOP2/GangliaMetrics">GangliaMetrics</a>
       wiki page is useful read.</p>
       <p>To have HBase emit metrics, edit <code>$HBASE_HOME/conf/hadoop-metrics.properties</code>
       and enable metric 'contexts' per plugin.  As of this writing, hadoop supports

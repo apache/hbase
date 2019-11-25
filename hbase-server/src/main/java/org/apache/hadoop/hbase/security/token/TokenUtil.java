@@ -19,8 +19,12 @@ package org.apache.hadoop.hbase.security.token;
 
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
+import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -39,25 +43,96 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Public
 public class TokenUtil {
-
   // This class is referenced indirectly by User out in common; instances are created by reflection
   private static final Logger LOG = LoggerFactory.getLogger(TokenUtil.class);
 
-  private static Text getClusterId(Token<AuthenticationTokenIdentifier> token) {
-    return token.getService() != null
-        ? token.getService() : new Text("default");
+    /**
+     * See {@link ClientTokenUtil#obtainToken(org.apache.hadoop.hbase.client.AsyncConnection)}.
+     * @deprecated External users should not use this method. Please post on
+     *   the HBase dev mailing list if you need this method. Internal
+     *   HBase code should use {@link ClientTokenUtil} instead.
+     */
+  @Deprecated
+  public static CompletableFuture<Token<AuthenticationTokenIdentifier>> obtainToken(
+      AsyncConnection conn) {
+    return ClientTokenUtil.obtainToken(conn);
   }
 
   /**
-   * @deprecated As of HBase-3.0. Will be removed in HBase-4.0
-   * <p>
-   *   See {@link ClientTokenUtil#obtainAndCacheToken(org.apache.hadoop.hbase.client.Connection,
-   *   org.apache.hadoop.hbase.security.User)}.
+   * It was removed in HBase-2.0 but added again as spark code relies on this method to obtain
+   * delegation token
+   * @deprecated Since 2.0.0.
    */
   @Deprecated
+  public static Token<AuthenticationTokenIdentifier> obtainToken(Configuration conf)
+      throws IOException {
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      return obtainToken(connection);
+    }
+  }
+
+  /**
+   * See {@link ClientTokenUtil#obtainToken(org.apache.hadoop.hbase.client.Connection)}.
+   * @deprecated External users should not use this method. Please post on
+   *   the HBase dev mailing list if you need this method. Internal
+   *   HBase code should use {@link ClientTokenUtil} instead.
+   */
+  @Deprecated
+  public static Token<AuthenticationTokenIdentifier> obtainToken(Connection conn)
+      throws IOException {
+    return ClientTokenUtil.obtainToken(conn);
+  }
+
+
+  /**
+   * See {@link ClientTokenUtil#toToken(org.apache.hadoop.security.token.Token)}.
+   * @deprecated External users should not use this method. Please post on
+   *   the HBase dev mailing list if you need this method. Internal
+   *   HBase code should use {@link ClientTokenUtil} instead.
+   */
+  @Deprecated
+  public static AuthenticationProtos.Token toToken(Token<AuthenticationTokenIdentifier> token) {
+    return ClientTokenUtil.toToken(token);
+  }
+
+  /**
+   * See {@link ClientTokenUtil#obtainToken(org.apache.hadoop.hbase.client.Connection,
+   * org.apache.hadoop.hbase.security.User)}.
+   * @deprecated External users should not use this method. Please post on
+   *   the HBase dev mailing list if you need this method. Internal
+   *   HBase code should use {@link ClientTokenUtil} instead.
+   */
+  @Deprecated
+  public static Token<AuthenticationTokenIdentifier> obtainToken(
+      final Connection conn, User user) throws IOException, InterruptedException {
+    return ClientTokenUtil.obtainToken(conn, user);
+  }
+
+  /**
+   * See {@link ClientTokenUtil#obtainAndCacheToken(org.apache.hadoop.hbase.client.Connection,
+   * org.apache.hadoop.hbase.security.User)}.
+   */
   public static void obtainAndCacheToken(final Connection conn,
-      final User user) throws IOException, InterruptedException {
+      User user)
+      throws IOException, InterruptedException {
     ClientTokenUtil.obtainAndCacheToken(conn, user);
+  }
+
+  /**
+   * See {@link ClientTokenUtil#toToken(org.apache.hadoop.security.token.Token)}.
+   * @deprecated External users should not use this method. Please post on
+   *   the HBase dev mailing list if you need this method. Internal
+   *   HBase code should use {@link ClientTokenUtil} instead.
+   */
+  @Deprecated
+  public static Token<AuthenticationTokenIdentifier> toToken(AuthenticationProtos.Token proto) {
+    return ClientTokenUtil.toToken(proto);
+  }
+
+  private static Text getClusterId(Token<AuthenticationTokenIdentifier> token)
+      throws IOException {
+    return token.getService() != null
+        ? token.getService() : new Text("default");
   }
 
   /**

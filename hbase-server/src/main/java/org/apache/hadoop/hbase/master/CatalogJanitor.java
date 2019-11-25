@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -80,6 +79,7 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 // TODO: Only works with single hbase:meta region currently.  Fix.
 // TODO: Should it start over every time? Could it continue if runs into problem? Only if
 // problem does not mess up 'results'.
+// TODO: Do more by way of 'repair'; see note on unknownServers below.
 @InterfaceAudience.Private
 public class CatalogJanitor extends ScheduledChore {
   private static final Logger LOG = LoggerFactory.getLogger(CatalogJanitor.class.getName());
@@ -169,17 +169,16 @@ public class CatalogJanitor extends ScheduledChore {
         LOG.debug("CatalogJanitor already running");
         return gcs;
       }
-      Report report = scanForReport();
-      this.lastReport = report;
-      if (!report.isEmpty()) {
-        LOG.warn(report.toString());
+      this.lastReport = scanForReport();
+      if (!this.lastReport.isEmpty()) {
+        LOG.warn(this.lastReport.toString());
       }
 
       if (isRIT(this.services.getAssignmentManager())) {
         LOG.warn("Playing-it-safe skipping merge/split gc'ing of regions from hbase:meta while " +
             "regions-in-transition (RIT)");
       }
-      Map<RegionInfo, Result> mergedRegions = report.mergedRegions;
+      Map<RegionInfo, Result> mergedRegions = this.lastReport.mergedRegions;
       for (Map.Entry<RegionInfo, Result> e : mergedRegions.entrySet()) {
         if (this.services.isInMaintenanceMode()) {
           // Stop cleaning if the master is in maintenance mode
@@ -192,7 +191,7 @@ public class CatalogJanitor extends ScheduledChore {
         }
       }
       // Clean split parents
-      Map<RegionInfo, Result> splitParents = report.splitParents;
+      Map<RegionInfo, Result> splitParents = this.lastReport.splitParents;
 
       // Now work on our list of found parents. See if any we can clean up.
       HashSet<String> parentNotCleaned = new HashSet<>();
@@ -443,7 +442,14 @@ public class CatalogJanitor extends ScheduledChore {
 
     private final List<Pair<RegionInfo, RegionInfo>> holes = new ArrayList<>();
     private final List<Pair<RegionInfo, RegionInfo>> overlaps = new ArrayList<>();
+
+    /**
+     * TODO: If CatalogJanitor finds an 'Unknown Server', it should 'fix' it by queuing
+     * a {@link org.apache.hadoop.hbase.master.procedure.HBCKServerCrashProcedure} for
+     * found server for it to clean up meta.
+     */
     private final List<Pair<RegionInfo, ServerName>> unknownServers = new ArrayList<>();
+
     private final List<byte []> emptyRegionInfo = new ArrayList<>();
 
     @VisibleForTesting
@@ -571,7 +577,12 @@ public class CatalogJanitor extends ScheduledChore {
         return true;
       }
       this.report.count++;
-      RegionInfo regionInfo = metaTableConsistencyCheck(r);
+      RegionInfo regionInfo = null;
+      try {
+        regionInfo = metaTableConsistencyCheck(r);
+      } catch(Throwable t) {
+        LOG.warn("Failed consistency check on {}", Bytes.toStringBinary(r.getRow()), t);
+      }
       if (regionInfo != null) {
         LOG.trace(regionInfo.toString());
         if (regionInfo.isSplitParent()) { // splitParent means split and offline.
@@ -695,8 +706,16 @@ public class CatalogJanitor extends ScheduledChore {
       if (locations == null) {
         return;
       }
-      // Check referenced servers are known/online.
+      if (locations.getRegionLocations() == null) {
+        return;
+      }
+      // Check referenced servers are known/online. Here we are looking
+      // at both the default replica -- the main replica -- and then replica
+      // locations too.
       for (HRegionLocation location: locations.getRegionLocations()) {
+        if (location == null) {
+          continue;
+        }
         ServerName sn = location.getServerName();
         if (sn == null) {
           continue;
@@ -706,19 +725,25 @@ public class CatalogJanitor extends ScheduledChore {
           // This should never happen but if it does, will mess up below.
           continue;
         }
+        RegionInfo ri = location.getRegion();
         // Skip split parent region
-        if (location.getRegion().isSplitParent()) {
+        if (ri.isSplitParent()) {
           continue;
         }
         // skip the offline regions which belong to disabled table.
-        if (isTableDisabled(location.getRegion())) {
+        if (isTableDisabled(ri)) {
+          continue;
+        }
+        RegionState rs = this.services.getAssignmentManager().getRegionStates().getRegionState(ri);
+        if (rs.isClosedOrAbnormallyClosed()) {
+          // If closed against an 'Unknown Server', that is should be fine.
           continue;
         }
         ServerManager.ServerLiveState state = this.services.getServerManager().
             isServerKnownAndOnline(sn);
         switch (state) {
           case UNKNOWN:
-            this.report.unknownServers.add(new Pair<>(location.getRegion(), sn));
+            this.report.unknownServers.add(new Pair<>(ri, sn));
             break;
 
           default:

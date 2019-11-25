@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterBase;
+import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.LimitScope;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -108,7 +109,8 @@ public class TestSwitchToStreamRead {
         if (kvs instanceof StoreFileScanner) {
           StoreFileScanner sfScanner = (StoreFileScanner) kvs;
           // starting from pread so we use shared reader here.
-          assertTrue(sfScanner.getReader().shared);
+          assertTrue(sfScanner.getReader().getReaderContext()
+            .getReaderType() == ReaderType.PREAD);
         }
       }
       List<Cell> cells = new ArrayList<>();
@@ -123,7 +125,8 @@ public class TestSwitchToStreamRead {
         if (kvs instanceof StoreFileScanner) {
           StoreFileScanner sfScanner = (StoreFileScanner) kvs;
           // we should have convert to use stream read now.
-          assertFalse(sfScanner.getReader().shared);
+          assertFalse(sfScanner.getReader().getReaderContext()
+            .getReaderType() == ReaderType.PREAD);
         }
       }
       for (int i = 500; i < 1000; i++) {
@@ -156,7 +159,8 @@ public class TestSwitchToStreamRead {
         if (kvs instanceof StoreFileScanner) {
           StoreFileScanner sfScanner = (StoreFileScanner) kvs;
           // starting from pread so we use shared reader here.
-          assertTrue(sfScanner.getReader().shared);
+          assertTrue(sfScanner.getReader().getReaderContext()
+            .getReaderType() == ReaderType.PREAD);
         }
       }
       List<Cell> cells = new ArrayList<>();
@@ -170,7 +174,8 @@ public class TestSwitchToStreamRead {
         if (kvs instanceof StoreFileScanner) {
           StoreFileScanner sfScanner = (StoreFileScanner) kvs;
           // we should have convert to use stream read now.
-          assertFalse(sfScanner.getReader().shared);
+          assertFalse(sfScanner.getReader().getReaderContext()
+            .getReaderType() == ReaderType.PREAD);
         }
       }
       assertFalse(scanner.next(cells,

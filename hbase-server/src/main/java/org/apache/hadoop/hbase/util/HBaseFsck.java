@@ -1014,7 +1014,6 @@ public class HBaseFsck extends Configured implements Closeable {
         HFile.Reader hf = null;
         try {
           hf = HFile.createReader(fs, hfile.getPath(), CacheConfig.DISABLED, true, getConf());
-          hf.loadFileInfo();
           Optional<Cell> startKv = hf.getFirstKey();
           start = CellUtil.cloneRow(startKv.get());
           Optional<Cell> endKv = hf.getLastKey();

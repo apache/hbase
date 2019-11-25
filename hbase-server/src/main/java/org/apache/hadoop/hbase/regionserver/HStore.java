@@ -718,14 +718,14 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
 
   @VisibleForTesting
   protected HStoreFile createStoreFileAndReader(final Path p) throws IOException {
-    StoreFileInfo info = new StoreFileInfo(conf, this.getFileSystem(), p);
+    StoreFileInfo info = new StoreFileInfo(conf, this.getFileSystem(),
+        p, isPrimaryReplicaStore());
     return createStoreFileAndReader(info);
   }
 
   private HStoreFile createStoreFileAndReader(StoreFileInfo info) throws IOException {
     info.setRegionCoprocessorHost(this.region.getCoprocessorHost());
-    HStoreFile storeFile = new HStoreFile(this.getFileSystem(), info, this.conf, this.cacheConf,
-        this.family.getBloomFilterType(), isPrimaryReplicaStore());
+    HStoreFile storeFile = new HStoreFile(info, this.family.getBloomFilterType(), this.cacheConf);
     storeFile.initReader();
     return storeFile;
   }
@@ -810,7 +810,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
       FileSystem srcFs = srcPath.getFileSystem(conf);
       srcFs.access(srcPath, FsAction.READ_WRITE);
       reader = HFile.createReader(srcFs, srcPath, cacheConf, isPrimaryReplicaStore(), conf);
-      reader.loadFileInfo();
 
       Optional<byte[]> firstKey = reader.getFirstRowKey();
       Preconditions.checkState(firstKey.isPresent(), "First key can not be null");
@@ -1163,6 +1162,9 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
                                 .withDataBlockEncoding(family.getDataBlockEncoding())
                                 .withEncryptionContext(cryptoContext)
                                 .withCreateTime(EnvironmentEdgeManager.currentTime())
+                                .withColumnFamily(family.getName())
+                                .withTableName(region.getTableDescriptor()
+                                    .getTableName().getName())
                                 .build();
     return hFileContext;
   }
@@ -1409,7 +1411,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
   public List<HStoreFile> compact(CompactionContext compaction,
     ThroughputController throughputController, User user) throws IOException {
     assert compaction != null;
-    List<HStoreFile> sfs = null;
     CompactionRequestImpl cr = compaction.getRequest();
     try {
       // Do all sanity checking in here if we have a valid CompactionRequestImpl

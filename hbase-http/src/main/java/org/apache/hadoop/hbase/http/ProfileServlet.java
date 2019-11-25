@@ -270,7 +270,7 @@ public class ProfileServlet extends HttpServlet {
             resp.getWriter().write(
               "Started [" + event.getInternalName() +
               "] profiling. This page will automatically redirect to " +
-              relativeUrl + " after " + duration + " seconds.\n\ncommand:\n" +
+              relativeUrl + " after " + duration + " seconds.\n\nCommand:\n" +
               Joiner.on(" ").join(cmd));
 
             // to avoid auto-refresh by ProfileOutputServlet, refreshDelay can be specified

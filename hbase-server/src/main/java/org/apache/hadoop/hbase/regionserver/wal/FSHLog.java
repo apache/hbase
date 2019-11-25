@@ -435,8 +435,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
 
   @Override
   protected long append(final RegionInfo hri, final WALKeyImpl key, final WALEdit edits,
-    final boolean inMemstore, boolean closeRegion) throws IOException {
-    return stampSequenceIdAndPublishToRingBuffer(hri, key, edits, inMemstore, closeRegion,
+    final boolean inMemstore) throws IOException {
+    return stampSequenceIdAndPublishToRingBuffer(hri, key, edits, inMemstore,
       disruptor.getRingBuffer());
   }
 

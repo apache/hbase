@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -195,15 +194,18 @@ public class TestRecoveredEdits {
         WALEdit val = entry.getEdit();
         count++;
         // Check this edit is for this region.
-        if (!Bytes
-            .equals(key.getEncodedRegionName(), region.getRegionInfo().getEncodedNameAsBytes())) {
+        if (!Bytes.equals(key.getEncodedRegionName(),
+            region.getRegionInfo().getEncodedNameAsBytes())) {
           continue;
         }
         Cell previous = null;
         for (Cell cell : val.getCells()) {
-          if (CellUtil.matchingFamily(cell, WALEdit.METAFAMILY)) continue;
-          if (previous != null && CellComparatorImpl.COMPARATOR.compareRows(previous, cell) == 0)
+          if (WALEdit.isMetaEditFamily(cell)) {
             continue;
+          }
+          if (previous != null && CellComparatorImpl.COMPARATOR.compareRows(previous, cell) == 0) {
+            continue;
+          }
           previous = cell;
           walCells.add(cell);
         }

@@ -423,6 +423,8 @@ public class HMaster extends HRegionServer implements MasterServices {
   private MasterProcedureManagerHost mpmHost;
 
   private RegionsRecoveryChore regionsRecoveryChore = null;
+
+  private RegionsRecoveryConfigManager regionsRecoveryConfigManager = null;
   // it is assigned after 'initialized' guard set to true, so should be volatile
   private volatile MasterQuotaManager quotaManager;
   private SpaceQuotaSnapshotNotifier spaceQuotaSnapshotNotifier;
@@ -448,6 +450,9 @@ public class HMaster extends HRegionServer implements MasterServices {
   // servers and no user tables. Useful for repair and recovery of hbase:meta
   private final boolean maintenanceMode;
   static final String MAINTENANCE_MODE = "hbase.master.maintenance_mode";
+
+  // Cached clusterId on stand by masters to serve clusterID requests from clients.
+  private final CachedClusterId cachedClusterId;
 
   public static class RedirectServlet extends HttpServlet {
     private static final long serialVersionUID = 2894774810058302473L;
@@ -520,8 +525,8 @@ public class HMaster extends HRegionServer implements MasterServices {
 
       this.rsFatals = new MemoryBoundedLogMessageBuffer(
           conf.getLong("hbase.master.buffer.for.rs.fatals", 1 * 1024 * 1024));
-      LOG.info("hbase.rootdir=" + getRootDir() +
-          ", hbase.cluster.distributed=" + this.conf.getBoolean(HConstants.CLUSTER_DISTRIBUTED, false));
+      LOG.info("hbase.rootdir={}, hbase.cluster.distributed={}", getDataRootDir(),
+          this.conf.getBoolean(HConstants.CLUSTER_DISTRIBUTED, false));
 
       // Disable usage of meta replicas in the master
       this.conf.setBoolean(HConstants.USE_META_REPLICAS, false);
@@ -569,6 +574,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       } else {
         this.activeMasterManager = null;
       }
+      cachedClusterId = new CachedClusterId(conf);
     } catch (Throwable t) {
       // Make sure we log the exception. HMaster is often started via reflection and the
       // cause of failed startup is lost.
@@ -1146,6 +1152,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     configurationManager.registerObserver(this.cleanerPool);
     configurationManager.registerObserver(this.hfileCleaner);
     configurationManager.registerObserver(this.logCleaner);
+    configurationManager.registerObserver(this.regionsRecoveryConfigManager);
     // Set master as 'initialized'.
     setInitialized(true);
 
@@ -1479,6 +1486,8 @@ public class HMaster extends HRegionServer implements MasterServices {
           "Provide threshold value > 0 for {} to enable it.",
         HConstants.STORE_FILE_REF_COUNT_THRESHOLD);
     }
+
+    this.regionsRecoveryConfigManager = new RegionsRecoveryConfigManager(this);
 
     replicationBarrierCleaner = new ReplicationBarrierCleaner(conf, this, getConnection(),
       replicationPeerManager);
@@ -3469,7 +3478,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    */
   public void requestMobCompaction(TableName tableName,
                                    List<ColumnFamilyDescriptor> columns, boolean allFiles) throws IOException {
-    mobCompactThread.requestMobCompaction(conf, fs, tableName, columns, allFiles);
+    mobCompactThread.requestMobCompaction(conf, getFileSystem(), tableName, columns, allFiles);
   }
 
   /**
@@ -3599,7 +3608,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (cpHost != null) {
       cpHost.preListReplicationPeers(regex);
     }
-    LOG.info(getClientIdAuditPrefix() + " list replication peers, regex=" + regex);
+    LOG.debug("{} list replication peers, regex={}", getClientIdAuditPrefix(), regex);
     Pattern pattern = regex == null ? null : Pattern.compile(regex);
     List<ReplicationPeerDescription> peers =
       this.replicationPeerManager.listPeers(pattern);
@@ -3850,5 +3859,21 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   public HbckChore getHbckChore() {
     return this.hbckChore;
+  }
+
+  @Override
+  public String getClusterId() {
+    if (activeMaster) {
+      return super.getClusterId();
+    }
+    return cachedClusterId.getFromCacheOrFetch();
+  }
+
+  @Override
+  public void runReplicationBarrierCleaner() {
+    ReplicationBarrierCleaner rbc = this.replicationBarrierCleaner;
+    if (rbc != null) {
+      rbc.chore();
+    }
   }
 }

@@ -121,13 +121,13 @@ public class TestSecureBulkLoadManager {
       }
     } ;
     testUtil.getMiniHBaseCluster().getRegionServerThreads().get(0).getRegionServer()
-        .secureBulkLoadManager.setFsCreatedListener(fsCreatedListener);
+        .getSecureBulkLoadManager().setFsCreatedListener(fsCreatedListener);
     /// create table
     testUtil.createTable(TABLE,FAMILY,Bytes.toByteArrays(SPLIT_ROWKEY));
 
     /// prepare files
     Path rootdir = testUtil.getMiniHBaseCluster().getRegionServerThreads().get(0)
-        .getRegionServer().getRootDir();
+        .getRegionServer().getDataRootDir();
     Path dir1 = new Path(rootdir, "dir1");
     prepareHFile(dir1, key1, value1);
     Path dir2 = new Path(rootdir, "dir2");

@@ -136,6 +136,9 @@ public class ProcedureStoreTracker {
     node = lookupClosestNode(node, procId);
     assert node != null : "expected node to update procId=" + procId;
     assert node.contains(procId) : "expected procId=" + procId + " in the node";
+    if (node == null) {
+      throw new NullPointerException("pid=" + procId);
+    }
     node.insertOrUpdate(procId);
     trackProcIds(procId);
     return node;

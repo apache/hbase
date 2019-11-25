@@ -38,6 +38,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.Objects;
 import java.util.function.Function;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
@@ -1594,14 +1595,13 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Unwraps an exception from a protobuf service into the underlying (expected) IOException.
-   * This method will <strong>always</strong> throw an exception.
+   * Unwraps an exception from a protobuf service into the underlying (expected) IOException. This
+   * method will <strong>always</strong> throw an exception.
    * @param se the {@code ServiceException} instance to convert into an {@code IOException}
+   * @throws NullPointerException if {@code se} is {@code null}
    */
   public static void toIOException(ServiceException se) throws IOException {
-    if (se == null) {
-      throw new NullPointerException("Null service exception passed!");
-    }
+    Objects.requireNonNull(se, "Service exception cannot be null");
 
     Throwable cause = se.getCause();
     if (cause != null && cause instanceof IOException) {

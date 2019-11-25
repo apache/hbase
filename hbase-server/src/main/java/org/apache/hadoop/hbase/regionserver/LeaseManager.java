@@ -53,29 +53,25 @@ import org.slf4j.LoggerFactory;
  * sleep time which is invariant.
  */
 @InterfaceAudience.Private
-public class Leases extends HasThread {
-  private static final Logger LOG = LoggerFactory.getLogger(Leases.class.getName());
-  public static final int MIN_WAIT_TIME = 100;
-  private final Map<String, Lease> leases = new ConcurrentHashMap<>();
+public class LeaseManager extends HasThread {
+  private static final Logger LOG = LoggerFactory.getLogger(LeaseManager.class.getName());
+  private static final int MIN_WAIT_TIME = 100;
 
-  protected final int leaseCheckFrequency;
-  protected volatile boolean stopRequested = false;
+  private final Map<String, Lease> leases = new ConcurrentHashMap<>();
+  private final int leaseCheckFrequency;
+  private volatile boolean stopRequested = false;
 
   /**
-   * Creates a lease monitor
+   * Creates a lease manager.
    *
-   * @param leaseCheckFrequency - how often the lease should be checked
-   *          (milliseconds)
+   * @param leaseCheckFrequency - how often the lease should be checked (milliseconds)
    */
-  public Leases(final int leaseCheckFrequency) {
-    super("RegionServerLeases");  // thread name
+  public LeaseManager(final int leaseCheckFrequency) {
+    super("RegionServer.LeaseManager");  // thread name
     this.leaseCheckFrequency = leaseCheckFrequency;
     setDaemon(true);
   }
 
-  /**
-   * @see Thread#run()
-   */
   @Override
   public void run() {
     long toWait = leaseCheckFrequency;
@@ -93,9 +89,7 @@ public class Leases extends HasThread {
         toWait = Math.max(MIN_WAIT_TIME, toWait);
 
         Thread.sleep(toWait);
-      } catch (InterruptedException e) {
-        continue;
-      } catch (ConcurrentModificationException e) {
+      } catch (InterruptedException | ConcurrentModificationException e) {
         continue;
       } catch (Throwable e) {
         LOG.error(HBaseMarkers.FATAL, "Unexpected exception killed leases thread", e);
@@ -156,7 +150,6 @@ public class Leases extends HasThread {
    * @param leaseTimeoutPeriod length of the lease in milliseconds
    * @param listener listener that will process lease expirations
    * @return The lease created.
-   * @throws LeaseStillHeldException
    */
   public Lease createLease(String leaseName, int leaseTimeoutPeriod, final LeaseListener listener)
       throws LeaseStillHeldException {
@@ -167,8 +160,6 @@ public class Leases extends HasThread {
 
   /**
    * Inserts lease.  Resets expiration before insertion.
-   * @param lease
-   * @throws LeaseStillHeldException
    */
   public void addLease(final Lease lease) throws LeaseStillHeldException {
     if (this.stopRequested) {
@@ -184,8 +175,7 @@ public class Leases extends HasThread {
   /**
    * Renew a lease
    *
-   * @param leaseName name of lease
-   * @throws LeaseException
+   * @param leaseName name of the lease
    */
   public void renewLease(final String leaseName) throws LeaseException {
     if (this.stopRequested) {
@@ -202,20 +192,17 @@ public class Leases extends HasThread {
 
   /**
    * Client explicitly cancels a lease.
+   *
    * @param leaseName name of lease
-   * @throws org.apache.hadoop.hbase.regionserver.LeaseException
    */
   public void cancelLease(final String leaseName) throws LeaseException {
     removeLease(leaseName);
   }
 
   /**
-   * Remove named lease.
-   * Lease is removed from the map of leases.
-   * Lease can be reinserted using {@link #addLease(Lease)}
+   * Remove named lease. Lease is removed from the map of leases.
    *
    * @param leaseName name of lease
-   * @throws org.apache.hadoop.hbase.regionserver.LeaseException
    * @return Removed lease
    */
   Lease removeLease(final String leaseName) throws LeaseException {
@@ -234,9 +221,6 @@ public class Leases extends HasThread {
   public static class LeaseStillHeldException extends IOException {
     private final String leaseName;
 
-    /**
-     * @param name
-     */
     public LeaseStillHeldException(final String name) {
       this.leaseName = name;
     }

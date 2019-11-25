@@ -47,7 +47,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilder;
+import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
@@ -67,6 +70,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
+import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.IOTests;
@@ -81,6 +85,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -112,6 +117,20 @@ public class TestHFile  {
     conf = TEST_UTIL.getConfiguration();
     cacheConf = new CacheConfig(conf);
     fs = TEST_UTIL.getTestFileSystem();
+  }
+
+  public static Reader createReaderFromStream(ReaderContext context, CacheConfig cacheConf,
+      Configuration conf) throws IOException {
+    HFileInfo fileInfo = new HFileInfo(context, conf);
+    Reader preadReader = HFile.createReader(context, fileInfo, cacheConf, conf);
+    fileInfo.initMetaAndIndex(preadReader);
+    preadReader.close();
+    context = new ReaderContextBuilder()
+        .withFileSystemAndPath(context.getFileSystem(), context.getFilePath())
+        .withReaderType(ReaderType.STREAM)
+        .build();
+    Reader streamReader = HFile.createReader(context, fileInfo, cacheConf,  conf);
+    return streamReader;
   }
 
   private ByteBuffAllocator initAllocator(boolean reservoirEnabled, int bufSize, int bufCount,
@@ -303,7 +322,6 @@ public class TestHFile  {
         HFile.getWriterFactory(conf, cacheConf).withPath(fs, f).withFileContext(context).create();
     w.close();
     Reader r = HFile.createReader(fs, f, cacheConf, true, conf);
-    r.loadFileInfo();
     assertFalse(r.getFirstKey().isPresent());
     assertFalse(r.getLastKey().isPresent());
   }
@@ -319,11 +337,53 @@ public class TestHFile  {
 
     try {
       Reader r = HFile.createReader(fs, f, cacheConf, true, conf);
-    } catch (CorruptHFileException che) {
+    } catch (CorruptHFileException | IllegalArgumentException che) {
       // Expected failure
       return;
     }
     fail("Should have thrown exception");
+  }
+
+  @Test
+  public void testCorruptOutOfOrderHFileWrite() throws IOException {
+    Path path = new Path(ROOT_DIR, testName.getMethodName());
+    FSDataOutputStream mockedOutputStream = Mockito.mock(FSDataOutputStream.class);
+    String columnFamily = "MyColumnFamily";
+    String tableName = "MyTableName";
+    HFileContext fileContext = new HFileContextBuilder()
+        .withHFileName(testName.getMethodName() + "HFile")
+        .withBlockSize(minBlockSize)
+        .withColumnFamily(Bytes.toBytes(columnFamily))
+        .withTableName(Bytes.toBytes(tableName))
+        .withHBaseCheckSum(false)
+        .withCompression(Compression.Algorithm.NONE)
+        .withCompressTags(false)
+        .build();
+    HFileWriterImpl writer = new HFileWriterImpl(conf, cacheConf, path, mockedOutputStream,
+        CellComparator.getInstance(), fileContext);
+    CellBuilder cellBuilder = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
+    byte[] row = Bytes.toBytes("foo");
+    byte[] qualifier = Bytes.toBytes("qualifier");
+    byte[] cf = Bytes.toBytes(columnFamily);
+    byte[] val = Bytes.toBytes("fooVal");
+    long firstTS = 100L;
+    long secondTS = 101L;
+    Cell firstCell = cellBuilder.setRow(row).setValue(val).setTimestamp(firstTS)
+        .setQualifier(qualifier).setFamily(cf).setType(Cell.Type.Put).build();
+    Cell secondCell= cellBuilder.setRow(row).setValue(val).setTimestamp(secondTS)
+        .setQualifier(qualifier).setFamily(cf).setType(Cell.Type.Put).build();
+    //second Cell will sort "higher" than the first because later timestamps should come first
+    writer.append(firstCell);
+    try {
+      writer.append(secondCell);
+    } catch(IOException ie){
+      String message = ie.getMessage();
+      Assert.assertTrue(message.contains("not lexically larger"));
+      Assert.assertTrue(message.contains(tableName));
+      Assert.assertTrue(message.contains(columnFamily));
+      return;
+    }
+    Assert.fail("Exception wasn't thrown even though Cells were appended in the wrong order!");
   }
 
   public static void truncateFile(FileSystem fs, Path src, Path dst) throws IOException {
@@ -357,8 +417,8 @@ public class TestHFile  {
     truncateFile(fs, w.getPath(), trunc);
 
     try {
-      Reader r = HFile.createReader(fs, trunc, cacheConf, true, conf);
-    } catch (CorruptHFileException che) {
+      HFile.createReader(fs, trunc, cacheConf, true, conf);
+    } catch (CorruptHFileException | IllegalArgumentException che) {
       // Expected failure
       return;
     }
@@ -462,11 +522,10 @@ public class TestHFile  {
     writeRecords(writer, useTags);
     fout.close();
     FSDataInputStream fin = fs.open(ncHFile);
-    Reader reader = HFile.createReaderFromStream(ncHFile, fs.open(ncHFile),
-      fs.getFileStatus(ncHFile).getLen(), cacheConf, conf);
+    ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, ncHFile).build();
+    Reader reader = createReaderFromStream(context, cacheConf, conf);
     System.out.println(cacheConf.toString());
     // Load up the index.
-    reader.loadFileInfo();
     // Get a scanner that caches and that does not use pread.
     HFileScanner scanner = reader.getScanner(true, false);
     // Align scanner at start of the file.
@@ -554,16 +613,13 @@ public class TestHFile  {
     someTestingWithMetaBlock(writer);
     writer.close();
     fout.close();
-    FSDataInputStream fin = fs.open(mFile);
-    Reader reader = HFile.createReaderFromStream(mFile, fs.open(mFile),
-        this.fs.getFileStatus(mFile).getLen(), cacheConf, conf);
-    reader.loadFileInfo();
+    ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, mFile).build();
+    Reader reader = createReaderFromStream(context, cacheConf, conf);
     // No data -- this should return false.
     assertFalse(reader.getScanner(false, false).seekTo());
     someReadingWithMetaBlock(reader);
     fs.delete(mFile, true);
     reader.close();
-    fin.close();
   }
 
   // test meta blocks for hfiles
@@ -591,7 +647,6 @@ public class TestHFile  {
       writer.close();
       fout.close();
       Reader reader = HFile.createReader(fs, mFile, cacheConf, true, conf);
-      reader.loadFileInfo();
       assertNull(reader.getMetaBlock("non-existant", false));
     }
   }

@@ -1376,12 +1376,10 @@ public class TestWALSplit {
         1,
         ServerName.parseServerName("ServerName:9099"), ImmutableMap.<byte[], List<Path>>of());
     final long time = EnvironmentEdgeManager.currentTime();
-    KeyValue kv = new KeyValue(Bytes.toBytes(region), WALEdit.METAFAMILY, WALEdit.REGION_EVENT,
-        time, regionOpenDesc.toByteArray());
     final WALKeyImpl walKey = new WALKeyImpl(Bytes.toBytes(region), TABLE_NAME, 1, time,
         HConstants.DEFAULT_CLUSTER_ID);
-    w.append(
-        new Entry(walKey, new WALEdit().add(kv)));
+    WALEdit we = WALEdit.createRegionEventWALEdit(Bytes.toBytes(region), regionOpenDesc);
+    w.append(new Entry(walKey, we));
     w.sync(false);
   }
 

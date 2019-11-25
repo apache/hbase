@@ -63,7 +63,7 @@ public class ExecutorService {
   private static final Logger LOG = LoggerFactory.getLogger(ExecutorService.class);
 
   // hold the all the executors created in a map addressable by their names
-  private final ConcurrentHashMap<String, Executor> executorMap = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, Executor> executorMap = new ConcurrentHashMap<>();
 
   // Name of the server hosting this executor service.
   private final String servername;
@@ -87,18 +87,18 @@ public class ExecutorService {
    */
   @VisibleForTesting
   public void startExecutorService(String name, int maxThreads) {
-    if (this.executorMap.get(name) != null) {
-      throw new RuntimeException("An executor service with the name " + name +
-        " is already running!");
-    }
-    Executor hbes = new Executor(name, maxThreads);
-    if (this.executorMap.putIfAbsent(name, hbes) != null) {
-      throw new RuntimeException("An executor service with the name " + name +
-      " is already running (2)!");
-    }
-    LOG.debug("Starting executor service name=" + name +
-      ", corePoolSize=" + hbes.threadPoolExecutor.getCorePoolSize() +
-      ", maxPoolSize=" + hbes.threadPoolExecutor.getMaximumPoolSize());
+    Executor hbes = this.executorMap.compute(name, (key, value) -> {
+      if (value != null) {
+        throw new RuntimeException("An executor service with the name " + key +
+            " is already running!");
+      }
+      return new Executor(key, maxThreads);
+    });
+
+    LOG.debug(
+        "Starting executor service name={}, corePoolSize={}, maxPoolSize={}",
+        name, hbes.threadPoolExecutor.getCorePoolSize(),
+        hbes.threadPoolExecutor.getMaximumPoolSize());
   }
 
   boolean isExecutorServiceRunning(String name) {
@@ -134,7 +134,8 @@ public class ExecutorService {
   public void startExecutorService(final ExecutorType type, final int maxThreads) {
     String name = type.getExecutorName(this.servername);
     if (isExecutorServiceRunning(name)) {
-      LOG.debug("Executor service " + toString() + " already running on " + this.servername);
+      LOG.debug("Executor service {} already running on {}", this,
+          this.servername);
       return;
     }
     startExecutorService(name, maxThreads);

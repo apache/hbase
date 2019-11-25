@@ -615,12 +615,12 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   }
 
   @Override
-  protected long append(RegionInfo hri, WALKeyImpl key, WALEdit edits, boolean inMemstore,
-    boolean closeRegion) throws IOException {
-    if (markerEditOnly() && !edits.isMetaEdit()) {
-      throw new IOException("WAL is closing, only marker edit is allowed");
-    }
-    long txid = stampSequenceIdAndPublishToRingBuffer(hri, key, edits, inMemstore, closeRegion,
+  protected long append(RegionInfo hri, WALKeyImpl key, WALEdit edits, boolean inMemstore)
+      throws IOException {
+      if (markerEditOnly() && !edits.isMetaEdit()) {
+        throw new IOException("WAL is closing, only marker edit is allowed");
+      }
+    long txid = stampSequenceIdAndPublishToRingBuffer(hri, key, edits, inMemstore,
       waitingConsumePayloads);
     if (shouldScheduleConsumer()) {
       consumeExecutor.execute(consumer);

@@ -246,7 +246,7 @@ ByteBuffAllocator bbAllocator;
     <th>Buffer Size(Bytes)</th>
 </tr>
 <tr>
-    <td><% bbAllocator.getHeapAllocationBytes() %></td>
+    <td><% ByteBuffAllocator.getHeapAllocationBytes(bbAllocator, ByteBuffAllocator.HEAP) %></td>
     <td><% bbAllocator.getPoolAllocationBytes() %></td>
     <td><% String.format("%.3f", ByteBuffAllocator.getHeapAllocationRatio(bbAllocator, ByteBuffAllocator.HEAP) * 100) %><% "%" %></td>
     <td><% bbAllocator.getTotalBufferCount() %></td>

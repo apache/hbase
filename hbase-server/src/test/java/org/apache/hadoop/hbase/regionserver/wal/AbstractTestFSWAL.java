@@ -428,7 +428,7 @@ public abstract class AbstractTestFSWAL {
         final RegionInfo info = region.getRegionInfo();
         final WALKeyImpl logkey = new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
             System.currentTimeMillis(), clusterIds, -1, -1, region.getMVCC(), scopes);
-        wal.append(info, logkey, edits, true, false);
+        wal.append(info, logkey, edits, true);
         region.getMVCC().completeAndWait(logkey.getWriteEntry());
       }
       region.flush(true);
@@ -477,7 +477,7 @@ public abstract class AbstractTestFSWAL {
         new WALKeyImpl(ri.getEncodedNameAsBytes(), td.getTableName(), SequenceId.NO_SEQUENCE_ID,
           timestamp, WALKey.EMPTY_UUIDS, HConstants.NO_NONCE, HConstants.NO_NONCE, mvcc, scopes);
     try {
-      wal.append(ri, key, cols, true, false);
+      wal.append(ri, key, cols, true);
       fail("Should fail since the wal has already been closed");
     } catch (IOException e) {
       // expected

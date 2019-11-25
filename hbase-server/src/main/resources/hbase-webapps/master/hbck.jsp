@@ -78,7 +78,7 @@
 
   <div class="row">
     <div class="page-header">
-  <p><span>This page displays two reports. Only the report titles show if reports are empty.</span></p>
+      <p><span>This page displays two reports: the 'HBCK Chore Report' and the 'CatalogJanitor Consistency Issues' report. Only titles show if there are no problems to report. Note some conditions are <em>transitory</em> as regions migrate.</span></p>
     </div>
   </div>
   <div class="row">
@@ -109,7 +109,7 @@
       <p>
         <span>
         There are three cases: 1. Master thought this region opened, but no regionserver reported it (Fix: use assigns
-        command; 2. Master thought this region opened on Server1, but regionserver reported Server2 (Fix:
+        command); 2. Master thought this region opened on Server1, but regionserver reported Server2 (Fix:
         need to check the server is still exist. If not, schedule SCP for it. If exist, restart Server2 and Server1):
         3. More than one regionservers reported opened this region (Fix: restart the RegionServers).
         Notice: the reported online regionservers may be not right when there are regions in transition.
@@ -119,7 +119,7 @@
 
   <table class="table table-striped">
     <tr>
-      <th>Region Encoded Name</th>
+      <th>Region Name</th>
       <th>Location in META</th>
       <th>Reported Online RegionServers</th>
     </tr>
@@ -142,10 +142,18 @@
       <h2>Orphan Regions on RegionServer</h2>
     </div>
   </div>
+      <p>
+        <span>
+          The below are Regions we've lost account of. To be safe, run bulk load of any data found in these Region orphan directories back into the HBase cluster.
+          First make sure hbase:meta is in healthy state; run 'hbkc2 fixMeta' to be sure. Once this is done, per Region below, run a bulk
+          load -- '$ hbase completebulkload REGION_DIR_PATH TABLE_NAME' -- and then delete the desiccated directory content (HFiles are removed upon successful load; all that is left are empty directories
+          and occasionally a seqid marking file).
+        </span>
+      </p>
 
   <table class="table table-striped">
     <tr>
-      <th>Region Encoded Name</th>
+      <th>Region Name</th>
       <th>Reported Online RegionServer</th>
     </tr>
     <% for (Map.Entry<String, ServerName> entry : orphanRegionsOnRS.entrySet()) { %>

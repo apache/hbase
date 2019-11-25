@@ -108,8 +108,9 @@ public class TestClusterRestartFailover extends AbstractTestRestartCluster {
         .filter(p -> (p instanceof ServerCrashProcedure) &&
             ((ServerCrashProcedure) p).getServerName().equals(SERVER_FOR_TEST)).findAny();
     assertTrue("Should have one SCP for " + SERVER_FOR_TEST, procedure.isPresent());
-    assertFalse("Submit the SCP for the same serverName " + SERVER_FOR_TEST + " which should fail",
-        UTIL.getHBaseCluster().getMaster().getServerManager().expireServer(SERVER_FOR_TEST));
+    assertTrue("Submit the SCP for the same serverName " + SERVER_FOR_TEST + " which should fail",
+      UTIL.getHBaseCluster().getMaster().getServerManager().expireServer(SERVER_FOR_TEST) ==
+          Procedure.NO_PROC_ID);
 
     // Wait the SCP to finish
     SCP_LATCH.countDown();
@@ -117,7 +118,8 @@ public class TestClusterRestartFailover extends AbstractTestRestartCluster {
 
     assertFalse("Even when the SCP is finished, the duplicate SCP should not be scheduled for " +
             SERVER_FOR_TEST,
-        UTIL.getHBaseCluster().getMaster().getServerManager().expireServer(SERVER_FOR_TEST));
+      UTIL.getHBaseCluster().getMaster().getServerManager().expireServer(SERVER_FOR_TEST) ==
+        Procedure.NO_PROC_ID);
     serverNode = UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
         .getServerNode(SERVER_FOR_TEST);
     assertNull("serverNode should be deleted after SCP finished", serverNode);
