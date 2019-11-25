@@ -196,7 +196,7 @@ public class TestHbck {
       final List<RegionState> prevStates = new ArrayList<>();
       final List<RegionState> newStates = new ArrayList<>();
       final Map<String, Pair<RegionState, RegionState>> regionsMap = new HashMap<>();
-      regions.forEach( r -> {
+      regions.forEach(r -> {
         RegionState prevState = am.getRegionStates().getRegionState(r);
         prevStates.add(prevState);
         RegionState newState = RegionState.createForTesting(r, RegionState.State.CLOSED);
@@ -204,7 +204,7 @@ public class TestHbck {
         regionsMap.put(r.getEncodedName(), new Pair<>(prevState, newState));
       });
       final List<RegionState> result = hbck.setRegionStateInMeta(newStates);
-      result.forEach( r -> {
+      result.forEach(r -> {
         RegionState prevState = regionsMap.get(r.getRegion().getEncodedName()).getFirst();
         assertEquals(prevState.getState(), r.getState());
       });

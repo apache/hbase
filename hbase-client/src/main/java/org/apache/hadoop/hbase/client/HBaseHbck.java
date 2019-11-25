@@ -123,7 +123,7 @@ public class HBaseHbck implements Hbck {
         rpcControllerFactory.newController(),
         RequestConverter.buildSetRegionStateInMetaRequest(states));
       final List<RegionState> result = new ArrayList<>();
-      response.getStatesList().forEach( s -> result.add(RegionState.convert(s)));
+      response.getStatesList().forEach(s -> result.add(RegionState.convert(s)));
       return result;
     } catch (ServiceException se) {
       throw new IOException(se);
