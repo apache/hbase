@@ -103,6 +103,11 @@ module Hbase
       assert(output.include?('0 row(s)'))
     end
 
+    define_test 'clear_deadservers should show exact row(s) count' do
+      output = capture_stdout { command(:clear_deadservers, 'test.server.com,16020,1574583397867') }
+      assert(output.include?('1 row(s)'))
+    end
+
     #-------------------------------------------------------------------------------
 
     define_test "flush should work" do
