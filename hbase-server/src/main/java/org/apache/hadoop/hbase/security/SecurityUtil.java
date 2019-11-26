@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.security;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -26,7 +28,9 @@ import org.apache.yetus.audience.InterfaceStability;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class SecurityUtil {
+public final class SecurityUtil {
+
+  private SecurityUtil() {}
 
   /**
    * Get the user name from a principal
@@ -45,5 +49,15 @@ public class SecurityUtil {
   public static String getPrincipalWithoutRealm(final String principal) {
     int i = principal.indexOf("@");
     return (i > -1) ? principal.substring(0, i) : principal;
+  }
+
+  public static String getServicePrincipalWithFQDN(String principal) throws UnknownHostException {
+    if (principal != null && !principal.isEmpty()) {
+      String[] components = principal.split("[/@]");
+      if (components[1].equals("_HOST")) {
+        return components[0] + '/' + InetAddress.getLocalHost().getHostName() + '@' + components[2];
+      }
+    }
+    return principal;
   }
 }

@@ -19,17 +19,21 @@ package org.apache.hadoop.hbase.thrift;
 
 import static org.apache.hadoop.hbase.thrift.Constants.INFOPORT_OPTION;
 import static org.apache.hadoop.hbase.thrift.Constants.PORT_OPTION;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
 import java.net.HttpURLConnection;
+import java.net.InetAddress;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
@@ -153,6 +157,14 @@ public class TestThriftHttpServer {
   @Test
   public void testRunThriftServer() throws Exception {
     runThriftServer(0);
+  }
+
+  @Test
+  public void testServicePrincipal() throws UnknownHostException {
+    String hostname = InetAddress.getLocalHost().getHostName();
+    String principalName = "HTTP/_HOST@HBASE.COM";
+    String principalNameWFQDN = "HTTP/" + hostname + "@HBASE.COM";
+    assertEquals(principalNameWFQDN, SecurityUtil.getServicePrincipalWithFQDN(principalName));
   }
 
   void runThriftServer(int customHeaderSize) throws Exception {

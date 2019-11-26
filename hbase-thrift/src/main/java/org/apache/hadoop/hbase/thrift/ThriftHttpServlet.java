@@ -79,7 +79,7 @@ public class ThriftHttpServlet extends TServlet {
       // login the spnego principal
       UserGroupInformation.setConfiguration(conf);
       this.httpUGI = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
-          conf.get(THRIFT_SPNEGO_PRINCIPAL_KEY),
+          SecurityUtil.getServicePrincipalWithFQDN(conf.get(THRIFT_SPNEGO_PRINCIPAL_KEY)),
           conf.get(THRIFT_SPNEGO_KEYTAB_FILE_KEY)
       );
     } else {
