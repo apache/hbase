@@ -54,11 +54,11 @@ public class ReplicationProtbufUtil {
    * @param sourceHFileArchiveDir Path to the source cluster hfile archive directory
    */
   public static void replicateWALEntry(AsyncRegionServerAdmin admin, Entry[] entries,
-      String replicationClusterId, Path sourceBaseNamespaceDir, Path sourceHFileArchiveDir)
-      throws IOException {
+      String replicationClusterId, Path sourceBaseNamespaceDir, Path sourceHFileArchiveDir,
+      int timeout) throws IOException {
     Pair<ReplicateWALEntryRequest, CellScanner> p = buildReplicateWALEntryRequest(entries, null,
       replicationClusterId, sourceBaseNamespaceDir, sourceHFileArchiveDir);
-    FutureUtils.get(admin.replicateWALEntry(p.getFirst(), p.getSecond()));
+    FutureUtils.get(admin.replicateWALEntry(p.getFirst(), p.getSecond(), timeout));
   }
 
   /**
