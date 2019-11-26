@@ -77,6 +77,7 @@ import org.apache.hadoop.hbase.thrift.generated.TIncrement;
 import org.apache.hadoop.hbase.thrift.generated.TRegionInfo;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.thrift.generated.TScan;
+import org.apache.hadoop.hbase.thrift.generated.TThriftServerType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.thrift.TException;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -1268,6 +1269,11 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
     } finally {
       closeTable(table);
     }
+  }
+
+  @Override
+  public TThriftServerType getThriftServerType() {
+    return TThriftServerType.ONE;
   }
 
   private static IOError getIOError(Throwable throwable) {

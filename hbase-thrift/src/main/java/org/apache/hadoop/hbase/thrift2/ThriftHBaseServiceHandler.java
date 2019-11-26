@@ -84,6 +84,7 @@ import org.apache.hadoop.hbase.thrift2.generated.TRowMutations;
 import org.apache.hadoop.hbase.thrift2.generated.TScan;
 import org.apache.hadoop.hbase.thrift2.generated.TTableDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TTableName;
+import org.apache.hadoop.hbase.thrift2.generated.TThriftServerType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.thrift.TException;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -810,6 +811,11 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
     } catch (IOException e) {
       throw getTIOError(e);
     }
+  }
+
+  @Override
+  public TThriftServerType getThriftServerType() {
+    return TThriftServerType.TWO;
   }
 
   @Override
