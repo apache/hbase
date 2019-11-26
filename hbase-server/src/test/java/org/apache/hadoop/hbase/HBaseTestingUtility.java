@@ -3652,7 +3652,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
                     }
                   }
                   if (RegionStateStore.getRegionState(r,
-                    info.getReplicaId()) != RegionState.State.OPEN) {
+                    info.getReplicaId(), info) != RegionState.State.OPEN) {
                     return false;
                   }
                 }
