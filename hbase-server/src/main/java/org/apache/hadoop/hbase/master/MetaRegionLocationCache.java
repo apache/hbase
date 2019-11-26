@@ -106,9 +106,13 @@ public class MetaRegionLocationCache extends ZKListener {
         retryCounter.sleepUntilNextRetry();
       }
     }
-    if (znodes == null) {
+    if (znodes == null || znodes.isEmpty()) {
       // No meta znodes exist at this point but we registered a watcher on the base znode to listen
       // for updates. They will be handled via nodeChildrenChanged().
+      return;
+    }
+    if (znodes.size() == cachedMetaLocations.size()) {
+      // No new meta znodes got added.
       return;
     }
     for (String znode: znodes) {
@@ -225,13 +229,11 @@ public class MetaRegionLocationCache extends ZKListener {
     if (!path.equals(watcher.getZNodePaths().baseZNode)) {
       return;
     }
-    // Can get triggered for *any* children change, but that is OK. It does not happen once the
-    // initial set of meta znodes are populated.
     try {
       populateInitialMetaLocations();
     } catch (InterruptedException ie) {
+      // log and ignore, we can reload the cache later if needed.
       LOG.warn("Interrupted while initializing meta region cache", ie);
-      Thread.currentThread().interrupt();
     }
   }
 }
