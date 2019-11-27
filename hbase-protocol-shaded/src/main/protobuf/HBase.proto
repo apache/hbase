@@ -79,6 +79,7 @@ message RegionInfo {
   optional bool offline = 5;
   optional bool split = 6;
   optional int32 replica_id = 7 [default = 0];
+  optional string region_encoded_name = 8;
 }
 
 /**

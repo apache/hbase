@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -54,6 +55,14 @@ public interface Hbck extends Abortable, Closeable {
    * @return previous state of the table in Meta
    */
   TableState setTableStateInMeta(TableState state) throws IOException;
+
+  /**
+   * Update region state in Meta only. No procedures are submitted to manipulate the given region
+   * or any other region from same table.
+   * @param states list of all region states to be updated in meta
+   * @return previous state of the region in Meta
+   */
+  List<RegionState> setRegionStateInMeta(List<RegionState> states) throws IOException;
 
   /**
    * Like {@link Admin#assign(byte[])} but 'raw' in that it can do more than one Region at a time

@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -136,6 +137,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCleaner
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetCleanerChoreRunningRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetNormalizerRunningRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetRegionStateInMetaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos
     .SetSnapshotCleanupRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetSplitOrMergeEnabledRequest;
@@ -1440,6 +1442,18 @@ public final class RequestConverter {
   public static SetTableStateInMetaRequest buildSetTableStateInMetaRequest(final TableState state) {
     return SetTableStateInMetaRequest.newBuilder().setTableState(state.convert())
         .setTableName(ProtobufUtil.toProtoTableName(state.getTableName())).build();
+  }
+
+  /**
+   * Creates a protocol buffer SetRegionStateInMetaRequest
+   * @param states list of regions states to update in Meta
+   * @return a SetRegionStateInMetaRequest
+   */
+  public static SetRegionStateInMetaRequest buildSetRegionStateInMetaRequest(
+      final List<RegionState> states) {
+    final SetRegionStateInMetaRequest.Builder builder = SetRegionStateInMetaRequest.newBuilder();
+    states.forEach(s -> builder.addStates(s.convert()));
+    return builder.build();
   }
 
   /**
