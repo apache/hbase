@@ -27,6 +27,8 @@ import javax.security.sasl.Sasl;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProvider;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 
@@ -38,9 +40,10 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 public class NettyHBaseSaslRpcClient extends AbstractHBaseSaslRpcClient {
   private static final Logger LOG = LoggerFactory.getLogger(NettyHBaseSaslRpcClient.class);
 
-  public NettyHBaseSaslRpcClient(AuthMethod method, Token<? extends TokenIdentifier> token,
-      String serverPrincipal, boolean fallbackAllowed, String rpcProtection) throws IOException {
-    super(method, token, serverPrincipal, fallbackAllowed, rpcProtection);
+  public NettyHBaseSaslRpcClient(Configuration conf, SaslClientAuthenticationProvider provider,
+      Token<? extends TokenIdentifier> token, String serverPrincipal, boolean fallbackAllowed,
+      String rpcProtection) throws IOException {
+    super(conf, provider, token, serverPrincipal, fallbackAllowed, rpcProtection);
   }
 
   public void setupSaslHandler(ChannelPipeline p) {

@@ -33,10 +33,8 @@ import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.io.crypto.aes.CryptoAES;
+import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProvider;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.ipc.RemoteException;
@@ -44,6 +42,9 @@ import org.apache.hadoop.security.SaslInputStream;
 import org.apache.hadoop.security.SaslOutputStream;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A utility class that encapsulates SASL logic for RPC client. Copied from
@@ -61,15 +62,16 @@ public class HBaseSaslRpcClient extends AbstractHBaseSaslRpcClient {
   private OutputStream cryptoOutputStream;
   private boolean initStreamForCrypto;
 
-  public HBaseSaslRpcClient(AuthMethod method, Token<? extends TokenIdentifier> token,
-      String serverPrincipal, boolean fallbackAllowed) throws IOException {
-    super(method, token, serverPrincipal, fallbackAllowed);
+  public HBaseSaslRpcClient(Configuration conf, SaslClientAuthenticationProvider provider,
+      Token<? extends TokenIdentifier> token, String serverPrincipal, boolean fallbackAllowed)
+          throws IOException {
+    super(conf, provider, token, serverPrincipal, fallbackAllowed);
   }
 
-  public HBaseSaslRpcClient(AuthMethod method, Token<? extends TokenIdentifier> token,
-      String serverPrincipal, boolean fallbackAllowed, String rpcProtection,
-      boolean initStreamForCrypto) throws IOException {
-    super(method, token, serverPrincipal, fallbackAllowed, rpcProtection);
+  public HBaseSaslRpcClient(Configuration conf, SaslClientAuthenticationProvider provider,
+      Token<? extends TokenIdentifier> token, String serverPrincipal, boolean fallbackAllowed,
+      String rpcProtection, boolean initStreamForCrypto) throws IOException {
+    super(conf, provider, token, serverPrincipal, fallbackAllowed, rpcProtection);
     this.initStreamForCrypto = initStreamForCrypto;
   }
 

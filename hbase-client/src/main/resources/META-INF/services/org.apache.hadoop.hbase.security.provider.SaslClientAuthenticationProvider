@@ -1,0 +1,3 @@
+org.apache.hadoop.hbase.security.provider.GssSaslClientAuthenticationProvider
+org.apache.hadoop.hbase.security.provider.DigestSaslClientAuthenticationProvider
+org.apache.hadoop.hbase.security.provider.SimpleSaslClientAuthenticationProvider

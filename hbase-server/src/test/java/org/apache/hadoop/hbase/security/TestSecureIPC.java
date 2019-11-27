@@ -107,9 +107,11 @@ public class TestSecureIPC {
   public static Collection<Object[]> parameters() {
     List<Object[]> params = new ArrayList<>();
     List<String> rpcClientImpls = Arrays.asList(
-        BlockingRpcClient.class.getName(), NettyRpcClient.class.getName());
+        BlockingRpcClient.class.getName(),
+        NettyRpcClient.class.getName());
     List<String> rpcServerImpls = Arrays.asList(
-        SimpleRpcServer.class.getName(), NettyRpcServer.class.getName());
+        SimpleRpcServer.class.getName(),
+        NettyRpcServer.class.getName());
     for (String rpcClientImpl : rpcClientImpls) {
       for (String rpcServerImpl : rpcServerImpls) {
         params.add(new Object[] { rpcClientImpl, rpcServerImpl });

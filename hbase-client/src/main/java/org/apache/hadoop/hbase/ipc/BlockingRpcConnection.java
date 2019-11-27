@@ -361,7 +361,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
 
   private boolean setupSaslConnection(final InputStream in2, final OutputStream out2)
       throws IOException {
-    saslRpcClient = new HBaseSaslRpcClient(authMethod, token, serverPrincipal,
+    saslRpcClient = new HBaseSaslRpcClient(this.rpcClient.conf, provider, token, serverPrincipal,
         this.rpcClient.fallbackAllowed, this.rpcClient.conf.get("hbase.rpc.protection",
           QualityOfProtection.AUTHENTICATION.name().toLowerCase(Locale.ROOT)),
         this.rpcClient.conf.getBoolean(CRYPTO_AES_ENABLED_KEY, CRYPTO_AES_ENABLED_DEFAULT));
@@ -389,7 +389,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     user.doAs(new PrivilegedExceptionAction<Object>() {
       @Override
       public Object run() throws IOException, InterruptedException {
-        if (shouldAuthenticateOverKrb()) {
+        if (provider.isKerberos()) {
           if (currRetries < maxRetries) {
             if (LOG.isDebugEnabled()) {
               LOG.debug("Exception encountered while connecting to " +
@@ -459,7 +459,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         if (useSasl) {
           final InputStream in2 = inStream;
           final OutputStream out2 = outStream;
-          UserGroupInformation ticket = getUGI();
+          UserGroupInformation ticket = provider.unwrapUgi(remoteId.ticket.getUGI());
           boolean continueSasl;
           if (ticket == null) {
             throw new FatalConnectionException("ticket/user is null");

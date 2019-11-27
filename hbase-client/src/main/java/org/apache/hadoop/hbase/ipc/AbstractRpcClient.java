@@ -104,14 +104,6 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
   private static final ScheduledExecutorService IDLE_CONN_SWEEPER = Executors
       .newScheduledThreadPool(1, Threads.newDaemonThreadFactory("Idle-Rpc-Conn-Sweeper"));
 
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="MS_MUTABLE_COLLECTION_PKGPROTECT",
-      justification="the rest of the system which live in the different package can use")
-  protected final static Map<Kind, TokenSelector<? extends TokenIdentifier>> TOKEN_HANDLERS = new HashMap<>();
-
-  static {
-    TOKEN_HANDLERS.put(Kind.HBASE_AUTH_TOKEN, new AuthenticationTokenSelector());
-  }
-
   protected boolean running = true; // if client runs
 
   protected final Configuration conf;
