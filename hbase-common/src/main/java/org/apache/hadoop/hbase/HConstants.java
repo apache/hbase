@@ -977,6 +977,10 @@ public final class HConstants {
 
   public static final int REPLICATION_SOURCE_TOTAL_BUFFER_DFAULT = 256 * 1024 * 1024;
 
+  /** Configuration key for ReplicationSource shipeEdits timeout */
+  public static final String REPLICATION_SOURCE_SHIPEDITS_TIMEOUT =
+      "replication.source.shipedits.timeout";
+  public static final int REPLICATION_SOURCE_SHIPEDITS_TIMEOUT_DFAULT = 60000;
 
   /**
    * Directory where the source cluster file system client configuration are placed which is used by
