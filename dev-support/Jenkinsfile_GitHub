@@ -83,7 +83,6 @@ pipeline {
                         echo "MAVEN_HOME: ${MAVEN_HOME}"
                         echo "maven version:"
                         mvn --offline --version  || true
-                        echo "getting machine specs, find in ${BUILD_URL}/artifact/patchprocess/machine/"
                         mkdir "${PATCHDIR}/machine"
                        "${SOURCEDIR}/dev-support/gather_machine_environment.sh" "${PATCHDIR}/machine"
                         ## /H*
