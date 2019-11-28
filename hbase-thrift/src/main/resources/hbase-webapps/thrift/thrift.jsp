@@ -27,9 +27,9 @@
 
 <%
 Configuration conf = (Configuration)getServletContext().getAttribute("hbase.conf");
+String serverType = (String)getServletContext().getAttribute("hbase.thrift.server.type");
 long startcode = conf.getLong("startcode", System.currentTimeMillis());
 String listenPort = conf.get("hbase.regionserver.thrift.port", "9090");
-String serverInfo = listenPort + "," + String.valueOf(startcode);
 ImplType implType = ImplType.getServerImpl(conf);
 String framed = (implType.isAlwaysFramed()
     ? "true" : conf.get("hbase.regionserver.thrift.framed", "false"))
@@ -128,6 +128,11 @@ String qop = conf.get("hbase.thrift.security.qop", "none");
             <td>Quality Of Protection</td>
             <td><%= qop %></td>
             <td>QOP settings for SASL </td>
+        </tr>
+        <tr>
+            <td>Thrift Server Type</td>
+            <td><%= serverType %></td>
+            <td>The type of this Thrift server</td>
         </tr>
     </table>
     </section>

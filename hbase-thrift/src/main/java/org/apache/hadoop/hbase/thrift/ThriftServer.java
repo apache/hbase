@@ -304,6 +304,7 @@ public class ThriftServer  extends Configured implements Tool {
           .get(THRIFT_INFO_SERVER_BINDING_ADDRESS, THRIFT_INFO_SERVER_BINDING_ADDRESS_DEFAULT);
       infoServer = new InfoServer("thrift", a, port, false, conf);
       infoServer.setAttribute("hbase.conf", conf);
+      infoServer.setAttribute("hbase.thrift.server.type", metrics.getThriftServerType());
       infoServer.start();
     }
   }
