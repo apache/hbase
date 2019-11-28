@@ -309,7 +309,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
             replicateContext.getSize());
         }
         // RuntimeExceptions encountered here bubble up and are handled in ReplicationSource
-        pool.submit(createReplicator(entries, i));
+        pool.submit(createReplicator(entries, i, replicateContext.getTimeout()));
         futures++;
       }
     }
@@ -477,7 +477,8 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   }
 
   @VisibleForTesting
-  protected int replicateEntries(List<Entry> entries, int batchIndex) throws IOException {
+  protected int replicateEntries(List<Entry> entries, int batchIndex, int timeout)
+      throws IOException {
     SinkPeer sinkPeer = null;
     try {
       int entriesHashCode = System.identityHashCode(entries);
@@ -490,7 +491,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
       BlockingInterface rrs = sinkPeer.getRegionServer();
       try {
         ReplicationProtbufUtil.replicateWALEntry(rrs, entries.toArray(new Entry[entries.size()]),
-          replicationClusterId, baseNamespaceDir, hfileArchiveDir);
+          replicationClusterId, baseNamespaceDir, hfileArchiveDir, timeout);
         if (LOG.isTraceEnabled()) {
           LOG.trace("{} Completed replicating batch {}", logPeerId(), entriesHashCode);
         }
@@ -510,14 +511,14 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     return batchIndex;
   }
 
-  private int serialReplicateRegionEntries(List<Entry> entries, int batchIndex)
+  private int serialReplicateRegionEntries(List<Entry> entries, int batchIndex, int timeout)
       throws IOException {
     int batchSize = 0, index = 0;
     List<Entry> batch = new ArrayList<>();
     for (Entry entry : entries) {
       int entrySize = getEstimatedEntrySize(entry);
       if (batchSize > 0 && batchSize + entrySize > replicationRpcLimit) {
-        replicateEntries(batch, index++);
+        replicateEntries(batch, index++, timeout);
         batch.clear();
         batchSize = 0;
       }
@@ -525,15 +526,15 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
       batchSize += entrySize;
     }
     if (batchSize > 0) {
-      replicateEntries(batch, index);
+      replicateEntries(batch, index, timeout);
     }
     return batchIndex;
   }
 
   @VisibleForTesting
-  protected Callable<Integer> createReplicator(List<Entry> entries, int batchIndex) {
-    return isSerial ? () -> serialReplicateRegionEntries(entries, batchIndex)
-        : () -> replicateEntries(entries, batchIndex);
+  protected Callable<Integer> createReplicator(List<Entry> entries, int batchIndex, int timeout) {
+    return isSerial ? () -> serialReplicateRegionEntries(entries, batchIndex, timeout)
+        : () -> replicateEntries(entries, batchIndex, timeout);
   }
 
   private String logPeerId(){

@@ -57,11 +57,12 @@ public class ReplicationProtbufUtil {
    */
   public static void replicateWALEntry(final AdminService.BlockingInterface admin,
       final Entry[] entries, String replicationClusterId, Path sourceBaseNamespaceDir,
-      Path sourceHFileArchiveDir) throws IOException {
+      Path sourceHFileArchiveDir, int timeout) throws IOException {
     Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner> p =
         buildReplicateWALEntryRequest(entries, null, replicationClusterId, sourceBaseNamespaceDir,
           sourceHFileArchiveDir);
     HBaseRpcController controller = new HBaseRpcControllerImpl(p.getSecond());
+    controller.setCallTimeout(timeout);
     try {
       admin.replicateWALEntry(controller, p.getFirst());
     } catch (org.apache.hbase.thirdparty.com.google.protobuf.ServiceException e) {
