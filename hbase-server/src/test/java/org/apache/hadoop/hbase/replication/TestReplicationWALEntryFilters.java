@@ -213,13 +213,11 @@ public class TestReplicationWALEntryFilters {
   @Test
   public void testNamespaceTableCfWALEntryFilter() {
     ReplicationPeer peer = mock(ReplicationPeer.class);
-    ReplicationPeerConfig peerConfig = mock(ReplicationPeerConfig.class);
+    ReplicationPeerConfigBuilder peerConfigBuilder = ReplicationPeerConfig.newBuilder();
 
     // 1. replicate_all flag is false, no namespaces and table-cfs config
-    when(peerConfig.replicateAllUserTables()).thenReturn(false);
-    when(peerConfig.getNamespaces()).thenReturn(null);
-    when(peerConfig.getTableCFsMap()).thenReturn(null);
-    when(peer.getPeerConfig()).thenReturn(peerConfig);
+    peerConfigBuilder.setReplicateAllUserTables(false).setNamespaces(null).setTableCFsMap(null);
+    when(peer.getPeerConfig()).thenReturn(peerConfigBuilder.build());
     Entry userEntry = createEntry(null, a, b, c);
     ChainWALEntryFilter filter =
         new ChainWALEntryFilter(new NamespaceTableCfWALEntryFilter(peer));
@@ -229,9 +227,8 @@ public class TestReplicationWALEntryFilters {
     // empty map
     userEntry = createEntry(null, a, b, c);
     Map<TableName, List<String>> tableCfs = new HashMap<>();
-    when(peerConfig.replicateAllUserTables()).thenReturn(false);
-    when(peerConfig.getTableCFsMap()).thenReturn(tableCfs);
-    when(peer.getPeerConfig()).thenReturn(peerConfig);
+    peerConfigBuilder.setReplicateAllUserTables(false).setTableCFsMap(tableCfs);
+    when(peer.getPeerConfig()).thenReturn(peerConfigBuilder.build());
     filter = new ChainWALEntryFilter(new NamespaceTableCfWALEntryFilter(peer));
     assertEquals(null, filter.filter(userEntry));
 
@@ -239,9 +236,8 @@ public class TestReplicationWALEntryFilters {
     userEntry = createEntry(null, a, b, c);
     tableCfs = new HashMap<>();
     tableCfs.put(TableName.valueOf("bar"), null);
-    when(peerConfig.replicateAllUserTables()).thenReturn(false);
-    when(peerConfig.getTableCFsMap()).thenReturn(tableCfs);
-    when(peer.getPeerConfig()).thenReturn(peerConfig);
+    peerConfigBuilder.setReplicateAllUserTables(false).setTableCFsMap(tableCfs);
+    when(peer.getPeerConfig()).thenReturn(peerConfigBuilder.build());
     filter = new ChainWALEntryFilter(new NamespaceTableCfWALEntryFilter(peer));
     assertEquals(null, filter.filter(userEntry));
 
@@ -249,9 +245,8 @@ public class TestReplicationWALEntryFilters {
     userEntry = createEntry(null, a, b, c);
     tableCfs = new HashMap<>();
     tableCfs.put(TableName.valueOf("foo"), Lists.newArrayList("a"));
-    when(peerConfig.replicateAllUserTables()).thenReturn(false);
-    when(peerConfig.getTableCFsMap()).thenReturn(tableCfs);
-    when(peer.getPeerConfig()).thenReturn(peerConfig);
+    peerConfigBuilder.setReplicateAllUserTables(false).setTableCFsMap(tableCfs);
+    when(peer.getPeerConfig()).thenReturn(peerConfigBuilder.build());
     filter = new ChainWALEntryFilter(new NamespaceTableCfWALEntryFilter(peer));
     assertEquals(createEntry(null, a), filter.filter(userEntry));
 
@@ -259,9 +254,8 @@ public class TestReplicationWALEntryFilters {
     userEntry = createEntry(null, a, b, c, d);
     tableCfs = new HashMap<>();
     tableCfs.put(TableName.valueOf("foo"), Lists.newArrayList("a", "c"));
-    when(peerConfig.replicateAllUserTables()).thenReturn(false);
-    when(peerConfig.getTableCFsMap()).thenReturn(tableCfs);
-    when(peer.getPeerConfig()).thenReturn(peerConfig);
+    peerConfigBuilder.setReplicateAllUserTables(false).setTableCFsMap(tableCfs);
+    when(peer.getPeerConfig()).thenReturn(peerConfigBuilder.build());
     filter = new ChainWALEntryFilter(new NamespaceTableCfWALEntryFilter(peer));
     assertEquals(createEntry(null, a,c), filter.filter(userEntry));
 
@@ -269,19 +263,17 @@ public class TestReplicationWALEntryFilters {
     when(peer.getTableCFs()).thenReturn(null);
     // empty set
     Set<String> namespaces = new HashSet<>();
-    when(peerConfig.replicateAllUserTables()).thenReturn(false);
-    when(peerConfig.getNamespaces()).thenReturn(namespaces);
-    when(peerConfig.getTableCFsMap()).thenReturn(null);
-    when(peer.getPeerConfig()).thenReturn(peerConfig);
+    peerConfigBuilder.setReplicateAllUserTables(false).setNamespaces(namespaces)
+      .setTableCFsMap(null);
+    when(peer.getPeerConfig()).thenReturn(peerConfigBuilder.build());
     userEntry = createEntry(null, a, b, c);
     filter = new ChainWALEntryFilter(new NamespaceTableCfWALEntryFilter(peer));
     assertEquals(null, filter.filter(userEntry));
 
     // namespace default
     namespaces.add("default");
-    when(peerConfig.replicateAllUserTables()).thenReturn(false);
-    when(peerConfig.getNamespaces()).thenReturn(namespaces);
-    when(peer.getPeerConfig()).thenReturn(peerConfig);
+    peerConfigBuilder.setReplicateAllUserTables(false).setNamespaces(namespaces);
+    when(peer.getPeerConfig()).thenReturn(peerConfigBuilder.build());
     userEntry = createEntry(null, a, b, c);
     filter = new ChainWALEntryFilter(new NamespaceTableCfWALEntryFilter(peer));
     assertEquals(createEntry(null, a,b,c), filter.filter(userEntry));
@@ -289,9 +281,8 @@ public class TestReplicationWALEntryFilters {
     // namespace ns1
     namespaces = new HashSet<>();
     namespaces.add("ns1");
-    when(peerConfig.replicateAllUserTables()).thenReturn(false);
-    when(peerConfig.getNamespaces()).thenReturn(namespaces);
-    when(peer.getPeerConfig()).thenReturn(peerConfig);
+    peerConfigBuilder.setReplicateAllUserTables(false).setNamespaces(namespaces);
+    when(peer.getPeerConfig()).thenReturn(peerConfigBuilder.build());
     userEntry = createEntry(null, a, b, c);
     filter = new ChainWALEntryFilter(new NamespaceTableCfWALEntryFilter(peer));
     assertEquals(null, filter.filter(userEntry));
@@ -302,10 +293,9 @@ public class TestReplicationWALEntryFilters {
     tableCfs = new HashMap<>();
     namespaces.add("ns1");
     tableCfs.put(TableName.valueOf("foo"), Lists.newArrayList("a", "c"));
-    when(peerConfig.replicateAllUserTables()).thenReturn(false);
-    when(peerConfig.getNamespaces()).thenReturn(namespaces);
-    when(peerConfig.getTableCFsMap()).thenReturn(tableCfs);
-    when(peer.getPeerConfig()).thenReturn(peerConfig);
+    peerConfigBuilder.setReplicateAllUserTables(false).setNamespaces(namespaces)
+      .setTableCFsMap(tableCfs);
+    when(peer.getPeerConfig()).thenReturn(peerConfigBuilder.build());
     userEntry = createEntry(null, a, b, c);
     filter = new ChainWALEntryFilter(new NamespaceTableCfWALEntryFilter(peer));
     assertEquals(createEntry(null, a, c), filter.filter(userEntry));
@@ -314,10 +304,9 @@ public class TestReplicationWALEntryFilters {
     tableCfs = new HashMap<>();
     namespaces.add("default");
     tableCfs.put(TableName.valueOf("ns1:foo"), Lists.newArrayList("a", "c"));
-    when(peerConfig.replicateAllUserTables()).thenReturn(false);
-    when(peerConfig.getNamespaces()).thenReturn(namespaces);
-    when(peerConfig.getTableCFsMap()).thenReturn(tableCfs);
-    when(peer.getPeerConfig()).thenReturn(peerConfig);
+    peerConfigBuilder.setReplicateAllUserTables(false).setNamespaces(namespaces)
+      .setTableCFsMap(tableCfs);
+    when(peer.getPeerConfig()).thenReturn(peerConfigBuilder.build());
     userEntry = createEntry(null, a, b, c);
     filter = new ChainWALEntryFilter(new NamespaceTableCfWALEntryFilter(peer));
     assertEquals(createEntry(null, a, b, c), filter.filter(userEntry));
@@ -326,10 +315,9 @@ public class TestReplicationWALEntryFilters {
     tableCfs = new HashMap<>();
     namespaces.add("ns1");
     tableCfs.put(TableName.valueOf("bar"), null);
-    when(peerConfig.replicateAllUserTables()).thenReturn(false);
-    when(peerConfig.getNamespaces()).thenReturn(namespaces);
-    when(peerConfig.getTableCFsMap()).thenReturn(tableCfs);
-    when(peer.getPeerConfig()).thenReturn(peerConfig);
+    peerConfigBuilder.setReplicateAllUserTables(false).setNamespaces(namespaces)
+      .setTableCFsMap(tableCfs);
+    when(peer.getPeerConfig()).thenReturn(peerConfigBuilder.build());
     userEntry = createEntry(null, a, b, c);
     filter = new ChainWALEntryFilter(new NamespaceTableCfWALEntryFilter(peer));
     assertEquals(null, filter.filter(userEntry));
@@ -338,14 +326,14 @@ public class TestReplicationWALEntryFilters {
   @Test
   public void testNamespaceTableCfWALEntryFilter2() {
     ReplicationPeer peer = mock(ReplicationPeer.class);
-    ReplicationPeerConfig peerConfig = mock(ReplicationPeerConfig.class);
+    ReplicationPeerConfigBuilder peerConfigBuilder = ReplicationPeerConfig.newBuilder();
 
     // 1. replicate_all flag is true
     // and no exclude namespaces and no exclude table-cfs config
-    when(peerConfig.replicateAllUserTables()).thenReturn(true);
-    when(peerConfig.getExcludeNamespaces()).thenReturn(null);
-    when(peerConfig.getExcludeTableCFsMap()).thenReturn(null);
-    when(peer.getPeerConfig()).thenReturn(peerConfig);
+    peerConfigBuilder.setReplicateAllUserTables(true)
+      .setExcludeNamespaces(null)
+      .setExcludeTableCFsMap(null);
+    when(peer.getPeerConfig()).thenReturn(peerConfigBuilder.build());
     Entry userEntry = createEntry(null, a, b, c);
     ChainWALEntryFilter filter =
         new ChainWALEntryFilter(new NamespaceTableCfWALEntryFilter(peer));
@@ -354,18 +342,16 @@ public class TestReplicationWALEntryFilters {
     // 2. replicate_all flag is true, and only config exclude namespaces
     // empty set
     Set<String> namespaces = new HashSet<String>();
-    when(peerConfig.getExcludeNamespaces()).thenReturn(namespaces);
-    when(peerConfig.getExcludeTableCFsMap()).thenReturn(null);
-    when(peer.getPeerConfig()).thenReturn(peerConfig);
+    peerConfigBuilder.setExcludeNamespaces(namespaces).setExcludeTableCFsMap(null);
+    when(peer.getPeerConfig()).thenReturn(peerConfigBuilder.build());
     userEntry = createEntry(null, a, b, c);
     filter = new ChainWALEntryFilter(new NamespaceTableCfWALEntryFilter(peer));
     assertEquals(createEntry(null, a, b, c), filter.filter(userEntry));
 
     // exclude namespace default
     namespaces.add("default");
-    when(peerConfig.getExcludeNamespaces()).thenReturn(namespaces);
-    when(peerConfig.getExcludeTableCFsMap()).thenReturn(null);
-    when(peer.getPeerConfig()).thenReturn(peerConfig);
+    peerConfigBuilder.setExcludeNamespaces(namespaces).setExcludeTableCFsMap(null);
+    when(peer.getPeerConfig()).thenReturn(peerConfigBuilder.build());
     userEntry = createEntry(null, a, b, c);
     filter = new ChainWALEntryFilter(new NamespaceTableCfWALEntryFilter(peer));
     assertEquals(null, filter.filter(userEntry));
@@ -373,9 +359,8 @@ public class TestReplicationWALEntryFilters {
     // exclude namespace ns1
     namespaces = new HashSet<String>();
     namespaces.add("ns1");
-    when(peerConfig.getExcludeNamespaces()).thenReturn(namespaces);
-    when(peerConfig.getExcludeTableCFsMap()).thenReturn(null);
-    when(peer.getPeerConfig()).thenReturn(peerConfig);
+    peerConfigBuilder.setExcludeNamespaces(namespaces).setExcludeTableCFsMap(null);
+    when(peer.getPeerConfig()).thenReturn(peerConfigBuilder.build());
     userEntry = createEntry(null, a, b, c);
     filter = new ChainWALEntryFilter(new NamespaceTableCfWALEntryFilter(peer));
     assertEquals(createEntry(null, a, b, c), filter.filter(userEntry));
@@ -383,9 +368,8 @@ public class TestReplicationWALEntryFilters {
     // 3. replicate_all flag is true, and only config exclude table-cfs
     // empty table-cfs map
     Map<TableName, List<String>> tableCfs = new HashMap<TableName, List<String>>();
-    when(peerConfig.getExcludeNamespaces()).thenReturn(null);
-    when(peerConfig.getExcludeTableCFsMap()).thenReturn(tableCfs);
-    when(peer.getPeerConfig()).thenReturn(peerConfig);
+    peerConfigBuilder.setExcludeNamespaces(null).setExcludeTableCFsMap(tableCfs);
+    when(peer.getPeerConfig()).thenReturn(peerConfigBuilder.build());
     userEntry = createEntry(null, a, b, c);
     filter = new ChainWALEntryFilter(new NamespaceTableCfWALEntryFilter(peer));
     assertEquals(createEntry(null, a, b, c), filter.filter(userEntry));
@@ -393,9 +377,8 @@ public class TestReplicationWALEntryFilters {
     // exclude table bar
     tableCfs = new HashMap<TableName, List<String>>();
     tableCfs.put(TableName.valueOf("bar"), null);
-    when(peerConfig.getExcludeNamespaces()).thenReturn(null);
-    when(peerConfig.getExcludeTableCFsMap()).thenReturn(tableCfs);
-    when(peer.getPeerConfig()).thenReturn(peerConfig);
+    peerConfigBuilder.setExcludeNamespaces(null).setExcludeTableCFsMap(tableCfs);
+    when(peer.getPeerConfig()).thenReturn(peerConfigBuilder.build());
     userEntry = createEntry(null, a, b, c);
     filter = new ChainWALEntryFilter(new NamespaceTableCfWALEntryFilter(peer));
     assertEquals(createEntry(null, a, b, c), filter.filter(userEntry));
@@ -403,9 +386,8 @@ public class TestReplicationWALEntryFilters {
     // exclude table foo:a
     tableCfs = new HashMap<TableName, List<String>>();
     tableCfs.put(TableName.valueOf("foo"), Lists.newArrayList("a"));
-    when(peerConfig.getExcludeNamespaces()).thenReturn(null);
-    when(peerConfig.getExcludeTableCFsMap()).thenReturn(tableCfs);
-    when(peer.getPeerConfig()).thenReturn(peerConfig);
+    peerConfigBuilder.setExcludeNamespaces(null).setExcludeTableCFsMap(tableCfs);
+    when(peer.getPeerConfig()).thenReturn(peerConfigBuilder.build());
     userEntry = createEntry(null, a, b, c);
     filter = new ChainWALEntryFilter(new NamespaceTableCfWALEntryFilter(peer));
     assertEquals(createEntry(null, b, c), filter.filter(userEntry));
@@ -416,9 +398,8 @@ public class TestReplicationWALEntryFilters {
     tableCfs = new HashMap<TableName, List<String>>();
     namespaces.add("ns1");
     tableCfs.put(TableName.valueOf("foo"), Lists.newArrayList("a", "c"));
-    when(peerConfig.getExcludeNamespaces()).thenReturn(namespaces);
-    when(peerConfig.getExcludeTableCFsMap()).thenReturn(tableCfs);
-    when(peer.getPeerConfig()).thenReturn(peerConfig);
+    peerConfigBuilder.setExcludeNamespaces(namespaces).setExcludeTableCFsMap(tableCfs);
+    when(peer.getPeerConfig()).thenReturn(peerConfigBuilder.build());
     userEntry = createEntry(null, a, b, c);
     filter = new ChainWALEntryFilter(new NamespaceTableCfWALEntryFilter(peer));
     assertEquals(createEntry(null, b), filter.filter(userEntry));
@@ -428,9 +409,8 @@ public class TestReplicationWALEntryFilters {
     tableCfs = new HashMap<TableName, List<String>>();
     namespaces.add("default");
     tableCfs.put(TableName.valueOf("ns1:bar"), new ArrayList<String>());
-    when(peerConfig.getExcludeNamespaces()).thenReturn(namespaces);
-    when(peerConfig.getExcludeTableCFsMap()).thenReturn(tableCfs);
-    when(peer.getPeerConfig()).thenReturn(peerConfig);
+    peerConfigBuilder.setExcludeNamespaces(namespaces).setExcludeTableCFsMap(tableCfs);
+    when(peer.getPeerConfig()).thenReturn(peerConfigBuilder.build());
     userEntry = createEntry(null, a, b, c);
     filter = new ChainWALEntryFilter(new NamespaceTableCfWALEntryFilter(peer));
     assertEquals(null, filter.filter(userEntry));
