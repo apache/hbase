@@ -31,11 +31,8 @@ String serverType = (String)getServletContext().getAttribute("hbase.thrift.serve
 long startcode = conf.getLong("startcode", System.currentTimeMillis());
 String listenPort = conf.get("hbase.regionserver.thrift.port", "9090");
 ImplType implType = ImplType.getServerImpl(conf);
-String framed = (implType.isAlwaysFramed()
-    ? "true" : conf.get("hbase.regionserver.thrift.framed", "false"))
-    .equals("true") ? "Framed": "Standard";
-String compact = conf.get("hbase.regionserver.thrift.compact", "false")
-    .equals("true") ? "Compact" : "Binary";
+String framed = (implType.isAlwaysFramed() || conf.getBoolean("hbase.regionserver.thrift.framed", false)) ? "Framed" : "Standard";
+String protocol = conf.getBoolean("hbase.regionserver.thrift.compact", false) ? "Compact" : "Binary";
 String qop = conf.get("hbase.thrift.security.qop", "none");
 %>
 <!DOCTYPE html>
@@ -116,7 +113,7 @@ String qop = conf.get("hbase.thrift.security.qop", "none");
         </tr>
         <tr>
             <td>Protocol</td>
-            <td><%= compact %></td>
+            <td><%= protocol %></td>
             <td>Thrift RPC engine protocol type</td>
         </tr>
         <tr>
@@ -127,7 +124,7 @@ String qop = conf.get("hbase.thrift.security.qop", "none");
         <tr>
             <td>Quality Of Protection</td>
             <td><%= qop %></td>
-            <td>QOP settings for SASL </td>
+            <td>QOP settings for SASL</td>
         </tr>
         <tr>
             <td>Thrift Server Type</td>
