@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release Notes - HBase - Version 1.4.12
+Release Notes - HBase - Version 1.4.12 11/29/2019
 
 ** Bug
     * [HBASE-18439] - Subclasses of o.a.h.h.chaos.actions.Action all use the same logger
