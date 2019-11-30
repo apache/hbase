@@ -229,7 +229,7 @@ if [[ "$1" == "publish-release" ]]; then
     mvn_goals=("${mvn_goals[@]}" deploy)
   fi
   echo "Staging release in nexus"
-  if ! MAVEN_OPTS="${MAVEN_OPTS}" ${MVN} --settings $tmp_settings \
+  if ! MAVEN_OPTS="${MAVEN_OPTS}" ${MVN} --settings "$tmp_settings" \
       -DskipTests -Dcheckstyle.skip=true "${PUBLISH_PROFILES}" \
       -Dmaven.repo.local="${tmp_repo}" \
       "${mvn_goals[@]}" > "${BASE_DIR}/mvn_deploy.log"; then
