@@ -55,7 +55,13 @@ EOF
 set -e
 
 function cleanup {
-  rm ${tmp_settings} &> /dev/null || true
+  echo "Cleaning up temp settings file." >&2
+  rm "${tmp_settings}" &> /dev/null || true
+  # If REPO was set, then leave things be. Otherwise if we defined a repo clean it out.
+  if [[ -z "${REPO}" ]] && [[ -n "${tmp_repo}" ]]; then
+    echo "Cleaning up temp repo in '${tmp_repo}'. set REPO to reuse downloads." >&2
+    rm -rf "${tmp_repo}" &> /dev/null || true
+  fi
 }
 
 if [ $# -eq 0 ]; then
@@ -141,7 +147,6 @@ git clean -d -f -x
 cd ..
 
 tmp_repo="${REPO:-`pwd`/$(mktemp -d hbase-repo-XXXXX)}"
-# Reexamine. Not sure this working. Pass as arg? That don't seem to work either!
 tmp_settings="/${tmp_repo}/tmp-settings.xml"
 echo "<settings><servers>" > "$tmp_settings"
 echo "<server><id>apache.snapshots.https</id><username>$ASF_USERNAME</username>" >> "$tmp_settings"
@@ -219,14 +224,18 @@ if [[ "$1" == "publish-release" ]]; then
   # Coerce the requested version
   $MVN versions:set -DnewVersion=$VERSION
   declare -a mvn_goals=(clean install)
+  declare staged_repo_id="dryrun-no-repo"
   if ! is_dry_run; then
     mvn_goals=("${mvn_goals[@]}" deploy)
   fi
   echo "Staging release in nexus"
-  MAVEN_OPTS="${MAVEN_OPTS}" ${MVN} --settings $tmp_settings \
+  if ! MAVEN_OPTS="${MAVEN_OPTS}" ${MVN} --settings $tmp_settings \
       -DskipTests -Dcheckstyle.skip=true "${PUBLISH_PROFILES}" \
       -Dmaven.repo.local="${tmp_repo}" \
-      "${mvn_goals[@]}" > "${BASE_DIR}/mvn_deploy.log"
+      "${mvn_goals[@]}" > "${BASE_DIR}/mvn_deploy.log"; then
+    echo "Staging build failed, see 'mvn_deploy.log' for details." >&2
+    exit 1
+  fi
   if ! is_dry_run; then
     staged_repo_id=$(grep -o "Closing staging repository with ID .*" "${BASE_DIR}/mvn_deploy.log" \
         | sed -e 's/Closing staging repository with ID "\([^"]*\)"./\1/')
@@ -234,11 +243,11 @@ if [[ "$1" == "publish-release" ]]; then
   else
     echo "Artifacts successfully built. not staged due to dry run."
   fi
-  )
   # Dump out email to send. Where we find vote.tmpl depends
   # on where this script is run from
   export PROJECT_TEXT=$(echo "${PROJECT}" | sed "s/-/ /g")
-  eval "echo \"$(< ${SELF}/vote.tmpl)\"" |tee vote.txt
+  eval "echo \"$(< ${SELF}/vote.tmpl)\"" |tee "${BASE_DIR}/vote.txt"
+  )
   exit 0
 fi
 
