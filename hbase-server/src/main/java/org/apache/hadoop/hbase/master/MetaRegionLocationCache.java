@@ -81,14 +81,14 @@ public class MetaRegionLocationCache extends ZKListener {
     // Populate the initial snapshot of data from meta znodes.
     // This is needed because stand-by masters can potentially start after the initial znode
     // creation.
-    populateInitialMetaLocations();
+    populateMetaLocations();
   }
 
   /**
    * Populates the current snapshot of meta locations from ZK. If no meta znodes exist, it registers
    * a watcher on base znode to check for any CREATE/DELETE events on the children.
    */
-  private void populateInitialMetaLocations() throws InterruptedException {
+  private void populateMetaLocations() throws InterruptedException {
     RetryCounter retryCounter = retryCounterFactory.create();
     List<String> znodes = null;
     while (retryCounter.shouldRetry()) {
@@ -230,7 +230,7 @@ public class MetaRegionLocationCache extends ZKListener {
       return;
     }
     try {
-      populateInitialMetaLocations();
+      populateMetaLocations();
     } catch (InterruptedException ie) {
       // log and ignore, we can reload the cache later if needed.
       LOG.warn("Interrupted while initializing meta region cache", ie);
