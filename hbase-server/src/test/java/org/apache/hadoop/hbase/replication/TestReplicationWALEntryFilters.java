@@ -163,7 +163,8 @@ public class TestReplicationWALEntryFilters {
 
     @Override
     public Cell filterCell(Entry entry, Cell cell) {
-      if (Bytes.toString(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()).equals("a")) {
+      if (Bytes.toString(
+          cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()).equals("a")) {
         return null;
       } else {
         return cell;
@@ -186,7 +187,8 @@ public class TestReplicationWALEntryFilters {
   @Test
   public void testChainWALEntryWithCellFilter() {
     Entry userEntry = createEntry(null, a, b, c);
-    CustomChainWALEntryFilter filterSomeCells = new CustomChainWALEntryFilter(new FilterSomeCellsWALCellFilter());
+    ChainWALEntryFilter filterSomeCells =
+        new ChainWALEntryFilter(new FilterSomeCellsWALCellFilter());
     // since WALCellFilter filter cells with rowkey 'a'
     assertEquals(createEntry(null, b,c), filterSomeCells.filter(userEntry));
 
@@ -194,7 +196,26 @@ public class TestReplicationWALEntryFilters {
     // since there is no cell to get filtered, nothing should get filtered
     assertEquals(userEntry2, filterSomeCells.filter(userEntry2));
 
-    CustomChainWALEntryFilter filterAllCells = new CustomChainWALEntryFilter(new FilterAllCellsWALCellFilter());
+    // since we filter all the cells, we should get empty entry
+    ChainWALEntryFilter filterAllCells =
+        new ChainWALEntryFilter(new FilterAllCellsWALCellFilter());
+    assertEquals(createEntry(null), filterAllCells.filter(userEntry));
+  }
+
+  @Test
+  public void testChainWALEmptyEntryWithCellFilter() {
+    Entry userEntry = createEntry(null, a, b, c);
+    ChainWALEmptyEntryFilter filterSomeCells =
+        new ChainWALEmptyEntryFilter(new FilterSomeCellsWALCellFilter());
+    // since WALCellFilter filter cells with rowkey 'a'
+    assertEquals(createEntry(null, b,c), filterSomeCells.filter(userEntry));
+
+    Entry userEntry2 = createEntry(null, b, c, d);
+    // since there is no cell to get filtered, nothing should get filtered
+    assertEquals(userEntry2, filterSomeCells.filter(userEntry2));
+
+    ChainWALEmptyEntryFilter filterAllCells =
+        new ChainWALEmptyEntryFilter(new FilterAllCellsWALCellFilter());
     assertEquals(createEntry(null), filterAllCells.filter(userEntry));
     // let's set the filter empty entry flag to true now for the above case
     filterAllCells.setFilterEmptyEntry(true);

@@ -17,37 +17,31 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import java.util.List;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import java.util.List;
-
 /**
  * A {@link ChainWALEntryFilter} for providing more flexible options
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
-public class CustomChainWALEntryFilter extends ChainWALEntryFilter {
+public class ChainWALEmptyEntryFilter extends ChainWALEntryFilter {
 
   private boolean filterEmptyEntry = false;
 
-  public CustomChainWALEntryFilter(final WALEntryFilter... filters) {
+  public ChainWALEmptyEntryFilter(final WALEntryFilter... filters) {
     super(filters);
   }
 
-  public CustomChainWALEntryFilter(final List<WALEntryFilter> filters) {
+  public ChainWALEmptyEntryFilter(final List<WALEntryFilter> filters) {
     super(filters);
   }
 
   @Override
   public WAL.Entry filter(WAL.Entry entry) {
-    filterEntry(entry);
-    if (entry == null) {
-      return null;
-    }
-
-    filterCells(entry);
+    entry = super.filter(entry);
     if (filterEmptyEntry && entry != null && entry.getEdit().isEmpty()) {
       return null;
     }
