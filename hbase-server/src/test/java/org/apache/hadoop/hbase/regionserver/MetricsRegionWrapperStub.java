@@ -71,6 +71,11 @@ public class MetricsRegionWrapperStub implements MetricsRegionWrapper {
   }
 
   @Override
+  public long getMaxCompactedStoreFileRefCount() {
+    return 0;
+  }
+
+  @Override
   public long getMemStoreSize() {
     return 103;
   }

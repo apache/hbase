@@ -375,7 +375,7 @@ public class TestRegionsRecoveryChore {
     return serverMetrics;
   }
 
-  private static RegionMetrics getRegionMetrics(byte[] regionName, int storeRefCount) {
+  private static RegionMetrics getRegionMetrics(byte[] regionName, int compactedStoreRefCount) {
     RegionMetrics regionMetrics = new RegionMetrics() {
 
       @Override
@@ -480,12 +480,17 @@ public class TestRegionsRecoveryChore {
 
       @Override
       public int getStoreRefCount() {
-        return storeRefCount;
+        return compactedStoreRefCount;
       }
 
       @Override
       public int getMaxStoreFileRefCount() {
-        return storeRefCount;
+        return 0;
+      }
+
+      @Override
+      public int getMaxCompactedStoreFileRefCount() {
+        return compactedStoreRefCount;
       }
 
     };

@@ -67,6 +67,7 @@ public final class RegionMetricsBuilder {
         .setStoreFileCount(regionLoadPB.getStorefiles())
         .setStoreRefCount(regionLoadPB.getStoreRefCount())
         .setMaxStoreFileRefCount(regionLoadPB.getMaxStoreFileRefCount())
+        .setMaxCompactedStoreFileRefCount(regionLoadPB.getMaxCompactedStoreFileRefCount())
         .setStoreFileSize(new Size(regionLoadPB.getStorefileSizeMB(), Size.Unit.MEGABYTE))
         .setStoreSequenceIds(regionLoadPB.getStoreCompleteSequenceIdList().stream()
           .collect(Collectors.toMap(
@@ -115,6 +116,7 @@ public final class RegionMetricsBuilder {
         .setStorefiles(regionMetrics.getStoreFileCount())
         .setStoreRefCount(regionMetrics.getStoreRefCount())
         .setMaxStoreFileRefCount(regionMetrics.getMaxStoreFileRefCount())
+        .setMaxCompactedStoreFileRefCount(regionMetrics.getMaxCompactedStoreFileRefCount())
         .setStorefileSizeMB((int) regionMetrics.getStoreFileSize().get(Size.Unit.MEGABYTE))
         .addAllStoreCompleteSequenceId(toStoreSequenceId(regionMetrics.getStoreSequenceId()))
         .setStoreUncompressedSizeMB(
@@ -131,6 +133,7 @@ public final class RegionMetricsBuilder {
   private int storeFileCount;
   private int storeRefCount;
   private int maxStoreFileRefCount;
+  private int maxCompactedStoreFileRefCount;
   private long compactingCellCount;
   private long compactedCellCount;
   private Size storeFileSize = Size.ZERO;
@@ -166,6 +169,10 @@ public final class RegionMetricsBuilder {
   }
   public RegionMetricsBuilder setMaxStoreFileRefCount(int value) {
     this.maxStoreFileRefCount = value;
+    return this;
+  }
+  public RegionMetricsBuilder setMaxCompactedStoreFileRefCount(int value) {
+    this.maxCompactedStoreFileRefCount = value;
     return this;
   }
   public RegionMetricsBuilder setCompactingCellCount(long value) {
@@ -243,6 +250,7 @@ public final class RegionMetricsBuilder {
         storeFileCount,
         storeRefCount,
         maxStoreFileRefCount,
+        maxCompactedStoreFileRefCount,
         compactingCellCount,
         compactedCellCount,
         storeFileSize,
@@ -268,6 +276,7 @@ public final class RegionMetricsBuilder {
     private final int storeFileCount;
     private final int storeRefCount;
     private final int maxStoreFileRefCount;
+    private final int maxCompactedStoreFileRefCount;
     private final long compactingCellCount;
     private final long compactedCellCount;
     private final Size storeFileSize;
@@ -290,6 +299,7 @@ public final class RegionMetricsBuilder {
         int storeFileCount,
         int storeRefCount,
         int maxStoreFileRefCount,
+        int maxCompactedStoreFileRefCount,
         final long compactingCellCount,
         long compactedCellCount,
         Size storeFileSize,
@@ -312,6 +322,7 @@ public final class RegionMetricsBuilder {
       this.storeFileCount = storeFileCount;
       this.storeRefCount = storeRefCount;
       this.maxStoreFileRefCount = maxStoreFileRefCount;
+      this.maxCompactedStoreFileRefCount = maxCompactedStoreFileRefCount;
       this.compactingCellCount = compactingCellCount;
       this.compactedCellCount = compactedCellCount;
       this.storeFileSize = Preconditions.checkNotNull(storeFileSize);
@@ -354,6 +365,11 @@ public final class RegionMetricsBuilder {
     @Override
     public int getMaxStoreFileRefCount() {
       return maxStoreFileRefCount;
+    }
+
+    @Override
+    public int getMaxCompactedStoreFileRefCount() {
+      return maxCompactedStoreFileRefCount;
     }
 
     @Override
@@ -451,6 +467,8 @@ public final class RegionMetricsBuilder {
         this.getStoreRefCount());
       Strings.appendKeyValue(sb, "maxStoreFileRefCount",
         this.getMaxStoreFileRefCount());
+      Strings.appendKeyValue(sb, "maxCompactedStoreFileRefCount",
+        this.getMaxCompactedStoreFileRefCount());
       Strings.appendKeyValue(sb, "uncompressedStoreFileSize",
           this.getUncompressedStoreFileSize());
       Strings.appendKeyValue(sb, "lastMajorCompactionTimestamp",

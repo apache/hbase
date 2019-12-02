@@ -234,6 +234,7 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String STORE_REF_COUNT = "storeRefCount";
   String STORE_REF_COUNT_DESC = "Store reference count";
   String MAX_STORE_FILE_REF_COUNT = "maxStoreFileRefCount";
+  String MAX_COMPACTED_STORE_FILE_REF_COUNT = "maxCompactedStoreFileRefCount";
   String MEMSTORE_SIZE = "memStoreSize";
   String MEMSTORE_SIZE_DESC = "Size of the memstore";
   String STOREFILE_SIZE = "storeFileSize";

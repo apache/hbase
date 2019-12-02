@@ -160,4 +160,10 @@ public interface RegionMetrics {
    *   of this region
    */
   int getMaxStoreFileRefCount();
+
+  /**
+   * @return the max reference count for any store file among all compacted stores files
+   *   of this region
+   */
+  int getMaxCompactedStoreFileRefCount();
 }

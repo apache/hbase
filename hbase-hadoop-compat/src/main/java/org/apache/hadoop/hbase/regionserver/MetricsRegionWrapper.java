@@ -170,4 +170,10 @@ public interface MetricsRegionWrapper {
    *   all store files that belong to this region
    */
   long getMaxStoreFileRefCount();
+
+  /**
+   * @return the max number of references active on any store file among
+   *   all compacted store files that belong to this region
+   */
+  long getMaxCompactedStoreFileRefCount();
 }

@@ -2798,4 +2798,20 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     return maxStoreFileRefCount.isPresent() ? maxStoreFileRefCount.getAsInt() : 0;
   }
 
+  /**
+   * @return get maximum ref count of storeFile among all compacted HStore Files
+   *   for the HStore
+   */
+  public int getMaxCompactedStoreFileRefCount() {
+    OptionalInt maxCompactedStoreFileRefCount = this.storeEngine.getStoreFileManager()
+      .getCompactedfiles()
+      .stream()
+      .filter(sf -> sf.getReader() != null)
+      .filter(HStoreFile::isHFile)
+      .mapToInt(HStoreFile::getRefCount)
+      .max();
+    return maxCompactedStoreFileRefCount.isPresent()
+      ? maxCompactedStoreFileRefCount.getAsInt() : 0;
+  }
+
 }

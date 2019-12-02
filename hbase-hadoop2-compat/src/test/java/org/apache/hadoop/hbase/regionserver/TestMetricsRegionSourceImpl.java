@@ -105,6 +105,11 @@ public class TestMetricsRegionSourceImpl {
     }
 
     @Override
+    public long getMaxCompactedStoreFileRefCount() {
+      return 0;
+    }
+
+    @Override
     public long getMemStoreSize() {
       return 0;
     }

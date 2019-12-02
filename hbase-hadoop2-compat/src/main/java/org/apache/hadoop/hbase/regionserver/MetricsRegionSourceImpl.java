@@ -222,6 +222,11 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
         MetricsRegionServerSource.MAX_STORE_FILE_REF_COUNT),
         this.regionWrapper.getMaxStoreFileRefCount());
       mrb.addGauge(Interns.info(
+        regionNamePrefix + MetricsRegionServerSource.MAX_COMPACTED_STORE_FILE_REF_COUNT,
+        MetricsRegionServerSource.MAX_COMPACTED_STORE_FILE_REF_COUNT),
+        this.regionWrapper.getMaxCompactedStoreFileRefCount()
+      );
+      mrb.addGauge(Interns.info(
               regionNamePrefix + MetricsRegionServerSource.MEMSTORE_SIZE,
               MetricsRegionServerSource.MEMSTORE_SIZE_DESC),
           this.regionWrapper.getMemStoreSize());
