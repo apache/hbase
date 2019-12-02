@@ -417,9 +417,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     double currentCost = computeCost(cluster, Double.MAX_VALUE);
     curOverallCost = currentCost;
-    for (int i = 0; i < this.curFunctionCosts.length; i++) {
-      curFunctionCosts[i] = tempFunctionCosts[i];
-    }
+    System.arraycopy(tempFunctionCosts, 0, curFunctionCosts, 0, curFunctionCosts.length);
     double initCost = currentCost;
     double newCost = currentCost;
 
@@ -463,9 +461,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
         // save for JMX
         curOverallCost = currentCost;
-        for (int i = 0; i < this.curFunctionCosts.length; i++) {
-          curFunctionCosts[i] = tempFunctionCosts[i];
-        }
+        System.arraycopy(tempFunctionCosts, 0, curFunctionCosts, 0, curFunctionCosts.length);
       } else {
         // Put things back the way they were before.
         // TODO: undo by remembering old values
