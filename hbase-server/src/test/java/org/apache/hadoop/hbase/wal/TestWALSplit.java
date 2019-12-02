@@ -407,15 +407,15 @@ public class TestWALSplit {
     WALFactory.createRecoveredEditsWriter(fs, p, conf).close();
   }
 
-  private Path createRecoveredEditsPathForRegion() throws  IOException{
+  private Path createRecoveredEditsPathForRegion() throws IOException {
     byte[] encoded = RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes();
     long now = System.currentTimeMillis();
-    Entry entry =
-      new Entry(new WALKeyImpl(encoded,
-        TableName.META_TABLE_NAME, 1, now, HConstants.DEFAULT_CLUSTER_ID),
+    Entry entry = new Entry(
+        new WALKeyImpl(encoded, TableName.META_TABLE_NAME, 1, now, HConstants.DEFAULT_CLUSTER_ID),
         new WALEdit());
-    Path p = WALSplitUtil.getRegionSplitEditsPath(entry,
-      FILENAME_BEING_SPLIT, TMPDIRNAME, conf);
+    Path p = WALSplitUtil
+        .getRegionSplitEditsPath(TableName.META_TABLE_NAME, encoded, 1, FILENAME_BEING_SPLIT,
+            TMPDIRNAME, conf);
     return p;
   }
 

@@ -19,17 +19,18 @@ package org.apache.hadoop.hbase.wal;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,36 +45,33 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 public abstract class OutputSink {
   private static final Logger LOG = LoggerFactory.getLogger(OutputSink.class);
 
-  protected WALSplitter.PipelineController controller;
-  protected EntryBuffers entryBuffers;
+  private final WALSplitter.PipelineController controller;
+  protected final EntryBuffers entryBuffers;
 
-  protected ConcurrentHashMap<String, WALSplitter.SinkWriter> writers = new ConcurrentHashMap<>();
-  protected final ConcurrentHashMap<String, Long> regionMaximumEditLogSeqNum =
-      new ConcurrentHashMap<>();
-
-  protected final List<WriterThread> writerThreads = Lists.newArrayList();
-
-  /* Set of regions which we've decided should not output edits */
-  protected final Set<byte[]> blacklistedRegions =
-      Collections.synchronizedSet(new TreeSet<>(Bytes.BYTES_COMPARATOR));
-
-  protected boolean closeAndCleanCompleted = false;
-
-  protected boolean writersClosed = false;
+  private final List<WriterThread> writerThreads = Lists.newArrayList();
 
   protected final int numThreads;
 
   protected CancelableProgressable reporter = null;
 
-  protected AtomicLong skippedEdits = new AtomicLong();
+  protected final AtomicLong totalSkippedEdits = new AtomicLong();
 
-  protected List<Path> splits = null;
+  protected final List<Path> splits = new ArrayList<>();
+
+  /**
+   * Used when close this output sink.
+   */
+  protected final ThreadPoolExecutor closeThreadPool;
+  protected final CompletionService<Void> closeCompletionService;
 
   public OutputSink(WALSplitter.PipelineController controller, EntryBuffers entryBuffers,
       int numWriters) {
-    numThreads = numWriters;
+    this.numThreads = numWriters;
     this.controller = controller;
     this.entryBuffers = entryBuffers;
+    this.closeThreadPool = Threads.getBoundedCachedThreadPool(numThreads, 30L, TimeUnit.SECONDS,
+        Threads.newDaemonThreadFactory("split-log-closeStream-"));
+    this.closeCompletionService = new ExecutorCompletionService<>(closeThreadPool);
   }
 
   void setReporter(CancelableProgressable reporter) {
@@ -92,36 +90,13 @@ public abstract class OutputSink {
   }
 
   /**
-   * Update region's maximum edit log SeqNum.
-   */
-  void updateRegionMaximumEditLogSeqNum(WAL.Entry entry) {
-    synchronized (regionMaximumEditLogSeqNum) {
-      String regionName = Bytes.toString(entry.getKey().getEncodedRegionName());
-      Long currentMaxSeqNum = regionMaximumEditLogSeqNum.get(regionName);
-      if (currentMaxSeqNum == null || entry.getKey().getSequenceId() > currentMaxSeqNum) {
-        regionMaximumEditLogSeqNum.put(regionName, entry.getKey().getSequenceId());
-      }
-    }
-  }
-
-  /**
-   * @return the number of currently opened writers
-   */
-  int getNumOpenWriters() {
-    return this.writers.size();
-  }
-
-  long getSkippedEdits() {
-    return this.skippedEdits.get();
-  }
-
-  /**
    * Wait for writer threads to dump all info to the sink
+   *
    * @return true when there is no error
    */
-  protected boolean finishWriting(boolean interrupt) throws IOException {
+  protected boolean finishWriterThreads(boolean interrupt) throws IOException {
     LOG.debug("Waiting for split writer threads to finish");
-    boolean progress_failed = false;
+    boolean progressFailed = false;
     for (WriterThread t : writerThreads) {
       t.finish();
     }
@@ -132,8 +107,8 @@ public abstract class OutputSink {
     }
 
     for (WriterThread t : writerThreads) {
-      if (!progress_failed && reporter != null && !reporter.progress()) {
-        progress_failed = true;
+      if (!progressFailed && reporter != null && !reporter.progress()) {
+        progressFailed = true;
       }
       try {
         t.join();
@@ -144,41 +119,42 @@ public abstract class OutputSink {
       }
     }
     controller.checkForErrors();
-    LOG.info("{} split writers finished; closing.", this.writerThreads.size());
-    return (!progress_failed);
+    LOG.info("{} split writer threads finished", this.writerThreads.size());
+    return (!progressFailed);
   }
 
-  public abstract List<Path> finishWritingAndClose() throws IOException;
+  long getTotalSkippedEdits() {
+    return this.totalSkippedEdits.get();
+  }
+
+  /**
+   * @return the number of currently opened writers
+   */
+  protected abstract int getNumOpenWriters();
+
+  /**
+   * @param buffer A buffer of some number of edits for a given region.
+   */
+  protected abstract void append(EntryBuffers.RegionEntryBuffer buffer) throws IOException;
+
+  protected abstract List<Path> close() throws IOException;
 
   /**
    * @return a map from encoded region ID to the number of edits written out for that region.
    */
-  public abstract Map<byte[], Long> getOutputCounts();
+  protected abstract Map<byte[], Long> getOutputCounts();
 
   /**
    * @return number of regions we've recovered
    */
-  public abstract int getNumberOfRecoveredRegions();
-
-  /**
-   * @param buffer A WAL Edit Entry
-   */
-  public abstract void append(WALSplitter.RegionEntryBuffer buffer) throws IOException;
-
-  /**
-   * WriterThread call this function to help flush internal remaining edits in buffer before close
-   * @return true when underlying sink has something to flush
-   */
-  public boolean flush() throws IOException {
-    return false;
-  }
+  protected abstract int getNumberOfRecoveredRegions();
 
   /**
    * Some WALEdit's contain only KV's for account on what happened to a region. Not all sinks will
    * want to get all of those edits.
    * @return Return true if this sink wants to accept this region-level WALEdit.
    */
-  public abstract boolean keepRegionEvent(WAL.Entry entry);
+  protected abstract boolean keepRegionEvent(WAL.Entry entry);
 
   public static class WriterThread extends Thread {
     private volatile boolean shouldStop = false;
@@ -207,11 +183,11 @@ public abstract class OutputSink {
     private void doRun() throws IOException {
       LOG.trace("Writer thread starting");
       while (true) {
-        WALSplitter.RegionEntryBuffer buffer = entryBuffers.getChunkToWrite();
+        EntryBuffers.RegionEntryBuffer buffer = entryBuffers.getChunkToWrite();
         if (buffer == null) {
           // No data currently available, wait on some more to show up
           synchronized (controller.dataAvailable) {
-            if (shouldStop && !this.outputSink.flush()) {
+            if (shouldStop) {
               return;
             }
             try {
@@ -234,15 +210,11 @@ public abstract class OutputSink {
       }
     }
 
-    private void writeBuffer(WALSplitter.RegionEntryBuffer buffer) throws IOException {
+    private void writeBuffer(EntryBuffers.RegionEntryBuffer buffer) throws IOException {
       outputSink.append(buffer);
     }
 
-    void setShouldStop(boolean shouldStop) {
-      this.shouldStop = shouldStop;
-    }
-
-    void finish() {
+    private void finish() {
       synchronized (controller.dataAvailable) {
         shouldStop = true;
         controller.dataAvailable.notifyAll();
