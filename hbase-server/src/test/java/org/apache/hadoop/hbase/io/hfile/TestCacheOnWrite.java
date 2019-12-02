@@ -53,6 +53,8 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -405,8 +407,12 @@ public class TestCacheOnWrite {
     storeFilePath = sfw.getPath();
   }
 
-  private void testNotCachingDataBlocksDuringCompactionInternals(boolean useTags)
+  private void testCachingDataBlocksDuringCompactionInternals(boolean useTags,  boolean cacheBlocksOnCompaction)
       throws IOException, InterruptedException {
+
+    // Set the conf if testing caching compacted blocks on write
+    conf.setBoolean(CacheConfig.CACHE_COMPACTED_BLOCKS_ON_WRITE_KEY, cacheBlocksOnCompaction);
+
     // TODO: need to change this test if we add a cache size threshold for
     // compactions, or if we implement some other kind of intelligent logic for
     // deciding what blocks to cache-on-write on compaction.
@@ -415,7 +421,8 @@ public class TestCacheOnWrite {
     final byte[] cfBytes = Bytes.toBytes(cf);
     final int maxVersions = 3;
     ColumnFamilyDescriptor cfd =
-        ColumnFamilyDescriptorBuilder.newBuilder(cfBytes).setCompressionType(compress)
+        ColumnFamilyDescriptorBuilder.newBuilder(cfBytes)
+            .setCompressionType(compress)
             .setBloomFilterType(BLOOM_TYPE).setMaxVersions(maxVersions)
             .setDataBlockEncoding(NoOpDataBlockEncoder.INSTANCE.getDataBlockEncoding()).build();
     HRegion region = TEST_UTIL.createTestRegion(table, cfd, blockCache);
@@ -448,16 +455,34 @@ public class TestCacheOnWrite {
       }
       region.flush(true);
     }
+
     clearBlockCache(blockCache);
     assertEquals(0, blockCache.getBlockCount());
+
     region.compact(false);
     LOG.debug("compactStores() returned");
 
+    boolean dataBlockCached = false;
     for (CachedBlock block: blockCache) {
-      assertNotEquals(BlockType.ENCODED_DATA, block.getBlockType());
-      assertNotEquals(BlockType.DATA, block.getBlockType());
+      if (BlockType.ENCODED_DATA.equals(block.getBlockType())
+          || BlockType.DATA.equals(block.getBlockType())) {
+        dataBlockCached = true;
+        break;
+      }
     }
+
+    // Data blocks should be cached in instances where we are caching blocks on write. In the case
+    // of testing
+    // BucketCache, we cannot verify block type as it is not stored in the cache.
+    assertTrue(
+      "\nTest description: " + testDescription + "\nprefetchCompactedBlocksOnWrite: "
+          + cacheBlocksOnCompaction + "\n",
+      (cacheBlocksOnCompaction && !(blockCache instanceof BucketCache)) == dataBlockCached);
+
     region.close();
+
+    // Clear the cache on write setting
+    conf.setBoolean(CacheConfig.CACHE_COMPACTED_BLOCKS_ON_WRITE_KEY, false);
   }
 
   @Test
@@ -467,8 +492,8 @@ public class TestCacheOnWrite {
   }
 
   @Test
-  public void testNotCachingDataBlocksDuringCompaction() throws IOException, InterruptedException {
-    testNotCachingDataBlocksDuringCompactionInternals(false);
-    testNotCachingDataBlocksDuringCompactionInternals(true);
+  public void testCachingDataBlocksDuringCompaction() throws IOException, InterruptedException {
+    testCachingDataBlocksDuringCompactionInternals(false, false);
+    testCachingDataBlocksDuringCompactionInternals(true, true);
   }
 }
