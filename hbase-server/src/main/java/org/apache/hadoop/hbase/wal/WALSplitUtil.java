@@ -163,7 +163,9 @@ public final class WALSplitUtil {
    * named for the sequenceid in the passed <code>logEntry</code>: e.g.
    * /hbase/some_table/2323432434/recovered.edits/2332. This method also ensures existence of
    * RECOVERED_EDITS_DIR under the region creating it if necessary.
-   * @param walEntry walEntry to recover
+   * @param tableName the table name
+   * @param encodedRegionName the encoded region name
+   * @param sedId the sequence id which used to generate file name
    * @param fileNameBeingSplit the file being split currently. Used to generate tmp file name.
    * @param tmpDirName of the directory used to sideline old recovered edits file
    * @param conf configuration
@@ -172,12 +174,12 @@ public final class WALSplitUtil {
    */
   @SuppressWarnings("deprecation")
   @VisibleForTesting
-  static Path getRegionSplitEditsPath(final WAL.Entry walEntry, String fileNameBeingSplit,
-      String tmpDirName, Configuration conf) throws IOException {
+  static Path getRegionSplitEditsPath(TableName tableName, byte[] encodedRegionName, long sedId,
+      String fileNameBeingSplit, String tmpDirName, Configuration conf) throws IOException {
     FileSystem walFS = FSUtils.getWALFileSystem(conf);
-    Path tableDir = FSUtils.getWALTableDir(conf, walEntry.getKey().getTableName());
-    String encodedRegionName = Bytes.toString(walEntry.getKey().getEncodedRegionName());
-    Path regionDir = HRegion.getRegionDir(tableDir, encodedRegionName);
+    Path tableDir = FSUtils.getWALTableDir(conf, tableName);
+    String encodedRegionNameStr = Bytes.toString(encodedRegionName);
+    Path regionDir = HRegion.getRegionDir(tableDir, encodedRegionNameStr);
     Path dir = getRegionDirRecoveredEditsDir(regionDir);
 
     if (walFS.exists(dir) && walFS.isFile(dir)) {
@@ -185,7 +187,7 @@ public final class WALSplitUtil {
       if (!walFS.exists(tmp)) {
         walFS.mkdirs(tmp);
       }
-      tmp = new Path(tmp, HConstants.RECOVERED_EDITS_DIR + "_" + encodedRegionName);
+      tmp = new Path(tmp, HConstants.RECOVERED_EDITS_DIR + "_" + encodedRegionNameStr);
       LOG.warn("Found existing old file: {}. It could be some "
           + "leftover of an old installation. It should be a folder instead. "
           + "So moving it to {}",
@@ -201,7 +203,7 @@ public final class WALSplitUtil {
     // Append fileBeingSplit to prevent name conflict since we may have duplicate wal entries now.
     // Append file name ends with RECOVERED_LOG_TMPFILE_SUFFIX to ensure
     // region's replayRecoveredEdits will not delete it
-    String fileName = formatRecoveredEditsFileName(walEntry.getKey().getSequenceId());
+    String fileName = formatRecoveredEditsFileName(sedId);
     fileName = getTmpRecoveredEditsFileName(fileName + "-" + fileNameBeingSplit);
     return new Path(dir, fileName);
   }

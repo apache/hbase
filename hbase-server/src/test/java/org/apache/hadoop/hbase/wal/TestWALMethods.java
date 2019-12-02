@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.WALSplitter.PipelineController;
-import org.apache.hadoop.hbase.wal.WALSplitter.RegionEntryBuffer;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -134,7 +133,7 @@ public class TestWALMethods {
 
   @Test
   public void testRegionEntryBuffer() throws Exception {
-    WALSplitter.RegionEntryBuffer reb = new WALSplitter.RegionEntryBuffer(
+    EntryBuffers.RegionEntryBuffer reb = new EntryBuffers.RegionEntryBuffer(
         TEST_TABLE, TEST_REGION);
     assertEquals(0, reb.heapSize());
 
@@ -153,7 +152,7 @@ public class TestWALMethods {
     assertTrue(sink.totalBuffered > 0);
     long amountInChunk = sink.totalBuffered;
     // Get a chunk
-    RegionEntryBuffer chunk = sink.getChunkToWrite();
+    EntryBuffers.RegionEntryBuffer chunk = sink.getChunkToWrite();
     assertEquals(chunk.heapSize(), amountInChunk);
 
     // Make sure it got marked that a thread is "working on this"
@@ -172,7 +171,7 @@ public class TestWALMethods {
     // to get the second
     sink.doneWriting(chunk);
 
-    RegionEntryBuffer chunk2 = sink.getChunkToWrite();
+    EntryBuffers.RegionEntryBuffer chunk2 = sink.getChunkToWrite();
     assertNotNull(chunk2);
     assertNotSame(chunk, chunk2);
     long amountInChunk2 = sink.totalBuffered;
