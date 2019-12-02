@@ -2349,6 +2349,28 @@
         <argLine>${hbase-surefire.cygwin-argLine}</argLine>
       </properties>
     </profile>
+    <!-- this profile should match the name of the release profile in the root asf pom -->
+    <profile>
+      <id>apache-release</id>
+      <build>
+        <plugins>
+          <!-- This should insert itself in place of the normal deploy plugin and then
+               handle either closing or dropping the staging repository for us depending
+               on if the build succeeds.
+            -->
+          <plugin>
+            <groupId>org.sonatype.plugins</groupId>
+            <artifactId>nexus-staging-maven-plugin</artifactId>
+            <version>1.6.8</version>
+            <extensions>true</extensions>
+            <configuration>
+              <nexusUrl>https://repository.apache.org/</nexusUrl>
+              <serverId>apache.releases.https</serverId>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
     <!-- this profile should be activated for release builds -->
     <profile>
       <id>release</id>
@@ -2597,7 +2619,7 @@
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-auth</artifactId>
-	    <version>${hadoop-two.version}</version>
+            <version>${hadoop-two.version}</version>
             <exclusions>
               <exclusion>
                 <groupId>com.google.guava</groupId>
