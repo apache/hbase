@@ -31,15 +31,11 @@ String serverType = (String)getServletContext().getAttribute("hbase.thrift.serve
 long startcode = conf.getLong("startcode", System.currentTimeMillis());
 String listenPort = conf.get("hbase.regionserver.thrift.port", "9090");
 ImplType implType = ImplType.getServerImpl(conf);
-<<<<<<< HEAD
-String framed = (implType.isAlwaysFramed() || conf.getBoolean("hbase.regionserver.thrift.framed", false)) ? "Framed" : "Standard";
-String protocol = conf.getBoolean("hbase.regionserver.thrift.compact", false) ? "Compact" : "Binary";
-String qop = conf.get("hbase.thrift.security.qop", "none");
-=======
+
 String transport = implType.isAlwaysFramed() ||conf.getBoolean("hbase.regionserver.thrift.framed", false) ? "Framed" : "Standard";
 String protocol = conf.getBoolean("hbase.regionserver.thrift.compact", false) ? "Compact" : "Binary";
 String qop = conf.get("hbase.thrift.security.qop", "None");
->>>>>>> 45fc8dc5a3... HBASE-18382 fixing commit according to PR comments
+
 %>
 <!DOCTYPE html>
 <?xml version="1.0" encoding="UTF-8" ?>
