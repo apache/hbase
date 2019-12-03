@@ -131,8 +131,12 @@ public class HeterogeneousRegionCountCostFunction extends StochasticLoadBalancer
     for (int i = 0; i < this.cluster.numServers; i++) {
       // retrieve capacity for each RS
       final ServerName sn = this.cluster.servers[i];
-      final double limit =
-          this.limitPerRS.containsKey(sn) ? this.limitPerRS.get(sn) : defaultNumberOfRegions;
+      double limit;
+      if (this.limitPerRS.containsKey(sn)) {
+        limit = this.limitPerRS.get(sn);
+      } else {
+        limit = defaultNumberOfRegions;
+      }
       final double nbrRegions = this.cluster.regionsPerServer[i].length;
       final double usage = nbrRegions / limit;
       if (usage > targetUsage) {
