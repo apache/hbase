@@ -30,6 +30,14 @@ decoupling an RPC client-server model from the mechanism used to authenticate th
 requests (e.g. the RPC code is identical whether username-password, Kerberos, or any
 other method is used to authenticate the request).
 
+RFC's define what [SASL mechanisms exist](https://www.iana.org/assignments/sasl-mechanisms/sasl-mechanisms.xml),
+but what RFC's define are a superset of the mechanisms that are
+[implemented in Java](https://docs.oracle.com/javase/8/docs/technotes/guides/security/sasl/sasl-refguide.html#SUN).
+This document limits discussion to SASL mechanisms in the abstract, focusing on those which are well-defined and
+implemented in Java today by the JDK itself. However, it is completely possible that a developer can implement
+and register their own SASL mechanism. Writing a custom mechanism is outside of the scope of this document, but
+not outside of the realm of possibility.
+
 The `SIMPLE` implementation does not use SASL, but instead has its own RPC logic
 built into the HBase RPC protocol. `KERBEROS` and `TOKEN` both use SASL to authenticate,
 relying on the `Token` interface that is intertwined with the Hadoop `UserGroupInformation`
@@ -42,7 +50,8 @@ it is (effectively) impossible to add a new authentication implementation to HBa
 use of the `org.apache.hadoop.hbase.security.AuthMethod` enum makes it impossible
 to define a new method of authentication. Also, the RPC implementation is written
 to only use the methods that are expressly shipped in HBase. Adding a new authentication
-method would require copying and modifying the RpcClient implementation.
+method would require copying and modifying the RpcClient implementation, in addition
+to modifying the RpcServer to invoke the correct authentication check.
 
 While it is possible to add a new authentication method to HBase, it cannot be done
 cleanly or sustainably. This is what is meant by "impossible".
@@ -70,7 +79,7 @@ performance impact in setting up a new RPC. The same conditional logic to determ
 
 ## Implementation Overview
 
-HBASE-XXXXX includes a refactoring of HBase RPC authentication where all current methods
+HBASE-23347 includes a refactoring of HBase RPC authentication where all current methods
 are ported to a new set of interfaces, and all RPC implementations are updated to use
 the new interfaces. In the spirit of SASL, the expectation is that users can provide
 their own authentication methods at runtime, and HBase should be capable of negotiating
@@ -89,7 +98,7 @@ A provider's client and server side logic are considered to be one-to-one. A `Fo
 should never be used to authenticate against a `Bar` server-side provider.
 
 We do expect that both clients and servers will have access to multiple providers. A server may
-be capable of authenticating via methods which a client in unaware of. A client may attempt to authenticate
+be capable of authenticating via methods which a client is unaware of. A client may attempt to authenticate
 against a server which the server does not know how to process. In both cases, the RPC
 should fail when a client and server do not have matching providers. The server identifies
 client authentication mechanisms via a `byte authCode` (which is already sent today with HBase RPCs).
@@ -117,7 +126,7 @@ by the following characteristics:
 
 In addition to these attributes, a provider also must define the following attributes:
 
-3. The SASL mechanim being used.
+3. The SASL mechanism being used.
 4. The Hadoop AuthenticationMethod, e.g. "TOKEN", "KERBEROS", "CERTIFICATE"
 5. The Token "kind", the name used to identify a TokenIdentifier, e.g. `HBASE_AUTH_TOKEN`
 
