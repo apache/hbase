@@ -18,8 +18,16 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import com.google.common.annotations.VisibleForTesting;
-
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
@@ -35,9 +43,9 @@ import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.AssignRe
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.LocalityType;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.MoveRegionAction;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.SwapRegionsAction;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.net.Address;
-import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.base.Optional;
 
