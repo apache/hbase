@@ -50,9 +50,7 @@ public class GssSaslServerAuthenticationProvider extends GssSaslClientAuthentica
       Map<String, String> saslProps) throws IOException {
     UserGroupInformation current = UserGroupInformation.getCurrentUser();
     String fullName = current.getUserName();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Server's Kerberos principal name is " + fullName);
-    }
+    LOG.debug("Server's Kerberos principal name is {}", fullName);
     String[] names = SaslUtil.splitKerberosName(fullName);
     if (names.length != 3) {
       throw new AccessDeniedException(
@@ -95,10 +93,7 @@ public class GssSaslServerAuthenticationProvider extends GssSaslClientAuthentica
           ac.setAuthorized(false);
         }
         if (ac.isAuthorized()) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(
-              "SASL server GSSAPI callback: setting " + "canonicalized client ID: " + authzid);
-          }
+          LOG.debug("SASL server GSSAPI callback: setting canonicalized client ID: {}", authzid);
           ac.setAuthorizedID(authzid);
         }
       }
