@@ -58,15 +58,15 @@ public class FillDiskCommandAction extends SudoCommandAction {
     String hostname = server.getHostname();
 
     try {
-      clusterManager.execSudoWithRetries(hostname, timeout, getFillCommand());
-      Thread.sleep(duration);
-    } catch (InterruptedException e) {
-      LOG.debug("Failed to run the command for the full duration", e);
+      clusterManager.execSudo(hostname, duration, getFillCommand());
+    } catch (IOException ex) {
+      LOG.info("Potential timeout. We try to stop the dd process on target machine");
+      clusterManager.execSudoWithRetries(hostname, timeout, getStopCommand());
+      throw ex;
     } finally {
       clusterManager.execSudoWithRetries(hostname, timeout, getClearCommand());
+      LOG.info("Finished to execute FillDiskCommandAction");
     }
-
-    LOG.info("Finished to execute FillDiskCommandAction");
   }
 
   private String getFillCommand(){
@@ -79,5 +79,9 @@ public class FillDiskCommandAction extends SudoCommandAction {
 
   private String getClearCommand(){
     return String.format("rm -f %s/garbage", path);
+  }
+
+  private String getStopCommand() {
+    return String.format("killall dd");
   }
 }

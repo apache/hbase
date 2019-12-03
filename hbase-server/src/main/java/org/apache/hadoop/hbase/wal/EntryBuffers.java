@@ -18,18 +18,23 @@
 package org.apache.hadoop.hbase.wal;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.wal.WALSplitter.PipelineController;
-import org.apache.hadoop.hbase.wal.WALSplitter.RegionEntryBuffer;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Class which accumulates edits and separates them into a buffer per region while simultaneously
@@ -37,39 +42,32 @@ import org.slf4j.LoggerFactory;
  * pull region-specific buffers from this class.
  */
 @InterfaceAudience.Private
-public class EntryBuffers {
+class EntryBuffers {
   private static final Logger LOG = LoggerFactory.getLogger(EntryBuffers.class);
 
-  PipelineController controller;
+  private final PipelineController controller;
 
-  Map<byte[], RegionEntryBuffer> buffers = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+  final Map<byte[], RegionEntryBuffer> buffers = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
   /*
    * Track which regions are currently in the middle of writing. We don't allow an IO thread to pick
    * up bytes from a region if we're already writing data for that region in a different IO thread.
    */
-  Set<byte[]> currentlyWriting = new TreeSet<>(Bytes.BYTES_COMPARATOR);
+  private final Set<byte[]> currentlyWriting = new TreeSet<>(Bytes.BYTES_COMPARATOR);
 
-  long totalBuffered = 0;
-  long maxHeapUsage;
-  boolean splitWriterCreationBounded;
+  protected long totalBuffered = 0;
+  protected final long maxHeapUsage;
 
   public EntryBuffers(PipelineController controller, long maxHeapUsage) {
-    this(controller, maxHeapUsage, false);
-  }
-
-  public EntryBuffers(PipelineController controller, long maxHeapUsage,
-      boolean splitWriterCreationBounded) {
     this.controller = controller;
     this.maxHeapUsage = maxHeapUsage;
-    this.splitWriterCreationBounded = splitWriterCreationBounded;
   }
 
   /**
    * Append a log entry into the corresponding region buffer. Blocks if the total heap usage has
    * crossed the specified threshold.
    */
-  public void appendEntry(WAL.Entry entry) throws InterruptedException, IOException {
+  void appendEntry(WAL.Entry entry) throws InterruptedException, IOException {
     WALKey key = entry.getKey();
     RegionEntryBuffer buffer;
     long incrHeap;
@@ -98,13 +96,6 @@ public class EntryBuffers {
    * @return RegionEntryBuffer a buffer of edits to be written.
    */
   synchronized RegionEntryBuffer getChunkToWrite() {
-    // The core part of limiting opening writers is it doesn't return chunk only if the
-    // heap size is over maxHeapUsage. Thus it doesn't need to create a writer for each
-    // region during splitting. It will flush all the logs in the buffer after splitting
-    // through a threadpool, which means the number of writers it created is under control.
-    if (splitWriterCreationBounded && totalBuffered < maxHeapUsage) {
-      return null;
-    }
     long biggestSize = 0;
     byte[] biggestBufferKey = null;
 
@@ -138,21 +129,56 @@ public class EntryBuffers {
     }
   }
 
+  @VisibleForTesting
   synchronized boolean isRegionCurrentlyWriting(byte[] region) {
     return currentlyWriting.contains(region);
   }
 
-  public void waitUntilDrained() {
-    synchronized (controller.dataAvailable) {
-      while (totalBuffered > 0) {
-        try {
-          controller.dataAvailable.wait(2000);
-        } catch (InterruptedException e) {
-          LOG.warn("Got interrupted while waiting for EntryBuffers is drained");
-          Thread.interrupted();
-          break;
-        }
-      }
+  /**
+   * A buffer of some number of edits for a given region.
+   * This accumulates edits and also provides a memory optimization in order to
+   * share a single byte array instance for the table and region name.
+   * Also tracks memory usage of the accumulated edits.
+   */
+  static class RegionEntryBuffer implements HeapSize {
+    private long heapInBuffer = 0;
+    final List<WAL.Entry> entryBuffer;
+    final TableName tableName;
+    final byte[] encodedRegionName;
+
+    RegionEntryBuffer(TableName tableName, byte[] region) {
+      this.tableName = tableName;
+      this.encodedRegionName = region;
+      this.entryBuffer = new ArrayList<>();
+    }
+
+    long appendEntry(WAL.Entry entry) {
+      internify(entry);
+      entryBuffer.add(entry);
+      // TODO linkedlist entry
+      long incrHeap = entry.getEdit().heapSize() +
+          ClassSize.align(2 * ClassSize.REFERENCE); // WALKey pointers
+      heapInBuffer += incrHeap;
+      return incrHeap;
+    }
+
+    private void internify(WAL.Entry entry) {
+      WALKeyImpl k = entry.getKey();
+      k.internTableName(this.tableName);
+      k.internEncodedRegionName(this.encodedRegionName);
+    }
+
+    @Override
+    public long heapSize() {
+      return heapInBuffer;
+    }
+
+    public byte[] getEncodedRegionName() {
+      return encodedRegionName;
+    }
+
+    public TableName getTableName() {
+      return tableName;
     }
   }
 }

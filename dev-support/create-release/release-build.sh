@@ -55,7 +55,13 @@ EOF
 set -e
 
 function cleanup {
-  rm ${tmp_settings} &> /dev/null || true
+  echo "Cleaning up temp settings file." >&2
+  rm "${tmp_settings}" &> /dev/null || true
+  # If REPO was set, then leave things be. Otherwise if we defined a repo clean it out.
+  if [[ -z "${REPO}" ]] && [[ -n "${tmp_repo}" ]]; then
+    echo "Cleaning up temp repo in '${tmp_repo}'. set REPO to reuse downloads." >&2
+    rm -rf "${tmp_repo}" &> /dev/null || true
+  fi
 }
 
 if [ $# -eq 0 ]; then
@@ -95,12 +101,7 @@ export LANG=C.UTF-8
 
 # Commit ref to checkout when building
 GIT_REF=${GIT_REF:-master}
-
 RELEASE_STAGING_LOCATION="https://dist.apache.org/repos/dist/dev/hbase"
-
-GPG="gpg --pinentry-mode loopback -u $GPG_KEY --no-tty --batch"
-NEXUS_ROOT=https://repository.apache.org/service/local/staging
-NEXUS_PROFILE=8e226b97c0c82 # Profile for project staging uploads via INFRA-17900 Need nexus "staging profile id" for the hbase project
 BASE_DIR=$(pwd)
 
 init_java
@@ -146,15 +147,14 @@ git clean -d -f -x
 cd ..
 
 tmp_repo="${REPO:-`pwd`/$(mktemp -d hbase-repo-XXXXX)}"
-# Reexamine. Not sure this working. Pass as arg? That don't seem to work either!
 tmp_settings="/${tmp_repo}/tmp-settings.xml"
-echo "<settings><servers>" > $tmp_settings
-echo "<server><id>apache.snapshots.https</id><username>$ASF_USERNAME</username>" >> $tmp_settings
-echo "<password>$ASF_PASSWORD</password></server>" >> $tmp_settings
-echo "<server><id>apache-release</id><username>$ASF_USERNAME</username>" >> $tmp_settings
-echo "<password>$ASF_PASSWORD</password></server>" >> $tmp_settings
-echo "</servers>" >> $tmp_settings
-echo "</settings>" >> $tmp_settings
+echo "<settings><servers>" > "$tmp_settings"
+echo "<server><id>apache.snapshots.https</id><username>$ASF_USERNAME</username>" >> "$tmp_settings"
+echo "<password>$ASF_PASSWORD</password></server>" >> "$tmp_settings"
+echo "<server><id>apache.releases.https</id><username>$ASF_USERNAME</username>" >> "$tmp_settings"
+echo "<password>$ASF_PASSWORD</password></server>" >> "$tmp_settings"
+echo "</servers>" >> "$tmp_settings"
+echo "</settings>" >> "$tmp_settings"
 export tmp_settings
 
 if [[ "$1" == "build" ]]; then
@@ -216,95 +216,38 @@ if [[ "$1" == "publish-snapshot" ]]; then
 fi
 
 if [[ "$1" == "publish-release" ]]; then
+  (
   cd "${PROJECT}"
-  # Get list of modules from parent pom but filter out 'assembly' modules.
-  # Used below in a few places.
-  modules=`sed -n 's/<module>\(.*\)<.*$/\1/p' pom.xml | grep -v '-assembly' |  tr '\n' ' '`
-  # Need to add the 'parent' module too. Its the SECOND artifactId instance in pom
-  artifactid=`sed -n 's/<artifactId>\(.*\)<.*$/\1/p' pom.xml | tr '\n' ' '| awk '{print $2}'`
-  modules="${artifactid} ${modules}"
-  # Get the second groupId in the pom. This is the groupId for these artifacts.
-  groupid=`sed -n 's/<groupId>\(.*\)<.*$/\1/p' pom.xml | tr '\n' ' '| awk '{print $2}'`
-  # Convert groupid to a dir path for use below reaching into repo for jars.
-  groupid_as_dir=`echo $groupid | sed -n 's/\./\//gp'`
-  echo "pwd=`pwd`, groupid_as_dir=${groupid_as_dir}"
   # Publish ${PROJECT} to Maven release repo
   echo "Publishing ${PROJECT} checkout at '$GIT_REF' ($git_hash)"
   echo "Publish version is $VERSION"
   # Coerce the requested version
   $MVN versions:set -DnewVersion=$VERSION
-  MAVEN_OPTS="${MAVEN_OPTS}" ${MVN} --settings $tmp_settings \
-    clean install -DskipTests \
-    -Dcheckstyle.skip=true "${PUBLISH_PROFILES}" \
-    -Dmaven.repo.local="${tmp_repo}"
-  pushd "${tmp_repo}/${groupid_as_dir}"
-  # Remove any extra files generated during install
-  # Remove extaneous files from module subdirs
-  find $modules -type f | grep -v \.jar | grep -v \.pom | xargs rm -rf
-
-  # Using Nexus API documented here:
-  # https://support.sonatype.com/entries/39720203-Uploading-to-a-Staging-Repository-via-REST-API
+  declare -a mvn_goals=(clean install)
+  declare staged_repo_id="dryrun-no-repo"
   if ! is_dry_run; then
-    echo "Creating Nexus staging repository"
-    repo_request="<promoteRequest><data><description>Apache ${PROJECT} $VERSION (commit $git_hash)</description></data></promoteRequest>"
-    out=$(curl -X POST -d "$repo_request" -u $ASF_USERNAME:$ASF_PASSWORD \
-      -H "Content-Type:application/xml" -v \
-      $NEXUS_ROOT/profiles/$NEXUS_PROFILE/start)
-    staged_repo_id=$(echo $out | sed -e "s/.*\(orgapachehbase-[0-9]\{4\}\).*/\1/")
-    echo "Created Nexus staging repository: $staged_repo_id"
+    mvn_goals=("${mvn_goals[@]}" deploy)
   fi
-
-  # this must have .asc, and .sha1 - it really doesn't like anything else there
-  for file in $(find $modules -type f)
-  do
-    if [[ "$file" == *.asc ]]; then
-      continue
-    fi
-    if [ ! -f $file.asc ]; then
-      echo "$GPG_PASSPHRASE" | $GPG --passphrase-fd 0 --output "$file.asc" \
-        --detach-sig --armour $file;
-    fi
-    if [ $(command -v md5)  ]; then
-      # Available on OS X; -q to keep only hash
-      md5 -q "$file" > "$file.md5"
-    else
-      # Available on Linux; cut to keep only hash
-      md5sum "$file" | cut -f1 -d' ' > "$file.md5"
-    fi
-    if [ $(command -v sha1sum)  ]; then
-      sha1sum "$file" | cut -f1 -d' ' > "$file.sha1"
-    else
-      shasum "$file" | cut -f1 -d' ' > "$file.sha1"
-    fi
-  done
-
+  echo "Staging release in nexus"
+  if ! MAVEN_OPTS="${MAVEN_OPTS}" ${MVN} --settings "$tmp_settings" \
+      -DskipTests -Dcheckstyle.skip=true "${PUBLISH_PROFILES}" \
+      -Dmaven.repo.local="${tmp_repo}" \
+      "${mvn_goals[@]}" > "${BASE_DIR}/mvn_deploy.log"; then
+    echo "Staging build failed, see 'mvn_deploy.log' for details." >&2
+    exit 1
+  fi
   if ! is_dry_run; then
-    nexus_upload=$NEXUS_ROOT/deployByRepositoryId/$staged_repo_id
-    echo "Uploading files to $nexus_upload"
-    for file in $(find ${modules} -type f)
-    do
-      # strip leading ./
-      file_short=$(echo $file | sed -e "s/\.\///")
-      dest_url="$nexus_upload/$groupid_as_dir/$file_short"
-      echo "  Uploading $file to $dest_url"
-      curl -u "$ASF_USERNAME:$ASF_PASSWORD" --upload-file "${file_short}" "${dest_url}"
-    done
-
-    echo "Closing nexus staging repository"
-    repo_request="<promoteRequest><data><stagedRepositoryId>$staged_repo_id</stagedRepositoryId><description>Apache ${PROJECT} $VERSION (commit $git_hash)</description></data></promoteRequest>"
-    out=$(curl -X POST -d "$repo_request" -u $ASF_USERNAME:$ASF_PASSWORD \
-      -H "Content-Type:application/xml" -v \
-      $NEXUS_ROOT/profiles/$NEXUS_PROFILE/finish)
-    echo "Closed Nexus staging repository: $staged_repo_id"
+    staged_repo_id=$(grep -o "Closing staging repository with ID .*" "${BASE_DIR}/mvn_deploy.log" \
+        | sed -e 's/Closing staging repository with ID "\([^"]*\)"./\1/')
+    echo "Artifacts successfully staged to repo ${staged_repo_id}"
+  else
+    echo "Artifacts successfully built. not staged due to dry run."
   fi
-
-  popd
-  rm -rf "$tmp_repo"
-  cd ..
   # Dump out email to send. Where we find vote.tmpl depends
   # on where this script is run from
   export PROJECT_TEXT=$(echo "${PROJECT}" | sed "s/-/ /g")
-  eval "echo \"$(< ${SELF}/vote.tmpl)\"" |tee vote.txt
+  eval "echo \"$(< ${SELF}/vote.tmpl)\"" |tee "${BASE_DIR}/vote.txt"
+  )
   exit 0
 fi
 

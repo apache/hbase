@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
-import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -118,7 +117,7 @@ public abstract class AbstractPeerProcedure<TState> extends AbstractPeerNoLockPr
         continue;
       }
       TableName tn = td.getTableName();
-      if (!ReplicationUtils.contains(peerConfig, tn)) {
+      if (!peerConfig.needToReplicate(tn)) {
         continue;
       }
       setLastPushedSequenceIdForTable(env, tn, lastSeqIds);
