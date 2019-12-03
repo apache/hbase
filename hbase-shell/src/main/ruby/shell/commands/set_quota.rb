@@ -61,7 +61,8 @@ For example:
     hbase> set_quota TYPE => THROTTLE, TABLE => 't1', LIMIT => '10M/sec'
     hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => WRITE, TABLE => 't1', LIMIT => '10M/sec'
     hbase> set_quota TYPE => THROTTLE, USER => 'u1', LIMIT => NONE
-    hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => WRITE, USER => 'u1', LIMIT => NONE
+    hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => WRITE_NUMBER, USER => 'u1', LIMIT => NONE
+    hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => READ_NUMBER, USER => 'u1', LIMIT => NONE
 
     hbase> set_quota TYPE => THROTTLE, REGIONSERVER => 'all', LIMIT => '30000req/sec'
     hbase> set_quota TYPE => THROTTLE, REGIONSERVER => 'all', THROTTLE_TYPE => WRITE, LIMIT => '20000req/sec'
