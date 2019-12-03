@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.replication;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * A {@link ChainWALEntryFilter} for providing more flexible options
