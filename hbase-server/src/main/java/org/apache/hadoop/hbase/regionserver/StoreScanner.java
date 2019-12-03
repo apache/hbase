@@ -236,9 +236,10 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
     store.addChangedReaderObserver(this);
 
+    List<KeyValueScanner> scanners = null;
     try {
       // Pass columns to try to filter out unnecessary StoreFiles.
-      List<KeyValueScanner> scanners = selectScannersFrom(store,
+      scanners = selectScannersFrom(store,
         store.getScanners(cacheBlocks, scanUsePread, false, matcher, scan.getStartRow(),
           scan.includeStartRow(), scan.getStopRow(), scan.includeStopRow(), this.readPt));
 
@@ -258,6 +259,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       // Combine all seeked scanners with a heap
       resetKVHeap(scanners, comparator);
     } catch (IOException e) {
+      clearAndClose(scanners);
       // remove us from the HStore#changedReaderObservers here or we'll have no chance to
       // and might cause memory leak
       store.deleteChangedReaderObserver(this);
@@ -870,6 +872,9 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   }
 
   private static void clearAndClose(List<KeyValueScanner> scanners) {
+    if (scanners == null) {
+      return;
+    }
     for (KeyValueScanner s : scanners) {
       s.close();
     }
