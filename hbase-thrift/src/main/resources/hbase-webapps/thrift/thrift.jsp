@@ -31,9 +31,15 @@ String serverType = (String)getServletContext().getAttribute("hbase.thrift.serve
 long startcode = conf.getLong("startcode", System.currentTimeMillis());
 String listenPort = conf.get("hbase.regionserver.thrift.port", "9090");
 ImplType implType = ImplType.getServerImpl(conf);
+<<<<<<< HEAD
 String framed = (implType.isAlwaysFramed() || conf.getBoolean("hbase.regionserver.thrift.framed", false)) ? "Framed" : "Standard";
 String protocol = conf.getBoolean("hbase.regionserver.thrift.compact", false) ? "Compact" : "Binary";
 String qop = conf.get("hbase.thrift.security.qop", "none");
+=======
+String transport = implType.isAlwaysFramed() ||conf.getBoolean("hbase.regionserver.thrift.framed", false) ? "Framed" : "Standard";
+String protocol = conf.getBoolean("hbase.regionserver.thrift.compact", false) ? "Compact" : "Binary";
+String qop = conf.get("hbase.thrift.security.qop", "None");
+>>>>>>> 45fc8dc5a3... HBASE-18382 fixing commit according to PR comments
 %>
 <!DOCTYPE html>
 <?xml version="1.0" encoding="UTF-8" ?>
@@ -118,19 +124,19 @@ String qop = conf.get("hbase.thrift.security.qop", "none");
         </tr>
         <tr>
             <td>Transport</td>
-            <td><%= framed %></td>
+            <td><%= transport %></td>
             <td>Thrift RPC engine transport type</td>
-        </tr>
-        <tr>
-            <td>Quality Of Protection</td>
-            <td><%= qop %></td>
-            <td>QOP settings for SASL</td>
         </tr>
         <tr>
             <td>Thrift Server Type</td>
             <td><%= serverType %></td>
             <td>The type of this Thrift server</td>
         </tr>
+      <tr>
+        <td>Quality of Protection</td>
+        <td><%= qop %></td>
+        <td>QOP Settings for SASL</td>
+      </tr>
     </table>
     </section>
     </div>
