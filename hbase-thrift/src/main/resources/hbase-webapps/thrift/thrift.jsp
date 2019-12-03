@@ -31,9 +31,9 @@ String serverType = (String)getServletContext().getAttribute("hbase.thrift.serve
 long startcode = conf.getLong("startcode", System.currentTimeMillis());
 String listenPort = conf.get("hbase.regionserver.thrift.port", "9090");
 ImplType implType = ImplType.getServerImpl(conf);
-String framed = implType.isAlwaysFramed()
-    ? "true" : conf.get("hbase.regionserver.thrift.framed", "false");
-String compact = conf.get("hbase.regionserver.thrift.compact", "false");
+String transport = implType.isAlwaysFramed() ||conf.getBoolean("hbase.regionserver.thrift.framed", false) ? "Framed" : "Standard";
+String protocol = conf.getBoolean("hbase.regionserver.thrift.compact", false) ? "Compact" : "Binary";
+String qop = conf.get("hbase.thrift.security.qop", "None");
 %>
 <!DOCTYPE html>
 <?xml version="1.0" encoding="UTF-8" ?>
@@ -112,20 +112,25 @@ String compact = conf.get("hbase.regionserver.thrift.compact", "false");
             <td>Thrift RPC engine implementation type chosen by this Thrift server</td>
         </tr>
         <tr>
-            <td>Compact Protocol</td>
-            <td><%= compact %></td>
-            <td>Thrift RPC engine uses compact protocol</td>
+            <td>Protocol</td>
+            <td><%= protocol %></td>
+            <td>Thrift RPC engine protocol type</td>
         </tr>
         <tr>
-            <td>Framed Transport</td>
-            <td><%= framed %></td>
-            <td>Thrift RPC engine uses framed transport</td>
+            <td>Transport</td>
+            <td><%= transport %></td>
+            <td>Thrift RPC engine transport type</td>
         </tr>
         <tr>
             <td>Thrift Server Type</td>
             <td><%= serverType %></td>
             <td>The type of this Thrift server</td>
         </tr>
+      <tr>
+        <td>Quality of Protection</td>
+        <td><%= qop %></td>
+        <td>QOP Settings for SASL</td>
+      </tr>
     </table>
     </section>
     </div>
