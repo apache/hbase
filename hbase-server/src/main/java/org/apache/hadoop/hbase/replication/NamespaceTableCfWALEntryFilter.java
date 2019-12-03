@@ -52,7 +52,7 @@ public class NamespaceTableCfWALEntryFilter implements WALEntryFilter, WALCellFi
 
   @Override
   public Entry filter(Entry entry) {
-    if (ReplicationUtils.contains(this.peer.getPeerConfig(), entry.getKey().getTableName())) {
+    if (this.peer.getPeerConfig().needToReplicate(entry.getKey().getTableName())) {
       return entry;
     } else {
       return null;
