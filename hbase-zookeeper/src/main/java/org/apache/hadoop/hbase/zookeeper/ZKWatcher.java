@@ -23,10 +23,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CountDownLatch;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.AuthUtil;
@@ -80,10 +78,6 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
 
   // listeners to be notified
   private final List<ZKListener> listeners = new CopyOnWriteArrayList<>();
-
-  // Used by ZKUtil:waitForZKConnectionIfAuthenticating to wait for SASL
-  // negotiation to complete
-  private CountDownLatch saslLatch = new CountDownLatch(1);
 
   private final Configuration conf;
 
@@ -383,13 +377,32 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
    */
   public List<String> getMetaReplicaNodes() throws KeeperException {
     List<String> childrenOfBaseNode = ZKUtil.listChildrenNoWatch(this, znodePaths.baseZNode);
+    return filterMetaReplicaNodes(childrenOfBaseNode);
+  }
+
+  /**
+   * Same as {@link #getMetaReplicaNodes()} except that this also registers a watcher on base znode
+   * for subsequent CREATE/DELETE operations on child nodes.
+   */
+  public List<String> getMetaReplicaNodesAndWatchChildren() throws KeeperException {
+    List<String> childrenOfBaseNode =
+        ZKUtil.listChildrenAndWatchForNewChildren(this, znodePaths.baseZNode);
+    return filterMetaReplicaNodes(childrenOfBaseNode);
+  }
+
+  /**
+   * @param nodes Input list of znodes
+   * @return Filtered list of znodes from nodes that belong to meta replica(s).
+   */
+  private List<String> filterMetaReplicaNodes(List<String> nodes) {
+    if (nodes == null || nodes.isEmpty()) {
+      return new ArrayList<>();
+    }
     List<String> metaReplicaNodes = new ArrayList<>(2);
-    if (childrenOfBaseNode != null) {
-      String pattern = conf.get("zookeeper.znode.metaserver","meta-region-server");
-      for (String child : childrenOfBaseNode) {
-        if (child.startsWith(pattern)) {
-          metaReplicaNodes.add(child);
-        }
+    String pattern = conf.get(ZNodePaths.META_ZNODE_PREFIX_CONF_KEY, ZNodePaths.META_ZNODE_PREFIX);
+    for (String child : nodes) {
+      if (child.startsWith(pattern)) {
+        metaReplicaNodes.add(child);
       }
     }
     return metaReplicaNodes;
