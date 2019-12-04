@@ -3171,7 +3171,7 @@ public class HRegionServer extends HasThread implements
 
   /**
    * Close asynchronously a region, can be called from the master or internally by the regionserver
-   * when stopping. If called from the master, the region will update the znode status.
+   * when stopping. If called from the master, the region will update the status.
    *
    * <p>
    * If an opening was in progress, this method will cancel it, but will not start a new close. The
@@ -3201,6 +3201,7 @@ public class HRegionServer extends HasThread implements
       }
     }
 
+    // previous can come back 'null' if not in map.
     final Boolean previous = this.regionsInTransitionInRS.putIfAbsent(Bytes.toBytes(encodedName),
         Boolean.FALSE);
 
@@ -3222,6 +3223,8 @@ public class HRegionServer extends HasThread implements
         throw new NotServingRegionException("The region " + encodedName +
           " was opening but not yet served. Opening is cancelled.");
       }
+    } else if (previous == null) {
+      LOG.info("Received CLOSE for {}", encodedName);
     } else if (Boolean.FALSE.equals(previous)) {
       LOG.info("Received CLOSE for the region: " + encodedName +
         ", which we are already trying to CLOSE, but not completed yet");
