@@ -96,6 +96,9 @@ public class RegionStates {
 
   public RegionStates() { }
 
+  /**
+   * Called on stop of AssignmentManager.
+   */
   public void clear() {
     regionsMap.clear();
     regionInTransition.clear();
@@ -728,12 +731,15 @@ public class RegionStates {
     return serverMap.computeIfAbsent(serverName, key -> new ServerStateNode(key));
   }
 
+  /**
+   * Called by SCP at end of successful processing.
+   */
   public void removeServer(final ServerName serverName) {
     serverMap.remove(serverName);
   }
 
   /**
-   * @return Pertinent ServerStateNode or NULL if none found.
+   * @return Pertinent ServerStateNode or NULL if none found (Do not make modifications).
    */
   @VisibleForTesting
   public ServerStateNode getServerNode(final ServerName serverName) {
