@@ -116,6 +116,7 @@ public class MetaRegionLocationCache extends ZKListener {
           retryCounter.sleepUntilNextRetry();
         } catch (InterruptedException ie) {
           LOG.error("Interrupted while loading meta locations from ZK", ie);
+          Thread.currentThread().interrupt();
           return;
         }
       }
