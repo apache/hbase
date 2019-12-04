@@ -162,8 +162,8 @@ abstract class ServerRpcConnection implements Closeable {
 
   private String getFatalConnectionString(final int version, final byte authByte) {
     return "serverVersion=" + RpcServer.CURRENT_VERSION +
-    ", clientVersion=" + version + ", authMethod=" + authByte +
-    ", authName=" + provider.getSaslAuthMethod().getName() + " from " + toString();
+        ", clientVersion=" + version + ", authMethod=" + authByte +
+        ", authName=" + provider.getSaslAuthMethod().getName() + " from " + toString();
   }
 
   /**
@@ -384,11 +384,11 @@ abstract class ServerRpcConnection implements Closeable {
       if (saslServer.isComplete()) {
         String qop = saslServer.getNegotiatedQop();
         useWrap = qop != null && !"auth".equalsIgnoreCase(qop);
-        ugi = provider.getAuthorizedUgi(saslServer.getAuthorizationID(), this.rpcServer.secretManager);
-        if (RpcServer.LOG.isDebugEnabled()) {
-          RpcServer.LOG.debug("SASL server context established. Authenticated client: " + ugi +
-              ". Negotiated QoP is " + qop);
-        }
+        ugi = provider.getAuthorizedUgi(saslServer.getAuthorizationID(),
+            this.rpcServer.secretManager);
+        RpcServer.LOG.debug(
+            "SASL server context established. Authenticated client: {}. Negotiated QoP is {}",
+            ugi, qop);
         this.rpcServer.metrics.authenticationSuccess();
         RpcServer.AUDITLOG.info(RpcServer.AUTH_SUCCESSFUL_FOR + ugi);
         saslContextEstablished = true;
@@ -738,7 +738,8 @@ abstract class ServerRpcConnection implements Closeable {
       return false;
     }
     // TODO this is a wart while simple auth'n doesn't go through sasl.
-    if (this.rpcServer.isSecurityEnabled && provider instanceof SimpleSaslServerAuthenticationProvider) {
+    if (this.rpcServer.isSecurityEnabled &&
+        provider instanceof SimpleSaslServerAuthenticationProvider) {
       if (this.rpcServer.allowFallbackToSimpleAuth) {
         this.rpcServer.metrics.authenticationFallback();
         authenticatedWithFallback = true;

@@ -24,7 +24,6 @@ import javax.security.sasl.SaslClient;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
@@ -32,9 +31,12 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation;
+
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)
 @InterfaceStability.Evolving
-public class SimpleSaslClientAuthenticationProvider extends AbstractSaslClientAuthenticationProvider {
+public class SimpleSaslClientAuthenticationProvider extends
+    AbstractSaslClientAuthenticationProvider {
   private static final SaslAuthMethod SASL_AUTH_METHOD = new SaslAuthMethod(
       "SIMPLE", (byte)80, "", AuthenticationMethod.SIMPLE);
 

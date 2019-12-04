@@ -33,7 +33,6 @@ import javax.security.sasl.SaslClient;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.security.SaslUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
@@ -43,9 +42,12 @@ import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation;
+
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)
 @InterfaceStability.Evolving
-public class DigestSaslClientAuthenticationProvider extends AbstractSaslClientAuthenticationProvider {
+public class DigestSaslClientAuthenticationProvider extends
+    AbstractSaslClientAuthenticationProvider {
 
   private static final String MECHANISM = "DIGEST-MD5";
   private static final SaslAuthMethod SASL_AUTH_METHOD = new SaslAuthMethod(
@@ -69,7 +71,8 @@ public class DigestSaslClientAuthenticationProvider extends AbstractSaslClientAu
   }
 
   public static class DigestSaslClientCallbackHandler implements CallbackHandler {
-    private static final Logger LOG = LoggerFactory.getLogger(DigestSaslClientCallbackHandler.class);
+    private static final Logger LOG =
+        LoggerFactory.getLogger(DigestSaslClientCallbackHandler.class);
     private final String userName;
     private final char[] userPassword;
 

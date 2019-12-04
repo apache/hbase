@@ -36,7 +36,7 @@ public class SaslAuthMethod {
   private final byte code;
   private final String saslMech;
   private final AuthenticationMethod method;
-  
+
   public SaslAuthMethod(String name, byte code, String saslMech, AuthenticationMethod method) {
     this.name = name;
     this.code = code;
@@ -59,7 +59,7 @@ public class SaslAuthMethod {
   }
 
   /**
-   * Returns the SASL mechanism used by this authentication method. 
+   * Returns the SASL mechanism used by this authentication method.
    */
   public String getSaslMechanism() {
     return saslMech;

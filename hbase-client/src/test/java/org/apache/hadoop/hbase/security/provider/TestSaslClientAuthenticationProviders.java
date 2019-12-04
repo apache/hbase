@@ -24,14 +24,20 @@ import static org.junit.Assert.assertSame;
 import java.util.HashMap;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({SmallTests.class, SecurityTests.class})
 public class TestSaslClientAuthenticationProviders {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSaslClientAuthenticationProviders.class);
 
   @Test
   public void testCannotAddTheSameProviderTwice() {
@@ -53,13 +59,16 @@ public class TestSaslClientAuthenticationProviders {
   @Test
   public void testInstanceIsCached() {
     Configuration conf = HBaseConfiguration.create();
-    SaslClientAuthenticationProviders providers1 = SaslClientAuthenticationProviders.getInstance(conf);
-    SaslClientAuthenticationProviders providers2 = SaslClientAuthenticationProviders.getInstance(conf);
+    SaslClientAuthenticationProviders providers1 =
+        SaslClientAuthenticationProviders.getInstance(conf);
+    SaslClientAuthenticationProviders providers2 =
+        SaslClientAuthenticationProviders.getInstance(conf);
     assertSame(providers1, providers2);
 
     SaslClientAuthenticationProviders.reset();
 
-    SaslClientAuthenticationProviders providers3 = SaslClientAuthenticationProviders.getInstance(conf);
+    SaslClientAuthenticationProviders providers3 =
+        SaslClientAuthenticationProviders.getInstance(conf);
     assertNotSame(providers1, providers3);
     assertEquals(providers1.getNumRegisteredProviders(), providers3.getNumRegisteredProviders());
   }

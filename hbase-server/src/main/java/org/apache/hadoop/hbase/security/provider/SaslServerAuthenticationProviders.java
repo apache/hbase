@@ -28,11 +28,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
-public class SaslServerAuthenticationProviders {
-  private static final Logger LOG = LoggerFactory.getLogger(SaslClientAuthenticationProviders.class);
+public final class SaslServerAuthenticationProviders {
+  private static final Logger LOG = LoggerFactory.getLogger(
+      SaslClientAuthenticationProviders.class);
 
   public static final String EXTRA_PROVIDERS_KEY = "hbase.server.sasl.provider.extras";
-  private static final AtomicReference<SaslServerAuthenticationProviders> holder = new AtomicReference<>();
+  private static final AtomicReference<SaslServerAuthenticationProviders> holder =
+      new AtomicReference<>();
 
   private final Configuration conf;
   private final HashMap<Byte, SaslServerAuthenticationProvider> providers;
@@ -71,7 +73,7 @@ public class SaslServerAuthenticationProviders {
   }
 
   /**
-   * Removes the cached singleton instance of {@link SaslServerAuthenticationProviders}. 
+   * Removes the cached singleton instance of {@link SaslServerAuthenticationProviders}.
    */
   public static void reset() {
     synchronized (holder) {
@@ -111,7 +113,7 @@ public class SaslServerAuthenticationProviders {
       }
 
       if (!SaslServerAuthenticationProvider.class.isAssignableFrom(clz)) {
-        LOG.warn("Server authentication class {} is not an instance of " 
+        LOG.warn("Server authentication class {} is not an instance of "
             + "SaslServerAuthenticationProvider", clz);
         continue;
       }

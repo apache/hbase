@@ -42,8 +42,10 @@ import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)
 @InterfaceStability.Evolving
-public class GssSaslServerAuthenticationProvider extends GssSaslClientAuthenticationProvider implements SaslServerAuthenticationProvider {
-  private static final Logger LOG = LoggerFactory.getLogger(GssSaslServerAuthenticationProvider.class);
+public class GssSaslServerAuthenticationProvider extends GssSaslClientAuthenticationProvider
+    implements SaslServerAuthenticationProvider {
+  private static final Logger LOG = LoggerFactory.getLogger(
+      GssSaslServerAuthenticationProvider.class);
 
   @Override
   public SaslServer createServer(SecretManager<TokenIdentifier> secretManager,
@@ -106,8 +108,8 @@ public class GssSaslServerAuthenticationProvider extends GssSaslClientAuthentica
   }
 
   @Override
-  public UserGroupInformation getAuthorizedUgi(String authzId, SecretManager<TokenIdentifier> secretManager)
-      throws IOException {
+  public UserGroupInformation getAuthorizedUgi(String authzId,
+      SecretManager<TokenIdentifier> secretManager) throws IOException {
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser(authzId);
     ugi.setAuthenticationMethod(getSaslAuthMethod().getAuthMethod());
     return ugi;

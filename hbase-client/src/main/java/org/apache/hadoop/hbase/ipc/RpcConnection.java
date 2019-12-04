@@ -27,9 +27,6 @@ import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.security.SecurityInfo;
 import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProvider;
 import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProviders;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeader;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.Text;
@@ -44,6 +41,10 @@ import org.apache.hbase.thirdparty.io.netty.util.TimerTask;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeader;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation;
 
 /**
  * Base class for ipc connection.
@@ -96,7 +97,8 @@ abstract class RpcConnection {
     this.useSasl = isSecurityEnabled;
     String serverPrincipal = null;
     // Choose the correct Token and AuthenticationProvider for this client to use
-    SaslClientAuthenticationProviders providers = SaslClientAuthenticationProviders.getInstance(conf);
+    SaslClientAuthenticationProviders providers =
+        SaslClientAuthenticationProviders.getInstance(conf);
     if (useSasl && securityInfo != null) {
       Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> pair =
           providers.selectProvider(new Text(clusterId), ticket);
@@ -174,10 +176,10 @@ abstract class RpcConnection {
   }
 
   protected ConnectionHeader getConnectionHeader() {
-    ConnectionHeader.Builder builder = ConnectionHeader.newBuilder();
+    final ConnectionHeader.Builder builder = ConnectionHeader.newBuilder();
     builder.setServiceName(remoteId.getServiceName());
-    UserInformation userInfoPB;
-    if ((userInfoPB = provider.getUserInfo(remoteId.ticket.getUGI())) != null) {
+    final UserInformation userInfoPB  = provider.getUserInfo(remoteId.ticket.getUGI());
+    if (userInfoPB != null) {
       builder.setUserInfo(userInfoPB);
     }
     if (this.codec != null) {

@@ -76,7 +76,6 @@ import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.token.SecureTestCluster;
 import org.apache.hadoop.hbase.security.token.TokenProvider;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -102,6 +101,8 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation;
+
 /**
  * Tests the pluggable authentication framework with SASL using a contrived authentication system.
  *
@@ -110,7 +111,8 @@ import org.slf4j.LoggerFactory;
  */
 @Category({MediumTests.class, SecurityTests.class})
 public class TestCustomSaslAuthenticationProvider {
-  private static final Logger LOG = LoggerFactory.getLogger(TestCustomSaslAuthenticationProvider.class);
+  private static final Logger LOG = LoggerFactory.getLogger(
+      TestCustomSaslAuthenticationProvider.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -271,7 +273,8 @@ public class TestCustomSaslAuthenticationProvider {
   /**
    * Server provider which validates credentials from an in-memory database.
    */
-  public static class InMemoryServerProvider extends InMemoryClientProvider implements SaslServerAuthenticationProvider {
+  public static class InMemoryServerProvider extends InMemoryClientProvider
+      implements SaslServerAuthenticationProvider {
 
     @Override
     public SaslServer createServer(SecretManager<TokenIdentifier> secretManager,
@@ -302,7 +305,7 @@ public class TestCustomSaslAuthenticationProvider {
           } else if (callback instanceof RealmCallback) {
             continue; // realm is ignored
           } else {
-            throw new UnsupportedCallbackException(callback, "Unrecognized SASL DIGEST-MD5 Callback");
+            throw new UnsupportedCallbackException(callback, "Unrecognized SASL Callback");
           }
         }
         if (nc != null && pc != null) {
@@ -311,7 +314,8 @@ public class TestCustomSaslAuthenticationProvider {
           try {
             id.readFields(new DataInputStream(new ByteArrayInputStream(encodedId)));
           } catch (IOException e) {
-            throw (InvalidToken) new InvalidToken("Can't de-serialize tokenIdentifier").initCause(e);
+            throw (InvalidToken) new InvalidToken(
+                "Can't de-serialize tokenIdentifier").initCause(e);
           }
           char[] actualPassword = SaslUtil.encodePassword(
               Bytes.toBytes(getPassword(id.getUser().getUserName())));
@@ -367,7 +371,8 @@ public class TestCustomSaslAuthenticationProvider {
     private InMemoryClientProvider inMemoryProvider;
 
     @Override
-    public void configure(Configuration conf, Map<Byte,SaslClientAuthenticationProvider> providers) {
+    public void configure(Configuration conf,
+        Map<Byte,SaslClientAuthenticationProvider> providers) {
       super.configure(conf, providers);
       Optional<SaslClientAuthenticationProvider> o = providers.values().stream()
         .filter((p) -> p instanceof InMemoryClientProvider)
@@ -437,7 +442,8 @@ public class TestCustomSaslAuthenticationProvider {
         InMemoryClientProvider.class.getName());
     CONF.setStrings(SaslServerAuthenticationProviders.EXTRA_PROVIDERS_KEY,
         InMemoryServerProvider.class.getName());
-    CONF.set(SaslClientAuthenticationProviders.SELECTOR_KEY, InMemoryProviderSelector.class.getName());
+    CONF.set(SaslClientAuthenticationProviders.SELECTOR_KEY,
+        InMemoryProviderSelector.class.getName());
 
     CLUSTER = createCluster(UTIL, KEYTAB_FILE, kdc);
     CLUSTER.startup();
@@ -472,7 +478,7 @@ public class TestCustomSaslAuthenticationProvider {
               .newBuilder(tableName)
               .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f1"))
               .build());
-          
+
           UTIL.waitTableAvailable(tableName);
 
           try (Table t = conn.getTable(tableName)) {
@@ -480,7 +486,7 @@ public class TestCustomSaslAuthenticationProvider {
             p.addColumn(Bytes.toBytes("f1"), Bytes.toBytes("q1"), Bytes.toBytes("1"));
             t.put(p);
           }
-          
+
           return admin.getClusterMetrics().getClusterId();
         }
       }

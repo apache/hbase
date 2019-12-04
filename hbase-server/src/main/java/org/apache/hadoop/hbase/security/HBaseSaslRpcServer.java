@@ -26,14 +26,14 @@ import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
 
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.security.provider.SaslServerAuthenticationProvider;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A utility class that encapsulates SASL logic for RPC server. Copied from
@@ -48,8 +48,9 @@ public class HBaseSaslRpcServer {
 
   private UserGroupInformation attemptingUser; // user name before auth
 
-  public HBaseSaslRpcServer(SaslServerAuthenticationProvider provider, Map<String, String> saslProps,
-      SecretManager<TokenIdentifier> secretManager) throws IOException {
+  public HBaseSaslRpcServer(SaslServerAuthenticationProvider provider,
+      Map<String, String> saslProps, SecretManager<TokenIdentifier> secretManager)
+          throws IOException {
     saslServer = provider.createServer(secretManager, saslProps);
   }
 

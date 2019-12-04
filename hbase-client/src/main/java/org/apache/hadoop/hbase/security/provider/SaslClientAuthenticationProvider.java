@@ -24,7 +24,6 @@ import javax.security.sasl.SaslClient;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -32,12 +31,14 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation;
+
 /**
  * Encapsulation of client-side logic to authenticate to HBase via some means over SASL.
  * Implementations should not directly implement this interface, but instead extend
  * {@link AbstractSaslClientAuthenticationProvider}.
  *
- * Implementations of this interface must make an implementation of {link {@link #hashCode()}
+ * Implementations of this interface must make an implementation of {@code hashCode()}
  * which returns the same value across multiple instances of the provider implementation.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)

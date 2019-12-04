@@ -37,9 +37,9 @@ import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,7 +47,8 @@ import org.slf4j.LoggerFactory;
 @InterfaceStability.Evolving
 public class DigestSaslServerAuthenticationProvider extends DigestSaslClientAuthenticationProvider
     implements SaslServerAuthenticationProvider {
-  private static final Logger LOG = LoggerFactory.getLogger(DigestSaslServerAuthenticationProvider.class);
+  private static final Logger LOG = LoggerFactory.getLogger(
+      DigestSaslServerAuthenticationProvider.class);
 
   @Override
   public SaslServer createServer(SecretManager<TokenIdentifier> secretManager,
@@ -60,7 +61,7 @@ public class DigestSaslServerAuthenticationProvider extends DigestSaslClientAuth
   }
 
   /** CallbackHandler for SASL DIGEST-MD5 mechanism */
-  private class SaslDigestCallbackHandler implements CallbackHandler {
+  private static class SaslDigestCallbackHandler implements CallbackHandler {
     private SecretManager<TokenIdentifier> secretManager;
 
     public SaslDigestCallbackHandler(SecretManager<TokenIdentifier> secretManager) {
@@ -91,7 +92,8 @@ public class DigestSaslServerAuthenticationProvider extends DigestSaslClientAuth
         }
       }
       if (pc != null) {
-        TokenIdentifier tokenIdentifier = HBaseSaslRpcServer.getIdentifier(nc.getDefaultName(), secretManager);
+        TokenIdentifier tokenIdentifier = HBaseSaslRpcServer.getIdentifier(
+            nc.getDefaultName(), secretManager);
         char[] password = getPassword(tokenIdentifier);
         if (LOG.isTraceEnabled()) {
           LOG.trace("SASL server DIGEST-MD5 callback: setting password " + "for client: " +
@@ -109,7 +111,8 @@ public class DigestSaslServerAuthenticationProvider extends DigestSaslClientAuth
         }
         if (ac.isAuthorized()) {
           if (LOG.isTraceEnabled()) {
-            String username = HBaseSaslRpcServer.getIdentifier(authzid, secretManager).getUser().getUserName();
+            String username = HBaseSaslRpcServer.getIdentifier(
+                authzid, secretManager).getUser().getUserName();
             LOG.trace(
               "SASL server DIGEST-MD5 callback: setting " + "canonicalized client ID: " + username);
           }

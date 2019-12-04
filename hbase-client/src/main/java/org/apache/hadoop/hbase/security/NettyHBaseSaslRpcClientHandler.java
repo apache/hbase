@@ -61,9 +61,8 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
    *          simple.
    */
   public NettyHBaseSaslRpcClientHandler(Promise<Boolean> saslPromise, UserGroupInformation ugi,
-      SaslClientAuthenticationProvider provider, Token<? extends TokenIdentifier> token, String serverPrincipal,
-      boolean fallbackAllowed, Configuration conf)
-      throws IOException {
+      SaslClientAuthenticationProvider provider, Token<? extends TokenIdentifier> token,
+      String serverPrincipal, boolean fallbackAllowed, Configuration conf) throws IOException {
     this.saslPromise = saslPromise;
     this.ugi = ugi;
     this.conf = conf;

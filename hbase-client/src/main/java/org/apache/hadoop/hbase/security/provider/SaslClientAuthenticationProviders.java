@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)
 @InterfaceStability.Evolving
-public class SaslClientAuthenticationProviders {
+public final class SaslClientAuthenticationProviders {
   private static final Logger LOG = LoggerFactory.getLogger(SaslClientAuthenticationProviders.class);
 
   public static final String SELECTOR_KEY = "hbase.client.sasl.provider.class";
@@ -52,7 +52,8 @@ public class SaslClientAuthenticationProviders {
   private final HashMap<Byte,SaslClientAuthenticationProvider> providers;
   private final AuthenticationProviderSelector selector;
 
-  private SaslClientAuthenticationProviders(HashMap<Byte,SaslClientAuthenticationProvider> providers,
+  private SaslClientAuthenticationProviders(
+      HashMap<Byte,SaslClientAuthenticationProvider> providers,
       AuthenticationProviderSelector selector) {
     this.providers = providers;
     this.selector = selector;
@@ -79,7 +80,7 @@ public class SaslClientAuthenticationProviders {
   }
 
   /**
-   * Removes the cached singleton instance of {@link SaslClientAuthenticationProviders}. 
+   * Removes the cached singleton instance of {@link SaslClientAuthenticationProviders}.
    */
   public static synchronized void reset() {
     providersRef.set(null);
@@ -94,8 +95,8 @@ public class SaslClientAuthenticationProviders {
     SaslClientAuthenticationProvider existingProvider = providers.get(
         provider.getSaslAuthMethod().getCode());
     if (existingProvider != null) {
-    throw new RuntimeException("Already registered authentication provider with " +
-        provider.getSaslAuthMethod().getCode() + " " + existingProvider.getClass()); 
+      throw new RuntimeException("Already registered authentication provider with " +
+          provider.getSaslAuthMethod().getCode() + " " + existingProvider.getClass());
     }
     providers.put(provider.getSaslAuthMethod().getCode(), provider);
   }
@@ -188,7 +189,7 @@ public class SaslClientAuthenticationProviders {
         .findFirst();
     return optional.get();
   }
- 
+
   public Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> selectProvider(
       Text clusterId, UserGroupInformation clientUser) {
     return selector.selectProvider(clusterId, clientUser);

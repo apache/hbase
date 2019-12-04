@@ -23,13 +23,13 @@ import java.util.Map;
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
 
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProvider;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A utility class that encapsulates SASL logic for RPC client. Copied from
@@ -50,21 +50,23 @@ public abstract class AbstractHBaseSaslRpcClient {
 
   /**
    * Create a HBaseSaslRpcClient for an authentication method
-   * @param method the requested authentication method
+   * @param conf the configuration object
+   * @param provider the authentication provider
    * @param token token to use if needed by the authentication method
    * @param serverPrincipal the server principal that we are trying to set the connection up to
    * @param fallbackAllowed does the client allow fallback to simple authentication
    * @throws IOException
    */
-  protected AbstractHBaseSaslRpcClient(Configuration conf, SaslClientAuthenticationProvider provider,
-      Token<? extends TokenIdentifier> token,
+  protected AbstractHBaseSaslRpcClient(Configuration conf,
+      SaslClientAuthenticationProvider provider, Token<? extends TokenIdentifier> token,
       String serverPrincipal, boolean fallbackAllowed) throws IOException {
     this(conf, provider, token, serverPrincipal, fallbackAllowed, "authentication");
   }
 
   /**
    * Create a HBaseSaslRpcClient for an authentication method
-   * @param method the requested authentication method
+   * @param conf configuration object
+   * @param provider the authentication provider
    * @param token token to use if needed by the authentication method
    * @param serverPrincipal the server principal that we are trying to set the connection up to
    * @param fallbackAllowed does the client allow fallback to simple authentication
@@ -79,7 +81,8 @@ public abstract class AbstractHBaseSaslRpcClient {
 
     saslClient = provider.createClient(conf, serverPrincipal, token, fallbackAllowed, saslProps);
     if (saslClient == null) {
-      throw new IOException("Authentication provider " + provider.getClass() + " returned a null SaslClient");
+      throw new IOException("Authentication provider " + provider.getClass()
+          + " returned a null SaslClient");
     }
   }
 

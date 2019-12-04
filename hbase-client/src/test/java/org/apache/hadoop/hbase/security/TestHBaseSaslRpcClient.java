@@ -54,7 +54,6 @@ import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.BeforeClass;
@@ -64,6 +63,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 
 @Category({SecurityTests.class, SmallTests.class})
 public class TestHBaseSaslRpcClient {
@@ -119,7 +120,8 @@ public class TestHBaseSaslRpcClient {
     final RealmChoiceCallback realmChoiceCallback = mock(RealmChoiceCallback.class);
 
     Callback[] callbackArray = {nameCallback, passwordCallback, realmCallback, realmChoiceCallback};
-    final DigestSaslClientCallbackHandler saslClCallbackHandler = new DigestSaslClientCallbackHandler(token);
+    final DigestSaslClientCallbackHandler saslClCallbackHandler =
+        new DigestSaslClientCallbackHandler(token);
     saslClCallbackHandler.handle(callbackArray);
     verify(nameCallback).setName(anyString());
     verify(realmCallback).setText(any());
@@ -131,7 +133,8 @@ public class TestHBaseSaslRpcClient {
     final Token<? extends TokenIdentifier> token = createTokenMock();
     when(token.getIdentifier()).thenReturn(Bytes.toBytes(DEFAULT_USER_NAME));
     when(token.getPassword()).thenReturn(Bytes.toBytes(DEFAULT_USER_PASSWORD));
-    final DigestSaslClientCallbackHandler saslClCallbackHandler = new DigestSaslClientCallbackHandler(token);
+    final DigestSaslClientCallbackHandler saslClCallbackHandler =
+        new DigestSaslClientCallbackHandler(token);
     try {
       saslClCallbackHandler.handle(new Callback[] { mock(TextOutputCallback.class) });
     } catch (UnsupportedCallbackException expEx) {
@@ -233,7 +236,8 @@ public class TestHBaseSaslRpcClient {
 
   private boolean assertIOExceptionThenSaslClientIsNull(String principal, String password) {
     try {
-      DigestSaslClientAuthenticationProvider provider = new DigestSaslClientAuthenticationProvider() {
+      DigestSaslClientAuthenticationProvider provider =
+          new DigestSaslClientAuthenticationProvider() {
         @Override
         public SaslClient createClient(Configuration conf, String serverPrincipal,
             Token<? extends TokenIdentifier> token, boolean fallbackAllowed,
@@ -301,8 +305,8 @@ public class TestHBaseSaslRpcClient {
 
   private HBaseSaslRpcClient createSaslRpcClientSimple(String principal, String password)
       throws IOException {
-    return new HBaseSaslRpcClient(HBaseConfiguration.create(), new SimpleSaslClientAuthenticationProvider(),
-        createTokenMock(), principal, false);
+    return new HBaseSaslRpcClient(HBaseConfiguration.create(),
+        new SimpleSaslClientAuthenticationProvider(), createTokenMock(), principal, false);
   }
 
   @SuppressWarnings("unchecked")

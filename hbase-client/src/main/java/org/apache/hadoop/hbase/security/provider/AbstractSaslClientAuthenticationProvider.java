@@ -24,12 +24,13 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * Base implementation of {@link SaslClientAuthenticationProvider}. All implementations should extend
- * this class instead of directly implementing the interface.
+ * Base implementation of {@link SaslClientAuthenticationProvider}. All implementations should
+ * extend this class instead of directly implementing the interface.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)
 @InterfaceStability.Evolving
-public abstract class AbstractSaslClientAuthenticationProvider implements SaslClientAuthenticationProvider {
+public abstract class AbstractSaslClientAuthenticationProvider implements
+        SaslClientAuthenticationProvider {
   public static final Text AUTH_TOKEN_TYPE = new Text("HBASE_AUTH_TOKEN");
 
 
@@ -41,12 +42,21 @@ public abstract class AbstractSaslClientAuthenticationProvider implements SaslCl
   }
 
   /**
-   * Provides a hash code to identify this AuthenticationProvider among others. These two fields must be
-   * unique to ensure that authentication methods are clearly separated.
+   * Provides a hash code to identify this AuthenticationProvider among others. These two fields
+   * must be unique to ensure that authentication methods are clearly separated.
    */
   @Override
   public final int hashCode() {
     return getSaslAuthMethod().hashCode();
+  }
+
+  @Override
+  public final boolean equals(Object o) {
+    // SaslClientAuthProviders should be unique via their hashCode().
+    if (o instanceof AbstractSaslClientAuthenticationProvider) {
+      return this.hashCode() == o.hashCode();
+    }
+    return false;
   }
 
   @Override
