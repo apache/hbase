@@ -21,16 +21,18 @@
   import="java.io.ByteArrayOutputStream"
   import="java.io.PrintStream"
   import="org.apache.hadoop.conf.Configuration"
+  import="org.apache.hadoop.fs.FileSystem"
   import="org.apache.hadoop.fs.Path"
   import="org.apache.hadoop.hbase.HBaseConfiguration"
   import="org.apache.hadoop.hbase.io.hfile.HFilePrettyPrinter"
   import="org.apache.hadoop.hbase.regionserver.HRegionServer"
-  import="org.apache.hadoop.hbase.regionserver.StoreFile"
+  import="org.apache.hadoop.hbase.regionserver.StoreFileInfo"
   %>
 <%
   String storeFile = request.getParameter("name");
   HRegionServer rs = (HRegionServer) getServletContext().getAttribute(HRegionServer.REGIONSERVER);
   Configuration conf = rs.getConfiguration();
+  FileSystem fs = FileSystem.get(conf);
 %>
 <!--[if IE]>
 <!DOCTYPE html>
@@ -43,8 +45,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="">
     <meta name="author" content="">
-
-
       <link href="/static/css/bootstrap.min.css" rel="stylesheet">
       <link href="/static/css/bootstrap-theme.min.css" rel="stylesheet">
       <link href="/static/css/hbase.css" rel="stylesheet">
@@ -94,7 +94,8 @@
      printer.setConf(conf);
      String[] options = {"-s"};
      printer.parseOptions(options);
-     printer.processFile(new Path(storeFile));
+     StoreFileInfo sfi = new StoreFileInfo(conf, fs, new Path(storeFile));
+     printer.processFile(sfi.getFileStatus().getPath());
      String text = byteStream.toString();%>
      <%=
        text
