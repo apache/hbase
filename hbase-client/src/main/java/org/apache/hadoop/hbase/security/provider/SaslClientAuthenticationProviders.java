@@ -41,7 +41,8 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)
 @InterfaceStability.Evolving
 public final class SaslClientAuthenticationProviders {
-  private static final Logger LOG = LoggerFactory.getLogger(SaslClientAuthenticationProviders.class);
+  private static final Logger LOG = LoggerFactory.getLogger(
+      SaslClientAuthenticationProviders.class);
 
   public static final String SELECTOR_KEY = "hbase.client.sasl.provider.class";
   public static final String EXTRA_PROVIDERS_KEY = "hbase.client.sasl.provider.extras";

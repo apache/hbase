@@ -46,8 +46,8 @@ public class SimpleSaslServerAuthenticationProvider extends SimpleSaslClientAuth
   }
 
   @Override
-  public UserGroupInformation getAuthorizedUgi(String authzId, SecretManager<TokenIdentifier> secretManager)
-      throws IOException {
+  public UserGroupInformation getAuthorizedUgi(String authzId,
+      SecretManager<TokenIdentifier> secretManager) throws IOException {
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser(authzId);
     ugi.setAuthenticationMethod(getSaslAuthMethod().getAuthMethod());
     return ugi;
