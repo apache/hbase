@@ -400,7 +400,7 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
       return new ArrayList<>();
     }
     List<String> metaReplicaNodes = new ArrayList<>(2);
-    String pattern = conf.get("zookeeper.znode.metaserver","meta-region-server");
+    String pattern = conf.get(ZNodePaths.META_ZNODE_PREFIX_CONF_KEY, ZNodePaths.META_ZNODE_PREFIX);
     for (String child : nodes) {
       if (child.startsWith(pattern)) {
         metaReplicaNodes.add(child);

@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentNavigableMap;
+import java.util.concurrent.ThreadFactory;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.types.CopyOnWriteArrayMap;
@@ -34,6 +35,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
@@ -55,6 +57,7 @@ public class MetaRegionLocationCache extends ZKListener {
    * Sleep interval ms between ZK operation retries.
    */
   private static final int SLEEP_INTERVAL_MS_BETWEEN_RETRIES = 1000;
+  private static final int SLEEP_INTERVAL_MS_MAX = 10000;
   private final RetryCounterFactory retryCounterFactory =
       new RetryCounterFactory(MAX_ZK_META_FETCH_RETRIES, SLEEP_INTERVAL_MS_BETWEEN_RETRIES);
 
@@ -72,24 +75,30 @@ public class MetaRegionLocationCache extends ZKListener {
     CREATED,
     CHANGED,
     DELETED
-  };
+  }
 
-  public MetaRegionLocationCache(ZKWatcher zkWatcher) throws InterruptedException {
+  public MetaRegionLocationCache(ZKWatcher zkWatcher) {
     super(zkWatcher);
     cachedMetaLocations = new CopyOnWriteArrayMap<>();
     watcher.registerListener(this);
     // Populate the initial snapshot of data from meta znodes.
     // This is needed because stand-by masters can potentially start after the initial znode
-    // creation.
-    populateMetaLocations();
+    // creation. It blocks forever until the initial meta locations are loaded from ZK and watchers
+    // are established. Subsequent updates are handled by the registered listener. Also, this runs
+    // in a separate thread in the background to not block master init.
+    ThreadFactory threadFactory = new ThreadFactoryBuilder().setDaemon(true).build();
+    RetryCounterFactory retryFactory = new RetryCounterFactory(
+        Integer.MAX_VALUE, SLEEP_INTERVAL_MS_BETWEEN_RETRIES, SLEEP_INTERVAL_MS_MAX);
+    threadFactory.newThread(
+      ()->loadMetaLocationsFromZk(retryFactory.create(), ZNodeOpType.INIT)).start();
   }
 
   /**
    * Populates the current snapshot of meta locations from ZK. If no meta znodes exist, it registers
    * a watcher on base znode to check for any CREATE/DELETE events on the children.
+   * @param retryCounter controls the number of retries and sleep between retries.
    */
-  private void populateMetaLocations() throws InterruptedException {
-    RetryCounter retryCounter = retryCounterFactory.create();
+  private void loadMetaLocationsFromZk(RetryCounter retryCounter, ZNodeOpType opType) {
     List<String> znodes = null;
     while (retryCounter.shouldRetry()) {
       try {
@@ -103,7 +112,12 @@ public class MetaRegionLocationCache extends ZKListener {
           watcher.abort("Error populating meta locations", ke);
           return;
         }
-        retryCounter.sleepUntilNextRetry();
+        try {
+          retryCounter.sleepUntilNextRetry();
+        } catch (InterruptedException ie) {
+          LOG.error("Interrupted while loading meta locations from ZK", ie);
+          return;
+        }
       }
     }
     if (znodes == null || znodes.isEmpty()) {
@@ -117,7 +131,7 @@ public class MetaRegionLocationCache extends ZKListener {
     }
     for (String znode: znodes) {
       String path = ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, znode);
-      updateMetaLocation(path, ZNodeOpType.INIT);
+      updateMetaLocation(path, opType);
     }
   }
 
@@ -229,11 +243,6 @@ public class MetaRegionLocationCache extends ZKListener {
     if (!path.equals(watcher.getZNodePaths().baseZNode)) {
       return;
     }
-    try {
-      populateMetaLocations();
-    } catch (InterruptedException ie) {
-      // log and ignore, we can reload the cache later if needed.
-      LOG.warn("Interrupted while initializing meta region cache", ie);
-    }
+    loadMetaLocationsFromZk(retryCounterFactory.create(), ZNodeOpType.CHANGED);
   }
 }

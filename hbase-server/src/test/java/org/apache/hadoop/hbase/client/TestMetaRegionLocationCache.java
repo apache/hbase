@@ -84,6 +84,14 @@ public class TestMetaRegionLocationCache {
 
   // Verifies that the cached meta locations in the given master are in sync with what is in ZK.
   private void verifyCachedMetaLocations(HMaster master) throws Exception {
+    // Wait until initial meta locations are loaded.
+    int retries = 0;
+    while (!master.getMetaRegionLocationCache().getMetaRegionLocations().isPresent()) {
+      Thread.sleep(1000);
+      if (++retries == 10) {
+        break;
+      }
+    }
     List<HRegionLocation> metaHRLs =
         master.getMetaRegionLocationCache().getMetaRegionLocations().get();
     assertFalse(metaHRLs.isEmpty());
