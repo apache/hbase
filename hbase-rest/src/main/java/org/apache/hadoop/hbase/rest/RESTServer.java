@@ -24,54 +24,50 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
-
-import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
+import javax.servlet.DispatcherType;
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.hadoop.hbase.http.SecurityHeadersFilter;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.http.ClickjackingPreventionFilter;
+import org.apache.hadoop.hbase.http.HttpServerUtil;
 import org.apache.hadoop.hbase.http.InfoServer;
+import org.apache.hadoop.hbase.http.SecurityHeadersFilter;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.rest.filter.AuthFilter;
 import org.apache.hadoop.hbase.rest.filter.GzipFilter;
 import org.apache.hadoop.hbase.rest.filter.RestCsrfPreventionFilter;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.DNS;
-import org.apache.hadoop.hbase.http.HttpServerUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.VersionInfo;
-
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.PosixParser;
-
+import org.apache.yetus.audience.InterfaceAudience;
 import org.eclipse.jetty.http.HttpVersion;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.HttpConnectionFactory;
-import org.eclipse.jetty.server.SslConnectionFactory;
+import org.eclipse.jetty.jmx.MBeanContainer;
 import org.eclipse.jetty.server.HttpConfiguration;
-import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.SecureRequestCustomizer;
-import org.eclipse.jetty.util.ssl.SslContextFactory;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.SslConnectionFactory;
+import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
-import org.eclipse.jetty.jmx.MBeanContainer;
-import org.eclipse.jetty.servlet.FilterHolder;
-
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.servlet.DispatcherType;
+import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 
 /**
  * Main class for launching REST gateway as a servlet hosted by Jetty.
@@ -138,12 +134,20 @@ public class RESTServer implements Constants {
     }
   }
 
+  private void addClickjackingPreventionFilter(ServletContextHandler ctxHandler,
+      Configuration conf) {
+    FilterHolder holder = new FilterHolder();
+    holder.setName("clickjackingprevention");
+    holder.setClassName(ClickjackingPreventionFilter.class.getName());
+    holder.setInitParameters(ClickjackingPreventionFilter.getDefaultParameters(conf));
+    ctxHandler.addFilter(holder, PATH_SPEC_ANY, EnumSet.allOf(DispatcherType.class));
+  }
+
   private void addSecurityHeadersFilter(ServletContextHandler ctxHandler, Configuration conf) {
     FilterHolder holder = new FilterHolder();
-    holder.setName("security");
+    holder.setName("securityheaders");
     holder.setClassName(SecurityHeadersFilter.class.getName());
-    Map<String, String> params = SecurityHeadersFilter.getDefaultParameters(conf);
-    holder.setInitParameters(params);
+    holder.setInitParameters(SecurityHeadersFilter.getDefaultParameters(conf));
     ctxHandler.addFilter(holder, PATH_SPEC_ANY, EnumSet.allOf(DispatcherType.class));
   }
 
@@ -359,6 +363,7 @@ public class RESTServer implements Constants {
       ctxHandler.addFilter(filter, PATH_SPEC_ANY, EnumSet.of(DispatcherType.REQUEST));
     }
     addCSRFFilter(ctxHandler, conf);
+    addClickjackingPreventionFilter(ctxHandler, conf);
     addSecurityHeadersFilter(ctxHandler, conf);
     HttpServerUtil.constrainHttpMethods(ctxHandler, servlet.getConfiguration()
         .getBoolean(REST_HTTP_ALLOW_OPTIONS_METHOD, REST_HTTP_ALLOW_OPTIONS_METHOD_DEFAULT));

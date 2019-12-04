@@ -597,9 +597,13 @@ public class HttpServer implements FilterContainer {
 
     addGlobalFilter("safety", QuotingInputFilter.class.getName(), null);
 
-    Map<String, String> params = SecurityHeadersFilter.getDefaultParameters(conf);
+    addGlobalFilter("clickjackingprevention",
+        ClickjackingPreventionFilter.class.getName(),
+        ClickjackingPreventionFilter.getDefaultParameters(conf));
+
     addGlobalFilter("securityheaders",
-            SecurityHeadersFilter.class.getName(), params);
+        SecurityHeadersFilter.class.getName(),
+        SecurityHeadersFilter.getDefaultParameters(conf));
 
     final FilterInitializer[] initializers = getFilterInitializers(conf);
     if (initializers != null) {
