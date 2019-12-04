@@ -668,6 +668,7 @@ public class ServerManager {
   /**
    * Contacts a region server and waits up to timeout ms
    * to close the region.  This bypasses the active hmaster.
+   * Pass -1 as timeout if you do not want to wait on result.
    */
   public static void closeRegionSilentlyAndWait(ClusterConnection connection,
     ServerName server, RegionInfo region, long timeout) throws IOException, InterruptedException {
@@ -677,6 +678,9 @@ public class ServerManager {
       ProtobufUtil.closeRegion(controller, rs, server, region.getRegionName());
     } catch (IOException e) {
       LOG.warn("Exception when closing region: " + region.getRegionNameAsString(), e);
+    }
+    if (timeout < 0) {
+      return;
     }
     long expiration = timeout + System.currentTimeMillis();
     while (System.currentTimeMillis() < expiration) {

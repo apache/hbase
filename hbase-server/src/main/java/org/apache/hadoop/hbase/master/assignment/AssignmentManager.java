@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,6 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -629,7 +630,8 @@ public class AssignmentManager {
       ServerName targetServer) throws HBaseIOException {
     RegionStateNode regionNode = this.regionStates.getRegionStateNode(regionInfo);
     if (regionNode == null) {
-      throw new UnknownRegionException("No RegionState found for " + regionInfo.getEncodedName());
+      throw new UnknownRegionException("No RegionStateNode found for " +
+          regionInfo.getEncodedName() + "(Closed/Deleted?)");
     }
     TransitRegionStateProcedure proc;
     regionNode.lock();
@@ -944,7 +946,7 @@ public class AssignmentManager {
     if (regionNode == null) {
       // the table/region is gone. maybe a delete, split, merge
       throw new UnexpectedStateException(String.format(
-        "Server %s was trying to transition region %s to %s. but the region was removed.",
+        "Server %s was trying to transition region %s to %s. but Region is not known.",
         serverName, regionInfo, state));
     }
     LOG.trace("Update region transition serverName={} region={} regionState={}", serverName,
@@ -966,7 +968,8 @@ public class AssignmentManager {
           state.equals(TransitionCode.CLOSED)) {
           LOG.info("RegionServer {} {}", state, regionNode.getRegionInfo().getEncodedName());
         } else {
-          LOG.warn("No matching procedure found for {} transition to {}", regionNode, state);
+          LOG.warn("No matching procedure found for {} transition on {} to {}",
+              serverName, regionNode, state);
         }
       }
     } finally {
@@ -1092,7 +1095,27 @@ public class AssignmentManager {
     checkOnlineRegionsReport(serverNode, regionNames);
   }
 
-  // just check and output possible inconsistency, without actually doing anything
+  /**
+   * Close <code>regionName</code> on <code>sn</code> silently and immediately without
+   * using a Procedure or going via hbase:meta. For case where a RegionServer's hosting
+   * of a Region is not aligned w/ the Master's accounting of Region state. This is for
+   * cleaning up an error in accounting.
+   */
+  private void closeRegionSilently(ServerName sn, byte [] regionName) {
+    try {
+      RegionInfo ri = MetaTableAccessor.parseRegionInfoFromRegionName(regionName);
+      // Pass -1 for timeout. Means do not wait.
+      ServerManager.closeRegionSilentlyAndWait(this.master.getClusterConnection(), sn, ri, -1);
+    } catch (Exception e) {
+      LOG.error("Failed trying to close {} on {}", Bytes.toStringBinary(regionName), sn, e);
+    }
+  }
+
+  /**
+   * Check that what the RegionServer reports aligns with the Master's image.
+   * If disagreement, we will tell the RegionServer to expediently close
+   * a Region we do not think it should have.
+   */
   private void checkOnlineRegionsReport(ServerStateNode serverNode, Set<byte[]> regionNames) {
     ServerName serverName = serverNode.getServerName();
     for (byte[] regionName : regionNames) {
@@ -1101,10 +1124,13 @@ public class AssignmentManager {
       }
       RegionStateNode regionNode = regionStates.getRegionStateNodeFromName(regionName);
       if (regionNode == null) {
-        LOG.warn("No region state node for {}, it should already be on {}",
-          Bytes.toStringBinary(regionName), serverName);
+        String regionNameAsStr = Bytes.toStringBinary(regionName);
+        LOG.warn("No RegionStateNode for {} but reported as up on {}; closing...",
+            regionNameAsStr, serverName);
+        closeRegionSilently(serverNode.getServerName(), regionName);
         continue;
       }
+      final long lag = 1000;
       regionNode.lock();
       try {
         long diff = EnvironmentEdgeManager.currentTime() - regionNode.getLastUpdate();
@@ -1112,17 +1138,19 @@ public class AssignmentManager {
           // This is possible as a region server has just closed a region but the region server
           // report is generated before the closing, but arrive after the closing. Make sure there
           // is some elapsed time so less false alarms.
-          if (!regionNode.getRegionLocation().equals(serverName) && diff > 1000) {
-            LOG.warn("{} reported OPEN on server={} but state has otherwise", regionNode,
-              serverName);
+          if (!regionNode.getRegionLocation().equals(serverName) && diff > lag) {
+            LOG.warn("Reporting {} server does not match {} (time since last " +
+                    "update={}ms); closing...",
+              serverName, regionNode, diff);
+            closeRegionSilently(serverNode.getServerName(), regionName);
           }
         } else if (!regionNode.isInState(State.CLOSING, State.SPLITTING)) {
           // So, we can get report that a region is CLOSED or SPLIT because a heartbeat
           // came in at about same time as a region transition. Make sure there is some
           // elapsed time so less false alarms.
-          if (diff > 1000) {
-            LOG.warn("{} reported an unexpected OPEN on {}; time since last update={}ms",
-              regionNode, serverName, diff);
+          if (diff > lag) {
+            LOG.warn("Reporting {} state does not match {} (time since last update={}ms)",
+              serverName, regionNode, diff);
           }
         }
       } finally {

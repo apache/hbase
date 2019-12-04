@@ -320,6 +320,7 @@ public class MetaTableAccessor {
    * is stored in the name, so the returned object should only be used for the fields
    * in the regionName.
    */
+  // This should be moved to RegionInfo? TODO.
   public static RegionInfo parseRegionInfoFromRegionName(byte[] regionName) throws IOException {
     byte[][] fields = RegionInfo.parseRegionName(regionName);
     long regionId = Long.parseLong(Bytes.toString(fields[2]));
@@ -1308,9 +1309,7 @@ public class MetaTableAccessor {
    * Generates and returns a Put containing the region into for the catalog table
    */
   public static Put makePutFromRegionInfo(RegionInfo regionInfo, long ts) throws IOException {
-    Put put = new Put(regionInfo.getRegionName(), ts);
-    addRegionInfo(put, regionInfo);
-    return put;
+    return addRegionInfo(new Put(regionInfo.getRegionName(), ts), regionInfo);
   }
 
   /**

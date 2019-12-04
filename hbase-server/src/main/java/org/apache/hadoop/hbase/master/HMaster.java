@@ -1752,7 +1752,7 @@ public class HMaster extends HRegionServer implements MasterServices {
         } catch (HBaseIOException hioe) {
           //should ignore failed plans here, avoiding the whole balance plans be aborted
           //later calls of balance() can fetch up the failed and skipped plans
-          LOG.warn("Failed balance plan: {}, just skip it", plan, hioe);
+          LOG.warn("Failed balance plan {}, skipping...", plan, hioe);
         }
         //rpCount records balance plans processed, does not care if a plan succeeds
         rpCount++;
