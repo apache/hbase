@@ -151,6 +151,11 @@ public class TestIllegalTableDescriptor {
     hcd.setScope(0);
     checkTableIsLegal(htd);
 
+    hcd.setValue(ColumnFamilyDescriptorBuilder.IN_MEMORY_COMPACTION, "INVALID");
+    checkTableIsIllegal(htd);
+    hcd.setValue(ColumnFamilyDescriptorBuilder.IN_MEMORY_COMPACTION, "NONE");
+    checkTableIsLegal(htd);
+
     try {
       hcd.setDFSReplication((short) -1);
       fail("Illegal value for setDFSReplication did not throw");
