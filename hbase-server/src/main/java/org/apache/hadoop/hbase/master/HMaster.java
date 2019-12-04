@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -355,6 +355,12 @@ public class HMaster extends HRegionServer implements MasterServices {
   // manager of assignment nodes in zookeeper
   private AssignmentManager assignmentManager;
 
+  /**
+   * Cache for the meta region replica's locations. Also tracks their changes to avoid stale
+   * cache entries.
+   */
+  private final MetaRegionLocationCache metaRegionLocationCache;
+
   // manager of replication
   private ReplicationPeerManager replicationPeerManager;
 
@@ -508,8 +514,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    * #finishActiveMasterInitialization(MonitoredTask) after
    * the master becomes the active one.
    */
-  public HMaster(final Configuration conf)
-      throws IOException, KeeperException {
+  public HMaster(final Configuration conf) throws IOException {
     super(conf);
     TraceUtil.initTracer(conf);
     try {
@@ -522,7 +527,6 @@ public class HMaster extends HRegionServer implements MasterServices {
       } else {
         maintenanceMode = false;
       }
-
       this.rsFatals = new MemoryBoundedLogMessageBuffer(
           conf.getLong("hbase.master.buffer.for.rs.fatals", 1 * 1024 * 1024));
       LOG.info("hbase.rootdir={}, hbase.cluster.distributed={}", getDataRootDir(),
@@ -570,8 +574,10 @@ public class HMaster extends HRegionServer implements MasterServices {
 
       // Some unit tests don't need a cluster, so no zookeeper at all
       if (!conf.getBoolean("hbase.testing.nocluster", false)) {
+        this.metaRegionLocationCache = new MetaRegionLocationCache(this.zooKeeper);
         this.activeMasterManager = new ActiveMasterManager(zooKeeper, this.serverName, this);
       } else {
+        this.metaRegionLocationCache = null;
         this.activeMasterManager = null;
       }
       cachedClusterId = new CachedClusterId(conf);
@@ -3839,5 +3845,9 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (rbc != null) {
       rbc.chore();
     }
+  }
+
+  public MetaRegionLocationCache getMetaRegionLocationCache() {
+    return this.metaRegionLocationCache;
   }
 }
