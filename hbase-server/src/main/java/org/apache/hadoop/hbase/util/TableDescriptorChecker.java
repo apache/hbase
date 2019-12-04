@@ -188,6 +188,13 @@ public final class TableDescriptorChecker {
             "  must be greater than zero.";
         warnOrThrowExceptionForFailure(logWarn, message, null);
       }
+
+      // check in-memory compaction
+      try {
+        hcd.getInMemoryCompaction();
+      } catch (IllegalArgumentException e) {
+        warnOrThrowExceptionForFailure(logWarn, e.getMessage(), e);
+      }
     }
   }
 
