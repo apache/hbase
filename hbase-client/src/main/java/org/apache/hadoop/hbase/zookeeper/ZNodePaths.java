@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,7 +40,8 @@ public class ZNodePaths {
   // TODO: Replace this with ZooKeeper constant when ZOOKEEPER-277 is resolved.
   public static final char ZNODE_PATH_SEPARATOR = '/';
 
-  public final static String META_ZNODE_PREFIX = "meta-region-server";
+  public static final String META_ZNODE_PREFIX_CONF_KEY = "zookeeper.znode.metaserver";
+  public static final String META_ZNODE_PREFIX = "meta-region-server";
   private static final String DEFAULT_SNAPSHOT_CLEANUP_ZNODE = "snapshot-cleanup";
 
   // base znode for this cluster
@@ -94,7 +95,7 @@ public class ZNodePaths {
   public ZNodePaths(Configuration conf) {
     baseZNode = conf.get(ZOOKEEPER_ZNODE_PARENT, DEFAULT_ZOOKEEPER_ZNODE_PARENT);
     ImmutableMap.Builder<Integer, String> builder = ImmutableMap.builder();
-    metaZNodePrefix = conf.get("zookeeper.znode.metaserver", META_ZNODE_PREFIX);
+    metaZNodePrefix = conf.get(META_ZNODE_PREFIX_CONF_KEY, META_ZNODE_PREFIX);
     String defaultMetaReplicaZNode = ZNodePaths.joinZNode(baseZNode, metaZNodePrefix);
     builder.put(DEFAULT_REPLICA_ID, defaultMetaReplicaZNode);
     int numMetaReplicas = conf.getInt(META_REPLICAS_NUM, DEFAULT_META_REPLICA_NUM);
@@ -176,6 +177,18 @@ public class ZNodePaths {
     // from outside the master
     return Optional.ofNullable(metaReplicaZNodes.get(replicaId))
         .orElseGet(() -> metaReplicaZNodes.get(DEFAULT_REPLICA_ID) + "-" + replicaId);
+  }
+
+  /**
+   * Parses the meta replicaId from the passed path.
+   * @param path the name of the full path which includes baseZNode.
+   * @return replicaId
+   */
+  public int getMetaReplicaIdFromPath(String path) {
+    // Extract the znode from path. The prefix is of the following format.
+    // baseZNode + PATH_SEPARATOR.
+    int prefixLen = baseZNode.length() + 1;
+    return getMetaReplicaIdFromZnode(path.substring(prefixLen));
   }
 
   /**
