@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
-import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -56,7 +55,7 @@ public class TestShutdownBackupMaster {
 
   public static final class MockHMaster extends HMaster {
 
-    public MockHMaster(Configuration conf) throws IOException, KeeperException {
+    public MockHMaster(Configuration conf) throws IOException {
       super(conf);
     }
 
