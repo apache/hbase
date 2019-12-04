@@ -24,6 +24,7 @@ import org.apache.hbase.thirdparty.io.netty.channel.SimpleChannelInboundHandler;
 import org.apache.hbase.thirdparty.io.netty.util.concurrent.Promise;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.conf.Configuration;
@@ -62,12 +63,13 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
    */
   public NettyHBaseSaslRpcClientHandler(Promise<Boolean> saslPromise, UserGroupInformation ugi,
       SaslClientAuthenticationProvider provider, Token<? extends TokenIdentifier> token,
-      String serverPrincipal, boolean fallbackAllowed, Configuration conf) throws IOException {
+      InetAddress serverAddr, SecurityInfo securityInfo, boolean fallbackAllowed,
+      Configuration conf) throws IOException {
     this.saslPromise = saslPromise;
     this.ugi = ugi;
     this.conf = conf;
-    this.saslRpcClient = new NettyHBaseSaslRpcClient(conf, provider, token, serverPrincipal,
-        fallbackAllowed, conf.get(
+    this.saslRpcClient = new NettyHBaseSaslRpcClient(conf, provider, token, serverAddr,
+        securityInfo, fallbackAllowed, conf.get(
         "hbase.rpc.protection", SaslUtil.QualityOfProtection.AUTHENTICATION.name().toLowerCase()));
   }
 

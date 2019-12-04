@@ -21,6 +21,7 @@ import org.apache.hbase.thirdparty.io.netty.channel.ChannelPipeline;
 import org.apache.hbase.thirdparty.io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 
 import java.io.IOException;
+import java.net.InetAddress;
 
 import javax.security.sasl.Sasl;
 
@@ -41,9 +42,9 @@ public class NettyHBaseSaslRpcClient extends AbstractHBaseSaslRpcClient {
   private static final Logger LOG = LoggerFactory.getLogger(NettyHBaseSaslRpcClient.class);
 
   public NettyHBaseSaslRpcClient(Configuration conf, SaslClientAuthenticationProvider provider,
-      Token<? extends TokenIdentifier> token, String serverPrincipal, boolean fallbackAllowed,
-      String rpcProtection) throws IOException {
-    super(conf, provider, token, serverPrincipal, fallbackAllowed, rpcProtection);
+      Token<? extends TokenIdentifier> token, InetAddress serverAddr, SecurityInfo securityInfo,
+      boolean fallbackAllowed, String rpcProtection) throws IOException {
+    super(conf, provider, token, serverAddr, securityInfo, fallbackAllowed, rpcProtection);
   }
 
   public void setupSaslHandler(ChannelPipeline p) {

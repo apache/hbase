@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.concurrent.TimeUnit;
 
@@ -31,7 +32,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.CompressionCodec;
-import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -60,7 +60,9 @@ abstract class RpcConnection {
 
   protected final Token<? extends TokenIdentifier> token;
 
-  protected final String serverPrincipal; // server's krb5 principal name
+  protected final InetAddress serverAddress;
+
+  protected final SecurityInfo securityInfo;
 
   protected final int reloginMaxBackoff; // max pause before relogin on sasl failure
 
@@ -87,15 +89,16 @@ abstract class RpcConnection {
     if (remoteId.getAddress().isUnresolved()) {
       throw new UnknownHostException("unknown host: " + remoteId.getAddress().getHostName());
     }
+    this.serverAddress = remoteId.getAddress().getAddress();
     this.timeoutTimer = timeoutTimer;
     this.codec = codec;
     this.compressor = compressor;
     this.conf = conf;
 
     UserGroupInformation ticket = remoteId.getTicket().getUGI();
-    SecurityInfo securityInfo = SecurityInfo.getInfo(remoteId.getServiceName());
+    this.securityInfo = SecurityInfo.getInfo(remoteId.getServiceName());
     this.useSasl = isSecurityEnabled;
-    String serverPrincipal = null;
+
     // Choose the correct Token and AuthenticationProvider for this client to use
     SaslClientAuthenticationProviders providers =
         SaslClientAuthenticationProviders.getInstance(conf);
@@ -107,17 +110,6 @@ abstract class RpcConnection {
             providers.toString(), ticket.getTokens());
         throw new RuntimeException("Found no valid authentication method from options");
       }
-
-      String serverKey = securityInfo.getServerPrincipal();
-      if (serverKey == null) {
-        throw new IOException("Can't obtain server Kerberos config key from SecurityInfo");
-      }
-      serverPrincipal = SecurityUtil.getServerPrincipal(conf.get(serverKey),
-        remoteId.address.getAddress().getCanonicalHostName().toLowerCase());
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("RPC Server Kerberos principal name for service=" + remoteId.getServiceName()
-            + " is " + serverPrincipal);
-      }
     } else if (!useSasl) {
       // Hack, while SIMPLE doesn't go via SASL.
       pair = providers.getSimpleProvider();
@@ -127,8 +119,6 @@ abstract class RpcConnection {
 
     this.provider = pair.getFirst();
     this.token = pair.getSecond();
-    // May be null
-    this.serverPrincipal = serverPrincipal;
 
     LOG.debug("Using {} authentication for service{}, sasl={}",
         provider.getSaslAuthMethod().getName(), remoteId.serviceName, useSasl);

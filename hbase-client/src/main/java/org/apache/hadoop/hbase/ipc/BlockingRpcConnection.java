@@ -361,9 +361,10 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
 
   private boolean setupSaslConnection(final InputStream in2, final OutputStream out2)
       throws IOException {
-    saslRpcClient = new HBaseSaslRpcClient(this.rpcClient.conf, provider, token, serverPrincipal,
-        this.rpcClient.fallbackAllowed, this.rpcClient.conf.get("hbase.rpc.protection",
-          QualityOfProtection.AUTHENTICATION.name().toLowerCase(Locale.ROOT)),
+    saslRpcClient = new HBaseSaslRpcClient(this.rpcClient.conf, provider, token,
+        serverAddress, securityInfo, this.rpcClient.fallbackAllowed,
+        this.rpcClient.conf.get("hbase.rpc.protection",
+            QualityOfProtection.AUTHENTICATION.name().toLowerCase(Locale.ROOT)),
         this.rpcClient.conf.getBoolean(CRYPTO_AES_ENABLED_KEY, CRYPTO_AES_ENABLED_DEFAULT));
     return saslRpcClient.saslConnect(in2, out2);
   }
@@ -406,7 +407,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
             return null;
           } else {
             String msg = "Couldn't setup connection for "
-                + UserGroupInformation.getLoginUser().getUserName() + " to " + serverPrincipal;
+                + UserGroupInformation.getLoginUser().getUserName() + " to "
+                + securityInfo.getServerPrincipal();
             LOG.warn(msg, ex);
             throw new IOException(msg, ex);
           }

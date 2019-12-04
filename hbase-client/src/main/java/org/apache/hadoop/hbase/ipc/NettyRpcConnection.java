@@ -192,7 +192,7 @@ class NettyRpcConnection extends RpcConnection {
     final NettyHBaseSaslRpcClientHandler saslHandler;
     try {
       saslHandler = new NettyHBaseSaslRpcClientHandler(saslPromise, ticket, provider, token,
-          serverPrincipal, rpcClient.fallbackAllowed, this.rpcClient.conf);
+          serverAddress, securityInfo, rpcClient.fallbackAllowed, this.rpcClient.conf);
     } catch (IOException e) {
       failInit(ch, e);
       return;

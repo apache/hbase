@@ -28,6 +28,7 @@ import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.File;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.security.PrivilegedExceptionAction;
 import java.util.List;
 import java.util.Map;
@@ -74,6 +75,7 @@ import org.apache.hadoop.hbase.ipc.SimpleRpcServer;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.security.SaslUtil;
+import org.apache.hadoop.hbase.security.SecurityInfo;
 import org.apache.hadoop.hbase.security.token.SecureTestCluster;
 import org.apache.hadoop.hbase.security.token.TokenProvider;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -194,8 +196,8 @@ public class TestCustomSaslAuthenticationProvider {
         "IN_MEMORY", (byte)42, MECHANISM, AuthenticationMethod.TOKEN);
 
     @Override
-    public SaslClient createClient(Configuration conf, String serverPrincipal,
-        Token<? extends TokenIdentifier> token, boolean fallbackAllowed,
+    public SaslClient createClient(Configuration conf, InetAddress serverAddr,
+        SecurityInfo securityInfo, Token<? extends TokenIdentifier> token, boolean fallbackAllowed,
         Map<String, String> saslProps) throws IOException {
       return Sasl.createSaslClient(new String[] { MECHANISM }, null, null,
           SaslUtil.SASL_DEFAULT_REALM, saslProps, new InMemoryClientProviderCallbackHandler(token));

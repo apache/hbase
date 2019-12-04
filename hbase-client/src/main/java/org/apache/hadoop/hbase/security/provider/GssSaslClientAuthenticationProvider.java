@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.security.provider;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.util.Map;
 
 import javax.security.sasl.Sasl;
@@ -26,26 +27,43 @@ import javax.security.sasl.SaslClient;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.security.SaslUtil;
+import org.apache.hadoop.hbase.security.SecurityInfo;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)
 @InterfaceStability.Evolving
 public class GssSaslClientAuthenticationProvider extends AbstractSaslClientAuthenticationProvider {
+  private static final Logger LOG = LoggerFactory.getLogger(
+      GssSaslClientAuthenticationProvider.class);
   private static final String MECHANISM = "GSSAPI";
   private static final SaslAuthMethod SASL_AUTH_METHOD = new SaslAuthMethod(
       "KERBEROS", (byte)81, MECHANISM, AuthenticationMethod.KERBEROS);
 
+  String getServerPrincipal(Configuration conf, SecurityInfo securityInfo, InetAddress server)
+      throws IOException {
+    String serverKey = securityInfo.getServerPrincipal();
+    if (serverKey == null) {
+      throw new IOException("Can't obtain server Kerberos config key from SecurityInfo");
+    }
+    return SecurityUtil.getServerPrincipal(conf.get(serverKey),
+        server.getCanonicalHostName().toLowerCase());
+  }
+
   @Override
-  public SaslClient createClient(Configuration conf, String serverPrincipal,
-      Token<? extends TokenIdentifier> token, boolean fallbackAllowed,
+  public SaslClient createClient(Configuration conf, InetAddress serverAddr,
+      SecurityInfo securityInfo, Token<? extends TokenIdentifier> token, boolean fallbackAllowed,
       Map<String, String> saslProps) throws IOException {
+    String serverPrincipal = getServerPrincipal(conf, securityInfo, serverAddr);
+    LOG.debug("Setting up Kerberos RPC to server={}", serverPrincipal);
     String[] names = SaslUtil.splitKerberosName(serverPrincipal);
     if (names.length != 3) {
       throw new IOException("Kerberos principal '" + serverPrincipal

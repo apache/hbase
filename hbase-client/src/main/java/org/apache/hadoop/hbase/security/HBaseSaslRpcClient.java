@@ -27,6 +27,7 @@ import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetAddress;
 import java.nio.ByteBuffer;
 
 import javax.security.sasl.Sasl;
@@ -63,15 +64,16 @@ public class HBaseSaslRpcClient extends AbstractHBaseSaslRpcClient {
   private boolean initStreamForCrypto;
 
   public HBaseSaslRpcClient(Configuration conf, SaslClientAuthenticationProvider provider,
-      Token<? extends TokenIdentifier> token, String serverPrincipal, boolean fallbackAllowed)
-          throws IOException {
-    super(conf, provider, token, serverPrincipal, fallbackAllowed);
+      Token<? extends TokenIdentifier> token, InetAddress serverAddr, SecurityInfo securityInfo,
+      boolean fallbackAllowed) throws IOException {
+    super(conf, provider, token, serverAddr, securityInfo, fallbackAllowed);
   }
 
   public HBaseSaslRpcClient(Configuration conf, SaslClientAuthenticationProvider provider,
-      Token<? extends TokenIdentifier> token, String serverPrincipal, boolean fallbackAllowed,
-      String rpcProtection, boolean initStreamForCrypto) throws IOException {
-    super(conf, provider, token, serverPrincipal, fallbackAllowed, rpcProtection);
+      Token<? extends TokenIdentifier> token, InetAddress serverAddr, SecurityInfo securityInfo,
+      boolean fallbackAllowed, String rpcProtection, boolean initStreamForCrypto)
+          throws IOException {
+    super(conf, provider, token, serverAddr, securityInfo, fallbackAllowed, rpcProtection);
     this.initStreamForCrypto = initStreamForCrypto;
   }
 

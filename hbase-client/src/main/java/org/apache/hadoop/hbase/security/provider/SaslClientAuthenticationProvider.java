@@ -18,12 +18,14 @@
 package org.apache.hadoop.hbase.security.provider;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.util.Map;
 
 import javax.security.sasl.SaslClient;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.security.SecurityInfo;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -48,7 +50,7 @@ public interface SaslClientAuthenticationProvider {
   /**
    * Creates the SASL client instance for this auth'n method.
    */
-  SaslClient createClient(Configuration conf, String serverPrincipal,
+  SaslClient createClient(Configuration conf, InetAddress serverAddr, SecurityInfo securityInfo,
       Token<? extends TokenIdentifier> token, boolean fallbackAllowed,
       Map<String, String> saslProps) throws IOException;
 

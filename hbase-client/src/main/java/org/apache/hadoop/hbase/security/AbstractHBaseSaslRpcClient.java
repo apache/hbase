@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.security;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.util.Map;
 
 import javax.security.sasl.SaslClient;
@@ -59,8 +60,9 @@ public abstract class AbstractHBaseSaslRpcClient {
    */
   protected AbstractHBaseSaslRpcClient(Configuration conf,
       SaslClientAuthenticationProvider provider, Token<? extends TokenIdentifier> token,
-      String serverPrincipal, boolean fallbackAllowed) throws IOException {
-    this(conf, provider, token, serverPrincipal, fallbackAllowed, "authentication");
+      InetAddress serverAddr, SecurityInfo securityInfo, boolean fallbackAllowed)
+          throws IOException {
+    this(conf, provider, token, serverAddr, securityInfo, fallbackAllowed, "authentication");
   }
 
   /**
@@ -75,11 +77,13 @@ public abstract class AbstractHBaseSaslRpcClient {
    */
   protected AbstractHBaseSaslRpcClient(Configuration conf,
       SaslClientAuthenticationProvider provider, Token<? extends TokenIdentifier> token,
-      String serverPrincipal, boolean fallbackAllowed, String rpcProtection) throws IOException {
+      InetAddress serverAddr, SecurityInfo securityInfo, boolean fallbackAllowed,
+      String rpcProtection) throws IOException {
     this.fallbackAllowed = fallbackAllowed;
     saslProps = SaslUtil.initSaslProperties(rpcProtection);
 
-    saslClient = provider.createClient(conf, serverPrincipal, token, fallbackAllowed, saslProps);
+    saslClient = provider.createClient(
+        conf, serverAddr, securityInfo, token, fallbackAllowed, saslProps);
     if (saslClient == null) {
       throw new IOException("Authentication provider " + provider.getClass()
           + " returned a null SaslClient");
