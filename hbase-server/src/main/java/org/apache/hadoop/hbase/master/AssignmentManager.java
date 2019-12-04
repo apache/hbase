@@ -2662,18 +2662,16 @@ public class AssignmentManager extends ZooKeeperListener {
             for (ServerName server : getExcludedServersForSystemTable()) {
               regionsShouldMove.addAll(getCarryingSystemTables(server));
             }
-            Set<Address> serverbygroup = new HashSet<>();
             Set<Address> remainservers = new HashSet<>();
-            Set<Address> excludedAddresses = new HashSet<>();
             if (!regionsShouldMove.isEmpty()) {
               List<RegionPlan> plans = new ArrayList<>();
               List<ServerName> names = getExcludedServersForSystemTable();
               for (HRegionInfo regionInfo : regionsShouldMove) {
-                serverbygroup = balancer.getServersInDefaultOrGroup(regionInfo);
-                excludedAddresses = getAddressFromServerName(names);
+                Set<Address> serverbygroup = balancer.getServersInDefaultOrGroup(regionInfo);
+                Set<Address> excludedAddresses = getAddressFromServerName(names);
                 if (serverbygroup != null) {
                   for (Address address : serverbygroup) {
-                    if ( !excludedAddresses.contains(address) &&
+                    if (!excludedAddresses.contains(address) &&
                             getAddressFromServerName(serverManager.
                                     getOnlineServersList()).contains(address)) {
                       remainservers.add(address);
