@@ -86,6 +86,7 @@ import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.PackagePrivateFieldAccessor;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
@@ -95,6 +96,7 @@ import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.LimitInputStream;
 import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
@@ -158,6 +160,7 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor.Flus
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.EventType;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.quotas.QuotaScope;
 import org.apache.hadoop.hbase.quotas.QuotaType;
 import org.apache.hadoop.hbase.quotas.ThrottleType;
@@ -170,6 +173,7 @@ import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenIdentifier;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
+import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DynamicClassLoader;
@@ -3656,5 +3660,87 @@ public final class ProtobufUtil {
       }
     }
     return Collections.emptySet();
+  }
+
+  /**
+   * Get the Meta region state from the passed data bytes. Can handle both old and new style
+   * server names.
+   * @param data protobuf serialized data with meta server name.
+   * @param replicaId replica ID for this region
+   * @return RegionState instance corresponding to the serialized data.
+   * @throws DeserializationException if the data is invalid.
+   */
+  public static RegionState parseMetaRegionStateFrom(final byte[] data, int replicaId)
+      throws DeserializationException {
+    RegionState.State state = RegionState.State.OPEN;
+    ServerName serverName;
+    if (data != null && data.length > 0 && ProtobufUtil.isPBMagicPrefix(data)) {
+      try {
+        int prefixLen = ProtobufUtil.lengthOfPBMagic();
+        ZooKeeperProtos.MetaRegionServer rl =
+            ZooKeeperProtos.MetaRegionServer.PARSER.parseFrom(data, prefixLen,
+                data.length - prefixLen);
+        if (rl.hasState()) {
+          state = RegionState.State.convert(rl.getState());
+        }
+        HBaseProtos.ServerName sn = rl.getServer();
+        serverName = ServerName.valueOf(
+            sn.getHostName(), sn.getPort(), sn.getStartCode());
+      } catch (InvalidProtocolBufferException e) {
+        throw new DeserializationException("Unable to parse meta region location");
+      }
+    } else {
+      // old style of meta region location?
+      serverName = parseServerNameFrom(data);
+    }
+    if (serverName == null) {
+      state = RegionState.State.OFFLINE;
+    }
+    return new RegionState(RegionReplicaUtil.getRegionInfoForReplica(
+        HRegionInfo.FIRST_META_REGIONINFO, replicaId), state, serverName);
+  }
+
+  /**
+   * Get a ServerName from the passed in data bytes.
+   * @param data Data with a serialize server name in it; can handle the old style
+   * servername where servername was host and port.  Works too with data that
+   * begins w/ the pb 'PBUF' magic and that is then followed by a protobuf that
+   * has a serialized {@link ServerName} in it.
+   * @return Returns null if <code>data</code> is null else converts passed data
+   * to a ServerName instance.
+   * @throws DeserializationException
+   */
+  public static ServerName parseServerNameFrom(final byte [] data) throws DeserializationException {
+    if (data == null || data.length <= 0) return null;
+    if (isPBMagicPrefix(data)) {
+      int prefixLen = lengthOfPBMagic();
+      try {
+        ZooKeeperProtos.Master rss =
+            ZooKeeperProtos.Master.PARSER.parseFrom(data, prefixLen, data.length - prefixLen);
+        org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName sn =
+            rss.getMaster();
+        return ServerName.valueOf(sn.getHostName(), sn.getPort(), sn.getStartCode());
+      } catch (/*InvalidProtocolBufferException*/IOException e) {
+        // A failed parse of the znode is pretty catastrophic. Rather than loop
+        // retrying hoping the bad bytes will changes, and rather than change
+        // the signature on this method to add an IOE which will send ripples all
+        // over the code base, throw a RuntimeException.  This should "never" happen.
+        // Fail fast if it does.
+        throw new DeserializationException(e);
+      }
+    }
+    // The str returned could be old style -- pre hbase-1502 -- which was
+    // hostname and port seperated by a colon rather than hostname, port and
+    // startcode delimited by a ','.
+    String str = Bytes.toString(data);
+    int index = str.indexOf(ServerName.SERVERNAME_SEPARATOR);
+    if (index != -1) {
+      // Presume its ServerName serialized with versioned bytes.
+      return ServerName.parseVersionedServerName(data);
+    }
+    // Presume it a hostname:port format.
+    String hostname = Addressing.parseHostname(str);
+    int port = Addressing.parsePort(str);
+    return ServerName.valueOf(hostname, port, -1L);
   }
 }

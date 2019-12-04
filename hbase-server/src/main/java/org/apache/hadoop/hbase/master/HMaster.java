@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -307,6 +306,12 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   private RegionsRecoveryConfigManager regionsRecoveryConfigManager = null;
 
+  /**
+   * Cache for the meta region replica's locations. Also tracks their changes to avoid stale
+   * cache entries.
+   */
+  private final MetaRegionLocationCache metaRegionLocationCache;
+
   // buffer for "fatal error" notices from region servers
   // in the cluster. This is only used for assisting
   // operations/debugging.
@@ -517,11 +522,13 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     // Some unit tests don't need a cluster, so no zookeeper at all
     if (!conf.getBoolean("hbase.testing.nocluster", false)) {
+      this.metaRegionLocationCache = new MetaRegionLocationCache(this.zooKeeper);
       setInitLatch(new CountDownLatch(1));
       activeMasterManager = new ActiveMasterManager(zooKeeper, this.serverName, this);
       int infoPort = putUpJettyServer();
       startActiveMasterManager(infoPort);
     } else {
+      this.metaRegionLocationCache = null;
       activeMasterManager = null;
     }
     cachedClusterId = new CachedClusterId(conf);
@@ -3443,5 +3450,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       return super.getClusterId();
     }
     return cachedClusterId.getFromCacheOrFetch();
+  }
+
+  public MetaRegionLocationCache getMetaRegionLocationCache() {
+    return this.metaRegionLocationCache;
   }
 }
