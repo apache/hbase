@@ -131,9 +131,8 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
 
   /**
    * Get all the servers of this region's rs_group，and now only used in RSGroupBasedLoadBalancer
-   * @param region
+   * @param region Get the servers of region's table
    * @return Set of Address
-   * @throws HBaseIOException
    */
   Set<Address> getServersInDefaultOrGroup(
           HRegionInfo region) throws HBaseIOException;

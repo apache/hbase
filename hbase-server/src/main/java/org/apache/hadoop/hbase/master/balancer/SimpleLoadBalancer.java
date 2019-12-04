@@ -17,7 +17,16 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.Random;
+import java.util.Set;
+import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -28,9 +37,9 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.RegionPlan;
+import org.apache.hadoop.hbase.net.Address;
 
 import com.google.common.collect.MinMaxPriorityQueue;
-import org.apache.hadoop.hbase.net.Address;
 
 /**
  * Makes decisions about the placement and movement of Regions across
