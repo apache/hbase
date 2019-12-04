@@ -653,7 +653,9 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
       if (runnable instanceof CompactionRunner) {
         CompactionRunner runner = (CompactionRunner)runnable;
         LOG.debug("Compaction Rejected: " + runner);
-        runner.store.cancelRequestedCompaction(runner.compaction);
+        if (runner.compaction != null) {
+          runner.store.cancelRequestedCompaction(runner.compaction);
+        }
       }
     }
   }
