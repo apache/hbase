@@ -105,7 +105,7 @@ public class TestOpenRegionProcedureHang {
 
   public static final class HMasterForTest extends HMaster {
 
-    public HMasterForTest(Configuration conf) throws IOException, KeeperException {
+    public HMasterForTest(Configuration conf) throws IOException {
       super(conf);
     }
 

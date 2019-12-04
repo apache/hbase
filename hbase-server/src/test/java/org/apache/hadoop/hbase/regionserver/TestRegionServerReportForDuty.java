@@ -122,7 +122,7 @@ public class TestRegionServerReportForDuty {
    * This test HMaster class will always throw ServerNotRunningYetException if checked.
    */
   public static class NeverInitializedMaster extends HMaster {
-    public NeverInitializedMaster(Configuration conf) throws IOException, KeeperException {
+    public NeverInitializedMaster(Configuration conf) throws IOException {
       super(conf);
     }
 
