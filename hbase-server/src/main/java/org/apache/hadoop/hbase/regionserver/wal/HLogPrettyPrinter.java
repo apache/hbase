@@ -67,7 +67,7 @@ public class HLogPrettyPrinter extends WALPrettyPrinter {
    * Basic constructor that simply initializes values to reasonable defaults.
    */
   public HLogPrettyPrinter() {
-    this(false, false, -1l, null, null, false, System.out);
+    this(false, false, -1l, null, null, null, false, System.out);
   }
 
   /**
@@ -82,6 +82,9 @@ public class HLogPrettyPrinter extends WALPrettyPrinter {
    * @param sequence
    *          when nonnegative, serves as a filter; only log entries with this
    *          sequence id will be printed
+   * @param table
+   *          when not null, serves as a filter; only log entries from this
+   *          table will be printed
    * @param region
    *          when not null, serves as a filter; only log entries from this
    *          region will be printed
@@ -96,9 +99,9 @@ public class HLogPrettyPrinter extends WALPrettyPrinter {
    *          PrettyPrinter's output.
    */
   public HLogPrettyPrinter(boolean outputValues, boolean outputJSON,
-      long sequence, String region, String row, boolean persistentOutput,
+      long sequence, String table, String region, String row, boolean persistentOutput,
       PrintStream out) {
-    super(outputValues, outputJSON, sequence, region, row, persistentOutput, out);
+    super(outputValues, outputJSON, sequence, table, region, row, persistentOutput, out);
   }
 
   public static void main(String[] args) throws IOException {
