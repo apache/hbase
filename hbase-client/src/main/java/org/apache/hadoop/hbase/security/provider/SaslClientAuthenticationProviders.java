@@ -183,13 +183,24 @@ public final class SaslClientAuthenticationProviders {
     return new SaslClientAuthenticationProviders(providers, selector);
   }
 
-  public SaslClientAuthenticationProvider getSimpleProvider() {
+  /**
+   * Returns the provider and token pair for SIMPLE authentication.
+   *
+   * This method is a "hack" while SIMPLE authentication for HBase does not flow through
+   * the SASL codepath.
+   */
+  public Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>>
+      getSimpleProvider() {
     Optional<SaslClientAuthenticationProvider> optional = providers.values().stream()
         .filter((p) -> p instanceof SimpleSaslClientAuthenticationProvider)
         .findFirst();
-    return optional.get();
+    return new Pair<>(optional.get(), null);
   }
 
+  /**
+   * Chooses the best authentication provider and corresponding token given the HBase cluster
+   * identifier and the user.
+   */
   public Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> selectProvider(
       Text clusterId, UserGroupInformation clientUser) {
     return selector.selectProvider(clusterId, clientUser);
