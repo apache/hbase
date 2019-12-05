@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcClient;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
+import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProvider;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
@@ -376,11 +377,11 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
    * connection again. The other problem is to do with ticket expiry. To handle that, a relogin is
    * attempted.
    * <p>
-   * The retry logic is governed by the {@link #shouldAuthenticateOverKrb} method. In case when the
-   * user doesn't have valid credentials, we don't need to retry (from cache or ticket). In such
-   * cases, it is prudent to throw a runtime exception when we receive a SaslException from the
-   * underlying authentication implementation, so there is no retry from other high level (for eg,
-   * HCM or HBaseAdmin).
+   * The retry logic is governed by the {@link SaslClientAuthenticationProvider#isKerberos()}
+   * method. In case when the user doesn't have valid credentials, we don't need to retry (from
+   * cache or ticket). In such cases, it is prudent to throw a runtime exception when we receive a
+   * SaslException from the underlying authentication implementation, so there is no retry from
+   * other high level (for eg, HCM or HBaseAdmin).
    * </p>
    */
   private void handleSaslConnectionFailure(final int currRetries, final int maxRetries,
