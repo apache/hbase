@@ -107,51 +107,6 @@ public class WALPrettyPrinter {
   }
 
   /**
-   * Fully specified constructor.
-   *
-   * @param outputValues
-   *          when true, enables output of values along with other log
-   *          information
-   * @param outputJSON
-   *          when true, enables output in JSON format rather than a
-   *          "pretty string"
-   * @param sequence
-   *          when nonnegative, serves as a filter; only log entries with this
-   *          sequence id will be printed
-   * @param table
-   *          when non null, serves as a filter. only entries corresponding to this
-   *          table will be printed.
-   * @param region
-   *          when not null, serves as a filter; only log entries from this
-   *          region will be printed
-   * @param row
-   *          when not null, serves as a filter; only log entries from this row
-   *          will be printed
-   * @param persistentOutput
-   *          keeps a single list running for multiple files. if enabled, the
-   *          endPersistentOutput() method must be used!
-   * @param out
-   *          Specifies an alternative to stdout for the destination of this
-   *          PrettyPrinter's output.
-   */
-  public WALPrettyPrinter(boolean outputValues, boolean outputJSON,
-      long sequence, String table, String region, String row, boolean persistentOutput,
-      PrintStream out) {
-    this.outputValues = outputValues;
-    this.outputJSON = outputJSON;
-    this.sequence = sequence;
-    this.table = table;
-    this.region = region;
-    this.row = row;
-    this.persistentOutput = persistentOutput;
-    if (persistentOutput) {
-      beginPersistentOutput();
-    }
-    this.out = out;
-    this.firstTxn = true;
-  }
-
-  /**
    * turns value output on
    */
   public void enableValues() {
