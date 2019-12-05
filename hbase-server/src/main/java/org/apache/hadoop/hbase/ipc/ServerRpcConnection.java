@@ -109,7 +109,6 @@ abstract class ServerRpcConnection implements Closeable {
   protected BlockingService service;
 
   protected SaslServerAuthenticationProvider provider;
-//  protected AuthMethod authMethod;
   protected boolean saslContextEstablished;
   protected boolean skipInitialSaslHandshake;
   private ByteBuffer unwrappedData;
@@ -163,7 +162,9 @@ abstract class ServerRpcConnection implements Closeable {
   private String getFatalConnectionString(final int version, final byte authByte) {
     return "serverVersion=" + RpcServer.CURRENT_VERSION +
         ", clientVersion=" + version + ", authMethod=" + authByte +
-        ", authName=" + provider.getSaslAuthMethod().getName() + " from " + toString();
+        // The provider may be null if we failed to parse the header of the request
+        ", authName=" + (provider == null ? "unknown" : provider.getSaslAuthMethod().getName()) +
+        " from " + toString();
   }
 
   /**
