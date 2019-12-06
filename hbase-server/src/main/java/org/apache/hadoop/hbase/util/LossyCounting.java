@@ -20,6 +20,8 @@
 package org.apache.hadoop.hbase.util;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -72,7 +74,8 @@ public class LossyCounting<T> {
     this.data = new ConcurrentHashMap<>();
     this.listener = listener;
     calculateCurrentTerm();
-    executor = Executors.newSingleThreadExecutor();
+    executor = Executors.newSingleThreadExecutor(
+      new ThreadFactoryBuilder().setDaemon(true).setNameFormat("lossy-count-%d").build());
   }
 
   public LossyCounting(String name, LossyCountingListener listener) {
