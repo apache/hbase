@@ -230,6 +230,9 @@ public class BlockCacheUtil {
   public static boolean shouldReplaceExistingCacheBlock(BlockCache blockCache,
       BlockCacheKey cacheKey, Cacheable newBlock) {
     Cacheable existingBlock = blockCache.getBlock(cacheKey, false, false, false);
+    if (existingBlock == null) {
+      return true;
+    }
     int comparison = BlockCacheUtil.validateBlockAddition(existingBlock, newBlock, cacheKey);
     if (comparison < 0) {
       LOG.warn("Cached block contents differ by nextBlockOnDiskSize, the new block has "
