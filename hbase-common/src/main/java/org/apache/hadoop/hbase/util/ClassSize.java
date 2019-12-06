@@ -196,7 +196,7 @@ public class ClassSize {
         return (int) UnsafeAccess.theUnsafe.objectFieldOffset(
           HeaderSize.class.getDeclaredField("a"));
       } catch (NoSuchFieldException | SecurityException e) {
-        LOG.error(e.toString(), e);
+        LOG.error("Unable to determine header size", e);
       }
       return super.headerSize();
     }

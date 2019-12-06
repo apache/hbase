@@ -99,7 +99,6 @@ public class ByteBufferArray {
         }
         assert bufferIndex == bufferCount;
       } catch (Exception e) {
-        LOG.error("Buffer creation interrupted", e);
         throw new IOException(e);
       }
     } finally {

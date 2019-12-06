@@ -165,7 +165,7 @@ public class HBaseConfiguration extends Configuration {
       }
     } catch (LinkageError e) {
        // should we handle it more aggressively in addition to log the error?
-       LOG.warn("Error thrown: ", e);
+       LOG.warn("Failed to load ConfServlet", e);
     } catch (ClassNotFoundException ce) {
       LOG.debug("ClassNotFound: ConfServlet");
       // ignore
@@ -191,29 +191,22 @@ public class HBaseConfiguration extends Configuration {
       Method m = Configuration.class.getMethod("getPassword", String.class);
       char[] p = (char[]) m.invoke(conf, alias);
       if (p != null) {
-        LOG.debug(String.format("Config option \"%s\" was found through" +
-            " the Configuration getPassword method.", alias));
+        LOG.debug(
+          "Config option \"{}\" was found through the Configuration getPassword method",
+          alias);
         passwd = new String(p);
       } else {
-        LOG.debug(String.format(
-            "Config option \"%s\" was not found. Using provided default value",
-            alias));
+        LOG.debug("Config option \"{}\" was not found. Using provided default value", alias);
         passwd = defPass;
       }
     } catch (NoSuchMethodException e) {
       // this is a version of Hadoop where the credential
       //provider API doesn't exist yet
-      LOG.debug(String.format(
-          "Credential.getPassword method is not available." +
-              " Falling back to configuration."));
+      LOG.debug("Credential.getPassword method is not available. Falling back to configuration",
+        e);
       passwd = conf.get(alias, defPass);
-    } catch (SecurityException e) {
-      throw new IOException(e.getMessage(), e);
-    } catch (IllegalAccessException e) {
-      throw new IOException(e.getMessage(), e);
-    } catch (IllegalArgumentException e) {
-      throw new IOException(e.getMessage(), e);
-    } catch (InvocationTargetException e) {
+    } catch (SecurityException | IllegalAccessException | IllegalArgumentException
+        | InvocationTargetException e) {
       throw new IOException(e.getMessage(), e);
     }
     return passwd;

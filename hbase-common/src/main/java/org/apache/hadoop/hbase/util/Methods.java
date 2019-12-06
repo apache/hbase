@@ -24,14 +24,10 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.UndeclaredThrowableException;
 
-import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class Methods {
-  private static final Logger LOG = LoggerFactory.getLogger(Methods.class);
 
   public static <T> Object call(Class<T> clazz, T instance, String methodName,
       Class[] types, Object[] args) throws Exception {
@@ -39,12 +35,11 @@ public class Methods {
       Method m = clazz.getMethod(methodName, types);
       return m.invoke(instance, args);
     } catch (IllegalArgumentException arge) {
-      LOG.error(HBaseMarkers.FATAL, "Constructed invalid call. class="+clazz.getName()+
-          " method=" + methodName + " types=" + Classes.stringify(types), arge);
-      throw arge;
+      throw new IllegalArgumentException("Constructed invalid call. class=" + clazz.getName()
+          + " method=" + methodName + " types=" + Classes.stringify(types), arge);
     } catch (NoSuchMethodException nsme) {
       throw new IllegalArgumentException(
-          "Can't find method "+methodName+" in "+clazz.getName()+"!", nsme);
+          "Failed to find method " + methodName + " in " + clazz.getName(), nsme);
     } catch (InvocationTargetException ite) {
       // unwrap the underlying exception and rethrow
       if (ite.getTargetException() != null) {
@@ -60,10 +55,8 @@ public class Methods {
       throw new IllegalArgumentException(
           "Denied access calling "+clazz.getName()+"."+methodName+"()", iae);
     } catch (SecurityException se) {
-      LOG.error(HBaseMarkers.FATAL, "SecurityException calling method. class="+
-          clazz.getName()+" method=" + methodName + " types=" +
-          Classes.stringify(types), se);
-      throw se;
+      throw new SecurityException("SecurityException calling method. class=" + clazz.getName()
+          + " method=" + methodName + " types=" + Classes.stringify(types), se);
     }
   }
 }

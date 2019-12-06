@@ -32,7 +32,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,8 +50,7 @@ public class Threads {
     new UncaughtExceptionHandler() {
     @Override
     public void uncaughtException(Thread t, Throwable e) {
-      LOG.warn("Thread:" + t + " exited with Exception:"
-          + StringUtils.stringifyException(e));
+      LOG.warn("Thread: {} exited with Exception", t, e);
     }
   };
 

@@ -531,33 +531,25 @@ public abstract class CommonFSUtils {
   static void setStoragePolicy(final FileSystem fs, final Path path, final String storagePolicy,
       boolean throwException) throws IOException {
     if (storagePolicy == null) {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("We were passed a null storagePolicy, exiting early.");
-      }
+      LOG.trace("Passed a null storagePolicy, exiting early");
       return;
     }
     String trimmedStoragePolicy = storagePolicy.trim();
     if (trimmedStoragePolicy.isEmpty()) {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("We were passed an empty storagePolicy, exiting early.");
-      }
+      LOG.trace("Passed an empty storagePolicy, exiting early");
       return;
     } else {
       trimmedStoragePolicy = trimmedStoragePolicy.toUpperCase(Locale.ROOT);
     }
     if (trimmedStoragePolicy.equals(HConstants.DEFER_TO_HDFS_STORAGE_POLICY)) {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("We were passed the defer-to-hdfs policy {}, exiting early.",
-          trimmedStoragePolicy);
-      }
+      LOG.trace("Passed the defer-to-hdfs policy {}, exiting early",
+        trimmedStoragePolicy);
       return;
     }
     try {
       invokeSetStoragePolicy(fs, path, trimmedStoragePolicy);
     } catch (IOException e) {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Failed to invoke set storage policy API on FS", e);
-      }
+      LOG.trace("Failed to invoke set storage policy API on FS", e);
       if (throwException) {
         throw e;
       }
@@ -579,12 +571,14 @@ public abstract class CommonFSUtils {
       toThrow = e;
       final String msg = "FileSystem doesn't support setStoragePolicy; HDFS-6584, HDFS-9345 " +
           "not available. This is normal and expected on earlier Hadoop versions.";
+
       if (!warningMap.containsKey(fs)) {
         warningMap.put(fs, true);
         LOG.warn(msg, e);
       } else if (LOG.isDebugEnabled()) {
         LOG.debug(msg, e);
       }
+
       m = null;
     } catch (SecurityException e) {
       toThrow = e;
@@ -593,30 +587,29 @@ public abstract class CommonFSUtils {
           "to the user@hbase mailing list. Please be sure to include a link to your configs, and " +
           "logs that include this message and period of time before it. Logs around service " +
           "start up will probably be useful as well.";
+
       if (!warningMap.containsKey(fs)) {
         warningMap.put(fs, true);
         LOG.warn(msg, e);
       } else if (LOG.isDebugEnabled()) {
         LOG.debug(msg, e);
       }
+
       m = null; // could happen on setAccessible() or getDeclaredMethod()
     }
     if (m != null) {
       try {
         m.invoke(fs, path, storagePolicy);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Set storagePolicy=" + storagePolicy + " for path=" + path);
-        }
+        LOG.debug("Set storagePolicy={} for path={}", storagePolicy, path);
       } catch (Exception e) {
         toThrow = e;
         // This swallows FNFE, should we be throwing it? seems more likely to indicate dev
         // misuse than a runtime problem with HDFS.
         if (!warningMap.containsKey(fs)) {
           warningMap.put(fs, true);
-          LOG.warn("Unable to set storagePolicy=" + storagePolicy + " for path=" + path + ". " +
-              "DEBUG log level might have more details.", e);
+          LOG.warn("Unable to set storagePolicy=" + storagePolicy + " for path=" + path, e);
         } else if (LOG.isDebugEnabled()) {
-          LOG.debug("Unable to set storagePolicy=" + storagePolicy + " for path=" + path, e);
+          LOG.debug("Unable to set storagePolicy={} for path={}", storagePolicy, path, e);
         }
         // check for lack of HDFS-7228
         if (e instanceof InvocationTargetException) {
@@ -624,25 +617,24 @@ public abstract class CommonFSUtils {
           if (exception instanceof RemoteException &&
               HadoopIllegalArgumentException.class.getName().equals(
                 ((RemoteException)exception).getClassName())) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Given storage policy, '" +storagePolicy +"', was rejected and probably " +
-                "isn't a valid policy for the version of Hadoop you're running. I.e. if you're " +
-                "trying to use SSD related policies then you're likely missing HDFS-7228. For " +
-                "more information see the 'ArchivalStorage' docs for your Hadoop release.");
-            }
+            LOG.debug(
+              "Given storage policy, '{}', was rejected and probably "
+                  + "is not a valid policy for the version of Hadoop running. I.e. if you are "
+                  + "trying to use SSD related policies then you are likely missing HDFS-7228. For "
+                  + "more information see the 'ArchivalStorage' docs for your Hadoop release.",
+              storagePolicy);
           // Hadoop 2.8+, 3.0-a1+ added FileSystem.setStoragePolicy with a default implementation
           // that throws UnsupportedOperationException
           } else if (exception instanceof UnsupportedOperationException) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("The underlying FileSystem implementation doesn't support " +
-                  "setStoragePolicy. This is probably intentional on their part, since HDFS-9345 " +
-                  "appears to be present in your version of Hadoop. For more information check " +
-                  "the Hadoop documentation on 'ArchivalStorage', the Hadoop FileSystem " +
-                  "specification docs from HADOOP-11981, and/or related documentation from the " +
-                  "provider of the underlying FileSystem (its name should appear in the " +
-                  "stacktrace that accompanies this message). Note in particular that Hadoop's " +
-                  "local filesystem implementation doesn't support storage policies.", exception);
-            }
+            LOG.debug("The underlying FileSystem implementation does not support "
+                + "setStoragePolicy. This is probably intentional, since HDFS-9345 "
+                + "appears to be present in the available version of Hadoop. For more information check "
+                + "the Hadoop documentation on 'ArchivalStorage', the Hadoop FileSystem "
+                + "specification docs from HADOOP-11981, and/or related documentation from the "
+                + "provider of the underlying FileSystem (its name should appear in the "
+                + "stacktrace that accompanies this message). Note in particular that Hadoop's "
+                + "local filesystem implementation does not support storage policies.",
+              exception);
           }
         }
       }
@@ -703,9 +695,7 @@ public abstract class CommonFSUtils {
       status = filter == null ? fs.listStatus(dir) : fs.listStatus(dir, filter);
     } catch (FileNotFoundException fnfe) {
       // if directory doesn't exist, return null
-      if (LOG.isTraceEnabled()) {
-        LOG.trace(dir + " doesn't exist");
-      }
+      LOG.trace("Directory {} does not exist", dir, fnfe);
     }
     if (status == null || status.length < 1) {
       return null;
@@ -746,9 +736,7 @@ public abstract class CommonFSUtils {
       }
     } catch (FileNotFoundException fnfe) {
       // if directory doesn't exist, return null
-      if (LOG.isTraceEnabled()) {
-        LOG.trace(dir + " doesn't exist");
-      }
+      LOG.trace("Directory {} does not exist", dir, fnfe);
     }
     return status;
   }
@@ -783,13 +771,13 @@ public abstract class CommonFSUtils {
    * Log the current state of the filesystem from a certain root directory
    * @param fs filesystem to investigate
    * @param root root file/directory to start logging from
-   * @param LOG log to output information
+   * @param logger log to output information
    * @throws IOException if an unexpected exception occurs
    */
-  public static void logFileSystemState(final FileSystem fs, final Path root, Logger LOG)
+  public static void logFileSystemState(final FileSystem fs, final Path root, final Logger logger)
       throws IOException {
-    LOG.debug("File system contents for path " + root);
-    logFSTree(LOG, fs, root, "|-");
+    LOG.debug("File system contents for path {}", root);
+    logFSTree(logger, fs, root, "|-");
   }
 
   /**
@@ -797,19 +785,21 @@ public abstract class CommonFSUtils {
    *
    * @see #logFileSystemState(FileSystem, Path, Logger)
    */
-  private static void logFSTree(Logger LOG, final FileSystem fs, final Path root, String prefix)
+  private static void logFSTree(final Logger logger, final FileSystem fs, final Path root, String prefix)
       throws IOException {
-    FileStatus[] files = listStatus(fs, root, null);
-    if (files == null) {
-      return;
-    }
+    if (logger.isDebugEnabled()) {
+      FileStatus[] files = listStatus(fs, root, null);
+      if (files == null) {
+        return;
+      }
 
-    for (FileStatus file : files) {
-      if (file.isDirectory()) {
-        LOG.debug(prefix + file.getPath().getName() + "/");
-        logFSTree(LOG, fs, file.getPath(), prefix + "---");
-      } else {
-        LOG.debug(prefix + file.getPath().getName());
+      for (FileStatus file : files) {
+        if (file.isDirectory()) {
+          logger.debug(prefix + file.getPath().getName() + "/");
+          logFSTree(logger, fs, file.getPath(), prefix + "---");
+        } else {
+          logger.debug(prefix + file.getPath().getName());
+        }
       }
     }
   }
@@ -901,8 +891,8 @@ public abstract class CommonFSUtils {
           allMethodsPresent = true;
           LOG.debug("Using builder API via reflection for DFS file creation.");
         } catch (NoSuchMethodException e) {
-          LOG.debug("Could not find method on builder; will use old DFS API for file creation {}",
-              e.getMessage());
+          LOG.debug("Could not find method on builder; will use old DFS API for file creation",
+              e);
         }
       }
     }
@@ -955,7 +945,7 @@ public abstract class CommonFSUtils {
           return (FSDataOutputStream) buildMethod.invoke(builder);
         } catch (IllegalAccessException | InvocationTargetException e) {
           // Should have caught this failure during initialization, so log full trace here
-          LOG.warn("Couldn't use reflection with builder API", e);
+          LOG.warn("Failed to use reflection with builder API", e);
         }
       }
 
@@ -1008,7 +998,7 @@ public abstract class CommonFSUtils {
                  "top of an alternate FileSystem implementation you should manually verify that " +
                  "hflush and hsync are implemented; otherwise you risk data loss and hard to " +
                  "diagnose errors when our assumptions are violated.");
-        LOG.debug("The first request to check for StreamCapabilities came from this stacktrace.",
+        LOG.debug("The first request to check for StreamCapabilities came from this stacktrace",
             exception);
       } finally {
         PRESENT = tmp;

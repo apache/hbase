@@ -35,8 +35,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Function;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
@@ -47,8 +45,6 @@ import org.apache.hbase.thirdparty.org.apache.commons.collections4.IterableUtils
  */
 @InterfaceAudience.Private
 public class KeyValueUtil {
-
-  private static final Logger LOG = LoggerFactory.getLogger(KeyValueUtil.class);
 
   /**************** length *********************/
 
@@ -519,119 +515,89 @@ public class KeyValueUtil {
 
   static void checkKeyValueBytes(byte[] buf, int offset, int length, boolean withTags) {
     if (buf == null) {
-      String msg = "Invalid to have null byte array in KeyValue.";
-      LOG.warn(msg);
-      throw new IllegalArgumentException(msg);
+      throw new IllegalArgumentException("Invalid to have null byte array in KeyValue.");
     }
 
     int pos = offset, endOffset = offset + length;
     // check the key
     if (pos + Bytes.SIZEOF_INT > endOffset) {
-      String msg =
-          "Overflow when reading key length at position=" + pos + bytesToHex(buf, offset, length);
-      LOG.warn(msg);
-      throw new IllegalArgumentException(msg);
+      throw new IllegalArgumentException(
+          "Overflow when reading key length at position=" + pos + bytesToHex(buf, offset, length));
     }
     int keyLen = Bytes.toInt(buf, pos, Bytes.SIZEOF_INT);
     pos += Bytes.SIZEOF_INT;
     if (keyLen <= 0 || pos + keyLen > endOffset) {
-      String msg =
-          "Invalid key length in KeyValue. keyLength=" + keyLen + bytesToHex(buf, offset, length);
-      LOG.warn(msg);
-      throw new IllegalArgumentException(msg);
+      throw new IllegalArgumentException("Invalid key length in KeyValue. keyLength=" + keyLen + bytesToHex(buf, offset, length));
     }
     // check the value
     if (pos + Bytes.SIZEOF_INT > endOffset) {
-      String msg =
-          "Overflow when reading value length at position=" + pos + bytesToHex(buf, offset, length);
-      LOG.warn(msg);
-      throw new IllegalArgumentException(msg);
+      throw new IllegalArgumentException("Overflow when reading value length at position=" + pos
+          + bytesToHex(buf, offset, length));
     }
     int valLen = Bytes.toInt(buf, pos, Bytes.SIZEOF_INT);
     pos += Bytes.SIZEOF_INT;
     if (valLen < 0 || pos + valLen > endOffset) {
-      String msg = "Invalid value length in KeyValue, valueLength=" + valLen +
-          bytesToHex(buf, offset, length);
-      LOG.warn(msg);
-      throw new IllegalArgumentException(msg);
+      throw new IllegalArgumentException("Invalid value length in KeyValue, valueLength=" + valLen
+          + bytesToHex(buf, offset, length));
     }
     // check the row
     if (pos + Bytes.SIZEOF_SHORT > endOffset) {
-      String msg =
-          "Overflow when reading row length at position=" + pos + bytesToHex(buf, offset, length);
-      LOG.warn(msg);
-      throw new IllegalArgumentException(msg);
+      throw new IllegalArgumentException(
+          "Overflow when reading row length at position=" + pos + bytesToHex(buf, offset, length));
     }
     short rowLen = Bytes.toShort(buf, pos, Bytes.SIZEOF_SHORT);
     pos += Bytes.SIZEOF_SHORT;
     if (rowLen < 0 || pos + rowLen > endOffset) {
-      String msg =
-          "Invalid row length in KeyValue, rowLength=" + rowLen + bytesToHex(buf, offset, length);
-      LOG.warn(msg);
-      throw new IllegalArgumentException(msg);
+      throw new IllegalArgumentException(
+          "Invalid row length in KeyValue, rowLength=" + rowLen + bytesToHex(buf, offset, length));
     }
     pos += rowLen;
     // check the family
     if (pos + Bytes.SIZEOF_BYTE > endOffset) {
-      String msg = "Overflow when reading family length at position=" + pos +
-          bytesToHex(buf, offset, length);
-      LOG.warn(msg);
-      throw new IllegalArgumentException(msg);
+      throw new IllegalArgumentException("Overflow when reading family length at position=" + pos
+          + bytesToHex(buf, offset, length));
     }
     int familyLen = buf[pos];
     pos += Bytes.SIZEOF_BYTE;
     if (familyLen < 0 || pos + familyLen > endOffset) {
-      String msg = "Invalid family length in KeyValue, familyLength=" + familyLen +
-          bytesToHex(buf, offset, length);
-      LOG.warn(msg);
-      throw new IllegalArgumentException(msg);
+      throw new IllegalArgumentException("Invalid family length in KeyValue, familyLength="
+          + familyLen + bytesToHex(buf, offset, length));
     }
     pos += familyLen;
     // check the qualifier
     int qualifierLen = keyLen - Bytes.SIZEOF_SHORT - rowLen - Bytes.SIZEOF_BYTE - familyLen
         - Bytes.SIZEOF_LONG - Bytes.SIZEOF_BYTE;
     if (qualifierLen < 0 || pos + qualifierLen > endOffset) {
-      String msg = "Invalid qualifier length in KeyValue, qualifierLen=" + qualifierLen +
-              bytesToHex(buf, offset, length);
-      LOG.warn(msg);
-      throw new IllegalArgumentException(msg);
+      throw new IllegalArgumentException("Invalid qualifier length in KeyValue, qualifierLen=" + qualifierLen +
+        bytesToHex(buf, offset, length));
     }
     pos += qualifierLen;
     // check the timestamp
     if (pos + Bytes.SIZEOF_LONG > endOffset) {
-      String msg =
-          "Overflow when reading timestamp at position=" + pos + bytesToHex(buf, offset, length);
-      LOG.warn(msg);
-      throw new IllegalArgumentException(msg);
+      throw new IllegalArgumentException(
+          "Overflow when reading timestamp at position=" + pos + bytesToHex(buf, offset, length));
     }
     long timestamp = Bytes.toLong(buf, pos, Bytes.SIZEOF_LONG);
     if (timestamp < 0) {
-      String msg =
-          "Timestamp cannot be negative, ts=" + timestamp + bytesToHex(buf, offset, length);
-      LOG.warn(msg);
-      throw new IllegalArgumentException(msg);
+      throw new IllegalArgumentException(
+          "Timestamp cannot be negative, ts=" + timestamp + bytesToHex(buf, offset, length));
     }
     pos += Bytes.SIZEOF_LONG;
     // check the type
     if (pos + Bytes.SIZEOF_BYTE > endOffset) {
-      String msg =
-          "Overflow when reading type at position=" + pos + bytesToHex(buf, offset, length);
-      LOG.warn(msg);
-      throw new IllegalArgumentException(msg);
+      throw new IllegalArgumentException(
+          "Overflow when reading type at position=" + pos + bytesToHex(buf, offset, length));
     }
     byte type = buf[pos];
     if (!Type.isValidType(type)) {
-      String msg = "Invalid type in KeyValue, type=" + type + bytesToHex(buf, offset, length);
-      LOG.warn(msg);
-      throw new IllegalArgumentException(msg);
+      throw new IllegalArgumentException(
+          "Invalid type in KeyValue, type=" + type + bytesToHex(buf, offset, length));
     }
     pos += Bytes.SIZEOF_BYTE;
     // check the value
     if (pos + valLen > endOffset) {
-      String msg =
-          "Overflow when reading value part at position=" + pos + bytesToHex(buf, offset, length);
-      LOG.warn(msg);
-      throw new IllegalArgumentException(msg);
+      throw new IllegalArgumentException(
+          "Overflow when reading value part at position=" + pos + bytesToHex(buf, offset, length));
     }
     pos += valLen;
     // check the tags
@@ -643,46 +609,36 @@ public class KeyValueUtil {
       pos = checkKeyValueTagBytes(buf, offset, length, pos, endOffset);
     }
     if (pos != endOffset) {
-      String msg = "Some redundant bytes in KeyValue's buffer, startOffset=" + pos + ", endOffset="
-          + endOffset + bytesToHex(buf, offset, length);
-      LOG.warn(msg);
-      throw new IllegalArgumentException(msg);
+      throw new IllegalArgumentException("Some redundant bytes in KeyValue's buffer, startOffset="
+          + pos + ", endOffset=" + endOffset + bytesToHex(buf, offset, length));
     }
   }
 
   private static int checkKeyValueTagBytes(byte[] buf, int offset, int length, int pos,
       int endOffset) {
     if (pos + Bytes.SIZEOF_SHORT > endOffset) {
-      String msg = "Overflow when reading tags length at position=" + pos +
-          bytesToHex(buf, offset, length);
-      LOG.warn(msg);
-      throw new IllegalArgumentException(msg);
+      throw new IllegalArgumentException(
+          "Overflow when reading tags length at position=" + pos + bytesToHex(buf, offset, length));
     }
     short tagsLen = Bytes.toShort(buf, pos);
     pos += Bytes.SIZEOF_SHORT;
     if (tagsLen < 0 || pos + tagsLen > endOffset) {
-      String msg = "Invalid tags length in KeyValue at position=" + (pos - Bytes.SIZEOF_SHORT)
-          + bytesToHex(buf, offset, length);
-      LOG.warn(msg);
-      throw new IllegalArgumentException(msg);
+      throw new IllegalArgumentException("Invalid tags length in KeyValue at position="
+          + (pos - Bytes.SIZEOF_SHORT) + bytesToHex(buf, offset, length));
     }
     int tagsEndOffset = pos + tagsLen;
     for (; pos < tagsEndOffset;) {
       if (pos + Tag.TAG_LENGTH_SIZE > endOffset) {
-        String msg = "Overflow when reading tag length at position=" + pos +
-            bytesToHex(buf, offset, length);
-        LOG.warn(msg);
-        throw new IllegalArgumentException(msg);
+        throw new IllegalArgumentException("Overflow when reading tag length at position=" + pos
+            + bytesToHex(buf, offset, length));
       }
       short tagLen = Bytes.toShort(buf, pos);
       pos += Tag.TAG_LENGTH_SIZE;
       // tagLen contains one byte tag type, so must be not less than 1.
       if (tagLen < 1 || pos + tagLen > endOffset) {
-        String msg =
+        throw new IllegalArgumentException(
             "Invalid tag length at position=" + (pos - Tag.TAG_LENGTH_SIZE) + ", tagLength="
-                + tagLen + bytesToHex(buf, offset, length);
-        LOG.warn(msg);
-        throw new IllegalArgumentException(msg);
+                + tagLen + bytesToHex(buf, offset, length));
       }
       pos += tagLen;
     }

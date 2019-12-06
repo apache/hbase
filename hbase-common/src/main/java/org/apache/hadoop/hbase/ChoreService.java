@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map.Entry;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
@@ -151,20 +149,18 @@ public class ChoreService implements ChoreServicer {
 
     try {
       if (chore.getPeriod() <= 0) {
-        LOG.info("Chore {} is disabled because its period is not positive.", chore);
+        LOG.info("Chore {} is disabled because its period is not positive", chore);
         return false;
       }
-      LOG.info("Chore {} is enabled.", chore);
+      LOG.info("Chore {} is enabled", chore);
       chore.setChoreServicer(this);
       ScheduledFuture<?> future =
           scheduler.scheduleAtFixedRate(chore, chore.getInitialDelay(), chore.getPeriod(),
             chore.getTimeUnit());
       scheduledChores.put(chore, future);
       return true;
-    } catch (Exception exception) {
-      if (LOG.isInfoEnabled()) {
-        LOG.info("Could not successfully schedule chore: " + chore.getName());
-      }
+    } catch (Exception ex) {
+      LOG.error("Could not successfully schedule chore: {}", chore, ex);
       return false;
     }
   }
@@ -280,7 +276,12 @@ public class ChoreService implements ChoreServicer {
     // amongst occurrences of the same chore).
     if (scheduler.getCorePoolSize() < scheduledChores.size()) {
       scheduler.setCorePoolSize(scheduler.getCorePoolSize() + 1);
-      printChoreServiceDetails("requestCorePoolIncrease");
+
+      LOG.trace("requestCorePoolIncrease");
+      LOG.trace("ChoreService corePoolSize: {}", getCorePoolSize());
+      LOG.trace("ChoreService scheduledChores: {}", getNumberOfScheduledChores());
+      LOG.trace("ChoreService missingStartTimeCount: {}", getNumberOfChoresMissingStartTime());
+
       return true;
     }
     return false;
@@ -294,7 +295,11 @@ public class ChoreService implements ChoreServicer {
   private synchronized void requestCorePoolDecrease() {
     if (scheduler.getCorePoolSize() > MIN_CORE_POOL_SIZE) {
       scheduler.setCorePoolSize(scheduler.getCorePoolSize() - 1);
-      printChoreServiceDetails("requestCorePoolDecrease");
+
+      LOG.trace("requestCorePoolDecrease");
+      LOG.trace("ChoreService corePoolSize: {}", getCorePoolSize());
+      LOG.trace("ChoreService scheduledChores: {}", getNumberOfScheduledChores());
+      LOG.trace("ChoreService missingStartTimeCount: {}", getNumberOfChoresMissingStartTime());
     }
   }
 
@@ -315,7 +320,12 @@ public class ChoreService implements ChoreServicer {
     // more on each iteration. This hurts us because the ScheduledThreadPoolExecutor allocates
     // idle threads to chores based on how delayed they are.
     rescheduleChore(chore);
-    printChoreDetails("onChoreMissedStartTime", chore);
+
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("onChoreMissedStartTime");
+      LOG.trace("Chore: {}", chore);
+      LOG.trace("Chore timeBetweenRuns: {}", chore.getTimeBetweenRuns());
+    }
   }
 
   /**
@@ -325,10 +335,8 @@ public class ChoreService implements ChoreServicer {
    */
   public synchronized void shutdown() {
     scheduler.shutdownNow();
-    if (LOG.isInfoEnabled()) {
-      LOG.info("Chore service for: " + coreThreadPoolPrefix + " had " + scheduledChores.keySet()
-          + " on shutdown");
-    }
+    LOG.info("Chore service for: {} had {} on shutdown", coreThreadPoolPrefix,
+      scheduledChores.keySet());
     cancelAllChores(true);
     scheduledChores.clear();
     choresMissingStartTime.clear();
@@ -359,34 +367,4 @@ public class ChoreService implements ChoreServicer {
     }
   }
 
-  /**
-   * Prints a summary of important details about the chore. Used for debugging purposes
-   */
-  private void printChoreDetails(final String header, ScheduledChore chore) {
-    LinkedHashMap<String, String> output = new LinkedHashMap<>();
-    output.put(header, "");
-    output.put("Chore name: ", chore.getName());
-    output.put("Chore period: ", Integer.toString(chore.getPeriod()));
-    output.put("Chore timeBetweenRuns: ", Long.toString(chore.getTimeBetweenRuns()));
-
-    for (Entry<String, String> entry : output.entrySet()) {
-      if (LOG.isTraceEnabled()) LOG.trace(entry.getKey() + entry.getValue());
-    }
-  }
-
-  /**
-   * Prints a summary of important details about the service. Used for debugging purposes
-   */
-  private void printChoreServiceDetails(final String header) {
-    LinkedHashMap<String, String> output = new LinkedHashMap<>();
-    output.put(header, "");
-    output.put("ChoreService corePoolSize: ", Integer.toString(getCorePoolSize()));
-    output.put("ChoreService scheduledChores: ", Integer.toString(getNumberOfScheduledChores()));
-    output.put("ChoreService missingStartTimeCount: ",
-      Integer.toString(getNumberOfChoresMissingStartTime()));
-
-    for (Entry<String, String> entry : output.entrySet()) {
-      if (LOG.isTraceEnabled()) LOG.trace(entry.getKey() + entry.getValue());
-    }
-  }
 }

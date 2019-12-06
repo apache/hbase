@@ -243,7 +243,7 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
     CoprocessorClassLoader cl = getIfCached(path);
     String pathStr = path.toString();
     if (cl != null) {
-      LOG.debug("Found classloader "+ cl + " for "+ pathStr);
+      LOG.debug("Found classloader {} for {}", cl, pathStr);
       return cl;
     }
 
@@ -255,7 +255,7 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
     try {
       cl = getIfCached(path);
       if (cl != null) {
-        LOG.debug("Found classloader "+ cl + " for "+ pathStr);
+        LOG.debug("Found classloader {} for {}", cl, pathStr);
         return cl;
       }
 
@@ -293,10 +293,7 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
       throws ClassNotFoundException {
     // Delegate to the parent immediately if this class is exempt
     if (isClassExempt(name, includedClassPrefixes)) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Skipping exempt class " + name +
-            " - delegating directly to parent");
-      }
+      LOG.debug("Skipping exempt class {} - delegating directly to parent", name);
       return parent.loadClass(name);
     }
 
@@ -304,30 +301,22 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
       // Check whether the class has already been loaded:
       Class<?> clasz = findLoadedClass(name);
       if (clasz != null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Class " + name + " already loaded");
-        }
+        LOG.debug("Class {} already loaded", name);
       }
       else {
         try {
           // Try to find this class using the URLs passed to this ClassLoader
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Finding class: " + name);
-          }
+          LOG.debug("Finding class: {}", name);
           clasz = findClass(name);
         } catch (ClassNotFoundException e) {
           // Class not found using this ClassLoader, so delegate to parent
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Class " + name + " not found - delegating to parent");
-          }
+          LOG.debug("Class {} not found - delegating to parent", name);
           try {
             clasz = parent.loadClass(name);
           } catch (ClassNotFoundException e2) {
             // Class not found in this ClassLoader or in the parent ClassLoader
             // Log some debug output before re-throwing ClassNotFoundException
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Class " + name + " not found in parent loader");
-            }
+            LOG.debug("Class {} not found in parent loader", name);
             throw e2;
           }
         }
@@ -343,9 +332,7 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
 
     // Delegate to the parent first if necessary
     if (loadResourceUsingParentFirst(name)) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Checking parent first for resource " + name);
-      }
+      LOG.debug("Checking parent first for resource: {}", name);
       resource = super.getResource(name);
       parentLoaded = true;
     }

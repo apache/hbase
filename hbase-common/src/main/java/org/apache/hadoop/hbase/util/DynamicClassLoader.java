@@ -165,26 +165,18 @@ public class DynamicClassLoader extends ClassLoaderBase {
         // Check whether the class has already been loaded:
         Class<?> clasz = findLoadedClass(name);
         if (clasz != null) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Class " + name + " already loaded");
-          }
+          LOG.debug("Class {} already loaded", name);
         }
         else {
           try {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Finding class: " + name);
-            }
+            LOG.debug("Finding class: {}", name);
             clasz = findClass(name);
           } catch (ClassNotFoundException cnfe) {
             // Load new jar files if any
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Loading new jar files, if any");
-            }
+            LOG.debug("Loading new jar files, if any");
             loadNewJars();
 
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Finding class again: " + name);
-            }
+            LOG.debug("Finding class again: {}", name);
             clasz = findClass(name);
           }
         }
@@ -232,10 +224,8 @@ public class DynamicClassLoader extends ClassLoaderBase {
       Path path = status.getPath();
       String fileName = path.getName();
       if (!fileName.endsWith(".jar")) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Ignored non-jar file " + fileName);
-        }
-        continue; // Ignore non-jar files
+        LOG.debug("Ignored non-jar file {}", fileName);
+        continue;
       }
       Long cachedLastModificationTime = jarModifiedTime.get(fileName);
       if (cachedLastModificationTime != null) {

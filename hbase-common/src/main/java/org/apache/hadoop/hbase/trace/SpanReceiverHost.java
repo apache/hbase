@@ -111,7 +111,7 @@ public class SpanReceiverHost {
       try {
         rcvr.close();
       } catch (IOException e) {
-        LOG.warn("Unable to close SpanReceiver correctly: " + e.getMessage(), e);
+        LOG.warn("Unable to close SpanReceiver correctly", e);
       }
     }
   }
