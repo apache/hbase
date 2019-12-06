@@ -24,7 +24,6 @@ import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -34,7 +33,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -1271,7 +1269,7 @@ public abstract class FSUtils extends CommonFSUtils {
    *   family dir and for each store file.
    * @return Map keyed by StoreFile name with a value of the full Path.
    * @throws IOException When scanning the directory fails.
-   * @throws InterruptedException
+   * @throws InterruptedException the thread is interrupted, either before or during the activity.
    */
   public static Map<String, Path> getTableStoreFilePathMap(Map<String, Path> resultMap,
       final FileSystem fs, final Path hbaseRootDir, TableName tableName, final PathFilter sfFilter,
