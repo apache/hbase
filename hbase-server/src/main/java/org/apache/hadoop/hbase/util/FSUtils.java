@@ -38,6 +38,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Vector;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -635,53 +636,55 @@ public abstract class FSUtils extends CommonFSUtils {
   }
 
   /**
-   * Writes a new unique identifier for this cluster to the "hbase.id" file
-   * in the HBase root directory
+   * Writes a new unique identifier for this cluster to the "hbase.id" file in the HBase root
+   * directory.
    * @param fs the root directory FileSystem
    * @param rootdir the path to the HBase root directory
    * @param clusterId the unique identifier to store
    * @param wait how long (in milliseconds) to wait between retries
    * @throws IOException if writing to the FileSystem fails and no wait value
    */
-  public static void setClusterId(FileSystem fs, Path rootdir, ClusterId clusterId,
-      int wait) throws IOException {
+  public static void setClusterId(final FileSystem fs, final Path rootdir,
+      final ClusterId clusterId, final long wait) throws IOException {
+
+    final Path idFile = new Path(rootdir, HConstants.CLUSTER_ID_FILE_NAME);
+    final Path tempDir = new Path(rootdir, HConstants.HBASE_TEMP_DIRECTORY);
+    final Path tempIdFile = new Path(tempDir, HConstants.CLUSTER_ID_FILE_NAME);
+
+    LOG.debug("Create cluster ID file [{}] with ID: {}", idFile, clusterId);
+
     while (true) {
-      try {
-        Path idFile = new Path(rootdir, HConstants.CLUSTER_ID_FILE_NAME);
-        Path tempIdFile = new Path(rootdir, HConstants.HBASE_TEMP_DIRECTORY +
-          Path.SEPARATOR + HConstants.CLUSTER_ID_FILE_NAME);
-        // Write the id file to a temporary location
-        FSDataOutputStream s = fs.create(tempIdFile);
-        try {
-          s.write(clusterId.toByteArray());
-          s.close();
-          s = null;
-          // Move the temporary file to its normal location. Throw an IOE if
-          // the rename failed
-          if (!fs.rename(tempIdFile, idFile)) {
-            throw new IOException("Unable to move temp version file to " + idFile);
-          }
-        } finally {
-          // Attempt to close the stream if still open on the way out
-          try {
-            if (s != null) s.close();
-          } catch (IOException ignore) { }
+      Optional<IOException> failure = Optional.empty();
+
+      LOG.debug("Write the cluster ID file to a temporary location: {}", tempIdFile);
+      try (FSDataOutputStream s = fs.create(tempIdFile)) {
+        s.write(clusterId.toByteArray());
+
+        LOG.debug("Move the temporary cluster ID file to its target location [{}]:[{}]", tempIdFile,
+          idFile);
+        if (!fs.rename(tempIdFile, idFile)) {
+          failure =
+              Optional.of(new IOException("Unable to move temp cluster ID file to " + idFile));
         }
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Created cluster ID file at " + idFile.toString() + " with ID: " + clusterId);
-        }
-        return;
       } catch (IOException ioe) {
-        if (wait > 0) {
-          LOG.warn("Unable to create cluster ID file in " + rootdir.toString() +
-              ", retrying in " + wait + "msec: " + StringUtils.stringifyException(ioe));
+        failure = Optional.of(ioe);
+      }
+
+      if (!failure.isPresent()) {
+        return;
+      } else {
+        final IOException cause = failure.get();
+        if (wait > 0L) {
+          LOG.warn("Unable to create cluster ID file in {}, retrying in {}ms", rootdir, wait,
+            cause);
           try {
             Thread.sleep(wait);
           } catch (InterruptedException e) {
-            throw (InterruptedIOException)new InterruptedIOException().initCause(e);
+            Thread.currentThread().interrupt();
+            throw (InterruptedIOException) new InterruptedIOException().initCause(e);
           }
         } else {
-          throw ioe;
+          throw cause;
         }
       }
     }
