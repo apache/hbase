@@ -17,31 +17,30 @@
  */
 package org.apache.hadoop.hbase.security.provider;
 
-import java.util.Map;
-
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
+/**
+ * Encapsulation of client-side logic to authenticate to HBase via some means over SASL.
+ * Implementations should not directly implement this interface, but instead extend
+ * {@link AbstractSaslClientAuthenticationProvider}.
+ *
+ * Implementations of this interface must make an implementation of {@code hashCode()}
+ * which returns the same value across multiple instances of the provider implementation.
+ */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)
 @InterfaceStability.Evolving
-public interface AuthenticationProviderSelector {
+public interface SaslAuthenticationProvider {
 
   /**
-   * Initializes the implementation with configuration and a set of providers available.
+   * Returns the attributes which identify how this provider authenticates.
    */
-  void configure(Configuration conf, Map<Byte,SaslClientAuthenticationProvider> availableProviders);
+  SaslAuthMethod getSaslAuthMethod();
 
   /**
-   * Chooses the authentication provider which should be used given the provided client context
-   * from the authentication providers passed in via {@link #configure(Configuration, Map)}.
+   * Returns the name of the type used by the TokenIdentifier.
    */
-  Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> selectProvider(
-      Text clusterId, UserGroupInformation ugi);
+  Text getTokenKind();
 }

@@ -27,7 +27,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.security.SecurityInfo;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -38,9 +37,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformati
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)
 @InterfaceStability.Evolving
 public class SimpleSaslClientAuthenticationProvider extends
-    AbstractSaslClientAuthenticationProvider {
-  private static final SaslAuthMethod SASL_AUTH_METHOD = new SaslAuthMethod(
-      "SIMPLE", (byte)80, "", AuthenticationMethod.SIMPLE);
+    SimpleSaslAuthenticationProvider implements SaslClientAuthenticationProvider {
 
   @Override
   public SaslClient createClient(Configuration conf, InetAddress serverAddress,
@@ -58,10 +55,5 @@ public class SimpleSaslClientAuthenticationProvider extends
       userInfoPB.setRealUser(user.getRealUser().getUserName());
     }
     return userInfoPB.build();
-  }
-
-  @Override
-  public SaslAuthMethod getSaslAuthMethod() {
-    return SASL_AUTH_METHOD;
   }
 }

@@ -35,7 +35,7 @@ import org.apache.yetus.audience.InterfaceStability;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)
 @InterfaceStability.Evolving
-public interface SaslServerAuthenticationProvider extends SaslClientAuthenticationProvider {
+public interface SaslServerAuthenticationProvider extends SaslAuthenticationProvider {
 
   /**
    * Creates the SaslServer to accept incoming SASL authentication requests.

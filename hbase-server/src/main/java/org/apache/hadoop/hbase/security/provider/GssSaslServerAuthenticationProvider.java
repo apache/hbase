@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)
 @InterfaceStability.Evolving
-public class GssSaslServerAuthenticationProvider extends GssSaslClientAuthenticationProvider
+public class GssSaslServerAuthenticationProvider extends GssSaslAuthenticationProvider
     implements SaslServerAuthenticationProvider {
   private static final Logger LOG = LoggerFactory.getLogger(
       GssSaslServerAuthenticationProvider.class);

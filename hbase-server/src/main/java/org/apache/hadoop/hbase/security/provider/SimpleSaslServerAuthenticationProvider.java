@@ -31,7 +31,7 @@ import org.apache.yetus.audience.InterfaceStability;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)
 @InterfaceStability.Evolving
-public class SimpleSaslServerAuthenticationProvider extends SimpleSaslClientAuthenticationProvider
+public class SimpleSaslServerAuthenticationProvider extends SimpleSaslAuthenticationProvider
     implements SaslServerAuthenticationProvider {
 
   @Override

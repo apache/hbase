@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SecurityInfo;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -48,16 +47,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformati
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)
 @InterfaceStability.Evolving
-public class DigestSaslClientAuthenticationProvider extends
-    AbstractSaslClientAuthenticationProvider {
+public class DigestSaslClientAuthenticationProvider extends DigestSaslAuthenticationProvider
+    implements SaslClientAuthenticationProvider {
 
   private static final String MECHANISM = "DIGEST-MD5";
-  private static final SaslAuthMethod SASL_AUTH_METHOD = new SaslAuthMethod(
-      "DIGEST", (byte)82, MECHANISM, AuthenticationMethod.TOKEN);
-
-  public static String getMechanism() {
-    return MECHANISM;
-  }
 
   @Override
   public SaslClient createClient(Configuration conf, InetAddress serverAddr,
@@ -65,11 +58,6 @@ public class DigestSaslClientAuthenticationProvider extends
       Map<String, String> saslProps) throws IOException {
     return Sasl.createSaslClient(new String[] { MECHANISM }, null, null,
         SaslUtil.SASL_DEFAULT_REALM, saslProps, new DigestSaslClientCallbackHandler(token));
-  }
-
-  @Override
-  public SaslAuthMethod getSaslAuthMethod() {
-    return SASL_AUTH_METHOD;
   }
 
   public static class DigestSaslClientCallbackHandler implements CallbackHandler {

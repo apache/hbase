@@ -26,13 +26,13 @@ import javax.security.sasl.SaslClient;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.security.SecurityInfo;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation;
 
 /**
  * Encapsulation of client-side logic to authenticate to HBase via some means over SASL.
@@ -44,7 +44,7 @@ import org.apache.yetus.audience.InterfaceStability;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)
 @InterfaceStability.Evolving
-public interface SaslClientAuthenticationProvider {
+public interface SaslClientAuthenticationProvider extends SaslAuthenticationProvider {
 
   /**
    * Creates the SASL client instance for this auth'n method.
@@ -52,16 +52,6 @@ public interface SaslClientAuthenticationProvider {
   SaslClient createClient(Configuration conf, InetAddress serverAddr, SecurityInfo securityInfo,
       Token<? extends TokenIdentifier> token, boolean fallbackAllowed,
       Map<String, String> saslProps) throws IOException;
-
-  /**
-   * Returns the attributes which identify how this provider authenticates.
-   */
-  SaslAuthMethod getSaslAuthMethod();
-
-  /**
-   * Returns the name of the type used by the TokenIdentifier.
-   */
-  Text getTokenKind();
 
   /**
    * Constructs a {@link UserInformation} from the given {@link UserGroupInformation}

@@ -17,31 +17,22 @@
  */
 package org.apache.hadoop.hbase.security.provider;
 
-import java.util.Map;
-
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
+/**
+ * Base client for client/server implementations for the "SIMPLE" HBase auth'n method.
+ */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)
 @InterfaceStability.Evolving
-public interface AuthenticationProviderSelector {
+public class SimpleSaslAuthenticationProvider extends BuiltInSaslAuthenticationProvider {
+  private static final SaslAuthMethod SASL_AUTH_METHOD = new SaslAuthMethod(
+      "SIMPLE", (byte)80, "", AuthenticationMethod.SIMPLE);
 
-  /**
-   * Initializes the implementation with configuration and a set of providers available.
-   */
-  void configure(Configuration conf, Map<Byte,SaslClientAuthenticationProvider> availableProviders);
-
-  /**
-   * Chooses the authentication provider which should be used given the provided client context
-   * from the authentication providers passed in via {@link #configure(Configuration, Map)}.
-   */
-  Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> selectProvider(
-      Text clusterId, UserGroupInformation ugi);
+  @Override
+  public SaslAuthMethod getSaslAuthMethod() {
+    return SASL_AUTH_METHOD;
+  }
 }

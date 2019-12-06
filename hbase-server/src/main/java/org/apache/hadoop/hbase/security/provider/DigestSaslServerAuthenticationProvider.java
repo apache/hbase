@@ -45,7 +45,7 @@ import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)
 @InterfaceStability.Evolving
-public class DigestSaslServerAuthenticationProvider extends DigestSaslClientAuthenticationProvider
+public class DigestSaslServerAuthenticationProvider extends DigestSaslAuthenticationProvider
     implements SaslServerAuthenticationProvider {
   private static final Logger LOG = LoggerFactory.getLogger(
       DigestSaslServerAuthenticationProvider.class);

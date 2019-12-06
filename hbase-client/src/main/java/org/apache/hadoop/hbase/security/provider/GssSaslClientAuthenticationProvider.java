@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SecurityInfo;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -42,12 +41,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformati
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)
 @InterfaceStability.Evolving
-public class GssSaslClientAuthenticationProvider extends AbstractSaslClientAuthenticationProvider {
+public class GssSaslClientAuthenticationProvider extends GssSaslAuthenticationProvider
+    implements SaslClientAuthenticationProvider {
   private static final Logger LOG = LoggerFactory.getLogger(
       GssSaslClientAuthenticationProvider.class);
-  private static final String MECHANISM = "GSSAPI";
-  private static final SaslAuthMethod SASL_AUTH_METHOD = new SaslAuthMethod(
-      "KERBEROS", (byte)81, MECHANISM, AuthenticationMethod.KERBEROS);
 
   String getServerPrincipal(Configuration conf, SecurityInfo securityInfo, InetAddress server)
       throws IOException {
@@ -70,13 +67,8 @@ public class GssSaslClientAuthenticationProvider extends AbstractSaslClientAuthe
       throw new IOException("Kerberos principal '" + serverPrincipal
           + "' does not have the expected format");
     }
-    return Sasl.createSaslClient(new String[] { MECHANISM }, null, names[0], names[1], saslProps,
-        null);
-  }
-
-  @Override
-  public SaslAuthMethod getSaslAuthMethod() {
-    return SASL_AUTH_METHOD;
+    return Sasl.createSaslClient(new String[] { getSaslAuthMethod().getSaslMechanism() }, null,
+        names[0], names[1], saslProps, null);
   }
 
   @Override
