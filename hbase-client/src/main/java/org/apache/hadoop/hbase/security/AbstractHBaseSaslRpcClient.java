@@ -54,7 +54,8 @@ public abstract class AbstractHBaseSaslRpcClient {
    * @param conf the configuration object
    * @param provider the authentication provider
    * @param token token to use if needed by the authentication method
-   * @param serverPrincipal the server principal that we are trying to set the connection up to
+   * @param serverAddr the address of the hbase service
+   * @param securityInfo the security details for the remote hbase service
    * @param fallbackAllowed does the client allow fallback to simple authentication
    * @throws IOException
    */
@@ -70,7 +71,8 @@ public abstract class AbstractHBaseSaslRpcClient {
    * @param conf configuration object
    * @param provider the authentication provider
    * @param token token to use if needed by the authentication method
-   * @param serverPrincipal the server principal that we are trying to set the connection up to
+   * @param serverAddr the address of the hbase service
+   * @param securityInfo the security details for the remote hbase service
    * @param fallbackAllowed does the client allow fallback to simple authentication
    * @param rpcProtection the protection level ("authentication", "integrity" or "privacy")
    * @throws IOException
