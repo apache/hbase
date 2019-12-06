@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.security.provider;
 
 import java.util.Map;
+import java.util.Objects;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.User;
@@ -38,37 +39,40 @@ public class DefaultProviderSelector implements AuthenticationProviderSelector {
   SimpleSaslClientAuthenticationProvider simpleAuth = null;
   GssSaslClientAuthenticationProvider krbAuth = null;
   DigestSaslClientAuthenticationProvider digestAuth = null;
-  Map<Byte,SaslClientAuthenticationProvider> providers;
 
   @Override
-  public void configure(Configuration conf, Map<Byte,SaslClientAuthenticationProvider> providers) {
-    this.conf = conf;
-    this.providers = providers;
-    for (SaslClientAuthenticationProvider provider : providers.values()) {
+  public synchronized void configure(
+      Configuration conf, Map<Byte,SaslClientAuthenticationProvider> providers) {
+    if (this.conf != null) {
+      throw new IllegalStateException("configure() should only be called once");
+    }
+    this.conf = Objects.requireNonNull(conf);
+    for (SaslClientAuthenticationProvider provider : Objects.requireNonNull(providers).values()) {
       if (provider instanceof SimpleSaslClientAuthenticationProvider) {
         if (simpleAuth != null) {
-          LOG.warn("Ignoring duplicate SimpleSaslClientAuthenticationProvider: previous={},"
-              + " ignored={}", simpleAuth.getClass(), provider.getClass());
-        } else {
-          simpleAuth = (SimpleSaslClientAuthenticationProvider) provider;
+          throw new IllegalStateException(
+              "Encountered multiple SimpleSaslClientAuthenticationProvider instances");
         }
+        simpleAuth = (SimpleSaslClientAuthenticationProvider) provider;
       } else if (provider instanceof GssSaslClientAuthenticationProvider) {
         if (krbAuth != null) {
-          LOG.warn("Ignoring duplicate GssSaslClientAuthenticationProvider: previous={},"
-              + " ignored={}", krbAuth.getClass(), provider.getClass());
-        } else {
-          krbAuth = (GssSaslClientAuthenticationProvider) provider;
+          throw new IllegalStateException(
+              "Encountered multiple GssSaslClientAuthenticationProvider instances");
         }
+        krbAuth = (GssSaslClientAuthenticationProvider) provider;
       } else if (provider instanceof DigestSaslClientAuthenticationProvider) {
         if (digestAuth != null) {
-          LOG.warn("Ignoring duplicate DigestSaslClientAuthenticationProvider: previous={},"
-              + " ignored={}", digestAuth.getClass(), provider.getClass());
-        } else {
-          digestAuth = (DigestSaslClientAuthenticationProvider) provider;
+          throw new IllegalStateException(
+              "Encountered multiple DigestSaslClientAuthenticationProvider instances");
         }
+        digestAuth = (DigestSaslClientAuthenticationProvider) provider;
       } else {
         LOG.warn("Ignoring unknown SaslClientAuthenticationProvider: {}", provider.getClass());
       }
+    }
+    if (simpleAuth == null || krbAuth == null || digestAuth == null) {
+      throw new IllegalStateException("Failed to load SIMPLE, KERBEROS, and DIGEST authentication "
+          + "providers. Classpath is not sane.");
     }
   }
 
@@ -97,8 +101,7 @@ public class DefaultProviderSelector implements AuthenticationProviderSelector {
     if (ugi.hasKerberosCredentials()) {
       return new Pair<>(krbAuth, null);
     }
-    LOG.warn("No matching SASL authentication provider and supporting token found from providers {}"
-        + " to HBase cluster {}", providers, clusterId);
+    LOG.warn("No matching SASL authentication provider and supporting token found from providers.");
     return null;
   }
 
