@@ -146,23 +146,16 @@ import org.slf4j.LoggerFactory;
  *         CF, but there are no references present to prevent its removal. Unless it is newer than
  *         the general TTL (default 5 minutes) or referenced in a snapshot it will be subject to
  *         cleaning.
- *   * ARCHIVE BUT IOE WHILE CHECKING HLINKS - Check the job logs to see why things failed while
+ *   * ARCHIVE BUT FAILURE WHILE CHECKING HLINKS - Check the job logs to see why things failed while
  *         looking for why this file is being kept around.
  *   * MISSING FILE - We couldn't find the reference on the FileSystem. Either there is dataloss due
  *         to a bug in the MOB storage system or the MOB storage is damaged but in an edge case that
- *         allows it to work for now. Note that MOB reference cells contain a pointer to the table
- *         the reference was originally created in, much like HFileLinks do, but that pointer is
- *         implemented via a server-side tag. It is thus possible that lookups to impacted rows will
- *         still work (e.g. if the HFileLink in our table's mob area was manually removed, but the
- *         original file in the referenced table is still around for some reason.) However, even in
- *         this edge case HBase's internal cleaning systems should eventually remove that file once
- *         it is no longer needed by another table or snapshot. You should do a recursive listing of
- *         the FileSystem holding the archive and mobdir for HBase across all tables to see if the
- *         referenced HFile exists. If it does then you can manually create the needed pieces of an
- *         HFileLink to ensure HBase properly accounts for the need to avoid deleting the hfile.
+ *         allows it to work for now. You can verify which by doing a raw reference scan to get the
+ *         referenced hfile and check the underlying filesystem. See the ref guide section on mob
+ *         for details.
  *   * HLINK BUT POINT TO MISSING FILE - There is a pointer in our mob area for this table and CF
  *         to a file elsewhere on the FileSystem, however the file it points to no longer exists.
- *   * MISSING FILE BUT IOE WHILE CHECKING HLINKS - We could not find the referenced file, however
+ *   * MISSING FILE BUT FAILURE WHILE CHECKING HLINKS - We could not find the referenced file, however
  *         you should check the job logs to see why we couldn't check to see if there is a pointer
  *         to the referenced file in our archive or another table's archive or mob area.
  *
@@ -223,17 +216,17 @@ public class MobRefReporter extends Configured implements Tool {
     String seperator;
 
     /* Results that mean things are fine */
-    final Text MOB_DIR = new Text("MOB DIR");
-    final Text HLINK_RESTORE = new Text("HLINK TO ARCHIVE FOR SAME TABLE");
-    final Text HLINK_CLONE = new Text("HLINK TO ARCHIVE FOR OTHER TABLE");
+    final Text OK_MOB_DIR = new Text("MOB DIR");
+    final Text OK_HLINK_RESTORE = new Text("HLINK TO ARCHIVE FOR SAME TABLE");
+    final Text OK_HLINK_CLONE = new Text("HLINK TO ARCHIVE FOR OTHER TABLE");
     /* Results that mean something is incorrect */
-    final Text ARCHIVE_ERROR_BAD_LINK = new Text("ARCHIVE WITH HLINK BUT NOT FROM OUR TABLE");
-    final Text ARCHIVE_ERROR_STALE = new Text("ARCHIVE BUT NO HLINKS");
-    final Text ARCHIVE_ERROR_IO = new Text("ARCHIVE BUT IOE WHILE CHECKING HLINKS");
+    final Text INCONSISTENT_ARCHIVE_BAD_LINK = new Text("ARCHIVE WITH HLINK BUT NOT FROM OUR TABLE");
+    final Text INCONSISTENT_ARCHIVE_STALE = new Text("ARCHIVE BUT NO HLINKS");
+    final Text INCONSISTENT_ARCHIVE_IOE = new Text("ARCHIVE BUT FAILURE WHILE CHECKING HLINKS");
     /* Results that mean data is probably already gone */
-    final Text MISSING = new Text("MISSING FILE");
-    final Text HLINK_ERROR_DANGLING = new Text("HLINK BUT POINTS TO MISSING FILE");
-    final Text MISSING_IO = new Text("MISSING FILE BUT IOE WHILE CHECKING HLINKS");
+    final Text DATALOSS_MISSING = new Text("MISSING FILE");
+    final Text DATALOSS_HLINK_DANGLING = new Text("HLINK BUT POINTS TO MISSING FILE");
+    final Text DATALOSS_MISSING_IOE = new Text("MISSING FILE BUT FAILURE WHILE CHECKING HLINKS");
     final Base64.Encoder base64 = Base64.getEncoder();
 
     @Override
@@ -265,7 +258,7 @@ public class MobRefReporter extends Configured implements Tool {
       // active mob area
       if (mob.getFileSystem(conf).exists(new Path(mob, file))) {
         LOG.debug("Found file '{}' in mob area", file);
-        context.write(MOB_DIR, key);
+        context.write(OK_MOB_DIR, key);
       // archive area - is there an hlink back reference (from a snapshot from same table)
       } else if (archive.getFileSystem(conf).exists(new Path(archive, file))) {
 
@@ -292,21 +285,21 @@ public class MobRefReporter extends Configured implements Tool {
             if (found) {
               LOG.debug("Found file '{}' in archive area. has proper hlink back references to "
                   + "suggest it is from a restored snapshot for this table.", file);
-              context.write(HLINK_RESTORE, key);
+              context.write(OK_HLINK_RESTORE, key);
             } else {
               LOG.warn("Found file '{}' in archive area, but the hlink back references do not "
                   + "properly point to the mob area for our table.", file);
-              context.write(ARCHIVE_ERROR_BAD_LINK, encodeRows(context, key, rows));
+              context.write(INCONSISTENT_ARCHIVE_BAD_LINK, encodeRows(context, key, rows));
             }
           } else {
             LOG.warn("Found file '{}' in archive area, but there are no hlinks pointing to it. Not "
                 + "yet used snapshot or an error.", file);
-            context.write(ARCHIVE_ERROR_STALE, encodeRows(context, key, rows));
+            context.write(INCONSISTENT_ARCHIVE_STALE, encodeRows(context, key, rows));
           }
         } catch (IOException e) {
           LOG.warn("Found file '{}' in archive area, but got an error while checking "
               + "on back references.", file, e);
-          context.write(ARCHIVE_ERROR_IO, encodeRows(context, key, rows));
+          context.write(INCONSISTENT_ARCHIVE_IOE, encodeRows(context, key, rows));
         }
 
       } else {
@@ -339,24 +332,27 @@ public class MobRefReporter extends Configured implements Tool {
             }
             if (found != null) {
               LOG.debug("Found file '{}' as a ref in the mob area: {}", file, found);
-              context.write(HLINK_CLONE, key);
+              context.write(OK_HLINK_CLONE, key);
             } else {
               LOG.warn("Found file '{}' as ref(s) in the mob area but they do not point to an hfile"
                   + " that exists.", file);
-              context.write(HLINK_ERROR_DANGLING, encodeRows(context, key, rows));
+              context.write(DATALOSS_HLINK_DANGLING, encodeRows(context, key, rows));
             }
           } else {
             LOG.error("Could not find referenced file '{}'. See the docs on this tool.", file);
             LOG.debug("Note that we don't have the server-side tag from the mob cells that says "
                 + "what table the reference is originally from. So if the HFileLink in this table "
                 + "is missing but the referenced file is still in the table from that tag, then "
-                + "lookups of these impacted rows would still work.");
-            context.write(MISSING, encodeRows(context, key, rows));
+                + "lookups of these impacted rows will work. Do a scan of the reference details "
+                + "of the cell for the hfile name and then check the entire hbase install if this "
+                + "table was made from a snapshot of another table. see the ref guide section on "
+                + "mob for details.");
+            context.write(DATALOSS_MISSING, encodeRows(context, key, rows));
           }
         } catch (IOException e) {
-          LOG.error("exception while checking mob area of our table for hfilelinks the point to {}",
+          LOG.error("Exception while checking mob area of our table for HFileLinks that point to {}",
               file, e);
-          context.write(MISSING_IO, encodeRows(context, key, rows));
+          context.write(DATALOSS_MISSING_IOE, encodeRows(context, key, rows));
         }
       }
     }
@@ -391,7 +387,7 @@ public class MobRefReporter extends Configured implements Tool {
   /**
    * Main method for the tool.
    * @return 0 if success, 1 for bad args. 2 if job aborted with an exception,
-   *   3 if unable to start due to other compaction, 4 if mr job was unsuccessful
+   *   3 if mr job was unsuccessful
    */
   public int run(String[] args) throws IOException, InterruptedException {
     // TODO make family and table optional
@@ -474,7 +470,7 @@ public class MobRefReporter extends Configured implements Tool {
         LOG.info("Finished creating report for '{}', family='{}'", tn, familyName);
       } else {
         System.err.println("Job was not successful");
-        return 4;
+        return 3;
       }
       return 0;
 
