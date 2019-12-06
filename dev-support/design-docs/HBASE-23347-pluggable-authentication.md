@@ -127,14 +127,21 @@ allowing custom providers, we must also allow a custom selection logic such that
 correct provider can be chosen. This is a formalization of the logic already present
 in `org.apache.hadoop.hbase.security.token.AuthenticationTokenSelector`.
 
-To enable the above, we have three new classes to support the user extensibility:
+To enable the above, we have some new interfaces to support the user extensibility:
 
-1. `interface SaslClientAuthenticationProvider`
-2. `interface SaslServerAuthenticationProvider extends SaslClientAuthenticationProvider`
-3. `interface AuthenticationProviderSelector`
+1. `interface SaslAuthenticationProvider`
+2. `interface SaslClientAuthenticationProvider extends SaslAuthenticationProvider`
+3. `interface SaslServerAuthenticationProvider extends SaslAuthenticationProvider`
+4. `interface AuthenticationProviderSelector`
 
-Each Authentication Provider implementation is a singleton and is intended to be shared
-across all RPCs. A provider selector is chosen per client, based on the given configuration.
+The `SaslAuthenticationProvider` shares logic which is common to the client and the
+server (though, this is up to the developer to guarantee this). The client and server
+interfaces each have logic specific to the HBase RPC client and HBase RPC server
+codbase, as their name implies. As described above, an implementation
+of one `SaslClientAuthenticationProvider` must match exactly one implementation of
+`SaslServerAuthenticationProvider`. Each Authentication Provider implementation is
+a singleton and is intended to be shared across all RPCs. A provider selector is
+chosen per client based on that client's configuration.
 
 A client authentication provider is uniquely identified among other providers
 by the following characteristics:
