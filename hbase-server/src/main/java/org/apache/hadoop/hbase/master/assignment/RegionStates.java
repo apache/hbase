@@ -567,8 +567,8 @@ public class RegionStates {
       final HashMap<ServerName, List<RegionInfo>> ensemble = new HashMap<>(serverMap.size());
       for (ServerStateNode serverNode : serverMap.values()) {
         ensemble.put(serverNode.getServerName(), serverNode.getRegionInfoList().stream()
-            .filter(region -> !isTableDisabled(tableStateManager, region.getTable()))
-            .collect(Collectors.toList()));
+          .filter(region -> !isTableDisabled(tableStateManager, region.getTable()))
+          .collect(Collectors.toList()));
       }
       // Use a fake table name to represent the whole cluster's assignments
       result.put(HConstants.ENSEMBLE_TABLE_NAME, ensemble);
@@ -576,10 +576,10 @@ public class RegionStates {
     return result;
   }
 
-  public boolean isTableDisabled(final TableStateManager tableStateManager,
-      final TableName tableName) {
+  private boolean isTableDisabled(final TableStateManager tableStateManager,
+    final TableName tableName) {
     return tableStateManager
-        .isTableState(tableName, TableState.State.DISABLED, TableState.State.DISABLING);
+      .isTableState(tableName, TableState.State.DISABLED, TableState.State.DISABLING);
   }
 
   // ==========================================================================
