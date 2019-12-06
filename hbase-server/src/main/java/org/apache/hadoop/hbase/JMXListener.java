@@ -147,9 +147,9 @@ public class JMXListener implements MasterCoprocessor, RegionServerCoprocessor {
         JMX_CS = JMXConnectorServerFactory.newJMXConnectorServer(serviceUrl, jmxEnv, mbs);
         JMX_CS.start();
       }
-      LOG.info("ConnectorServer started!");
+      LOG.info("ConnectorServer started");
     } catch (IOException e) {
-      LOG.error("fail to start connector server!", e);
+      LOG.error("Failed to start connector server", e);
       // deregister the RMI registry
       if (rmiRegistry != null) {
         UnicastRemoteObject.unexportObject(rmiRegistry, true);

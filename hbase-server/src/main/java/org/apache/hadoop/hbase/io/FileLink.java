@@ -307,9 +307,9 @@ public class FileLink {
           assert(in.getPos() == pos) : "Link unable to seek to the right position=" + pos;
           if (LOG.isTraceEnabled()) {
             if (currentPath == null) {
-              LOG.debug("link open path=" + path);
+              LOG.trace("Link open path={}", path);
             } else {
-              LOG.trace("link switch from path=" + currentPath + " to path=" + path);
+              LOG.trace("Link switch from path={} to path={}", currentPath, path);
             }
           }
           currentPath = path;

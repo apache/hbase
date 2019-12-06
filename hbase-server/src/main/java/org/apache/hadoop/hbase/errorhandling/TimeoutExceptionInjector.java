@@ -84,10 +84,8 @@ public class TimeoutExceptionInjector {
         LOG.warn("Timer already marked completed, ignoring!");
         return;
       }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Marking timer as complete - no error notifications will be received for " +
-          "this timer.");
-      }
+      LOG.debug(
+        "Marking timer as complete - no error notifications will be received for this timer");
       this.complete = true;
     }
     this.timer.cancel();
@@ -105,7 +103,7 @@ public class TimeoutExceptionInjector {
       LOG.warn("Timer already started, can't be started again. Ignoring second request.");
       return;
     }
-    LOG.debug("Scheduling process timer to run in: " + maxTime + " ms");
+    LOG.debug("Scheduling process timer to run in: {}ms", maxTime);
     timer.schedule(timerTask, maxTime);
     this.start = EnvironmentEdgeManager.currentTime();
   }
@@ -118,10 +116,10 @@ public class TimeoutExceptionInjector {
   public void trigger() {
     synchronized (timerTask) {
       if (this.complete) {
-        LOG.warn("Timer already completed, not triggering.");
+        LOG.warn("Timer already completed, not triggering");
         return;
       }
-      LOG.debug("Triggering timer immediately!");
+      LOG.debug("Triggering timer immediately");
       this.timer.cancel();
       this.timerTask.run();
     }

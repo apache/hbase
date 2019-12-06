@@ -69,7 +69,7 @@ public final class ZNodeClearer {
     try {
       fstream = new FileWriter(fileName);
     } catch (IOException e) {
-      LOG.warn("Can't write znode file "+fileName, e);
+      LOG.warn("Failed to write znode file " + fileName, e);
       return;
     }
 
@@ -86,7 +86,7 @@ public final class ZNodeClearer {
         }
       }
     } catch (IOException e) {
-      LOG.warn("Can't write znode file "+fileName, e);
+      LOG.warn("Failed to write znode file " + fileName, e);
     }
   }
 
@@ -176,7 +176,7 @@ public final class ZNodeClearer {
             @Override public boolean isAborted() { return false; }
           });
     } catch (IOException e) {
-      LOG.warn("Can't connect to zookeeper to read the master znode", e);
+      LOG.warn("Failed to connect to ZooKeeper to read the master znode", e);
       return false;
     }
 
@@ -194,10 +194,10 @@ public final class ZNodeClearer {
       }
     } catch (FileNotFoundException fnfe) {
       // If no file, just keep going -- return success.
-      LOG.warn("Can't find the znode file; presume non-fatal", fnfe);
+      LOG.warn("Failed to find the znode file; presume non-fatal", fnfe);
       return true;
     } catch (IOException e) {
-      LOG.warn("Can't read the content of the znode file", e);
+      LOG.warn("Failed to read the content of the znode file", e);
       return false;
     } catch (KeeperException e) {
       LOG.warn("ZooKeeper exception deleting znode", e);

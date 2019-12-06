@@ -96,7 +96,7 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
     try {
       snaphotOfRegionAssignment.initialize();
     } catch (IOException ie) {
-      LOG.warn("Not running balancer since exception was thrown " + ie);
+      LOG.warn("Not running balancer since exception was thrown", ie);
       return plans;
     }
     // This is not used? Findbugs says so: Map<ServerName, ServerName> serverNameToServerNameWithoutCode = new HashMap<>();
@@ -382,8 +382,9 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
 
     List<ServerName> parentFavoredNodes = getFavoredNodes(parent);
     if (parentFavoredNodes == null) {
-      LOG.debug("Unable to find favored nodes for parent, " + parent
-          + " generating new favored nodes for daughter");
+      LOG.debug("Unable to find favored nodes for parent, {}"
+          + " generating new favored nodes for daughter",
+        parent);
       result.put(regionA, helper.generateFavoredNodes(regionA));
       result.put(regionB, helper.generateFavoredNodes(regionB));
 

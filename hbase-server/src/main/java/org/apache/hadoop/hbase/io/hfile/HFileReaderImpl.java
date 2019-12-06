@@ -874,12 +874,10 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
       try {
         blockBuffer.skip(getCurCellSerializedSize());
       } catch (IllegalArgumentException e) {
-        LOG.error("Current pos = " + blockBuffer.position()
-            + "; currKeyLen = " + currKeyLen + "; currValLen = "
-            + currValueLen + "; block limit = " + blockBuffer.limit()
-            + "; currBlock currBlockOffset = " + this.curBlock.getOffset()
-            + "; path=" + reader.getPath());
-        throw e;
+        throw new IllegalArgumentException("Current pos = " + blockBuffer.position()
+            + "; currKeyLen = " + currKeyLen + "; currValLen = " + currValueLen + "; block limit = "
+            + blockBuffer.limit() + "; currBlock currBlockOffset = " + this.curBlock.getOffset()
+            + "; path=" + reader.getPath(), e);
       }
     }
 
@@ -1307,9 +1305,8 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
           HFileBlock cachedBlock = getCachedBlock(cacheKey, cacheBlock, useLock, isCompaction,
             updateCacheMetrics, expectedBlockType, expectedDataBlockEncoding);
           if (cachedBlock != null) {
-            if (LOG.isTraceEnabled()) {
-              LOG.trace("From Cache " + cachedBlock);
-            }
+            LOG.trace("From Cache {}", cachedBlock);
+
             TraceUtil.addTimelineAnnotation("blockCacheHit");
             assert cachedBlock.isUnpacked() : "Packed block leak.";
             if (cachedBlock.getBlockType().isData()) {

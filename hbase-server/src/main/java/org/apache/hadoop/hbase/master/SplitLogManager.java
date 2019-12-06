@@ -170,7 +170,7 @@ public class SplitLogManager {
     for (Path logDir : logDirs) {
       final FileSystem fs = logDir.getFileSystem(conf);
       if (!fs.exists(logDir)) {
-        LOG.warn(logDir + " doesn't exist. Nothing to do!");
+        LOG.warn(logDir + " does not exist. Nothing to do.");
         continue;
       }
       FileStatus[] logfiles = FSUtils.listStatus(fs, logDir, filter);
@@ -402,11 +402,11 @@ public class SplitLogManager {
         if (oldtask.status == IN_PROGRESS) {
           oldtask.batch = batch;
           batch.installed++;
-          LOG.debug("Previously orphan task " + path + " is now being waited upon");
+          LOG.debug("Previously orphan task {} is now being waited upon", path);
           return null;
         }
         while (oldtask.status == FAILURE) {
-          LOG.debug("wait for status of task " + path + " to change to DELETED");
+          LOG.debug("wait for status of task {} to change to DELETED", path);
           SplitLogCounters.tot_mgr_wait_for_zk_delete.increment();
           try {
             oldtask.wait();
@@ -585,7 +585,7 @@ public class SplitLogManager {
           } else {
             handleDeadWorker(cur_worker);
             LOG.warn("Failed to resubmit task " + path + " owned by dead " + cur_worker
-                + ", will retry.");
+                + ", will retry");
           }
         } else if (getSplitLogManagerCoordination().resubmitTask(path, task, CHECK)) {
           resubmitted++;

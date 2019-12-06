@@ -75,10 +75,10 @@ public abstract class PersistentIOEngine implements IOEngine {
       messageDigest.update(Bytes.toBytes(sb.toString()));
       return messageDigest.digest();
     } catch (IOException ioex) {
-      LOG.error("Calculating checksum failed, because of ", ioex);
+      LOG.error("Calculating checksum failed", ioex);
       return new byte[0];
     } catch (NoSuchAlgorithmException e) {
-      LOG.error("No such algorithm : " + algorithm + "!");
+      LOG.error("No such algorithm : " + algorithm);
       return new byte[0];
     }
   }

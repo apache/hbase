@@ -200,8 +200,8 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
   public E load(Path path, String className, int priority,
       Configuration conf, String[] includedClassPrefixes) throws IOException {
     Class<?> implClass;
-    LOG.debug("Loading coprocessor class " + className + " with path " +
-        path + " and priority " + priority);
+    LOG.debug("Loading coprocessor class {} with path {} and priority {}", className, path,
+      priority);
 
     boolean skipLoadDuplicateCoprocessor = conf.getBoolean(SKIP_LOAD_DUPLICATE_TABLE_COPROCESSOR,
       DEFAULT_SKIP_LOAD_DUPLICATE_TABLE_COPROCESSOR);
@@ -450,18 +450,16 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
       // If available, pull a table name out of the environment
       if(env instanceof RegionCoprocessorEnvironment) {
         String tableName = ((RegionCoprocessorEnvironment)env).getRegionInfo().getTable().getNameAsString();
-        LOG.error("Removing coprocessor '" + env.toString() + "' from table '"+ tableName + "'", e);
+        LOG.error("Removing coprocessor '{}' from table '{}'", env, tableName, e);
       } else {
-        LOG.error("Removing coprocessor '" + env.toString() + "' from " +
-                "environment",e);
+        LOG.error("Removing coprocessor '{}' from environment", env, e);
       }
 
       coprocEnvironments.remove(env);
       try {
         shutdown(env);
       } catch (Exception x) {
-        LOG.error("Uncaught exception when shutting down coprocessor '"
-            + env.toString() + "'", x);
+        LOG.error("Uncaught exception when shutting down coprocessor '{}'", env, x);
       }
       throw new DoNotRetryIOException("Coprocessor: '" + env.toString() +
           "' threw: '" + e + "' and has been removed from the active " +

@@ -85,12 +85,12 @@ class HFileArchiveManager {
    * @throws IOException if the number of attempts is exceeded
    */
   public HFileArchiveManager disableHFileBackup() throws IOException {
-    LOG.debug("Disabling backups on all tables.");
+    LOG.debug("Disabling backups on all tables");
     try {
       ZKUtil.deleteNodeRecursively(this.zooKeeper, archiveZnode);
       return this;
     } catch (KeeperException e) {
-      throw new IOException("Unexpected ZK exception!", e);
+      throw new IOException("Unexpected ZooKeeper exception", e);
     }
   }
 
@@ -110,7 +110,7 @@ class HFileArchiveManager {
 
     // then add the table to the list of znodes to archive
     String tableNode = this.getTableNode(table);
-    LOG.debug("Creating: " + tableNode + ", data: []");
+    LOG.debug("Creating: {}, data: []", tableNode);
     ZKUtil.createSetData(zooKeeper, tableNode, new byte[0]);
   }
 
@@ -135,7 +135,7 @@ class HFileArchiveManager {
     // make sure the table is the latest version so the delete takes
     zooKeeper.sync(tableNode);
 
-    LOG.debug("Attempting to delete table node:" + tableNode);
+    LOG.debug("Attempting to delete table node: {}", tableNode);
     ZKUtil.deleteNodeRecursively(zooKeeper, tableNode);
   }
 

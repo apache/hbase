@@ -62,7 +62,7 @@ public class ForeignExceptionDispatcher implements ForeignExceptionListener, For
     // if we already have an exception, then ignore it
     if (exception != null) return;
 
-    LOG.debug(name + " accepting received exception" , e);
+    LOG.debug("{} accepting received exception", name, e);
     // mark that we got the error
     if (e != null) {
       exception = e;

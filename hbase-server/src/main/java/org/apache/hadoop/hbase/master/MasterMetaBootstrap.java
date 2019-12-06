@@ -109,7 +109,7 @@ class MasterMetaBootstrap {
     } catch (Exception ex) {
       // ignore the exception since we don't want the master to be wedged due to potential
       // issues in the cleanup of the extra regions. We can do that cleanup via hbck or manually
-      LOG.warn("Ignoring exception " + ex);
+      LOG.warn("Ignoring exception", ex);
     }
   }
 }

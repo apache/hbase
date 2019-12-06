@@ -36,7 +36,7 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public final class BlockCacheFactory {
 
-  private static final Logger LOG = LoggerFactory.getLogger(BlockCacheFactory.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(BlockCacheFactory.class);
 
   /**
    * Configuration keys for Bucket cache
@@ -171,9 +171,8 @@ public final class BlockCacheFactory {
   }
 
   private static BlockCache createExternalBlockcache(Configuration c) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Trying to use External l2 cache");
-    }
+    LOG.debug("Trying to use External l2 cache");
+
     Class klass = null;
 
     // Get the class, from the config. s
@@ -250,7 +249,7 @@ public final class BlockCacheFactory {
           bucketCacheSize, blockSize, bucketSizes, writerThreads, writerQueueLen, persistentPath,
           ioErrorsTolerationDuration, c);
     } catch (IOException ioex) {
-      LOG.error("Can't instantiate bucket cache", ioex); throw new RuntimeException(ioex);
+      throw new RuntimeException(ioex);
     }
     return bucketCache;
   }

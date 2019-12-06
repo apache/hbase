@@ -56,8 +56,8 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public class SnapshotOfRegionAssignmentFromMeta {
-  private static final Logger LOG = LoggerFactory.getLogger(SnapshotOfRegionAssignmentFromMeta.class
-      .getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(SnapshotOfRegionAssignmentFromMeta.class);
 
   private final Connection connection;
 
@@ -159,9 +159,7 @@ public class SnapshotOfRegionAssignmentFromMeta {
           }
           return true;
         } catch (RuntimeException e) {
-          LOG.error("Catche remote exception " + e.getMessage() +
-              " when processing" + result);
-          throw e;
+          throw new RuntimeException("Remote exception while processing " + result, e);
         }
       }
     };

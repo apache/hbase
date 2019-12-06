@@ -941,7 +941,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
           try {
             this.wait(1000 * 10/*Don't wait for ever*/);
           } catch (InterruptedException e) {
-            LOG.warn("Interrupted eviction thread ", e);
+            LOG.warn("Interrupted eviction thread", e);
             Thread.currentThread().interrupt();
           }
         }
@@ -1165,7 +1165,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
 
     if (!this.scheduleThreadPool.isShutdown()) {
       List<Runnable> runnables = this.scheduleThreadPool.shutdownNow();
-      LOG.debug("Still running " + runnables);
+      LOG.debug("Still running {}", runnables);
     }
     this.evictionThread.shutdown();
   }

@@ -250,8 +250,7 @@ public class ActiveMasterManager extends ZKListener {
       }
     }
     catch (KeeperException ke) {
-      LOG.info("Received an unexpected KeeperException when checking " +
-          "isActiveMaster : "+ ke);
+      LOG.info("Received a ZooKeeper exception when checking isActiveMaster", ke);
     }
     return false;
   }
@@ -268,7 +267,7 @@ public class ActiveMasterManager extends ZKListener {
       try {
         activeMaster = MasterAddressTracker.getMasterAddress(this.watcher);
       } catch (IOException e) {
-        LOG.warn("Failed get of master address: " + e.toString());
+        LOG.warn("Failed get of master address", e);
       }
       if (activeMaster != null &&  activeMaster.equals(this.sn)) {
         ZKUtil.deleteNode(watcher, watcher.getZNodePaths().masterAddressZNode);
@@ -277,8 +276,7 @@ public class ActiveMasterManager extends ZKListener {
         ZNodeClearer.deleteMyEphemeralNodeOnDisk();
       }
     } catch (KeeperException e) {
-      LOG.debug(this.watcher.prefix("Failed delete of our master address node; " +
-          e.getMessage()));
+      LOG.debug("Failed delete of master address node: {}", this.watcher, e);
     }
   }
 }

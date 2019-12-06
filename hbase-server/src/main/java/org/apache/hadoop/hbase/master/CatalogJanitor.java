@@ -82,7 +82,7 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 // TODO: Do more by way of 'repair'; see note on unknownServers below.
 @InterfaceAudience.Private
 public class CatalogJanitor extends ScheduledChore {
-  private static final Logger LOG = LoggerFactory.getLogger(CatalogJanitor.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(CatalogJanitor.class);
   private final AtomicBoolean alreadyRunning = new AtomicBoolean(false);
   private final AtomicBoolean enabled = new AtomicBoolean(true);
   private final MasterServices services;
@@ -258,10 +258,12 @@ public class CatalogJanitor extends ScheduledChore {
       LOG.warn("Merged region does not exist: " + mergedRegion.getEncodedName());
     }
     if (regionFs == null || !regionFs.hasReferences(htd)) {
-      LOG.debug("Deleting parents ({}) from fs; merged child {} no longer holds references",
-           parents.stream().map(r -> RegionInfo.getShortNameToLog(r)).
-              collect(Collectors.joining(", ")),
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(
+          "Deleting parents ({}) from fs; merged child {} no longer holds references", parents
+              .stream().map(r -> RegionInfo.getShortNameToLog(r)).collect(Collectors.joining(", ")),
           mergedRegion);
+      }
       ProcedureExecutor<MasterProcedureEnv> pe = this.services.getMasterProcedureExecutor();
       pe.submitProcedure(new GCMultipleMergedRegionsProcedure(pe.getEnvironment(),
           mergedRegion,  parents));
@@ -584,7 +586,7 @@ public class CatalogJanitor extends ScheduledChore {
         LOG.warn("Failed consistency check on {}", Bytes.toStringBinary(r.getRow()), t);
       }
       if (regionInfo != null) {
-        LOG.trace(regionInfo.toString());
+        LOG.trace("{}", regionInfo);
         if (regionInfo.isSplitParent()) { // splitParent means split and offline.
           this.report.splitParents.put(regionInfo, r);
         }

@@ -147,7 +147,7 @@ public class RegionPlacementMaintainer implements Closeable {
    */
   public List<AssignmentVerificationReport> verifyRegionPlacement(boolean isDetailMode)
       throws IOException {
-    System.out.println("Start to verify the region assignment and " +
+    LOG.info("Start to verify the region assignment and " +
         "generate the verification report");
     // Get the region assignment snapshot
     SnapshotOfRegionAssignmentFromMeta snapshot = this.getRegionAssignmentSnapshot();
@@ -476,8 +476,8 @@ public class RegionPlacementMaintainer implements Closeable {
         genAssignmentPlan(table, assignmentSnapshot, regionLocalityMap, plan,
             USE_MUNKRES_FOR_PLACING_SECONDARY_AND_TERTIARY);
       } catch (Exception e) {
-        LOG.error("Get some exceptions for placing primary region server" +
-            "for table " + table + " because " + e);
+        LOG.error("Failed while placing primary region server " +
+            "for table " + table, e);
       }
     }
     LOG.info("Finish to generate the new assignment plan for the " +
@@ -646,7 +646,7 @@ public class RegionPlacementMaintainer implements Closeable {
       LOG.info("Updated the hbase:meta with the new assignment plan");
     } catch (Exception e) {
       LOG.error("Failed to update hbase:meta with the new assignment" +
-          "plan because " + e.getMessage());
+          "plan", e);
     }
   }
 

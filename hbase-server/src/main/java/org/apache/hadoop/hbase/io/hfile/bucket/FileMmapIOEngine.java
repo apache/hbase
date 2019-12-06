@@ -64,14 +64,11 @@ public abstract class FileMmapIOEngine extends PersistentIOEngine {
       fileChannel = raf.getChannel();
       LOG.info("Allocating " + StringUtils.byteDesc(fileSize) + ", on the path:" + filePath);
     } catch (java.io.FileNotFoundException fex) {
-      LOG.error("Can't create bucket cache file " + filePath, fex);
-      throw fex;
+      throw new IOException("Failed to create bucket cache file " + filePath, fex);
     } catch (IOException ioex) {
-      LOG.error(
-        "Can't extend bucket cache file; insufficient space for " + StringUtils.byteDesc(fileSize),
-        ioex);
       shutdown();
-      throw ioex;
+      throw new IOException("Failed to extend bucket cache file; insufficient space for "
+          + StringUtils.byteDesc(fileSize), ioex);
     }
     ByteBufferAllocator allocator = new ByteBufferAllocator() {
       AtomicInteger pos = new AtomicInteger(0);
@@ -144,12 +141,12 @@ public abstract class FileMmapIOEngine extends PersistentIOEngine {
     try {
       fileChannel.close();
     } catch (IOException ex) {
-      LOG.error("Can't shutdown cleanly", ex);
+      LOG.error("Failed to shutdown cleanly", ex);
     }
     try {
       raf.close();
     } catch (IOException ex) {
-      LOG.error("Can't shutdown cleanly", ex);
+      LOG.error("Failed to shutdown cleanly", ex);
     }
   }
 }

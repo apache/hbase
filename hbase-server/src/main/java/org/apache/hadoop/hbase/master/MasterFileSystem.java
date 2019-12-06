@@ -389,9 +389,7 @@ public class MasterFileSystem {
         this.fs.setPermission(p, HiddenDirPerms);
       }
     } catch (IOException e) {
-      LOG.error("Failed to create or set permission on staging directory " + p.toString());
-      throw new IOException("Failed to create or set permission on staging directory "
-          + p.toString(), e);
+      throw new IOException("Failed to create or set permission on staging directory " + p, e);
     }
   }
 
@@ -410,7 +408,6 @@ public class MasterFileSystem {
     } catch (IOException e) {
         e = e instanceof RemoteException ?
                 ((RemoteException)e).unwrapRemoteException() : e;
-      LOG.error("bootstrap", e);
       throw e;
     }
   }

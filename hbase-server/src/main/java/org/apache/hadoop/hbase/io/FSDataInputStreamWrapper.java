@@ -43,7 +43,6 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 @InterfaceAudience.Private
 public class FSDataInputStreamWrapper implements Closeable {
   private static final Logger LOG = LoggerFactory.getLogger(FSDataInputStreamWrapper.class);
-  private static final boolean isLogTraceEnabled = LOG.isTraceEnabled();
 
   private final HFileSystem hfs;
   private final Path path;
@@ -276,11 +275,10 @@ public class FSDataInputStreamWrapper implements Closeable {
             try {
               this.unbuffer = streamClass.getDeclaredMethod("unbuffer");
             } catch (NoSuchMethodException | SecurityException e) {
-              if (isLogTraceEnabled) {
-                LOG.trace("Failed to find 'unbuffer' method in class " + streamClass
-                    + " . So there may be a TCP socket connection "
-                    + "left open in CLOSE_WAIT state.", e);
-              }
+              LOG.trace(
+                "Failed to find 'unbuffer' method in class {}. So there may be a TCP socket connection"
+                    + " left open in CLOSE_WAIT state.",
+                streamClass, e);
               return;
             }
             this.instanceOfCanUnbuffer = true;
@@ -292,18 +290,17 @@ public class FSDataInputStreamWrapper implements Closeable {
         try {
           this.unbuffer.invoke(wrappedStream);
         } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-          if (isLogTraceEnabled) {
-            LOG.trace("Failed to invoke 'unbuffer' method in class " + streamClass
-                + " . So there may be a TCP socket connection left open in CLOSE_WAIT state.", e);
-          }
+          LOG.trace(
+            "Failed to invoke 'unbuffer' method in class {}. So there may be a TCP socket connection"
+                + " left open in CLOSE_WAIT state.",
+            streamClass, e);
         }
       } else {
-        if (isLogTraceEnabled) {
-          LOG.trace("Failed to find 'unbuffer' method in class " + streamClass
-              + " . So there may be a TCP socket connection "
-              + "left open in CLOSE_WAIT state. For more details check "
-              + "https://issues.apache.org/jira/browse/HBASE-9393");
-        }
+        LOG.trace("Failed to find 'unbuffer' method in class {}. "
+            + "So there may be a TCP socket connection "
+            + "left open in CLOSE_WAIT state. For more details check "
+            + "https://issues.apache.org/jira/browse/HBASE-9393",
+          streamClass);
       }
     }
   }

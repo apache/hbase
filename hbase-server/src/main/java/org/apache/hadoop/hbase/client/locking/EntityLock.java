@@ -187,10 +187,9 @@ public class EntityLock {
     final boolean result = latch.await(timeout, timeUnit);
     String lockRequestStr = lockRequest.toString().replace("\n", ", ");
     if (result) {
-      LOG.info("Acquired " + lockRequestStr);
+      LOG.info("Acquired {}", lockRequestStr);
     } else {
-      LOG.info(String.format("Failed acquire in %s %s of %s", timeout, timeUnit.toString(),
-          lockRequestStr));
+      LOG.info("Failed acquire in {} {} of {}", timeout, timeUnit, lockRequestStr);
     }
     return result;
   }

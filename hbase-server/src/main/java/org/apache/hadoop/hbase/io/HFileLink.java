@@ -421,7 +421,7 @@ public class HFileLink extends FileLink {
       // Create the link
       return fs.createNewFile(new Path(dstFamilyPath, name));
     } catch (IOException e) {
-      LOG.error("couldn't create the link=" + name + " for " + dstFamilyPath, e);
+      LOG.error("Failed to create the link=" + name + " for " + dstFamilyPath, e);
       // Revert the reference if the link creation failed
       if (createBackRef) {
         fs.delete(backRefPath, false);

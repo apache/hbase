@@ -99,9 +99,7 @@ public class HFilePreadReader extends HFileReaderImpl {
     cacheConf.getBlockCache().ifPresent(cache -> {
       if (evictOnClose) {
         int numEvicted = cache.evictBlocksByHfileName(name);
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("On close, file=" + name + " evicted=" + numEvicted + " block(s)");
-        }
+        LOG.trace("On close, file={} evicted={} block(s)", name, numEvicted);
       }
     });
     fsBlockReader.closeStreams();

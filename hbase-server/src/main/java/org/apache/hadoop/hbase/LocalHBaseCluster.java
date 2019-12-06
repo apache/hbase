@@ -143,12 +143,12 @@ public class LocalHBaseCluster {
     if (conf.getBoolean(ASSIGN_RANDOM_PORTS, false)) {
       if (conf.getInt(HConstants.MASTER_PORT, HConstants.DEFAULT_MASTER_PORT)
           == HConstants.DEFAULT_MASTER_PORT) {
-        LOG.debug("Setting Master Port to random.");
+        LOG.debug("Setting Master Port to random");
         conf.set(HConstants.MASTER_PORT, "0");
       }
       if (conf.getInt(HConstants.REGIONSERVER_PORT, HConstants.DEFAULT_REGIONSERVER_PORT)
           == HConstants.DEFAULT_REGIONSERVER_PORT) {
-        LOG.debug("Setting RegionServer Port to random.");
+        LOG.debug("Setting RegionServer Port to random");
         conf.set(HConstants.REGIONSERVER_PORT, "0");
       }
       // treat info ports special; expressly don't change '-1' (keep off)
@@ -156,13 +156,13 @@ public class LocalHBaseCluster {
       if (conf.getInt(HConstants.REGIONSERVER_INFO_PORT, 0) != -1 &&
           conf.getInt(HConstants.REGIONSERVER_INFO_PORT, HConstants.DEFAULT_REGIONSERVER_INFOPORT)
           == HConstants.DEFAULT_REGIONSERVER_INFOPORT) {
-        LOG.debug("Setting RS InfoServer Port to random.");
+        LOG.debug("Setting RS InfoServer Port to random");
         conf.set(HConstants.REGIONSERVER_INFO_PORT, "0");
       }
       if (conf.getInt(HConstants.MASTER_INFO_PORT, 0) != -1 &&
           conf.getInt(HConstants.MASTER_INFO_PORT, HConstants.DEFAULT_MASTER_INFOPORT)
           == HConstants.DEFAULT_MASTER_INFOPORT) {
-        LOG.debug("Setting Master InfoServer Port to random.");
+        LOG.debug("Setting Master InfoServer Port to random");
         conf.set(HConstants.MASTER_INFO_PORT, "0");
       }
     }
@@ -275,7 +275,7 @@ public class LocalHBaseCluster {
     List<RegionServerThread> list = getRegionServers();
     for (JVMClusterUtil.RegionServerThread rst: list) {
       if (rst.isAlive()) liveServers.add(rst);
-      else LOG.info("Not alive " + rst.getName());
+      else LOG.info("RegionServer not alive: " + rst.getName());
     }
     return liveServers;
   }
@@ -303,7 +303,7 @@ public class LocalHBaseCluster {
   public String waitOnRegionServer(JVMClusterUtil.RegionServerThread rst) {
     while (rst.isAlive()) {
       try {
-        LOG.info("Waiting on " + rst.getRegionServer().toString());
+        LOG.info("Waiting on " + rst.getRegionServer());
         rst.join();
       } catch (InterruptedException e) {
         LOG.error("Interrupted while waiting for {} to finish. Retrying join", rst.getName(), e);
@@ -376,7 +376,7 @@ public class LocalHBaseCluster {
   public String waitOnMaster(JVMClusterUtil.MasterThread masterThread) {
     while (masterThread.isAlive()) {
       try {
-        LOG.info("Waiting on " + masterThread.getMaster().getServerName().toString());
+        LOG.info("Waiting on " + masterThread.getMaster().getServerName());
         masterThread.join();
       } catch (InterruptedException e) {
         LOG.error("Interrupted while waiting for {} to finish. Retrying join",

@@ -253,10 +253,9 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
       SASL_ADAPTOR = createSaslAdaptor();
       TRANSPARENT_CRYPTO_HELPER = createTransparentCryptoHelper();
     } catch (Exception e) {
-      String msg = "Couldn't properly initialize access to HDFS internals. Please "
-          + "update your WAL Provider to not make use of the 'asyncfs' provider. See "
+      String msg = "Failed to properly initialize access to HDFS internals. Please "
+          + "update the WAL Provider to not make use of the 'asyncfs' provider. See "
           + "HBASE-16110 for more information.";
-      LOG.error(msg, e);
       throw new Error(msg, e);
     }
   }

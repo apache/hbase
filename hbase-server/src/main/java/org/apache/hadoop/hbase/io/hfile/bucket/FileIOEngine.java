@@ -66,9 +66,7 @@ public class FileIOEngine extends PersistentIOEngine {
       for (String filePath : filePaths) {
         File file = new File(filePath);
         if (file.exists()) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("File " + filePath + " already exists. Deleting!!");
-          }
+          LOG.debug("File {} already exists. Deleting.", filePath);
           file.delete();
           // If deletion fails still we can manage with the writes
         }
@@ -84,10 +82,8 @@ public class FileIOEngine extends PersistentIOEngine {
         if (totalSpace < sizePerFile) {
           // The next setting length will throw exception,logging this message
           // is just used for the detail reason of exception，
-          String msg = "Only " + StringUtils.byteDesc(totalSpace)
-              + " total space under " + filePath + ", not enough for requested "
-              + StringUtils.byteDesc(sizePerFile);
-          LOG.warn(msg);
+          LOG.warn("Only " + StringUtils.byteDesc(totalSpace) + " total space under " + filePath
+              + ", not enough for requested " + StringUtils.byteDesc(sizePerFile));
         }
         File file = new File(filePath);
         // setLength() method will change file's last modified time. So if don't do
@@ -100,7 +96,6 @@ public class FileIOEngine extends PersistentIOEngine {
         LOG.info("Allocating cache " + StringUtils.byteDesc(sizePerFile)
             + ", on the path:" + filePath);
       } catch (IOException fex) {
-        LOG.error("Failed allocating cache on " + filePath, fex);
         shutdown();
         throw fex;
       }
@@ -183,13 +178,8 @@ public class FileIOEngine extends PersistentIOEngine {
   @Override
   public void sync() throws IOException {
     for (int i = 0; i < fileChannels.length; i++) {
-      try {
-        if (fileChannels[i] != null) {
-          fileChannels[i].force(true);
-        }
-      } catch (IOException ie) {
-        LOG.warn("Failed syncing data to " + this.filePaths[i]);
-        throw ie;
+      if (fileChannels[i] != null) {
+        fileChannels[i].force(true);
       }
     }
   }

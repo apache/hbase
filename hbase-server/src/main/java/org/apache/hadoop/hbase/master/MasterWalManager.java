@@ -211,7 +211,7 @@ public class MasterWalManager {
 
     do {
       if (services.isStopped()) {
-        LOG.warn("Master stopped while trying to get failed servers.");
+        LOG.warn("Master stopped while trying to get failed servers");
         break;
       }
       try {
@@ -247,7 +247,7 @@ public class MasterWalManager {
         }
         retrySplitting = false;
       } catch (IOException ioe) {
-        LOG.warn("Failed getting failed servers to be recovered.", ioe);
+        LOG.warn("Failed getting failed servers to be recovered", ioe);
         if (!checkFileSystem()) {
           LOG.warn("Bad Filesystem, exiting");
           Runtime.getRuntime().halt(1);
@@ -311,9 +311,9 @@ public class MasterWalManager {
             throw new IOException("Failed fs.rename for log split: " + logDir);
           }
           logDir = splitDir;
-          LOG.debug("Renamed region directory: " + splitDir);
+          LOG.debug("Renamed region directory: {}", splitDir);
         } else if (!fs.exists(splitDir)) {
-          LOG.info("Log dir for server " + serverName + " does not exist");
+          LOG.info("Log dir for server {} does not exist", serverName);
           continue;
         }
         logDirs.add(splitDir);
@@ -380,15 +380,15 @@ public class MasterWalManager {
               Path newPath = AbstractFSWAL.getWALArchivePath(this.oldLogDir,
                   status.getPath());
               if (!FSUtils.renameAndSetModifyTime(fs, status.getPath(), newPath)) {
-                LOG.warn("Unable to move  " + status.getPath() + " to " + newPath);
+                LOG.warn("Unable to move {} to {}", status.getPath(), newPath);
               } else {
-                LOG.debug("Archived meta log " + status.getPath() + " to " + newPath);
+                LOG.debug("Archived meta log {} to {}", status.getPath(), newPath);
               }
             }
           }
         }
         if (!fs.delete(splitDir, false)) {
-          LOG.warn("Unable to delete log dir. Ignoring. " + splitDir);
+          LOG.warn("Unable to delete log dir {}. Ignoring.", splitDir);
         }
       }
     } catch (IOException ie) {

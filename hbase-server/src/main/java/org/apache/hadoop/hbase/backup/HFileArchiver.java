@@ -130,7 +130,7 @@ public class HFileArchiver {
       return false;
     }
 
-    LOG.debug("ARCHIVING {}", regionDir);
+    LOG.debug("Archiving region directory {}", regionDir);
 
     // make sure the regiondir lives under the tabledir
     Preconditions.checkArgument(regionDir.toString().startsWith(tableDir.toString()));
@@ -153,13 +153,13 @@ public class HFileArchiver {
     FileStatus[] storeDirs = FSUtils.listStatus(fs, regionDir, nonHidden);
     // if there no files, we can just delete the directory and return;
     if (storeDirs == null) {
-      LOG.debug("Directory {} empty.", regionDir);
+      LOG.debug("Directory {} empty", regionDir);
       return deleteRegionWithoutArchiving(fs, regionDir);
     }
 
     // convert the files in the region to a File
     Stream.of(storeDirs).map(getAsFile).forEachOrdered(toArchive::add);
-    LOG.debug("Archiving " + toArchive);
+    LOG.debug("Archiving {}", toArchive);
     List<File> failedArchive = resolveAndArchive(fs, regionArchiveDir, toArchive,
         EnvironmentEdgeManager.currentTime());
     if (!failedArchive.isEmpty()) {
@@ -265,8 +265,10 @@ public class HFileArchiver {
       RegionInfo parent, Path familyDir, byte[] family) throws IOException {
     FileStatus[] storeFiles = FSUtils.listStatus(fs, familyDir);
     if (storeFiles == null) {
-      LOG.debug("No files to dispose of in {}, family={}", parent.getRegionNameAsString(),
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("No files to dispose of in {}, family={}", parent.getRegionNameAsString(),
           Bytes.toString(family));
+      }
       return;
     }
 
@@ -360,7 +362,7 @@ public class HFileArchiver {
     }
 
     // otherwise we attempt to archive the store files
-    LOG.debug("Archiving compacted files.");
+    LOG.debug("Archiving compacted files");
 
     // Wrap the storefile into a File
     StoreToFile getStorePath = new StoreToFile(fs);
@@ -449,7 +451,7 @@ public class HFileArchiver {
         if (file.isFile()) {
           // attempt to archive the file
           if (!resolveAndArchiveFile(baseArchiveDir, file, startTime)) {
-            LOG.warn("Couldn't archive " + file + " into backup directory: " + baseArchiveDir);
+            LOG.warn("Failed to archive " + file + " into backup directory: " + baseArchiveDir);
             failures.add(file);
           }
         } else {
@@ -493,25 +495,26 @@ public class HFileArchiver {
     // really, really unlikely situtation, where we get the same name for the existing file, but
     // is included just for that 1 in trillion chance.
     if (fs.exists(archiveFile)) {
-      LOG.debug("{} already exists in archive, moving to timestamped backup and " +
-          "overwriting current.", archiveFile);
+      LOG.debug("File {} already exists in archive, moving to timestamped backup and "
+          + "overwriting current",
+        archiveFile);
 
       // move the archive file to the stamped backup
       Path backedupArchiveFile = new Path(archiveDir, filename + SEPARATOR + archiveStartTime);
       if (!fs.rename(archiveFile, backedupArchiveFile)) {
-        LOG.error("Could not rename archive file to backup: " + backedupArchiveFile
+        LOG.error("Failed to rename archive file to backup: " + backedupArchiveFile
             + ", deleting existing file in favor of newer.");
         // try to delete the exisiting file, if we can't rename it
         if (!fs.delete(archiveFile, false)) {
-          throw new IOException("Couldn't delete existing archive file (" + archiveFile
+          throw new IOException("Failed to delete existing archive file (" + archiveFile
               + ") or rename it to the backup file (" + backedupArchiveFile
-              + ") to make room for similarly named file.");
+              + ") to make room for similarly named file");
         }
       }
-      LOG.debug("Backed up archive file from " + archiveFile);
+      LOG.debug("Backed up archive file from {}", archiveFile);
     }
 
-    LOG.trace("No existing file in archive for {}, free to archive original file.", archiveFile);
+    LOG.trace("No existing file in archive for {}, free to archive original file", archiveFile);
 
     // at this point, we should have a free spot for the archive file
     boolean success = false;

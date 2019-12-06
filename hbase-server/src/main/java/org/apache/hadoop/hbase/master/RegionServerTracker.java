@@ -121,7 +121,7 @@ public class RegionServerTracker extends ZKListener {
       Set<ServerName> splittingServersFromWALDir)
       throws KeeperException, IOException {
     LOG.info("Starting RegionServerTracker; {} have existing ServerCrashProcedures, {} " +
-        "possibly 'live' servers, and {} 'splitting'.", deadServersFromPE.size(),
+        "possibly 'live' servers, and {} 'splitting'", deadServersFromPE.size(),
         liveServersFromWALDir.size(), splittingServersFromWALDir.size());
     // deadServersFromPE is made from a list of outstanding ServerCrashProcedures.
     // splittingServersFromWALDir are being actively split -- the directory in the FS ends in

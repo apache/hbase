@@ -318,7 +318,7 @@ public class HFileWriterImpl implements HFile.Writer {
 
     // Meta data block index writer
     metaBlockIndexWriter = new HFileBlockIndex.BlockIndexWriter();
-    if (LOG.isTraceEnabled()) LOG.trace("Initialized with " + cacheConf);
+    LOG.trace("Initialized with {}", cacheConf);
   }
 
   /**

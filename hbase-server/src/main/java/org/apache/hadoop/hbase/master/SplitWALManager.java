@@ -96,8 +96,8 @@ public class SplitWALManager {
       // 2. create corresponding procedures
       return createSplitWALProcedures(splittingFiles, crashedServer);
     } catch (IOException e) {
-      LOG.error("failed to create procedures for splitting logs of {}", crashedServer, e);
-      throw e;
+      throw new IOException("Failed to create procedures for splitting logs of " + crashedServer,
+          e);
     }
   }
 

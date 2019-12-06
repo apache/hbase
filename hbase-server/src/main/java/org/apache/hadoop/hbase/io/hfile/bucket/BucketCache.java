@@ -309,7 +309,7 @@ public class BucketCache implements BlockCache, HeapSize {
       try {
         retrieveFromFile(bucketSizes);
       } catch (IOException ioex) {
-        LOG.error("Can't restore from file[" + persistencePath + "] because of ", ioex);
+        LOG.error("Failed to restore from file [" + persistencePath + "]", ioex);
       }
     }
     final String threadName = Thread.currentThread().getName();
@@ -401,7 +401,7 @@ public class BucketCache implements BlockCache, HeapSize {
       return new SharedMemoryMmapIOEngine(ioEngineName.substring(5), capacity);
     } else {
       throw new IllegalArgumentException(
-          "Don't understand io engine name for cache- prefix with file:, files:, mmap: or offheap");
+          "Failed to parse io engine name for cache - use prefix with file:, files:, mmap: or offheap");
     }
   }
 
@@ -739,11 +739,11 @@ public class BucketCache implements BlockCache, HeapSize {
     if (!freeSpaceLock.tryLock()) {
       return;
     }
+    LOG.debug("Free started because: {}", why);
     try {
       freeInProgress = true;
       long bytesToFreeWithoutExtra = 0;
       // Calculate free byte for each bucketSizeinfo
-      StringBuilder msgBuffer = LOG.isDebugEnabled()? new StringBuilder(): null;
       BucketAllocator.IndexStatistics[] stats = bucketAllocator.getIndexStatistics();
       long[] bytesToFreeForBucket = new long[stats.length];
       for (int i = 0; i < stats.length; i++) {
@@ -753,14 +753,14 @@ public class BucketCache implements BlockCache, HeapSize {
         if (stats[i].freeCount() < freeGoal) {
           bytesToFreeForBucket[i] = stats[i].itemSize() * (freeGoal - stats[i].freeCount());
           bytesToFreeWithoutExtra += bytesToFreeForBucket[i];
-          if (msgBuffer != null) {
-            msgBuffer.append("Free for bucketSize(" + stats[i].itemSize() + ")="
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Free for bucketSize(" + stats[i].itemSize() + ")="
               + StringUtils.byteDesc(bytesToFreeForBucket[i]) + ", ");
           }
         }
       }
-      if (msgBuffer != null) {
-        msgBuffer.append("Free for total=" + StringUtils.byteDesc(bytesToFreeWithoutExtra) + ", ");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Free for total=" + StringUtils.byteDesc(bytesToFreeWithoutExtra));
       }
 
       if (bytesToFreeWithoutExtra <= 0) {
@@ -768,10 +768,10 @@ public class BucketCache implements BlockCache, HeapSize {
       }
       long currentSize = bucketAllocator.getUsedSize();
       long totalSize = bucketAllocator.getTotalSize();
-      if (LOG.isDebugEnabled() && msgBuffer != null) {
-        LOG.debug("Free started because \"" + why + "\"; " + msgBuffer.toString() +
-          " of current used=" + StringUtils.byteDesc(currentSize) + ", actual cacheSize=" +
-          StringUtils.byteDesc(realCacheSize.sum()) + ", total=" + StringUtils.byteDesc(totalSize));
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Current used=" + StringUtils.byteDesc(currentSize) + ", actual cacheSize="
+            + StringUtils.byteDesc(realCacheSize.sum()) + ", total="
+            + StringUtils.byteDesc(totalSize));
       }
 
       long bytesToFreeWithExtra = (long) Math.floor(bytesToFreeWithoutExtra
@@ -965,7 +965,7 @@ public class BucketCache implements BlockCache, HeapSize {
         try {
           re = entries.get(index);
           if (re == null) {
-            LOG.warn("Couldn't get entry or changed on us; who else is messing with it?");
+            LOG.warn("Failed to get entry or changed on us; who else is messing with it?");
             index++;
             continue;
           }
@@ -1159,7 +1159,7 @@ public class BucketCache implements BlockCache, HeapSize {
         algorithm);
     } else {
       // if has not checksum, it means the persistence file is old format
-      LOG.info("Persistent file is old format, it does not support verifying file integrity!");
+      LOG.info("Persistent file is old format, it does not support verifying file integrity");
     }
     verifyCapacityAndClasses(proto.getCacheCapacity(), proto.getIoClass(), proto.getMapClass());
     backingMap = BucketProtoUtils.fromPB(proto.getDeserializersMap(), proto.getBackingMap());
@@ -1214,7 +1214,7 @@ public class BucketCache implements BlockCache, HeapSize {
         join();
         persistToFile();
       } catch (IOException ex) {
-        LOG.error("Unable to persist data on exit: " + ex.toString(), ex);
+        LOG.error("Unable to persist data on exit", ex);
       } catch (InterruptedException e) {
         LOG.warn("Failed to persist data on exit", e);
       }

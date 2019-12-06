@@ -226,8 +226,7 @@ public class ServerManager {
     checkClockSkew(sn, request.getServerCurrentTime());
     checkIsDead(sn, "STARTUP");
     if (!checkAndRecordNewServer(sn, ServerMetricsBuilder.of(sn, versionNumber, version))) {
-      LOG.warn(
-        "THIS SHOULD NOT HAPPEN, RegionServerStartup" + " could not record the server: " + sn);
+      LOG.warn("THIS SHOULD NOT HAPPEN, RegionServerStartup could not record the server: " + sn);
     }
     return sn;
   }
@@ -362,16 +361,13 @@ public class ServerManager {
       throws ClockOutOfSyncException {
     long skew = Math.abs(System.currentTimeMillis() - serverCurrentTime);
     if (skew > maxSkew) {
-      String message = "Server " + serverName + " has been " +
-        "rejected; Reported time is too far out of sync with master.  " +
-        "Time difference of " + skew + "ms > max allowed of " + maxSkew + "ms";
-      LOG.warn(message);
-      throw new ClockOutOfSyncException(message);
-    } else if (skew > warningSkew){
-      String message = "Reported time for server " + serverName + " is out of sync with master " +
-        "by " + skew + "ms. (Warning threshold is " + warningSkew + "ms; " +
-        "error threshold is " + maxSkew + "ms)";
-      LOG.warn(message);
+      throw new ClockOutOfSyncException("Server " + serverName + " has been "
+          + "rejected; Reported time is too far out of sync with master.  " + "Time difference of "
+          + skew + "ms > max allowed of " + maxSkew + "ms");
+    } else if (skew > warningSkew) {
+      LOG.warn("Reported time for server " + serverName + " is out of sync with master " + "by "
+          + skew + "ms. (Warning threshold is " + warningSkew + "ms; " + "error threshold is "
+          + maxSkew + "ms)");
     }
   }
 

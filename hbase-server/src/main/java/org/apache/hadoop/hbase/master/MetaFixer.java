@@ -89,7 +89,7 @@ class MetaFixer {
   void fixHoles(CatalogJanitor.Report report) throws IOException {
     List<Pair<RegionInfo, RegionInfo>> holes = report.getHoles();
     if (holes.isEmpty()) {
-      LOG.debug("No holes.");
+      LOG.debug("No holes");
       return;
     }
     for (Pair<RegionInfo, RegionInfo> p: holes) {
@@ -180,7 +180,7 @@ class MetaFixer {
   static List<SortedSet<RegionInfo>> calculateMerges(int maxMergeCount,
       List<Pair<RegionInfo, RegionInfo>> overlaps) {
     if (overlaps.isEmpty()) {
-      LOG.debug("No overlaps.");
+      LOG.debug("No overlaps");
       return Collections.emptyList();
     }
     List<SortedSet<RegionInfo>> merges = new ArrayList<>();

@@ -346,15 +346,14 @@ public abstract class RpcExecutor {
             if (abortable != null) {
               abortable.abort(message, e);
             } else {
-              LOG.error("Error but can't abort because abortable is null: "
-                  + StringUtils.stringifyException(e));
+              LOG.error("Error but unable to abort because abortable is null", e);
               throw e;
             }
           } else {
-            LOG.warn("Handler errors " + StringUtils.stringifyException(e));
+            LOG.warn("Handler errors" , e);
           }
         } else {
-          LOG.warn("Handler  exception " + StringUtils.stringifyException(e));
+          LOG.warn("Handler exception", e);
         }
       } finally {
         this.activeHandlerCount.decrementAndGet();

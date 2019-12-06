@@ -73,8 +73,7 @@ public class LongTermArchivingHFileCleaner extends BaseHFileCleanerDelegate {
 
       String tableName = table.getName();
       boolean ret = !archiveTracker.keepHFiles(tableName);
-      LOG.debug("Archiver says to [" + (ret ? "delete" : "keep") + "] files for table:" +
-          tableName);
+      LOG.debug("Archiver says to [{}] files for table: {}", (ret ? "delete" : "keep"), tableName);
       return ret;
     } catch (IOException e) {
       LOG.error("Failed to lookup status of:" + fStat.getPath() + ", keeping it just incase.", e);

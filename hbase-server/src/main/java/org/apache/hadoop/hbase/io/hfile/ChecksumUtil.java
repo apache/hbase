@@ -181,9 +181,13 @@ public class ChecksumUtil {
     assert dataChecksum != null;
     int onDiskDataSizeWithHeader =
       buf.getInt(HFileBlock.Header.ON_DISK_DATA_SIZE_WITH_HEADER_INDEX);
-    LOG.trace("dataLength={}, sizeWithHeader={}, checksumType={}, file={}, "
-      + "offset={}, headerSize={}, bytesPerChecksum={}", buf.capacity(), onDiskDataSizeWithHeader,
-      ctype.getName(), pathName, offset, hdrSize, bytesPerChecksum);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace(
+        "dataLength={}, sizeWithHeader={}, checksumType={}, file={}, "
+            + "offset={}, headerSize={}, bytesPerChecksum={}",
+        buf.capacity(), onDiskDataSizeWithHeader, ctype.getName(), pathName, offset, hdrSize,
+        bytesPerChecksum);
+    }
     ByteBuff data = buf.duplicate().position(0).limit(onDiskDataSizeWithHeader);
     ByteBuff checksums = buf.duplicate().position(onDiskDataSizeWithHeader).limit(buf.limit());
     return verifyChunkedSums(dataChecksum, data, checksums, pathName);

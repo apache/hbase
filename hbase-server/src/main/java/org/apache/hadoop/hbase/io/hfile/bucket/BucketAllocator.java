@@ -397,12 +397,12 @@ public final class BucketAllocator {
     }
 
     if (sizeNotMatchedCount > 0) {
-      LOG.warn("There are " + sizeNotMatchedCount + " blocks which can't be rebuilt because " +
-        "there is no matching bucket size for these blocks");
+      LOG.warn("There are " + sizeNotMatchedCount + " blocks which failed to be rebuilt because "
+          + "there is no matching bucket size for these blocks");
     }
     if (insufficientCapacityCount > 0) {
-      LOG.warn("There are " + insufficientCapacityCount + " blocks which can't be rebuilt - "
-        + "did you shrink the cache?");
+      LOG.warn("There are " + insufficientCapacityCount + " blocks which failed to be rebuilt - "
+          + "did you shrink the cache?");
     }
   }
 
@@ -545,7 +545,7 @@ public final class BucketAllocator {
   void logStatistics() {
     IndexStatistics total = new IndexStatistics();
     IndexStatistics[] stats = getIndexStatistics(total);
-    LOG.info("Bucket allocator statistics follow:\n");
+    LOG.info("Bucket allocator statistics follow:");
     LOG.info("  Free bytes=" + total.freeBytes() + "+; used bytes="
         + total.usedBytes() + "; total bytes=" + total.totalBytes());
     for (IndexStatistics s : stats) {

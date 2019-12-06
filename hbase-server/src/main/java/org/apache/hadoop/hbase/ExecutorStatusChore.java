@@ -73,7 +73,7 @@ public class ExecutorStatusChore extends ScheduledChore {
         running.set(runningSize);
       }
     } catch(Throwable e) {
-      LOG.error(e.getMessage(), e);
+      LOG.error("Failed to run chore", e);
     }
   }
 

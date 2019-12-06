@@ -355,7 +355,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
 public class MasterRpcServices extends RSRpcServices
       implements MasterService.BlockingInterface, RegionServerStatusService.BlockingInterface,
         LockService.BlockingInterface, HbckService.BlockingInterface {
-  private static final Logger LOG = LoggerFactory.getLogger(MasterRpcServices.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(MasterRpcServices.class);
   private static final Logger AUDITLOG =
       LoggerFactory.getLogger("SecurityLogger."+MasterRpcServices.class.getName());
 
@@ -1189,8 +1189,7 @@ public class MasterRpcServices extends RSRpcServices
         throw new ServiceException("The procedure is not registered: "
           + desc.getSignature());
       }
-      LOG.debug("Checking to see if procedure from request:"
-        + desc.getSignature() + " is done");
+      LOG.debug("Checking to see if procedure from request [{}] is done", desc.getSignature());
 
       IsProcedureDoneResponse.Builder builder =
         IsProcedureDoneResponse.newBuilder();
@@ -1232,7 +1231,7 @@ public class MasterRpcServices extends RSRpcServices
   @Override
   public GetProcedureResultResponse getProcedureResult(RpcController controller,
       GetProcedureResultRequest request) throws ServiceException {
-    LOG.debug("Checking to see if procedure is done pid=" + request.getProcId());
+    LOG.debug("Checking to see if procedure is done pid={}", request.getProcId());
     try {
       master.checkInitialized();
       GetProcedureResultResponse.Builder builder = GetProcedureResultResponse.newBuilder();
@@ -1583,8 +1582,7 @@ public class MasterRpcServices extends RSRpcServices
     try {
       master.shutdown();
     } catch (IOException e) {
-      LOG.error("Exception occurred in HMaster.shutdown()", e);
-      throw new ServiceException(e);
+      throw new ServiceException("Exception occurred in HMaster.shutdown()", e);
     }
     return ShutdownResponse.newBuilder().build();
   }
@@ -1625,8 +1623,7 @@ public class MasterRpcServices extends RSRpcServices
     try {
       master.stopMaster();
     } catch (IOException e) {
-      LOG.error("Exception occurred while stopping master", e);
-      throw new ServiceException(e);
+      throw new ServiceException("Exception occurred while stopping master", e);
     }
     return StopMasterResponse.newBuilder().build();
   }
@@ -1668,8 +1665,10 @@ public class MasterRpcServices extends RSRpcServices
       if (master.cpHost != null) {
         master.cpHost.preUnassign(hri, force);
       }
-      LOG.debug(master.getClientIdAuditPrefix() + " unassign " + hri.getRegionNameAsString()
-          + " in current location if it is online and reassign.force=" + force);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(master.getClientIdAuditPrefix() + " unassign " + hri.getRegionNameAsString()
+            + " in current location if it is online and reassign.force=" + force);
+      }
       master.getAssignmentManager().unassign(hri);
       if (master.cpHost != null) {
         master.cpHost.postUnassign(hri, force);
@@ -1816,7 +1815,6 @@ public class MasterRpcServices extends RSRpcServices
       for (ColumnFamilyDescriptor hcd : hcds) {
         if (Bytes.equals(family, hcd.getName())) {
           if (!hcd.isMobEnabled()) {
-            LOG.error("Column family " + hcd.getNameAsString() + " is not a mob column family");
             throw new DoNotRetryIOException("Column family " + hcd.getNameAsString()
                     + " is not a mob column family");
           }
@@ -1831,7 +1829,6 @@ public class MasterRpcServices extends RSRpcServices
       }
     }
     if (compactedColumns.isEmpty()) {
-      LOG.error("No mob column families are assigned in the mob compaction");
       throw new DoNotRetryIOException(
               "No mob column families are assigned in the mob compaction");
     }
@@ -2245,11 +2242,9 @@ public class MasterRpcServices extends RSRpcServices
       long procId = MasterProcedureUtil.submitProcedure(npr);
       return LockResponse.newBuilder().setProcId(procId).build();
     } catch (IllegalArgumentException e) {
-      LOG.warn("Exception when queuing lock", e);
-      throw new ServiceException(new DoNotRetryIOException(e));
+      throw new ServiceException("Exception when queuing lock", new DoNotRetryIOException(e));
     } catch (IOException e) {
-      LOG.warn("Exception when queuing lock", e);
-      throw new ServiceException(e);
+      throw new ServiceException("Exception when queuing lock", e);
     }
   }
 
@@ -2852,7 +2847,7 @@ public class MasterRpcServices extends RSRpcServices
     } catch (FileNotFoundException fnfe) {
       // If no files, then we don't contain metas; was failing schedule of
       // SCP because this was FNFE'ing when no server dirs ('Unknown Server').
-      LOG.warn("No dir for WALs for {}; continuing", serverName.toString());
+      LOG.warn("No dir for WALs for {}; continuing", serverName);
       return false;
     }
   }

@@ -54,7 +54,7 @@ public class HFileArchiveTableMonitor {
    */
   public synchronized void addTable(String table) {
     if (this.shouldArchiveTable(table)) {
-      LOG.debug("Already archiving table: " + table + ", ignoring it");
+      LOG.debug("Already archiving table: {}, ignoring it", table);
       return;
     }
     archivedTables.add(table);

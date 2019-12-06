@@ -41,8 +41,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public class AssignmentVerificationReport {
-  private static final Logger LOG = LoggerFactory.getLogger(
-      AssignmentVerificationReport.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(AssignmentVerificationReport.class);
 
   private TableName tableName = null;
   private boolean enforceLocality = false;
@@ -202,9 +201,9 @@ public class AssignmentVerificationReport {
           }
         }
       } catch (Exception e) {
-        LOG.error("Cannot verify the region assignment for region " +
-            ((region == null) ? " null " : region.getRegionNameAsString()) +
-            "because of " + e);
+        LOG.error("Failed to verify the region assignment for region "
+            + ((region == null) ? " null " : region.getRegionNameAsString()),
+          e);
       }
     }
 
@@ -368,8 +367,8 @@ public class AssignmentVerificationReport {
         primaryToSecTerRSMap.put(primaryRS, secAndTerSet);
       } catch (Exception e) {
         LOG.error("Cannot verify the region assignment for region "
-            + ((region == null) ? " null " : region.getRegionNameAsString())
-            + "because of " + e);
+            + ((region == null) ? " null " : region.getRegionNameAsString()),
+          e);
       }
     }
     float dispersionScoreSummary = 0;

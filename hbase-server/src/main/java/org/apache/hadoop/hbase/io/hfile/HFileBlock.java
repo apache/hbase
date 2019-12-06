@@ -1601,7 +1601,6 @@ public class HFileBlock implements Cacheable {
                        offset + " filesize " + fileSize +
                        " but this cannot happen because doVerify is " +
                        doVerificationThruHBaseChecksum;
-          HFile.LOG.warn(msg);
           throw new IOException(msg); // cannot happen case here
         }
         HFile.CHECKSUM_FAILURES.increment(); // update metrics
@@ -1626,7 +1625,6 @@ public class HFileBlock implements Cacheable {
         String msg = "readBlockData failed, possibly due to " +
                      "checksum verification failed for file " + pathName +
                      " at offset " + offset + " filesize " + fileSize;
-        HFile.LOG.warn(msg);
         throw new IOException(msg);
       }
 
@@ -1760,7 +1758,8 @@ public class HFileBlock implements Cacheable {
         // in a LOG every time we seek. See HBASE-17072 for more detail.
         if (headerBuf == null) {
           if (LOG.isTraceEnabled()) {
-            LOG.trace("Extra see to get block size!", new RuntimeException());
+            LOG.trace("Extra see to get block size",
+              new Exception("Trace Enabled. Not a real Exception"));
           }
           headerBuf = HEAP.allocate(hdrSize);
           readAtOffset(is, headerBuf, hdrSize, false, offset, pread);
@@ -1810,7 +1809,7 @@ public class HFileBlock implements Cacheable {
         if (!fileContext.isCompressedOrEncrypted()) {
           hFileBlock.sanityCheckUncompressed();
         }
-        LOG.trace("Read {} in {} ns", hFileBlock, duration);
+        LOG.trace("Read {} in {}ns", hFileBlock, duration);
         // Cache next block header if we read it for the next time through here.
         if (nextBlockOnDiskSize != -1) {
           cacheNextBlockHeader(offset + hFileBlock.getOnDiskSizeWithHeader(), onDiskBlock,

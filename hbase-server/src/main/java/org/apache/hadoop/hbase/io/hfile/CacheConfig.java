@@ -34,7 +34,7 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
  */
 @InterfaceAudience.Private
 public class CacheConfig {
-  private static final Logger LOG = LoggerFactory.getLogger(CacheConfig.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(CacheConfig.class);
 
   /**
    * Disabled cache configuration

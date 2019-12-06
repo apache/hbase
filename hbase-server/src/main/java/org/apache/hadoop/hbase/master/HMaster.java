@@ -293,8 +293,7 @@ public class HMaster extends HRegionServer implements MasterServices {
             LOG.error("Master failed to complete initialization after " + timeout + "ms. Please"
                 + " consider submitting a bug report including a thread dump of this process.");
             if (haltOnTimeout) {
-              LOG.error("Zombie Master exiting. Thread dump to stdout");
-              Threads.printThreadInfo(System.out, "Zombie HMaster");
+              LOG.error("Zombie Master exiting", new Exception("Stack Trace Dump"));
               System.exit(-1);
             }
           }
@@ -475,7 +474,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       if(redirectHost == null) {
         redirectHost = request.getServerName();
         if(!Addressing.isLocalAddress(InetAddress.getByName(redirectHost))) {
-          LOG.warn("Couldn't resolve '" + redirectHost + "' as an address local to this node and '" +
+          LOG.warn("Failed to resolve '" + redirectHost + "' as an address local to this node and '" +
               MASTER_HOSTNAME_KEY + "' is not set; client will get an HTTP 400 response. If " +
               "your HBase deployment relies on client accessible names that the region server process " +
               "can't resolve locally, then you should set the previously mentioned configuration variable " +
@@ -644,12 +643,9 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
     final String addr = conf.get("hbase.master.info.bindAddress", "0.0.0.0");
     if (!Addressing.isLocalAddress(InetAddress.getByName(addr))) {
-      String msg =
-          "Failed to start redirecting jetty server. Address " + addr
-              + " does not belong to this host. Correct configuration parameter: "
-              + "hbase.master.info.bindAddress";
-      LOG.error(msg);
-      throw new IOException(msg);
+      throw new IOException("Failed to start redirecting jetty server. Address " + addr
+          + " does not belong to this host. Correct configuration parameter: "
+          + "hbase.master.info.bindAddress");
     }
 
     // TODO I'm pretty sure we could just add another binding to the InfoServer run by
@@ -848,11 +844,10 @@ public class HMaster extends HRegionServer implements MasterServices {
     for (Class<? extends Procedure> clazz : UNSUPPORTED_PROCEDURES) {
       List<Procedure<MasterProcedureEnv>> procs = procsByType.get(clazz);
       if (procs != null) {
-        LOG.error(
-          "Unsupported procedure type {} found, please rollback your master to the old" +
-            " version to finish them, and then try to upgrade again. The full procedure list: {}",
-          clazz, procs);
-        throw new HBaseIOException("Unsupported procedure type " + clazz + " found");
+        throw new HBaseIOException("Unsupported procedure type " + clazz
+            + " found, please rollback your master to the old"
+            + " version to finish them, and then try to upgrade again. The full procedure list: "
+            + procs);
       }
     }
     // A special check for SCP, as we do not support RecoverMetaProcedure any more so we need to
@@ -1157,7 +1152,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     setInitialized(true);
 
     if (maintenanceMode) {
-      LOG.info("Detected repair mode, skipping final initialization steps.");
+      LOG.info("Detected repair mode, skipping final initialization steps");
       return;
     }
 
@@ -1208,11 +1203,12 @@ public class HMaster extends HRegionServer implements MasterServices {
      * After master has started up, lets do balancer post startup initialization. Since this runs
      * in activeMasterManager thread, it should be fine.
      */
-    long start = System.currentTimeMillis();
+    final long start = System.nanoTime();
     this.balancer.postMasterStartupInitialize();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Balancer post startup initialization complete, took " + (
-          (System.currentTimeMillis() - start) / 1000) + " seconds");
+      final long end = System.nanoTime();
+      LOG.debug("Balancer post startup initialization complete, took {}s",
+        TimeUnit.NANOSECONDS.toSeconds(end - start));
     }
   }
 
@@ -1499,14 +1495,10 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (isSnapshotChoreEnabled) {
       getChoreService().scheduleChore(this.snapshotCleanerChore);
     } else {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Snapshot Cleaner Chore is disabled. Not starting up the chore..");
-      }
+      LOG.trace("Snapshot Cleaner Chore is disabled. Not starting up the chore.");
     }
     serviceStarted = true;
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Started service threads");
-    }
+    LOG.trace("Started service threads");
   }
 
   @Override
@@ -1746,12 +1738,12 @@ public class HMaster extends HRegionServer implements MasterServices {
   public boolean balance(boolean force) throws IOException {
     // if master not initialized, don't run balancer.
     if (!isInitialized()) {
-      LOG.debug("Master has not been initialized, don't run balancer.");
+      LOG.debug("Master has not been initialized, skip run balancer");
       return false;
     }
 
     if (isInMaintenanceMode()) {
-      LOG.info("Master is in maintenanceMode mode, don't run balancer.");
+      LOG.info("Master is in maintenanceMode mode, skip run balancer");
       return false;
     }
 
@@ -1861,8 +1853,8 @@ public class HMaster extends HRegionServer implements MasterServices {
         if (rpCount < plans.size() && System.currentTimeMillis() > cutoffTime) {
           // TODO: After balance, there should not be a cutoff time (keeping it as
           // a security net for now)
-          LOG.debug("No more balancing till next balance run; maxBalanceTime="
-              + this.maxBlancingTime);
+          LOG.debug("No more balancing till next balance run; maxBalanceTime={}ms",
+            this.maxBlancingTime);
           break;
         }
       }
@@ -1885,19 +1877,19 @@ public class HMaster extends HRegionServer implements MasterServices {
    */
   public boolean normalizeRegions() throws IOException {
     if (!isInitialized()) {
-      LOG.debug("Master has not been initialized, don't run region normalizer.");
+      LOG.debug("Master has not been initialized, skip region normalizer");
       return false;
     }
     if (this.getServerManager().isClusterShutdown()) {
-      LOG.info("Cluster is shutting down, don't run region normalizer.");
+      LOG.info("Cluster is shutting down, skip region normalizer");
       return false;
     }
     if (isInMaintenanceMode()) {
-      LOG.info("Master is in maintenance mode, don't run region normalizer.");
+      LOG.info("Master is in maintenance mode, skip region normalizer");
       return false;
     }
     if (!this.regionNormalizerTracker.isNormalizerOn()) {
-      LOG.debug("Region normalization is disabled, don't run region normalizer.");
+      LOG.debug("Region normalization is disabled, skip region normalizer");
       return false;
     }
 
@@ -1910,15 +1902,16 @@ public class HMaster extends HRegionServer implements MasterServices {
 
       for (TableName table : allEnabledTables) {
         if (isInMaintenanceMode()) {
-          LOG.debug("Master is in maintenance mode, stop running region normalizer.");
+          LOG.debug("Master is in maintenance mode, stop running region normalizer");
           return false;
         }
 
         TableDescriptor tblDesc = getTableDescriptors().get(table);
         if (table.isSystemTable() || (tblDesc != null &&
             !tblDesc.isNormalizationEnabled())) {
-          LOG.trace("Skipping normalization for {}, as it's either system"
-              + " table or doesn't have auto normalization turned on", table);
+          LOG.trace("Skipping normalization for {}, as it is either system"
+              + " table or it does not have auto normalization turned on",
+            table);
           continue;
         }
         List<NormalizationPlan> plans = this.normalizer.computePlanForTable(table);
@@ -2049,14 +2042,14 @@ public class HMaster extends HRegionServer implements MasterServices {
       final List<ServerName> destServers = this.serverManager.createDestinationServersList(exclude);
       dest = balancer.randomAssignment(hri, destServers);
       if (dest == null) {
-        LOG.debug("Unable to determine a plan to assign " + hri);
+        LOG.debug("Unable to determine a plan to assign {}", hri);
         return;
       }
     } else {
       ServerName candidate = ServerName.valueOf(Bytes.toString(destServerName));
       dest = balancer.randomAssignment(hri, Lists.newArrayList(candidate));
       if (dest == null) {
-        LOG.debug("Unable to determine a plan to assign " + hri);
+        LOG.debug("Unable to determine a plan to assign {}", hri);
         return;
       }
       // TODO: What is this? I don't get it.
@@ -2064,16 +2057,17 @@ public class HMaster extends HRegionServer implements MasterServices {
           && !((BaseLoadBalancer)balancer).shouldBeOnMaster(hri)) {
         // To avoid unnecessary region moving later by balancer. Don't put user
         // regions on master.
-        LOG.debug("Skipping move of region " + hri.getRegionNameAsString()
-          + " to avoid unnecessary region moving later by load balancer,"
-          + " because it should not be on master");
+        LOG.debug("Skipping move of region {}"
+            + " to avoid unnecessary region moving later by load balancer,"
+            + " because it should not be on master",
+          hri.getRegionNameAsString());
         return;
       }
     }
 
     if (dest.equals(regionState.getServerName())) {
-      LOG.debug("Skipping move of region " + hri.getRegionNameAsString()
-        + " because region already assigned to the same server " + dest + ".");
+      LOG.debug("Skipping move of region {} because region already assigned to the same server {}",
+        hri.getRegionNameAsString(), dest);
       return;
     }
 
@@ -2205,7 +2199,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       // This will only be a minute or so while the cluster starts up,
       // so don't worry about setting watches on the parent znode
       while (!activeMasterManager.hasActiveMaster()) {
-        LOG.debug("Waiting for master address and cluster state znode to be written.");
+        LOG.debug("Waiting for master address and cluster state znode to be written");
         Threads.sleep(timeout);
       }
     }
@@ -2402,7 +2396,7 @@ public class HMaster extends HRegionServer implements MasterServices {
                     + "' is disallowed due to a violated space quota.");
               }
             }
-          } else if (LOG.isTraceEnabled()) {
+          } else {
             LOG.trace("Unable to check for space quotas as the MasterQuotaManager is not enabled");
           }
         }
@@ -2670,7 +2664,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       backupMasterStrings = ZKUtil.listChildrenNoWatch(this.zooKeeper,
         this.zooKeeper.getZNodePaths().backupMasterAddressesZNode);
     } catch (KeeperException e) {
-      LOG.warn(this.zooKeeper.prefix("Unable to list backup servers"), e);
+      LOG.warn("Unable to list backup servers for {}", this.zooKeeper, e);
       backupMasterStrings = null;
     }
 
@@ -2697,8 +2691,7 @@ public class HMaster extends HRegionServer implements MasterServices {
             backupMasters.add(sn);
           }
         } catch (KeeperException e) {
-          LOG.warn(this.zooKeeper.prefix("Unable to get information about " +
-                   "backup servers"), e);
+          LOG.warn("Unable to get information about backup servers from {}", this.zooKeeper, e);
         }
       }
       Collections.sort(backupMasters, new Comparator<ServerName>() {
@@ -3010,9 +3003,8 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
 
     coprocessorServiceHandlers.put(serviceName, instance);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Registered master coprocessor service: service="+serviceName);
-    }
+    LOG.debug("Registered master coprocessor service: service={}", serviceName);
+
     return true;
   }
 

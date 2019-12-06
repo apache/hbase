@@ -101,9 +101,7 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements
   @Override
   public void nodeChildrenChanged(String path) {
     if (path.equals(watcher.getZNodePaths().splitLogZNode)) {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("tasks arrived or departed on " + path);
-      }
+      LOG.trace("Tasks arrived or departed on {}", path);
       synchronized (taskReadySeq) {
         this.taskReadySeq.incrementAndGet();
         taskReadySeq.notify();
@@ -154,7 +152,7 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements
         // currentTask can change but that's ok
         String taskpath = currentTask;
         if (taskpath != null && taskpath.equals(path)) {
-          LOG.info("retrying data watch on " + path);
+          LOG.info("Retrying data watch on " + path);
           SplitLogCounters.tot_wkr_get_data_retry.increment();
           getDataSetWatchAsync();
         } else {
@@ -192,7 +190,7 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements
           // worker to unassigned to owned by another worker
           if (!slt.isOwned(serverName) && !slt.isDone(serverName) && !slt.isErr(serverName)
               && !slt.isResigned(serverName)) {
-            LOG.info("task " + taskpath + " preempted from " + serverName
+            LOG.info("Task " + taskpath + " preempted from " + serverName
                 + ", current task state and owner=" + slt.toString());
             worker.stopTask();
           }
@@ -259,7 +257,7 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements
         return false;
       }
 
-      LOG.info("worker " + server.getServerName() + " acquired task " + path);
+      LOG.info("Worker " + server.getServerName() + " acquired task " + path);
       SplitLogCounters.tot_wkr_task_acquired.increment();
       getDataSetWatchAsync();
 
@@ -462,8 +460,10 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements
       } catch (KeeperException e) {
         LOG.warn("Could not get children of znode " + watcher.getZNodePaths().splitLogZNode, e);
       }
-      LOG.debug("Retry listChildren of znode " + watcher.getZNodePaths().splitLogZNode
-          + " after sleep for " + sleepTime + "ms!");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Retry listChildren of znode " + watcher.getZNodePaths().splitLogZNode
+            + " after sleep for " + sleepTime + "ms");
+      }
       Thread.sleep(sleepTime);
     }
     return childrenPaths;
@@ -554,20 +554,20 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements
     int taskZKVersion = zkDetails.getCurTaskZKVersion().intValue();
     try {
       if (ZKUtil.setData(watcher, task, slt.toByteArray(), taskZKVersion)) {
-        LOG.info("successfully transitioned task " + task + " to final state " + slt);
+        LOG.info("Successfully transitioned task " + task + " to final state " + slt);
         ctr.increment();
         return;
       }
-      LOG.warn("failed to transistion task " + task + " to end state " + slt
+      LOG.warn("Failed to transistion task " + task + " to end state " + slt
           + " because of version mismatch ");
     } catch (KeeperException.BadVersionException bve) {
-      LOG.warn("transisition task " + task + " to " + slt + " failed because of version mismatch",
+      LOG.warn("Transisition task " + task + " to " + slt + " failed because of version mismatch",
         bve);
     } catch (KeeperException.NoNodeException e) {
       LOG.error(HBaseMarkers.FATAL,
-        "logic error - end task " + task + " " + slt + " failed because task doesn't exist", e);
+        "Logic error - end task " + task + " " + slt + " failed because task doesn't exist", e);
     } catch (KeeperException e) {
-      LOG.warn("failed to end task, " + task + " " + slt, e);
+      LOG.warn("Failed to end task, " + task + " " + slt, e);
     }
     SplitLogCounters.tot_wkr_final_transition_failed.increment();
   }
