@@ -40,6 +40,7 @@ public class ReaderContextBuilder {
   private HFileSystem hfs;
   private boolean primaryReplicaReader = true;
   private ReaderType type = ReaderType.PREAD;
+  private boolean pefetchOnOpen = false;
 
   public ReaderContextBuilder() {}
 
@@ -82,6 +83,11 @@ public class ReaderContextBuilder {
     return this;
   }
 
+  public ReaderContextBuilder withPrefetchOnOpen(boolean pefetchOnOpen) {
+    this.pefetchOnOpen = pefetchOnOpen;
+    return this;
+  }
+
   @VisibleForTesting
   public ReaderContextBuilder withFileSystemAndPath(FileSystem fs, Path filePath)
       throws IOException {
@@ -94,7 +100,8 @@ public class ReaderContextBuilder {
 
   public ReaderContext build() {
     validateFields();
-    return new ReaderContext(filePath, fsdis, fileSize, hfs, primaryReplicaReader, type);
+    return new ReaderContext(filePath, fsdis, fileSize, hfs, primaryReplicaReader,
+        type, pefetchOnOpen);
   }
 
   private void validateFields() throws IllegalArgumentException {

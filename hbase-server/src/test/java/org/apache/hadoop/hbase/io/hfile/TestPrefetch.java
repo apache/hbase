@@ -116,7 +116,11 @@ public class TestPrefetch {
 
   private void readStoreFile(Path storeFilePath) throws Exception {
     // Open the file
-    HFile.Reader reader = HFile.createReader(fs, storeFilePath, cacheConf, true, conf);
+    ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, storeFilePath)
+        .withPrefetchOnOpen(true).build();
+    HFileInfo hfile = new HFileInfo(context, conf);
+    HFile.Reader reader = HFile.createReader(context, hfile, cacheConf, conf);
+    hfile.initMetaAndIndex(reader);
 
     while (!reader.prefetchComplete()) {
       // Sleep for a bit

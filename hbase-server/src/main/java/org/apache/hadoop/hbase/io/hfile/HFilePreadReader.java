@@ -35,7 +35,7 @@ public class HFilePreadReader extends HFileReaderImpl {
       CacheConfig cacheConf, Configuration conf) throws IOException {
     super(context, fileInfo, cacheConf, conf);
     // Prefetch file blocks upon open if requested
-    if (cacheConf.shouldPrefetchOnOpen()) {
+    if (context.shouldPrefetchOnOpen()) {
       PrefetchExecutor.request(path, new Runnable() {
         @Override
         public void run() {

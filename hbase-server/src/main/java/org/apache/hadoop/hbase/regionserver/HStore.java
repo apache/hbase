@@ -575,6 +575,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
 
     int totalValidStoreFile = 0;
     for (StoreFileInfo storeFileInfo : files) {
+      storeFileInfo.setPrefetchOnOpen(cacheConf.shouldPrefetchOnOpen());
       // open each store file in parallel
       completionService.submit(() -> this.createStoreFileAndReader(storeFileInfo));
       totalValidStoreFile++;
@@ -899,7 +900,10 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     LOG.info("Loaded HFile " + srcPath + " into store '" + getColumnFamilyName() + "' as "
         + dstPath + " - updating store file list.");
 
-    HStoreFile sf = createStoreFileAndReader(dstPath);
+    StoreFileInfo info = new StoreFileInfo(conf, this.getFileSystem(),
+        dstPath, isPrimaryReplicaStore());
+    info.setPrefetchOnOpen(cacheConf.shouldPrefetchOnOpen());
+    HStoreFile sf = createStoreFileAndReader(info);
     bulkLoadHFile(sf);
 
     LOG.info("Successfully loaded store file {} into store {} (new location: {})",
@@ -909,6 +913,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
   }
 
   public void bulkLoadHFile(StoreFileInfo fileInfo) throws IOException {
+    fileInfo.setPrefetchOnOpen(cacheConf.shouldPrefetchOnOpen());
     HStoreFile sf = createStoreFileAndReader(fileInfo);
     bulkLoadHFile(sf);
   }

@@ -107,6 +107,8 @@ public class StoreFileInfo {
 
   private RegionCoprocessorHost coprocessorHost;
 
+  private boolean prefetchOnOpen = false;
+
   // timestamp on when the file was created, is 0 and ignored for reference or link files
   private long createdTimestamp;
 
@@ -321,6 +323,7 @@ public class StoreFileInfo {
         .withFileSize(length)
         .withPrimaryReplicaReader(this.primaryReplica)
         .withReaderType(type)
+        .withPrefetchOnOpen(prefetchOnOpen)
         .withFileSystem(fs);
     if (this.reference != null) {
       contextBuilder.withFilePath(this.getPath());
@@ -641,6 +644,10 @@ public class StoreFileInfo {
 
   HFileInfo getHFileInfo() {
     return hfileInfo;
+  }
+
+  void setPrefetchOnOpen(boolean prefetchOnOpen) {
+    this.prefetchOnOpen = prefetchOnOpen;
   }
 
   void initHDFSBlocksDistribution() throws IOException {

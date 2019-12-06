@@ -39,15 +39,17 @@ public class ReaderContext {
   private final HFileSystem hfs;
   private final boolean primaryReplicaReader;
   private final ReaderType type;
+  private final boolean prefetchOnOpen;
 
   public ReaderContext(Path filePath, FSDataInputStreamWrapper fsdis, long fileSize,
-      HFileSystem hfs, boolean primaryReplicaReader, ReaderType type) {
+      HFileSystem hfs, boolean primaryReplicaReader, ReaderType type, boolean prefetchOnOpen) {
     this.filePath = filePath;
     this.fsdis = fsdis;
     this.fileSize = fileSize;
     this.hfs = hfs;
     this.primaryReplicaReader = primaryReplicaReader;
     this.type = type;
+    this.prefetchOnOpen = prefetchOnOpen;
   }
 
   public Path getFilePath() {
@@ -72,5 +74,9 @@ public class ReaderContext {
 
   public ReaderType getReaderType() {
     return this.type;
+  }
+
+  public boolean shouldPrefetchOnOpen() {
+    return this.prefetchOnOpen;
   }
 }
