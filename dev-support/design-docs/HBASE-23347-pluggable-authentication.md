@@ -33,7 +33,7 @@ today via the configuration property `hbase.security.authentication`
 3. `TOKEN`
 
 `SIMPLE` authentication is effectively no authentication; HBase assumes the user
-is who they claim to be. `KERBEROS` uses authenticates clients via the KerberosV5
+is who they claim to be. `KERBEROS` authenticates clients via the KerberosV5
 protocol using the GSSAPI mechanism of the Java Simple Authentication and Security
 Layer (SASL) protocol. `TOKEN` is a username-password based authentication protocol
 which uses short-lived passwords that can only be obtained via a `KERBEROS` authenticated
