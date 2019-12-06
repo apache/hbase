@@ -97,13 +97,13 @@ public class TestSecurityHeadersFilter {
 
     assertThat("Header 'Strict-Transport-Security' is missing from Rest response",
         response.getHeader("Strict-Transport-Security"), is(not((String)null)));
-    assertThat("Header 'Strict-Transport-Security' has invalid default value",
+    assertThat("Header 'Strict-Transport-Security' has invalid value",
         response.getHeader("Strict-Transport-Security"),
         equalTo("max-age=63072000;includeSubDomains;preload"));
 
     assertThat("Header 'Content-Security-Policy' is missing from Rest response",
         response.getHeader("Content-Security-Policy"), is(not((String)null)));
-    assertThat("Header 'Content-Security-Policy' has invalid default value",
+    assertThat("Header 'Content-Security-Policy' has invalid value",
         response.getHeader("Content-Security-Policy"),
         equalTo("default-src https: data: 'unsafe-inline' 'unsafe-eval'"));
   }
