@@ -61,11 +61,6 @@ public class SimpleSaslClientAuthenticationProvider extends
   }
 
   @Override
-  public boolean isKerberos() {
-    return false;
-  }
-
-  @Override
   public SaslAuthMethod getSaslAuthMethod() {
     return SASL_AUTH_METHOD;
   }

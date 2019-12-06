@@ -127,9 +127,4 @@ public class DigestSaslClientAuthenticationProvider extends
     // Don't send user for token auth. Copied from RpcConnection.
     return null;
   }
-
-  @Override
-  public boolean isKerberos() {
-    return false;
-  }
 }

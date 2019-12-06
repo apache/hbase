@@ -377,11 +377,10 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
    * connection again. The other problem is to do with ticket expiry. To handle that, a relogin is
    * attempted.
    * <p>
-   * The retry logic is governed by the {@link SaslClientAuthenticationProvider#isKerberos()}
-   * method. In case when the user doesn't have valid credentials, we don't need to retry (from
-   * cache or ticket). In such cases, it is prudent to throw a runtime exception when we receive a
-   * SaslException from the underlying authentication implementation, so there is no retry from
-   * other high level (for eg, HCM or HBaseAdmin).
+   * The retry logic is governed by the {@link SaslClientAuthenticationProvider#canRetry()}
+   * method. Some providers have the ability to obtain new credentials and then re-attempt to
+   * authenticate with HBase services. Other providers will continue to fail if they failed the
+   * first time -- for those, we want to fail-fast.
    * </p>
    */
   private void handleSaslConnectionFailure(final int currRetries, final int maxRetries,
@@ -391,41 +390,49 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     user.doAs(new PrivilegedExceptionAction<Object>() {
       @Override
       public Object run() throws IOException, InterruptedException {
-        if (provider.isKerberos()) {
-          if (currRetries < maxRetries) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Exception encountered while connecting to " +
-                "the server : " + StringUtils.stringifyException(ex));
-            }
-            // try re-login
-            relogin();
-            disposeSasl();
-            // have granularity of milliseconds
-            // we are sleeping with the Connection lock held but since this
-            // connection instance is being used for connecting to the server
-            // in question, it is okay
-            Thread.sleep(ThreadLocalRandom.current().nextInt(reloginMaxBackoff) + 1);
-            return null;
-          } else {
-            String msg = "Couldn't setup connection for "
-                + UserGroupInformation.getLoginUser().getUserName() + " to "
-                + securityInfo.getServerPrincipal();
-            LOG.warn(msg, ex);
-            throw new IOException(msg, ex);
+        // A provider which failed authentication, but doesn't have the ability to relogin with
+        // some external system (e.g. username/password, the password either works or it doesn't)
+        if (!provider.canRetry()) {
+          LOG.warn("Exception encountered while connecting to the server : " + ex);
+          if (ex instanceof RemoteException) {
+            throw (RemoteException) ex;
           }
+          if (ex instanceof SaslException) {
+            String msg = "SASL authentication failed."
+                + " The most likely cause is missing or invalid credentials. Consider 'kinit'.";
+            LOG.error(HBaseMarkers.FATAL, msg, ex);
+            throw new RuntimeException(msg, ex);
+          }
+          throw new IOException(ex);
+        }
+
+        // Other providers, like kerberos, could request a new ticket from a keytab. Let
+        // them try again.
+        if (currRetries < maxRetries) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Exception encountered while connecting to " +
+              "the server : " + StringUtils.stringifyException(ex));
+          }
+
+          // Invoke the provider to perform the relogin
+          provider.relogin();
+
+          // Get rid of any old state on the SaslClient
+          disposeSasl();
+          
+          // have granularity of milliseconds
+          // we are sleeping with the Connection lock held but since this
+          // connection instance is being used for connecting to the server
+          // in question, it is okay
+          Thread.sleep(ThreadLocalRandom.current().nextInt(reloginMaxBackoff) + 1);
+          return null;
         } else {
-          LOG.warn("Exception encountered while connecting to " + "the server : " + ex);
+          String msg = "Couldn't setup connection for "
+              + UserGroupInformation.getLoginUser().getUserName() + " to "
+              + securityInfo.getServerPrincipal();
+          LOG.warn(msg, ex);
+          throw new IOException(msg, ex);
         }
-        if (ex instanceof RemoteException) {
-          throw (RemoteException) ex;
-        }
-        if (ex instanceof SaslException) {
-          String msg = "SASL authentication failed."
-              + " The most likely cause is missing or invalid credentials." + " Consider 'kinit'.";
-          LOG.error(HBaseMarkers.FATAL, msg, ex);
-          throw new RuntimeException(msg, ex);
-        }
-        throw new IOException(ex);
       }
     });
   }

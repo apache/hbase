@@ -126,14 +126,6 @@ abstract class RpcConnection {
     this.remoteId = remoteId;
   }
 
-  protected void relogin() throws IOException {
-    if (UserGroupInformation.isLoginKeytabBased()) {
-      UserGroupInformation.getLoginUser().reloginFromKeytab();
-    } else {
-      UserGroupInformation.getLoginUser().reloginFromTicketCache();
-    }
-  }
-
   protected void scheduleTimeoutTask(final Call call) {
     if (call.timeout > 0) {
       call.timeoutTask = timeoutTimer.newTimeout(new TimerTask() {

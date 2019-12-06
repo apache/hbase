@@ -26,14 +26,13 @@ import javax.security.sasl.SaslClient;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.security.SecurityInfo;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation;
 
 /**
  * Encapsulation of client-side logic to authenticate to HBase via some means over SASL.
@@ -70,14 +69,25 @@ public interface SaslClientAuthenticationProvider {
   UserInformation getUserInfo(UserGroupInformation user);
 
   /**
-   * Returns true if this provider is based on Kerberos. False, otherwise.
-   */
-  boolean isKerberos();
-
-  /**
    * Performs any necessary unwrapping of a "proxy" user UGI which is executing some request
    * on top of a "real" user. This operation may simply return the original UGI if that is
    * what is appropriate for the given implementation.
    */
-  UserGroupInformation unwrapUgi(UserGroupInformation ugi);
+  default UserGroupInformation unwrapUgi(UserGroupInformation ugi) {
+    return ugi;
+  }
+
+  /**
+   * Returns true if the implementation is capable of performing some action which may allow a
+   * failed authentication to become a successful authentication. Otherwise, returns false
+   */
+  default boolean canRetry() {
+    return false;
+  }
+
+  /**
+   * Executes any necessary logic to re-login the client. Not all implementations will have
+   * any logic that needs to be executed.
+   */
+  default void relogin() throws IOException {}
 }

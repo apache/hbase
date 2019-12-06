@@ -87,7 +87,28 @@ public class GssSaslClientAuthenticationProvider extends AbstractSaslClientAuthe
   }
 
   @Override
-  public boolean isKerberos() {
+  public boolean canRetry() {
     return true;
+  }
+
+  @Override
+  public void relogin() throws IOException {
+    // Check if UGI thinks we need to do another login
+    if (UserGroupInformation.isLoginKeytabBased()) {
+      UserGroupInformation.getLoginUser().reloginFromKeytab();
+    } else {
+      UserGroupInformation.getLoginUser().reloginFromTicketCache();
+    }
+  }
+
+  @Override
+  public UserGroupInformation unwrapUgi(UserGroupInformation ugi) {
+    // Unwrap the UGI with the real user when we're using Kerberos auth
+    if (ugi != null && ugi.getRealUser() != null) {
+      return ugi.getRealUser();
+    }
+
+    // Otherwise, use the UGI we were given
+    return ugi;
   }
 }

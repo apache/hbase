@@ -159,8 +159,8 @@ class NettyRpcConnection extends RpcConnection {
         @Override
         public void run() {
           try {
-            if (provider.isKerberos()) {
-              relogin();
+            if (provider.canRetry()) {
+              provider.relogin();
             }
           } catch (IOException e) {
             LOG.warn("Relogin failed", e);

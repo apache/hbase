@@ -265,11 +265,6 @@ public class TestCustomSaslAuthenticationProvider {
     public UserInformation getUserInfo(UserGroupInformation user) {
       return null;
     }
-
-    @Override
-    public boolean isKerberos() {
-      return false;
-    }
   }
 
   /**
