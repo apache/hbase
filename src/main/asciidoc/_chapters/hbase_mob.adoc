@@ -219,7 +219,7 @@ hfile and also have a MOB reference cell written into the normal region HFile.
 
 MOB reference cells have the same key as the cell they are based on. The value of the reference cell
 is made up of two pieces of metadata: the size of the actual value and the MOB hfile that contains
-the original cell. In addition to any tags originall written to HBase, the reference cell prepends
+the original cell. In addition to any tags originally written to HBase, the reference cell prepends
 two additional tags. The first is a marker tag that says the cell is a MOB reference. This can be
 used later to scan specifically just for reference cells. The second stores the namespace and table
 at the time the MOB hfile is written out. This tag is used to optimize how the MOB system finds
@@ -296,11 +296,11 @@ Decoded as an integer this gives us an underlying value size of 162,964 bytes.
 
 The remaining bytes give us an HFile name,
 'd41d8cd98f00b204e9800998ecf8427e19700118ffd9c244fe69488bbc9f2c77d24a3e6a'. This HFile will most
-likely be stored in the designed MOB storage are for this specific table. However, the file could
+likely be stored in the designated MOB storage area for this specific table. However, the file could
 also be in the archive area if this table is from a restored snapshot. Furthermore, if the table is
 from a cloned snapshot of a different table then the file could be in either the active or archive
 area of that source table. As mentioned in the explanation of MOB reference cells above, the Region
-Server will use a server side tag to optimize lookign at the mob and archive area of the correct
+Server will use a server side tag to optimize looking at the mob and archive area of the correct
 original table when finding the MOB HFile. Since your scan is client side it can't retrieve that tag
 and you'll either need to already know the lineage of your table or you'll need to search across all
 tables.
