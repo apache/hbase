@@ -1270,18 +1270,34 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
       this.lock.readLock().unlock();
     }
 
-    // First the store file scanners
+    try {
+      // First the store file scanners
 
-    // TODO this used to get the store files in descending order,
-    // but now we get them in ascending order, which I think is
-    // actually more correct, since memstore get put at the end.
-    List<StoreFileScanner> sfScanners = StoreFileScanner.getScannersForStoreFiles(storeFilesToScan,
-      cacheBlocks, usePread, isCompaction, false, matcher, readPt);
-    List<KeyValueScanner> scanners = new ArrayList<>(sfScanners.size() + 1);
-    scanners.addAll(sfScanners);
-    // Then the memstore scanners
-    scanners.addAll(memStoreScanners);
-    return scanners;
+      // TODO this used to get the store files in descending order,
+      // but now we get them in ascending order, which I think is
+      // actually more correct, since memstore get put at the end.
+      List<StoreFileScanner> sfScanners = StoreFileScanner
+        .getScannersForStoreFiles(storeFilesToScan, cacheBlocks, usePread, isCompaction, false,
+          matcher, readPt);
+      List<KeyValueScanner> scanners = new ArrayList<>(sfScanners.size() + 1);
+      scanners.addAll(sfScanners);
+      // Then the memstore scanners
+      scanners.addAll(memStoreScanners);
+      return scanners;
+    } catch (Throwable t) {
+      clearAndClose(memStoreScanners);
+      throw t instanceof IOException ? (IOException) t : new IOException(t);
+    }
+  }
+
+  private static void clearAndClose(List<KeyValueScanner> scanners) {
+    if (scanners == null) {
+      return;
+    }
+    for (KeyValueScanner s : scanners) {
+      s.close();
+    }
+    scanners.clear();
   }
 
   /**
@@ -1335,15 +1351,21 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
         this.lock.readLock().unlock();
       }
     }
-    List<StoreFileScanner> sfScanners = StoreFileScanner.getScannersForStoreFiles(files,
-      cacheBlocks, usePread, isCompaction, false, matcher, readPt);
-    List<KeyValueScanner> scanners = new ArrayList<>(sfScanners.size() + 1);
-    scanners.addAll(sfScanners);
-    // Then the memstore scanners
-    if (memStoreScanners != null) {
-      scanners.addAll(memStoreScanners);
+    try {
+      List<StoreFileScanner> sfScanners = StoreFileScanner
+        .getScannersForStoreFiles(files, cacheBlocks, usePread, isCompaction, false, matcher,
+          readPt);
+      List<KeyValueScanner> scanners = new ArrayList<>(sfScanners.size() + 1);
+      scanners.addAll(sfScanners);
+      // Then the memstore scanners
+      if (memStoreScanners != null) {
+        scanners.addAll(memStoreScanners);
+      }
+      return scanners;
+    } catch (Throwable t) {
+      clearAndClose(memStoreScanners);
+      throw t instanceof IOException ? (IOException) t : new IOException(t);
     }
-    return scanners;
   }
 
   /**
