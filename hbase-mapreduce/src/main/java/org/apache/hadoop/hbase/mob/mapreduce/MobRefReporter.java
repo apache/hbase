@@ -79,45 +79,47 @@ import org.slf4j.LoggerFactory;
  * ...
  *         Reduce output records=99
  * ...
- * CELLS_PER_ROW_DIGITS
- *         1=10000
+ * CELLS PER ROW
+ *         Number of rows with 1s of cells per row=10000
  * MOB
  *         NUM_CELLS=52364
  * PROBLEM
- *         IMPACTED_ROWS=338
- *         MOB_FILES=2
- * PROBLEM_ROWS_PER_FILE_DIGITS
- *         3=2
- * SIZE_PER_CELL_DIGITS
- *         5=627
- *         6=51392
- *         7=345
- * SIZE_PER_ROW_DIGITS
- *         6=6838
- *         7=3162
+ *         Affected rows=338
+ *         Problem MOB files=2
+ * ROWS WITH PROBLEMS PER FILE
+ *         Number of HFiles with 100s of affected rows=2
+ * SIZES OF CELLS
+ *         Number of cells with size in the 10,000s of bytes=627
+ *         Number of cells with size in the 100,000s of bytes=51392
+ *         Number of cells with size in the 1,000,000s of bytes=345
+ * SIZES OF ROWS
+ *         Number of rows with total size in the 100,000s of bytes=6838
+ *         Number of rows with total size in the 1,000,000s of bytes=3162
  * </pre>
  *
  *   * Map-Reduce Framework:Map input records - the number of rows with mob references
  *   * Map-Reduce Framework:Reduce output records - the number of unique hfiles referenced
  *   * MOB:NUM_CELLS - the total number of mob reference cells
- *   * PROBLEM:IMPACTED_ROWS - the number of rows that reference hfiles with an issue
- *   * PROBLEM:MOB_FILES - the number of unique hfiles that have an issue
- *   * CELLS_PER_ROW_DIGITS: - this counter group gives a histogram of the order of magnitude of the
+ *   * PROBLEM:Affected rows - the number of rows that reference hfiles with an issue
+ *   * PROBLEM:Problem MOB files - the number of unique hfiles that have an issue
+ *   * CELLS PER ROW: - this counter group gives a histogram of the order of magnitude of the
  *         number of cells in a given row by grouping by the number of digits used in each count.
  *         This allows us to see more about the distribution of cells than what we can determine
  *         with just the cell count and the row count. In this particular example we can see that
  *         all of our rows have somewhere between 1 - 9 cells.
- *   * PROBLEM_ROWS_PER_FILE_DIGITS: - this counter group gives a histogram of the order of
+ *   * ROWS WITH PROBLEMS PER FILE: - this counter group gives a histogram of the order of
  *         magnitude of the number of rows in each of the hfiles with a problem. e.g. in the
  *         example there are 2 hfiles and they each have the same order of magnitude number of rows,
- *         namely 3 digits worth i.e. 100-999.
- *   * SIZE_PER_CELL_DIGITS: - this counter group gives a histogram of the order of magnitude of
+ *         specifically between 100 and 999.
+ *   * SIZES OF CELLS: - this counter group gives a histogram of the order of magnitude of
  *         the size of mob values according to our reference cells. e.g. in the example above we
- *         have between 5 and 7 digits in our cell sizes i.e. 10,000 - 9,999,999 bytes. From this
- *         histogram we can also see that _most_ cells are 100,000 - 199,000 bytes and the smaller
+ *         have cell sizes that are all between 10,000 bytes and 9,999,999 bytes. From this
+ *         histogram we can also see that _most_ cells are 100,000 - 999,000 bytes and the smaller
  *         and bigger ones are outliers making up less than 2% of mob cells.
- *   * SIZE_PER_ROW_DIGITS: - this counter group gives a histogram of the order of magnitude of the
- *         size of
+ *   * SIZES OF ROWS: - this counter group gives a histogram of the order of magnitude of the
+ *         size of mob values across each row according to our reference cells. In the example above
+ *         we have rows that are are between 100,000 bytes and 9,999,999 bytes. We can also see that
+ *         about 2/3rd of our rows are 100,000 - 999,999 bytes.
  *
  * Generates a report that gives one file status per line, with tabs dividing fields.
  *
@@ -190,18 +192,18 @@ public class MobRefReporter extends Configured implements Tool {
             files.add(fileName);
           }
           final int cellsize = MobUtils.getMobValueLength(c);
-          context.getCounter("SIZE_PER_CELL_DIGITS",
-              Integer.toString(Integer.toString(cellsize).length())).increment(1L);
+          context.getCounter("SIZES OF CELLS", "Number of cells with size in the " +
+              log10GroupedString(cellsize) + "s of bytes").increment(1L);
           size += cellsize;
           count++;
         } else {
           LOG.debug("cell is not a mob ref, even though we asked for only refs. cell={}", c);
         }
       }
-      context.getCounter("CELLS_PER_ROW_DIGITS",
-          Integer.toString(Long.toString(count).length())).increment(1L);
-      context.getCounter("SIZE_PER_ROW_DIGITS",
-          Integer.toString(Long.toString(size).length())).increment(1L);
+      context.getCounter("CELLS PER ROW", "Number of rows with " + log10GroupedString(count) +
+          "s of cells per row").increment(1L);
+      context.getCounter("SIZES OF ROWS", "Number of rows with total size in the " +
+          log10GroupedString(size) + "s of bytes").increment(1L);
       context.getCounter("MOB","NUM_CELLS").increment(count);
     }
   }
@@ -375,13 +377,21 @@ public class MobRefReporter extends Configured implements Tool {
         moreThanOne = true;
         count++;
       }
-      context.getCounter("PROBLEM", "MOB_FILES").increment(1L);
-      context.getCounter("PROBLEM", "IMPACTED_ROWS").increment(count);
-      context.getCounter("PROBLEM_ROWS_PER_FILE_DIGITS",
-          Integer.toString(Long.toString(count).length())).increment(1L);
+      context.getCounter("PROBLEM", "Problem MOB files").increment(1L);
+      context.getCounter("PROBLEM", "Affected rows").increment(count);
+      context.getCounter("ROWS WITH PROBLEMS PER FILE", "Number of HFiles with " +
+          log10GroupedString(count) + "s of affected rows").increment(1L);
       key.set(sb.toString());
       return key;
     }
+  }
+
+  /**
+   * Returns the string representation of the given number after grouping it
+   * into log10 buckets. e.g. 0-9 -> 1, 10-99 -> 10, ..., 100,000-999,999 -> 100,000, etc.
+   */
+  static String log10GroupedString(long number) {
+    return String.format("%,d", (long)(Math.pow(10d, Math.floor(Math.log10(number)))));
   }
 
   /**
