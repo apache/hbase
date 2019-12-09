@@ -384,6 +384,10 @@ public class ThriftUtilities {
       out.setDurability(durabilityFromThrift(in.getDurability()));
     }
 
+    if (in.getCellVisibility() != null) {
+      out.setCellVisibility(new CellVisibility(in.getCellVisibility().getExpression()));
+    }
+
     return out;
   }
 

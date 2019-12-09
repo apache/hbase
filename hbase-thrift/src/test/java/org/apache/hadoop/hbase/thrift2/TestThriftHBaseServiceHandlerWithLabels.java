@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.thrift2.generated.TCellVisibility;
 import org.apache.hadoop.hbase.thrift2.generated.TColumn;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnIncrement;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnValue;
+import org.apache.hadoop.hbase.thrift2.generated.TDelete;
 import org.apache.hadoop.hbase.thrift2.generated.TGet;
 import org.apache.hadoop.hbase.thrift2.generated.TIllegalArgument;
 import org.apache.hadoop.hbase.thrift2.generated.TIncrement;
@@ -436,6 +437,94 @@ public class TestThriftHBaseServiceHandlerWithLabels {
     assertEquals(1, result.getColumnValuesSize());
     TColumnValue columnValue = result.getColumnValues().get(0);
     assertArrayEquals(Bytes.add(v1, v2), columnValue.getValue());
+  }
+
+  @Test
+  public void testDeleteWithLabels() throws Exception {
+    ThriftHBaseServiceHandler handler = createHandler();
+    byte[] rowName = "testPutGetDeleteGet".getBytes();
+    ByteBuffer table = wrap(tableAname);
+
+    // common auths
+    TAuthorization tauth = new TAuthorization();
+    List<String> labels = new ArrayList<String>();
+    labels.add(SECRET);
+    labels.add(PRIVATE);
+    tauth.setLabels(labels);
+
+    // put
+    List<TColumnValue> columnValues = new ArrayList<TColumnValue>();
+    columnValues.add(new TColumnValue(wrap(familyAname), wrap(qualifierAname), wrap(valueAname)));
+    columnValues.add(new TColumnValue(wrap(familyBname), wrap(qualifierBname), wrap(valueBname)));
+    TPut put = new TPut(wrap(rowName), columnValues);
+
+    put.setColumnValues(columnValues);
+    put.setCellVisibility(new TCellVisibility()
+      .setExpression("(" + SECRET + "|" + CONFIDENTIAL + ")" + "&" + "!" + TOPSECRET));
+    handler.put(table, put);
+
+    // verify put
+    TGet get = new TGet(wrap(rowName));
+    get.setAuthorizations(tauth);
+    TResult result = handler.get(table, get);
+    assertArrayEquals(rowName, result.getRow());
+    List<TColumnValue> returnedColumnValues = result.getColumnValues();
+    assertTColumnValuesEqual(columnValues, returnedColumnValues);
+
+    // delete
+    TDelete delete = new TDelete(wrap(rowName));
+    delete.setCellVisibility(new TCellVisibility()
+      .setExpression("(" + SECRET + "|" + CONFIDENTIAL + ")" + "&" + "!" + TOPSECRET));
+    handler.deleteSingle(table, delete);
+
+    // verify delete
+    TGet get2 = new TGet(wrap(rowName));
+    get2.setAuthorizations(tauth);
+    TResult result2 = handler.get(table, get2);
+    assertNull(result2.getRow());
+  }
+
+  @Test
+  public void testDeleteWithLabelsNegativeTest() throws Exception {
+    ThriftHBaseServiceHandler handler = createHandler();
+    byte[] rowName = "testPutGetTryDeleteGet".getBytes();
+    ByteBuffer table = wrap(tableAname);
+
+    // common auths
+    TAuthorization tauth = new TAuthorization();
+    List<String> labels = new ArrayList<String>();
+    labels.add(SECRET);
+    labels.add(PRIVATE);
+    tauth.setLabels(labels);
+
+    // put
+    List<TColumnValue> columnValues = new ArrayList<TColumnValue>();
+    columnValues.add(new TColumnValue(wrap(familyAname), wrap(qualifierAname), wrap(valueAname)));
+    columnValues.add(new TColumnValue(wrap(familyBname), wrap(qualifierBname), wrap(valueBname)));
+    TPut put = new TPut(wrap(rowName), columnValues);
+
+    put.setColumnValues(columnValues);
+    put.setCellVisibility(new TCellVisibility()
+      .setExpression("(" + SECRET + "|" + CONFIDENTIAL + ")" + "&" + "!" + TOPSECRET));
+    handler.put(table, put);
+
+    // verify put
+    TGet get = new TGet(wrap(rowName));
+    get.setAuthorizations(tauth);
+    TResult result = handler.get(table, get);
+    assertArrayEquals(rowName, result.getRow());
+    List<TColumnValue> returnedColumnValues = result.getColumnValues();
+    assertTColumnValuesEqual(columnValues, returnedColumnValues);
+
+    // _try_ delete with _no_ CellVisibility
+    TDelete delete = new TDelete(wrap(rowName));
+    handler.deleteSingle(table, delete);
+
+    // verify delete did in fact _not_ work
+    TGet get2 = new TGet(wrap(rowName));
+    get2.setAuthorizations(tauth);
+    TResult result2 = handler.get(table, get2);
+    assertArrayEquals(rowName, result2.getRow());
   }
 
   /**
