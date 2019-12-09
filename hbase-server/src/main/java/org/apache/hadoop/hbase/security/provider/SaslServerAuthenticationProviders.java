@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.security.provider;
 
 import java.util.HashMap;
+import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -160,5 +161,19 @@ public final class SaslServerAuthenticationProviders {
    */
   public SaslServerAuthenticationProvider selectProvider(byte authByte) {
     return providers.get(Byte.valueOf(authByte));
+  }
+
+  /**
+   * Extracts the SIMPLE authentication provider.
+   */
+  public SaslServerAuthenticationProvider getSimpleProvider() {
+    Optional<SaslServerAuthenticationProvider> opt = providers.values()
+        .stream()
+        .filter((p) -> p instanceof SimpleSaslServerAuthenticationProvider)
+        .findFirst();
+    if (!opt.isPresent()) {
+      throw new RuntimeException("SIMPLE authentication provider not available when it should be");
+    }
+    return opt.get();
   }
 }

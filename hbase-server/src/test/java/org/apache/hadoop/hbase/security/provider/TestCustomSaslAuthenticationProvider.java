@@ -274,11 +274,13 @@ public class TestCustomSaslAuthenticationProvider {
       implements SaslServerAuthenticationProvider {
 
     @Override
-    public SaslServer createServer(SecretManager<TokenIdentifier> secretManager,
+    public AttemptingUserProvidingSaslServer createServer(
+        SecretManager<TokenIdentifier> secretManager,
         Map<String, String> saslProps) throws IOException {
-      return Sasl.createSaslServer(getSaslAuthMethod().getSaslMechanism(), null,
-        SaslUtil.SASL_DEFAULT_REALM, saslProps,
-        new InMemoryServerProviderCallbackHandler());
+      return new AttemptingUserProvidingSaslServer(
+          Sasl.createSaslServer(getSaslAuthMethod().getSaslMechanism(), null,
+              SaslUtil.SASL_DEFAULT_REALM, saslProps, new InMemoryServerProviderCallbackHandler()),
+              () -> null);
     }
 
     /**

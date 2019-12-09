@@ -29,6 +29,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.security.GeneralSecurityException;
+import java.util.Objects;
 import java.util.Properties;
 
 import org.apache.commons.crypto.cipher.CryptoCipherFactory;
@@ -69,6 +70,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ResponseHeade
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -739,8 +741,7 @@ abstract class ServerRpcConnection implements Closeable {
       return false;
     }
     // TODO this is a wart while simple auth'n doesn't go through sasl.
-    if (this.rpcServer.isSecurityEnabled &&
-        provider instanceof SimpleSaslServerAuthenticationProvider) {
+    if (this.rpcServer.isSecurityEnabled && isSimpleAuthentication()) {
       if (this.rpcServer.allowFallbackToSimpleAuth) {
         this.rpcServer.metrics.authenticationFallback();
         authenticatedWithFallback = true;
@@ -750,18 +751,21 @@ abstract class ServerRpcConnection implements Closeable {
         return false;
       }
     }
-    // TODO can we remove this fallback? Is this even a good idea?
-//    if (!this.rpcServer.isSecurityEnabled && authMethod != AuthMethod.SIMPLE) {
-//      doRawSaslReply(SaslStatus.SUCCESS, new IntWritable(SaslUtil.SWITCH_TO_SIMPLE_AUTH), null,
-//        null);
-//      authMethod = AuthMethod.SIMPLE;
-//      // client has already sent the initial Sasl message and we
-//      // should ignore it. Both client and server should fall back
-//      // to simple auth from now on.
-//      skipInitialSaslHandshake = true;
-//    }
+    if (!this.rpcServer.isSecurityEnabled && !isSimpleAuthentication()) {
+      doRawSaslReply(SaslStatus.SUCCESS, new IntWritable(SaslUtil.SWITCH_TO_SIMPLE_AUTH), null,
+        null);
+      provider = saslProviders.getSimpleProvider();
+      // client has already sent the initial Sasl message and we
+      // should ignore it. Both client and server should fall back
+      // to simple auth from now on.
+      skipInitialSaslHandshake = true;
+    }
     useSasl = !(provider instanceof SimpleSaslServerAuthenticationProvider);
     return true;
+  }
+
+  boolean isSimpleAuthentication() {
+    return Objects.requireNonNull(provider) instanceof SimpleSaslServerAuthenticationProvider;
   }
 
   public abstract boolean isConnectionOpen();
