@@ -37,7 +37,7 @@ public class SimpleSaslServerAuthenticationProvider extends SimpleSaslAuthentica
   @Override
   public SaslServer createServer(SecretManager<TokenIdentifier> secretManager,
       Map<String, String> saslProps) throws IOException {
-    return null;
+    throw new RuntimeException("HBase SIMPLE authentication doesn't use SASL");
   }
 
   @Override
