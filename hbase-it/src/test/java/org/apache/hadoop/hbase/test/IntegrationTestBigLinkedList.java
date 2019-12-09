@@ -122,73 +122,103 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
 
 /**
+ * <p>
  * This is an integration test borrowed from goraci, written by Keith Turner,
  * which is in turn inspired by the Accumulo test called continous ingest (ci).
  * The original source code can be found here:
- * https://github.com/keith-turner/goraci
- * https://github.com/enis/goraci/
- *
+ * <ul>
+ *   <li>https://github.com/keith-turner/goraci</li>
+ *   <li>https://github.com/enis/goraci/</li>
+ * </ul>
+ * </p>
+ * <p>
  * Apache Accumulo [0] has a simple test suite that verifies that data is not
  * lost at scale. This test suite is called continuous ingest. This test runs
  * many ingest clients that continually create linked lists containing 25
  * million nodes. At some point the clients are stopped and a map reduce job is
- * run to ensure no linked list has a hole. A hole indicates data was lost.··
- *
+ * run to ensure no linked list has a hole. A hole indicates data was lost.
+ * </p>
+ * <p>
  * The nodes in the linked list are random. This causes each linked list to
  * spread across the table. Therefore if one part of a table loses data, then it
  * will be detected by references in another part of the table.
- *
- * THE ANATOMY OF THE TEST
+ * </p>
+ * <p>
+ * <h3>THE ANATOMY OF THE TEST</h3>
  *
  * Below is rough sketch of how data is written. For specific details look at
  * the Generator code.
- *
- * 1 Write out 1 million nodes· 2 Flush the client· 3 Write out 1 million that
- * reference previous million· 4 If this is the 25th set of 1 million nodes,
- * then update 1st set of million to point to last· 5 goto 1
- *
+ * </p>
+ * <p>
+ * <ol>
+ * <li>Write out 1 million nodes</li>
+ * <li>Flush the client</li>
+ * <li>Write out 1 million that reference previous million</li>
+ * <li>If this is the 25th set of 1 million nodes, then update 1st set of
+ * million to point to last</li>
+ * <li>goto 1</li>
+ * </ol>
+ * </p>
+ * <p>
  * The key is that nodes only reference flushed nodes. Therefore a node should
  * never reference a missing node, even if the ingest client is killed at any
  * point in time.
- *
+ * </p>
+ * <p>
  * When running this test suite w/ Accumulo there is a script running in
  * parallel called the Aggitator that randomly and continuously kills server
- * processes.·· The outcome was that many data loss bugs were found in Accumulo
- * by doing this.· This test suite can also help find bugs that impact uptime
- * and stability when· run for days or weeks.··
- *
- * This test suite consists the following· - a few Java programs· - a little
- * helper script to run the java programs - a maven script to build it.··
- *
+ * processes. The outcome was that many data loss bugs were found in Accumulo
+ * by doing this. This test suite can also help find bugs that impact uptime
+ * and stability when run for days or weeks.
+ * </p>
+ * <p>
+ * This test suite consists the following
+ * <ul>
+ * <li>a few Java programs</li>
+ * <li>a little helper script to run the java programs</li>
+ * <li>a maven script to build it</li>
+ * </ul>
+ * </p>
+ * <p>
  * When generating data, its best to have each map task generate a multiple of
  * 25 million. The reason for this is that circular linked list are generated
  * every 25M. Not generating a multiple in 25M will result in some nodes in the
  * linked list not having references. The loss of an unreferenced node can not
  * be detected.
- *
- *
- * Below is a description of the Java programs
- *
- * Generator - A map only job that generates data. As stated previously,·its best to generate data
- * in multiples of 25M. An option is also available to allow concurrent walkers to select and walk
- * random flushed loops during this phase.
- *
- * Verify - A map reduce job that looks for holes. Look at the counts after running. REFERENCED and
- * UNREFERENCED are· ok, any UNDEFINED counts are bad. Do not run at the· same
- * time as the Generator.
- *
- * Walker - A standalone program that start following a linked list· and emits timing info.··
- *
- * Print - A standalone program that prints nodes in the linked list
- *
- * Delete - A standalone program that deletes a single node
+ * </p>
+ * <p>
+ * <h3>Below is a description of the Java programs</h3>
+ * <ul>
+ * <li>
+ * {@code Generator} - A map only job that generates data. As stated previously, its best to
+ * generate data in multiples of 25M. An option is also available to allow concurrent walkers to
+ * select and walk random flushed loops during this phase.
+ * </li>
+ * <li>
+ * {@code Verify} - A map reduce job that looks for holes. Look at the counts after running.
+ * {@code REFERENCED} and {@code UNREFERENCED} are ok, any {@code UNDEFINED} counts are bad. Do not
+ * run at the same time as the Generator.
+ * </li>
+ * <li>
+ * {@code Walker} - A standalone program that start following a linked list and emits timing info.
+ * </li>
+ * <li>
+ * {@code Print} - A standalone program that prints nodes in the linked list
+ * </li>
+ * <li>
+ * {@code Delete} - A standalone program that deletes a single node
+ * </li>
+ * </ul>
  *
  * This class can be run as a unit test, as an integration test, or from the command line
- *
+ * </p>
+ * <p>
  * ex:
+ * <pre>
  * ./hbase org.apache.hadoop.hbase.test.IntegrationTestBigLinkedList
  *    loop 2 1 100000 /temp 1 1000 50 1 0
- *
+ * </pre>
+ * </p>
  */
 @Category(IntegrationTests.class)
 public class IntegrationTestBigLinkedList extends IntegrationTestBase {
@@ -1879,7 +1909,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
     System.err.println(" walker     " +
       "Standalone program that starts following a linked list & emits timing info.");
     System.err.println(" print      Standalone program that prints nodes in the linked list.");
-    System.err.println(" delete     Standalone program that deletes a·single node.");
+    System.err.println(" delete     Standalone program that deletes a single node.");
     System.err.println(" loop       Program to Loop through Generator and Verify steps");
     System.err.println(" clean      Program to clean all left over detritus.");
     System.err.println(" search     Search for missing keys.");
