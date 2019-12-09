@@ -32,8 +32,11 @@ long startcode = conf.getLong("startcode", System.currentTimeMillis());
 String listenPort = conf.get("hbase.regionserver.thrift.port", "9090");
 ImplType implType = ImplType.getServerImpl(conf);
 
-String transport = implType.isAlwaysFramed() ||conf.getBoolean("hbase.regionserver.thrift.framed", false) ? "Framed" : "Standard";
-String protocol = conf.getBoolean("hbase.regionserver.thrift.compact", false) ? "Compact" : "Binary";
+String transport =
+  (implType.isAlwaysFramed() ||
+    conf.getBoolean("hbase.regionserver.thrift.framed", false)) ? "Framed" : "Standard";
+String protocol =
+  conf.getBoolean("hbase.regionserver.thrift.compact", false) ? "Compact" : "Binary";
 String qop = conf.get("hbase.thrift.security.qop", "None");
 
 %>
@@ -55,12 +58,15 @@ String qop = conf.get("hbase.thrift.security.qop", "None");
   <div class="navbar  navbar-fixed-top navbar-default">
       <div class="container-fluid">
           <div class="navbar-header">
-              <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+              <button type="button"
+                      class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
                   <span class="icon-bar"></span>
                   <span class="icon-bar"></span>
                   <span class="icon-bar"></span>
               </button>
-              <a class="navbar-brand" href="/thrift.jsp"><img src="/static/hbase_logo_small.png" alt="HBase Logo"/></a>
+              <a class="navbar-brand" href="/thrift.jsp">
+                <img src="/static/hbase_logo_small.png" alt="HBase Logo"/>
+              </a>
           </div>
           <div class="collapse navbar-collapse">
               <ul class="nav navbar-nav">
@@ -138,7 +144,8 @@ String qop = conf.get("hbase.thrift.security.qop", "None");
     </div>
     <div class="row">
         <section>
-            <a href="http://hbase.apache.org/book.html#_thrift">Apache HBase Reference Guide chapter on Thrift</a>
+            <a href="http://hbase.apache.org/book.html#_thrift">
+              Apache HBase Reference Guide chapter on Thrift</a>
         </section>
     </div>
 </div>
