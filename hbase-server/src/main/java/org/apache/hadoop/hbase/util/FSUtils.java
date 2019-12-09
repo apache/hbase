@@ -39,7 +39,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Vector;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -1660,7 +1659,7 @@ public abstract class FSUtils extends CommonFSUtils {
    *           in case of file system errors or interrupts
    */
   private static void getRegionLocalityMappingFromFS(final Configuration conf,
-      final String desiredTable, final int threadPoolSize,
+      final String desiredTable, int threadPoolSize,
       final Map<String, Map<String, Float>> regionDegreeLocalityMapping) throws IOException {
     final FileSystem fs =  FileSystem.get(conf);
     final Path rootPath = FSUtils.getRootDir(conf);
@@ -1711,10 +1710,10 @@ public abstract class FSUtils extends CommonFSUtils {
     }
 
     // lower the number of threads in case we have very few expected regions
-    final int finalThreadPoolSize = Math.min(threadPoolSize, statusList.length);
+    threadPoolSize = Math.min(threadPoolSize, statusList.length);
 
     // run in multiple threads
-    final ExecutorService tpe = Executors.newFixedThreadPool(finalThreadPoolSize,
+    final ExecutorService tpe = Executors.newFixedThreadPool(threadPoolSize,
       Threads.newDaemonThreadFactory("FSRegionQuery"));
     try {
       // ignore all file status items that are not of interest
