@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.security.provider;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.User;
@@ -34,6 +36,7 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class DefaultProviderSelector implements AuthenticationProviderSelector {
   private static final Logger LOG = LoggerFactory.getLogger(DefaultProviderSelector.class);
+  private final ReadWriteLock LOCK = new ReentrantReadWriteLock();
 
   Configuration conf;
   SimpleSaslClientAuthenticationProvider simpleAuth = null;
@@ -41,12 +44,17 @@ public class DefaultProviderSelector implements AuthenticationProviderSelector {
   DigestSaslClientAuthenticationProvider digestAuth = null;
 
   @Override
-  public synchronized void configure(
-      Configuration conf, Map<Byte,SaslClientAuthenticationProvider> providers) {
-    if (this.conf != null) {
-      throw new IllegalStateException("configure() should only be called once");
+  public void configure(Configuration conf, Map<Byte,SaslClientAuthenticationProvider> providers) {
+    try {
+      LOCK.writeLock().lock();
+      if (this.conf != null) {
+        throw new IllegalStateException("configure() should only be called once");
+      }
+      this.conf = Objects.requireNonNull(conf);
+    } finally {
+      LOCK.writeLock().unlock();
     }
-    this.conf = Objects.requireNonNull(conf);
+    
     for (SaslClientAuthenticationProvider provider : Objects.requireNonNull(providers).values()) {
       if (provider instanceof SimpleSaslClientAuthenticationProvider) {
         if (simpleAuth != null) {
@@ -82,9 +90,14 @@ public class DefaultProviderSelector implements AuthenticationProviderSelector {
     if (clusterId == null) {
       throw new NullPointerException("Null clusterId was given");
     }
-    // Superfluous: we dont' do SIMPLE auth over SASL, but we should to simplify.
-    if (!User.isHBaseSecurityEnabled(conf)) {
-      return new Pair<>(simpleAuth, null);
+    try {
+      LOCK.readLock().lock();
+      // Superfluous: we dont' do SIMPLE auth over SASL, but we should to simplify.
+      if (!User.isHBaseSecurityEnabled(conf)) {
+        return new Pair<>(simpleAuth, null);
+      }
+    } finally {
+      LOCK.readLock().unlock();
     }
     // Must be digest auth, look for a token.
     // TestGenerateDelegationToken is written expecting DT is used when DT and Krb are both present.
