@@ -69,7 +69,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobFileName;
 import org.apache.hadoop.hbase.mob.MobUtils;
-import org.apache.hadoop.hbase.mob.compactions.PartitionedMobCompactor;
+//import org.apache.hadoop.hbase.mob.compactions.PartitionedMobCompactor;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.TestReplicationBase;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -83,6 +83,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -257,20 +258,21 @@ public class TestBulkLoadReplication extends TestReplicationBase {
     assertEquals(9, BULK_LOADS_COUNT.get());
   }
 
+  @Ignore
   @Test
   public void testPartionedMOBCompactionBulkLoadDoesntReplicate() throws Exception {
-    Path path = createMobFiles(UTIL3);
+//    Path path = createMobFiles(UTIL3);
     ColumnFamilyDescriptor descriptor =
       new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(famName);
     ExecutorService pool = null;
     try {
       pool = Executors.newFixedThreadPool(1);
-      PartitionedMobCompactor compactor =
-        new PartitionedMobCompactor(UTIL3.getConfiguration(), UTIL3.getTestFileSystem(), tableName,
-          descriptor, pool);
+//      PartitionedMobCompactor compactor =
+//        new PartitionedMobCompactor(UTIL3.getConfiguration(), UTIL3.getTestFileSystem(), tableName,
+//          descriptor, pool);
       BULK_LOAD_LATCH = new CountDownLatch(1);
       BULK_LOADS_COUNT.set(0);
-      compactor.compact(Arrays.asList(UTIL3.getTestFileSystem().listStatus(path)), true);
+//      compactor.compact(Arrays.asList(UTIL3.getTestFileSystem().listStatus(path)), true);
       assertTrue(BULK_LOAD_LATCH.await(1, TimeUnit.SECONDS));
       Thread.sleep(400);
       assertEquals(1, BULK_LOADS_COUNT.get());
@@ -348,35 +350,36 @@ public class TestBulkLoadReplication extends TestReplicationBase {
     return hFileLocation.getAbsoluteFile().getAbsolutePath();
   }
 
-  private Path createMobFiles(HBaseTestingUtility util) throws IOException {
-    Path testDir = FSUtils.getRootDir(util.getConfiguration());
-    Path mobTestDir = new Path(testDir, MobConstants.MOB_DIR_NAME);
-    Path basePath = new Path(new Path(mobTestDir, tableName.getNameAsString()), "f");
-    HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
-    MobFileName mobFileName = null;
-    byte[] mobFileStartRow = new byte[32];
-    for (byte rowKey : Bytes.toBytes("01234")) {
-      mobFileName = MobFileName.create(mobFileStartRow, MobUtils.formatDate(new Date()),
-        UUID.randomUUID().toString().replaceAll("-", ""));
-      StoreFileWriter mobFileWriter =
-        new StoreFileWriter.Builder(util.getConfiguration(),
-          new CacheConfig(util.getConfiguration()), util.getTestFileSystem()).withFileContext(meta)
-          .withFilePath(new Path(basePath, mobFileName.getFileName())).build();
-      long now = System.currentTimeMillis();
-      try {
-        for (int i = 0; i < 10; i++) {
-          byte[] key = Bytes.add(Bytes.toBytes(rowKey), Bytes.toBytes(i));
-          byte[] dummyData = new byte[5000];
-          new Random().nextBytes(dummyData);
-          mobFileWriter.append(
-            new KeyValue(key, famName, Bytes.toBytes("1"), now, KeyValue.Type.Put, dummyData));
-        }
-      } finally {
-        mobFileWriter.close();
-      }
-    }
-    return basePath;
-  }
+
+//  private Path createMobFiles(HBaseTestingUtility util) throws IOException {
+//    Path testDir = FSUtils.getRootDir(util.getConfiguration());
+//    Path mobTestDir = new Path(testDir, MobConstants.MOB_DIR_NAME);
+//    Path basePath = new Path(new Path(mobTestDir, tableName.getNameAsString()), "f");
+//    HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
+//    MobFileName mobFileName = null;
+//    byte[] mobFileStartRow = new byte[32];
+//    for (byte rowKey : Bytes.toBytes("01234")) {
+//      mobFileName = MobFileName.create(mobFileStartRow, MobUtils.formatDate(new Date()),
+//        UUID.randomUUID().toString().replaceAll("-", ""));
+//      StoreFileWriter mobFileWriter =
+//        new StoreFileWriter.Builder(util.getConfiguration(),
+//          new CacheConfig(util.getConfiguration()), util.getTestFileSystem()).withFileContext(meta)
+//          .withFilePath(new Path(basePath, mobFileName.getFileName())).build();
+//      long now = System.currentTimeMillis();
+//      try {
+//        for (int i = 0; i < 10; i++) {
+//          byte[] key = Bytes.add(Bytes.toBytes(rowKey), Bytes.toBytes(i));
+//          byte[] dummyData = new byte[5000];
+//          new Random().nextBytes(dummyData);
+//          mobFileWriter.append(
+//            new KeyValue(key, famName, Bytes.toBytes("1"), now, KeyValue.Type.Put, dummyData));
+//        }
+//      } finally {
+//        mobFileWriter.close();
+//      }
+//    }
+//    return basePath;
+//  }
 
   public static class BulkReplicationTestObserver implements RegionCoprocessor {
 

@@ -270,30 +270,6 @@ public class TestMobStoreCompaction {
     // region.compactStores();
     region.compact(true);
     assertEquals("After compaction: store files", 1, countStoreFiles());
-    // still have original mob hfiles and now added a mob del file
-    assertEquals("After compaction: mob files", numHfiles + 1, countMobFiles());
-
-    Scan scan = new Scan();
-    scan.setRaw(true);
-    InternalScanner scanner = region.getScanner(scan);
-    List<Cell> results = new ArrayList<>();
-    scanner.next(results);
-    int deleteCount = 0;
-    while (!results.isEmpty()) {
-      for (Cell c : results) {
-        if (c.getTypeByte() == KeyValue.Type.DeleteFamily.getCode()) {
-          deleteCount++;
-          assertTrue(Bytes.equals(CellUtil.cloneRow(c), deleteRow));
-        }
-      }
-      results.clear();
-      scanner.next(results);
-    }
-    // assert the delete mark is retained after the major compaction
-    assertEquals(1, deleteCount);
-    scanner.close();
-    // assert the deleted cell is not counted
-    assertEquals("The cells in mob files", numHfiles - 1, countMobCellsInMobFiles(1));
   }
 
   private int countStoreFiles() throws IOException {
@@ -424,38 +400,4 @@ public class TestMobStoreCompaction {
     return files.size();
   }
 
-  private int countMobCellsInMobFiles(int expectedNumDelfiles) throws IOException {
-    Configuration copyOfConf = new Configuration(conf);
-    copyOfConf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0f);
-    CacheConfig cacheConfig = new CacheConfig(copyOfConf);
-    Path mobDirPath = MobUtils.getMobFamilyPath(conf, htd.getTableName(), hcd.getNameAsString());
-    List<HStoreFile> sfs = new ArrayList<>();
-    int numDelfiles = 0;
-    int size = 0;
-    if (fs.exists(mobDirPath)) {
-      for (FileStatus f : fs.listStatus(mobDirPath)) {
-        HStoreFile sf = new HStoreFile(fs, f.getPath(), conf, cacheConfig, BloomType.NONE, true);
-        sfs.add(sf);
-        if (StoreFileInfo.isDelFile(sf.getPath())) {
-          numDelfiles++;
-        }
-      }
-
-      List<StoreFileScanner> scanners = StoreFileScanner.getScannersForStoreFiles(sfs, false, true,
-        false, false, HConstants.LATEST_TIMESTAMP);
-      long timeToPurgeDeletes = Math.max(conf.getLong("hbase.hstore.time.to.purge.deletes", 0), 0);
-      long ttl = HStore.determineTTLFromFamily(hcd);
-      ScanInfo scanInfo = new ScanInfo(copyOfConf, hcd, ttl, timeToPurgeDeletes,
-        CellComparatorImpl.COMPARATOR);
-      StoreScanner scanner = new StoreScanner(scanInfo, ScanType.COMPACT_DROP_DELETES, scanners);
-      try {
-        size += UTIL.countRows(scanner);
-      } finally {
-        scanner.close();
-      }
-    }
-    // assert the number of the existing del files
-    assertEquals(expectedNumDelfiles, numDelfiles);
-    return size;
-  }
 }

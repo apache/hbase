@@ -98,6 +98,7 @@ public class TestHBaseFsckMOB extends BaseTestHBaseFsck {
   /**
    * This creates a table and then corrupts a mob file.  Hbck should quarantine the file.
    */
+  @SuppressWarnings("deprecation")
   @Test
   public void testQuarantineCorruptMobFile() throws Exception {
     TableName table = TableName.valueOf(name.getMethodName());

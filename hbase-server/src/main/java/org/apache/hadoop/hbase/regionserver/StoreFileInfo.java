@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
 import org.apache.hadoop.hbase.io.hfile.ReaderContextBuilder;
+import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -133,51 +134,50 @@ public class StoreFileInfo {
     this(conf, fs, null, initialPath, primaryReplica);
   }
 
-  private StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus,
-      final Path initialPath, final boolean primaryReplica) throws IOException {
-    assert fs != null;
-    assert initialPath != null;
-    assert conf != null;
+	private StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus,
+			final Path initialPath, final boolean primaryReplica) throws IOException {
+		assert fs != null;
+		assert initialPath != null;
+		assert conf != null;
 
-    this.fs = fs;
-    this.conf = conf;
-    this.initialPath = initialPath;
-    this.primaryReplica = primaryReplica;
-    this.noReadahead = this.conf.getBoolean(STORE_FILE_READER_NO_READAHEAD,
-        DEFAULT_STORE_FILE_READER_NO_READAHEAD);
-    Path p = initialPath;
-    if (HFileLink.isHFileLink(p)) {
-      // HFileLink
-      this.reference = null;
-      this.link = HFileLink.buildFromHFileLinkPattern(conf, p);
-      LOG.trace("{} is a link", p);
-    } else if (isReference(p)) {
-      this.reference = Reference.read(fs, p);
-      Path referencePath = getReferredToFile(p);
-      if (HFileLink.isHFileLink(referencePath)) {
-        // HFileLink Reference
-        this.link = HFileLink.buildFromHFileLinkPattern(conf, referencePath);
-      } else {
-        // Reference
-        this.link = null;
-      }
-      LOG.trace("{} is a {} reference to {}", p, reference.getFileRegion(), referencePath);
-    } else if (isHFile(p)) {
-      // HFile
-      if (fileStatus != null) {
-        this.createdTimestamp = fileStatus.getModificationTime();
-        this.size = fileStatus.getLen();
-      } else {
-        FileStatus fStatus = fs.getFileStatus(initialPath);
-        this.createdTimestamp = fStatus.getModificationTime();
-        this.size = fStatus.getLen();
-      }
-      this.reference = null;
-      this.link = null;
-    } else {
-      throw new IOException("path=" + p + " doesn't look like a valid StoreFile");
-    }
-  }
+		this.fs = fs;
+		this.conf = conf;
+		this.initialPath = initialPath;
+		this.primaryReplica = primaryReplica;
+		this.noReadahead = this.conf.getBoolean(STORE_FILE_READER_NO_READAHEAD, DEFAULT_STORE_FILE_READER_NO_READAHEAD);
+		Path p = initialPath;
+		if (HFileLink.isHFileLink(p)) {
+			// HFileLink
+			this.reference = null;
+			this.link = HFileLink.buildFromHFileLinkPattern(conf, p);
+			LOG.trace("{} is a link", p);
+		} else if (isReference(p)) {
+			this.reference = Reference.read(fs, p);
+			Path referencePath = getReferredToFile(p);
+			if (HFileLink.isHFileLink(referencePath)) {
+				// HFileLink Reference
+				this.link = HFileLink.buildFromHFileLinkPattern(conf, referencePath);
+			} else {
+				// Reference
+				this.link = null;
+			}
+			LOG.trace("{} is a {} reference to {}", p, reference.getFileRegion(), referencePath);
+		} else if (isHFile(p) || isMobFile(p) || isMobRefFile(p)) {
+			// HFile
+			if (fileStatus != null) {
+				this.createdTimestamp = fileStatus.getModificationTime();
+				this.size = fileStatus.getLen();
+			} else {
+				FileStatus fStatus = fs.getFileStatus(initialPath);
+				this.createdTimestamp = fStatus.getModificationTime();
+				this.size = fStatus.getLen();
+			}
+			this.reference = null;
+			this.link = null;
+		} else {
+			throw new IOException("path=" + p + " doesn't look like a valid StoreFile");
+		}
+	}
 
   /**
    * Create a Store File Info
@@ -442,6 +442,30 @@ public class StoreFileInfo {
     return m.matches() && m.groupCount() > 0;
   }
 
+  public static boolean isMobFile(final Path path) {
+    String fileName = path.getName();
+    String[] parts = fileName.split(MobUtils.SEP);
+    if (parts.length != 2) {
+      return false;
+    }
+    Matcher m = HFILE_NAME_PATTERN.matcher(parts[0]);
+    Matcher mm = HFILE_NAME_PATTERN.matcher(parts[1]);
+    return m.matches() && mm.matches();
+  }
+
+  public static boolean isMobRefFile(final Path path) {
+    String fileName = path.getName();
+    int lastIndex = fileName.lastIndexOf(MobUtils.SEP);
+    if (lastIndex < 0) {
+      return false;
+    }
+    String[] parts = new String[2];
+    parts[0] = fileName.substring(0, lastIndex);
+    parts[1] = fileName.substring(lastIndex + 1);
+    String name = parts[0] + "." + parts[1];
+    Matcher  m = REF_NAME_PATTERN.matcher(name);
+    return m.matches() && m.groupCount() > 1;
+  }
   /**
    * @param path Path to check.
    * @return True if the path has format of a del file.

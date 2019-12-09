@@ -115,7 +115,7 @@ public abstract class Compactor<T extends CellSink> {
   }
 
   /** The sole reason this class exists is that java has no ref/out/pointer parameters. */
-  protected static class FileDetails {
+  public static class FileDetails {
     /** Maximum key count after compaction (for blooms) */
     public long maxKeyCount = 0;
     /** Earliest put timestamp if major compaction */
