@@ -126,6 +126,8 @@ public class TestReportOnlineRegionsRace {
   public static void setUp() throws Exception {
     UTIL.getConfiguration().setClass(HConstants.MASTER_IMPL, HMasterForTest.class, HMaster.class);
     UTIL.getConfiguration().setInt("hbase.regionserver.msginterval", 1000);
+    UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT,
+        HConstants.DEFAULT_REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT);
     UTIL.startMiniCluster(1);
     UTIL.createTable(NAME, CF);
     UTIL.waitTableAvailable(NAME);
