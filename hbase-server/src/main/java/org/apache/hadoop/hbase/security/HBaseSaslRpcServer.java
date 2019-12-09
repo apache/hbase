@@ -21,11 +21,13 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.Map;
+import java.util.Optional;
 
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
 
+import org.apache.hadoop.hbase.security.provider.AttemptingUserProvidingSaslServer;
 import org.apache.hadoop.hbase.security.provider.SaslServerAuthenticationProvider;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
@@ -44,14 +46,14 @@ public class HBaseSaslRpcServer {
 
   private static final Logger LOG = LoggerFactory.getLogger(HBaseSaslRpcServer.class);
 
+  private final AttemptingUserProvidingSaslServer serverWithProvider;
   private final SaslServer saslServer;
-
-  private UserGroupInformation attemptingUser; // user name before auth
 
   public HBaseSaslRpcServer(SaslServerAuthenticationProvider provider,
       Map<String, String> saslProps, SecretManager<TokenIdentifier> secretManager)
           throws IOException {
-    saslServer = provider.createServer(secretManager, saslProps);
+    serverWithProvider = provider.createServer(secretManager, saslProps);
+    saslServer = serverWithProvider.getServer();
   }
 
   public boolean isComplete() {
@@ -67,8 +69,12 @@ public class HBaseSaslRpcServer {
     SaslUtil.safeDispose(saslServer);
   }
 
-  public UserGroupInformation getAttemptingUser() {
-    return attemptingUser;
+  public String getAttemptingUser() {
+    Optional<UserGroupInformation> optionalUser = serverWithProvider.getAttemptingUser();
+    if (optionalUser.isPresent()) {
+      optionalUser.get().toString();
+    }
+    return "Unknown";
   }
 
   public byte[] wrap(byte[] buf, int off, int len) throws SaslException {

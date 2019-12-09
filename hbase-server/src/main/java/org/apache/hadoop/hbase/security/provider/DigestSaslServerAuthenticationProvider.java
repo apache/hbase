@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.security.provider;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
@@ -50,22 +51,31 @@ public class DigestSaslServerAuthenticationProvider extends DigestSaslAuthentica
   private static final Logger LOG = LoggerFactory.getLogger(
       DigestSaslServerAuthenticationProvider.class);
 
+  private AtomicReference<UserGroupInformation> attemptingUser = new AtomicReference<>(null);
+
   @Override
-  public SaslServer createServer(SecretManager<TokenIdentifier> secretManager,
+  public AttemptingUserProvidingSaslServer createServer(
+      SecretManager<TokenIdentifier> secretManager,
       Map<String, String> saslProps) throws IOException {
     if (secretManager == null) {
       throw new AccessDeniedException("Server is not configured to do DIGEST authentication.");
     }
-    return Sasl.createSaslServer(getSaslAuthMethod().getSaslMechanism(), null,
-      SaslUtil.SASL_DEFAULT_REALM, saslProps, new SaslDigestCallbackHandler(secretManager));
+    final SaslServer server = Sasl.createSaslServer(getSaslAuthMethod().getSaslMechanism(), null,
+      SaslUtil.SASL_DEFAULT_REALM, saslProps,
+      new SaslDigestCallbackHandler(secretManager, attemptingUser));
+
+    return new AttemptingUserProvidingSaslServer(server, () -> attemptingUser.get());
   }
 
   /** CallbackHandler for SASL DIGEST-MD5 mechanism */
   private static class SaslDigestCallbackHandler implements CallbackHandler {
-    private SecretManager<TokenIdentifier> secretManager;
+    private final SecretManager<TokenIdentifier> secretManager;
+    private final AtomicReference<UserGroupInformation> attemptingUser;
 
-    public SaslDigestCallbackHandler(SecretManager<TokenIdentifier> secretManager) {
+    public SaslDigestCallbackHandler(SecretManager<TokenIdentifier> secretManager,
+        AtomicReference<UserGroupInformation> attemptingUser) {
       this.secretManager = secretManager;
+      this.attemptingUser = attemptingUser;
     }
 
     private char[] getPassword(TokenIdentifier tokenid) throws InvalidToken {
@@ -94,6 +104,7 @@ public class DigestSaslServerAuthenticationProvider extends DigestSaslAuthentica
       if (pc != null) {
         TokenIdentifier tokenIdentifier = HBaseSaslRpcServer.getIdentifier(
             nc.getDefaultName(), secretManager);
+        attemptingUser.set(tokenIdentifier.getUser());
         char[] password = getPassword(tokenIdentifier);
         if (LOG.isTraceEnabled()) {
           LOG.trace("SASL server DIGEST-MD5 callback: setting password " + "for client: " +

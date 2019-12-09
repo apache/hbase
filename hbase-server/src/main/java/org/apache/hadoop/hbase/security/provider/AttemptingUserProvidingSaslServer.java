@@ -17,38 +17,37 @@
  */
 package org.apache.hadoop.hbase.security.provider;
 
-import java.io.IOException;
-import java.util.Map;
+import java.util.Optional;
+import java.util.function.Supplier;
+
+import javax.security.sasl.SaslServer;
 
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.SecretManager;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
+/**
+ * Wrapper around a SaslServer which provides the last user attempting to authenticate via SASL,
+ * if the server/mechanism allow figuring that out.
+ */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)
 @InterfaceStability.Evolving
-public class SimpleSaslServerAuthenticationProvider extends SimpleSaslAuthenticationProvider
-    implements SaslServerAuthenticationProvider {
+public class AttemptingUserProvidingSaslServer {
+  private final Supplier<UserGroupInformation> producer;
+  private final SaslServer saslServer;
 
-  @Override
-  public AttemptingUserProvidingSaslServer createServer(
-      SecretManager<TokenIdentifier> secretManager,
-      Map<String, String> saslProps) throws IOException {
-    throw new RuntimeException("HBase SIMPLE authentication doesn't use SASL");
+  public AttemptingUserProvidingSaslServer(
+      SaslServer saslServer, Supplier<UserGroupInformation> producer) {
+    this.saslServer = saslServer;
+    this.producer = producer;
   }
 
-  @Override
-  public boolean supportsProtocolAuthentication() {
-    return true;
+  public SaslServer getServer() {
+    return saslServer;
   }
 
-  @Override
-  public UserGroupInformation getAuthorizedUgi(String authzId,
-      SecretManager<TokenIdentifier> secretManager) throws IOException {
-    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(authzId);
-    ugi.setAuthenticationMethod(getSaslAuthMethod().getAuthMethod());
-    return ugi;
+  public Optional<UserGroupInformation> getAttemptingUser() {
+    return Optional.of(producer.get());
   }
 }

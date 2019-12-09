@@ -27,7 +27,6 @@ import javax.security.auth.callback.UnsupportedCallbackException;
 import javax.security.sasl.AuthorizeCallback;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
-import javax.security.sasl.SaslServer;
 
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
@@ -48,7 +47,8 @@ public class GssSaslServerAuthenticationProvider extends GssSaslAuthenticationPr
       GssSaslServerAuthenticationProvider.class);
 
   @Override
-  public SaslServer createServer(SecretManager<TokenIdentifier> secretManager,
+  public AttemptingUserProvidingSaslServer createServer(
+      SecretManager<TokenIdentifier> secretManager,
       Map<String, String> saslProps) throws IOException {
     UserGroupInformation current = UserGroupInformation.getCurrentUser();
     String fullName = current.getUserName();
@@ -59,11 +59,12 @@ public class GssSaslServerAuthenticationProvider extends GssSaslAuthenticationPr
           "Kerberos principal does NOT contain an instance (hostname): " + fullName);
     }
     try {
-      return current.doAs(new PrivilegedExceptionAction<SaslServer>() {
+      return current.doAs(new PrivilegedExceptionAction<AttemptingUserProvidingSaslServer>() {
         @Override
-        public SaslServer run() throws SaslException {
-          return Sasl.createSaslServer(getSaslAuthMethod().getSaslMechanism(), names[0],
-            names[1], saslProps, new SaslGssCallbackHandler());
+        public AttemptingUserProvidingSaslServer run() throws SaslException {
+          return new AttemptingUserProvidingSaslServer(Sasl.createSaslServer(
+              getSaslAuthMethod().getSaslMechanism(), names[0], names[1], saslProps,
+              new SaslGssCallbackHandler()), () -> null);
         }
       });
     } catch (InterruptedException e) {
