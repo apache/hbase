@@ -25,6 +25,8 @@ import static org.apache.hadoop.hbase.regionserver.HStoreFile.EARLIEST_PUT_TS;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.MAJOR_COMPACTION_KEY;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.MAX_SEQ_ID_KEY;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.MOB_CELLS_COUNT;
+import static org.apache.hadoop.hbase.regionserver.HStoreFile.MOB_FILE_REFS;
+import static org.apache.hadoop.hbase.regionserver.HStoreFile.NULL_VALUE;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.TIMERANGE_KEY;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -36,6 +38,8 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -47,6 +51,7 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.hfile.HFileWriterImpl;
 import org.apache.hadoop.hbase.util.BloomContext;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
@@ -165,6 +170,9 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     }
   }
 
+  public long getPos() throws IOException {
+    return ((HFileWriterImpl) writer).getPos();
+  }
   /**
    * Writes meta data.
    * Call before {@link #close()} since its written as meta data to this file.
@@ -236,6 +244,21 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     writer.appendFileInfo(MAJOR_COMPACTION_KEY, Bytes.toBytes(majorCompaction));
     writer.appendFileInfo(MOB_CELLS_COUNT, Bytes.toBytes(mobCellsCount));
     appendTrackedTimestampsToMetadata();
+  }
+
+  /**
+   * Appends MOB - specific metadata (even if it is empty)
+   * @param mobRefSet - set of MOB file names
+   * @throws IOException problem writing to FS
+   */
+  public void appendMobMetadata(Set<String> mobRefSet) throws IOException {
+    if (mobRefSet != null && mobRefSet.size() > 0) {
+      String sb = StringUtils.join(mobRefSet, ",");
+      byte[] bytes = Bytes.toBytes(sb.toString());
+      writer.appendFileInfo(MOB_FILE_REFS, bytes);
+    } else {
+      writer.appendFileInfo(MOB_FILE_REFS, NULL_VALUE);
+    }
   }
 
   /**
