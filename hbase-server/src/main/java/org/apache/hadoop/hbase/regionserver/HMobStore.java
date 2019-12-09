@@ -188,26 +188,6 @@ public class HMobStore extends HStore {
   }
 
   /**
-   * Creates the writer for the del file in temp directory. The del file keeps tracking the delete
-   * markers. Its name has a suffix _del, the format is [0-9a-f]+(_del)?.
-   * @param date        The latest date of written cells.
-   * @param maxKeyCount The key count.
-   * @param compression The compression algorithm.
-   * @param startKey    The start key.
-   * @return The writer for the del file. n
-   */
-  public StoreFileWriter createDelFileWriterInTmp(Date date, long maxKeyCount,
-    Compression.Algorithm compression, byte[] startKey) throws IOException {
-    if (startKey == null) {
-      startKey = HConstants.EMPTY_START_ROW;
-    }
-    Path path = getTempDir();
-    String suffix = UUID.randomUUID().toString().replaceAll("-", "") + "_del";
-    MobFileName mobFileName = MobFileName.create(startKey, MobUtils.formatDate(date), suffix);
-    return createWriterInTmp(mobFileName, path, maxKeyCount, compression, true);
-  }
-
-  /**
    * Creates the writer for the mob file in temp directory.
    * @param date         The date string, its format is yyyymmmdd.
    * @param basePath     The basic path for a temp directory.
@@ -220,7 +200,8 @@ public class HMobStore extends HStore {
   public StoreFileWriter createWriterInTmp(String date, Path basePath, long maxKeyCount,
     Compression.Algorithm compression, byte[] startKey, boolean isCompaction) throws IOException {
     MobFileName mobFileName =
-      MobFileName.create(startKey, date, UUID.randomUUID().toString().replaceAll("-", ""));
+      MobFileName.create(startKey, date, UUID.randomUUID().toString().replaceAll("-", ""),
+        getHRegion().getRegionInfo().getEncodedName());
     return createWriterInTmp(mobFileName, basePath, maxKeyCount, compression, isCompaction);
   }
 
@@ -253,8 +234,7 @@ public class HMobStore extends HStore {
     }
     Path dstPath = new Path(targetPath, sourceFile.getName());
     validateMobFile(sourceFile);
-    String msg = "Renaming flushed file from " + sourceFile + " to " + dstPath;
-    LOG.info(msg);
+    LOG.info(" FLUSH Renaming flushed file from {} to {}", sourceFile, dstPath);
     Path parent = dstPath.getParent();
     if (!getFileSystem().exists(parent)) {
       getFileSystem().mkdirs(parent);
@@ -293,6 +273,20 @@ public class HMobStore extends HStore {
    */
   public MobCell resolve(Cell reference, boolean cacheBlocks) throws IOException {
     return resolve(reference, cacheBlocks, -1, true);
+  }
+
+  /**
+   * Reads the cell from the mob file with readEmptyValueOnMobCellMiss
+   * @param reference                   The cell found in the HBase, its value is a path to a mob
+   *                                    file.
+   * @param cacheBlocks                 Whether the scanner should cache blocks.
+   * @param readEmptyValueOnMobCellMiss should return empty mob cell if reference can not be
+   *                                    resolved.
+   * @return The cell found in the mob file. n
+   */
+  public MobCell resolve(Cell reference, boolean cacheBlocks, boolean readEmptyValueOnMobCellMiss)
+    throws IOException {
+    return resolve(reference, cacheBlocks, -1, readEmptyValueOnMobCellMiss);
   }
 
   /**
@@ -507,4 +501,5 @@ public class HMobStore extends HStore {
   public byte[] getRefCellTags() {
     return this.refCellTags;
   }
+
 }

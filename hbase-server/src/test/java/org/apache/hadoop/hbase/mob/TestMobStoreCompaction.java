@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver;
+package org.apache.hadoop.hbase.mob;
 
 import static org.apache.hadoop.hbase.HBaseTestingUtility.START_KEY;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
@@ -29,14 +29,13 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparatorImpl;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -58,10 +57,17 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
-import org.apache.hadoop.hbase.mob.MobConstants;
-import org.apache.hadoop.hbase.mob.MobFileCache;
-import org.apache.hadoop.hbase.mob.MobUtils;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
+import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.RegionAsTable;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
+import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -78,7 +84,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Test mob store compaction
  */
-@Category(SmallTests.class)
+@Category(MediumTests.class)
 public class TestMobStoreCompaction {
 
   @ClassRule
@@ -177,7 +183,18 @@ public class TestMobStoreCompaction {
     // Change the threshold larger than the data size
     setMobThreshold(region, COLUMN_FAMILY, 500);
     region.initialize();
-    region.compactStores();
+
+    List<HStore> stores = region.getStores();
+    for (HStore store : stores) {
+      // Force major compaction
+      store.triggerMajorCompaction();
+      Optional<CompactionContext> context = store.requestCompaction(HStore.PRIORITY_USER,
+        CompactionLifeCycleTracker.DUMMY, User.getCurrent());
+      if (!context.isPresent()) {
+        continue;
+      }
+      region.compact(context.get(), store, NoLimitThroughputController.INSTANCE, User.getCurrent());
+    }
 
     assertEquals("After compaction: store files", 1, countStoreFiles());
     assertEquals("After compaction: mob file count", compactionThreshold, countMobFiles());
@@ -265,30 +282,6 @@ public class TestMobStoreCompaction {
     // region.compactStores();
     region.compact(true);
     assertEquals("After compaction: store files", 1, countStoreFiles());
-    // still have original mob hfiles and now added a mob del file
-    assertEquals("After compaction: mob files", numHfiles + 1, countMobFiles());
-
-    Scan scan = new Scan();
-    scan.setRaw(true);
-    InternalScanner scanner = region.getScanner(scan);
-    List<Cell> results = new ArrayList<>();
-    scanner.next(results);
-    int deleteCount = 0;
-    while (!results.isEmpty()) {
-      for (Cell c : results) {
-        if (c.getTypeByte() == KeyValue.Type.DeleteFamily.getCode()) {
-          deleteCount++;
-          assertTrue(Bytes.equals(CellUtil.cloneRow(c), deleteRow));
-        }
-      }
-      results.clear();
-      scanner.next(results);
-    }
-    // assert the delete mark is retained after the major compaction
-    assertEquals(1, deleteCount);
-    scanner.close();
-    // assert the deleted cell is not counted
-    assertEquals("The cells in mob files", numHfiles - 1, countMobCellsInMobFiles(1));
   }
 
   private int countStoreFiles() throws IOException {
@@ -417,40 +410,5 @@ public class TestMobStoreCompaction {
     scanner.close();
 
     return files.size();
-  }
-
-  private int countMobCellsInMobFiles(int expectedNumDelfiles) throws IOException {
-    Configuration copyOfConf = new Configuration(conf);
-    copyOfConf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0f);
-    CacheConfig cacheConfig = new CacheConfig(copyOfConf);
-    Path mobDirPath = MobUtils.getMobFamilyPath(conf, htd.getTableName(), hcd.getNameAsString());
-    List<HStoreFile> sfs = new ArrayList<>();
-    int numDelfiles = 0;
-    int size = 0;
-    if (fs.exists(mobDirPath)) {
-      for (FileStatus f : fs.listStatus(mobDirPath)) {
-        HStoreFile sf = new HStoreFile(fs, f.getPath(), conf, cacheConfig, BloomType.NONE, true);
-        sfs.add(sf);
-        if (StoreFileInfo.isDelFile(sf.getPath())) {
-          numDelfiles++;
-        }
-      }
-
-      List<StoreFileScanner> scanners = StoreFileScanner.getScannersForStoreFiles(sfs, false, true,
-        false, false, HConstants.LATEST_TIMESTAMP);
-      long timeToPurgeDeletes = Math.max(conf.getLong("hbase.hstore.time.to.purge.deletes", 0), 0);
-      long ttl = HStore.determineTTLFromFamily(hcd);
-      ScanInfo scanInfo =
-        new ScanInfo(copyOfConf, hcd, ttl, timeToPurgeDeletes, CellComparatorImpl.COMPARATOR);
-      StoreScanner scanner = new StoreScanner(scanInfo, ScanType.COMPACT_DROP_DELETES, scanners);
-      try {
-        size += UTIL.countRows(scanner);
-      } finally {
-        scanner.close();
-      }
-    }
-    // assert the number of the existing del files
-    assertEquals(expectedNumDelfiles, numDelfiles);
-    return size;
   }
 }
