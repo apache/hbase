@@ -203,7 +203,8 @@ struct TDelete {
   3: optional i64 timestamp,
   4: optional TDeleteType deleteType = 1,
   6: optional map<binary, binary> attributes,
-  7: optional TDurability durability
+  7: optional TDurability durability,
+  8: optional TCellVisibility cellVisibility
 
 }
 
