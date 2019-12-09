@@ -2037,7 +2037,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return this.htableDescriptor;
   }
 
-  void setTableDescriptor(TableDescriptor desc) {
+  public void setTableDescriptor(TableDescriptor desc) {
     htableDescriptor = desc;
   }
 

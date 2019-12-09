@@ -156,7 +156,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
 
   protected final MemStore memstore;
   // This stores directory in the filesystem.
-  private final HRegion region;
+  protected final HRegion region;
   protected Configuration conf;
   private long lastCompactSize = 0;
   volatile boolean forceMajor = false;
@@ -2008,7 +2008,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     finishCompactionRequest(compaction.getRequest());
   }
 
-  private void finishCompactionRequest(CompactionRequestImpl cr) {
+  protected void finishCompactionRequest(CompactionRequestImpl cr) {
     this.region.reportCompactionRequestEnd(cr.isMajor(), cr.getFiles().size(), cr.getSize());
     if (cr.isOffPeak()) {
       offPeakCompactionTracker.set(false);

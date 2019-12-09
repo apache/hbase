@@ -23,8 +23,8 @@ import org.apache.hadoop.hbase.util.MD5Hash;
 
 /**
  * The mob file name.
- * It consists of a md5 of a start key, a date and an uuid.
- * It looks like md5(start) + date + uuid.
+ * It consists of a md5 of a start key, a date, uuid and encoded region name.
+ * It looks like md5(start) + date + uuid+ "_" + encoded region name.
  * <ol>
  * <li>characters 0-31: md5 hex string of a start key. Since the length of the start key is not
  * fixed, have to use the md5 instead which has a fix length.</li>
@@ -40,15 +40,18 @@ import org.apache.hadoop.hbase.util.MD5Hash;
  * TTL easily. If this timestamp is older than the TTL, it's regarded as expired.
  */
 @InterfaceAudience.Private
-public final class MobFileName {
+public final class MobFileName{
   private final String date;
   private final String startKey;
   private final String uuid;
   private final String fileName;
+  // Name of a region this MOB file belongs to
+  private final String regionName;
 
   private static final int STARTKEY_END_INDEX = 32;
   private static final int DATE_END_INDEX = 40;
   private static final int UUID_END_INDEX = 72;
+  public static final String REGION_SEP = "_";
 
   /**
    * @param startKey
@@ -57,12 +60,14 @@ public final class MobFileName {
    *          The string of the latest timestamp of cells in this file, the format is yyyymmdd.
    * @param uuid
    *          The uuid
+   * @param regionName name of a region, where this file was created during flush or compaction.
    */
-  private MobFileName(byte[] startKey, String date, String uuid) {
+  private MobFileName(byte[] startKey, String date, String uuid, String regionName) {
     this.startKey = MD5Hash.getMD5AsHex(startKey, 0, startKey.length);
     this.uuid = uuid;
     this.date = date;
-    this.fileName = this.startKey + this.date + this.uuid;
+    this.regionName = regionName;
+    this.fileName = this.startKey + this.date + this.uuid + REGION_SEP + this.regionName;
   }
 
   /**
@@ -72,12 +77,14 @@ public final class MobFileName {
    *          The string of the latest timestamp of cells in this file, the format is yyyymmdd.
    * @param uuid
    *          The uuid
+   * @param regionName name of a region, where this file was created during flush or compaction.
    */
-  private MobFileName(String startKey, String date, String uuid) {
+  private MobFileName(String startKey, String date, String uuid, String regionName) {
     this.startKey = startKey;
     this.uuid = uuid;
     this.date = date;
-    this.fileName = this.startKey + this.date + this.uuid;
+    this.regionName = regionName;
+    this.fileName = this.startKey + this.date + this.uuid + REGION_SEP + this.regionName;
   }
 
   /**
@@ -88,10 +95,11 @@ public final class MobFileName {
    * @param date
    *          The string of the latest timestamp of cells in this file, the format is yyyymmdd.
    * @param uuid The uuid.
+   * @param regionName name of a region, where this file was created during flush or compaction.
    * @return An instance of a MobFileName.
    */
-  public static MobFileName create(byte[] startKey, String date, String uuid) {
-    return new MobFileName(startKey, date, uuid);
+  public static MobFileName create(byte[] startKey, String date, String uuid, String regionName) {
+    return new MobFileName(startKey, date, uuid, regionName);
   }
 
   /**
@@ -102,10 +110,11 @@ public final class MobFileName {
    * @param date
    *          The string of the latest timestamp of cells in this file, the format is yyyymmdd.
    * @param uuid The uuid.
+   * @param regionName name of a region, where this file was created during flush or compaction.
    * @return An instance of a MobFileName.
    */
-  public static MobFileName create(String startKey, String date, String uuid) {
-    return new MobFileName(startKey, date, uuid);
+  public static MobFileName create(String startKey, String date, String uuid, String regionName) {
+    return new MobFileName(startKey, date, uuid, regionName);
   }
 
   /**
@@ -115,11 +124,17 @@ public final class MobFileName {
    */
   public static MobFileName create(String fileName) {
     // The format of a file name is md5HexString(0-31bytes) + date(32-39bytes) + UUID
+    // + "_" + region
     // The date format is yyyyMMdd
     String startKey = fileName.substring(0, STARTKEY_END_INDEX);
     String date = fileName.substring(STARTKEY_END_INDEX, DATE_END_INDEX);
     String uuid = fileName.substring(DATE_END_INDEX, UUID_END_INDEX);
-    return new MobFileName(startKey, date, uuid);
+    String regionName = fileName.substring(UUID_END_INDEX+1);
+    return new MobFileName(startKey, date, uuid, regionName);
+  }
+
+  public static boolean isOldMobFileName(String name) {
+    return name.indexOf(REGION_SEP) < 0;
   }
 
   /**
@@ -148,6 +163,13 @@ public final class MobFileName {
     return startKey;
   }
 
+  /**
+   * Gets region name
+   * @return name of a region, where this file was created during flush or compaction.
+   */
+  public String getRegionName() {
+    return regionName;
+  }
   /**
    * Gets the date string. Its format is yyyymmdd.
    * @return The date string.
