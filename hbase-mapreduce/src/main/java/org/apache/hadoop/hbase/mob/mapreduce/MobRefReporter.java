@@ -157,9 +157,9 @@ import org.slf4j.LoggerFactory;
  *         for details.
  *   * HLINK BUT POINT TO MISSING FILE - There is a pointer in our mob area for this table and CF
  *         to a file elsewhere on the FileSystem, however the file it points to no longer exists.
- *   * MISSING FILE BUT FAILURE WHILE CHECKING HLINKS - We could not find the referenced file, however
- *         you should check the job logs to see why we couldn't check to see if there is a pointer
- *         to the referenced file in our archive or another table's archive or mob area.
+ *   * MISSING FILE BUT FAILURE WHILE CHECKING HLINKS - We could not find the referenced file,
+ *         however you should check the job logs to see why we couldn't check to see if there is a
+ *         pointer to the referenced file in our archive or another table's archive or mob area.
  *
  */
 @InterfaceAudience.Private
@@ -222,7 +222,8 @@ public class MobRefReporter extends Configured implements Tool {
     final Text OK_HLINK_RESTORE = new Text("HLINK TO ARCHIVE FOR SAME TABLE");
     final Text OK_HLINK_CLONE = new Text("HLINK TO ARCHIVE FOR OTHER TABLE");
     /* Results that mean something is incorrect */
-    final Text INCONSISTENT_ARCHIVE_BAD_LINK = new Text("ARCHIVE WITH HLINK BUT NOT FROM OUR TABLE");
+    final Text INCONSISTENT_ARCHIVE_BAD_LINK =
+        new Text("ARCHIVE WITH HLINK BUT NOT FROM OUR TABLE");
     final Text INCONSISTENT_ARCHIVE_STALE = new Text("ARCHIVE BUT NO HLINKS");
     final Text INCONSISTENT_ARCHIVE_IOE = new Text("ARCHIVE BUT FAILURE WHILE CHECKING HLINKS");
     /* Results that mean data is probably already gone */
@@ -352,7 +353,8 @@ public class MobRefReporter extends Configured implements Tool {
             context.write(DATALOSS_MISSING, encodeRows(context, key, rows));
           }
         } catch (IOException e) {
-          LOG.error("Exception while checking mob area of our table for HFileLinks that point to {}",
+          LOG.error(
+              "Exception while checking mob area of our table for HFileLinks that point to {}",
               file, e);
           context.write(DATALOSS_MISSING_IOE, encodeRows(context, key, rows));
         }
