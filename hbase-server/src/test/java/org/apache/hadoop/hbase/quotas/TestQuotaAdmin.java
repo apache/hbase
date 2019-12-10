@@ -80,6 +80,13 @@ public class TestQuotaAdmin {
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
+  private final static TableName[] TABLE_NAMES =
+      new TableName[] { TableName.valueOf("TestQuotaAdmin0"), TableName.valueOf("TestQuotaAdmin1"),
+          TableName.valueOf("TestQuotaAdmin2") };
+
+  private final static String[] NAMESPACES =
+      new String[] { "NAMESPACE01", "NAMESPACE02", "NAMESPACE03" };
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
@@ -838,5 +845,157 @@ public class TestQuotaAdmin {
     } finally {
       scanner.close();
     }
+  }
+
+  @Test
+  public void testUserUnThrottleByType() throws Exception {
+    final Admin admin = TEST_UTIL.getAdmin();
+    final String userName = User.getCurrent().getShortName();
+    String userName01 = "user01";
+    // Add 6req/min limit
+    admin.setQuota(QuotaSettingsFactory.throttleUser(userName, ThrottleType.REQUEST_NUMBER, 6,
+      TimeUnit.MINUTES));
+    admin.setQuota(
+      QuotaSettingsFactory.throttleUser(userName, ThrottleType.REQUEST_SIZE, 6, TimeUnit.MINUTES));
+    admin.setQuota(QuotaSettingsFactory.throttleUser(userName01, ThrottleType.REQUEST_NUMBER, 6,
+      TimeUnit.MINUTES));
+    admin.setQuota(QuotaSettingsFactory.throttleUser(userName01, ThrottleType.REQUEST_SIZE, 6,
+      TimeUnit.MINUTES));
+    admin.setQuota(
+      QuotaSettingsFactory.unthrottleUserByThrottleType(userName, ThrottleType.REQUEST_NUMBER));
+    assertEquals(3, getQuotaSettingCount(admin));
+    admin.setQuota(
+      QuotaSettingsFactory.unthrottleUserByThrottleType(userName, ThrottleType.REQUEST_SIZE));
+    assertEquals(2, getQuotaSettingCount(admin));
+    admin.setQuota(QuotaSettingsFactory.unthrottleUser(userName01));
+    assertEquals(0, getQuotaSettingCount(admin));
+  }
+
+  @Test
+  public void testUserTableUnThrottleByType() throws Exception {
+    final Admin admin = TEST_UTIL.getAdmin();
+    final String userName = User.getCurrent().getShortName();
+    String userName01 = "user01";
+    // Add 6req/min limit
+    admin.setQuota(QuotaSettingsFactory.throttleUser(userName, TABLE_NAMES[0],
+      ThrottleType.REQUEST_NUMBER, 6, TimeUnit.MINUTES));
+    admin.setQuota(QuotaSettingsFactory.throttleUser(userName, TABLE_NAMES[0],
+      ThrottleType.REQUEST_SIZE, 6, TimeUnit.MINUTES));
+    admin.setQuota(QuotaSettingsFactory.throttleUser(userName01, TABLE_NAMES[1],
+      ThrottleType.REQUEST_NUMBER, 6, TimeUnit.MINUTES));
+    admin.setQuota(QuotaSettingsFactory.throttleUser(userName01, TABLE_NAMES[1],
+      ThrottleType.REQUEST_SIZE, 6, TimeUnit.MINUTES));
+    admin.setQuota(QuotaSettingsFactory.unthrottleUserByThrottleType(userName, TABLE_NAMES[0],
+      ThrottleType.REQUEST_NUMBER));
+    assertEquals(3, getQuotaSettingCount(admin));
+    admin.setQuota(QuotaSettingsFactory.unthrottleUserByThrottleType(userName, TABLE_NAMES[0],
+      ThrottleType.REQUEST_SIZE));
+    assertEquals(2, getQuotaSettingCount(admin));
+    admin.setQuota(QuotaSettingsFactory.unthrottleUser(userName01));
+    assertEquals(0, getQuotaSettingCount(admin));
+  }
+
+  @Test
+  public void testUserNameSpaceUnThrottleByType() throws Exception {
+    final Admin admin = TEST_UTIL.getAdmin();
+    final String userName = User.getCurrent().getShortName();
+    String userName01 = "user01";
+    // Add 6req/min limit
+    admin.setQuota(QuotaSettingsFactory.throttleUser(userName, NAMESPACES[0],
+      ThrottleType.REQUEST_NUMBER, 6, TimeUnit.MINUTES));
+    admin.setQuota(QuotaSettingsFactory.throttleUser(userName, NAMESPACES[0],
+      ThrottleType.REQUEST_SIZE, 6, TimeUnit.MINUTES));
+    admin.setQuota(QuotaSettingsFactory.throttleUser(userName01, NAMESPACES[1],
+      ThrottleType.REQUEST_NUMBER, 6, TimeUnit.MINUTES));
+    admin.setQuota(QuotaSettingsFactory.throttleUser(userName01, NAMESPACES[1],
+      ThrottleType.REQUEST_SIZE, 6, TimeUnit.MINUTES));
+    admin.setQuota(QuotaSettingsFactory.unthrottleUserByThrottleType(userName, NAMESPACES[0],
+      ThrottleType.REQUEST_NUMBER));
+    assertEquals(3, getQuotaSettingCount(admin));
+    admin.setQuota(QuotaSettingsFactory.unthrottleUserByThrottleType(userName, NAMESPACES[0],
+      ThrottleType.REQUEST_SIZE));
+    assertEquals(2, getQuotaSettingCount(admin));
+    admin.setQuota(QuotaSettingsFactory.unthrottleUser(userName01));
+    assertEquals(0, getQuotaSettingCount(admin));
+  }
+
+  @Test
+  public void testTableUnThrottleByType() throws Exception {
+    final Admin admin = TEST_UTIL.getAdmin();
+    final String userName = User.getCurrent().getShortName();
+    // Add 6req/min limit
+    admin.setQuota(QuotaSettingsFactory.throttleTable(TABLE_NAMES[0], ThrottleType.REQUEST_NUMBER,
+      6, TimeUnit.MINUTES));
+    admin.setQuota(QuotaSettingsFactory.throttleTable(TABLE_NAMES[0], ThrottleType.REQUEST_SIZE, 6,
+      TimeUnit.MINUTES));
+    admin.setQuota(QuotaSettingsFactory.throttleTable(TABLE_NAMES[1], ThrottleType.REQUEST_NUMBER,
+      6, TimeUnit.MINUTES));
+    admin.setQuota(QuotaSettingsFactory.throttleTable(TABLE_NAMES[1], ThrottleType.REQUEST_SIZE, 6,
+      TimeUnit.MINUTES));
+    admin.setQuota(QuotaSettingsFactory.unthrottleTableByThrottleType(TABLE_NAMES[0],
+      ThrottleType.REQUEST_NUMBER));
+    assertEquals(3, getQuotaSettingCount(admin));
+    admin.setQuota(QuotaSettingsFactory.unthrottleTableByThrottleType(TABLE_NAMES[0],
+      ThrottleType.REQUEST_SIZE));
+    assertEquals(2, getQuotaSettingCount(admin));
+    admin.setQuota(QuotaSettingsFactory.unthrottleTable(TABLE_NAMES[1]));
+    assertEquals(0, getQuotaSettingCount(admin));
+  }
+
+  @Test
+  public void testNameSpaceUnThrottleByType() throws Exception {
+    final Admin admin = TEST_UTIL.getAdmin();
+    final String userName = User.getCurrent().getShortName();
+    // Add 6req/min limit
+    admin.setQuota(QuotaSettingsFactory.throttleNamespace(NAMESPACES[0],
+      ThrottleType.REQUEST_NUMBER, 6, TimeUnit.MINUTES));
+    admin.setQuota(QuotaSettingsFactory.throttleNamespace(NAMESPACES[0], ThrottleType.REQUEST_SIZE,
+      6, TimeUnit.MINUTES));
+    admin.setQuota(QuotaSettingsFactory.throttleNamespace(NAMESPACES[1],
+      ThrottleType.REQUEST_NUMBER, 6, TimeUnit.MINUTES));
+    admin.setQuota(QuotaSettingsFactory.throttleNamespace(NAMESPACES[1], ThrottleType.REQUEST_SIZE,
+      6, TimeUnit.MINUTES));
+    admin.setQuota(QuotaSettingsFactory.unthrottleNamespaceByThrottleType(NAMESPACES[0],
+      ThrottleType.REQUEST_NUMBER));
+    assertEquals(3, getQuotaSettingCount(admin));
+    admin.setQuota(QuotaSettingsFactory.unthrottleNamespaceByThrottleType(NAMESPACES[0],
+      ThrottleType.REQUEST_SIZE));
+    assertEquals(2, getQuotaSettingCount(admin));
+    admin.setQuota(QuotaSettingsFactory.unthrottleNamespace(NAMESPACES[1]));
+    assertEquals(0, getQuotaSettingCount(admin));
+  }
+
+  @Test
+  public void testRegionServerUnThrottleByType() throws Exception {
+    final Admin admin = TEST_UTIL.getAdmin();
+    final String[] REGIONSERVER = { "RS01", "RS02" };
+
+    admin.setQuota(QuotaSettingsFactory.throttleRegionServer(REGIONSERVER[0],
+      ThrottleType.READ_NUMBER, 4, TimeUnit.MINUTES));
+    admin.setQuota(QuotaSettingsFactory.throttleRegionServer(REGIONSERVER[0],
+      ThrottleType.WRITE_NUMBER, 4, TimeUnit.MINUTES));
+    admin.setQuota(QuotaSettingsFactory.throttleRegionServer(REGIONSERVER[1],
+      ThrottleType.READ_NUMBER, 4, TimeUnit.MINUTES));
+    admin.setQuota(QuotaSettingsFactory.throttleRegionServer(REGIONSERVER[1],
+      ThrottleType.WRITE_NUMBER, 4, TimeUnit.MINUTES));
+
+    admin.setQuota(QuotaSettingsFactory.unthrottleRegionServerByThrottleType(REGIONSERVER[0],
+      ThrottleType.READ_NUMBER));
+    assertEquals(3, getQuotaSettingCount(admin));
+    admin.setQuota(QuotaSettingsFactory.unthrottleRegionServerByThrottleType(REGIONSERVER[0],
+      ThrottleType.WRITE_NUMBER));
+    assertEquals(2, getQuotaSettingCount(admin));
+    admin.setQuota(QuotaSettingsFactory.unthrottleRegionServer(REGIONSERVER[1]));
+    assertEquals(0, getQuotaSettingCount(admin));
+  }
+
+  public int getQuotaSettingCount(Admin admin) throws IOException {
+    List<QuotaSettings> list_quotas = admin.getQuota(new QuotaFilter());
+    int quotaSettingCount = 0;
+    for (QuotaSettings setting : list_quotas) {
+      quotaSettingCount++;
+      LOG.info("Quota Setting:" + setting);
+    }
+    return quotaSettingCount;
   }
 }
