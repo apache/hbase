@@ -3857,4 +3857,9 @@ public class HRegionServer extends HasThread implements
   public AsyncClusterConnection getAsyncClusterConnection() {
     return asyncClusterConnection;
   }
+
+  @VisibleForTesting
+  public CompactedHFilesDischarger getCompactedHFilesDischarger() {
+    return compactedFileDischarger;
+  }
 }

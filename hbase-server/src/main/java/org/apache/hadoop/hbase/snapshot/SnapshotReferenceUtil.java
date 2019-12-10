@@ -350,6 +350,16 @@ public final class SnapshotReferenceUtil {
         String hfile = storeFile.getName();
         if (HFileLink.isHFileLink(hfile)) {
           names.add(HFileLink.getReferencedHFileName(hfile));
+        } else if (StoreFileInfo.isReference(hfile)) {
+          Path refPath = StoreFileInfo.getReferredToFile(new Path(new Path(
+              new Path(new Path(regionInfo.getTable().getNamespaceAsString(),
+                  regionInfo.getTable().getQualifierAsString()), regionInfo.getEncodedName()),
+              family), hfile));
+          names.add(hfile);
+          names.add(refPath.getName());
+          if (HFileLink.isHFileLink(refPath.getName())) {
+            names.add(HFileLink.getReferencedHFileName(refPath.getName()));
+          }
         } else {
           names.add(hfile);
         }
