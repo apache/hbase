@@ -37,8 +37,10 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionState.State;
+import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -538,10 +540,13 @@ public class RegionStates {
    * @return A clone of current assignments.
    */
   public Map<TableName, Map<ServerName, List<RegionInfo>>> getAssignmentsForBalancer(
-      boolean isByTable) {
+      TableStateManager tableStateManager, boolean isByTable) {
     final Map<TableName, Map<ServerName, List<RegionInfo>>> result = new HashMap<>();
     if (isByTable) {
       for (RegionStateNode node : regionsMap.values()) {
+        if (isTableDisabled(tableStateManager, node.getTable())) {
+          continue;
+        }
         Map<ServerName, List<RegionInfo>> tableResult =
             result.computeIfAbsent(node.getTable(), t -> new HashMap<>());
         final ServerName serverName = node.getRegionLocation();
@@ -562,12 +567,20 @@ public class RegionStates {
     } else {
       final HashMap<ServerName, List<RegionInfo>> ensemble = new HashMap<>(serverMap.size());
       for (ServerStateNode serverNode : serverMap.values()) {
-        ensemble.put(serverNode.getServerName(), serverNode.getRegionInfoList());
+        ensemble.put(serverNode.getServerName(), serverNode.getRegionInfoList().stream()
+          .filter(region -> !isTableDisabled(tableStateManager, region.getTable()))
+          .collect(Collectors.toList()));
       }
       // Use a fake table name to represent the whole cluster's assignments
       result.put(HConstants.ENSEMBLE_TABLE_NAME, ensemble);
     }
     return result;
+  }
+
+  private boolean isTableDisabled(final TableStateManager tableStateManager,
+    final TableName tableName) {
+    return tableStateManager
+      .isTableState(tableName, TableState.State.DISABLED, TableState.State.DISABLING);
   }
 
   // ==========================================================================
