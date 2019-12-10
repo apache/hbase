@@ -311,3 +311,160 @@ $> hdfs dfs -find /hbase -name \
     d41d8cd98f00b204e9800998ecf8427e19700118ffd9c244fe69488bbc9f2c77d24a3e6a
 /hbase/mobdir/data/default/some_table/372c1b27e3dc0b56c3a031926e5efbe9/foo/d41d8cd98f00b204e9800998ecf8427e19700118ffd9c244fe69488bbc9f2c77d24a3e6a
 ----
+
+==== Moving a column family out of MOB
+
+If you want to disable MOB on a column family you must ensure you instruct HBase to migrate the data
+out of the MOB system prior to turning the feature off. If you fail to do this HBase will return the
+internal MOB metadata to applications because it will not know that it needs to resolve the actual
+values.
+
+The following procedure will safely migrate the underlying data without requiring a cluster outage.
+Clients will see a number of retries when configuration settings are applied and regions are
+reloaded.
+
+.Procedure: Stop MOB maintenance, change MOB threshold, rewrite data via compaction
+. Ensure the MOB compaction chore in the Master is off by setting
+`hbase.mob.file.compaction.chore.period` to `0`. Applying this configuration change will require a
+rolling restart of HBase Masters. That will require at least one fail-over of the active master,
+which may cause retries for clients doing HBase administrative operations.
+. Ensure no MOB compactions are issued for the table via the HBase shell for the duration of this
+migration.
+. Use the HBase shell to change the MOB size threshold for the column family you are migrating to a
+value that is larger than the largest cell present in the column family. E.g. given a table named
+'some_table' and a column family named 'foo' we can pick one gigabyte as an arbitrary "bigger than
+what we store" value:
++
+----
+hbase(main):011:0> alter 'some_table', {NAME => 'foo', MOB_THRESHOLD => '1000000000'}
+Updating all regions with the new schema...
+9/25 regions updated.
+25/25 regions updated.
+Done.
+0 row(s) in 3.4940 seconds
+----
++
+Note that if you are still ingesting data you must ensure this threshold is larger than any cell
+value you might write; MAX_INT would be a safe choice.
+
+. Perform a major compaction on the table. Specifically you are performing a "normal" compaction and
+not a MOB compaction.
++
+----
+hbase(main):012:0> major_compact 'some_table'
+0 row(s) in 0.2600 seconds
+----
+
+. Monitor for the end of the major compaction. Since compaction is handled asynchronously you'll
+need to use the shell to first see the compaction start and then see it end.
++
+HBase should first say that a "MAJOR" compaction is happening.
++
+----
+hbase(main):015:0> @hbase.admin(@formatter).instance_eval do
+hbase(main):016:1*   p @admin.get_compaction_state('some_table').to_string
+hbase(main):017:2* end
+“MAJOR”
+----
++
+When the compaction has finished the result should print out "NONE".
++
+----
+hbase(main):015:0> @hbase.admin(@formatter).instance_eval do
+hbase(main):016:1*   p @admin.get_compaction_state('some_table').to_string
+hbase(main):017:2* end
+“NONE”
+----
+. Run the _mobrefs_ utility to ensure there are no MOB cells. Specifically, the tool will launch a
+Hadoop MapReduce job that will show a job counter of 0 input records when we've successfully
+rewritten all of the data.
++
+----
+$> HADOOP_CLASSPATH=/etc/hbase/conf:$(hbase mapredcp) yarn jar \
+    /some/path/to/hbase-shaded-mapreduce.jar mobrefs mobrefs-report-output some_table foo
+...
+19/12/10 11:38:47 INFO impl.YarnClientImpl: Submitted application application_1575695902338_0004
+19/12/10 11:38:47 INFO mapreduce.Job: The url to track the job: https://rm-2.example.com:8090/proxy/application_1575695902338_0004/
+19/12/10 11:38:47 INFO mapreduce.Job: Running job: job_1575695902338_0004
+19/12/10 11:38:57 INFO mapreduce.Job: Job job_1575695902338_0004 running in uber mode : false
+19/12/10 11:38:57 INFO mapreduce.Job:  map 0% reduce 0%
+19/12/10 11:39:07 INFO mapreduce.Job:  map 7% reduce 0%
+19/12/10 11:39:17 INFO mapreduce.Job:  map 13% reduce 0%
+19/12/10 11:39:19 INFO mapreduce.Job:  map 33% reduce 0%
+19/12/10 11:39:21 INFO mapreduce.Job:  map 40% reduce 0%
+19/12/10 11:39:22 INFO mapreduce.Job:  map 47% reduce 0%
+19/12/10 11:39:23 INFO mapreduce.Job:  map 60% reduce 0%
+19/12/10 11:39:24 INFO mapreduce.Job:  map 73% reduce 0%
+19/12/10 11:39:27 INFO mapreduce.Job:  map 100% reduce 0%
+19/12/10 11:39:35 INFO mapreduce.Job:  map 100% reduce 100%
+19/12/10 11:39:35 INFO mapreduce.Job: Job job_1575695902338_0004 completed successfully
+19/12/10 11:39:35 INFO mapreduce.Job: Counters: 54
+...
+        Map-Reduce Framework
+                Map input records=0
+...
+19/12/09 22:41:28 INFO mapreduce.MobRefReporter: Finished creating report for 'some_table', family='foo'
+----
++
+If the data has not successfully been migrated out, this report will show both a non-zero number
+of input records and a count of mob cells.
++
+----
+$> HADOOP_CLASSPATH=/etc/hbase/conf:$(hbase mapredcp) yarn jar \
+    /some/path/to/hbase-shaded-mapreduce.jar mobrefs mobrefs-report-output some_table foo
+...
+19/12/10 11:44:18 INFO impl.YarnClientImpl: Submitted application application_1575695902338_0005
+19/12/10 11:44:18 INFO mapreduce.Job: The url to track the job: https://busbey-2.gce.cloudera.com:8090/proxy/application_1575695902338_0005/
+19/12/10 11:44:18 INFO mapreduce.Job: Running job: job_1575695902338_0005
+19/12/10 11:44:26 INFO mapreduce.Job: Job job_1575695902338_0005 running in uber mode : false
+19/12/10 11:44:26 INFO mapreduce.Job:  map 0% reduce 0%
+19/12/10 11:44:36 INFO mapreduce.Job:  map 7% reduce 0%
+19/12/10 11:44:45 INFO mapreduce.Job:  map 13% reduce 0%
+19/12/10 11:44:47 INFO mapreduce.Job:  map 27% reduce 0%
+19/12/10 11:44:48 INFO mapreduce.Job:  map 33% reduce 0%
+19/12/10 11:44:50 INFO mapreduce.Job:  map 40% reduce 0%
+19/12/10 11:44:51 INFO mapreduce.Job:  map 53% reduce 0%
+19/12/10 11:44:52 INFO mapreduce.Job:  map 73% reduce 0%
+19/12/10 11:44:54 INFO mapreduce.Job:  map 100% reduce 0%
+19/12/10 11:44:59 INFO mapreduce.Job:  map 100% reduce 100%
+19/12/10 11:45:00 INFO mapreduce.Job: Job job_1575695902338_0005 completed successfully
+19/12/10 11:45:00 INFO mapreduce.Job: Counters: 54
+...
+        Map-Reduce Framework
+                Map input records=1
+...
+        MOB
+                NUM_CELLS=1
+...
+19/12/10 11:45:00 INFO mapreduce.MobRefReporter: Finished creating report for 'some_table', family='foo'
+----
++
+If this happens you should verify that MOB compactions are disabled, verify that you have picked
+a sufficiently large MOB threshold, and redo the major compaction step.
+. When the _mobrefs_ report shows that no more data is stored in the MOB system then you can safely
+alter the column family configuration so that the MOB feature is disabled.
++
+----
+hbase(main):017:0> alter 'some_table', {NAME => 'foo', IS_MOB => 'false'}
+Updating all regions with the new schema...
+8/25 regions updated.
+25/25 regions updated.
+Done.
+0 row(s) in 2.9370 seconds
+----
+. After the column family no longer shows the MOB feature enabled, it is safe to start MOB
+maintenance chores again. You can allow the default to be used for
+`hbase.mob.file.compaction.chore.period` by removing it from your configuration files or restore
+it to whatever custom value you had prior to starting this process.
+. Once the MOB feature is disabled for the column family there will be no internal HBase process
+looking for data in the MOB storage area specific to this column family. There will still be data
+present there from prior to the compaction process that rewrote the values into HBase's data area.
+You can check for this residual data directly in HDFS as an HBase superuser.
++
+----
+$ hdfs dfs -count /hbase/mobdir/data/default/some_table
+           4           54         9063269081 /hbase/mobdir/data/default/some_table
+----
++
+This data is spurious and may be reclaimed. You should sideline it, verify your application’s view
+of the table, and then delete it.
