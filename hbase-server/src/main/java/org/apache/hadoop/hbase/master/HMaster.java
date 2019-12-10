@@ -1796,7 +1796,8 @@ public class HMaster extends HRegionServer implements MasterServices {
 
       boolean isByTable = getConfiguration().getBoolean("hbase.master.loadbalance.bytable", false);
       Map<TableName, Map<ServerName, List<RegionInfo>>> assignments =
-          this.assignmentManager.getRegionStates().getAssignmentsForBalancer(isByTable);
+        this.assignmentManager.getRegionStates()
+          .getAssignmentsForBalancer(tableStateManager, isByTable);
       for (Map<ServerName, List<RegionInfo>> serverMap : assignments.values()) {
         serverMap.keySet().removeAll(this.serverManager.getDrainingServersList());
       }
