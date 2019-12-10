@@ -581,8 +581,7 @@ public class AssignmentManager {
     if (!regionNode.isInState(expectedStates)) {
       throw new DoNotRetryRegionException("Unexpected state for " + regionNode);
     }
-    if (getTableStateManager().isTableState(regionNode.getTable(), TableState.State.DISABLING,
-      TableState.State.DISABLED)) {
+    if (isTableDisabled(regionNode.getTable())) {
       throw new DoNotRetryIOException(regionNode.getTable() + " is disabled for " + regionNode);
     }
   }
