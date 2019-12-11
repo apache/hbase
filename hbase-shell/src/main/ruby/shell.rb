@@ -364,6 +364,7 @@ Shell.load_command_group(
     clear_block_cache
     stop_master
     stop_regionserver
+    regioninfo
     rit
     list_decommissioned_regionservers
     decommission_regionservers

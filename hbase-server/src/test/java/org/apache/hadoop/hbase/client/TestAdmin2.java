@@ -749,6 +749,34 @@ public class TestAdmin2 extends TestAdminBase {
       // Make sure that the store size is still the actual file system's store size.
       Assert.assertEquals(expectedStoreFilesSize, store.getSize());
     }
+
+    // Test querying using the encoded name only. When encoded name passed,
+    // and the target server is the Master, we return the full region name.
+    // Convenience.
+    testGetWithEncodedRegionName(conn, region.getRegionInfo());
+    testGetWithRegionName(conn, region.getRegionInfo());
+    // Try querying meta encoded name.
+    testGetWithEncodedRegionName(conn, RegionInfoBuilder.FIRST_META_REGIONINFO);
+    testGetWithRegionName(conn, RegionInfoBuilder.FIRST_META_REGIONINFO);
+  }
+
+  /**
+   * Do get of RegionInfo from Master using encoded region name.
+   */
+  private void testGetWithEncodedRegionName(ClusterConnection conn, RegionInfo inputRI)
+      throws IOException {
+    RegionInfo ri = ProtobufUtil.getRegionInfo(null,
+      conn.getAdmin(TEST_UTIL.getMiniHBaseCluster().getMaster().getServerName()),
+      inputRI.getEncodedNameAsBytes());
+    assertEquals(inputRI, ri);
+  }
+
+  private void testGetWithRegionName(ClusterConnection conn, RegionInfo inputRI)
+      throws IOException {
+    RegionInfo ri = ProtobufUtil.getRegionInfo(null,
+        conn.getAdmin(TEST_UTIL.getMiniHBaseCluster().getMaster().getServerName()),
+        inputRI.getRegionName());
+    assertEquals(inputRI, ri);
   }
 
   @Test
