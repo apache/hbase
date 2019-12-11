@@ -387,6 +387,10 @@ public class ReplicationSourceWALReaderThread extends Thread {
     this.isReaderRunning = readerRunning;
   }
 
+  public long getLastReadPosition() {
+    return this.lastReadPosition;
+  }
+
   /**
    * Holds a batch of WAL entries to replicate, along with some statistics
    *
