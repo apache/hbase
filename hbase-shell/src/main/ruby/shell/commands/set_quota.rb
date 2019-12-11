@@ -47,12 +47,30 @@ For example:
 
     hbase> set_quota TYPE => THROTTLE, USER => 'u1', LIMIT => '10req/sec'
     hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => READ, USER => 'u1', LIMIT => '10req/sec'
+    Unthrottle number of requests:
+    hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => REQUEST_NUMBER, USER => 'u1', LIMIT => 'NONE'
+    Unthrottle number of read requests:
+    hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => READ_NUMBER, USER => 'u1', LIMIT => NONE
+    Unthrottle number of write requests:
+    hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => WRITE_NUMBER, USER => 'u1', LIMIT => NONE
 
     hbase> set_quota TYPE => THROTTLE, USER => 'u1', LIMIT => '10M/sec'
     hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => WRITE, USER => 'u1', LIMIT => '10M/sec'
+    Unthrottle data size:
+    hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => REQUEST_SIZE, USER => 'u1', LIMIT => 'NONE'
+    Unthrottle read data size:
+    hbase> set_quota TYPE => THROTTLE, USER => 'u1', THROTTLE_TYPE => READ_SIZE, LIMIT => 'NONE'
+    Unthrottle write data size:
+    hbase> set_quota TYPE => THROTTLE, USER => 'u1', THROTTLE_TYPE => WRITE_SIZE, LIMIT => 'NONE'
 
     hbase> set_quota TYPE => THROTTLE, USER => 'u1', LIMIT => '10CU/sec'
     hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => WRITE, USER => 'u1', LIMIT => '10CU/sec'
+    Unthrottle capacity unit:
+    hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => REQUEST_CAPACITY_UNIT, USER => 'u1', LIMIT => 'NONE'
+    Unthrottle read capacity unit:
+    hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => READ_CAPACITY_UNIT, USER => 'u1', LIMIT => 'NONE'
+    Unthrottle write capacity unit:
+    hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => WRITE_CAPACITY_UNIT, USER => 'u1', LIMIT => 'NONE'
 
     hbase> set_quota TYPE => THROTTLE, USER => 'u1', TABLE => 't2', LIMIT => '5K/min'
     hbase> set_quota TYPE => THROTTLE, USER => 'u1', NAMESPACE => 'ns2', LIMIT => NONE
@@ -61,7 +79,6 @@ For example:
     hbase> set_quota TYPE => THROTTLE, TABLE => 't1', LIMIT => '10M/sec'
     hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => WRITE, TABLE => 't1', LIMIT => '10M/sec'
     hbase> set_quota TYPE => THROTTLE, USER => 'u1', LIMIT => NONE
-    hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => WRITE, USER => 'u1', LIMIT => NONE
 
     hbase> set_quota TYPE => THROTTLE, REGIONSERVER => 'all', LIMIT => '30000req/sec'
     hbase> set_quota TYPE => THROTTLE, REGIONSERVER => 'all', THROTTLE_TYPE => WRITE, LIMIT => '20000req/sec'
