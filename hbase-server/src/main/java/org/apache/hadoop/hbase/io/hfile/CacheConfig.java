@@ -81,12 +81,6 @@ public class CacheConfig {
    */
   public static final String PREFETCH_BLOCKS_ON_OPEN_KEY = "hbase.rs.prefetchblocksonopen";
 
-  /**
-   * Configuration key to cache blocks when a compacted file is written
-   */
-  public static final String CACHE_COMPACTED_BLOCKS_ON_WRITE_KEY =
-      "hbase.rs.cachecompactedblocksonwrite";
-
   public static final String DROP_BEHIND_CACHE_COMPACTION_KEY =
       "hbase.hfile.drop.behind.compaction";
 
@@ -99,7 +93,6 @@ public class CacheConfig {
   public static final boolean DEFAULT_EVICT_ON_CLOSE = false;
   public static final boolean DEFAULT_CACHE_DATA_COMPRESSED = false;
   public static final boolean DEFAULT_PREFETCH_ON_OPEN = false;
-  public static final boolean DEFAULT_CACHE_COMPACTED_BLOCKS_ON_WRITE = false;
   public static final boolean DROP_BEHIND_CACHE_COMPACTION_DEFAULT = true;
 
   /**
@@ -130,11 +123,6 @@ public class CacheConfig {
 
   /** Whether data blocks should be prefetched into the cache */
   private final boolean prefetchOnOpen;
-
-  /**
-   * Whether data blocks should be cached when compacted file is written
-   */
-  private final boolean cacheCompactedDataOnWrite;
 
   private final boolean dropBehindCompaction;
 
@@ -186,8 +174,6 @@ public class CacheConfig {
         (family == null ? false : family.isEvictBlocksOnClose());
     this.prefetchOnOpen = conf.getBoolean(PREFETCH_BLOCKS_ON_OPEN_KEY, DEFAULT_PREFETCH_ON_OPEN) ||
         (family == null ? false : family.isPrefetchBlocksOnOpen());
-    this.cacheCompactedDataOnWrite = conf.getBoolean(CACHE_COMPACTED_BLOCKS_ON_WRITE_KEY,
-      DEFAULT_CACHE_COMPACTED_BLOCKS_ON_WRITE);
     this.blockCache = blockCache;
     this.byteBuffAllocator = byteBuffAllocator;
     LOG.info("Created cacheConfig: " + this + (family == null ? "" : " for family " + family) +
@@ -207,7 +193,6 @@ public class CacheConfig {
     this.evictOnClose = cacheConf.evictOnClose;
     this.cacheDataCompressed = cacheConf.cacheDataCompressed;
     this.prefetchOnOpen = cacheConf.prefetchOnOpen;
-    this.cacheCompactedDataOnWrite = cacheConf.cacheCompactedDataOnWrite;
     this.dropBehindCompaction = cacheConf.dropBehindCompaction;
     this.blockCache = cacheConf.blockCache;
     this.byteBuffAllocator = cacheConf.byteBuffAllocator;
@@ -222,7 +207,6 @@ public class CacheConfig {
     this.evictOnClose = false;
     this.cacheDataCompressed = false;
     this.prefetchOnOpen = false;
-    this.cacheCompactedDataOnWrite = false;
     this.dropBehindCompaction = false;
     this.blockCache = null;
     this.byteBuffAllocator = ByteBuffAllocator.HEAP;
@@ -333,13 +317,6 @@ public class CacheConfig {
    */
   public boolean shouldPrefetchOnOpen() {
     return this.prefetchOnOpen;
-  }
-
-  /**
-   * @return true if blocks should be cached while writing during compaction, false if not
-   */
-  public boolean shouldCacheCompactedBlocksOnWrite() {
-    return this.cacheCompactedDataOnWrite;
   }
 
   /**

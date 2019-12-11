@@ -1118,9 +1118,9 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
       boolean shouldDropBehind) throws IOException {
     final CacheConfig writerCacheConf;
     if (isCompaction) {
-      // Don't cache data on write on compactions, unless specifically configured to do so
+      // Don't cache data on write on compactions.
       writerCacheConf = new CacheConfig(cacheConf);
-      writerCacheConf.setCacheDataOnWrite(cacheConf.shouldCacheCompactedBlocksOnWrite());
+      writerCacheConf.setCacheDataOnWrite(false);
     } else {
       writerCacheConf = cacheConf;
     }
