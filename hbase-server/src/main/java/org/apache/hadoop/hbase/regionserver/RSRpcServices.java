@@ -1756,6 +1756,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
   }
 
+  // Master implementation of this Admin Service differs given it is not
+  // able to supply detail only known to RegionServer. See note on
+  // MasterRpcServers#getRegionInfo.
   @Override
   @QosPriority(priority=HConstants.ADMIN_QOS)
   public GetRegionInfoResponse getRegionInfo(final RpcController controller,

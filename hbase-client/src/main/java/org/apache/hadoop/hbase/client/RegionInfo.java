@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.util.HashKey;
 import org.apache.hadoop.hbase.util.JenkinsHash;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.apache.hadoop.io.DataInputBuffer;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -346,18 +345,15 @@ public interface RegionInfo {
     return parseRegionName(regionName)[1];
   }
 
-  @InterfaceAudience.Private
-  static boolean isEncodedRegionName(byte[] regionName) throws IOException {
-    try {
-      parseRegionName(regionName);
-      return false;
-    } catch (IOException e) {
-      if (StringUtils.stringifyException(e)
-      .contains(INVALID_REGION_NAME_FORMAT_MESSAGE)) {
-        return true;
-      }
-      throw e;
-    }
+  /**
+   * Figure if the passed bytes represent an encoded region name or not.
+   * @param regionName A Region name either encoded or not.
+   * @return True if <code>regionName</code> represents an encoded name.
+   */
+  @InterfaceAudience.Private // For use by internals only.
+  public static boolean isEncodedRegionName(byte[] regionName) throws IOException {
+    // If not parseable as region name, presume encoded. TODO: add stringency; e.g. if hex.
+    return parseRegionNameOrReturnNull(regionName) == null && regionName.length <= MD5_HEX_LENGTH;
   }
 
   /**
@@ -596,15 +592,28 @@ public interface RegionInfo {
 
   /**
    * Separate elements of a regionName.
-   * @return Array of byte[] containing tableName, startKey and id
+   * @return Array of byte[] containing tableName, startKey and id OR null if
+   *   not parseable as a region name.
+   * @throws IOException if not parseable as regionName.
    */
-  static byte [][] parseRegionName(final byte[] regionName)
-  throws IOException {
-    // Region name is of the format:
-    // tablename,startkey,regionIdTimestamp[_replicaId][.encodedName.]
-    // startkey can contain the delimiter (',') so we parse from the start and end
+  static byte [][] parseRegionName(final byte[] regionName) throws IOException {
+    byte [][] result = parseRegionNameOrReturnNull(regionName);
+    if (result == null) {
+      throw new IOException(INVALID_REGION_NAME_FORMAT_MESSAGE + ": " + Bytes.toStringBinary(regionName));
+    }
+    return result;
+  }
 
-    // parse from start
+  /**
+   * Separate elements of a regionName.
+   * Region name is of the format:
+   * <code>tablename,startkey,regionIdTimestamp[_replicaId][.encodedName.]</code>.
+   * Startkey can contain the delimiter (',') so we parse from the start and then parse from
+   * the end.
+   * @return Array of byte[] containing tableName, startKey and id OR null if not parseable
+   * as a region name.
+   */
+  static byte [][] parseRegionNameOrReturnNull(final byte[] regionName) {
     int offset = -1;
     for (int i = 0; i < regionName.length; i++) {
       if (regionName[i] == HConstants.DELIMITER) {
@@ -613,8 +622,7 @@ public interface RegionInfo {
       }
     }
     if (offset == -1) {
-      throw new IOException(INVALID_REGION_NAME_FORMAT_MESSAGE
-      + ": " + Bytes.toStringBinary(regionName));
+      return null;
     }
     byte[] tableName = new byte[offset];
     System.arraycopy(regionName, 0, tableName, 0, offset);
@@ -622,9 +630,9 @@ public interface RegionInfo {
 
     int endOffset = regionName.length;
     // check whether regionName contains encodedName
-    if (regionName.length > MD5_HEX_LENGTH + 2
-    && regionName[regionName.length-1] == ENC_SEPARATOR
-    && regionName[regionName.length-MD5_HEX_LENGTH-2] == ENC_SEPARATOR) {
+    if (regionName.length > MD5_HEX_LENGTH + 2 &&
+        regionName[regionName.length-1] == ENC_SEPARATOR &&
+        regionName[regionName.length-MD5_HEX_LENGTH-2] == ENC_SEPARATOR) {
       endOffset = endOffset - MD5_HEX_LENGTH - 2;
     }
 
@@ -645,8 +653,7 @@ public interface RegionInfo {
       }
     }
     if (offset == -1) {
-      throw new IOException(INVALID_REGION_NAME_FORMAT_MESSAGE
-      + ": " + Bytes.toStringBinary(regionName));
+      return null;
     }
     byte [] startKey = HConstants.EMPTY_BYTE_ARRAY;
     if(offset != tableName.length + 1) {
