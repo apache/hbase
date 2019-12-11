@@ -23,6 +23,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
@@ -37,10 +38,6 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.NoSuchElementException;
 import java.util.TreeMap;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -48,12 +45,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
@@ -448,9 +447,48 @@ public class TestWALEntryStream {
     when(peer.getTableCFs()).thenReturn(tableCfs);
     WALEntryFilter filter = new ChainWALEntryFilter(new TableCfWALEntryFilter(peer));
 
+    // add filterable entries
+    appendToLogPlus(3, notReplicatedCf);
+    appendToLogPlus(3, notReplicatedCf);
+    appendToLogPlus(3, notReplicatedCf);
+
+    // add non filterable entries
+    appendEntriesToLog(2);
+
+    ReplicationSourceManager mockSourceManager = mock(ReplicationSourceManager.class);
+    when(mockSourceManager.getTotalBufferUsed()).thenReturn(new AtomicLong(0));
+    final ReplicationSourceWALReaderThread reader =
+            new ReplicationSourceWALReaderThread(mockSourceManager, getQueueInfo(), walQueue,
+                    0, fs, conf, filter, new MetricsSource("1"));
+    reader.start();
+
+    WALEntryBatch entryBatch = reader.take();
+
+    assertNotNull(entryBatch);
+    assertFalse(entryBatch.isEmpty());
+    List<Entry> walEntries = entryBatch.getWalEntries();
+    assertEquals(2, walEntries.size());
+    for (Entry entry : walEntries) {
+      ArrayList<Cell> cells = entry.getEdit().getCells();
+      assertTrue(cells.size() == 1);
+      assertTrue(CellUtil.matchingFamily(cells.get(0), family));
+    }
+  }
+
+  @Test
+  public void testReplicationSourceWALReaderThreadWithFilterWhenLogRolled() throws Exception {
+    final byte[] notReplicatedCf = Bytes.toBytes("notReplicated");
+    final Map<TableName, List<String>> tableCfs = new HashMap<>();
+    tableCfs.put(tableName, Collections.singletonList(Bytes.toString(family)));
+    ReplicationPeer peer = mock(ReplicationPeer.class);
+    when(peer.getTableCFs()).thenReturn(tableCfs);
+    WALEntryFilter filter = new ChainWALEntryFilter(new TableCfWALEntryFilter(peer));
+
     appendToLogPlus(3, notReplicatedCf);
 
     Path firstWAL = walQueue.peek();
+    final long eof = getPosition(firstWAL);
+
     ReplicationSourceManager mockSourceManager = mock(ReplicationSourceManager.class);
     when(mockSourceManager.getTotalBufferUsed()).thenReturn(new AtomicLong(0));
     final ReplicationSourceWALReaderThread reader =
@@ -459,16 +497,12 @@ public class TestWALEntryStream {
     reader.start();
 
     // reader won't put any batch, even if EOF reached.
-    ExecutorService executor = Executors.newSingleThreadExecutor();
-    Future<WALEntryBatch> future = executor.submit(new Callable<WALEntryBatch>() {
-      @Override
-      public WALEntryBatch call() throws Exception {
-        return reader.take();
+    Waiter.waitFor(conf, 20000, new Waiter.Predicate<Exception>() {
+      @Override public boolean evaluate() {
+        return reader.getLastReadPosition() >= eof;
       }
     });
-    Thread.sleep(2000);
-    assertFalse(future.isDone());
-    future.cancel(true);
+    assertNull(reader.poll(0));
 
     log.rollWriter();
 
@@ -476,17 +510,22 @@ public class TestWALEntryStream {
     WALEntryBatch entryBatch = reader.take();
 
     Path lastWAL= walQueue.peek();
-    WALEntryStream entryStream = new WALEntryStream(new PriorityBlockingQueue<>(walQueue),
-            fs, conf, new MetricsSource("1"));
-    entryStream.hasNext();
-    long positionToBeLogged = entryStream.getPosition();
+    long positionToBeLogged = getPosition(lastWAL);
 
     assertNotNull(entryBatch);
     assertTrue(entryBatch.isEmpty());
-    assertTrue(walQueue.size() == 1);
+    assertEquals(1, walQueue.size());
     assertNotEquals(firstWAL, entryBatch.getLastWalPath());
     assertEquals(lastWAL, entryBatch.getLastWalPath());
     assertEquals(positionToBeLogged, entryBatch.getLastWalPosition());
+  }
+
+  private long getPosition(Path walPath) throws IOException {
+    WALEntryStream entryStream =
+            new WALEntryStream(new PriorityBlockingQueue<>(Collections.singletonList(walPath)),
+                    fs, conf, new MetricsSource("1"));
+    entryStream.hasNext();
+    return entryStream.getPosition();
   }
 
   private String getRow(WAL.Entry entry) {
