@@ -1723,16 +1723,24 @@ public final class ProtobufUtil {
       final RpcController controller, final AdminService.BlockingInterface admin,
       final byte[] regionName) throws IOException {
     try {
-      GetRegionInfoRequest request =
-          org.apache.hadoop.hbase.client.RegionInfo.isEncodedRegionName(regionName)?
-        GetRegionInfoRequest.newBuilder().setRegion(RequestConverter.
-            buildRegionSpecifier(RegionSpecifierType.ENCODED_REGION_NAME, regionName)).build():
-        RequestConverter.buildGetRegionInfoRequest(regionName);
-      GetRegionInfoResponse response = admin.getRegionInfo(controller, request);
+      GetRegionInfoRequest request = getGetRegionInfoRequest(regionName);
+      GetRegionInfoResponse response = admin.getRegionInfo(controller,
+        getGetRegionInfoRequest(regionName));
       return toRegionInfo(response.getRegionInfo());
     } catch (ServiceException se) {
       throw getRemoteException(se);
     }
+  }
+
+  /**
+   * @return A GetRegionInfoRequest for the passed in regionName.
+   */
+  public static GetRegionInfoRequest getGetRegionInfoRequest(final byte [] regionName)
+    throws IOException {
+    return org.apache.hadoop.hbase.client.RegionInfo.isEncodedRegionName(regionName)?
+        GetRegionInfoRequest.newBuilder().setRegion(RequestConverter.
+          buildRegionSpecifier(RegionSpecifierType.ENCODED_REGION_NAME, regionName)).build():
+        RequestConverter.buildGetRegionInfoRequest(regionName);
   }
 
   /**
