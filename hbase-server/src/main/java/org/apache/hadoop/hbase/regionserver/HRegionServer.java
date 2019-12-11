@@ -3926,4 +3926,9 @@ public class HRegionServer extends HasThread implements
       Runtime.getRuntime().halt(1);
     }
   }
+
+  @VisibleForTesting
+  public CompactedHFilesDischarger getCompactedHFilesDischarger() {
+    return compactedFileDischarger;
+  }
 }
