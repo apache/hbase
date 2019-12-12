@@ -149,12 +149,12 @@ public abstract class FSUtils extends CommonFSUtils {
 
     do {
       tailName = tailPath.getName();
-      if (tailName.isEmpty()) {
+      if (tailName == null || tailName.isEmpty()) {
         result = true;
         break;
       }
       toSearchName = toSearch.getName();
-      if (toSearchName.isEmpty()) {
+      if (toSearchName == null || toSearchName.isEmpty()) {
         break;
       }
       // Move up a parent on each path for next go around.  Path doesn't let us go off the end.
@@ -763,9 +763,9 @@ public abstract class FSUtils extends CommonFSUtils {
    * Returns the total overall fragmentation percentage. Includes hbase:meta and
    * -ROOT- as well.
    *
-   * @param master  The master defining the HBase root and file system.
-   * @return A map for each table and its percentage.
-   * @throws IOException When scanning the directory fails.
+   * @param master  The master defining the HBase root and file system
+   * @return A map for each table and its percentage (never null)
+   * @throws IOException When scanning the directory fails
    */
   public static int getTotalTableFragmentation(final HMaster master)
   throws IOException {
@@ -779,7 +779,7 @@ public abstract class FSUtils extends CommonFSUtils {
    * percentage across all tables is stored under the special key "-TOTAL-".
    *
    * @param master  The master defining the HBase root and file system.
-   * @return A map for each table and its percentage.
+   * @return A map for each table and its percentage (never null).
    *
    * @throws IOException When scanning the directory fails.
    */
@@ -797,10 +797,10 @@ public abstract class FSUtils extends CommonFSUtils {
    * have more than one file in them. Checks -ROOT- and hbase:meta too. The total
    * percentage across all tables is stored under the special key "-TOTAL-".
    *
-   * @param fs  The file system to use.
-   * @param hbaseRootDir  The root directory to scan.
-   * @return A map for each table and its percentage.
-   * @throws IOException When scanning the directory fails.
+   * @param fs  The file system to use
+   * @param hbaseRootDir  The root directory to scan
+   * @return A map for each table and its percentage (never null)
+   * @throws IOException When scanning the directory fails
    */
   public static Map<String, Integer> getTableFragmentation(
     final FileSystem fs, final Path hbaseRootDir)
