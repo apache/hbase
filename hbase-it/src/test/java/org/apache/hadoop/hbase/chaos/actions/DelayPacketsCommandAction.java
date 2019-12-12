@@ -26,30 +26,29 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- *
- * Corrupt network packages on a random regionserver.
+ * Action adds latency to communication on a random regionserver.
  */
-public class CorruptPackagesCommandAction extends TCCommandAction {
-  private static final Logger LOG = LoggerFactory.getLogger(CorruptPackagesCommandAction.class);
-  private float ratio;
+public class DelayPacketsCommandAction extends TCCommandAction {
+  private static final Logger LOG = LoggerFactory.getLogger(DelayPacketsCommandAction.class);
+  private long delay;
   private long duration;
 
   /**
-   * Corrupt network packages on a random regionserver.
+   * Adds latency to communication on a random region server
    *
-   * @param ratio the ratio of packages corrupted
+   * @param delay the latency wil be delay +/-50% in milliseconds
    * @param duration the time this issue persists in milliseconds
    * @param timeout the timeout for executing required commands on the region server in milliseconds
    * @param network network interface the regionserver uses for communication
    */
-  public CorruptPackagesCommandAction(float ratio, long duration, long timeout, String network) {
+  public DelayPacketsCommandAction(long delay, long duration, long timeout, String network) {
     super(timeout, network);
-    this.ratio = ratio;
+    this.delay = delay;
     this.duration = duration;
   }
 
   protected void localPerform() throws IOException {
-    LOG.info("Starting to execute CorruptPackagesCommandAction");
+    LOG.info("Starting to execute DelayPacketsCommandAction");
     ServerName server = PolicyBasedChaosMonkey.selectRandomItem(getCurrentServers());
     String hostname = server.getHostname();
 
@@ -62,11 +61,11 @@ public class CorruptPackagesCommandAction extends TCCommandAction {
       clusterManager.execSudoWithRetries(hostname, timeout, getCommand(DELETE));
     }
 
-    LOG.info("Finished to execute CorruptPackagesCommandAction");
+    LOG.info("Finished to execute DelayPacketsCommandAction");
   }
 
   private String getCommand(String operation){
-    return String.format("tc qdisc %s dev %s root netem corrupt %s%%", operation, network,
-        ratio * 100);
+    return String.format("tc qdisc %s dev %s root netem delay %sms %sms",
+        operation, network, delay, delay/2);
   }
 }
