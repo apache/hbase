@@ -144,11 +144,6 @@ public class TestClientNoCluster extends Configured implements Tool {
     public CompletableFuture<String> getClusterId() {
       return CompletableFuture.completedFuture(HConstants.CLUSTER_ID_DEFAULT);
     }
-
-    @Override
-    public CompletableFuture<Integer> getCurrentNrHRS() {
-      return CompletableFuture.completedFuture(1);
-    }
   }
 
   /**
