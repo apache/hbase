@@ -27,29 +27,29 @@ import org.slf4j.LoggerFactory;
 
 /**
  *
- * Duplicate network packages on a random regionserver.
+ * Corrupt network packets on a random regionserver.
  */
-public class DuplicatePackagesCommandAction extends TCCommandAction {
-  private static final Logger LOG = LoggerFactory.getLogger(DuplicatePackagesCommandAction.class);
+public class CorruptPacketsCommandAction extends TCCommandAction {
+  private static final Logger LOG = LoggerFactory.getLogger(CorruptPacketsCommandAction.class);
   private float ratio;
   private long duration;
 
   /**
-   * Duplicate network packages on a random regionserver.
+   * Corrupt network packets on a random regionserver.
    *
-   * @param ratio the ratio of packages duplicated
+   * @param ratio the ratio of packets corrupted
    * @param duration the time this issue persists in milliseconds
    * @param timeout the timeout for executing required commands on the region server in milliseconds
    * @param network network interface the regionserver uses for communication
    */
-  public DuplicatePackagesCommandAction(float ratio, long duration, long timeout, String network) {
+  public CorruptPacketsCommandAction(float ratio, long duration, long timeout, String network) {
     super(timeout, network);
     this.ratio = ratio;
     this.duration = duration;
   }
 
   protected void localPerform() throws IOException {
-    LOG.info("Starting to execute DuplicatePackagesCommandAction");
+    LOG.info("Starting to execute CorruptPacketsCommandAction");
     ServerName server = PolicyBasedChaosMonkey.selectRandomItem(getCurrentServers());
     String hostname = server.getHostname();
 
@@ -62,11 +62,11 @@ public class DuplicatePackagesCommandAction extends TCCommandAction {
       clusterManager.execSudoWithRetries(hostname, timeout, getCommand(DELETE));
     }
 
-    LOG.info("Finished to execute DuplicatePackagesCommandAction");
+    LOG.info("Finished to execute CorruptPacketsCommandAction");
   }
 
   private String getCommand(String operation){
-    return String.format("tc qdisc %s dev %s root netem duplicate %s%%", operation, network,
+    return String.format("tc qdisc %s dev %s root netem corrupt %s%%", operation, network,
         ratio * 100);
   }
 }
