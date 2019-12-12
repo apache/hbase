@@ -131,6 +131,22 @@ class SyncFuture {
     return true;
   }
 
+   synchronized boolean isAllowSync(final long txid, final Throwable t) {
+    if (isDone()) {
+      return false;
+    }
+    this.throwable = t;
+    if (txid < this.txid) {
+      // Something badly wrong.
+      if (throwable == null) {
+        this.throwable =
+                new IllegalStateException("done txid=" + txid + ", my txid=" + this.txid);
+      }
+    }
+    
+    return true;
+  }
+  
   boolean cancel(boolean mayInterruptIfRunning) {
     throw new UnsupportedOperationException();
   }
