@@ -26,29 +26,30 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Action adds latency to communication on a random regionserver.
+ *
+ * Lose network packets on a random regionserver.
  */
-public class DelayPackagesCommandAction extends TCCommandAction {
-  private static final Logger LOG = LoggerFactory.getLogger(DelayPackagesCommandAction.class);
-  private long delay;
+public class LosePacketsCommandAction extends TCCommandAction {
+  private static final Logger LOG = LoggerFactory.getLogger(LosePacketsCommandAction.class);
+  private float ratio;
   private long duration;
 
   /**
-   * Adds latency to communication on a random region server
+   * Lose network packets on a random regionserver.
    *
-   * @param delay the latency wil be delay +/-50% in milliseconds
+   * @param ratio the ratio of packets lost
    * @param duration the time this issue persists in milliseconds
    * @param timeout the timeout for executing required commands on the region server in milliseconds
    * @param network network interface the regionserver uses for communication
    */
-  public DelayPackagesCommandAction(long delay, long duration, long timeout, String network) {
+  public LosePacketsCommandAction(float ratio, long duration, long timeout, String network) {
     super(timeout, network);
-    this.delay = delay;
+    this.ratio = ratio;
     this.duration = duration;
   }
 
   protected void localPerform() throws IOException {
-    LOG.info("Starting to execute DelayPackagesCommandAction");
+    LOG.info("Starting to execute LosePacketsCommandAction");
     ServerName server = PolicyBasedChaosMonkey.selectRandomItem(getCurrentServers());
     String hostname = server.getHostname();
 
@@ -61,11 +62,11 @@ public class DelayPackagesCommandAction extends TCCommandAction {
       clusterManager.execSudoWithRetries(hostname, timeout, getCommand(DELETE));
     }
 
-    LOG.info("Finished to execute DelayPackagesCommandAction");
+    LOG.info("Finished to execute LosePacketsCommandAction");
   }
 
   private String getCommand(String operation){
-    return String.format("tc qdisc %s dev %s root netem delay %sms %sms",
-        operation, network, delay, delay/2);
+    return String.format("tc qdisc %s dev %s root netem loss %s%%", operation, network,
+        ratio * 100);
   }
 }
