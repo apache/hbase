@@ -788,6 +788,13 @@ public class MiniHBaseCluster extends HBaseCluster {
   }
 
   /**
+   * @return Number of live region servers in the cluster currently.
+   */
+  public int getNumLiveRegionServers() {
+    return this.hbaseCluster.getLiveRegionServers().size();
+  }
+
+  /**
    * @return List of region server threads. Does not return the master even though it is also
    * a region server.
    */
