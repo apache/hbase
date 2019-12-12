@@ -23,7 +23,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,13 +47,8 @@ public class RecoveredReplicationSourceShipper extends ReplicationSourceShipper 
   }
 
   @Override
-  protected void postFinish() {
-    source.tryFinish();
-  }
-
-  @Override
   public long getStartPosition() {
-    long startPosition = getRecoveredQueueStartPos();
+    final long startPosition = getRecoveredQueueStartPos();
     int numRetries = 0;
     while (numRetries <= maxRetriesMultiplier) {
       try {
@@ -71,15 +65,15 @@ public class RecoveredReplicationSourceShipper extends ReplicationSourceShipper 
   // If this is a recovered queue, the queue is already full and the first log
   // normally has a position (unless the RS failed between 2 logs)
   private long getRecoveredQueueStartPos() {
-    long startPosition = 0;
+    long startPosition = 0L;
     String peerClusterZNode = source.getQueueId();
     try {
       startPosition = this.replicationQueues.getWALPosition(source.getServer().getServerName(),
         peerClusterZNode, this.queue.peek().getName());
-      LOG.trace("Recovered queue started with log {} at position {}", this.queue.peek(),
+      LOG.debug("Recovered queue started with log {} at position {}", this.queue.peek(),
         startPosition);
     } catch (ReplicationException e) {
-      terminate("Couldn't get the position of this recovered queue " + peerClusterZNode, e);
+      terminate("Failed to get the position of this recovered queue " + peerClusterZNode, e);
     }
     return startPosition;
   }
@@ -92,10 +86,7 @@ public class RecoveredReplicationSourceShipper extends ReplicationSourceShipper 
         "Closing worker for wal group " + this.walGroupId + " because an error occurred: " + reason,
         cause);
     }
-    entryReader.interrupt();
-    Threads.shutdown(entryReader, sleepForRetries);
-    this.interrupt();
-    Threads.shutdown(this, sleepForRetries);
-    LOG.info("ReplicationSourceWorker {} terminated", this.getName());
+    LOG.info("ReplicationSourceWorker stopping");
+    stopWorker();
   }
 }

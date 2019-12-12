@@ -25,6 +25,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -72,8 +73,8 @@ class ReplicationSourceWALReader extends Thread {
   private final int maxRetriesMultiplier;
   private final boolean eofAutoRecovery;
 
-  //Indicates whether this particular worker is running
-  private boolean isReaderRunning = true;
+  // Indicates whether this particular worker is running
+  private final AtomicBoolean isReaderRunning = new AtomicBoolean(true);
 
   private AtomicLong totalBufferUsed;
   private long totalBufferQuota;
@@ -122,14 +123,18 @@ class ReplicationSourceWALReader extends Thread {
   @Override
   public void run() {
     int sleepMultiplier = 1;
-    while (isReaderRunning()) { // we only loop back here if something fatal happened to our stream
+
+ // we only loop back here if something fatal happened to our stream
+    while (isReaderRunning.get()) {
       try (WALEntryStream entryStream =
           new WALEntryStream(logQueue, conf, currentPosition,
               source.getWALFileLengthProvider(), source.getServerWALsBelongTo(),
               source.getSourceMetrics())) {
-        while (isReaderRunning()) { // loop here to keep reusing stream while we can
+
+        // loop here to keep reusing stream while we can
+        while (isReaderRunning.get()) {
           if (!source.isPeerEnabled()) {
-            Threads.sleep(sleepForRetries);
+            Thread.sleep(sleepForRetries);
             continue;
           }
           if (!checkQuota()) {
@@ -157,9 +162,9 @@ class ReplicationSourceWALReader extends Thread {
           handleEofException(e);
         }
         Threads.sleep(sleepForRetries * sleepMultiplier);
-      } catch (InterruptedException e) {
-        LOG.trace("Interrupted while sleeping between WAL reads");
-        Thread.currentThread().interrupt();
+      } catch (InterruptedException ie) {
+        LOG.debug("Interrupted. Stopping thread.", ie);
+        return;
       }
     }
   }
@@ -236,7 +241,7 @@ class ReplicationSourceWALReader extends Thread {
     if (logQueue.isEmpty()) {
       // we're done with current queue, either this is a recovered queue, or it is the special group
       // for a sync replication peer and the peer has been transited to DA or S state.
-      setReaderRunning(false);
+      stopReaderRunning();
       // shuts down shipper thread immediately
       entryBatchQueue.put(WALEntryBatch.NO_MORE_DATA);
     } else {
@@ -366,8 +371,7 @@ class ReplicationSourceWALReader extends Thread {
       lastCell = cells.get(i);
     }
 
-    Pair<Integer, Integer> result = new Pair<>(distinctRowKeys, totalHFileEntries);
-    return result;
+    return new Pair<>(distinctRowKeys, totalHFileEntries);
   }
 
   /**
@@ -409,17 +413,7 @@ class ReplicationSourceWALReader extends Thread {
     return totalBufferUsed.addAndGet(size) >= totalBufferQuota;
   }
 
-  /**
-   * @return whether the reader thread is running
-   */
-  public boolean isReaderRunning() {
-    return isReaderRunning && !isInterrupted();
-  }
-
-  /**
-   * @param readerRunning the readerRunning to set
-   */
-  public void setReaderRunning(boolean readerRunning) {
-    this.isReaderRunning = readerRunning;
+  public void stopReaderRunning() {
+    this.isReaderRunning.set(false);
   }
 }

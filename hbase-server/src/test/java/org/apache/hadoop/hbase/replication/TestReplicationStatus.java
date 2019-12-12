@@ -77,7 +77,7 @@ public class TestReplicationStatus extends TestReplicationBase {
       ReplicationLoadSink rLoadSink = sm.getReplicationLoadSink();
 
       // check SourceList only has one entry, because only has one peer
-      assertTrue("failed to get ReplicationLoadSourceList", (rLoadSourceList.size() == 1));
+      assertEquals("failed to get ReplicationLoadSourceList", 1, rLoadSourceList.size());
       assertEquals(PEER_ID2, rLoadSourceList.get(0).getPeerID());
 
       // check Sink exist only as it is difficult to verify the value on the fly
@@ -94,8 +94,9 @@ public class TestReplicationStatus extends TestReplicationBase {
     ServerName server = UTIL1.getHBaseCluster().getRegionServer(0).getServerName();
     ServerMetrics sm = metrics.getLiveServerMetrics().get(server);
     List<ReplicationLoadSource> rLoadSourceList = sm.getReplicationLoadSourceList();
+
     // check SourceList still only has one entry
-    assertTrue("failed to get ReplicationLoadSourceList", (rLoadSourceList.size() == 2));
+    assertEquals("failed to get ReplicationLoadSourceList", 2, rLoadSourceList.size());
     assertEquals(PEER_ID2, rLoadSourceList.get(0).getPeerID());
   }
 }

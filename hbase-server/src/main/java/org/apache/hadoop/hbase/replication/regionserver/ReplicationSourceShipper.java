@@ -22,7 +22,10 @@ import static org.apache.hadoop.hbase.replication.ReplicationUtils.sleepForRetri
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.Callable;
 import java.util.concurrent.PriorityBlockingQueue;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -30,7 +33,6 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -45,7 +47,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescript
  * ReplicationSourceWALReaderThread
  */
 @InterfaceAudience.Private
-public class ReplicationSourceShipper extends Thread {
+public class ReplicationSourceShipper implements Callable<ReplicationSourceShipper.WorkerState> {
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationSourceShipper.class);
 
   // Hold the state of a replication worker thread
@@ -82,7 +84,7 @@ public class ReplicationSourceShipper extends Thread {
     this.conf = conf;
     this.walGroupId = walGroupId;
     this.queue = queue;
-    this.source = source;
+    this.source = Objects.requireNonNull(source);
     this.sleepForRetries =
         this.conf.getLong("replication.source.sleepforretries", 1000);    // 1 second
     this.maxRetriesMultiplier =
@@ -94,7 +96,9 @@ public class ReplicationSourceShipper extends Thread {
   }
 
   @Override
-  public final void run() {
+  public WorkerState call() throws Exception {
+    Objects.requireNonNull(this.entryReader);
+
     setWorkerState(WorkerState.RUNNING);
     LOG.info("Running ReplicationSourceShipper Thread for wal group: {}", this.walGroupId);
     // Loop until we close down
@@ -107,7 +111,7 @@ public class ReplicationSourceShipper extends Thread {
         continue;
       }
       try {
-        WALEntryBatch entryBatch = entryReader.poll(getEntriesTimeout);
+        WALEntryBatch entryBatch = this.entryReader.poll(getEntriesTimeout);
         LOG.debug("Shipper from source {} got entry batch from reader: {}",
             source.getQueueId(), entryBatch);
         if (entryBatch == null) {
@@ -121,16 +125,18 @@ public class ReplicationSourceShipper extends Thread {
         }
       } catch (InterruptedException e) {
         LOG.trace("Interrupted while waiting for next replication entry batch", e);
-        Thread.currentThread().interrupt();
+        break;
       }
     }
+
     // If the worker exits run loop without finishing its task, mark it as stopped.
     if (!isFinished()) {
       setWorkerState(WorkerState.STOPPED);
-    } else {
-      source.removeWorker(this);
-      postFinish();
     }
+
+    this.entryReader.stopReaderRunning();
+
+    return this.state;
   }
 
   private void noMoreData() {
@@ -144,20 +150,16 @@ public class ReplicationSourceShipper extends Thread {
     setWorkerState(WorkerState.FINISHED);
   }
 
-  // To be implemented by recovered shipper
-  protected void postFinish() {
-  }
-
   /**
    * get batchEntry size excludes bulk load file sizes.
    * Uses ReplicationSourceWALReader's static method.
    */
   private int getBatchEntrySizeExcludeBulkLoad(WALEntryBatch entryBatch) {
     int totalSize = 0;
-    for(Entry entry : entryBatch.getWalEntries()) {
-      totalSize += entryReader.getEntrySizeExcludeBulkLoad(entry);
+    for (Entry entry : entryBatch.getWalEntries()) {
+      totalSize += ReplicationSourceWALReader.getEntrySizeExcludeBulkLoad(entry);
     }
-    return  totalSize;
+    return totalSize;
   }
 
   /**
@@ -288,12 +290,6 @@ public class ReplicationSourceShipper extends Thread {
     return updated;
   }
 
-  public void startup(UncaughtExceptionHandler handler) {
-    String name = Thread.currentThread().getName();
-    Threads.setDaemonThreadRunning(this,
-      name + ".replicationSource.shipper" + walGroupId + "," + source.getQueueId(), handler);
-  }
-
   Path getCurrentPath() {
     return entryReader.getCurrentPath();
   }
@@ -311,7 +307,7 @@ public class ReplicationSourceShipper extends Thread {
   }
 
   protected boolean isActive() {
-    return source.isSourceActive() && state == WorkerState.RUNNING && !isInterrupted();
+    return source.isSourceActive() && state == WorkerState.RUNNING;
   }
 
   protected final void setWorkerState(WorkerState state) {
@@ -325,4 +321,5 @@ public class ReplicationSourceShipper extends Thread {
   public boolean isFinished() {
     return state == WorkerState.FINISHED;
   }
+
 }

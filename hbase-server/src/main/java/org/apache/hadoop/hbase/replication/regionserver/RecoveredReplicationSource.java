@@ -142,7 +142,8 @@ public class RecoveredReplicationSource extends ReplicationSource {
     return path;
   }
 
-  void tryFinish() {
+  @Override
+  protected void tryFinish() {
     if (workerThreads.isEmpty()) {
       this.getSourceMetrics().clear();
       manager.finishRecoveredSource(this);
