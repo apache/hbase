@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,17 +40,7 @@ public class DummyAsyncRegistry implements AsyncRegistry {
   }
 
   @Override
-  public CompletableFuture<Integer> getCurrentNrHRS() {
-    return null;
-  }
-
-  @Override
   public CompletableFuture<ServerName> getMasterAddress() {
-    return null;
-  }
-
-  @Override
-  public CompletableFuture<Integer> getMasterInfoPort() {
     return null;
   }
 

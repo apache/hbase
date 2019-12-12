@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,7 +24,6 @@ import static org.apache.hadoop.hbase.client.RegionReplicaUtil.getRegionInfoForR
 import static org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.lengthOfPBMagic;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 import static org.apache.hadoop.hbase.zookeeper.ZKMetadata.removeMetaData;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -43,14 +42,12 @@ import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 
 /**
- * Fetch the registry data from zookeeper.
+ * Zookeeper based registry implementation.
  */
 @InterfaceAudience.Private
 class ZKAsyncRegistry implements AsyncRegistry {
@@ -210,11 +207,6 @@ class ZKAsyncRegistry implements AsyncRegistry {
     return future;
   }
 
-  @Override
-  public CompletableFuture<Integer> getCurrentNrHRS() {
-    return zk.exists(znodePaths.rsZNode).thenApply(s -> s != null ? s.getNumChildren() : 0);
-  }
-
   private static ZooKeeperProtos.Master getMasterProto(byte[] data) throws IOException {
     if (data == null || data.length == 0) {
       return null;
@@ -235,12 +227,6 @@ class ZKAsyncRegistry implements AsyncRegistry {
           return ServerName.valueOf(snProto.getHostName(), snProto.getPort(),
             snProto.getStartCode());
         });
-  }
-
-  @Override
-  public CompletableFuture<Integer> getMasterInfoPort() {
-    return getAndConvert(znodePaths.masterAddressZNode, ZKAsyncRegistry::getMasterProto)
-        .thenApply(proto -> proto != null ? proto.getInfoPort() : 0);
   }
 
   @Override
