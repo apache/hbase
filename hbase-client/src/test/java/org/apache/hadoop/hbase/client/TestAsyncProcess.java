@@ -472,11 +472,6 @@ public class TestAsyncProcess {
       public CompletableFuture<String> getClusterId() {
         return CompletableFuture.completedFuture("testClusterId");
       }
-
-      @Override
-      public CompletableFuture<Integer> getCurrentNrHRS() {
-        return CompletableFuture.completedFuture(1);
-      }
     }
 
     final AtomicInteger nbThreads = new AtomicInteger(0);
