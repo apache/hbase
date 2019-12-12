@@ -323,10 +323,4 @@ public interface ClusterConnection extends Connection {
    *         supports cell blocks.
    */
   boolean hasCellBlockSupport();
-
-  /**
-   * @return the number of region servers that are currently running
-   * @throws IOException if a remote or network exception occurs
-   */
-  int getCurrentNrHRS() throws IOException;
 }
