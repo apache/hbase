@@ -503,6 +503,19 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     }
 
     /**
+    * is  allow release . but not notify write thread
+    */
+    private int allowRelease(final SyncFuture syncFuture, final long currentSequence,
+                                  final Throwable t) {
+      if (!syncFuture.isAllowSync(currentSequence, t)) {
+        throw new IllegalStateException();
+      }
+
+      // This function releases one sync future only.
+      return 1;
+    }
+    
+    /**
      * Release all SyncFutures whose sequence is <= <code>currentSequence</code>.
      * @param t May be non-null if we are processing SyncFutures because an exception was thrown.
      * @return Count of SyncFutures we let go.
@@ -568,7 +581,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
             // See if we can process any syncfutures BEFORE we go sync.
             long currentHighestSyncedSequence = highestSyncedTxid.get();
             if (currentSequence < currentHighestSyncedSequence) {
-              syncCount += releaseSyncFuture(takeSyncFuture, currentHighestSyncedSequence, null);
+              syncCount += allowRelease(takeSyncFuture, currentHighestSyncedSequence, null);
               // Done with the 'take'. Go around again and do a new 'take'.
               continue;
             }
