@@ -551,7 +551,7 @@ public abstract class FSUtils extends CommonFSUtils {
         return fs.exists(filePath);
       } catch (IOException ioe) {
         if (wait > 0L) {
-          LOG.warn("Unable to check cluster ID file in {}, retrying in {}ms", ioe);
+          LOG.warn("Unable to check cluster ID file in {}, retrying in {}ms", rootdir, wait, ioe);
           try {
             Thread.sleep(wait);
           } catch (InterruptedException e) {
@@ -939,7 +939,7 @@ public abstract class FSUtils extends CommonFSUtils {
       try {
         TableName.isLegalTableQualifierName(Bytes.toBytes(name));
       } catch (IllegalArgumentException e) {
-        LOG.info("Invalid table name: " + name);
+        LOG.info("Invalid table name: {}", name);
         return false;
       }
       return true;
