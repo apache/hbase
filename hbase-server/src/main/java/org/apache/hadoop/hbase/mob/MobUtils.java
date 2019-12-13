@@ -428,8 +428,6 @@ public final class MobUtils {
       storeFiles);
   }
 
-
-
   /**
    * Creates a mob reference KeyValue. The value of the mob reference KeyValue is mobCellValueSize +
    * mobFileName.
@@ -620,8 +618,8 @@ public final class MobUtils {
   }
 
   /**
-   * Indicates whether return null value when the mob file is missing or corrupt.
-   * The information is set in the attribute "empty.value.on.mobcell.miss" of scan.
+   * Indicates whether return null value when the mob file is missing or corrupt. The information is
+   * set in the attribute "empty.value.on.mobcell.miss" of scan.
    * @param scan The current scan.
    * @return True if the readEmptyValueOnMobCellMiss is enabled.
    */
@@ -676,12 +674,11 @@ public final class MobUtils {
     if (index < 0) {
       return null;
     }
-    return mobFileName.substring(index+1);
+    return mobFileName.substring(index + 1);
   }
 
   /**
-   * Get list of referenced MOB files from a given collection
-   * of store files
+   * Get list of referenced MOB files from a given collection of store files
    * @param storeFiles store files
    * @param mobDir MOB file directory
    * @return list of MOB file paths

@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 
@@ -37,8 +38,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparatorImpl;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -63,7 +62,11 @@ import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.mob.MobUtils;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
+import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -158,6 +161,9 @@ public class TestMobStoreCompaction {
 
   /**
    * During compaction, the mob threshold size is changed.
+   * The test is no longer valid. Major MOB compaction must be triggered by User
+   * HRegion does not provide public API to trigger major-compaction by User
+   * This test will move to mob sub-package.  
    */
   @Test
   public void testLargerValue() throws Exception {
@@ -178,8 +184,21 @@ public class TestMobStoreCompaction {
     // Change the threshold larger than the data size
     setMobThreshold(region, COLUMN_FAMILY, 500);
     region.initialize();
-    region.compactStores();
-
+    
+    List<HStore> stores = region.getStores();
+    for (HStore store: stores) {
+      // Force major compaction
+      store.triggerMajorCompaction();
+      Optional<CompactionContext> context =  
+          store.requestCompaction(HStore.PRIORITY_USER, CompactionLifeCycleTracker.DUMMY, 
+            User.getCurrent());
+      if (!context.isPresent()) {
+        continue;
+      }
+      region.compact(context.get(), store, 
+        NoLimitThroughputController.INSTANCE, User.getCurrent());
+    }
+    
     assertEquals("After compaction: store files", 1, countStoreFiles());
     assertEquals("After compaction: mob file count", compactionThreshold, countMobFiles());
     assertEquals("After compaction: referenced mob file count", 0, countReferencedMobFiles());

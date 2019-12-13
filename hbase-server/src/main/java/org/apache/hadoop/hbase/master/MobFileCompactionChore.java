@@ -38,10 +38,12 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 
 /**
  * Periodic MOB compaction chore.
@@ -61,11 +63,12 @@ public class MobFileCompactionChore extends ScheduledChore {
   private int regionBatchSize = 0;// not set - compact all
 
   public MobFileCompactionChore(HMaster master) {
-    super(master.getServerName() + "-MobFileCompactionChore", master, master.getConfiguration()
-      .getInt(MobConstants.MOB_COMPACTION_CHORE_PERIOD,
-        MobConstants.DEFAULT_MOB_COMPACTION_CHORE_PERIOD), master
-      .getConfiguration().getInt(MobConstants.MOB_COMPACTION_CHORE_PERIOD,
-        MobConstants.DEFAULT_MOB_COMPACTION_CHORE_PERIOD), TimeUnit.SECONDS);
+    super(master.getServerName() + "-MobFileCompactionChore", master,
+        master.getConfiguration().getInt(MobConstants.MOB_COMPACTION_CHORE_PERIOD,
+          MobConstants.DEFAULT_MOB_COMPACTION_CHORE_PERIOD),
+        master.getConfiguration().getInt(MobConstants.MOB_COMPACTION_CHORE_PERIOD,
+          MobConstants.DEFAULT_MOB_COMPACTION_CHORE_PERIOD),
+        TimeUnit.SECONDS);
     this.master = master;
     this.conf = master.getConfiguration();
     this.regionBatchSize =
@@ -86,7 +89,7 @@ public class MobFileCompactionChore extends ScheduledChore {
     boolean reported = false;
 
     try (Connection conn = ConnectionFactory.createConnection(conf);
-         Admin admin = conn.getAdmin(); ) {
+        Admin admin = conn.getAdmin();) {
 
       TableDescriptors htds = master.getTableDescriptors();
       Map<String, TableDescriptor> map = htds.getAll();
@@ -120,13 +123,13 @@ public class MobFileCompactionChore extends ScheduledChore {
                 hcd.getNameAsString());
             }
           } catch (IOException e) {
-            LOG.error("Failed to compact table="+ htd.getTableName() +" cf="+ hcd.getNameAsString(),
-              e);
+            LOG.error(
+              "Failed to compact table=" + htd.getTableName() + " cf=" + hcd.getNameAsString(), e);
           } catch (InterruptedException ee) {
             Thread.currentThread().interrupt();
             master.reportMobCompactionEnd(htd.getTableName());
-            LOG.warn("Failed to compact table="+ htd.getTableName() +" cf="+ hcd.getNameAsString(),
-              ee);
+            LOG.warn(
+              "Failed to compact table=" + htd.getTableName() + " cf=" + hcd.getNameAsString(), ee);
             // Quit the chore
             return;
           }
@@ -156,25 +159,25 @@ public class MobFileCompactionChore extends ScheduledChore {
     Collections.shuffle(regions);
     // Create first batch
     List<RegionInfo> toCompact = new ArrayList<RegionInfo>();
-    for (int i=0; i < this.regionBatchSize; i++) {
+    for (int i = 0; i < this.regionBatchSize; i++) {
       toCompact.add(regions.remove(0));
     }
 
     // Start compaction now
-    for(RegionInfo ri: toCompact) {
+    for (RegionInfo ri : toCompact) {
       startCompaction(admin, htd.getTableName(), ri, hcd.getName());
     }
 
     List<RegionInfo> compacted = new ArrayList<RegionInfo>();
     int totalCompacted = 0;
-    while(!toCompact.isEmpty()) {
+    while (!toCompact.isEmpty()) {
       // Check status of active compactions
-      for (RegionInfo ri: toCompact) {
+      for (RegionInfo ri : toCompact) {
         try {
           if (admin.getCompactionStateForRegion(ri.getRegionName()) == CompactionState.NONE) {
             totalCompacted++;
             LOG.info("Finished major compaction: table={} region={}, compacted regions={}",
-              htd.getTableName(),ri.getRegionNameAsString(), totalCompacted);
+              htd.getTableName(), ri.getRegionNameAsString(), totalCompacted);
             compacted.add(ri);
           }
         } catch (IOException e) {
@@ -182,11 +185,11 @@ public class MobFileCompactionChore extends ScheduledChore {
         }
       }
       // Update batch: remove compacted regions and add new ones
-      for (RegionInfo ri: compacted) {
+      for (RegionInfo ri : compacted) {
         toCompact.remove(ri);
         if (regions.size() > 0) {
           RegionInfo region = regions.remove(0);
-          startCompaction(admin, htd.getTableName(),region, hcd.getName());
+          startCompaction(admin, htd.getTableName(), region, hcd.getName());
           toCompact.add(region);
         }
       }
@@ -199,17 +202,16 @@ public class MobFileCompactionChore extends ScheduledChore {
 
   }
 
-  private void startCompaction(Admin admin, TableName table,  RegionInfo region, byte[] cf)
+  private void startCompaction(Admin admin, TableName table, RegionInfo region, byte[] cf)
       throws IOException, InterruptedException {
 
-    LOG.info("Started major compaction: table={} region={}", table,
-      region.getRegionNameAsString());
+    LOG.info("Started major compaction: table={} region={}", table, region.getRegionNameAsString());
     admin.majorCompactRegion(region.getRegionName());
     // Wait until it really starts
     // but with finite timeout
     long waitTime = 300000; // 5 min
     long startTime = EnvironmentEdgeManager.currentTime();
-    while(admin.getCompactionStateForRegion(region.getRegionName()) == CompactionState.NONE) {
+    while (admin.getCompactionStateForRegion(region.getRegionName()) == CompactionState.NONE) {
       // Is 1 second too aggressive?
       Thread.sleep(1000);
       if (EnvironmentEdgeManager.currentTime() - startTime > waitTime) {

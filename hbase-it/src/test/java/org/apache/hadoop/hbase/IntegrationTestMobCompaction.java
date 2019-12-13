@@ -44,8 +44,7 @@ import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
-import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -53,6 +52,8 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
  * An integration test to detect regressions in HBASE-22749. Test creates
@@ -189,7 +190,7 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
       "Total number of data rows to load. Default: '" + DEFAULT_ROWS_COUNT + "'");
     addOptWithArg(FAILURE_PROB_KEY,
       "Probability of a failure of a region MOB compaction request. Default: '"
-    + DEFAULT_FAILURE_PROB + "'");
+      + DEFAULT_FAILURE_PROB + "'");
   }
 
   @Override

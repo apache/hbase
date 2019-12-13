@@ -100,8 +100,8 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
     mobRefSet.get().clear();
     boolean isUserRequest = userRequest.get();
     boolean compactMOBs = major && isUserRequest;
-    boolean discardMobMiss =
-        conf.getBoolean(MobConstants.MOB_UNSAFE_DISCARD_MISS_KEY, MobConstants.DEFAULT_MOB_DISCARD_MISS);
+    boolean discardMobMiss = conf.getBoolean(MobConstants.MOB_UNSAFE_DISCARD_MISS_KEY,
+      MobConstants.DEFAULT_MOB_DISCARD_MISS);
 
     boolean mustFail = false;
     if (compactMOBs) {
