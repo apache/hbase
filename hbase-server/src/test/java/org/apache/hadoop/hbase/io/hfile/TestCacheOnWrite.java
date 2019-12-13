@@ -53,8 +53,6 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HStore;
-import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -407,13 +405,15 @@ public class TestCacheOnWrite {
     storeFilePath = sfw.getPath();
   }
 
-  private void testCachingDataBlocksDuringCompactionInternals(boolean useTags,  boolean cacheBlocksOnCompaction)
-      throws IOException, InterruptedException {
+  private void testCachingDataBlocksDuringCompactionInternals(boolean useTags,
+      boolean cacheBlocksOnCompaction) throws IOException, InterruptedException {
     // create a localConf
-    boolean localValue = conf.getBoolean(CacheConfig.CACHE_COMPACTED_BLOCKS_ON_WRITE_KEY, false);
+    boolean localValue = conf.getBoolean(CacheConfig.CACHE_COMPACTED_BLOCKS_ON_WRITE_KEY,
+      false);
     try {
       // Set the conf if testing caching compacted blocks on write
-      conf.setBoolean(CacheConfig.CACHE_COMPACTED_BLOCKS_ON_WRITE_KEY, cacheBlocksOnCompaction);
+      conf.setBoolean(CacheConfig.CACHE_COMPACTED_BLOCKS_ON_WRITE_KEY,
+        cacheBlocksOnCompaction);
 
       // TODO: need to change this test if we add a cache size threshold for
       // compactions, or if we implement some other kind of intelligent logic for
