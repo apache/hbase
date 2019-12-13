@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.conf;
 
+import java.util.Collections;
+import java.util.Set;
+import java.util.WeakHashMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Collections;
-import java.util.Set;
-import java.util.WeakHashMap;
 
 /**
  * Maintains the set of all the classes which would like to get notified
@@ -56,9 +55,7 @@ import java.util.WeakHashMap;
  * 2. Register the appropriate instance of the class with the
  *    {@link ConfigurationManager} instance, using the
  *    {@link ConfigurationManager#registerObserver(ConfigurationObserver)}
- *    method. For the RS side of things, the ConfigurationManager is a static
- *    member of the {@link org.apache.hadoop.hbase.regionserver.HRegionServer}
- *    class. Be careful not to do this in the constructor, as you might cause
+ *    method. Be careful not to do this in the constructor, as you might cause
  *    the 'this' reference to escape. Use a factory method, or an initialize()
  *    method which is called after the construction of the object.
  *
@@ -68,7 +65,6 @@ import java.util.WeakHashMap;
  *    for any reason, it is still okay, since entries for dead observers are
  *    automatically collected during GC. But nonetheless, it is still a good
  *    practice to deregister your observer, whenever possible.
- *
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -80,12 +76,11 @@ public class ConfigurationManager {
   // constructed from a WeakHashMap, whose entries would be removed if the
   // observer classes go out of scope.
   private final Set<ConfigurationObserver> configurationObservers =
-    Collections.newSetFromMap(new WeakHashMap<ConfigurationObserver,
-                                              Boolean>());
+      Collections.newSetFromMap(new WeakHashMap<>());
 
   /**
    * Register an observer class
-   * @param observer
+   * @param observer observer to be registered.
    */
   public void registerObserver(ConfigurationObserver observer) {
     synchronized (configurationObservers) {
@@ -98,7 +93,7 @@ public class ConfigurationManager {
 
   /**
    * Deregister an observer class
-   * @param observer
+   * @param observer to be deregistered.
    */
   public void deregisterObserver(ConfigurationObserver observer) {
     synchronized (configurationObservers) {
