@@ -22,8 +22,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -52,7 +50,7 @@ import org.junit.runners.Parameterized;
 /**
  * Class to test asynchronous table admin operations.
  * @see TestAsyncTableAdminApi2 This test and it used to be joined it was taking longer than our
- * ten minute timeout so they were split.
+ *     ten minute timeout so they were split.
  * @see TestAsyncTableAdminApi3 Another split out from this class so each runs under ten minutes.
  */
 @RunWith(Parameterized.class)
