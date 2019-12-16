@@ -1214,6 +1214,8 @@ public class TableDescriptorBuilder {
           }
           s.append("}");
         }
+
+        s.append("}");
       }
 
       s.append("}"); // end METHOD
