@@ -22,6 +22,7 @@ import java.util.Objects;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.Text;
@@ -35,16 +36,22 @@ import org.slf4j.LoggerFactory;
 import net.jcip.annotations.NotThreadSafe;
 
 /**
- * Default implementation of {@link AuthenticationProviderSelector} which can choose from: Simple
- * authentication, Kerberos authentication, and Delegation Token authentication.
+ * Default implementation of {@link AuthenticationProviderSelector} which can choose from the
+ * authentication implementations which HBase provides out of the box: Simple, Kerberos, and
+ * Delegation Token authentication.
+ *
+ * This implementation will ignore any {@link SaslAuthenticationProvider}'s which are available
+ * on the classpath or specified in the configuration because HBase cannot correctly choose which
+ * token should be returned to a client when multiple are present. It is expected that users
+ * implement their own {@link AuthenticationProviderSelector} when writing a custom provider.
  *
  * This implementation is not thread-safe. {@link #configure(Configuration, Set)} and
  * {@link #selectProvider(Text, UserGroupInformation)} is not safe if they are called concurrently.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)
 @NotThreadSafe
-public class DefaultProviderSelector implements AuthenticationProviderSelector {
-  private static final Logger LOG = LoggerFactory.getLogger(DefaultProviderSelector.class);
+public class BuiltInProviderSelector implements AuthenticationProviderSelector {
+  private static final Logger LOG = LoggerFactory.getLogger(BuiltInProviderSelector.class);
 
   Configuration conf;
   SimpleSaslClientAuthenticationProvider simpleAuth = null;
@@ -115,7 +122,8 @@ public class DefaultProviderSelector implements AuthenticationProviderSelector {
     if (ugi.hasKerberosCredentials()) {
       return new Pair<>(krbAuth, null);
     }
-    LOG.warn("No matching SASL authentication provider and supporting token found from providers.");
+    LOG.debug(
+        "No matching SASL authentication provider and supporting token found from providers.");
     return null;
   }
 

@@ -110,7 +110,7 @@ public final class SaslClientAuthenticationProviders {
   static AuthenticationProviderSelector instantiateSelector(Configuration conf,
       Collection<SaslClientAuthenticationProvider> providers) {
     Class<? extends AuthenticationProviderSelector> clz = conf.getClass(
-        SELECTOR_KEY, DefaultProviderSelector.class, AuthenticationProviderSelector.class);
+        SELECTOR_KEY, BuiltInProviderSelector.class, AuthenticationProviderSelector.class);
     try {
       AuthenticationProviderSelector selector = clz.newInstance();
       selector.configure(conf, providers);

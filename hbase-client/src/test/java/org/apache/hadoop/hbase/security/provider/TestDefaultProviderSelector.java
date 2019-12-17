@@ -30,10 +30,10 @@ import org.junit.Test;
 
 public class TestDefaultProviderSelector {
 
-  DefaultProviderSelector selector;
+  BuiltInProviderSelector selector;
   @Before
   public void setup() {
-    selector = new DefaultProviderSelector();
+    selector = new BuiltInProviderSelector();
   }
 
   @Test(expected = IllegalStateException.class)

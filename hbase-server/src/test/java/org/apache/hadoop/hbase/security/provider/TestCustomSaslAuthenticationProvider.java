@@ -366,7 +366,7 @@ public class TestCustomSaslAuthenticationProvider {
    * Custom provider which can select our custom provider, amongst other tokens which
    * may be available.
    */
-  public static class InMemoryProviderSelector extends DefaultProviderSelector {
+  public static class InMemoryProviderSelector extends BuiltInProviderSelector {
     private InMemoryClientProvider inMemoryProvider;
 
     @Override
