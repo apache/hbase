@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
 /**
+ * Convenience class for composing an instance of {@link TableDescriptor}.
  * @since 2.0.0
  */
 @InterfaceAudience.Public
