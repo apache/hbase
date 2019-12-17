@@ -24,11 +24,12 @@ import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Encapsulation of client-side logic to authenticate to HBase via some means over SASL.
- * Implementations should not directly implement this interface, but instead extend
- * {@link AbstractSaslClientAuthenticationProvider}.
+ * It is suggested that custom implementations extend the abstract class in the type hierarchy
+ * instead of directly implementing this interface (clients have a base class available, but
+ * servers presently do not).
  *
- * Implementations of this interface must make an implementation of {@code hashCode()}
- * which returns the same value across multiple instances of the provider implementation.
+ * Implementations of this interface <b>must</b> be unique among each other via the {@code byte}
+ * returned by {@link SaslAuthMethod#getCode()} on {@link #getSaslAuthMethod()}.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)
 @InterfaceStability.Evolving

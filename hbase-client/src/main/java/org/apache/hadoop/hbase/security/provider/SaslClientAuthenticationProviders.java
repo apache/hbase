@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.security.provider;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Optional;
 import java.util.ServiceLoader;
@@ -50,11 +52,11 @@ public final class SaslClientAuthenticationProviders {
   private static final AtomicReference<SaslClientAuthenticationProviders> providersRef =
       new AtomicReference<>();
 
-  private final HashMap<Byte,SaslClientAuthenticationProvider> providers;
+  private final Collection<SaslClientAuthenticationProvider> providers;
   private final AuthenticationProviderSelector selector;
 
   private SaslClientAuthenticationProviders(
-      HashMap<Byte,SaslClientAuthenticationProvider> providers,
+      Collection<SaslClientAuthenticationProvider> providers,
       AuthenticationProviderSelector selector) {
     this.providers = providers;
     this.selector = selector;
@@ -93,20 +95,20 @@ public final class SaslClientAuthenticationProviders {
    */
   static void addProviderIfNotExists(SaslClientAuthenticationProvider provider,
       HashMap<Byte,SaslClientAuthenticationProvider> providers) {
-    SaslClientAuthenticationProvider existingProvider = providers.get(
-        provider.getSaslAuthMethod().getCode());
+    Byte code = provider.getSaslAuthMethod().getCode();
+    SaslClientAuthenticationProvider existingProvider = providers.get(code);
     if (existingProvider != null) {
-      throw new RuntimeException("Already registered authentication provider with " +
-          provider.getSaslAuthMethod().getCode() + " " + existingProvider.getClass());
+      throw new RuntimeException("Already registered authentication provider with " + code + " "
+          + existingProvider.getClass());
     }
-    providers.put(provider.getSaslAuthMethod().getCode(), provider);
+    providers.put(code, provider);
   }
 
   /**
    * Instantiates the ProviderSelector implementation from the provided configuration.
    */
   static AuthenticationProviderSelector instantiateSelector(Configuration conf,
-      HashMap<Byte,SaslClientAuthenticationProvider> providers) {
+      Collection<SaslClientAuthenticationProvider> providers) {
     Class<? extends AuthenticationProviderSelector> clz = conf.getClass(
         SELECTOR_KEY, DefaultProviderSelector.class, AuthenticationProviderSelector.class);
     try {
@@ -166,21 +168,24 @@ public final class SaslClientAuthenticationProviders {
   static SaslClientAuthenticationProviders instantiate(Configuration conf) {
     ServiceLoader<SaslClientAuthenticationProvider> loader =
         ServiceLoader.load(SaslClientAuthenticationProvider.class);
-    HashMap<Byte,SaslClientAuthenticationProvider> providers = new HashMap<>();
+    HashMap<Byte,SaslClientAuthenticationProvider> providerMap = new HashMap<>();
     for (SaslClientAuthenticationProvider provider : loader) {
-      addProviderIfNotExists(provider, providers);
+      addProviderIfNotExists(provider, providerMap);
     }
 
-    addExplicitProviders(conf, providers);
+    addExplicitProviders(conf, providerMap);
 
-    AuthenticationProviderSelector selector = instantiateSelector(conf, providers);
+    Collection<SaslClientAuthenticationProvider> providers = Collections.unmodifiableCollection(
+        providerMap.values());
 
     if (LOG.isTraceEnabled()) {
-      String loadedProviders = providers.values().stream()
+      String loadedProviders = providers.stream()
           .map((provider) -> provider.getClass().getName())
           .collect(Collectors.joining(", "));
       LOG.trace("Found SaslClientAuthenticationProviders {}", loadedProviders);
     }
+
+    AuthenticationProviderSelector selector = instantiateSelector(conf, providers);
     return new SaslClientAuthenticationProviders(providers, selector);
   }
 
@@ -192,7 +197,7 @@ public final class SaslClientAuthenticationProviders {
    */
   public Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>>
       getSimpleProvider() {
-    Optional<SaslClientAuthenticationProvider> optional = providers.values().stream()
+    Optional<SaslClientAuthenticationProvider> optional = providers.stream()
         .filter((p) -> p instanceof SimpleSaslClientAuthenticationProvider)
         .findFirst();
     return new Pair<>(optional.get(), null);
@@ -209,7 +214,7 @@ public final class SaslClientAuthenticationProviders {
 
   @Override
   public String toString() {
-    return providers.values().stream()
+    return providers.stream()
         .map((p) -> p.getClass().getName())
         .collect(Collectors.joining(", ", "providers=[", "], selector=")) + selector.getClass();
   }

@@ -21,8 +21,8 @@ import static org.junit.Assert.assertNotNull;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.junit.Before;
@@ -38,12 +38,12 @@ public class TestDefaultProviderSelector {
 
   @Test(expected = IllegalStateException.class)
   public void testExceptionOnMissingProviders() {
-    selector.configure(new Configuration(false), Collections.emptyMap());
+    selector.configure(new Configuration(false), Collections.emptySet());
   }
 
   @Test(expected = NullPointerException.class)
   public void testNullConfiguration() {
-    selector.configure(null, Collections.emptyMap());
+    selector.configure(null, Collections.emptySet());
   }
 
   @Test(expected = NullPointerException.class)
@@ -53,21 +53,17 @@ public class TestDefaultProviderSelector {
 
   @Test(expected = IllegalStateException.class)
   public void testDuplicateProviders() {
-    Map<Byte,SaslClientAuthenticationProvider> providers = new HashMap<>();
-    providers.put((byte) 1, new SimpleSaslClientAuthenticationProvider());
-    providers.put((byte) 2, new SimpleSaslClientAuthenticationProvider());
+    Set<SaslClientAuthenticationProvider> providers = new HashSet<>();
+    providers.add(new SimpleSaslClientAuthenticationProvider());
+    providers.add(new SimpleSaslClientAuthenticationProvider());
     selector.configure(new Configuration(false), providers);
   }
 
   @Test
   public void testExpectedProviders() {
-    Map<Byte,SaslClientAuthenticationProvider> providers = new HashMap<>();
-
-    for (SaslClientAuthenticationProvider provider : Arrays.asList(
+    HashSet<SaslClientAuthenticationProvider> providers = new HashSet<>(Arrays.asList(
         new SimpleSaslClientAuthenticationProvider(), new GssSaslClientAuthenticationProvider(),
-        new DigestSaslClientAuthenticationProvider())) {
-      providers.put(provider.getSaslAuthMethod().getCode(), provider);
-    }
+        new DigestSaslClientAuthenticationProvider()));
 
     selector.configure(new Configuration(false), providers);
 

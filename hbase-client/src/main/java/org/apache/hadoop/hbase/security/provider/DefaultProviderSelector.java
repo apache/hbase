@@ -17,10 +17,9 @@
  */
 package org.apache.hadoop.hbase.security.provider;
 
-import java.util.Map;
+import java.util.Collection;
 import java.util.Objects;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.User;
@@ -33,10 +32,19 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import net.jcip.annotations.NotThreadSafe;
+
+/**
+ * Default implementation of {@link AuthenticationProviderSelector} which can choose from: Simple
+ * authentication, Kerberos authentication, and Delegation Token authentication.
+ *
+ * This implementation is not thread-safe. {@link #configure(Configuration, Set)} and
+ * {@link #selectProvider(Text, UserGroupInformation)} is not safe if they are called concurrently.
+ */
 @InterfaceAudience.Private
+@NotThreadSafe
 public class DefaultProviderSelector implements AuthenticationProviderSelector {
   private static final Logger LOG = LoggerFactory.getLogger(DefaultProviderSelector.class);
-  private final ReadWriteLock LOCK = new ReentrantReadWriteLock();
 
   Configuration conf;
   SimpleSaslClientAuthenticationProvider simpleAuth = null;
@@ -44,31 +52,28 @@ public class DefaultProviderSelector implements AuthenticationProviderSelector {
   DigestSaslClientAuthenticationProvider digestAuth = null;
 
   @Override
-  public void configure(Configuration conf, Map<Byte,SaslClientAuthenticationProvider> providers) {
-    try {
-      LOCK.writeLock().lock();
-      if (this.conf != null) {
-        throw new IllegalStateException("configure() should only be called once");
-      }
-      this.conf = Objects.requireNonNull(conf);
-    } finally {
-      LOCK.writeLock().unlock();
+  public void configure(
+      Configuration conf, Collection<SaslClientAuthenticationProvider> providers) {
+    if (this.conf != null) {
+      throw new IllegalStateException("configure() should only be called once");
     }
+    this.conf = Objects.requireNonNull(conf);
     
-    for (SaslClientAuthenticationProvider provider : Objects.requireNonNull(providers).values()) {
-      if (provider instanceof SimpleSaslClientAuthenticationProvider) {
+    for (SaslClientAuthenticationProvider provider : Objects.requireNonNull(providers)) {
+      final String name = provider.getSaslAuthMethod().getName();
+      if (SimpleSaslAuthenticationProvider.SASL_AUTH_METHOD.getName().contentEquals(name)) {
         if (simpleAuth != null) {
           throw new IllegalStateException(
               "Encountered multiple SimpleSaslClientAuthenticationProvider instances");
         }
         simpleAuth = (SimpleSaslClientAuthenticationProvider) provider;
-      } else if (provider instanceof GssSaslClientAuthenticationProvider) {
+      } else if (GssSaslAuthenticationProvider.SASL_AUTH_METHOD.getName().equals(name)) {
         if (krbAuth != null) {
           throw new IllegalStateException(
               "Encountered multiple GssSaslClientAuthenticationProvider instances");
         }
         krbAuth = (GssSaslClientAuthenticationProvider) provider;
-      } else if (provider instanceof DigestSaslClientAuthenticationProvider) {
+      } else if (DigestSaslAuthenticationProvider.SASL_AUTH_METHOD.getName().equals(name)) {
         if (digestAuth != null) {
           throw new IllegalStateException(
               "Encountered multiple DigestSaslClientAuthenticationProvider instances");
@@ -90,15 +95,11 @@ public class DefaultProviderSelector implements AuthenticationProviderSelector {
     if (clusterId == null) {
       throw new NullPointerException("Null clusterId was given");
     }
-    try {
-      LOCK.readLock().lock();
-      // Superfluous: we dont' do SIMPLE auth over SASL, but we should to simplify.
-      if (!User.isHBaseSecurityEnabled(conf)) {
-        return new Pair<>(simpleAuth, null);
-      }
-    } finally {
-      LOCK.readLock().unlock();
+    // Superfluous: we don't do SIMPLE auth over SASL, but we should to simplify.
+    if (!User.isHBaseSecurityEnabled(conf)) {
+      return new Pair<>(simpleAuth, null);
     }
+
     // Must be digest auth, look for a token.
     // TestGenerateDelegationToken is written expecting DT is used when DT and Krb are both present.
     // (for whatever that's worth).

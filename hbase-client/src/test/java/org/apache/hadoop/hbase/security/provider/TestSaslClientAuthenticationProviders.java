@@ -21,13 +21,25 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
 
+import java.io.IOException;
+import java.net.InetAddress;
 import java.util.HashMap;
+import java.util.Map;
+
+import javax.security.sasl.SaslClient;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.security.SecurityInfo;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -71,5 +83,57 @@ public class TestSaslClientAuthenticationProviders {
         SaslClientAuthenticationProviders.getInstance(conf);
     assertNotSame(providers1, providers3);
     assertEquals(providers1.getNumRegisteredProviders(), providers3.getNumRegisteredProviders());
+  }
+
+  @Test(expected = RuntimeException.class)
+  public void testDifferentConflictingImplementationsFail() {
+    Configuration conf = HBaseConfiguration.create();
+    conf.setStrings(SaslClientAuthenticationProviders.EXTRA_PROVIDERS_KEY,
+        ConflictingProvider1.class.getName(), ConflictingProvider2.class.getName());
+    SaslClientAuthenticationProviders.getInstance(conf);
+  }
+
+  static class ConflictingProvider1 implements SaslClientAuthenticationProvider {
+    static final SaslAuthMethod METHOD1 = new SaslAuthMethod(
+        "FOO", (byte)12, "DIGEST-MD5", AuthenticationMethod.SIMPLE);
+    @Override public SaslAuthMethod getSaslAuthMethod() {
+      return METHOD1;
+    }
+
+    @Override public Text getTokenKind() {
+      return null;
+    }
+
+    @Override public SaslClient createClient(Configuration conf, InetAddress serverAddr,
+        SecurityInfo securityInfo, Token<? extends TokenIdentifier> token, boolean fallbackAllowed,
+        Map<String, String> saslProps) throws IOException {
+      return null;
+    }
+
+    @Override public UserInformation getUserInfo(UserGroupInformation user) {
+      return null;
+    }
+  }
+
+  static class ConflictingProvider2 implements SaslClientAuthenticationProvider {
+    static final SaslAuthMethod METHOD2 = new SaslAuthMethod(
+        "BAR", (byte)12, "DIGEST-MD5", AuthenticationMethod.SIMPLE);
+    @Override public SaslAuthMethod getSaslAuthMethod() {
+      return METHOD2;
+    }
+
+    @Override public Text getTokenKind() {
+      return null;
+    }
+
+    @Override public SaslClient createClient(Configuration conf, InetAddress serverAddr,
+        SecurityInfo securityInfo, Token<? extends TokenIdentifier> token, boolean fallbackAllowed,
+        Map<String, String> saslProps) throws IOException {
+      return null;
+    }
+
+    @Override public UserInformation getUserInfo(UserGroupInformation user) {
+      return null;
+    }
   }
 }

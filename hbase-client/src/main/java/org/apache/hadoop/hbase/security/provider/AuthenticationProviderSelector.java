@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.security.provider;
 
+import java.util.Collection;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
@@ -34,9 +35,12 @@ import org.apache.yetus.audience.InterfaceStability;
 public interface AuthenticationProviderSelector {
 
   /**
-   * Initializes the implementation with configuration and a set of providers available.
+   * Initializes the implementation with configuration and a set of providers available. This method
+   * should be called exactly once per implementation prior to calling
+   * {@link #selectProvider(Text, UserGroupInformation)}.
    */
-  void configure(Configuration conf, Map<Byte,SaslClientAuthenticationProvider> availableProviders);
+  void configure(Configuration conf,
+      Collection<SaslClientAuthenticationProvider> availableProviders);
 
   /**
    * Chooses the authentication provider which should be used given the provided client context

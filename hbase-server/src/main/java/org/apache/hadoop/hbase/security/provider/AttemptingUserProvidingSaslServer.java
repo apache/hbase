@@ -48,6 +48,6 @@ public class AttemptingUserProvidingSaslServer {
   }
 
   public Optional<UserGroupInformation> getAttemptingUser() {
-    return Optional.of(producer.get());
+    return Optional.ofNullable(producer.get());
   }
 }

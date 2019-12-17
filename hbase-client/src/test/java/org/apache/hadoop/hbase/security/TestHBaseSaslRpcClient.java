@@ -37,7 +37,6 @@ import javax.security.auth.callback.PasswordCallback;
 import javax.security.auth.callback.TextOutputCallback;
 import javax.security.auth.callback.UnsupportedCallbackException;
 import javax.security.sasl.RealmCallback;
-import javax.security.sasl.RealmChoiceCallback;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
 
@@ -119,14 +118,13 @@ public class TestHBaseSaslRpcClient {
     final NameCallback nameCallback = mock(NameCallback.class);
     final PasswordCallback passwordCallback = mock(PasswordCallback.class);
     final RealmCallback realmCallback = mock(RealmCallback.class);
-    final RealmChoiceCallback realmChoiceCallback = mock(RealmChoiceCallback.class);
 
-    Callback[] callbackArray = {nameCallback, passwordCallback, realmCallback, realmChoiceCallback};
+    // We can provide a realmCallback, but HBase presently does nothing with it.
+    Callback[] callbackArray = {nameCallback, passwordCallback, realmCallback};
     final DigestSaslClientCallbackHandler saslClCallbackHandler =
         new DigestSaslClientCallbackHandler(token);
     saslClCallbackHandler.handle(callbackArray);
     verify(nameCallback).setName(anyString());
-    verify(realmCallback).setText(any());
     verify(passwordCallback).setPassword(any());
   }
 

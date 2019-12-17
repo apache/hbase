@@ -29,7 +29,7 @@ import org.apache.yetus.audience.InterfaceStability;
 @InterfaceStability.Evolving
 public class GssSaslAuthenticationProvider extends BuiltInSaslAuthenticationProvider {
 
-  static final SaslAuthMethod SASL_AUTH_METHOD = new SaslAuthMethod(
+  public static final SaslAuthMethod SASL_AUTH_METHOD = new SaslAuthMethod(
       "KERBEROS", (byte)81, "GSSAPI", AuthenticationMethod.KERBEROS);
 
   @Override

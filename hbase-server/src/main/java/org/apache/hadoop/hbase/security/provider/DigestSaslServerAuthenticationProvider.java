@@ -107,27 +107,33 @@ public class DigestSaslServerAuthenticationProvider extends DigestSaslAuthentica
         attemptingUser.set(tokenIdentifier.getUser());
         char[] password = getPassword(tokenIdentifier);
         if (LOG.isTraceEnabled()) {
-          LOG.trace("SASL server DIGEST-MD5 callback: setting password " + "for client: " +
+          LOG.trace("SASL server DIGEST-MD5 callback: setting password for client: {}",
               tokenIdentifier.getUser());
         }
         pc.setPassword(password);
       }
       if (ac != null) {
-        String authid = ac.getAuthenticationID();
-        String authzid = ac.getAuthorizationID();
-        if (authid.equals(authzid)) {
+        // The authentication ID is the identifier (username) of the user who authenticated via
+        // SASL (the one who provided credentials). The authorization ID is who the remote user
+        // "asked" to be once they authenticated. This is akin to the UGI/JAAS "doAs" notion, e.g.
+        // authentication ID is the "real" user and authorization ID is the "proxy" user.
+        //
+        // For DelegationTokens: we do not expect any remote user with a delegation token to execute
+        // any RPCs as a user other than themselves. We disallow all cases where the real user
+        // does not match who the remote user wants to execute a request as someone else.
+        String authenticatedUserId = ac.getAuthenticationID();
+        String userRequestedToExecuteAs = ac.getAuthorizationID();
+        if (authenticatedUserId.equals(userRequestedToExecuteAs)) {
           ac.setAuthorized(true);
-        } else {
-          ac.setAuthorized(false);
-        }
-        if (ac.isAuthorized()) {
           if (LOG.isTraceEnabled()) {
             String username = HBaseSaslRpcServer.getIdentifier(
-                authzid, secretManager).getUser().getUserName();
+                userRequestedToExecuteAs, secretManager).getUser().getUserName();
             LOG.trace(
               "SASL server DIGEST-MD5 callback: setting " + "canonicalized client ID: " + username);
           }
-          ac.setAuthorizedID(authzid);
+          ac.setAuthorizedID(userRequestedToExecuteAs);
+        } else {
+          ac.setAuthorized(false);
         }
       }
     }

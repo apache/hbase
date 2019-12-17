@@ -399,7 +399,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
           }
           if (ex instanceof SaslException) {
             String msg = "SASL authentication failed."
-                + " The most likely cause is missing or invalid credentials. Consider 'kinit'.";
+                + " The most likely cause is missing or invalid credentials.";
             LOG.error(HBaseMarkers.FATAL, msg, ex);
             throw new RuntimeException(msg, ex);
           }

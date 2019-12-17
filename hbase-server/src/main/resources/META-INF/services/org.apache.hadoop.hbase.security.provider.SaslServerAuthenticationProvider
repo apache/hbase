@@ -16,3 +16,4 @@
 org.apache.hadoop.hbase.security.provider.DigestSaslServerAuthenticationProvider
 org.apache.hadoop.hbase.security.provider.GssSaslServerAuthenticationProvider
 org.apache.hadoop.hbase.security.provider.SimpleSaslServerAuthenticationProvider
+

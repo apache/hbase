@@ -30,6 +30,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.security.PrivilegedExceptionAction;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -46,7 +47,6 @@ import javax.security.sasl.RealmCallback;
 import javax.security.sasl.RealmChoiceCallback;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
-import javax.security.sasl.SaslServer;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -141,7 +141,7 @@ public class TestCustomSaslAuthenticationProvider {
   }
 
   /**
-   * A custom tokenidentifier for our custom auth'n method. Unique from the TokenIdentifier
+   * A custom token identifier for our custom auth'n method. Unique from the TokenIdentifier
    * used for delegation tokens.
    */
   public static class PasswordAuthTokenIdentifier extends TokenIdentifier {
@@ -371,9 +371,9 @@ public class TestCustomSaslAuthenticationProvider {
 
     @Override
     public void configure(Configuration conf,
-        Map<Byte,SaslClientAuthenticationProvider> providers) {
+        Collection<SaslClientAuthenticationProvider> providers) {
       super.configure(conf, providers);
-      Optional<SaslClientAuthenticationProvider> o = providers.values().stream()
+      Optional<SaslClientAuthenticationProvider> o = providers.stream()
         .filter((p) -> p instanceof InMemoryClientProvider)
         .findAny();
       if (!o.isPresent()) {

@@ -137,7 +137,7 @@ To enable the above, we have some new interfaces to support the user extensibili
 The `SaslAuthenticationProvider` shares logic which is common to the client and the
 server (though, this is up to the developer to guarantee this). The client and server
 interfaces each have logic specific to the HBase RPC client and HBase RPC server
-codbase, as their name implies. As described above, an implementation
+codebase, as their name implies. As described above, an implementation
 of one `SaslClientAuthenticationProvider` must match exactly one implementation of
 `SaslServerAuthenticationProvider`. Each Authentication Provider implementation is
 a singleton and is intended to be shared across all RPCs. A provider selector is
