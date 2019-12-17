@@ -135,4 +135,9 @@ public interface StoreFile {
    * Get the max timestamp of all the cells in the store file.
    */
   OptionalLong getMaximumTimestamp();
+
+  /**
+   * Get the reader for this store file
+   */
+  StoreFileReader getReader();
 }
