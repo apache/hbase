@@ -1,3 +1,21 @@
+/**
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.hadoop.hbase.master.normalizer;
 
 import com.google.protobuf.RpcController;
@@ -24,8 +42,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.when;
@@ -53,7 +70,7 @@ public class TestMergeNormalizer {
 
     setupMocksForNormalizer(regionSizes, hris);
     List<NormalizationPlan> plans = normalizer.computePlanForTable(testTable);
-    assertTrue(plans == null);
+    assertNull(plans);
   }
 
   @Test
@@ -72,7 +89,7 @@ public class TestMergeNormalizer {
 
     setupMocksForNormalizer(regionSizes, hris);
     List<NormalizationPlan> plans = normalizer.computePlanForTable(testTable);
-    assertTrue(plans == null);
+    assertNull(plans);
   }
 
   @Test
@@ -99,7 +116,7 @@ public class TestMergeNormalizer {
 
     setupMocksForNormalizer(regionSizes, hris);
     List<NormalizationPlan> plans = normalizer.computePlanForTable(testTable);
-    assertTrue(plans == null);
+    assertNull(plans);
   }
 
   @Test
@@ -111,19 +128,23 @@ public class TestMergeNormalizer {
     Timestamp currentTime = new Timestamp(System.currentTimeMillis());
     Timestamp threedaysBefore = new Timestamp(currentTime.getTime() - TimeUnit.DAYS.toMillis(3));
 
-    HRegionInfo hri1 = new HRegionInfo(testTable, Bytes.toBytes("aaa"), Bytes.toBytes("bbb"),false,threedaysBefore.getTime());
+    HRegionInfo hri1 = new HRegionInfo(testTable, Bytes.toBytes("aaa"), Bytes.toBytes("bbb"), false,
+        threedaysBefore.getTime());
     hris.add(hri1);
     regionSizes.put(hri1.getRegionName(), 15);
 
-    HRegionInfo hri2 = new HRegionInfo(testTable, Bytes.toBytes("bbb"), Bytes.toBytes("ccc"),false, threedaysBefore.getTime());
+    HRegionInfo hri2 = new HRegionInfo(testTable, Bytes.toBytes("bbb"), Bytes.toBytes("ccc"), false,
+        threedaysBefore.getTime());
     hris.add(hri2);
     regionSizes.put(hri2.getRegionName(), 5);
 
-    HRegionInfo hri3 = new HRegionInfo(testTable, Bytes.toBytes("ccc"), Bytes.toBytes("ddd"),false, threedaysBefore.getTime());
+    HRegionInfo hri3 = new HRegionInfo(testTable, Bytes.toBytes("ccc"), Bytes.toBytes("ddd"), false,
+        threedaysBefore.getTime());
     hris.add(hri3);
     regionSizes.put(hri3.getRegionName(), 5);
 
-    HRegionInfo hri4 = new HRegionInfo(testTable, Bytes.toBytes("ddd"), Bytes.toBytes("eee"),false,threedaysBefore.getTime());
+    HRegionInfo hri4 = new HRegionInfo(testTable, Bytes.toBytes("ddd"), Bytes.toBytes("eee"), false,
+        threedaysBefore.getTime());
     hris.add(hri4);
     regionSizes.put(hri4.getRegionName(), 15);
 
@@ -131,11 +152,13 @@ public class TestMergeNormalizer {
     hris.add(hri5);
     regionSizes.put(hri5.getRegionName(), 16);
 
-    HRegionInfo hri6 = new HRegionInfo(testTable, Bytes.toBytes("fff"), Bytes.toBytes("ggg"),false,threedaysBefore.getTime());
+    HRegionInfo hri6 = new HRegionInfo(testTable, Bytes.toBytes("fff"), Bytes.toBytes("ggg"), false,
+        threedaysBefore.getTime());
     hris.add(hri6);
     regionSizes.put(hri6.getRegionName(), 0);
 
-    HRegionInfo hri7 = new HRegionInfo(testTable, Bytes.toBytes("ggg"), Bytes.toBytes("hhh"),false);
+    HRegionInfo hri7 =
+        new HRegionInfo(testTable, Bytes.toBytes("ggg"), Bytes.toBytes("hhh"), false);
     hris.add(hri7);
     regionSizes.put(hri7.getRegionName(), 0);
 
@@ -146,6 +169,11 @@ public class TestMergeNormalizer {
     assertTrue(plan instanceof MergeNormalizationPlan);
     assertEquals(hri2, ((MergeNormalizationPlan) plan).getFirstRegion());
     assertEquals(hri3, ((MergeNormalizationPlan) plan).getSecondRegion());
+
+    // to check last 0 sized regions are merged
+    plan = plans.get(1);
+    assertEquals(hri6, ((MergeNormalizationPlan) plan).getFirstRegion());
+    assertEquals(hri7, ((MergeNormalizationPlan) plan).getSecondRegion());
   }
 
   @Test
@@ -170,28 +198,27 @@ public class TestMergeNormalizer {
     hris.add(hri4);
     regionSizes.put(hri4.getRegionName(), 15);
 
-    HRegionInfo hri5 = new HRegionInfo(testTable, Bytes.toBytes("ddd"), Bytes.toBytes("eee"));
+    HRegionInfo hri5 = new HRegionInfo(testTable, Bytes.toBytes("eee"), Bytes.toBytes("fff"));
     hris.add(hri4);
     regionSizes.put(hri5.getRegionName(), 5);
 
     setupMocksForNormalizer(regionSizes, hris);
     List<NormalizationPlan> plans = normalizer.computePlanForTable(testTable);
 
-    assertTrue(plans == null);
+    assertNull(plans);
   }
 
   @SuppressWarnings("MockitoCast")
-  protected void setupMocksForNormalizer(Map<byte[], Integer> regionSizes,
-    List<HRegionInfo> hris) {
+  protected void setupMocksForNormalizer(Map<byte[], Integer> regionSizes, List<HRegionInfo> hris) {
     masterServices = Mockito.mock(MasterServices.class, RETURNS_DEEP_STUBS);
     masterRpcServices = Mockito.mock(MasterRpcServices.class, RETURNS_DEEP_STUBS);
 
     // for simplicity all regions are assumed to be on one server; doesn't matter to us
     ServerName sn = ServerName.valueOf("localhost", 0, 1L);
-    when(masterServices.getAssignmentManager().getRegionStates().
-      getRegionsOfTable(any(TableName.class))).thenReturn(hris);
-    when(masterServices.getAssignmentManager().getRegionStates().
-      getRegionServerOfRegion(any(HRegionInfo.class))).thenReturn(sn);
+    when(masterServices.getAssignmentManager().getRegionStates()
+        .getRegionsOfTable(any(TableName.class))).thenReturn(hris);
+    when(masterServices.getAssignmentManager().getRegionStates()
+        .getRegionServerOfRegion(any(HRegionInfo.class))).thenReturn(sn);
 
     for (Map.Entry<byte[], Integer> region : regionSizes.entrySet()) {
       RegionLoad regionLoad = Mockito.mock(RegionLoad.class);
@@ -201,13 +228,13 @@ public class TestMergeNormalizer {
       // this is possibly broken with jdk9, unclear if false positive or not
       // suppress it for now, fix it when we get to running tests on 9
       // see: http://errorprone.info/bugpattern/MockitoCast
-      when((Object) masterServices.getServerManager().getLoad(sn).
-        getRegionsLoad().get(region.getKey())).thenReturn(regionLoad);
+      when((Object) masterServices.getServerManager().getLoad(sn).getRegionsLoad()
+          .get(region.getKey())).thenReturn(regionLoad);
     }
     try {
       when(masterRpcServices.isSplitOrMergeEnabled(any(RpcController.class),
         any(MasterProtos.IsSplitOrMergeEnabledRequest.class))).thenReturn(
-        MasterProtos.IsSplitOrMergeEnabledResponse.newBuilder().setEnabled(true).build());
+          MasterProtos.IsSplitOrMergeEnabledResponse.newBuilder().setEnabled(true).build());
     } catch (ServiceException se) {
       LOG.debug("error setting isSplitOrMergeEnabled switch", se);
     }
