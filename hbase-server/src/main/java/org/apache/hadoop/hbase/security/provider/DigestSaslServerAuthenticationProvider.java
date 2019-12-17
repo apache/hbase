@@ -31,7 +31,6 @@ import javax.security.sasl.RealmCallback;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslServer;
 
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer;
 import org.apache.hadoop.hbase.security.SaslUtil;
@@ -40,12 +39,10 @@ import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class DigestSaslServerAuthenticationProvider extends DigestSaslAuthenticationProvider
     implements SaslServerAuthenticationProvider {
   private static final Logger LOG = LoggerFactory.getLogger(

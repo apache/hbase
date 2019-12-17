@@ -28,19 +28,16 @@ import javax.security.sasl.AuthorizeCallback;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class GssSaslServerAuthenticationProvider extends GssSaslAuthenticationProvider
     implements SaslServerAuthenticationProvider {
   private static final Logger LOG = LoggerFactory.getLogger(

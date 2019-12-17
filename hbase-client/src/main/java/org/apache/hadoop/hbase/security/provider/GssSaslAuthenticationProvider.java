@@ -17,16 +17,13 @@
  */
 package org.apache.hadoop.hbase.security.provider;
 
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Base client for client/server implementations for the "KERBEROS" HBase auth'n method.
  */
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class GssSaslAuthenticationProvider extends BuiltInSaslAuthenticationProvider {
 
   public static final SaslAuthMethod SASL_AUTH_METHOD = new SaslAuthMethod(

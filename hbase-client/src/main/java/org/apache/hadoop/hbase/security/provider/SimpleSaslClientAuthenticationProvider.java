@@ -24,18 +24,15 @@ import java.util.Map;
 import javax.security.sasl.SaslClient;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.security.SecurityInfo;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation;
 
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class SimpleSaslClientAuthenticationProvider extends
     SimpleSaslAuthenticationProvider implements SaslClientAuthenticationProvider {
 

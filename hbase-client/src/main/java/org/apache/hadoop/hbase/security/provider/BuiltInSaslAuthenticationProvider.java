@@ -17,16 +17,18 @@
  */
 package org.apache.hadoop.hbase.security.provider;
 
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.io.Text;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Base class for all Apache HBase, built-in {@link SaslAuthenticationProvider}'s to extend.
+ *
+ * HBase users should take care to note that this class (and its sub-classes) are marked with the
+ * {@code InterfaceAudience.Private} annotation. These implementations are available for users to
+ * read, copy, and modify, but should not be extended or re-used in binary form. There are no
+ * compatibility guarantees provided for implementations of this class.
  */
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public abstract class BuiltInSaslAuthenticationProvider implements SaslAuthenticationProvider {
 
   public static final Text AUTH_TOKEN_TYPE = new Text("HBASE_AUTH_TOKEN");

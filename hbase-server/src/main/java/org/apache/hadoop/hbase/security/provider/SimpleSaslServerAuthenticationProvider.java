@@ -20,15 +20,12 @@ package org.apache.hadoop.hbase.security.provider;
 import java.io.IOException;
 import java.util.Map;
 
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class SimpleSaslServerAuthenticationProvider extends SimpleSaslAuthenticationProvider
     implements SaslServerAuthenticationProvider {
 
