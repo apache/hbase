@@ -400,7 +400,6 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
           if (ex instanceof SaslException) {
             String msg = "SASL authentication failed."
                 + " The most likely cause is missing or invalid credentials.";
-            LOG.error(HBaseMarkers.FATAL, msg, ex);
             throw new RuntimeException(msg, ex);
           }
           throw new IOException(ex);
@@ -409,10 +408,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         // Other providers, like kerberos, could request a new ticket from a keytab. Let
         // them try again.
         if (currRetries < maxRetries) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Exception encountered while connecting to " +
-              "the server : " + StringUtils.stringifyException(ex));
-          }
+          LOG.debug("Exception encountered while connecting to the server", ex);
 
           // Invoke the provider to perform the relogin
           provider.relogin();
@@ -427,10 +423,9 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
           Thread.sleep(ThreadLocalRandom.current().nextInt(reloginMaxBackoff) + 1);
           return null;
         } else {
-          String msg = "Couldn't setup connection for "
+          String msg = "Failed to initiate connection for "
               + UserGroupInformation.getLoginUser().getUserName() + " to "
               + securityInfo.getServerPrincipal();
-          LOG.warn(msg, ex);
           throw new IOException(msg, ex);
         }
       }

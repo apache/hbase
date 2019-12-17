@@ -39,8 +39,6 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public abstract class AbstractHBaseSaslRpcClient {
-  private static final Logger LOG = LoggerFactory.getLogger(AbstractHBaseSaslRpcClient.class);
-
   private static final byte[] EMPTY_TOKEN = new byte[0];
 
   protected final SaslClient saslClient;

@@ -37,12 +37,10 @@ public final class SaslServerAuthenticationProviders {
   private static final AtomicReference<SaslServerAuthenticationProviders> holder =
       new AtomicReference<>();
 
-  private final Configuration conf;
   private final HashMap<Byte, SaslServerAuthenticationProvider> providers;
 
   private SaslServerAuthenticationProviders(Configuration conf,
       HashMap<Byte, SaslServerAuthenticationProvider> providers) {
-    this.conf = conf;
     this.providers = providers;
   }
 

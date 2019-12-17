@@ -106,8 +106,10 @@ abstract class RpcConnection {
     if (useSasl && securityInfo != null) {
       pair = providers.selectProvider(new Text(clusterId), ticket);
       if (pair == null) {
-        LOG.error("Found no valid authentication method from {} with tokens={}",
-            providers.toString(), ticket.getTokens());
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Found no valid authentication method from providers={} with tokens={}",
+              providers.toString(), ticket.getTokens());
+        }
         throw new RuntimeException("Found no valid authentication method from options");
       }
     } else if (!useSasl) {

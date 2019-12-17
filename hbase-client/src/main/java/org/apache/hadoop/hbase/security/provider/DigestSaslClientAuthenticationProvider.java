@@ -87,21 +87,15 @@ public class DigestSaslClientAuthenticationProvider extends DigestSaslAuthentica
         }
       }
       if (nc != null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("SASL client callback: setting username: " + userName);
-        }
+        LOG.debug("SASL client callback: setting username: {}", userName);
         nc.setName(userName);
       }
       if (pc != null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("SASL client callback: setting userPassword");
-        }
+        LOG.debug("SASL client callback: setting userPassword");
         pc.setPassword(userPassword);
       }
       if (rc != null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("SASL client callback: setting realm: " + rc.getDefaultText());
-        }
+        LOG.debug("SASL client callback: setting realm: {}", rc.getDefaultText());
         rc.setText(rc.getDefaultText());
       }
     }

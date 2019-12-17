@@ -47,7 +47,8 @@ public class GssSaslClientAuthenticationProvider extends GssSaslAuthenticationPr
       throws IOException {
     String serverKey = securityInfo.getServerPrincipal();
     if (serverKey == null) {
-      throw new IOException("Can't obtain server Kerberos config key from SecurityInfo");
+      throw new IllegalArgumentException(
+          "Can't obtain server Kerberos config key from SecurityInfo");
     }
     return SecurityUtil.getServerPrincipal(conf.get(serverKey),
         server.getCanonicalHostName().toLowerCase());

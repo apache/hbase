@@ -99,9 +99,8 @@ public class BuiltInProviderSelector implements AuthenticationProviderSelector {
   @Override
   public Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> selectProvider(
       Text clusterId, UserGroupInformation ugi) {
-    if (clusterId == null) {
-      throw new NullPointerException("Null clusterId was given");
-    }
+    Objects.requireNonNull(clusterId, "Null clusterId was given");
+
     // Superfluous: we don't do SIMPLE auth over SASL, but we should to simplify.
     if (!User.isHBaseSecurityEnabled(conf)) {
       return new Pair<>(simpleAuth, null);
