@@ -376,11 +376,10 @@ public class TestCustomSaslAuthenticationProvider {
       Optional<SaslClientAuthenticationProvider> o = providers.stream()
         .filter((p) -> p instanceof InMemoryClientProvider)
         .findAny();
-      if (!o.isPresent()) {
-        throw new RuntimeException(
-            "InMemoryClientProvider not found in available providers: " + providers);
-      }
-      inMemoryProvider = (InMemoryClientProvider) o.get();
+
+      inMemoryProvider = (InMemoryClientProvider) o.orElseThrow(
+          () -> new RuntimeException("InMemoryClientProvider not found in available providers: "
+              + providers));
     }
 
     @Override
