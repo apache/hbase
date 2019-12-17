@@ -343,7 +343,10 @@ class MetricsRegionServerWrapperImpl
 
   @Override
   public long getL1CacheHitCount() {
-    return 200;
+    if (this.l1Stats == null) {
+      return 0;
+    }
+    return this.l1Stats.getHitCount();
   }
 
   @Override
