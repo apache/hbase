@@ -464,7 +464,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         if (useSasl) {
           final InputStream in2 = inStream;
           final OutputStream out2 = outStream;
-          UserGroupInformation ticket = provider.unwrapUgi(remoteId.ticket.getUGI());
+          UserGroupInformation ticket = provider.getRealUser(remoteId.ticket);
           boolean continueSasl;
           if (ticket == null) {
             throw new FatalConnectionException("ticket/user is null");

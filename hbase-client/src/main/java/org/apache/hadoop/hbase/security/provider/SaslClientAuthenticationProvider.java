@@ -26,6 +26,7 @@ import javax.security.sasl.SaslClient;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.security.SecurityInfo;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -59,12 +60,21 @@ public interface SaslClientAuthenticationProvider extends SaslAuthenticationProv
   UserInformation getUserInfo(UserGroupInformation user);
 
   /**
-   * Performs any necessary unwrapping of a "proxy" user UGI which is executing some request
-   * on top of a "real" user. This operation may simply return the original UGI if that is
-   * what is appropriate for the given implementation.
+   * Returns the "real" user, the user who has the credentials being authenticated by the
+   * remote service, in the form of an {@link UserGroupInformation} object.
+   *
+   * It is common in the Hadoop "world" to have distinct notions of a "real" user and a "proxy"
+   * user. A "real" user is the user which actually has the credentials (often, a Kerberos ticket),
+   * but some code may be running as some other user who has no credentials. This method gives
+   * the authentication provider a chance to acknowledge this is happening and ensure that any
+   * RPCs are executed with the real user's credentials, because executing them as the proxy user
+   * would result in failure because no credentials exist to authenticate the RPC.
+   *
+   * Not all implementations will need to implement this method. By default, the provided User's
+   * UGI is returned directly.
    */
-  default UserGroupInformation unwrapUgi(UserGroupInformation ugi) {
-    return ugi;
+  default UserGroupInformation getRealUser(User ugi) {
+    return ugi.getUGI();
   }
 
   /**

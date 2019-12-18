@@ -183,7 +183,7 @@ class NettyRpcConnection extends RpcConnection {
   }
 
   private void saslNegotiate(final Channel ch) {
-    UserGroupInformation ticket = provider.unwrapUgi(remoteId.getTicket().getUGI());
+    UserGroupInformation ticket = provider.getRealUser(remoteId.getTicket().getUGI());
     if (ticket == null) {
       failInit(ch, new FatalConnectionException("ticket/user is null"));
       return;

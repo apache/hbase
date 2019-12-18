@@ -27,6 +27,7 @@ import javax.security.sasl.SaslClient;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SecurityInfo;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -93,7 +94,8 @@ public class GssSaslClientAuthenticationProvider extends GssSaslAuthenticationPr
   }
 
   @Override
-  public UserGroupInformation unwrapUgi(UserGroupInformation ugi) {
+  public UserGroupInformation getRealUser(User user) {
+    final UserGroupInformation ugi = user.getUGI();
     // Unwrap the UGI with the real user when we're using Kerberos auth
     if (ugi != null && ugi.getRealUser() != null) {
       return ugi.getRealUser();
