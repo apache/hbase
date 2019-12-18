@@ -5324,8 +5324,9 @@ public class TestFromClientSide {
         // flush the data
         System.out.println("Flushing cache");
         region.flush(true);
-        // expect one more block in cache, no change in hits/misses
-        long expectedBlockCount = startBlockCount + 1;
+        // expect two more blocks in cache - DATA and ROOT_INDEX
+        // , no change in hits/misses
+        long expectedBlockCount = startBlockCount + 2;
         long expectedBlockHits = startBlockHits;
         long expectedBlockMiss = startBlockMiss;
         assertEquals(expectedBlockCount, cache.getBlockCount());
@@ -5351,7 +5352,8 @@ public class TestFromClientSide {
         // flush, one new block
         System.out.println("Flushing cache");
         region.flush(true);
-        assertEquals(++expectedBlockCount, cache.getBlockCount());
+        // + 1 for Index Block
+        assertEquals(++expectedBlockCount + 1, cache.getBlockCount());
         assertEquals(expectedBlockHits, cache.getStats().getHitCount());
         assertEquals(expectedBlockMiss, cache.getStats().getMissCount());
         // compact, net minus two blocks, two hits, no misses
