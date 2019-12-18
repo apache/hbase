@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.security.provider;
 import java.io.IOException;
 import java.util.Map;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
@@ -38,7 +39,8 @@ public interface SaslServerAuthenticationProvider extends SaslAuthenticationProv
   /**
    * Creates the SaslServer to accept incoming SASL authentication requests.
    */
-  AttemptingUserProvidingSaslServer createServer(SecretManager<TokenIdentifier> secretManager,
+  AttemptingUserProvidingSaslServer createServer(Configuration conf,
+      SecretManager<TokenIdentifier> secretManager,
       Map<String, String> saslProps) throws IOException;
 
   boolean supportsProtocolAuthentication();

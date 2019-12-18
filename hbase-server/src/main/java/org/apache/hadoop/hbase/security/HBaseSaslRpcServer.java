@@ -27,6 +27,7 @@ import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.provider.AttemptingUserProvidingSaslServer;
 import org.apache.hadoop.hbase.security.provider.SaslServerAuthenticationProvider;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -49,10 +50,10 @@ public class HBaseSaslRpcServer {
   private final AttemptingUserProvidingSaslServer serverWithProvider;
   private final SaslServer saslServer;
 
-  public HBaseSaslRpcServer(SaslServerAuthenticationProvider provider,
+  public HBaseSaslRpcServer(Configuration conf, SaslServerAuthenticationProvider provider,
       Map<String, String> saslProps, SecretManager<TokenIdentifier> secretManager)
           throws IOException {
-    serverWithProvider = provider.createServer(secretManager, saslProps);
+    serverWithProvider = provider.createServer(conf, secretManager, saslProps);
     saslServer = serverWithProvider.getServer();
   }
 

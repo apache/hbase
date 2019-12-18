@@ -349,7 +349,8 @@ abstract class ServerRpcConnection implements Closeable {
       try {
         if (saslServer == null) {
           saslServer =
-              new HBaseSaslRpcServer(provider, rpcServer.saslProps, rpcServer.secretManager);
+              new HBaseSaslRpcServer(
+                  rpcServer.getConf(), provider, rpcServer.saslProps, rpcServer.secretManager);
           RpcServer.LOG.debug("Created SASL server with mechanism={}",
               provider.getSaslAuthMethod().getAuthMethod());
         }

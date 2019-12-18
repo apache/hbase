@@ -28,6 +28,7 @@ import javax.security.sasl.AuthorizeCallback;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -44,7 +45,7 @@ public class GssSaslServerAuthenticationProvider extends GssSaslAuthenticationPr
       GssSaslServerAuthenticationProvider.class);
 
   @Override
-  public AttemptingUserProvidingSaslServer createServer(
+  public AttemptingUserProvidingSaslServer createServer(Configuration conf,
       SecretManager<TokenIdentifier> secretManager,
       Map<String, String> saslProps) throws IOException {
     UserGroupInformation current = UserGroupInformation.getCurrentUser();

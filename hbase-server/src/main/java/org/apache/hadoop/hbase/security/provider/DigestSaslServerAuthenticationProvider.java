@@ -31,6 +31,7 @@ import javax.security.sasl.RealmCallback;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslServer;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer;
 import org.apache.hadoop.hbase.security.SaslUtil;
@@ -51,7 +52,7 @@ public class DigestSaslServerAuthenticationProvider extends DigestSaslAuthentica
   private AtomicReference<UserGroupInformation> attemptingUser = new AtomicReference<>(null);
 
   @Override
-  public AttemptingUserProvidingSaslServer createServer(
+  public AttemptingUserProvidingSaslServer createServer(Configuration conf,
       SecretManager<TokenIdentifier> secretManager,
       Map<String, String> saslProps) throws IOException {
     if (secretManager == null) {
