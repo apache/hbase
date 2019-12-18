@@ -44,7 +44,7 @@ public interface AuthenticationProviderSelector {
 
   /**
    * Chooses the authentication provider which should be used given the provided client context
-   * from the authentication providers passed in via {@link #configure(Configuration, Map)}.
+   * from the authentication providers passed in via {@link #configure(Configuration, Collection)}.
    */
   Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> selectProvider(
       Text clusterId, UserGroupInformation ugi);

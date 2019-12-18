@@ -47,14 +47,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformati
 public class DigestSaslClientAuthenticationProvider extends DigestSaslAuthenticationProvider
     implements SaslClientAuthenticationProvider {
 
-  private static final String MECHANISM = "DIGEST-MD5";
-
   @Override
   public SaslClient createClient(Configuration conf, InetAddress serverAddr,
       SecurityInfo securityInfo, Token<? extends TokenIdentifier> token, boolean fallbackAllowed,
       Map<String, String> saslProps) throws IOException {
-    return Sasl.createSaslClient(new String[] { MECHANISM }, null, null,
-        SaslUtil.SASL_DEFAULT_REALM, saslProps, new DigestSaslClientCallbackHandler(token));
+    return Sasl.createSaslClient(new String[] { getSaslAuthMethod().getSaslMechanism() }, null,
+        null, SaslUtil.SASL_DEFAULT_REALM, saslProps, new DigestSaslClientCallbackHandler(token));
   }
 
   public static class DigestSaslClientCallbackHandler implements CallbackHandler {

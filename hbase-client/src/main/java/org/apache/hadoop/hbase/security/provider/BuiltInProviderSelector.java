@@ -19,7 +19,8 @@ package org.apache.hadoop.hbase.security.provider;
 
 import java.util.Collection;
 import java.util.Objects;
-import java.util.Set;
+
+import net.jcip.annotations.NotThreadSafe;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -33,8 +34,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import net.jcip.annotations.NotThreadSafe;
-
 /**
  * Default implementation of {@link AuthenticationProviderSelector} which can choose from the
  * authentication implementations which HBase provides out of the box: Simple, Kerberos, and
@@ -45,7 +44,7 @@ import net.jcip.annotations.NotThreadSafe;
  * token should be returned to a client when multiple are present. It is expected that users
  * implement their own {@link AuthenticationProviderSelector} when writing a custom provider.
  *
- * This implementation is not thread-safe. {@link #configure(Configuration, Set)} and
+ * This implementation is not thread-safe. {@link #configure(Configuration, Collection)} and
  * {@link #selectProvider(Text, UserGroupInformation)} is not safe if they are called concurrently.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)
@@ -65,7 +64,7 @@ public class BuiltInProviderSelector implements AuthenticationProviderSelector {
       throw new IllegalStateException("configure() should only be called once");
     }
     this.conf = Objects.requireNonNull(conf);
-    
+
     for (SaslClientAuthenticationProvider provider : Objects.requireNonNull(providers)) {
       final String name = provider.getSaslAuthMethod().getName();
       if (SimpleSaslAuthenticationProvider.SASL_AUTH_METHOD.getName().contentEquals(name)) {

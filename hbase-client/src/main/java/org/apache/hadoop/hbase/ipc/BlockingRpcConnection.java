@@ -415,7 +415,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
 
           // Get rid of any old state on the SaslClient
           disposeSasl();
- 
+
           // have granularity of milliseconds
           // we are sleeping with the Connection lock held but since this
           // connection instance is being used for connecting to the server

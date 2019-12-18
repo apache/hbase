@@ -280,7 +280,7 @@ public class TestCustomSaslAuthenticationProvider {
       return new AttemptingUserProvidingSaslServer(
           Sasl.createSaslServer(getSaslAuthMethod().getSaslMechanism(), null,
               SaslUtil.SASL_DEFAULT_REALM, saslProps, new InMemoryServerProviderCallbackHandler()),
-              () -> null);
+        () -> null);
     }
 
     /**
@@ -378,7 +378,7 @@ public class TestCustomSaslAuthenticationProvider {
         .findAny();
 
       inMemoryProvider = (InMemoryClientProvider) o.orElseThrow(
-          () -> new RuntimeException("InMemoryClientProvider not found in available providers: "
+        () -> new RuntimeException("InMemoryClientProvider not found in available providers: "
               + providers));
     }
 

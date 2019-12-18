@@ -29,8 +29,6 @@ import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProvide
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * A utility class that encapsulates SASL logic for RPC client. Copied from
