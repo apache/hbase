@@ -589,7 +589,9 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
    */
   public int getMetaReplicaIdFromZnode(String znode) {
     String pattern = conf.get("zookeeper.znode.metaserver","meta-region-server");
-    if (znode.equals(pattern)) return DEFAULT_REPLICA_ID;
+    if (znode.equals(pattern)) {
+      return DEFAULT_REPLICA_ID;
+    }
     // the non-default replicas are of the pattern meta-region-server-<replicaId>
     String nonDefaultPattern = pattern + "-";
     return Integer.parseInt(znode.substring(nonDefaultPattern.length()));

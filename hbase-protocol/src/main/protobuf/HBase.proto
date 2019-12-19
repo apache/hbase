@@ -234,3 +234,9 @@ message SnapshotDescription {
   optional UsersAndPermissions users_and_permissions = 7;
   optional int64 ttl = 8 [default = 0];
 }
+
+message RegionLocation {
+  required RegionInfo region_info = 1;
+  optional ServerName server_name = 2;
+  required int64 seq_num = 3;
+}
