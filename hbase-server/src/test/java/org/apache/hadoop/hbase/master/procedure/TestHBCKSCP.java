@@ -112,6 +112,7 @@ public class TestHBCKSCP extends TestSCPBase {
     master.getServerManager().moveFromOnlineToDeadServers(rsServerName);
     master.getServerManager().getDeadServers().finish(rsServerName);
     master.getServerManager().getDeadServers().removeDeadServer(rsServerName);
+    master.getAssignmentManager().getRegionStates().removeServer(rsServerName);
     // Kill the server. Nothing should happen since an 'Unknown Server' as far
     // as the Master is concerned; i.e. no SCP.
     LOG.info("Killing {}", rsServerName);
