@@ -18680,6 +18680,878 @@ public final class HBaseProtos {
     // @@protoc_insertion_point(class_scope:hbase.pb.SnapshotDescription)
   }
 
+  public interface RegionLocationOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // required .hbase.pb.RegionInfo region_info = 1;
+    /**
+     * <code>required .hbase.pb.RegionInfo region_info = 1;</code>
+     */
+    boolean hasRegionInfo();
+    /**
+     * <code>required .hbase.pb.RegionInfo region_info = 1;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo getRegionInfo();
+    /**
+     * <code>required .hbase.pb.RegionInfo region_info = 1;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder getRegionInfoOrBuilder();
+
+    // optional .hbase.pb.ServerName server_name = 2;
+    /**
+     * <code>optional .hbase.pb.ServerName server_name = 2;</code>
+     */
+    boolean hasServerName();
+    /**
+     * <code>optional .hbase.pb.ServerName server_name = 2;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServerName();
+    /**
+     * <code>optional .hbase.pb.ServerName server_name = 2;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerNameOrBuilder();
+
+    // required int64 seq_num = 3;
+    /**
+     * <code>required int64 seq_num = 3;</code>
+     */
+    boolean hasSeqNum();
+    /**
+     * <code>required int64 seq_num = 3;</code>
+     */
+    long getSeqNum();
+  }
+  /**
+   * Protobuf type {@code hbase.pb.RegionLocation}
+   */
+  public static final class RegionLocation extends
+      com.google.protobuf.GeneratedMessage
+      implements RegionLocationOrBuilder {
+    // Use RegionLocation.newBuilder() to construct.
+    private RegionLocation(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private RegionLocation(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final RegionLocation defaultInstance;
+    public static RegionLocation getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public RegionLocation getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private RegionLocation(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000001) == 0x00000001)) {
+                subBuilder = regionInfo_.toBuilder();
+              }
+              regionInfo_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(regionInfo_);
+                regionInfo_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000001;
+              break;
+            }
+            case 18: {
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000002) == 0x00000002)) {
+                subBuilder = serverName_.toBuilder();
+              }
+              serverName_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(serverName_);
+                serverName_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000002;
+              break;
+            }
+            case 24: {
+              bitField0_ |= 0x00000004;
+              seqNum_ = input.readInt64();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_RegionLocation_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_RegionLocation_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLocation.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLocation.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<RegionLocation> PARSER =
+        new com.google.protobuf.AbstractParser<RegionLocation>() {
+      public RegionLocation parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new RegionLocation(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<RegionLocation> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // required .hbase.pb.RegionInfo region_info = 1;
+    public static final int REGION_INFO_FIELD_NUMBER = 1;
+    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo regionInfo_;
+    /**
+     * <code>required .hbase.pb.RegionInfo region_info = 1;</code>
+     */
+    public boolean hasRegionInfo() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required .hbase.pb.RegionInfo region_info = 1;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo getRegionInfo() {
+      return regionInfo_;
+    }
+    /**
+     * <code>required .hbase.pb.RegionInfo region_info = 1;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder getRegionInfoOrBuilder() {
+      return regionInfo_;
+    }
+
+    // optional .hbase.pb.ServerName server_name = 2;
+    public static final int SERVER_NAME_FIELD_NUMBER = 2;
+    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName serverName_;
+    /**
+     * <code>optional .hbase.pb.ServerName server_name = 2;</code>
+     */
+    public boolean hasServerName() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional .hbase.pb.ServerName server_name = 2;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServerName() {
+      return serverName_;
+    }
+    /**
+     * <code>optional .hbase.pb.ServerName server_name = 2;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerNameOrBuilder() {
+      return serverName_;
+    }
+
+    // required int64 seq_num = 3;
+    public static final int SEQ_NUM_FIELD_NUMBER = 3;
+    private long seqNum_;
+    /**
+     * <code>required int64 seq_num = 3;</code>
+     */
+    public boolean hasSeqNum() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>required int64 seq_num = 3;</code>
+     */
+    public long getSeqNum() {
+      return seqNum_;
+    }
+
+    private void initFields() {
+      regionInfo_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.getDefaultInstance();
+      serverName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
+      seqNum_ = 0L;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      if (!hasRegionInfo()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasSeqNum()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!getRegionInfo().isInitialized()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (hasServerName()) {
+        if (!getServerName().isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeMessage(1, regionInfo_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeMessage(2, serverName_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeInt64(3, seqNum_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(1, regionInfo_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(2, serverName_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(3, seqNum_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLocation)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLocation other = (org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLocation) obj;
+
+      boolean result = true;
+      result = result && (hasRegionInfo() == other.hasRegionInfo());
+      if (hasRegionInfo()) {
+        result = result && getRegionInfo()
+            .equals(other.getRegionInfo());
+      }
+      result = result && (hasServerName() == other.hasServerName());
+      if (hasServerName()) {
+        result = result && getServerName()
+            .equals(other.getServerName());
+      }
+      result = result && (hasSeqNum() == other.hasSeqNum());
+      if (hasSeqNum()) {
+        result = result && (getSeqNum()
+            == other.getSeqNum());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasRegionInfo()) {
+        hash = (37 * hash) + REGION_INFO_FIELD_NUMBER;
+        hash = (53 * hash) + getRegionInfo().hashCode();
+      }
+      if (hasServerName()) {
+        hash = (37 * hash) + SERVER_NAME_FIELD_NUMBER;
+        hash = (53 * hash) + getServerName().hashCode();
+      }
+      if (hasSeqNum()) {
+        hash = (37 * hash) + SEQ_NUM_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getSeqNum());
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLocation parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLocation parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLocation parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLocation parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLocation parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLocation parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLocation parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLocation parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLocation parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLocation parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLocation prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.RegionLocation}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLocationOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_RegionLocation_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_RegionLocation_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLocation.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLocation.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLocation.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          getRegionInfoFieldBuilder();
+          getServerNameFieldBuilder();
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        if (regionInfoBuilder_ == null) {
+          regionInfo_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.getDefaultInstance();
+        } else {
+          regionInfoBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000001);
+        if (serverNameBuilder_ == null) {
+          serverName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
+        } else {
+          serverNameBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000002);
+        seqNum_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000004);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_RegionLocation_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLocation getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLocation.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLocation build() {
+        org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLocation result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLocation buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLocation result = new org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLocation(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        if (regionInfoBuilder_ == null) {
+          result.regionInfo_ = regionInfo_;
+        } else {
+          result.regionInfo_ = regionInfoBuilder_.build();
+        }
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        if (serverNameBuilder_ == null) {
+          result.serverName_ = serverName_;
+        } else {
+          result.serverName_ = serverNameBuilder_.build();
+        }
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.seqNum_ = seqNum_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLocation) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLocation)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLocation other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLocation.getDefaultInstance()) return this;
+        if (other.hasRegionInfo()) {
+          mergeRegionInfo(other.getRegionInfo());
+        }
+        if (other.hasServerName()) {
+          mergeServerName(other.getServerName());
+        }
+        if (other.hasSeqNum()) {
+          setSeqNum(other.getSeqNum());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasRegionInfo()) {
+          
+          return false;
+        }
+        if (!hasSeqNum()) {
+          
+          return false;
+        }
+        if (!getRegionInfo().isInitialized()) {
+          
+          return false;
+        }
+        if (hasServerName()) {
+          if (!getServerName().isInitialized()) {
+            
+            return false;
+          }
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLocation parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLocation) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // required .hbase.pb.RegionInfo region_info = 1;
+      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo regionInfo_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder> regionInfoBuilder_;
+      /**
+       * <code>required .hbase.pb.RegionInfo region_info = 1;</code>
+       */
+      public boolean hasRegionInfo() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required .hbase.pb.RegionInfo region_info = 1;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo getRegionInfo() {
+        if (regionInfoBuilder_ == null) {
+          return regionInfo_;
+        } else {
+          return regionInfoBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>required .hbase.pb.RegionInfo region_info = 1;</code>
+       */
+      public Builder setRegionInfo(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo value) {
+        if (regionInfoBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          regionInfo_ = value;
+          onChanged();
+        } else {
+          regionInfoBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      /**
+       * <code>required .hbase.pb.RegionInfo region_info = 1;</code>
+       */
+      public Builder setRegionInfo(
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder builderForValue) {
+        if (regionInfoBuilder_ == null) {
+          regionInfo_ = builderForValue.build();
+          onChanged();
+        } else {
+          regionInfoBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      /**
+       * <code>required .hbase.pb.RegionInfo region_info = 1;</code>
+       */
+      public Builder mergeRegionInfo(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo value) {
+        if (regionInfoBuilder_ == null) {
+          if (((bitField0_ & 0x00000001) == 0x00000001) &&
+              regionInfo_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.getDefaultInstance()) {
+            regionInfo_ =
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.newBuilder(regionInfo_).mergeFrom(value).buildPartial();
+          } else {
+            regionInfo_ = value;
+          }
+          onChanged();
+        } else {
+          regionInfoBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      /**
+       * <code>required .hbase.pb.RegionInfo region_info = 1;</code>
+       */
+      public Builder clearRegionInfo() {
+        if (regionInfoBuilder_ == null) {
+          regionInfo_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.getDefaultInstance();
+          onChanged();
+        } else {
+          regionInfoBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+      /**
+       * <code>required .hbase.pb.RegionInfo region_info = 1;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder getRegionInfoBuilder() {
+        bitField0_ |= 0x00000001;
+        onChanged();
+        return getRegionInfoFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>required .hbase.pb.RegionInfo region_info = 1;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder getRegionInfoOrBuilder() {
+        if (regionInfoBuilder_ != null) {
+          return regionInfoBuilder_.getMessageOrBuilder();
+        } else {
+          return regionInfo_;
+        }
+      }
+      /**
+       * <code>required .hbase.pb.RegionInfo region_info = 1;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder> 
+          getRegionInfoFieldBuilder() {
+        if (regionInfoBuilder_ == null) {
+          regionInfoBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder>(
+                  regionInfo_,
+                  getParentForChildren(),
+                  isClean());
+          regionInfo_ = null;
+        }
+        return regionInfoBuilder_;
+      }
+
+      // optional .hbase.pb.ServerName server_name = 2;
+      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName serverName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> serverNameBuilder_;
+      /**
+       * <code>optional .hbase.pb.ServerName server_name = 2;</code>
+       */
+      public boolean hasServerName() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional .hbase.pb.ServerName server_name = 2;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServerName() {
+        if (serverNameBuilder_ == null) {
+          return serverName_;
+        } else {
+          return serverNameBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>optional .hbase.pb.ServerName server_name = 2;</code>
+       */
+      public Builder setServerName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
+        if (serverNameBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          serverName_ = value;
+          onChanged();
+        } else {
+          serverNameBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.ServerName server_name = 2;</code>
+       */
+      public Builder setServerName(
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder builderForValue) {
+        if (serverNameBuilder_ == null) {
+          serverName_ = builderForValue.build();
+          onChanged();
+        } else {
+          serverNameBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.ServerName server_name = 2;</code>
+       */
+      public Builder mergeServerName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
+        if (serverNameBuilder_ == null) {
+          if (((bitField0_ & 0x00000002) == 0x00000002) &&
+              serverName_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance()) {
+            serverName_ =
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.newBuilder(serverName_).mergeFrom(value).buildPartial();
+          } else {
+            serverName_ = value;
+          }
+          onChanged();
+        } else {
+          serverNameBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.ServerName server_name = 2;</code>
+       */
+      public Builder clearServerName() {
+        if (serverNameBuilder_ == null) {
+          serverName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
+          onChanged();
+        } else {
+          serverNameBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.ServerName server_name = 2;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder getServerNameBuilder() {
+        bitField0_ |= 0x00000002;
+        onChanged();
+        return getServerNameFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>optional .hbase.pb.ServerName server_name = 2;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerNameOrBuilder() {
+        if (serverNameBuilder_ != null) {
+          return serverNameBuilder_.getMessageOrBuilder();
+        } else {
+          return serverName_;
+        }
+      }
+      /**
+       * <code>optional .hbase.pb.ServerName server_name = 2;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
+          getServerNameFieldBuilder() {
+        if (serverNameBuilder_ == null) {
+          serverNameBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder>(
+                  serverName_,
+                  getParentForChildren(),
+                  isClean());
+          serverName_ = null;
+        }
+        return serverNameBuilder_;
+      }
+
+      // required int64 seq_num = 3;
+      private long seqNum_ ;
+      /**
+       * <code>required int64 seq_num = 3;</code>
+       */
+      public boolean hasSeqNum() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>required int64 seq_num = 3;</code>
+       */
+      public long getSeqNum() {
+        return seqNum_;
+      }
+      /**
+       * <code>required int64 seq_num = 3;</code>
+       */
+      public Builder setSeqNum(long value) {
+        bitField0_ |= 0x00000004;
+        seqNum_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required int64 seq_num = 3;</code>
+       */
+      public Builder clearSeqNum() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        seqNum_ = 0L;
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.RegionLocation)
+    }
+
+    static {
+      defaultInstance = new RegionLocation(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.RegionLocation)
+  }
+
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_TableSchema_descriptor;
   private static
@@ -18795,6 +19667,11 @@ public final class HBaseProtos {
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_hbase_pb_SnapshotDescription_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_RegionLocation_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_hbase_pb_RegionLocation_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -18857,14 +19734,17 @@ public final class HBaseProtos {
       "owner\030\006 \001(\t\022<\n\025users_and_permissions\030\007 \001" +
       "(\0132\035.hbase.pb.UsersAndPermissions\022\016\n\003ttl" +
       "\030\010 \001(\003:\0010\".\n\004Type\022\014\n\010DISABLED\020\000\022\t\n\005FLUSH" +
-      "\020\001\022\r\n\tSKIPFLUSH\020\002*r\n\013CompareType\022\010\n\004LESS" +
-      "\020\000\022\021\n\rLESS_OR_EQUAL\020\001\022\t\n\005EQUAL\020\002\022\r\n\tNOT_" +
-      "EQUAL\020\003\022\024\n\020GREATER_OR_EQUAL\020\004\022\013\n\007GREATER" +
-      "\020\005\022\t\n\005NO_OP\020\006*n\n\010TimeUnit\022\017\n\013NANOSECONDS" +
-      "\020\001\022\020\n\014MICROSECONDS\020\002\022\020\n\014MILLISECONDS\020\003\022\013" +
-      "\n\007SECONDS\020\004\022\013\n\007MINUTES\020\005\022\t\n\005HOURS\020\006\022\010\n\004D" +
-      "AYS\020\007B>\n*org.apache.hadoop.hbase.protobu",
-      "f.generatedB\013HBaseProtosH\001\240\001\001"
+      "\020\001\022\r\n\tSKIPFLUSH\020\002\"w\n\016RegionLocation\022)\n\013r" +
+      "egion_info\030\001 \002(\0132\024.hbase.pb.RegionInfo\022)" +
+      "\n\013server_name\030\002 \001(\0132\024.hbase.pb.ServerNam" +
+      "e\022\017\n\007seq_num\030\003 \002(\003*r\n\013CompareType\022\010\n\004LES" +
+      "S\020\000\022\021\n\rLESS_OR_EQUAL\020\001\022\t\n\005EQUAL\020\002\022\r\n\tNOT" +
+      "_EQUAL\020\003\022\024\n\020GREATER_OR_EQUAL\020\004\022\013\n\007GREATE" +
+      "R\020\005\022\t\n\005NO_OP\020\006*n\n\010TimeUnit\022\017\n\013NANOSECOND",
+      "S\020\001\022\020\n\014MICROSECONDS\020\002\022\020\n\014MILLISECONDS\020\003\022" +
+      "\013\n\007SECONDS\020\004\022\013\n\007MINUTES\020\005\022\t\n\005HOURS\020\006\022\010\n\004" +
+      "DAYS\020\007B>\n*org.apache.hadoop.hbase.protob" +
+      "uf.generatedB\013HBaseProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -19009,6 +19889,12 @@ public final class HBaseProtos {
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_SnapshotDescription_descriptor,
               new java.lang.String[] { "Name", "Table", "CreationTime", "Type", "Version", "Owner", "UsersAndPermissions", "Ttl", });
+          internal_static_hbase_pb_RegionLocation_descriptor =
+            getDescriptor().getMessageTypes().get(23);
+          internal_static_hbase_pb_RegionLocation_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_hbase_pb_RegionLocation_descriptor,
+              new java.lang.String[] { "RegionInfo", "ServerName", "SeqNum", });
           return null;
         }
       };

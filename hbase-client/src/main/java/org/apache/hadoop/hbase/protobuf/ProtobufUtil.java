@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -3703,15 +3704,17 @@ public final class ProtobufUtil {
   /**
    * Get a ServerName from the passed in data bytes.
    * @param data Data with a serialize server name in it; can handle the old style
-   * servername where servername was host and port.  Works too with data that
-   * begins w/ the pb 'PBUF' magic and that is then followed by a protobuf that
-   * has a serialized {@link ServerName} in it.
+   *   servername where servername was host and port.  Works too with data that
+   *   begins w/ the pb 'PBUF' magic and that is then followed by a protobuf that
+   *   has a serialized {@link ServerName} in it.
    * @return Returns null if <code>data</code> is null else converts passed data
-   * to a ServerName instance.
-   * @throws DeserializationException
+   *   to a ServerName instance.
+   * @throws DeserializationException when data cannot be de-serialized as expected.
    */
   public static ServerName parseServerNameFrom(final byte [] data) throws DeserializationException {
-    if (data == null || data.length <= 0) return null;
+    if (data == null || data.length <= 0) {
+      return null;
+    }
     if (isPBMagicPrefix(data)) {
       int prefixLen = lengthOfPBMagic();
       try {
@@ -3742,5 +3745,21 @@ public final class ProtobufUtil {
     String hostname = Addressing.parseHostname(str);
     int port = Addressing.parsePort(str);
     return ServerName.valueOf(hostname, port, -1L);
+  }
+
+  public static HBaseProtos.RegionLocation toRegionLocation(HRegionLocation loc) {
+    HBaseProtos.RegionLocation.Builder builder = HBaseProtos.RegionLocation.newBuilder();
+    builder.setRegionInfo(HRegionInfo.convert(loc.getRegionInfo()));
+    if (loc.getServerName() != null) {
+      builder.setServerName(toServerName(loc.getServerName()));
+    }
+    builder.setSeqNum(loc.getSeqNum());
+    return builder.build();
+  }
+
+  public static HRegionLocation toRegionLocation(HBaseProtos.RegionLocation proto) {
+    org.apache.hadoop.hbase.HRegionInfo regionInfo = HRegionInfo.convert(proto.getRegionInfo());
+    ServerName serverName = proto.hasServerName() ? toServerName(proto.getServerName()) : null;
+    return new HRegionLocation(regionInfo, serverName, proto.getSeqNum());
   }
 }

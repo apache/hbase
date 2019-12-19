@@ -28,6 +28,7 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CoordinatedStateException;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -71,6 +72,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.BalanceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.BalanceResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ClearDeadServersRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ClearDeadServersResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ClientMetaService;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateNamespaceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateNamespaceResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateTableRequest;
@@ -93,10 +95,16 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableTableReques
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetActiveMasterRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetActiveMasterResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterIdRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterIdResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterStatusRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterStatusResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLocationsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLocationsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNamespaceDescriptorRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNamespaceDescriptorResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultRequest;
@@ -221,7 +229,8 @@ import com.google.protobuf.ServiceException;
 @InterfaceAudience.Private
 @SuppressWarnings("deprecation")
 public class MasterRpcServices extends RSRpcServices
-    implements MasterService.BlockingInterface, RegionServerStatusService.BlockingInterface {
+    implements MasterService.BlockingInterface, RegionServerStatusService.BlockingInterface,
+    ClientMetaService.BlockingInterface {
   private static final Log LOG = LogFactory.getLog(MasterRpcServices.class.getName());
 
   private final HMaster master;
@@ -330,6 +339,9 @@ public class MasterRpcServices extends RSRpcServices
     bssi.add(new BlockingServiceAndInterface(
       RegionServerStatusService.newReflectiveBlockingService(this),
       RegionServerStatusService.BlockingInterface.class));
+    bssi.add(new BlockingServiceAndInterface(
+        ClientMetaService.newReflectiveBlockingService(this),
+        ClientMetaService.BlockingInterface.class));
     bssi.addAll(super.getServices());
     return bssi;
   }
@@ -1757,4 +1769,39 @@ public class MasterRpcServices extends RSRpcServices
     }
     return null;
   }
+
+  @Override
+  public GetClusterIdResponse getClusterId(RpcController rpcController, GetClusterIdRequest request)
+      throws ServiceException {
+    GetClusterIdResponse.Builder resp = GetClusterIdResponse.newBuilder();
+    String clusterId = master.getClusterId();
+    if (clusterId != null) {
+      resp.setClusterId(clusterId);
+    }
+    return resp.build();
+  }
+
+  @Override
+  public GetActiveMasterResponse getActiveMaster(RpcController rpcController,
+      GetActiveMasterRequest request) throws ServiceException {
+    GetActiveMasterResponse.Builder resp = GetActiveMasterResponse.newBuilder();
+    ServerName serverName = master.getActiveMaster();
+    if (serverName != null) {
+      resp.setServerName(ProtobufUtil.toServerName(serverName));
+    }
+    return resp.build();
+  }
+
+  @Override
+  public GetMetaRegionLocationsResponse getMetaRegionLocations(RpcController rpcController,
+     GetMetaRegionLocationsRequest request) throws ServiceException {
+    GetMetaRegionLocationsResponse.Builder response = GetMetaRegionLocationsResponse.newBuilder();
+    List<HRegionLocation> metaLocations =
+        master.getMetaRegionLocationCache().getMetaRegionLocations();
+    for (HRegionLocation location: metaLocations) {
+      response.addMetaLocations(ProtobufUtil.toRegionLocation(location));
+    }
+    return response.build();
+  }
+
 }
