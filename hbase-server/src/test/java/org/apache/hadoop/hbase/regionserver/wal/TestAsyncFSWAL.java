@@ -156,8 +156,8 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
               }
 
               @Override
-              public CompletableFuture<Long> sync() {
-                CompletableFuture<Long> result = writer.sync();
+              public CompletableFuture<Long> sync(boolean forceSync) {
+                CompletableFuture<Long> result = writer.sync(forceSync);
                 if (failedCount.incrementAndGet() < 1000) {
                   CompletableFuture<Long> future = new CompletableFuture<>();
                   FutureUtils.addListener(result,

@@ -77,7 +77,7 @@ public class TestAsyncProtobufLog extends AbstractTestProtobufLog<WALProvider.As
   @Override
   protected void sync(AsyncWriter writer) throws IOException {
     try {
-      writer.sync().get();
+      writer.sync(false).get();
     } catch (InterruptedException e) {
       throw new InterruptedIOException();
     } catch (ExecutionException e) {
