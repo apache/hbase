@@ -1389,7 +1389,7 @@ public class MetaTableAccessor {
     }
   }
 
-  private static void addRegionStateToPut(Put put, RegionState.State state) throws IOException {
+  private static Put addRegionStateToPut(Put put, RegionState.State state) throws IOException {
     put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
         .setRow(put.getRow())
         .setFamily(HConstants.CATALOG_FAMILY)
@@ -1398,6 +1398,17 @@ public class MetaTableAccessor {
         .setType(Cell.Type.Put)
         .setValue(Bytes.toBytes(state.name()))
         .build());
+    return put;
+  }
+
+  /**
+   * Update state column in hbase:meta.
+   */
+  public static void updateRegionState(Connection connection, RegionInfo ri,
+      RegionState.State state) throws IOException {
+    Put put = new Put(RegionReplicaUtil.getRegionInfoForDefaultReplica(ri).getRegionName());
+    MetaTableAccessor.putsToMetaTable(connection,
+        Collections.singletonList(addRegionStateToPut(put, state)));
   }
 
   /**
