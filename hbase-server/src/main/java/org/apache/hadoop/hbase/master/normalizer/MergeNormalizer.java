@@ -45,7 +45,7 @@ import org.slf4j.LoggerFactory;
  */
 
 @InterfaceAudience.Private
-public class MergeNormalizer extends BaseNormalizer implements RegionNormalizer {
+public class MergeNormalizer extends BaseNormalizer {
   private static final Logger LOG = LoggerFactory.getLogger(MergeNormalizer.class);
   private static final int MIN_REGION_COUNT = 3;
   private static final int MIN_DURATION_FOR_MERGE = 2;
