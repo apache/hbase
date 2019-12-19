@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerCall;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -187,6 +188,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    * many and we crash, then will take forever replaying. Keep the number of logs tidy.
    */
   protected final int maxLogs;
+
+  protected final boolean useHsync;
 
   /**
    * This lock makes sure only one log roll runs at a time. Should not be taken while any other lock
@@ -429,6 +432,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
       }
     };
     this.implClassName = getClass().getSimpleName();
+    this.useHsync = conf.getBoolean(HRegion.WAL_HSYNC_CONF_KEY, HRegion.DEFAULT_WAL_HSYNC);
   }
 
   /**
@@ -867,8 +871,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     sequenceIdAccounting.updateStore(encodedRegionName, familyName, sequenceid, onlyIfGreater);
   }
 
-  protected final SyncFuture getSyncFuture(long sequence) {
-    return cachedSyncFutures.get().reset(sequence);
+  protected final SyncFuture getSyncFuture(long sequence, boolean forceSync) {
+    return cachedSyncFutures.get().reset(sequence).setForceSync(forceSync);
   }
 
   protected boolean isLogRollRequested() {
