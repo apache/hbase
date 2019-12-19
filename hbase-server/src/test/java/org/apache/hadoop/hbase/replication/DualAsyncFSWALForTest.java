@@ -66,17 +66,17 @@ class DualAsyncFSWALForTest extends DualAsyncFSWAL {
     }
 
     @Override
-    public CompletableFuture<Long> sync() {
+    public CompletableFuture<Long> sync(boolean forceSync) {
       CompletableFuture<Long> localFuture;
       CompletableFuture<Long> remoteFuture;
       if (!localBroken) {
-        localFuture = localWriter.sync();
+        localFuture = localWriter.sync(forceSync);
       } else {
         localFuture = new CompletableFuture<>();
         localFuture.completeExceptionally(new IOException("Inject error"));
       }
       if (!remoteBroken) {
-        remoteFuture = remoteWriter.sync();
+        remoteFuture = remoteWriter.sync(forceSync);
       } else {
         remoteFuture = new CompletableFuture<>();
         remoteFuture.completeExceptionally(new IOException("Inject error"));

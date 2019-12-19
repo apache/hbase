@@ -353,7 +353,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     highestProcessedAppendTxidAtLastSync = currentHighestProcessedAppendTxid;
     final long startTimeNs = System.nanoTime();
     final long epoch = (long) epochAndState >>> 2L;
-    addListener(writer.sync(), (result, error) -> {
+    addListener(writer.sync(useHsync), (result, error) -> {
       if (error != null) {
         syncFailed(epoch, error);
       } else {
@@ -630,11 +630,21 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
 
   @Override
   public void sync() throws IOException {
+    sync(useHsync);
+  }
+
+  @Override
+  public void sync(long txid) throws IOException {
+    sync(txid, useHsync);
+  }
+
+  @Override
+  public void sync(boolean forceSync) throws IOException {
     try (TraceScope scope = TraceUtil.createTrace("AsyncFSWAL.sync")) {
       long txid = waitingConsumePayloads.next();
       SyncFuture future;
       try {
-        future = getSyncFuture(txid);
+        future = getSyncFuture(txid, forceSync);
         RingBufferTruck truck = waitingConsumePayloads.get(txid);
         truck.load(future);
       } finally {
@@ -648,7 +658,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   }
 
   @Override
-  public void sync(long txid) throws IOException {
+  public void sync(long txid, boolean forceSync) throws IOException {
     if (highestSyncedTxid.get() >= txid) {
       return;
     }
@@ -657,7 +667,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       long sequence = waitingConsumePayloads.next();
       SyncFuture future;
       try {
-        future = getSyncFuture(txid);
+        future = getSyncFuture(txid, forceSync);
         RingBufferTruck truck = waitingConsumePayloads.get(sequence);
         truck.load(future);
       } finally {
