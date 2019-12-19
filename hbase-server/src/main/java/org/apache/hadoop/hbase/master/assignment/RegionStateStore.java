@@ -51,7 +51,6 @@ import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
@@ -115,7 +114,7 @@ public class RegionStateStore {
       if (regionInfo == null) continue;
 
       final int replicaId = regionInfo.getReplicaId();
-      final State state = getRegionState(result, replicaId, regionInfo);
+      final State state = getRegionState(result, regionInfo);
 
       final ServerName lastHost = hrl.getServerName();
       final ServerName regionLocation = getRegionServer(result, replicaId);
@@ -326,12 +325,11 @@ public class RegionStateStore {
 
   /**
    * Pull the region state from a catalog table {@link Result}.
-   * @param r Result to pull the region state from
    * @return the region state, or null if unknown.
    */
-  @VisibleForTesting
-  public static State getRegionState(final Result r, int replicaId, RegionInfo regionInfo) {
-    Cell cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY, getStateColumn(replicaId));
+  public static State getRegionState(final Result r, RegionInfo regionInfo) {
+    Cell cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+        getStateColumn(regionInfo.getReplicaId()));
     if (cell == null || cell.getValueLength() == 0) {
       return null;
     }
