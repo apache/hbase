@@ -1200,3 +1200,47 @@ service HbckService {
   rpc FixMeta(FixMetaRequest)
     returns(FixMetaResponse);
 }
+
+/** Request and response to get the clusterID for this cluster */
+message GetClusterIdRequest {
+}
+message GetClusterIdResponse {
+  /** Not set if cluster ID could not be determined. */
+  optional string cluster_id = 1;
+}
+
+/** Request and response to get the currently active master name for this cluster */
+message GetActiveMasterRequest {
+}
+message GetActiveMasterResponse {
+  /** Not set if an active master could not be determined. */
+  optional ServerName server_name = 1;
+}
+
+/** Request and response to get the current list of meta region locations */
+message GetMetaRegionLocationsRequest {
+}
+message GetMetaRegionLocationsResponse {
+  /** Not set if meta region locations could not be determined. */
+  repeated RegionLocation meta_locations = 1;
+}
+
+/**
+ * Implements all the RPCs needed by clients to look up cluster meta information needed for connection establishment.
+ */
+service ClientMetaService {
+  /**
+   * Get Cluster ID for this cluster.
+   */
+  rpc GetClusterId(GetClusterIdRequest) returns(GetClusterIdResponse);
+
+  /**
+   * Get active master server name for this cluster.
+   */
+  rpc GetActiveMaster(GetActiveMasterRequest) returns(GetActiveMasterResponse);
+
+  /**
+   * Get current meta replicas' region locations.
+   */
+  rpc GetMetaRegionLocations(GetMetaRegionLocationsRequest) returns(GetMetaRegionLocationsResponse);
+}
