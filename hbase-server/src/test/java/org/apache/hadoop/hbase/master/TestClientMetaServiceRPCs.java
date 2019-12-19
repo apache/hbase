@@ -61,6 +61,8 @@ public class TestClientMetaServiceRPCs {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestClientMetaServiceRPCs.class);
 
+  // Total number of masters (active + stand by) for the purpose of this test.
+  private static final int MASTER_COUNT = 3;
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Configuration conf;
   private static int rpcTimeout;
@@ -70,7 +72,7 @@ public class TestClientMetaServiceRPCs {
   public static void setUp() throws Exception {
     // Start the mini cluster with stand-by masters.
     StartMiniClusterOption.Builder builder = StartMiniClusterOption.builder();
-    builder.numMasters(3).numRegionServers(3);
+    builder.numMasters(MASTER_COUNT).numRegionServers(3);
     TEST_UTIL.startMiniCluster(builder.build());
     conf = TEST_UTIL.getConfiguration();
     rpcTimeout = (int) Math.min(Integer.MAX_VALUE, TimeUnit.MILLISECONDS.toNanos(
@@ -103,6 +105,7 @@ public class TestClientMetaServiceRPCs {
   @Test public void TestClusterID() throws Exception {
     HBaseRpcController rpcController = getRpcController();
     String clusterID = TEST_UTIL.getMiniHBaseCluster().getMaster().getClusterId();
+    int rpcCount = 0;
     for (JVMClusterUtil.MasterThread masterThread:
         TEST_UTIL.getMiniHBaseCluster().getMasterThreads()) {
       ClientMetaService.BlockingInterface stub =
@@ -110,7 +113,9 @@ public class TestClientMetaServiceRPCs {
       GetClusterIdResponse resp =
           stub.getClusterId(rpcController, GetClusterIdRequest.getDefaultInstance());
       assertEquals(clusterID, resp.getClusterId());
+      rpcCount++;
     }
+    assertEquals(MASTER_COUNT, rpcCount);
   }
 
   /**
@@ -119,6 +124,7 @@ public class TestClientMetaServiceRPCs {
   @Test public void TestActiveMaster() throws Exception {
     HBaseRpcController rpcController = getRpcController();
     ServerName activeMaster = TEST_UTIL.getMiniHBaseCluster().getMaster().getServerName();
+    int rpcCount = 0;
     for (JVMClusterUtil.MasterThread masterThread:
         TEST_UTIL.getMiniHBaseCluster().getMasterThreads()) {
       ClientMetaService.BlockingInterface stub =
@@ -126,7 +132,9 @@ public class TestClientMetaServiceRPCs {
       GetActiveMasterResponse resp =
           stub.getActiveMaster(rpcController, GetActiveMasterRequest.getDefaultInstance());
       assertEquals(activeMaster, ProtobufUtil.toServerName(resp.getServerName()));
+      rpcCount++;
     }
+    assertEquals(MASTER_COUNT, rpcCount);
   }
 
   /**
@@ -137,6 +145,7 @@ public class TestClientMetaServiceRPCs {
     List<HRegionLocation> metaLocations = TEST_UTIL.getMiniHBaseCluster().getMaster()
         .getMetaRegionLocationCache().getMetaRegionLocations().get();
     Collections.sort(metaLocations);
+    int rpcCount = 0;
     for (JVMClusterUtil.MasterThread masterThread:
       TEST_UTIL.getMiniHBaseCluster().getMasterThreads()) {
       ClientMetaService.BlockingInterface stub =
@@ -148,6 +157,8 @@ public class TestClientMetaServiceRPCs {
         location -> result.add(ProtobufUtil.toRegionLocation(location)));
       Collections.sort(result);
       assertEquals(metaLocations, result);
+      rpcCount++;
     }
+    assertEquals(MASTER_COUNT, rpcCount);
   }
 }
