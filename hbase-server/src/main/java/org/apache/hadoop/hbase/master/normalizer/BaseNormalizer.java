@@ -1,0 +1,101 @@
+/**
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.hadoop.hbase.master.normalizer;
+
+import com.google.protobuf.ServiceException;
+import java.util.List;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.RegionLoad;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.master.MasterRpcServices;
+import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public abstract class BaseNormalizer implements RegionNormalizer {
+  private static final Logger LOG = LoggerFactory.getLogger(BaseNormalizer.class);
+  protected MasterServices masterServices;
+  protected MasterRpcServices masterRpcServices;
+
+  @Override
+  public void setMasterServices(MasterServices masterServices) {
+    this.masterServices = masterServices;
+  }
+
+  @Override
+  public void setMasterRpcServices(MasterRpcServices masterRpcServices) {
+    this.masterRpcServices = masterRpcServices;
+  }
+
+  protected long getRegionSize(HRegionInfo hri) {
+    ServerName sn =
+        masterServices.getAssignmentManager().getRegionStates().getRegionServerOfRegion(hri);
+    RegionLoad regionLoad =
+        masterServices.getServerManager().getLoad(sn).getRegionsLoad().get(hri.getRegionName());
+    if (regionLoad == null) {
+      LOG.debug("Region {} was not found in RegionsLoad", hri.getRegionNameAsString());
+      return -1;
+    }
+    return regionLoad.getStorefileSizeMB();
+  }
+
+  protected boolean isMergeEnabled() {
+    boolean mergeEnabled = true;
+    try {
+      mergeEnabled = masterRpcServices
+          .isSplitOrMergeEnabled(null,
+            RequestConverter.buildIsSplitOrMergeEnabledRequest(Admin.MasterSwitchType.MERGE))
+          .getEnabled();
+    } catch (ServiceException se) {
+      LOG.debug("Unable to determine whether merge is enabled", se);
+    }
+    return mergeEnabled;
+  }
+
+  protected boolean isSplitEnabled() {
+    boolean splitEnabled = true;
+    try {
+      splitEnabled = masterRpcServices
+          .isSplitOrMergeEnabled(null,
+            RequestConverter.buildIsSplitOrMergeEnabledRequest(Admin.MasterSwitchType.SPLIT))
+          .getEnabled();
+    } catch (ServiceException se) {
+      LOG.debug("Unable to determine whether merge is enabled", se);
+    }
+    return splitEnabled;
+  }
+
+  protected double getAvgRegionSize(List<HRegionInfo> tableRegions) {
+    long totalSizeMb = 0;
+    int acutalRegionCnt = 0;
+    for (HRegionInfo hri : tableRegions) {
+      long regionSize = getRegionSize(hri);
+      // don't consider regions that are in bytes for averaging the size.
+      if (regionSize > 0) {
+        acutalRegionCnt++;
+        totalSizeMb += regionSize;
+      }
+    }
+
+    double avgRegionSize = acutalRegionCnt == 0 ? 0 : totalSizeMb / (double) acutalRegionCnt;
+    return avgRegionSize;
+  }
+}

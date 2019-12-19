@@ -18,21 +18,14 @@
  */
 package org.apache.hadoop.hbase.master.normalizer;
 
-import com.google.protobuf.ServiceException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.RegionLoad;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.master.MasterRpcServices;
-import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,8 +34,8 @@ import org.slf4j.LoggerFactory;
  * <ol>
  * <li>get all regions of a given table
  * <li>get avg size S of each region (by total size of store files reported in RegionLoad)
- * <li>two regions R1 and its neighbour R2 are merged, if R1 + R2 &lt; S, and all
- * such regions are returned to be merged
+ * <li>two regions R1 and its neighbour R2 are merged, if R1 + R2 &lt; S, and all such regions are
+ * returned to be merged
  * <li>Otherwise, no action is performed
  * </ol>
  * <p>
@@ -52,72 +45,23 @@ import org.slf4j.LoggerFactory;
  */
 
 @InterfaceAudience.Private
-public class MergeNormalizer implements RegionNormalizer {
+public class MergeNormalizer extends BaseNormalizer implements RegionNormalizer {
   private static final Logger LOG = LoggerFactory.getLogger(MergeNormalizer.class);
   private static final int MIN_REGION_COUNT = 3;
   private static final int MIN_DURATION_FOR_MERGE = 2;
-  private MasterServices masterServices;
-  private MasterRpcServices masterRpcServices;
-
-  @Override
-  public void setMasterServices(MasterServices masterServices) {
-    this.masterServices = masterServices;
-  }
-
-  @Override
-  public void setMasterRpcServices(MasterRpcServices masterRpcServices) {
-    this.masterRpcServices = masterRpcServices;
-  }
 
   @Override
   public List<NormalizationPlan> computePlanForTable(TableName table) throws HBaseIOException {
-    if (table == null || table.isSystemTable()) {
-      LOG.debug("Normalization of system table {} isn't allowed", table);
-      return null;
-    }
-    boolean mergeEnabled = true;
-    try {
-      mergeEnabled = masterRpcServices
-          .isSplitOrMergeEnabled(null,
-            RequestConverter.buildIsSplitOrMergeEnabledRequest(Admin.MasterSwitchType.MERGE))
-          .getEnabled();
-    } catch (ServiceException se) {
-      LOG.debug("Unable to determine whether merge is enabled", se);
-    }
-    if (!mergeEnabled) {
-      LOG.debug("Merge disabled for table: {}", table);
+    if (!shouldNormalize(table)) {
       return null;
     }
     List<NormalizationPlan> plans = new ArrayList<>();
     List<HRegionInfo> tableRegions =
         masterServices.getAssignmentManager().getRegionStates().getRegionsOfTable(table);
-    if (tableRegions == null || tableRegions.size() < MIN_REGION_COUNT) {
-      int nrRegions = tableRegions == null ? 0 : tableRegions.size();
-      LOG.debug(
-        "Table {} has {} regions, required min number of regions for normalizer to run is {} , not "
-          + "running normalizer", table, nrRegions, MIN_REGION_COUNT);
-      return null;
-    }
-
-    LOG.debug("Computing normalization plan for table: {}, number of regions: {}",
-      table,tableRegions.size());
-
-    long totalSizeMb = 0;
-    int acutalRegionCnt = 0;
-
-    for (HRegionInfo hri : tableRegions) {
-      long regionSize = getRegionSize(hri);
-      // don't consider regions that are in bytes for averaging the size.
-      if (regionSize > 0) {
-        acutalRegionCnt++;
-        totalSizeMb += regionSize;
-      }
-    }
-
-    double avgRegionSize = acutalRegionCnt == 0 ? 0 : totalSizeMb / (double) acutalRegionCnt;
-
-    LOG.debug("Table {}, total aggregated regions size: {}", table, totalSizeMb);
+    double avgRegionSize = getAvgRegionSize(tableRegions);
     LOG.debug("Table {}, average region size: {}", table, avgRegionSize);
+    LOG.debug("Computing normalization plan for table: {}, number of regions: {}", table,
+      tableRegions.size());
 
     int candidateIdx = 0;
     while (candidateIdx < tableRegions.size()) {
@@ -150,25 +94,34 @@ public class MergeNormalizer implements RegionNormalizer {
     return plans;
   }
 
-  private long getRegionSize(HRegionInfo hri) {
-    ServerName sn =
-        masterServices.getAssignmentManager().getRegionStates().getRegionServerOfRegion(hri);
-    RegionLoad regionLoad =
-        masterServices.getServerManager().getLoad(sn).getRegionsLoad().get(hri.getRegionName());
-    if (regionLoad == null) {
-      LOG.debug("{} was not found in RegionsLoad", hri.getRegionNameAsString() );
-      return -1;
-    }
-    return regionLoad.getStorefileSizeMB();
-  }
-
   private boolean isOldEnoughToMerge(HRegionInfo hri) {
     Timestamp currentTime = new Timestamp(System.currentTimeMillis());
     Timestamp hriTime = new Timestamp(hri.getRegionId());
     boolean isOld =
-      new Timestamp(hriTime.getTime() + TimeUnit.DAYS.toMillis(MIN_DURATION_FOR_MERGE))
-        .before(currentTime);
+        new Timestamp(hriTime.getTime() + TimeUnit.DAYS.toMillis(MIN_DURATION_FOR_MERGE))
+            .before(currentTime);
     return isOld;
   }
-}
 
+  private boolean shouldNormalize(TableName table) {
+    boolean normalize = false;
+    if (table == null || table.isSystemTable()) {
+      LOG.debug("Normalization of system table {} isn't allowed", table);
+    } else if (!isMergeEnabled()) {
+      LOG.debug("Merge disabled for table: {}", table);
+    } else {
+      List<HRegionInfo> tableRegions =
+          masterServices.getAssignmentManager().getRegionStates().getRegionsOfTable(table);
+      if (tableRegions == null || tableRegions.size() < MIN_REGION_COUNT) {
+        int nrRegions = tableRegions == null ? 0 : tableRegions.size();
+        LOG.debug(
+          "Table {} has {} regions, required min number of regions for normalizer to run is {} , "
+              + "not running normalizer",
+          table, nrRegions, MIN_REGION_COUNT);
+      } else {
+        normalize = true;
+      }
+    }
+    return normalize;
+  }
+}
