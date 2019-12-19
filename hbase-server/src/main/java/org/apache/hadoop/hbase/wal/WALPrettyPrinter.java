@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -52,8 +51,6 @@ import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
 // imports for things that haven't moved yet.
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 
 /**
@@ -72,17 +69,10 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @InterfaceStability.Evolving
 public class WALPrettyPrinter {
-  private static final Logger LOG = LoggerFactory.getLogger(WALPrettyPrinter.class);
-
-  // Output template for pretty printing.
-  private static final String outputTmpl =
-      "Sequence=%s, table=%s, region=%s, at write timestamp=%s";
-
   private boolean outputValues;
   private boolean outputJSON;
   // The following enable filtering by sequence, region, and row, respectively
   private long sequence;
-  private String table;
   private String region;
   private String row;
   // enable in order to output a single list of transactions from several files
@@ -102,7 +92,6 @@ public class WALPrettyPrinter {
     outputValues = false;
     outputJSON = false;
     sequence = -1;
-    table = null;
     region = null;
     row = null;
     persistentOutput = false;
@@ -122,9 +111,6 @@ public class WALPrettyPrinter {
    * @param sequence
    *          when nonnegative, serves as a filter; only log entries with this
    *          sequence id will be printed
-   * @param table
-   *          when non null, serves as a filter. only entries corresponding to this
-   *          table will be printed.
    * @param region
    *          when not null, serves as a filter; only log entries from this
    *          region will be printed
@@ -139,12 +125,12 @@ public class WALPrettyPrinter {
    *          PrettyPrinter's output.
    */
   public WALPrettyPrinter(boolean outputValues, boolean outputJSON,
-      long sequence, String table, String region, String row, boolean persistentOutput,
+      long sequence, String region, String row, boolean
+      persistentOutput,
       PrintStream out) {
     this.outputValues = outputValues;
     this.outputJSON = outputJSON;
     this.sequence = sequence;
-    this.table = table;
     this.region = region;
     this.row = row;
     this.persistentOutput = persistentOutput;
@@ -195,13 +181,6 @@ public class WALPrettyPrinter {
   }
 
   /**
-   * Sets the table filter. Only log entries for this table are printed.
-   * @param table table name to set.
-   */
-  public void setTableFilter(String table) {
-    this.table = table;
-  }
-  /**
    * sets the region by which output will be filtered
    *
    * @param region
@@ -228,14 +207,12 @@ public class WALPrettyPrinter {
    * the case of JSON output.
    */
   public void beginPersistentOutput() {
-    if (persistentOutput) {
+    if (persistentOutput)
       return;
-    }
     persistentOutput = true;
     firstTxn = true;
-    if (outputJSON) {
+    if (outputJSON)
       out.print("[");
-    }
   }
 
   /**
@@ -243,13 +220,11 @@ public class WALPrettyPrinter {
    * case of JSON output.
    */
   public void endPersistentOutput() {
-    if (!persistentOutput) {
+    if (!persistentOutput)
       return;
-    }
     persistentOutput = false;
-    if (outputJSON) {
+    if (outputJSON)
       out.print("]");
-    }
   }
 
   /**
@@ -313,23 +288,16 @@ public class WALPrettyPrinter {
         Map<String, Object> txn = key.toStringMap();
         long writeTime = key.getWriteTime();
         // check output filters
-        if (table != null && !((TableName) txn.get("table")).toString().equals(table)) {
+        if (sequence >= 0 && ((Long) txn.get("sequence")) != sequence)
           continue;
-        }
-        if (sequence >= 0 && ((Long) txn.get("sequence")) != sequence) {
+        if (region != null && !((String) txn.get("region")).equals(region))
           continue;
-        }
-        if (region != null && !txn.get("region").equals(region)) {
-          continue;
-        }
         // initialize list into which we will store atomic actions
-        List<Map<String, Object>> actions = new ArrayList<Map<String, Object>>();
+        List<Map> actions = new ArrayList<Map>();
         for (Cell cell : edit.getCells()) {
           // add atomic operation to txn
-          Map<String, Object> op = new HashMap<>(toStringMap(cell));
-          if (outputValues) {
-            op.put("value", Bytes.toStringBinary(CellUtil.cloneValue(cell)));
-          }
+          Map<String, Object> op = new HashMap<String, Object>(toStringMap(cell));
+          if (outputValues) op.put("value", Bytes.toStringBinary(cell.getValue()));
           // check row output filter
           if (row == null || ((String) op.get("row")).equals(row)) {
             actions.add(op);
@@ -337,33 +305,29 @@ public class WALPrettyPrinter {
           op.put("total_size_sum", CellUtil.estimatedHeapSizeOf(cell));
 
         }
-        if (actions.isEmpty()) {
+        if (actions.size() == 0)
           continue;
-        }
         txn.put("actions", actions);
         if (outputJSON) {
           // JSON output is a straightforward "toString" on the txn object
-          if (firstTxn) {
+          if (firstTxn)
             firstTxn = false;
-          } else {
+          else
             out.print(",");
-          }
           // encode and print JSON
           out.print(GSON.toJson(txn));
         } else {
           // Pretty output, complete with indentation by atomic action
-          out.println(String.format(outputTmpl,
-              txn.get("sequence"), txn.get("table"), txn.get("region"), new Date(writeTime)));
+          out.println("Sequence=" + txn.get("sequence") + " "
+              + ", region=" + txn.get("region") + " at write timestamp=" + new Date(writeTime));
           for (int i = 0; i < actions.size(); i++) {
-            Map<String, Object> op = actions.get(i);
+            Map op = actions.get(i);
             out.println("row=" + op.get("row") +
                 ", column=" + op.get("family") + ":" + op.get("qualifier"));
             if (op.get("tag") != null) {
               out.println("    tag: " + op.get("tag"));
             }
-            if (outputValues) {
-              out.println("    value: " + op.get("value"));
-            }
+            if (outputValues) out.println("    value: " + op.get("value"));
             out.println("cell total size sum: " + op.get("total_size_sum"));
           }
         }
@@ -422,7 +386,6 @@ public class WALPrettyPrinter {
     options.addOption("h", "help", false, "Output help message");
     options.addOption("j", "json", false, "Output JSON");
     options.addOption("p", "printvals", false, "Print values");
-    options.addOption("t", "table", true, "Table name to filter by.");
     options.addOption("r", "region", true,
         "Region to filter by. Pass encoded region name; e.g. '9192caead6a5a20acb4454ffbc79fa14'");
     options.addOption("s", "sequence", true,
@@ -442,29 +405,21 @@ public class WALPrettyPrinter {
         System.exit(-1);
       }
       // configure the pretty printer using command line options
-      if (cmd.hasOption("p")) {
+      if (cmd.hasOption("p"))
         printer.enableValues();
-      }
-      if (cmd.hasOption("j")) {
+      if (cmd.hasOption("j"))
         printer.enableJSON();
-      }
-      if (cmd.hasOption("t")) {
-        printer.setTableFilter(cmd.getOptionValue("t"));
-      }
-      if (cmd.hasOption("r")) {
+      if (cmd.hasOption("r"))
         printer.setRegionFilter(cmd.getOptionValue("r"));
-      }
-      if (cmd.hasOption("s")) {
+      if (cmd.hasOption("s"))
         printer.setSequenceFilter(Long.parseLong(cmd.getOptionValue("s")));
-      }
-      if (cmd.hasOption("w")) {
+      if (cmd.hasOption("w"))
         printer.setRowFilter(cmd.getOptionValue("w"));
-      }
       if (cmd.hasOption("g")) {
         printer.setPosition(Long.parseLong(cmd.getOptionValue("g")));
       }
     } catch (ParseException e) {
-      LOG.error("Failed to parse commandLine arguments", e);
+      e.printStackTrace();
       HelpFormatter formatter = new HelpFormatter();
       formatter.printHelp("HFile filename(s) ", options, true);
       System.exit(-1);
