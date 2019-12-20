@@ -478,6 +478,10 @@ public class WALSplitter {
         throw new RuntimeException(thrown);
       }
     }
+
+    public Throwable clearError(){
+      return thrown.getAndSet(null);
+    }
   }
 
   /**

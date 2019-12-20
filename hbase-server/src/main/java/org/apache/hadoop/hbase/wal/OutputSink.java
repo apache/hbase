@@ -91,6 +91,15 @@ public abstract class OutputSink {
     }
   }
 
+  public synchronized void restartWriterThreadsIfNeeded() {
+    for (WriterThread t : writerThreads) {
+      if (!t.isAlive()){
+        LOG.debug("restarting thread" + t);
+        t.start();
+      }
+    }
+  }
+
   /**
    * Update region's maximum edit log SeqNum.
    */
