@@ -540,7 +540,7 @@ public class RegionStates {
    * @return A clone of current assignments.
    */
   public Map<TableName, Map<ServerName, List<RegionInfo>>> getAssignmentsForBalancer(
-      TableStateManager tableStateManager, boolean isByTable) {
+    TableStateManager tableStateManager, List<ServerName> onlineServers, boolean isByTable) {
     final Map<TableName, Map<ServerName, List<RegionInfo>>> result = new HashMap<>();
     if (isByTable) {
       for (RegionStateNode node : regionsMap.values()) {
@@ -560,16 +560,21 @@ public class RegionStates {
       }
       // Add online servers with no assignment for the table.
       for (Map<ServerName, List<RegionInfo>> table : result.values()) {
-        for (ServerName serverName : serverMap.keySet()) {
+        for (ServerName serverName : onlineServers) {
           table.putIfAbsent(serverName, new ArrayList<>());
         }
       }
     } else {
       final HashMap<ServerName, List<RegionInfo>> ensemble = new HashMap<>(serverMap.size());
-      for (ServerStateNode serverNode : serverMap.values()) {
-        ensemble.put(serverNode.getServerName(), serverNode.getRegionInfoList().stream()
-          .filter(region -> !isTableDisabled(tableStateManager, region.getTable()))
-          .collect(Collectors.toList()));
+      for (ServerName serverName : onlineServers) {
+        ServerStateNode serverNode = serverMap.get(serverName);
+        if (serverNode != null) {
+          ensemble.put(serverNode.getServerName(), serverNode.getRegionInfoList().stream()
+            .filter(region -> !isTableDisabled(tableStateManager, region.getTable()))
+            .collect(Collectors.toList()));
+        } else {
+          ensemble.put(serverName, new ArrayList<>());
+        }
       }
       // Use a fake table name to represent the whole cluster's assignments
       result.put(HConstants.ENSEMBLE_TABLE_NAME, ensemble);
