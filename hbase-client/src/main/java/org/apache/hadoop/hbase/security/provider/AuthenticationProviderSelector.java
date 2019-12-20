@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.security.provider;
 
 import java.util.Collection;
-import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;

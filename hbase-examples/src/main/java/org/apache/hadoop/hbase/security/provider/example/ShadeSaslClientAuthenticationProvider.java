@@ -62,7 +62,7 @@ public class ShadeSaslClientAuthenticationProvider extends ShadeSaslAuthenticati
     private final char[] password;
     public ShadeSaslClientCallbackHandler(
         Token<? extends TokenIdentifier> token) throws IOException {
-      this.username = Bytes.toString(token.decodeIdentifier().getBytes());
+      this.username = token.decodeIdentifier().getUser().getUserName();
       this.password = Bytes.toString(token.getPassword()).toCharArray();
     }
 

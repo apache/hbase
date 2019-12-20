@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hbase.security.provider.example;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -30,14 +33,25 @@ import javax.security.sasl.AuthorizeCallback;
 import javax.security.sasl.RealmCallback;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.security.provider.AttemptingUserProvidingSaslServer;
 import org.apache.hadoop.hbase.security.provider.SaslServerAuthenticationProvider;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ShadeSaslServerAuthenticationProvider extends ShadeSaslAuthenticationProvider
     implements SaslServerAuthenticationProvider {
+  private static final Logger LOG = LoggerFactory.getLogger(
+      ShadeSaslServerAuthenticationProvider.class);
+
+  public static final String PASSWORD_FILE_KEY = "hbase.security.shade.password.file";
+  static final char SEPARATOR = '=';
 
   private AtomicReference<UserGroupInformation> attemptingUser = new AtomicReference<>(null);
 
@@ -45,9 +59,55 @@ public class ShadeSaslServerAuthenticationProvider extends ShadeSaslAuthenticati
   public AttemptingUserProvidingSaslServer createServer(Configuration conf,
       SecretManager<TokenIdentifier> secretManager, Map<String, String> saslProps)
           throws IOException {
+    Map<String,char[]> passwordDatabase = readPasswordDB(conf);
+
     return new AttemptingUserProvidingSaslServer(
         new SaslPlainServer(
-            new ShadeSaslServerCallbackHandler(attemptingUser)), () -> attemptingUser.get());
+            new ShadeSaslServerCallbackHandler(attemptingUser, passwordDatabase)),
+        () -> attemptingUser.get());
+  }
+
+  Map<String,char[]> readPasswordDB(Configuration conf) throws IOException {
+    String passwordFileName = conf.get(PASSWORD_FILE_KEY);
+    if (passwordFileName == null) {
+      throw new RuntimeException(PASSWORD_FILE_KEY
+          + " is not defined in configuration, cannot use this implementation");
+    }
+
+    Path passwordFile = new Path(passwordFileName);
+    FileSystem fs = passwordFile.getFileSystem(conf);
+    if (!fs.exists(passwordFile)) {
+      throw new RuntimeException("Configured password file does not exist: " + passwordFile);
+    }
+
+    Map<String,char[]> passwordDb = new HashMap<>();
+    try (FSDataInputStream fdis = fs.open(passwordFile);
+        BufferedReader reader = new BufferedReader(new InputStreamReader(fdis))) {
+      String line = null;
+      int offset = 0;
+      while ((line = reader.readLine()) != null) {
+        line.trim();
+        String[] parts = StringUtils.split(line, SEPARATOR);
+        if (parts.length < 2) {
+          LOG.warn("Password file contains invalid record on line {}, skipping", offset + 1);
+          continue;
+        }
+
+        final String username = parts[0];
+        StringBuilder builder = new StringBuilder();
+        for (int i = 1; i < parts.length; i++) {
+          if (builder.length() > 0) {
+            builder.append(SEPARATOR);
+          }
+          builder.append(parts[i]);
+        }
+
+        passwordDb.put(username, builder.toString().toCharArray());
+        offset++;
+      }
+    }
+
+    return passwordDb;
   }
 
   @Override
@@ -63,9 +123,12 @@ public class ShadeSaslServerAuthenticationProvider extends ShadeSaslAuthenticati
 
   static class ShadeSaslServerCallbackHandler implements CallbackHandler {
     private final AtomicReference<UserGroupInformation> attemptingUser;
+    private final Map<String,char[]> passwordDatabase;
 
-    public ShadeSaslServerCallbackHandler(AtomicReference<UserGroupInformation> attemptingUser) {
+    public ShadeSaslServerCallbackHandler(AtomicReference<UserGroupInformation> attemptingUser,
+        Map<String,char[]> passwordDatabase) {
       this.attemptingUser = attemptingUser;
+      this.passwordDatabase = passwordDatabase;
     }
 
     @Override public void handle(Callback[] callbacks) throws UnsupportedCallbackException {
@@ -88,12 +151,17 @@ public class ShadeSaslServerAuthenticationProvider extends ShadeSaslAuthenticati
 
       if (nc != null && pc != null) {
         String username = nc.getName();
-        UserGroupInformation ugi = createUgiForRemoteUser(username);
-        char[] password = pc.getPassword();
 
+        UserGroupInformation ugi = createUgiForRemoteUser(username);
         attemptingUser.set(ugi);
 
-        // TODO validate
+        char[] actualPassword = passwordDatabase.get(username);
+        if (actualPassword == null) {
+          // How should we gracefully fail the authentication?
+          throw new RuntimeException("Could not obtain password for user");
+        }
+
+        pc.setPassword(actualPassword);
       }
 
       if (ac != null) {
@@ -114,5 +182,4 @@ public class ShadeSaslServerAuthenticationProvider extends ShadeSaslAuthenticati
       return ugi;
     }
   }
-
 }
