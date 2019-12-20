@@ -466,20 +466,31 @@ public class ServerCrashProcedure
       RegionStateNode regionNode = am.getRegionStates().getOrCreateRegionStateNode(region);
       regionNode.lock();
       try {
+        // This is possible, as when a server is dead, TRSP will fail to schedule a RemoteProcedure
+        // to us and then try to assign the region to a new RS. And before it has updated the region
+        // location to the new RS, we may have already called the am.getRegionsOnServer so we will
+        // consider the region is still on us. And then before we arrive here, the TRSP could have
+        // updated the region location, or even finished itself, so the region is no longer on us
+        // any more, we should not try to assign it again. Please see HBASE-23594 for more details.
+        if (!serverName.equals(regionNode.getRegionLocation())) {
+          LOG.info("{} found a region {} which is no longer on us {}, give up assigning...", this,
+            regionNode, serverName);
+          continue;
+        }
         if (regionNode.getProcedure() != null) {
           LOG.info("{} found RIT {}; {}", this, regionNode.getProcedure(), regionNode);
           regionNode.getProcedure().serverCrashed(env, regionNode, getServerName());
-        } else {
-          if (env.getMasterServices().getTableStateManager().isTableState(regionNode.getTable(),
-            TableState.State.DISABLING, TableState.State.DISABLED)) {
-            continue;
-          }
-          // force to assign to a new candidate server, see HBASE-23035 for more details.
-          TransitRegionStateProcedure proc =
-              TransitRegionStateProcedure.assign(env, region, true, null);
-          regionNode.setProcedure(proc);
-          addChildProcedure(proc);
+          continue;
         }
+        if (env.getMasterServices().getTableStateManager().isTableState(regionNode.getTable(),
+          TableState.State.DISABLING, TableState.State.DISABLED)) {
+          continue;
+        }
+        // force to assign to a new candidate server, see HBASE-23035 for more details.
+        TransitRegionStateProcedure proc =
+          TransitRegionStateProcedure.assign(env, region, true, null);
+        regionNode.setProcedure(proc);
+        addChildProcedure(proc);
       } finally {
         regionNode.unlock();
       }
