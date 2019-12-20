@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.junit.After;
@@ -46,11 +47,11 @@ import org.junit.rules.TestName;
  * Test balancer with disabled table
  */
 @Category({ MasterTests.class, LargeTests.class })
-public class TestBalancerWithDisabledTable {
+public class TestBalancer {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestBalancerWithDisabledTable.class);
+      HBaseClassTestRule.forClass(TestBalancer.class);
 
   private final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -78,14 +79,21 @@ public class TestBalancerWithDisabledTable {
 
     HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
     AssignmentManager assignmentManager = master.getAssignmentManager();
+    RegionStates regionStates = assignmentManager.getRegionStates();
+    ServerName sn1 = ServerName.parseServerName("asf903.gq1.ygridcore.net,52690,1517835491385");
+    regionStates.getOrCreateServer(sn1);
+
     TableStateManager tableStateManager = master.getTableStateManager();
+    ServerManager serverManager = master.getServerManager();
     Map<TableName, Map<ServerName, List<RegionInfo>>> assignments =
-      assignmentManager.getRegionStates().getAssignmentsForBalancer(tableStateManager, true);
+      assignmentManager.getRegionStates()
+        .getAssignmentsForBalancer(tableStateManager, serverManager.getOnlineServersList(), true);
     assertFalse(assignments.containsKey(disableTableName));
     assertTrue(assignments.containsKey(tableName));
+    assertFalse(assignments.get(tableName).containsKey(sn1));
 
-    assignments =
-      assignmentManager.getRegionStates().getAssignmentsForBalancer(tableStateManager, false);
+    assignments = assignmentManager.getRegionStates()
+      .getAssignmentsForBalancer(tableStateManager, serverManager.getOnlineServersList(), false);
     Map<TableName, Map<ServerName, List<RegionInfo>>> tableNameMap = new HashMap<>();
     for (Map.Entry<ServerName, List<RegionInfo>> entry : assignments
       .get(HConstants.ENSEMBLE_TABLE_NAME).entrySet()) {
@@ -100,5 +108,6 @@ public class TestBalancerWithDisabledTable {
     }
     assertFalse(tableNameMap.containsKey(disableTableName));
     assertTrue(tableNameMap.containsKey(tableName));
+    assertFalse(tableNameMap.get(tableName).containsKey(sn1));
   }
 }
