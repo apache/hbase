@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.DummyAsyncRegistry;
+import org.apache.hadoop.hbase.client.DummyConnectionRegistry;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
 import org.apache.hadoop.hbase.master.cleaner.DirScanPool;
@@ -92,7 +92,7 @@ public class TestZooKeeperTableArchiveClient {
   private static RegionServerServices rss;
   private static DirScanPool POOL;
 
-  public static final class MockRegistry extends DummyAsyncRegistry {
+  public static final class MockRegistry extends DummyConnectionRegistry {
 
     public MockRegistry(Configuration conf) {
     }
@@ -111,7 +111,7 @@ public class TestZooKeeperTableArchiveClient {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniZKCluster();
     UTIL.getConfiguration().setClass("hbase.client.registry.impl", MockRegistry.class,
-      DummyAsyncRegistry.class);
+      DummyConnectionRegistry.class);
     CONNECTION = ConnectionFactory.createConnection(UTIL.getConfiguration());
     archivingClient = new ZKTableArchiveClient(UTIL.getConfiguration(), CONNECTION);
     // make hfile archiving node so we can archive files

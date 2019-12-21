@@ -38,14 +38,14 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 @InterfaceAudience.Private
 class AsyncMetaRegionLocator {
 
-  private final AsyncRegistry registry;
+  private final ConnectionRegistry registry;
 
   private final AtomicReference<RegionLocations> metaRegionLocations = new AtomicReference<>();
 
   private final AtomicReference<CompletableFuture<RegionLocations>> metaRelocateFuture =
     new AtomicReference<>();
 
-  AsyncMetaRegionLocator(AsyncRegistry registry) {
+  AsyncMetaRegionLocator(ConnectionRegistry registry) {
     this.registry = registry;
   }
 
@@ -60,7 +60,7 @@ class AsyncMetaRegionLocator {
    */
   CompletableFuture<RegionLocations> getRegionLocations(int replicaId, boolean reload) {
     return ConnectionUtils.getOrFetch(metaRegionLocations, metaRelocateFuture, reload,
-      registry::getMetaRegionLocation, locs -> isGood(locs, replicaId), "meta region location");
+      registry::getMetaRegionLocations, locs -> isGood(locs, replicaId), "meta region location");
   }
 
   private HRegionLocation getCacheLocation(HRegionLocation loc) {
