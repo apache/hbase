@@ -51,6 +51,7 @@ import org.slf4j.LoggerFactory;
 public class StoreFileInfo {
   private static final Logger LOG = LoggerFactory.getLogger(StoreFileInfo.class);
 
+  private FileStatus localStatus;
   /**
    * A non-capture group, for hfiles, so that this can be embedded.
    * HFiles are uuid ([0-9a-z]+). Bulk loaded hfiles has (_SeqId_[0-9]+_) has suffix.
@@ -108,6 +109,7 @@ public class StoreFileInfo {
   private RegionCoprocessorHost coprocessorHost;
 
   // timestamp on when the file was created, is 0 and ignored for reference or link files
+  // the before timestamp is shown as above ! Now i change to use the createdTimestamp of reference or link files , will it create some problem later ?
   private long createdTimestamp;
 
   private long size;
@@ -168,9 +170,8 @@ public class StoreFileInfo {
         this.createdTimestamp = fileStatus.getModificationTime();
         this.size = fileStatus.getLen();
       } else {
-        FileStatus fStatus = fs.getFileStatus(initialPath);
-        this.createdTimestamp = fStatus.getModificationTime();
-        this.size = fStatus.getLen();
+        this.createdTimestamp = this.getFileStatus().getModificationTime();
+        this.size = this.getFileStatus().getLen();
       }
       this.reference = null;
       this.link = null;
@@ -296,7 +297,7 @@ public class StoreFileInfo {
     if (this.link != null) {
       // HFileLink
       in = new FSDataInputStreamWrapper(fs, this.link, doDropBehind, readahead);
-      status = this.link.getFileStatus(fs);
+  //    status = this.link.getFileStatus(fs);
     } else if (this.reference != null) {
       // HFile Reference
       Path referencePath = getReferredToFile(this.getPath());
@@ -310,11 +311,12 @@ public class StoreFileInfo {
         newFnfe.initCause(fnfe);
         throw newFnfe;
       }
-      status = fs.getFileStatus(referencePath);
+  //    status = fs.getFileStatus(referencePath);
     } else {
       in = new FSDataInputStreamWrapper(fs, this.getPath(), doDropBehind, readahead);
-      status = fs.getFileStatus(initialPath);
+  //   status = fs.getFileStatus(initialPath);
     }
+    status = this.getFileStatus();
     long length = status.getLen();
     ReaderContextBuilder contextBuilder = new ReaderContextBuilder()
         .withInputStreamWrapper(in)
@@ -370,13 +372,16 @@ public class StoreFileInfo {
    */
   public FileStatus getReferencedFileStatus(final FileSystem fs) throws IOException {
     FileStatus status;
+    if(this.localStatus !=null) return this.localStatus;
     if (this.reference != null) {
       if (this.link != null) {
         FileNotFoundException exToThrow = null;
         for (int i = 0; i < this.link.getLocations().length; i++) {
           // HFileLink Reference
           try {
-            return link.getFileStatus(fs);
+            this.localStatus = link.getFileStatus(fs);
+            status = this.localStatus;
+            return status;
           } catch (FileNotFoundException ex) {
             // try the other location
             exToThrow = ex;
@@ -386,7 +391,8 @@ public class StoreFileInfo {
       } else {
         // HFile Reference
         Path referencePath = getReferredToFile(this.getPath());
-        status = fs.getFileStatus(referencePath);
+        this.localStatus = fs.getFileStatus(referencePath);
+        status = this.localStatus;
       }
     } else {
       if (this.link != null) {
@@ -394,7 +400,9 @@ public class StoreFileInfo {
         for (int i = 0; i < this.link.getLocations().length; i++) {
           // HFileLink
           try {
-            return link.getFileStatus(fs);
+            this.localStatus = link.getFileStatus(fs);
+            status = this.localStatus;
+            return status;
           } catch (FileNotFoundException ex) {
             // try the other location
             exToThrow = ex;
@@ -402,7 +410,8 @@ public class StoreFileInfo {
         }
         throw exToThrow;
       } else {
-        status = fs.getFileStatus(initialPath);
+        this.localStatus = fs.getFileStatus(initialPath);
+        status = this.localStatus;
       }
     }
     return status;
