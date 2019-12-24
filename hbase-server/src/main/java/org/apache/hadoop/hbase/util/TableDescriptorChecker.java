@@ -63,8 +63,12 @@ public final class TableDescriptorChecker {
    * Checks whether the table conforms to some sane limits, and configured
    * values (compression, etc) work. Throws an exception if something is wrong.
    */
-  public static void sanityCheck(final Configuration conf, final TableDescriptor td)
+  public static void sanityCheck(final Configuration c, final TableDescriptor td)
       throws IOException {
+    CompoundConfiguration conf = new CompoundConfiguration()
+      .add(c)
+      .addBytesMap(td.getValues());
+
     // Setting this to true logs the warning instead of throwing exception
     boolean logWarn = false;
     if (!conf.getBoolean(TABLE_SANITY_CHECKS, DEFAULT_TABLE_SANITY_CHECKS)) {
@@ -276,21 +280,21 @@ public final class TableDescriptorChecker {
     }
   }
 
-  private static void checkCompression(final TableDescriptor td) throws IOException {
+  public static void checkCompression(final TableDescriptor td) throws IOException {
     for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
       CompressionTest.testCompression(cfd.getCompressionType());
       CompressionTest.testCompression(cfd.getCompactionCompressionType());
     }
   }
 
-  private static void checkEncryption(final Configuration conf, final TableDescriptor td)
+  public static void checkEncryption(final Configuration conf, final TableDescriptor td)
       throws IOException {
     for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
       EncryptionTest.testEncryption(conf, cfd.getEncryptionType(), cfd.getEncryptionKey());
     }
   }
 
-  private static void checkClassLoading(final Configuration conf, final TableDescriptor td)
+  public static void checkClassLoading(final Configuration conf, final TableDescriptor td)
       throws IOException {
     RegionSplitPolicy.getSplitPolicyClass(td, conf);
     RegionCoprocessorHost.testTableCoprocessorAttrs(conf, td);

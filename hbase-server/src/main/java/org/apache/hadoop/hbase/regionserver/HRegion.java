@@ -168,6 +168,7 @@ import org.apache.hadoop.hbase.util.HashedBytes;
 import org.apache.hadoop.hbase.util.NonceKey;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
+import org.apache.hadoop.hbase.util.TableDescriptorChecker;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -7329,12 +7330,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   throws IOException {
     try {
       // Refuse to open the region if we are missing local compression support
-      checkCompressionCodecs();
+      TableDescriptorChecker.checkCompression(htableDescriptor);
       // Refuse to open the region if encryption configuration is incorrect or
       // codec support is missing
-      checkEncryption();
+      TableDescriptorChecker.checkEncryption(conf, htableDescriptor);
       // Refuse to open the region if a required class cannot be loaded
-      checkClassLoading();
+      TableDescriptorChecker.checkClassLoading(conf, htableDescriptor);
       this.openSeqNum = initialize(reporter);
       this.mvcc.advanceTo(openSeqNum);
       // The openSeqNum must be increased every time when a region is assigned, as we rely on it to
@@ -7403,25 +7404,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     HRegion r = HRegion.newHRegion(tableDir, wal, fs, conf, info, htd, null);
     r.initializeWarmup(reporter);
-  }
-
-
-  private void checkCompressionCodecs() throws IOException {
-    for (ColumnFamilyDescriptor fam: this.htableDescriptor.getColumnFamilies()) {
-      CompressionTest.testCompression(fam.getCompressionType());
-      CompressionTest.testCompression(fam.getCompactionCompressionType());
-    }
-  }
-
-  private void checkEncryption() throws IOException {
-    for (ColumnFamilyDescriptor fam: this.htableDescriptor.getColumnFamilies()) {
-      EncryptionTest.testEncryption(conf, fam.getEncryptionType(), fam.getEncryptionKey());
-    }
-  }
-
-  private void checkClassLoading() throws IOException {
-    RegionSplitPolicy.getSplitPolicyClass(this.htableDescriptor, conf);
-    RegionCoprocessorHost.testTableCoprocessorAttrs(conf, this.htableDescriptor);
   }
 
   /**
