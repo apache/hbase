@@ -1176,8 +1176,7 @@ public class AssignmentManager {
         if (rsn.getState() != State.OPEN) {
           continue; // Opportunistic check, should quickly skip RITs, offline tables, etc.
         }
-        // Should not acquire region stat lock, this may block other important work,
-        // see HBASE-23613.
+        // Do not need to acquire region state lock as this is only for showing metrics.
         ServerName sn = rsn.getRegionLocation();
         State state = rsn.getState();
         if (state != State.OPEN) {
