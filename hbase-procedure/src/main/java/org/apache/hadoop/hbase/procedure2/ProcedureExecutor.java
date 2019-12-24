@@ -217,6 +217,11 @@ public class ProcedureExecutor<TEnvironment> {
    */
   private TimeoutExecutorThread<TEnvironment> timeoutExecutor;
 
+  /**
+   * Use a dedicated thread for executing WorkerMonitor.
+   */
+  private TimeoutExecutorThread<TEnvironment> workerMonitorExecutor;
+
   private int corePoolSize;
   private int maxPoolSize;
 
@@ -560,7 +565,8 @@ public class ProcedureExecutor<TEnvironment> {
         corePoolSize, maxPoolSize);
 
     this.threadGroup = new ThreadGroup("PEWorkerGroup");
-    this.timeoutExecutor = new TimeoutExecutorThread<>(this, threadGroup);
+    this.timeoutExecutor = new TimeoutExecutorThread<>(this, threadGroup, "ProcExecTimeout");
+    this.workerMonitorExecutor = new TimeoutExecutorThread<>(this, threadGroup, "WorkerMonitor");
 
     // Create the workers
     workerId.set(0);
@@ -604,12 +610,13 @@ public class ProcedureExecutor<TEnvironment> {
     // Start the executors. Here we must have the lastProcId set.
     LOG.trace("Start workers {}", workerThreads.size());
     timeoutExecutor.start();
+    workerMonitorExecutor.start();
     for (WorkerThread worker: workerThreads) {
       worker.start();
     }
 
     // Internal chores
-    timeoutExecutor.add(new WorkerMonitor());
+    workerMonitorExecutor.add(new WorkerMonitor());
 
     // Add completed cleaner chore
     addChore(new CompletedProcedureCleaner<>(conf, store, procExecutionLock, completed,
@@ -624,6 +631,7 @@ public class ProcedureExecutor<TEnvironment> {
     LOG.info("Stopping");
     scheduler.stop();
     timeoutExecutor.sendStopSignal();
+    workerMonitorExecutor.sendStopSignal();
   }
 
   @VisibleForTesting
@@ -632,6 +640,8 @@ public class ProcedureExecutor<TEnvironment> {
 
     // stop the timeout executor
     timeoutExecutor.awaitTermination();
+    // stop the work monitor executor
+    workerMonitorExecutor.awaitTermination();
 
     // stop the worker threads
     for (WorkerThread worker: workerThreads) {
