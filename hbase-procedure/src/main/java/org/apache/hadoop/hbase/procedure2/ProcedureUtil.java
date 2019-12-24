@@ -370,4 +370,17 @@ public final class ProcedureUtil {
       .setMaxSleepTime(maxSleepTimeMs).setBackoffPolicy(new ExponentialBackoffPolicyWithLimit());
     return new RetryCounter(retryConfig);
   }
+
+  public static boolean isFinished(ProcedureProtos.Procedure proc) {
+    if (!proc.hasParentId()) {
+      switch (proc.getState()) {
+        case ROLLEDBACK:
+        case SUCCESS:
+          return true;
+        default:
+          break;
+      }
+    }
+    return false;
+  }
 }

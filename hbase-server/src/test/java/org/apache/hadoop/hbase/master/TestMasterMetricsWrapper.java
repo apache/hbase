@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.List;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -98,7 +98,9 @@ public class TestMasterMetricsWrapper {
     }
     assertEquals(regionServerCount - 1, info.getNumRegionServers());
     assertEquals(1, info.getNumDeadRegionServers());
-    assertEquals(1, info.getNumWALFiles());
+    // now we do not expose this information as WALProcedureStore is not the only ProcedureStore
+    // implementation any more.
+    assertEquals(0, info.getNumWALFiles());
   }
 
   @Test

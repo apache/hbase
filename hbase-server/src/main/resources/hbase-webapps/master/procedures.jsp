@@ -30,21 +30,12 @@
   import="org.apache.hadoop.hbase.procedure2.LockedResource"
   import="org.apache.hadoop.hbase.procedure2.Procedure"
   import="org.apache.hadoop.hbase.procedure2.ProcedureExecutor"
-  import="org.apache.hadoop.hbase.procedure2.store.wal.ProcedureWALFile"
-  import="org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore"
   import="org.apache.hadoop.hbase.procedure2.util.StringUtils"
   import="org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix"
 %>
 <%
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
   ProcedureExecutor<MasterProcedureEnv> procExecutor = master.getMasterProcedureExecutor();
-  WALProcedureStore walStore = master.getWalProcedureStore();
-
-  ArrayList<WALProcedureStore.SyncMetrics> syncMetricsBuff = walStore.getSyncMetrics();
-  long millisToNextRoll = walStore.getMillisToNextPeriodicRoll();
-  long millisFromLastRoll = walStore.getMillisFromLastRoll();
-  ArrayList<ProcedureWALFile> procedureWALFiles = walStore.getActiveLogs();
-  Set<ProcedureWALFile> corruptedWALFiles = walStore.getCorruptedLogs();
   List<Procedure<MasterProcedureEnv>> procedures = procExecutor.getProcedures();
   Collections.sort(procedures, new Comparator<Procedure>() {
     @Override
@@ -159,109 +150,4 @@
   <% } %>
 </div>
 <br />
-<div class="container-fluid content">
-  <div class="row">
-    <div class="page-header">
-      <h2>Procedure WAL State</h2>
-    </div>
-  </div>
-  <div class="tabbable">
-    <ul class="nav nav-pills">
-      <li class="active">
-        <a href="#tab_WALFiles" data-toggle="tab">WAL files</a>
-      </li>
-      <li class="">
-        <a href="#tab_WALFilesCorrupted" data-toggle="tab">Corrupted WAL files</a>
-      </li>
-      <li class="">
-        <a href="#tab_WALRollTime" data-toggle="tab">WAL roll time</a>
-      </li>
-      <li class="">
-        <a href="#tab_SyncStats" data-toggle="tab">Sync stats</a>
-      </li>
-    </ul>
-    <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
-      <div class="tab-pane active" id="tab_WALFiles">
-        <% if (procedureWALFiles != null && procedureWALFiles.size() > 0) { %>
-          <table class="table table-striped">
-            <tr>
-              <th>LogID</th>
-              <th>Size</th>
-              <th>Timestamp</th>
-              <th>Path</th>
-            </tr>
-            <% for (int i = procedureWALFiles.size() - 1; i >= 0; --i) { %>
-            <%    ProcedureWALFile pwf = procedureWALFiles.get(i); %>
-            <tr>
-              <td> <%= pwf.getLogId() %></td>
-              <td> <%= TraditionalBinaryPrefix.long2String(pwf.getSize(), "B", 1) %> </td>
-              <td> <%= new Date(pwf.getTimestamp()) %> </td>
-              <td> <%= escapeXml(pwf.toString()) %> </td>
-            </tr>
-            <% } %>
-          </table>
-        <% } else {%>
-          <p> No WAL files</p>
-        <% } %>
-      </div>
-      <div class="tab-pane" id="tab_WALFilesCorrupted">
-      <% if (corruptedWALFiles != null && corruptedWALFiles.size() > 0) { %>
-        <table class="table table-striped">
-          <tr>
-            <th>LogID</th>
-            <th>Size</th>
-            <th>Timestamp</th>
-            <th>Path</th>
-          </tr>
-          <% for (ProcedureWALFile cwf:corruptedWALFiles) { %>
-          <tr>
-            <td> <%= cwf.getLogId() %></td>
-            <td> <%= TraditionalBinaryPrefix.long2String(cwf.getSize(), "B", 1) %> </td>
-            <td> <%= new Date(cwf.getTimestamp()) %> </td>
-            <td> <%= escapeXml(cwf.toString()) %> </td>
-          </tr>
-          <% } %>
-          </table>
-      <% } else {%>
-        <p> No corrupted WAL files</p>
-      <% } %>
-      </div>
-      <div class="tab-pane" id="tab_WALRollTime">
-        <table class="table table-striped">
-          <tr>
-            <th> Milliseconds to next roll</th>
-            <th> Milliseconds from last roll</th>
-          </tr>
-          <tr>
-            <td> <%=StringUtils.humanTimeDiff(millisToNextRoll)  %></td>
-            <td> <%=StringUtils.humanTimeDiff(millisFromLastRoll) %></td>
-          </tr>
-        </table>
-      </div>
-      <div class="tab-pane" id="tab_SyncStats">
-        <table class="table table-striped">
-          <tr>
-            <th> Time</th>
-            <th> Sync Wait</th>
-            <th> Last num of synced entries</th>
-            <th> Total Synced</th>
-            <th> Synced per second</th>
-          </tr>
-          <% for (int i = syncMetricsBuff.size() - 1; i >= 0; --i) { %>
-          <%    WALProcedureStore.SyncMetrics syncMetrics = syncMetricsBuff.get(i); %>
-          <tr>
-            <td> <%= new Date(syncMetrics.getTimestamp()) %></td>
-            <td> <%= StringUtils.humanTimeDiff(syncMetrics.getSyncWaitMs()) %></td>
-            <td> <%= syncMetrics.getSyncedEntries() %></td>
-            <td> <%= TraditionalBinaryPrefix.long2String(syncMetrics.getTotalSyncedBytes(), "B", 1) %></td>
-            <td> <%= TraditionalBinaryPrefix.long2String((long)syncMetrics.getSyncedPerSec(), "B", 1) %></td>
-          </tr>
-          <%} %>
-        </table>
-        </div>
-      </div>
-  </div>
-</div>
-<br />
-
 <jsp:include page="footer.jsp" />

@@ -15,13 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.procedure2.store;
+package org.apache.hadoop.hbase.procedure2.store.wal;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.hadoop.hbase.procedure2.Procedure;
-import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreTracker.DeleteState;
+import org.apache.hadoop.hbase.procedure2.store.wal.ProcedureStoreTracker.DeleteState;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
@@ -51,7 +51,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
  * For a non-partial BitSetNode, the initial modified value is 0 and deleted value is 1. For the
  * partial one, the initial modified value is 0 and the initial deleted value is also 0. In
  * {@link #unsetPartialFlag()} we will reset the deleted to 1 if it is not modified.
+ * @deprecated Since 2.3.0, will be removed in 4.0.0. Keep here only for rolling upgrading, now we
+ *             use the new region based procedure store.
  */
+@Deprecated
 @InterfaceAudience.Private
 class BitSetNode {
   private static final long WORD_MASK = 0xffffffffffffffffL;
