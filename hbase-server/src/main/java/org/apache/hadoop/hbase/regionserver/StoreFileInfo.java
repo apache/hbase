@@ -360,7 +360,7 @@ public class StoreFileInfo {
       return FSUtils.computeHDFSBlocksDistribution(fs, status, 0, status.getLen());
     }
   }
- 
+  
   /**
    * Get the {@link FileStatus} of the file referenced by this StoreFileInfo
    * @param fs The current file system to use.
@@ -376,8 +376,7 @@ public class StoreFileInfo {
           // HFileLink Reference
           try {
             this.localStatus = link.getFileStatus(fs);
-            status = this.localStatus;
-            return status;
+            return this.localStatus;
           } catch (FileNotFoundException ex) {
             // try the other location
             exToThrow = ex;
@@ -397,8 +396,7 @@ public class StoreFileInfo {
           // HFileLink
           try {
             this.localStatus = link.getFileStatus(fs);
-            status = this.localStatus;
-            return status;
+            return this.localStatus;
           } catch (FileNotFoundException ex) {
             // try the other location
             exToThrow = ex;
