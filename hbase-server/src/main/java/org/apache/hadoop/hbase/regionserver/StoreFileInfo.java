@@ -108,8 +108,7 @@ public class StoreFileInfo {
 
   private RegionCoprocessorHost coprocessorHost;
 
-  // timestamp on when the file was created, is 0 and ignored for reference or link files
-  // the before timestamp is shown as above ! Now i change to use the createdTimestamp of reference or link files , will it create some problem later ?
+  // change to use the createdTimestamp of reference or link files , will it create some problem later ?
   private long createdTimestamp;
 
   private long size;
@@ -297,7 +296,6 @@ public class StoreFileInfo {
     if (this.link != null) {
       // HFileLink
       in = new FSDataInputStreamWrapper(fs, this.link, doDropBehind, readahead);
-  //    status = this.link.getFileStatus(fs);
     } else if (this.reference != null) {
       // HFile Reference
       Path referencePath = getReferredToFile(this.getPath());
@@ -311,10 +309,8 @@ public class StoreFileInfo {
         newFnfe.initCause(fnfe);
         throw newFnfe;
       }
-  //    status = fs.getFileStatus(referencePath);
     } else {
       in = new FSDataInputStreamWrapper(fs, this.getPath(), doDropBehind, readahead);
-  //   status = fs.getFileStatus(initialPath);
     }
     status = this.getFileStatus();
     long length = status.getLen();
@@ -364,7 +360,7 @@ public class StoreFileInfo {
       return FSUtils.computeHDFSBlocksDistribution(fs, status, 0, status.getLen());
     }
   }
-
+ 
   /**
    * Get the {@link FileStatus} of the file referenced by this StoreFileInfo
    * @param fs The current file system to use.
@@ -372,7 +368,7 @@ public class StoreFileInfo {
    */
   public FileStatus getReferencedFileStatus(final FileSystem fs) throws IOException {
     FileStatus status;
-    if(this.localStatus !=null) return this.localStatus;
+    if(this.localStatus != null) {return this.localStatus;}
     if (this.reference != null) {
       if (this.link != null) {
         FileNotFoundException exToThrow = null;
