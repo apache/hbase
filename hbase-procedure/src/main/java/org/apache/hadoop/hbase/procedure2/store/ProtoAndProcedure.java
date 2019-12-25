@@ -15,32 +15,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.procedure2.store.wal;
+package org.apache.hadoop.hbase.procedure2.store;
 
-import org.apache.hadoop.hbase.HBaseIOException;
+import java.io.IOException;
+import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
+
 /**
- * Thrown when a procedure WAL is corrupted
- * @deprecated Since 2.3.0, will be removed in 4.0.0. Keep here only for rolling upgrading, now we
- *             use the new region based procedure store.
+ * when loading we will iterator the procedures twice, so use this class to cache the deserialized
+ * result to prevent deserializing multiple times.
  */
-@Deprecated
 @InterfaceAudience.Private
-public class CorruptedWALProcedureStoreException extends HBaseIOException {
+public class ProtoAndProcedure {
+  private final ProcedureProtos.Procedure proto;
 
-  private static final long serialVersionUID = -3407300445435898074L;
+  private Procedure<?> proc;
 
-  /** default constructor */
-  public CorruptedWALProcedureStoreException() {
-    super();
+  public ProtoAndProcedure(ProcedureProtos.Procedure proto) {
+    this.proto = proto;
   }
 
-  /**
-   * Constructor
-   * @param s message
-   */
-  public CorruptedWALProcedureStoreException(String s) {
-    super(s);
+  public Procedure<?> getProcedure() throws IOException {
+    if (proc == null) {
+      proc = ProcedureUtil.convertToProcedure(proto);
+    }
+    return proc;
+  }
+
+  public ProcedureProtos.Procedure getProto() {
+    return proto;
   }
 }

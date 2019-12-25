@@ -72,6 +72,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -237,18 +238,20 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static final String HBASE_MAX_CELL_SIZE_KEY = "hbase.server.keyvalue.maxsize";
   public static final int DEFAULT_MAX_CELL_SIZE = 10485760;
 
-  /**
-   * This is the global default value for durability. All tables/mutations not
-   * defining a durability or using USE_DEFAULT will default to this value.
-   */
-  private static final Durability DEFAULT_DURABILITY = Durability.SYNC_WAL;
-
   public static final String HBASE_REGIONSERVER_MINIBATCH_SIZE =
       "hbase.regionserver.minibatch.size";
   public static final int DEFAULT_HBASE_REGIONSERVER_MINIBATCH_SIZE = 20000;
 
   public static final String WAL_HSYNC_CONF_KEY = "hbase.wal.hsync";
   public static final boolean DEFAULT_WAL_HSYNC = false;
+
+  /**
+   * This is for for using HRegion as a local storage, where we may put the recovered edits in a
+   * special place. Once this is set, we will only replay the recovered edits under this directory
+   * and ignore the original replay directory configs.
+   */
+  public static final String SPECIAL_RECOVERED_EDITS_DIR =
+    "hbase.hregion.special.recovered.edits.dir";
 
   final AtomicBoolean closed = new AtomicBoolean(false);
 
@@ -4598,6 +4601,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return size.getHeapSize() + size.getOffHeapSize() > getMemStoreFlushSize();
   }
 
+  private void deleteRecoveredEdits(FileSystem fs, Iterable<Path> files) throws IOException {
+    for (Path file : files) {
+      if (!fs.delete(file, false)) {
+        LOG.error("Failed delete of {}", file);
+      } else {
+        LOG.debug("Deleted recovered.edits file={}", file);
+      }
+    }
+  }
+
   /**
    * Read the edits put under this region by wal splitting process.  Put
    * the recovered edits back up into this region.
@@ -4629,11 +4642,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * the maxSeqId for the store to be applied, else its skipped.
    * @return the sequence id of the last edit added to this region out of the
    * recovered edits log or <code>minSeqId</code> if nothing added from editlogs.
-   * @throws IOException
    */
-  protected long replayRecoveredEditsIfAny(Map<byte[], Long> maxSeqIdInStores,
-      final CancelableProgressable reporter, final MonitoredTask status)
-      throws IOException {
+  @VisibleForTesting
+  long replayRecoveredEditsIfAny(Map<byte[], Long> maxSeqIdInStores,
+    final CancelableProgressable reporter, final MonitoredTask status) throws IOException {
     long minSeqIdForTheRegion = -1;
     for (Long maxSeqIdInStore : maxSeqIdInStores.values()) {
       if (maxSeqIdInStore < minSeqIdForTheRegion || minSeqIdForTheRegion == -1) {
@@ -4641,63 +4653,74 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
     }
     long seqId = minSeqIdForTheRegion;
+    String specialRecoveredEditsDirStr = conf.get(SPECIAL_RECOVERED_EDITS_DIR);
+    if (org.apache.commons.lang3.StringUtils.isBlank(specialRecoveredEditsDirStr)) {
+      FileSystem walFS = getWalFileSystem();
+      FileSystem rootFS = getFilesystem();
+      Path wrongRegionWALDir = FSUtils.getWrongWALRegionDir(conf, getRegionInfo().getTable(),
+        getRegionInfo().getEncodedName());
+      Path regionWALDir = getWALRegionDir();
+      Path regionDir = FSUtils.getRegionDirFromRootDir(FSUtils.getRootDir(conf), getRegionInfo());
 
-    FileSystem walFS = getWalFileSystem();
-    FileSystem rootFS = getFilesystem();
-    Path wrongRegionWALDir = FSUtils.getWrongWALRegionDir(conf, getRegionInfo().getTable(),
-      getRegionInfo().getEncodedName());
-    Path regionWALDir = getWALRegionDir();
-    Path regionDir = FSUtils.getRegionDirFromRootDir(FSUtils.getRootDir(conf), getRegionInfo());
-
-    // We made a mistake in HBASE-20734 so we need to do this dirty hack...
-    NavigableSet<Path> filesUnderWrongRegionWALDir =
-      WALSplitUtil.getSplitEditFilesSorted(walFS, wrongRegionWALDir);
-    seqId = Math.max(seqId, replayRecoveredEditsForPaths(minSeqIdForTheRegion, walFS,
-      filesUnderWrongRegionWALDir, reporter, regionDir));
-    // This is to ensure backwards compatability with HBASE-20723 where recovered edits can appear
-    // under the root dir even if walDir is set.
-    NavigableSet<Path> filesUnderRootDir = Collections.emptyNavigableSet();
-    if (!regionWALDir.equals(regionDir)) {
-      filesUnderRootDir = WALSplitUtil.getSplitEditFilesSorted(rootFS, regionDir);
-      seqId = Math.max(seqId, replayRecoveredEditsForPaths(minSeqIdForTheRegion, rootFS,
-        filesUnderRootDir, reporter, regionDir));
-    }
-
-    NavigableSet<Path> files = WALSplitUtil.getSplitEditFilesSorted(walFS, regionWALDir);
-    seqId = Math.max(seqId, replayRecoveredEditsForPaths(minSeqIdForTheRegion, walFS,
-        files, reporter, regionWALDir));
-
-    if (seqId > minSeqIdForTheRegion) {
-      // Then we added some edits to memory. Flush and cleanup split edit files.
-      internalFlushcache(null, seqId, stores.values(), status, false, FlushLifeCycleTracker.DUMMY);
-    }
-    // Now delete the content of recovered edits. We're done w/ them.
-    if (files.size() > 0 && this.conf.getBoolean("hbase.region.archive.recovered.edits", false)) {
-      // For debugging data loss issues!
-      // If this flag is set, make use of the hfile archiving by making recovered.edits a fake
-      // column family. Have to fake out file type too by casting our recovered.edits as storefiles
-      String fakeFamilyName = WALSplitUtil.getRegionDirRecoveredEditsDir(regionWALDir).getName();
-      Set<HStoreFile> fakeStoreFiles = new HashSet<>(files.size());
-      for (Path file : files) {
-        fakeStoreFiles.add(new HStoreFile(walFS, file, this.conf, null, null, true));
+      // We made a mistake in HBASE-20734 so we need to do this dirty hack...
+      NavigableSet<Path> filesUnderWrongRegionWALDir =
+        WALSplitUtil.getSplitEditFilesSorted(walFS, wrongRegionWALDir);
+      seqId = Math.max(seqId, replayRecoveredEditsForPaths(minSeqIdForTheRegion, walFS,
+        filesUnderWrongRegionWALDir, reporter, regionDir));
+      // This is to ensure backwards compatability with HBASE-20723 where recovered edits can appear
+      // under the root dir even if walDir is set.
+      NavigableSet<Path> filesUnderRootDir = Collections.emptyNavigableSet();
+      if (!regionWALDir.equals(regionDir)) {
+        filesUnderRootDir = WALSplitUtil.getSplitEditFilesSorted(rootFS, regionDir);
+        seqId = Math.max(seqId, replayRecoveredEditsForPaths(minSeqIdForTheRegion, rootFS,
+          filesUnderRootDir, reporter, regionDir));
       }
-      getRegionWALFileSystem().archiveRecoveredEdits(fakeFamilyName, fakeStoreFiles);
+
+      NavigableSet<Path> files = WALSplitUtil.getSplitEditFilesSorted(walFS, regionWALDir);
+      seqId = Math.max(seqId,
+        replayRecoveredEditsForPaths(minSeqIdForTheRegion, walFS, files, reporter, regionWALDir));
+      if (seqId > minSeqIdForTheRegion) {
+        // Then we added some edits to memory. Flush and cleanup split edit files.
+        internalFlushcache(null, seqId, stores.values(), status, false,
+          FlushLifeCycleTracker.DUMMY);
+      }
+      // Now delete the content of recovered edits. We're done w/ them.
+      if (files.size() > 0 && this.conf.getBoolean("hbase.region.archive.recovered.edits", false)) {
+        // For debugging data loss issues!
+        // If this flag is set, make use of the hfile archiving by making recovered.edits a fake
+        // column family. Have to fake out file type too by casting our recovered.edits as
+        // storefiles
+        String fakeFamilyName = WALSplitUtil.getRegionDirRecoveredEditsDir(regionWALDir).getName();
+        Set<HStoreFile> fakeStoreFiles = new HashSet<>(files.size());
+        for (Path file : files) {
+          fakeStoreFiles.add(new HStoreFile(walFS, file, this.conf, null, null, true));
+        }
+        getRegionWALFileSystem().archiveRecoveredEdits(fakeFamilyName, fakeStoreFiles);
+      } else {
+        deleteRecoveredEdits(walFS, Iterables.concat(files, filesUnderWrongRegionWALDir));
+        deleteRecoveredEdits(rootFS, filesUnderRootDir);
+      }
     } else {
-      for (Path file : Iterables.concat(files, filesUnderWrongRegionWALDir)) {
-        if (!walFS.delete(file, false)) {
-          LOG.error("Failed delete of {}", file);
-        } else {
-          LOG.debug("Deleted recovered.edits file={}", file);
+      Path recoveredEditsDir = new Path(specialRecoveredEditsDirStr);
+      FileSystem fs = recoveredEditsDir.getFileSystem(conf);
+      FileStatus[] files = fs.listStatus(recoveredEditsDir);
+      LOG.debug("Found {} recovered edits file(s) under {}", files == null ? 0 : files.length,
+        recoveredEditsDir);
+      if (files != null) {
+        for (FileStatus file : files) {
+          seqId =
+            Math.max(seqId, replayRecoveredEdits(file.getPath(), maxSeqIdInStores, reporter, fs));
         }
       }
-      for (Path file : filesUnderRootDir) {
-        if (!rootFS.delete(file, false)) {
-          LOG.error("Failed delete of {}", file);
-        } else {
-          LOG.debug("Deleted recovered.edits file={}", file);
-        }
+      if (seqId > minSeqIdForTheRegion) {
+        // Then we added some edits to memory. Flush and cleanup split edit files.
+        internalFlushcache(null, seqId, stores.values(), status, false,
+          FlushLifeCycleTracker.DUMMY);
       }
+      deleteRecoveredEdits(fs,
+        Stream.of(files).map(FileStatus::getPath).collect(Collectors.toList()));
     }
+
     return seqId;
   }
 
@@ -4762,18 +4785,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return seqid;
   }
 
-  /*
+  /**
    * @param edits File of recovered edits.
-   * @param maxSeqIdInStores Maximum sequenceid found in each store.  Edits in wal
-   * must be larger than this to be replayed for each store.
-   * @param reporter
-   * @return the sequence id of the last edit added to this region out of the
-   * recovered edits log or <code>minSeqId</code> if nothing added from editlogs.
-   * @throws IOException
+   * @param maxSeqIdInStores Maximum sequenceid found in each store. Edits in wal must be larger
+   *          than this to be replayed for each store.
+   * @return the sequence id of the last edit added to this region out of the recovered edits log or
+   *         <code>minSeqId</code> if nothing added from editlogs.
    */
-  private long replayRecoveredEdits(final Path edits,
-      Map<byte[], Long> maxSeqIdInStores, final CancelableProgressable reporter, FileSystem fs)
-    throws IOException {
+  private long replayRecoveredEdits(final Path edits, Map<byte[], Long> maxSeqIdInStores,
+    final CancelableProgressable reporter, FileSystem fs) throws IOException {
     String msg = "Replaying edits from " + edits;
     LOG.info(msg);
     MonitoredTask status = TaskMonitor.get().createStatus(msg);
@@ -7142,15 +7162,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param wal shared WAL
    * @param initialize - true to initialize the region
    * @return new HRegion
-   * @throws IOException
    */
   public static HRegion createHRegion(final RegionInfo info, final Path rootDir,
-        final Configuration conf, final TableDescriptor hTableDescriptor,
-        final WAL wal, final boolean initialize)
-  throws IOException {
-    LOG.info("creating " + info
-        + ", tableDescriptor=" + (hTableDescriptor == null? "null": hTableDescriptor) +
-        ", regionDir=" + rootDir);
+    final Configuration conf, final TableDescriptor hTableDescriptor, final WAL wal,
+    final boolean initialize) throws IOException {
+    LOG.info("creating " + info + ", tableDescriptor=" +
+      (hTableDescriptor == null ? "null" : hTableDescriptor) + ", regionDir=" + rootDir);
     createRegionDir(conf, info, rootDir);
     FileSystem fs = rootDir.getFileSystem(conf);
     Path tableDir = FSUtils.getTableDir(rootDir, info.getTable());
@@ -7158,6 +7175,18 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (initialize) {
       region.initialize(null);
     }
+    return region;
+  }
+
+  /**
+   * Create a region under the given table directory.
+   */
+  public static HRegion createHRegion(Configuration conf, RegionInfo regionInfo, FileSystem fs,
+    Path tableDir, TableDescriptor tableDesc) throws IOException {
+    LOG.info("Creating {}, tableDescriptor={}, under table dir {}", regionInfo, tableDesc,
+      tableDir);
+    HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, regionInfo);
+    HRegion region = HRegion.newHRegion(tableDir, null, fs, conf, regionInfo, tableDesc, null);
     return region;
   }
 
@@ -7308,18 +7337,17 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @return new HRegion
    */
   public static HRegion openHRegion(final Configuration conf, final FileSystem fs,
-      final Path rootDir, final RegionInfo info, final TableDescriptor htd, final WAL wal,
-      final RegionServerServices rsServices, final CancelableProgressable reporter)
-      throws IOException {
+    final Path rootDir, final RegionInfo info, final TableDescriptor htd, final WAL wal,
+    final RegionServerServices rsServices, final CancelableProgressable reporter)
+    throws IOException {
     Path tableDir = FSUtils.getTableDir(rootDir, info.getTable());
-    return openHRegion(conf, fs, rootDir, tableDir, info, htd, wal, rsServices, reporter);
+    return openHRegionFromTableDir(conf, fs, tableDir, info, htd, wal, rsServices, reporter);
   }
 
   /**
    * Open a Region.
    * @param conf The Configuration object to use.
    * @param fs Filesystem to use
-   * @param rootDir Root directory for HBase instance
    * @param info Info for region to be opened.
    * @param htd the table descriptor
    * @param wal WAL for region to use. This method will call
@@ -7331,15 +7359,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @return new HRegion
    * @throws NullPointerException if {@code info} is {@code null}
    */
-  public static HRegion openHRegion(final Configuration conf, final FileSystem fs,
-      final Path rootDir, final Path tableDir, final RegionInfo info, final TableDescriptor htd,
-      final WAL wal, final RegionServerServices rsServices,
-      final CancelableProgressable reporter)
-      throws IOException {
+  public static HRegion openHRegionFromTableDir(final Configuration conf, final FileSystem fs,
+    final Path tableDir, final RegionInfo info, final TableDescriptor htd, final WAL wal,
+    final RegionServerServices rsServices, final CancelableProgressable reporter)
+    throws IOException {
     Objects.requireNonNull(info, "RegionInfo cannot be null");
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Opening region: " + info);
-    }
+    LOG.debug("Opening region: {}", info);
     HRegion r = HRegion.newHRegion(tableDir, wal, fs, conf, info, htd, rsServices);
     return r.openHRegion(reporter);
   }
