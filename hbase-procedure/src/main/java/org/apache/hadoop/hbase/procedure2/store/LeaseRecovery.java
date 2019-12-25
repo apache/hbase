@@ -15,32 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.procedure2.store.wal;
+package org.apache.hadoop.hbase.procedure2.store;
 
-import org.apache.hadoop.hbase.HBaseIOException;
+import java.io.IOException;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.yetus.audience.InterfaceAudience;
 
-/**
- * Thrown when a procedure WAL is corrupted
- * @deprecated Since 2.3.0, will be removed in 4.0.0. Keep here only for rolling upgrading, now we
- *             use the new region based procedure store.
- */
-@Deprecated
 @InterfaceAudience.Private
-public class CorruptedWALProcedureStoreException extends HBaseIOException {
+public interface LeaseRecovery {
 
-  private static final long serialVersionUID = -3407300445435898074L;
-
-  /** default constructor */
-  public CorruptedWALProcedureStoreException() {
-    super();
-  }
-
-  /**
-   * Constructor
-   * @param s message
-   */
-  public CorruptedWALProcedureStoreException(String s) {
-    super(s);
-  }
+  void recoverFileLease(FileSystem fs, Path path) throws IOException;
 }

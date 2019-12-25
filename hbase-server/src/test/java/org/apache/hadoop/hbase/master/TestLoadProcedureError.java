@@ -126,7 +126,7 @@ public class TestLoadProcedureError {
     ARRIVE.await();
     FAIL_LOAD = true;
     // do not persist the store tracker
-    UTIL.getMiniHBaseCluster().getMaster().getWalProcedureStore().stop(true);
+    UTIL.getMiniHBaseCluster().getMaster().getProcedureStore().stop(true);
     UTIL.getMiniHBaseCluster().getMaster().abort("for testing");
     waitNoMaster();
     // restart twice, and should fail twice, as we will throw an exception in the afterReplay above

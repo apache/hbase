@@ -45,9 +45,9 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.procedure2.store.LeaseRecovery;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreBase;
-import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreTracker;
 import org.apache.hadoop.hbase.procedure2.util.ByteSlot;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -106,7 +106,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedu
  * deleted.
  * @see ProcedureWALPrettyPrinter for printing content of a single WAL.
  * @see #main(String[]) to parse a directory of MasterWALProcs.
+ * @deprecated Since 2.3.0, will be removed in 4.0.0. Keep here only for rolling upgrading, now we
+ *             use the new region based procedure store.
  */
+@Deprecated
 @InterfaceAudience.Private
 public class WALProcedureStore extends ProcedureStoreBase {
   private static final Logger LOG = LoggerFactory.getLogger(WALProcedureStore.class);
@@ -114,10 +117,6 @@ public class WALProcedureStore extends ProcedureStoreBase {
   /** Used to construct the name of the log directory for master procedures */
   public static final String MASTER_PROCEDURE_LOGDIR = "MasterProcWALs";
 
-
-  public interface LeaseRecovery {
-    void recoverFileLease(FileSystem fs, Path path) throws IOException;
-  }
 
   public static final String WAL_COUNT_WARN_THRESHOLD_CONF_KEY =
     "hbase.procedure.store.wal.warn.threshold";
@@ -233,12 +232,10 @@ public class WALProcedureStore extends ProcedureStoreBase {
     }
   }
 
-  public WALProcedureStore(final Configuration conf, final LeaseRecovery leaseRecovery)
-      throws IOException {
-    this(conf,
-        new Path(CommonFSUtils.getWALRootDir(conf), MASTER_PROCEDURE_LOGDIR),
-        new Path(CommonFSUtils.getWALRootDir(conf), HConstants.HREGION_OLDLOGDIR_NAME),
-        leaseRecovery);
+  public WALProcedureStore(Configuration conf, LeaseRecovery leaseRecovery) throws IOException {
+    this(conf, new Path(CommonFSUtils.getWALRootDir(conf), MASTER_PROCEDURE_LOGDIR),
+      new Path(CommonFSUtils.getWALRootDir(conf), HConstants.HREGION_OLDLOGDIR_NAME),
+      leaseRecovery);
   }
 
   @VisibleForTesting
@@ -1411,7 +1408,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
       System.exit(-1);
     }
     WALProcedureStore store = new WALProcedureStore(conf, new Path(args[0]), null,
-      new WALProcedureStore.LeaseRecovery() {
+      new LeaseRecovery() {
         @Override
         public void recoverFileLease(FileSystem fs, Path path) throws IOException {
           // no-op

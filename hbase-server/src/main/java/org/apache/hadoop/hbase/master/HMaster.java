@@ -161,8 +161,9 @@ import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteProcedure;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureException;
+import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureStoreListener;
-import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
+import org.apache.hadoop.hbase.procedure2.store.region.RegionProcedureStore;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.quotas.MasterQuotasObserver;
 import org.apache.hadoop.hbase.quotas.QuotaObserverChore;
@@ -331,6 +332,10 @@ public class HMaster extends HRegionServer implements MasterServices {
     "hbase.master.wait.on.service.seconds";
   public static final int DEFAULT_HBASE_MASTER_WAIT_ON_SERVICE_IN_SECONDS = 5 * 60;
 
+  public static final String HBASE_MASTER_CLEANER_INTERVAL = "hbase.master.cleaner.interval";
+
+  public static final int DEFAULT_HBASE_MASTER_CLEANER_INTERVAL = 600 * 1000;
+
   // Metrics for the HMaster
   final MetricsMaster metricsMaster;
   // file system manager for the master FS operations
@@ -425,7 +430,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   private SnapshotQuotaObserverChore snapshotQuotaChore;
 
   private ProcedureExecutor<MasterProcedureEnv> procedureExecutor;
-  private WALProcedureStore procedureStore;
+  private ProcedureStore procedureStore;
 
   // handle table states
   private TableStateManager tableStateManager;
@@ -909,10 +914,8 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.masterActiveTime = System.currentTimeMillis();
     // TODO: Do this using Dependency Injection, using PicoContainer, Guice or Spring.
 
-    // Only initialize the MemStoreLAB when master carry table
-    if (LoadBalancer.isTablesOnMaster(conf)) {
-      initializeMemStoreChunkCreator();
-    }
+    // always initialize the MemStoreLAB as we use a region to store procedure now.
+    initializeMemStoreChunkCreator();
     this.fileSystemManager = new MasterFileSystem(conf);
     this.walManager = new MasterWalManager(this);
 
@@ -1422,18 +1425,19 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.executorService.startExecutorService(ExecutorType.MASTER_SNAPSHOT_OPERATIONS, conf.getInt(
       SnapshotManager.SNAPSHOT_POOL_THREADS_KEY, SnapshotManager.SNAPSHOT_POOL_THREADS_DEFAULT));
 
-   // We depend on there being only one instance of this executor running
-   // at a time.  To do concurrency, would need fencing of enable/disable of
-   // tables.
-   // Any time changing this maxThreads to > 1, pls see the comment at
-   // AccessController#postCompletedCreateTableAction
-   this.executorService.startExecutorService(ExecutorType.MASTER_TABLE_OPERATIONS, 1);
-   startProcedureExecutor();
+    // We depend on there being only one instance of this executor running
+    // at a time. To do concurrency, would need fencing of enable/disable of
+    // tables.
+    // Any time changing this maxThreads to > 1, pls see the comment at
+    // AccessController#postCompletedCreateTableAction
+    this.executorService.startExecutorService(ExecutorType.MASTER_TABLE_OPERATIONS, 1);
+    startProcedureExecutor();
 
     // Create cleaner thread pool
     cleanerPool = new DirScanPool(conf);
     // Start log cleaner thread
-    int cleanerInterval = conf.getInt("hbase.master.cleaner.interval", 600 * 1000);
+    int cleanerInterval =
+      conf.getInt(HBASE_MASTER_CLEANER_INTERVAL, DEFAULT_HBASE_MASTER_CLEANER_INTERVAL);
     this.logCleaner = new LogCleaner(cleanerInterval, this, conf,
       getMasterWalManager().getFileSystem(), getMasterWalManager().getOldLogDir(), cleanerPool);
     getChoreService().scheduleChore(logCleaner);
@@ -1537,7 +1541,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   private void createProcedureExecutor() throws IOException {
     MasterProcedureEnv procEnv = new MasterProcedureEnv(this);
     procedureStore =
-      new WALProcedureStore(conf, new MasterProcedureEnv.WALStoreLeaseRecovery(this));
+      new RegionProcedureStore(this, new MasterProcedureEnv.FsUtilsLeaseRecovery(this));
     procedureStore.registerListener(new ProcedureStoreListener() {
 
       @Override
@@ -2707,10 +2711,10 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   public int getNumWALFiles() {
-    return procedureStore != null ? procedureStore.getActiveLogs().size() : 0;
+    return 0;
   }
 
-  public WALProcedureStore getWalProcedureStore() {
+  public ProcedureStore getProcedureStore() {
     return procedureStore;
   }
 
