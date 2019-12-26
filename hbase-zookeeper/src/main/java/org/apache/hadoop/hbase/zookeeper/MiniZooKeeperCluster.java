@@ -280,8 +280,8 @@ public class MiniZooKeeperCluster {
     activeZKServerIndex = 0;
     started = true;
     int clientPort = clientPortList.get(activeZKServerIndex);
-    LOG.info("Started MiniZooKeeperCluster and ran successful 'stat' " +
-        "on client port=" + clientPort);
+    LOG.info("Started MiniZooKeeperCluster and ran successful 'stat' on client port={}",
+      clientPort);
     return clientPort;
   }
 
@@ -353,16 +353,14 @@ public class MiniZooKeeperCluster {
     standaloneServerFactoryList.remove(activeZKServerIndex);
     clientPortList.remove(activeZKServerIndex);
     zooKeeperServers.remove(activeZKServerIndex);
-    LOG.info("Kill the current active ZK servers in the cluster " +
-        "on client port: " + clientPort);
+    LOG.info("Kill the current active ZK servers in the cluster on client port: {}", clientPort);
 
     if (standaloneServerFactoryList.isEmpty()) {
       // there is no backup servers;
       return -1;
     }
     clientPort = clientPortList.get(activeZKServerIndex);
-    LOG.info("Activate a backup zk server in the cluster " +
-        "on client port: " + clientPort);
+    LOG.info("Activate a backup zk server in the cluster on client port: {}", clientPort);
     // return the next back zk server's port
     return clientPort;
   }
@@ -394,8 +392,7 @@ public class MiniZooKeeperCluster {
     standaloneServerFactoryList.remove(backupZKServerIndex);
     clientPortList.remove(backupZKServerIndex);
     zooKeeperServers.remove(backupZKServerIndex);
-    LOG.info("Kill one backup ZK servers in the cluster " +
-        "on client port: " + clientPort);
+    LOG.info("Kill one backup ZK servers in the cluster on client port: {}", clientPort);
   }
 
   // XXX: From o.a.zk.t.ClientBase
@@ -450,7 +447,7 @@ public class MiniZooKeeperCluster {
         }
       } catch (IOException e) {
         // ignore as this is expected
-        LOG.info("server localhost:" + port + " not up " + e);
+        LOG.info("server localhost:{} not up {}", port, e);
       }
 
       if (System.currentTimeMillis() > start + timeout) {
