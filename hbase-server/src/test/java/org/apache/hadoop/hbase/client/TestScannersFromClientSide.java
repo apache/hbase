@@ -1010,7 +1010,7 @@ public class TestScannersFromClientSide {
       Result result;
       int expectedKvNumber = 6;
       int returnedKvNumber = 0;
-      while((result = rs.next()) != null){
+      while((result = rs.next()) != null) {
         returnedKvNumber += result.listCells().size();
       }
       rs.close();
@@ -1020,24 +1020,24 @@ public class TestScannersFromClientSide {
 
   public static class LimitKVsReturnFilter extends FilterBase {
 
-    private static int total = 0;
+    private int cellCount = 0;
 
     @Override
     public ReturnCode filterCell(Cell v) throws IOException {
-      if(total>=6) {
-        total++;
+      if (cellCount >= 6) {
+        cellCount++;
         return ReturnCode.SKIP;
       }
-      total++;
+      cellCount++;
       return ReturnCode.INCLUDE;
     }
 
     @Override
     public boolean filterAllRemaining() throws IOException {
-      if(total<7) {
+      if (cellCount < 7) {
         return false;
       }
-      total++;
+      cellCount++;
       return true;
     }
 
@@ -1047,9 +1047,8 @@ public class TestScannersFromClientSide {
     }
 
     public static LimitKVsReturnFilter parseFrom(final byte [] pbBytes)
-      throws DeserializationException {
+        throws DeserializationException {
       return new LimitKVsReturnFilter();
     }
   }
-
 }
