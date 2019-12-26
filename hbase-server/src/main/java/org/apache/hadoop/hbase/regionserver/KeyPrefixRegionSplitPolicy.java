@@ -19,13 +19,18 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Arrays;
 
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * A custom RegionSplitPolicy implementing a SplitPolicy that groups
- * rows by a prefix of the row-key
+ * rows by a prefix of the row-key.
+ *
+ * Note: If the row range is too big, it may not be possible to guarantee that the split point
+ * will have just the specified length, as the resulting key might be the same as the starting key
+ * of the parent.
  *
  * This ensures that a region is not split "inside" a prefix of a row key.
  * I.e. rows can be co-located in a region by their prefix.
@@ -79,8 +84,16 @@ public class KeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundRegionSpli
     byte[] splitPoint = super.getSplitPoint();
     if (prefixLength > 0 && splitPoint != null && splitPoint.length > 0) {
       // group split keys by a prefix
-      return Arrays.copyOf(splitPoint,
+      int length = prefixLength;
+      byte[] result = Arrays.copyOf(splitPoint,
           Math.min(prefixLength, splitPoint.length));
+      while(Bytes.equals(result, region.getRegionInfo().getStartKey()) &&
+          length < splitPoint.length){
+        length++;
+        result = Arrays.copyOf(splitPoint,
+          Math.min(length, splitPoint.length));
+      }
+      return result;
     } else {
       return splitPoint;
     }

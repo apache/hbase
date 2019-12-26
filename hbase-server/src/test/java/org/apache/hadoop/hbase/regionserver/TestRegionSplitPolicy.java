@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -33,6 +34,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -111,7 +113,7 @@ public class TestRegionSplitPolicy {
     RegionServerServices rss = Mockito.mock(RegionServerServices.class);
     final List<HRegion> regions = new ArrayList<>();
     Mockito.doReturn(regions).when(rss).getRegions(TABLENAME);
-    Mockito.when(mockRegion.getRegionServerServices()).thenReturn(rss);
+    when(mockRegion.getRegionServerServices()).thenReturn(rss);
     // Set max size for this 'table'.
     long maxSplitSize = 1024L;
     htd.setMaxFileSize(maxSplitSize);
@@ -170,16 +172,16 @@ public class TestRegionSplitPolicy {
     RegionServerServices rss  = Mockito.mock(RegionServerServices.class);
     final List<HRegion> regions = new ArrayList<>();
     Mockito.doReturn(regions).when(rss).getRegions(TABLENAME);
-    Mockito.when(mockRegion.getRegionServerServices()).thenReturn(rss);
-    Mockito.when(mockRegion.getBlockedRequestsCount()).thenReturn(0L);
-    Mockito.when(mockRegion.getWriteRequestsCount()).thenReturn(0L);
+    when(mockRegion.getRegionServerServices()).thenReturn(rss);
+    when(mockRegion.getBlockedRequestsCount()).thenReturn(0L);
+    when(mockRegion.getWriteRequestsCount()).thenReturn(0L);
 
 
     BusyRegionSplitPolicy policy =
         (BusyRegionSplitPolicy)RegionSplitPolicy.create(mockRegion, conf);
 
-    Mockito.when(mockRegion.getBlockedRequestsCount()).thenReturn(10L);
-    Mockito.when(mockRegion.getWriteRequestsCount()).thenReturn(10L);
+    when(mockRegion.getBlockedRequestsCount()).thenReturn(10L);
+    when(mockRegion.getWriteRequestsCount()).thenReturn(10L);
     // Not enough time since region came online
     assertFalse(policy.shouldSplit());
 
@@ -191,12 +193,12 @@ public class TestRegionSplitPolicy {
     policy =
         (BusyRegionSplitPolicy)RegionSplitPolicy.create(mockRegion, conf);
     long start = EnvironmentEdgeManager.currentTime();
-    Mockito.when(mockRegion.getBlockedRequestsCount()).thenReturn(10L);
-    Mockito.when(mockRegion.getWriteRequestsCount()).thenReturn(20L);
+    when(mockRegion.getBlockedRequestsCount()).thenReturn(10L);
+    when(mockRegion.getWriteRequestsCount()).thenReturn(20L);
     Thread.sleep(300);
     assertFalse(policy.shouldSplit());
-    Mockito.when(mockRegion.getBlockedRequestsCount()).thenReturn(12L);
-    Mockito.when(mockRegion.getWriteRequestsCount()).thenReturn(30L);
+    when(mockRegion.getBlockedRequestsCount()).thenReturn(12L);
+    when(mockRegion.getWriteRequestsCount()).thenReturn(30L);
     Thread.sleep(2);
     // Enough blocked requests since last time, but aggregate blocked request
     // rate over last 500 ms is still low, because major portion of the window is constituted
@@ -204,8 +206,8 @@ public class TestRegionSplitPolicy {
     if (EnvironmentEdgeManager.currentTime() - start < 500) {
       assertFalse(policy.shouldSplit());
     }
-    Mockito.when(mockRegion.getBlockedRequestsCount()).thenReturn(14L);
-    Mockito.when(mockRegion.getWriteRequestsCount()).thenReturn(40L);
+    when(mockRegion.getBlockedRequestsCount()).thenReturn(14L);
+    when(mockRegion.getWriteRequestsCount()).thenReturn(40L);
     Thread.sleep(200);
     assertTrue(policy.shouldSplit());
   }
@@ -249,6 +251,11 @@ public class TestRegionSplitPolicy {
     Mockito.doReturn(myHtd).when(myMockRegion).getTableDescriptor();
     Mockito.doReturn(stores).when(myMockRegion).getStores();
 
+    RegionInfo mockInfo = Mockito.mock(RegionInfo.class);
+    Mockito.doReturn(mockInfo).when(myMockRegion).getRegionInfo();
+    when(mockInfo.getStartKey()).thenReturn(Bytes.toBytes("a")).
+      thenReturn(Bytes.toBytes("ab"));
+
     HStore mockStore = Mockito.mock(HStore.class);
     Mockito.doReturn(2000L).when(mockStore).getSize();
     Mockito.doReturn(true).when(mockStore).canSplit();
@@ -259,6 +266,8 @@ public class TestRegionSplitPolicy {
         .create(myMockRegion, conf);
 
     assertEquals("ab", Bytes.toString(policy.getSplitPoint()));
+
+    assertEquals("abc", Bytes.toString(policy.getSplitPoint()));
 
     Mockito.doReturn(true).when(myMockRegion).shouldForceSplit();
     Mockito.doReturn(Bytes.toBytes("efgh")).when(myMockRegion)
