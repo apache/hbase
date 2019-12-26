@@ -637,7 +637,9 @@ public abstract class FSUtils extends CommonFSUtils {
 
   /**
    * Writes a new unique identifier for this cluster to the "hbase.id" file in the HBase root
-   * directory.
+   * directory. If any operations on the ID file fails, and {@code wait} is a positive value, the
+   * method will retry to produce the ID file until the thread is forcibly interrupted.
+   *
    * @param fs the root directory FileSystem
    * @param rootdir the path to the HBase root directory
    * @param clusterId the unique identifier to store
@@ -659,20 +661,25 @@ public abstract class FSUtils extends CommonFSUtils {
       LOG.debug("Write the cluster ID file to a temporary location: {}", tempIdFile);
       try (FSDataOutputStream s = fs.create(tempIdFile)) {
         s.write(clusterId.toByteArray());
-
-        LOG.debug("Move the temporary cluster ID file to its target location [{}]:[{}]", tempIdFile,
-          idFile);
-        if (!fs.rename(tempIdFile, idFile)) {
-          failure =
-              Optional.of(new IOException("Unable to move temp cluster ID file to " + idFile));
-        }
       } catch (IOException ioe) {
         failure = Optional.of(ioe);
       }
 
       if (!failure.isPresent()) {
-        return;
-      } else {
+        try {
+          LOG.debug("Move the temporary cluster ID file to its target location [{}]:[{}]",
+            tempIdFile, idFile);
+
+          if (!fs.rename(tempIdFile, idFile)) {
+            failure =
+                Optional.of(new IOException("Unable to move temp cluster ID file to " + idFile));
+          }
+        } catch (IOException ioe) {
+          failure = Optional.of(ioe);
+        }
+      }
+
+      if (failure.isPresent()) {
         final IOException cause = failure.get();
         if (wait > 0L) {
           LOG.warn("Unable to create cluster ID file in {}, retrying in {}ms", rootdir, wait,
@@ -683,9 +690,12 @@ public abstract class FSUtils extends CommonFSUtils {
             Thread.currentThread().interrupt();
             throw (InterruptedIOException) new InterruptedIOException().initCause(e);
           }
+          continue;
         } else {
           throw cause;
         }
+      } else {
+        return;
       }
     }
   }
