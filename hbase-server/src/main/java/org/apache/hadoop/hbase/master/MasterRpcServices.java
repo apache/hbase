@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -1775,24 +1774,44 @@ public class MasterRpcServices extends RSRpcServices
     }
   }
 
+  /**
+   * This method implements Admin getRegionInfo. On RegionServer, it is
+   * able to return RegionInfo and detail. On Master, it just returns
+   * RegionInfo. On Master it has been hijacked to return Mob detail.
+   * Master implementation is good for querying full region name if
+   * you only have the encoded name (useful around region replicas
+   * for example which do not have a row in hbase:meta).
+   */
   @Override
   @QosPriority(priority=HConstants.ADMIN_QOS)
   public GetRegionInfoResponse getRegionInfo(final RpcController controller,
     final GetRegionInfoRequest request) throws ServiceException {
-    byte[] regionName = request.getRegion().getValue().toByteArray();
-    TableName tableName = RegionInfo.getTable(regionName);
-    if (MobUtils.isMobRegionName(tableName, regionName)) {
-      // a dummy region info contains the compaction state.
-      RegionInfo mobRegionInfo = MobUtils.getMobRegionInfo(tableName);
-      GetRegionInfoResponse.Builder builder = GetRegionInfoResponse.newBuilder();
-      builder.setRegionInfo(ProtobufUtil.toRegionInfo(mobRegionInfo));
-      if (request.hasCompactionState() && request.getCompactionState()) {
-        builder.setCompactionState(master.getMobCompactionState(tableName));
-      }
-      return builder.build();
-    } else {
-      return super.getRegionInfo(controller, request);
+    RegionInfo ri = null;
+    try {
+      ri = getRegionInfo(request.getRegion());
+    } catch(UnknownRegionException ure) {
+      throw new ServiceException(ure);
     }
+    GetRegionInfoResponse.Builder builder = GetRegionInfoResponse.newBuilder();
+    if (ri != null) {
+      builder.setRegionInfo(ProtobufUtil.toRegionInfo(ri));
+    } else {
+      // Is it a MOB name? These work differently.
+      byte [] regionName = request.getRegion().getValue().toByteArray();
+      TableName tableName = RegionInfo.getTable(regionName);
+      if (MobUtils.isMobRegionName(tableName, regionName)) {
+        // a dummy region info contains the compaction state.
+        RegionInfo mobRegionInfo = MobUtils.getMobRegionInfo(tableName);
+        builder.setRegionInfo(ProtobufUtil.toRegionInfo(mobRegionInfo));
+        if (request.hasCompactionState() && request.getCompactionState()) {
+          builder.setCompactionState(master.getMobCompactionState(tableName));
+        }
+      } else {
+        // If unknown RegionInfo and not a MOB region, it is unknown.
+        throw new ServiceException(new UnknownRegionException(Bytes.toString(regionName)));
+      }
+    }
+    return builder.build();
   }
 
   /**

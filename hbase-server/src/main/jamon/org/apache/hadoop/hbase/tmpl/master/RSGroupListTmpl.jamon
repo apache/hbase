@@ -151,7 +151,7 @@ if (master.getServerManager() != null) {
 <td><% totalTables %></td>
 <td><% totalRequests %></td>
 <td><% totalRegions %></td>
-<td><% master.getServerManager().getAverageLoad() %></td>
+<td><% StringUtils.limitDecimalTo2(master.getServerManager().getAverageLoad()) %></td>
 </tr>
 </table>
 </%def>

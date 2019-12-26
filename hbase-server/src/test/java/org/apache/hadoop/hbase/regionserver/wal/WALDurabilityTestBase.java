@@ -18,14 +18,14 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
@@ -33,25 +33,18 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.MemStoreLABImpl;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
+import org.junit.After;
 import org.junit.Before;
-import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
 /**
  * Tests for WAL write durability - hflush vs hsync
  */
-@Category({ MediumTests.class })
-public class TestWALDurability {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestWALDurability.class);
+public abstract class WALDurabilityTestBase<T extends WAL> {
 
   private static final String COLUMN_FAMILY = "MyCF";
   private static final byte[] COLUMN_FAMILY_BYTES = Bytes.toBytes(COLUMN_FAMILY);
@@ -66,82 +59,70 @@ public class TestWALDurability {
   protected TableName tableName;
 
   @Before
-  public void setup() throws IOException {
+  public void setUp() throws IOException {
     conf = TEST_UTIL.getConfiguration();
     dir = TEST_UTIL.getDataTestDir("TestHRegion").toString();
     tableName = TableName.valueOf(name.getMethodName());
   }
 
+  @After
+  public void tearDown() throws IOException {
+    TEST_UTIL.cleanupTestDir();
+  }
+
+  protected abstract T getWAL(FileSystem fs, Path root, String logDir, Configuration conf)
+    throws IOException;
+
+  protected abstract void resetSyncFlag(T wal);
+
+  protected abstract Boolean getSyncFlag(T wal);
+
   @Test
   public void testWALDurability() throws IOException {
-    class CustomFSLog extends FSHLog {
-      private Boolean syncFlag;
-
-      public CustomFSLog(FileSystem fs, Path root, String logDir, Configuration conf)
-          throws IOException {
-        super(fs, root, logDir, conf);
-      }
-
-      @Override
-      public void sync(boolean forceSync) throws IOException {
-        syncFlag = forceSync;
-        super.sync(forceSync);
-      }
-
-      @Override
-      public void sync(long txid, boolean forceSync) throws IOException {
-        syncFlag = forceSync;
-        super.sync(txid, forceSync);
-      }
-
-      private void resetSyncFlag() {
-        this.syncFlag = null;
-      }
-
-    }
     // global hbase.wal.hsync false, no override in put call - hflush
     conf.set(HRegion.WAL_HSYNC_CONF_KEY, "false");
     FileSystem fs = FileSystem.get(conf);
     Path rootDir = new Path(dir + getName());
-    CustomFSLog customFSLog = new CustomFSLog(fs, rootDir, getName(), conf);
-    customFSLog.init();
-    HRegion region = initHRegion(tableName, null, null, customFSLog);
+    T wal = getWAL(fs, rootDir, getName(), conf);
+    HRegion region = initHRegion(tableName, null, null, wal);
     byte[] bytes = Bytes.toBytes(getName());
     Put put = new Put(bytes);
     put.addColumn(COLUMN_FAMILY_BYTES, Bytes.toBytes("1"), bytes);
 
-    customFSLog.resetSyncFlag();
-    assertNull(customFSLog.syncFlag);
+    resetSyncFlag(wal);
+    assertNull(getSyncFlag(wal));
     region.put(put);
-    assertEquals(customFSLog.syncFlag, false);
+    assertFalse(getSyncFlag(wal));
+
+    region.close();
+    wal.close();
 
     // global hbase.wal.hsync true, no override in put call
     conf.set(HRegion.WAL_HSYNC_CONF_KEY, "true");
     fs = FileSystem.get(conf);
-    customFSLog = new CustomFSLog(fs, rootDir, getName(), conf);
-    customFSLog.init();
-    region = initHRegion(tableName, null, null, customFSLog);
+    wal = getWAL(fs, rootDir, getName(), conf);
+    region = initHRegion(tableName, null, null, wal);
 
-    customFSLog.resetSyncFlag();
-    assertNull(customFSLog.syncFlag);
+    resetSyncFlag(wal);
+    assertNull(getSyncFlag(wal));
     region.put(put);
-    assertEquals(customFSLog.syncFlag, true);
+    assertEquals(getSyncFlag(wal), true);
 
     // global hbase.wal.hsync true, durability set in put call - fsync
     put.setDurability(Durability.FSYNC_WAL);
-    customFSLog.resetSyncFlag();
-    assertNull(customFSLog.syncFlag);
+    resetSyncFlag(wal);
+    assertNull(getSyncFlag(wal));
     region.put(put);
-    assertEquals(customFSLog.syncFlag, true);
+    assertTrue(getSyncFlag(wal));
 
     // global hbase.wal.hsync true, durability set in put call - sync
     put = new Put(bytes);
     put.addColumn(COLUMN_FAMILY_BYTES, Bytes.toBytes("1"), bytes);
     put.setDurability(Durability.SYNC_WAL);
-    customFSLog.resetSyncFlag();
-    assertNull(customFSLog.syncFlag);
+    resetSyncFlag(wal);
+    assertNull(getSyncFlag(wal));
     region.put(put);
-    assertEquals(customFSLog.syncFlag, false);
+    assertFalse(getSyncFlag(wal));
 
     HBaseTestingUtility.closeRegionAndWAL(region);
   }
@@ -155,7 +136,7 @@ public class TestWALDurability {
    *         when done.
    */
   public static HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey, WAL wal)
-      throws IOException {
+    throws IOException {
     ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
     return TEST_UTIL.createLocalHRegion(tableName, startKey, stopKey, false, Durability.USE_DEFAULT,
       wal, COLUMN_FAMILY_BYTES);

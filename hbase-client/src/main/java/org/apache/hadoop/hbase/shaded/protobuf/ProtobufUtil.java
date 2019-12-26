@@ -1714,25 +1714,33 @@ public final class ProtobufUtil {
 // Start helpers for Admin
 
   /**
-   * A helper to retrieve region info given a region name
-   * using admin protocol.
+   * A helper to retrieve region info given a region name or an
+   * encoded region name using admin protocol.
    *
-   * @param admin
-   * @param regionName
    * @return the retrieved region info
-   * @throws IOException
    */
-  public static org.apache.hadoop.hbase.client.RegionInfo getRegionInfo(final RpcController controller,
-      final AdminService.BlockingInterface admin, final byte[] regionName) throws IOException {
+  public static org.apache.hadoop.hbase.client.RegionInfo getRegionInfo(
+      final RpcController controller, final AdminService.BlockingInterface admin,
+      final byte[] regionName) throws IOException {
     try {
-      GetRegionInfoRequest request =
-        RequestConverter.buildGetRegionInfoRequest(regionName);
-      GetRegionInfoResponse response =
-        admin.getRegionInfo(controller, request);
+      GetRegionInfoRequest request = getGetRegionInfoRequest(regionName);
+      GetRegionInfoResponse response = admin.getRegionInfo(controller,
+        getGetRegionInfoRequest(regionName));
       return toRegionInfo(response.getRegionInfo());
     } catch (ServiceException se) {
       throw getRemoteException(se);
     }
+  }
+
+  /**
+   * @return A GetRegionInfoRequest for the passed in regionName.
+   */
+  public static GetRegionInfoRequest getGetRegionInfoRequest(final byte [] regionName)
+    throws IOException {
+    return org.apache.hadoop.hbase.client.RegionInfo.isEncodedRegionName(regionName)?
+        GetRegionInfoRequest.newBuilder().setRegion(RequestConverter.
+          buildRegionSpecifier(RegionSpecifierType.ENCODED_REGION_NAME, regionName)).build():
+        RequestConverter.buildGetRegionInfoRequest(regionName);
   }
 
   /**

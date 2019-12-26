@@ -27,29 +27,29 @@ import org.slf4j.LoggerFactory;
 
 /**
  *
- * Lose network packages on a random regionserver.
+ * Duplicate network packets on a random regionserver.
  */
-public class LosePackagesCommandAction extends TCCommandAction {
-  private static final Logger LOG = LoggerFactory.getLogger(LosePackagesCommandAction.class);
+public class DuplicatePacketsCommandAction extends TCCommandAction {
+  private static final Logger LOG = LoggerFactory.getLogger(DuplicatePacketsCommandAction.class);
   private float ratio;
   private long duration;
 
   /**
-   * Lose network packages on a random regionserver.
+   * Duplicate network packets on a random regionserver.
    *
-   * @param ratio the ratio of packages lost
+   * @param ratio the ratio of packets duplicated
    * @param duration the time this issue persists in milliseconds
    * @param timeout the timeout for executing required commands on the region server in milliseconds
    * @param network network interface the regionserver uses for communication
    */
-  public LosePackagesCommandAction(float ratio, long duration, long timeout, String network) {
+  public DuplicatePacketsCommandAction(float ratio, long duration, long timeout, String network) {
     super(timeout, network);
     this.ratio = ratio;
     this.duration = duration;
   }
 
   protected void localPerform() throws IOException {
-    LOG.info("Starting to execute LosePackagesCommandAction");
+    LOG.info("Starting to execute DuplicatePacketsCommandAction");
     ServerName server = PolicyBasedChaosMonkey.selectRandomItem(getCurrentServers());
     String hostname = server.getHostname();
 
@@ -62,11 +62,11 @@ public class LosePackagesCommandAction extends TCCommandAction {
       clusterManager.execSudoWithRetries(hostname, timeout, getCommand(DELETE));
     }
 
-    LOG.info("Finished to execute LosePackagesCommandAction");
+    LOG.info("Finished to execute DuplicatePacketsCommandAction");
   }
 
   private String getCommand(String operation){
-    return String.format("tc qdisc %s dev %s root netem loss %s%%", operation, network,
+    return String.format("tc qdisc %s dev %s root netem duplicate %s%%", operation, network,
         ratio * 100);
   }
 }

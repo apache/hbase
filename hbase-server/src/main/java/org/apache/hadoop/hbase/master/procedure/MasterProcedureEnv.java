@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.replication.ReplicationPeerManager;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
-import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
+import org.apache.hadoop.hbase.procedure2.store.LeaseRecovery;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
@@ -47,10 +47,10 @@ public class MasterProcedureEnv implements ConfigurationObserver {
   private static final Logger LOG = LoggerFactory.getLogger(MasterProcedureEnv.class);
 
   @InterfaceAudience.Private
-  public static class WALStoreLeaseRecovery implements WALProcedureStore.LeaseRecovery {
+  public static class FsUtilsLeaseRecovery implements LeaseRecovery {
     private final MasterServices master;
 
-    public WALStoreLeaseRecovery(final MasterServices master) {
+    public FsUtilsLeaseRecovery(final MasterServices master) {
       this.master = master;
     }
 

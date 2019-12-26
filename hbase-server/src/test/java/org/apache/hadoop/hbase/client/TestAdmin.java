@@ -356,7 +356,7 @@ public class TestAdmin extends TestAdminBase {
 
   private void verifyRoundRobinDistribution(RegionLocator regionLocator, int expectedRegions)
       throws IOException {
-    int numRS = TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().size();
+    int numRS = TEST_UTIL.getMiniHBaseCluster().getNumLiveRegionServers();
     List<HRegionLocation> regions = regionLocator.getAllRegionLocations();
     Map<ServerName, List<RegionInfo>> server2Regions = new HashMap<>();
     for (HRegionLocation loc : regions) {

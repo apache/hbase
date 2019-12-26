@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.procedure2.store.wal;
+package org.apache.hadoop.hbase.procedure2.store;
 
 import static org.junit.Assert.assertEquals;
 
@@ -41,11 +41,11 @@ import org.junit.experimental.categories.Category;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
 @Category({ MasterTests.class, SmallTests.class })
-public class TestWALProcedureTree {
+public class TestProcedureTree {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWALProcedureTree.class);
+    HBaseClassTestRule.forClass(TestProcedureTree.class);
 
   public static final class TestProcedure extends Procedure<Void> {
 
@@ -123,7 +123,7 @@ public class TestWALProcedureTree {
     proc1.addStackIndex(1);
     TestProcedure proc2 = createProc(3, 2);
     proc2.addStackIndex(3);
-    WALProcedureTree tree = WALProcedureTree.build(toProtos(proc0, proc1, proc2));
+    ProcedureTree tree = ProcedureTree.build(toProtos(proc0, proc1, proc2));
     List<TestProcedure> validProcs = getProcs(tree.getValidProcs());
     assertEquals(0, validProcs.size());
     List<TestProcedure> corruptedProcs = getProcs(tree.getCorruptedProcs());
@@ -141,7 +141,7 @@ public class TestWALProcedureTree {
     proc1.addStackIndex(1);
     TestProcedure proc2 = createProc(3, 2);
     proc2.addStackIndex(1);
-    WALProcedureTree tree = WALProcedureTree.build(toProtos(proc0, proc1, proc2));
+    ProcedureTree tree = ProcedureTree.build(toProtos(proc0, proc1, proc2));
     List<TestProcedure> validProcs = getProcs(tree.getValidProcs());
     assertEquals(0, validProcs.size());
     List<TestProcedure> corruptedProcs = getProcs(tree.getCorruptedProcs());
@@ -161,7 +161,7 @@ public class TestWALProcedureTree {
     proc2.addStackIndex(0);
     TestProcedure proc3 = createProc(5, 4);
     proc3.addStackIndex(1);
-    WALProcedureTree tree = WALProcedureTree.build(toProtos(proc0, proc1, proc2, proc3));
+    ProcedureTree tree = ProcedureTree.build(toProtos(proc0, proc1, proc2, proc3));
     List<TestProcedure> validProcs = getProcs(tree.getValidProcs());
     assertEquals(3, validProcs.size());
     List<TestProcedure> corruptedProcs = getProcs(tree.getCorruptedProcs());

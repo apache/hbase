@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
+import org.apache.hadoop.hbase.procedure2.store.LeaseRecovery;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 
@@ -246,7 +247,7 @@ public class ProcedureWALPerformanceEvaluation extends AbstractHBaseTool {
 
   private static class NoSyncWalProcedureStore extends WALProcedureStore {
     public NoSyncWalProcedureStore(final Configuration conf, final Path logDir) throws IOException {
-      super(conf, logDir, null, new WALProcedureStore.LeaseRecovery() {
+      super(conf, logDir, null, new LeaseRecovery() {
         @Override
         public void recoverFileLease(FileSystem fs, Path path) throws IOException {
           // no-op

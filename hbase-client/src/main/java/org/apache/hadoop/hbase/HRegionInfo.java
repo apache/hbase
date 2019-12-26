@@ -456,8 +456,7 @@ public class HRegionInfo implements RegionInfo, Comparable<HRegionInfo> {
    */
   @Deprecated
   @InterfaceAudience.Private
-  public static byte [][] parseRegionName(final byte [] regionName)
-  throws IOException {
+  public static byte [][] parseRegionName(final byte [] regionName) throws IOException {
     return RegionInfo.parseRegionName(regionName);
   }
 

@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerCall;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -134,6 +135,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
 
   protected static final String WAL_SYNC_TIMEOUT_MS = "hbase.regionserver.wal.sync.timeout";
   protected static final int DEFAULT_WAL_SYNC_TIMEOUT_MS = 5 * 60 * 1000; // in ms, 5min
+
+  public static final String MAX_LOGS = "hbase.regionserver.maxlogs";
 
   /**
    * file system instance
@@ -210,6 +213,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    * many and we crash, then will take forever replaying. Keep the number of logs tidy.
    */
   protected final int maxLogs;
+
+  protected final boolean useHsync;
 
   /**
    * This lock makes sure only one log roll runs at a time. Should not be taken while any other lock
@@ -447,8 +452,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     this.blocksize = WALUtil.getWALBlockSize(this.conf, this.fs, this.walDir);
     float multiplier = conf.getFloat("hbase.regionserver.logroll.multiplier", 0.5f);
     this.logrollsize = (long)(this.blocksize * multiplier);
-    this.maxLogs = conf.getInt("hbase.regionserver.maxlogs",
-      Math.max(32, calculateMaxLogFiles(conf, logrollsize)));
+    this.maxLogs = conf.getInt(MAX_LOGS, Math.max(32, calculateMaxLogFiles(conf, logrollsize)));
 
     LOG.info("WAL configuration: blocksize=" + StringUtils.byteDesc(blocksize) + ", rollsize=" +
       StringUtils.byteDesc(this.logrollsize) + ", prefix=" + this.walFilePrefix + ", suffix=" +
@@ -472,6 +476,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     this.implClassName = getClass().getSimpleName();
     this.walTooOldNs = TimeUnit.SECONDS.toNanos(conf.getInt(
             SURVIVED_TOO_LONG_SEC_KEY, SURVIVED_TOO_LONG_SEC_DEFAULT));
+    this.useHsync = conf.getBoolean(HRegion.WAL_HSYNC_CONF_KEY, HRegion.DEFAULT_WAL_HSYNC);
   }
 
   /**
@@ -937,8 +942,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     sequenceIdAccounting.updateStore(encodedRegionName, familyName, sequenceid, onlyIfGreater);
   }
 
-  protected final SyncFuture getSyncFuture(long sequence) {
-    return cachedSyncFutures.get().reset(sequence);
+  protected final SyncFuture getSyncFuture(long sequence, boolean forceSync) {
+    return cachedSyncFutures.get().reset(sequence).setForceSync(forceSync);
   }
 
   protected boolean isLogRollRequested() {

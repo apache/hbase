@@ -270,7 +270,10 @@ public class ProfileServlet extends HttpServlet {
             resp.getWriter().write(
               "Started [" + event.getInternalName() +
               "] profiling. This page will automatically redirect to " +
-              relativeUrl + " after " + duration + " seconds.\n\nCommand:\n" +
+              relativeUrl + " after " + duration + " seconds. " +
+              "If empty diagram and Linux 4.6+, see 'Basic Usage' section on the Async " +
+              "Profiler Home Page, https://github.com/jvm-profiling-tools/async-profiler." +
+              "\n\nCommand:\n" +
               Joiner.on(" ").join(cmd));
 
             // to avoid auto-refresh by ProfileOutputServlet, refreshDelay can be specified
