@@ -81,7 +81,7 @@ public abstract class ZKNodeTracker extends ZKListener {
           this.data = data;
         } else {
           // It existed but now does not, try again to ensure a watch is set
-          LOG.debug("Try starting again because there is no data from " + node);
+          LOG.debug("Try starting again because there is no data from {}", node);
           start();
         }
       }
@@ -147,7 +147,7 @@ public abstract class ZKNodeTracker extends ZKListener {
 
         // It did not exists, and now it does.
         if (nodeExistsChecked){
-          LOG.debug("Node " + node + " now exists, resetting a watcher");
+          LOG.debug("Node {} now exists, resetting a watcher", node);
           try {
             // This does not create a watch if the node does not exists
             this.data = ZKUtil.getDataAndWatch(watcher, node);
