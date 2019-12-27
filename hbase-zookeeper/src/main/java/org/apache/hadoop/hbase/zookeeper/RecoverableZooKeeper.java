@@ -98,8 +98,8 @@ public class RecoverableZooKeeper {
       // the identifier = processID@hostName
       identifier = ManagementFactory.getRuntimeMXBean().getName();
     }
-    LOG.info("Process identifier=" + identifier +
-      " connecting to ZooKeeper ensemble=" + quorumServers);
+    LOG.info("Process identifier={} connecting to ZooKeeper ensemble={}", identifier,
+      quorumServers);
     this.identifier = identifier;
     this.id = Bytes.toBytes(identifier);
 
@@ -180,7 +180,7 @@ public class RecoverableZooKeeper {
                     "previous attempt succeeded.");
                 return;
               }
-              LOG.debug("Node " + path + " already deleted, retry=" + isRetry);
+              LOG.debug("Node {} already deleted, retry={}", path, isRetry);
               throw e;
 
             case CONNECTIONLOSS:
@@ -263,12 +263,10 @@ public class RecoverableZooKeeper {
   private void retryOrThrow(RetryCounter retryCounter, KeeperException e,
       String opName) throws KeeperException {
     if (!retryCounter.shouldRetry()) {
-      LOG.error("ZooKeeper " + opName + " failed after "
-        + retryCounter.getMaxAttempts() + " attempts");
+      LOG.error("ZooKeeper {} failed after {} attempts", opName, retryCounter.getMaxAttempts());
       throw e;
     }
-    LOG.debug("Retry, connectivity issue (JVM Pause?); quorum=" + quorumServers + "," +
-        "exception=" + e);
+    LOG.debug("Retry, connectivity issue (JVM Pause?); quorum={},exception{}=", quorumServers, e);
   }
 
   /**
