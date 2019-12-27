@@ -328,7 +328,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
     }
 
     @Override
-    public Map<byte[], Long> getOutputCounts() {
+    public Map<String, Long> getOutputCounts() {
       return null; // only used in tests
     }
 

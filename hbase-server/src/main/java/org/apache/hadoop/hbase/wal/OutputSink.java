@@ -81,7 +81,7 @@ public abstract class OutputSink {
   /**
    * Start the threads that will pump data from the entryBuffers to the output files.
    */
-  public synchronized void startWriterThreads() {
+  public void startWriterThreads() throws IOException {
     for (int i = 0; i < numThreads; i++) {
       WriterThread t = new WriterThread(controller, entryBuffers, this, i);
       t.start();
@@ -142,7 +142,7 @@ public abstract class OutputSink {
   /**
    * @return a map from encoded region ID to the number of edits written out for that region.
    */
-  protected abstract Map<byte[], Long> getOutputCounts();
+  protected abstract Map<String, Long> getOutputCounts();
 
   /**
    * @return number of regions we've recovered

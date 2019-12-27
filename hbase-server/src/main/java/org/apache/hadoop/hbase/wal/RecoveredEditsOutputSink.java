@@ -135,10 +135,10 @@ class RecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
   }
 
   @Override
-  public Map<byte[], Long> getOutputCounts() {
-    TreeMap<byte[], Long> ret = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+  public Map<String, Long> getOutputCounts() {
+    TreeMap<String, Long> ret = new TreeMap<>();
     for (Map.Entry<String, RecoveredEditsWriter> entry : writers.entrySet()) {
-      ret.put(Bytes.toBytes(entry.getKey()), entry.getValue().editsWritten);
+      ret.put(entry.getKey(), entry.getValue().editsWritten);
     }
     return ret;
   }

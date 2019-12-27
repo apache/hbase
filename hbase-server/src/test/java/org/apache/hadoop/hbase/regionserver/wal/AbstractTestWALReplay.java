@@ -642,7 +642,7 @@ public abstract class AbstractTestWALReplay {
   // Only throws exception if throwExceptionWhenFlushing is set true.
   public static class CustomStoreFlusher extends DefaultStoreFlusher {
     // Switch between throw and not throw exception in flush
-    static final AtomicBoolean throwExceptionWhenFlushing = new AtomicBoolean(false);
+    public static final AtomicBoolean throwExceptionWhenFlushing = new AtomicBoolean(false);
 
     public CustomStoreFlusher(Configuration conf, HStore store) {
       super(conf, store);
@@ -1173,7 +1173,7 @@ public abstract class AbstractTestWALReplay {
     wal.sync();
   }
 
-  static List<Put> addRegionEdits(final byte[] rowName, final byte[] family, final int count,
+  public static List<Put> addRegionEdits(final byte[] rowName, final byte[] family, final int count,
       EnvironmentEdge ee, final Region r, final String qualifierPrefix) throws IOException {
     List<Put> puts = new ArrayList<>();
     for (int j = 0; j < count; j++) {
