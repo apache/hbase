@@ -47,7 +47,6 @@ import org.apache.hbase.thirdparty.com.google.common.io.CountingOutputStream;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestCellCodecWithTags {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestCellCodecWithTags.class);
@@ -61,16 +60,16 @@ public class TestCellCodecWithTags {
     Codec.Encoder encoder = codec.getEncoder(dos);
     final Cell cell1 = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("1"),
         HConstants.LATEST_TIMESTAMP, Bytes.toBytes("1"), new Tag[] {
-            new ArrayBackedTag((byte) 1, Bytes.toBytes("teststring1")),
-            new ArrayBackedTag((byte) 2, Bytes.toBytes("teststring2")) });
+          new ArrayBackedTag((byte) 1, Bytes.toBytes("teststring1")),
+          new ArrayBackedTag((byte) 2, Bytes.toBytes("teststring2")) });
     final Cell cell2 = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("2"),
         HConstants.LATEST_TIMESTAMP, Bytes.toBytes("2"), new Tag[] { new ArrayBackedTag((byte) 1,
             Bytes.toBytes("teststring3")), });
     final Cell cell3 = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("3"),
         HConstants.LATEST_TIMESTAMP, Bytes.toBytes("3"), new Tag[] {
-            new ArrayBackedTag((byte) 2, Bytes.toBytes("teststring4")),
-            new ArrayBackedTag((byte) 2, Bytes.toBytes("teststring5")),
-            new ArrayBackedTag((byte) 1, Bytes.toBytes("teststring6")) });
+          new ArrayBackedTag((byte) 2, Bytes.toBytes("teststring4")),
+          new ArrayBackedTag((byte) 2, Bytes.toBytes("teststring5")),
+          new ArrayBackedTag((byte) 1, Bytes.toBytes("teststring6")) });
 
     encoder.write(cell1);
     encoder.write(cell2);
