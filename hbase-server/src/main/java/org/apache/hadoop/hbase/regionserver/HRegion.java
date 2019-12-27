@@ -979,6 +979,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // Recover any edits if available.
         maxSeqId = Math.max(maxSeqId,
           replayRecoveredEditsIfAny(maxSeqIdInStores, reporter, status));
+        // Recover any hfiles if available
+        maxSeqId = Math.max(maxSeqId, loadRecoveredHFilesIfAny(stores));
         // Make sure mvcc is up to max.
         this.mvcc.advanceTo(maxSeqId);
       } finally {
@@ -5373,6 +5375,32 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // Record latest flush time
       this.lastStoreFlushTimeMap.put(store, startTime);
     }
+  }
+
+  private long loadRecoveredHFilesIfAny(Collection<HStore> stores) throws IOException {
+    Path regionDir = getWALRegionDir();
+    long maxSeqId = -1;
+    for (HStore store : stores) {
+      String familyName = store.getColumnFamilyName();
+      FileStatus[] files =
+          WALSplitUtil.getRecoveredHFiles(fs.getFileSystem(), regionDir, familyName);
+      if (files != null && files.length != 0) {
+        for (FileStatus file : files) {
+          store.assertBulkLoadHFileOk(file.getPath());
+          Pair<Path, Path> pair = store.preBulkLoadHFile(file.getPath().toString(), -1);
+          store.bulkLoadHFile(Bytes.toBytes(familyName), pair.getFirst().toString(),
+              pair.getSecond());
+          maxSeqId =
+              Math.max(maxSeqId, WALSplitUtil.getSeqIdForRecoveredHFile(file.getPath().getName()));
+        }
+        if (this.rsServices != null && store.needsCompaction()) {
+          this.rsServices.getCompactionRequestor()
+              .requestCompaction(this, store, "load recovered hfiles request compaction",
+                  Store.PRIORITY_USER + 1, CompactionLifeCycleTracker.DUMMY, null);
+        }
+      }
+    }
+    return maxSeqId;
   }
 
   /**

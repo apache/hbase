@@ -1045,7 +1045,12 @@ public abstract class FSUtils extends CommonFSUtils {
   }
 
   public static Path getRegionDirFromTableDir(Path tableDir, RegionInfo region) {
-    return new Path(tableDir, ServerRegionReplicaUtil.getRegionInfoForFs(region).getEncodedName());
+    return getRegionDirFromTableDir(tableDir,
+        ServerRegionReplicaUtil.getRegionInfoForFs(region).getEncodedName());
+  }
+
+  public static Path getRegionDirFromTableDir(Path tableDir, String encodedRegionName) {
+    return new Path(tableDir, encodedRegionName);
   }
 
   /**
