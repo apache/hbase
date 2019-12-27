@@ -29,6 +29,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -58,7 +59,7 @@ class RegionFlusherAndCompactor implements Closeable {
 
   static final String FLUSH_SIZE_KEY = "hbase.procedure.store.region.flush.size";
 
-  private static final long DEFAULT_FLUSH_SIZE = 16L * 1024 * 1024;
+  static final long DEFAULT_FLUSH_SIZE = TableDescriptorBuilder.DEFAULT_MEMSTORE_FLUSH_SIZE;
 
   static final String FLUSH_PER_CHANGES_KEY = "hbase.procedure.store.region.flush.per.changes";
 

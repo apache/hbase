@@ -53,6 +53,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDe
 public class WALUtil {
   private static final Logger LOG = LoggerFactory.getLogger(WALUtil.class);
 
+  public static final String WAL_BLOCK_SIZE = "hbase.regionserver.hlog.blocksize";
+
   private WALUtil() {
     // Shut down construction of this class.
   }
@@ -193,7 +195,7 @@ public class WALUtil {
     if (isRecoverEdits) {
       return conf.getLong("hbase.regionserver.recoverededits.blocksize", defaultBlockSize);
     }
-    return conf.getLong("hbase.regionserver.hlog.blocksize", defaultBlockSize);
+    return conf.getLong(WAL_BLOCK_SIZE, defaultBlockSize);
   }
 
   public static void filterCells(WALEdit edit, Function<Cell, Cell> mapper) {
