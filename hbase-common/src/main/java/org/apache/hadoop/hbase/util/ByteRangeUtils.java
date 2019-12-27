@@ -30,7 +30,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  * Utility methods for working with {@link ByteRange}.
  */
 @InterfaceAudience.Public
-public class ByteRangeUtils {
+public final class ByteRangeUtils {
   private ByteRangeUtils() {
   }
 
