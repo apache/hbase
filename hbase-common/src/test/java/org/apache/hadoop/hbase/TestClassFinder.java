@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -53,7 +52,6 @@ import org.junit.rules.TestName;
 
 @Category(SmallTests.class)
 public class TestClassFinder {
-
   private static final Log LOG = LogFactory.getLog(TestClassFinder.class);
 
   @Rule public TestName name = new TestName();
@@ -89,7 +87,7 @@ public class TestClassFinder {
   }
 
   @AfterClass
-  public static void deleteTestDir() throws IOException {
+  public static void deleteTestDir() {
     testUtil.cleanupTestDir(TestClassFinder.class.getSimpleName());
   }
 
@@ -185,8 +183,7 @@ public class TestClassFinder {
   }
 
   private static String createAndLoadJar(final String packageNameSuffix,
-      final String classNamePrefix, final long counter)
-  throws Exception {
+      final String classNamePrefix, final long counter) throws Exception {
     FileAndPath c1 = compileTestClass(counter, packageNameSuffix, classNamePrefix);
     FileAndPath c2 = compileTestClass(counter, packageNameSuffix, PREFIX + "1");
     FileAndPath c3 = compileTestClass(counter, packageNameSuffix, PREFIX + classNamePrefix + "2");
@@ -241,7 +238,9 @@ public class TestClassFinder {
 
   private static boolean contains(final Set<Class<?>> classes, final String simpleName) {
     for (Class<?> c: classes) {
-      if (c.getSimpleName().equals(simpleName)) return true;
+      if (c.getSimpleName().equals(simpleName)) {
+        return true;
+      }
     }
     return false;
   }
@@ -299,8 +298,7 @@ public class TestClassFinder {
   @Test
   public void testClassFinderFiltersByPathInDirs() throws Exception {
     final String hardcodedThisSubdir = "hbase-common";
-    final ClassFinder.ResourcePathFilter notExcJarFilter =
-        new ClassFinder.ResourcePathFilter() {
+    final ClassFinder.ResourcePathFilter notExcJarFilter = new ClassFinder.ResourcePathFilter() {
       @Override
       public boolean isCandidatePath(String resourcePath, boolean isJar) {
         return isJar || !resourcePath.contains(hardcodedThisSubdir);
@@ -383,7 +381,7 @@ public class TestClassFinder {
     // Directory entries for all packages have to be added explicitly for
     // resources to be findable via ClassLoader. Directory entries must end
     // with "/"; the initial one is expected to, also.
-    Set<String> pathsInJar = new HashSet<String>();
+    Set<String> pathsInJar = new HashSet<>();
     for (FileAndPath fileAndPath : filesInJar) {
       String pathToAdd = fileAndPath.path;
       while (pathsInJar.add(pathToAdd)) {
@@ -421,7 +419,6 @@ public class TestClassFinder {
 
   // Java 11 workaround - Custom class loader to expose addUrl method of URLClassLoader
   private static class CustomClassloader extends URLClassLoader {
-
     public CustomClassloader(URL[] urls, ClassLoader parentLoader) {
       super(urls, parentLoader);
     }

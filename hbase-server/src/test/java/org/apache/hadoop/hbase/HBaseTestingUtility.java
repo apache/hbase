@@ -1187,10 +1187,9 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * @return True if we removed the test dirs
-   * @throws IOException
    */
   @Override
-  public boolean cleanupTestDir() throws IOException {
+  public boolean cleanupTestDir() {
     boolean ret = super.cleanupTestDir();
     if (deleteDir(this.clusterTestDir)) {
       this.clusterTestDir = null;

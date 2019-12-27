@@ -76,9 +76,8 @@ public class HBaseCommonTestingUtility {
   private File dataTestDir = null;
 
   /**
-   * @return Where to write test data on local filesystem, specific to
-   * the test.  Useful for tests that do not use a cluster.
-   * Creates it if it does not exist already.
+   * @return Where to write test data on local filesystem, specific to the test. Useful for tests
+   *    that do not use a cluster. Creates it if it does not exist already.
    */
   public Path getDataTestDir() {
     if (this.dataTestDir == null) {
@@ -88,10 +87,9 @@ public class HBaseCommonTestingUtility {
   }
 
   /**
-   * @param subdirName
-   * @return Path to a subdirectory named <code>subdirName</code> under
-   * {@link #getDataTestDir()}.
-   * Does *NOT* create it if it does not exist.
+   * @param subdirName the name of the subdirectory in the test data directory
+   * @return Path to a subdirectory named {code subdirName} under
+   *  {@link #getDataTestDir()}. Does *NOT* create it if it does not exist.
    */
   public Path getDataTestDir(final String subdirName) {
     return new Path(getDataTestDir(), subdirName);
@@ -115,7 +113,10 @@ public class HBaseCommonTestingUtility {
     this.dataTestDir = new File(testPath.toString()).getAbsoluteFile();
     // Set this property so if mapreduce jobs run, they will use this as their home dir.
     System.setProperty("test.build.dir", this.dataTestDir.toString());
-    if (deleteOnExit()) this.dataTestDir.deleteOnExit();
+
+    if (deleteOnExit()) {
+      this.dataTestDir.deleteOnExit();
+    }
 
     createSubDir("hbase.local.dir", testPath, "hbase-local-dir");
 
@@ -125,7 +126,11 @@ public class HBaseCommonTestingUtility {
   protected void createSubDir(String propertyName, Path parent, String subDirName) {
     Path newPath = new Path(parent, subDirName);
     File newDir = new File(newPath.toString()).getAbsoluteFile();
-    if (deleteOnExit()) newDir.deleteOnExit();
+
+    if (deleteOnExit()) {
+      newDir.deleteOnExit();
+    }
+
     conf.set(propertyName, newDir.getAbsolutePath());
   }
 
@@ -140,9 +145,8 @@ public class HBaseCommonTestingUtility {
 
   /**
    * @return True if we removed the test dirs
-   * @throws IOException
    */
-  public boolean cleanupTestDir() throws IOException {
+  public boolean cleanupTestDir() {
     if (deleteDir(this.dataTestDir)) {
       this.dataTestDir = null;
       return true;
@@ -153,9 +157,8 @@ public class HBaseCommonTestingUtility {
   /**
    * @param subdir Test subdir name.
    * @return True if we removed the test dir
-   * @throws IOException
    */
-  boolean cleanupTestDir(final String subdir) throws IOException {
+  boolean cleanupTestDir(final String subdir) {
     if (this.dataTestDir == null) {
       return false;
     }
@@ -164,9 +167,9 @@ public class HBaseCommonTestingUtility {
 
   /**
    * @return Where to write test data on local filesystem; usually
-   * {@link #DEFAULT_BASE_TEST_DIRECTORY}
-   * Should not be used by the unit tests, hence its's private.
-   * Unit test will use a subdirectory of this directory.
+   *    {@link #DEFAULT_BASE_TEST_DIRECTORY}
+   *    Should not be used by the unit tests, hence its's private.
+   *    Unit test will use a subdirectory of this directory.
    * @see #setupDataTestDir()
    */
   private Path getBaseTestDir() {
@@ -185,9 +188,8 @@ public class HBaseCommonTestingUtility {
   /**
    * @param dir Directory to delete
    * @return True if we deleted it.
-   * @throws IOException
    */
-  boolean deleteDir(final File dir) throws IOException {
+  boolean deleteDir(final File dir) {
     if (dir == null || !dir.exists()) {
       return true;
     }
@@ -195,7 +197,10 @@ public class HBaseCommonTestingUtility {
     do {
       ntries += 1;
       try {
-        if (deleteOnExit()) FileUtils.deleteDirectory(dir);
+        if (deleteOnExit()) {
+          FileUtils.deleteDirectory(dir);
+        }
+
         return true;
       } catch (IOException ex) {
         LOG.warn("Failed to delete " + dir.getAbsolutePath());

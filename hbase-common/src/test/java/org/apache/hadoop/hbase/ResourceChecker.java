@@ -16,7 +16,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import org.apache.commons.logging.Log;
@@ -45,7 +44,6 @@ public class ResourceChecker {
   public ResourceChecker(final String tagLine) {
     this.tagLine = tagLine;
   }
-
 
   /**
    * Class to implement for each type of resource.
@@ -83,20 +81,21 @@ public class ResourceChecker {
 
     /**
      * The value for the resource.
-     * @param phase
+     * @param phase the {@link Phase} to get the value for
      */
     abstract public int getVal(Phase phase);
     
     /*
      * Retrieves List of Strings which would be logged in logEndings()
      */
-    public List<String> getStringsToLog() { return null; }
+    public List<String> getStringsToLog() {
+      return null;
+    }
   }
 
   private List<ResourceAnalyzer> ras = new ArrayList<ResourceAnalyzer>();
   private int[] initialValues;
   private int[] endingValues;
-
 
   private void fillInit() {
     initialValues = new int[ras.size()];
@@ -141,7 +140,11 @@ public class ResourceChecker {
     StringBuilder sb = new StringBuilder();
     for (ResourceAnalyzer ra : ras) {
       int cur = initialValues[i++];
-      if (sb.length() > 0) sb.append(", ");
+
+      if (sb.length() > 0) {
+        sb.append(", ");
+      }
+
       sb.append(ra.getName()).append("=").append(cur);
     }
     LOG.info("before: " + tagLine + " " + sb);
@@ -156,7 +159,11 @@ public class ResourceChecker {
     for (ResourceAnalyzer ra : ras) {
       int curP = initialValues[i];
       int curN = endingValues[i++];
-      if (sb.length() > 0) sb.append(", ");
+
+      if (sb.length() > 0) {
+        sb.append(", ");
+      }
+
       sb.append(ra.getName()).append("=").append(curN).append(" (was ").append(curP).append(")");
       if (curN > curP) {
         List<String> strings = ra.getStringsToLog();
@@ -170,7 +177,6 @@ public class ResourceChecker {
     }
     LOG.info("after: " + tagLine + " " + sb);
   }
-
 
   /**
    * To be called as the beginning of a test method:
