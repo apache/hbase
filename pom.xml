@@ -582,6 +582,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>vjasani</id>
+      <name>Viraj Jasani</name>
+      <email>vjasani@apache.org</email>
+      <timezone>+5</timezone>
+    </developer>
+    <developer>
       <id>water</id>
       <name>Xiang Li</name>
       <email>xiangli@apache.org</email>
