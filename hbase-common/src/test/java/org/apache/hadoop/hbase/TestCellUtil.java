@@ -41,7 +41,6 @@ import org.mockito.Mockito;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestCellUtil {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestCellUtil.class);
@@ -78,7 +77,7 @@ public class TestCellUtil {
     }
 
     @Override
-    public boolean advance() throws IOException {
+    public boolean advance() {
       if (this.count < cellsCount) {
         this.current = new TestCell(this.count);
         this.count++;
@@ -219,13 +218,13 @@ public class TestCellUtil {
    */
   @Test
   public void testCreateCellScannerOverflow() throws IOException {
-    consume(doCreateCellScanner(1, 1), 1 * 1);
-    consume(doCreateCellScanner(3, 0), 3 * 0);
+    consume(doCreateCellScanner(1, 1), 1);
+    consume(doCreateCellScanner(3, 0), 0);
     consume(doCreateCellScanner(3, 3), 3 * 3);
-    consume(doCreateCellScanner(0, 1), 0 * 1);
+    consume(doCreateCellScanner(0, 1), 0);
     // Do big number. See HBASE-11813 for why.
     final int hundredK = 100000;
-    consume(doCreateCellScanner(hundredK, 0), hundredK * 0);
+    consume(doCreateCellScanner(hundredK, 0), 0);
     consume(doCreateCellArray(1), 1);
     consume(doCreateCellArray(0), 0);
     consume(doCreateCellArray(3), 3);
@@ -233,14 +232,14 @@ public class TestCellUtil {
     for (int i = 0; i < hundredK; i++) {
       cells.add(new TestCellScannable(1));
     }
-    consume(CellUtil.createCellScanner(cells), hundredK * 1);
+    consume(CellUtil.createCellScanner(cells), hundredK);
     NavigableMap<byte [], List<Cell>> m = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     List<Cell> cellArray = new ArrayList<>(hundredK);
     for (int i = 0; i < hundredK; i++) {
       cellArray.add(new TestCell(i));
     }
     m.put(new byte [] {'f'}, cellArray);
-    consume(CellUtil.createCellScanner(m), hundredK * 1);
+    consume(CellUtil.createCellScanner(m), hundredK);
   }
 
   private CellScanner doCreateCellArray(final int itemsPerList) {
@@ -251,8 +250,7 @@ public class TestCellUtil {
     return CellUtil.createCellScanner(cells);
   }
 
-  private CellScanner doCreateCellScanner(final int listsCount, final int itemsPerList)
-  throws IOException {
+  private CellScanner doCreateCellScanner(final int listsCount, final int itemsPerList) {
     List<CellScannable> cells = new ArrayList<>(listsCount);
     for (int i = 0; i < listsCount; i++) {
       CellScannable cs = new CellScannable() {
@@ -536,11 +534,10 @@ public class TestCellUtil {
 
   // Workaround for jdk 11 - reflective access to interface default methods for testGetType
   private abstract class CellForMockito implements Cell {
-
   }
 
   @Test
-  public void testGetType() throws IOException {
+  public void testGetType() {
     CellForMockito c = Mockito.mock(CellForMockito.class);
     Mockito.when(c.getType()).thenCallRealMethod();
     for (CellForMockito.Type type : CellForMockito.Type.values()) {
