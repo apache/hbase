@@ -52,7 +52,6 @@ import org.slf4j.LoggerFactory;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestClassFinder {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestClassFinder.class);
@@ -92,7 +91,7 @@ public class TestClassFinder {
   }
 
   @AfterClass
-  public static void deleteTestDir() throws IOException {
+  public static void deleteTestDir() {
     testUtil.cleanupTestDir(TestClassFinder.class.getSimpleName());
   }
 
@@ -153,12 +152,8 @@ public class TestClassFinder {
     final String classNamePrefix = name.getMethodName();
     LOG.info("Created jar " + createAndLoadJar("", classNamePrefix, counter));
 
-    ClassFinder.FileNameFilter notExcNameFilter = new ClassFinder.FileNameFilter() {
-      @Override
-      public boolean isCandidateFile(String fileName, String absFilePath) {
-        return !fileName.startsWith(PREFIX);
-      }
-    };
+    ClassFinder.FileNameFilter notExcNameFilter =
+      (fileName, absFilePath) -> !fileName.startsWith(PREFIX);
     ClassFinder incClassesFinder = new ClassFinder(null, notExcNameFilter, null, classLoader);
     Set<Class<?>> incClasses = incClassesFinder.findClasses(
         makePackageName("", counter), false);
@@ -173,12 +168,7 @@ public class TestClassFinder {
     final String classNamePrefix = name.getMethodName();
     LOG.info("Created jar " + createAndLoadJar("", classNamePrefix, counter));
 
-    final ClassFinder.ClassFilter notExcClassFilter = new ClassFinder.ClassFilter() {
-      @Override
-      public boolean isCandidateClass(Class<?> c) {
-        return !c.getSimpleName().startsWith(PREFIX);
-      }
-    };
+    final ClassFinder.ClassFilter notExcClassFilter = c -> !c.getSimpleName().startsWith(PREFIX);
     ClassFinder incClassesFinder = new ClassFinder(null, null, notExcClassFilter, classLoader);
     Set<Class<?>> incClasses = incClassesFinder.findClasses(
         makePackageName("", counter), false);
@@ -188,8 +178,7 @@ public class TestClassFinder {
   }
 
   private static String createAndLoadJar(final String packageNameSuffix,
-      final String classNamePrefix, final long counter)
-  throws Exception {
+      final String classNamePrefix, final long counter) throws Exception {
     FileAndPath c1 = compileTestClass(counter, packageNameSuffix, classNamePrefix);
     FileAndPath c2 = compileTestClass(counter, packageNameSuffix, PREFIX + "1");
     FileAndPath c3 = compileTestClass(counter, packageNameSuffix, PREFIX + classNamePrefix + "2");
@@ -212,12 +201,7 @@ public class TestClassFinder {
       new File(excludedJar).toURI().getRawSchemeSpecificPart();
 
     final ClassFinder.ResourcePathFilter notExcJarFilter =
-        new ClassFinder.ResourcePathFilter() {
-      @Override
-      public boolean isCandidatePath(String resourcePath, boolean isJar) {
-        return !isJar || !resourcePath.equals(excludedJarResource);
-      }
-    };
+      (resourcePath, isJar) -> !isJar || !resourcePath.equals(excludedJarResource);
     ClassFinder incClassesFinder = new ClassFinder(notExcJarFilter, null, null, classLoader);
     Set<Class<?>> incClasses = incClassesFinder.findClasses(
         makePackageName("", counter), false);
@@ -244,7 +228,9 @@ public class TestClassFinder {
 
   private static boolean contains(final Set<Class<?>> classes, final String simpleName) {
     for (Class<?> c: classes) {
-      if (c.getSimpleName().equals(simpleName)) return true;
+      if (c.getSimpleName().equals(simpleName)) {
+        return true;
+      }
     }
     return false;
   }
@@ -258,12 +244,8 @@ public class TestClassFinder {
     String pkgNameSuffix = name.getMethodName();
     LOG.info("Created jar " + createAndLoadJar(pkgNameSuffix, classNamePrefix, counter));
     final String classNameToFilterOut = classNamePrefix + counter;
-    final ClassFinder.FileNameFilter notThisFilter = new ClassFinder.FileNameFilter() {
-      @Override
-      public boolean isCandidateFile(String fileName, String absFilePath) {
-        return !fileName.equals(classNameToFilterOut + ".class");
-      }
-    };
+    final ClassFinder.FileNameFilter notThisFilter =
+      (fileName, absFilePath) -> !fileName.equals(classNameToFilterOut + ".class");
     String pkgName = makePackageName(pkgNameSuffix, counter);
     ClassFinder allClassesFinder = new ClassFinder(classLoader);
     Set<Class<?>> allClasses = allClassesFinder.findClasses(pkgName, false);
@@ -283,12 +265,7 @@ public class TestClassFinder {
     String pkgNameSuffix = name.getMethodName();
     LOG.info("Created jar " + createAndLoadJar(pkgNameSuffix, classNamePrefix, counter));
     final Class<?> clazz = makeClass(pkgNameSuffix, classNamePrefix, counter);
-    final ClassFinder.ClassFilter notThisFilter = new ClassFinder.ClassFilter() {
-      @Override
-      public boolean isCandidateClass(Class<?> c) {
-        return c != clazz;
-      }
-    };
+    final ClassFinder.ClassFilter notThisFilter = c -> c != clazz;
     String pkgName = makePackageName(pkgNameSuffix, counter);
     ClassFinder allClassesFinder = new ClassFinder(classLoader);
     Set<Class<?>> allClasses = allClassesFinder.findClasses(pkgName, false);
@@ -303,12 +280,7 @@ public class TestClassFinder {
   public void testClassFinderFiltersByPathInDirs() throws Exception {
     final String hardcodedThisSubdir = "hbase-common";
     final ClassFinder.ResourcePathFilter notExcJarFilter =
-        new ClassFinder.ResourcePathFilter() {
-      @Override
-      public boolean isCandidatePath(String resourcePath, boolean isJar) {
-        return isJar || !resourcePath.contains(hardcodedThisSubdir);
-      }
-    };
+      (resourcePath, isJar) -> isJar || !resourcePath.contains(hardcodedThisSubdir);
     String thisPackage = this.getClass().getPackage().getName();
     ClassFinder notThisClassFinder = new ClassFinder(notExcJarFilter, null, null, classLoader);
     Set<Class<?>> notAllClasses = notThisClassFinder.findClasses(thisPackage, false);
@@ -424,7 +396,6 @@ public class TestClassFinder {
 
   // Java 11 workaround - Custom class loader to expose addUrl method of URLClassLoader
   private static class CustomClassloader extends URLClassLoader {
-
     public CustomClassloader(URL[] urls, ClassLoader parentLoader) {
       super(urls, parentLoader);
     }
