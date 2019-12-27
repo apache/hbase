@@ -27,6 +27,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
+import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
+import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.AbstractWALRoller;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -115,6 +117,11 @@ final class RegionProcedureStoreWALRoller extends AbstractWALRoller<Abortable> {
     // we do not need this feature, so force disable it.
     conf.setBoolean(AbstractFSWALProvider.SEPARATE_OLDLOGDIR, false);
     conf.setLong(WAL_ROLL_PERIOD_KEY, conf.getLong(ROLL_PERIOD_MS_KEY, DEFAULT_ROLL_PERIOD_MS));
+    long flushSize = conf.getLong(RegionFlusherAndCompactor.FLUSH_SIZE_KEY,
+      RegionFlusherAndCompactor.DEFAULT_FLUSH_SIZE);
+    // make the roll size the same with the flush size, as we only have one region here
+    conf.setLong(WALUtil.WAL_BLOCK_SIZE, flushSize * 2);
+    conf.setFloat(AbstractFSWAL.WAL_ROLL_MULTIPLIER, 0.5f);
     return new RegionProcedureStoreWALRoller(conf, abortable, fs, walRootDir, globalWALRootDir);
   }
 }
