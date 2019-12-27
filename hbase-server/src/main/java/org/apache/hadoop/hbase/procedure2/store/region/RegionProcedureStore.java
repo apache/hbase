@@ -65,6 +65,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.math.IntMath;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
@@ -91,11 +92,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
  *          --&lt;master-server-name&gt;-dead <---- The WAL dir dead master
  * </pre>
  *
- * We use p:d column to store the serialized protobuf format procedure, and when deleting we
- * will first fill the info:proc column with an empty byte array, and then actually delete them in
- * the {@link #cleanup()} method. This is because that we need to retain the max procedure id, so we
- * can not directly delete a procedure row as we do not know if it is the one with the max procedure
- * id.
+ * We use p:d column to store the serialized protobuf format procedure, and when deleting we will
+ * first fill the info:proc column with an empty byte array, and then actually delete them in the
+ * {@link #cleanup()} method. This is because that we need to retain the max procedure id, so we can
+ * not directly delete a procedure row as we do not know if it is the one with the max procedure id.
  */
 @InterfaceAudience.Private
 public class RegionProcedureStore extends ProcedureStoreBase {
@@ -155,7 +155,7 @@ public class RegionProcedureStore extends ProcedureStoreBase {
     if (!setRunning(true)) {
       return;
     }
-    LOG.info("Starting the Region Procedure Store...");
+    LOG.info("Starting the Region Procedure Store, number threads={}", numThreads);
     this.numThreads = numThreads;
   }
 
@@ -381,13 +381,15 @@ public class RegionProcedureStore extends ProcedureStoreBase {
     CommonFSUtils.setRootDir(conf, rootDir);
     CommonFSUtils.setWALRootDir(conf, rootDir);
     RegionFlusherAndCompactor.setupConf(conf);
-
-    walRoller = RegionProcedureStoreWALRoller.create(conf, server, fs, rootDir, globalWALRootDir);
-    walRoller.start();
     conf.setInt(AbstractFSWAL.MAX_LOGS, conf.getInt(MAX_WALS_KEY, DEFAULT_MAX_WALS));
     if (conf.get(USE_HSYNC_KEY) != null) {
       conf.set(HRegion.WAL_HSYNC_CONF_KEY, conf.get(USE_HSYNC_KEY));
     }
+    conf.setInt(AbstractFSWAL.RING_BUFFER_SLOT_COUNT, IntMath.ceilingPowerOfTwo(16 * numThreads));
+
+    walRoller = RegionProcedureStoreWALRoller.create(conf, server, fs, rootDir, globalWALRootDir);
+    walRoller.start();
+
     walFactory = new WALFactory(conf, server.getServerName().toString(), false);
     Path dataDir = new Path(rootDir, DATA_DIR);
     if (fs.exists(dataDir)) {
