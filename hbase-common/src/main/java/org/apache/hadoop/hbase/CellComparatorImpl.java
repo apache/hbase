@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.util.Comparator;
@@ -23,13 +22,12 @@ import java.util.Comparator;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hbase.thirdparty.com.google.common.primitives.Longs;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
+import org.apache.hbase.thirdparty.com.google.common.primitives.Longs;
 
 /**
  * Compare two HBase cells.  Do not use this method comparing <code>-ROOT-</code> or
@@ -52,11 +50,13 @@ import org.slf4j.LoggerFactory;
 @InterfaceStability.Evolving
 public class CellComparatorImpl implements CellComparator {
   static final Logger LOG = LoggerFactory.getLogger(CellComparatorImpl.class);
+
   /**
    * Comparator for plain key/values; i.e. non-catalog table key/values. Works on Key portion
    * of KeyValue only.
    */
   public static final CellComparatorImpl COMPARATOR = new CellComparatorImpl();
+
   /**
    * A {@link CellComparatorImpl} for <code>hbase:meta</code> catalog table
    * {@link KeyValue}s.
@@ -342,7 +342,7 @@ public class CellComparatorImpl implements CellComparator {
           return -1;
         } else if (rightDelimiter < 0 && leftDelimiter >= 0) {
           return 1;
-        } else if (leftDelimiter < 0 && rightDelimiter < 0) {
+        } else if (leftDelimiter < 0) {
           return 0;
         }
       }
@@ -365,7 +365,7 @@ public class CellComparatorImpl implements CellComparator {
           return -1;
         } else if (rightDelimiter < 0 && leftDelimiter >= 0) {
           return 1;
-        } else if (leftDelimiter < 0 && rightDelimiter < 0) {
+        } else if (leftDelimiter < 0) {
           return 0;
         }
       }
