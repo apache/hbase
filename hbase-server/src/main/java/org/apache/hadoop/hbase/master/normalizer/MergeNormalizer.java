@@ -23,7 +23,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseIOException;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.slf4j.Logger;
@@ -48,7 +51,6 @@ import org.slf4j.LoggerFactory;
 public class MergeNormalizer extends BaseNormalizer {
   private static final Logger LOG = LoggerFactory.getLogger(MergeNormalizer.class);
   private static final int MIN_REGION_COUNT = 3;
-  private static final int MIN_DURATION_FOR_MERGE = 2;
 
   @Override
   public List<NormalizationPlan> computePlanForTable(TableName table) throws HBaseIOException {
@@ -98,7 +100,7 @@ public class MergeNormalizer extends BaseNormalizer {
     Timestamp currentTime = new Timestamp(System.currentTimeMillis());
     Timestamp hriTime = new Timestamp(hri.getRegionId());
     boolean isOld =
-        new Timestamp(hriTime.getTime() + TimeUnit.DAYS.toMillis(MIN_DURATION_FOR_MERGE))
+        new Timestamp(hriTime.getTime() + TimeUnit.DAYS.toMillis(getMinimumDurationBeforeMerge()))
             .before(currentTime);
     return isOld;
   }
@@ -123,5 +125,12 @@ public class MergeNormalizer extends BaseNormalizer {
       }
     }
     return normalize;
+  }
+
+  private long getMinimumDurationBeforeMerge() {
+    Configuration entries = HBaseConfiguration.create();
+    long minDuration = masterServices.getConfiguration()
+      .getLong(HConstants.HBASE_MASTER_DAYS_BEFORE_MERGE, HConstants.DEFAULT_MIN_DAYS_BEFORE_MERGE);
+    return minDuration;
   }
 }

@@ -21,13 +21,13 @@ package org.apache.hadoop.hbase.master.normalizer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseIOException;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledResponse;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -276,6 +276,8 @@ public class TestSimpleRegionNormalizer {
     when(masterServices.getAssignmentManager().getRegionStates().
       getRegionServerOfRegion(any(HRegionInfo.class))).thenReturn(sn);
 
+    when(masterServices.getConfiguration().getLong(HConstants.HBASE_MASTER_DAYS_BEFORE_MERGE,
+      HConstants.DEFAULT_MIN_DAYS_BEFORE_MERGE)).thenReturn(0L);
     for (Map.Entry<byte[], Integer> region : regionSizes.entrySet()) {
       RegionLoad regionLoad = Mockito.mock(RegionLoad.class);
       when(regionLoad.getName()).thenReturn(region.getKey());

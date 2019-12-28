@@ -35,6 +35,10 @@ public abstract class BaseNormalizer implements RegionNormalizer {
   protected MasterServices masterServices;
   protected MasterRpcServices masterRpcServices;
 
+  /**
+   * Set the master service.
+   * @param masterServices inject instance of MasterServices
+   */
   @Override
   public void setMasterServices(MasterServices masterServices) {
     this.masterServices = masterServices;

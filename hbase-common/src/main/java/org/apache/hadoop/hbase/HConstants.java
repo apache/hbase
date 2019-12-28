@@ -151,6 +151,12 @@ public final class HConstants {
   public static final String HBASE_MASTER_NORMALIZER_CLASS =
     "hbase.master.normalizer.class";
 
+  /** Config for min age of region before being considerded for merge in mormalizer */
+  public static final long DEFAULT_MIN_DAYS_BEFORE_MERGE = 3;
+
+  public static final String HBASE_MASTER_DAYS_BEFORE_MERGE =
+      "hbase.master.normalize.daysBeforeMerge";
+
   /** Cluster is standalone or pseudo-distributed */
   public static final boolean CLUSTER_IS_LOCAL = false;
 
