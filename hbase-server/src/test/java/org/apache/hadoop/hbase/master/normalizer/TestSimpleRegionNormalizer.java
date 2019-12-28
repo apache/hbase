@@ -18,10 +18,21 @@
  */
 package org.apache.hadoop.hbase.master.normalizer;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.when;
+
+import com.google.protobuf.RpcController;
+import com.google.protobuf.ServiceException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseIOException;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
@@ -36,20 +47,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
-
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
-import static org.mockito.Mockito.when;
 
 /**
  * Tests logic of {@link SimpleRegionNormalizer}.
@@ -264,20 +261,17 @@ public class TestSimpleRegionNormalizer {
   }
 
   @SuppressWarnings("MockitoCast")
-  protected void setupMocksForNormalizer(Map<byte[], Integer> regionSizes,
-                                         List<HRegionInfo> hris) {
+  protected void setupMocksForNormalizer(Map<byte[], Integer> regionSizes, List<HRegionInfo> hris) {
     masterServices = Mockito.mock(MasterServices.class, RETURNS_DEEP_STUBS);
     masterRpcServices = Mockito.mock(MasterRpcServices.class, RETURNS_DEEP_STUBS);
 
     // for simplicity all regions are assumed to be on one server; doesn't matter to us
     ServerName sn = ServerName.valueOf("localhost", 0, 1L);
-    when(masterServices.getAssignmentManager().getRegionStates().
-      getRegionsOfTable(any(TableName.class))).thenReturn(hris);
-    when(masterServices.getAssignmentManager().getRegionStates().
-      getRegionServerOfRegion(any(HRegionInfo.class))).thenReturn(sn);
+    when(masterServices.getAssignmentManager().getRegionStates()
+        .getRegionsOfTable(any(TableName.class))).thenReturn(hris);
+    when(masterServices.getAssignmentManager().getRegionStates()
+        .getRegionServerOfRegion(any(HRegionInfo.class))).thenReturn(sn);
 
-    when(masterServices.getConfiguration().getInt(HConstants.HBASE_MASTER_DAYS_BEFORE_MERGE,
-      HConstants.DEFAULT_MIN_DAYS_BEFORE_MERGE)).thenReturn(0);
     for (Map.Entry<byte[], Integer> region : regionSizes.entrySet()) {
       RegionLoad regionLoad = Mockito.mock(RegionLoad.class);
       when(regionLoad.getName()).thenReturn(region.getKey());
@@ -286,13 +280,13 @@ public class TestSimpleRegionNormalizer {
       // this is possibly broken with jdk9, unclear if false positive or not
       // suppress it for now, fix it when we get to running tests on 9
       // see: http://errorprone.info/bugpattern/MockitoCast
-      when((Object) masterServices.getServerManager().getLoad(sn).
-        getRegionsLoad().get(region.getKey())).thenReturn(regionLoad);
+      when((Object) masterServices.getServerManager().getLoad(sn).getRegionsLoad()
+          .get(region.getKey())).thenReturn(regionLoad);
     }
     try {
       when(masterRpcServices.isSplitOrMergeEnabled(any(RpcController.class),
-        any(IsSplitOrMergeEnabledRequest.class))).thenReturn(
-          IsSplitOrMergeEnabledResponse.newBuilder().setEnabled(true).build());
+        any(IsSplitOrMergeEnabledRequest.class)))
+            .thenReturn(IsSplitOrMergeEnabledResponse.newBuilder().setEnabled(true).build());
     } catch (ServiceException se) {
       LOG.debug("error setting isSplitOrMergeEnabled switch", se);
     }

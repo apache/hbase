@@ -18,6 +18,12 @@
  */
 package org.apache.hadoop.hbase.master.normalizer;
 
+import static org.junit.Assert.assertEquals;
+
+import java.io.IOException;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -40,13 +46,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import java.io.IOException;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-
-import static org.junit.Assert.assertEquals;
-
 /**
  * Testing {@link SimpleRegionNormalizer} on minicluster.
  */
@@ -61,8 +60,6 @@ public class TestSimpleRegionNormalizerOnCluster {
   public static void beforeAllTests() throws Exception {
     // we will retry operations when PleaseHoldException is thrown
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
-    TEST_UTIL.getConfiguration().setLong(HConstants.HBASE_MASTER_DAYS_BEFORE_MERGE, 0L);
-
     // Start a cluster of two regionservers.
     TEST_UTIL.startMiniCluster(1);
     admin = TEST_UTIL.getHBaseAdmin();
@@ -76,8 +73,7 @@ public class TestSimpleRegionNormalizerOnCluster {
   @Test(timeout = 60000)
   @SuppressWarnings("deprecation")
   public void testRegionNormalizationSplitOnCluster() throws Exception {
-    final TableName TABLENAME =
-      TableName.valueOf("testRegionNormalizationSplitOnCluster");
+    final TableName TABLENAME = TableName.valueOf("testRegionNormalizationSplitOnCluster");
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HMaster m = cluster.getMaster();
 
@@ -146,8 +142,7 @@ public class TestSimpleRegionNormalizerOnCluster {
   @Test(timeout = 60000)
   @SuppressWarnings("deprecation")
   public void testRegionNormalizationMergeOnCluster() throws Exception {
-    final TableName TABLENAME =
-      TableName.valueOf("testRegionNormalizationMergeOnCluster");
+    final TableName TABLENAME = TableName.valueOf("testRegionNormalizationMergeOnCluster");
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HMaster m = cluster.getMaster();
 

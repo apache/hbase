@@ -19,10 +19,12 @@
 package org.apache.hadoop.hbase.master.normalizer;
 
 import com.google.protobuf.ServiceException;
+import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -101,5 +103,59 @@ public abstract class BaseNormalizer implements RegionNormalizer {
 
     double avgRegionSize = acutalRegionCnt == 0 ? 0 : totalSizeMb / (double) acutalRegionCnt;
     return avgRegionSize;
+  }
+
+  protected List<NormalizationPlan> getMergeNormalizationPlan(TableName table) {
+    List<NormalizationPlan> plans = new ArrayList<>();
+    List<HRegionInfo> tableRegions =
+        masterServices.getAssignmentManager().getRegionStates().getRegionsOfTable(table);
+    double avgRegionSize = getAvgRegionSize(tableRegions);
+    LOG.debug("Table {}, average region size: {}", table, avgRegionSize);
+    LOG.debug("Computing normalization plan for table: {}, number of regions: {}", table,
+      tableRegions.size());
+
+    int candidateIdx = 0;
+    while (candidateIdx < tableRegions.size()) {
+      if (candidateIdx == tableRegions.size() - 1) {
+        break;
+      }
+      HRegionInfo hri = tableRegions.get(candidateIdx);
+      long regionSize = getRegionSize(hri);
+      HRegionInfo hri2 = tableRegions.get(candidateIdx + 1);
+      long regionSize2 = getRegionSize(hri2);
+      if (regionSize >= 0 && regionSize2 >= 0 && regionSize + regionSize2 < avgRegionSize) {
+        // atleast one of the two regions should be older than MIN_REGION_DURATION days
+        plans.add(new MergeNormalizationPlan(hri, hri2));
+        candidateIdx++;
+      } else {
+        LOG.debug("Skipping region {} of table {} with size {}", hri.getRegionId(), table,
+          regionSize);
+      }
+      candidateIdx++;
+    }
+    return plans;
+  }
+
+  protected List<NormalizationPlan> getSplitNormalizationPlan(TableName table) {
+    List<NormalizationPlan> plans = new ArrayList<>();
+    List<HRegionInfo> tableRegions =
+        masterServices.getAssignmentManager().getRegionStates().getRegionsOfTable(table);
+    double avgRegionSize = getAvgRegionSize(tableRegions);
+    LOG.debug("Table{}, average region size: ", table, avgRegionSize);
+
+    int candidateIdx = 0;
+    while (candidateIdx < tableRegions.size()) {
+      HRegionInfo hri = tableRegions.get(candidateIdx);
+      long regionSize = getRegionSize(hri);
+      // if the region is > 2 times larger than average, we split it, split
+      // is more high priority normalization action than merge.
+      if (regionSize > 2 * avgRegionSize) {
+        LOG.info("Table " + table + ", large region " + hri.getRegionNameAsString() + " has size "
+            + regionSize + ", more than twice avg size, splitting");
+        plans.add(new SplitNormalizationPlan(hri, null));
+      }
+      candidateIdx++;
+    }
+    return plans;
   }
 }

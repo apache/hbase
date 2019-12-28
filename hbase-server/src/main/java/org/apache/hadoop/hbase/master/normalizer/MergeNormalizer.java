@@ -54,40 +54,20 @@ public class MergeNormalizer extends BaseNormalizer {
 
   @Override
   public List<NormalizationPlan> computePlanForTable(TableName table) throws HBaseIOException {
+    List<NormalizationPlan> plans = new ArrayList<>();
     if (!shouldNormalize(table)) {
       return null;
     }
-    List<NormalizationPlan> plans = new ArrayList<>();
-    List<HRegionInfo> tableRegions =
-        masterServices.getAssignmentManager().getRegionStates().getRegionsOfTable(table);
-    double avgRegionSize = getAvgRegionSize(tableRegions);
-    LOG.debug("Table {}, average region size: {}", table, avgRegionSize);
-    LOG.debug("Computing normalization plan for table: {}, number of regions: {}", table,
-      tableRegions.size());
-
-    int candidateIdx = 0;
-    while (candidateIdx < tableRegions.size()) {
-      if (candidateIdx == tableRegions.size() - 1) {
-        break;
-      }
-      HRegionInfo hri = tableRegions.get(candidateIdx);
-      long regionSize = getRegionSize(hri);
-      HRegionInfo hri2 = tableRegions.get(candidateIdx + 1);
-      long regionSize2 = getRegionSize(hri2);
-      if (regionSize >= 0 && regionSize2 >= 0 && regionSize + regionSize2 < avgRegionSize) {
-        // atleast one of the two regions should be older than MIN_REGION_DURATION days
+    // atleast one of the two regions should be older than MIN_REGION_DURATION days
+    List<NormalizationPlan> normalizationPlans = getMergeNormalizationPlan(table);
+    for (NormalizationPlan plan : normalizationPlans) {
+      if (plan instanceof MergeNormalizationPlan) {
+        HRegionInfo hri = ((MergeNormalizationPlan) plan).getFirstRegion();
+        HRegionInfo hri2 = ((MergeNormalizationPlan) plan).getSecondRegion();
         if (isOldEnoughToMerge(hri) || isOldEnoughToMerge(hri2)) {
-          LOG.info(
-            "Table {}, small region size: {} plus its neighbor size: {}, less than the avg size "
-                + "{}, merging them",
-            table, regionSize, regionSize2, avgRegionSize);
-          plans.add(new MergeNormalizationPlan(hri, hri2));
-          candidateIdx++;
+          plans.add(plan);
         }
-      } else {
-        LOG.debug("Skipping region {} of table {}", hri.getRegionId(), table);
       }
-      candidateIdx++;
     }
     if (plans.isEmpty()) {
       LOG.debug("No normalization needed, regions look good for table: {}", table);
@@ -129,8 +109,8 @@ public class MergeNormalizer extends BaseNormalizer {
 
   private int getMinimumDurationBeforeMerge() {
     Configuration entries = HBaseConfiguration.create();
-    int minDuration = masterServices.getConfiguration()
-      .getInt(HConstants.HBASE_MASTER_DAYS_BEFORE_MERGE, HConstants.DEFAULT_MIN_DAYS_BEFORE_MERGE);
+    int minDuration = masterServices.getConfiguration().getInt(
+      HConstants.HBASE_MASTER_DAYS_BEFORE_MERGE, HConstants.DEFAULT_MIN_DAYS_BEFORE_MERGE);
     return minDuration;
   }
 }

@@ -22,42 +22,36 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Simple implementation of region normalizer.
- *
- * Logic in use:
- *
- *  <ol>
- *  <li> get all regions of a given table
- *  <li> get avg size S of each region (by total size of store files reported in RegionLoad)
- *  <li> If biggest region is bigger than S * 2, it is kindly requested to split,
- *    and normalization stops
- *  <li> Otherwise, two smallest region R1 and its smallest neighbor R2 are kindly requested
- *    to merge, if R1 + R1 &lt;  S, and normalization stops
- *  <li> Otherwise, no action is performed
+ * Simple implementation of region normalizer. Logic in use:
+ * <ol>
+ * <li>get all regions of a given table
+ * <li>get avg size S of each region (by total size of store files reported in RegionLoad)
+ * <li>If biggest region is bigger than S * 2, it is kindly requested to split, and normalization
+ * stops
+ * <li>Otherwise, two smallest region R1 and its smallest neighbor R2 are kindly requested to merge,
+ * if R1 + R1 &lt; S, and normalization stops
+ * <li>Otherwise, no action is performed
  * </ol>
  * <p>
- * Region sizes are coarse and approximate on the order of megabytes. Additionally,
- * "empty" regions (less than 1MB, with the previous note) are not merged away. This
- * is by design to prevent normalization from undoing the pre-splitting of a table.
+ * Region sizes are coarse and approximate on the order of megabytes. Additionally, "empty" regions
+ * (less than 1MB, with the previous note) are not merged away. This is by design to prevent
+ * normalization from undoing the pre-splitting of a table.
  */
 @InterfaceAudience.Private
 public class SimpleRegionNormalizer extends BaseNormalizer {
   private static final Logger LOG = LoggerFactory.getLogger(SimpleRegionNormalizer.class);
   private static final int MIN_REGION_COUNT = 3;
 
-
   // Comparator that gives higher priority to region Split plan
-  private Comparator<NormalizationPlan> planComparator =
-      new Comparator<NormalizationPlan>() {
+  private Comparator<NormalizationPlan> planComparator = new Comparator<NormalizationPlan>() {
     @Override
     public int compare(NormalizationPlan plan, NormalizationPlan plan2) {
       if (plan instanceof SplitNormalizationPlan) {
@@ -71,9 +65,8 @@ public class SimpleRegionNormalizer extends BaseNormalizer {
   };
 
   /**
-   * Computes next most "urgent" normalization action on the table.
-   * Action may be either a split, or a merge, or no action.
-   *
+   * Computes next most "urgent" normalization action on the table. Action may be either a split, or
+   * a merge, or no action.
    * @param table table to normalize
    * @return normalization plan to execute
    */
@@ -89,59 +82,29 @@ public class SimpleRegionNormalizer extends BaseNormalizer {
       LOG.debug("Both split and merge are disabled for table: " + table);
       return null;
     }
-    List<NormalizationPlan> plans = new ArrayList<>();
-    List<HRegionInfo> tableRegions = masterServices.getAssignmentManager().getRegionStates().
-      getRegionsOfTable(table);
+    List<HRegionInfo> tableRegions =
+        masterServices.getAssignmentManager().getRegionStates().getRegionsOfTable(table);
 
-    //TODO: should we make min number of regions a config param?
+    // TODO: should we make min number of regions a config param?
     if (tableRegions == null || tableRegions.size() < MIN_REGION_COUNT) {
       int nrRegions = tableRegions == null ? 0 : tableRegions.size();
       LOG.debug("Table " + table + " has " + nrRegions + " regions, required min number"
-        + " of regions for normalizer to run is " + MIN_REGION_COUNT + ", not running normalizer");
+          + " of regions for normalizer to run is " + MIN_REGION_COUNT
+          + ", not running normalizer");
       return null;
     }
-
-    LOG.debug("Computing normalization plan for table: " + table +
-      ", number of regions: " + tableRegions.size());
-
-    long totalSizeMb = 0;
-    int acutalRegionCnt = 0;
-
-    for (int i = 0; i < tableRegions.size(); i++) {
-      HRegionInfo hri = tableRegions.get(i);
-      long regionSize = getRegionSize(hri);
-      if (regionSize > 0) {
-        acutalRegionCnt++;
-        totalSizeMb += regionSize;
+    List<NormalizationPlan> plans = new ArrayList<>();
+    if (splitEnabled) {
+      List<NormalizationPlan> splitNormalizationPlan = getSplitNormalizationPlan(table);
+      if (splitNormalizationPlan != null) {
+        plans = splitNormalizationPlan;
       }
     }
-
-    double avgRegionSize = acutalRegionCnt == 0 ? 0 : totalSizeMb / (double) acutalRegionCnt;
-
-    LOG.debug("Table " + table + ", total aggregated regions size: " + totalSizeMb);
-    LOG.debug("Table " + table + ", average region size: " + avgRegionSize);
-
-    int candidateIdx = 0;
-    while (candidateIdx < tableRegions.size()) {
-      HRegionInfo hri = tableRegions.get(candidateIdx);
-      long regionSize = getRegionSize(hri);
-      // if the region is > 2 times larger than average, we split it, split
-      // is more high priority normalization action than merge.
-      if (regionSize > 2 * avgRegionSize) {
-        if (splitEnabled) {
-          LOG.info("Table " + table + ", large region " + hri.getRegionNameAsString() + " has size "
-              + regionSize + ", more than twice avg size, splitting");
-          plans.add(new SplitNormalizationPlan(hri, null));
-        }
+    if (mergeEnabled) {
+      List<NormalizationPlan> normalizationPlans = getMergeNormalizationPlan(table);
+      if (normalizationPlans != null) {
+        plans.addAll(normalizationPlans);
       }
-      candidateIdx++;
-    }
-    MergeNormalizer mergeNormalizer = new MergeNormalizer();
-    mergeNormalizer.setMasterRpcServices(masterRpcServices);
-    mergeNormalizer.setMasterServices(masterServices);
-    List<NormalizationPlan> normalizationPlans = mergeNormalizer.computePlanForTable(table);
-    if(normalizationPlans != null) {
-      plans.addAll(normalizationPlans);
     }
     if (plans.isEmpty()) {
       LOG.debug("No normalization needed, regions look good for table: " + table);
