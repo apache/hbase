@@ -71,7 +71,7 @@ public abstract class BaseNormalizer implements RegionNormalizer {
             RequestConverter.buildIsSplitOrMergeEnabledRequest(Admin.MasterSwitchType.MERGE))
           .getEnabled();
     } catch (ServiceException se) {
-      LOG.debug("Unable to determine whether merge is enabled", se);
+      LOG.warn("Unable to determine whether merge is enabled", se);
     }
     return mergeEnabled;
   }
@@ -84,7 +84,7 @@ public abstract class BaseNormalizer implements RegionNormalizer {
             RequestConverter.buildIsSplitOrMergeEnabledRequest(Admin.MasterSwitchType.SPLIT))
           .getEnabled();
     } catch (ServiceException se) {
-      LOG.debug("Unable to determine whether merge is enabled", se);
+      LOG.warn("Unable to determine whether merge is enabled", se);
     }
     return splitEnabled;
   }
@@ -141,7 +141,7 @@ public abstract class BaseNormalizer implements RegionNormalizer {
     List<HRegionInfo> tableRegions =
         masterServices.getAssignmentManager().getRegionStates().getRegionsOfTable(table);
     double avgRegionSize = getAvgRegionSize(tableRegions);
-    LOG.debug("Table{}, average region size: ", table, avgRegionSize);
+    LOG.debug("Table {}, average region size: {}", table, avgRegionSize);
 
     int candidateIdx = 0;
     while (candidateIdx < tableRegions.size()) {
