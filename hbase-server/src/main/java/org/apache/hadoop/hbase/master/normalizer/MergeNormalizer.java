@@ -127,10 +127,10 @@ public class MergeNormalizer extends BaseNormalizer {
     return normalize;
   }
 
-  private long getMinimumDurationBeforeMerge() {
+  private int getMinimumDurationBeforeMerge() {
     Configuration entries = HBaseConfiguration.create();
-    long minDuration = masterServices.getConfiguration()
-      .getLong(HConstants.HBASE_MASTER_DAYS_BEFORE_MERGE, HConstants.DEFAULT_MIN_DAYS_BEFORE_MERGE);
+    int minDuration = masterServices.getConfiguration()
+      .getInt(HConstants.HBASE_MASTER_DAYS_BEFORE_MERGE, HConstants.DEFAULT_MIN_DAYS_BEFORE_MERGE);
     return minDuration;
   }
 }

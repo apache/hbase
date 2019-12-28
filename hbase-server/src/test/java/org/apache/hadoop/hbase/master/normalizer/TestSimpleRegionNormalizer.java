@@ -276,8 +276,8 @@ public class TestSimpleRegionNormalizer {
     when(masterServices.getAssignmentManager().getRegionStates().
       getRegionServerOfRegion(any(HRegionInfo.class))).thenReturn(sn);
 
-    when(masterServices.getConfiguration().getLong(HConstants.HBASE_MASTER_DAYS_BEFORE_MERGE,
-      HConstants.DEFAULT_MIN_DAYS_BEFORE_MERGE)).thenReturn(0L);
+    when(masterServices.getConfiguration().getInt(HConstants.HBASE_MASTER_DAYS_BEFORE_MERGE,
+      HConstants.DEFAULT_MIN_DAYS_BEFORE_MERGE)).thenReturn(0);
     for (Map.Entry<byte[], Integer> region : regionSizes.entrySet()) {
       RegionLoad regionLoad = Mockito.mock(RegionLoad.class);
       when(regionLoad.getName()).thenReturn(region.getKey());

@@ -152,7 +152,7 @@ public final class HConstants {
     "hbase.master.normalizer.class";
 
   /** Config for min age of region before being considerded for merge in mormalizer */
-  public static final long DEFAULT_MIN_DAYS_BEFORE_MERGE = 3;
+  public static final int DEFAULT_MIN_DAYS_BEFORE_MERGE = 3;
 
   public static final String HBASE_MASTER_DAYS_BEFORE_MERGE =
       "hbase.master.normalize.daysBeforeMerge";
