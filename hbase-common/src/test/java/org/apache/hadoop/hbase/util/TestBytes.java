@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.junit.Assert.assertArrayEquals;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -41,7 +42,6 @@ import org.junit.experimental.categories.Category;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestBytes extends TestCase {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestBytes.class);
@@ -99,141 +99,141 @@ public class TestBytes extends TestCase {
     assertNotNull(ee);
   }
 
-  public void testAdd () throws Exception {
+  public void testAdd() {
     byte[] a = {0,0,0,0,0,0,0,0,0,0};
     byte[] b = {1,1,1,1,1,1,1,1,1,1,1};
     byte[] c = {2,2,2,2,2,2,2,2,2,2,2,2};
     byte[] d = {3,3,3,3,3,3,3,3,3,3,3,3,3};
-    byte[] result1 = Bytes.add (a, b, c);
-    byte[] result2 = Bytes.add (new byte[][] {a, b, c});
+    byte[] result1 = Bytes.add(a, b, c);
+    byte[] result2 = Bytes.add(new byte[][] {a, b, c});
     assertEquals(0, Bytes.compareTo(result1, result2));
-    byte[] result4 = Bytes.add (result1, d);
-    byte[] result5 = Bytes.add (new byte[][] {result1, d});
+    byte[] result4 = Bytes.add(result1, d);
+    byte[] result5 = Bytes.add(new byte[][] {result1, d});
     assertEquals(0, Bytes.compareTo(result1, result2));
   }
 
-  public void testSplit() throws Exception {
-    byte [] lowest = Bytes.toBytes("AAA");
-    byte [] middle = Bytes.toBytes("CCC");
-    byte [] highest = Bytes.toBytes("EEE");
-    byte [][] parts = Bytes.split(lowest, highest, 1);
-    for (int i = 0; i < parts.length; i++) {
-      System.out.println(Bytes.toString(parts[i]));
+  public void testSplit() {
+    byte[] lowest = Bytes.toBytes("AAA");
+    byte[] middle = Bytes.toBytes("CCC");
+    byte[] highest = Bytes.toBytes("EEE");
+    byte[][] parts = Bytes.split(lowest, highest, 1);
+    for (byte[] bytes : parts) {
+      System.out.println(Bytes.toString(bytes));
     }
     assertEquals(3, parts.length);
     assertTrue(Bytes.equals(parts[1], middle));
     // Now divide into three parts.  Change highest so split is even.
     highest = Bytes.toBytes("DDD");
     parts = Bytes.split(lowest, highest, 2);
-    for (int i = 0; i < parts.length; i++) {
-      System.out.println(Bytes.toString(parts[i]));
+    for (byte[] part : parts) {
+      System.out.println(Bytes.toString(part));
     }
     assertEquals(4, parts.length);
     // Assert that 3rd part is 'CCC'.
     assertTrue(Bytes.equals(parts[2], middle));
   }
 
-  public void testSplit2() throws Exception {
+  public void testSplit2() {
     // More split tests.
     byte [] lowest = Bytes.toBytes("http://A");
     byte [] highest = Bytes.toBytes("http://z");
     byte [] middle = Bytes.toBytes("http://]");
     byte [][] parts = Bytes.split(lowest, highest, 1);
-    for (int i = 0; i < parts.length; i++) {
-      System.out.println(Bytes.toString(parts[i]));
+    for (byte[] part : parts) {
+      System.out.println(Bytes.toString(part));
     }
     assertEquals(3, parts.length);
     assertTrue(Bytes.equals(parts[1], middle));
   }
 
-  public void testSplit3() throws Exception {
+  public void testSplit3() {
     // Test invalid split cases
-    byte [] low = { 1, 1, 1 };
-    byte [] high = { 1, 1, 3 };
+    byte[] low = { 1, 1, 1 };
+    byte[] high = { 1, 1, 3 };
 
     // If swapped, should throw IAE
     try {
       Bytes.split(high, low, 1);
-      assertTrue("Should not be able to split if low > high", false);
+      fail("Should not be able to split if low > high");
     } catch(IllegalArgumentException iae) {
       // Correct
     }
 
     // Single split should work
-    byte [][] parts = Bytes.split(low, high, 1);
+    byte[][] parts = Bytes.split(low, high, 1);
     for (int i = 0; i < parts.length; i++) {
       System.out.println("" + i + " -> " + Bytes.toStringBinary(parts[i]));
     }
-    assertTrue("Returned split should have 3 parts but has " + parts.length, parts.length == 3);
+    assertEquals("Returned split should have 3 parts but has " + parts.length, 3, parts.length);
 
     // If split more than once, use additional byte to split
     parts = Bytes.split(low, high, 2);
-    assertTrue("Split with an additional byte", parts != null);
+    assertNotNull("Split with an additional byte", parts);
     assertEquals(parts.length, low.length + 1);
 
     // Split 0 times should throw IAE
     try {
-      parts = Bytes.split(low, high, 0);
-      assertTrue("Should not be able to split 0 times", false);
+      Bytes.split(low, high, 0);
+      fail("Should not be able to split 0 times");
     } catch(IllegalArgumentException iae) {
       // Correct
     }
   }
 
-  public void testToInt() throws Exception {
-    int [] ints = {-1, 123, Integer.MIN_VALUE, Integer.MAX_VALUE};
-    for (int i = 0; i < ints.length; i++) {
-      byte [] b = Bytes.toBytes(ints[i]);
-      assertEquals(ints[i], Bytes.toInt(b));
-      byte [] b2 = bytesWithOffset(b);
-      assertEquals(ints[i], Bytes.toInt(b2, 1));
-      assertEquals(ints[i], Bytes.toInt(b2, 1, Bytes.SIZEOF_INT));
+  public void testToInt() {
+    int[] ints = { -1, 123, Integer.MIN_VALUE, Integer.MAX_VALUE };
+    for (int anInt : ints) {
+      byte[] b = Bytes.toBytes(anInt);
+      assertEquals(anInt, Bytes.toInt(b));
+      byte[] b2 = bytesWithOffset(b);
+      assertEquals(anInt, Bytes.toInt(b2, 1));
+      assertEquals(anInt, Bytes.toInt(b2, 1, Bytes.SIZEOF_INT));
     }
   }
 
-  public void testToLong() throws Exception {
-    long [] longs = {-1l, 123l, Long.MIN_VALUE, Long.MAX_VALUE};
-    for (int i = 0; i < longs.length; i++) {
-      byte [] b = Bytes.toBytes(longs[i]);
-      assertEquals(longs[i], Bytes.toLong(b));
-      byte [] b2 = bytesWithOffset(b);
-      assertEquals(longs[i], Bytes.toLong(b2, 1));
-      assertEquals(longs[i], Bytes.toLong(b2, 1, Bytes.SIZEOF_LONG));
+  public void testToLong() {
+    long[] longs = { -1L, 123L, Long.MIN_VALUE, Long.MAX_VALUE };
+    for (long aLong : longs) {
+      byte[] b = Bytes.toBytes(aLong);
+      assertEquals(aLong, Bytes.toLong(b));
+      byte[] b2 = bytesWithOffset(b);
+      assertEquals(aLong, Bytes.toLong(b2, 1));
+      assertEquals(aLong, Bytes.toLong(b2, 1, Bytes.SIZEOF_LONG));
     }
   }
 
-  public void testToFloat() throws Exception {
-    float [] floats = {-1f, 123.123f, Float.MAX_VALUE};
-    for (int i = 0; i < floats.length; i++) {
-      byte [] b = Bytes.toBytes(floats[i]);
-      assertEquals(floats[i], Bytes.toFloat(b), 0.0f);
-      byte [] b2 = bytesWithOffset(b);
-      assertEquals(floats[i], Bytes.toFloat(b2, 1), 0.0f);
+  public void testToFloat() {
+    float[] floats = { -1f, 123.123f, Float.MAX_VALUE };
+    for (float aFloat : floats) {
+      byte[] b = Bytes.toBytes(aFloat);
+      assertEquals(aFloat, Bytes.toFloat(b), 0.0f);
+      byte[] b2 = bytesWithOffset(b);
+      assertEquals(aFloat, Bytes.toFloat(b2, 1), 0.0f);
     }
   }
 
-  public void testToDouble() throws Exception {
+  public void testToDouble() {
     double [] doubles = {Double.MIN_VALUE, Double.MAX_VALUE};
-    for (int i = 0; i < doubles.length; i++) {
-      byte [] b = Bytes.toBytes(doubles[i]);
-      assertEquals(doubles[i], Bytes.toDouble(b), 0.0);
-      byte [] b2 = bytesWithOffset(b);
-      assertEquals(doubles[i], Bytes.toDouble(b2, 1), 0.0);
+    for (double aDouble : doubles) {
+      byte[] b = Bytes.toBytes(aDouble);
+      assertEquals(aDouble, Bytes.toDouble(b), 0.0);
+      byte[] b2 = bytesWithOffset(b);
+      assertEquals(aDouble, Bytes.toDouble(b2, 1), 0.0);
     }
   }
 
-  public void testToBigDecimal() throws Exception {
-    BigDecimal [] decimals = {new BigDecimal("-1"), new BigDecimal("123.123"),
-      new BigDecimal("123123123123")};
-    for (int i = 0; i < decimals.length; i++) {
-      byte [] b = Bytes.toBytes(decimals[i]);
-      assertEquals(decimals[i], Bytes.toBigDecimal(b));
-      byte [] b2 = bytesWithOffset(b);
-      assertEquals(decimals[i], Bytes.toBigDecimal(b2, 1, b.length));
+  public void testToBigDecimal() {
+    BigDecimal[] decimals = { new BigDecimal("-1"), new BigDecimal("123.123"),
+      new BigDecimal("123123123123") };
+    for (BigDecimal decimal : decimals) {
+      byte[] b = Bytes.toBytes(decimal);
+      assertEquals(decimal, Bytes.toBigDecimal(b));
+      byte[] b2 = bytesWithOffset(b);
+      assertEquals(decimal, Bytes.toBigDecimal(b2, 1, b.length));
     }
   }
 
-  private byte [] bytesWithOffset(byte [] src) {
+  private byte[] bytesWithOffset(byte[] src) {
     // add one byte in front to test offset
     byte [] result = new byte[src.length + 1];
     result[0] = (byte) 0xAA;
@@ -249,7 +249,7 @@ public class TestBytes extends TestCase {
 
     byte[] actual = Bytes.toBytes(target);
     byte[] expected = { 0, 1, 2, 3, 4, 5, 6 };
-    assertTrue(Arrays.equals(expected,  actual));
+    assertArrayEquals(expected, actual);
     assertEquals(2, target.position());
     assertEquals(7, target.limit());
 
@@ -259,7 +259,7 @@ public class TestBytes extends TestCase {
 
     byte[] actual2 = Bytes.toBytes(target2);
     byte[] expected2 = { 2, 3, 4, 5, 6 };
-    assertTrue(Arrays.equals(expected2, actual2));
+    assertArrayEquals(expected2, actual2);
     assertEquals(0, target2.position());
     assertEquals(5, target2.limit());
   }
@@ -272,21 +272,21 @@ public class TestBytes extends TestCase {
 
     byte[] actual = Bytes.getBytes(target);
     byte[] expected = { 2, 3, 4, 5, 6 };
-    assertTrue(Arrays.equals(expected,  actual));
+    assertArrayEquals(expected, actual);
     assertEquals(2, target.position());
     assertEquals(7, target.limit());
   }
 
   public void testReadAsVLong() throws Exception {
-    long [] longs = {-1l, 123l, Long.MIN_VALUE, Long.MAX_VALUE};
-    for (int i = 0; i < longs.length; i++) {
+    long[] longs = { -1L, 123L, Long.MIN_VALUE, Long.MAX_VALUE };
+    for (long aLong : longs) {
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       DataOutputStream output = new DataOutputStream(baos);
-      WritableUtils.writeVLong(output, longs[i]);
+      WritableUtils.writeVLong(output, aLong);
       byte[] long_bytes_no_offset = baos.toByteArray();
-      assertEquals(longs[i], Bytes.readAsVLong(long_bytes_no_offset, 0));
+      assertEquals(aLong, Bytes.readAsVLong(long_bytes_no_offset, 0));
       byte[] long_bytes_with_offset = bytesWithOffset(long_bytes_no_offset);
-      assertEquals(longs[i], Bytes.readAsVLong(long_bytes_with_offset, 1));
+      assertEquals(aLong, Bytes.readAsVLong(long_bytes_with_offset, 1));
     }
   }
 
@@ -317,23 +317,23 @@ public class TestBytes extends TestCase {
     assertEquals(expected, actual);
   }
 
-  public void testBinarySearch() throws Exception {
-    byte [][] arr = {
-        {1},
-        {3},
-        {5},
-        {7},
-        {9},
-        {11},
-        {13},
-        {15},
+  public void testBinarySearch() {
+    byte[][] arr = {
+        { 1 },
+        { 3 },
+        { 5 },
+        { 7 },
+        { 9 },
+        { 11 },
+        { 13 },
+        { 15 },
     };
-    byte [] key1 = {3,1};
-    byte [] key2 = {4,9};
-    byte [] key2_2 = {4};
-    byte [] key3 = {5,11};
-    byte [] key4 = {0};
-    byte [] key5 = {2};
+    byte[] key1 = { 3, 1 };
+    byte[] key2 = { 4, 9 };
+    byte[] key2_2 = { 4 };
+    byte[] key3 = { 5, 11 };
+    byte[] key4 = { 0 };
+    byte[] key5 = { 2 };
 
     assertEquals(1, Bytes.binarySearch(arr, key1, 0, 1));
     assertEquals(0, Bytes.binarySearch(arr, key1, 1, 1));
@@ -389,8 +389,7 @@ public class TestBytes extends TestCase {
     assertFalse(Bytes.startsWith(Bytes.toBytes(""), Bytes.toBytes("hello")));
   }
 
-  public void testIncrementBytes() throws IOException {
-
+  public void testIncrementBytes() {
     assertTrue(checkTestIncrementBytes(10, 1));
     assertTrue(checkTestIncrementBytes(12, 123435445));
     assertTrue(checkTestIncrementBytes(124634654, 1));
@@ -410,10 +409,9 @@ public class TestBytes extends TestCase {
     assertTrue(checkTestIncrementBytes(-1546543452, -34565445));
   }
 
-  private static boolean checkTestIncrementBytes(long val, long amount)
-  throws IOException {
+  private static boolean checkTestIncrementBytes(long val, long amount) {
     byte[] value = Bytes.toBytes(val);
-    byte [] testValue = {-1, -1, -1, -1, -1, -1, -1, -1};
+    byte[] testValue = { -1, -1, -1, -1, -1, -1, -1, -1 };
     if (value[0] > 0) {
       testValue = new byte[Bytes.SIZEOF_LONG];
     }
@@ -450,14 +448,14 @@ public class TestBytes extends TestCase {
     assertEquals("", Bytes.readStringFixedSize(dis, 9));
   }
 
-  public void testCopy() throws Exception {
-    byte [] bytes = Bytes.toBytes("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-    byte [] copy =  Bytes.copy(bytes);
-    assertFalse(bytes == copy);
+  public void testCopy() {
+    byte[] bytes = Bytes.toBytes("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+    byte[] copy =  Bytes.copy(bytes);
+    assertNotSame(bytes, copy);
     assertTrue(Bytes.equals(bytes, copy));
   }
 
-  public void testToBytesBinaryTrailingBackslashes() throws Exception {
+  public void testToBytesBinaryTrailingBackslashes() {
     try {
       Bytes.toBytesBinary("abc\\x00\\x01\\");
     } catch (StringIndexOutOfBoundsException ex) {
@@ -465,13 +463,13 @@ public class TestBytes extends TestCase {
     }
   }
 
-  public void testToStringBinary_toBytesBinary_Reversable() throws Exception {
+  public void testToStringBinary_toBytesBinary_Reversable() {
     String bytes = Bytes.toStringBinary(Bytes.toBytes(2.17));
     assertEquals(2.17, Bytes.toDouble(Bytes.toBytesBinary(bytes)), 0);
   }
 
   public void testUnsignedBinarySearch(){
-    byte[] bytes = new byte[]{0,5,123,127,-128,-100,-1};
+    byte[] bytes = new byte[] { 0,5,123,127,-128,-100,-1 };
     Assert.assertEquals(1, Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)5));
     Assert.assertEquals(3, Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)127));
     Assert.assertEquals(4, Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)-128));
@@ -484,17 +482,17 @@ public class TestBytes extends TestCase {
   public void testUnsignedIncrement(){
     byte[] a = Bytes.toBytes(0);
     int a2 = Bytes.toInt(Bytes.unsignedCopyAndIncrement(a), 0);
-    Assert.assertTrue(a2==1);
+    Assert.assertEquals(1, a2);
 
     byte[] b = Bytes.toBytes(-1);
     byte[] actual = Bytes.unsignedCopyAndIncrement(b);
     Assert.assertNotSame(b, actual);
     byte[] expected = new byte[]{1,0,0,0,0};
-    Assert.assertArrayEquals(expected, actual);
+    assertArrayEquals(expected, actual);
 
     byte[] c = Bytes.toBytes(255);//should wrap to the next significant byte
     int c2 = Bytes.toInt(Bytes.unsignedCopyAndIncrement(c), 0);
-    Assert.assertTrue(c2==256);
+    Assert.assertEquals(256, c2);
   }
 
   public void testIndexOf() {
@@ -511,7 +509,7 @@ public class TestBytes extends TestCase {
     byte[] array = Bytes.toBytes("hello world");
     assertTrue(Bytes.contains(array, (byte) 'e'));
     assertTrue(Bytes.contains(array, (byte) 'd'));
-    assertFalse( Bytes.contains(array, (byte) 'a'));
+    assertFalse(Bytes.contains(array, (byte) 'a'));
     assertTrue(Bytes.contains(array, Bytes.toBytes("world")));
     assertTrue(Bytes.contains(array, Bytes.toBytes("ello")));
     assertFalse(Bytes.contains(array, Bytes.toBytes("owo")));
@@ -520,8 +518,8 @@ public class TestBytes extends TestCase {
   public void testZero() {
     byte[] array = Bytes.toBytes("hello");
     Bytes.zero(array);
-    for (int i = 0; i < array.length; i++) {
-      assertEquals(0, array[i]);
+    for (byte b : array) {
+      assertEquals(0, b);
     }
     array = Bytes.toBytes("hello world");
     Bytes.zero(array, 2, 7);
@@ -538,7 +536,7 @@ public class TestBytes extends TestCase {
   public void testPutBuffer() {
     byte[] b = new byte[100];
     for (byte i = 0; i < 100; i++) {
-      Bytes.putByteBuffer(b, i, ByteBuffer.wrap(new byte[]{i}));
+      Bytes.putByteBuffer(b, i, ByteBuffer.wrap(new byte[] { i }));
     }
     for (byte i = 0; i < 100; i++) {
       Assert.assertEquals(i, b[i]);
@@ -547,18 +545,9 @@ public class TestBytes extends TestCase {
 
   public void testToFromHex() {
     List<String> testStrings = new ArrayList<>(8);
-    testStrings.addAll(Arrays.asList(new String[] {
-        "",
-        "00",
-        "A0",
-        "ff",
-        "FFffFFFFFFFFFF",
-        "12",
-        "0123456789abcdef",
-        "283462839463924623984692834692346ABCDFEDDCA0",
-      }));
-    for (String testString : testStrings)
-    {
+    testStrings.addAll(Arrays.asList("", "00", "A0", "ff", "FFffFFFFFFFFFF", "12",
+      "0123456789abcdef", "283462839463924623984692834692346ABCDFEDDCA0"));
+    for (String testString : testStrings) {
       byte[] byteData = Bytes.fromHex(testString);
       Assert.assertEquals(testString.length() / 2, byteData.length);
       String result = Bytes.toHex(byteData);
@@ -566,27 +555,20 @@ public class TestBytes extends TestCase {
     }
 
     List<byte[]> testByteData = new ArrayList<>(5);
-    testByteData.addAll(Arrays.asList(new byte[][] {
-      new byte[0],
-      new byte[1],
-      new byte[10],
-      new byte[] {1, 2, 3, 4, 5},
-      new byte[] {(byte) 0xFF},
-    }));
+    testByteData.addAll(Arrays.asList(new byte[0], new byte[1], new byte[10],
+      new byte[] { 1, 2, 3, 4, 5 }, new byte[] { (byte) 0xFF }));
     Random r = new Random();
-    for (int i = 0; i < 20; i++)
-    {
+    for (int i = 0; i < 20; i++) {
       byte[] bytes = new byte[r.nextInt(100)];
       r.nextBytes(bytes);
       testByteData.add(bytes);
     }
 
-    for (byte[] testData : testByteData)
-    {
+    for (byte[] testData : testByteData) {
       String hexString = Bytes.toHex(testData);
       Assert.assertEquals(testData.length * 2, hexString.length());
       byte[] result = Bytes.fromHex(hexString);
-      Assert.assertArrayEquals(testData, result);
+      assertArrayEquals(testData, result);
     }
   }
 }
