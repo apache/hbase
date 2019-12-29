@@ -121,8 +121,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
   private static final int ROWS_PER_GB = ONE_GB / ROW_LENGTH;
 
   public static final TableName TABLE_NAME = TableName.valueOf("TestTable");
-  public static final byte [] FAMILY_NAME = Bytes.toBytes("info");
-  public static final byte [] QUALIFIER_NAME = Bytes.toBytes("data");
+  public static final byte[] FAMILY_NAME = Bytes.toBytes("info");
+  public static final byte[] QUALIFIER_NAME = Bytes.toBytes("data");
   private TableName tableName = TABLE_NAME;
 
   protected HTableDescriptor TABLE_DESCRIPTOR;
@@ -163,11 +163,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
    * Enum for map metrics.  Keep it out here rather than inside in the Map
    * inner-class so we can find associated properties.
    */
-  protected static enum Counter {
+  protected enum Counter {
     /** elapsed time */
     ELAPSED_TIME,
     /** number of rows */
-    ROWS}
+    ROWS
+  }
 
   /**
    * Constructor
@@ -227,18 +228,15 @@ public class PerformanceEvaluation extends Configured implements Tool {
    *  the record value is the PeInputSplit itself.
    */
   public static class PeInputSplit extends InputSplit implements Writable {
-    private TableName tableName = TABLE_NAME;
-    private int startRow = 0;
-    private int rows = 0;
-    private int totalRows = 0;
-    private int clients = 0;
-    private boolean flushCommits = false;
-    private boolean writeToWAL = true;
-    private boolean useTags = false;
-    private int noOfTags = 0;
-
-    public PeInputSplit() {
-    }
+    private TableName tableName;
+    private int startRow;
+    private int rows;
+    private int totalRows;
+    private int clients;
+    private boolean flushCommits;
+    private boolean writeToWAL;
+    private boolean useTags;
+    private int noOfTags;
 
     public PeInputSplit(TableName tableName, int startRow, int rows, int totalRows, int clients,
         boolean flushCommits, boolean writeToWAL, boolean useTags, int noOfTags) {
@@ -310,10 +308,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
       return totalRows;
     }
 
-    public int getClients() {
-      return clients;
-    }
-
     public boolean isFlushCommits() {
       return flushCommits;
     }
@@ -336,7 +330,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
    *  It extends from FileInputFormat, want to use it's methods such as setInputPaths().
    */
   public static class PeInputFormat extends FileInputFormat<NullWritable, PeInputSplit> {
-
     @Override
     public List<InputSplit> getSplits(JobContext job) throws IOException {
       // generate splits
@@ -350,7 +343,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
         FileSystem fs = path.getFileSystem(job.getConfiguration());
         FSDataInputStream fileIn = fs.open(path);
         LineReader in = new LineReader(fileIn, job.getConfiguration());
-        int lineLen = 0;
+        int lineLen;
         while(true) {
           Text lineText = new Text();
           lineLen = in.readLine(lineText);
@@ -358,7 +351,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
             break;
           }
           Matcher m = LINE_PATTERN.matcher(lineText.toString());
-          if((m != null) && m.matches()) {
+          if ((m != null) && m.matches()) {
             TableName tableName = TableName.valueOf(m.group(1));
             int startRow = Integer.parseInt(m.group(2));
             int rows = Integer.parseInt(m.group(3));
@@ -395,7 +388,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     @Override
     public RecordReader<NullWritable, PeInputSplit> createRecordReader(InputSplit split,
-                            TaskAttemptContext context) {
+        TaskAttemptContext context) {
       return new PeRecordReader();
     }
 
@@ -481,7 +474,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     private <Type> Class<? extends Type> forName(String className, Class<Type> type) {
-      Class<? extends Type> clazz = null;
+      Class<? extends Type> clazz;
       try {
         clazz = Class.forName(className).asSubclass(type);
       } catch (ClassNotFoundException e) {
@@ -492,14 +485,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     @Override
     protected void map(NullWritable key, PeInputSplit value, final Context context)
-           throws IOException, InterruptedException {
-
-      Status status = new Status() {
-        @Override
-        public void setStatus(String msg) {
-          context.setStatus(msg);
-        }
-      };
+        throws IOException, InterruptedException {
+      Status status = context::setStatus;
 
       // Evaluation task
       pe.tableName = value.getTableName();
@@ -519,9 +506,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   /**
    * If table does not already exist, create.
-   * @param c Client to use checking.
+   * @param admin Client to use checking.
    * @return True if we created the table.
-   * @throws IOException
+   * @throws IOException if an operation on the table fails
    */
   private boolean checkTable(RemoteAdmin admin) throws IOException {
     HTableDescriptor tableDescriptor = getDescriptor();
@@ -544,8 +531,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
         LOG.info("Table " + tableDescriptor + " created");
       }
     }
-    boolean tableExists = admin.isTableAvailable(tableDescriptor.getTableName().getName());
-    return tableExists;
+
+    return admin.isTableAvailable(tableDescriptor.getTableName().getName());
   }
 
   protected HTableDescriptor getDescriptor() {
@@ -636,12 +623,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
           try {
             long elapsedTime = pe.runOneClient(cmd, index * perClientRows,
                 perClientRows, R,
-                 flushCommits, writeToWAL, useTags, noOfTags, connection, new Status() {
-                   @Override
-                   public void setStatus(final String msg) {
-                     LOG.info("client-" + getName() + " " + msg);
-                   }
-                 });
+                 flushCommits, writeToWAL, useTags, noOfTags, connection,
+              msg -> LOG.info("client-" + getName() + " " + msg));
             timings[index] = elapsedTime;
             LOG.info("Finished " + getName() + " in " + elapsedTime +
               "ms writing " + perClientRows + " rows");
@@ -684,8 +667,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
    * per client regards which row they are to start on.
    * @param cmd Command to run.
    */
-  private void doMapReduce(final Class<? extends Test> cmd) throws IOException,
-        InterruptedException, ClassNotFoundException {
+  private void doMapReduce(final Class<? extends Test> cmd)
+      throws IOException, InterruptedException, ClassNotFoundException {
     Configuration conf = getConf();
     Path inputDir = writeInputFile(conf);
     conf.set(EvaluationMapTask.CMD_KEY, cmd.getName());
@@ -715,7 +698,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
    * Write input file of offsets-per-client for the mapreduce job.
    * @param c Configuration
    * @return Directory that contains file written.
-   * @throws IOException
+   * @throws IOException if creating the directory or the file fails
    */
   private Path writeInputFile(final Configuration c) throws IOException {
     SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddHHmmss");
@@ -784,31 +767,26 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   /**
-   * Wraps up options passed to {@link org.apache.hadoop.hbase.PerformanceEvaluation.Test
-   * tests}.  This makes the reflection logic a little easier to understand...
+   * Wraps up options passed to {@link org.apache.hadoop.hbase.PerformanceEvaluation} tests
+   * This makes the reflection logic a little easier to understand...
    */
   static class TestOptions {
     private int startRow;
     private int perClientRunRows;
     private int totalRows;
-    private int numClientThreads;
     private TableName tableName;
     private boolean flushCommits;
-    private boolean writeToWAL = true;
-    private boolean useTags = false;
-    private int noOfTags = 0;
+    private boolean writeToWAL;
+    private boolean useTags;
+    private int noOfTags;
     private Connection connection;
 
-    TestOptions() {
-    }
-
-    TestOptions(int startRow, int perClientRunRows, int totalRows, int numClientThreads,
-        TableName tableName, boolean flushCommits, boolean writeToWAL, boolean useTags,
+    TestOptions(int startRow, int perClientRunRows, int totalRows, TableName tableName,
+        boolean flushCommits, boolean writeToWAL, boolean useTags,
         int noOfTags, Connection connection) {
       this.startRow = startRow;
       this.perClientRunRows = perClientRunRows;
       this.totalRows = totalRows;
-      this.numClientThreads = numClientThreads;
       this.tableName = tableName;
       this.flushCommits = flushCommits;
       this.writeToWAL = writeToWAL;
@@ -827,10 +805,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     public int getTotalRows() {
       return totalRows;
-    }
-
-    public int getNumClientThreads() {
-      return numClientThreads;
     }
 
     public TableName getTableName() {
@@ -1040,7 +1014,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       s.close();
     }
 
-    protected abstract Pair<byte[],byte[]> getStartAndStopRow();
+    protected abstract Pair<byte[], byte[]> getStartAndStopRow();
 
     protected Pair<byte[], byte[]> generateStartAndStopRows(int maxRange) {
       int start = this.rand.nextInt(Integer.MAX_VALUE) % totalRows;
@@ -1250,12 +1224,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   /**
    * Format passed integer.
-   * @param number
-   * @return Returns zero-prefixed 10-byte wide decimal version of passed
-   * number (Does absolute in case number is negative).
+   * @param number the integer to format
+   * @return Returns zero-prefixed 10-byte wide decimal version of passed number (Does absolute in
+   *    case number is negative).
    */
   public static byte [] format(final int number) {
-    byte [] b = new byte[DEFAULT_ROW_PREFIX_LENGTH + 10];
+    byte[] b = new byte[DEFAULT_ROW_PREFIX_LENGTH + 10];
     int d = Math.abs(number);
     for (int i = b.length - 1; i >= 0; i--) {
       b[i] = (byte)((d % 10) + '0');
@@ -1305,7 +1279,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     long totalElapsedTime;
 
     TestOptions options = new TestOptions(startRow, perClientRunRows,
-      totalRows, N, tableName, flushCommits, writeToWAL, useTags, noOfTags, connection);
+      totalRows, tableName, flushCommits, writeToWAL, useTags, noOfTags, connection);
     final Test t;
     try {
       Constructor<? extends Test> constructor = cmd.getDeclaredConstructor(
@@ -1327,12 +1301,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   private void runNIsOne(final Class<? extends Test> cmd) {
-    Status status = new Status() {
-      @Override
-      public void setStatus(String msg) {
-        LOG.info(msg);
-      }
-    };
+    Status status = LOG::info;
 
     RemoteAdmin admin;
     try {
@@ -1346,8 +1315,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
   }
 
-  private void runTest(final Class<? extends Test> cmd) throws IOException,
-          InterruptedException, ClassNotFoundException {
+  private void runTest(final Class<? extends Test> cmd)
+      throws IOException, InterruptedException, ClassNotFoundException {
     if (N == 1) {
       // If there is only one client and one HRegionServer, we assume nothing
       // has been set up at all.
