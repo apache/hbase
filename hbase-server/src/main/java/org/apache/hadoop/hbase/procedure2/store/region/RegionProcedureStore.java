@@ -120,7 +120,7 @@ public class RegionProcedureStore extends ProcedureStoreBase {
 
   private static final TableName TABLE_NAME = TableName.valueOf("master:procedure");
 
-  private static final byte[] FAMILY = Bytes.toBytes("p");
+  static final byte[] FAMILY = Bytes.toBytes("p");
 
   private static final byte[] PROC_QUALIFIER = Bytes.toBytes("d");
 
