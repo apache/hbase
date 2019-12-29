@@ -130,4 +130,8 @@ public class WALProcedurePrettyPrinter extends AbstractHBaseTool {
       }
     }
   }
+
+  public static void main(String[] args) {
+    new WALProcedurePrettyPrinter().doStaticMain(args);
+  }
 }
