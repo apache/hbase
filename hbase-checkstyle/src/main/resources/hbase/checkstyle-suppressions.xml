@@ -55,4 +55,5 @@
   <suppress checks="HideUtilityClassConstructor" files="org.apache.hadoop.hbase.util.ByteRangeUtils"/>
   <!-- Will not be final, because it is InterfaceAudience.Public -->
   <suppress checks="FinalClass" files="org.apache.hadoop.hbase.net.Address"/>
+  <suppress checks="VisibilityModifier" files="org.apache.hadoop.hbase.regionserver.compactions.Compactor.FileDetails"/>
 </suppressions>
