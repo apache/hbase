@@ -218,7 +218,11 @@ public class ProcedureExecutor<TEnvironment> {
   private TimeoutExecutorThread<TEnvironment> timeoutExecutor;
 
   /**
-   * Use a dedicated thread for executing WorkerMonitor.
+   * WorkerMonitor check for stuck workers and new worker thread when necessary, for example if
+   * there is no worker to assign meta, it will new worker thread for it, so it is very important.
+   * TimeoutExecutor execute many tasks like DeadServerMetricRegionChore RegionInTransitionChore
+   * and so on, some tasks may execute for a long time so will block other tasks like
+   * WorkerMonitor, so use a dedicated thread for executing WorkerMonitor.
    */
   private TimeoutExecutorThread<TEnvironment> workerMonitorExecutor;
 
