@@ -610,6 +610,8 @@ public class ReplicationSource implements ReplicationSourceInterface {
       Threads.shutdown(initThread, this.sleepForRetries);
     }
 
+    this.workerThreads.values().forEach(worker -> worker.stopWorker());
+
     final boolean shutdownSuccess = MoreExecutors.shutdownAndAwaitTermination(this.executorService,
       10L, TimeUnit.SECONDS);
     if (!shutdownSuccess) {

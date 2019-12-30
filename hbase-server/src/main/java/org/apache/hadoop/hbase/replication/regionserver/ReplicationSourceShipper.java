@@ -303,7 +303,7 @@ public class ReplicationSourceShipper implements Callable<ReplicationSourceShipp
   }
 
   long getStartPosition() {
-    return 0;
+    return 0L;
   }
 
   protected boolean isActive() {
