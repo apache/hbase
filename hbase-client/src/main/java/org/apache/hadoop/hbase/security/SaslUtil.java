@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hbase.security;
 
-import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -27,7 +27,6 @@ import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
 
-import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -70,15 +69,15 @@ public class SaslUtil {
   }
 
   static String encodeIdentifier(byte[] identifier) {
-    return new String(Base64.encodeBase64(identifier), StandardCharsets.UTF_8);
+    return Base64.getEncoder().encodeToString(identifier);
   }
 
   static byte[] decodeIdentifier(String identifier) {
-    return Base64.decodeBase64(Bytes.toBytes(identifier));
+    return Base64.getDecoder().decode(Bytes.toBytes(identifier));
   }
 
   static char[] encodePassword(byte[] password) {
-    return new String(Base64.encodeBase64(password), StandardCharsets.UTF_8).toCharArray();
+    return Base64.getEncoder().encodeToString(password).toCharArray();
   }
 
   /**
