@@ -582,6 +582,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>vjasani</id>
+      <name>Viraj Jasani</name>
+      <email>vjasani@apache.org</email>
+      <timezone>+5</timezone>
+    </developer>
+    <developer>
       <id>water</id>
       <name>Xiang Li</name>
       <email>xiangli@apache.org</email>
@@ -1528,7 +1534,7 @@
     <maven.project.info.report.version>2.9</maven.project.info.report.version>
     <os.maven.version>1.5.0.Final</os.maven.version>
     <spotbugs.version>3.1.11</spotbugs.version>
-    <surefire.version>2.22.2</surefire.version>
+    <surefire.version>3.0.0-M4</surefire.version>
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
     <hbase-thirdparty.version>3.1.1</hbase-thirdparty.version>

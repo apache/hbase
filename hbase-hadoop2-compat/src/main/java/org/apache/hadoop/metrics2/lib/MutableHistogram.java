@@ -51,6 +51,10 @@ public class MutableHistogram extends MutableMetric implements MetricHistogram {
     histogram.update(val);
   }
 
+  @Override public long getCount() {
+    return histogram.getCount();
+  }
+
   public long getMax() {
     return histogram.getMax();
   }

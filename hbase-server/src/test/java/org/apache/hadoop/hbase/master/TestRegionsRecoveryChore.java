@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Size;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.UserMetrics;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
@@ -354,6 +355,10 @@ public class TestRegionsRecoveryChore {
           ++regionNo;
         }
         return regionMetricsMap;
+      }
+
+      @Override public Map<byte[], UserMetrics> getUserMetrics() {
+        return new HashMap<>();
       }
 
       @Override

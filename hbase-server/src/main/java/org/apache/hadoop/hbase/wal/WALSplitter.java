@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.wal;
 
+import static org.apache.hadoop.hbase.wal.BoundedRecoveredHFilesOutputSink.DEFAULT_WAL_SPLIT_TO_HFILE;
+import static org.apache.hadoop.hbase.wal.BoundedRecoveredHFilesOutputSink.WAL_SPLIT_TO_HFILE;
 import static org.apache.hadoop.hbase.wal.WALSplitUtil.finishSplitLogFile;
 
 import java.io.EOFException;
@@ -112,7 +114,7 @@ public class WALSplitter {
 
   @VisibleForTesting
   WALSplitter(final WALFactory factory, Configuration conf, Path walDir, FileSystem walFS,
-      LastSequenceId idChecker, SplitLogWorkerCoordination splitLogWorkerCoordination) {
+    LastSequenceId idChecker, SplitLogWorkerCoordination splitLogWorkerCoordination) {
     this.conf = HBaseConfiguration.create(conf);
     String codecClassName =
         conf.get(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, WALCellCodec.class.getName());
@@ -129,16 +131,21 @@ public class WALSplitter {
 
     // if we limit the number of writers opened for sinking recovered edits
     boolean splitWriterCreationBounded = conf.getBoolean(SPLIT_WRITER_CREATION_BOUNDED, false);
+    boolean splitToHFile = conf.getBoolean(WAL_SPLIT_TO_HFILE, DEFAULT_WAL_SPLIT_TO_HFILE);
     long bufferSize = this.conf.getLong(SPLIT_WAL_BUFFER_SIZE, 128 * 1024 * 1024);
     int numWriterThreads = this.conf.getInt(SPLIT_WAL_WRITER_THREADS, 3);
-    if (splitWriterCreationBounded) {
+
+    if (splitToHFile) {
+      entryBuffers = new BoundedEntryBuffers(controller, bufferSize);
+      outputSink =
+          new BoundedRecoveredHFilesOutputSink(this, controller, entryBuffers, numWriterThreads);
+    } else if (splitWriterCreationBounded) {
       entryBuffers = new BoundedEntryBuffers(controller, bufferSize);
       outputSink =
           new BoundedRecoveredEditsOutputSink(this, controller, entryBuffers, numWriterThreads);
     } else {
       entryBuffers = new EntryBuffers(controller, bufferSize);
-      outputSink =
-          new RecoveredEditsOutputSink(this, controller, entryBuffers, numWriterThreads);
+      outputSink = new RecoveredEditsOutputSink(this, controller, entryBuffers, numWriterThreads);
     }
   }
 

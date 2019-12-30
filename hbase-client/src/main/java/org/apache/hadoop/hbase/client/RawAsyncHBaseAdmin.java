@@ -1165,12 +1165,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   private byte[] toEncodeRegionName(byte[] regionName) {
-    try {
-      return RegionInfo.isEncodedRegionName(regionName) ? regionName
-          : Bytes.toBytes(RegionInfo.encodeRegionName(regionName));
-    } catch (IOException e) {
-      return regionName;
-    }
+    return RegionInfo.isEncodedRegionName(regionName) ? regionName :
+      Bytes.toBytes(RegionInfo.encodeRegionName(regionName));
   }
 
   private void checkAndGetTableName(byte[] encodeRegionName, AtomicReference<TableName> tableName,

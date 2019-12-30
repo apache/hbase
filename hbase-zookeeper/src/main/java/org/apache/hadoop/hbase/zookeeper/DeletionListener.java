@@ -94,7 +94,7 @@ public class DeletionListener extends ZKListener {
       return;
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Processing delete on " + pathToWatch);
+      LOG.debug("Processing delete on {}", pathToWatch);
     }
     deletedLatch.countDown();
   }

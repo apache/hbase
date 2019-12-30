@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.procedure2.store;
+package org.apache.hadoop.hbase.procedure2.store.wal;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -36,9 +36,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
  *
  * It can be used by the ProcedureStore to identify which procedures are already
  * deleted/completed to avoid the deserialization step on restart
+ * @deprecated Since 2.3.0, will be removed in 4.0.0. Keep here only for rolling upgrading, now we
+ *             use the new region based procedure store.
  */
+@Deprecated
 @InterfaceAudience.Private
-public class ProcedureStoreTracker {
+class ProcedureStoreTracker {
   private static final Logger LOG = LoggerFactory.getLogger(ProcedureStoreTracker.class);
 
   // Key is procedure id corresponding to first bit of the bitmap.

@@ -83,5 +83,9 @@ public abstract class MutableRangeHistogram extends MutableHistogram implements 
           Interns.info(name + "_" + rangeType + "_" + ranges[ranges.length - 1] + "-inf", desc),
           val - cumNum);
     }
-  }  
+  }
+
+  @Override public long getCount() {
+    return histogram.getCount();
+  }
 }

@@ -237,7 +237,7 @@ class AsyncNonMetaRegionLocator {
   // which prevents us being added. The upper layer can use this value to complete pending requests.
   private RegionLocations addToCache(TableCache tableCache, RegionLocations locs) {
     LOG.trace("Try adding {} to cache", locs);
-    byte[] startKey = locs.getDefaultRegionLocation().getRegion().getStartKey();
+    byte[] startKey = locs.getRegionLocation().getRegion().getStartKey();
     for (;;) {
       RegionLocations oldLocs = tableCache.cache.putIfAbsent(startKey, locs);
       if (oldLocs == null) {

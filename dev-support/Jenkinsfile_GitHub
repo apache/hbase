@@ -83,19 +83,8 @@ pipeline {
                         echo "MAVEN_HOME: ${MAVEN_HOME}"
                         echo "maven version:"
                         mvn --offline --version  || true
-                        echo "getting machine specs, find in ${BUILD_URL}/artifact/patchprocess/machine/"
                         mkdir "${PATCHDIR}/machine"
-                        cat /proc/cpuinfo >"${PATCHDIR}/machine/cpuinfo" 2>&1 || true
-                        cat /proc/meminfo >"${PATCHDIR}/machine/meminfo" 2>&1 || true
-                        cat /proc/diskstats >"${PATCHDIR}/machine/diskstats" 2>&1 || true
-                        cat /sys/block/sda/stat >"${PATCHDIR}/machine/sys-block-sda-stat" 2>&1 || true
-                        df -h >"${PATCHDIR}/machine/df-h" 2>&1 || true
-                        ps -Awwf >"${PATCHDIR}/machine/ps-Awwf" 2>&1 || true
-                        ifconfig -a >"${PATCHDIR}/machine/ifconfig-a" 2>&1 || true
-                        lsblk -ta >"${PATCHDIR}/machine/lsblk-ta" 2>&1 || true
-                        lsblk -fa >"${PATCHDIR}/machine/lsblk-fa" 2>&1 || true
-                        cat /proc/loadavg >"${output}/loadavg" 2>&1 || true
-                        ulimit -a >"${PATCHDIR}/machine/ulimit-a" 2>&1 || true
+                       "${SOURCEDIR}/dev-support/gather_machine_environment.sh" "${PATCHDIR}/machine"
                         ## /H*
 
                         # If CHANGE_URL is set (e.g., Github Branch Source plugin), process it.

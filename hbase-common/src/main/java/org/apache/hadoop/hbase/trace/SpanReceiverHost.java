@@ -40,7 +40,7 @@ public class SpanReceiverHost {
   private Configuration conf;
   private boolean closed = false;
 
-  private static enum SingletonHolder {
+  private enum SingletonHolder {
     INSTANCE;
     final transient Object lock = new Object();
     transient SpanReceiverHost host = null;
@@ -78,7 +78,6 @@ public class SpanReceiverHost {
   /**
    * Reads the names of classes specified in the {@code hbase.trace.spanreceiver.classes} property
    * and instantiates and registers them with the Tracer.
-   *
    */
   public void loadSpanReceivers() {
     String[] receiverNames = conf.getStrings(SPAN_RECEIVERS_CONF_KEY);
@@ -93,7 +92,7 @@ public class SpanReceiverHost {
       SpanReceiver receiver = builder.className(className).build();
       if (receiver != null) {
         receivers.add(receiver);
-        LOG.info("SpanReceiver " + className + " was loaded successfully.");
+        LOG.info("SpanReceiver {} was loaded successfully.", className);
       }
     }
     for (SpanReceiver rcvr : receivers) {
@@ -105,7 +104,10 @@ public class SpanReceiverHost {
    * Calls close() on all SpanReceivers created by this SpanReceiverHost.
    */
   public synchronized void closeReceivers() {
-    if (closed) return;
+    if (closed) {
+      return;
+    }
+
     closed = true;
     for (SpanReceiver rcvr : receivers) {
       try {

@@ -40,7 +40,6 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestHBaseConfiguration {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestHBaseConfiguration.class);
@@ -55,7 +54,7 @@ public class TestHBaseConfiguration {
   }
 
   @Test
-  public void testSubset() throws Exception {
+  public void testSubset() {
     Configuration conf = HBaseConfiguration.create();
     // subset is used in TableMapReduceUtil#initCredentials to support different security
     // configurations between source and destination clusters, so we'll use that as an example
@@ -130,7 +129,6 @@ public class TestHBaseConfiguration {
 
     private static Object hadoopCredProviderFactory = null;
     private static Method getProvidersMethod = null;
-    private static Method getAliasesMethod = null;
     private static Method getCredentialEntryMethod = null;
     private static Method getCredentialMethod = null;
     private static Method createCredentialEntryMethod = null;
@@ -161,7 +159,7 @@ public class TestHBaseConfiguration {
       hadoopClassesAvailable = false;
 
       // Load Hadoop CredentialProviderFactory
-      Class<?> hadoopCredProviderFactoryClz = null;
+      Class<?> hadoopCredProviderFactoryClz;
       try {
         hadoopCredProviderFactoryClz = Class
             .forName(HADOOP_CRED_PROVIDER_FACTORY_CLASS_NAME);
@@ -181,13 +179,13 @@ public class TestHBaseConfiguration {
             HADOOP_CRED_PROVIDER_FACTORY_GET_PROVIDERS_METHOD_NAME,
             Configuration.class);
         // Load Hadoop CredentialProvider
-        Class<?> hadoopCredProviderClz = null;
+        Class<?> hadoopCredProviderClz;
         hadoopCredProviderClz = Class.forName(HADOOP_CRED_PROVIDER_CLASS_NAME);
         getCredentialEntryMethod = loadMethod(hadoopCredProviderClz,
             HADOOP_CRED_PROVIDER_GET_CREDENTIAL_ENTRY_METHOD_NAME, String.class);
 
-        getAliasesMethod = loadMethod(hadoopCredProviderClz,
-            HADOOP_CRED_PROVIDER_GET_ALIASES_METHOD_NAME);
+        Method getAliasesMethod =
+          loadMethod(hadoopCredProviderClz, HADOOP_CRED_PROVIDER_GET_ALIASES_METHOD_NAME);
 
         createCredentialEntryMethod = loadMethod(hadoopCredProviderClz,
             HADOOP_CRED_PROVIDER_CREATE_CREDENTIAL_ENTRY_METHOD_NAME,
@@ -197,7 +195,7 @@ public class TestHBaseConfiguration {
             HADOOP_CRED_PROVIDER_FLUSH_METHOD_NAME);
 
         // Load Hadoop CredentialEntry
-        Class<?> hadoopCredentialEntryClz = null;
+        Class<?> hadoopCredentialEntryClz;
         try {
           hadoopCredentialEntryClz = Class
               .forName(HADOOP_CRED_ENTRY_CLASS_NAME);
@@ -216,17 +214,15 @@ public class TestHBaseConfiguration {
       LOG.info("Credential provider classes have been" +
           " loaded and initialized successfully through reflection.");
       return true;
-
     }
 
     private Method loadMethod(Class<?> clz, String name, Class<?>... classes)
         throws Exception {
-      Method method = null;
+      Method method;
       try {
         method = clz.getMethod(name, classes);
       } catch (SecurityException e) {
-        fail("security exception caught for: " + name + " in " +
-      clz.getCanonicalName());
+        fail("security exception caught for: " + name + " in " + clz.getCanonicalName());
         throw e;
       } catch (NoSuchMethodException e) {
         LOG.error("Failed to load the " + name + ": " + e);
@@ -246,19 +242,11 @@ public class TestHBaseConfiguration {
     @SuppressWarnings("unchecked")
     protected  List<Object> getCredentialProviders(Configuration conf) {
       // Call CredentialProviderFactory.getProviders(Configuration)
-      Object providersObj = null;
+      Object providersObj;
       try {
         providersObj = getProvidersMethod.invoke(hadoopCredProviderFactory,
             conf);
-      } catch (IllegalArgumentException e) {
-        LOG.error("Failed to invoke: " + getProvidersMethod.getName() +
-            ": " + e);
-        return null;
-      } catch (IllegalAccessException e) {
-        LOG.error("Failed to invoke: " + getProvidersMethod.getName() +
-            ": " + e);
-        return null;
-      } catch (InvocationTargetException e) {
+      } catch (IllegalArgumentException | InvocationTargetException | IllegalAccessException e) {
         LOG.error("Failed to invoke: " + getProvidersMethod.getName() +
             ": " + e);
         return null;
@@ -285,7 +273,6 @@ public class TestHBaseConfiguration {
      */
     public  void createEntry(Configuration conf, String name, char[] credential)
         throws Exception {
-
       if (!isHadoopCredentialProviderAvailable()) {
         return;
       }
@@ -315,30 +302,17 @@ public class TestHBaseConfiguration {
      */
     private void createEntryInProvider(Object credentialProvider,
         String name, char[] credential) throws Exception {
-
       if (!isHadoopCredentialProviderAvailable()) {
         return;
       }
 
       try {
         createCredentialEntryMethod.invoke(credentialProvider, name, credential);
-      } catch (IllegalArgumentException e) {
-        return;
-      } catch (IllegalAccessException e) {
-        return;
-      } catch (InvocationTargetException e) {
+      } catch (IllegalArgumentException | InvocationTargetException | IllegalAccessException e) {
         return;
       }
 
-      try {
-        flushMethod.invoke(credentialProvider);
-      } catch (IllegalArgumentException e) {
-        throw e;
-      } catch (IllegalAccessException e) {
-        throw e;
-      } catch (InvocationTargetException e) {
-        throw e;
-      }
+      flushMethod.invoke(credentialProvider);
     }
   }
 }

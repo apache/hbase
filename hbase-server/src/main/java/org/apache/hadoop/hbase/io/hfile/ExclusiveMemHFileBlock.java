@@ -39,10 +39,9 @@ public class ExclusiveMemHFileBlock extends HFileBlock {
   ExclusiveMemHFileBlock(BlockType blockType, int onDiskSizeWithoutHeader,
       int uncompressedSizeWithoutHeader, long prevBlockOffset, ByteBuff buf, boolean fillHeader,
       long offset, int nextBlockOnDiskSize, int onDiskDataSizeWithHeader,
-      HFileContext fileContext) {
+      HFileContext fileContext, ByteBuffAllocator alloc) {
     super(blockType, onDiskSizeWithoutHeader, uncompressedSizeWithoutHeader, prevBlockOffset, buf,
-        fillHeader, offset, nextBlockOnDiskSize, onDiskDataSizeWithHeader, fileContext,
-        ByteBuffAllocator.HEAP);
+        fillHeader, offset, nextBlockOnDiskSize, onDiskDataSizeWithHeader, fileContext, alloc);
   }
 
   @Override
