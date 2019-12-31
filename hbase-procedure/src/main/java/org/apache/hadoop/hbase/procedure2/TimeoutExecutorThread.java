@@ -37,8 +37,9 @@ class TimeoutExecutorThread<TEnvironment> extends StoppableThread {
 
   private final DelayQueue<DelayedWithTimeout> queue = new DelayQueue<>();
 
-  public TimeoutExecutorThread(ProcedureExecutor<TEnvironment> executor, ThreadGroup group) {
-    super(group, "ProcExecTimeout");
+  public TimeoutExecutorThread(ProcedureExecutor<TEnvironment> executor, ThreadGroup group,
+    String name) {
+    super(group, name);
     setDaemon(true);
     this.executor = executor;
   }
