@@ -634,7 +634,7 @@ public class HFile {
    * @return The list of files found.
    * @throws IOException When scanning the files fails.
    */
-  static List<Path> getStoreFiles(FileSystem fs, Path regionDir)
+  public static List<Path> getStoreFiles(FileSystem fs, Path regionDir)
       throws IOException {
     List<Path> regionHFiles = new ArrayList<>();
     PathFilter dirFilter = new FSUtils.DirFilter(fs);
