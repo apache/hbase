@@ -366,8 +366,8 @@ public class RegionLoad implements RegionMetrics {
   }
 
   @Override
-  public int getMaxStoreFileRefCount() {
-    return metrics.getMaxStoreFileRefCount();
+  public int getMaxCompactedStoreFileRefCount() {
+    return metrics.getMaxCompactedStoreFileRefCount();
   }
 
   /**
