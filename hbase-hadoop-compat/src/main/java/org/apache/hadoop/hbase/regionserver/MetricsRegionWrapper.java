@@ -149,8 +149,8 @@ public interface MetricsRegionWrapper {
   long getStoreRefCount();
 
   /**
-   * @return the max reference count for any store file among all stores files
-   *   of this region
+   * @return the max number of references active on any store file among
+   *   all compacted store files that belong to this region
    */
-  int getMaxStoreFileRefCount();
+  int getMaxCompactedStoreFileRefCount();
 }

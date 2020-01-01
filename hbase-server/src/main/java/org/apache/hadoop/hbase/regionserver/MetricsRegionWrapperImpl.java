@@ -55,7 +55,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   private long numReferenceFiles;
   private long maxFlushQueueSize;
   private long maxCompactionQueueSize;
-  private int maxStoreFileRefCount;
+  private int maxCompactedStoreFileRefCount;
 
   private ScheduledFuture<?> regionMetricsUpdateTask;
 
@@ -125,8 +125,8 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   }
 
   @Override
-  public int getMaxStoreFileRefCount() {
-    return maxStoreFileRefCount;
+  public int getMaxCompactedStoreFileRefCount() {
+    return maxCompactedStoreFileRefCount;
   }
 
   @Override
@@ -222,7 +222,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
     public void run() {
       long tempNumStoreFiles = 0;
       int tempStoreRefCount = 0;
-      int tempMaxStoreFileRefCount = 0;
+      int tempMaxCompactedStoreFileRefCount = 0;
       long tempMemstoreSize = 0;
       long tempStoreFileSize = 0;
       long tempMaxStoreFileAge = 0;
@@ -256,16 +256,16 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
             // Cast here to avoid interface changes to Store
             HStore hStore = ((HStore) store);
             tempStoreRefCount += hStore.getStoreRefCount();
-            int currentMaxStoreFileRefCount = hStore.getMaxStoreFileRefCount();
-            tempMaxStoreFileRefCount = Math.max(tempMaxStoreFileRefCount,
-              currentMaxStoreFileRefCount);
+            int currentMaxCompactedStoreFileRefCount = hStore.getMaxCompactedStoreFileRefCount();
+            tempMaxCompactedStoreFileRefCount = Math.max(tempMaxCompactedStoreFileRefCount,
+              currentMaxCompactedStoreFileRefCount);
           }
         }
       }
 
       numStoreFiles = tempNumStoreFiles;
       storeRefCount = tempStoreRefCount;
-      maxStoreFileRefCount = tempMaxStoreFileRefCount;
+      maxCompactedStoreFileRefCount = tempMaxCompactedStoreFileRefCount;
       memstoreSize = tempMemstoreSize;
       storeFileSize = tempStoreFileSize;
       maxStoreFileAge = tempMaxStoreFileAge;

@@ -137,17 +137,18 @@ public class RegionsRecoveryChore extends ScheduledChore {
     for (ServerLoad serverLoad : serverMetricsMap.values()) {
       Map<byte[], RegionLoad> regionLoadsMap = serverLoad.getRegionsLoad();
       for (RegionLoad regionLoad : regionLoadsMap.values()) {
-        // For each region, each store file can have different ref counts
-        // We need to find maximum of all such ref counts and if that max count
-        // is beyond a threshold value, we should reopen the region.
-        // Here, we take max ref count of all store files and not the cumulative
-        // count of all store files
-        final int maxStoreFileRefCount = regionLoad.getMaxStoreFileRefCount();
+        // For each region, each compacted store file can have different ref counts
+        // We need to find maximum of all such ref counts and if that max count of compacted
+        // store files is beyond a threshold value, we should reopen the region.
+        // Here, we take max ref count of all compacted store files and not the cumulative
+        // count of all compacted store files
+        final int maxCompactedStoreFileRefCount = regionLoad
+          .getMaxCompactedStoreFileRefCount();
 
-        if (maxStoreFileRefCount > storeFileRefCountThreshold) {
+        if (maxCompactedStoreFileRefCount > storeFileRefCountThreshold) {
           final byte[] regionName = regionLoad.getName();
           prepareTableToReopenRegionsMap(tableToReopenRegionsMap, regionName,
-            maxStoreFileRefCount);
+            maxCompactedStoreFileRefCount);
         }
       }
     }

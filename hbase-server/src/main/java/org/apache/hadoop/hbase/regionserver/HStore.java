@@ -2873,20 +2873,21 @@ public class HStore implements Store {
   }
 
   /**
-   * @return get maximum ref count of storeFile among all HStore Files
+   * @return get maximum ref count of storeFile among all compacted HStore Files
    *   for the HStore
    */
-  public int getMaxStoreFileRefCount() {
-    int maxStoreFileRefCount = 0;
-    for (StoreFile store : storeEngine.getStoreFileManager().getStorefiles()) {
+  public int getMaxCompactedStoreFileRefCount() {
+    int maxCompactedStoreFileRefCount = 0;
+    for (StoreFile store : storeEngine.getStoreFileManager().getCompactedfiles()) {
       if (store.isHFile()) {
         StoreFile.Reader storeReader = store.getReader();
         if (storeReader != null) {
-          maxStoreFileRefCount = Math.max(maxStoreFileRefCount, storeReader.getRefCount());
+          maxCompactedStoreFileRefCount = Math.max(maxCompactedStoreFileRefCount,
+            storeReader.getRefCount());
         }
       }
     }
-    return maxStoreFileRefCount;
+    return maxCompactedStoreFileRefCount;
   }
 
 }

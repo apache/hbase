@@ -198,8 +198,8 @@ public class RegionLoad {
    * @return the max reference count for any store file among all stores files
    *   of this region
    */
-  public int getMaxStoreFileRefCount() {
-    return regionLoadPB.getMaxStoreFileRefCount();
+  public int getMaxCompactedStoreFileRefCount() {
+    return regionLoadPB.getMaxCompactedStoreFileRefCount();
   }
 
   /**
@@ -212,7 +212,8 @@ public class RegionLoad {
     sb = Strings.appendKeyValue(sb, "numberOfStorefiles",
         this.getStorefiles());
     sb = Strings.appendKeyValue(sb, "storeRefCount", this.getStoreRefCount());
-    sb = Strings.appendKeyValue(sb, "maxStoreFileRefCount", this.getMaxStoreFileRefCount());
+    sb = Strings.appendKeyValue(sb, "maxCompactedStoreFileRefCount",
+      this.getMaxCompactedStoreFileRefCount());
     sb = Strings.appendKeyValue(sb, "storefileUncompressedSizeMB",
       this.getStoreUncompressedSizeMB());
     sb = Strings.appendKeyValue(sb, "lastMajorCompactionTimestamp",

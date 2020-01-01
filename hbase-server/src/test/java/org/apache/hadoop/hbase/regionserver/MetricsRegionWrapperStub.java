@@ -66,7 +66,7 @@ public class MetricsRegionWrapperStub implements MetricsRegionWrapper {
   }
 
   @Override
-  public int getMaxStoreFileRefCount() {
+  public int getMaxCompactedStoreFileRefCount() {
     return 0;
   }
 

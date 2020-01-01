@@ -97,7 +97,7 @@ public class TestMetricsRegionSourceImpl {
     }
 
     @Override
-    public int getMaxStoreFileRefCount() {
+    public int getMaxCompactedStoreFileRefCount() {
       return 0;
     }
 
