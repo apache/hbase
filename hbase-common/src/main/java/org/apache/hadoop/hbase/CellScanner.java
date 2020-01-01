@@ -15,14 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.Cell;
 
 /**
  * An interface for iterating through a sequence of cells. Similar to Java's Iterator, but without
@@ -59,7 +57,7 @@ public interface CellScanner {
   /**
    * Advance the scanner 1 cell.
    * @return true if the next cell is found and {@link #current()} will return a valid Cell
-   * @throws IOException
+   * @throws IOException if advancing the scanner fails
    */
   boolean advance() throws IOException;
 }

@@ -24,9 +24,12 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  * Utility for Strings.
  */
 @InterfaceAudience.Private
-public class Strings {
-  public final static String DEFAULT_SEPARATOR = "=";
-  public final static String DEFAULT_KEYVALUE_SEPARATOR = ", ";
+public final class Strings {
+  public static final String DEFAULT_SEPARATOR = "=";
+  public static final String DEFAULT_KEYVALUE_SEPARATOR = ", ";
+
+  private Strings() {
+  }
 
   /**
    * Append to a StringBuilder a key/value.
@@ -67,17 +70,18 @@ public class Strings {
    * host.example.com
    * @param dnPtr a domain name pointer (PTR) string.
    * @return Sanitized hostname with last period stripped off.
-   *
    */
   public static String domainNamePointerToHostName(String dnPtr) {
-    if (dnPtr == null)
+    if (dnPtr == null) {
       return null;
+    }
+
     return dnPtr.endsWith(".") ? dnPtr.substring(0, dnPtr.length()-1) : dnPtr;
   }
 
   /**
    * Null-safe length check.
-   * @param input
+   * @param input the {@link String} to do the null-safe length check for
    * @return true if null or length==0
    */
   public static boolean isEmpty(String input) {
