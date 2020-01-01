@@ -20,6 +20,9 @@ package org.apache.hadoop.hbase.rest.model;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.rest.ScannerResultGenerator;
 import org.apache.hadoop.hbase.testclassification.RestTests;
@@ -29,12 +32,8 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-
 @Category({RestTests.class, SmallTests.class})
 public class TestScannerModel extends TestModelBase<ScannerModel> {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestScannerModel.class);
