@@ -2878,12 +2878,15 @@ public class HStore implements Store {
    */
   public int getMaxCompactedStoreFileRefCount() {
     int maxCompactedStoreFileRefCount = 0;
-    for (StoreFile store : storeEngine.getStoreFileManager().getCompactedfiles()) {
-      if (store.isHFile()) {
-        StoreFile.Reader storeReader = store.getReader();
-        if (storeReader != null) {
-          maxCompactedStoreFileRefCount = Math.max(maxCompactedStoreFileRefCount,
-            storeReader.getRefCount());
+    Collection<StoreFile> compactedFiles = storeEngine.getStoreFileManager().getCompactedfiles();
+    if (compactedFiles != null) {
+      for (StoreFile store : compactedFiles) {
+        if (store.isHFile()) {
+          StoreFile.Reader storeReader = store.getReader();
+          if (storeReader != null) {
+            maxCompactedStoreFileRefCount = Math.max(maxCompactedStoreFileRefCount,
+              storeReader.getRefCount());
+          }
         }
       }
     }
