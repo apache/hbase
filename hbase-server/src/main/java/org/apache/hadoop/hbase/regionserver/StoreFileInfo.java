@@ -169,8 +169,8 @@ public class StoreFileInfo {
         this.createdTimestamp = fileStatus.getModificationTime();
         this.size = fileStatus.getLen();
       } else {
-        this.createdTimestamp = this.getFileStatus().getModificationTime();
-        this.size = this.getFileStatus().getLen();
+        this.createdTimestamp = getFileStatus().getModificationTime();
+        this.size = getFileStatus().getLen();
       }
       this.reference = null;
       this.link = null;
@@ -360,7 +360,7 @@ public class StoreFileInfo {
       return FSUtils.computeHDFSBlocksDistribution(fs, status, 0, status.getLen());
     }
   }
-  
+
   /**
    * Get the {@link FileStatus} of the file referenced by this StoreFileInfo
    * @param fs The current file system to use.
