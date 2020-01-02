@@ -123,8 +123,6 @@ public class ReplicationSourceManager implements ReplicationListener {
 
   private AtomicLong totalBufferUsed = new AtomicLong();
 
-  private boolean pendingShipment;
-
   /**
    * Creates a replication manager and sets the watch on all the other registered region servers
    * @param replicationQueues the interface for manipulating replication queues
@@ -191,19 +189,13 @@ public class ReplicationSourceManager implements ReplicationListener {
    * @param holdLogInZK if true then the log is retained in ZK
    */
   public synchronized void logPositionAndCleanOldLogs(Path log, String id, long position,
-      boolean queueRecovered, boolean holdLogInZK) {
-    if (!this.pendingShipment) {
-      String fileName = log.getName();
-      this.replicationQueues.setLogPosition(id, fileName, position);
-      if (holdLogInZK) {
-        return;
-      }
-      cleanOldLogs(fileName, id, queueRecovered);
+    boolean queueRecovered, boolean holdLogInZK) {
+    String fileName = log.getName();
+    this.replicationQueues.setLogPosition(id, fileName, position);
+    if (holdLogInZK) {
+      return;
     }
-  }
-
-  public synchronized void setPendingShipment(boolean pendingShipment) {
-    this.pendingShipment = pendingShipment;
+    cleanOldLogs(fileName, id, queueRecovered);
   }
 
   /**
