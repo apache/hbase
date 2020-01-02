@@ -117,10 +117,10 @@ public class CacheConfig {
   private boolean cacheDataOnWrite;
 
   /** Whether index blocks should be cached when new files are written */
-  private final boolean cacheIndexesOnWrite;
+  private boolean cacheIndexesOnWrite;
 
   /** Whether compound bloom filter blocks should be cached on write */
-  private final boolean cacheBloomsOnWrite;
+  private boolean cacheBloomsOnWrite;
 
   /** Whether blocks of a file should be evicted when the file is closed */
   private boolean evictOnClose;
@@ -274,6 +274,20 @@ public class CacheConfig {
   public void setCacheDataOnWrite(boolean cacheDataOnWrite) {
     this.cacheDataOnWrite = cacheDataOnWrite;
   }
+
+
+  /**
+   * Enable cache on write including:
+   * cacheDataOnWrite
+   * cacheIndexesOnWrite
+   * cacheBloomsOnWrite
+   */
+  public void enableCacheOnWrite() {
+    this.cacheDataOnWrite = true;
+    this.cacheIndexesOnWrite = true;
+    this.cacheBloomsOnWrite = true;
+  }
+
 
   /**
    * @return true if index blocks should be written to the cache when an HFile

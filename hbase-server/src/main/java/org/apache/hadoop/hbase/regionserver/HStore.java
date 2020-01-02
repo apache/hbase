@@ -1120,9 +1120,26 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     if (isCompaction) {
       // Don't cache data on write on compactions, unless specifically configured to do so
       writerCacheConf = new CacheConfig(cacheConf);
-      writerCacheConf.setCacheDataOnWrite(cacheConf.shouldCacheCompactedBlocksOnWrite());
+      final boolean shouldCacheCompactedBlocksOnWrite = cacheConf
+        .shouldCacheCompactedBlocksOnWrite();
+      // if data blocks are to be cached on write
+      // during compaction, we should forcefully
+      // cache index and bloom blocks as well
+      if (shouldCacheCompactedBlocksOnWrite) {
+        writerCacheConf.enableCacheOnWrite();
+        LOG.info("cacheCompactedBlocksOnWrite is true, hence enabled cacheOnWrite for " +
+          "Data blocks, Index blocks and Bloom filter blocks");
+      } else {
+        writerCacheConf.setCacheDataOnWrite(false);
+      }
     } else {
       writerCacheConf = cacheConf;
+      final boolean shouldCacheDataOnWrite = cacheConf.shouldCacheDataOnWrite();
+      if (shouldCacheDataOnWrite) {
+        writerCacheConf.enableCacheOnWrite();
+        LOG.info("cacheDataOnWrite is true, hence enabled cacheOnWrite for " +
+          "Index blocks and Bloom filter blocks");
+      }
     }
     InetSocketAddress[] favoredNodes = null;
     if (region.getRegionServerServices() != null) {
