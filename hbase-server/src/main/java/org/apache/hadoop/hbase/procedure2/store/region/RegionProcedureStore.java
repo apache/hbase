@@ -112,17 +112,15 @@ public class RegionProcedureStore extends ProcedureStoreBase {
 
   static final String LOGCLEANER_PLUGINS = "hbase.procedure.store.region.logcleaner.plugins";
 
-  private static final String DATA_DIR = "data";
-
-  private static final String REPLAY_EDITS_DIR = "replay";
+  private static final String REPLAY_EDITS_DIR = "recovered.wals";
 
   private static final String DEAD_WAL_DIR_SUFFIX = "-dead";
 
-  private static final TableName TABLE_NAME = TableName.valueOf("master:procedure");
+  static final TableName TABLE_NAME = TableName.valueOf("master:procedure");
 
   static final byte[] FAMILY = Bytes.toBytes("p");
 
-  private static final byte[] PROC_QUALIFIER = Bytes.toBytes("d");
+  static final byte[] PROC_QUALIFIER = Bytes.toBytes("d");
 
   private static final int REGION_ID = 1;
 
@@ -231,27 +229,26 @@ public class RegionProcedureStore extends ProcedureStoreBase {
     return wal;
   }
 
-  private HRegion bootstrap(Configuration conf, FileSystem fs, Path rootDir, Path dataDir)
-    throws IOException {
+  private HRegion bootstrap(Configuration conf, FileSystem fs, Path rootDir) throws IOException {
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(TABLE_NAME).setRegionId(REGION_ID).build();
-    Path tmpDataDir = new Path(dataDir.getParent(), dataDir.getName() + "-tmp");
-    if (fs.exists(tmpDataDir) && !fs.delete(tmpDataDir, true)) {
-      throw new IOException("Can not delete partial created proc region " + tmpDataDir);
+    Path tmpTableDir = CommonFSUtils.getTableDir(rootDir, TableName
+      .valueOf(TABLE_NAME.getNamespaceAsString(), TABLE_NAME.getQualifierAsString() + "-tmp"));
+    if (fs.exists(tmpTableDir) && !fs.delete(tmpTableDir, true)) {
+      throw new IOException("Can not delete partial created proc region " + tmpTableDir);
     }
-    Path tableDir = CommonFSUtils.getTableDir(tmpDataDir, TABLE_NAME);
-    HRegion.createHRegion(conf, regionInfo, fs, tableDir, TABLE_DESC).close();
-    if (!fs.rename(tmpDataDir, dataDir)) {
-      throw new IOException("Can not rename " + tmpDataDir + " to " + dataDir);
+    HRegion.createHRegion(conf, regionInfo, fs, tmpTableDir, TABLE_DESC).close();
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, TABLE_NAME);
+    if (!fs.rename(tmpTableDir, tableDir)) {
+      throw new IOException("Can not rename " + tmpTableDir + " to " + tableDir);
     }
     WAL wal = createWAL(fs, rootDir, regionInfo);
     return HRegion.openHRegionFromTableDir(conf, fs, tableDir, regionInfo, TABLE_DESC, wal, null,
       null);
   }
 
-  private HRegion open(Configuration conf, FileSystem fs, Path rootDir, Path dataDir)
-    throws IOException {
+  private HRegion open(Configuration conf, FileSystem fs, Path rootDir) throws IOException {
     String factoryId = server.getServerName().toString();
-    Path tableDir = CommonFSUtils.getTableDir(dataDir, TABLE_NAME);
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, TABLE_NAME);
     Path regionDir =
       fs.listStatus(tableDir, p -> RegionInfo.isEncodedRegionName(Bytes.toBytes(p.getName())))[0]
         .getPath();
@@ -391,13 +388,13 @@ public class RegionProcedureStore extends ProcedureStoreBase {
     walRoller.start();
 
     walFactory = new WALFactory(conf, server.getServerName().toString());
-    Path dataDir = new Path(rootDir, DATA_DIR);
-    if (fs.exists(dataDir)) {
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, TABLE_NAME);
+    if (fs.exists(tableDir)) {
       // load the existing region.
-      region = open(conf, fs, rootDir, dataDir);
+      region = open(conf, fs, rootDir);
     } else {
       // bootstrapping...
-      region = bootstrap(conf, fs, rootDir, dataDir);
+      region = bootstrap(conf, fs, rootDir);
     }
     flusherAndCompactor = new RegionFlusherAndCompactor(conf, server, region);
     walRoller.setFlusherAndCompactor(flusherAndCompactor);

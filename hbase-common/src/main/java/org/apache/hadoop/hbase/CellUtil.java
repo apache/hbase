@@ -34,7 +34,7 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.Optional;
-
+import java.util.function.Function;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
@@ -1297,17 +1297,25 @@ public final class CellUtil {
    * @return The Key portion of the passed <code>cell</code> as a String.
    */
   public static String getCellKeyAsString(Cell cell) {
-    StringBuilder sb = new StringBuilder(
-        Bytes.toStringBinary(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
+    return getCellKeyAsString(cell,
+      c -> Bytes.toStringBinary(c.getRowArray(), c.getRowOffset(), c.getRowLength()));
+  }
+
+  /**
+   * @param cell the cell to convert
+   * @param rowConverter used to convert the row of the cell to a string
+   * @return The Key portion of the passed <code>cell</code> as a String.
+   */
+  public static String getCellKeyAsString(Cell cell, Function<Cell, String> rowConverter) {
+    StringBuilder sb = new StringBuilder(rowConverter.apply(cell));
     sb.append('/');
-    sb.append(cell.getFamilyLength() == 0 ? ""
-        : Bytes.toStringBinary(cell.getFamilyArray(), cell.getFamilyOffset(),
-          cell.getFamilyLength()));
+    sb.append(cell.getFamilyLength() == 0 ? "" :
+      Bytes.toStringBinary(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength()));
     // KeyValue only added ':' if family is non-null. Do same.
     if (cell.getFamilyLength() > 0) sb.append(':');
-    sb.append(cell.getQualifierLength() == 0 ? ""
-        : Bytes.toStringBinary(cell.getQualifierArray(), cell.getQualifierOffset(),
-          cell.getQualifierLength()));
+    sb.append(cell.getQualifierLength() == 0 ? "" :
+      Bytes.toStringBinary(cell.getQualifierArray(), cell.getQualifierOffset(),
+        cell.getQualifierLength()));
     sb.append('/');
     sb.append(KeyValue.humanReadableTimestamp(cell.getTimestamp()));
     sb.append('/');

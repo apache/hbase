@@ -21,23 +21,16 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.LoadCounter;
-import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -45,32 +38,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Category({ MasterTests.class, MediumTests.class })
-public class TestRegionProcedureStore {
+public class TestRegionProcedureStore extends RegionProcedureStoreTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestRegionProcedureStore.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionProcedureStore.class);
-
-  private HBaseCommonTestingUtility htu;
-
-  private RegionProcedureStore store;
-
-  @Before
-  public void setUp() throws IOException {
-    htu = new HBaseCommonTestingUtility();
-    htu.getConfiguration().setBoolean(MemStoreLAB.USEMSLAB_KEY, false);
-    Path testDir = htu.getDataTestDir();
-    CommonFSUtils.setWALRootDir(htu.getConfiguration(), testDir);
-    store = RegionProcedureStoreTestHelper.createStore(htu.getConfiguration(), new LoadCounter());
-  }
-
-  @After
-  public void tearDown() throws IOException {
-    store.stop(true);
-    htu.cleanupTestDir();
-  }
 
   private void verifyProcIdsOnRestart(final Set<Long> procIds) throws Exception {
     LOG.debug("expected: " + procIds);

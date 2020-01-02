@@ -22,7 +22,6 @@ import static org.junit.Assert.assertEquals;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
@@ -31,16 +30,10 @@ import java.util.List;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.LoadCounter;
-import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -48,32 +41,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Category({ MasterTests.class, MediumTests.class })
-public class TestWALProcedurePrettyPrinter {
+public class TestWALProcedurePrettyPrinter extends RegionProcedureStoreTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestWALProcedurePrettyPrinter.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestWALProcedurePrettyPrinter.class);
-
-  private HBaseCommonTestingUtility htu;
-
-  private RegionProcedureStore store;
-
-  @Before
-  public void setUp() throws IOException {
-    htu = new HBaseCommonTestingUtility();
-    htu.getConfiguration().setBoolean(MemStoreLAB.USEMSLAB_KEY, false);
-    Path testDir = htu.getDataTestDir();
-    CommonFSUtils.setWALRootDir(htu.getConfiguration(), testDir);
-    store = RegionProcedureStoreTestHelper.createStore(htu.getConfiguration(), new LoadCounter());
-  }
-
-  @After
-  public void tearDown() throws IOException {
-    store.stop(true);
-    htu.cleanupTestDir();
-  }
 
   @Test
   public void test() throws Exception {
