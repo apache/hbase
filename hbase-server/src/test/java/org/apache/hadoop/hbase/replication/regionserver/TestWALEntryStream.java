@@ -22,17 +22,18 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NavigableMap;
 import java.util.NoSuchElementException;
 import java.util.TreeMap;
@@ -42,16 +43,21 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.replication.ChainWALEntryFilter;
+import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
+import org.apache.hadoop.hbase.replication.TableCfWALEntryFilter;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceWALReaderThread.WALEntryBatch;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -71,7 +77,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
 
@@ -371,36 +376,123 @@ public class TestWALEntryStream {
   }
 
   @Test
-  public void testReplicationSourceUpdatesLogPositionOnFilteredEntries() throws Exception {
+  public void testReplicationSourceWALReaderThreadRecoveredQueue() throws Exception {
     appendEntriesToLog(3);
-    // get ending position
+    log.rollWriter();
+    appendEntriesToLog(2);
+
     long position;
-    try (WALEntryStream entryStream =
-      new WALEntryStream(walQueue, fs, conf, new MetricsSource("1"))) {
+    try (WALEntryStream entryStream = new WALEntryStream(new PriorityBlockingQueue<>(walQueue),
+            fs, conf, new MetricsSource("1"))) {
+      entryStream.next();
+      entryStream.next();
       entryStream.next();
       entryStream.next();
       entryStream.next();
       position = entryStream.getPosition();
     }
-    // start up a readerThread with a WALEntryFilter that always filter the entries
-    ReplicationSourceManager mockSourceManager = Mockito.mock(ReplicationSourceManager.class);
-    ReplicationSourceWALReaderThread readerThread = new ReplicationSourceWALReaderThread(
-      mockSourceManager, getQueueInfo(), walQueue, 0, fs, conf, new WALEntryFilter() {
-        @Override
-        public Entry filter(Entry entry) {
-          return null;
-        }
-      }, new MetricsSource("1"));
-    readerThread.start();
-    Thread.sleep(100);
-    ArgumentCaptor<Long> positionCaptor = ArgumentCaptor.forClass(Long.class);
-    verify(mockSourceManager, times(3))
-      .logPositionAndCleanOldLogs(any(Path.class),
-        anyString(),
-        positionCaptor.capture(),
-        anyBoolean(),
-        anyBoolean());
-    assertEquals(position, positionCaptor.getValue().longValue());
+
+    ReplicationSourceManager mockSourceManager = mock(ReplicationSourceManager.class);
+    ReplicationSourceWALReaderThread reader =
+            new ReplicationSourceWALReaderThread(mockSourceManager, getRecoveredQueueInfo(),
+                    walQueue, 0, fs, conf, getDummyFilter(), new MetricsSource("1"));
+    Path walPath = walQueue.toArray(new Path[2])[1];
+    reader.start();
+    WALEntryBatch entryBatch = reader.take();
+
+    assertNotNull(entryBatch);
+    assertEquals(5, entryBatch.getWalEntries().size());
+    assertEquals(position, entryBatch.getLastWalPosition());
+    assertEquals(walPath, entryBatch.getLastWalPath());
+    assertFalse(entryBatch.hasMoreEntries());
+  }
+
+  @Test
+  public void testReplicationSourceWALReaderThreadWithFilter() throws Exception {
+    final byte[] notReplicatedCf = Bytes.toBytes("notReplicated");
+    final Map<TableName, List<String>> tableCfs = new HashMap<>();
+    tableCfs.put(tableName, Collections.singletonList(Bytes.toString(family)));
+    ReplicationPeer peer = mock(ReplicationPeer.class);
+    when(peer.getTableCFs()).thenReturn(tableCfs);
+    WALEntryFilter filter = new ChainWALEntryFilter(new TableCfWALEntryFilter(peer));
+
+    // add filterable entries
+    appendToLogPlus(3, notReplicatedCf);
+    appendToLogPlus(3, notReplicatedCf);
+    appendToLogPlus(3, notReplicatedCf);
+
+    // add non filterable entries
+    appendEntriesToLog(2);
+
+    ReplicationSourceManager mockSourceManager = mock(ReplicationSourceManager.class);
+    final ReplicationSourceWALReaderThread reader =
+            new ReplicationSourceWALReaderThread(mockSourceManager, getQueueInfo(), walQueue,
+                    0, fs, conf, filter, new MetricsSource("1"));
+    reader.start();
+
+    WALEntryBatch entryBatch = reader.take();
+
+    assertNotNull(entryBatch);
+    assertFalse(entryBatch.isEmpty());
+    List<Entry> walEntries = entryBatch.getWalEntries();
+    assertEquals(2, walEntries.size());
+    for (Entry entry : walEntries) {
+      ArrayList<Cell> cells = entry.getEdit().getCells();
+      assertTrue(cells.size() == 1);
+      assertTrue(CellUtil.matchingFamily(cells.get(0), family));
+    }
+  }
+
+  @Test
+  public void testReplicationSourceWALReaderThreadWithFilterWhenLogRolled() throws Exception {
+    final byte[] notReplicatedCf = Bytes.toBytes("notReplicated");
+    final Map<TableName, List<String>> tableCfs = new HashMap<>();
+    tableCfs.put(tableName, Collections.singletonList(Bytes.toString(family)));
+    ReplicationPeer peer = mock(ReplicationPeer.class);
+    when(peer.getTableCFs()).thenReturn(tableCfs);
+    WALEntryFilter filter = new ChainWALEntryFilter(new TableCfWALEntryFilter(peer));
+
+    appendToLogPlus(3, notReplicatedCf);
+
+    Path firstWAL = walQueue.peek();
+    final long eof = getPosition(firstWAL);
+
+    ReplicationSourceManager mockSourceManager = mock(ReplicationSourceManager.class);
+    final ReplicationSourceWALReaderThread reader =
+            new ReplicationSourceWALReaderThread(mockSourceManager, getQueueInfo(), walQueue,
+                    0, fs, conf, filter, new MetricsSource("1"));
+    reader.start();
+
+    // reader won't put any batch, even if EOF reached.
+    Waiter.waitFor(conf, 20000, new Waiter.Predicate<Exception>() {
+      @Override public boolean evaluate() {
+        return reader.getLastReadPosition() >= eof;
+      }
+    });
+    assertNull(reader.poll(0));
+
+    log.rollWriter();
+
+    // should get empty batch with current wal position, after wal rolled
+    WALEntryBatch entryBatch = reader.take();
+
+    Path lastWAL= walQueue.peek();
+    long positionToBeLogged = getPosition(lastWAL);
+
+    assertNotNull(entryBatch);
+    assertTrue(entryBatch.isEmpty());
+    assertEquals(1, walQueue.size());
+    assertNotEquals(firstWAL, entryBatch.getLastWalPath());
+    assertEquals(lastWAL, entryBatch.getLastWalPath());
+    assertEquals(positionToBeLogged, entryBatch.getLastWalPosition());
+  }
+
+  private long getPosition(Path walPath) throws IOException {
+    WALEntryStream entryStream =
+            new WALEntryStream(new PriorityBlockingQueue<>(Collections.singletonList(walPath)),
+                    fs, conf, new MetricsSource("1"));
+    entryStream.hasNext();
+    return entryStream.getPosition();
   }
 
   private String getRow(WAL.Entry entry) {
@@ -426,17 +518,25 @@ public class TestWALEntryStream {
   }
 
   private void appendToLogPlus(int count) throws IOException {
+    appendToLogPlus(count, family, qualifier);
+  }
+
+  private void appendToLogPlus(int count, byte[] cf) throws IOException {
+    appendToLogPlus(count, cf, qualifier);
+  }
+
+  private void appendToLogPlus(int count, byte[] cf, byte[] cq) throws IOException {
     final long txid = log.append(htd, info,
       new WALKey(info.getEncodedNameAsBytes(), tableName, System.currentTimeMillis(), mvcc),
-      getWALEdits(count), true);
+      getWALEdits(count, cf, cq), true);
     log.sync(txid);
   }
 
-  private WALEdit getWALEdits(int count) {
+  private WALEdit getWALEdits(int count, byte[] cf, byte[] cq) {
     WALEdit edit = new WALEdit();
     for (int i = 0; i < count; i++) {
-      edit.add(new KeyValue(Bytes.toBytes(System.currentTimeMillis()), family, qualifier,
-          System.currentTimeMillis(), qualifier));
+      edit.add(new KeyValue(Bytes.toBytes(System.currentTimeMillis()), cf, cq,
+          System.currentTimeMillis(), cq));
     }
     return edit;
   }
@@ -458,8 +558,16 @@ public class TestWALEntryStream {
     };
   }
 
+  private ReplicationQueueInfo getRecoveredQueueInfo() {
+    return getQueueInfo("1-1");
+  }
+
   private ReplicationQueueInfo getQueueInfo() {
-    return new ReplicationQueueInfo("1");
+    return getQueueInfo("1");
+  }
+
+  private ReplicationQueueInfo getQueueInfo(String znode) {
+    return new ReplicationQueueInfo(znode);
   }
 
   class PathWatcher extends WALActionsListener.Base {
@@ -472,5 +580,4 @@ public class TestWALEntryStream {
       currentPath = newPath;
     }
   }
-
 }
