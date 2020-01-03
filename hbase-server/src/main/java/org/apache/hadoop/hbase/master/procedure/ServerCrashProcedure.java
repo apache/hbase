@@ -124,7 +124,7 @@ public class ServerCrashProcedure
     // This adds server to the DeadServer processing list but not to the DeadServers list.
     // Server gets removed from processing list below on procedure successful finish.
     if (!notifiedDeadServer) {
-      services.getServerManager().getDeadServers().notifyServer(serverName);
+      services.getServerManager().getDeadServers().processing(serverName);
       notifiedDeadServer = true;
     }
 
