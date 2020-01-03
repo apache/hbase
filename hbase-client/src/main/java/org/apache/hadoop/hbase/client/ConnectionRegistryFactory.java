@@ -17,37 +17,29 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.RegionLocations;
-import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Registry that does nothing. Otherwise, default Registry wants zookeeper up and running.
+ * Factory class to get the instance of configured connection registry.
  */
 @InterfaceAudience.Private
-class DoNothingAsyncRegistry implements AsyncRegistry {
+final class ConnectionRegistryFactory {
 
-  public DoNothingAsyncRegistry(Configuration conf) {
+  static final String CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY =
+      "hbase.client.connection.registry.impl";
+
+  private ConnectionRegistryFactory() {
   }
 
-  @Override
-  public CompletableFuture<RegionLocations> getMetaRegionLocation() {
-    return CompletableFuture.completedFuture(null);
-  }
-
-  @Override
-  public CompletableFuture<String> getClusterId() {
-    return CompletableFuture.completedFuture(null);
-  }
-
-  @Override
-  public CompletableFuture<ServerName> getMasterAddress() {
-    return CompletableFuture.completedFuture(null);
-  }
-
-  @Override
-  public void close() {
+  /**
+   * @return The connection registry implementation to use.
+   */
+  static ConnectionRegistry getRegistry(Configuration conf) {
+    Class<? extends ConnectionRegistry> clazz = conf.getClass(
+        CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY, ZKConnectionRegistry.class,
+        ConnectionRegistry.class);
+    return ReflectionUtils.newInstance(clazz, conf);
   }
 }

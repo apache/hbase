@@ -462,7 +462,7 @@ public class TestAsyncProcess {
    * Returns our async process.
    */
   static class MyConnectionImpl extends ConnectionImplementation {
-    public static class TestRegistry extends DoNothingAsyncRegistry {
+    public static class TestRegistry extends DoNothingConnectionRegistry {
 
       public TestRegistry(Configuration conf) {
         super(conf);
@@ -481,8 +481,8 @@ public class TestAsyncProcess {
     }
 
     private static Configuration setupConf(Configuration conf) {
-      conf.setClass(AsyncRegistryFactory.REGISTRY_IMPL_CONF_KEY, TestRegistry.class,
-        AsyncRegistry.class);
+      conf.setClass(ConnectionRegistryFactory.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
+          TestRegistry.class, ConnectionRegistry.class);
       return conf;
     }
 

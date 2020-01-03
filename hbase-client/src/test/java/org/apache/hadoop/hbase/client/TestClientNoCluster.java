@@ -127,7 +127,7 @@ public class TestClientNoCluster extends Configured implements Tool {
   /**
    * Simple cluster registry inserted in place of our usual zookeeper based one.
    */
-  static class SimpleRegistry extends DoNothingAsyncRegistry {
+  static class SimpleRegistry extends DoNothingConnectionRegistry {
     final ServerName META_HOST = META_SERVERNAME;
 
     public SimpleRegistry(Configuration conf) {
@@ -135,7 +135,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     }
 
     @Override
-    public CompletableFuture<RegionLocations> getMetaRegionLocation() {
+    public CompletableFuture<RegionLocations> getMetaRegionLocations() {
       return CompletableFuture.completedFuture(new RegionLocations(
           new HRegionLocation(RegionInfoBuilder.FIRST_META_REGIONINFO, META_HOST)));
     }

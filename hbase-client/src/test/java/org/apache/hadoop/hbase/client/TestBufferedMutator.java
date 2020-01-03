@@ -58,7 +58,8 @@ public class TestBufferedMutator {
   public void testAlternateBufferedMutatorImpl() throws IOException {
     BufferedMutatorParams params =  new BufferedMutatorParams(TableName.valueOf(name.getMethodName()));
     Configuration conf = HBaseConfiguration.create();
-    conf.set(AsyncRegistryFactory.REGISTRY_IMPL_CONF_KEY, DoNothingAsyncRegistry.class.getName());
+    conf.set(ConnectionRegistryFactory.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
+        DoNothingConnectionRegistry.class.getName());
     try (Connection connection = ConnectionFactory.createConnection(conf)) {
       BufferedMutator bm = connection.getBufferedMutator(params);
       // Assert we get default BM if nothing specified.
