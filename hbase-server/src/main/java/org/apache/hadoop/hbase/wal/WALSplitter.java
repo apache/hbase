@@ -472,15 +472,12 @@ public class WALSplitter {
       if (thrown == null) {
         return;
       }
+      this.thrown.set(null);
       if (thrown instanceof IOException) {
         throw new IOException(thrown);
       } else {
         throw new RuntimeException(thrown);
       }
-    }
-
-    public Throwable clearError(){
-      return thrown.getAndSet(null);
     }
   }
 

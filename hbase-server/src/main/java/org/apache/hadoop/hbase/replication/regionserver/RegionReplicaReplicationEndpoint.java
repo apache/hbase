@@ -161,7 +161,6 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
         outputSink.finishWritingAndClose();
       } catch (IOException ex) {
         LOG.warn("Got exception while trying to close OutputSink", ex);
-        controller.clearError();
       }
     }
     if (this.pool != null) {
@@ -252,7 +251,6 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
         LOG.warn("Received IOException while trying to replicate"
             + StringUtils.stringifyException(e));
         outputSink.restartWriterThreadsIfNeeded();
-        controller.clearError();
       }
     }
 
