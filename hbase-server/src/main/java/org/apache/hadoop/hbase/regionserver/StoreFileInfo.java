@@ -51,7 +51,7 @@ import org.slf4j.LoggerFactory;
 public class StoreFileInfo {
   private static final Logger LOG = LoggerFactory.getLogger(StoreFileInfo.class);
 
-  private FileStatus localStatus;
+  private final FileStatus localStatus = null ;
   /**
    * A non-capture group, for hfiles, so that this can be embedded.
    * HFiles are uuid ([0-9a-z]+). Bulk loaded hfiles has (_SeqId_[0-9]+_) has suffix.
