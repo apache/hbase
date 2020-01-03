@@ -37,7 +37,6 @@ import org.junit.rules.TestName;
 
 @Category({MapReduceTests.class, SmallTests.class})
 public class TestTableSplit {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestTableSplit.class);
@@ -53,12 +52,12 @@ public class TestTableSplit {
     TableSplit split2 = new TableSplit(TableName.valueOf(name.getMethodName()),
         Bytes.toBytes("row-start"),
             Bytes.toBytes("row-end"), "location");
-    assertEquals (split1, split2);
-    assertTrue   (split1.hashCode() == split2.hashCode());
+    assertEquals(split1, split2);
+    assertTrue(split1.hashCode() == split2.hashCode());
     HashSet<TableSplit> set = new HashSet<>(2);
     set.add(split1);
     set.add(split2);
-    assertTrue(set.size() == 1);
+    assertEquals(1, set.size());
   }
 
   /**
@@ -73,12 +72,12 @@ public class TestTableSplit {
         Bytes.toBytes("row-start"),
             Bytes.toBytes("row-end"), "location", 1982);
 
-    assertEquals (split1, split2);
-    assertTrue   (split1.hashCode() == split2.hashCode());
+    assertEquals(split1, split2);
+    assertTrue(split1.hashCode() == split2.hashCode());
     HashSet<TableSplit> set = new HashSet<>(2);
     set.add(split1);
     set.add(split2);
-    assertTrue(set.size() == 1);
+    assertEquals(1, set.size());
   }
 
   /**
@@ -118,14 +117,14 @@ public class TestTableSplit {
             + "encoded region name: encoded-region-name)";
     Assert.assertEquals(str, split.toString());
 
-    split = new TableSplit((TableName) null, null, null, null);
+    split = new TableSplit(null, null, null, null);
     str =
         "HBase table split(table name: null, scan: , start row: null, "
             + "end row: null, region location: null, "
             + "encoded region name: )";
     Assert.assertEquals(str, split.toString());
 
-    split = new TableSplit((TableName) null, null, null, null, null, null, 1000L);
+    split = new TableSplit(null, null, null, null, null, null, 1000L);
     str =
         "HBase table split(table name: null, scan: , start row: null, "
             + "end row: null, region location: null, "
