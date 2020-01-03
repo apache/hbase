@@ -20,6 +20,142 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+## Release 2.2.3 - Unreleased (as of 2020-01-03)
+
+### NEW FEATURES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-22280](https://issues.apache.org/jira/browse/HBASE-22280) | Separate read/write handler for priority request(especially for meta). |  Major | Scheduler |
+| [HBASE-22969](https://issues.apache.org/jira/browse/HBASE-22969) | A new binary component comparator(BinaryComponentComparator) to perform comparison of arbitrary length and position |  Minor | Filters |
+
+
+### IMPROVEMENTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-23629](https://issues.apache.org/jira/browse/HBASE-23629) | Addition to Supporting projects page |  Minor | . |
+| [HBASE-23623](https://issues.apache.org/jira/browse/HBASE-23623) | Reduce number of Checkstyle violations in hbase-rest |  Minor | REST |
+| [HBASE-23627](https://issues.apache.org/jira/browse/HBASE-23627) | Resolve remaining Checkstyle violations in hbase-thrift |  Minor | Thrift |
+| [HBASE-23615](https://issues.apache.org/jira/browse/HBASE-23615) | Use a dedicated thread for executing WorkerMonitor in ProcedureExecutor. |  Major | amv2 |
+| [HBASE-23626](https://issues.apache.org/jira/browse/HBASE-23626) | Reduce number of Checkstyle violations in tests of hbase-common |  Minor | . |
+| [HBASE-23622](https://issues.apache.org/jira/browse/HBASE-23622) | Reduce number of Checkstyle violations in hbase-common |  Minor | . |
+| [HBASE-23621](https://issues.apache.org/jira/browse/HBASE-23621) | Reduce number of Checkstyle violations in tests of hbase-common |  Minor | . |
+| [HBASE-23619](https://issues.apache.org/jira/browse/HBASE-23619) | Use built-in formatting for logging in hbase-zookeeper |  Trivial | Zookeeper |
+| [HBASE-23238](https://issues.apache.org/jira/browse/HBASE-23238) | Additional test and checks for null references on ScannerCallableWithReplicas |  Minor | . |
+| [HBASE-23613](https://issues.apache.org/jira/browse/HBASE-23613) | ProcedureExecutor check StuckWorkers blocked by DeadServerMetricRegionChore |  Major | . |
+| [HBASE-23239](https://issues.apache.org/jira/browse/HBASE-23239) | Reporting on status of backing MOB files from client-facing cells |  Major | mapreduce, mob, Operability |
+| [HBASE-23549](https://issues.apache.org/jira/browse/HBASE-23549) | Document steps to disable MOB for a column family |  Minor | documentation, mob |
+| [HBASE-23380](https://issues.apache.org/jira/browse/HBASE-23380) | General Cleanup of FSUtil |  Minor | Filesystem Integration |
+| [HBASE-23379](https://issues.apache.org/jira/browse/HBASE-23379) | Clean Up FSUtil getRegionLocalityMappingFromFS |  Minor | . |
+| [HBASE-23377](https://issues.apache.org/jira/browse/HBASE-23377) | Balancer should skip disabled tables's regions |  Major | Balancer |
+| [HBASE-23373](https://issues.apache.org/jira/browse/HBASE-23373) | Log \`RetriesExhaustedException\` context with full time precision |  Minor | asyncclient, Client |
+| [HBASE-23303](https://issues.apache.org/jira/browse/HBASE-23303) | Add security headers to REST server/info page |  Major | REST |
+| [HBASE-23361](https://issues.apache.org/jira/browse/HBASE-23361) | [UI] Limit two decimals even for total average load |  Minor | UI |
+| [HBASE-23365](https://issues.apache.org/jira/browse/HBASE-23365) | Minor change MemStoreFlusher's log |  Trivial | . |
+| [HBASE-23362](https://issues.apache.org/jira/browse/HBASE-23362) | WalPrettyPrinter should include the table name |  Minor | tooling |
+| [HBASE-23352](https://issues.apache.org/jira/browse/HBASE-23352) | Allow chaos monkeys to access cmd line params, and improve FillDiskCommandAction |  Minor | integration tests |
+| [HBASE-23293](https://issues.apache.org/jira/browse/HBASE-23293) | [REPLICATION] make ship edits timeout configurable |  Minor | Replication |
+| [HBASE-23334](https://issues.apache.org/jira/browse/HBASE-23334) | The table-lock node of zk is not needed since HBASE-16786 |  Minor | . |
+| [HBASE-23325](https://issues.apache.org/jira/browse/HBASE-23325) | [UI]rsgoup average load keep two decimals |  Minor | . |
+| [HBASE-23321](https://issues.apache.org/jira/browse/HBASE-23321) | [hbck2] fixHoles of fixMeta doesn't update in-memory state |  Minor | hbck2 |
+| [HBASE-23315](https://issues.apache.org/jira/browse/HBASE-23315) | Miscellaneous HBCK Report page cleanup |  Minor | . |
+| [HBASE-23278](https://issues.apache.org/jira/browse/HBASE-23278) |  Add a table-level compaction progress display on the UI |  Minor | UI |
+| [HBASE-19450](https://issues.apache.org/jira/browse/HBASE-19450) | Add log about average execution time for ScheduledChore |  Minor | Operability |
+| [HBASE-23283](https://issues.apache.org/jira/browse/HBASE-23283) | Provide clear and consistent logging about the period of enabled chores |  Minor | Operability |
+| [HBASE-23245](https://issues.apache.org/jira/browse/HBASE-23245) | All MutableHistogram implementations should remove maxExpected |  Major | metrics |
+| [HBASE-23228](https://issues.apache.org/jira/browse/HBASE-23228) | Allow for jdk8 specific modules on branch-1 in precommit/nightly testing |  Critical | build, test |
+| [HBASE-23082](https://issues.apache.org/jira/browse/HBASE-23082) | Backport low-latency snapshot tracking for space quotas to 2.x |  Major | Quotas |
+| [HBASE-23221](https://issues.apache.org/jira/browse/HBASE-23221) | Polish the WAL interface after HBASE-23181 |  Major | regionserver, wal |
+| [HBASE-23191](https://issues.apache.org/jira/browse/HBASE-23191) | Log spams on Replication |  Trivial | Replication |
+| [HBASE-23207](https://issues.apache.org/jira/browse/HBASE-23207) | Log a region open journal |  Minor | . |
+| [HBASE-23172](https://issues.apache.org/jira/browse/HBASE-23172) | HBase Canary region success count metrics reflect column family successes, not region successes |  Minor | canary |
+| [HBASE-23170](https://issues.apache.org/jira/browse/HBASE-23170) | Admin#getRegionServers use ClusterMetrics.Option.SERVERS\_NAME |  Major | . |
+| [HBASE-23038](https://issues.apache.org/jira/browse/HBASE-23038) | Provide consistent and clear logging about disabling chores |  Minor | master, regionserver |
+
+
+### BUG FIXES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-23175](https://issues.apache.org/jira/browse/HBASE-23175) | Yarn unable to acquire delegation token for HBase Spark jobs |  Major | security, spark |
+| [HBASE-23553](https://issues.apache.org/jira/browse/HBASE-23553) | Snapshot referenced data files are deleted in some case |  Major | . |
+| [HBASE-23587](https://issues.apache.org/jira/browse/HBASE-23587) | The FSYNC\_WAL flag does not work on branch-2.x |  Major | wal |
+| [HBASE-23596](https://issues.apache.org/jira/browse/HBASE-23596) | HBCKServerCrashProcedure can double assign |  Major | proc-v2 |
+| [HBASE-23589](https://issues.apache.org/jira/browse/HBASE-23589) | FlushDescriptor contains non-matching family/output combinations |  Critical | read replicas |
+| [HBASE-23581](https://issues.apache.org/jira/browse/HBASE-23581) | Creating table gets stuck when specifying an invalid split policy as METADATA |  Major | . |
+| [HBASE-23572](https://issues.apache.org/jira/browse/HBASE-23572) | In 'HBCK Report', distinguish between live, dead, and unknown servers |  Trivial | . |
+| [HBASE-23564](https://issues.apache.org/jira/browse/HBASE-23564) | RegionStates may has some expired serverinfo and make regions do not balance. |  Major | . |
+| [HBASE-23594](https://issues.apache.org/jira/browse/HBASE-23594) | Procedure stuck due to region happen to recorded on two servers. |  Critical | amv2, Region Assignment |
+| [HBASE-23376](https://issues.apache.org/jira/browse/HBASE-23376) | NPE happens while replica region is moving |  Minor | read replicas |
+| [HBASE-23582](https://issues.apache.org/jira/browse/HBASE-23582) | Unbalanced braces in string representation of table descriptor |  Minor | . |
+| [HBASE-23566](https://issues.apache.org/jira/browse/HBASE-23566) | Fix package/packet terminology problem in chaos monkeys |  Minor | integration tests |
+| [HBASE-23360](https://issues.apache.org/jira/browse/HBASE-23360) | [CLI] Fix help command "set\_quota" to explain removing quota |  Minor | shell |
+| [HBASE-23554](https://issues.apache.org/jira/browse/HBASE-23554) | Encoded regionname to regionname utility |  Major | shell |
+| [HBASE-22096](https://issues.apache.org/jira/browse/HBASE-22096) | /storeFile.jsp shows CorruptHFileException when the storeFile is a reference file |  Major | UI |
+| [HBASE-22529](https://issues.apache.org/jira/browse/HBASE-22529) | Sanity check for in-memory compaction policy |  Minor | . |
+| [HBASE-23337](https://issues.apache.org/jira/browse/HBASE-23337) | Several modules missing in nexus for Apache HBase 2.2.2 |  Blocker | build, community, scripts |
+| [HBASE-23345](https://issues.apache.org/jira/browse/HBASE-23345) | Table need to replication unless all of cfs are excluded |  Minor | Replication |
+| [HBASE-23356](https://issues.apache.org/jira/browse/HBASE-23356) | When construct StoreScanner throw exceptions it is possible to left some KeyValueScanner not closed. |  Major | . |
+| [HBASE-23117](https://issues.apache.org/jira/browse/HBASE-23117) | Bad enum in hbase:meta info:state column can fail loadMeta and stop startup |  Minor | . |
+| [HBASE-23312](https://issues.apache.org/jira/browse/HBASE-23312) | HBase Thrift SPNEGO configs (HBASE-19852) should be backwards compatible |  Major | Thrift |
+| [HBASE-23197](https://issues.apache.org/jira/browse/HBASE-23197) | "IllegalArgumentException: Wrong FS" on edits replay when WALs on different file system and hbase.region.archive.recovered.edits is enabled. |  Major | . |
+| [HBASE-23336](https://issues.apache.org/jira/browse/HBASE-23336) | [CLI] Incorrect row(s) count  "clear\_deadservers" |  Minor | shell |
+| [HBASE-23237](https://issues.apache.org/jira/browse/HBASE-23237) | Negative 'Requests per Second' counts in UI |  Major | UI |
+| [HBASE-23328](https://issues.apache.org/jira/browse/HBASE-23328) | info:regioninfo goes wrong when region replicas enabled |  Major | read replicas |
+| [HBASE-22607](https://issues.apache.org/jira/browse/HBASE-22607) | TestExportSnapshotNoCluster::testSnapshotWithRefsExportFileSystemState() fails intermittently |  Major | test |
+| [HBASE-23318](https://issues.apache.org/jira/browse/HBASE-23318) | LoadTestTool doesn't start |  Minor | . |
+| [HBASE-23282](https://issues.apache.org/jira/browse/HBASE-23282) | HBCKServerCrashProcedure for 'Unknown Servers' |  Major | hbck2, proc-v2 |
+| [HBASE-23294](https://issues.apache.org/jira/browse/HBASE-23294) | ReplicationBarrierCleaner should delete all the barriers for a removed region which does not belong to any serial replication peer |  Major | master, Replication |
+| [HBASE-23290](https://issues.apache.org/jira/browse/HBASE-23290) | shell processlist command is broken |  Major | shell |
+| [HBASE-18439](https://issues.apache.org/jira/browse/HBASE-18439) | Subclasses of o.a.h.h.chaos.actions.Action all use the same logger |  Minor | integration tests |
+| [HBASE-23262](https://issues.apache.org/jira/browse/HBASE-23262) | Cannot load Master UI |  Major | master, UI |
+| [HBASE-23263](https://issues.apache.org/jira/browse/HBASE-23263) | NPE in Quotas.jsp |  Major | UI |
+| [HBASE-22980](https://issues.apache.org/jira/browse/HBASE-22980) | HRegionPartioner getPartition() method incorrectly partitions the regions of the table. |  Major | mapreduce |
+| [HBASE-21458](https://issues.apache.org/jira/browse/HBASE-21458) | Error: Could not find or load main class org.apache.hadoop.hbase.util.GetJavaProperty |  Minor | build, Client |
+| [HBASE-23243](https://issues.apache.org/jira/browse/HBASE-23243) | [pv2] Filter out SUCCESS procedures; on decent-sized cluster, plethora overwhelms problems |  Major | proc-v2, UI |
+| [HBASE-23247](https://issues.apache.org/jira/browse/HBASE-23247) | [hbck2] Schedule SCPs for 'Unknown Servers' |  Major | hbck2 |
+| [HBASE-23241](https://issues.apache.org/jira/browse/HBASE-23241) | TestExecutorService sometimes fail |  Major | test |
+| [HBASE-23244](https://issues.apache.org/jira/browse/HBASE-23244) | NPEs running Canary |  Major | canary |
+| [HBASE-23231](https://issues.apache.org/jira/browse/HBASE-23231) | ReplicationSource do not update metrics after refresh |  Major | wal |
+| [HBASE-22739](https://issues.apache.org/jira/browse/HBASE-22739) | ArrayIndexOutOfBoundsException when balance |  Major | Balancer |
+| [HBASE-23192](https://issues.apache.org/jira/browse/HBASE-23192) | CatalogJanitor consistencyCheck does not log problematic row on exception |  Minor | hbck2 |
+| [HBASE-20827](https://issues.apache.org/jira/browse/HBASE-20827) | Add pause when retrying after CallQueueTooBigException for reportRegionStateTransition |  Major | Region Assignment |
+| [HBASE-23187](https://issues.apache.org/jira/browse/HBASE-23187) | Update parent region state to SPLIT in meta |  Major | master |
+| [HBASE-23199](https://issues.apache.org/jira/browse/HBASE-23199) | Error populating Table-Attribute fields |  Major | master, UI |
+| [HBASE-23222](https://issues.apache.org/jira/browse/HBASE-23222) | Better logging and mitigation for MOB compaction failures |  Critical | mob |
+| [HBASE-23181](https://issues.apache.org/jira/browse/HBASE-23181) | Blocked WAL archive: "LogRoller: Failed to schedule flush of XXXX, because it is not online on us" |  Major | regionserver, wal |
+| [HBASE-23193](https://issues.apache.org/jira/browse/HBASE-23193) | ConnectionImplementation.isTableAvailable can not deal with meta table on branch-2.x |  Major | rsgroup, test |
+| [HBASE-23177](https://issues.apache.org/jira/browse/HBASE-23177) | If fail to open reference because FNFE, make it plain it is a Reference |  Major | Operability |
+| [HBASE-23042](https://issues.apache.org/jira/browse/HBASE-23042) | Parameters are incorrect in procedures jsp |  Major | . |
+
+
+### SUB-TASKS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-23320](https://issues.apache.org/jira/browse/HBASE-23320) | Upgrade surefire plugin to 3.0.0-M4 |  Major | dependencies, test |
+| [HBASE-20461](https://issues.apache.org/jira/browse/HBASE-20461) | Implement fsync for AsyncFSWAL |  Major | wal |
+| [HBASE-23085](https://issues.apache.org/jira/browse/HBASE-23085) | Network and Data related Actions |  Minor | integration tests |
+| [HBASE-23307](https://issues.apache.org/jira/browse/HBASE-23307) | Add running of ReplicationBarrierCleaner to hbck2 fixMeta invocation |  Major | hbck2 |
+| [HBASE-23322](https://issues.apache.org/jira/browse/HBASE-23322) | [hbck2] Simplification on HBCKSCP scheduling |  Minor | hbck2 |
+| [HBASE-22480](https://issues.apache.org/jira/browse/HBASE-22480) | Get block from BlockCache once and return this block to BlockCache twice make ref count error. |  Major | . |
+| [HBASE-23136](https://issues.apache.org/jira/browse/HBASE-23136) | PartionedMobFileCompactor bulkloaded files shouldn't get replicated (addressing buklload replication related issue raised in HBASE-22380) |  Critical | . |
+| [HBASE-23217](https://issues.apache.org/jira/browse/HBASE-23217) | Set version as 2.2.3-SNAPSHOT in branch-2.2 |  Major | . |
+| [HBASE-22982](https://issues.apache.org/jira/browse/HBASE-22982) | Send SIGSTOP to hang or SIGCONT to resume rs and add graceful rolling restart |  Minor | integration tests |
+
+
+### OTHER:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-23575](https://issues.apache.org/jira/browse/HBASE-23575) | Remove dead code from AsyncRegistry interface |  Minor | Client |
+| [HBASE-23236](https://issues.apache.org/jira/browse/HBASE-23236) | Upgrade to yetus 0.11.1 |  Major | build |
+| [HBASE-23250](https://issues.apache.org/jira/browse/HBASE-23250) | Log message about CleanerChore delegate initialization should be at INFO |  Minor | master, Operability |
+| [HBASE-23227](https://issues.apache.org/jira/browse/HBASE-23227) | Upgrade jackson-databind to 2.9.10.1 to avoid recent CVEs |  Blocker | dependencies, REST, security |
+
+
+
 ## Release 2.2.2 - Unreleased (as of 2019-10-16)
 
 ### NEW FEATURES:
