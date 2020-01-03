@@ -577,10 +577,9 @@ public class FSHLog extends AbstractFSWAL<Writer> {
           //TraceScope scope = Trace.continueSpan(takeSyncFuture.getSpan());
           long start = System.nanoTime();
           Throwable lastException = null;
-          boolean wasRollRequested = false;
           try {
             TraceUtil.addTimelineAnnotation("syncing writer");
-            writer.sync(useHsync);
+            writer.sync(takeSyncFuture.isForceSync());
             TraceUtil.addTimelineAnnotation("writer synced");
             currentSequence = updateHighestSyncedSequence(currentSequence);
           } catch (IOException e) {

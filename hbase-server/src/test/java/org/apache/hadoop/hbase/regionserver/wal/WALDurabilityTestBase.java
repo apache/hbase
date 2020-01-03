@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -77,25 +76,39 @@ public abstract class WALDurabilityTestBase<T extends WAL> {
 
   protected abstract Boolean getSyncFlag(T wal);
 
+  protected abstract Boolean getWriterSyncFlag(T wal);
+
   @Test
   public void testWALDurability() throws IOException {
+    byte[] bytes = Bytes.toBytes(getName());
+    Put put = new Put(bytes);
+    put.addColumn(COLUMN_FAMILY_BYTES, Bytes.toBytes("1"), bytes);
+
     // global hbase.wal.hsync false, no override in put call - hflush
     conf.set(HRegion.WAL_HSYNC_CONF_KEY, "false");
     FileSystem fs = FileSystem.get(conf);
     Path rootDir = new Path(dir + getName());
     T wal = getWAL(fs, rootDir, getName(), conf);
     HRegion region = initHRegion(tableName, null, null, wal);
-    byte[] bytes = Bytes.toBytes(getName());
-    Put put = new Put(bytes);
-    put.addColumn(COLUMN_FAMILY_BYTES, Bytes.toBytes("1"), bytes);
+    try {
+      resetSyncFlag(wal);
+      assertNull(getSyncFlag(wal));
+      assertNull(getWriterSyncFlag(wal));
+      region.put(put);
+      assertFalse(getSyncFlag(wal));
+      assertFalse(getWriterSyncFlag(wal));
 
-    resetSyncFlag(wal);
-    assertNull(getSyncFlag(wal));
-    region.put(put);
-    assertFalse(getSyncFlag(wal));
-
-    region.close();
-    wal.close();
+      // global hbase.wal.hsync false, durability set in put call - fsync
+      put.setDurability(Durability.FSYNC_WAL);
+      resetSyncFlag(wal);
+      assertNull(getSyncFlag(wal));
+      assertNull(getWriterSyncFlag(wal));
+      region.put(put);
+      assertTrue(getSyncFlag(wal));
+      assertTrue(getWriterSyncFlag(wal));
+    } finally {
+      HBaseTestingUtility.closeRegionAndWAL(region);
+    }
 
     // global hbase.wal.hsync true, no override in put call
     conf.set(HRegion.WAL_HSYNC_CONF_KEY, "true");
@@ -103,28 +116,36 @@ public abstract class WALDurabilityTestBase<T extends WAL> {
     wal = getWAL(fs, rootDir, getName(), conf);
     region = initHRegion(tableName, null, null, wal);
 
-    resetSyncFlag(wal);
-    assertNull(getSyncFlag(wal));
-    region.put(put);
-    assertEquals(getSyncFlag(wal), true);
+    try {
+      resetSyncFlag(wal);
+      assertNull(getSyncFlag(wal));
+      assertNull(getWriterSyncFlag(wal));
+      region.put(put);
+      assertTrue(getSyncFlag(wal));
+      assertTrue(getWriterSyncFlag(wal));
 
-    // global hbase.wal.hsync true, durability set in put call - fsync
-    put.setDurability(Durability.FSYNC_WAL);
-    resetSyncFlag(wal);
-    assertNull(getSyncFlag(wal));
-    region.put(put);
-    assertTrue(getSyncFlag(wal));
+      // global hbase.wal.hsync true, durability set in put call - fsync
+      put.setDurability(Durability.FSYNC_WAL);
+      resetSyncFlag(wal);
+      assertNull(getSyncFlag(wal));
+      assertNull(getWriterSyncFlag(wal));
+      region.put(put);
+      assertTrue(getSyncFlag(wal));
+      assertTrue(getWriterSyncFlag(wal));
 
-    // global hbase.wal.hsync true, durability set in put call - sync
-    put = new Put(bytes);
-    put.addColumn(COLUMN_FAMILY_BYTES, Bytes.toBytes("1"), bytes);
-    put.setDurability(Durability.SYNC_WAL);
-    resetSyncFlag(wal);
-    assertNull(getSyncFlag(wal));
-    region.put(put);
-    assertFalse(getSyncFlag(wal));
-
-    HBaseTestingUtility.closeRegionAndWAL(region);
+      // global hbase.wal.hsync true, durability set in put call - sync
+      put = new Put(bytes);
+      put.addColumn(COLUMN_FAMILY_BYTES, Bytes.toBytes("1"), bytes);
+      put.setDurability(Durability.SYNC_WAL);
+      resetSyncFlag(wal);
+      assertNull(getSyncFlag(wal));
+      assertNull(getWriterSyncFlag(wal));
+      region.put(put);
+      assertFalse(getSyncFlag(wal));
+      assertFalse(getWriterSyncFlag(wal));
+    } finally {
+      HBaseTestingUtility.closeRegionAndWAL(region);
+    }
   }
 
   private String getName() {
