@@ -83,7 +83,7 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   private final User user;
 
-  final AsyncRegistry registry;
+  final ConnectionRegistry registry;
 
   private final int rpcTimeout;
 
@@ -118,7 +118,7 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   private final ClusterStatusListener clusterStatusListener;
 
-  public AsyncConnectionImpl(Configuration conf, AsyncRegistry registry, String clusterId,
+  public AsyncConnectionImpl(Configuration conf, ConnectionRegistry registry, String clusterId,
       User user) {
     this.conf = conf;
     this.user = user;
@@ -248,7 +248,7 @@ class AsyncConnectionImpl implements AsyncConnection {
   CompletableFuture<MasterService.Interface> getMasterStub() {
     return ConnectionUtils.getOrFetch(masterStub, masterStubMakeFuture, false, () -> {
       CompletableFuture<MasterService.Interface> future = new CompletableFuture<>();
-      addListener(registry.getMasterAddress(), (addr, error) -> {
+      addListener(registry.getActiveMaster(), (addr, error) -> {
         if (error != null) {
           future.completeExceptionally(error);
         } else if (addr == null) {
@@ -342,7 +342,7 @@ class AsyncConnectionImpl implements AsyncConnection {
   @Override
   public CompletableFuture<Hbck> getHbck() {
     CompletableFuture<Hbck> future = new CompletableFuture<>();
-    addListener(registry.getMasterAddress(), (sn, error) -> {
+    addListener(registry.getActiveMaster(), (sn, error) -> {
       if (error != null) {
         future.completeExceptionally(error);
       } else {
