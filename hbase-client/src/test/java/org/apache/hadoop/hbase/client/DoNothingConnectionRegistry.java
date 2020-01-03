@@ -18,30 +18,33 @@
 package org.apache.hadoop.hbase.client;
 
 import java.util.concurrent.CompletableFuture;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Can be overridden in UT if you only want to implement part of the methods in
- * {@link AsyncRegistry}.
+ * Registry that does nothing. Otherwise, default Registry wants zookeeper up and running.
  */
-public class DummyAsyncRegistry implements AsyncRegistry {
+@InterfaceAudience.Private
+class DoNothingConnectionRegistry implements ConnectionRegistry {
 
-  public static final String REGISTRY_IMPL_CONF_KEY = AsyncRegistryFactory.REGISTRY_IMPL_CONF_KEY;
+  public DoNothingConnectionRegistry(Configuration conf) {
+  }
 
   @Override
-  public CompletableFuture<RegionLocations> getMetaRegionLocation() {
-    return null;
+  public CompletableFuture<RegionLocations> getMetaRegionLocations() {
+    return CompletableFuture.completedFuture(null);
   }
 
   @Override
   public CompletableFuture<String> getClusterId() {
-    return null;
+    return CompletableFuture.completedFuture(null);
   }
 
   @Override
-  public CompletableFuture<ServerName> getMasterAddress() {
-    return null;
+  public CompletableFuture<ServerName> getActiveMaster() {
+    return CompletableFuture.completedFuture(null);
   }
 
   @Override
