@@ -85,7 +85,7 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   private final User user;
 
-  final AsyncRegistry registry;
+  final ConnectionRegistry registry;
 
   private final int rpcTimeout;
 
@@ -122,7 +122,7 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   private volatile ConnectionOverAsyncConnection conn;
 
-  public AsyncConnectionImpl(Configuration conf, AsyncRegistry registry, String clusterId,
+  public AsyncConnectionImpl(Configuration conf, ConnectionRegistry registry, String clusterId,
       SocketAddress localAddress, User user) {
     this.conf = conf;
     this.user = user;
@@ -136,7 +136,8 @@ class AsyncConnectionImpl implements AsyncConnection {
     } else {
       this.metrics = Optional.empty();
     }
-    this.rpcClient = RpcClientFactory.createClient(conf, clusterId, localAddress, metrics.orElse(null));
+    this.rpcClient = RpcClientFactory.createClient(
+        conf, clusterId, localAddress, metrics.orElse(null));
     this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
     this.hostnameCanChange = conf.getBoolean(RESOLVE_HOSTNAME_ON_FAIL_KEY, true);
     this.rpcTimeout =
@@ -257,7 +258,7 @@ class AsyncConnectionImpl implements AsyncConnection {
   CompletableFuture<MasterService.Interface> getMasterStub() {
     return ConnectionUtils.getOrFetch(masterStub, masterStubMakeFuture, false, () -> {
       CompletableFuture<MasterService.Interface> future = new CompletableFuture<>();
-      addListener(registry.getMasterAddress(), (addr, error) -> {
+      addListener(registry.getActiveMaster(), (addr, error) -> {
         if (error != null) {
           future.completeExceptionally(error);
         } else if (addr == null) {
@@ -368,7 +369,7 @@ class AsyncConnectionImpl implements AsyncConnection {
   @Override
   public CompletableFuture<Hbck> getHbck() {
     CompletableFuture<Hbck> future = new CompletableFuture<>();
-    addListener(registry.getMasterAddress(), (sn, error) -> {
+    addListener(registry.getActiveMaster(), (sn, error) -> {
       if (error != null) {
         future.completeExceptionally(error);
       } else {
