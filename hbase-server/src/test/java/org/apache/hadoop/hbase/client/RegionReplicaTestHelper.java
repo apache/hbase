@@ -39,7 +39,7 @@ final class RegionReplicaTestHelper {
 
   // waits for all replicas to have region location
   static void waitUntilAllMetaReplicasHavingRegionLocation(Configuration conf,
-      AsyncRegistry registry, int regionReplication) throws IOException {
+      ConnectionRegistry registry, int regionReplication) throws IOException {
     Waiter.waitFor(conf, conf.getLong("hbase.client.sync.wait.timeout.msec", 60000), 200, true,
       new ExplainingPredicate<IOException>() {
         @Override
@@ -50,7 +50,7 @@ final class RegionReplicaTestHelper {
         @Override
         public boolean evaluate() throws IOException {
           try {
-            RegionLocations locs = registry.getMetaRegionLocation().get();
+            RegionLocations locs = registry.getMetaRegionLocations().get();
             if (locs.size() < regionReplication) {
               return false;
             }
@@ -61,7 +61,7 @@ final class RegionReplicaTestHelper {
             }
             return true;
           } catch (Exception e) {
-            TestZKAsyncRegistry.LOG.warn("Failed to get meta region locations", e);
+            TestZKConnectionRegistry.LOG.warn("Failed to get meta region locations", e);
             return false;
           }
         }
