@@ -91,7 +91,7 @@ public class TestAsyncTableUseMetaReplicas {
     conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
       FailPrimaryMetaScanCp.class.getName());
     UTIL.startMiniCluster(3);
-    try (AsyncRegistry registry = AsyncRegistryFactory.getRegistry(conf)) {
+    try (ConnectionRegistry registry = ConnectionRegistryFactory.getRegistry(conf)) {
       RegionReplicaTestHelper.waitUntilAllMetaReplicasHavingRegionLocation(conf, registry, 3);
     }
     try (Table table = UTIL.createTable(TABLE_NAME, FAMILY)) {

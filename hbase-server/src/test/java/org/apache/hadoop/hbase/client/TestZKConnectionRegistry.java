@@ -48,16 +48,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Category({ MediumTests.class, ClientTests.class })
-public class TestZKAsyncRegistry {
+public class TestZKConnectionRegistry {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestZKAsyncRegistry.class);
+    HBaseClassTestRule.forClass(TestZKConnectionRegistry.class);
 
-  static final Logger LOG = LoggerFactory.getLogger(TestZKAsyncRegistry.class);
+  static final Logger LOG = LoggerFactory.getLogger(TestZKConnectionRegistry.class);
   static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  private static ZKAsyncRegistry REGISTRY;
+  private static ZKConnectionRegistry REGISTRY;
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -67,7 +67,7 @@ public class TestZKAsyncRegistry {
     // make sure that we do not depend on this config when getting locations for meta replicas, see
     // HBASE-21658.
     conf.setInt(META_REPLICAS_NUM, 1);
-    REGISTRY = new ZKAsyncRegistry(conf);
+    REGISTRY = new ZKConnectionRegistry(conf);
   }
 
   @AfterClass
@@ -84,10 +84,10 @@ public class TestZKAsyncRegistry {
     assertEquals("Expected " + expectedClusterId + ", found=" + clusterId, expectedClusterId,
       clusterId);
     assertEquals(TEST_UTIL.getHBaseCluster().getMaster().getServerName(),
-      REGISTRY.getMasterAddress().get());
+      REGISTRY.getActiveMaster().get());
     RegionReplicaTestHelper
       .waitUntilAllMetaReplicasHavingRegionLocation(TEST_UTIL.getConfiguration(), REGISTRY, 3);
-    RegionLocations locs = REGISTRY.getMetaRegionLocation().get();
+    RegionLocations locs = REGISTRY.getMetaRegionLocations().get();
     assertEquals(3, locs.getRegionLocations().length);
     IntStream.range(0, 3).forEach(i -> {
       HRegionLocation loc = locs.getRegionLocation(i);
@@ -102,7 +102,7 @@ public class TestZKAsyncRegistry {
     try (ReadOnlyZKClient zk1 = REGISTRY.getZKClient()) {
       Configuration otherConf = new Configuration(TEST_UTIL.getConfiguration());
       otherConf.set(HConstants.ZOOKEEPER_QUORUM, "localhost");
-      try (ZKAsyncRegistry otherRegistry = new ZKAsyncRegistry(otherConf)) {
+      try (ZKConnectionRegistry otherRegistry = new ZKConnectionRegistry(otherConf)) {
         ReadOnlyZKClient zk2 = otherRegistry.getZKClient();
         assertNotSame("Using a different configuration / quorum should result in different " +
           "backing zk connection.", zk1, zk2);
@@ -119,9 +119,9 @@ public class TestZKAsyncRegistry {
   public void testNoMetaAvailable() throws InterruptedException {
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.set("zookeeper.znode.metaserver", "whatever");
-    try (ZKAsyncRegistry registry = new ZKAsyncRegistry(conf)) {
+    try (ZKConnectionRegistry registry = new ZKConnectionRegistry(conf)) {
       try {
-        registry.getMetaRegionLocation().get();
+        registry.getMetaRegionLocations().get();
         fail("Should have failed since we set an incorrect meta znode prefix");
       } catch (ExecutionException e) {
         assertThat(e.getCause(), instanceOf(IOException.class));

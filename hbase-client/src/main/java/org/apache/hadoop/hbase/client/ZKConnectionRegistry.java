@@ -50,15 +50,15 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
  * Zookeeper based registry implementation.
  */
 @InterfaceAudience.Private
-class ZKAsyncRegistry implements AsyncRegistry {
+class ZKConnectionRegistry implements ConnectionRegistry {
 
-  private static final Logger LOG = LoggerFactory.getLogger(ZKAsyncRegistry.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ZKConnectionRegistry.class);
 
   private final ReadOnlyZKClient zk;
 
   private final ZNodePaths znodePaths;
 
-  ZKAsyncRegistry(Configuration conf) {
+  ZKConnectionRegistry(Configuration conf) {
     this.znodePaths = new ZNodePaths(conf);
     this.zk = new ReadOnlyZKClient(conf);
   }
@@ -93,7 +93,7 @@ class ZKAsyncRegistry implements AsyncRegistry {
 
   @Override
   public CompletableFuture<String> getClusterId() {
-    return getAndConvert(znodePaths.clusterIdZNode, ZKAsyncRegistry::getClusterId);
+    return getAndConvert(znodePaths.clusterIdZNode, ZKConnectionRegistry::getClusterId);
   }
 
   @VisibleForTesting
@@ -144,7 +144,7 @@ class ZKAsyncRegistry implements AsyncRegistry {
       int replicaId = znodePaths.getMetaReplicaIdFromZnode(metaReplicaZNode);
       String path = ZNodePaths.joinZNode(znodePaths.baseZNode, metaReplicaZNode);
       if (replicaId == DEFAULT_REPLICA_ID) {
-        addListener(getAndConvert(path, ZKAsyncRegistry::getMetaProto), (proto, error) -> {
+        addListener(getAndConvert(path, ZKConnectionRegistry::getMetaProto), (proto, error) -> {
           if (error != null) {
             future.completeExceptionally(error);
             return;
@@ -162,7 +162,7 @@ class ZKAsyncRegistry implements AsyncRegistry {
           tryComplete(remaining, locs, future);
         });
       } else {
-        addListener(getAndConvert(path, ZKAsyncRegistry::getMetaProto), (proto, error) -> {
+        addListener(getAndConvert(path, ZKConnectionRegistry::getMetaProto), (proto, error) -> {
           if (future.isDone()) {
             return;
           }
@@ -191,7 +191,7 @@ class ZKAsyncRegistry implements AsyncRegistry {
   }
 
   @Override
-  public CompletableFuture<RegionLocations> getMetaRegionLocation() {
+  public CompletableFuture<RegionLocations> getMetaRegionLocations() {
     CompletableFuture<RegionLocations> future = new CompletableFuture<>();
     addListener(
       zk.list(znodePaths.baseZNode)
@@ -217,8 +217,8 @@ class ZKAsyncRegistry implements AsyncRegistry {
   }
 
   @Override
-  public CompletableFuture<ServerName> getMasterAddress() {
-    return getAndConvert(znodePaths.masterAddressZNode, ZKAsyncRegistry::getMasterProto)
+  public CompletableFuture<ServerName> getActiveMaster() {
+    return getAndConvert(znodePaths.masterAddressZNode, ZKConnectionRegistry::getMasterProto)
         .thenApply(proto -> {
           if (proto == null) {
             return null;
