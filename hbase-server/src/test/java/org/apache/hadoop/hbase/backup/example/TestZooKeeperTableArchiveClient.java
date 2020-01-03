@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -110,7 +109,7 @@ public class TestZooKeeperTableArchiveClient {
   public static void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniZKCluster();
-    UTIL.getConfiguration().setClass("hbase.client.registry.impl", MockRegistry.class,
+    UTIL.getConfiguration().setClass(MockRegistry.REGISTRY_IMPL_CONF_KEY, MockRegistry.class,
       DummyConnectionRegistry.class);
     CONNECTION = ConnectionFactory.createConnection(UTIL.getConfiguration());
     archivingClient = new ZKTableArchiveClient(UTIL.getConfiguration(), CONNECTION);
@@ -147,9 +146,13 @@ public class TestZooKeeperTableArchiveClient {
 
   @AfterClass
   public static void cleanupTest() throws Exception {
-    CONNECTION.close();
+    if (CONNECTION != null) {
+      CONNECTION.close();
+    }
     UTIL.shutdownMiniZKCluster();
-    POOL.shutdownNow();
+    if (POOL != null) {
+      POOL.shutdownNow();
+    }
   }
 
   /**
@@ -353,6 +356,7 @@ public class TestZooKeeperTableArchiveClient {
    * @throws IOException on failure
    * @throws KeeperException on failure
    */
+  @SuppressWarnings("checkstyle:EmptyBlock")
   private List<BaseHFileCleanerDelegate> turnOnArchiving(String tableName, HFileCleaner cleaner)
       throws IOException, KeeperException {
     // turn on hfile retention
