@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -25,6 +26,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.wal.WALProvider.AsyncWriter;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -72,16 +74,52 @@ public class TestAsyncFSWALDurability extends WALDurabilityTestBase<CustomAsyncF
   protected Boolean getSyncFlag(CustomAsyncFSWAL wal) {
     return wal.getSyncFlag();
   }
+
+  @Override
+  protected Boolean getWriterSyncFlag(CustomAsyncFSWAL wal) {
+    return wal.getWriterSyncFlag();
+  }
 }
 
 class CustomAsyncFSWAL extends AsyncFSWAL {
+
   private Boolean syncFlag;
+
+  private Boolean writerSyncFlag;
 
   public CustomAsyncFSWAL(FileSystem fs, Path rootDir, String logDir, Configuration conf,
     EventLoopGroup eventLoopGroup, Class<? extends Channel> channelClass)
     throws FailedLogCloseException, IOException {
     super(fs, rootDir, logDir, HConstants.HREGION_OLDLOGDIR_NAME, conf, null, true, null, null,
       eventLoopGroup, channelClass);
+  }
+
+  @Override
+  protected AsyncWriter createWriterInstance(Path path) throws IOException {
+    AsyncWriter writer = super.createWriterInstance(path);
+    return new AsyncWriter() {
+
+      @Override
+      public void close() throws IOException {
+        writer.close();
+      }
+
+      @Override
+      public long getLength() {
+        return writer.getLength();
+      }
+
+      @Override
+      public CompletableFuture<Long> sync(boolean forceSync) {
+        writerSyncFlag = forceSync;
+        return writer.sync(forceSync);
+      }
+
+      @Override
+      public void append(Entry entry) {
+        writer.append(entry);
+      }
+    };
   }
 
   @Override
@@ -98,9 +136,14 @@ class CustomAsyncFSWAL extends AsyncFSWAL {
 
   void resetSyncFlag() {
     this.syncFlag = null;
+    this.writerSyncFlag = null;
   }
 
   Boolean getSyncFlag() {
     return syncFlag;
+  }
+
+  Boolean getWriterSyncFlag() {
+    return writerSyncFlag;
   }
 }

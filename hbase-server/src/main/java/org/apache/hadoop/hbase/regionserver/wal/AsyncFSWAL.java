@@ -347,13 +347,31 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     }
   }
 
+  // find all the sync futures between these two txids to see if we need to issue a hsync, if no
+  // sync futures then just use the default one.
+  private boolean isHsync(long beginTxid, long endTxid) {
+    SortedSet<SyncFuture> futures =
+      syncFutures.subSet(new SyncFuture().reset(beginTxid), new SyncFuture().reset(endTxid + 1));
+    if (futures.isEmpty()) {
+      return useHsync;
+    }
+    for (SyncFuture future : futures) {
+      if (future.isForceSync()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private void sync(AsyncWriter writer) {
     fileLengthAtLastSync = writer.getLength();
     long currentHighestProcessedAppendTxid = highestProcessedAppendTxid;
+    boolean shouldUseHsync =
+      isHsync(highestProcessedAppendTxidAtLastSync, currentHighestProcessedAppendTxid);
     highestProcessedAppendTxidAtLastSync = currentHighestProcessedAppendTxid;
     final long startTimeNs = System.nanoTime();
     final long epoch = (long) epochAndState >>> 2L;
-    addListener(writer.sync(useHsync), (result, error) -> {
+    addListener(writer.sync(shouldUseHsync), (result, error) -> {
       if (error != null) {
         syncFailed(epoch, error);
       } else {
