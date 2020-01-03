@@ -217,7 +217,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   /**
    * Cluster registry of basic info such as clusterid and meta region location.
    */
-  private final AsyncRegistry registry;
+  private final ConnectionRegistry registry;
 
   private final ClientBackoffPolicy backoffPolicy;
 
@@ -303,7 +303,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
         this.conf.get(BufferedMutator.CLASSNAME_KEY);
 
     try {
-      this.registry = AsyncRegistryFactory.getRegistry(conf);
+      this.registry = ConnectionRegistryFactory.getRegistry(conf);
       retrieveClusterId();
 
       this.rpcClient = RpcClientFactory.createClient(this.conf, this.clusterId, this.metrics);
@@ -434,7 +434,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
 
   @Override
   public Hbck getHbck() throws IOException {
-    return getHbck(get(registry.getMasterAddress()));
+    return getHbck(get(registry.getActiveMaster()));
   }
 
   @Override
@@ -811,7 +811,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       }
 
       // Look up from zookeeper
-      locations = get(this.registry.getMetaRegionLocation());
+      locations = get(this.registry.getMetaRegionLocations());
       if (locations != null) {
         cacheLocation(tableName, locations);
       }
@@ -1162,7 +1162,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
      */
     private MasterProtos.MasterService.BlockingInterface makeStubNoRetries()
         throws IOException, KeeperException {
-      ServerName sn = get(registry.getMasterAddress());
+      ServerName sn = get(registry.getActiveMaster());
       if (sn == null) {
         String msg = "ZooKeeper available but no active master location found";
         LOG.info(msg);
@@ -1211,7 +1211,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
 
   @Override
   public AdminProtos.AdminService.BlockingInterface getAdminForMaster() throws IOException {
-    return getAdmin(get(registry.getMasterAddress()));
+    return getAdmin(get(registry.getActiveMaster()));
   }
 
   @Override

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,27 +17,37 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.RegionLocations;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 /**
- * Get instance of configured Registry.
+ * Registry that does nothing. Otherwise, default Registry wants zookeeper up and running.
  */
 @InterfaceAudience.Private
-final class AsyncRegistryFactory {
+class DoNothingConnectionRegistry implements ConnectionRegistry {
 
-  static final String REGISTRY_IMPL_CONF_KEY = "hbase.client.registry.impl";
-
-  private AsyncRegistryFactory() {
+  public DoNothingConnectionRegistry(Configuration conf) {
   }
 
-  /**
-   * @return The cluster registry implementation to use.
-   */
-  static AsyncRegistry getRegistry(Configuration conf) {
-    Class<? extends AsyncRegistry> clazz =
-        conf.getClass(REGISTRY_IMPL_CONF_KEY, ZKAsyncRegistry.class, AsyncRegistry.class);
-    return ReflectionUtils.newInstance(clazz, conf);
+  @Override
+  public CompletableFuture<RegionLocations> getMetaRegionLocations() {
+    return CompletableFuture.completedFuture(null);
+  }
+
+  @Override
+  public CompletableFuture<String> getClusterId() {
+    return CompletableFuture.completedFuture(null);
+  }
+
+  @Override
+  public CompletableFuture<ServerName> getActiveMaster() {
+    return CompletableFuture.completedFuture(null);
+  }
+
+  @Override
+  public void close() {
   }
 }
