@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
@@ -51,14 +52,49 @@ public class TestFSHLogDurability extends WALDurabilityTestBase<CustomFSHLog> {
   protected Boolean getSyncFlag(CustomFSHLog wal) {
     return wal.getSyncFlag();
   }
+
+  @Override
+  protected Boolean getWriterSyncFlag(CustomFSHLog wal) {
+    return wal.getWriterSyncFlag();
+  }
 }
 
 class CustomFSHLog extends FSHLog {
   private Boolean syncFlag;
 
+  private Boolean writerSyncFlag;
+
   public CustomFSHLog(FileSystem fs, Path root, String logDir, Configuration conf)
     throws IOException {
     super(fs, root, logDir, conf);
+  }
+
+  @Override
+  protected Writer createWriterInstance(Path path) throws IOException {
+    Writer writer = super.createWriterInstance(path);
+    return new Writer() {
+
+      @Override
+      public void close() throws IOException {
+        writer.close();
+      }
+
+      @Override
+      public long getLength() {
+        return writer.getLength();
+      }
+
+      @Override
+      public void sync(boolean forceSync) throws IOException {
+        writerSyncFlag = forceSync;
+        writer.sync(forceSync);
+      }
+
+      @Override
+      public void append(Entry entry) throws IOException {
+        writer.append(entry);
+      }
+    };
   }
 
   @Override
@@ -75,9 +111,14 @@ class CustomFSHLog extends FSHLog {
 
   void resetSyncFlag() {
     this.syncFlag = null;
+    this.writerSyncFlag = null;
   }
 
   Boolean getSyncFlag() {
     return syncFlag;
+  }
+
+  Boolean getWriterSyncFlag() {
+    return writerSyncFlag;
   }
 }
