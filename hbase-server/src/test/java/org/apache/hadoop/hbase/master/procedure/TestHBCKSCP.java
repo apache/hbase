@@ -104,7 +104,7 @@ public class TestHBCKSCP extends TestSCPBase {
     assertEquals(RegionState.State.OPEN.toString(),
         Bytes.toString(r.getValue(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER)));
     ServerName serverName = MetaTableAccessor.getServerName(r, 0);
-    assertEquals(rsServerName, serverName);
+    assertTrue(rsServerName.equals(serverName));
     // moveFrom adds to dead servers and adds it to processing list only we will
     // not be processing this server 'normally'. Remove it from processing by
     // calling 'finish' and then remove it from dead servers so rsServerName
@@ -154,13 +154,14 @@ public class TestHBCKSCP extends TestSCPBase {
     assertNotEquals(rsServerName, serverName);
     // Make sure no mention of old server post SCP.
     assertFalse(searchMeta(master, rsServerName));
+    assertFalse(master.getServerManager().getDeadServers().isProcessingServer(rsServerName));
     assertFalse(master.getServerManager().getDeadServers().isDeadServer(rsServerName));
   }
 
   /**
    * @return True if we find reference to <code>sn</code> in meta table.
    */
-  private boolean searchMeta(HMaster master, ServerName sn) throws IOException {
+  boolean searchMeta(HMaster master, ServerName sn) throws IOException {
     List<Pair<RegionInfo, ServerName>> ps =
       MetaTableAccessor.getTableRegionsAndLocations(master.getConnection(), null);
     for (Pair<RegionInfo, ServerName> p: ps) {
