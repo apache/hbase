@@ -1105,7 +1105,7 @@ public class AssignmentManager {
     try {
       RegionInfo ri = MetaTableAccessor.parseRegionInfoFromRegionName(regionName);
       // Pass -1 for timeout. Means do not wait.
-      ServerManager.closeRegionSilentlyAndWait(this.master.getClusterConnection(), sn, ri, -1);
+      ServerManager.closeRegionSilentlyAndWait(this.master.getAsyncClusterConnection(), sn, ri, -1);
     } catch (Exception e) {
       LOG.error("Failed trying to close {} on {}", Bytes.toStringBinary(regionName), sn, e);
     }
