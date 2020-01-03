@@ -175,7 +175,7 @@ public class TestAsyncTableRpcPriority {
         return null;
       }
     }).when(stub).get(any(HBaseRpcController.class), any(GetRequest.class), any());
-    conn = new AsyncConnectionImpl(CONF, new DoNothingAsyncRegistry(CONF), "test",
+    conn = new AsyncConnectionImpl(CONF, new DoNothingConnectionRegistry(CONF), "test",
       UserProvider.instantiate(CONF).getCurrent()) {
 
       @Override

@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -90,6 +89,7 @@ public class TestZooKeeperTableArchiveClient {
   private static RegionServerServices rss;
   private static DirScanPool POOL;
 
+
   /**
    * Setup the config for the cluster
    */
@@ -132,9 +132,13 @@ public class TestZooKeeperTableArchiveClient {
 
   @AfterClass
   public static void cleanupTest() throws Exception {
-    CONNECTION.close();
+    if (CONNECTION != null) {
+      CONNECTION.close();
+    }
     UTIL.shutdownMiniZKCluster();
-    POOL.shutdownNow();
+    if (POOL != null) {
+      POOL.shutdownNow();
+    }
   }
 
   /**
@@ -338,6 +342,7 @@ public class TestZooKeeperTableArchiveClient {
    * @throws IOException on failure
    * @throws KeeperException on failure
    */
+  @SuppressWarnings("checkstyle:EmptyBlock")
   private List<BaseHFileCleanerDelegate> turnOnArchiving(String tableName, HFileCleaner cleaner)
       throws IOException, KeeperException {
     // turn on hfile retention

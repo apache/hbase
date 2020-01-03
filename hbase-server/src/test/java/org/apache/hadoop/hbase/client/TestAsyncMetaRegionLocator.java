@@ -44,7 +44,7 @@ public class TestAsyncMetaRegionLocator {
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  private static AsyncRegistry REGISTRY;
+  private static ConnectionRegistry REGISTRY;
 
   private static AsyncMetaRegionLocator LOCATOR;
 
@@ -53,7 +53,7 @@ public class TestAsyncMetaRegionLocator {
     TEST_UTIL.getConfiguration().setInt(HConstants.META_REPLICAS_NUM, 3);
     TEST_UTIL.startMiniCluster(3);
     TEST_UTIL.waitUntilNoRegionsInTransition();
-    REGISTRY = AsyncRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
+    REGISTRY = ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
     RegionReplicaTestHelper
       .waitUntilAllMetaReplicasHavingRegionLocation(TEST_UTIL.getConfiguration(), REGISTRY, 3);
     TEST_UTIL.getAdmin().balancerSwitch(false, true);
