@@ -15,51 +15,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.hbtop.terminal;
+package org.apache.hadoop.hbase.hbtop.terminal.impl;
 
 import java.util.concurrent.TimeUnit;
+
+import org.apache.hadoop.hbase.hbtop.terminal.KeyPress;
+import org.apache.hadoop.hbase.hbtop.terminal.Terminal;
+import org.apache.hadoop.hbase.hbtop.terminal.TerminalPrinter;
 import org.apache.hadoop.hbase.hbtop.terminal.impl.TerminalImpl;
 
 
-public final class CursorTest {
+public final class TestTerminalPrinter {
 
-  private CursorTest() {
+  private TestTerminalPrinter() {
   }
 
   public static void main(String[] args) throws Exception {
     try (Terminal terminal = new TerminalImpl()) {
+      terminal.hideCursor();
       terminal.refresh();
-      terminal.setCursorPosition(0, 0);
 
-      terminal.getTerminalPrinter(0).print("aaa").endOfLine();
-      terminal.refresh();
-      TimeUnit.SECONDS.sleep(1);
+      TerminalPrinter printer = terminal.getTerminalPrinter(0);
+      printer.print("Normal string").endOfLine();
+      printer.startHighlight().print("Highlighted string").stopHighlight().endOfLine();
+      printer.startBold().print("Bold string").stopBold().endOfLine();
+      printer.startHighlight().startBold().print("Highlighted bold string")
+          .stopBold().stopHighlight().endOfLine();
+      printer.endOfLine();
+      printer.print("Press any key to finish").endOfLine();
 
-      terminal.getTerminalPrinter(0).print("bbb").endOfLine();
-      terminal.refresh();
-      TimeUnit.SECONDS.sleep(1);
-
-      terminal.setCursorPosition(1, 0);
-      terminal.refresh();
-      TimeUnit.SECONDS.sleep(1);
-
-      terminal.setCursorPosition(2, 0);
-      terminal.refresh();
-      TimeUnit.SECONDS.sleep(1);
-
-      terminal.setCursorPosition(3, 0);
-      terminal.refresh();
-      TimeUnit.SECONDS.sleep(1);
-
-      terminal.setCursorPosition(0, 1);
-      terminal.refresh();
-      TimeUnit.SECONDS.sleep(1);
-
-      terminal.getTerminalPrinter(1).print("ccc").endOfLine();
-      terminal.refresh();
-      TimeUnit.SECONDS.sleep(1);
-
-      terminal.getTerminalPrinter(3).print("Press any key to finish").endOfLine();
       terminal.refresh();
 
       while (true) {

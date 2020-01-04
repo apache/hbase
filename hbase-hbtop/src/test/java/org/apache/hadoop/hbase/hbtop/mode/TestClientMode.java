@@ -32,10 +32,10 @@ import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
-public class ClientModeTest extends ModeTestBase {
+public class TestClientMode extends TestModeBase {
 
   @ClassRule public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(ClientModeTest.class);
+      HBaseClassTestRule.forClass(TestClientMode.class);
 
   @Override protected Mode getMode() {
     return Mode.CLIENT;

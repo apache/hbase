@@ -673,7 +673,10 @@ elif [ "$COMMAND" = "hbtop" ] ; then
     done
   fi
 
-  HBASE_OPTS="${HBASE_OPTS} -Dlog4j.configuration=file:${HBASE_HOME}/conf/log4j-hbtop.properties"
+  if [ -f "${HBASE_HOME}/conf/log4j-hbtop.properties" ] ; then
+    HBASE_HBTOP_OPTS="${HBASE_HBTOP_OPTS} -Dlog4j.configuration=file:${HBASE_HOME}/conf/log4j-hbtop.properties"
+  fi
+  HBASE_OPTS="${HBASE_OPTS} ${HBASE_HBTOP_OPTS}"
 else
   CLASS=$COMMAND
 fi

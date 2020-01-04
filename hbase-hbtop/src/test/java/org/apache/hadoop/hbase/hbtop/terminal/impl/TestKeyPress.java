@@ -15,31 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.hbtop.terminal;
+package org.apache.hadoop.hbase.hbtop.terminal.impl;
 
 import java.util.concurrent.TimeUnit;
+
+import org.apache.hadoop.hbase.hbtop.terminal.KeyPress;
+import org.apache.hadoop.hbase.hbtop.terminal.Terminal;
 import org.apache.hadoop.hbase.hbtop.terminal.impl.TerminalImpl;
 
 
-public final class TerminalPrinterTest {
+public final class TestKeyPress {
 
-  private TerminalPrinterTest() {
+  private TestKeyPress() {
   }
 
   public static void main(String[] args) throws Exception {
     try (Terminal terminal = new TerminalImpl()) {
       terminal.hideCursor();
-      terminal.refresh();
-
-      TerminalPrinter printer = terminal.getTerminalPrinter(0);
-      printer.print("Normal string").endOfLine();
-      printer.startHighlight().print("Highlighted string").stopHighlight().endOfLine();
-      printer.startBold().print("Bold string").stopBold().endOfLine();
-      printer.startHighlight().startBold().print("Highlighted bold string")
-          .stopBold().stopHighlight().endOfLine();
-      printer.endOfLine();
-      printer.print("Press any key to finish").endOfLine();
-
       terminal.refresh();
 
       while (true) {
@@ -48,7 +40,13 @@ public final class TerminalPrinterTest {
           TimeUnit.MILLISECONDS.sleep(100);
           continue;
         }
-        break;
+
+        terminal.getTerminalPrinter(0).print(keyPress.toString()).endOfLine();
+        terminal.refresh();
+
+        if (keyPress.getType() == KeyPress.Type.F12) {
+          break;
+        }
       }
     }
   }

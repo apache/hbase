@@ -232,7 +232,7 @@ public final class TestUtils {
     long requestCountPerSecond, long readRequestCountPerSecond,
     long filteredReadRequestCountPerSecond, long writeCountRequestPerSecond,
     Size storeFileSize, Size uncompressedStoreFileSize, int numStoreFiles,
-    Size memStoreSize, float Locality, String startKey, long compactingCellCount,
+    Size memStoreSize, float locality, String startKey, long compactingCellCount,
     long compactedCellCount, float compactionProgress, String lastMajorCompactionTime) {
     assertThat(record.size(), is(22));
     assertThat(record.get(Field.NAMESPACE).asString(), is(namespace));
@@ -255,7 +255,7 @@ public final class TestUtils {
       is(uncompressedStoreFileSize));
     assertThat(record.get(Field.NUM_STORE_FILES).asInt(), is(numStoreFiles));
     assertThat(record.get(Field.MEM_STORE_SIZE).asSize(), is(memStoreSize));
-    assertThat(record.get(Field.LOCALITY).asFloat(), is(Locality));
+    assertThat(record.get(Field.LOCALITY).asFloat(), is(locality));
     assertThat(record.get(Field.START_KEY).asString(), is(startKey));
     assertThat(record.get(Field.COMPACTING_CELL_COUNT).asLong(), is(compactingCellCount));
     assertThat(record.get(Field.COMPACTED_CELL_COUNT).asLong(), is(compactedCellCount));

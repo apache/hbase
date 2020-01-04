@@ -23,7 +23,7 @@ import org.apache.hadoop.hbase.hbtop.TestUtils;
 import org.junit.Test;
 
 
-public abstract class ModeTestBase {
+public abstract class TestModeBase {
 
   @Test
   public void testGetRecords() {
