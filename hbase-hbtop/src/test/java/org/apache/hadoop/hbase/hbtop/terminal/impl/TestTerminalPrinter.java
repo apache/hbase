@@ -22,7 +22,6 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.hbtop.terminal.KeyPress;
 import org.apache.hadoop.hbase.hbtop.terminal.Terminal;
 import org.apache.hadoop.hbase.hbtop.terminal.TerminalPrinter;
-import org.apache.hadoop.hbase.hbtop.terminal.impl.TerminalImpl;
 
 
 public final class TestTerminalPrinter {
