@@ -39,13 +39,13 @@ from thrift.transport import THttpClient
 from thrift.protocol import TBinaryProtocol
 
 # Add path for local "gen-py/hbase" for the pre-generated module
-gen_py_path = os.path.abspath('gen-py')
+gen_py_path = os.path.abspath('./gen-py')
 sys.path.append(gen_py_path)
 from hbase import THBaseService
 from hbase.ttypes import *
 
-print "Thrift2 Demo"
-print "This demo assumes you have a table called \"example\" with a column family called \"family1\""
+print ("Thrift2 Demo")
+print ("This demo assumes you have a table called \"example\" with a column family called \"family1\"")
 
 host = "localhost"
 port = 9090
@@ -61,21 +61,16 @@ client = THBaseService.Client(protocol)
 
 transport.open()
 
-# Check Thrift Server Type
-serverType = client.getThriftServerType()
-if serverType != TThriftServerType.TWO:
-  raise Exception("Mismatch between client and server, server type is %s" % serverType)
-
 table = "example"
 
-put = TPut(row="row1", columnValues=[TColumnValue(family="family1",qualifier="qualifier1",value="value1")])
-print "Putting:", put
+put = TPut(row="row1", columnValues=[TColumnValue(family="family1",qualifier="qualifier1",value="value5")])
+print ("Putting:", put)
 client.put(table, put)
 
 get = TGet(row="row1")
-print "Getting:", get
+print ("Getting:", get)
 result = client.get(table, get)
 
-print "Result:", result
+print ("Result:", result)
 
 transport.close()
