@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
+import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -26,7 +28,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.procedure.DisableTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
@@ -39,20 +40,12 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Future;
 
 /**
  * Testcase for HBASE-23636.
  */
 @Category({ MasterTests.class, LargeTests.class })
 public class TestRaceBetweenSCPAndDTP {
-  private static final Logger LOG = LoggerFactory.getLogger(TestRaceBetweenSCPAndDTP.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
