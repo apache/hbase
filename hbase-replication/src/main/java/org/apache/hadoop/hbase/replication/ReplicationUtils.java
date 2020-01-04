@@ -135,6 +135,18 @@ public final class ReplicationUtils {
   }
 
   /**
+   * @deprecated Will be removed in HBase 3.
+   *             Use {@link ReplicationPeerConfig#needToReplicate(TableName)} instead.
+   * @param peerConfig configuration for the replication peer cluster
+   * @param tableName name of the table
+   * @return true if the table need replicate to the peer cluster
+   */
+  @Deprecated
+  public static boolean contains(ReplicationPeerConfig peerConfig, TableName tableName) {
+    return peerConfig.needToReplicate(tableName);
+  }
+
+  /**
    * Get the adaptive timeout value when performing a retry
    */
   public static int getAdaptiveTimeout(final int initialValue, final int retries) {
