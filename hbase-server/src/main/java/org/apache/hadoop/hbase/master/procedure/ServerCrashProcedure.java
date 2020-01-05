@@ -491,7 +491,7 @@ public class ServerCrashProcedure
         }
         if (env.getMasterServices().getTableStateManager()
           .isTableState(regionNode.getTable(), TableState.State.DISABLED)) {
-          LOG.warn("{} found table disabled for region {}.", this, regionNode);
+          LOG.warn("Found table disabled for region {}, procDetails: {}", regionNode, this);
           continue;
         }
         // force to assign to a new candidate server, see HBASE-23035 for more details.
