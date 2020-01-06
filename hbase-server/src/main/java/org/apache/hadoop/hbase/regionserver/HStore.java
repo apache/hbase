@@ -159,6 +159,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
   private AtomicLong storeSize = new AtomicLong();
   private AtomicLong totalUncompressedBytes = new AtomicLong();
 
+  private boolean cacheOnWriteLogged;
+
   /**
    * RWLock for store operations.
    * Locked in shared mode when the list of component stores is looked at:
@@ -338,6 +340,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
         getColumnFamilyName(), memstore.getClass().getSimpleName(), policyName, verifyBulkLoads,
         parallelPutCountPrintThreshold, family.getDataBlockEncoding(),
         family.getCompressionType());
+    cacheOnWriteLogged = false;
   }
 
   /**
@@ -1120,15 +1123,19 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     if (isCompaction) {
       // Don't cache data on write on compactions, unless specifically configured to do so
       writerCacheConf = new CacheConfig(cacheConf);
-      final boolean shouldCacheCompactedBlocksOnWrite = cacheConf
-        .shouldCacheCompactedBlocksOnWrite();
+      final boolean cacheCompactedBlocksOnWrite =
+        cacheConf.shouldCacheCompactedBlocksOnWrite();
       // if data blocks are to be cached on write
       // during compaction, we should forcefully
       // cache index and bloom blocks as well
-      if (shouldCacheCompactedBlocksOnWrite) {
+      if (cacheCompactedBlocksOnWrite) {
         writerCacheConf.enableCacheOnWrite();
-        LOG.info("cacheCompactedBlocksOnWrite is true, hence enabled cacheOnWrite for " +
-          "Data blocks, Index blocks and Bloom filter blocks");
+        if (!cacheOnWriteLogged) {
+          LOG.info("For Store {} , cacheCompactedBlocksOnWrite is true, hence enabled " +
+              "cacheOnWrite for Data blocks, Index blocks and Bloom filter blocks",
+            getColumnFamilyName());
+          cacheOnWriteLogged = true;
+        }
       } else {
         writerCacheConf.setCacheDataOnWrite(false);
       }
@@ -1137,8 +1144,11 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
       final boolean shouldCacheDataOnWrite = cacheConf.shouldCacheDataOnWrite();
       if (shouldCacheDataOnWrite) {
         writerCacheConf.enableCacheOnWrite();
-        LOG.info("cacheDataOnWrite is true, hence enabled cacheOnWrite for " +
-          "Index blocks and Bloom filter blocks");
+        if (!cacheOnWriteLogged) {
+          LOG.info("For Store {} , cacheDataOnWrite is true, hence enabled cacheOnWrite for " +
+            "Index blocks and Bloom filter blocks", getColumnFamilyName());
+          cacheOnWriteLogged = true;
+        }
       }
     }
     InetSocketAddress[] favoredNodes = null;
