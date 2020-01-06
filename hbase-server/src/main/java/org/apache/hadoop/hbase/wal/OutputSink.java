@@ -19,9 +19,7 @@ package org.apache.hadoop.hbase.wal;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -94,21 +92,15 @@ public abstract class OutputSink {
   }
 
   public synchronized void restartWriterThreadsIfNeeded() {
-    Iterator<WriterThread> writerIterator = writerThreads.iterator();
-    //remove dead threads
-    List<String> names = new ArrayList();
-    while(writerIterator.hasNext()){
-      WriterThread t = writerIterator.next();
+    for(int i = 0; i< writerThreads.size(); i++){
+      WriterThread t = writerThreads.get(i);
       if (!t.isAlive()){
-        names.add(t.getName());
-        writerIterator.remove();
+        String threadName = t.getName();
+        LOG.debug("Replacing dead thread: " + threadName);
+        WriterThread newThread = new WriterThread(controller, entryBuffers, this, threadName);
+        newThread.start();
+        writerThreads.set(i, newThread);
       }
-    }
-    //add new threads, reusing the old names
-   for (String threadName : names){
-      WriterThread t = new WriterThread(controller, entryBuffers, this, threadName);
-      t.start();
-      writerThreads.add(t);
     }
   }
 
@@ -209,10 +201,7 @@ public abstract class OutputSink {
 
     WriterThread(WALSplitter.PipelineController controller, EntryBuffers entryBuffers,
         OutputSink sink, int i) {
-      super(Thread.currentThread().getName() + "-Writer-" + i);
-      this.controller = controller;
-      this.entryBuffers = entryBuffers;
-      outputSink = sink;
+      this(controller, entryBuffers, sink, Thread.currentThread().getName() + "-Writer-" + i);
     }
 
     WriterThread(WALSplitter.PipelineController controller, EntryBuffers entryBuffers,
