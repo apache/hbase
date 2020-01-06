@@ -482,8 +482,20 @@ public class ServerCrashProcedure
           regionNode.getProcedure().serverCrashed(env, regionNode, getServerName());
           continue;
         }
-        if (env.getMasterServices().getTableStateManager().isTableState(regionNode.getTable(),
-          TableState.State.DISABLING, TableState.State.DISABLED)) {
+        if (env.getMasterServices().getTableStateManager()
+          .isTableState(regionNode.getTable(), TableState.State.DISABLING)) {
+          // We need to change the state here otherwise the TRSP scheduled by DTP will try to
+          // close the region from a dead server and will never succeed. Please see HBASE-23636
+          // for more details.
+          env.getAssignmentManager().regionClosedAbnormally(regionNode);
+          LOG.info("{} found table disabling for region {}, set it state to ABNORMALLY_CLOSED.",
+            this, regionNode);
+          continue;
+        }
+        if (env.getMasterServices().getTableStateManager()
+          .isTableState(regionNode.getTable(), TableState.State.DISABLED)) {
+          // This should not happen, table disabled but has regions on server.
+          LOG.warn("Found table disabled for region {}, procDetails: {}", regionNode, this);
           continue;
         }
         // force to assign to a new candidate server, see HBASE-23035 for more details.
