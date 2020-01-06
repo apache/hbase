@@ -25,6 +25,7 @@ import static org.mockito.Mockito.mock;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -50,6 +51,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -75,6 +77,7 @@ public class TestCompactedHFilesDischarger {
 
   @Before
   public void setUp() throws Exception {
+    testUtil.getConfiguration().setBoolean(HStore.FORCE_ARCHIVAL_AFTER_RESET, true);
     TableName tableName = TableName.valueOf(getClass().getSimpleName());
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor(fam));
@@ -349,6 +352,8 @@ public class TestCompactedHFilesDischarger {
     region.flush(true);
     write("row3");
     region.flush(true);
+    write("row4");
+    region.flush(true);
 
     Scan scan = new Scan();
     scan.setCaching(1);
@@ -359,20 +364,85 @@ public class TestCompactedHFilesDischarger {
     assertEquals("row1", Bytes.toString(CellUtil.cloneRow(res.get(0))));
     res.clear();
     // Create a new file in between scan nexts
-    write("row4");
+    write("row5");
     region.flush(true);
 
     // Compact the table
     region.compact(true);
 
+    scanner.next(res);
+    assertEquals("row2", Bytes.toString(CellUtil.cloneRow(res.get(0))));
+    res.clear();
+
     // Create the cleaner object
     CompactedHFilesDischarger cleaner =
-        new CompactedHFilesDischarger(1000, (Stoppable) null, rss, false);
+        new CompactedHFilesDischarger(100, null, rss, false);
     cleaner.chore();
     // This issues scan next
     scanner.next(res);
-    assertEquals("row2", Bytes.toString(CellUtil.cloneRow(res.get(0))));
+    assertEquals("row3", Bytes.toString(CellUtil.cloneRow(res.get(0))));
+    res.clear();
+    scanner.next(res);
+    assertEquals("row4", Bytes.toString(CellUtil.cloneRow(res.get(0))));
+    res.clear();
 
+    scanner.close();
+  }
+
+  @Test
+  public void testCompactedStoreFilesForceArchival() throws Exception {
+    // Create the cleaner object
+    CompactedHFilesDischarger cleaner =
+      new CompactedHFilesDischarger(1000, null, rss, false);
+
+    List<String> rows = new ArrayList<>();
+    for (int i = 0; i < 500; i++) {
+      rows.add("row" + i);
+    }
+    // keep the result sorted since we are going to scan after the records are written
+    // in random order and then flushed
+    Collections.sort(rows);
+
+    Scan scan = new Scan();
+    scan.setCaching(1);
+    List<Cell> res = new ArrayList<>();
+
+    for (int i = 0; i < 500; i++) {
+      write("row" + i);
+      if (i % 37 == 0 || i == 499) {
+        region.flush(true);
+      }
+    }
+    RegionScanner scanner = region.getScanner(scan);
+    scanner.next(res);
+    assertEquals("row0", Bytes.toString(CellUtil.cloneRow(res.get(0))));
+    res.clear();
+
+    region.compact(true);
+
+    for (int i = 1; i < 150; i++) {
+      scanner.next(res);
+      // cleaner chore runs after a couple of scanner.next() calls
+      if (i == 3) {
+        cleaner.chore();
+      }
+      assertEquals(rows.get(i), Bytes.toString(CellUtil.cloneRow(res.get(0))));
+      res.clear();
+    }
+
+    // Compact the table
+    region.compact(true);
+    Assert.assertEquals(16, region.getStores().get(0).getCompactedFiles().size());
+    for (int i = 150; i < 300; i++) {
+      scanner.next(res);
+      // run cleaner chore after some time
+      if (i == 170 || i == 177) {
+        cleaner.chore();
+      }
+      assertEquals(rows.get(i), Bytes.toString(CellUtil.cloneRow(res.get(0))));
+      res.clear();
+    }
+    Assert.assertEquals(0, region.getStores().get(0).getCompactedFiles().size());
     scanner.close();
   }
 

@@ -138,6 +138,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
       "hbase.server.compactchecker.interval.multiplier";
   public static final String BLOCKING_STOREFILES_KEY = "hbase.hstore.blockingStoreFiles";
   public static final String BLOCK_STORAGE_POLICY_KEY = "hbase.hstore.block.storage.policy";
+  public static final String FORCE_ARCHIVAL_AFTER_RESET = "hbase.hstore.file.force.archive";
   // keep in accordance with HDFS default storage policy
   public static final String DEFAULT_BLOCK_STORAGE_POLICY = "HOT";
   public static final int DEFAULT_COMPACTCHECKER_INTERVAL_MULTIPLIER = 1000;
@@ -160,6 +161,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
   private AtomicLong totalUncompressedBytes = new AtomicLong();
 
   private boolean cacheOnWriteLogged;
+
+  private final boolean isStoreFileForceArchivalEnabled;
 
   /**
    * RWLock for store operations.
@@ -340,6 +343,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
         getColumnFamilyName(), memstore.getClass().getSimpleName(), policyName, verifyBulkLoads,
         parallelPutCountPrintThreshold, family.getDataBlockEncoding(),
         family.getCompressionType());
+    isStoreFileForceArchivalEnabled = this.conf.getBoolean(FORCE_ARCHIVAL_AFTER_RESET, false);
     cacheOnWriteLogged = false;
   }
 
@@ -1248,7 +1252,13 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
       } finally {
         this.lock.readLock().unlock();
       }
-      o.updateReaders(sfs, memStoreScanners);
+      UpdateReaderParams updateReaderParams =
+        new UpdateReaderParams.UpdateReaderParamsBuilder()
+          .setIsFlushEvent(true)
+          .setStoreFiles(sfs)
+          .setMemStoreScanners(memStoreScanners)
+          .build();
+      o.updateReaders(updateReaderParams);
     }
   }
 
@@ -2674,6 +2684,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
       throws IOException {
     final List<HStoreFile> filesToRemove = new ArrayList<>(compactedfiles.size());
     final List<Long> storeFileSizes = new ArrayList<>(compactedfiles.size());
+    boolean notifyAllReaders = false;
     for (final HStoreFile file : compactedfiles) {
       synchronized (file) {
         try {
@@ -2689,28 +2700,19 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
             continue;
           }
 
-          if (file.isCompactedAway() && !file.isReferencedInReads()) {
-            // Even if deleting fails we need not bother as any new scanners won't be
-            // able to use the compacted file as the status is already compactedAway
-            LOG.trace("Closing and archiving the file {}", file);
-            // Copy the file size before closing the reader
-            final long length = r.length();
-            r.close(true);
-            // Just close and return
-            filesToRemove.add(file);
-            // Only add the length if we successfully added the file to `filesToRemove`
-            storeFileSizes.add(length);
-          } else {
-            LOG.info("Can't archive compacted file " + file.getPath()
-                + " because of either isCompactedAway=" + file.isCompactedAway()
-                + " or file has reference, isReferencedInReads=" + file.isReferencedInReads()
-                + ", refCount=" + r.getRefCount() + ", skipping for now.");
+          boolean isFileReaderClosed = closeFileReaderForArchival(filesToRemove, storeFileSizes,
+            file, r);
+          if (!isFileReaderClosed) {
+            notifyAllReaders = true;
           }
         } catch (Exception e) {
           LOG.error("Exception while trying to close the compacted store file {}", file.getPath(),
               e);
         }
       }
+    }
+    if (this.isStoreFileForceArchivalEnabled && notifyAllReaders) {
+      notifyChangedReadersObservers();
     }
     if (this.isPrimaryReplicaStore()) {
       // Only the primary region is allowed to move the file to archive.
@@ -2747,6 +2749,61 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
       clearCompactedfiles(filesToRemove);
       // Try to send report of this archival to the Master for updating quota usage faster
       reportArchivedFilesForQuota(filesToRemove, storeFileSizes);
+    }
+  }
+
+  private boolean closeFileReaderForArchival(List<HStoreFile> filesToRemove,
+      List<Long> storeFileSizes, HStoreFile file, StoreFileReader r)
+      throws IOException {
+    boolean toBeArchived = false;
+    if (file.isCompactedAway() && !file.isReferencedInReads()) {
+      toBeArchived = true;
+    } else {
+      LOG.info("Can't archive compacted file " + file.getPath()
+        + " because of either isCompactedAway=" + file.isCompactedAway()
+        + " or file has reference, isReferencedInReads=" + file.isReferencedInReads()
+        + ", refCount=" + r.getRefCount() + ", skipping for now.");
+      if (!file.isCompactedAway()) {
+        LOG.warn("File is sent for archival but is not yet compacted away, file: {}, refCount: {}",
+          file.getPath(), r.getRefCount());
+      }
+    }
+    if (toBeArchived) {
+      // Even if deleting fails we need not bother as any new scanners won't be
+      // able to use the compacted file as the status is already compactedAway
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Closing and archiving the file {}", file);
+      }
+      // Copy the file size before closing the reader
+      final long length = r.length();
+      r.close(true);
+      // Just close and return
+      filesToRemove.add(file);
+      // Only add the length if we successfully added the file to `filesToRemove`
+      storeFileSizes.add(length);
+    }
+    return toBeArchived;
+  }
+
+  /**
+   * Notify all observers that set of Readers has changed and Re-Create scanners
+   *
+   * @throws IOException Something goes wrong with change of scanners
+   */
+  private void notifyChangedReadersObservers() throws IOException {
+    for (ChangedReadersObserver o : this.changedReaderObservers) {
+      // retrieve active store files that are not compacted away
+      Collection<HStoreFile> storeFiles = this.storeEngine.getStoreFileManager().getStorefiles();
+
+      UpdateReaderParams updateReaderParams =
+        new UpdateReaderParams.UpdateReaderParamsBuilder()
+          // event related to compaction
+          .setIsFlushEvent(false)
+          .setStoreFiles(new ArrayList<>(storeFiles))
+          .build();
+
+      // Update readers to close current scanners and re-create new on active store files
+      o.updateReaders(updateReaderParams);
     }
   }
 
@@ -2848,4 +2905,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
       ? maxCompactedStoreFileRefCount.getAsInt() : 0;
   }
 
+  boolean isStoreFileForceArchivalEnabled() {
+    return isStoreFileForceArchivalEnabled;
+  }
 }

@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
@@ -153,10 +154,17 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   // The current list of scanners
   @VisibleForTesting
   final List<KeyValueScanner> currentScanners = new ArrayList<>();
-  // flush update lock
-  private final ReentrantLock flushLock = new ReentrantLock();
+  // flush & compaction update lock
+  private final ReentrantLock flushCompactLock = new ReentrantLock();
   // lock for closing.
   private final ReentrantLock closeLock = new ReentrantLock();
+  // new scanners to be opened on new HFiles that are generated post compaction
+  // not a single scanner on this list should be on compacted away files
+  private final List<KeyValueScanner> newFileScannersPostCompact = new ArrayList<>();
+  // while forcefully resetting scanners after compaction, put memstore scanners here
+  private final List<KeyValueScanner> memstoreScannersPostCompact = new ArrayList<>();
+  // Indicates whether scanners are supposed to be reset during scan
+  private volatile boolean resetScannersFlushCompact = false;
 
   protected final long readPt;
   private boolean topChanged = false;
@@ -512,8 +520,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
   @Override
   public boolean seek(Cell key) throws IOException {
-    if (checkFlushed()) {
-      reopenAfterFlush();
+    if (checkIfScannersToBeReset()) {
+      reopenScanners();
     }
     return this.heap.seek(key);
   }
@@ -529,7 +537,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     if (scannerContext == null) {
       throw new IllegalArgumentException("Scanner context cannot be null");
     }
-    if (checkFlushed() && reopenAfterFlush()) {
+    if (checkIfScannersToBeReset() && reopenScanners()) {
       return scannerContext.setScannerState(NextState.MORE_VALUES).hasMoreValues();
     }
 
@@ -871,6 +879,29 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     return this.readPt;
   }
 
+  @Override
+  public void updateReaders(UpdateReaderParams updateReaderParams) throws IOException {
+    if (updateReaderParams == null) {
+      return;
+    }
+    final List<HStoreFile> storeFiles = updateReaderParams.getStoreFiles();
+    final List<KeyValueScanner> memStoreScanners =
+      updateReaderParams.getMemStoreScanners();
+    final boolean isFlush = updateReaderParams.isFlushEvent();
+
+    // if false, this is compaction event and to notify scanner
+    // to reset in subsequent next(), seek() etc calls so that
+    // we can gracefully archive compacted away store files
+    // if true, it is regular flush event and we need to update
+    // scanners accordingly
+    if (isFlush) {
+      updateReadersPostFlush(storeFiles, memStoreScanners);
+    } else {
+      updateReadersPostCompaction(storeFiles);
+    }
+    // Let the next() call handle re-creating and seeking
+  }
+
   private static void clearAndClose(List<KeyValueScanner> scanners) {
     if (scanners == null) {
       return;
@@ -882,14 +913,13 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   }
 
   // Implementation of ChangedReadersObserver
-  @Override
-  public void updateReaders(List<HStoreFile> sfs, List<KeyValueScanner> memStoreScanners)
-      throws IOException {
+  private void updateReadersPostFlush(List<HStoreFile> sfs,
+      List<KeyValueScanner> memStoreScanners) throws IOException {
     if (CollectionUtils.isEmpty(sfs) && CollectionUtils.isEmpty(memStoreScanners)) {
       return;
     }
     boolean updateReaders = false;
-    flushLock.lock();
+    flushCompactLock.lock();
     try {
       if (!closeLock.tryLock()) {
         // The reason for doing this is that when the current store scanner does not retrieve
@@ -910,41 +940,91 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         return;
       }
       flushed = true;
-      final boolean isCompaction = false;
-      boolean usePread = get || scanUsePread;
-      // SEE HBASE-19468 where the flushed files are getting compacted even before a scanner
-      // calls next(). So its better we create scanners here rather than next() call. Ensure
-      // these scanners are properly closed() whether or not the scan is completed successfully
-      // Eagerly creating scanners so that we have the ref counting ticking on the newly created
-      // store files. In case of stream scanners this eager creation does not induce performance
-      // penalty because in scans (that uses stream scanners) the next() call is bound to happen.
-      List<KeyValueScanner> scanners = store.getScanners(sfs, cacheBlocks, get, usePread,
-        isCompaction, matcher, scan.getStartRow(), scan.getStopRow(), this.readPt, false);
+      this.resetScannersFlushCompact = true;
+      List<KeyValueScanner> scanners = getScannersForUpdateReaders(sfs);
       flushedstoreFileScanners.addAll(scanners);
       if (!CollectionUtils.isEmpty(memStoreScanners)) {
         clearAndClose(memStoreScannersAfterFlush);
         memStoreScannersAfterFlush.addAll(memStoreScanners);
       }
     } finally {
-      flushLock.unlock();
+      flushCompactLock.unlock();
       if (updateReaders) {
         closeLock.unlock();
       }
     }
-    // Let the next() call handle re-creating and seeking
+  }
+
+  // Implementation of ChangedReadersObserver
+  // reset current scanners
+  private void updateReadersPostCompaction(List<HStoreFile> storeFiles)
+      throws IOException {
+    if (CollectionUtils.isEmpty(storeFiles)) {
+      return;
+    }
+    try {
+      if (this.closing) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("StoreScanner already closing. There is no need to re-create scanners");
+        }
+        return;
+      }
+      flushCompactLock.lock();
+      // let next(), seek() take care of resetting scanners
+      this.resetScannersFlushCompact = true;
+      List<KeyValueScanner> scanners = getScannersForUpdateReaders(storeFiles);
+
+      newFileScannersPostCompact.addAll(scanners);
+      LOG.info("Added new scanners in the list of scanners post compaction");
+    } catch (Exception e) {
+      LOG.error("UpdateReadersPostCompaction: Error while getting new scanners on " +
+        "given store files", e);
+      throw e;
+    } finally {
+      flushCompactLock.unlock();
+    }
+  }
+
+  // to be used while retrieving scanners on given list of store files
+  // during updateReaders() - post flush / compaction
+  private List<KeyValueScanner> getScannersForUpdateReaders(List<HStoreFile> storeFiles)
+      throws IOException {
+    final boolean usePRead = get || scanUsePread;
+    final boolean isCompaction = false;
+    final boolean includeMemstoreScanner = false;
+
+    // SEE HBASE-19468 where the flushed files are getting compacted even before a scanner
+    // calls next(). So its better we create scanners here rather than next() call. Ensure
+    // these scanners are properly closed() whether or not the scan is completed successfully
+    // Eagerly creating scanners so that we have the ref counting ticking on the newly created
+    // store files. In case of stream scanners this eager creation does not induce performance
+    // penalty because in scans (that uses stream scanners) the next() call is bound to happen.
+    return store.getScanners(storeFiles, cacheBlocks, get, usePRead,
+      isCompaction, matcher, scan.getStartRow(), scan.getStopRow(), this.readPt,
+      includeMemstoreScanner);
   }
 
   /**
-   * @return if top of heap has changed (and KeyValueHeap has to try the next KV)
+   * @return if top of heap has changed (and KeyValueHeap has to try the next KV), has
+   *   2 use-cases: flush and compaction
    */
-  protected final boolean reopenAfterFlush() throws IOException {
+  protected final boolean reopenScanners() throws IOException {
+    if (this.flushed) {
+      this.flushed = false;
+      return reopenAfterFlush();
+    } else {
+      return reopenAfterCompaction();
+    }
+  }
+
+  private boolean reopenAfterFlush() throws IOException {
     // here we can make sure that we have a Store instance so no null check on store.
     Cell lastTop = heap.peek();
     // When we have the scan object, should we not pass it to getScanners() to get a limited set of
     // scanners? We did so in the constructor and we could have done it now by storing the scan
     // object from the constructor
     List<KeyValueScanner> scanners;
-    flushLock.lock();
+    flushCompactLock.lock();
     try {
       List<KeyValueScanner> allScanners =
           new ArrayList<>(flushedstoreFileScanners.size() + memStoreScannersAfterFlush.size());
@@ -955,7 +1035,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       flushedstoreFileScanners.clear();
       memStoreScannersAfterFlush.clear();
     } finally {
-      flushLock.unlock();
+      flushCompactLock.unlock();
     }
 
     // Seek the new scanners to the last key
@@ -980,6 +1060,65 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       topChanged = true;
     } else {
       topChanged = false;
+    }
+    return topChanged;
+  }
+
+  private boolean reopenAfterCompaction() throws IOException {
+    try {
+      flushCompactLock.lock();
+      // here we can make sure that we have a Store instance so no null check on store.
+      Cell lastTop = heap.peek();
+      List<KeyValueScanner> scanners;
+      if (newFileScannersPostCompact.isEmpty()) {
+        LOG.info("New files generated after compaction must have been put on the current " +
+          "scanners. Heap update not required.");
+        return false;
+      }
+      List<KeyValueScanner> fileScanners = currentScanners.stream()
+        .filter(KeyValueScanner::isFileScanner)
+        .collect(Collectors.toList());
+      // closing all file scanners
+      if (fileScanners.size() != currentScanners.size()) {
+        List<KeyValueScanner> memScanners = currentScanners.stream()
+          .filter(e -> !e.isFileScanner())
+          .collect(Collectors.toList());
+        // keep memstore scanners
+        memstoreScannersPostCompact.addAll(memScanners);
+      }
+      List<KeyValueScanner> allScanners = new ArrayList<>(memstoreScannersPostCompact.size()
+        + newFileScannersPostCompact.size());
+      allScanners.addAll(memstoreScannersPostCompact);
+      allScanners.addAll(newFileScannersPostCompact);
+      scanners = selectScannersFrom(store, allScanners);
+      memstoreScannersPostCompact.clear();
+      newFileScannersPostCompact.clear();
+
+      // Seek the new scanners to the last key
+      if (lastTop != null) {
+        seekScanners(scanners, lastTop, false, parallelSeekEnabled);
+      }
+
+      fileScanners.forEach(KeyValueScanner::close);
+      // clear all current scanners and go for KVHeap update
+      currentScanners.clear();
+      LOG.info("Current scanners are reset and updating KVHeap");
+      // add the newly created scanners on new store files and the current active memstore scanner
+      addCurrentScanners(scanners);
+      // Combine all seeked scanners with a heap
+      resetKVHeap(this.currentScanners, store.getComparator());
+      resetQueryMatcher(lastTop);
+      if (heap.peek() == null || store.getComparator()
+          .compareRows(lastTop, this.heap.peek()) != 0) {
+        LOG.info("During reopenAfterCompaction, Storescanner.peek() is changed where " +
+          "before = {}, and after = {}", lastTop == null ? null : lastTop.toString(),
+          heap.peek());
+        topChanged = true;
+      } else {
+        topChanged = false;
+      }
+    } finally {
+      flushCompactLock.unlock();
     }
     return topChanged;
   }
@@ -1030,8 +1169,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
   @Override
   public boolean reseek(Cell kv) throws IOException {
-    if (checkFlushed()) {
-      reopenAfterFlush();
+    if (checkIfScannersToBeReset()) {
+      reopenScanners();
     }
     if (explicitColumnQuery && lazySeekEnabledGlobally) {
       return heap.requestSeek(kv, true, useRowColBloom);
@@ -1089,26 +1228,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     resetQueryMatcher(lastTop);
     scannersToClose.forEach(KeyValueScanner::close);
   }
-
-  protected final boolean checkFlushed() {
-    // check the var without any lock. Suppose even if we see the old
-    // value here still it is ok to continue because we will not be resetting
-    // the heap but will continue with the referenced memstore's snapshot. For compactions
-    // any way we don't need the updateReaders at all to happen as we still continue with
-    // the older files
-    if (flushed) {
-      // If there is a flush and the current scan is notified on the flush ensure that the
-      // scan's heap gets reset and we do a seek on the newly flushed file.
-      if (this.closing) {
-        return false;
-      }
-      // reset the flag
-      flushed = false;
-      return true;
-    }
-    return false;
-  }
-
 
   /**
    * Seek storefiles in parallel to optimize IO latency as much as possible
@@ -1202,5 +1321,22 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       trySwitchToStreamRead();
     }
   }
+
+  final boolean checkIfScannersToBeReset() {
+    if (this.store == null) {
+      return false;
+    }
+
+    if (this.resetScannersFlushCompact) {
+      if (this.closing) {
+        return false;
+      }
+      // reset the flag
+      this.resetScannersFlushCompact = false;
+      return true;
+    }
+    return false;
+  }
+
 }
 

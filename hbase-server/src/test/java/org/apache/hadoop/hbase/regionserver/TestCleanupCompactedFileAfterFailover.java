@@ -45,14 +45,9 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Category({LargeTests.class})
 public class TestCleanupCompactedFileAfterFailover {
-
-  private static final Logger LOG =
-      LoggerFactory.getLogger(TestCleanupCompactedFileAfterFailover.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -60,7 +55,6 @@ public class TestCleanupCompactedFileAfterFailover {
 
   private static HBaseTestingUtility TEST_UTIL;
   private static Admin admin;
-  private static Table table;
 
   private static TableName TABLE_NAME = TableName.valueOf("TestCleanupCompactedFileAfterFailover");
   private static byte[] ROW = Bytes.toBytes("row");
@@ -79,6 +73,7 @@ public class TestCleanupCompactedFileAfterFailover {
     TEST_UTIL.getConfiguration().set("dfs.blocksize", "64000");
     TEST_UTIL.getConfiguration().set("dfs.namenode.fs-limits.min-block-size", "1024");
     TEST_UTIL.getConfiguration().set(TimeToLiveHFileCleaner.TTL_CONF_KEY, "0");
+    TEST_UTIL.getConfiguration().setBoolean(HStore.FORCE_ARCHIVAL_AFTER_RESET, false);
     TEST_UTIL.startMiniCluster(RS_NUMBER);
     admin = TEST_UTIL.getAdmin();
   }
@@ -94,7 +89,6 @@ public class TestCleanupCompactedFileAfterFailover {
     builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY));
     admin.createTable(builder.build());
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
-    table = TEST_UTIL.getConnection().getTable(TABLE_NAME);
   }
 
   @After
@@ -105,23 +99,24 @@ public class TestCleanupCompactedFileAfterFailover {
 
   @Test
   public void testCleanupAfterFailoverWithCompactOnce() throws Exception {
-    testCleanupAfterFailover(1);
+    testCleanupAfterFailover(1, false, TEST_UTIL);
   }
 
   @Test
   public void testCleanupAfterFailoverWithCompactTwice() throws Exception {
-    testCleanupAfterFailover(2);
+    testCleanupAfterFailover(2, false, TEST_UTIL);
   }
 
   @Test
   public void testCleanupAfterFailoverWithCompactThreeTimes() throws Exception {
-    testCleanupAfterFailover(3);
+    testCleanupAfterFailover(3, false, TEST_UTIL);
   }
 
-  private void testCleanupAfterFailover(int compactNum) throws Exception {
+  static void testCleanupAfterFailover(int compactNum, boolean isForceArchive,
+      HBaseTestingUtility testUtil) throws Exception {
     HRegionServer rsServedTable = null;
     List<HRegion> regions = new ArrayList<>();
-    for (JVMClusterUtil.RegionServerThread rsThread : TEST_UTIL.getHBaseCluster()
+    for (JVMClusterUtil.RegionServerThread rsThread : testUtil.getHBaseCluster()
         .getLiveRegionServerThreads()) {
       HRegionServer rs = rsThread.getRegionServer();
       if (rs.getOnlineTables().contains(TABLE_NAME)) {
@@ -134,11 +129,11 @@ public class TestCleanupCompactedFileAfterFailover {
     HRegion region = regions.get(0);
     HStore store = region.getStore(FAMILY);
 
-    writeDataAndFlush(3, region);
+    writeDataAndFlush(3, region, testUtil);
     assertEquals(3, store.getStorefilesCount());
 
     // Open a scanner and not close, then the storefile will be referenced
-    store.getScanner(new Scan(), null, 0);
+    KeyValueScanner kvs = store.getScanner(new Scan(), null, 0);
 
     region.compact(true);
     assertEquals(1, store.getStorefilesCount());
@@ -149,9 +144,19 @@ public class TestCleanupCompactedFileAfterFailover {
       // Compact again
       region.compact(true);
       assertEquals(1, store.getStorefilesCount());
+      // try archival - might not archive all eligible files given that they have
+      // references in use, if isForceArchive enabled, will notify readers
       store.closeAndArchiveCompactedFiles();
-      // Compacted storefiles still be 3 as the new compacted storefile was archived
-      assertEquals(3, store.getStoreEngine().getStoreFileManager().getCompactedfiles().size());
+      ((StoreScanner) kvs).next(new ArrayList<>());
+      // try archival again since above scan call should have reset scanners
+      // and also update the heap
+      store.closeAndArchiveCompactedFiles();
+      // Compacted storefiles still be 3 as the new compacted storefile was archived if
+      // force-archival by scanner reset is disabled, otherwise count should be 0
+      int compactedFiles = isForceArchive ? 0 : 3;
+      assertEquals(compactedFiles, store.getStoreEngine().getStoreFileManager()
+        .getCompactedfiles().size());
+      assertEquals(1, store.getStoreEngine().getStoreFileManager().getStorefiles().size());
     }
 
     int walNum = rsServedTable.getWALs().size();
@@ -165,10 +170,10 @@ public class TestCleanupCompactedFileAfterFailover {
     rsServedTable.kill();
     // Sleep to wait failover
     Thread.sleep(3000);
-    TEST_UTIL.waitTableAvailable(TABLE_NAME);
+    testUtil.waitTableAvailable(TABLE_NAME);
 
     regions.clear();
-    for (JVMClusterUtil.RegionServerThread rsThread : TEST_UTIL.getHBaseCluster()
+    for (JVMClusterUtil.RegionServerThread rsThread : testUtil.getHBaseCluster()
         .getLiveRegionServerThreads()) {
       HRegionServer rs = rsThread.getRegionServer();
       if (rs != rsServedTable && rs.getOnlineTables().contains(TABLE_NAME)) {
@@ -182,7 +187,9 @@ public class TestCleanupCompactedFileAfterFailover {
     assertEquals(1, store.getStorefilesCount());
   }
 
-  private void writeDataAndFlush(int fileNum, HRegion region) throws Exception {
+  private static void writeDataAndFlush(int fileNum, HRegion region,
+      HBaseTestingUtility testUtil) throws Exception {
+    Table table = testUtil.getConnection().getTable(TABLE_NAME);
     for (int i = 0; i < fileNum; i++) {
       for (int j = 0; j < 100; j++) {
         table.put(new Put(concat(ROW, j)).addColumn(FAMILY, QUALIFIER, concat(VALUE, j)));
@@ -191,7 +198,7 @@ public class TestCleanupCompactedFileAfterFailover {
     }
   }
 
-  private byte[] concat(byte[] base, int index) {
+  private static byte[] concat(byte[] base, int index) {
     return Bytes.toBytes(Bytes.toString(base) + "-" + index);
   }
 }

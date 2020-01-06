@@ -65,7 +65,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 /**
  * This test tests whether parallel {@link StoreScanner#close()} and
- * {@link StoreScanner#updateReaders(List, List)} works perfectly ensuring
+ * {@link StoreScanner#updateReaders(UpdateReaderParams)} works perfectly ensuring
  * that there are no references on the existing Storescanner readers.
  */
 @Category({ RegionServerTests.class, MediumTests.class })
@@ -286,7 +286,13 @@ public class TestStoreScannerClosure {
           e.printStackTrace();
         }
       }
-      super.updateReaders(sfs, memStoreScanners);
+      final UpdateReaderParams updateReaderParams =
+        new UpdateReaderParams.UpdateReaderParamsBuilder()
+          .setIsFlushEvent(true)
+          .setStoreFiles(sfs)
+          .setMemStoreScanners(memStoreScanners)
+          .build();
+      super.updateReaders(updateReaderParams);
       if (!await) {
         latch.countDown();
       }

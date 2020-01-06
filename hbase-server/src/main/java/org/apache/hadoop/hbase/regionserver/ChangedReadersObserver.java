@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.util.List;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -35,10 +34,11 @@ public interface ChangedReadersObserver {
   long getReadPoint();
 
   /**
-   * Notify observers.
-   * @param sfs The new files
-   * @param memStoreScanners scanner of current memstore
-   * @throws IOException e
+   * Notify observers
+   *
+   * @param updateReaderParams params required to notify observers
+   * @throws IOException if something goes wrong while dealing with store scanners
    */
-  void updateReaders(List<HStoreFile> sfs, List<KeyValueScanner> memStoreScanners) throws IOException;
+  void updateReaders(UpdateReaderParams updateReaderParams) throws IOException;
+
 }

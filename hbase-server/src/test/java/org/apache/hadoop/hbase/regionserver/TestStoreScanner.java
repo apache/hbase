@@ -80,6 +80,13 @@ public class TestStoreScanner {
   private ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, Integer.MAX_VALUE, Long.MAX_VALUE,
       KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.getInstance(), false);
 
+  private static final UpdateReaderParams UPDATE_READER_PARAMS =
+    new UpdateReaderParams.UpdateReaderParamsBuilder()
+      .setIsFlushEvent(true)
+      .setStoreFiles(Collections.EMPTY_LIST)
+      .setMemStoreScanners(Collections.EMPTY_LIST)
+      .build();
+
   /**
    * From here on down, we have a bunch of defines and specific CELL_GRID of Cells. The
    * CELL_GRID then has a Scanner that can fake out 'block' transitions. All this elaborate
@@ -897,8 +904,8 @@ public class TestStoreScanner {
       // Previously a updateReaders twice in a row would cause an NPE. In test this would also
       // normally cause an NPE because scan.store is null. So as long as we get through these
       // two calls we are good and the bug was quashed.
-      scan.updateReaders(Collections.emptyList(), Collections.emptyList());
-      scan.updateReaders(Collections.emptyList(), Collections.emptyList());
+      scan.updateReaders(UPDATE_READER_PARAMS);
+      scan.updateReaders(UPDATE_READER_PARAMS);
       scan.peek();
     }
   }
