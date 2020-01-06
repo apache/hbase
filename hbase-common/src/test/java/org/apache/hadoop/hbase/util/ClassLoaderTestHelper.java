@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.util;
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -43,10 +44,13 @@ import org.slf4j.LoggerFactory;
 /**
  * Some utilities to help class loader testing
  */
-public class ClassLoaderTestHelper {
+public final class ClassLoaderTestHelper {
   private static final Logger LOG = LoggerFactory.getLogger(ClassLoaderTestHelper.class);
 
   private static final int BUFFER_SIZE = 4096;
+
+  private ClassLoaderTestHelper() {
+  }
 
   /**
    * Jar a list of files into a jar archive.
@@ -57,28 +61,29 @@ public class ClassLoaderTestHelper {
    */
   private static boolean createJarArchive(File archiveFile, File[] tobeJared) {
     try {
-      byte buffer[] = new byte[BUFFER_SIZE];
+      byte[] buffer = new byte[BUFFER_SIZE];
       // Open archive file
       FileOutputStream stream = new FileOutputStream(archiveFile);
       JarOutputStream out = new JarOutputStream(stream, new Manifest());
 
-      for (int i = 0; i < tobeJared.length; i++) {
-        if (tobeJared[i] == null || !tobeJared[i].exists()
-            || tobeJared[i].isDirectory()) {
+      for (File file : tobeJared) {
+        if (file == null || !file.exists() || file.isDirectory()) {
           continue;
         }
 
         // Add archive entry
-        JarEntry jarAdd = new JarEntry(tobeJared[i].getName());
-        jarAdd.setTime(tobeJared[i].lastModified());
+        JarEntry jarAdd = new JarEntry(file.getName());
+        jarAdd.setTime(file.lastModified());
         out.putNextEntry(jarAdd);
 
         // Write file to archive
-        FileInputStream in = new FileInputStream(tobeJared[i]);
+        FileInputStream in = new FileInputStream(file);
         while (true) {
           int nRead = in.read(buffer, 0, buffer.length);
-          if (nRead <= 0)
+          if (nRead <= 0) {
             break;
+          }
+
           out.write(buffer, 0, nRead);
         }
         in.close();
@@ -102,7 +107,7 @@ public class ClassLoaderTestHelper {
    * @param testDir the folder under which to store the test class and jar
    * @param className the test class name
    * @param code the optional test class code, which can be null.
-   * If null, a bare empty class will be used
+   *    If null, a bare empty class will be used
    * @return the test jar file generated
    */
   public static File buildJar(String testDir,
@@ -117,7 +122,7 @@ public class ClassLoaderTestHelper {
    * @param testDir the folder under which to store the test class
    * @param className the test class name
    * @param code the optional test class code, which can be null.
-   * If null, an empty class will be used
+   *    If null, an empty class will be used
    * @param folder the folder under which to store the generated jar
    * @return the test jar file generated
    */
@@ -163,7 +168,7 @@ public class ClassLoaderTestHelper {
     jarFile.getParentFile().mkdirs();
     if (!createJarArchive(jarFile,
         new File[]{new File(srcDir.toString(), className + ".class")})){
-      assertTrue("Build jar file failed.", false);
+      fail("Build jar file failed.");
     }
     return jarFile;
   }
@@ -183,7 +188,7 @@ public class ClassLoaderTestHelper {
       String libPrefix, File... srcJars) throws Exception {
     FileOutputStream stream = new FileOutputStream(targetJar);
     JarOutputStream out = new JarOutputStream(stream, new Manifest());
-    byte buffer[] = new byte[BUFFER_SIZE];
+    byte[] buffer = new byte[BUFFER_SIZE];
 
     for (File jarFile: srcJars) {
       // Add archive entry
@@ -195,8 +200,10 @@ public class ClassLoaderTestHelper {
       FileInputStream in = new FileInputStream(jarFile);
       while (true) {
         int nRead = in.read(buffer, 0, buffer.length);
-        if (nRead <= 0)
+        if (nRead <= 0) {
           break;
+        }
+
         out.write(buffer, 0, nRead);
       }
       in.close();
@@ -210,5 +217,4 @@ public class ClassLoaderTestHelper {
     return conf.get(ClassLoaderBase.LOCAL_DIR_KEY)
       + File.separator + "jars" + File.separator;
   }
-
 }

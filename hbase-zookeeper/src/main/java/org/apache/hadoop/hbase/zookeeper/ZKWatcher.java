@@ -169,7 +169,7 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
         try {
           this.recoverableZooKeeper.close();
         } catch (InterruptedException ie) {
-          LOG.debug("Encountered InterruptedException when closing " + this.recoverableZooKeeper);
+          LOG.debug("Encountered InterruptedException when closing {}", this.recoverableZooKeeper);
           Thread.currentThread().interrupt();
         }
         throw zce;
@@ -235,7 +235,7 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
       setZnodeAclsRecursive(ZNodePaths.joinZNode(znode, child));
     }
     List<ACL> acls = ZKUtil.createACL(this, znode, true);
-    LOG.info("Setting ACLs for znode:" + znode + " , acl:" + acls);
+    LOG.info("Setting ACLs for znode:{} , acl:{}", znode, acls);
     recoverableZooKeeper.setAcl(znode, acls, -1);
   }
 
@@ -304,13 +304,13 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
           }
         } else {
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Unexpected shortname in SASL ACL: " + id);
+            LOG.debug("Unexpected shortname in SASL ACL: {}", id);
           }
           return false;
         }
       } else {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("unexpected ACL id '" + id + "'");
+          LOG.debug("unexpected ACL id '{}'", id);
         }
         return false;
       }
@@ -539,7 +539,7 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
         this.identifier = this.prefix + "-0x" +
           Long.toHexString(this.recoverableZooKeeper.getSessionId());
         // Update our identifier.  Otherwise ignore.
-        LOG.debug(this.identifier + " connected");
+        LOG.debug("{} connected", this.identifier);
         break;
 
       // Abort the server if Disconnected or Expired

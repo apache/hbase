@@ -46,7 +46,6 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.parsers.SAXParserFactory;
-import javax.xml.stream.XMLStreamException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -72,19 +71,14 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.xml.sax.InputSource;
 import org.xml.sax.XMLReader;
 
 @Category({RestTests.class, MediumTests.class})
 public class TestTableScan {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestTableScan.class);
-
-  private static final Logger LOG = LoggerFactory.getLogger(TestTableScan.class);
 
   private static final TableName TABLE = TableName.valueOf("TestScanResource");
   private static final String CFA = "a";
@@ -131,7 +125,7 @@ public class TestTableScan {
   }
 
   @Test
-  public void testSimpleScannerXML() throws IOException, JAXBException, XMLStreamException {
+  public void testSimpleScannerXML() throws IOException, JAXBException {
     // Test scanning particular columns
     StringBuilder builder = new StringBuilder();
     builder.append("/*");
@@ -207,7 +201,7 @@ public class TestTableScan {
   }
 
   @Test
-  public void testSimpleScannerJson() throws IOException, JAXBException {
+  public void testSimpleScannerJson() throws IOException {
     // Test scanning particular columns with limit.
     StringBuilder builder = new StringBuilder();
     builder.append("/*");
@@ -294,16 +288,16 @@ public class TestTableScan {
     unmarshaller.setListener(new Unmarshaller.Listener() {
         @Override
         public void beforeUnmarshal(Object target, Object parent) {
-            if (target instanceof ClientSideCellSetModel) {
-                ((ClientSideCellSetModel) target).setCellSetModelListener(listener);
-            }
+          if (target instanceof ClientSideCellSetModel) {
+            ((ClientSideCellSetModel) target).setCellSetModelListener(listener);
+          }
         }
 
         @Override
         public void afterUnmarshal(Object target, Object parent) {
-            if (target instanceof ClientSideCellSetModel) {
-                ((ClientSideCellSetModel) target).setCellSetModelListener(null);
-            }
+          if (target instanceof ClientSideCellSetModel) {
+            ((ClientSideCellSetModel) target).setCellSetModelListener(null);
+          }
         }
     });
 
@@ -434,7 +428,7 @@ public class TestTableScan {
   }
 
   @Test
-  public void testScanningUnknownColumnJson() throws IOException, JAXBException {
+  public void testScanningUnknownColumnJson() throws IOException {
     // Test scanning particular columns with limit.
     StringBuilder builder = new StringBuilder();
     builder.append("/*");
@@ -603,7 +597,7 @@ public class TestTableScan {
   }
 
   @Test
-  public void testColumnWithEmptyQualifier() throws IOException, JAXBException {
+  public void testColumnWithEmptyQualifier() throws IOException {
     // Test scanning with empty qualifier
     StringBuilder builder = new StringBuilder();
     builder.append("/*");
@@ -669,7 +663,6 @@ public class TestTableScan {
   @XmlRootElement(name = "CellSet")
   @XmlAccessorType(XmlAccessType.FIELD)
   public static class ClientSideCellSetModel implements Serializable {
-
     private static final long serialVersionUID = 1L;
 
     /**
@@ -686,26 +679,23 @@ public class TestTableScan {
      * is removed again.
      */
     public void setCellSetModelListener(final Listener l) {
-        row = (l == null) ? null : new ArrayList<RowModel>() {
+      row = (l == null) ? null : new ArrayList<RowModel>() {
         private static final long serialVersionUID = 1L;
 
-            @Override
-            public boolean add(RowModel o) {
-                l.handleRowModel(ClientSideCellSetModel.this, o);
-                listenerInvoked = true;
-                return false;
-            }
-        };
+        @Override
+        public boolean add(RowModel o) {
+          l.handleRowModel(ClientSideCellSetModel.this, o);
+          listenerInvoked = true;
+          return false;
+        }
+      };
     }
 
     /**
      * This listener is invoked every time a new row model is unmarshalled.
      */
-    public static interface Listener {
-        void handleRowModel(ClientSideCellSetModel helper, RowModel rowModel);
+    public interface Listener {
+      void handleRowModel(ClientSideCellSetModel helper, RowModel rowModel);
     }
   }
 }
-
-
-

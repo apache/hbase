@@ -1064,11 +1064,10 @@ public class TestWALSplit {
     logSplitter.splitLogFile(fs.getFileStatus(logPath), null);
 
     // Verify number of written edits per region
-    Map<byte[], Long> outputCounts = logSplitter.outputSink.getOutputCounts();
-    for (Map.Entry<byte[], Long> entry : outputCounts.entrySet()) {
-      LOG.info("Got " + entry.getValue() + " output edits for region " +
-          Bytes.toString(entry.getKey()));
-      assertEquals((long)entry.getValue(), numFakeEdits / regions.size());
+    Map<String, Long> outputCounts = logSplitter.outputSink.getOutputCounts();
+    for (Map.Entry<String, Long> entry : outputCounts.entrySet()) {
+      LOG.info("Got " + entry.getValue() + " output edits for region " + entry.getKey());
+      assertEquals((long) entry.getValue(), numFakeEdits / regions.size());
     }
     assertEquals("Should have as many outputs as regions", regions.size(), outputCounts.size());
   }

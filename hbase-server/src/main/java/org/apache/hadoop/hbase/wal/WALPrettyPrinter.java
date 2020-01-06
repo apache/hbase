@@ -283,7 +283,7 @@ public class WALPrettyPrinter {
           continue;
         }
         // initialize list into which we will store atomic actions
-        List<Map> actions = new ArrayList<>();
+        List<Map<String, Object>> actions = new ArrayList<>();
         for (Cell cell : edit.getCells()) {
           // add atomic operation to txn
           Map<String, Object> op = new HashMap<>(toStringMap(cell));
@@ -314,16 +314,8 @@ public class WALPrettyPrinter {
           out.println(String.format(outputTmpl,
               txn.get("sequence"), txn.get("table"), txn.get("region"), new Date(writeTime)));
           for (int i = 0; i < actions.size(); i++) {
-            Map op = actions.get(i);
-            out.println("row=" + op.get("row") +
-                ", column=" + op.get("family") + ":" + op.get("qualifier"));
-            if (op.get("tag") != null) {
-              out.println("    tag: " + op.get("tag"));
-            }
-            if (outputValues) {
-              out.println("    value: " + op.get("value"));
-            }
-            out.println("cell total size sum: " + op.get("total_size_sum"));
+            Map<String, Object> op = actions.get(i);
+            printCell(out, op, outputValues);
           }
         }
         out.println("edit heap size: " + entry.getEdit().heapSize());
@@ -337,10 +329,23 @@ public class WALPrettyPrinter {
     }
   }
 
-  private static Map<String, Object> toStringMap(Cell cell) {
+  public static void printCell(PrintStream out, Map<String, Object> op, boolean outputValues) {
+    out.println("row=" + op.get("row") + ", type=" + op.get("type") + ", column=" +
+      op.get("family") + ":" + op.get("qualifier"));
+    if (op.get("tag") != null) {
+      out.println("    tag: " + op.get("tag"));
+    }
+    if (outputValues) {
+      out.println("    value: " + op.get("value"));
+    }
+    out.println("cell total size sum: " + op.get("total_size_sum"));
+  }
+
+  public static Map<String, Object> toStringMap(Cell cell) {
     Map<String, Object> stringMap = new HashMap<>();
     stringMap.put("row",
         Bytes.toStringBinary(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
+    stringMap.put("type", cell.getType());
     stringMap.put("family", Bytes.toStringBinary(cell.getFamilyArray(), cell.getFamilyOffset(),
                 cell.getFamilyLength()));
     stringMap.put("qualifier",

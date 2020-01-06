@@ -51,7 +51,7 @@ public class LoadBalancerTracker extends ZKNodeTracker {
       // if data in ZK is null, use default of on.
       return upData == null || parseFrom(upData).getBalancerOn();
     } catch (DeserializationException dex) {
-      LOG.error("ZK state for LoadBalancer could not be parsed " + Bytes.toStringBinary(upData));
+      LOG.error("ZK state for LoadBalancer could not be parsed {}", Bytes.toStringBinary(upData));
       // return false to be safe.
       return false;
     }

@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.DataInput;
 import java.io.DataOutput;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -44,14 +43,12 @@ public class NMapInputFormat extends InputFormat<NullWritable, NullWritable> {
 
   @Override
   public RecordReader<NullWritable, NullWritable> createRecordReader(
-      InputSplit split,
-      TaskAttemptContext tac) throws IOException, InterruptedException {
+      InputSplit split, TaskAttemptContext tac) {
     return new SingleRecordReader<>(NullWritable.get(), NullWritable.get());
   }
 
   @Override
-  public List<InputSplit> getSplits(JobContext context) throws IOException,
-      InterruptedException {
+  public List<InputSplit> getSplits(JobContext context) {
     int count = getNumMapTasks(context.getConfiguration());
     List<InputSplit> splits = new ArrayList<>(count);
     for (int i = 0; i < count; i++) {
@@ -70,21 +67,21 @@ public class NMapInputFormat extends InputFormat<NullWritable, NullWritable> {
 
   private static class NullInputSplit extends InputSplit implements Writable {
     @Override
-    public long getLength() throws IOException, InterruptedException {
+    public long getLength() {
       return 0;
     }
 
     @Override
-    public String[] getLocations() throws IOException, InterruptedException {
+    public String[] getLocations() {
       return new String[] {};
     }
 
     @Override
-    public void readFields(DataInput in) throws IOException {
+    public void readFields(DataInput in) {
     }
 
     @Override
-    public void write(DataOutput out) throws IOException {
+    public void write(DataOutput out) {
     }
   }
 
@@ -125,10 +122,12 @@ public class NMapInputFormat extends InputFormat<NullWritable, NullWritable> {
 
     @Override
     public boolean nextKeyValue() {
-      if (providedKey) return false;
+      if (providedKey) {
+        return false;
+      }
+
       providedKey = true;
       return true;
     }
-
   }
 }

@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
@@ -27,8 +29,6 @@ import org.apache.hadoop.metrics2.lib.Interns;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 @InterfaceAudience.Private
 public class MetricsUserAggregateSourceImpl extends BaseSourceImpl
@@ -90,9 +90,9 @@ public class MetricsUserAggregateSourceImpl extends BaseSourceImpl
     }
   }
 
-  @VisibleForTesting
-  public ConcurrentHashMap<String, MetricsUserSource> getUserSources() {
-    return userSources;
+  @Override
+  public Map<String, MetricsUserSource> getUserSources() {
+    return Collections.unmodifiableMap(userSources);
   }
 
   @Override

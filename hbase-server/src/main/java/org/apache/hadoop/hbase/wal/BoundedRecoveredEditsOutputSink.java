@@ -23,11 +23,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -45,7 +47,7 @@ class BoundedRecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
 
   // Since the splitting process may create multiple output files, we need a map
   // to track the output count of each region.
-  private ConcurrentHashMap<byte[], Long> regionEditsWrittenMap = new ConcurrentHashMap<>();
+  private ConcurrentMap<String, Long> regionEditsWrittenMap = new ConcurrentHashMap<>();
   // Need a counter to track the opening writers.
   private final AtomicInteger openingWritersNum = new AtomicInteger(0);
 
@@ -68,7 +70,7 @@ class BoundedRecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
     if (writer != null) {
       openingWritersNum.incrementAndGet();
       writer.writeRegionEntries(entries);
-      regionEditsWrittenMap.compute(buffer.encodedRegionName,
+      regionEditsWrittenMap.compute(Bytes.toString(buffer.encodedRegionName),
         (k, v) -> v == null ? writer.editsWritten : v + writer.editsWritten);
       List<IOException> thrown = new ArrayList<>();
       Path dst = closeRecoveredEditsWriter(writer, thrown);
@@ -125,7 +127,7 @@ class BoundedRecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
   }
 
   @Override
-  public Map<byte[], Long> getOutputCounts() {
+  public Map<String, Long> getOutputCounts() {
     return regionEditsWrittenMap;
   }
 

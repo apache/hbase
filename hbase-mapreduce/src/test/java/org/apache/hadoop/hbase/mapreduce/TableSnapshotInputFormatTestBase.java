@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.mapreduce;
 
 import static org.junit.Assert.assertFalse;
@@ -80,8 +79,8 @@ public abstract class TableSnapshotInputFormatTestBase {
     throws Exception;
 
   protected abstract void testWithMapReduceImpl(HBaseTestingUtility util, TableName tableName,
-    String snapshotName, Path tableDir, int numRegions, int numSplitsPerRegion, int expectedNumSplits,
-    boolean shutdownCluster) throws Exception;
+    String snapshotName, Path tableDir, int numRegions, int numSplitsPerRegion,
+    int expectedNumSplits, boolean shutdownCluster) throws Exception;
 
   protected abstract byte[] getStartRow();
 
@@ -158,7 +157,8 @@ public abstract class TableSnapshotInputFormatTestBase {
       String snapshotName, Path tmpTableDir) throws Exception;
 
   protected void testWithMapReduce(HBaseTestingUtility util, String snapshotName,
-      int numRegions, int numSplitsPerRegion, int expectedNumSplits, boolean shutdownCluster) throws Exception {
+      int numRegions, int numSplitsPerRegion, int expectedNumSplits, boolean shutdownCluster)
+      throws Exception {
     setupCluster();
     try {
       Path tableDir = util.getDataTestDirOnTestFS(snapshotName);
@@ -182,10 +182,11 @@ public abstract class TableSnapshotInputFormatTestBase {
         cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
     }
 
-    for (int j = 0; j < FAMILIES.length; j++) {
-      byte[] actual = result.getValue(FAMILIES[j], FAMILIES[j]);
-      Assert.assertArrayEquals("Row in snapshot does not match, expected:" + Bytes.toString(row)
-        + " ,actual:" + Bytes.toString(actual), row, actual);
+    for (byte[] family : FAMILIES) {
+      byte[] actual = result.getValue(family, family);
+      Assert.assertArrayEquals(
+        "Row in snapshot does not match, expected:" + Bytes.toString(row) + " ,actual:" + Bytes
+          .toString(actual), row, actual);
     }
   }
 
@@ -226,5 +227,4 @@ public abstract class TableSnapshotInputFormatTestBase {
     admin.flush(tableName);
     table.close();
   }
-
 }

@@ -15,18 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.procedure2.store.wal;
+package org.apache.hadoop.hbase.procedure2.store;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
@@ -50,9 +47,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
  * we will also consider them as corrupted. Please see the code in {@link #checkOrphan(Map)} method.
  */
 @InterfaceAudience.Private
-public final class WALProcedureTree {
+public final class ProcedureTree {
 
-  private static final Logger LOG = LoggerFactory.getLogger(WALProcedureTree.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ProcedureTree.class);
 
   private static final class Entry {
 
@@ -78,50 +75,18 @@ public final class WALProcedureTree {
     }
   }
 
-  // when loading we will iterator the procedures twice, so use this class to cache the deserialized
-  // result to prevent deserializing multiple times.
-  private static final class ProtoAndProc {
-    private final ProcedureProtos.Procedure proto;
+  private final List<ProtoAndProcedure> validProcs = new ArrayList<>();
 
-    private Procedure<?> proc;
+  private final List<ProtoAndProcedure> corruptedProcs = new ArrayList<>();
 
-    public ProtoAndProc(ProcedureProtos.Procedure proto) {
-      this.proto = proto;
-    }
-
-    public Procedure<?> getProc() throws IOException {
-      if (proc == null) {
-        proc = ProcedureUtil.convertToProcedure(proto);
-      }
-      return proc;
-    }
-  }
-
-  private final List<ProtoAndProc> validProcs = new ArrayList<>();
-
-  private final List<ProtoAndProc> corruptedProcs = new ArrayList<>();
-
-  private static boolean isFinished(ProcedureProtos.Procedure proc) {
-    if (!proc.hasParentId()) {
-      switch (proc.getState()) {
-        case ROLLEDBACK:
-        case SUCCESS:
-          return true;
-        default:
-          break;
-      }
-    }
-    return false;
-  }
-
-  private WALProcedureTree(Map<Long, Entry> procMap) {
+  private ProcedureTree(Map<Long, Entry> procMap) {
     List<Entry> rootEntries = buildTree(procMap);
     for (Entry rootEntry : rootEntries) {
       checkReady(rootEntry, procMap);
     }
     checkOrphan(procMap);
-    Comparator<ProtoAndProc> cmp =
-      (p1, p2) -> Long.compare(p1.proto.getProcId(), p2.proto.getProcId());
+    Comparator<ProtoAndProcedure> cmp =
+      (p1, p2) -> Long.compare(p1.getProto().getProcId(), p2.getProto().getProcId());
     Collections.sort(validProcs, cmp);
     Collections.sort(corruptedProcs, cmp);
   }
@@ -144,7 +109,7 @@ public final class WALProcedureTree {
   }
 
   private void collectStackId(Entry entry, Map<Integer, List<Entry>> stackId2Proc,
-      MutableInt maxStackId) {
+    MutableInt maxStackId) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Procedure {} stack ids={}", entry, entry.proc.getStackIdList());
     }
@@ -159,8 +124,8 @@ public final class WALProcedureTree {
   }
 
   private void addAllToCorruptedAndRemoveFromProcMap(Entry entry,
-      Map<Long, Entry> remainingProcMap) {
-    corruptedProcs.add(new ProtoAndProc(entry.proc));
+    Map<Long, Entry> remainingProcMap) {
+    corruptedProcs.add(new ProtoAndProcedure(entry.proc));
     remainingProcMap.remove(entry.proc.getProcId());
     for (Entry e : entry.subProcs) {
       addAllToCorruptedAndRemoveFromProcMap(e, remainingProcMap);
@@ -168,7 +133,7 @@ public final class WALProcedureTree {
   }
 
   private void addAllToValidAndRemoveFromProcMap(Entry entry, Map<Long, Entry> remainingProcMap) {
-    validProcs.add(new ProtoAndProc(entry.proc));
+    validProcs.add(new ProtoAndProcedure(entry.proc));
     remainingProcMap.remove(entry.proc.getProcId());
     for (Entry e : entry.subProcs) {
       addAllToValidAndRemoveFromProcMap(e, remainingProcMap);
@@ -180,7 +145,7 @@ public final class WALProcedureTree {
   // remainingProcMap, so at last, if there are still procedures in the map, we know that there are
   // orphan procedures.
   private void checkReady(Entry rootEntry, Map<Long, Entry> remainingProcMap) {
-    if (isFinished(rootEntry.proc)) {
+    if (ProcedureUtil.isFinished(rootEntry.proc)) {
       if (!rootEntry.subProcs.isEmpty()) {
         LOG.error("unexpected active children for root-procedure: {}", rootEntry);
         rootEntry.subProcs.forEach(e -> LOG.error("unexpected active children: {}", e));
@@ -217,86 +182,23 @@ public final class WALProcedureTree {
   private void checkOrphan(Map<Long, Entry> procMap) {
     procMap.values().forEach(entry -> {
       LOG.error("Orphan procedure: {}", entry);
-      corruptedProcs.add(new ProtoAndProc(entry.proc));
+      corruptedProcs.add(new ProtoAndProcedure(entry.proc));
     });
   }
 
-  private static final class Iter implements ProcedureIterator {
-
-    private final List<ProtoAndProc> procs;
-
-    private Iterator<ProtoAndProc> iter;
-
-    private ProtoAndProc current;
-
-    public Iter(List<ProtoAndProc> procs) {
-      this.procs = procs;
-      reset();
-    }
-
-    @Override
-    public void reset() {
-      iter = procs.iterator();
-      if (iter.hasNext()) {
-        current = iter.next();
-      } else {
-        current = null;
-      }
-    }
-
-    @Override
-    public boolean hasNext() {
-      return current != null;
-    }
-
-    private void checkNext() {
-      if (!hasNext()) {
-        throw new NoSuchElementException();
-      }
-    }
-
-    @Override
-    public boolean isNextFinished() {
-      checkNext();
-      return isFinished(current.proto);
-    }
-
-    private void moveToNext() {
-      if (iter.hasNext()) {
-        current = iter.next();
-      } else {
-        current = null;
-      }
-    }
-
-    @Override
-    public void skipNext() {
-      checkNext();
-      moveToNext();
-    }
-
-    @Override
-    public Procedure<?> next() throws IOException {
-      checkNext();
-      Procedure<?> proc = current.getProc();
-      moveToNext();
-      return proc;
-    }
-  }
-
   public ProcedureIterator getValidProcs() {
-    return new Iter(validProcs);
+    return new InMemoryProcedureIterator(validProcs);
   }
 
   public ProcedureIterator getCorruptedProcs() {
-    return new Iter(corruptedProcs);
+    return new InMemoryProcedureIterator(corruptedProcs);
   }
 
-  public static WALProcedureTree build(Collection<ProcedureProtos.Procedure> procedures) {
+  public static ProcedureTree build(Collection<ProcedureProtos.Procedure> procedures) {
     Map<Long, Entry> procMap = new HashMap<>();
     for (ProcedureProtos.Procedure proc : procedures) {
       procMap.put(proc.getProcId(), new Entry(proc));
     }
-    return new WALProcedureTree(procMap);
+    return new ProcedureTree(procMap);
   }
 }

@@ -20,13 +20,13 @@ package org.apache.hadoop.hbase.chaos.factories;
 
 import org.apache.hadoop.hbase.chaos.actions.Action;
 import org.apache.hadoop.hbase.chaos.actions.AddCPULoadAction;
-import org.apache.hadoop.hbase.chaos.actions.CorruptPackagesCommandAction;
-import org.apache.hadoop.hbase.chaos.actions.DelayPackagesCommandAction;
+import org.apache.hadoop.hbase.chaos.actions.CorruptPacketsCommandAction;
+import org.apache.hadoop.hbase.chaos.actions.DelayPacketsCommandAction;
 import org.apache.hadoop.hbase.chaos.actions.DumpClusterStatusAction;
-import org.apache.hadoop.hbase.chaos.actions.DuplicatePackagesCommandAction;
+import org.apache.hadoop.hbase.chaos.actions.DuplicatePacketsCommandAction;
 import org.apache.hadoop.hbase.chaos.actions.FillDiskCommandAction;
-import org.apache.hadoop.hbase.chaos.actions.LosePackagesCommandAction;
-import org.apache.hadoop.hbase.chaos.actions.ReorderPackagesCommandAction;
+import org.apache.hadoop.hbase.chaos.actions.LosePacketsCommandAction;
+import org.apache.hadoop.hbase.chaos.actions.ReorderPacketsCommandAction;
 import org.apache.hadoop.hbase.chaos.monkies.ChaosMonkey;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.chaos.policies.PeriodicRandomActionPolicy;
@@ -57,15 +57,15 @@ public class DistributedIssuesMonkeyFactory extends MonkeyFactory {
 
     Action[] actions1 = new Action[] {
       new AddCPULoadAction(cpuLoadDuration, cpuLoadProcesses, networkIssueTimeout),
-      new CorruptPackagesCommandAction(networkIssueRation, networkIssueDuration,
+      new CorruptPacketsCommandAction(networkIssueRation, networkIssueDuration,
           networkIssueTimeout, networkIssueInterface),
-      new DuplicatePackagesCommandAction(networkIssueRation, networkIssueDuration,
+      new DuplicatePacketsCommandAction(networkIssueRation, networkIssueDuration,
           networkIssueTimeout, networkIssueInterface),
-      new LosePackagesCommandAction(networkIssueRation, networkIssueDuration,
+      new LosePacketsCommandAction(networkIssueRation, networkIssueDuration,
           networkIssueTimeout, networkIssueInterface),
-      new DelayPackagesCommandAction(networkIssueDelay, networkIssueDuration,
+      new DelayPacketsCommandAction(networkIssueDelay, networkIssueDuration,
           networkIssueTimeout, networkIssueInterface),
-      new ReorderPackagesCommandAction(networkIssueRation, networkIssueDuration,
+      new ReorderPacketsCommandAction(networkIssueRation, networkIssueDuration,
           networkIssueDelay, networkIssueTimeout, networkIssueInterface),
       new FillDiskCommandAction(fillDiskFileSize, fillDiskIssueduration, fillDiskPath,
           fillDiskTimeout)};

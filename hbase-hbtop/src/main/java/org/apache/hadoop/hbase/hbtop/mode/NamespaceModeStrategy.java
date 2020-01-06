@@ -20,8 +20,7 @@ package org.apache.hadoop.hbase.hbtop.mode;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.hbtop.Record;
 import org.apache.hadoop.hbase.hbtop.RecordFilter;
@@ -64,27 +63,14 @@ public final class NamespaceModeStrategy implements ModeStrategy {
     return Field.REQUEST_COUNT_PER_SECOND;
   }
 
-  @Override
-  public List<Record> getRecords(ClusterMetrics clusterMetrics) {
+  @Override public List<Record> getRecords(ClusterMetrics clusterMetrics,
+      List<RecordFilter> pushDownFilters) {
     // Get records from RegionModeStrategy and add REGION_COUNT field
-    List<Record> records = regionModeStrategy.getRecords(clusterMetrics).stream()
-      .map(record ->
-        Record.ofEntries(fieldInfos.stream()
-          .filter(fi -> record.containsKey(fi.getField()))
-          .map(fi -> Record.entry(fi.getField(), record.get(fi.getField())))))
-      .map(record -> Record.builder().putAll(record).put(Field.REGION_COUNT, 1).build())
-      .collect(Collectors.toList());
+    List<Record> records = regionModeStrategy.selectModeFieldsAndAddCountField(fieldInfos,
+        regionModeStrategy.getRecords(clusterMetrics, pushDownFilters), Field.REGION_COUNT);
 
     // Aggregation by NAMESPACE field
-    return records.stream()
-      .collect(Collectors.groupingBy(r -> r.get(Field.NAMESPACE).asString()))
-      .entrySet().stream()
-      .flatMap(
-        e -> e.getValue().stream()
-          .reduce(Record::combine)
-          .map(Stream::of)
-          .orElse(Stream.empty()))
-      .collect(Collectors.toList());
+    return ModeStrategyUtils.aggregateRecords(records, Field.NAMESPACE);
   }
 
   @Override

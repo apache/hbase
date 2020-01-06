@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.hbtop.Record;
+import org.apache.hadoop.hbase.hbtop.RecordFilter;
 import org.apache.hadoop.hbase.hbtop.field.Field;
 import org.apache.hadoop.hbase.hbtop.field.FieldInfo;
 import org.apache.hadoop.hbase.hbtop.mode.Mode;
@@ -324,7 +325,8 @@ public class TopScreenPresenter {
   }
 
   public ScreenView goToFilterDisplayMode(Screen screen, Terminal terminal, int row) {
-    return new FilterDisplayModeScreenView(screen, terminal, row, topScreenModel.getFilters(),
-      topScreenView);
+    ArrayList<RecordFilter> filters = new ArrayList<>(topScreenModel.getFilters());
+    filters.addAll(topScreenModel.getPushDownFilters());
+    return new FilterDisplayModeScreenView(screen, terminal, row, filters, topScreenView);
   }
 }

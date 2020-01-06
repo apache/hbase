@@ -159,6 +159,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
   private AtomicLong storeSize = new AtomicLong();
   private AtomicLong totalUncompressedBytes = new AtomicLong();
 
+  private boolean cacheOnWriteLogged;
+
   /**
    * RWLock for store operations.
    * Locked in shared mode when the list of component stores is looked at:
@@ -338,6 +340,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
         getColumnFamilyName(), memstore.getClass().getSimpleName(), policyName, verifyBulkLoads,
         parallelPutCountPrintThreshold, family.getDataBlockEncoding(),
         family.getCompressionType());
+    cacheOnWriteLogged = false;
   }
 
   /**
@@ -1118,11 +1121,35 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
       boolean shouldDropBehind) throws IOException {
     final CacheConfig writerCacheConf;
     if (isCompaction) {
-      // Don't cache data on write on compactions.
+      // Don't cache data on write on compactions, unless specifically configured to do so
       writerCacheConf = new CacheConfig(cacheConf);
-      writerCacheConf.setCacheDataOnWrite(false);
+      final boolean cacheCompactedBlocksOnWrite =
+        cacheConf.shouldCacheCompactedBlocksOnWrite();
+      // if data blocks are to be cached on write
+      // during compaction, we should forcefully
+      // cache index and bloom blocks as well
+      if (cacheCompactedBlocksOnWrite) {
+        writerCacheConf.enableCacheOnWrite();
+        if (!cacheOnWriteLogged) {
+          LOG.info("For Store {} , cacheCompactedBlocksOnWrite is true, hence enabled " +
+              "cacheOnWrite for Data blocks, Index blocks and Bloom filter blocks",
+            getColumnFamilyName());
+          cacheOnWriteLogged = true;
+        }
+      } else {
+        writerCacheConf.setCacheDataOnWrite(false);
+      }
     } else {
       writerCacheConf = cacheConf;
+      final boolean shouldCacheDataOnWrite = cacheConf.shouldCacheDataOnWrite();
+      if (shouldCacheDataOnWrite) {
+        writerCacheConf.enableCacheOnWrite();
+        if (!cacheOnWriteLogged) {
+          LOG.info("For Store {} , cacheDataOnWrite is true, hence enabled cacheOnWrite for " +
+            "Index blocks and Bloom filter blocks", getColumnFamilyName());
+          cacheOnWriteLogged = true;
+        }
+      }
     }
     InetSocketAddress[] favoredNodes = null;
     if (region.getRegionServerServices() != null) {
@@ -2806,18 +2833,19 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
   }
 
   /**
-   * @return get maximum ref count of storeFile among all HStore Files
+   * @return get maximum ref count of storeFile among all compacted HStore Files
    *   for the HStore
    */
-  public int getMaxStoreFileRefCount() {
-    OptionalInt maxStoreFileRefCount = this.storeEngine.getStoreFileManager()
-      .getStorefiles()
+  public int getMaxCompactedStoreFileRefCount() {
+    OptionalInt maxCompactedStoreFileRefCount = this.storeEngine.getStoreFileManager()
+      .getCompactedfiles()
       .stream()
       .filter(sf -> sf.getReader() != null)
       .filter(HStoreFile::isHFile)
       .mapToInt(HStoreFile::getRefCount)
       .max();
-    return maxStoreFileRefCount.isPresent() ? maxStoreFileRefCount.getAsInt() : 0;
+    return maxCompactedStoreFileRefCount.isPresent()
+      ? maxCompactedStoreFileRefCount.getAsInt() : 0;
   }
 
 }

@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Size;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.UserMetrics;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
@@ -213,7 +214,7 @@ public class TestRegionsRecoveryChore {
     Mockito.verify(hMaster, Mockito.times(0)).reopenRegions(Mockito.any(), Mockito.anyList(),
       Mockito.anyLong(), Mockito.anyLong());
 
-    // default maxStoreFileRefCount is -1 (no regions to be reopened using AM)
+    // default maxCompactedStoreFileRefCount is -1 (no regions to be reopened using AM)
     Mockito.verify(hMaster, Mockito.times(0)).getAssignmentManager();
     Mockito.verify(assignmentManager, Mockito.times(0))
       .getRegionInfo(Mockito.any());
@@ -356,6 +357,10 @@ public class TestRegionsRecoveryChore {
         return regionMetricsMap;
       }
 
+      @Override public Map<byte[], UserMetrics> getUserMetrics() {
+        return new HashMap<>();
+      }
+
       @Override
       public Set<String> getCoprocessorNames() {
         return null;
@@ -375,7 +380,7 @@ public class TestRegionsRecoveryChore {
     return serverMetrics;
   }
 
-  private static RegionMetrics getRegionMetrics(byte[] regionName, int storeRefCount) {
+  private static RegionMetrics getRegionMetrics(byte[] regionName, int compactedStoreRefCount) {
     RegionMetrics regionMetrics = new RegionMetrics() {
 
       @Override
@@ -480,12 +485,12 @@ public class TestRegionsRecoveryChore {
 
       @Override
       public int getStoreRefCount() {
-        return storeRefCount;
+        return compactedStoreRefCount;
       }
 
       @Override
-      public int getMaxStoreFileRefCount() {
-        return storeRefCount;
+      public int getMaxCompactedStoreFileRefCount() {
+        return compactedStoreRefCount;
       }
 
     };

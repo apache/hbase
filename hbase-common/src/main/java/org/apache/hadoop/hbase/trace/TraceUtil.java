@@ -38,7 +38,7 @@ public final class TraceUtil {
   }
 
   public static void initTracer(Configuration c) {
-    if(c != null) {
+    if (c != null) {
       conf = new HBaseHTraceConfiguration(c);
     }
 
@@ -62,7 +62,9 @@ public final class TraceUtil {
    * @return TraceScope or null when not tracing
    */
   public static TraceScope createTrace(String description, Span span) {
-    if(span == null) return createTrace(description);
+    if (span == null) {
+      return createTrace(description);
+    }
 
     return (tracer == null) ? null : tracer.newScope(description, span.getSpanId());
   }

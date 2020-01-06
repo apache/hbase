@@ -24,6 +24,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+
 import org.apache.commons.lang3.time.FastDateFormat;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.RegionMetrics;
@@ -31,6 +33,7 @@ import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.hbtop.Record;
+import org.apache.hadoop.hbase.hbtop.RecordFilter;
 import org.apache.hadoop.hbase.hbtop.field.Field;
 import org.apache.hadoop.hbase.hbtop.field.FieldInfo;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -83,8 +86,8 @@ public final class RegionModeStrategy implements ModeStrategy {
     return Field.REQUEST_COUNT_PER_SECOND;
   }
 
-  @Override
-  public List<Record> getRecords(ClusterMetrics clusterMetrics) {
+  @Override public List<Record> getRecords(ClusterMetrics clusterMetrics,
+      List<RecordFilter> pushDownFilters) {
     List<Record> ret = new ArrayList<>();
     for (ServerMetrics sm : clusterMetrics.getLiveServerMetrics().values()) {
       long lastReportTimestamp = sm.getLastReportTimestamp();
@@ -172,6 +175,27 @@ public final class RegionModeStrategy implements ModeStrategy {
       lastMajorCompactionTimestamp == 0 ? "" : df.format(lastMajorCompactionTimestamp));
 
     return builder.build();
+  }
+
+  /**
+   * Form new record list with records formed by only fields provided through fieldInfo and
+   * add a count field for each record with value 1
+   * We are doing two operation of selecting and adding new field
+   * because of saving some CPU cycles on rebuilding the record again
+   *
+   * @param fieldInfos List of FieldInfos required in the record
+   * @param records    List of records which needs to be processed
+   * @param countField Field which needs to be added with value 1 for each record
+   * @return records after selecting required fields and adding count field
+   */
+  List<Record> selectModeFieldsAndAddCountField(List<FieldInfo> fieldInfos, List<Record> records,
+      Field countField) {
+
+    return records.stream().map(record -> Record.ofEntries(
+        fieldInfos.stream().filter(fi -> record.containsKey(fi.getField()))
+            .map(fi -> Record.entry(fi.getField(), record.get(fi.getField())))))
+        .map(record -> Record.builder().putAll(record).put(countField, 1).build())
+        .collect(Collectors.toList());
   }
 
   @Nullable

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import java.util.concurrent.CompletableFuture;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
@@ -44,18 +43,8 @@ class DoNothingAsyncRegistry implements AsyncRegistry {
   }
 
   @Override
-  public CompletableFuture<Integer> getCurrentNrHRS() {
-    return CompletableFuture.completedFuture(0);
-  }
-
-  @Override
   public CompletableFuture<ServerName> getMasterAddress() {
     return CompletableFuture.completedFuture(null);
-  }
-
-  @Override
-  public CompletableFuture<Integer> getMasterInfoPort() {
-    return CompletableFuture.completedFuture(0);
   }
 
   @Override

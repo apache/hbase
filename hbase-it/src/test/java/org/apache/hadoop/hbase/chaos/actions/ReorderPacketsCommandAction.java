@@ -27,24 +27,24 @@ import org.slf4j.LoggerFactory;
 
 /**
  *
- * Reorder network packages on a random regionserver.
+ * Reorder network packets on a random regionserver.
  */
-public class ReorderPackagesCommandAction extends TCCommandAction {
-  private static final Logger LOG = LoggerFactory.getLogger(ReorderPackagesCommandAction.class);
+public class ReorderPacketsCommandAction extends TCCommandAction {
+  private static final Logger LOG = LoggerFactory.getLogger(ReorderPacketsCommandAction.class);
   private float ratio;
   private long duration;
   private long delay;
 
   /**
-   * Reorder network packages on a random regionserver.
+   * Reorder network packets on a random regionserver.
    *
-   * @param ratio the ratio of packages reordered
+   * @param ratio the ratio of packets reordered
    * @param duration the time this issue persists in milliseconds
-   * @param delay the delay between reordered and non-reordered packages in milliseconds
+   * @param delay the delay between reordered and non-reordered packets in milliseconds
    * @param timeout the timeout for executing required commands on the region server in milliseconds
    * @param network network interface the regionserver uses for communication
    */
-  public ReorderPackagesCommandAction(float ratio, long duration, long delay, long timeout,
+  public ReorderPacketsCommandAction(float ratio, long duration, long delay, long timeout,
       String network) {
     super(timeout, network);
     this.ratio = ratio;
@@ -53,7 +53,7 @@ public class ReorderPackagesCommandAction extends TCCommandAction {
   }
 
   protected void localPerform() throws IOException {
-    LOG.info("Starting to execute ReorderPackagesCommandAction");
+    LOG.info("Starting to execute ReorderPacketsCommandAction");
     ServerName server = PolicyBasedChaosMonkey.selectRandomItem(getCurrentServers());
     String hostname = server.getHostname();
 
@@ -66,7 +66,7 @@ public class ReorderPackagesCommandAction extends TCCommandAction {
       clusterManager.execSudoWithRetries(hostname, timeout, getCommand(DELETE));
     }
 
-    LOG.info("Finished to execute ReorderPackagesCommandAction");
+    LOG.info("Finished to execute ReorderPacketsCommandAction");
   }
 
   private String getCommand(String operation){
