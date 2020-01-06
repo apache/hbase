@@ -1074,10 +1074,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   private CompletableFuture<List<HRegionLocation>> getTableHRegionLocations(TableName tableName) {
     if (TableName.META_TABLE_NAME.equals(tableName)) {
       CompletableFuture<List<HRegionLocation>> future = new CompletableFuture<>();
-      // For meta table, we use zk to fetch all locations.
-      ConnectionRegistry registry = ConnectionRegistryFactory.getRegistry(
-          connection.getConfiguration());
-      addListener(registry.getMetaRegionLocations(), (metaRegions, err) -> {
+      addListener(connection.registry.getMetaRegionLocations(), (metaRegions, err) -> {
         if (err != null) {
           future.completeExceptionally(err);
         } else if (metaRegions == null || metaRegions.isEmpty() ||
@@ -1086,8 +1083,6 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         } else {
           future.complete(Collections.singletonList(metaRegions.getDefaultRegionLocation()));
         }
-        // close the registry.
-        IOUtils.closeQuietly(registry);
       });
       return future;
     } else {
