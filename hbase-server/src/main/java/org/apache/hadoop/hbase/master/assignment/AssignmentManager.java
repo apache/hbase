@@ -1764,7 +1764,7 @@ public class AssignmentManager {
 
   // should be called under the RegionStateNode lock
   // for SCP
-  void regionClosedAbnormally(RegionStateNode regionNode) throws IOException {
+  public void regionClosedAbnormally(RegionStateNode regionNode) throws IOException {
     RegionState.State state = regionNode.getState();
     ServerName regionLocation = regionNode.getRegionLocation();
     regionNode.transitionState(State.ABNORMALLY_CLOSED);
