@@ -25,7 +25,6 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.IOException;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -49,12 +48,12 @@ import org.junit.experimental.categories.Category;
 public class TestKeyValue extends TestCase {
   private static final Log LOG = LogFactory.getLog(TestKeyValue.class);
 
-  public void testColumnCompare() throws Exception {
-    final byte [] a = Bytes.toBytes("aaa");
-    byte [] family1 = Bytes.toBytes("abc");
-    byte [] qualifier1 = Bytes.toBytes("def");
-    byte [] family2 = Bytes.toBytes("abcd");
-    byte [] qualifier2 = Bytes.toBytes("ef");
+  public void testColumnCompare() {
+    final byte[] a = Bytes.toBytes("aaa");
+    byte[] family1 = Bytes.toBytes("abc");
+    byte[] qualifier1 = Bytes.toBytes("def");
+    byte[] family2 = Bytes.toBytes("abcd");
+    byte[] qualifier2 = Bytes.toBytes("ef");
 
     KeyValue aaa = new KeyValue(a, family1, qualifier1, 0L, KeyValue.Type.Put, a);
     assertFalse(CellUtil.matchingColumn(aaa, family2, qualifier2));
@@ -62,28 +61,27 @@ public class TestKeyValue extends TestCase {
     aaa = new KeyValue(a, family2, qualifier2, 0L, KeyValue.Type.Put, a);
     assertFalse(CellUtil.matchingColumn(aaa, family1, qualifier1));
     assertTrue(CellUtil.matchingColumn(aaa, family2,qualifier2));
-    byte [] nullQualifier = new byte[0];
+    byte[] nullQualifier = new byte[0];
     aaa = new KeyValue(a, family1, nullQualifier, 0L, KeyValue.Type.Put, a);
     assertTrue(CellUtil.matchingColumn(aaa, family1,null));
     assertFalse(CellUtil.matchingColumn(aaa, family2,qualifier2));
   }
 
   /**
-   * Test a corner case when the family qualifier is a prefix of the
-   *  column qualifier.
+   * Test a corner case when the family qualifier is a prefix of the column qualifier.
    */
-  public void testColumnCompare_prefix() throws Exception {
-    final byte [] a = Bytes.toBytes("aaa");
-    byte [] family1 = Bytes.toBytes("abc");
-    byte [] qualifier1 = Bytes.toBytes("def");
-    byte [] family2 = Bytes.toBytes("ab");
-    byte [] qualifier2 = Bytes.toBytes("def");
+  public void testColumnCompare_prefix() {
+    final byte[] a = Bytes.toBytes("aaa");
+    byte[] family1 = Bytes.toBytes("abc");
+    byte[] qualifier1 = Bytes.toBytes("def");
+    byte[] family2 = Bytes.toBytes("ab");
+    byte[] qualifier2 = Bytes.toBytes("def");
 
     KeyValue aaa = new KeyValue(a, family1, qualifier1, 0L, KeyValue.Type.Put, a);
     assertFalse(CellUtil.matchingColumn(aaa, family2, qualifier2));
   }
 
-  public void testBasics() throws Exception {
+  public void testBasics() {
     LOG.info("LOWKEY: " + KeyValue.LOWESTKEY.toString());
     check(Bytes.toBytes(getName()),
       Bytes.toBytes(getName()), Bytes.toBytes(getName()), 1,
@@ -108,11 +106,11 @@ public class TestKeyValue extends TestCase {
     LOG.info(kv.toString());
   }
 
-  public void testPlainCompare() throws Exception {
-    final byte [] a = Bytes.toBytes("aaa");
-    final byte [] b = Bytes.toBytes("bbb");
-    final byte [] fam = Bytes.toBytes("col");
-    final byte [] qf = Bytes.toBytes("umn");
+  public void testPlainCompare() {
+    final byte[] a = Bytes.toBytes("aaa");
+    final byte[] b = Bytes.toBytes("bbb");
+    final byte[] fam = Bytes.toBytes("col");
+    final byte[] qf = Bytes.toBytes("umn");
     KeyValue aaa = new KeyValue(a, fam, qf, a);
     KeyValue bbb = new KeyValue(b, fam, qf, b);
     assertTrue(KeyValue.COMPARATOR.compare(aaa, bbb) < 0);
@@ -135,7 +133,7 @@ public class TestKeyValue extends TestCase {
     assertTrue(KeyValue.COMPARATOR.compare(aaa, aaa) == 0);
   }
 
-  public void testMoreComparisons() throws Exception {
+  public void testMoreComparisons() {
     long now = System.currentTimeMillis();
 
     // Meta compares
@@ -176,9 +174,8 @@ public class TestKeyValue extends TestCase {
   /**
    * Tests cases where rows keys have characters below the ','.
    * See HBASE-832
-   * @throws IOException
    */
-  public void testKeyValueBorderCases() throws IOException {
+  public void testKeyValueBorderCases() {
     // % sorts before , so if we don't do special comparator, rowB would
     // come before rowA.
     KeyValue rowA = new KeyValue(Bytes.toBytes("testtable,www.hbase.org/,1234"),
@@ -192,7 +189,6 @@ public class TestKeyValue extends TestCase {
     rowB = new KeyValue(Bytes.toBytes("testtable,$www.hbase.org/,99999"),
         Bytes.toBytes("fam"), Bytes.toBytes(""), Long.MAX_VALUE, (byte[])null);
     assertTrue(KeyValue.META_COMPARATOR.compare(rowA, rowB) < 0);
-
   }
 
   private void metacomparisons(final KeyValue.MetaComparator c) {
@@ -228,12 +224,12 @@ public class TestKeyValue extends TestCase {
           Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",,1"), now)) > 0);
   }
 
-  public void testBinaryKeys() throws Exception {
-    Set<KeyValue> set = new TreeSet<KeyValue>(KeyValue.COMPARATOR);
-    final byte [] fam = Bytes.toBytes("col");
-    final byte [] qf = Bytes.toBytes("umn");
-    final byte [] nb = new byte[0];
-    KeyValue [] keys = {new KeyValue(Bytes.toBytes("aaaaa,\u0000\u0000,2"), fam, qf, 2, nb),
+  public void testBinaryKeys() {
+    Set<KeyValue> set = new TreeSet<>(KeyValue.COMPARATOR);
+    final byte[] fam = Bytes.toBytes("col");
+    final byte[] qf = Bytes.toBytes("umn");
+    final byte[] nb = new byte[0];
+    KeyValue[] keys = {new KeyValue(Bytes.toBytes("aaaaa,\u0000\u0000,2"), fam, qf, 2, nb),
       new KeyValue(Bytes.toBytes("aaaaa,\u0001,3"), fam, qf, 3, nb),
       new KeyValue(Bytes.toBytes("aaaaa,,1"), fam, qf, 1, nb),
       new KeyValue(Bytes.toBytes("aaaaa,\u1000,5"), fam, qf, 5, nb),
@@ -246,8 +242,8 @@ public class TestKeyValue extends TestCase {
     boolean assertion = false;
     int count = 0;
     try {
-      for (KeyValue k: set) {
-        assertTrue(count++ == k.getTimestamp());
+      for (KeyValue k : set) {
+        assertEquals(count++, k.getTimestamp());
       }
     } catch (junit.framework.AssertionFailedError e) {
       // Expected
@@ -255,11 +251,11 @@ public class TestKeyValue extends TestCase {
     }
     assertTrue(assertion);
     // Make set with good comparator
-    set = new TreeSet<KeyValue>(new KeyValue.MetaComparator());
+    set = new TreeSet<>(new KeyValue.MetaComparator());
     Collections.addAll(set, keys);
     count = 0;
-    for (KeyValue k: set) {
-      assertTrue(count++ == k.getTimestamp());
+    for (KeyValue k : set) {
+      assertEquals(count++, k.getTimestamp());
     }
   }
 
@@ -268,11 +264,8 @@ public class TestKeyValue extends TestCase {
 
   private final byte[] family = Bytes.toBytes("family");
   private final byte[] qualA = Bytes.toBytes("qfA");
-  private final byte[] qualB = Bytes.toBytes("qfB");
 
-  private void assertKVLess(KeyValue.KVComparator c,
-                            KeyValue less,
-                            KeyValue greater) {
+  private void assertKVLess(KeyValue.KVComparator c, KeyValue less, KeyValue greater) {
     int cmp = c.compare(less,greater);
     assertTrue(cmp < 0);
     cmp = c.compare(greater,less);
@@ -317,7 +310,7 @@ public class TestKeyValue extends TestCase {
     assertKVLessWithoutRow(c, 0, kv0_1, kv1_0);
 
     // Test comparison by skipping the same prefix bytes.
-    /***
+    /*
      * KeyValue Format and commonLength:
      * |_keyLen_|_valLen_|_rowLen_|_rowKey_|_famiLen_|_fami_|_Quali_|....
      * ------------------|-------commonLength--------|--------------
@@ -380,12 +373,12 @@ public class TestKeyValue extends TestCase {
     assertKVLess(c, firstOnRowABufferFamQual, lastOnRowA);
   }
 
-  public void testCreateKeyOnly() throws Exception {
+  public void testCreateKeyOnly() {
     long ts = 1;
-    byte [] value = Bytes.toBytes("a real value");
-    byte [] evalue = new byte[0]; // empty value
+    byte[] value = Bytes.toBytes("a real value");
+    byte[] evalue = new byte[0]; // empty value
 
-    for (byte[] val : new byte[][]{value, evalue}) {
+    for (byte[] val : new byte[][] { value, evalue }) {
       for (boolean useLen : new boolean[]{false,true}) {
         KeyValue kv1 = new KeyValue(rowA, family, qualA, ts, val);
         KeyValue kv1ko = kv1.createKeyOnly(useLen);
@@ -443,7 +436,8 @@ public class TestKeyValue extends TestCase {
     byte[] metaValue1 = Bytes.toBytes("metaValue1");
     byte[] metaValue2 = Bytes.toBytes("metaValue2");
     KeyValue kv = new KeyValue(row, cf, q, HConstants.LATEST_TIMESTAMP, value, new Tag[] {
-        new Tag((byte) 1, metaValue1), new Tag((byte) 2, metaValue2) });
+      new Tag((byte) 1, metaValue1), new Tag((byte) 2, metaValue2)
+    });
     assertTrue(kv.getTagsLength() > 0);
     assertTrue(Bytes.equals(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(), row, 0,
       row.length));
@@ -544,7 +538,7 @@ public class TestKeyValue extends TestCase {
     assertTrue(c.compare(a, b) < 0);
   }
 
-  public void testEqualsAndHashCode() throws Exception {
+  public void testEqualsAndHashCode() {
     KeyValue kvA1 = new KeyValue(Bytes.toBytes("key"), Bytes.toBytes("cf"),
         Bytes.toBytes("qualA"), Bytes.toBytes("1"));
     KeyValue kvA2 = new KeyValue(Bytes.toBytes("key"), Bytes.toBytes("cf"),
@@ -559,7 +553,6 @@ public class TestKeyValue extends TestCase {
     assertNotEquals(kvA1, kvB);
     assertEquals(kvA1.hashCode(), kvA2.hashCode());
     assertNotEquals(kvA1.hashCode(), kvB.hashCode());
-
   }
 
   public void testKeyValueSerialization() throws Exception {
@@ -570,8 +563,9 @@ public class TestKeyValue extends TestCase {
         Bytes.toBytes("2")),
       new KeyValue(Bytes.toBytes("key"), Bytes.toBytes("cf"), Bytes.toBytes("qualA"),
         System.currentTimeMillis(), Bytes.toBytes("2"),
-        new Tag[] { new Tag((byte) 120, "tagA"),
-        new Tag((byte) 121, Bytes.toBytes("tagB")) }),
+        new Tag[] {
+          new Tag((byte) 120, "tagA"),
+          new Tag((byte) 121, Bytes.toBytes("tagB")) }),
       new KeyValue(Bytes.toBytes("key"), Bytes.toBytes("cf"), Bytes.toBytes("qualA"),
         System.currentTimeMillis(), Bytes.toBytes("2"),
         new Tag[] { new Tag((byte) 0, "tagA") }),
@@ -595,11 +589,11 @@ public class TestKeyValue extends TestCase {
 
   @Test
   public void testNullByteArrayKeyValueFailure() {
-    //can't add to testCheckKeyValueBytesFailureCase because it
-    //goes through the InputStream KeyValue API which can't produce a null buffer
+    // can't add to testCheckKeyValueBytesFailureCase because it
+    // goes through the InputStream KeyValue API which can't produce a null buffer
     try {
-      KeyValue kv = new KeyValue(null, 0, 0);
-    } catch (IllegalArgumentException iae){
+      new KeyValue(null, 0, 0);
+    } catch (IllegalArgumentException iae) {
       assertEquals("Invalid to have null byte array in KeyValue.", iae.getMessage());
       return;
     }
@@ -638,22 +632,22 @@ public class TestKeyValue extends TestCase {
   @Test
   public void testCheckKeyValueBytesFailureCase() throws Exception {
     byte[][] inputs = new byte[][] { HConstants.EMPTY_BYTE_ARRAY, // case.0
-        Bytes.toBytesBinary("a"), // case.1
-        Bytes.toBytesBinary("\\x00\\x00\\x00\\x01"), // case.2
-        Bytes.toBytesBinary("\\x00\\x00\\x00\\x01\\x00"), // case.3
-        Bytes.toBytesBinary("\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01"), // case.4
-        Bytes.toBytesBinary("\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01\\x00"), // case.5
-        Bytes.toBytesBinary("\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01\\x00\\x01"), // case.6
-        Bytes.toBytesBinary("\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01\\x00\\x03ROW"), // case.7
-        Bytes.toBytesBinary("\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01\\x00\\x03ROW\\x01"), // case.8
-        Bytes.toBytesBinary("\\x00\\x00\\x00\\x11\\x00\\x00\\x00\\x01\\x00\\x03ROW\\x01FQ\\xFF"
-            + "\\xFF\\xFF\\xFF\\xFF\\xFF\\xFF\\xFF\\x03"), // case.9
-        Bytes.toBytesBinary("\\x00\\x00\\x00\\x11\\x00\\x00\\x00\\x01\\x00\\x03ROW\\x01FQ\\x00"
-            + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x03"), // case.10
-        Bytes.toBytesBinary("\\x00\\x00\\x00\\x11\\x00\\x00\\x00\\x01\\x00\\x03ROW\\x01FQ\\x00"
-            + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x04"), // case.11
-        Bytes.toBytesBinary("\\x00\\x00\\x00\\x11\\x00\\x00\\x00\\x01\\x00\\x03ROW\\x01FQ\\x00"
-            + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x04VALUE"), // case.12
+      Bytes.toBytesBinary("a"), // case.1
+      Bytes.toBytesBinary("\\x00\\x00\\x00\\x01"), // case.2
+      Bytes.toBytesBinary("\\x00\\x00\\x00\\x01\\x00"), // case.3
+      Bytes.toBytesBinary("\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01"), // case.4
+      Bytes.toBytesBinary("\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01\\x00"), // case.5
+      Bytes.toBytesBinary("\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01\\x00\\x01"), // case.6
+      Bytes.toBytesBinary("\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01\\x00\\x03ROW"), // case.7
+      Bytes.toBytesBinary("\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01\\x00\\x03ROW\\x01"), // case.8
+      Bytes.toBytesBinary("\\x00\\x00\\x00\\x11\\x00\\x00\\x00\\x01\\x00\\x03ROW\\x01FQ\\xFF"
+          + "\\xFF\\xFF\\xFF\\xFF\\xFF\\xFF\\xFF\\x03"), // case.9
+      Bytes.toBytesBinary("\\x00\\x00\\x00\\x11\\x00\\x00\\x00\\x01\\x00\\x03ROW\\x01FQ\\x00"
+          + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x03"), // case.10
+      Bytes.toBytesBinary("\\x00\\x00\\x00\\x11\\x00\\x00\\x00\\x01\\x00\\x03ROW\\x01FQ\\x00"
+          + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x04"), // case.11
+      Bytes.toBytesBinary("\\x00\\x00\\x00\\x11\\x00\\x00\\x00\\x01\\x00\\x03ROW\\x01FQ\\x00"
+          + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x04VALUE"), // case.12
     };
     String[] outputs = new String[] { "Overflow when reading key length at position=0",
       "Overflow when reading key length at position=0",
@@ -668,32 +662,34 @@ public class TestKeyValue extends TestCase {
       "Invalid tags length in KeyValue at position=26"};
     byte[][] withTagsInputs = new byte[][] {
       Bytes.toBytesBinary("\\x00\\x00\\x00\\x11\\x00\\x00\\x00\\x01\\x00\\x03ROW\\x01FQ\\x00"
-        + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x04V\\x01"), // case.13
+          + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x04V\\x01"), // case.13
       Bytes.toBytesBinary("\\x00\\x00\\x00\\x11\\x00\\x00\\x00\\x01\\x00\\x03ROW\\x01FQ\\x00"
-        + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x04V\\x00\\x01"), // case.14
+          + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x04V\\x00\\x01"), // case.14
       Bytes.toBytesBinary("\\x00\\x00\\x00\\x11\\x00\\x00\\x00\\x01\\x00\\x03ROW\\x01FQ\\x00"
-        + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x04V\\x00\\x04\\x00\\x03\\x00A"), // case.15
+          + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x04V\\x00\\x04\\x00\\x03\\x00A"), // case.15
+      // case.16
       Bytes.toBytesBinary("\\x00\\x00\\x00\\x11\\x00\\x00\\x00\\x01\\x00\\x03ROW\\x01FQ\\x00"
-        + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x04V\\x00\\x0A\\x00\\x04\\x00TAG\\x00\\x04"
-        + "\\xFFT"), // case.16
+          + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x04V\\x00\\x0A\\x00\\x04\\x00TAG\\x00\\x04"
+          + "\\xFFT"),
       Bytes.toBytesBinary("\\x00\\x00\\x00\\x11\\x00\\x00\\x00\\x01\\x00\\x03ROW\\x01FQ\\x00"
-        + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x04V\\x00\\x0C\\x00\\x04\\x00TAG\\x00\\x05"
-        + "\\xF0COME\\x00"), // case.17
+          + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x04V\\x00\\x0C\\x00\\x04\\x00TAG\\x00\\x05"
+          + "\\xF0COME\\x00"), // case.17
       Bytes.toBytesBinary("\\x00\\x00\\x00\\x11\\x00\\x00\\x00\\x01\\x00\\x03ROW\\x01FQ\\x00"
-        + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x04V\\x00\\x0C\\x00\\x04\\x00TAG\\x00\\x05"
-        + "\\xF0COME"), // case.18
+          + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x04V\\x00\\x0C\\x00\\x04\\x00TAG\\x00\\x05"
+          + "\\xF0COME"), // case.18
       Bytes.toBytesBinary("\\x00\\x00\\x00\\x11\\x00\\x00\\x00\\x01\\x00\\x03ROW\\x01FQ\\x00"
-        + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x04V\\x00\\x00"), // case.19
+          + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x04V\\x00\\x00"), // case.19
       Bytes.toBytesBinary("\\x00\\x00\\x00\\x11\\x00\\x00\\x00\\x01\\x00\\x03ROW\\x01FQ\\x00"
-        + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x04V\\x00\\x1B\\x00\\x05\\x01TAG1\\x00\\x05"
-        + "\\x02TAG2\\x00\\x05\\x03TAG3\\x00\\x05\\x04TAG4"), // case.20
+          + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x04V\\x00\\x1B\\x00\\x05\\x01TAG1\\x00\\x05"
+          + "\\x02TAG2\\x00\\x05\\x03TAG3\\x00\\x05\\x04TAG4"), // case.20
     };
     String[] withTagsOutputs = new String[] { "Overflow when reading tags length at position=26",
       "Invalid tags length in KeyValue at position=26",
       "Invalid tag length at position=28, tagLength=3",
       "Invalid tag length at position=34, tagLength=4",
       "Some redundant bytes in KeyValue's buffer, startOffset=41, endOffset=42", null, null,
-      null, };
+      null,
+    };
     assertEquals(inputs.length, outputs.length);
     assertEquals(withTagsInputs.length, withTagsOutputs.length);
 
