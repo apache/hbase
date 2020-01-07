@@ -47,6 +47,8 @@
   <suppress checks="ImportOrder" message="Extra separation in import group before"/>
   <suppress checks="MethodLength" files="org.apache.hadoop.hbase.thrift.DemoClient.java"/>
   <suppress checks="LineLength" files="org.apache.hadoop.hbase.util.ZKDataMigrator.java"/>
+  <suppress checks="InnerAssignment" files="org.apache.hadoop.hbase.Waiter"/>
+  <suppress checks="EmptyBlock" files="org.apache.hadoop.hbase.TestTimeout"/>
   <suppress checks="InnerAssignment" files="org.apache.hadoop.hbase.rest.PerformanceEvaluation"/>
   <suppress checks="EmptyBlock" files="org.apache.hadoop.hbase.rest.PerformanceEvaluation"/>
 </suppressions>
