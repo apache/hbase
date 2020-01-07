@@ -1688,8 +1688,9 @@ public class HMaster extends HRegionServer implements MasterServices {
    * @return Maximum time we should run balancer for
    */
   private int getMaxBalancingTime() {
-    int maxBalancingTime = getConfiguration()
-      .getInt(HConstants.HBASE_BALANCER_MAX_BALANCING, HConstants.DEFAULT_HBASE_BALANCER_PERIOD);
+    int maxBalancingTime = getConfiguration().getInt(HConstants.HBASE_BALANCER_MAX_BALANCING,
+      getConfiguration()
+        .getInt(HConstants.HBASE_BALANCER_PERIOD, HConstants.DEFAULT_HBASE_BALANCER_PERIOD));
     return maxBalancingTime;
   }
 
