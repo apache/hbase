@@ -16,7 +16,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.fail;
@@ -34,7 +33,6 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public final class Waiter {
-
   private static final Logger LOG = LoggerFactory.getLogger(Waiter.class);
 
   /**
@@ -87,14 +85,12 @@ public final class Waiter {
    */
   @InterfaceAudience.Private
   public interface Predicate<E extends Exception> {
-
     /**
      * Perform a predicate evaluation.
      * @return the boolean result of the evaluation.
-     * @throws Exception thrown if the predicate evaluation could not evaluate.
+     * @throws E thrown if the predicate evaluation could not evaluate.
      */
     boolean evaluate() throws E;
-
   }
 
   /**
@@ -102,14 +98,12 @@ public final class Waiter {
    */
   @InterfaceAudience.Private
   public interface ExplainingPredicate<E extends Exception> extends Predicate<E> {
-
     /**
      * Perform a predicate evaluation.
      *
      * @return explanation of failed state
      */
     String explainFailure() throws E;
-
   }
 
   /**
@@ -139,7 +133,7 @@ public final class Waiter {
    *         wait is interrupted otherwise <code>-1</code> when times out
    */
   public static <E extends Exception> long waitFor(Configuration conf, long timeout,
-      Predicate<E> predicate) throws E {
+      Predicate<E> predicate) {
     return waitFor(conf, timeout, 100, true, predicate);
   }
 
@@ -157,7 +151,7 @@ public final class Waiter {
    *         wait is interrupted otherwise <code>-1</code> when times out
    */
   public static <E extends Exception> long waitFor(Configuration conf, long timeout, long interval,
-      Predicate<E> predicate) throws E {
+      Predicate<E> predicate) {
     return waitFor(conf, timeout, interval, true, predicate);
   }
 
@@ -176,14 +170,14 @@ public final class Waiter {
    *         wait is interrupted otherwise <code>-1</code> when times out
    */
   public static <E extends Exception> long waitFor(Configuration conf, long timeout, long interval,
-      boolean failIfTimeout, Predicate<E> predicate) throws E {
+      boolean failIfTimeout, Predicate<E> predicate) {
     long started = System.currentTimeMillis();
     long adjustedTimeout = (long) (getWaitForRatio(conf) * timeout);
     long mustEnd = started + adjustedTimeout;
-    long remainderWait = 0;
-    long sleepInterval = 0;
-    Boolean eval = false;
-    Boolean interrupted = false;
+    long remainderWait;
+    long sleepInterval;
+    boolean eval;
+    boolean interrupted = false;
 
     try {
       LOG.info(MessageFormat.format("Waiting up to [{0}] milli-secs(wait.for.ratio=[{1}])",
@@ -192,7 +186,7 @@ public final class Waiter {
               && (remainderWait = mustEnd - System.currentTimeMillis()) > 0) {
         try {
           // handle tail case when remainder wait is less than one interval
-          sleepInterval = (remainderWait > interval) ? interval : remainderWait;
+          sleepInterval = Math.min(remainderWait, interval);
           Thread.sleep(sleepInterval);
         } catch (InterruptedException e) {
           eval = predicate.evaluate();
@@ -232,5 +226,4 @@ public final class Waiter {
       return "";
     }
   }
-
 }
