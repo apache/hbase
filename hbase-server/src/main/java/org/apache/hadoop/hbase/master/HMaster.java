@@ -1688,12 +1688,10 @@ public class HMaster extends HRegionServer implements MasterServices {
    * @return Maximum time we should run balancer for
    */
   private int getMaxBalancingTime() {
-    int maxBalancingTime = getConfiguration().getInt(HConstants.HBASE_BALANCER_MAX_BALANCING, -1);
-    if (maxBalancingTime == -1) {
-      // if max balancing time isn't set, defaulting it to period time
-      maxBalancingTime = getConfiguration().getInt(HConstants.HBASE_BALANCER_PERIOD,
-        HConstants.DEFAULT_HBASE_BALANCER_PERIOD);
-    }
+    // if max balancing time isn't set, defaulting it to period time
+    int maxBalancingTime = getConfiguration().getInt(HConstants.HBASE_BALANCER_MAX_BALANCING,
+      getConfiguration()
+        .getInt(HConstants.HBASE_BALANCER_PERIOD, HConstants.DEFAULT_HBASE_BALANCER_PERIOD));
     return maxBalancingTime;
   }
 
@@ -1860,11 +1858,14 @@ public class HMaster extends HRegionServer implements MasterServices {
         //rpCount records balance plans processed, does not care if a plan succeeds
         rpCount++;
 
-        balanceThrottling(balanceStartTime + rpCount * balanceInterval, maxRegionsInTransition,
+        if (this.maxBlancingTime > 0) {
+          balanceThrottling(balanceStartTime + rpCount * balanceInterval, maxRegionsInTransition,
             cutoffTime);
+        }
 
         // if performing next balance exceeds cutoff time, exit the loop
-        if (rpCount < plans.size() && System.currentTimeMillis() > cutoffTime) {
+        if (this.maxBlancingTime > 0 && rpCount < plans.size()
+          && System.currentTimeMillis() > cutoffTime) {
           // TODO: After balance, there should not be a cutoff time (keeping it as
           // a security net for now)
           LOG.debug("No more balancing till next balance run; maxBalanceTime="
