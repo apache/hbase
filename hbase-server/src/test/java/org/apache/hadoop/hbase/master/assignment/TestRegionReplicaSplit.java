@@ -18,9 +18,6 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,10 +26,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.RegionReplicaUtil;
+import org.apache.hadoop.hbase.client.RegionReplicaTestHelper;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -108,11 +104,10 @@ public class TestRegionReplicaSplit {
     List<RegionInfo> regions = new ArrayList<RegionInfo>();
     for (RegionServerThread rs : HTU.getMiniHBaseCluster().getRegionServerThreads()) {
       for (Region r : rs.getRegionServer().getRegions(table.getName())) {
-        System.out.println("the region before split is is " + r.getRegionInfo()
-            + rs.getRegionServer().getServerName());
         regions.add(r.getRegionInfo());
       }
     }
+    // There are 6 regions before split, 9 regions after split.
     HTU.getAdmin().split(table.getName(), Bytes.toBytes(1));
     int count = 0;
     while (true) {
@@ -126,33 +121,7 @@ public class TestRegionReplicaSplit {
       }
       count = 0;
     }
-    List<ServerName> newRegionLocations = new ArrayList<ServerName>();
-    for (RegionServerThread rs : HTU.getMiniHBaseCluster().getRegionServerThreads()) {
-      RegionInfo prevInfo = null;
-      for (Region r : rs.getRegionServer().getRegions(table.getName())) {
-        if (!regions.contains(r.getRegionInfo())
-            && !RegionReplicaUtil.isDefaultReplica(r.getRegionInfo())) {
-          LOG.info("The region is " + r.getRegionInfo() + " the location is "
-              + rs.getRegionServer().getServerName());
-          if (!RegionReplicaUtil.isDefaultReplica(r.getRegionInfo())
-              && newRegionLocations.contains(rs.getRegionServer().getServerName())
-              && prevInfo != null
-              && Bytes.equals(prevInfo.getStartKey(), r.getRegionInfo().getStartKey())
-              && Bytes.equals(prevInfo.getEndKey(), r.getRegionInfo().getEndKey())) {
-            fail("Splitted regions should not be assigned to same region server");
-          } else {
-            prevInfo = r.getRegionInfo();
-            if (!RegionReplicaUtil.isDefaultReplica(r.getRegionInfo())
-                && !newRegionLocations.contains(rs.getRegionServer().getServerName())) {
-              newRegionLocations.add(rs.getRegionServer().getServerName());
-            }
-          }
-        }
-      }
-    }
-    // since we assign the daughter regions in round robin fashion, both the daugther region
-    // replicas will be assigned to two unique servers.
-    assertEquals("The new regions should be assigned to 3 unique servers ", 3,
-      newRegionLocations.size());
+
+    RegionReplicaTestHelper.assertReplicaDistributed(HTU, table);
   }
 }
