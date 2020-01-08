@@ -716,14 +716,20 @@ public class PerformanceEvaluation extends Configured implements Tool {
       int perClientRows = (this.R / this.N);
       for (int i = 0; i < 10; i++) {
         for (int j = 0; j < N; j++) {
-          String s = "tableName=" + this.tableName + ", startRow=" + ((j * perClientRows) + (i * (
-            perClientRows / 10))) + ", perClientRunRows=" + (perClientRows / 10) + ", totalRows="
-            + this.R + ", clients=" + this.N + ", flushCommits=" + this.flushCommits
-            + ", writeToWAL=" + this.writeToWAL + ", useTags=" + this.useTags + ", noOfTags="
-            + this.noOfTags;
-          byte[] b = Bytes.toBytes(s);
+          StringBuilder s = new StringBuilder();
+          s.append("tableName=").append(tableName);
+          s.append(", startRow=").append((j * perClientRows) + (i * (perClientRows / 10)));
+          s.append(", perClientRunRows=").append(perClientRows / 10);
+          s.append(", totalRows=").append(R);
+          s.append(", clients=").append(N);
+          s.append(", flushCommits=").append(flushCommits);
+          s.append(", writeToWAL=").append(writeToWAL);
+          s.append(", useTags=").append(useTags);
+          s.append(", noOfTags=").append(noOfTags);
+
+          byte[] b = Bytes.toBytes(s.toString());
           int hash = h.hash(new ByteArrayHashKey(b, 0, b.length), -1);
-          m.put(hash, s);
+          m.put(hash, s.toString());
         }
       }
       for (Map.Entry<Integer, String> e : m.entrySet()) {
