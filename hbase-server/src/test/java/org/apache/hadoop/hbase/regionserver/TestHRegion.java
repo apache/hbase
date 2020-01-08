@@ -4187,12 +4187,16 @@ public class TestHRegion {
     try {
       FileSystem fs = Mockito.mock(FileSystem.class);
       Mockito.when(fs.exists((Path) Mockito.anyObject())).thenThrow(new IOException());
-      HTableDescriptor htd = new HTableDescriptor(tableName);
-      htd.addFamily(new HColumnDescriptor("cf"));
-      info = new HRegionInfo(htd.getTableName(), HConstants.EMPTY_BYTE_ARRAY,
-          HConstants.EMPTY_BYTE_ARRAY, false);
+      TableDescriptorBuilder tableDescriptorBuilder =
+        TableDescriptorBuilder.newBuilder(tableName);
+      ColumnFamilyDescriptor columnFamilyDescriptor =
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("cf")).build();
+      tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+      info = new HRegionInfo(tableDescriptorBuilder.build().getTableName(),
+        HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY, false);
       Path path = new Path(dir + "testStatusSettingToAbortIfAnyExceptionDuringRegionInitilization");
-      region = HRegion.newHRegion(path, null, fs, CONF, info, htd, null);
+      region = HRegion.newHRegion(path, null, fs, CONF, info,
+        tableDescriptorBuilder.build(), null);
       // region initialization throws IOException and set task state to ABORTED.
       region.initialize();
       fail("Region initialization should fail due to IOException");
@@ -4217,13 +4221,18 @@ public class TestHRegion {
   public void testRegionInfoFileCreation() throws IOException {
     Path rootDir = new Path(dir + "testRegionInfoFileCreation");
 
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
-    htd.addFamily(new HColumnDescriptor("cf"));
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("cf")).build();
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    TableDescriptor tableDescriptor = tableDescriptorBuilder.build();
 
-    HRegionInfo hri = new HRegionInfo(htd.getTableName());
+    HRegionInfo hri = new HRegionInfo(tableDescriptor.getTableName());
 
     // Create a region and skip the initialization (like CreateTableHandler)
-    region = HBaseTestingUtility.createRegionAndWAL(hri, rootDir, CONF, htd, false);
+    region = HBaseTestingUtility.createRegionAndWAL(hri, rootDir, CONF,
+      tableDescriptor, false);
     Path regionDir = region.getRegionFileSystem().getRegionDir();
     FileSystem fs = region.getRegionFileSystem().getFileSystem();
     HBaseTestingUtility.closeRegionAndWAL(region);
@@ -4235,7 +4244,7 @@ public class TestHRegion {
         fs.exists(regionInfoFile));
 
     // Try to open the region
-    region = HRegion.openHRegion(rootDir, hri, htd, null, CONF);
+    region = HRegion.openHRegion(rootDir, hri, tableDescriptor, null, CONF);
     assertEquals(regionDir, region.getRegionFileSystem().getRegionDir());
     HBaseTestingUtility.closeRegionAndWAL(region);
 
@@ -4248,7 +4257,7 @@ public class TestHRegion {
     assertFalse(HRegionFileSystem.REGION_INFO_FILE + " should be removed from the region dir",
         fs.exists(regionInfoFile));
 
-    region = HRegion.openHRegion(rootDir, hri, htd, null, CONF);
+    region = HRegion.openHRegion(rootDir, hri, tableDescriptor, null, CONF);
 //    region = TEST_UTIL.openHRegion(hri, htd);
     assertEquals(regionDir, region.getRegionFileSystem().getRegionDir());
     HBaseTestingUtility.closeRegionAndWAL(region);

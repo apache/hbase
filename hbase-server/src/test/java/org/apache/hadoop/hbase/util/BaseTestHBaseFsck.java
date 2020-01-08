@@ -39,13 +39,14 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
@@ -55,6 +56,7 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
@@ -235,11 +237,14 @@ public class BaseTestHBaseFsck {
    * @throws Exception
    */
   void setupTableWithRegionReplica(TableName tablename, int replicaCount) throws Exception {
-    HTableDescriptor desc = new HTableDescriptor(tablename);
-    desc.setRegionReplication(replicaCount);
-    HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toString(FAM));
-    desc.addFamily(hcd); // If a table has no CF's it doesn't get checked
-    createTable(TEST_UTIL, desc, SPLITS);
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(tablename);
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(FAM).build();
+    tableDescriptorBuilder.setRegionReplication(replicaCount);
+    // If a table has no CF's it doesn't get checked
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    createTable(TEST_UTIL, tableDescriptorBuilder.build(), SPLITS);
 
     tbl = connection.getTable(tablename, tableExecutorService);
     List<Put> puts = new ArrayList<>(ROWKEYS.length);
@@ -258,12 +263,16 @@ public class BaseTestHBaseFsck {
    * @throws Exception
    */
   void setupMobTable(TableName tablename) throws Exception {
-    HTableDescriptor desc = new HTableDescriptor(tablename);
-    HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toString(FAM));
-    hcd.setMobEnabled(true);
-    hcd.setMobThreshold(0);
-    desc.addFamily(hcd); // If a table has no CF's it doesn't get checked
-    createTable(TEST_UTIL, desc, SPLITS);
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(tablename);
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder
+        .newBuilder(FAM)
+        .setMobEnabled(true)
+        .setMobThreshold(0).build();
+    // If a table has no CF's it doesn't get checked
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    createTable(TEST_UTIL, tableDescriptorBuilder.build(), SPLITS);
 
     tbl = connection.getTable(tablename, tableExecutorService);
     List<Put> puts = new ArrayList<>(ROWKEYS.length);
@@ -600,21 +609,21 @@ public class BaseTestHBaseFsck {
     }
   }
 
-  public static void createTable(HBaseTestingUtility testUtil, HTableDescriptor htd,
-    byte [][] splitKeys) throws Exception {
+  public static void createTable(HBaseTestingUtility testUtil, TableDescriptor tableDescriptor,
+      byte[][] splitKeys) throws Exception {
     // NOTE: We need a latch because admin is not sync,
     // so the postOp coprocessor method may be called after the admin operation returned.
     MasterSyncCoprocessor coproc = testUtil.getHBaseCluster().getMaster()
         .getMasterCoprocessorHost().findCoprocessor(MasterSyncCoprocessor.class);
     coproc.tableCreationLatch = new CountDownLatch(1);
     if (splitKeys != null) {
-      admin.createTable(htd, splitKeys);
+      admin.createTable(tableDescriptor, splitKeys);
     } else {
-      admin.createTable(htd);
+      admin.createTable(tableDescriptor);
     }
     coproc.tableCreationLatch.await();
     coproc.tableCreationLatch = null;
-    testUtil.waitUntilAllRegionsAssigned(htd.getTableName());
+    testUtil.waitUntilAllRegionsAssigned(tableDescriptor.getTableName());
   }
 
   public static void deleteTable(HBaseTestingUtility testUtil, TableName tableName)

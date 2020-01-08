@@ -4293,7 +4293,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * encoding, bloom codecs available.
    * @return the list of column descriptors
    */
-  public static List<HColumnDescriptor> generateColumnDescriptors() {
+  public static List<ColumnFamilyDescriptor> generateColumnDescriptors() {
     return generateColumnDescriptors("");
   }
 
@@ -4303,23 +4303,24 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @param prefix family names prefix
    * @return the list of column descriptors
    */
-  public static List<HColumnDescriptor> generateColumnDescriptors(final String prefix) {
-    List<HColumnDescriptor> htds = new ArrayList<>();
+  public static List<ColumnFamilyDescriptor> generateColumnDescriptors(final String prefix) {
+    List<ColumnFamilyDescriptor> columnFamilyDescriptors = new ArrayList<>();
     long familyId = 0;
     for (Compression.Algorithm compressionType: getSupportedCompressionAlgorithms()) {
       for (DataBlockEncoding encodingType: DataBlockEncoding.values()) {
         for (BloomType bloomType: BloomType.values()) {
           String name = String.format("%s-cf-!@#&-%d!@#", prefix, familyId);
-          HColumnDescriptor htd = new HColumnDescriptor(name);
-          htd.setCompressionType(compressionType);
-          htd.setDataBlockEncoding(encodingType);
-          htd.setBloomFilterType(bloomType);
-          htds.add(htd);
+          ColumnFamilyDescriptorBuilder columnFamilyDescriptorBuilder =
+            ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(name));
+          columnFamilyDescriptorBuilder.setCompressionType(compressionType);
+          columnFamilyDescriptorBuilder.setDataBlockEncoding(encodingType);
+          columnFamilyDescriptorBuilder.setBloomFilterType(bloomType);
+          columnFamilyDescriptors.add(columnFamilyDescriptorBuilder.build());
           familyId++;
         }
       }
     }
-    return htds;
+    return columnFamilyDescriptors;
   }
 
   /**

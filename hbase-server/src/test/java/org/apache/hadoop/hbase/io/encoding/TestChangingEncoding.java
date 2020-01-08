@@ -30,11 +30,10 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Durability;
@@ -42,6 +41,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -77,7 +77,7 @@ public class TestChangingEncoding {
 
   private static final int TIMEOUT_MS = 600000;
 
-  private HColumnDescriptor hcd;
+  private ColumnFamilyDescriptorBuilder columnFamilyDescriptorBuilder;
 
   private TableName tableName;
   private static final List<DataBlockEncoding> ENCODINGS_TO_ITERATE =
@@ -94,11 +94,13 @@ public class TestChangingEncoding {
 
   private void prepareTest(String testId) throws IOException {
     tableName = TableName.valueOf("test_table_" + testId);
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    hcd = new HColumnDescriptor(CF);
-    htd.addFamily(hcd);
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(tableName);
+    columnFamilyDescriptorBuilder =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(CF));
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptorBuilder.build());
     try (Admin admin = TEST_UTIL.getConnection().getAdmin()) {
-      admin.createTable(htd);
+      admin.createTable(tableDescriptorBuilder.build());
     }
     numBatchesWritten = 0;
   }
@@ -185,12 +187,12 @@ public class TestChangingEncoding {
       boolean onlineChange) throws Exception {
     LOG.debug("Setting CF encoding to " + encoding + " (ordinal="
       + encoding.ordinal() + "), onlineChange=" + onlineChange);
-    hcd.setDataBlockEncoding(encoding);
+    columnFamilyDescriptorBuilder.setDataBlockEncoding(encoding);
     try (Admin admin = TEST_UTIL.getConnection().getAdmin()) {
       if (!onlineChange) {
         admin.disableTable(tableName);
       }
-      admin.modifyColumnFamily(tableName, hcd);
+      admin.modifyColumnFamily(tableName, columnFamilyDescriptorBuilder.build());
       if (!onlineChange) {
         admin.enableTable(tableName);
       }

@@ -35,10 +35,11 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
@@ -150,13 +151,14 @@ public class TestSeekOptimizations {
   public void testMultipleTimestampRanges() throws IOException {
     // enable seek counting
     StoreFileScanner.instrument();
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(FAMILY))
+        .setCompressionType(comprAlgo)
+        .setBloomFilterType(bloomType)
+        .setMaxVersions(3)
+        .build();
 
-    region = TEST_UTIL.createTestRegion("testMultipleTimestampRanges",
-        new HColumnDescriptor(FAMILY)
-            .setCompressionType(comprAlgo)
-            .setBloomFilterType(bloomType)
-            .setMaxVersions(3)
-    );
+    region = TEST_UTIL.createTestRegion("testMultipleTimestampRanges", columnFamilyDescriptor);
 
     // Delete the given timestamp and everything before.
     final long latestDelTS = USE_MANY_STORE_FILES ? 1397 : -1;

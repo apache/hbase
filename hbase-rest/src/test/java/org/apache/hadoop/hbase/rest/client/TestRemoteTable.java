@@ -157,7 +157,7 @@ public class TestRemoteTable {
   public void testGetTableDescriptor() throws IOException {
     try (Table table = TEST_UTIL.getConnection().getTable(TABLE)) {
       TableDescriptor local = table.getDescriptor();
-      assertEquals(remoteTable.getDescriptor(), new HTableDescriptor(local));
+      assertEquals(remoteTable.getDescriptor(), local);
     }
   }
 
