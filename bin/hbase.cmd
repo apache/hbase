@@ -466,4 +466,5 @@ goto :eof
   echo   mapredcp        Dump CLASSPATH entries required by mapreduce
   echo   version         Print the version
   echo   CLASSNAME       Run the class named CLASSNAME
+  echo   onlinemerge     Run the merge tool
   goto :eof

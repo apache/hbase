@@ -122,6 +122,7 @@ if [ $# = 0 ]; then
   echo "  pre-upgrade      Run Pre-Upgrade validator tool"
   echo "  hbtop            Run HBTop tool"
   echo "  CLASSNAME        Run the class named CLASSNAME"
+  echo "  onlinemerge     Run the merge tool"
   exit 1
 fi
 
@@ -635,6 +636,8 @@ elif [ "$COMMAND" = "mapredcp" ] ; then
 elif [ "$COMMAND" = "classpath" ] ; then
   echo "$CLASSPATH"
   exit 0
+elif [ "$COMMAND" = "onlinemerge" ] ; then
+  CLASS='org.apache.hadoop.hbase.util.OnlineMergeTool'
 elif [ "$COMMAND" = "pe" ] ; then
   CLASS='org.apache.hadoop.hbase.PerformanceEvaluation'
   HBASE_OPTS="$HBASE_OPTS $HBASE_PE_OPTS"
