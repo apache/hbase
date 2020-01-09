@@ -734,4 +734,9 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   public AsyncClusterConnection getAsyncClusterConnection() {
     return null;
   }
+
+  @Override
+  public int getRegionNumOfTable(TableName tableName) {
+    return 0;
+  }
 }

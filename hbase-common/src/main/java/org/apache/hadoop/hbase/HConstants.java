@@ -366,6 +366,12 @@ public final class HConstants {
   /** Default maximum file size */
   public static final long DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024 * 1024L;
 
+  /** Conf key for region num bigger than which as a small table when split */
+  public static final String SMALL_TABLE_REGION_NUM = "hbase.split.smalltable.region.num";
+
+  /** Default region num as small table when split */
+  public static final int DEFAULT_SMALL_TABLE_REGION_NUM = 20;
+
   /**
    * Max size of single row for Get's or Scan's without in-row scanning flag set.
    */

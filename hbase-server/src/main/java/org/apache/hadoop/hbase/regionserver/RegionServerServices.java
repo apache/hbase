@@ -316,4 +316,10 @@ public interface RegionServerServices extends Server, MutableOnlineRegions, Favo
    * @return {@link ZKPermissionWatcher}
    */
   ZKPermissionWatcher getZKPermissionWatcher();
+
+  /**
+   * @param tableName
+   * @return all region count of the table
+   */
+  int getRegionNumOfTable(TableName tableName);
 }

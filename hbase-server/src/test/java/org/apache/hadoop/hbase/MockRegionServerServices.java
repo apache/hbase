@@ -378,4 +378,9 @@ public class MockRegionServerServices implements RegionServerServices {
   public AsyncClusterConnection getAsyncClusterConnection() {
     return null;
   }
+
+  @Override
+  public int getRegionNumOfTable(TableName tableName) {
+    return 0;
+  }
 }

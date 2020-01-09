@@ -233,6 +233,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetRegionNumOfTableRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetRegionNumOfTableResponse;
 
 /**
  * HRegionServer makes a set of HRegions available to clients. It checks in with
@@ -3887,5 +3889,27 @@ public class HRegionServer extends HasThread implements
   @VisibleForTesting
   public CompactedHFilesDischarger getCompactedHFilesDischarger() {
     return compactedFileDischarger;
+  }
+
+  @Override
+  public int getRegionNumOfTable(TableName tableName) {
+    try {
+      GetRegionNumOfTableRequest req =
+        RequestConverter.buildGetRegionNumOfTableRequest(tableName);
+      RegionServerStatusService.BlockingInterface rss = rssStub;
+      if (rss == null) {
+        createRegionServerStatusStub();
+        rss = rssStub;
+        if (rss == null) {
+          LOG.warn("Unable to connect to the master to get the region num of table");
+          return 0;
+        }
+      }
+      GetRegionNumOfTableResponse resp = rss.getRegionNumOfTable(null, req);
+      return resp.getRegionNum();
+    } catch (ServiceException e) {
+      LOG.warn("Unable to connect to the master to get the region num of table", e);
+      return 0;
+    }
   }
 }

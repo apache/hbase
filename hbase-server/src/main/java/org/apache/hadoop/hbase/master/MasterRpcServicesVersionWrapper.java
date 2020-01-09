@@ -108,4 +108,11 @@ public class MasterRpcServicesVersionWrapper
       throws ServiceException {
     return masterRpcServices.reportFileArchival(controller, request);
   }
+
+  @Override
+  public RegionServerStatusProtos.GetRegionNumOfTableResponse getRegionNumOfTable(
+    RpcController controller, RegionServerStatusProtos.GetRegionNumOfTableRequest request)
+    throws ServiceException {
+    return masterRpcServices.getRegionNumOfTable(controller, request);
+  }
 }

@@ -145,6 +145,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaSta
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetRegionNumOfTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest;
@@ -1762,4 +1763,14 @@ public final class RequestConverter {
     return IsSnapshotCleanupEnabledRequest.newBuilder().build();
   }
 
+  /**
+   * Creates a request for get region num of table
+   * @param tableName
+   * @return A {@link GetRegionNumOfTableRequest}
+   */
+  public static GetRegionNumOfTableRequest buildGetRegionNumOfTableRequest(
+    TableName tableName) {
+    return GetRegionNumOfTableRequest.newBuilder()
+      .setTableName(ProtobufUtil.toProtoTableName(tableName)).build();
+  }
 }

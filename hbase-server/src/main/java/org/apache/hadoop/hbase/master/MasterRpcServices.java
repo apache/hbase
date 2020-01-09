@@ -308,6 +308,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaSta
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse.RegionSizes;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.FileArchiveNotificationRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.FileArchiveNotificationResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
@@ -2893,4 +2894,21 @@ public class MasterRpcServices extends RSRpcServices
     return true;
   }
 
+  @Override
+  @QosPriority(priority = HConstants.ADMIN_QOS)
+  public RegionServerStatusProtos.GetRegionNumOfTableResponse getRegionNumOfTable(
+    RpcController controller,RegionServerStatusProtos.GetRegionNumOfTableRequest request)
+    throws ServiceException {
+    try {
+      int regionNumOfTable = 0;
+      master.checkServiceStarted();
+      TableName tableName = ProtobufUtil.toTableName(request.getTableName());
+      regionNumOfTable = master.getAssignmentManager().getRegionStates()
+        .getRegionsOfTable(tableName,true).size();
+      return RegionServerStatusProtos.GetRegionNumOfTableResponse.newBuilder()
+        .setRegionNum(regionNumOfTable).build();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+  }
 }

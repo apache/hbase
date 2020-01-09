@@ -161,6 +161,45 @@ public class TestRegionSplitPolicy {
   }
 
   @Test
+  public void testSteppingSplitPolicy() throws IOException {
+    // Configure SteppingSplitPolicy as our split policy
+    conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
+      SteppingSplitPolicy.class.getName());
+    conf.setInt(HConstants.SMALL_TABLE_REGION_NUM,10);
+    // Now make it so the mock region has a RegionServerService that will
+    // return 'online regions'.
+    RegionServerServices rss = Mockito.mock(RegionServerServices.class);
+    final List<HRegion> regions = new ArrayList<>();
+    Mockito.doReturn(regions).when(rss).getRegions(TABLENAME);
+    Mockito.doReturn(10).when(rss).getRegionNumOfTable(TABLENAME);
+    Mockito.when(mockRegion.getRegionServerServices()).thenReturn(rss);
+    // Set max size for this 'table'.
+    long maxSplitSize = 1024L;
+    htd.setMaxFileSize(maxSplitSize);
+    long flushSize = maxSplitSize/8;
+    conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, flushSize);
+    htd.setMemStoreFlushSize(flushSize);
+    SteppingSplitPolicy policy =
+      (SteppingSplitPolicy)RegionSplitPolicy.create(mockRegion, conf);
+    regions.add(mockRegion);
+
+    // it is a small table seen by local and by cluster
+    // , then the check size should be flushSize*2
+    assertEquals(flushSize * 2, policy.getSizeToCheck(regions.size()));
+
+    // it is a small table seen by local but not by cluster
+    // , then the check size should be maxSize with jitter
+    Mockito.doReturn(11).when(rss).getRegionNumOfTable(TABLENAME);
+    assertTrue(maxSplitSize > policy.getSizeToCheck(regions.size()));
+
+    // it is not a small table even seen by local because of more than one region
+    // , then the check size should be maxSize with jitter
+    Mockito.doReturn(10).when(rss).getRegionNumOfTable(TABLENAME);
+    regions.add(mockRegion);
+    assertTrue(maxSplitSize > policy.getSizeToCheck(regions.size()));
+  }
+
+  @Test
   public void testBusyRegionSplitPolicy() throws Exception {
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
         BusyRegionSplitPolicy.class.getName());

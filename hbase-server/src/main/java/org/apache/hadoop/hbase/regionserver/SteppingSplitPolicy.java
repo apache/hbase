@@ -17,19 +17,28 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class SteppingSplitPolicy extends IncreasingToUpperBoundRegionSplitPolicy {
   /**
    * @return flushSize * 2 if there's exactly one region of the table in question
-   * found on this regionserver. Otherwise max file size.
-   * This allows a table to spread quickly across servers, while avoiding creating
-   * too many regions.
+   * found on this regionserver and as small table in question found on master.
+   * Otherwise max file size.This allows a table to spread quickly across servers,
+   * while avoiding creating too many regions.
    */
   @Override
-  protected long getSizeToCheck(final int tableRegionsCount) {
-    return tableRegionsCount == 1  ? this.initialSize : getDesiredMaxFileSize();
+  protected long getSizeToCheck(final int regionNumOfTableLocal) {
+    long sizeToCheck = getDesiredMaxFileSize();
+    if (regionNumOfTableLocal == 1) {
+      TableName tableName = this.region.getTableDescriptor().getTableName();
+      int regionNumOfTable = this.region.getRegionServerServices().getRegionNumOfTable(tableName);
+      if (regionNumOfTable <= smallTableRegionNum) {
+        sizeToCheck = this.initialSize;
+      }
+    }
+    return sizeToCheck;
   }
 
 

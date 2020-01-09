@@ -49,6 +49,7 @@ public class IncreasingToUpperBoundRegionSplitPolicy extends ConstantSizeRegionS
       LoggerFactory.getLogger(IncreasingToUpperBoundRegionSplitPolicy.class);
 
   protected long initialSize;
+  protected int smallTableRegionNum;
 
   @Override
   protected void configureForRegion(HRegion region) {
@@ -66,6 +67,8 @@ public class IncreasingToUpperBoundRegionSplitPolicy extends ConstantSizeRegionS
       initialSize = 2 * conf.getLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE,
                                      TableDescriptorBuilder.DEFAULT_MEMSTORE_FLUSH_SIZE);
     }
+    smallTableRegionNum = conf.getInt(HConstants.SMALL_TABLE_REGION_NUM
+      , HConstants.DEFAULT_SMALL_TABLE_REGION_NUM);
   }
 
   @Override
