@@ -306,7 +306,7 @@ public class RegionProcedureStore extends ProcedureStoreBase {
     if (!fs.exists(procWALDir)) {
       return;
     }
-    LOG.info("The old procedure wal directory {} exists, start migrating", procWALDir);
+    LOG.info("The old WALProcedureStore wal directory {} exists, migrating...", procWALDir);
     WALProcedureStore store = new WALProcedureStore(conf, leaseRecovery);
     store.start(numThreads);
     store.recoverLease();
@@ -347,7 +347,7 @@ public class RegionProcedureStore extends ProcedureStoreBase {
         }
       }
     });
-    LOG.info("The max pid is {}, and the max pid of all loaded procedures is {}",
+    LOG.info("The WALProcedureStore max pid is {}, and the max pid of all loaded procedures is {}",
       maxProcIdSet.longValue(), maxProcIdFromProcs.longValue());
     // Theoretically, the maxProcIdSet should be greater than or equal to maxProcIdFromProcs, but
     // anyway, let's do a check here.
@@ -358,12 +358,13 @@ public class RegionProcedureStore extends ProcedureStoreBase {
           PROC_QUALIFIER, EMPTY_BYTE_ARRAY));
       }
     } else if (maxProcIdSet.longValue() < maxProcIdFromProcs.longValue()) {
-      LOG.warn("The max pid is less than the max pid of all loaded procedures");
+      LOG.warn("The WALProcedureStore max pid is less than the max pid of all loaded procedures");
     }
     if (!fs.delete(procWALDir, true)) {
-      throw new IOException("Failed to delete the migrated proc wal directory " + procWALDir);
+      throw new IOException("Failed to delete the WALProcedureStore migrated proc wal directory " +
+        procWALDir);
     }
-    LOG.info("Migration finished");
+    LOG.info("Migration of WALProcedureStore finished");
   }
 
   @Override
