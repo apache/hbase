@@ -621,6 +621,12 @@ possible configurations would overwhelm and obscure the important.
     <description>configure the minimum number of regions</description>
   </property>
   <property>
+    <name>hbase.normalizer.min.region.merge.age</name>
+    <value>3</value>
+    <description>configure the minimum age in days for region before it is considered for merge while
+      normalizing</description>
+  </property>
+  <property>
     <name>hbase.regions.slop</name>
     <value>0.001</value>
     <description>Rebalance if any regionserver has average + (average * slop) regions.
