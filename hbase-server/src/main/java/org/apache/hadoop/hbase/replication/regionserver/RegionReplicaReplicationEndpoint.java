@@ -250,6 +250,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
       } catch (IOException e) {
         LOG.warn("Received IOException while trying to replicate"
             + StringUtils.stringifyException(e));
+        outputSink.restartWriterThreadsIfNeeded();
       }
     }
 

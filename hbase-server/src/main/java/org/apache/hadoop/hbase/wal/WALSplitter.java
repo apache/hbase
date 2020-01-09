@@ -472,6 +472,7 @@ public class WALSplitter {
       if (thrown == null) {
         return;
       }
+      this.thrown.set(null);
       if (thrown instanceof IOException) {
         throw new IOException(thrown);
       } else {
