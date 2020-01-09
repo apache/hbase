@@ -23,7 +23,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -84,7 +84,7 @@ public class TestIgnoreUnknownFamily {
     Path familyDir = new Path(regionDir, Bytes.toString(UNKNOWN_FAMILY));
     StoreFileWriter writer =
         new StoreFileWriter.Builder(mfs.getConfiguration(), mfs.getFileSystem())
-            .withOutputDir(familyDir).withFileContext(new HFileContext()).build();
+            .withOutputDir(familyDir).withFileContext(new HFileContextBuilder().build()).build();
     writer.close();
   }
 

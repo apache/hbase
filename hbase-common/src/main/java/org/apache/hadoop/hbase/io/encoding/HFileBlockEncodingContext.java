@@ -17,7 +17,6 @@
 package org.apache.hadoop.hbase.io.encoding;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -46,9 +45,6 @@ public interface HFileBlockEncodingContext {
   /**
    * Do any action that needs to be performed after the encoding.
    * Compression is also included if a non-null compression algorithm is used
-   *
-   * @param blockType
-   * @throws IOException
    */
   void postEncoding(BlockType blockType) throws IOException;
 
@@ -64,7 +60,6 @@ public interface HFileBlockEncodingContext {
 
   /**
    * Sets the encoding state.
-   * @param state
    */
   void setEncodingState(EncodingState state);
 

@@ -26,7 +26,6 @@ import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -145,7 +144,6 @@ public class TestPrefetch {
       .build();
     StoreFileWriter sfw = new StoreFileWriter.Builder(conf, cacheConf, fs)
       .withOutputDir(storeFileParentDir)
-      .withComparator(CellComparatorImpl.COMPARATOR)
       .withFileContext(meta)
       .build();
 
