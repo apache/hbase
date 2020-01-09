@@ -114,13 +114,13 @@ public class TestEncryptionKeyRotation {
     columnFamilyDescriptorBuilder.setEncryptionKey(EncryptionUtil.wrapKey(conf, "hbase",
       initialCFKey));
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptorBuilder.build());
+    TableDescriptor tableDescriptor = tableDescriptorBuilder.build();
 
     // Create the table and some on disk files
-    createTableAndFlush(tableDescriptorBuilder.build());
+    createTableAndFlush(tableDescriptor);
 
     // Verify we have store file(s) with the initial key
-    final List<Path> initialPaths = findStorefilePaths(tableDescriptorBuilder.build()
-      .getTableName());
+    final List<Path> initialPaths = findStorefilePaths(tableDescriptor.getTableName());
     assertTrue(initialPaths.size() > 0);
     for (Path path: initialPaths) {
       assertTrue("Store file " + path + " has incorrect key",
@@ -131,29 +131,27 @@ public class TestEncryptionKeyRotation {
     columnFamilyDescriptorBuilder.setEncryptionKey(EncryptionUtil.wrapKey(conf,
       conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, User.getCurrent().getShortName()),
       secondCFKey));
-    TEST_UTIL.getAdmin().modifyColumnFamily(tableDescriptorBuilder.build().getTableName(),
+    TEST_UTIL.getAdmin().modifyColumnFamily(tableDescriptor.getTableName(),
       columnFamilyDescriptorBuilder.build());
     Thread.sleep(5000); // Need a predicate for online schema change
 
     // And major compact
-    TEST_UTIL.getAdmin().majorCompact(tableDescriptorBuilder.build().getTableName());
+    TEST_UTIL.getAdmin().majorCompact(tableDescriptor.getTableName());
     // waiting for the major compaction to complete
     TEST_UTIL.waitFor(30000, new Waiter.Predicate<IOException>() {
       @Override
       public boolean evaluate() throws IOException {
-        return TEST_UTIL.getAdmin().getCompactionState(tableDescriptorBuilder.build()
+        return TEST_UTIL.getAdmin().getCompactionState(tableDescriptor
           .getTableName()) == CompactionState.NONE;
       }
     });
-    List<Path> pathsAfterCompaction = findStorefilePaths(tableDescriptorBuilder
-      .build().getTableName());
+    List<Path> pathsAfterCompaction = findStorefilePaths(tableDescriptor.getTableName());
     assertTrue(pathsAfterCompaction.size() > 0);
     for (Path path: pathsAfterCompaction) {
       assertTrue("Store file " + path + " has incorrect key",
         Bytes.equals(secondCFKey.getEncoded(), extractHFileKey(path)));
     }
-    List<Path> compactedPaths = findCompactedStorefilePaths(tableDescriptorBuilder
-      .build().getTableName());
+    List<Path> compactedPaths = findCompactedStorefilePaths(tableDescriptor.getTableName());
     assertTrue(compactedPaths.size() > 0);
     for (Path path: compactedPaths) {
       assertTrue("Store file " + path + " retains initial key",
@@ -174,12 +172,13 @@ public class TestEncryptionKeyRotation {
     columnFamilyDescriptorBuilder.setEncryptionKey(
       EncryptionUtil.wrapKey(conf, "hbase", initialCFKey));
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptorBuilder.build());
+    TableDescriptor tableDescriptor = tableDescriptorBuilder.build();
 
     // Create the table and some on disk files
-    createTableAndFlush(tableDescriptorBuilder.build());
+    createTableAndFlush(tableDescriptor);
 
     // Verify we have store file(s) with the initial key
-    List<Path> storeFilePaths = findStorefilePaths(tableDescriptorBuilder.build().getTableName());
+    List<Path> storeFilePaths = findStorefilePaths(tableDescriptor.getTableName());
     assertTrue(storeFilePaths.size() > 0);
     for (Path path: storeFilePaths) {
       assertTrue("Store file " + path + " has incorrect key",
@@ -196,9 +195,9 @@ public class TestEncryptionKeyRotation {
     // Start the cluster back up
     TEST_UTIL.startMiniHBaseCluster();
     // Verify the table can still be loaded
-    TEST_UTIL.waitTableAvailable(tableDescriptorBuilder.build().getTableName(), 5000);
+    TEST_UTIL.waitTableAvailable(tableDescriptor.getTableName(), 5000);
     // Double check that the store file keys can be unwrapped
-    storeFilePaths = findStorefilePaths(tableDescriptorBuilder.build().getTableName());
+    storeFilePaths = findStorefilePaths(tableDescriptor.getTableName());
     assertTrue(storeFilePaths.size() > 0);
     for (Path path: storeFilePaths) {
       assertTrue("Store file " + path + " has incorrect key",
