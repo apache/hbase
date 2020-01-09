@@ -270,7 +270,7 @@
             %>
             <tr>
               <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
-              <td><a href="http://<%= hostAndPort %>/rs-status/"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
+              <td><a href="http://<%= hostAndPort %>/rs-status"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
               <td><%= readReq%></td>
               <td><%= writeReq%></td>
               <td><%= fileSize%></td>
@@ -335,7 +335,7 @@
             %>
             <tr>
               <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
-              <td><a href="http://<%= hostAndPort %>/rs-status/"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
+              <td><a href="http://<%= hostAndPort %>/rs-status"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
               <td><%= String.format("%,1d", compactingCells)%></td>
               <td><%= String.format("%,1d", compactedCells)%></td>
               <td><%= String.format("%,1d", compactingCells - compactedCells)%></td>
