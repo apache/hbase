@@ -111,9 +111,8 @@ public class TestWALActionsListener {
       edit.add(kv);
       NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       scopes.put(b, 0);
-      long txid = wal.append(hri,
-        new WALKeyImpl(hri.getEncodedNameAsBytes(), TableName.valueOf(b), 0, mvcc, scopes), edit,
-        true);
+      long txid = wal.appendData(hri,
+        new WALKeyImpl(hri.getEncodedNameAsBytes(), TableName.valueOf(b), 0, mvcc, scopes), edit);
       wal.sync(txid);
       if (i == 10) {
         wal.registerWALActionsListener(laterobserver);

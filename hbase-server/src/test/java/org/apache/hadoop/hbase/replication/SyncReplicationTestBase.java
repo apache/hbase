@@ -267,11 +267,13 @@ public class SyncReplicationTestBase {
     }
     if (!expectedRejection) {
       ReplicationProtbufUtil.replicateWALEntry(
-        connection.getRegionServerAdmin(regionServer.getServerName()), entries, null, null, null);
+        connection.getRegionServerAdmin(regionServer.getServerName()), entries, null, null, null,
+        HConstants.REPLICATION_SOURCE_SHIPEDITS_TIMEOUT_DFAULT);
     } else {
       try {
         ReplicationProtbufUtil.replicateWALEntry(
-          connection.getRegionServerAdmin(regionServer.getServerName()), entries, null, null, null);
+          connection.getRegionServerAdmin(regionServer.getServerName()), entries, null, null, null,
+          HConstants.REPLICATION_SOURCE_SHIPEDITS_TIMEOUT_DFAULT);
         fail("Should throw IOException when sync-replication state is in A or DA");
       } catch (RemoteException e) {
         assertRejection(e.unwrapRemoteException());

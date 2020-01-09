@@ -27,6 +27,7 @@ import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
@@ -63,7 +64,8 @@ public abstract class CommonFSUtils {
   public static final String HBASE_WAL_DIR = "hbase.wal.dir";
 
   /** Parameter to disable stream capability enforcement checks */
-  public static final String UNSAFE_STREAM_CAPABILITY_ENFORCE = "hbase.unsafe.stream.capability.enforce";
+  public static final String UNSAFE_STREAM_CAPABILITY_ENFORCE =
+    "hbase.unsafe.stream.capability.enforce";
 
   /** Full access permissions (starting point for a umask) */
   public static final String FULL_RWX_PERMISSIONS = "777";
@@ -139,8 +141,7 @@ public abstract class CommonFSUtils {
    * @return True if deleted <code>dir</code>
    * @throws IOException e
    */
-  public static boolean deleteDirectory(final FileSystem fs, final Path dir)
-  throws IOException {
+  public static boolean deleteDirectory(final FileSystem fs, final Path dir) throws IOException {
     return fs.exists(dir) && fs.delete(dir, true);
   }
 
@@ -159,7 +160,7 @@ public abstract class CommonFSUtils {
     Method m = null;
     Class<? extends FileSystem> cls = fs.getClass();
     try {
-      m = cls.getMethod("getDefaultBlockSize", new Class<?>[] { Path.class });
+      m = cls.getMethod("getDefaultBlockSize", Path.class);
     } catch (NoSuchMethodException e) {
       LOG.info("FileSystem doesn't support getDefaultBlockSize");
     } catch (SecurityException e) {
@@ -194,7 +195,7 @@ public abstract class CommonFSUtils {
     Method m = null;
     Class<? extends FileSystem> cls = fs.getClass();
     try {
-      m = cls.getMethod("getDefaultReplication", new Class<?>[] { Path.class });
+      m = cls.getMethod("getDefaultReplication", Path.class);
     } catch (NoSuchMethodException e) {
       LOG.info("FileSystem doesn't support getDefaultReplication");
     } catch (SecurityException e) {
@@ -247,7 +248,7 @@ public abstract class CommonFSUtils {
   public static FSDataOutputStream create(FileSystem fs, Path path,
       FsPermission perm, boolean overwrite) throws IOException {
     if (LOG.isTraceEnabled()) {
-      LOG.trace("Creating file=" + path + " with permission=" + perm + ", overwrite=" + overwrite);
+      LOG.trace("Creating file={} with permission={}, overwrite={}", path, perm, overwrite);
     }
     return fs.create(path, perm, overwrite, getDefaultBufferSize(fs),
         getDefaultReplication(fs, path), getDefaultBlockSize(fs, path), null);
@@ -360,11 +361,11 @@ public abstract class CommonFSUtils {
     return p.makeQualified(fs.getUri(), fs.getWorkingDirectory());
   }
 
-  public static void setRootDir(final Configuration c, final Path root) throws IOException {
+  public static void setRootDir(final Configuration c, final Path root) {
     c.set(HConstants.HBASE_DIR, root.toString());
   }
 
-  public static void setFsDefault(final Configuration c, final Path root) throws IOException {
+  public static void setFsDefault(final Configuration c, final Path root) {
     c.set("fs.defaultFS", root.toString());    // for hadoop 0.21+
   }
 
@@ -389,7 +390,7 @@ public abstract class CommonFSUtils {
   }
 
   @VisibleForTesting
-  public static void setWALRootDir(final Configuration c, final Path root) throws IOException {
+  public static void setWALRootDir(final Configuration c, final Path root) {
     c.set(HBASE_WAL_DIR, root.toString());
   }
 
@@ -498,8 +499,7 @@ public abstract class CommonFSUtils {
   // this mapping means that under a federated FileSystem implementation, we'll
   // only log the first failure from any of the underlying FileSystems at WARN and all others
   // will be at DEBUG.
-  private static final Map<FileSystem, Boolean> warningMap =
-      new ConcurrentHashMap<FileSystem, Boolean>();
+  private static final Map<FileSystem, Boolean> warningMap = new ConcurrentHashMap<>();
 
   /**
    * Sets storage policy for given path.
@@ -571,8 +571,7 @@ public abstract class CommonFSUtils {
     Method m = null;
     Exception toThrow = null;
     try {
-      m = fs.getClass().getDeclaredMethod("setStoragePolicy",
-        new Class<?>[] { Path.class, String.class });
+      m = fs.getClass().getDeclaredMethod("setStoragePolicy", Path.class, String.class);
       m.setAccessible(true);
     } catch (NoSuchMethodException e) {
       toThrow = e;
@@ -604,7 +603,7 @@ public abstract class CommonFSUtils {
       try {
         m.invoke(fs, path, storagePolicy);
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Set storagePolicy=" + storagePolicy + " for path=" + path);
+          LOG.debug("Set storagePolicy={} for path={}", storagePolicy, path);
         }
       } catch (Exception e) {
         toThrow = e;
@@ -676,8 +675,7 @@ public abstract class CommonFSUtils {
    * @return Returns the filesystem of the hbase rootdir.
    * @throws IOException from underlying FileSystem
    */
-  public static FileSystem getCurrentFileSystem(Configuration conf)
-  throws IOException {
+  public static FileSystem getCurrentFileSystem(Configuration conf) throws IOException {
     return getRootDir(conf).getFileSystem(conf);
   }
 
@@ -695,7 +693,7 @@ public abstract class CommonFSUtils {
    * @param filter path filter
    * @return null if dir is empty or doesn't exist, otherwise FileStatus array
    */
-  public static FileStatus [] listStatus(final FileSystem fs,
+  public static FileStatus[] listStatus(final FileSystem fs,
       final Path dir, final PathFilter filter) throws IOException {
     FileStatus [] status = null;
     try {
@@ -703,7 +701,7 @@ public abstract class CommonFSUtils {
     } catch (FileNotFoundException fnfe) {
       // if directory doesn't exist, return null
       if (LOG.isTraceEnabled()) {
-        LOG.trace(dir + " doesn't exist");
+        LOG.trace("{} doesn't exist", dir);
       }
     }
     if (status == null || status.length < 1) {
@@ -746,7 +744,7 @@ public abstract class CommonFSUtils {
     } catch (FileNotFoundException fnfe) {
       // if directory doesn't exist, return null
       if (LOG.isTraceEnabled()) {
-        LOG.trace(dir + " doesn't exist");
+        LOG.trace("{} doesn't exist", dir);
       }
     }
     return status;
@@ -782,13 +780,13 @@ public abstract class CommonFSUtils {
    * Log the current state of the filesystem from a certain root directory
    * @param fs filesystem to investigate
    * @param root root file/directory to start logging from
-   * @param LOG log to output information
+   * @param log log to output information
    * @throws IOException if an unexpected exception occurs
    */
-  public static void logFileSystemState(final FileSystem fs, final Path root, Logger LOG)
+  public static void logFileSystemState(final FileSystem fs, final Path root, Logger log)
       throws IOException {
-    LOG.debug("File system contents for path " + root);
-    logFSTree(LOG, fs, root, "|-");
+    log.debug("File system contents for path {}", root);
+    logFSTree(log, fs, root, "|-");
   }
 
   /**
@@ -796,7 +794,7 @@ public abstract class CommonFSUtils {
    *
    * @see #logFileSystemState(FileSystem, Path, Logger)
    */
-  private static void logFSTree(Logger LOG, final FileSystem fs, final Path root, String prefix)
+  private static void logFSTree(Logger log, final FileSystem fs, final Path root, String prefix)
       throws IOException {
     FileStatus[] files = listStatus(fs, root, null);
     if (files == null) {
@@ -805,10 +803,10 @@ public abstract class CommonFSUtils {
 
     for (FileStatus file : files) {
       if (file.isDirectory()) {
-        LOG.debug(prefix + file.getPath().getName() + "/");
-        logFSTree(LOG, fs, file.getPath(), prefix + "---");
+        log.debug(prefix + file.getPath().getName() + "/");
+        logFSTree(log, fs, file.getPath(), prefix + "---");
       } else {
-        LOG.debug(prefix + file.getPath().getName());
+        log.debug(prefix + file.getPath().getName());
       }
     }
   }
@@ -818,25 +816,6 @@ public abstract class CommonFSUtils {
     // set the modify time for TimeToLive Cleaner
     fs.setTimes(src, EnvironmentEdgeManager.currentTime(), -1);
     return fs.rename(src, dest);
-  }
-
-  /**
-   * Do our short circuit read setup.
-   * Checks buffer size to use and whether to do checksumming in hbase or hdfs.
-   * @param conf must not be null
-   */
-  public static void setupShortCircuitRead(final Configuration conf) {
-    // Check that the user has not set the "dfs.client.read.shortcircuit.skip.checksum" property.
-    boolean shortCircuitSkipChecksum =
-      conf.getBoolean("dfs.client.read.shortcircuit.skip.checksum", false);
-    boolean useHBaseChecksum = conf.getBoolean(HConstants.HBASE_CHECKSUM_VERIFICATION, true);
-    if (shortCircuitSkipChecksum) {
-      LOG.warn("Configuration \"dfs.client.read.shortcircuit.skip.checksum\" should not " +
-        "be set to true." + (useHBaseChecksum ? " HBase checksum doesn't require " +
-        "it, see https://issues.apache.org/jira/browse/HBASE-6868." : ""));
-      assert !shortCircuitSkipChecksum; //this will fail if assertions are on
-    }
-    checkShortCircuitReadBufferSize(conf);
   }
 
   /**
@@ -1018,19 +997,18 @@ public abstract class CommonFSUtils {
   }
 
   /**
-   * If our FileSystem version includes the StreamCapabilities class, check if
-   * the given stream has a particular capability.
+   * If our FileSystem version includes the StreamCapabilities class, check if the given stream has
+   * a particular capability.
    * @param stream capabilities are per-stream instance, so check this one specifically. must not be
-   *        null
+   *          null
    * @param capability what to look for, per Hadoop Common's FileSystem docs
    * @return true if there are no StreamCapabilities. false if there are, but this stream doesn't
    *         implement it. return result of asking the stream otherwise.
+   * @throws NullPointerException if {@code stream} is {@code null}
    */
   public static boolean hasCapability(FSDataOutputStream stream, String capability) {
     // be consistent whether or not StreamCapabilities is present
-    if (stream == null) {
-      throw new NullPointerException("stream parameter must not be null.");
-    }
+    Objects.requireNonNull(stream, "stream cannot be null");
     // If o.a.h.fs.StreamCapabilities doesn't exist, assume everyone does everything
     // otherwise old versions of Hadoop will break.
     boolean result = true;

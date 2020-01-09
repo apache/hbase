@@ -545,17 +545,17 @@
       <name>Tak-Lon (Stephen) Wu</name>
       <email>taklwu@apache.org</email>
       <timezone>-8</timezone>
-    </developer>	  
+    </developer>
     <developer>
       <id>tedyu</id>
       <name>Ted Yu</name>
       <email>yuzhihong@gmail.com</email>
       <timezone>-8</timezone>
     </developer>
-	<developer>
-	  <id>tianjy</id>
-	  <email>tianjy@apache.org</email>
-	  <timezone>+8</timezone>
+    <developer>
+      <id>tianjy</id>
+      <email>tianjy@apache.org</email>
+      <timezone>+8</timezone>
     </developer>
     <developer>
       <id>todd</id>
@@ -580,6 +580,12 @@
       <name>Virag Kothari</name>
       <email>virag@yahoo-inc.com</email>
       <timezone>-8</timezone>
+    </developer>
+    <developer>
+      <id>vjasani</id>
+      <name>Viraj Jasani</name>
+      <email>vjasani@apache.org</email>
+      <timezone>+5</timezone>
     </developer>
     <developer>
       <id>water</id>
@@ -1471,7 +1477,7 @@
     <httpcore.version>4.4.6</httpcore.version>
     <metrics-core.version>3.2.6</metrics-core.version>
     <jackson.version>2.9.10</jackson.version>
-    <jackson.databind.version>2.9.10</jackson.databind.version>
+    <jackson.databind.version>2.9.10.1</jackson.databind.version>
     <jaxb-api.version>2.2.12</jaxb-api.version>
     <jetty.version>9.3.27.v20190418</jetty.version>
     <servlet.api.version>3.1.0</servlet.api.version>
@@ -1528,7 +1534,7 @@
     <maven.project.info.report.version>2.9</maven.project.info.report.version>
     <os.maven.version>1.5.0.Final</os.maven.version>
     <spotbugs.version>3.1.11</spotbugs.version>
-    <surefire.version>2.22.2</surefire.version>
+    <surefire.version>3.0.0-M4</surefire.version>
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
     <hbase-thirdparty.version>3.1.1</hbase-thirdparty.version>
@@ -2481,6 +2487,28 @@
         <argLine>${hbase-surefire.cygwin-argLine}</argLine>
       </properties>
     </profile>
+    <!-- this profile should match the name of the release profile in the root asf pom -->
+    <profile>
+      <id>apache-release</id>
+      <build>
+        <plugins>
+          <!-- This should insert itself in place of the normal deploy plugin and then
+               handle either closing or dropping the staging repository for us depending
+               on if the build succeeds.
+            -->
+          <plugin>
+            <groupId>org.sonatype.plugins</groupId>
+            <artifactId>nexus-staging-maven-plugin</artifactId>
+            <version>1.6.8</version>
+            <extensions>true</extensions>
+            <configuration>
+              <nexusUrl>https://repository.apache.org/</nexusUrl>
+              <serverId>apache.releases.https</serverId>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
     <!-- this profile should be activated for release builds -->
     <profile>
       <id>release</id>
@@ -2729,7 +2757,7 @@
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-auth</artifactId>
-	    <version>${hadoop-two.version}</version>
+            <version>${hadoop-two.version}</version>
             <exclusions>
               <exclusion>
                 <groupId>com.google.guava</groupId>

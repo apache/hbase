@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.IllegalArgumentIOException;
 import org.apache.hadoop.hbase.util.IdReadWriteLock;
+import org.apache.hadoop.hbase.util.IdReadWriteLockWithObjectPool;
 import org.apache.hadoop.hbase.util.ZKDataMigrator;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
@@ -62,7 +63,7 @@ public class TableStateManager {
   private static final String MIGRATE_TABLE_STATE_FROM_ZK_KEY =
     "hbase.migrate.table.state.from.zookeeper";
 
-  private final IdReadWriteLock<TableName> tnLock = new IdReadWriteLock<>();
+  private final IdReadWriteLock<TableName> tnLock = new IdReadWriteLockWithObjectPool<>();
   protected final MasterServices master;
 
   private final ConcurrentMap<TableName, TableState.State> tableName2State =

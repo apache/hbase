@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -115,10 +116,8 @@ public abstract class AbstractHBaseTool implements Tool {
   @Override
   public int run(String[] args) throws IOException {
     cmdLineArgs = args;
-    if (conf == null) {
-      LOG.error("Tool configuration is not initialized");
-      throw new NullPointerException("conf");
-    }
+
+    Objects.requireNonNull(conf, "Tool configuration is not initialized");
 
     CommandLine cmd;
     List<String> argsList = new ArrayList<>(args.length);

@@ -92,7 +92,7 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
     // Add entries for the CM from hbase-site.xml as a convenience.
     // Do this prior to loading from the properties file to make sure those in the properties
     // file are given precedence to those in hbase-site.xml (backwards compatibility).
-    loadMonkeyProperties(monkeyProps, HBaseConfiguration.create());
+    loadMonkeyProperties(monkeyProps, conf);
     if (cmd.hasOption(CHAOS_MONKEY_PROPS)) {
       String chaosMonkeyPropsFile = cmd.getOptionValue(CHAOS_MONKEY_PROPS);
       if (StringUtils.isNotEmpty(chaosMonkeyPropsFile)) {
@@ -183,6 +183,7 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
     if (fact == null) {
       fact = getDefaultMonkeyFactory();
     }
+    LOG.info("Using chaos monkey factory: {}", fact.getClass());
     monkey = fact.setUtil(util)
                  .setTableName(getTablename())
                  .setProperties(monkeyProps)

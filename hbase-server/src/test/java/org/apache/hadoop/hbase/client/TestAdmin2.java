@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.junit.Assert;
 import org.junit.ClassRule;
@@ -694,6 +695,32 @@ public class TestAdmin2 extends TestAdminBase {
       // Make sure that the store size is still the actual file system's store size.
       Assert.assertEquals(expectedStoreFilesSize, store.getSize());
     }
+
+    // Test querying using the encoded name only. When encoded name passed,
+    // and the target server is the Master, we return the full region name.
+    // Convenience.
+    ServerName sn = null;
+    try (Admin admin = TEST_UTIL.getConnection().getAdmin()) {
+      sn = admin.getMaster();
+    }
+    RegionInfo ri = region.getRegionInfo();
+    testGetWithRegionName(sn, ri, ri.getEncodedNameAsBytes());
+    testGetWithRegionName(sn, ri, ri.getRegionName());
+    // Try querying meta encoded name.
+    ri = RegionInfoBuilder.FIRST_META_REGIONINFO;
+    testGetWithRegionName(sn, ri, ri.getEncodedNameAsBytes());
+    testGetWithRegionName(sn, ri, ri.getRegionName());
+  }
+
+  /**
+   * Do get of RegionInfo from Master using encoded region name.
+   */
+  private void testGetWithRegionName(ServerName sn, RegionInfo inputRI,
+      byte [] regionName) throws IOException {
+    RegionInfo ri = ProtobufUtil.toRegionInfo(FutureUtils.get(
+      TEST_UTIL.getAsyncConnection().getRegionServerAdmin(sn).getRegionInfo(
+        ProtobufUtil.getGetRegionInfoRequest(regionName))).getRegionInfo());
+    assertEquals(inputRI, ri);
   }
 
   @Test

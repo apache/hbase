@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,6 +19,7 @@ package org.apache.hadoop.hbase.master;
 
 import static org.apache.hadoop.hbase.master.MasterWalManager.META_FILTER;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.BindException;
 import java.net.InetAddress;
@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Table;
@@ -196,6 +197,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedu
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedureResultResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProceduresRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProceduresResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetRegionStateInMetaResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetSchemaAlterStatusRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetSchemaAlterStatusResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
@@ -275,6 +277,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetNormali
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetNormalizerRunningResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetRegionStateInMetaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos
     .SetSnapshotCleanupRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos
@@ -393,9 +396,10 @@ public class MasterRpcServices extends RSRpcServices
   }
 
   @Override
-  protected RpcServerInterface createRpcServer(Server server, Configuration conf,
-      RpcSchedulerFactory rpcSchedulerFactory, InetSocketAddress bindAddress, String name)
-      throws IOException {
+  protected RpcServerInterface createRpcServer(final Server server,
+      final RpcSchedulerFactory rpcSchedulerFactory, final InetSocketAddress bindAddress,
+      final String name) throws IOException {
+    final Configuration conf = regionServer.getConfiguration();
     // RpcServer at HM by default enable ByteBufferPool iff HM having user table region in it
     boolean reservoirEnabled = conf.getBoolean(ByteBuffAllocator.ALLOCATOR_POOL_ENABLED_KEY,
       LoadBalancer.isMasterCanHostUserRegions(conf));
@@ -1770,24 +1774,44 @@ public class MasterRpcServices extends RSRpcServices
     }
   }
 
+  /**
+   * This method implements Admin getRegionInfo. On RegionServer, it is
+   * able to return RegionInfo and detail. On Master, it just returns
+   * RegionInfo. On Master it has been hijacked to return Mob detail.
+   * Master implementation is good for querying full region name if
+   * you only have the encoded name (useful around region replicas
+   * for example which do not have a row in hbase:meta).
+   */
   @Override
   @QosPriority(priority=HConstants.ADMIN_QOS)
   public GetRegionInfoResponse getRegionInfo(final RpcController controller,
     final GetRegionInfoRequest request) throws ServiceException {
-    byte[] regionName = request.getRegion().getValue().toByteArray();
-    TableName tableName = RegionInfo.getTable(regionName);
-    if (MobUtils.isMobRegionName(tableName, regionName)) {
-      // a dummy region info contains the compaction state.
-      RegionInfo mobRegionInfo = MobUtils.getMobRegionInfo(tableName);
-      GetRegionInfoResponse.Builder builder = GetRegionInfoResponse.newBuilder();
-      builder.setRegionInfo(ProtobufUtil.toRegionInfo(mobRegionInfo));
-      if (request.hasCompactionState() && request.getCompactionState()) {
-        builder.setCompactionState(master.getMobCompactionState(tableName));
-      }
-      return builder.build();
-    } else {
-      return super.getRegionInfo(controller, request);
+    RegionInfo ri = null;
+    try {
+      ri = getRegionInfo(request.getRegion());
+    } catch(UnknownRegionException ure) {
+      throw new ServiceException(ure);
     }
+    GetRegionInfoResponse.Builder builder = GetRegionInfoResponse.newBuilder();
+    if (ri != null) {
+      builder.setRegionInfo(ProtobufUtil.toRegionInfo(ri));
+    } else {
+      // Is it a MOB name? These work differently.
+      byte [] regionName = request.getRegion().getValue().toByteArray();
+      TableName tableName = RegionInfo.getTable(regionName);
+      if (MobUtils.isMobRegionName(tableName, regionName)) {
+        // a dummy region info contains the compaction state.
+        RegionInfo mobRegionInfo = MobUtils.getMobRegionInfo(tableName);
+        builder.setRegionInfo(ProtobufUtil.toRegionInfo(mobRegionInfo));
+        if (request.hasCompactionState() && request.getCompactionState()) {
+          builder.setCompactionState(master.getMobCompactionState(tableName));
+        }
+      } else {
+        // If unknown RegionInfo and not a MOB region, it is unknown.
+        throw new ServiceException(new UnknownRegionException(Bytes.toString(regionName)));
+      }
+    }
+    return builder.build();
   }
 
   /**
@@ -2464,6 +2488,42 @@ public class MasterRpcServices extends RSRpcServices
   }
 
   /**
+   * Update state of the region in meta only. This is required by hbck in some situations to cleanup
+   * stuck assign/ unassign regions procedures for the table.
+   *
+   * @return previous states of the regions
+   */
+  @Override
+  public GetRegionStateInMetaResponse setRegionStateInMeta(RpcController controller,
+    SetRegionStateInMetaRequest request) throws ServiceException {
+    final GetRegionStateInMetaResponse.Builder builder = GetRegionStateInMetaResponse.newBuilder();
+    for(ClusterStatusProtos.RegionState s : request.getStatesList()) {
+      try {
+        RegionInfo info = this.master.getAssignmentManager().
+          loadRegionFromMeta(s.getRegionInfo().getRegionEncodedName());
+        LOG.trace("region info loaded from meta table: {}", info);
+        RegionState prevState = this.master.getAssignmentManager().getRegionStates().
+          getRegionState(info);
+        RegionState newState = RegionState.convert(s);
+        LOG.info("{} set region={} state from {} to {}", master.getClientIdAuditPrefix(), info,
+          prevState.getState(), newState.getState());
+        Put metaPut = MetaTableAccessor.makePutFromRegionInfo(info, System.currentTimeMillis());
+        metaPut.addColumn(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER,
+          Bytes.toBytes(newState.getState().name()));
+        List<Put> putList = new ArrayList<>();
+        putList.add(metaPut);
+        MetaTableAccessor.putsToMetaTable(this.master.getConnection(), putList);
+        //Loads from meta again to refresh AM cache with the new region state
+        this.master.getAssignmentManager().loadRegionFromMeta(info.getEncodedName());
+        builder.addStates(prevState.convert());
+      } catch (Exception e) {
+        throw new ServiceException(e);
+      }
+    }
+    return builder.build();
+  }
+
+  /**
    * Get RegionInfo from Master using content of RegionSpecifier as key.
    * @return RegionInfo found by decoding <code>rs</code> or null if none found
    */
@@ -2583,26 +2643,18 @@ public class MasterRpcServices extends RSRpcServices
   public MasterProtos.ScheduleServerCrashProcedureResponse scheduleServerCrashProcedure(
       RpcController controller, MasterProtos.ScheduleServerCrashProcedureRequest request)
       throws ServiceException {
-    List<HBaseProtos.ServerName> serverNames = request.getServerNameList();
     List<Long> pids = new ArrayList<>();
-    try {
-      for (HBaseProtos.ServerName serverName : serverNames) {
-        ServerName server = ProtobufUtil.toServerName(serverName);
-        LOG.info("{} schedule ServerCrashProcedure for {}",
-            master.getClientIdAuditPrefix(), server);
-        if (shouldSubmitSCP(server)) {
-          master.getServerManager().moveFromOnlineToDeadServers(server);
-          ProcedureExecutor<MasterProcedureEnv> procExec = this.master.getMasterProcedureExecutor();
-          pids.add(procExec.submitProcedure(new ServerCrashProcedure(procExec.getEnvironment(),
-            server, true, containMetaWals(server))));
-        } else {
-          pids.add(-1L);
-        }
+    for (HBaseProtos.ServerName sn: request.getServerNameList()) {
+      ServerName serverName = ProtobufUtil.toServerName(sn);
+      LOG.info("{} schedule ServerCrashProcedure for {}",
+          this.master.getClientIdAuditPrefix(), serverName);
+      if (shouldSubmitSCP(serverName)) {
+        pids.add(this.master.getServerManager().expireServer(serverName, true));
+      } else {
+        pids.add(Procedure.NO_PROC_ID);
       }
-      return MasterProtos.ScheduleServerCrashProcedureResponse.newBuilder().addAllPid(pids).build();
-    } catch (IOException e) {
-      throw new ServiceException(e);
     }
+    return MasterProtos.ScheduleServerCrashProcedureResponse.newBuilder().addAllPid(pids).build();
   }
 
   @Override
@@ -2814,7 +2866,14 @@ public class MasterRpcServices extends RSRpcServices
         AbstractFSWALProvider.getWALDirectoryName(serverName.toString()));
     Path splitDir = logDir.suffix(AbstractFSWALProvider.SPLITTING_EXT);
     Path checkDir = master.getFileSystem().exists(splitDir) ? splitDir : logDir;
-    return master.getFileSystem().listStatus(checkDir, META_FILTER).length > 0;
+    try {
+      return master.getFileSystem().listStatus(checkDir, META_FILTER).length > 0;
+    } catch (FileNotFoundException fnfe) {
+      // If no files, then we don't contain metas; was failing schedule of
+      // SCP because this was FNFE'ing when no server dirs ('Unknown Server').
+      LOG.warn("No dir for WALs for {}; continuing", serverName.toString());
+      return false;
+    }
   }
 
   private boolean shouldSubmitSCP(ServerName serverName) {
@@ -2833,4 +2892,5 @@ public class MasterRpcServices extends RSRpcServices
     }
     return true;
   }
+
 }

@@ -224,7 +224,8 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
           <& AssignmentManagerStatusTmpl; assignmentManager=master.getAssignmentManager()&>
         </%if>
         <%if !master.isInMaintenanceMode() %>
-          <%if master.getMasterCoprocessorHost().findCoprocessor("RSGroupAdminEndpoint") != null %>
+          <%if master.getMasterCoprocessorHost().findCoprocessor("RSGroupAdminEndpoint") != null &&
+            serverManager.getOnlineServersList().size() > 0 %>
             <section>
               <h2><a name="rsgroup">RSGroup</a></h2>
               <& RSGroupListTmpl; master= master; serverManager= serverManager&>

@@ -33,6 +33,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -621,7 +622,6 @@ public class SplitTableRegionProcedure
    */
   private Pair<Integer, Integer> splitStoreFiles(final MasterProcedureEnv env,
       final HRegionFileSystem regionFs) throws IOException {
-    final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
     final Configuration conf = env.getMasterConfiguration();
     TableDescriptor htd = env.getMasterServices().getTableDescriptors().get(getTableName());
     // The following code sets up a thread pool executor with as many slots as
@@ -685,8 +685,8 @@ public class SplitTableRegionProcedure
           // As this procedure is running on master, use CacheConfig.DISABLED means
           // don't cache any block.
           StoreFileSplitter sfs =
-              new StoreFileSplitter(regionFs, familyName, new HStoreFile(mfs.getFileSystem(),
-                  storeFileInfo, conf, CacheConfig.DISABLED, hcd.getBloomFilterType(), true));
+              new StoreFileSplitter(regionFs, familyName, new HStoreFile(
+                  storeFileInfo, hcd.getBloomFilterType(), CacheConfig.DISABLED));
           futures.add(threadPool.submit(sfs));
         }
       }

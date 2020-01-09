@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -248,7 +248,8 @@ public class TransitRegionStateProcedure
 
     if (retries > env.getAssignmentManager().getAssignRetryImmediatelyMaxAttempts()) {
       // Throw exception to backoff and retry when failed open too many times
-      throw new HBaseIOException("Failed to open region");
+      throw new HBaseIOException("Failed confirm OPEN of " + regionNode +
+          " (remote log may yield more detail on why).");
     } else {
       // Here we do not throw exception because we want to the region to be online ASAP
       return Flow.HAS_MORE_STATE;

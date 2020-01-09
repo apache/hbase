@@ -48,7 +48,7 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
 
   public MetricsTableWrapperAggregateImpl(final HRegionServer regionServer) {
     this.regionServer = regionServer;
-    this.period = regionServer.conf.getLong(HConstants.REGIONSERVER_METRICS_PERIOD,
+    this.period = regionServer.getConfiguration().getLong(HConstants.REGIONSERVER_METRICS_PERIOD,
       HConstants.DEFAULT_REGIONSERVER_METRICS_PERIOD) + 1000;
     this.executor = CompatibilitySingletonFactory.getInstance(MetricsExecutor.class).getExecutor();
     this.runnable = new TableMetricsWrapperRunnable();

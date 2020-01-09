@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -61,7 +62,10 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
+import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.io.hfile.ReaderContext;
+import org.apache.hadoop.hbase.io.hfile.ReaderContextBuilder;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
@@ -281,9 +285,8 @@ public class TestHStoreFile extends HBaseTestCase {
                   HFileLink.createHFileLinkName(hri, storeFilePath.getName()));
 
     // Try to open store file from link
-    StoreFileInfo storeFileInfo = new StoreFileInfo(testConf, this.fs, linkFilePath);
-    HStoreFile hsf =
-        new HStoreFile(this.fs, storeFileInfo, testConf, cacheConf, BloomType.NONE, true);
+    StoreFileInfo storeFileInfo = new StoreFileInfo(testConf, this.fs, linkFilePath, true);
+    HStoreFile hsf = new HStoreFile(storeFileInfo, BloomType.NONE, cacheConf);
     assertTrue(storeFileInfo.isLink());
     hsf.initReader();
 
@@ -550,8 +553,11 @@ public class TestHStoreFile extends HBaseTestCase {
     }
     writer.close();
 
+    ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, f).build();
+    HFileInfo fileInfo = new HFileInfo(context, conf);
     StoreFileReader reader =
-        new StoreFileReader(fs, f, cacheConf, true, new AtomicInteger(0), true, conf);
+        new StoreFileReader(context, fileInfo, cacheConf, new AtomicInteger(0), conf);
+    fileInfo.initMetaAndIndex(reader.getHFileReader());
     reader.loadFileInfo();
     reader.loadBloomfilter();
     StoreFileScanner scanner = getStoreFileScanner(reader, false, false);
@@ -638,8 +644,11 @@ public class TestHStoreFile extends HBaseTestCase {
     }
     writer.close();
 
+    ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, f).build();
+    HFileInfo fileInfo = new HFileInfo(context, conf);
     StoreFileReader reader =
-        new StoreFileReader(fs, f, cacheConf, true, new AtomicInteger(0), true, conf);
+        new StoreFileReader(context, fileInfo, cacheConf, new AtomicInteger(0), conf);
+    fileInfo.initMetaAndIndex(reader.getHFileReader());
     reader.loadFileInfo();
     reader.loadBloomfilter();
 
@@ -684,8 +693,11 @@ public class TestHStoreFile extends HBaseTestCase {
     writeStoreFile(writer);
     writer.close();
 
+    ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, f).build();
+    HFileInfo fileInfo = new HFileInfo(context, conf);
     StoreFileReader reader =
-        new StoreFileReader(fs, f, cacheConf, true, new AtomicInteger(0), true, conf);
+        new StoreFileReader(context, fileInfo, cacheConf, new AtomicInteger(0), conf);
+    fileInfo.initMetaAndIndex(reader.getHFileReader());
 
     // Now do reseek with empty KV to position to the beginning of the file
 
@@ -744,8 +756,16 @@ public class TestHStoreFile extends HBaseTestCase {
       }
       writer.close();
 
+      ReaderContext context = new ReaderContextBuilder()
+          .withFilePath(f)
+          .withFileSize(fs.getFileStatus(f).getLen())
+          .withFileSystem(fs)
+          .withInputStreamWrapper(new FSDataInputStreamWrapper(fs, f))
+          .build();
+      HFileInfo fileInfo = new HFileInfo(context, conf);
       StoreFileReader reader =
-          new StoreFileReader(fs, f, cacheConf, true, new AtomicInteger(0), true, conf);
+          new StoreFileReader(context, fileInfo, cacheConf, new AtomicInteger(0), conf);
+      fileInfo.initMetaAndIndex(reader.getHFileReader());
       reader.loadFileInfo();
       reader.loadBloomfilter();
       StoreFileScanner scanner = getStoreFileScanner(reader, false, false);

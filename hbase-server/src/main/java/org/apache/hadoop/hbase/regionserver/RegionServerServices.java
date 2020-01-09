@@ -195,7 +195,7 @@ public interface RegionServerServices extends Server, MutableOnlineRegions, Favo
   /**
    * @return The RegionServer's "Leases" service
    */
-  Leases getLeases();
+  LeaseManager getLeaseManager();
 
   /**
    * @return hbase executor service

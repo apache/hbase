@@ -24,7 +24,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
-import org.apache.hadoop.conf.Configuration;
+
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
@@ -63,7 +63,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
@@ -599,8 +598,6 @@ public class MergeTableRegionsProcedure
    */
   private void mergeStoreFiles(final MasterProcedureEnv env, final HRegionFileSystem regionFs,
       final Path mergeDir) throws IOException {
-    final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
-    final Configuration conf = env.getMasterConfiguration();
     final TableDescriptor htd = env.getMasterServices().getTableDescriptors().get(getTableName());
     for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
       String family = hcd.getNameAsString();
@@ -610,9 +607,8 @@ public class MergeTableRegionsProcedure
           // Create reference file(s) to parent region file here in mergedDir.
           // As this procedure is running on master, use CacheConfig.DISABLED means
           // don't cache any block.
-          regionFs.mergeStoreFile(mergedRegion, family, new HStoreFile(mfs.getFileSystem(),
-              storeFileInfo, conf, CacheConfig.DISABLED, hcd.getBloomFilterType(), true),
-            mergeDir);
+          regionFs.mergeStoreFile(mergedRegion, family, new HStoreFile(
+              storeFileInfo, hcd.getBloomFilterType(), CacheConfig.DISABLED), mergeDir);
         }
       }
     }

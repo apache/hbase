@@ -85,7 +85,7 @@ public interface WALProvider {
   }
 
   interface AsyncWriter extends WriterBase {
-    CompletableFuture<Long> sync();
+    CompletableFuture<Long> sync(boolean forceSync);
 
     void append(WAL.Entry entry);
   }

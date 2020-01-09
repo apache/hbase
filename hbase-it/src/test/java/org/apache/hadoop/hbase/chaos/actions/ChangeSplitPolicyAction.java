@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.chaos.actions;
 
+import java.util.Random;
+
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -25,10 +27,11 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.IncreasingToUpperBoundRegionSplitPolicy;
-
-import java.util.Random;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ChangeSplitPolicyAction extends Action {
+  private static final Logger LOG = LoggerFactory.getLogger(ChangeSplitPolicyAction.class);
   private final TableName tableName;
   private final String[] possiblePolicies;
   private final Random random;

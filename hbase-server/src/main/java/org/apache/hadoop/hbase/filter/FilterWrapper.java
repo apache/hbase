@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.filter;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Objects;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -40,12 +41,13 @@ import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferExce
 final public class FilterWrapper extends Filter {
   Filter filter = null;
 
-  public FilterWrapper( Filter filter ) {
-    if (null == filter) {
-      // ensure the filter instance is not null
-      throw new NullPointerException("Cannot create FilterWrapper with null Filter");
-    }
-    this.filter = filter;
+  /**
+   * Constructor.
+   * @param filter filter to wrap
+   * @throws NullPointerException if {@code filter} is {@code null}
+   */
+  public FilterWrapper(Filter filter) {
+    this.filter = Objects.requireNonNull(filter, "Cannot create FilterWrapper with null Filter");
   }
 
   /**

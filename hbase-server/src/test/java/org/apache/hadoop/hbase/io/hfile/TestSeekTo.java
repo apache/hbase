@@ -150,7 +150,6 @@ public class TestSeekTo {
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Configuration conf = TEST_UTIL.getConfiguration();
     HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf), true, conf);
-    reader.loadFileInfo();
     HFileScanner scanner = reader.getScanner(false, true);
     assertFalse(scanner.seekBefore(toKV("a", tagUsage)));
 
@@ -209,7 +208,6 @@ public class TestSeekTo {
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Configuration conf = TEST_UTIL.getConfiguration();
     HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf), true, conf);
-    reader.loadFileInfo();
     HFileScanner scanner = reader.getScanner(false, true);
     assertFalse(scanner.seekBefore(toKV("a", tagUsage)));
     assertFalse(scanner.seekBefore(toKV("b", tagUsage)));
@@ -303,7 +301,6 @@ public class TestSeekTo {
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Configuration conf = TEST_UTIL.getConfiguration();
     HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf), true, conf);
-    reader.loadFileInfo();
     assertEquals(2, reader.getDataBlockIndexReader().getRootBlockCount());
     HFileScanner scanner = reader.getScanner(false, true);
     // lies before the start of the file.
@@ -336,7 +333,6 @@ public class TestSeekTo {
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Configuration conf = TEST_UTIL.getConfiguration();
     HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf), true, conf);
-    reader.loadFileInfo();
     HFileBlockIndex.BlockIndexReader blockIndexReader =
       reader.getDataBlockIndexReader();
     System.out.println(blockIndexReader.toString());

@@ -21,11 +21,15 @@ package org.apache.hadoop.hbase.chaos.actions;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
 * Action that tries to flush a table.
 */
 public class FlushTableAction extends Action {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FlushTableAction.class);
   private final long sleepTime;
   private final TableName tableName;
 

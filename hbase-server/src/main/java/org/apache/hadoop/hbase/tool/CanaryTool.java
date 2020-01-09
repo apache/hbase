@@ -273,26 +273,31 @@ public class CanaryTool implements Tool, Canary {
   public static class RegionStdOutSink extends StdOutSink {
     private Map<String, LongAdder> perTableReadLatency = new HashMap<>();
     private LongAdder writeLatency = new LongAdder();
-    private final Map<String, RegionTaskResult> regionMap = new ConcurrentHashMap<>();
+    private final Map<String, List<RegionTaskResult>> regionMap = new ConcurrentHashMap<>();
 
     public void publishReadFailure(ServerName serverName, RegionInfo region, Exception e) {
       incReadFailureCount();
-      LOG.error("Read from {} on {} failed", region.getRegionNameAsString(), serverName, e);
+      LOG.error("Read from {} on serverName={} failed",
+          region.getRegionNameAsString(), serverName, e);
     }
 
     public void publishReadFailure(ServerName serverName, RegionInfo region,
         ColumnFamilyDescriptor column, Exception e) {
       incReadFailureCount();
-      LOG.error("Read from {} on {} {} failed", region.getRegionNameAsString(), serverName,
+      LOG.error("Read from {} on serverName={}, columnFamily={} failed",
+          region.getRegionNameAsString(), serverName,
           column.getNameAsString(), e);
     }
 
     public void publishReadTiming(ServerName serverName, RegionInfo region,
         ColumnFamilyDescriptor column, long msTime) {
+      RegionTaskResult rtr = new RegionTaskResult(region, region.getTable(), serverName, column);
+      rtr.setReadSuccess();
+      rtr.setReadLatency(msTime);
+      List<RegionTaskResult> rtrs = regionMap.get(region.getRegionNameAsString());
+      rtrs.add(rtr);
+      // Note that read success count will be equal to total column family read successes.
       incReadSuccessCount();
-      RegionTaskResult res = this.regionMap.get(region.getRegionNameAsString());
-      res.setReadSuccess();
-      res.setReadLatency(msTime);
       LOG.info("Read from {} on {} {} in {}ms", region.getRegionNameAsString(), serverName,
           column.getNameAsString(), msTime);
     }
@@ -311,10 +316,13 @@ public class CanaryTool implements Tool, Canary {
 
     public void publishWriteTiming(ServerName serverName, RegionInfo region,
         ColumnFamilyDescriptor column, long msTime) {
+      RegionTaskResult rtr = new RegionTaskResult(region, region.getTable(), serverName, column);
+      rtr.setWriteSuccess();
+      rtr.setWriteLatency(msTime);
+      List<RegionTaskResult> rtrs = regionMap.get(region.getRegionNameAsString());
+      rtrs.add(rtr);
+      // Note that write success count will be equal to total column family write successes.
       incWriteSuccessCount();
-      RegionTaskResult res = this.regionMap.get(region.getRegionNameAsString());
-      res.setWriteSuccess();
-      res.setWriteLatency(msTime);
       LOG.info("Write to {} on {} {} in {}ms",
         region.getRegionNameAsString(), serverName, column.getNameAsString(), msTime);
     }
@@ -337,7 +345,7 @@ public class CanaryTool implements Tool, Canary {
       return this.writeLatency;
     }
 
-    public Map<String, RegionTaskResult> getRegionMap() {
+    public Map<String, List<RegionTaskResult>> getRegionMap() {
       return this.regionMap;
     }
 
@@ -486,7 +494,8 @@ public class CanaryTool implements Tool, Canary {
           sink.publishReadTiming(serverName, region, column, stopWatch.getTime());
         } catch (Exception e) {
           sink.publishReadFailure(serverName, region, column, e);
-          sink.updateReadFailures(region.getRegionNameAsString(), serverName.getHostname());
+          sink.updateReadFailures(region.getRegionNameAsString(),
+              serverName == null? "NULL": serverName.getHostname());
         } finally {
           if (rs != null) {
             rs.close();
@@ -1046,15 +1055,18 @@ public class CanaryTool implements Tool, Canary {
     private RegionInfo region;
     private TableName tableName;
     private ServerName serverName;
+    private ColumnFamilyDescriptor column;
     private AtomicLong readLatency = null;
     private AtomicLong writeLatency = null;
     private boolean readSuccess = false;
     private boolean writeSuccess = false;
 
-    public RegionTaskResult(RegionInfo region, TableName tableName, ServerName serverName) {
+    public RegionTaskResult(RegionInfo region, TableName tableName, ServerName serverName,
+        ColumnFamilyDescriptor column) {
       this.region = region;
       this.tableName = tableName;
       this.serverName = serverName;
+      this.column = column;
     }
 
     public RegionInfo getRegionInfo() {
@@ -1079,6 +1091,14 @@ public class CanaryTool implements Tool, Canary {
 
     public String getServerNameAsString() {
       return this.serverName.getServerName();
+    }
+
+    public ColumnFamilyDescriptor getColumnFamily() {
+      return this.column;
+    }
+
+    public String getColumnFamilyNameAsString() {
+      return this.column.getNameAsString();
     }
 
     public long getReadLatency() {
@@ -1562,13 +1582,16 @@ public class CanaryTool implements Tool, Canary {
       try (RegionLocator regionLocator =
                admin.getConnection().getRegionLocator(tableDesc.getTableName())) {
         for (HRegionLocation location: regionLocator.getAllRegionLocations()) {
+          if (location == null) {
+            LOG.warn("Null location");
+            continue;
+          }
           ServerName rs = location.getServerName();
           RegionInfo region = location.getRegion();
           tasks.add(new RegionTask(admin.getConnection(), region, rs, (RegionStdOutSink)sink,
               taskType, rawScanEnabled, rwLatency));
-          Map<String, RegionTaskResult> regionMap = ((RegionStdOutSink) sink).getRegionMap();
-          regionMap.put(region.getRegionNameAsString(), new RegionTaskResult(region,
-              region.getTable(), rs));
+          Map<String, List<RegionTaskResult>> regionMap = ((RegionStdOutSink) sink).getRegionMap();
+          regionMap.put(region.getRegionNameAsString(), new ArrayList<RegionTaskResult>());
         }
         return executor.invokeAll(tasks);
       }
@@ -1779,6 +1802,10 @@ public class CanaryTool implements Tool, Canary {
           try (RegionLocator regionLocator =
                    this.admin.getConnection().getRegionLocator(tableDesc.getTableName())) {
             for (HRegionLocation location : regionLocator.getAllRegionLocations()) {
+              if (location == null) {
+                LOG.warn("Null location");
+                continue;
+              }
               ServerName rs = location.getServerName();
               String rsName = rs.getHostname();
               RegionInfo r = location.getRegion();

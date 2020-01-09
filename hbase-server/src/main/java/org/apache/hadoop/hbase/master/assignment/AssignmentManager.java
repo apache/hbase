@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,6 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -58,6 +59,7 @@ import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.master.balancer.FavoredStochasticBalancer;
+import org.apache.hadoop.hbase.master.procedure.HBCKServerCrashProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
@@ -580,8 +582,7 @@ public class AssignmentManager {
     if (!regionNode.isInState(expectedStates)) {
       throw new DoNotRetryRegionException("Unexpected state for " + regionNode);
     }
-    if (getTableStateManager().isTableState(regionNode.getTable(), TableState.State.DISABLING,
-      TableState.State.DISABLED)) {
+    if (isTableDisabled(regionNode.getTable())) {
       throw new DoNotRetryIOException(regionNode.getTable() + " is disabled for " + regionNode);
     }
   }
@@ -629,7 +630,8 @@ public class AssignmentManager {
       ServerName targetServer) throws HBaseIOException {
     RegionStateNode regionNode = this.regionStates.getRegionStateNode(regionInfo);
     if (regionNode == null) {
-      throw new UnknownRegionException("No RegionState found for " + regionInfo.getEncodedName());
+      throw new UnknownRegionException("No RegionStateNode found for " +
+          regionInfo.getEncodedName() + "(Closed/Deleted?)");
     }
     TransitRegionStateProcedure proc;
     regionNode.lock();
@@ -944,7 +946,7 @@ public class AssignmentManager {
     if (regionNode == null) {
       // the table/region is gone. maybe a delete, split, merge
       throw new UnexpectedStateException(String.format(
-        "Server %s was trying to transition region %s to %s. but the region was removed.",
+        "Server %s was trying to transition region %s to %s. but Region is not known.",
         serverName, regionInfo, state));
     }
     LOG.trace("Update region transition serverName={} region={} regionState={}", serverName,
@@ -966,7 +968,8 @@ public class AssignmentManager {
           state.equals(TransitionCode.CLOSED)) {
           LOG.info("RegionServer {} {}", state, regionNode.getRegionInfo().getEncodedName());
         } else {
-          LOG.warn("No matching procedure found for {} transition to {}", regionNode, state);
+          LOG.warn("No matching procedure found for {} transition on {} to {}",
+              serverName, regionNode, state);
         }
       }
     } finally {
@@ -1092,7 +1095,27 @@ public class AssignmentManager {
     checkOnlineRegionsReport(serverNode, regionNames);
   }
 
-  // just check and output possible inconsistency, without actually doing anything
+  /**
+   * Close <code>regionName</code> on <code>sn</code> silently and immediately without
+   * using a Procedure or going via hbase:meta. For case where a RegionServer's hosting
+   * of a Region is not aligned w/ the Master's accounting of Region state. This is for
+   * cleaning up an error in accounting.
+   */
+  private void closeRegionSilently(ServerName sn, byte [] regionName) {
+    try {
+      RegionInfo ri = MetaTableAccessor.parseRegionInfoFromRegionName(regionName);
+      // Pass -1 for timeout. Means do not wait.
+      ServerManager.closeRegionSilentlyAndWait(this.master.getAsyncClusterConnection(), sn, ri, -1);
+    } catch (Exception e) {
+      LOG.error("Failed trying to close {} on {}", Bytes.toStringBinary(regionName), sn, e);
+    }
+  }
+
+  /**
+   * Check that what the RegionServer reports aligns with the Master's image.
+   * If disagreement, we will tell the RegionServer to expediently close
+   * a Region we do not think it should have.
+   */
   private void checkOnlineRegionsReport(ServerStateNode serverNode, Set<byte[]> regionNames) {
     ServerName serverName = serverNode.getServerName();
     for (byte[] regionName : regionNames) {
@@ -1101,10 +1124,13 @@ public class AssignmentManager {
       }
       RegionStateNode regionNode = regionStates.getRegionStateNodeFromName(regionName);
       if (regionNode == null) {
-        LOG.warn("No region state node for {}, it should already be on {}",
-          Bytes.toStringBinary(regionName), serverName);
+        String regionNameAsStr = Bytes.toStringBinary(regionName);
+        LOG.warn("No RegionStateNode for {} but reported as up on {}; closing...",
+            regionNameAsStr, serverName);
+        closeRegionSilently(serverNode.getServerName(), regionName);
         continue;
       }
+      final long lag = 1000;
       regionNode.lock();
       try {
         long diff = EnvironmentEdgeManager.currentTime() - regionNode.getLastUpdate();
@@ -1112,17 +1138,19 @@ public class AssignmentManager {
           // This is possible as a region server has just closed a region but the region server
           // report is generated before the closing, but arrive after the closing. Make sure there
           // is some elapsed time so less false alarms.
-          if (!regionNode.getRegionLocation().equals(serverName) && diff > 1000) {
-            LOG.warn("{} reported OPEN on server={} but state has otherwise", regionNode,
-              serverName);
+          if (!regionNode.getRegionLocation().equals(serverName) && diff > lag) {
+            LOG.warn("Reporting {} server does not match {} (time since last " +
+                    "update={}ms); closing...",
+              serverName, regionNode, diff);
+            closeRegionSilently(serverNode.getServerName(), regionName);
           }
         } else if (!regionNode.isInState(State.CLOSING, State.SPLITTING)) {
           // So, we can get report that a region is CLOSED or SPLIT because a heartbeat
           // came in at about same time as a region transition. Make sure there is some
           // elapsed time so less false alarms.
-          if (diff > 1000) {
-            LOG.warn("{} reported an unexpected OPEN on {}; time since last update={}ms",
-              regionNode, serverName, diff);
+          if (diff > lag) {
+            LOG.warn("Reporting {} state does not match {} (time since last update={}ms)",
+              serverName, regionNode, diff);
           }
         }
       } finally {
@@ -1176,15 +1204,9 @@ public class AssignmentManager {
         if (rsn.getState() != State.OPEN) {
           continue; // Opportunistic check, should quickly skip RITs, offline tables, etc.
         }
-        ServerName sn;
-        State state;
-        rsn.lock();
-        try {
-          sn = rsn.getRegionLocation();
-          state = rsn.getState();
-        } finally {
-          rsn.unlock();
-        }
+        // Do not need to acquire region state lock as this is only for showing metrics.
+        ServerName sn = rsn.getRegionLocation();
+        State state = rsn.getState();
         if (state != State.OPEN) {
           continue; // Mostly skipping RITs that are already being take care of.
         }
@@ -1490,44 +1512,67 @@ public class AssignmentManager {
     return 0;
   }
 
-  public long submitServerCrash(ServerName serverName, boolean shouldSplitWal) {
-    boolean carryingMeta;
-    long pid;
+  /**
+   * Usually run by the Master in reaction to server crash during normal processing.
+   * Can also be invoked via external RPC to effect repair; in the latter case,
+   * the 'force' flag is set so we push through the SCP though context may indicate
+   * already-running-SCP (An old SCP may have exited abnormally, or damaged cluster
+   * may still have references in hbase:meta to 'Unknown Servers' -- servers that
+   * are not online or in dead servers list, etc.)
+   * @param force Set if the request came in externally over RPC (via hbck2). Force means
+   *              run the SCP even if it seems as though there might be an outstanding
+   *              SCP running.
+   * @return pid of scheduled SCP or {@link Procedure#NO_PROC_ID} if none scheduled.
+   */
+  public long submitServerCrash(ServerName serverName, boolean shouldSplitWal, boolean force) {
+    // May be an 'Unknown Server' so handle case where serverNode is null.
     ServerStateNode serverNode = regionStates.getServerNode(serverName);
-    if(serverNode == null){
-      LOG.info("Skip to add SCP for {} since this server should be OFFLINE already", serverName);
-      return -1;
-    }
-
     // Remove the in-memory rsReports result
     synchronized (rsReports) {
       rsReports.remove(serverName);
     }
 
-    // we hold the write lock here for fencing on reportRegionStateTransition. Once we set the
+    // We hold the write lock here for fencing on reportRegionStateTransition. Once we set the
     // server state to CRASHED, we will no longer accept the reportRegionStateTransition call from
     // this server. This is used to simplify the implementation for TRSP and SCP, where we can make
     // sure that, the region list fetched by SCP will not be changed any more.
-    serverNode.writeLock().lock();
+    if (serverNode != null) {
+      serverNode.writeLock().lock();
+    }
+    boolean carryingMeta;
+    long pid;
     try {
       ProcedureExecutor<MasterProcedureEnv> procExec = this.master.getMasterProcedureExecutor();
       carryingMeta = isCarryingMeta(serverName);
-      if (!serverNode.isInState(ServerState.ONLINE)) {
-        LOG.info(
-          "Skip to add SCP for {} with meta= {}, " +
-              "since there should be a SCP is processing or already done for this server node",
-          serverName, carryingMeta);
-        return -1;
+      if (!force && serverNode != null && !serverNode.isInState(ServerState.ONLINE)) {
+        LOG.info("Skip adding SCP for {} (meta={}) -- running?", serverNode, carryingMeta);
+        return Procedure.NO_PROC_ID;
       } else {
-        serverNode.setState(ServerState.CRASHED);
-        pid = procExec.submitProcedure(new ServerCrashProcedure(procExec.getEnvironment(),
-            serverName, shouldSplitWal, carryingMeta));
-        LOG.info(
-          "Added {} to dead servers which carryingMeta={}, submitted ServerCrashProcedure pid={}",
-          serverName, carryingMeta, pid);
+        MasterProcedureEnv mpe = procExec.getEnvironment();
+        // If serverNode == null, then 'Unknown Server'. Schedule HBCKSCP instead.
+        // HBCKSCP scours Master in-memory state AND hbase;meta for references to
+        // serverName just-in-case. An SCP that is scheduled when the server is
+        // 'Unknown' probably originated externally with HBCK2 fix-it tool.
+        ServerState oldState = null;
+        if (serverNode != null) {
+          oldState = serverNode.getState();
+          serverNode.setState(ServerState.CRASHED);
+        }
+
+        if (force) {
+          pid = procExec.submitProcedure(
+              new HBCKServerCrashProcedure(mpe, serverName, shouldSplitWal, carryingMeta));
+        } else {
+          pid = procExec.submitProcedure(
+              new ServerCrashProcedure(mpe, serverName, shouldSplitWal, carryingMeta));
+        }
+        LOG.info("Scheduled SCP pid={} for {} (carryingMeta={}){}.", pid, serverName, carryingMeta,
+            serverNode == null? "": " " + serverNode.toString() + ", oldState=" + oldState);
       }
     } finally {
-      serverNode.writeLock().unlock();
+      if (serverNode != null) {
+        serverNode.writeLock().unlock();
+      }
     }
     return pid;
   }
@@ -1719,7 +1764,7 @@ public class AssignmentManager {
 
   // should be called under the RegionStateNode lock
   // for SCP
-  void regionClosedAbnormally(RegionStateNode regionNode) throws IOException {
+  public void regionClosedAbnormally(RegionStateNode regionNode) throws IOException {
     RegionState.State state = regionNode.getState();
     ServerName regionLocation = regionNode.getRegionLocation();
     regionNode.transitionState(State.ABNORMALLY_CLOSED);

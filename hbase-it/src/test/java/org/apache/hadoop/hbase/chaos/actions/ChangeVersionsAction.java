@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.util.Random;
 
 import org.apache.hadoop.hbase.TableName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Action that changes the number of versions on a column family from a list of tables.
@@ -30,6 +32,7 @@ import org.apache.hadoop.hbase.TableName;
  */
 public class ChangeVersionsAction extends Action {
   private final TableName tableName;
+  private static final Logger LOG = LoggerFactory.getLogger(ChangeVersionsAction.class);
 
   private Random random;
 
@@ -44,7 +47,7 @@ public class ChangeVersionsAction extends Action {
 
     LOG.debug("Performing action: Changing versions on " + tableName + " to " + versions);
     modifyAllTableColumns(tableName, columnBuilder -> {
-     columnBuilder.setMinVersions(versions).setMaxVersions(versions);
+      columnBuilder.setMinVersions(versions).setMaxVersions(versions);
     });
     LOG.debug("Performing action: Just changed versions on " + tableName);
   }

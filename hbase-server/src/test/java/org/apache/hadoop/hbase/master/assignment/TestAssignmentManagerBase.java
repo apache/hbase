@@ -304,7 +304,7 @@ public abstract class TestAssignmentManagerBase {
 
   protected void doCrash(final ServerName serverName) {
     this.master.getServerManager().moveFromOnlineToDeadServers(serverName);
-    this.am.submitServerCrash(serverName, false/* No WALs here */);
+    this.am.submitServerCrash(serverName, false/* No WALs here */, false);
     // add a new server to avoid killing all the region servers which may hang the UTs
     ServerName newSn = ServerName.valueOf("localhost", 10000 + newRsAdded, 1);
     newRsAdded++;

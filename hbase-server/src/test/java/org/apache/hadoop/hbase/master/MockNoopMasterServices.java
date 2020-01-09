@@ -490,4 +490,7 @@ public class MockNoopMasterServices implements MasterServices {
   public AsyncClusterConnection getAsyncClusterConnection() {
     return null;
   }
+
+  @Override
+  public void runReplicationBarrierCleaner() {}
 }

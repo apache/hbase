@@ -170,8 +170,11 @@ public class SerialReplicationTestBase {
 
       @Override
       public boolean evaluate() throws Exception {
-        return UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().stream()
-          .map(t -> t.getRegionServer()).allMatch(HRegionServer::walRollRequestFinished);
+        return UTIL.getMiniHBaseCluster()
+            .getLiveRegionServerThreads()
+            .stream()
+            .map(RegionServerThread::getRegionServer)
+            .allMatch(HRegionServer::walRollRequestFinished);
       }
 
       @Override

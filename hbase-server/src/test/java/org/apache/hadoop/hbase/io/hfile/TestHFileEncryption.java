@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
+import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
@@ -152,8 +153,13 @@ public class TestHFileEncryption {
         os.close();
       }
       FSDataInputStream is = fs.open(path);
+      ReaderContext context = new ReaderContextBuilder()
+          .withInputStreamWrapper(new FSDataInputStreamWrapper(is))
+          .withFilePath(path)
+          .withFileSystem(fs)
+          .withFileSize(totalSize).build();
       try {
-        HFileBlock.FSReaderImpl hbr = new HFileBlock.FSReaderImpl(is, totalSize, fileContext,
+        HFileBlock.FSReaderImpl hbr = new HFileBlock.FSReaderImpl(context, fileContext,
             ByteBuffAllocator.HEAP);
         long pos = 0;
         for (int i = 0; i < blocks; i++) {
@@ -192,7 +198,6 @@ public class TestHFileEncryption {
     // read it back in and validate correct crypto metadata
     HFile.Reader reader = HFile.createReader(fs, path, cacheConf, true, conf);
     try {
-      reader.loadFileInfo();
       FixedFileTrailer trailer = reader.getTrailer();
       assertNotNull(trailer.getEncryptionKey());
       Encryption.Context readerContext = reader.getFileContext().getEncryptionContext();
@@ -245,7 +250,6 @@ public class TestHFileEncryption {
         HFileScanner scanner = null;
         HFile.Reader reader = HFile.createReader(fs, path, cacheConf, true, conf);
         try {
-          reader.loadFileInfo();
           FixedFileTrailer trailer = reader.getTrailer();
           assertNotNull(trailer.getEncryptionKey());
           scanner = reader.getScanner(false, false);

@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static junit.framework.TestCase.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -28,15 +31,13 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.Reference;
+import org.apache.hadoop.hbase.io.hfile.ReaderContext;
+import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static junit.framework.TestCase.assertTrue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 
 /**
  * Test HStoreFile
@@ -103,9 +104,10 @@ public class TestStoreFileInfo {
     // Try to open nonsense hfilelink. Make sure exception is from HFileLink.
     Path p = new Path("/hbase/test/0123/cf/testtb=4567-abcd");
     try (FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration())) {
-      StoreFileInfo sfi = new StoreFileInfo(TEST_UTIL.getConfiguration(), fs, p);
+      StoreFileInfo sfi = new StoreFileInfo(TEST_UTIL.getConfiguration(), fs, p, true);
       try {
-        sfi.open(fs, null, false, 1000, true, new AtomicInteger(), false);
+        ReaderContext context = sfi.createReaderContext(false, 1000, ReaderType.PREAD);
+        sfi.createReader(context, null);
         throw new IllegalStateException();
       } catch (FileNotFoundException fnfe) {
         assertTrue(fnfe.getMessage().contains(HFileLink.class.getSimpleName()));
@@ -122,9 +124,10 @@ public class TestStoreFileInfo {
     fs.mkdirs(p.getParent());
     Reference r = Reference.createBottomReference(HConstants.EMPTY_START_ROW);
     r.write(fs, p);
-    StoreFileInfo sfi = new StoreFileInfo(TEST_UTIL.getConfiguration(), fs, p);
+    StoreFileInfo sfi = new StoreFileInfo(TEST_UTIL.getConfiguration(), fs, p, true);
     try {
-      sfi.open(fs, null, false, 1000, true, new AtomicInteger(), false);
+      ReaderContext context = sfi.createReaderContext(false, 1000, ReaderType.PREAD);
+      sfi.createReader(context, null);
       throw new IllegalStateException();
     } catch (FileNotFoundException fnfe) {
       assertTrue(fnfe.getMessage().contains("->"));

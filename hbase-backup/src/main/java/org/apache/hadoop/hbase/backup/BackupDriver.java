@@ -40,6 +40,7 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_YARN_
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.Objects;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -187,10 +188,7 @@ public class BackupDriver extends AbstractHBaseTool {
 
   @Override
   public int run(String[] args) throws IOException {
-    if (conf == null) {
-      LOG.error("Tool configuration is not initialized");
-      throw new NullPointerException("conf");
-    }
+    Objects.requireNonNull(conf, "Tool configuration is not initialized");
 
     CommandLine cmd;
     try {

@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
@@ -31,12 +30,16 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  * Utility methods for working with {@link ByteRange}.
  */
 @InterfaceAudience.Public
-public class ByteRangeUtils {
+public final class ByteRangeUtils {
+  private ByteRangeUtils() {
+  }
 
   public static int numEqualPrefixBytes(ByteRange left, ByteRange right, int rightInnerOffset) {
     int maxCompares = Math.min(left.getLength(), right.getLength() - rightInnerOffset);
-    final byte[] lbytes = left.getBytes(), rbytes = right.getBytes();
-    final int loffset = left.getOffset(), roffset = right.getOffset();
+    final byte[] lbytes = left.getBytes();
+    final byte[] rbytes = right.getBytes();
+    final int loffset = left.getOffset();
+    final int roffset = right.getOffset();
     for (int i = 0; i < maxCompares; ++i) {
       if (lbytes[loffset + i] != rbytes[roffset + rightInnerOffset + i]) {
         return i;
@@ -76,5 +79,4 @@ public class ByteRangeUtils {
     os.write(byteRange.getBytes(), byteRange.getOffset() + byteRangeInnerOffset,
       byteRange.getLength() - byteRangeInnerOffset);
   }
-
 }

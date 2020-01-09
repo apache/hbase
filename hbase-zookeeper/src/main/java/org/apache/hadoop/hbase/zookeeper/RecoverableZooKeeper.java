@@ -67,7 +67,7 @@ import org.slf4j.LoggerFactory;
  * the create it will do a getChildren("/") and see "x-222-1", "x-542-30",
  * "x-352-109", x-333-110". The process will know that the original create
  * succeeded an the znode it created is "x-352-109".
- * @see "http://wiki.apache.org/hadoop/ZooKeeper/ErrorHandling"
+ * @see "https://cwiki.apache.org/confluence/display/HADOOP2/ZooKeeper+ErrorHandling"
  */
 @InterfaceAudience.Private
 public class RecoverableZooKeeper {
@@ -97,8 +97,8 @@ public class RecoverableZooKeeper {
       // the identifier = processID@hostName
       identifier = ManagementFactory.getRuntimeMXBean().getName();
     }
-    LOG.info("Process identifier=" + identifier +
-      " connecting to ZooKeeper ensemble=" + quorumServers);
+    LOG.info("Process identifier={} connecting to ZooKeeper ensemble={}", identifier,
+      quorumServers);
     this.identifier = identifier;
     this.id = Bytes.toBytes(identifier);
 
@@ -178,7 +178,7 @@ public class RecoverableZooKeeper {
                     "previous attempt succeeded.");
                 return;
               }
-              LOG.debug("Node " + path + " already deleted, retry=" + isRetry);
+              LOG.debug("Node {} already deleted, retry={}", path, isRetry);
               throw e;
 
             case CONNECTIONLOSS:
@@ -248,12 +248,10 @@ public class RecoverableZooKeeper {
   private void retryOrThrow(RetryCounter retryCounter, KeeperException e,
       String opName) throws KeeperException {
     if (!retryCounter.shouldRetry()) {
-      LOG.error("ZooKeeper " + opName + " failed after "
-        + retryCounter.getMaxAttempts() + " attempts");
+      LOG.error("ZooKeeper {} failed after {} attempts", opName, retryCounter.getMaxAttempts());
       throw e;
     }
-    LOG.debug("Retry, connectivity issue (JVM Pause?); quorum=" + quorumServers + "," +
-        "exception=" + e);
+    LOG.debug("Retry, connectivity issue (JVM Pause?); quorum={},exception{}=", quorumServers, e);
   }
 
   /**

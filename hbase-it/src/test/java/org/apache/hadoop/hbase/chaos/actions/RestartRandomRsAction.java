@@ -20,11 +20,15 @@ package org.apache.hadoop.hbase.chaos.actions;
 
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Action that restarts a random HRegionServer
  */
 public class RestartRandomRsAction extends RestartActionBaseAction {
+  private static final Logger LOG = LoggerFactory.getLogger(RestartRandomRsAction.class);
+
   public RestartRandomRsAction(long sleepTime) {
     super(sleepTime);
   }

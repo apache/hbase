@@ -234,7 +234,7 @@ public final class MetaTableLocator {
       LOG.warn("Tried to set null ServerName in hbase:meta; skipping -- ServerName required");
       return;
     }
-    LOG.info("Setting hbase:meta (replicaId=" + replicaId + ") location in ZooKeeper as " +
+    LOG.info("Setting hbase:meta (replicaId={}) location in ZooKeeper as {}", replicaId,
       serverName);
     // Make the MetaRegionServer pb and then get its bytes and save this as
     // the znode content.
@@ -327,7 +327,7 @@ public final class MetaTableLocator {
     if (replicaId == RegionInfo.DEFAULT_REPLICA_ID) {
       LOG.info("Deleting hbase:meta region location in ZooKeeper");
     } else {
-      LOG.info("Deleting hbase:meta for " + replicaId + " region location in ZooKeeper");
+      LOG.info("Deleting hbase:meta for {} region location in ZooKeeper", replicaId);
     }
     try {
       // Just delete the node.  Don't need any watches.
@@ -365,7 +365,7 @@ public final class MetaTableLocator {
       List<String> metaReplicaNodes = zkw.getMetaReplicaNodes();
       numReplicasConfigured = metaReplicaNodes.size();
     } catch (KeeperException e) {
-      LOG.warn("Got ZK exception " + e);
+      LOG.warn("Got ZK exception {}", e);
     }
     for (int replicaId = 1; replicaId < numReplicasConfigured; replicaId++) {
       // return all replica locations for the meta

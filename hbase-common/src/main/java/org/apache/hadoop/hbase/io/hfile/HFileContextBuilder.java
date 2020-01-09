@@ -54,6 +54,8 @@ public class HFileContextBuilder {
   private long fileCreateTime = 0;
 
   private String hfileName = null;
+  private byte[] columnFamily = null;
+  private byte[] tableName = null;
 
   public HFileContextBuilder() {}
 
@@ -73,6 +75,8 @@ public class HFileContextBuilder {
     this.cryptoContext = hfc.getEncryptionContext();
     this.fileCreateTime = hfc.getFileCreateTime();
     this.hfileName = hfc.getHFileName();
+    this.columnFamily = hfc.getColumnFamily();
+    this.tableName = hfc.getTableName();
   }
 
   public HFileContextBuilder withHBaseCheckSum(boolean useHBaseCheckSum) {
@@ -135,9 +139,19 @@ public class HFileContextBuilder {
     return this;
   }
 
+  public HFileContextBuilder withColumnFamily(byte[] columnFamily){
+    this.columnFamily = columnFamily;
+    return this;
+  }
+
+  public HFileContextBuilder withTableName(byte[] tableName){
+    this.tableName = tableName;
+    return this;
+  }
+
   public HFileContext build() {
     return new HFileContext(usesHBaseChecksum, includesMvcc, includesTags, compression,
         compressTags, checksumType, bytesPerChecksum, blocksize, encoding, cryptoContext,
-        fileCreateTime, hfileName);
+        fileCreateTime, hfileName, columnFamily, tableName);
   }
 }

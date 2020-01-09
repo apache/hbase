@@ -120,10 +120,11 @@ public class ServerCrashProcedure
     final MasterServices services = env.getMasterServices();
     final AssignmentManager am = env.getAssignmentManager();
     updateProgress(true);
-    // HBASE-14802
-    // If we have not yet notified that we are processing a dead server, we should do now.
+    // HBASE-14802 If we have not yet notified that we are processing a dead server, do so now.
+    // This adds server to the DeadServer processing list but not to the DeadServers list.
+    // Server gets removed from processing list below on procedure successful finish.
     if (!notifiedDeadServer) {
-      services.getServerManager().getDeadServers().notifyServer(serverName);
+      services.getServerManager().getDeadServers().processing(serverName);
       notifiedDeadServer = true;
     }
 
@@ -175,12 +176,14 @@ public class ServerCrashProcedure
           setNextState(ServerCrashState.SERVER_CRASH_GET_REGIONS);
           break;
         case SERVER_CRASH_GET_REGIONS:
-          this.regionsOnCrashedServer =
-            services.getAssignmentManager().getRegionsOnServer(serverName);
+          this.regionsOnCrashedServer = getRegionsOnCrashedServer(env);
           // Where to go next? Depends on whether we should split logs at all or
           // if we should do distributed log splitting.
           if (regionsOnCrashedServer != null) {
             LOG.info("{} had {} regions", serverName, regionsOnCrashedServer.size());
+            if (LOG.isTraceEnabled()) {
+              this.regionsOnCrashedServer.stream().forEach(ri -> LOG.trace(ri.getShortNameToLog()));
+            }
           }
           if (!this.shouldSplitWal) {
             setNextState(ServerCrashState.SERVER_CRASH_ASSIGN);
@@ -240,6 +243,13 @@ public class ServerCrashProcedure
       LOG.warn("Failed state=" + state + ", retry " + this + "; cycles=" + getCycles(), e);
     }
     return Flow.HAS_MORE_STATE;
+  }
+
+  /**
+   * @return List of Regions on crashed server.
+   */
+  List<RegionInfo> getRegionsOnCrashedServer(MasterProcedureEnv env) {
+    return env.getMasterServices().getAssignmentManager().getRegionsOnServer(serverName);
   }
 
   private void cleanupSplitDir(MasterProcedureEnv env) {
@@ -456,20 +466,43 @@ public class ServerCrashProcedure
       RegionStateNode regionNode = am.getRegionStates().getOrCreateRegionStateNode(region);
       regionNode.lock();
       try {
+        // This is possible, as when a server is dead, TRSP will fail to schedule a RemoteProcedure
+        // to us and then try to assign the region to a new RS. And before it has updated the region
+        // location to the new RS, we may have already called the am.getRegionsOnServer so we will
+        // consider the region is still on us. And then before we arrive here, the TRSP could have
+        // updated the region location, or even finished itself, so the region is no longer on us
+        // any more, we should not try to assign it again. Please see HBASE-23594 for more details.
+        if (!serverName.equals(regionNode.getRegionLocation())) {
+          LOG.info("{} found a region {} which is no longer on us {}, give up assigning...", this,
+            regionNode, serverName);
+          continue;
+        }
         if (regionNode.getProcedure() != null) {
           LOG.info("{} found RIT {}; {}", this, regionNode.getProcedure(), regionNode);
           regionNode.getProcedure().serverCrashed(env, regionNode, getServerName());
-        } else {
-          if (env.getMasterServices().getTableStateManager().isTableState(regionNode.getTable(),
-            TableState.State.DISABLING, TableState.State.DISABLED)) {
-            continue;
-          }
-          // force to assign to a new candidate server, see HBASE-23035 for more details.
-          TransitRegionStateProcedure proc =
-              TransitRegionStateProcedure.assign(env, region, true, null);
-          regionNode.setProcedure(proc);
-          addChildProcedure(proc);
+          continue;
         }
+        if (env.getMasterServices().getTableStateManager()
+          .isTableState(regionNode.getTable(), TableState.State.DISABLING)) {
+          // We need to change the state here otherwise the TRSP scheduled by DTP will try to
+          // close the region from a dead server and will never succeed. Please see HBASE-23636
+          // for more details.
+          env.getAssignmentManager().regionClosedAbnormally(regionNode);
+          LOG.info("{} found table disabling for region {}, set it state to ABNORMALLY_CLOSED.",
+            this, regionNode);
+          continue;
+        }
+        if (env.getMasterServices().getTableStateManager()
+          .isTableState(regionNode.getTable(), TableState.State.DISABLED)) {
+          // This should not happen, table disabled but has regions on server.
+          LOG.warn("Found table disabled for region {}, procDetails: {}", regionNode, this);
+          continue;
+        }
+        // force to assign to a new candidate server, see HBASE-23035 for more details.
+        TransitRegionStateProcedure proc =
+          TransitRegionStateProcedure.assign(env, region, true, null);
+        regionNode.setProcedure(proc);
+        addChildProcedure(proc);
       } finally {
         regionNode.unlock();
       }

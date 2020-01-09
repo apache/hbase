@@ -33,6 +33,7 @@ import java.util.Map.Entry;
 import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.OptionalDouble;
+import java.util.OptionalInt;
 import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -157,6 +158,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
   static int closeCheckInterval = 0;
   private AtomicLong storeSize = new AtomicLong();
   private AtomicLong totalUncompressedBytes = new AtomicLong();
+
+  private boolean cacheOnWriteLogged;
 
   /**
    * RWLock for store operations.
@@ -337,6 +340,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
         getColumnFamilyName(), memstore.getClass().getSimpleName(), policyName, verifyBulkLoads,
         parallelPutCountPrintThreshold, family.getDataBlockEncoding(),
         family.getCompressionType());
+    cacheOnWriteLogged = false;
   }
 
   /**
@@ -717,14 +721,14 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
 
   @VisibleForTesting
   protected HStoreFile createStoreFileAndReader(final Path p) throws IOException {
-    StoreFileInfo info = new StoreFileInfo(conf, this.getFileSystem(), p);
+    StoreFileInfo info = new StoreFileInfo(conf, this.getFileSystem(),
+        p, isPrimaryReplicaStore());
     return createStoreFileAndReader(info);
   }
 
   private HStoreFile createStoreFileAndReader(StoreFileInfo info) throws IOException {
     info.setRegionCoprocessorHost(this.region.getCoprocessorHost());
-    HStoreFile storeFile = new HStoreFile(this.getFileSystem(), info, this.conf, this.cacheConf,
-        this.family.getBloomFilterType(), isPrimaryReplicaStore());
+    HStoreFile storeFile = new HStoreFile(info, this.family.getBloomFilterType(), this.cacheConf);
     storeFile.initReader();
     return storeFile;
   }
@@ -809,7 +813,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
       FileSystem srcFs = srcPath.getFileSystem(conf);
       srcFs.access(srcPath, FsAction.READ_WRITE);
       reader = HFile.createReader(srcFs, srcPath, cacheConf, isPrimaryReplicaStore(), conf);
-      reader.loadFileInfo();
 
       Optional<byte[]> firstKey = reader.getFirstRowKey();
       Preconditions.checkState(firstKey.isPresent(), "First key can not be null");
@@ -1118,11 +1121,35 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
       boolean shouldDropBehind) throws IOException {
     final CacheConfig writerCacheConf;
     if (isCompaction) {
-      // Don't cache data on write on compactions.
+      // Don't cache data on write on compactions, unless specifically configured to do so
       writerCacheConf = new CacheConfig(cacheConf);
-      writerCacheConf.setCacheDataOnWrite(false);
+      final boolean cacheCompactedBlocksOnWrite =
+        cacheConf.shouldCacheCompactedBlocksOnWrite();
+      // if data blocks are to be cached on write
+      // during compaction, we should forcefully
+      // cache index and bloom blocks as well
+      if (cacheCompactedBlocksOnWrite) {
+        writerCacheConf.enableCacheOnWrite();
+        if (!cacheOnWriteLogged) {
+          LOG.info("For Store {} , cacheCompactedBlocksOnWrite is true, hence enabled " +
+              "cacheOnWrite for Data blocks, Index blocks and Bloom filter blocks",
+            getColumnFamilyName());
+          cacheOnWriteLogged = true;
+        }
+      } else {
+        writerCacheConf.setCacheDataOnWrite(false);
+      }
     } else {
       writerCacheConf = cacheConf;
+      final boolean shouldCacheDataOnWrite = cacheConf.shouldCacheDataOnWrite();
+      if (shouldCacheDataOnWrite) {
+        writerCacheConf.enableCacheOnWrite();
+        if (!cacheOnWriteLogged) {
+          LOG.info("For Store {} , cacheDataOnWrite is true, hence enabled cacheOnWrite for " +
+            "Index blocks and Bloom filter blocks", getColumnFamilyName());
+          cacheOnWriteLogged = true;
+        }
+      }
     }
     InetSocketAddress[] favoredNodes = null;
     if (region.getRegionServerServices() != null) {
@@ -1162,6 +1189,9 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
                                 .withDataBlockEncoding(family.getDataBlockEncoding())
                                 .withEncryptionContext(cryptoContext)
                                 .withCreateTime(EnvironmentEdgeManager.currentTime())
+                                .withColumnFamily(family.getName())
+                                .withTableName(region.getTableDescriptor()
+                                    .getTableName().getName())
                                 .build();
     return hFileContext;
   }
@@ -1267,18 +1297,34 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
       this.lock.readLock().unlock();
     }
 
-    // First the store file scanners
+    try {
+      // First the store file scanners
 
-    // TODO this used to get the store files in descending order,
-    // but now we get them in ascending order, which I think is
-    // actually more correct, since memstore get put at the end.
-    List<StoreFileScanner> sfScanners = StoreFileScanner.getScannersForStoreFiles(storeFilesToScan,
-      cacheBlocks, usePread, isCompaction, false, matcher, readPt);
-    List<KeyValueScanner> scanners = new ArrayList<>(sfScanners.size() + 1);
-    scanners.addAll(sfScanners);
-    // Then the memstore scanners
-    scanners.addAll(memStoreScanners);
-    return scanners;
+      // TODO this used to get the store files in descending order,
+      // but now we get them in ascending order, which I think is
+      // actually more correct, since memstore get put at the end.
+      List<StoreFileScanner> sfScanners = StoreFileScanner
+        .getScannersForStoreFiles(storeFilesToScan, cacheBlocks, usePread, isCompaction, false,
+          matcher, readPt);
+      List<KeyValueScanner> scanners = new ArrayList<>(sfScanners.size() + 1);
+      scanners.addAll(sfScanners);
+      // Then the memstore scanners
+      scanners.addAll(memStoreScanners);
+      return scanners;
+    } catch (Throwable t) {
+      clearAndClose(memStoreScanners);
+      throw t instanceof IOException ? (IOException) t : new IOException(t);
+    }
+  }
+
+  private static void clearAndClose(List<KeyValueScanner> scanners) {
+    if (scanners == null) {
+      return;
+    }
+    for (KeyValueScanner s : scanners) {
+      s.close();
+    }
+    scanners.clear();
   }
 
   /**
@@ -1332,15 +1378,21 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
         this.lock.readLock().unlock();
       }
     }
-    List<StoreFileScanner> sfScanners = StoreFileScanner.getScannersForStoreFiles(files,
-      cacheBlocks, usePread, isCompaction, false, matcher, readPt);
-    List<KeyValueScanner> scanners = new ArrayList<>(sfScanners.size() + 1);
-    scanners.addAll(sfScanners);
-    // Then the memstore scanners
-    if (memStoreScanners != null) {
-      scanners.addAll(memStoreScanners);
+    try {
+      List<StoreFileScanner> sfScanners = StoreFileScanner
+        .getScannersForStoreFiles(files, cacheBlocks, usePread, isCompaction, false, matcher,
+          readPt);
+      List<KeyValueScanner> scanners = new ArrayList<>(sfScanners.size() + 1);
+      scanners.addAll(sfScanners);
+      // Then the memstore scanners
+      if (memStoreScanners != null) {
+        scanners.addAll(memStoreScanners);
+      }
+      return scanners;
+    } catch (Throwable t) {
+      clearAndClose(memStoreScanners);
+      throw t instanceof IOException ? (IOException) t : new IOException(t);
     }
-    return scanners;
   }
 
   /**
@@ -1408,7 +1460,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
   public List<HStoreFile> compact(CompactionContext compaction,
     ThroughputController throughputController, User user) throws IOException {
     assert compaction != null;
-    List<HStoreFile> sfs = null;
     CompactionRequestImpl cr = compaction.getRequest();
     try {
       // Do all sanity checking in here if we have a valid CompactionRequestImpl
@@ -2780,4 +2831,21 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
       .filter(sf -> sf.getReader() != null).filter(HStoreFile::isHFile)
       .mapToInt(HStoreFile::getRefCount).sum();
   }
+
+  /**
+   * @return get maximum ref count of storeFile among all compacted HStore Files
+   *   for the HStore
+   */
+  public int getMaxCompactedStoreFileRefCount() {
+    OptionalInt maxCompactedStoreFileRefCount = this.storeEngine.getStoreFileManager()
+      .getCompactedfiles()
+      .stream()
+      .filter(sf -> sf.getReader() != null)
+      .filter(HStoreFile::isHFile)
+      .mapToInt(HStoreFile::getRefCount)
+      .max();
+    return maxCompactedStoreFileRefCount.isPresent()
+      ? maxCompactedStoreFileRefCount.getAsInt() : 0;
+  }
+
 }

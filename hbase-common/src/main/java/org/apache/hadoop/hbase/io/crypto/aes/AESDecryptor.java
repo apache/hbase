@@ -83,10 +83,8 @@ public class AESDecryptor implements Decryptor {
   }
 
   protected void init() {
+    Preconditions.checkState(iv != null, "IV is null");
     try {
-      if (iv == null) {
-        throw new NullPointerException("IV is null");
-      }
       cipher.init(javax.crypto.Cipher.DECRYPT_MODE, key, new IvParameterSpec(iv));
     } catch (InvalidKeyException e) {
       throw new RuntimeException(e);

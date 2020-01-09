@@ -91,8 +91,11 @@ public class TestRegionServerAbortTimeout {
   @AfterClass
   public static void tearDown() throws Exception {
     // Wait the SCP of abort rs to finish
-    UTIL.waitFor(30000, () -> UTIL.getMiniHBaseCluster().getMaster().getProcedures().stream()
-        .filter(p -> p instanceof ServerCrashProcedure && p.isFinished()).count() > 0);
+    UTIL.waitFor(30000, () -> UTIL.getMiniHBaseCluster()
+        .getMaster()
+        .getProcedures()
+        .stream()
+        .anyMatch(p -> p instanceof ServerCrashProcedure && p.isFinished()));
     UTIL.getAdmin().disableTable(TABLE_NAME);
     UTIL.getAdmin().deleteTable(TABLE_NAME);
     UTIL.shutdownMiniCluster();

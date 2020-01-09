@@ -74,7 +74,6 @@ public class TestEncryptionRandomKeying {
     HFile.Reader reader = HFile.createReader(TEST_UTIL.getTestFileSystem(), path,
       new CacheConfig(conf), true, conf);
     try {
-      reader.loadFileInfo();
       Encryption.Context cryptoContext = reader.getFileContext().getEncryptionContext();
       assertNotNull("Reader has a null crypto context", cryptoContext);
       Key key = cryptoContext.getKey();

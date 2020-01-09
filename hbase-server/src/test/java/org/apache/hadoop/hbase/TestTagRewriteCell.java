@@ -35,7 +35,14 @@ public class TestTagRewriteCell {
 
   @Test
   public void testHeapSize() {
-    Cell originalCell = CellUtil.createCell(Bytes.toBytes("row"), Bytes.toBytes("value"));
+    Cell originalCell = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+      .setRow(Bytes.toBytes("row"))
+      .setFamily(HConstants.EMPTY_BYTE_ARRAY)
+      .setQualifier(HConstants.EMPTY_BYTE_ARRAY)
+      .setTimestamp(HConstants.LATEST_TIMESTAMP)
+      .setType(KeyValue.Type.Maximum.getCode())
+      .setValue(Bytes.toBytes("value"))
+      .build();
     final int fakeTagArrayLength = 10;
     Cell trCell = PrivateCellUtil.createCell(originalCell, new byte[fakeTagArrayLength]);
 

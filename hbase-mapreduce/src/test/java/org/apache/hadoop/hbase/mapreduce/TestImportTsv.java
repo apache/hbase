@@ -561,7 +561,6 @@ public class TestImportTsv implements Configurable {
   private static int getKVCountFromHfile(FileSystem fs, Path p) throws IOException {
     Configuration conf = util.getConfiguration();
     HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf), true, conf);
-    reader.loadFileInfo();
     HFileScanner scanner = reader.getScanner(false, false);
     scanner.seekTo();
     int count = 0;

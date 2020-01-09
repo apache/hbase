@@ -31,6 +31,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Objects;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.regex.Matcher;
@@ -136,7 +137,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
  *                             columns: info:merge0001, info:merge0002. You make also see 'mergeA',
  *                             and 'mergeB'. This is old form replaced by the new format that allows
  *                             for more than two parents to be merged at a time.
- * TODO: Add rep_barrier for serial replication explaination.
+ * TODO: Add rep_barrier for serial replication explaination. See SerialReplicationChecker.
  * </pre>
  * </p>
  * <p>
@@ -230,13 +231,13 @@ public class MetaTableAccessor {
    * Callers should call close on the returned {@link Table} instance.
    * @param connection connection we're using to access Meta
    * @return An {@link Table} for <code>hbase:meta</code>
+   * @throws NullPointerException if {@code connection} is {@code null}
    */
   public static Table getMetaHTable(final Connection connection)
   throws IOException {
     // We used to pass whole CatalogTracker in here, now we just pass in Connection
-    if (connection == null) {
-      throw new NullPointerException("No connection");
-    } else if (connection.isClosed()) {
+    Objects.requireNonNull(connection, "Connection cannot be null");
+    if (connection.isClosed()) {
       throw new IOException("connection is closed");
     }
     return connection.getTable(TableName.META_TABLE_NAME);
@@ -319,6 +320,7 @@ public class MetaTableAccessor {
    * is stored in the name, so the returned object should only be used for the fields
    * in the regionName.
    */
+  // This should be moved to RegionInfo? TODO.
   public static RegionInfo parseRegionInfoFromRegionName(byte[] regionName) throws IOException {
     byte[][] fields = RegionInfo.parseRegionName(regionName);
     long regionId = Long.parseLong(Bytes.toString(fields[2]));
@@ -607,6 +609,7 @@ public class MetaTableAccessor {
    * @param excludeOfflinedSplitParents don't return split parents
    * @return Return list of regioninfos and server addresses.
    */
+  // What happens here when 1M regions in hbase:meta? This won't scale?
   public static List<Pair<RegionInfo, ServerName>> getTableRegionsAndLocations(
       Connection connection, @Nullable final TableName tableName,
       final boolean excludeOfflinedSplitParents) throws IOException {
@@ -1247,9 +1250,7 @@ public class MetaTableAccessor {
    * Generates and returns a Put containing the region into for the catalog table
    */
   public static Put makePutFromRegionInfo(RegionInfo regionInfo, long ts) throws IOException {
-    Put put = new Put(regionInfo.getRegionName(), ts);
-    addRegionInfo(put, regionInfo);
-    return put;
+    return addRegionInfo(new Put(regionInfo.getRegionName(), ts), regionInfo);
   }
 
   /**
@@ -1387,7 +1388,7 @@ public class MetaTableAccessor {
     }
   }
 
-  private static void addRegionStateToPut(Put put, RegionState.State state) throws IOException {
+  private static Put addRegionStateToPut(Put put, RegionState.State state) throws IOException {
     put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
         .setRow(put.getRow())
         .setFamily(HConstants.CATALOG_FAMILY)
@@ -1396,6 +1397,17 @@ public class MetaTableAccessor {
         .setType(Cell.Type.Put)
         .setValue(Bytes.toBytes(state.name()))
         .build());
+    return put;
+  }
+
+  /**
+   * Update state column in hbase:meta.
+   */
+  public static void updateRegionState(Connection connection, RegionInfo ri,
+      RegionState.State state) throws IOException {
+    Put put = new Put(RegionReplicaUtil.getRegionInfoForDefaultReplica(ri).getRegionName());
+    MetaTableAccessor.putsToMetaTable(connection,
+        Collections.singletonList(addRegionStateToPut(put, state)));
   }
 
   /**
@@ -1837,7 +1849,10 @@ public class MetaTableAccessor {
         .setQualifier(HConstants.REGIONINFO_QUALIFIER)
         .setTimestamp(p.getTimestamp())
         .setType(Type.Put)
-        .setValue(RegionInfo.toByteArray(hri))
+        // Serialize the Default Replica HRI otherwise scan of hbase:meta
+        // shows an info:regioninfo value with encoded name and region
+        // name that differs from that of the hbase;meta row.
+        .setValue(RegionInfo.toByteArray(RegionReplicaUtil.getRegionInfoForDefaultReplica(hri)))
         .build());
     return p;
   }
@@ -1928,6 +1943,9 @@ public class MetaTableAccessor {
     return put;
   }
 
+  /**
+   * See class comment on SerialReplicationChecker
+   */
   public static void addReplicationBarrier(Put put, long openSeqNum) throws IOException {
     put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
       .setRow(put.getRow())

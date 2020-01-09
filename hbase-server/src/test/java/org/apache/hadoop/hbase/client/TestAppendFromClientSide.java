@@ -22,7 +22,8 @@ import static org.junit.Assert.assertNotEquals;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.CellBuilderType;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
@@ -73,7 +74,14 @@ public class TestAppendFromClientSide {
     Table table = TEST_UTIL.createTable(TABLENAME, FAMILY);
     long timestamp = 999;
     Append append = new Append(ROW);
-    append.add(CellUtil.createCell(ROW, FAMILY, QUALIFIER, timestamp, KeyValue.Type.Put.getCode(), Bytes.toBytes(100L)));
+    append.add(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+      .setRow(ROW)
+      .setFamily(FAMILY)
+      .setQualifier(QUALIFIER)
+      .setTimestamp(timestamp)
+      .setType(KeyValue.Type.Put.getCode())
+      .setValue(Bytes.toBytes(100L))
+      .build());
     Result r = table.append(append);
     assertEquals(1, r.size());
     assertEquals(timestamp, r.rawCells()[0].getTimestamp());

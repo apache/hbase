@@ -154,7 +154,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
       for (String className : logCleaners) {
         T logCleaner = newFileCleaner(className, conf);
         if (logCleaner != null) {
-          LOG.debug("Initialize cleaner={}", className);
+          LOG.info("Initialize cleaner={}", className);
           this.cleanersChain.add(logCleaner);
         }
       }

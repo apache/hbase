@@ -437,7 +437,7 @@
     <% if (rsGroupTables != null && rsGroupTables.size() > 0) {
         List<TableDescriptor> tables;
         try (Admin admin = master.getConnection().getAdmin()) {
-            tables = master.isInitialized() ? admin.listTableDescriptors((Pattern)null, true) : null;
+            tables = master.isInitialized() ? admin.listTableDescriptors(true) : null;
         }
          Map<TableName, HTableDescriptor> tableDescriptors
             = tables.stream().collect(Collectors.toMap(TableDescriptor::getTableName, p -> new HTableDescriptor(p)));

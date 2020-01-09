@@ -51,11 +51,19 @@ public final class HConstants {
 
   /** Used as a magic return value while optimized index key feature enabled(HBASE-7845) */
   public final static int INDEX_KEY_MAGIC = -2;
+
   /*
-     * Name of directory that holds recovered edits written by the wal log
-     * splitting code, one per region
-     */
+   * Name of directory that holds recovered edits written by the wal log
+   * splitting code, one per region
+   */
   public static final String RECOVERED_EDITS_DIR = "recovered.edits";
+
+  /*
+   * Name of directory that holds recovered hfiles written by the wal log
+   * splitting code, one per region
+   */
+  public static final String RECOVERED_HFILES_DIR = "recovered.hfiles";
+
   /**
    * The first four bytes of Hadoop RPC connections
    */
@@ -170,6 +178,11 @@ public final class HConstants {
 
   /** Configuration key for master web API port */
   public static final String MASTER_INFO_PORT = "hbase.master.info.port";
+
+  /** Configuration key for the list of master host:ports **/
+  public static final String MASTER_ADDRS_KEY = "hbase.master.addrs";
+
+  public static final String MASTER_ADDRS_DEFAULT =  "localhost:" + DEFAULT_MASTER_PORT;
 
   /** Parameter name for the master type being backup (waits for primary to go inactive). */
   public static final String MASTER_TYPE_BACKUP = "hbase.master.backup";
@@ -950,6 +963,10 @@ public final class HConstants {
 
   public static final int REPLICATION_SOURCE_TOTAL_BUFFER_DFAULT = 256 * 1024 * 1024;
 
+  /** Configuration key for ReplicationSource shipeEdits timeout */
+  public static final String REPLICATION_SOURCE_SHIPEDITS_TIMEOUT =
+      "replication.source.shipedits.timeout";
+  public static final int REPLICATION_SOURCE_SHIPEDITS_TIMEOUT_DFAULT = 60000;
 
   /**
    * Directory where the source cluster file system client configuration are placed which is used by
@@ -1473,6 +1490,18 @@ public final class HConstants {
 
   // User defined Default TTL config key
   public static final String DEFAULT_SNAPSHOT_TTL_CONFIG_KEY = "hbase.master.snapshot.ttl";
+
+  // Regions Recovery based on high storeFileRefCount threshold value
+  public static final String STORE_FILE_REF_COUNT_THRESHOLD =
+    "hbase.regions.recovery.store.file.ref.count";
+
+  // default -1 indicates there is no threshold on high storeRefCount
+  public static final int DEFAULT_STORE_FILE_REF_COUNT_THRESHOLD = -1;
+
+  public static final String REGIONS_RECOVERY_INTERVAL =
+    "hbase.master.regions.recovery.check.interval";
+
+  public static final int DEFAULT_REGIONS_RECOVERY_INTERVAL = 1200 * 1000; // Default 20 min
 
   /**
    * Configurations for master executor services.

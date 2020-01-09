@@ -123,11 +123,11 @@ public class TestRegionServerMetrics {
 
     while (cluster.getLiveRegionServerThreads().isEmpty() &&
         cluster.getRegionServer(0) == null &&
-        rs.getRegionServerMetrics() == null) {
+        rs.getMetrics() == null) {
       Threads.sleep(100);
     }
     rs = cluster.getRegionServer(0);
-    metricsRegionServer = rs.getRegionServerMetrics();
+    metricsRegionServer = rs.getMetrics();
     serverSource = metricsRegionServer.getMetricsSource();
   }
 

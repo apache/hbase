@@ -154,44 +154,6 @@ public final class ReplicationUtils {
       HConstants.REPLICATION_BULKLOAD_ENABLE_DEFAULT);
   }
 
-  /**
-   * Returns whether we should replicate the given table.
-   */
-  public static boolean contains(ReplicationPeerConfig peerConfig, TableName tableName) {
-    String namespace = tableName.getNamespaceAsString();
-    if (peerConfig.replicateAllUserTables()) {
-      // replicate all user tables, but filter by exclude namespaces and table-cfs config
-      Set<String> excludeNamespaces = peerConfig.getExcludeNamespaces();
-      if (excludeNamespaces != null && excludeNamespaces.contains(namespace)) {
-        return false;
-      }
-      Map<TableName, List<String>> excludedTableCFs = peerConfig.getExcludeTableCFsMap();
-      // trap here, must check existence first since HashMap allows null value.
-      if (excludedTableCFs == null || !excludedTableCFs.containsKey(tableName)) {
-        return true;
-      }
-      List<String> cfs = excludedTableCFs.get(tableName);
-      // if cfs is null or empty then we can make sure that we do not need to replicate this table,
-      // otherwise, we may still need to replicate the table but filter out some families.
-      return cfs != null && !cfs.isEmpty();
-    } else {
-      // Not replicate all user tables, so filter by namespaces and table-cfs config
-      Set<String> namespaces = peerConfig.getNamespaces();
-      Map<TableName, List<String>> tableCFs = peerConfig.getTableCFsMap();
-
-      if (namespaces == null && tableCFs == null) {
-        return false;
-      }
-
-      // First filter by namespaces config
-      // If table's namespace in peer config, all the tables data are applicable for replication
-      if (namespaces != null && namespaces.contains(namespace)) {
-        return true;
-      }
-      return tableCFs != null && tableCFs.containsKey(tableName);
-    }
-  }
-
   public static FileSystem getRemoteWALFileSystem(Configuration conf, String remoteWALDir)
       throws IOException {
     return new Path(remoteWALDir).getFileSystem(conf);
@@ -235,5 +197,19 @@ public final class ReplicationUtils {
       Thread.currentThread().interrupt();
     }
     return sleepMultiplier < maxRetriesMultiplier;
+  }
+
+  /**
+   * Get the adaptive timeout value when performing a retry
+   */
+  public static int getAdaptiveTimeout(final int initialValue, final int retries) {
+    int ntries = retries;
+    if (ntries >= HConstants.RETRY_BACKOFF.length) {
+      ntries = HConstants.RETRY_BACKOFF.length - 1;
+    }
+    if (ntries < 0) {
+      ntries = 0;
+    }
+    return initialValue * HConstants.RETRY_BACKOFF[ntries];
   }
 }

@@ -476,6 +476,14 @@ exception TIllegalArgument {
   1: optional string message
 }
 
+/**
+ * Specify type of thrift server: thrift and thrift2
+ */
+enum TThriftServerType {
+  ONE = 1,
+  TWO = 2
+}
+
 service THBaseService {
 
   /**
@@ -1038,4 +1046,11 @@ service THBaseService {
   **/
   list<string> listNamespaces(
   ) throws (1: TIOError io)
+
+  /**
+   * Get the type of this thrift server.
+   *
+   * @return the type of this thrift server
+   */
+  TThriftServerType getThriftServerType()
 }

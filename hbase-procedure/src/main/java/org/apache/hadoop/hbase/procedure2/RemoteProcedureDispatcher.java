@@ -147,8 +147,7 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
    */
   public void addNode(final TRemote key) {
     assert key != null: "Tried to add a node with a null key";
-    final BufferNode newNode = new BufferNode(key);
-    nodeMap.putIfAbsent(key, newNode);
+    nodeMap.computeIfAbsent(key, k -> new BufferNode(k));
   }
 
   /**

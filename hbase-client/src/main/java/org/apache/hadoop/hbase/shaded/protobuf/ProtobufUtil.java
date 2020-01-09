@@ -35,6 +35,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableSet;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -1713,25 +1714,33 @@ public final class ProtobufUtil {
 // Start helpers for Admin
 
   /**
-   * A helper to retrieve region info given a region name
-   * using admin protocol.
+   * A helper to retrieve region info given a region name or an
+   * encoded region name using admin protocol.
    *
-   * @param admin
-   * @param regionName
    * @return the retrieved region info
-   * @throws IOException
    */
-  public static org.apache.hadoop.hbase.client.RegionInfo getRegionInfo(final RpcController controller,
-      final AdminService.BlockingInterface admin, final byte[] regionName) throws IOException {
+  public static org.apache.hadoop.hbase.client.RegionInfo getRegionInfo(
+      final RpcController controller, final AdminService.BlockingInterface admin,
+      final byte[] regionName) throws IOException {
     try {
-      GetRegionInfoRequest request =
-        RequestConverter.buildGetRegionInfoRequest(regionName);
-      GetRegionInfoResponse response =
-        admin.getRegionInfo(controller, request);
+      GetRegionInfoRequest request = getGetRegionInfoRequest(regionName);
+      GetRegionInfoResponse response = admin.getRegionInfo(controller,
+        getGetRegionInfoRequest(regionName));
       return toRegionInfo(response.getRegionInfo());
     } catch (ServiceException se) {
       throw getRemoteException(se);
     }
+  }
+
+  /**
+   * @return A GetRegionInfoRequest for the passed in regionName.
+   */
+  public static GetRegionInfoRequest getGetRegionInfoRequest(final byte [] regionName)
+    throws IOException {
+    return org.apache.hadoop.hbase.client.RegionInfo.isEncodedRegionName(regionName)?
+        GetRegionInfoRequest.newBuilder().setRegion(RequestConverter.
+          buildRegionSpecifier(RegionSpecifierType.ENCODED_REGION_NAME, regionName)).build():
+        RequestConverter.buildGetRegionInfoRequest(regionName);
   }
 
   /**
@@ -1965,14 +1974,13 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Unwraps an exception from a protobuf service into the underlying (expected) IOException.
-   * This method will <strong>always</strong> throw an exception.
+   * Unwraps an exception from a protobuf service into the underlying (expected) IOException. This
+   * method will <strong>always</strong> throw an exception.
    * @param se the {@code ServiceException} instance to convert into an {@code IOException}
+   * @throws NullPointerException if {@code se} is {@code null}
    */
   public static void toIOException(ServiceException se) throws IOException {
-    if (se == null) {
-      throw new NullPointerException("Null service exception passed!");
-    }
+    Objects.requireNonNull(se, "Service exception cannot be null");
 
     Throwable cause = se.getCause();
     if (cause != null && cause instanceof IOException) {
@@ -2224,6 +2232,14 @@ public final class ProtobufUtil {
     return HBaseProtos.TableName.newBuilder()
         .setNamespace(UnsafeByteOperations.unsafeWrap(tableName.getNamespace()))
         .setQualifier(UnsafeByteOperations.unsafeWrap(tableName.getQualifier())).build();
+  }
+
+  public static HBaseProtos.RegionInfo toProtoRegionInfo(
+    org.apache.hadoop.hbase.client.RegionInfo regionInfo) {
+    return HBaseProtos.RegionInfo.newBuilder()
+      .setRegionId(regionInfo.getRegionId())
+      .setRegionEncodedName(regionInfo.getEncodedName())
+      .setTableName(toProtoTableName(regionInfo.getTable())).build();
   }
 
   public static List<TableName> toTableNameList(List<HBaseProtos.TableName> tableNamesList) {
@@ -3145,6 +3161,7 @@ public final class ProtobufUtil {
     builder.setOffline(info.isOffline());
     builder.setSplit(info.isSplit());
     builder.setReplicaId(info.getReplicaId());
+    builder.setRegionEncodedName(info.getEncodedName());
     return builder.build();
   }
 
@@ -3183,6 +3200,9 @@ public final class ProtobufUtil {
     .setSplit(split);
     if (proto.hasOffline()) {
       rib.setOffline(proto.getOffline());
+    }
+    if (proto.hasRegionEncodedName()) {
+      rib.setEncodedName(proto.getRegionEncodedName());
     }
     return rib.build();
   }

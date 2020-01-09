@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ScheduledChore;
@@ -69,10 +70,10 @@ public class QuotaCache implements Stoppable {
   // for testing purpose only, enforce the cache to be always refreshed
   static boolean TEST_FORCE_REFRESH = false;
 
-  private final ConcurrentHashMap<String, QuotaState> namespaceQuotaCache = new ConcurrentHashMap<>();
-  private final ConcurrentHashMap<TableName, QuotaState> tableQuotaCache = new ConcurrentHashMap<>();
-  private final ConcurrentHashMap<String, UserQuotaState> userQuotaCache = new ConcurrentHashMap<>();
-  private final ConcurrentHashMap<String, QuotaState> regionServerQuotaCache =
+  private final ConcurrentMap<String, QuotaState> namespaceQuotaCache = new ConcurrentHashMap<>();
+  private final ConcurrentMap<TableName, QuotaState> tableQuotaCache = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, UserQuotaState> userQuotaCache = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, QuotaState> regionServerQuotaCache =
       new ConcurrentHashMap<>();
   private volatile boolean exceedThrottleQuotaEnabled = false;
   // factors used to divide cluster scope quota into machine scope quota
@@ -174,7 +175,7 @@ public class QuotaCache implements Stoppable {
    * Returns the QuotaState requested. If the quota info is not in cache an empty one will be
    * returned and the quota request will be enqueued for the next cache refresh.
    */
-  private <K> QuotaState getQuotaState(final ConcurrentHashMap<K, QuotaState> quotasMap,
+  private <K> QuotaState getQuotaState(final ConcurrentMap<K, QuotaState> quotasMap,
       final K key) {
     return computeIfAbsent(quotasMap, key, QuotaState::new, this::triggerCacheRefresh);
   }
@@ -223,17 +224,18 @@ public class QuotaCache implements Stoppable {
     protected void chore() {
       // Prefetch online tables/namespaces
       for (TableName table: ((HRegionServer)QuotaCache.this.rsServices).getOnlineTables()) {
-        if (table.isSystemTable()) continue;
-        if (!QuotaCache.this.tableQuotaCache.containsKey(table)) {
-          QuotaCache.this.tableQuotaCache.putIfAbsent(table, new QuotaState());
+        if (table.isSystemTable()) {
+          continue;
         }
-        String ns = table.getNamespaceAsString();
-        if (!QuotaCache.this.namespaceQuotaCache.containsKey(ns)) {
-          QuotaCache.this.namespaceQuotaCache.putIfAbsent(ns, new QuotaState());
-        }
+        QuotaCache.this.tableQuotaCache.computeIfAbsent(table, key -> new QuotaState());
+
+        final String ns = table.getNamespaceAsString();
+
+        QuotaCache.this.namespaceQuotaCache.computeIfAbsent(ns, key -> new QuotaState());
       }
-      QuotaCache.this.regionServerQuotaCache.putIfAbsent(QuotaTableUtil.QUOTA_REGION_SERVER_ROW_KEY,
-        new QuotaState());
+
+      QuotaCache.this.regionServerQuotaCache.computeIfAbsent(
+          QuotaTableUtil.QUOTA_REGION_SERVER_ROW_KEY, key -> new QuotaState());
 
       updateQuotaFactors();
       fetchNamespaceQuotaState();
@@ -319,7 +321,7 @@ public class QuotaCache implements Stoppable {
     }
 
     private <K, V extends QuotaState> void fetch(final String type,
-        final ConcurrentHashMap<K, V> quotasMap, final Fetcher<K, V> fetcher) {
+        final ConcurrentMap<K, V> quotasMap, final Fetcher<K, V> fetcher) {
       long now = EnvironmentEdgeManager.currentTime();
       long refreshPeriod = getPeriod();
       long evictPeriod = refreshPeriod * EVICT_PERIOD_FACTOR;

@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import static org.junit.Assert.assertEquals;
 
-import java.io.IOException;
 import java.util.Arrays;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -55,7 +54,6 @@ import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
  */
 @Category(LargeTests.class)
 public class TestSyncTable {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestSyncTable.class);
@@ -230,10 +228,8 @@ public class TestSyncTable {
     targetTable.close();
   }
 
-  private void assertTargetDoDeletesFalse(int expectedRows, TableName
-      sourceTableName,
-      TableName targetTableName)
-      throws Exception {
+  private void assertTargetDoDeletesFalse(int expectedRows, TableName sourceTableName,
+      TableName targetTableName) throws Exception {
     Table sourceTable = TEST_UTIL.getConnection().getTable(sourceTableName);
     Table targetTable = TEST_UTIL.getConnection().getTable(targetTableName);
 
@@ -242,7 +238,7 @@ public class TestSyncTable {
     Result targetRow = targetScanner.next();
     Result sourceRow = sourceScanner.next();
     int rowsCount = 0;
-    while (targetRow!=null) {
+    while (targetRow != null) {
       rowsCount++;
       //only compares values for existing rows, skipping rows existing on
       //target only that were not deleted given --doDeletes=false
@@ -283,7 +279,7 @@ public class TestSyncTable {
         Cell sourceCell = sourceCells[j];
         Cell targetCell = targetCells[j];
         try {
-          if (!CellUtil.matchingRow(sourceCell, targetCell)) {
+          if (!CellUtil.matchingRows(sourceCell, targetCell)) {
             Assert.fail("Rows don't match");
           }
           if (!CellUtil.matchingFamily(sourceCell, targetCell)) {
@@ -292,7 +288,7 @@ public class TestSyncTable {
           if (!CellUtil.matchingQualifier(sourceCell, targetCell)) {
             Assert.fail("Qualifiers don't match");
           }
-          if(targetRowKey < 80 && targetRowKey >= 90){
+          if (targetRowKey < 80 && targetRowKey >= 90){
             if (!CellUtil.matchingTimestamp(sourceCell, targetCell)) {
               Assert.fail("Timestamps don't match");
             }
@@ -317,10 +313,8 @@ public class TestSyncTable {
     targetTable.close();
   }
 
-  private void assertTargetDoPutsFalse(int expectedRows, TableName
-      sourceTableName,
-      TableName targetTableName)
-      throws Exception {
+  private void assertTargetDoPutsFalse(int expectedRows, TableName sourceTableName,
+      TableName targetTableName) throws Exception {
     Table sourceTable = TEST_UTIL.getConnection().getTable(sourceTableName);
     Table targetTable = TEST_UTIL.getConnection().getTable(targetTableName);
 
@@ -384,7 +378,7 @@ public class TestSyncTable {
           Cell sourceCell = sourceCells[j];
           Cell targetCell = targetCells[j];
           try {
-            if (!CellUtil.matchingRow(sourceCell, targetCell)) {
+            if (!CellUtil.matchingRows(sourceCell, targetCell)) {
               Assert.fail("Rows don't match");
             }
             if (!CellUtil.matchingFamily(sourceCell, targetCell)) {
@@ -432,18 +426,18 @@ public class TestSyncTable {
     return syncTable.counters;
   }
 
-  private void hashSourceTable(TableName sourceTableName, Path testDir)
-      throws Exception, IOException {
+  private void hashSourceTable(TableName sourceTableName, Path testDir) throws Exception {
     int numHashFiles = 3;
     long batchSize = 100;  // should be 2 batches per region
     int scanBatch = 1;
     HashTable hashTable = new HashTable(TEST_UTIL.getConfiguration());
     int code = hashTable.run(new String[] {
-        "--batchsize=" + batchSize,
-        "--numhashfiles=" + numHashFiles,
-        "--scanbatch=" + scanBatch,
-        sourceTableName.getNameAsString(),
-        testDir.toString()});
+      "--batchsize=" + batchSize,
+      "--numhashfiles=" + numHashFiles,
+      "--scanbatch=" + scanBatch,
+      sourceTableName.getNameAsString(),
+      testDir.toString()
+    });
     assertEquals("hash table job failed", 0, code);
 
     FileSystem fs = TEST_UTIL.getTestFileSystem();
@@ -570,6 +564,4 @@ public class TestSyncTable {
     sourceTable.close();
     targetTable.close();
   }
-
-
 }

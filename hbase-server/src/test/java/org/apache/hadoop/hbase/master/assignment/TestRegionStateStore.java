@@ -19,20 +19,26 @@ package org.apache.hadoop.hbase.master.assignment;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -78,6 +84,39 @@ public class TestRegionStateStore {
       public void visitRegionState(Result result, RegionInfo regionInfo, RegionState.State state,
         ServerName regionLocation, ServerName lastHost, long openSeqNum) {
         assertEquals(encodedName, regionInfo.getEncodedName());
+        visitorCalled.set(true);
+      }
+    });
+    assertTrue("Visitor has not been called.", visitorCalled.get());
+  }
+
+  @Test
+  public void testVisitMetaForBadRegionState() throws Exception {
+    final TableName tableName = TableName.valueOf("testVisitMetaForBadRegionState");
+    util.createTable(tableName, "cf");
+    final List<HRegion> regions = util.getHBaseCluster().getRegions(tableName);
+    final String encodedName = regions.get(0).getRegionInfo().getEncodedName();
+    final RegionStateStore regionStateStore = util.getHBaseCluster().getMaster().
+        getAssignmentManager().getRegionStateStore();
+
+    // add the BAD_STATE which does not exist in enum RegionState.State
+    Put put = new Put(regions.get(0).getRegionInfo().getRegionName(),
+        EnvironmentEdgeManager.currentTime());
+    put.addColumn(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER,
+        Bytes.toBytes("BAD_STATE"));
+
+    try (Table table = util.getConnection().getTable(TableName.META_TABLE_NAME)) {
+      table.put(put);
+    }
+
+    final AtomicBoolean visitorCalled = new AtomicBoolean(false);
+    regionStateStore.visitMetaForRegion(encodedName, new RegionStateStore.RegionStateVisitor() {
+      @Override
+      public void visitRegionState(Result result, RegionInfo regionInfo,
+                                   RegionState.State state, ServerName regionLocation,
+                                   ServerName lastHost, long openSeqNum) {
+        assertEquals(encodedName, regionInfo.getEncodedName());
+        assertNull(state);
         visitorCalled.set(true);
       }
     });

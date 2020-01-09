@@ -28,6 +28,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -227,8 +228,9 @@ public class ReplicationSource implements ReplicationSourceInterface {
   public void addHFileRefs(TableName tableName, byte[] family, List<Pair<Path, Path>> pairs)
       throws ReplicationException {
     String peerId = replicationPeer.getId();
+    Set<String> namespaces = replicationPeer.getNamespaces();
     Map<TableName, List<String>> tableCFMap = replicationPeer.getTableCFs();
-    if (tableCFMap != null) {
+    if (tableCFMap != null) { // All peers with TableCFs
       List<String> tableCfs = tableCFMap.get(tableName);
       if (tableCFMap.containsKey(tableName)
           && (tableCfs == null || tableCfs.contains(Bytes.toString(family)))) {
@@ -236,7 +238,15 @@ public class ReplicationSource implements ReplicationSourceInterface {
         metrics.incrSizeOfHFileRefsQueue(pairs.size());
       } else {
         LOG.debug("HFiles will not be replicated belonging to the table {} family {} to peer id {}",
-          tableName, Bytes.toString(family), peerId);
+            tableName, Bytes.toString(family), peerId);
+      }
+    } else if (namespaces != null) { // Only for set NAMESPACES peers
+      if (namespaces.contains(tableName.getNamespaceAsString())) {
+        this.queueStorage.addHFileRefs(peerId, pairs);
+        metrics.incrSizeOfHFileRefsQueue(pairs.size());
+      } else {
+        LOG.debug("HFiles will not be replicated belonging to the table {} family {} to peer id {}",
+            tableName, Bytes.toString(family), peerId);
       }
     } else {
       // user has explicitly not defined any table cfs for replication, means replicate all the
@@ -305,24 +315,30 @@ public class ReplicationSource implements ReplicationSourceInterface {
   }
 
   private void tryStartNewShipper(String walGroupId, PriorityBlockingQueue<Path> queue) {
-    ReplicationSourceShipper worker = createNewShipper(walGroupId, queue);
-    ReplicationSourceShipper extant = workerThreads.putIfAbsent(walGroupId, worker);
-    if (extant != null) {
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("{} Someone has beat us to start a worker thread for wal group {}", logPeerId(),
-          walGroupId);
+    workerThreads.compute(walGroupId, (key, value) -> {
+      if (value != null) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(
+              "{} Someone has beat us to start a worker thread for wal group {}",
+              logPeerId(), key);
+        }
+        return value;
+      } else {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("{} Starting up worker for wal group {}", logPeerId(), key);
+        }
+        ReplicationSourceShipper worker = createNewShipper(walGroupId, queue);
+        ReplicationSourceWALReader walReader =
+            createNewWALReader(walGroupId, queue, worker.getStartPosition());
+        Threads.setDaemonThreadRunning(
+            walReader, Thread.currentThread().getName()
+                + ".replicationSource.wal-reader." + walGroupId + "," + queueId,
+            this::uncaughtException);
+        worker.setWALReader(walReader);
+        worker.startup(this::uncaughtException);
+        return worker;
       }
-    } else {
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("{} Starting up worker for wal group {}", logPeerId(), walGroupId);
-      }
-      ReplicationSourceWALReader walReader =
-        createNewWALReader(walGroupId, queue, worker.getStartPosition());
-      Threads.setDaemonThreadRunning(walReader, Thread.currentThread().getName() +
-        ".replicationSource.wal-reader." + walGroupId + "," + queueId, this::uncaughtException);
-      worker.setWALReader(walReader);
-      worker.startup(this::uncaughtException);
-    }
+    });
   }
 
   @Override
@@ -549,7 +565,12 @@ public class ReplicationSource implements ReplicationSourceInterface {
     terminate(reason, cause, true);
   }
 
-  public void terminate(String reason, Exception cause, boolean join) {
+  @Override
+  public void terminate(String reason, Exception cause, boolean clearMetrics) {
+    terminate(reason, cause, clearMetrics, true);
+  }
+
+  public void terminate(String reason, Exception cause, boolean clearMetrics, boolean join) {
     if (cause == null) {
       LOG.info("{} Closing source {} because: {}", logPeerId(), this.queueId, reason);
     } else {
@@ -595,7 +616,6 @@ public class ReplicationSource implements ReplicationSourceInterface {
     if (this.replicationEndpoint != null) {
       this.replicationEndpoint.stop();
     }
-    metrics.clear();
     if (join) {
       for (ReplicationSourceShipper worker : workers) {
         Threads.shutdown(worker, this.sleepForRetries);
@@ -611,7 +631,9 @@ public class ReplicationSource implements ReplicationSourceInterface {
         }
       }
     }
-    this.metrics.clear();
+    if (clearMetrics) {
+      this.metrics.clear();
+    }
   }
 
   @Override

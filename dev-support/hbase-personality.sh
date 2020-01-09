@@ -132,6 +132,8 @@ function personality_modules
   local repostatus=$1
   local testtype=$2
   local extra=""
+  local branch1jdk8=()
+  local jdk8module=""
   local MODULES=("${CHANGED_MODULES[@]}")
 
   yetus_info "Personality: ${repostatus} ${testtype}"
@@ -170,6 +172,21 @@ function personality_modules
     return
   fi
 
+  # This list should include any modules that require jdk8. Maven should be configured to only
+  # include them when a proper JDK is in use, but that doesn' work if we specifically ask for the
+  # module to build as yetus does if something changes in the module.  Rather than try to
+  # figure out what jdk is in use so we can duplicate the module activation logic, just
+  # build at the top level if anything changes in one of these modules and let maven sort it out.
+  branch1jdk8=(hbase-error-prone hbase-tinylfu-blockcache)
+  if [[ "${PATCH_BRANCH}" = branch-1* ]]; then
+    for jdk8module in "${branch1jdk8[@]}"; do
+      if [[ "${MODULES[*]}" =~ ${jdk8module} ]]; then
+        MODULES=(.)
+        break
+      fi
+    done
+  fi
+
   if [[ ${testtype} == findbugs ]]; then
     # Run findbugs on each module individually to diff pre-patch and post-patch results and
     # report new warnings for changed modules only.
@@ -190,7 +207,8 @@ function personality_modules
     return
   fi
 
-  if [[ ${testtype} == compile ]] && [[ "${SKIP_ERRORPRONE}" != "true" ]]; then
+  if [[ ${testtype} == compile ]] && [[ "${SKIP_ERRORPRONE}" != "true" ]] &&
+      [[ "${PATCH_BRANCH}" != branch-1* ]] ; then
     extra="${extra} -PerrorProne"
   fi
 

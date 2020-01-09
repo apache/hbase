@@ -23,8 +23,10 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Optional;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
@@ -55,8 +57,13 @@ public class TestResultFromCoprocessor {
   private static final byte[] QUAL = Bytes.toBytes("qual");
   private static final byte[] VALUE = Bytes.toBytes(100L);
   private static final byte[] FIXED_VALUE = Bytes.toBytes("fixed_value");
-  private static final Cell FIXED_CELL = CellUtil.createCell(ROW, FAMILY,
-          QUAL, 0, KeyValue.Type.Put.getCode(), FIXED_VALUE);
+  private static final Cell FIXED_CELL = ExtendedCellBuilderFactory
+    .create(CellBuilderType.DEEP_COPY)
+    .setRow(ROW).setFamily(FAMILY)
+    .setQualifier(QUAL).setTimestamp(0)
+    .setType(KeyValue.Type.Put.getCode())
+    .setValue(FIXED_VALUE)
+    .build();
   private static final Result FIXED_RESULT = Result.create(Arrays.asList(FIXED_CELL));
   private static final TableName TABLE_NAME = TableName.valueOf("TestResultFromCoprocessor");
   @BeforeClass

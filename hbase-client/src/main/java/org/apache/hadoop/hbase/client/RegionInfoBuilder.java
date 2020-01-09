@@ -116,6 +116,11 @@ public class RegionInfoBuilder {
     return this;
   }
 
+  public RegionInfoBuilder setEncodedName(String encodedName) {
+    this.encodedName = encodedName;
+    return this;
+  }
+
   public RegionInfo build() {
     return new MutableRegionInfo(tableName, startKey, endKey, split,
         regionId, replicaId, offLine, regionName, encodedName);

@@ -159,9 +159,11 @@ public class AsyncRegionServerAdmin {
   }
 
   public CompletableFuture<ReplicateWALEntryResponse> replicateWALEntry(
-      ReplicateWALEntryRequest request, CellScanner cellScanner) {
-    return call((stub, controller, done) -> stub.replicateWALEntry(controller, request, done),
-      cellScanner);
+      ReplicateWALEntryRequest request, CellScanner cellScanner, int timeout) {
+    return call((stub, controller, done) -> {
+      controller.setCallTimeout(timeout);
+      stub.replicateWALEntry(controller, request, done);
+    }, cellScanner);
   }
 
   public CompletableFuture<ReplicateWALEntryResponse> replay(ReplicateWALEntryRequest request,

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.util;
 
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.Lock;
@@ -75,7 +76,7 @@ public abstract class ObjectPool<K, V> {
    *
    * @param objectFactory the factory to supply new objects on demand
    *
-   * @throws NullPointerException if {@code objectFactory} is null
+   * @throws NullPointerException if {@code objectFactory} is {@code null}
    */
   public ObjectPool(ObjectFactory<K, V> objectFactory) {
     this(objectFactory, DEFAULT_INITIAL_CAPACITY, DEFAULT_CONCURRENCY_LEVEL);
@@ -88,7 +89,7 @@ public abstract class ObjectPool<K, V> {
    * @param objectFactory the factory to supply new objects on demand
    * @param initialCapacity the initial capacity to keep objects in the pool
    *
-   * @throws NullPointerException if {@code objectFactory} is null
+   * @throws NullPointerException if {@code objectFactory} is {@code null}
    * @throws IllegalArgumentException if {@code initialCapacity} is negative
    */
   public ObjectPool(ObjectFactory<K, V> objectFactory, int initialCapacity) {
@@ -103,7 +104,7 @@ public abstract class ObjectPool<K, V> {
    * @param initialCapacity the initial capacity to keep objects in the pool
    * @param concurrencyLevel the estimated count of concurrently accessing threads
    *
-   * @throws NullPointerException if {@code objectFactory} is null
+   * @throws NullPointerException if {@code objectFactory} is {@code null}
    * @throws IllegalArgumentException if {@code initialCapacity} is negative or
    *    {@code concurrencyLevel} is non-positive
    */
@@ -112,10 +113,7 @@ public abstract class ObjectPool<K, V> {
       int initialCapacity,
       int concurrencyLevel) {
 
-    if (objectFactory == null) {
-      throw new NullPointerException("Given object factory instance is NULL");
-    }
-    this.objectFactory = objectFactory;
+    this.objectFactory = Objects.requireNonNull(objectFactory, "Object factory cannot be null");
 
     this.referenceCache =
         new ConcurrentHashMap<K, Reference<V>>(initialCapacity, 0.75f, concurrencyLevel);
@@ -164,10 +162,10 @@ public abstract class ObjectPool<K, V> {
   /**
    * Returns a shared object associated with the given {@code key},
    * which is identified by the {@code equals} method.
-   * @throws NullPointerException if {@code key} is null
+   * @throws NullPointerException if {@code key} is {@code null}
    */
   public V get(K key) {
-    Reference<V> ref = referenceCache.get(key);
+    Reference<V> ref = referenceCache.get(Objects.requireNonNull(key));
     if (ref != null) {
       V obj = ref.get();
       if (obj != null) {

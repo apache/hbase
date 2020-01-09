@@ -21,8 +21,11 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
@@ -38,6 +41,7 @@ import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.TableProcedureInterface;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -48,6 +52,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -180,6 +185,36 @@ public class TestHbck {
       hbck.setTableStateInMeta(new TableState(TABLE_NAME, TableState.State.ENABLED));
     assertTrue("Incorrect previous state! expeced=DISABLED, found=" + prevState.getState(),
       prevState.isDisabled());
+  }
+
+  @Test
+  public void testSetRegionStateInMeta() throws Exception {
+    Hbck hbck = getHbck();
+    try(Admin admin = TEST_UTIL.getAdmin()){
+      final List<RegionInfo> regions = admin.getRegions(TABLE_NAME);
+      final AssignmentManager am = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager();
+      final List<RegionState> prevStates = new ArrayList<>();
+      final List<RegionState> newStates = new ArrayList<>();
+      final Map<String, Pair<RegionState, RegionState>> regionsMap = new HashMap<>();
+      regions.forEach(r -> {
+        RegionState prevState = am.getRegionStates().getRegionState(r);
+        prevStates.add(prevState);
+        RegionState newState = RegionState.createForTesting(r, RegionState.State.CLOSED);
+        newStates.add(newState);
+        regionsMap.put(r.getEncodedName(), new Pair<>(prevState, newState));
+      });
+      final List<RegionState> result = hbck.setRegionStateInMeta(newStates);
+      result.forEach(r -> {
+        RegionState prevState = regionsMap.get(r.getRegion().getEncodedName()).getFirst();
+        assertEquals(prevState.getState(), r.getState());
+      });
+      regions.forEach(r -> {
+        RegionState cachedState = am.getRegionStates().getRegionState(r.getEncodedName());
+        RegionState newState = regionsMap.get(r.getEncodedName()).getSecond();
+        assertEquals(newState.getState(), cachedState.getState());
+      });
+      hbck.setRegionStateInMeta(prevStates);
+    }
   }
 
   @Test

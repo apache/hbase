@@ -378,8 +378,8 @@ make_binary_release() {
 
   # Check there is a bin gz output. The build may not produce one: e.g. hbase-thirdparty.
   f_bin_tgz="./${PROJECT}-assembly/target/${basename}*-bin.tar.gz"
-  if test -f "${f_bin_tgz}"; then
-    cp "${f_bin_tgz}" ..
+  if ls ${f_bin_tgz} &>/dev/null; then
+    cp ${f_bin_tgz} ..
     cd .. || exit
     for i in "${basename}"*-bin.tar.gz; do
       echo "$GPG_PASSPHRASE" | $GPG --passphrase-fd 0 --armour --output "$i.asc" --detach-sig "$i"

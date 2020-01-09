@@ -37,8 +37,10 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionState.State;
+import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -94,6 +96,9 @@ public class RegionStates {
 
   public RegionStates() { }
 
+  /**
+   * Called on stop of AssignmentManager.
+   */
   public void clear() {
     regionsMap.clear();
     regionInTransition.clear();
@@ -112,9 +117,8 @@ public class RegionStates {
   // ==========================================================================
   @VisibleForTesting
   RegionStateNode createRegionStateNode(RegionInfo regionInfo) {
-    RegionStateNode newNode = new RegionStateNode(regionInfo, regionInTransition);
-    RegionStateNode oldNode = regionsMap.putIfAbsent(regionInfo.getRegionName(), newNode);
-    return oldNode != null ? oldNode : newNode;
+    return regionsMap.computeIfAbsent(regionInfo.getRegionName(),
+      key -> new RegionStateNode(regionInfo, regionInTransition));
   }
 
   public RegionStateNode getOrCreateRegionStateNode(RegionInfo regionInfo) {
@@ -350,9 +354,13 @@ public class RegionStates {
     if (LOG.isTraceEnabled()) {
       LOG.trace("WORKING ON " + node + " " + node.getRegionInfo());
     }
-    if (node.isInState(State.SPLIT)) return false;
-    if (node.isInState(State.OFFLINE) && !offline) return false;
     final RegionInfo hri = node.getRegionInfo();
+    if (node.isInState(State.SPLIT) || hri.isSplit()) {
+      return false;
+    }
+    if ((node.isInState(State.OFFLINE) || hri.isOffline()) && !offline) {
+      return false;
+    }
     return (!hri.isOffline() && !hri.isSplit()) ||
         ((hri.isOffline() || hri.isSplit()) && offline);
   }
@@ -534,10 +542,13 @@ public class RegionStates {
    * @return A clone of current assignments.
    */
   public Map<TableName, Map<ServerName, List<RegionInfo>>> getAssignmentsForBalancer(
-      boolean isByTable) {
+    TableStateManager tableStateManager, List<ServerName> onlineServers, boolean isByTable) {
     final Map<TableName, Map<ServerName, List<RegionInfo>>> result = new HashMap<>();
     if (isByTable) {
       for (RegionStateNode node : regionsMap.values()) {
+        if (isTableDisabled(tableStateManager, node.getTable())) {
+          continue;
+        }
         Map<ServerName, List<RegionInfo>> tableResult =
             result.computeIfAbsent(node.getTable(), t -> new HashMap<>());
         final ServerName serverName = node.getRegionLocation();
@@ -551,19 +562,32 @@ public class RegionStates {
       }
       // Add online servers with no assignment for the table.
       for (Map<ServerName, List<RegionInfo>> table : result.values()) {
-        for (ServerName serverName : serverMap.keySet()) {
-          table.putIfAbsent(serverName, new ArrayList<>());
+        for (ServerName serverName : onlineServers) {
+          table.computeIfAbsent(serverName, key -> new ArrayList<>());
         }
       }
     } else {
       final HashMap<ServerName, List<RegionInfo>> ensemble = new HashMap<>(serverMap.size());
-      for (ServerStateNode serverNode : serverMap.values()) {
-        ensemble.put(serverNode.getServerName(), serverNode.getRegionInfoList());
+      for (ServerName serverName : onlineServers) {
+        ServerStateNode serverNode = serverMap.get(serverName);
+        if (serverNode != null) {
+          ensemble.put(serverNode.getServerName(), serverNode.getRegionInfoList().stream()
+            .filter(region -> !isTableDisabled(tableStateManager, region.getTable()))
+            .collect(Collectors.toList()));
+        } else {
+          ensemble.put(serverName, new ArrayList<>());
+        }
       }
       // Use a fake table name to represent the whole cluster's assignments
       result.put(HConstants.ENSEMBLE_TABLE_NAME, ensemble);
     }
     return result;
+  }
+
+  private boolean isTableDisabled(final TableStateManager tableStateManager,
+    final TableName tableName) {
+    return tableStateManager
+      .isTableState(tableName, TableState.State.DISABLED, TableState.State.DISABLING);
   }
 
   // ==========================================================================
@@ -673,13 +697,7 @@ public class RegionStates {
 
   public RegionFailedOpen addToFailedOpen(final RegionStateNode regionNode) {
     final byte[] key = regionNode.getRegionInfo().getRegionName();
-    RegionFailedOpen node = regionFailedOpen.get(key);
-    if (node == null) {
-      RegionFailedOpen newNode = new RegionFailedOpen(regionNode);
-      RegionFailedOpen oldNode = regionFailedOpen.putIfAbsent(key, newNode);
-      node = oldNode != null ? oldNode : newNode;
-    }
-    return node;
+    return regionFailedOpen.computeIfAbsent(key, (k) -> new RegionFailedOpen(regionNode));
   }
 
   public RegionFailedOpen getFailedOpen(final RegionInfo regionInfo) {
@@ -710,19 +728,19 @@ public class RegionStates {
    * to {@link #getServerNode(ServerName)} where we can.
    */
   public ServerStateNode getOrCreateServer(final ServerName serverName) {
-    ServerStateNode node = serverMap.get(serverName);
-    if (node == null) {
-      node = new ServerStateNode(serverName);
-      ServerStateNode oldNode = serverMap.putIfAbsent(serverName, node);
-      node = oldNode != null ? oldNode : node;
-    }
-    return node;
+    return serverMap.computeIfAbsent(serverName, key -> new ServerStateNode(key));
   }
 
+  /**
+   * Called by SCP at end of successful processing.
+   */
   public void removeServer(final ServerName serverName) {
     serverMap.remove(serverName);
   }
 
+  /**
+   * @return Pertinent ServerStateNode or NULL if none found (Do not make modifications).
+   */
   @VisibleForTesting
   public ServerStateNode getServerNode(final ServerName serverName) {
     return serverMap.get(serverName);

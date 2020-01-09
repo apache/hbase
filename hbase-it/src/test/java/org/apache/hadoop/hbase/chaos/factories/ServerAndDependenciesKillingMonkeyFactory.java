@@ -78,10 +78,10 @@ public class ServerAndDependenciesKillingMonkeyFactory extends MonkeyFactory {
         MonkeyConstants.GRACEFUL_RESTART_RS_SLEEP_TIME,
         MonkeyConstants.DEFAULT_GRACEFUL_RESTART_RS_SLEEP_TIME + ""));
     rollingBatchSuspendRSSleepTime = Long.parseLong(this.properties.getProperty(
-        MonkeyConstants.ROLLING_BATCH_RESTART_RS_SLEEP_TIME,
-        MonkeyConstants.DEFAULT_ROLLING_BATCH_RESTART_RS_SLEEP_TIME + ""));
+        MonkeyConstants.ROLLING_BATCH_SUSPEND_RS_SLEEP_TIME,
+        MonkeyConstants.DEFAULT_ROLLING_BATCH_SUSPEND_RS_SLEEP_TIME+ ""));
     rollingBatchSuspendtRSRatio = Float.parseFloat(this.properties.getProperty(
-        MonkeyConstants.ROLLING_BATCH_RESTART_RS_RATIO,
-        MonkeyConstants.DEFAULT_ROLLING_BATCH_RESTART_RS_RATIO + ""));
+        MonkeyConstants.ROLLING_BATCH_SUSPEND_RS_RATIO,
+        MonkeyConstants.DEFAULT_ROLLING_BATCH_SUSPEND_RS_RATIO + ""));
   }
 }

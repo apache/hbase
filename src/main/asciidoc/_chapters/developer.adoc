@@ -2315,7 +2315,7 @@ then wait for a `+1` response from another committer before committing.
 
 Patches which do not adhere to the guidelines in
 link:https://hbase.apache.org/book.html#developer[HowToContribute] and to the
-link:https://wiki.apache.org/hadoop/CodeReviewChecklist[code review checklist]
+link:https://cwiki.apache.org/confluence/display/HADOOP2/CodeReviewChecklist[code review checklist]
 should be rejected. Committers should always be polite to contributors and try
 to instruct and encourage them to contribute better patches. If a committer
 wishes to improve an unacceptable patch, then it should first be rejected, and a

@@ -436,7 +436,6 @@ public class RestoreTool {
           HFile.Reader reader = HFile.createReader(fs, hfile, conf);
           final byte[] first, last;
           try {
-            reader.loadFileInfo();
             first = reader.getFirstRowKey().get();
             last = reader.getLastRowKey().get();
             LOG.debug("Trying to figure out region boundaries hfile=" + hfile + " first="

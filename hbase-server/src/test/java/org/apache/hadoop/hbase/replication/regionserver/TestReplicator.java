@@ -227,9 +227,9 @@ public class TestReplicator extends TestReplicationBase {
     }
 
     @Override
-    protected Callable<Integer> createReplicator(List<Entry> entries, int ordinal) {
+    protected Callable<Integer> createReplicator(List<Entry> entries, int ordinal, int timeout) {
       return () -> {
-        int batchIndex = replicateEntries(entries, ordinal);
+        int batchIndex = replicateEntries(entries, ordinal, timeout);
         entriesCount += entries.size();
         int count = batchCount.incrementAndGet();
         LOG.info(
@@ -244,10 +244,10 @@ public class TestReplicator extends TestReplicationBase {
     private final AtomicBoolean failNext = new AtomicBoolean(false);
 
     @Override
-    protected Callable<Integer> createReplicator(List<Entry> entries, int ordinal) {
+    protected Callable<Integer> createReplicator(List<Entry> entries, int ordinal, int timeout) {
       return () -> {
         if (failNext.compareAndSet(false, true)) {
-          int batchIndex = replicateEntries(entries, ordinal);
+          int batchIndex = replicateEntries(entries, ordinal, timeout);
           entriesCount += entries.size();
           int count = batchCount.incrementAndGet();
           LOG.info(

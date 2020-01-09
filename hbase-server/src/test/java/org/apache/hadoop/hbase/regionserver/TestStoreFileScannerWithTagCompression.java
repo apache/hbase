@@ -38,6 +38,9 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.io.hfile.HFileInfo;
+import org.apache.hadoop.hbase.io.hfile.ReaderContext;
+import org.apache.hadoop.hbase.io.hfile.ReaderContextBuilder;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -79,8 +82,11 @@ public class TestStoreFileScannerWithTagCompression {
     writeStoreFile(writer);
     writer.close();
 
+    ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, f).build();
+    HFileInfo fileInfo = new HFileInfo(context, conf);
     StoreFileReader reader =
-        new StoreFileReader(fs, f, cacheConf, true, new AtomicInteger(0), true, conf);
+        new StoreFileReader(context, fileInfo, cacheConf, new AtomicInteger(0), conf);
+    fileInfo.initMetaAndIndex(reader.getHFileReader());
     StoreFileScanner s = reader.getStoreFileScanner(false, false, false, 0, 0, false);
     try {
       // Now do reseek with empty KV to position to the beginning of the file

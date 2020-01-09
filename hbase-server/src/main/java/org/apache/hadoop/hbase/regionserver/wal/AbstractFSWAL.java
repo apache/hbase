@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerCall;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -134,6 +135,13 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
 
   protected static final String WAL_SYNC_TIMEOUT_MS = "hbase.regionserver.wal.sync.timeout";
   protected static final int DEFAULT_WAL_SYNC_TIMEOUT_MS = 5 * 60 * 1000; // in ms, 5min
+
+  public static final String WAL_ROLL_MULTIPLIER = "hbase.regionserver.logroll.multiplier";
+
+  public static final String MAX_LOGS = "hbase.regionserver.maxlogs";
+
+  public static final String RING_BUFFER_SLOT_COUNT =
+    "hbase.regionserver.wal.disruptor.event.count";
 
   /**
    * file system instance
@@ -211,6 +219,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    */
   protected final int maxLogs;
 
+  protected final boolean useHsync;
+
   /**
    * This lock makes sure only one log roll runs at a time. Should not be taken while any other lock
    * is held. We don't just use synchronized because that results in bogus and tedious findbugs
@@ -271,8 +281,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   private static final class WalProps {
 
     /**
-     * Map the encoded region name to the highest sequence id. Contain all the regions it has
-     * entries of
+     * Map the encoded region name to the highest sequence id.
+     * <p/>Contains all the regions it has an entry for.
      */
     public final Map<byte[], Long> encodedName2HighestSequenceId;
 
@@ -353,9 +363,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     // sync. If no sync, then the handlers will be outstanding just waiting on sync completion
     // before they return.
     int preallocatedEventCount =
-      this.conf.getInt("hbase.regionserver.wal.disruptor.event.count", 1024 * 16);
-    checkArgument(preallocatedEventCount >= 0,
-      "hbase.regionserver.wal.disruptor.event.count must > 0");
+      this.conf.getInt(RING_BUFFER_SLOT_COUNT, 1024 * 16);
+    checkArgument(preallocatedEventCount >= 0, RING_BUFFER_SLOT_COUNT + " must > 0");
     int floor = Integer.highestOneBit(preallocatedEventCount);
     if (floor == preallocatedEventCount) {
       return floor;
@@ -445,10 +454,9 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     // 2 times the DFS default: i.e. 2 * DFS default block size rolling at 50% full will generally
     // make similar size logs to 1 * DFS default block size rolling at 95% full. See HBASE-19148.
     this.blocksize = WALUtil.getWALBlockSize(this.conf, this.fs, this.walDir);
-    float multiplier = conf.getFloat("hbase.regionserver.logroll.multiplier", 0.5f);
-    this.logrollsize = (long)(this.blocksize * multiplier);
-    this.maxLogs = conf.getInt("hbase.regionserver.maxlogs",
-      Math.max(32, calculateMaxLogFiles(conf, logrollsize)));
+    float multiplier = conf.getFloat(WAL_ROLL_MULTIPLIER, 0.5f);
+    this.logrollsize = (long) (this.blocksize * multiplier);
+    this.maxLogs = conf.getInt(MAX_LOGS, Math.max(32, calculateMaxLogFiles(conf, logrollsize)));
 
     LOG.info("WAL configuration: blocksize=" + StringUtils.byteDesc(blocksize) + ", rollsize=" +
       StringUtils.byteDesc(this.logrollsize) + ", prefix=" + this.walFilePrefix + ", suffix=" +
@@ -472,6 +480,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     this.implClassName = getClass().getSimpleName();
     this.walTooOldNs = TimeUnit.SECONDS.toNanos(conf.getInt(
             SURVIVED_TOO_LONG_SEC_KEY, SURVIVED_TOO_LONG_SEC_DEFAULT));
+    this.useHsync = conf.getBoolean(HRegion.WAL_HSYNC_CONF_KEY, HRegion.DEFAULT_WAL_HSYNC);
   }
 
   /**
@@ -628,9 +637,9 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   }
 
   /**
-   * If the number of un-archived WAL files is greater than maximum allowed, check the first
-   * (oldest) WAL file, and returns those regions which should be flushed so that it can be
-   * archived.
+   * If the number of un-archived WAL files ('live' WALs) is greater than maximum allowed,
+   * check the first (oldest) WAL, and return those regions which should be flushed so that
+   * it can be let-go/'archived'.
    * @return regions (encodedRegionNames) to flush in order to archive oldest WAL file.
    */
   byte[][] findRegionsToForceFlush() throws IOException {
@@ -930,10 +939,6 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   /**
    * updates the sequence number of a specific store. depending on the flag: replaces current seq
    * number if the given seq id is bigger, or even if it is lower than existing one
-   * @param encodedRegionName
-   * @param familyName
-   * @param sequenceid
-   * @param onlyIfGreater
    */
   @Override
   public void updateStore(byte[] encodedRegionName, byte[] familyName, Long sequenceid,
@@ -941,8 +946,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     sequenceIdAccounting.updateStore(encodedRegionName, familyName, sequenceid, onlyIfGreater);
   }
 
-  protected final SyncFuture getSyncFuture(long sequence) {
-    return cachedSyncFutures.get().reset(sequence);
+  protected final SyncFuture getSyncFuture(long sequence, boolean forceSync) {
+    return cachedSyncFutures.get().reset(sequence).setForceSync(forceSync);
   }
 
   protected boolean isLogRollRequested() {
@@ -977,7 +982,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     // Noop
   }
 
-  protected final boolean append(W writer, FSWALEntry entry) throws IOException {
+  protected final boolean appendEntry(W writer, FSWALEntry entry) throws IOException {
     // TODO: WORK ON MAKING THIS APPEND FASTER. DOING WAY TOO MUCH WORK WITH CPs, PBing, etc.
     atHeadOfRingBufferEventHandlerAppend();
     long start = EnvironmentEdgeManager.currentTime();
@@ -1001,8 +1006,13 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     doAppend(writer, entry);
     assert highestUnsyncedTxid < entry.getTxid();
     highestUnsyncedTxid = entry.getTxid();
-    sequenceIdAccounting.update(encodedRegionName, entry.getFamilyNames(), regionSequenceId,
-      entry.isInMemStore());
+    if (entry.isCloseRegion()) {
+      // let's clean all the records of this region
+      sequenceIdAccounting.onRegionClose(encodedRegionName);
+    } else {
+      sequenceIdAccounting.update(encodedRegionName, entry.getFamilyNames(), regionSequenceId,
+        entry.isInMemStore());
+    }
     coprocessorHost.postWALWrite(entry.getRegionInfo(), entry.getKey(), entry.getEdit());
     // Update metrics.
     postAppend(entry, EnvironmentEdgeManager.currentTime() - start);
@@ -1052,11 +1062,11 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   }
 
   protected final long stampSequenceIdAndPublishToRingBuffer(RegionInfo hri, WALKeyImpl key,
-      WALEdit edits, boolean inMemstore, RingBuffer<RingBufferTruck> ringBuffer)
-      throws IOException {
+    WALEdit edits, boolean inMemstore, RingBuffer<RingBufferTruck> ringBuffer)
+    throws IOException {
     if (this.closed) {
       throw new IOException(
-          "Cannot append; log is closed, regionName = " + hri.getRegionNameAsString());
+        "Cannot append; log is closed, regionName = " + hri.getRegionNameAsString());
     }
     MutableLong txidHolder = new MutableLong();
     MultiVersionConcurrencyControl.WriteEntry we = key.getMvcc().begin(() -> {
@@ -1102,7 +1112,24 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     }
   }
 
+  @Override
+  public long appendData(RegionInfo info, WALKeyImpl key, WALEdit edits) throws IOException {
+    return append(info, key, edits, true);
+  }
+
+  @Override
+  public long appendMarker(RegionInfo info, WALKeyImpl key, WALEdit edits)
+    throws IOException {
+    return append(info, key, edits, false);
+  }
+
   /**
+   * Append a set of edits to the WAL.
+   * <p/>
+   * The WAL is not flushed/sync'd after this transaction completes BUT on return this edit must
+   * have its region edit/sequence id assigned else it messes up our unification of mvcc and
+   * sequenceid. On return <code>key</code> will have the region edit/sequence id filled in.
+   * <p/>
    * NOTE: This append, at a time that is usually after this call returns, starts an mvcc
    * transaction by calling 'begin' wherein which we assign this update a sequenceid. At assignment
    * time, we stamp all the passed in Cells inside WALEdit with their sequenceId. You must
@@ -1113,9 +1140,20 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    * passed in WALKey <code>walKey</code> parameter. Be warned that the WriteEntry is not
    * immediately available on return from this method. It WILL be available subsequent to a sync of
    * this append; otherwise, you will just have to wait on the WriteEntry to get filled in.
+   * @param info the regioninfo associated with append
+   * @param key Modified by this call; we add to it this edits region edit/sequence id.
+   * @param edits Edits to append. MAY CONTAIN NO EDITS for case where we want to get an edit
+   *          sequence id that is after all currently appended edits.
+   * @param inMemstore Always true except for case where we are writing a region event meta
+   *          marker edit, for example, a compaction completion record into the WAL or noting a
+   *          Region Open event. In these cases the entry is just so we can finish an unfinished
+   *          compaction after a crash when the new Server reads the WAL on recovery, etc. These
+   *          transition event 'Markers' do not go via the memstore. When memstore is false,
+   *          we presume a Marker event edit.
+   * @return Returns a 'transaction id' and <code>key</code> will have the region edit/sequence id
+   *         in it.
    */
-  @Override
-  public abstract long append(RegionInfo info, WALKeyImpl key, WALEdit edits, boolean inMemstore)
+  protected abstract long append(RegionInfo info, WALKeyImpl key, WALEdit edits, boolean inMemstore)
       throws IOException;
 
   protected abstract void doAppend(W writer, FSWALEntry entry) throws IOException;

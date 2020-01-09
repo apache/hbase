@@ -487,7 +487,7 @@ public class TestPerColumnFamilyFlush {
       assertTrue(desiredRegion.getStore(FAMILY3).getMemStoreSize().getHeapSize() < cfFlushSizeLowerBound);
       table.put(createPut(1, 12345678));
       // Make numRolledLogFiles greater than maxLogs
-      desiredRegionAndServer.getSecond().walRoller.requestRollAll();
+      desiredRegionAndServer.getSecond().getWalRoller().requestRollAll();
       // Wait for some time till the flush caused by log rolling happens.
       TEST_UTIL.waitFor(30000, new Waiter.ExplainingPredicate<Exception>() {
 

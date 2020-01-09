@@ -31,7 +31,7 @@ pipeline {
     disableConcurrentBuilds()
   }
   environment {
-    YETUS_RELEASE = '0.11.0'
+    YETUS_RELEASE = '0.11.1'
     // where we'll write everything from different steps. Need a copy here so the final step can check for success/failure.
     OUTPUT_DIR_RELATIVE_GENERAL = 'output-general'
     OUTPUT_DIR_RELATIVE_JDK7 = 'output-jdk7'

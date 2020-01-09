@@ -173,6 +173,14 @@ public class LocalHBaseCluster {
     for (int i = 0; i < noMasters; i++) {
       addMaster(new Configuration(conf), i);
     }
+
+    // Populate the master address host ports in the config. This is needed if a master based
+    // registry is configured for client metadata services (HBASE-18095)
+    List<String> masterHostPorts = new ArrayList<>();
+    getMasters().forEach(masterThread ->
+        masterHostPorts.add(masterThread.getMaster().getServerName().getAddress().toString()));
+    conf.set(HConstants.MASTER_ADDRS_KEY, String.join(",", masterHostPorts));
+
     // Start the HRegionServers.
     this.regionServerClass =
       (Class<? extends HRegionServer>)conf.getClass(HConstants.REGION_SERVER_IMPL,
@@ -220,7 +228,7 @@ public class LocalHBaseCluster {
   }
 
   public JVMClusterUtil.MasterThread addMaster(Configuration c, final int index)
-  throws IOException {
+      throws IOException {
     // Create each master with its own Configuration instance so each has
     // its Connection instance rather than share (see HBASE_INSTANCES down in
     // the guts of ConnectionManager.

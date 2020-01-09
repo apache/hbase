@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -447,10 +447,14 @@ public class TestHBaseTestingUtility {
     HBaseTestingUtility htu = new HBaseTestingUtility(defaultConfig);
     try {
       MiniHBaseCluster defaultCluster = htu.startMiniCluster();
+      final String masterHostPort =
+          defaultCluster.getMaster().getServerName().getAddress().toString();
       assertNotEquals(HConstants.DEFAULT_MASTER_INFOPORT,
           defaultCluster.getConfiguration().getInt(HConstants.MASTER_INFO_PORT, 0));
       assertNotEquals(HConstants.DEFAULT_REGIONSERVER_INFOPORT,
           defaultCluster.getConfiguration().getInt(HConstants.REGIONSERVER_INFO_PORT, 0));
+      assertEquals(masterHostPort,
+          defaultCluster.getConfiguration().get(HConstants.MASTER_ADDRS_KEY));
     } finally {
       htu.shutdownMiniCluster();
     }
@@ -464,10 +468,14 @@ public class TestHBaseTestingUtility {
     htu = new HBaseTestingUtility(altConfig);
     try {
       MiniHBaseCluster customCluster = htu.startMiniCluster();
+      final String masterHostPort =
+          customCluster.getMaster().getServerName().getAddress().toString();
       assertEquals(nonDefaultMasterInfoPort,
-              customCluster.getConfiguration().getInt(HConstants.MASTER_INFO_PORT, 0));
+          customCluster.getConfiguration().getInt(HConstants.MASTER_INFO_PORT, 0));
       assertEquals(nonDefaultRegionServerPort,
           customCluster.getConfiguration().getInt(HConstants.REGIONSERVER_INFO_PORT, 0));
+      assertEquals(masterHostPort,
+          customCluster.getConfiguration().get(HConstants.MASTER_ADDRS_KEY));
     } finally {
       htu.shutdownMiniCluster();
     }

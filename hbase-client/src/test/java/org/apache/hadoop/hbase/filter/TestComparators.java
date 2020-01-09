@@ -104,6 +104,59 @@ public class TestComparators {
     assertTrue(PrivateCellUtil.qualifierStartsWith(kv, q1));
     assertFalse(PrivateCellUtil.qualifierStartsWith(kv, q2));
     assertFalse(PrivateCellUtil.qualifierStartsWith(kv, Bytes.toBytes("longerthanthequalifier")));
+
+    //Binary component comparisons
+    byte[] val = Bytes.toBytes("abcd");
+    kv = new KeyValue(r0, f, q1, val);
+    buffer = ByteBuffer.wrap(kv.getBuffer());
+    bbCell = new ByteBufferKeyValue(buffer, 0, buffer.remaining());
+
+    //equality check
+    //row comparison
+    //row is "row0"(set by variable r0)
+    //and we are checking for equality to 'o' at position 1
+    //'r' is at position 0.
+    byte[] component = Bytes.toBytes("o");
+    comparable = new BinaryComponentComparator(component, 1);
+    assertEquals(0, PrivateCellUtil.compareRow(bbCell, comparable));
+    assertEquals(0, PrivateCellUtil.compareRow(kv, comparable));
+    //value comparison
+    //value is "abcd"(set by variable val).
+    //and we are checking for equality to 'c' at position 2.
+    //'a' is at position 0.
+    component = Bytes.toBytes("c");
+    comparable = new BinaryComponentComparator(component, 2);
+    assertEquals(0,PrivateCellUtil.compareValue(bbCell, comparable));
+    assertEquals(0,PrivateCellUtil.compareValue(kv, comparable));
+
+    //greater than
+    component = Bytes.toBytes("z");
+    //checking for greater than at position 1.
+    //for both row("row0") and value("abcd")
+    //'z' > 'r'
+    comparable = new BinaryComponentComparator(component, 1);
+    //row comparison
+    assertTrue(PrivateCellUtil.compareRow(bbCell, comparable) > 0);
+    assertTrue(PrivateCellUtil.compareRow(kv, comparable) > 0);
+    //value comparison
+    //'z' > 'a'
+    assertTrue(PrivateCellUtil.compareValue(bbCell, comparable) > 0);
+    assertTrue(PrivateCellUtil.compareValue(kv, comparable) > 0);
+
+    //less than
+    component = Bytes.toBytes("a");
+    //checking for less than at position 1 for row ("row0")
+    comparable = new BinaryComponentComparator(component, 1);
+    //row comparison
+    //'a' < 'r'
+    assertTrue(PrivateCellUtil.compareRow(bbCell, comparable) < 0);
+    assertTrue(PrivateCellUtil.compareRow(kv, comparable) < 0);
+    //value comparison
+    //checking for less than at position 2 for value("abcd")
+    //'a' < 'c'
+    comparable = new BinaryComponentComparator(component, 2);
+    assertTrue(PrivateCellUtil.compareValue(bbCell, comparable) < 0);
+    assertTrue(PrivateCellUtil.compareValue(kv, comparable) < 0);
   }
 
 }

@@ -407,15 +407,15 @@ public class TestWALSplit {
     WALFactory.createRecoveredEditsWriter(fs, p, conf).close();
   }
 
-  private Path createRecoveredEditsPathForRegion() throws  IOException{
+  private Path createRecoveredEditsPathForRegion() throws IOException {
     byte[] encoded = RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes();
     long now = System.currentTimeMillis();
-    Entry entry =
-      new Entry(new WALKeyImpl(encoded,
-        TableName.META_TABLE_NAME, 1, now, HConstants.DEFAULT_CLUSTER_ID),
+    Entry entry = new Entry(
+        new WALKeyImpl(encoded, TableName.META_TABLE_NAME, 1, now, HConstants.DEFAULT_CLUSTER_ID),
         new WALEdit());
-    Path p = WALSplitUtil.getRegionSplitEditsPath(entry,
-      FILENAME_BEING_SPLIT, TMPDIRNAME, conf);
+    Path p = WALSplitUtil
+        .getRegionSplitEditsPath(TableName.META_TABLE_NAME, encoded, 1, FILENAME_BEING_SPLIT,
+            TMPDIRNAME, conf);
     return p;
   }
 
@@ -1064,11 +1064,10 @@ public class TestWALSplit {
     logSplitter.splitLogFile(fs.getFileStatus(logPath), null);
 
     // Verify number of written edits per region
-    Map<byte[], Long> outputCounts = logSplitter.outputSink.getOutputCounts();
-    for (Map.Entry<byte[], Long> entry : outputCounts.entrySet()) {
-      LOG.info("Got " + entry.getValue() + " output edits for region " +
-          Bytes.toString(entry.getKey()));
-      assertEquals((long)entry.getValue(), numFakeEdits / regions.size());
+    Map<String, Long> outputCounts = logSplitter.outputSink.getOutputCounts();
+    for (Map.Entry<String, Long> entry : outputCounts.entrySet()) {
+      LOG.info("Got " + entry.getValue() + " output edits for region " + entry.getKey());
+      assertEquals((long) entry.getValue(), numFakeEdits / regions.size());
     }
     assertEquals("Should have as many outputs as regions", regions.size(), outputCounts.size());
   }
@@ -1376,12 +1375,10 @@ public class TestWALSplit {
         1,
         ServerName.parseServerName("ServerName:9099"), ImmutableMap.<byte[], List<Path>>of());
     final long time = EnvironmentEdgeManager.currentTime();
-    KeyValue kv = new KeyValue(Bytes.toBytes(region), WALEdit.METAFAMILY, WALEdit.REGION_EVENT,
-        time, regionOpenDesc.toByteArray());
     final WALKeyImpl walKey = new WALKeyImpl(Bytes.toBytes(region), TABLE_NAME, 1, time,
         HConstants.DEFAULT_CLUSTER_ID);
-    w.append(
-        new Entry(walKey, new WALEdit().add(kv)));
+    WALEdit we = WALEdit.createRegionEventWALEdit(Bytes.toBytes(region), regionOpenDesc);
+    w.append(new Entry(walKey, we));
     w.sync(false);
   }
 

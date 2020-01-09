@@ -86,6 +86,23 @@ public final class HFileArchiveUtil {
   }
 
   /**
+   * Gets the archive directory under specified root dir. One scenario where this is useful is
+   * when WAL and root dir are configured under different file systems,
+   * i.e. root dir on S3 and WALs on HDFS.
+   * This is mostly useful for archiving recovered edits, when
+   * <b>hbase.region.archive.recovered.edits</b> is enabled.
+   * @param rootDir {@link Path} the root dir under which archive path should be created.
+   * @param region parent region information under which the store currently lives
+   * @param family name of the family in the store
+   * @return {@link Path} to the WAL FS directory to archive the given store
+   *         or <tt>null</tt> if it should not be archived
+   */
+  public static Path getStoreArchivePathForRootDir(Path rootDir, RegionInfo region, byte[] family) {
+    Path tableArchiveDir = getTableArchivePath(rootDir, region.getTable());
+    return HStore.getStoreHomedir(tableArchiveDir, region, family);
+  }
+
+  /**
    * Get the archive directory for a given region under the specified table
    * @param tableName the table name. Cannot be null.
    * @param regiondir the path to the region directory. Cannot be null.

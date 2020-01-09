@@ -76,3 +76,8 @@ message SubstringComparator {
 message BigDecimalComparator {
   required ByteArrayComparable comparable = 1;
 }
+
+message BinaryComponentComparator {
+  required bytes  value = 1;
+  required uint32 offset = 2;
+}

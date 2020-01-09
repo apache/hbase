@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -27,8 +26,8 @@ import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
-import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Do different kinds of data block encoding according to column family
@@ -47,7 +46,7 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
   }
 
   public static HFileDataBlockEncoder createFromFileInfo(
-      FileInfo fileInfo) throws IOException {
+      HFileInfo fileInfo) throws IOException {
     DataBlockEncoding encoding = DataBlockEncoding.NONE;
     byte[] dataBlockEncodingType = fileInfo.get(DATA_BLOCK_ENCODING);
     if (dataBlockEncodingType != null) {

@@ -24,9 +24,18 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * The ProcedureStore is used by the executor to persist the state of each procedure execution.
- * This allows to resume the execution of pending/in-progress procedures in case
- * of machine failure or service shutdown.
+ * The ProcedureStore is used by the executor to persist the state of each procedure execution. This
+ * allows to resume the execution of pending/in-progress procedures in case of machine failure or
+ * service shutdown.
+ * <p/>
+ * Notice that, the implementation must guarantee that the maxProcId when loading is the maximum one
+ * in the whole history, not only the current live procedures. This is very important as for
+ * executing remote procedures, we have some nonce checks at region server side to prevent executing
+ * non-idempotent operations more than once. If the procedure id could go back, then we may
+ * accidentally ignore some important operations such as region assign or unassign.<br/>
+ * This may lead to some garbages so we provide a {@link #cleanup()} method, the framework will call
+ * this method periodically and the store implementation could do some clean up works in this
+ * method.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -240,4 +249,13 @@ public interface ProcedureStore {
    * @param count the number of IDs to delete
    */
   void delete(long[] procIds, int offset, int count);
+
+  /**
+   * Will be called by the framework to give the store a chance to do some clean up works.
+   * <p/>
+   * Notice that this is for periodical clean up work, not for the clean up after close, if you want
+   * to close the store just call the {@link #stop(boolean)} method above.
+   */
+  default void cleanup() {
+  }
 }

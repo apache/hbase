@@ -23,11 +23,15 @@ import java.util.List;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.client.RegionLocator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
 * Action that restarts an HRegionServer holding one of the regions of the table.
 */
 public class RestartRsHoldingTableAction extends RestartActionBaseAction {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RestartRsHoldingTableAction.class);
 
   private final RegionLocator locator;
 

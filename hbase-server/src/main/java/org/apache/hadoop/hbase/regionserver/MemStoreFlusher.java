@@ -280,10 +280,10 @@ class MemStoreFlusher implements FlushRequester {
       } else {
         LOG.info("Flush of region " + regionToFlush + " due to global heap pressure. " +
             "Flush type=" + flushType.toString() +
-            "Total Memstore Heap size=" +
+            ", Total Memstore Heap size=" +
             TraditionalBinaryPrefix.long2String(
                 server.getRegionServerAccounting().getGlobalMemStoreHeapSize(), "", 1) +
-            "Total Memstore Off-Heap size=" +
+            ", Total Memstore Off-Heap size=" +
             TraditionalBinaryPrefix.long2String(
                 server.getRegionServerAccounting().getGlobalMemStoreOffHeapSize(), "", 1) +
             ", Region memstore size=" +
@@ -711,7 +711,7 @@ class MemStoreFlusher implements FlushRequester {
           try {
             flushType = isAboveHighWaterMark();
             while (flushType != FlushType.NORMAL && !server.isStopped()) {
-              server.cacheFlusher.setFlushType(flushType);
+              server.getMemStoreFlusher().setFlushType(flushType);
               if (!blocked) {
                 startTime = EnvironmentEdgeManager.currentTime();
                 if (!server.getRegionServerAccounting().isOffheap()) {
@@ -769,7 +769,7 @@ class MemStoreFlusher implements FlushRequester {
       } else {
         flushType = isAboveLowWaterMark();
         if (flushType != FlushType.NORMAL) {
-          server.cacheFlusher.setFlushType(flushType);
+          server.getMemStoreFlusher().setFlushType(flushType);
           wakeupFlushThread();
         }
       }

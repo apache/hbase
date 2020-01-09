@@ -18,11 +18,13 @@
 
 package org.apache.hadoop.hbase.chaos.actions;
 
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-
 import java.io.IOException;
 import java.util.Random;
+
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Action that changes the encoding on a column family from a list of tables.
@@ -30,6 +32,7 @@ import java.util.Random;
 public class ChangeEncodingAction extends Action {
   private final TableName tableName;
   private final Random random;
+  private static final Logger LOG = LoggerFactory.getLogger(ChangeEncodingAction.class);
 
   public ChangeEncodingAction(TableName tableName) {
     this.tableName = tableName;

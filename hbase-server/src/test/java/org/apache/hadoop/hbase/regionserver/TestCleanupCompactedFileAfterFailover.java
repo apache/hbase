@@ -156,7 +156,7 @@ public class TestCleanupCompactedFileAfterFailover {
 
     int walNum = rsServedTable.getWALs().size();
     // Roll WAL
-    rsServedTable.walRoller.requestRollAll();
+    rsServedTable.getWalRoller().requestRollAll();
     // Flush again
     region.flush(true);
     // The WAL which contains compaction event marker should be archived

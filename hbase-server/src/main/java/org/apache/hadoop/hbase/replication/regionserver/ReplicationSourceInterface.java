@@ -92,6 +92,14 @@ public interface ReplicationSourceInterface {
   void terminate(String reason, Exception cause);
 
   /**
+   * End the replication
+   * @param reason why it's terminating
+   * @param cause the error that's causing it
+   * @param clearMetrics removes all metrics about this Source
+   */
+  void terminate(String reason, Exception cause, boolean clearMetrics);
+
+  /**
    * Get the current log that's replicated
    * @return the current log
    */
