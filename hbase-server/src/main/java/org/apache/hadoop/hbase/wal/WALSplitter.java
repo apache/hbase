@@ -887,10 +887,7 @@ public class WALSplitter {
      */
     void checkForErrors() throws IOException {
       Throwable thrown = this.thrown.get();
-      if (thrown == null) {
-        return;
-      }
-      this.thrown.set(null);
+      if (thrown == null) return;
       if (thrown instanceof IOException) {
         throw new IOException(thrown);
       } else {
