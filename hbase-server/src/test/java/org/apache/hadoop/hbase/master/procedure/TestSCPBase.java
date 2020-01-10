@@ -19,11 +19,8 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -32,14 +29,12 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.RegionReplicaUtil;
+import org.apache.hadoop.hbase.client.RegionReplicaTestHelper;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
-import org.apache.hadoop.hbase.regionserver.Region;
-import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.junit.After;
 import org.junit.Before;
 import org.slf4j.Logger;
@@ -131,7 +126,7 @@ public class TestSCPBase {
         long procId = getSCPProcId(procExec);
         ProcedureTestingUtility.waitProcedure(procExec, procId);
       }
-      assertReplicaDistributed(t);
+      RegionReplicaTestHelper.assertReplicaDistributed(util, t);
       assertEquals(count, util.countRows(t));
       assertEquals(checksum, util.checksumRows(t));
     }
@@ -140,36 +135,6 @@ public class TestSCPBase {
   protected long getSCPProcId(ProcedureExecutor<?> procExec) {
     util.waitFor(30000, () -> !procExec.getProcedures().isEmpty());
     return procExec.getActiveProcIds().stream().mapToLong(Long::longValue).min().getAsLong();
-  }
-
-  private void assertReplicaDistributed(Table t) throws IOException {
-    if (t.getDescriptor().getRegionReplication() <= 1) {
-      return;
-    }
-    // Assert all data came back.
-    List<RegionInfo> regionInfos = new ArrayList<>();
-    for (RegionServerThread rs : this.util.getMiniHBaseCluster().getRegionServerThreads()) {
-      regionInfos.clear();
-      for (Region r : rs.getRegionServer().getRegions(t.getName())) {
-        LOG.info("The region is " + r.getRegionInfo() + " the location is " +
-          rs.getRegionServer().getServerName());
-        if (contains(regionInfos, r.getRegionInfo())) {
-          LOG.error("Am exiting");
-          fail("Replica regions should be assigned to different region servers");
-        } else {
-          regionInfos.add(r.getRegionInfo());
-        }
-      }
-    }
-  }
-
-  private boolean contains(List<RegionInfo> regionInfos, RegionInfo regionInfo) {
-    for (RegionInfo info : regionInfos) {
-      if (RegionReplicaUtil.isReplicasForSameRegion(info, regionInfo)) {
-        return true;
-      }
-    }
-    return false;
   }
 
   protected Table createTable(final TableName tableName) throws IOException {
