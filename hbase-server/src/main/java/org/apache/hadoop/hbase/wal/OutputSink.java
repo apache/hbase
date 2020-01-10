@@ -91,19 +91,6 @@ public abstract class OutputSink {
     }
   }
 
-  public synchronized void restartWriterThreadsIfNeeded() {
-    for(int i = 0; i< writerThreads.size(); i++){
-      WriterThread t = writerThreads.get(i);
-      if (!t.isAlive()){
-        String threadName = t.getName();
-        LOG.debug("Replacing dead thread: " + threadName);
-        WriterThread newThread = new WriterThread(controller, entryBuffers, this, threadName);
-        newThread.start();
-        writerThreads.set(i, newThread);
-      }
-    }
-  }
-
   /**
    * Update region's maximum edit log SeqNum.
    */
@@ -201,12 +188,7 @@ public abstract class OutputSink {
 
     WriterThread(WALSplitter.PipelineController controller, EntryBuffers entryBuffers,
         OutputSink sink, int i) {
-      this(controller, entryBuffers, sink, Thread.currentThread().getName() + "-Writer-" + i);
-    }
-
-    WriterThread(WALSplitter.PipelineController controller, EntryBuffers entryBuffers,
-        OutputSink sink, String threadName) {
-      super(threadName);
+      super(Thread.currentThread().getName() + "-Writer-" + i);
       this.controller = controller;
       this.entryBuffers = entryBuffers;
       outputSink = sink;
