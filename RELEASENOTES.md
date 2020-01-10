@@ -27,6 +27,13 @@ These release notes cover new developer and user-facing incompatibilities, impor
 
 ---
 
+* [HBASE-23651](https://issues.apache.org/jira/browse/HBASE-23651) | *Major* | **Region balance throttling can be disabled**
+
+Set hbase.balancer.max.balancing to a int value which \<=0 will disable region balance throttling.
+
+
+---
+
 * [HBASE-23596](https://issues.apache.org/jira/browse/HBASE-23596) | *Major* | **HBCKServerCrashProcedure can double assign**
 
 Makes it so the recently added HBCKServerCrashProcedure -- the SCP that gets invoked when an operator schedules an SCP via hbck2 scheduleRecoveries command -- now works the same as SCP EXCEPT if master knows nothing of the scheduled servername. In this latter case, HBCKSCP will do a full scan of hbase:meta looking for instances of the passed servername. If any found it will attempt cleanup of hbase:meta references by reassigning any found OPEN or OPENING and by closing any in CLOSING state.
@@ -216,7 +223,6 @@ Additionally, the region read and write latencies previously only stored the lat
 * [HBASE-23177](https://issues.apache.org/jira/browse/HBASE-23177) | *Major* | **If fail to open reference because FNFE, make it plain it is a Reference**
 
 Changes the message on the FNFE exception thrown when the file a Reference points to is missing; the message now includes detail on Reference as well as pointed-to file so can connect how FNFE relates to region open.
-
 
 
 
