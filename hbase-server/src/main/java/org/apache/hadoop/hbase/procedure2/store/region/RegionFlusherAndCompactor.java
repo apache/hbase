@@ -121,7 +121,7 @@ class RegionFlusherAndCompactor implements Closeable {
     compactExecutor = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder()
       .setNameFormat("Procedure-Region-Store-Compactor").setDaemon(true).build());
     LOG.info("Constructor flushSize={}, flushPerChanges={}, flushIntervalMs={}, " +
-        "compactMin=", flushSize, flushPerChanges, flushIntervalMs, compactMin);
+        "compactMin={}", flushSize, flushPerChanges, flushIntervalMs, compactMin);
   }
 
   // inject our flush related configurations
