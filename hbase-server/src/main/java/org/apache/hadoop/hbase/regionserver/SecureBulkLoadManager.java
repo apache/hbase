@@ -108,11 +108,9 @@ public class SecureBulkLoadManager {
   private Configuration conf;
 
   //two levels so it doesn't get deleted accidentally
-  //no sticky bit in Hadoop 1.0
   private Path baseStagingDir;
 
   private UserProvider userProvider;
-  private ConcurrentHashMap<UserGroupInformation, MutableInt> ugiReferenceCounter;
   private AsyncConnection conn;
 
   SecureBulkLoadManager(Configuration conf, AsyncConnection conn) {
@@ -123,7 +121,6 @@ public class SecureBulkLoadManager {
   public void start() throws IOException {
     random = new SecureRandom();
     userProvider = UserProvider.instantiate(conf);
-    ugiReferenceCounter = new ConcurrentHashMap<>();
     fs = FileSystem.get(conf);
     baseStagingDir = new Path(FSUtils.getRootDir(conf), HConstants.BULKLOAD_STAGING_DIR_NAME);
 
@@ -153,26 +150,15 @@ public class SecureBulkLoadManager {
 
   public void cleanupBulkLoad(final HRegion region, final CleanupBulkLoadRequest request)
       throws IOException {
-    try {
-      region.getCoprocessorHost().preCleanupBulkLoad(getActiveUser());
+    region.getCoprocessorHost().preCleanupBulkLoad(getActiveUser());
 
-      Path path = new Path(request.getBulkToken());
-      if (!fs.delete(path, true)) {
-        if (fs.exists(path)) {
-          throw new IOException("Failed to clean up " + path);
-        }
-      }
-      LOG.info("Cleaned up " + path + " successfully.");
-    } finally {
-      UserGroupInformation ugi = getActiveUser().getUGI();
-      try {
-        if (!UserGroupInformation.getLoginUser().equals(ugi) && !isUserReferenced(ugi)) {
-          FileSystem.closeAllForUGI(ugi);
-        }
-      } catch (IOException e) {
-        LOG.error("Failed to close FileSystem for: " + ugi, e);
+    Path path = new Path(request.getBulkToken());
+    if (!fs.delete(path, true)) {
+      if (fs.exists(path)) {
+        throw new IOException("Failed to clean up " + path);
       }
     }
+    LOG.trace("Cleaned up bulk load staging path {} successfully.", path);
   }
 
   private Consumer<HRegion> fsCreatedListener;
@@ -180,37 +166,6 @@ public class SecureBulkLoadManager {
   @VisibleForTesting
   void setFsCreatedListener(Consumer<HRegion> fsCreatedListener) {
     this.fsCreatedListener = fsCreatedListener;
-  }
-
-
-  private void incrementUgiReference(UserGroupInformation ugi) {
-    // if we haven't seen this ugi before, make a new counter
-    ugiReferenceCounter.compute(ugi, (key, value) -> {
-      if (value == null) {
-        value = new MutableInt(1);
-      } else {
-        value.increment();
-      }
-      return value;
-    });
-  }
-
-  private void decrementUgiReference(UserGroupInformation ugi) {
-    // if the count drops below 1 we remove the entry by returning null
-    ugiReferenceCounter.computeIfPresent(ugi, (key, value) -> {
-      if (value.intValue() > 1) {
-        value.decrement();
-      } else {
-        value = null;
-      }
-      return value;
-    });
-  }
-
-  private boolean isUserReferenced(UserGroupInformation ugi) {
-    // if the ugi is in the map, based on invariants above
-    // the count must be above zero
-    return ugiReferenceCounter.containsKey(ugi);
   }
 
   public Map<byte[], List<Path>> secureBulkLoadHFiles(final HRegion region,
@@ -259,7 +214,6 @@ public class SecureBulkLoadManager {
     Map<byte[], List<Path>> map = null;
 
     try {
-      incrementUgiReference(ugi);
       // Get the target fs (HBase region server fs) delegation token
       // Since we have checked the permission via 'preBulkLoadHFile', now let's give
       // the 'request user' necessary token to operate on the target fs.
@@ -279,9 +233,22 @@ public class SecureBulkLoadManager {
       map = ugi.doAs(new PrivilegedAction<Map<byte[], List<Path>>>() {
         @Override
         public Map<byte[], List<Path>> run() {
+          /* NB. Hadoop caches instances of FileSystem objects by default. However, when security
+           * is enabled, the current UserGroupInformation affects whether or not a new FileSystem
+           * instance is created or a cached instance is returned. For reasons not covered here (see
+           * HADOOP-6670 for background), UGI instances which are logically equivalent do not have
+           * equal hashCodes -- the hashCode is unique per instance of UGI.
+           *
+           * This means that if we are create a new FileSystem, specifically creating a new
+           * FileSystem object with a _new UserGroupInformation_, we must be certain to close it
+           * once it is done. Otherwise, it will remain in the Cache and eventually fill the heap.
+           *
+           * If we create a new instance, we can do away with all of the reference counting. If
+           * making a new instance becomes too costly, we're likely better off caching it ourselves.
+           */
           FileSystem fs = null;
           try {
-            fs = FileSystem.get(conf);
+            fs = FileSystem.newInstance(conf);
             for(Pair<byte[], String> el: familyPaths) {
               Path stageFamily = new Path(bulkToken, Bytes.toString(el.getFirst()));
               if(!fs.exists(stageFamily)) {
@@ -299,12 +266,19 @@ public class SecureBulkLoadManager {
               clusterIds, request.getReplicate());
           } catch (Exception e) {
             LOG.error("Failed to complete bulk load", e);
+          } finally {
+            try {
+              if (fs != null) {
+                fs.close();
+              }
+            } catch (IOException e) {
+              LOG.warn("Failed to close FileSystem after bulk load", e);
+            }
           }
           return null;
         }
       });
     } finally {
-      decrementUgiReference(ugi);
       if (region.getCoprocessorHost() != null) {
         region.getCoprocessorHost().postBulkLoadHFile(familyPaths, map);
       }

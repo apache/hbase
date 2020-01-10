@@ -6382,9 +6382,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             store.bulkLoadHFile(familyName, path, commitedStoreFile);
             // Note the size of the store file
             try {
-              FileSystem fs = commitedStoreFile.getFileSystem(baseConf);
-              storeFilesSizes.put(commitedStoreFile.getName(), fs.getFileStatus(commitedStoreFile)
-                  .getLen());
+              // The store files are in the normal place now, so use the Region's FileSystem
+              storeFilesSizes.put(commitedStoreFile.getName(),
+                  fs.getFileSystem().getFileStatus(commitedStoreFile).getLen());
             } catch (IOException e) {
               LOG.warn("Failed to find the size of hfile " + commitedStoreFile, e);
               storeFilesSizes.put(commitedStoreFile.getName(), 0L);
