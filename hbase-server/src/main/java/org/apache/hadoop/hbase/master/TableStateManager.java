@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.exceptions.IllegalArgumentIOException;
 import org.apache.hadoop.hbase.util.IdReadWriteLock;
 import org.apache.hadoop.hbase.util.ZKDataMigrator;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -52,20 +53,8 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 // TODO: Make this a guava Service
 @InterfaceAudience.Private
 public class TableStateManager {
+
   private static final Logger LOG = LoggerFactory.getLogger(TableStateManager.class);
-
-  /**
-   * All table state is kept in hbase:meta except that of hbase:meta itself.
-   * hbase:meta state is kept here locally in this in-memory variable. State
-   * for hbase:meta is not persistent. If this process dies, the hbase:meta
-   * state reverts to enabled. State is used so we can edit hbase:meta as we
-   * would any other table by disabling, altering, and then re-enabling. If this
-   * process dies in the midst of an edit, the table reverts to enabled. Schema
-   * is read from the filesystem. It is changed atomically so if we die midway
-   * through an edit we should be good.
-   */
-  private TableState.State metaTableState = TableState.State.ENABLED;
-
   /**
    * Set this key to false in Configuration to disable migrating table state from zookeeper so
    * hbase:meta table.
@@ -79,7 +68,7 @@ public class TableStateManager {
   private final ConcurrentMap<TableName, TableState.State> tableName2State =
     new ConcurrentHashMap<>();
 
-  TableStateManager(MasterServices master) {
+  public TableStateManager(MasterServices master) {
     this.master = master;
   }
 
@@ -98,6 +87,61 @@ public class TableStateManager {
     }
   }
 
+  /**
+   * Set table state to provided but only if table in specified states Caller should lock table on
+   * write.
+   * @param tableName table to change state for
+   * @param newState new state
+   * @param states states to check against
+   * @return null if succeed or table state if failed
+   */
+  public TableState setTableStateIfInStates(TableName tableName, TableState.State newState,
+      TableState.State... states) throws IOException {
+    ReadWriteLock lock = tnLock.getLock(tableName);
+    lock.writeLock().lock();
+    try {
+      TableState currentState = readMetaState(tableName);
+      if (currentState == null) {
+        throw new TableNotFoundException(tableName);
+      }
+      if (currentState.inStates(states)) {
+        updateMetaState(tableName, newState);
+        return null;
+      } else {
+        return currentState;
+      }
+    } finally {
+      lock.writeLock().unlock();
+    }
+  }
+
+  /**
+   * Set table state to provided but only if table not in specified states Caller should lock table
+   * on write.
+   * @param tableName table to change state for
+   * @param newState new state
+   * @param states states to check against
+   */
+  public boolean setTableStateIfNotInStates(TableName tableName, TableState.State newState,
+      TableState.State... states) throws IOException {
+    ReadWriteLock lock = tnLock.getLock(tableName);
+    lock.writeLock().lock();
+    try {
+      TableState currentState = readMetaState(tableName);
+      if (currentState == null) {
+        throw new TableNotFoundException(tableName);
+      }
+      if (!currentState.inStates(states)) {
+        updateMetaState(tableName, newState);
+        return true;
+      } else {
+        return false;
+      }
+    } finally {
+      lock.writeLock().unlock();
+    }
+  }
+
   public boolean isTableState(TableName tableName, TableState.State... states) {
     try {
       TableState tableState = getTableState(tableName);
@@ -111,7 +155,6 @@ public class TableStateManager {
 
   public void setDeletedTable(TableName tableName) throws IOException {
     if (tableName.equals(TableName.META_TABLE_NAME)) {
-      // Can't delete the hbase:meta table.
       return;
     }
     ReadWriteLock lock = tnLock.getLock(tableName);
@@ -140,7 +183,7 @@ public class TableStateManager {
    * @param states filter by states
    * @return tables in given states
    */
-  Set<TableName> getTablesInStates(TableState.State... states) throws IOException {
+  public Set<TableName> getTablesInStates(TableState.State... states) throws IOException {
     // Only be called in region normalizer, will not use cache.
     final Set<TableName> rv = Sets.newHashSet();
     MetaTableAccessor.fullScanTables(master.getConnection(), new MetaTableAccessor.Visitor() {
@@ -156,6 +199,12 @@ public class TableStateManager {
     return rv;
   }
 
+  public static class TableStateNotFoundException extends TableNotFoundException {
+    TableStateNotFoundException(TableName tableName) {
+      super(tableName.getNameAsString());
+    }
+  }
+
   @NonNull
   public TableState getTableState(TableName tableName) throws IOException {
     ReadWriteLock lock = tnLock.getLock(tableName);
@@ -163,7 +212,7 @@ public class TableStateManager {
     try {
       TableState currentState = readMetaState(tableName);
       if (currentState == null) {
-        throw new TableNotFoundException("No state found for " + tableName);
+        throw new TableStateNotFoundException(tableName);
       }
       return currentState;
     } finally {
@@ -172,18 +221,22 @@ public class TableStateManager {
   }
 
   private void updateMetaState(TableName tableName, TableState.State newState) throws IOException {
+    if (tableName.equals(TableName.META_TABLE_NAME)) {
+      if (TableState.State.DISABLING.equals(newState) ||
+        TableState.State.DISABLED.equals(newState)) {
+        throw new IllegalArgumentIOException("Cannot disable the meta table; " + newState);
+      }
+      // Otherwise, just return; no need to set ENABLED on meta -- it is always ENABLED.
+      return;
+    }
     boolean succ = false;
     try {
-      if (tableName.equals(TableName.META_TABLE_NAME)) {
-        this.metaTableState = newState;
-      } else {
-        MetaTableAccessor.updateTableState(master.getConnection(), tableName, newState);
-      }
-      this.tableName2State.put(tableName, newState);
+      MetaTableAccessor.updateTableState(master.getConnection(), tableName, newState);
+      tableName2State.put(tableName, newState);
       succ = true;
     } finally {
       if (!succ) {
-        this.tableName2State.remove(tableName);
+        tableName2State.remove(tableName);
       }
     }
     metaStateUpdated(tableName, newState);
@@ -202,9 +255,7 @@ public class TableStateManager {
     if (state != null) {
       return new TableState(tableName, state);
     }
-    TableState tableState = tableName.equals(TableName.META_TABLE_NAME)?
-        new TableState(TableName.META_TABLE_NAME, this.metaTableState):
-        MetaTableAccessor.getTableState(master.getConnection(), tableName);
+    TableState tableState = MetaTableAccessor.getTableState(master.getConnection(), tableName);
     if (tableState != null) {
       tableName2State.putIfAbsent(tableName, tableState.getState());
     }
@@ -212,8 +263,10 @@ public class TableStateManager {
   }
 
   public void start() throws IOException {
+    TableDescriptors tableDescriptors = master.getTableDescriptors();
     migrateZooKeeper();
-    fixTableStates(master.getTableDescriptors(), master.getConnection());
+    Connection connection = master.getConnection();
+    fixTableStates(tableDescriptors, connection);
   }
 
   private void fixTableStates(TableDescriptors tableDescriptors, Connection connection)
@@ -282,7 +335,7 @@ public class TableStateManager {
         TableState ts = null;
         try {
           ts = getTableState(entry.getKey());
-        } catch (TableNotFoundException e) {
+        } catch (TableStateNotFoundException e) {
           // This can happen; table exists but no TableState.
         }
         if (ts == null) {

@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase;
 
-
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.ByteArrayOutputStream;
@@ -81,7 +80,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 
 /**
@@ -306,18 +304,11 @@ public class MetaTableAccessor {
    */
   public static HRegionLocation getRegionLocation(Connection connection, RegionInfo regionInfo)
       throws IOException {
-    return getRegionLocation(getCatalogFamilyRow(connection, regionInfo),
-        regionInfo, regionInfo.getReplicaId());
-  }
-
-  /**
-   * @return Return the {@link HConstants#CATALOG_FAMILY} row from hbase:meta.
-   */
-  public static Result getCatalogFamilyRow(Connection connection, RegionInfo ri)
-      throws IOException {
-    Get get = new Get(getMetaKeyForRegion(ri));
+    byte[] row = getMetaKeyForRegion(regionInfo);
+    Get get = new Get(row);
     get.addFamily(HConstants.CATALOG_FAMILY);
-    return get(getMetaHTable(connection), get);
+    Result r = get(getMetaHTable(connection), get);
+    return getRegionLocation(r, regionInfo, regionInfo.getReplicaId());
   }
 
   /** Returns the row key to use for this regionInfo */
@@ -981,8 +972,7 @@ public class MetaTableAccessor {
    * @return A ServerName instance or null if necessary fields not found or empty.
    */
   @Nullable
-  // for use by HMaster#getTableRegionRow which is used for testing only
-  @InterfaceAudience.Private
+  @InterfaceAudience.Private // for use by HMaster#getTableRegionRow which is used for testing only
   public static ServerName getServerName(final Result r, final int replicaId) {
     byte[] serverColumn = getServerColumn(replicaId);
     Cell cell = r.getColumnLatestCell(getCatalogFamily(), serverColumn);
@@ -1121,8 +1111,9 @@ public class MetaTableAccessor {
   @Nullable
   public static TableState getTableState(Connection conn, TableName tableName)
       throws IOException {
-    Preconditions.checkArgument(!tableName.equals(TableName.META_TABLE_NAME),
-      "Not for hbase:meta state");
+    if (tableName.equals(TableName.META_TABLE_NAME)) {
+      return new TableState(tableName, TableState.State.ENABLED);
+    }
     Table metaHTable = getMetaHTable(conn);
     Get get = new Get(tableName.getName()).addColumn(getTableFamily(), getTableStateColumn());
     Result result = metaHTable.get(get);
@@ -1149,8 +1140,7 @@ public class MetaTableAccessor {
   }
 
   /**
-   * Updates state in META.
-   * Do not use. For internal use only.
+   * Updates state in META
    * @param conn connection to use
    * @param tableName table to look for
    */

@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -543,9 +543,7 @@ public class HBaseAdmin implements Admin {
   static TableDescriptor getTableDescriptor(final TableName tableName, Connection connection,
       RpcRetryingCallerFactory rpcCallerFactory, final RpcControllerFactory rpcControllerFactory,
       int operationTimeout, int rpcTimeout) throws IOException {
-    if (tableName == null) {
-      return null;
-    }
+    if (tableName == null) return null;
     TableDescriptor td =
         executeCallable(new MasterCallable<TableDescriptor>(connection, rpcControllerFactory) {
       @Override
@@ -950,13 +948,22 @@ public class HBaseAdmin implements Admin {
   @Override
   public boolean isTableEnabled(final TableName tableName) throws IOException {
     checkTableExists(tableName);
-    return this.connection.getTableState(tableName).isEnabled();
+    return executeCallable(new RpcRetryingCallable<Boolean>() {
+      @Override
+      protected Boolean rpcCall(int callTimeout) throws Exception {
+        TableState tableState = MetaTableAccessor.getTableState(getConnection(), tableName);
+        if (tableState == null) {
+          throw new TableNotFoundException(tableName);
+        }
+        return tableState.inStates(TableState.State.ENABLED);
+      }
+    });
   }
 
   @Override
   public boolean isTableDisabled(TableName tableName) throws IOException {
     checkTableExists(tableName);
-    return this.connection.getTableState(tableName).isDisabled();
+    return connection.isTableDisabled(tableName);
   }
 
   @Override
@@ -4350,4 +4357,5 @@ public class HBaseAdmin implements Admin {
     });
 
   }
+
 }

@@ -322,12 +322,7 @@ public class TestFSTableDescriptors {
     }
 
     Map<String, TableDescriptor> tables = tds.getAll();
-    // Remove hbase:meta from list. It shows up now since we  made it dynamic. The schema
-    // is written into the fs by the FSTableDescriptors constructor now where before it
-    // didn't.
-    tables.remove(TableName.META_TABLE_NAME.getNameAsString());
     assertEquals(4, tables.size());
-
 
     String[] tableNamesOrdered =
         new String[] { "bar:foo", "default:bar", "default:foo", "foo:bar" };
@@ -364,13 +359,12 @@ public class TestFSTableDescriptors {
 
     assertTrue(nonchtds.getAll().size() == chtds.getAll().size());
 
-    // add a new entry for random table name.
-    TableName random = TableName.valueOf("random");
-    TableDescriptor htd = TableDescriptorBuilder.newBuilder(random).build();
+    // add a new entry for hbase:meta
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME).build();
     nonchtds.createTableDescriptor(htd);
 
-    // random will only increase the cachehit by 1
-    assertEquals(nonchtds.getAll().size(), chtds.getAll().size() + 1);
+    // hbase:meta will only increase the cachehit by 1
+    assertTrue(nonchtds.getAll().size() == chtds.getAll().size());
 
     for (Map.Entry<String, TableDescriptor> entry: nonchtds.getAll().entrySet()) {
       String t = (String) entry.getKey();

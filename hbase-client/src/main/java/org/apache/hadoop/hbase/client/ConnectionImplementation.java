@@ -1,4 +1,5 @@
-/*
+/**
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -85,9 +86,6 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
-import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
-import org.apache.hbase.thirdparty.com.google.common.cache.CacheLoader;
-import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
@@ -155,21 +153,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.Updat
 class ConnectionImplementation implements ClusterConnection, Closeable {
   public static final String RETRIES_BY_SERVER_KEY = "hbase.client.retries.by.server";
   private static final Logger LOG = LoggerFactory.getLogger(ConnectionImplementation.class);
-
-  /**
-   * TableState cache.
-   * Table States change super rarely. In synchronous client, state can be queried a lot
-   * particularly when Regions are moving. It is ok if we are not super responsive noticing
-   * Table State change. So, cache the last look up for a period. Use
-   * {@link #TABLESTATE_CACHE_DURATION_MS} to change default of one second.
-   * NOT-private to allow external readers of generated cache stats.
-   */
-  final LoadingCache<TableName, TableState> tableStateCache;
-
-  /**
-   * Duration in milliseconds a tablestate endures in the cache of tablestates.
-   */
-  public static final String TABLESTATE_CACHE_DURATION_MS = "hbase.client.tablestate.cache.ttl.ms";
 
   private static final String RESOLVE_HOSTNAME_ON_FAIL_KEY = "hbase.resolve.hostnames.on.failure";
 
@@ -347,26 +330,6 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       close();
       throw e;
     }
-    // Create tablestate cache. Add a loader that know how to find table state.
-    int duration = this.conf.getInt(TABLESTATE_CACHE_DURATION_MS, 1000);
-    this.tableStateCache = CacheBuilder.newBuilder().
-      expireAfterWrite(duration, TimeUnit.MILLISECONDS).
-      recordStats().
-      build(new CacheLoader<TableName, TableState>() {
-        @Override
-        public TableState load(TableName tableName) throws Exception {
-          if (tableName.equals(TableName.META_TABLE_NAME)) {
-            // We cannot get hbase:meta state by reading hbase:meta table. Read registry.
-            return registry.getMetaTableState().get();
-          }
-          TableState ts =
-            MetaTableAccessor.getTableState(ConnectionImplementation.this, tableName);
-          if (ts == null) {
-            throw new TableNotFoundException(tableName);
-          }
-          return ts;
-        }
-      });
   }
 
   private void spawnRenewalChore(final UserGroupInformation user) {
@@ -466,19 +429,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
 
   @Override
   public Admin getAdmin() throws IOException {
-    return new HBaseAdmin(this) {
-      @Override
-      public void enableTable(TableName tableName) throws IOException {
-        super.enableTable(tableName);
-        ConnectionImplementation.this.tableStateCache.invalidate(tableName);
-      }
-
-      @Override
-      public void disableTable(TableName tableName) throws IOException {
-        super.disableTable(tableName);
-        ConnectionImplementation.this.tableStateCache.invalidate(tableName);
-      }
-    };
+    return new HBaseAdmin(this);
   }
 
   @Override
@@ -803,9 +754,13 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   @Override
   public RegionLocations relocateRegion(final TableName tableName,
       final byte [] row, int replicaId) throws IOException{
-    if (isTableDisabled(tableName)) {
+    // Since this is an explicit request not to use any caching, finding
+    // disabled tables should not be desirable.  This will ensure that an exception is thrown when
+    // the first time a disabled table is interacted with.
+    if (!tableName.equals(TableName.META_TABLE_NAME) && isTableDisabled(tableName)) {
       throw new TableNotEnabledException(tableName.getNameAsString() + " is disabled.");
     }
+
     return locateRegion(tableName, row, false, true, replicaId);
   }
 
@@ -2102,15 +2057,11 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   @Override
   public TableState getTableState(TableName tableName) throws IOException {
     checkClosed();
-    try {
-      return this.tableStateCache.get(tableName);
-    } catch (ExecutionException e) {
-      // Throws ExecutionException for any exceptions fetching table state. Probably an IOE.
-      if (e.getCause() instanceof IOException) {
-        throw (IOException)e.getCause();
-      }
-      throw new IOException(e);
+    TableState tableState = MetaTableAccessor.getTableState(this, tableName);
+    if (tableState == null) {
+      throw new TableNotFoundException(tableName);
     }
+    return tableState;
   }
 
   @Override

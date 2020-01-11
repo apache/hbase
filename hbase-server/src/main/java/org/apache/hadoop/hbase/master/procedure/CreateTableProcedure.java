@@ -78,7 +78,9 @@ public class CreateTableProcedure
   @Override
   protected Flow executeFromState(final MasterProcedureEnv env, final CreateTableState state)
       throws InterruptedException {
-    LOG.info("{} execute state={}", this, state);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace(this + " execute state=" + state);
+    }
     try {
       switch (state) {
         case CREATE_TABLE_PRE_OPERATION:
@@ -318,7 +320,8 @@ public class CreateTableProcedure
     // using a copy of descriptor, table will be created enabling first
     final Path tempTableDir = FSUtils.getTableDir(tempdir, tableDescriptor.getTableName());
     ((FSTableDescriptors)(env.getMasterServices().getTableDescriptors()))
-        .createTableDescriptorForTableDirectory(tempTableDir, tableDescriptor, false);
+        .createTableDescriptorForTableDirectory(
+          tempTableDir, tableDescriptor, false);
 
     // 2. Create Regions
     newRegions = hdfsRegionHandler.createHdfsRegions(env, tempdir,
