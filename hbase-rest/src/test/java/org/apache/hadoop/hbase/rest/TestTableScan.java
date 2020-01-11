@@ -50,10 +50,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
@@ -106,10 +107,15 @@ public class TestTableScan {
       REST_TEST_UTIL.getServletPort()));
     Admin admin = TEST_UTIL.getAdmin();
     if (!admin.tableExists(TABLE)) {
-      HTableDescriptor htd = new HTableDescriptor(TABLE);
-      htd.addFamily(new HColumnDescriptor(CFA));
-      htd.addFamily(new HColumnDescriptor(CFB));
-      admin.createTable(htd);
+      TableDescriptorBuilder tableDescriptorBuilder =
+        TableDescriptorBuilder.newBuilder(TABLE);
+      ColumnFamilyDescriptor columnFamilyDescriptor =
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(CFA)).build();
+      tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+      columnFamilyDescriptor =
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(CFB)).build();
+      tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+      admin.createTable(tableDescriptorBuilder.build());
       expectedRows1 = TestScannerResource.insertData(conf, TABLE, COLUMN_1, 1.0);
       expectedRows2 = TestScannerResource.insertData(conf, TABLE, COLUMN_2, 0.5);
       expectedRows3 = TestScannerResource.insertData(conf, TABLE, COLUMN_EMPTY, 1.0);

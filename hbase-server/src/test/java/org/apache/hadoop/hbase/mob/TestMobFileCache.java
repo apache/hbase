@@ -28,13 +28,15 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.regionserver.HMobStore;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -46,8 +48,6 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Category(SmallTests.class)
 public class TestMobFileCache {
@@ -56,7 +56,6 @@ public class TestMobFileCache {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMobFileCache.class);
 
-  static final Logger LOG = LoggerFactory.getLogger(TestMobFileCache.class);
   private HBaseTestingUtility UTIL;
   private HRegion region;
   private Configuration conf;
@@ -88,23 +87,31 @@ public class TestMobFileCache {
     UTIL = HBaseTestingUtility.createLocalHTU();
     conf = UTIL.getConfiguration();
     conf.set(MobConstants.MOB_FILE_CACHE_SIZE_KEY, TEST_CACHE_SIZE);
-    HTableDescriptor htd = UTIL.createTableDescriptor("testMobFileCache");
-    HColumnDescriptor hcd1 = new HColumnDescriptor(FAMILY1);
-    hcd1.setMobEnabled(true);
-    hcd1.setMobThreshold(0);
-    HColumnDescriptor hcd2 = new HColumnDescriptor(FAMILY2);
-    hcd2.setMobEnabled(true);
-    hcd2.setMobThreshold(0);
-    HColumnDescriptor hcd3 = new HColumnDescriptor(FAMILY3);
-    hcd3.setMobEnabled(true);
-    hcd3.setMobThreshold(0);
-    htd.addFamily(hcd1);
-    htd.addFamily(hcd2);
-    htd.addFamily(hcd3);
-    RegionInfo regionInfo = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(UTIL.createTableDescriptor("testMobFileCache"));
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(FAMILY1))
+        .setMobEnabled(true)
+        .setMobThreshold(0)
+        .build();
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(FAMILY2))
+        .setMobEnabled(true)
+        .setMobThreshold(0)
+        .build();
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(FAMILY3))
+        .setMobEnabled(true)
+        .setMobThreshold(0)
+        .build();
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    TableDescriptor tableDescriptor = tableDescriptorBuilder.build();
+    RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     mobFileCache = new MobFileCache(conf);
     region = HBaseTestingUtility
-        .createRegionAndWAL(regionInfo, UTIL.getDataTestDir(), conf, htd, mobFileCache);
+      .createRegionAndWAL(regionInfo, UTIL.getDataTestDir(), conf, tableDescriptor, mobFileCache);
   }
 
   @After
@@ -124,30 +131,34 @@ public class TestMobFileCache {
    * Create the mob store file
    */
   private Path createMobStoreFile(Configuration conf, String family) throws IOException {
-    HColumnDescriptor hcd = new HColumnDescriptor(family);
-    hcd.setMaxVersions(4);
-    hcd.setMobEnabled(true);
-    return createMobStoreFile(hcd);
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder
+        .newBuilder(Bytes.toBytes(family))
+        .setMaxVersions(4)
+        .setMobEnabled(true).build();
+    return createMobStoreFile(columnFamilyDescriptor);
   }
 
   /**
    * Create the mob store file
    */
-  private Path createMobStoreFile(HColumnDescriptor hcd)
+  private Path createMobStoreFile(ColumnFamilyDescriptor columnFamilyDescriptor)
       throws IOException {
     // Setting up a Store
     TableName tn = TableName.valueOf(TABLE);
-    HTableDescriptor htd = new HTableDescriptor(tn);
-    htd.addFamily(hcd);
-    HMobStore mobStore = (HMobStore) region.getStore(hcd.getName());
-    KeyValue key1 = new KeyValue(ROW, hcd.getName(), QF1, 1, VALUE);
-    KeyValue key2 = new KeyValue(ROW, hcd.getName(), QF2, 1, VALUE);
-    KeyValue key3 = new KeyValue(ROW2, hcd.getName(), QF3, 1, VALUE2);
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(tn);
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    HMobStore mobStore = (HMobStore) region.getStore(columnFamilyDescriptor.getName());
+    KeyValue key1 = new KeyValue(ROW, columnFamilyDescriptor.getName(), QF1, 1, VALUE);
+    KeyValue key2 = new KeyValue(ROW, columnFamilyDescriptor.getName(), QF2, 1, VALUE);
+    KeyValue key3 = new KeyValue(ROW2, columnFamilyDescriptor.getName(), QF3, 1, VALUE2);
     KeyValue[] keys = new KeyValue[] { key1, key2, key3 };
     int maxKeyCount = keys.length;
     HRegionInfo regionInfo = new HRegionInfo(tn);
     StoreFileWriter mobWriter = mobStore.createWriterInTmp(currentDate,
-        maxKeyCount, hcd.getCompactionCompression(), regionInfo.getStartKey(), false);
+      maxKeyCount, columnFamilyDescriptor.getCompactionCompressionType(),
+      regionInfo.getStartKey(), false);
     Path mobFilePath = mobWriter.getPath();
     String fileName = mobFilePath.getName();
     mobWriter.append(key1);

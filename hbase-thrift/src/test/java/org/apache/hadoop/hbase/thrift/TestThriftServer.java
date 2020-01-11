@@ -36,13 +36,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
@@ -726,11 +728,17 @@ public class TestThriftServer {
     String col = "c";
     // create a table which will throw exceptions for requests
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    HTableDescriptor tableDesc = new HTableDescriptor(tableName);
-    tableDesc.addCoprocessor(ErrorThrowingGetObserver.class.getName());
-    tableDesc.addFamily(new HColumnDescriptor(family));
 
-    Table table = UTIL.createTable(tableDesc, null);
+    ColumnFamilyDescriptor columnFamilyDescriptor = ColumnFamilyDescriptorBuilder
+      .newBuilder(Bytes.toBytes(family))
+      .build();
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(tableName)
+        .setCoprocessor(ErrorThrowingGetObserver.class.getName())
+        .setColumnFamily(columnFamilyDescriptor)
+        .build();
+
+    Table table = UTIL.createTable(tableDescriptor, null);
     long now = System.currentTimeMillis();
     table.put(new Put(Bytes.toBytes(rowkey))
         .addColumn(Bytes.toBytes(family), Bytes.toBytes(col), now, Bytes.toBytes("val1")));

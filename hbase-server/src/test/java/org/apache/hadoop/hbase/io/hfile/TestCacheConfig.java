@@ -32,8 +32,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
@@ -41,6 +42,7 @@ import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -237,10 +239,13 @@ public class TestCacheConfig {
     conf.setBoolean(CacheConfig.CACHE_DATA_ON_READ_KEY, true);
     conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, false);
 
-    HColumnDescriptor family = new HColumnDescriptor("testDisableCacheDataBlock");
-    family.setBlockCacheEnabled(false);
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder
+        .newBuilder(Bytes.toBytes("testDisableCacheDataBlock"))
+        .setBlockCacheEnabled(false)
+        .build();
 
-    cacheConfig = new CacheConfig(conf, family, null, ByteBuffAllocator.HEAP);
+    cacheConfig = new CacheConfig(conf, columnFamilyDescriptor, null, ByteBuffAllocator.HEAP);
     assertFalse(cacheConfig.shouldCacheBlockOnRead(BlockCategory.DATA));
     assertFalse(cacheConfig.shouldCacheCompressed(BlockCategory.DATA));
     assertFalse(cacheConfig.shouldCacheDataCompressed());

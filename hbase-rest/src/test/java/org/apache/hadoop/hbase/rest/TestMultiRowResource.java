@@ -32,10 +32,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.rest.client.Client;
 import org.apache.hadoop.hbase.rest.client.Cluster;
 import org.apache.hadoop.hbase.rest.client.Response;
@@ -117,10 +118,15 @@ public class TestMultiRowResource {
     if (admin.tableExists(TABLE)) {
       return;
     }
-    HTableDescriptor htd = new HTableDescriptor(TABLE);
-    htd.addFamily(new HColumnDescriptor(CFA));
-    htd.addFamily(new HColumnDescriptor(CFB));
-    admin.createTable(htd);
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(TABLE);
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(CFA)).build();
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(CFB)).build();
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    admin.createTable(tableDescriptorBuilder.build());
   }
 
   @AfterClass

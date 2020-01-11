@@ -36,9 +36,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -110,19 +110,21 @@ public class TestHRegionFileSystem {
 
       // alter table cf schema to change storage policies
       // and make sure it could override settings in conf
-      HColumnDescriptor hcdA = new HColumnDescriptor(Bytes.toString(FAMILIES[0]));
+      ColumnFamilyDescriptorBuilder cfdA =
+        ColumnFamilyDescriptorBuilder.newBuilder(FAMILIES[0]);
       // alter through setting HStore#BLOCK_STORAGE_POLICY_KEY in HColumnDescriptor
-      hcdA.setValue(HStore.BLOCK_STORAGE_POLICY_KEY, "ONE_SSD");
-      admin.modifyColumnFamily(TABLE_NAME, hcdA);
+      cfdA.setValue(HStore.BLOCK_STORAGE_POLICY_KEY, "ONE_SSD");
+      admin.modifyColumnFamily(TABLE_NAME, cfdA.build());
       while (TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().
           getRegionStates().hasRegionsInTransition()) {
         Thread.sleep(200);
         LOG.debug("Waiting on table to finish schema altering");
       }
       // alter through HColumnDescriptor#setStoragePolicy
-      HColumnDescriptor hcdB = new HColumnDescriptor(Bytes.toString(FAMILIES[1]));
-      hcdB.setStoragePolicy("ALL_SSD");
-      admin.modifyColumnFamily(TABLE_NAME, hcdB);
+      ColumnFamilyDescriptorBuilder cfdB =
+        ColumnFamilyDescriptorBuilder.newBuilder(FAMILIES[1]);
+      cfdB.setStoragePolicy("ALL_SSD");
+      admin.modifyColumnFamily(TABLE_NAME, cfdB.build());
       while (TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
           .hasRegionsInTransition()) {
         Thread.sleep(200);

@@ -22,7 +22,12 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.util.RegionSplitter.SplitAlgorithm;
 import org.junit.After;
@@ -109,15 +114,21 @@ public class IntegrationTestManyRegions {
 
   @Test
   public void testCreateTableWithRegions() throws Exception {
-    HTableDescriptor desc = new HTableDescriptor(TABLE_NAME);
-    desc.addFamily(new HColumnDescriptor("cf"));
+    ColumnFamilyDescriptor columnFamilyDescriptor = ColumnFamilyDescriptorBuilder
+      .newBuilder(Bytes.toBytes("cf"))
+      .build();
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(TABLE_NAME)
+        .setColumnFamily(columnFamilyDescriptor)
+        .build();
+
     SplitAlgorithm algo = new RegionSplitter.HexStringSplit();
     byte[][] splits = algo.split(REGION_COUNT);
 
     LOG.info(String.format("Creating table %s with %d splits.", TABLE_NAME, REGION_COUNT));
     long startTime = System.currentTimeMillis();
     try {
-      admin.createTable(desc, splits);
+      admin.createTable(tableDescriptor, splits);
       LOG.info(String.format("Pre-split table created successfully in %dms.",
           (System.currentTimeMillis() - startTime)));
     } catch (IOException e) {
