@@ -616,7 +616,6 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
         try {
           WALEntryBatch entryBatch = entryReader.take();
           shipEdits(entryBatch);
-          releaseBufferQuota((int) entryBatch.getHeapSize());
           if (!entryBatch.hasMoreEntries()) {
             LOG.debug("Finished recovering queue for group "
                     + walGroupId + " of peer " + peerClusterZnode);
