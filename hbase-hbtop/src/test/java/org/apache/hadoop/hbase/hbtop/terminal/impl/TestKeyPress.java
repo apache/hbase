@@ -15,51 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.hbtop.terminal;
+package org.apache.hadoop.hbase.hbtop.terminal.impl;
 
 import java.util.concurrent.TimeUnit;
-import org.apache.hadoop.hbase.hbtop.terminal.impl.TerminalImpl;
+
+import org.apache.hadoop.hbase.hbtop.terminal.KeyPress;
+import org.apache.hadoop.hbase.hbtop.terminal.Terminal;
 
 
-public final class CursorTest {
+public final class TestKeyPress {
 
-  private CursorTest() {
+  private TestKeyPress() {
   }
 
   public static void main(String[] args) throws Exception {
     try (Terminal terminal = new TerminalImpl()) {
-      terminal.refresh();
-      terminal.setCursorPosition(0, 0);
-
-      terminal.getTerminalPrinter(0).print("aaa").endOfLine();
-      terminal.refresh();
-      TimeUnit.SECONDS.sleep(1);
-
-      terminal.getTerminalPrinter(0).print("bbb").endOfLine();
-      terminal.refresh();
-      TimeUnit.SECONDS.sleep(1);
-
-      terminal.setCursorPosition(1, 0);
-      terminal.refresh();
-      TimeUnit.SECONDS.sleep(1);
-
-      terminal.setCursorPosition(2, 0);
-      terminal.refresh();
-      TimeUnit.SECONDS.sleep(1);
-
-      terminal.setCursorPosition(3, 0);
-      terminal.refresh();
-      TimeUnit.SECONDS.sleep(1);
-
-      terminal.setCursorPosition(0, 1);
-      terminal.refresh();
-      TimeUnit.SECONDS.sleep(1);
-
-      terminal.getTerminalPrinter(1).print("ccc").endOfLine();
-      terminal.refresh();
-      TimeUnit.SECONDS.sleep(1);
-
-      terminal.getTerminalPrinter(3).print("Press any key to finish").endOfLine();
+      terminal.hideCursor();
       terminal.refresh();
 
       while (true) {
@@ -68,7 +39,13 @@ public final class CursorTest {
           TimeUnit.MILLISECONDS.sleep(100);
           continue;
         }
-        break;
+
+        terminal.getTerminalPrinter(0).print(keyPress.toString()).endOfLine();
+        terminal.refresh();
+
+        if (keyPress.getType() == KeyPress.Type.F12) {
+          break;
+        }
       }
     }
   }
