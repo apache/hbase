@@ -21,7 +21,6 @@ import java.io.Closeable;
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -30,25 +29,11 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 interface AsyncRegistry extends Closeable {
-  /**
-   * A completed CompletableFuture to host default hbase:meta table state (ENABLED).
-   */
-  TableState ENABLED_META_TABLE_STATE =
-    new TableState(TableName.META_TABLE_NAME, TableState.State.ENABLED);
-  CompletableFuture<TableState> COMPLETED_GET_META_TABLE_STATE =
-    CompletableFuture.completedFuture(ENABLED_META_TABLE_STATE);
 
   /**
    * Get the location of meta region.
    */
   CompletableFuture<RegionLocations> getMetaRegionLocation();
-
-  /**
-   * The hbase:meta table state.
-   */
-  default CompletableFuture<TableState> getMetaTableState() {
-    return COMPLETED_GET_META_TABLE_STATE;
-  }
 
   /**
    * Should only be called once.

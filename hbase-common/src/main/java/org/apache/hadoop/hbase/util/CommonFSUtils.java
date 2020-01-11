@@ -703,8 +703,6 @@ public abstract class CommonFSUtils {
       if (LOG.isTraceEnabled()) {
         LOG.trace("{} doesn't exist", dir);
       }
-    } catch (IllegalArgumentException iae) {
-      int x = 0;
     }
     if (status == null || status.length < 1) {
       return null;

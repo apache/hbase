@@ -90,7 +90,6 @@ import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
 import org.apache.hadoop.hbase.security.access.UserPermission;
-
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
@@ -667,38 +666,22 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       new DisableTableProcedureBiConsumer(tableName));
   }
 
-  /**
-   * Utility for completing passed TableState {@link CompletableFuture} <code>future</code>
-   * using passed parameters.
-   */
-  private static CompletableFuture<Boolean> completeCheckTableState(
-      CompletableFuture<Boolean> future, TableState tableState, Throwable error,
-      TableState.State targetState, TableName tableName) {
-    if (error != null) {
-      future.completeExceptionally(error);
-    } else {
-      if (tableState != null) {
-        future.complete(tableState.inStates(targetState));
-      } else {
-        future.completeExceptionally(new TableNotFoundException(tableName));
-      }
-    }
-    return future;
-  }
-
   @Override
   public CompletableFuture<Boolean> isTableEnabled(TableName tableName) {
     if (TableName.isMetaTableName(tableName)) {
-      CompletableFuture<Boolean> future = new CompletableFuture<>();
-      addListener(this.connection.registry.getMetaTableState(), (tableState, error) -> {
-        completeCheckTableState(future, tableState, error, TableState.State.ENABLED, tableName);
-      });
-      return future;
+      return CompletableFuture.completedFuture(true);
     }
     CompletableFuture<Boolean> future = new CompletableFuture<>();
-    addListener(AsyncMetaTableAccessor.getTableState(metaTable, tableName), (tableState, error) -> {
-      completeCheckTableState(future, tableState.isPresent()? tableState.get(): null, error,
-        TableState.State.ENABLED, tableName);
+    addListener(AsyncMetaTableAccessor.getTableState(metaTable, tableName), (state, error) -> {
+      if (error != null) {
+        future.completeExceptionally(error);
+        return;
+      }
+      if (state.isPresent()) {
+        future.complete(state.get().inStates(TableState.State.ENABLED));
+      } else {
+        future.completeExceptionally(new TableNotFoundException(tableName));
+      }
     });
     return future;
   }
@@ -706,16 +689,19 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<Boolean> isTableDisabled(TableName tableName) {
     if (TableName.isMetaTableName(tableName)) {
-      CompletableFuture<Boolean> future = new CompletableFuture<>();
-      addListener(this.connection.registry.getMetaTableState(), (tableState, error) -> {
-        completeCheckTableState(future, tableState, error, TableState.State.DISABLED, tableName);
-      });
-      return future;
+      return CompletableFuture.completedFuture(false);
     }
     CompletableFuture<Boolean> future = new CompletableFuture<>();
-    addListener(AsyncMetaTableAccessor.getTableState(metaTable, tableName), (tableState, error) -> {
-      completeCheckTableState(future, tableState.isPresent()? tableState.get(): null, error,
-        TableState.State.DISABLED, tableName);
+    addListener(AsyncMetaTableAccessor.getTableState(metaTable, tableName), (state, error) -> {
+      if (error != null) {
+        future.completeExceptionally(error);
+        return;
+      }
+      if (state.isPresent()) {
+        future.complete(state.get().inStates(TableState.State.DISABLED));
+      } else {
+        future.completeExceptionally(new TableNotFoundException(tableName));
+      }
     });
     return future;
   }
