@@ -15,16 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.hbtop.screen.help;
+package org.apache.hadoop.hbase.hbtop.screen.top;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.hbtop.screen.top.TopScreenView;
+import org.apache.hadoop.hbase.hbtop.RecordFilter;
+import org.apache.hadoop.hbase.hbtop.field.Field;
+import org.apache.hadoop.hbase.hbtop.field.FieldInfo;
+import org.apache.hadoop.hbase.hbtop.mode.Mode;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -37,36 +42,44 @@ import org.mockito.runners.MockitoJUnitRunner;
 
 @Category(SmallTests.class)
 @RunWith(MockitoJUnitRunner.class)
-public class HelpScreenPresenterTest {
+public class TestFilterDisplayModeScreenPresenter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(HelpScreenPresenterTest.class);
-
-  private static final long TEST_REFRESH_DELAY = 5;
+    HBaseClassTestRule.forClass(TestFilterDisplayModeScreenPresenter.class);
 
   @Mock
-  private HelpScreenView helpScreenView;
+  private FilterDisplayModeScreenView filterDisplayModeScreenView;
 
   @Mock
   private TopScreenView topScreenView;
 
-  private HelpScreenPresenter helpScreenPresenter;
+  private FilterDisplayModeScreenPresenter filterDisplayModeScreenPresenter;
 
   @Before
   public void setup() {
-    helpScreenPresenter = new HelpScreenPresenter(helpScreenView, TEST_REFRESH_DELAY,
-      topScreenView);
+    List<Field> fields = Mode.REGION.getFieldInfos().stream()
+      .map(FieldInfo::getField)
+      .collect(Collectors.toList());
+
+    List<RecordFilter>  filters = new ArrayList<>();
+    filters.add(RecordFilter.parse("NAMESPACE==namespace", fields, true));
+    filters.add(RecordFilter.parse("TABLE==table", fields, true));
+
+    filterDisplayModeScreenPresenter = new FilterDisplayModeScreenPresenter(
+      filterDisplayModeScreenView, filters, topScreenView);
   }
 
   @Test
   public void testInit() {
-    helpScreenPresenter.init();
-    verify(helpScreenView).showHelpScreen(eq(TEST_REFRESH_DELAY), argThat(cds -> cds.length == 14));
+    filterDisplayModeScreenPresenter.init();
+    verify(filterDisplayModeScreenView).showFilters(argThat(filters -> filters.size() == 2
+      && filters.get(0).toString().equals("NAMESPACE==namespace")
+      && filters.get(1).toString().equals("TABLE==table")));
   }
 
   @Test
-  public void testTransitionToTopScreen() {
-    assertThat(helpScreenPresenter.transitionToNextScreen(), is(topScreenView));
+  public void testReturnToTopScreen() {
+    assertThat(filterDisplayModeScreenPresenter.returnToNextScreen(), is(topScreenView));
   }
 }

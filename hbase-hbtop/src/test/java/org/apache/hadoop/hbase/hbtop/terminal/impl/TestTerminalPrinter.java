@@ -15,15 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.hbtop.terminal;
+package org.apache.hadoop.hbase.hbtop.terminal.impl;
 
 import java.util.concurrent.TimeUnit;
-import org.apache.hadoop.hbase.hbtop.terminal.impl.TerminalImpl;
+
+import org.apache.hadoop.hbase.hbtop.terminal.KeyPress;
+import org.apache.hadoop.hbase.hbtop.terminal.Terminal;
+import org.apache.hadoop.hbase.hbtop.terminal.TerminalPrinter;
 
 
-public final class TerminalPrinterTest {
+public final class TestTerminalPrinter {
 
-  private TerminalPrinterTest() {
+  private TestTerminalPrinter() {
   }
 
   public static void main(String[] args) throws Exception {

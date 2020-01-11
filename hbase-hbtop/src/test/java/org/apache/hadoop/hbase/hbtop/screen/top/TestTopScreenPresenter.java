@@ -45,11 +45,11 @@ import org.mockito.runners.MockitoJUnitRunner;
 
 @Category(SmallTests.class)
 @RunWith(MockitoJUnitRunner.class)
-public class TopScreenPresenterTest {
+public class TestTopScreenPresenter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TopScreenPresenterTest.class);
+    HBaseClassTestRule.forClass(TestTopScreenPresenter.class);
 
   private static final List<FieldInfo> TEST_FIELD_INFOS = Arrays.asList(
     new FieldInfo(Field.REGION, 10, true),

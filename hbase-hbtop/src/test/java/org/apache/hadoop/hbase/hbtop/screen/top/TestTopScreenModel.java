@@ -47,11 +47,11 @@ import org.mockito.runners.MockitoJUnitRunner;
 
 @Category(SmallTests.class)
 @RunWith(MockitoJUnitRunner.class)
-public class TopScreenModelTest {
+public class TestTopScreenModel {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TopScreenModelTest.class);
+    HBaseClassTestRule.forClass(TestTopScreenModel.class);
 
   @Mock
   private Admin admin;
