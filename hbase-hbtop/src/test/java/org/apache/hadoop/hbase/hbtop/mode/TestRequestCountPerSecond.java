@@ -28,11 +28,11 @@ import org.junit.experimental.categories.Category;
 
 
 @Category(SmallTests.class)
-public class RequestCountPerSecondTest {
+public class TestRequestCountPerSecond {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(RequestCountPerSecondTest.class);
+    HBaseClassTestRule.forClass(TestRequestCountPerSecond.class);
 
   @Test
   public void test() {

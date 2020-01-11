@@ -15,55 +15,57 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.hbtop.mode;
+package org.apache.hadoop.hbase.hbtop.screen.top;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 
-import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.hbtop.Record;
-import org.apache.hadoop.hbase.hbtop.TestUtils;
-import org.apache.hadoop.hbase.hbtop.field.Field;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.Before;
 import org.junit.ClassRule;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.runners.MockitoJUnitRunner;
 
 
 @Category(SmallTests.class)
-public class RegionServerModeTest extends ModeTestBase {
+@RunWith(MockitoJUnitRunner.class)
+public class TestMessageModeScreenPresenter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(RegionServerModeTest.class);
+    HBaseClassTestRule.forClass(TestMessageModeScreenPresenter.class);
 
-  @Override
-  protected Mode getMode() {
-    return Mode.REGION_SERVER;
+  private static final String TEST_MESSAGE = "test message";
+
+  @Mock
+  private MessageModeScreenView messageModeScreenView;
+
+  @Mock
+  private TopScreenView topScreenView;
+
+  private MessageModeScreenPresenter messageModeScreenPresenter;
+
+  @Before
+  public void setup() {
+    messageModeScreenPresenter = new MessageModeScreenPresenter(messageModeScreenView,
+      TEST_MESSAGE, topScreenView);
   }
 
-  @Override
-  protected void assertRecords(List<Record> records) {
-    TestUtils.assertRecordsInRegionServerMode(records);
+  @Test
+  public void testInit() {
+    messageModeScreenPresenter.init();
+
+    verify(messageModeScreenView).showMessage(eq(TEST_MESSAGE));
   }
 
-  @Override
-  protected void assertDrillDown(Record currentRecord, DrillDownInfo drillDownInfo) {
-    assertThat(drillDownInfo.getNextMode(), is(Mode.REGION));
-    assertThat(drillDownInfo.getInitialFilters().size(), is(1));
-
-    switch (currentRecord.get(Field.REGION_SERVER).asString()) {
-      case "host1:1000":
-        assertThat(drillDownInfo.getInitialFilters().get(0).toString(), is("RS==host1:1000"));
-        break;
-
-      case "host2:1001":
-        assertThat(drillDownInfo.getInitialFilters().get(0).toString(), is("RS==host2:1001"));
-        break;
-
-      default:
-        fail();
-    }
+  @Test
+  public void testReturnToTopScreen() {
+    assertThat(messageModeScreenPresenter.returnToNextScreen(), is(topScreenView));
   }
 }

@@ -38,11 +38,11 @@ import org.junit.experimental.categories.Category;
 
 
 @Category(SmallTests.class)
-public class RecordFilterTest {
+public class TestRecordFilter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(RecordFilterTest.class);
+    HBaseClassTestRule.forClass(TestRecordFilter.class);
 
   @Test
   public void testParseAndBuilder() {

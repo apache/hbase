@@ -32,45 +32,35 @@ import org.junit.experimental.categories.Category;
 
 
 @Category(SmallTests.class)
-public class TableModeTest extends ModeTestBase {
+public class TestNamespaceMode extends TestModeBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TableModeTest.class);
+    HBaseClassTestRule.forClass(TestNamespaceMode.class);
 
   @Override
   protected Mode getMode() {
-    return Mode.TABLE;
+    return Mode.NAMESPACE;
   }
 
   @Override
   protected void assertRecords(List<Record> records) {
-    TestUtils.assertRecordsInTableMode(records);
+    TestUtils.assertRecordsInNamespaceMode(records);
   }
 
   @Override
   protected void assertDrillDown(Record currentRecord, DrillDownInfo drillDownInfo) {
-    assertThat(drillDownInfo.getNextMode(), is(Mode.REGION));
-    assertThat(drillDownInfo.getInitialFilters().size(), is(2));
+    assertThat(drillDownInfo.getNextMode(), is(Mode.TABLE));
+    assertThat(drillDownInfo.getInitialFilters().size(), is(1));
 
-    String tableName = String.format("%s:%s", currentRecord.get(Field.NAMESPACE).asString(),
-      currentRecord.get(Field.TABLE).asString());
-
-    switch (tableName) {
-      case "default:table1":
+    switch (currentRecord.get(Field.NAMESPACE).asString()) {
+      case "default":
         assertThat(drillDownInfo.getInitialFilters().get(0).toString(), is("NAMESPACE==default"));
-        assertThat(drillDownInfo.getInitialFilters().get(1).toString(), is("TABLE==table1"));
         break;
 
-      case "default:table2":
-        assertThat(drillDownInfo.getInitialFilters().get(0).toString(), is("NAMESPACE==default"));
-        assertThat(drillDownInfo.getInitialFilters().get(1).toString(), is("TABLE==table2"));
-        break;
-
-      case "namespace:table3":
+      case "namespace":
         assertThat(drillDownInfo.getInitialFilters().get(0).toString(),
           is("NAMESPACE==namespace"));
-        assertThat(drillDownInfo.getInitialFilters().get(1).toString(), is("TABLE==table3"));
         break;
 
       default:

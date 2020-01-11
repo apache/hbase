@@ -234,8 +234,8 @@ public class TopScreenPresenter {
     return new FieldScreenView(screen, terminal,
       topScreenModel.getCurrentSortField(), topScreenModel.getFields(),
       fieldDisplayMap,
-      (sortKey, fields, fieldDisplayMap) -> {
-        topScreenModel.setSortFieldAndFields(sortKey, fields);
+      (sortField, fields, fieldDisplayMap) -> {
+        topScreenModel.setSortFieldAndFields(sortField, fields);
         this.fieldDisplayMap.clear();
         this.fieldDisplayMap.putAll(fieldDisplayMap);
       }, topScreenView);

@@ -19,10 +19,17 @@ package org.apache.hadoop.hbase.hbtop.screen.top;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.verify;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.hbtop.RecordFilter;
+import org.apache.hadoop.hbase.hbtop.field.Field;
+import org.apache.hadoop.hbase.hbtop.field.FieldInfo;
+import org.apache.hadoop.hbase.hbtop.mode.Mode;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -35,37 +42,44 @@ import org.mockito.runners.MockitoJUnitRunner;
 
 @Category(SmallTests.class)
 @RunWith(MockitoJUnitRunner.class)
-public class MessageModeScreenPresenterTest {
+public class TestFilterDisplayModeScreenPresenter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(MessageModeScreenPresenterTest.class);
-
-  private static final String TEST_MESSAGE = "test message";
+    HBaseClassTestRule.forClass(TestFilterDisplayModeScreenPresenter.class);
 
   @Mock
-  private MessageModeScreenView messageModeScreenView;
+  private FilterDisplayModeScreenView filterDisplayModeScreenView;
 
   @Mock
   private TopScreenView topScreenView;
 
-  private MessageModeScreenPresenter messageModeScreenPresenter;
+  private FilterDisplayModeScreenPresenter filterDisplayModeScreenPresenter;
 
   @Before
   public void setup() {
-    messageModeScreenPresenter = new MessageModeScreenPresenter(messageModeScreenView,
-      TEST_MESSAGE, topScreenView);
+    List<Field> fields = Mode.REGION.getFieldInfos().stream()
+      .map(FieldInfo::getField)
+      .collect(Collectors.toList());
+
+    List<RecordFilter>  filters = new ArrayList<>();
+    filters.add(RecordFilter.parse("NAMESPACE==namespace", fields, true));
+    filters.add(RecordFilter.parse("TABLE==table", fields, true));
+
+    filterDisplayModeScreenPresenter = new FilterDisplayModeScreenPresenter(
+      filterDisplayModeScreenView, filters, topScreenView);
   }
 
   @Test
   public void testInit() {
-    messageModeScreenPresenter.init();
-
-    verify(messageModeScreenView).showMessage(eq(TEST_MESSAGE));
+    filterDisplayModeScreenPresenter.init();
+    verify(filterDisplayModeScreenView).showFilters(argThat(filters -> filters.size() == 2
+      && filters.get(0).toString().equals("NAMESPACE==namespace")
+      && filters.get(1).toString().equals("TABLE==table")));
   }
 
   @Test
   public void testReturnToTopScreen() {
-    assertThat(messageModeScreenPresenter.returnToNextScreen(), is(topScreenView));
+    assertThat(filterDisplayModeScreenPresenter.returnToNextScreen(), is(topScreenView));
   }
 }
