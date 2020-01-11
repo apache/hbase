@@ -75,6 +75,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Hash;
 import org.apache.hadoop.hbase.util.MurmurHash;
 import org.apache.hadoop.hbase.util.Pair;
+
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
@@ -91,6 +92,7 @@ import org.apache.hadoop.mapreduce.lib.reduce.LongSumReducer;
 import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -204,8 +206,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   protected void addCommandDescriptor(Class<? extends Test> cmdClass,
       String name, String description) {
-    CmdDescriptor cmdDescriptor =
-      new CmdDescriptor(cmdClass, name, description);
+    CmdDescriptor cmdDescriptor = new CmdDescriptor(cmdClass, name, description);
     commands.put(name, cmdDescriptor);
   }
 
@@ -335,7 +336,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       // generate splits
       List<InputSplit> splitList = new ArrayList<>();
 
-      for (FileStatus file: listStatus(job)) {
+      for (FileStatus file : listStatus(job)) {
         if (file.isDirectory()) {
           continue;
         }
@@ -344,10 +345,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
         FSDataInputStream fileIn = fs.open(path);
         LineReader in = new LineReader(fileIn, job.getConfiguration());
         int lineLen;
-        while(true) {
+        while (true) {
           Text lineText = new Text();
           lineLen = in.readLine(lineText);
-          if(lineLen <= 0) {
+          if (lineLen <= 0) {
             break;
           }
           Matcher m = LINE_PATTERN.matcher(lineText.toString());
@@ -406,7 +407,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
       @Override
       public boolean nextKeyValue() {
-        if(readOver) {
+        if (readOver) {
           return false;
         }
 
@@ -429,7 +430,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
       @Override
       public float getProgress() {
-        if(readOver) {
+        if (readOver) {
           return 1.0f;
         } else {
           return 0.0f;
@@ -562,7 +563,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     int numSplitPoints = presplitRegions - 1;
     byte[][] splits = new byte[numSplitPoints][];
     int jump = this.R  / this.presplitRegions;
-    for (int i=0; i < numSplitPoints; i++) {
+    for (int i = 0; i < numSplitPoints; i++) {
       int rowkey = jump * (1 + i);
       splits[i] = format(rowkey);
     }
@@ -635,11 +636,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
       };
       threads.add(t);
     }
-    for (Thread t: threads) {
+    for (Thread t : threads) {
       t.start();
     }
-    for (Thread t: threads) {
-      while(t.isAlive()) {
+    for (Thread t : threads) {
+      while (t.isAlive()) {
         try {
           t.join();
         } catch (InterruptedException e) {
@@ -708,33 +709,32 @@ public class PerformanceEvaluation extends Configured implements Tool {
     FileSystem fs = FileSystem.get(c);
     fs.mkdirs(inputDir);
     Path inputFile = new Path(inputDir, "input.txt");
-    PrintStream out = new PrintStream(fs.create(inputFile));
     // Make input random.
-    Map<Integer, String> m = new TreeMap<>();
-    Hash h = MurmurHash.getInstance();
-    int perClientRows = (this.R / this.N);
-    try {
+    try (PrintStream out = new PrintStream(fs.create(inputFile))) {
+      Map<Integer, String> m = new TreeMap<>();
+      Hash h = MurmurHash.getInstance();
+      int perClientRows = (this.R / this.N);
       for (int i = 0; i < 10; i++) {
         for (int j = 0; j < N; j++) {
-          String s = "tableName=" + this.tableName +
-              ", startRow=" + ((j * perClientRows) + (i * (perClientRows/10))) +
-              ", perClientRunRows=" + (perClientRows / 10) +
-              ", totalRows=" + this.R +
-              ", clients=" + this.N +
-              ", flushCommits=" + this.flushCommits +
-              ", writeToWAL=" + this.writeToWAL +
-              ", useTags=" + this.useTags +
-              ", noOfTags=" + this.noOfTags;
-          byte[] b = Bytes.toBytes(s);
+          StringBuilder s = new StringBuilder();
+          s.append("tableName=").append(tableName);
+          s.append(", startRow=").append((j * perClientRows) + (i * (perClientRows / 10)));
+          s.append(", perClientRunRows=").append(perClientRows / 10);
+          s.append(", totalRows=").append(R);
+          s.append(", clients=").append(N);
+          s.append(", flushCommits=").append(flushCommits);
+          s.append(", writeToWAL=").append(writeToWAL);
+          s.append(", useTags=").append(useTags);
+          s.append(", noOfTags=").append(noOfTags);
+
+          byte[] b = Bytes.toBytes(s.toString());
           int hash = h.hash(new ByteArrayHashKey(b, 0, b.length), -1);
-          m.put(hash, s);
+          m.put(hash, s.toString());
         }
       }
-      for (Map.Entry<Integer, String> e: m.entrySet()) {
+      for (Map.Entry<Integer, String> e : m.entrySet()) {
         out.println(e.getValue());
       }
-    } finally {
-      out.close();
     }
     return inputDir;
   }
@@ -1198,14 +1198,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     void testRow(int i) throws IOException {
       byte[] value = generateValue(this.rand);
       Scan scan = constructScan(value);
-      ResultScanner scanner = null;
-      try {
-        scanner = this.table.getScanner(scan);
+      try (ResultScanner scanner = this.table.getScanner(scan)) {
         while (scanner.next() != null) {
-        }
-      } finally {
-        if (scanner != null) {
-          scanner.close();
         }
       }
     }
