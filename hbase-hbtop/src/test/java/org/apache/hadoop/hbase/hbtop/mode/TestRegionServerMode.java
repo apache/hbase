@@ -32,35 +32,34 @@ import org.junit.experimental.categories.Category;
 
 
 @Category(SmallTests.class)
-public class NamespaceModeTest extends ModeTestBase {
+public class TestRegionServerMode extends TestModeBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(NamespaceModeTest.class);
+    HBaseClassTestRule.forClass(TestRegionServerMode.class);
 
   @Override
   protected Mode getMode() {
-    return Mode.NAMESPACE;
+    return Mode.REGION_SERVER;
   }
 
   @Override
   protected void assertRecords(List<Record> records) {
-    TestUtils.assertRecordsInNamespaceMode(records);
+    TestUtils.assertRecordsInRegionServerMode(records);
   }
 
   @Override
   protected void assertDrillDown(Record currentRecord, DrillDownInfo drillDownInfo) {
-    assertThat(drillDownInfo.getNextMode(), is(Mode.TABLE));
+    assertThat(drillDownInfo.getNextMode(), is(Mode.REGION));
     assertThat(drillDownInfo.getInitialFilters().size(), is(1));
 
-    switch (currentRecord.get(Field.NAMESPACE).asString()) {
-      case "default":
-        assertThat(drillDownInfo.getInitialFilters().get(0).toString(), is("NAMESPACE==default"));
+    switch (currentRecord.get(Field.REGION_SERVER).asString()) {
+      case "host1:1000":
+        assertThat(drillDownInfo.getInitialFilters().get(0).toString(), is("RS==host1:1000"));
         break;
 
-      case "namespace":
-        assertThat(drillDownInfo.getInitialFilters().get(0).toString(),
-          is("NAMESPACE==namespace"));
+      case "host2:1001":
+        assertThat(drillDownInfo.getInitialFilters().get(0).toString(), is("RS==host2:1001"));
         break;
 
       default:

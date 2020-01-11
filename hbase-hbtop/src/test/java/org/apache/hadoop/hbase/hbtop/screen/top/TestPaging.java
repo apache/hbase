@@ -28,11 +28,11 @@ import org.junit.experimental.categories.Category;
 
 
 @Category(SmallTests.class)
-public class PagingTest {
+public class TestPaging {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(PagingTest.class);
+    HBaseClassTestRule.forClass(TestPaging.class);
 
   @Test
   public void testArrowUpAndArrowDown() {

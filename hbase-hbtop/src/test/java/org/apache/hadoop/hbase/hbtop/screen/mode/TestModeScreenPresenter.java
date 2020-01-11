@@ -40,11 +40,11 @@ import org.mockito.runners.MockitoJUnitRunner;
 
 @Category(SmallTests.class)
 @RunWith(MockitoJUnitRunner.class)
-public class ModeScreenPresenterTest {
+public class TestModeScreenPresenter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(ModeScreenPresenterTest.class);
+    HBaseClassTestRule.forClass(TestModeScreenPresenter.class);
 
   @Mock
   private ModeScreenView modeScreenView;

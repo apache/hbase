@@ -30,11 +30,11 @@ import org.junit.experimental.categories.Category;
 
 
 @Category(SmallTests.class)
-public class FieldValueTest {
+public class TestFieldValue {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(FieldValueTest.class);
+    HBaseClassTestRule.forClass(TestFieldValue.class);
 
   @Test
   public void testParseAndAsSomethingMethod() {
