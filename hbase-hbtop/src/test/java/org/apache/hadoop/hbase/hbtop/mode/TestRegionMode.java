@@ -15,42 +15,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.http;
+package org.apache.hadoop.hbase.hbtop.mode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.junit.Assert.assertThat;
 
-import java.util.Arrays;
 import java.util.List;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.hbtop.Record;
+import org.apache.hadoop.hbase.hbtop.TestUtils;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({SmallTests.class})
-public class TestProfileOutputServlet {
+
+@Category(SmallTests.class)
+public class TestRegionMode extends TestModeBase {
+
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestProfileOutputServlet.class);
+    HBaseClassTestRule.forClass(TestRegionMode.class);
 
-  @Test
-  public void testSanitization() {
-    List<String> good = Arrays.asList("abcd", "key=value", "key1=value&key2=value2", "",
-        "host=host-1.example.com");
-    for (String input : good) {
-      assertEquals(input, ProfileOutputServlet.sanitize(input));
-    }
-    List<String> bad = Arrays.asList("function(){console.log(\"oops\")}", "<strong>uhoh</strong>");
-    for (String input : bad) {
-      try {
-        ProfileOutputServlet.sanitize(input);
-        fail("Expected sanitization of \"" + input + "\" to fail");
-      } catch (RuntimeException e) {
-        // Pass
-      }
-    }
+  @Override
+  protected Mode getMode() {
+    return Mode.REGION;
   }
 
+  @Override
+  protected void assertRecords(List<Record> records) {
+    TestUtils.assertRecordsInRegionMode(records);
+  }
+
+  @Override
+  protected void assertDrillDown(Record currentRecord, DrillDownInfo drillDownInfo) {
+    assertThat(drillDownInfo, is(nullValue()));
+  }
 }

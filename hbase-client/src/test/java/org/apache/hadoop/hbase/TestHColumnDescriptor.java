@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.exceptions.HBaseException;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -31,7 +30,6 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.BuilderStyleTest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PrettyPrinter;
-import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -112,20 +110,6 @@ public class TestHColumnDescriptor {
     new HColumnDescriptor(Bytes.toBytes(""));
   }
 
-  /**
-   * Test that we add and remove strings from configuration properly.
-   */
-  @Test
-  public void testAddGetRemoveConfiguration() throws Exception {
-    HColumnDescriptor desc = new HColumnDescriptor("foo");
-    String key = "Some";
-    String value = "value";
-    desc.setConfiguration(key, value);
-    assertEquals(value, desc.getConfigurationValue(key));
-    desc.removeConfiguration(key);
-    assertEquals(null, desc.getConfigurationValue(key));
-  }
-
   @Test
   public void testMobValuesInHColumnDescriptorShouldReadable() {
     boolean isMob = true;
@@ -161,37 +145,4 @@ public class TestHColumnDescriptor {
     BuilderStyleTest.assertClassesAreBuilderStyle(HColumnDescriptor.class);
   }
 
-  @Test
-  public void testSetTimeToLive() throws HBaseException {
-    String ttl;
-    HColumnDescriptor desc = new HColumnDescriptor("foo");
-
-    ttl = "50000";
-    desc.setTimeToLive(ttl);
-    Assert.assertEquals(50000, desc.getTimeToLive());
-
-    ttl = "50000 seconds";
-    desc.setTimeToLive(ttl);
-    Assert.assertEquals(50000, desc.getTimeToLive());
-
-    ttl = "";
-    desc.setTimeToLive(ttl);
-    Assert.assertEquals(0, desc.getTimeToLive());
-
-    ttl = "FOREVER";
-    desc.setTimeToLive(ttl);
-    Assert.assertEquals(HConstants.FOREVER, desc.getTimeToLive());
-
-    ttl = "1 HOUR 10 minutes 1 second";
-    desc.setTimeToLive(ttl);
-    Assert.assertEquals(4201, desc.getTimeToLive());
-
-    ttl = "500 Days 23 HOURS";
-    desc.setTimeToLive(ttl);
-    Assert.assertEquals(43282800, desc.getTimeToLive());
-
-    ttl = "43282800 SECONDS (500 Days 23 hours)";
-    desc.setTimeToLive(ttl);
-    Assert.assertEquals(43282800, desc.getTimeToLive());
-  }
 }

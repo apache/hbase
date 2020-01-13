@@ -15,56 +15,58 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.hbtop.mode;
+package org.apache.hadoop.hbase.hbtop.screen.help;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
-
-import java.util.List;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.hbtop.Record;
-import org.apache.hadoop.hbase.hbtop.TestUtils;
-import org.apache.hadoop.hbase.hbtop.field.Field;
+import org.apache.hadoop.hbase.hbtop.screen.top.TopScreenView;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.Before;
 import org.junit.ClassRule;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.runners.MockitoJUnitRunner;
+
 
 @Category(SmallTests.class)
-public class UserModeTest extends ModeTestBase {
+@RunWith(MockitoJUnitRunner.class)
+public class TestHelpScreenPresenter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(UserModeTest.class);
+    HBaseClassTestRule.forClass(TestHelpScreenPresenter.class);
 
-  @Override
-  protected Mode getMode() {
-    return Mode.USER;
+  private static final long TEST_REFRESH_DELAY = 5;
+
+  @Mock
+  private HelpScreenView helpScreenView;
+
+  @Mock
+  private TopScreenView topScreenView;
+
+  private HelpScreenPresenter helpScreenPresenter;
+
+  @Before
+  public void setup() {
+    helpScreenPresenter = new HelpScreenPresenter(helpScreenView, TEST_REFRESH_DELAY,
+      topScreenView);
   }
 
-  @Override
-  protected void assertRecords(List<Record> records) {
-    TestUtils.assertRecordsInUserMode(records);
+  @Test
+  public void testInit() {
+    helpScreenPresenter.init();
+    verify(helpScreenView).showHelpScreen(eq(TEST_REFRESH_DELAY), argThat(cds -> cds.length == 14));
   }
 
-  @Override
-  protected void assertDrillDown(Record currentRecord, DrillDownInfo drillDownInfo) {
-    assertThat(drillDownInfo.getNextMode(), is(Mode.CLIENT));
-    assertThat(drillDownInfo.getInitialFilters().size(), is(1));
-    String userName = currentRecord.get(Field.USER).asString();
-
-    switch (userName) {
-      case "FOO":
-        assertThat(drillDownInfo.getInitialFilters().get(0).toString(), is("USER==FOO"));
-        break;
-
-      case "BAR":
-        assertThat(drillDownInfo.getInitialFilters().get(0).toString(), is("USER==BAR"));
-        break;
-
-      default:
-        fail();
-    }
+  @Test
+  public void testTransitionToTopScreen() {
+    assertThat(helpScreenPresenter.transitionToNextScreen(), is(topScreenView));
   }
 }

@@ -2431,7 +2431,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           flushesQueued.reset();
         }
 
-        status.markComplete("Flush successful");
+        status.markComplete("Flush successful " + fs.toString());
         return fs;
       } finally {
         synchronized (writestate) {

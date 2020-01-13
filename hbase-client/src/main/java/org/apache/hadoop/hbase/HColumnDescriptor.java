@@ -106,7 +106,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
    * The other attributes are defaulted.
    *
    * @param familyName Column family name. Must be 'printable' -- digit or
-   * letter -- and may not contain a <code>:</code>
+   *   letter -- and may not contain a <code>:</code>
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
    *             (<a href="https://issues.apache.org/jira/browse/HBASE-18433">HBASE-18433</a>).
    *             Use {@link ColumnFamilyDescriptorBuilder#of(String)}.

@@ -36,10 +36,14 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.namespace.QName;
 
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.protobuf.generated.ColumnSchemaMessage.ColumnSchema;
@@ -339,18 +343,20 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
    * @return a table descriptor
    */
   @JsonIgnore
-  public HTableDescriptor getTableDescriptor() {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(getName()));
+  public TableDescriptor getTableDescriptor() {
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(getName()));
     for (Map.Entry<QName, Object> e : getAny().entrySet()) {
-      htd.setValue(e.getKey().getLocalPart(), e.getValue().toString());
+      tableDescriptorBuilder.setValue(e.getKey().getLocalPart(), e.getValue().toString());
     }
     for (ColumnSchemaModel column : getColumns()) {
-      HColumnDescriptor hcd = new HColumnDescriptor(column.getName());
+      ColumnFamilyDescriptorBuilder cfdb = ColumnFamilyDescriptorBuilder
+        .newBuilder(Bytes.toBytes(column.getName()));
       for (Map.Entry<QName, Object> e : column.getAny().entrySet()) {
-        hcd.setValue(e.getKey().getLocalPart(), e.getValue().toString());
+        cfdb.setValue(e.getKey().getLocalPart(), e.getValue().toString());
       }
-      htd.addFamily(hcd);
+      tableDescriptorBuilder.setColumnFamily(cfdb.build());
     }
-    return htd;
+    return tableDescriptorBuilder.build();
   }
 }

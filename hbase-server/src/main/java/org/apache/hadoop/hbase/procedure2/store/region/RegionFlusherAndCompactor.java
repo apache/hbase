@@ -120,6 +120,8 @@ class RegionFlusherAndCompactor implements Closeable {
     flushThread.start();
     compactExecutor = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder()
       .setNameFormat("Procedure-Region-Store-Compactor").setDaemon(true).build());
+    LOG.info("Constructor flushSize={}, flushPerChanges={}, flushIntervalMs={}, " +
+        "compactMin={}", flushSize, flushPerChanges, flushIntervalMs, compactMin);
   }
 
   // inject our flush related configurations
@@ -130,6 +132,8 @@ class RegionFlusherAndCompactor implements Closeable {
     conf.setLong(HRegion.MEMSTORE_FLUSH_PER_CHANGES, flushPerChanges);
     long flushIntervalMs = conf.getLong(FLUSH_INTERVAL_MS_KEY, DEFAULT_FLUSH_INTERVAL_MS);
     conf.setLong(HRegion.MEMSTORE_PERIODIC_FLUSH_INTERVAL, flushIntervalMs);
+    LOG.info("Injected flushSize={}, flushPerChanges={}, flushIntervalMs={}", flushSize,
+      flushPerChanges, flushIntervalMs);
   }
 
   private void compact() {
@@ -180,6 +184,7 @@ class RegionFlusherAndCompactor implements Closeable {
       changesAfterLastFlush.set(0);
       try {
         region.flush(true);
+        lastFlushTime = EnvironmentEdgeManager.currentTime();
       } catch (IOException e) {
         LOG.error(HBaseMarkers.FATAL, "Failed to flush procedure store region, aborting...", e);
         abortable.abort("Failed to flush procedure store region", e);
@@ -207,8 +212,14 @@ class RegionFlusherAndCompactor implements Closeable {
   }
 
   private boolean shouldFlush(long changes) {
-    return region.getMemStoreHeapSize() + region.getMemStoreOffHeapSize() >= flushSize ||
-      changes > flushPerChanges;
+    long heapSize = region.getMemStoreHeapSize();
+    long offHeapSize = region.getMemStoreOffHeapSize();
+    boolean flush = heapSize + offHeapSize >= flushSize || changes > flushPerChanges;
+    if (flush && LOG.isTraceEnabled()) {
+      LOG.trace("shouldFlush totalMemStoreSize={}, flushSize={}, changes={}, flushPerChanges={}",
+        heapSize + offHeapSize, flushSize, changes, flushPerChanges);
+    }
+    return flush;
   }
 
   void onUpdate() {

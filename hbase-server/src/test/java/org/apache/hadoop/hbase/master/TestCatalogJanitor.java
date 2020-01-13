@@ -38,12 +38,13 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MetaMockingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -172,9 +173,14 @@ public class TestCatalogJanitor {
    * family that is MockMasterServices.DEFAULT_COLUMN_FAMILY_NAME)
    */
   private TableDescriptor createTableDescriptorForCurrentMethod() {
-    return TableDescriptorBuilder.newBuilder(TableName.valueOf(this.name.getMethodName())).
-      setColumnFamily(new HColumnDescriptor(MockMasterServices.DEFAULT_COLUMN_FAMILY_NAME)).
-        build();
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder
+        .newBuilder(Bytes.toBytes(MockMasterServices.DEFAULT_COLUMN_FAMILY_NAME))
+        .build();
+    return TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(this.name.getMethodName()))
+      .setColumnFamily(columnFamilyDescriptor)
+      .build();
   }
 
   /**

@@ -349,11 +349,13 @@ public class TestAdmin2 extends TestAdminBase {
   private Admin createTable(TableName tableName) throws IOException {
     Admin admin = TEST_UTIL.getAdmin();
 
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    HColumnDescriptor hcd = new HColumnDescriptor("value");
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(tableName);
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("value")).build();
 
-    htd.addFamily(hcd);
-    admin.createTable(htd);
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    admin.createTable(tableDescriptorBuilder.build());
     return admin;
   }
 
@@ -362,11 +364,13 @@ public class TestAdmin2 extends TestAdminBase {
   }
 
   private void createTableWithDefaultConf(TableName TABLENAME) throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(TABLENAME);
-    HColumnDescriptor hcd = new HColumnDescriptor("value");
-    htd.addFamily(hcd);
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(TABLENAME);
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("value")).build();
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
 
-    ADMIN.createTable(htd);
+    ADMIN.createTable(tableDescriptorBuilder.build());
   }
 
   /**

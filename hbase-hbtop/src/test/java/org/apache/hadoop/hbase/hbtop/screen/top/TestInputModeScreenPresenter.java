@@ -43,11 +43,11 @@ import org.mockito.runners.MockitoJUnitRunner;
 
 @Category(SmallTests.class)
 @RunWith(MockitoJUnitRunner.class)
-public class InputModeScreenPresenterTest {
+public class TestInputModeScreenPresenter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(InputModeScreenPresenterTest.class);
+    HBaseClassTestRule.forClass(TestInputModeScreenPresenter.class);
 
   private static final String TEST_INPUT_MESSAGE = "test input message";
 

@@ -38,8 +38,8 @@ public class ProfileOutputServlet extends DefaultServlet {
   private static final long serialVersionUID = 1L;
   private static final Logger LOG = LoggerFactory.getLogger(ProfileOutputServlet.class);
   private static final int REFRESH_PERIOD = 2;
-  // Alphanumeric characters, plus percent (url-encoding), equals, and ampersand
-  private static final Pattern ALPHA_NUMERIC = Pattern.compile("[a-zA-Z0-9\\%\\=\\&]*");
+  // Alphanumeric characters, plus percent (url-encoding), equals, ampersand, dot and hyphen
+  private static final Pattern ALPHA_NUMERIC = Pattern.compile("[a-zA-Z0-9%=&.\\-]*");
 
   @Override
   protected void doGet(final HttpServletRequest req, final HttpServletResponse resp)

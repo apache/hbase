@@ -38,11 +38,12 @@ import javax.xml.bind.JAXBException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.rest.client.Client;
 import org.apache.hadoop.hbase.rest.client.Cluster;
 import org.apache.hadoop.hbase.rest.client.Response;
@@ -186,15 +187,17 @@ public class TestNamespacesInstanceResource {
     admin.createNamespace(nsd);
 
     // Create two tables via admin.
-    HColumnDescriptor colDesc = new HColumnDescriptor("cf1");
     TableName tn1 = TableName.valueOf(nsName + ":table1");
-    HTableDescriptor table = new HTableDescriptor(tn1);
-    table.addFamily(colDesc);
-    admin.createTable(table);
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(tn1);
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("cf1")).build();
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    admin.createTable(tableDescriptorBuilder.build());
     TableName tn2 = TableName.valueOf(nsName + ":table2");
-    table = new HTableDescriptor(tn2);
-    table.addFamily(colDesc);
-    admin.createTable(table);
+    tableDescriptorBuilder = TableDescriptorBuilder.newBuilder(tn2);
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    admin.createTable(tableDescriptorBuilder.build());
 
     Map<String, String> nsProperties = new HashMap<>();
     nsProperties.put("key1", "value1");
