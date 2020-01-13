@@ -119,7 +119,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   }
 
   protected ReplicationSinkManager createReplicationSinkManager(AsyncClusterConnection conn) {
-    return new ReplicationSinkManager(conn,this, this.conf);
+    return new ReplicationSinkManager(conn, this, this.conf);
   }
 
   @Override
