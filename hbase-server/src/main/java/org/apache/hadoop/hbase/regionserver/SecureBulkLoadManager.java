@@ -306,7 +306,7 @@ public class SecureBulkLoadManager {
           FileSystem.closeAllForUGI(ugi);
         }
       } catch (IOException e) {
-        LOG.error("Failed to close FileSystem for: " + ugi, e);
+        LOG.error("Failed to close FileSystem for: {}", ugi, e);
       }
       if (region.getCoprocessorHost() != null) {
         region.getCoprocessorHost().postBulkLoadHFile(familyPaths, map);
