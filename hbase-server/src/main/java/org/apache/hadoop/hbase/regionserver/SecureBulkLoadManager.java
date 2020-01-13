@@ -152,26 +152,15 @@ public class SecureBulkLoadManager {
 
   public void cleanupBulkLoad(final HRegion region, final CleanupBulkLoadRequest request)
       throws IOException {
-    try {
-      region.getCoprocessorHost().preCleanupBulkLoad(getActiveUser());
+    region.getCoprocessorHost().preCleanupBulkLoad(getActiveUser());
 
-      Path path = new Path(request.getBulkToken());
-      if (!fs.delete(path, true)) {
-        if (fs.exists(path)) {
-          throw new IOException("Failed to clean up " + path);
-        }
-      }
-      LOG.info("Cleaned up " + path + " successfully.");
-    } finally {
-      UserGroupInformation ugi = getActiveUser().getUGI();
-      try {
-        if (!UserGroupInformation.getLoginUser().equals(ugi) && !isUserReferenced(ugi)) {
-          FileSystem.closeAllForUGI(ugi);
-        }
-      } catch (IOException e) {
-        LOG.error("Failed to close FileSystem for: " + ugi, e);
+    Path path = new Path(request.getBulkToken());
+    if (!fs.delete(path, true)) {
+      if (fs.exists(path)) {
+        throw new IOException("Failed to clean up " + path);
       }
     }
+    LOG.trace("Cleaned up {} successfully.", path);
   }
 
   private Consumer<HRegion> fsCreatedListener;
@@ -280,6 +269,13 @@ public class SecureBulkLoadManager {
         public Map<byte[], List<Path>> run() {
           FileSystem fs = null;
           try {
+            /*
+             * This is creating and caching a new FileSystem instance. Other code called
+             * "beneath" this method will rely on this FileSystem instance being in the
+             * cache. This is important as those methods make _no_ attempt to close this
+             * FileSystem instance. It is critical that here, in SecureBulkLoadManager,
+             * we are tracking the lifecycle and closing the FS when safe to do so.
+             */
             fs = FileSystem.get(conf);
             for(Pair<byte[], String> el: familyPaths) {
               Path stageFamily = new Path(bulkToken, Bytes.toString(el.getFirst()));
@@ -304,6 +300,13 @@ public class SecureBulkLoadManager {
       });
     } finally {
       decrementUgiReference(ugi);
+      try {
+        if (!UserGroupInformation.getLoginUser().equals(ugi) && !isUserReferenced(ugi)) {
+          FileSystem.closeAllForUGI(ugi);
+        }
+      } catch (IOException e) {
+        LOG.error("Failed to close FileSystem for: {}", ugi, e);
+      }
       if (region.getCoprocessorHost() != null) {
         region.getCoprocessorHost().postBulkLoadHFile(familyPaths, map);
       }
