@@ -50,8 +50,6 @@ import org.apache.hadoop.hbase.rest.protobuf.generated.ColumnSchemaMessage.Colum
 import org.apache.hadoop.hbase.rest.protobuf.generated.TableSchemaMessage.TableSchema;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import org.apache.yetus.audience.InterfaceAudience;
-
 /**
  * A representation of HBase table descriptors.
  *
