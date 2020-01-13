@@ -1762,7 +1762,9 @@ public class MasterRpcServices extends RSRpcServices
       if (MobUtils.isMobRegionName(tableName, regionName)) {
         checkHFileFormatVersionForMob();
         //TODO: support CompactType.MOB
-        LOG.warn("CompactType.MOB is not supported yet, will run regular compaction.");
+        // HBASE-23571
+        LOG.warn("CompactType.MOB is not supported yet, will run regular compaction."+
+            " Refer to HBASE-23571.");
         return super.compactRegion(controller, request);
       } else {
         return super.compactRegion(controller, request);

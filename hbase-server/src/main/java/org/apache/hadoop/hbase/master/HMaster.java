@@ -148,6 +148,8 @@ import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.master.zksyncer.MasterAddressSyncer;
 import org.apache.hadoop.hbase.master.zksyncer.MetaLocationSyncer;
 import org.apache.hadoop.hbase.mob.MobConstants;
+import org.apache.hadoop.hbase.mob.MobFileCleanerChore;
+import org.apache.hadoop.hbase.mob.MobFileCompactionChore;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -1266,16 +1268,8 @@ public class HMaster extends HRegionServer implements MasterServices {
   private void initMobCleaner() {
     this.mobFileCleanerChore = new MobFileCleanerChore(this);
     getChoreService().scheduleChore(mobFileCleanerChore);
-
-    int mobCompactionPeriod = conf.getInt(MobConstants.MOB_COMPACTION_CHORE_PERIOD,
-      MobConstants.DEFAULT_MOB_COMPACTION_CHORE_PERIOD);
-
-    if (mobCompactionPeriod > 0) {
-      this.mobFileCompactionChore = new MobFileCompactionChore(this);
-      getChoreService().scheduleChore(mobFileCompactionChore);
-    } else {
-      LOG.info("The period is " + mobCompactionPeriod + " seconds, MobCompactionChore is disabled");
-    }
+    this.mobFileCompactionChore = new MobFileCompactionChore(this);
+    getChoreService().scheduleChore(mobFileCompactionChore);
   }
 
   /**

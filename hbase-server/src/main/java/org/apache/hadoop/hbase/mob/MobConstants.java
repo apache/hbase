@@ -44,6 +44,11 @@ public final class MobConstants {
   public static final byte[] MOB_REGION_NAME_BYTES = Bytes.toBytes(MOB_REGION_NAME);
 
   public static final String MOB_CLEANER_PERIOD = "hbase.master.mob.cleaner.period";
+  
+  @Deprecated
+  public static final String DEPRECATED_MOB_CLEANER_PERIOD = 
+      "hbase.master.mob.ttl.cleaner.period";
+  
   public static final int DEFAULT_MOB_CLEANER_PERIOD = 24 * 60 * 60; // one day
 
   public static final String MOB_CACHE_EVICT_PERIOD = "hbase.mob.cache.evict.period";

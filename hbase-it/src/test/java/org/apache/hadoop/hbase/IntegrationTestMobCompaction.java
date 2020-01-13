@@ -34,10 +34,10 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.master.MobFileCleanerChore;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
 import org.apache.hadoop.hbase.mob.FaultyMobStoreCompactor;
 import org.apache.hadoop.hbase.mob.MobConstants;
+import org.apache.hadoop.hbase.mob.MobFileCleanerChore;
 import org.apache.hadoop.hbase.mob.MobStoreEngine;
 import org.apache.hadoop.hbase.mob.MobUtils;
 
@@ -63,6 +63,13 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
  * FaultyMobStoreCompactor. The probability of failure is controlled by command-line
  * argument 'failprob'.
  * @see <a href="https://issues.apache.org/jira/browse/HBASE-22749">HBASE-22749</a>
+ * <p>
+ * Sample usage:
+ *
+ * <pre>
+ * hbase org.apache.hadoop.hbase.IntegrationTestMobCompaction -Dservers=10 -Drows=1000000
+ * -Dfailprob=0.2
+ * </pre>
  */
 @SuppressWarnings("deprecation")
 
@@ -142,6 +149,9 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
   @Override
   public void setUpMonkey() throws Exception {
     // Sorry, no Monkey
+    String msg = "Chaos monkey is not supported";
+    LOG.warn(msg);
+    throw new IOException(msg);
   }
 
   private void deleteTablesIfAny() throws IOException {
@@ -400,10 +410,6 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
     }
   }
 
-  /**
-   *
-   * @param args argument list
-   */
   public static void main(String[] args) throws Exception {
     Configuration conf = HBaseConfiguration.create();
     initConf(conf);
