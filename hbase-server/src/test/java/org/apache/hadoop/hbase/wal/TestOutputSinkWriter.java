@@ -44,20 +44,24 @@ public class TestOutputSinkWriter {
     BrokenEntryBuffers entryBuffers = new BrokenEntryBuffers(controller, 2000);
     OutputSink sink = new OutputSink(controller, entryBuffers, 1) {
 
-      @Override public List<Path> finishWritingAndClose() throws IOException {
+      @Override protected int getNumOpenWriters() {
+        return 0;
+      }
+
+      @Override protected void append(EntryBuffers.RegionEntryBuffer buffer) throws IOException {
+
+      }
+
+      @Override protected List<Path> close() throws IOException {
         return null;
       }
 
-      @Override public Map<byte[],Long> getOutputCounts() {
+      @Override public Map<String,Long> getOutputCounts() {
         return null;
       }
 
       @Override public int getNumberOfRecoveredRegions() {
         return 0;
-      }
-
-      @Override public void append(WALSplitter.RegionEntryBuffer buffer) throws IOException {
-
       }
 
       @Override public boolean keepRegionEvent(WAL.Entry entry) {
@@ -110,7 +114,7 @@ public class TestOutputSinkWriter {
     }
 
     @Override
-    synchronized WALSplitter.RegionEntryBuffer getChunkToWrite() {
+    synchronized EntryBuffers.RegionEntryBuffer getChunkToWrite() {
       //This just emulates something going wrong with in the Writer
       if(throwError){
         throwError = false;
