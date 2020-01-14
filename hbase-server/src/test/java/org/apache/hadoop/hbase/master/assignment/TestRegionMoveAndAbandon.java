@@ -116,6 +116,7 @@ public class TestRegionMoveAndAbandon {
     // Start up everything again
     LOG.info("Starting cluster");
     UTIL.getMiniHBaseCluster().startMaster();
+    UTIL.invalidateConnection();
     UTIL.ensureSomeRegionServersAvailable(2);
 
     UTIL.waitFor(30_000, new Waiter.Predicate<Exception>() {

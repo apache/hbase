@@ -32,7 +32,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -45,6 +44,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
@@ -117,7 +117,8 @@ public class TestNamespaceAuditor {
     conf.setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
     conf.setClass("hbase.coprocessor.regionserver.classes", CPRegionServerObserver.class,
       RegionServerObserver.class);
-    UTIL.startMiniCluster();
+    StartMiniClusterOption option = StartMiniClusterOption.builder().numMasters(2).build();
+    UTIL.startMiniCluster(option);
     waitForQuotaInitialize(UTIL);
     ADMIN = UTIL.getAdmin();
   }
@@ -483,17 +484,6 @@ public class TestNamespaceAuditor {
     return getQuotaManager().getState(namespace);
   }
 
-  byte[] getSplitKey(byte[] startKey, byte[] endKey) {
-    String skey = Bytes.toString(startKey);
-    int key;
-    if (StringUtils.isBlank(skey)) {
-      key = Integer.parseInt(Bytes.toString(endKey))/2 ;
-    } else {
-      key = (int) (Integer.parseInt(skey) * 1.5);
-    }
-    return Bytes.toBytes("" + key);
-  }
-
   public static class CustomObserver implements RegionCoprocessor, RegionObserver {
     volatile CountDownLatch postCompact;
 
@@ -546,11 +536,11 @@ public class TestNamespaceAuditor {
     UTIL.waitFor(1000, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-       return (getNamespaceState(nsp1).getTables().size() == 2);
+        return (getNamespaceState(nsp1).getTables().size() == 2);
       }
     });
     NamespaceTableAndRegionInfo before = getNamespaceState(nsp1);
-    restartMaster();
+    killActiveMaster();
     NamespaceTableAndRegionInfo after = getNamespaceState(nsp1);
     assertEquals("Expected: " + before.getTables() + " Found: " + after.getTables(), before
         .getTables().size(), after.getTables().size());
@@ -570,10 +560,9 @@ public class TestNamespaceAuditor {
     });
   }
 
-  private void restartMaster() throws Exception {
+  private void killActiveMaster() throws Exception {
     UTIL.getHBaseCluster().getMaster(0).stop("Stopping to start again");
     UTIL.getHBaseCluster().waitOnMaster(0);
-    UTIL.getHBaseCluster().startMaster();
     waitForQuotaInitialize(UTIL);
   }
 

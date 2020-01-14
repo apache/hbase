@@ -141,6 +141,7 @@ public class TestRegionSplit {
     JVMClusterUtil.MasterThread t = UTIL.getHBaseCluster().startMaster();
     Thread.sleep(500);
 
+    UTIL.invalidateConnection();
     // enable table
     UTIL.getAdmin().enableTable(tableName);
     Thread.sleep(500);

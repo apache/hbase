@@ -15,29 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.client;
+package org.apache.hadoop.hbase.master;
 
-import static org.apache.hadoop.hbase.HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY;
+import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.util.ReflectionUtils;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 
 /**
- * Factory class to get the instance of configured connection registry.
+ * An implementation of HMaster that always runs as a stand by and never transitions to active.
  */
-@InterfaceAudience.Private
-final class ConnectionRegistryFactory {
-
-  private ConnectionRegistryFactory() {
+public class AlwaysStandByHMaster extends HMaster {
+  public AlwaysStandByHMaster(Configuration conf) throws IOException {
+    super(conf);
   }
 
-  /**
-   * @return The connection registry implementation to use.
-   */
-  static ConnectionRegistry getRegistry(Configuration conf) {
-    Class<? extends ConnectionRegistry> clazz = conf.getClass(
-        CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY, MasterRegistry.class,
-        ConnectionRegistry.class);
-    return ReflectionUtils.newInstance(clazz, conf);
+  protected ActiveMasterManager createActiveMasterManager(
+      ZKWatcher zk, ServerName sn, org.apache.hadoop.hbase.Server server) {
+    return new AlwaysStandByMasterManager(zk, sn, server);
   }
 }

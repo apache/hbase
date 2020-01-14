@@ -35,6 +35,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -141,7 +142,8 @@ public class TestSplitTransactionOnCluster {
   @BeforeClass public static void before() throws Exception {
     TESTING_UTIL.getConfiguration().setInt(HConstants.HBASE_BALANCER_PERIOD, 60000);
     StartMiniClusterOption option = StartMiniClusterOption.builder()
-        .masterClass(MyMaster.class).numRegionServers(NB_SERVERS).numDataNodes(NB_SERVERS).build();
+        .masterClass(MyMaster.class).numRegionServers(NB_SERVERS).
+            numDataNodes(NB_SERVERS).build();
     TESTING_UTIL.startMiniCluster(option);
   }
 
@@ -804,6 +806,10 @@ public class TestSplitTransactionOnCluster {
     cluster.waitOnMaster(0);
     HMaster master = cluster.startMaster().getMaster();
     cluster.waitForActiveAndReadyMaster();
+    // reset the connections
+    IOUtils.closeQuietly(admin);
+    TESTING_UTIL.invalidateConnection();
+    admin = TESTING_UTIL.getAdmin();
     return master;
   }
 

@@ -60,8 +60,7 @@ public abstract class AbstractTestRegionLocator {
     UTIL.waitTableAvailable(TABLE_NAME);
     try (ConnectionRegistry registry =
              ConnectionRegistryFactory.getRegistry(UTIL.getConfiguration())) {
-      RegionReplicaTestHelper.waitUntilAllMetaReplicasHavingRegionLocation(UTIL.getConfiguration(),
-        registry, REGION_REPLICATION);
+      RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(UTIL, registry, REGION_REPLICATION);
     }
     UTIL.getAdmin().balancerSwitch(false, true);
   }

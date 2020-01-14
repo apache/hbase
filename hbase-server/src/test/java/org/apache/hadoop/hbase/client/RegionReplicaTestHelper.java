@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,24 +42,30 @@ public final class RegionReplicaTestHelper {
   }
 
   // waits for all replicas to have region location
-  static void waitUntilAllMetaReplicasHavingRegionLocation(Configuration conf,
-      ConnectionRegistry registry, int regionReplication) throws IOException {
+  static void waitUntilAllMetaReplicasAreReady(HBaseTestingUtility util,
+      ConnectionRegistry registry, int regionReplication) {
+    Configuration conf = util.getConfiguration();
     Waiter.waitFor(conf, conf.getLong("hbase.client.sync.wait.timeout.msec", 60000), 200, true,
       new ExplainingPredicate<IOException>() {
         @Override
-        public String explainFailure() throws IOException {
+        public String explainFailure() {
           return "Not all meta replicas get assigned";
         }
 
         @Override
-        public boolean evaluate() throws IOException {
+        public boolean evaluate() {
           try {
             RegionLocations locs = registry.getMetaRegionLocations().get();
             if (locs.size() < regionReplication) {
               return false;
             }
             for (int i = 0; i < regionReplication; i++) {
-              if (locs.getRegionLocation(i) == null) {
+              HRegionLocation loc = locs.getRegionLocation(i);
+              // Wait until the replica is served by a region server. There could be delay between
+              // the replica being available to the connection and region server opening it.
+              Optional<ServerName> rsCarryingReplica =
+                  getRSCarryingReplica(util, loc.getRegion().getTable(), i);
+              if (!rsCarryingReplica.isPresent()) {
                 return false;
               }
             }
