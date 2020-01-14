@@ -526,18 +526,17 @@ public abstract class CommonFSUtils {
       } else if (LOG.isDebugEnabled()) {
         LOG.debug("Unable to set storagePolicy=" + storagePolicy + " for path=" + path, e);
       }
+
       // check for lack of HDFS-7228
-      if (e instanceof InvocationTargetException) {
-        final Throwable exception = e.getCause();
-        if (exception instanceof RemoteException &&
-            HadoopIllegalArgumentException.class.getName().equals(
-              ((RemoteException)exception).getClassName())) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Given storage policy, '" +storagePolicy +"', was rejected and probably " +
-              "isn't a valid policy for the version of Hadoop you're running. I.e. if you're " +
-              "trying to use SSD related policies then you're likely missing HDFS-7228. For " +
-              "more information see the 'ArchivalStorage' docs for your Hadoop release.");
-          }
+      final Throwable exception = e.getCause();
+      if (exception instanceof RemoteException &&
+          HadoopIllegalArgumentException.class.getName().equals(
+            ((RemoteException)exception).getClassName())) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Given storage policy, '" +storagePolicy +"', was rejected and probably " +
+            "isn't a valid policy for the version of Hadoop you're running. I.e. if you're " +
+            "trying to use SSD related policies then you're likely missing HDFS-7228. For " +
+            "more information see the 'ArchivalStorage' docs for your Hadoop release.");
         }
       }
     }
