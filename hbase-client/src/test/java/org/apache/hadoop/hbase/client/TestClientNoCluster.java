@@ -121,7 +121,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     // Run my Connection overrides.  Use my little ConnectionImplementation below which
     // allows me insert mocks and also use my Registry below rather than the default zk based
     // one so tests run faster and don't have zk dependency.
-    this.conf.set(ConnectionRegistryFactory.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
+    this.conf.set(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
         SimpleRegistry.class.getName());
   }
 
