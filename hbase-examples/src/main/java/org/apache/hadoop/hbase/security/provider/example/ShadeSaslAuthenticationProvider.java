@@ -27,13 +27,13 @@ import org.apache.yetus.audience.InterfaceAudience;
 public abstract class ShadeSaslAuthenticationProvider implements SaslAuthenticationProvider {
   public static final SaslAuthMethod METHOD = new SaslAuthMethod(
       "SHADE", (byte) 15, "PLAIN", AuthenticationMethod.TOKEN);
-  public static final Text TOKEN_KIND = new Text("HBASE_EXAMPLE_SHADE_TOKEN");
+  public static final String TOKEN_KIND = "HBASE_EXAMPLE_SHADE_TOKEN";
 
   @Override public SaslAuthMethod getSaslAuthMethod() {
     return METHOD;
   }
 
-  @Override public Text getTokenKind() {
+  @Override public String getTokenKind() {
     return TOKEN_KIND; 
   }
 }

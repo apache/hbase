@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.security.SecurityInfo;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
@@ -101,7 +100,7 @@ public class TestSaslClientAuthenticationProviders {
       return METHOD1;
     }
 
-    @Override public Text getTokenKind() {
+    @Override public String getTokenKind() {
       return null;
     }
 
@@ -123,7 +122,7 @@ public class TestSaslClientAuthenticationProviders {
       return METHOD2;
     }
 
-    @Override public Text getTokenKind() {
+    @Override public String getTokenKind() {
       return null;
     }
 

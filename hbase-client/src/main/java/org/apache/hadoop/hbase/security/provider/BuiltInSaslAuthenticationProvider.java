@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.security.provider;
 
-import org.apache.hadoop.io.Text;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -31,10 +30,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public abstract class BuiltInSaslAuthenticationProvider implements SaslAuthenticationProvider {
 
-  public static final Text AUTH_TOKEN_TYPE = new Text("HBASE_AUTH_TOKEN");
+  public static final String AUTH_TOKEN_TYPE = "HBASE_AUTH_TOKEN";
 
   @Override
-  public Text getTokenKind() {
+  public String getTokenKind() {
     return AUTH_TOKEN_TYPE;
   }
 }

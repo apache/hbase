@@ -43,5 +43,5 @@ public interface SaslAuthenticationProvider {
   /**
    * Returns the name of the type used by the TokenIdentifier.
    */
-  Text getTokenKind();
+  String getTokenKind();
 }

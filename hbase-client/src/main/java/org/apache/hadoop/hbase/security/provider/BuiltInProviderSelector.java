@@ -56,6 +56,7 @@ public class BuiltInProviderSelector implements AuthenticationProviderSelector {
   SimpleSaslClientAuthenticationProvider simpleAuth = null;
   GssSaslClientAuthenticationProvider krbAuth = null;
   DigestSaslClientAuthenticationProvider digestAuth = null;
+  Text digestAuthTokenKind = null;
 
   @Override
   public void configure(
@@ -85,6 +86,7 @@ public class BuiltInProviderSelector implements AuthenticationProviderSelector {
               "Encountered multiple DigestSaslClientAuthenticationProvider instances");
         }
         digestAuth = (DigestSaslClientAuthenticationProvider) provider;
+        digestAuthTokenKind = new Text(digestAuth.getTokenKind());
       } else {
         LOG.warn("Ignoring unknown SaslClientAuthenticationProvider: {}", provider.getClass());
       }
@@ -97,13 +99,15 @@ public class BuiltInProviderSelector implements AuthenticationProviderSelector {
 
   @Override
   public Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> selectProvider(
-      Text clusterId, UserGroupInformation ugi) {
+      String clusterId, UserGroupInformation ugi) {
     Objects.requireNonNull(clusterId, "Null clusterId was given");
 
     // Superfluous: we don't do SIMPLE auth over SASL, but we should to simplify.
     if (!User.isHBaseSecurityEnabled(conf)) {
       return new Pair<>(simpleAuth, null);
     }
+
+    final Text clusterIdAsText = clusterId == null ? new Text() : new Text(clusterId);
 
     // Must be digest auth, look for a token.
     // TestGenerateDelegationToken is written expecting DT is used when DT and Krb are both present.
@@ -112,8 +116,8 @@ public class BuiltInProviderSelector implements AuthenticationProviderSelector {
       // We need to check for two things:
       //   1. This token is for the HBase cluster we want to talk to
       //   2. We have suppporting client implementation to handle the token (the "kind" of token)
-      if (clusterId.equals(token.getService()) &&
-          digestAuth.getTokenKind().equals(token.getKind())) {
+      if (clusterIdAsText.equals(token.getService()) &&
+          digestAuthTokenKind.equals(token.getKind())) {
         return new Pair<>(digestAuth, token);
       }
     }

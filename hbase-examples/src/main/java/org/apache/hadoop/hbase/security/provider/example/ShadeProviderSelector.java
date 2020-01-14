@@ -33,6 +33,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class ShadeProviderSelector extends BuiltInProviderSelector {
 
+  private final Text SHADE_TOKEN_KIND_TEXT = new Text(ShadeSaslAuthenticationProvider.TOKEN_KIND);
   private ShadeSaslClientAuthenticationProvider shade;
 
   @Override
@@ -49,12 +50,12 @@ public class ShadeProviderSelector extends BuiltInProviderSelector {
 
   @Override
   public Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> selectProvider(
-      Text clusterId, UserGroupInformation ugi) {
+      String clusterId, UserGroupInformation ugi) {
     Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> pair =
         super.selectProvider(clusterId, ugi);
 
     Optional<Token<?>> optional = ugi.getTokens().stream()
-        .filter((t) -> ShadeSaslAuthenticationProvider.TOKEN_KIND.equals(t.getKind()))
+        .filter((t) -> SHADE_TOKEN_KIND_TEXT.equals(t.getKind()))
         .findFirst();
     if (optional.isPresent()) {
       return new Pair<>(shade, optional.get());

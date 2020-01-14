@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.security.provider;
 
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.io.Text;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -30,11 +29,11 @@ import org.apache.yetus.audience.InterfaceStability;
 @InterfaceStability.Evolving
 public abstract class AbstractSaslClientAuthenticationProvider implements
         SaslClientAuthenticationProvider {
-  public static final Text AUTH_TOKEN_TYPE = new Text("HBASE_AUTH_TOKEN");
+  public static final String AUTH_TOKEN_TYPE = "HBASE_AUTH_TOKEN";
 
 
   @Override
-  public final Text getTokenKind() {
+  public final String getTokenKind() {
     // All HBase authentication tokens are "HBASE_AUTH_TOKEN"'s. We differentiate between them
     // via the code().
     return AUTH_TOKEN_TYPE;
