@@ -157,6 +157,11 @@ In addition to these attributes, a provider also must define the following attri
 
 It is allowed (even expected) that there may be multiple providers that use `TOKEN` authentication.
 
+N.b. Hadoop requires all `TokenIdentifier` implements to have a no-args constructor and a `ServiceLoader`
+entry in their packaging JAR file (e.g. `META-INF/services/org.apache.hadoop.security.token.TokenIdentifier`).
+Otherwise, parsing the `TokenIdentifier` on the server-side end of an RPC from a Hadoop `Token` will return
+`null` to the caller (often, in the `CallbackHandler` implementation).
+
 ### Factories
 
 To ease development with these unknown set of providers, there are two classes which
