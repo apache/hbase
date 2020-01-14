@@ -542,10 +542,9 @@ public abstract class CommonFSUtils {
       }
 
       // check for lack of HDFS-7228
-      final Throwable exception = e.getCause();
-      if (exception instanceof RemoteException &&
+      if (e instanceof RemoteException &&
           HadoopIllegalArgumentException.class.getName().equals(
-            ((RemoteException)exception).getClassName())) {
+            ((RemoteException)e).getClassName())) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Given storage policy, '" +storagePolicy +"', was rejected and probably " +
             "isn't a valid policy for the version of Hadoop you're running. I.e. if you're " +
@@ -554,7 +553,7 @@ public abstract class CommonFSUtils {
         }
       // Hadoop 2.8+, 3.0-a1+ added FileSystem.setStoragePolicy with a default implementation
       // that throws UnsupportedOperationException
-      } else if (exception instanceof UnsupportedOperationException) {
+      } else if (e instanceof UnsupportedOperationException) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("The underlying FileSystem implementation doesn't support " +
               "setStoragePolicy. This is probably intentional on their part, since HDFS-9345 " +
@@ -563,7 +562,7 @@ public abstract class CommonFSUtils {
               "specification docs from HADOOP-11981, and/or related documentation from the " +
               "provider of the underlying FileSystem (its name should appear in the " +
               "stacktrace that accompanies this message). Note in particular that Hadoop's " +
-              "local filesystem implementation doesn't support storage policies.", exception);
+              "local filesystem implementation doesn't support storage policies.", e);
         }
       }
     }
