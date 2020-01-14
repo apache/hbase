@@ -34,4 +34,5 @@
   <suppress checks="." files=".*/generated/.*\.java"/>
   <suppress checks="." files=".*/generated-jamon/.*\.java"/>
   <suppress checks="MagicNumberCheck" files=".*Test\.java"/>
+  <suppress checks="HideUtilityClassConstructor" files="org.apache.hadoop.hbase.util.ByteRangeUtils"/>
 </suppressions>
