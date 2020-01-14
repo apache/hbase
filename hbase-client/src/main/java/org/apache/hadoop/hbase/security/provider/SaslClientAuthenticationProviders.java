@@ -28,7 +28,6 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -208,7 +207,7 @@ public final class SaslClientAuthenticationProviders {
    * identifier and the user.
    */
   public Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> selectProvider(
-      Text clusterId, UserGroupInformation clientUser) {
+      String clusterId, UserGroupInformation clientUser) {
     return selector.selectProvider(clusterId, clientUser);
   }
 

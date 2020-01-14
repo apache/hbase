@@ -22,7 +22,6 @@ import java.util.Collection;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -36,7 +35,7 @@ public interface AuthenticationProviderSelector {
   /**
    * Initializes the implementation with configuration and a set of providers available. This method
    * should be called exactly once per implementation prior to calling
-   * {@link #selectProvider(Text, UserGroupInformation)}.
+   * {@link #selectProvider(String, UserGroupInformation)}.
    */
   void configure(Configuration conf,
       Collection<SaslClientAuthenticationProvider> availableProviders);

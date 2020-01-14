@@ -38,7 +38,7 @@ public class ShadeClientTokenUtil {
       Connection conn, String username, char[] password) throws IOException {
     ShadeTokenIdentifier identifier = new ShadeTokenIdentifier(username);
     return new Token<>(identifier.getBytes(), Bytes.toBytes(new String(password)),
-        ShadeSaslAuthenticationProvider.TOKEN_KIND,
+        new Text(ShadeSaslAuthenticationProvider.TOKEN_KIND),
         new Text(conn.getAdmin().getClusterMetrics().getClusterId()));
   }
 }

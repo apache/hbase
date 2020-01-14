@@ -50,7 +50,7 @@ public class SaslPlainServer implements SaslServer {
     public SaslServer createSaslServer(String mechanism, String protocol,
         String serverName, Map<String,?> props, CallbackHandler cbh)
             throws SaslException {
-      return "PLAIN".equals(mechanism) ? new SaslPlainServer(cbh) : null; 
+      return "PLAIN".equals(mechanism) ? new SaslPlainServer(cbh) : null;
     }
     @Override
     public String[] getMechanismNames(Map<String,?> props){
@@ -59,7 +59,7 @@ public class SaslPlainServer implements SaslServer {
           : new String[0];
     }
   }
-  
+
   private CallbackHandler cbh;
   private boolean completed;
   private String authz;
@@ -72,7 +72,7 @@ public class SaslPlainServer implements SaslServer {
   public String getMechanismName() {
     return "PLAIN";
   }
-  
+
   @Override
   public byte[] evaluateResponse(byte[] response) throws SaslException {
     if (completed) {
@@ -119,7 +119,7 @@ public class SaslPlainServer implements SaslServer {
       throw new IllegalStateException("PLAIN authentication not completed");
     }
   }
-  
+
   @Override
   public boolean isComplete() {
     return completed;
@@ -130,19 +130,19 @@ public class SaslPlainServer implements SaslServer {
     throwIfNotComplete();
     return authz;
   }
-  
+
   @Override
   public Object getNegotiatedProperty(String propName) {
-    throwIfNotComplete();      
+    throwIfNotComplete();
     return Sasl.QOP.equals(propName) ? "auth" : null;
   }
-  
+
   @Override
   public byte[] wrap(byte[] outgoing, int offset, int len)
       throws SaslException {
     throwIfNotComplete();
     throw new IllegalStateException(
-        "PLAIN supports neither integrity nor privacy");      
+        "PLAIN supports neither integrity nor privacy");
   }
   
   @Override
@@ -150,9 +150,9 @@ public class SaslPlainServer implements SaslServer {
       throws SaslException {
     throwIfNotComplete();
     throw new IllegalStateException(
-        "PLAIN supports neither integrity nor privacy");      
+        "PLAIN supports neither integrity nor privacy");
   }
-  
+
   @Override
   public void dispose() throws SaslException {
     cbh = null;
