@@ -284,22 +284,34 @@ For additional information on setting up Eclipse for HBase development on Window
 
 === IntelliJ IDEA
 
-You can set up IntelliJ IDEA for similar functionality as Eclipse.
-Follow these steps.
+A functional development environment can be setup around an IntelliJ IDEA installation that has the
+plugins necessary for building Java projects with Maven.
 
-. Select
-. You do not need to select a profile.
-  Be sure [label]#Maven project
-  required# is selected, and click btn:[Next].
-. Select the location for the JDK.
+. Use either File > New > "Project from Existing Sources..." or "Project From Version Control.."
+. Depending on your version of IntelliJ, you may need to choose Maven as the "project" or "model"
+type.
 
-.Using the HBase Formatter in IntelliJ IDEA
-Using the Eclipse Code Formatter plugin for IntelliJ IDEA, you can import the HBase code formatter described in <<eclipse.code.formatting,eclipse.code.formatting>>.
+The following plugins are recommended:
+
+. Maven, bundled. This allows IntelliJ to resolve dependencies and recognize the project structure.
+. EditorConfig, bundled. This will apply project whitespace settings found in the the
+`.editorconfig` file available on branches with
+link:https://issues.apache.org/jira/browse/HBASE-23234[HBASE-23234] or later.
+. link:https://plugins.jetbrains.com/plugin/1065-checkstyle-idea/[Checkstyle-IDEA]. Configure this
+against the configuration file found under `hbase-checkstyle/src/main/resources/hbase/checkstyle.xml`.
+This will highlight style errors in the IDE, so you can fix them before they get flagged during the
+pre-commit process.
+. link:https://plugins.jetbrains.com/plugin/8277-protobuf-support/[Protobuf Support]. HBase uses
+link:https://developers.google.com/protocol-buffers/[Protocol Buffers] in a number of places where
+serialization is required. This plugin is helpful when editing these object definitions.
+. link:https://plugins.jetbrains.com/plugin/7391-asciidoc/[AsciiDoc]. HBase uses
+link:http://asciidoc.org[AsciiDoc] for  building it's project documentation. This plugin is helpful
+when editing this book.
 
 === Other IDEs
 
-It would be useful to mirror the <<eclipse,eclipse>> set-up instructions for other IDEs.
-If you would like to assist, please have a look at link:https://issues.apache.org/jira/browse/HBASE-11704[HBASE-11704].
+If you'd have another environment with which you'd like to develop on HBase, please consider
+documenting your setup process here.
 
 [[build]]
 == Building Apache HBase
