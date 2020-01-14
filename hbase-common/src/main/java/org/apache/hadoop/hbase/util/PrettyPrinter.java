@@ -19,9 +19,12 @@
 
 package org.apache.hadoop.hbase.util;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.exceptions.HBaseException;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -29,7 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
-public class PrettyPrinter {
+public final class PrettyPrinter {
 
   private static final Logger LOG = LoggerFactory.getLogger(PrettyPrinter.class);
 
@@ -117,7 +120,7 @@ public class PrettyPrinter {
       sb.append(" DAY").append(days == 1 ? "" : "S");
     }
 
-    if (hours > 0 ) {
+    if (hours > 0) {
       sb.append(days > 0 ? " " : "");
       sb.append(hours);
       sb.append(" HOUR").append(hours == 1 ? "" : "S");
@@ -186,6 +189,20 @@ public class PrettyPrinter {
               "format do not match");
     }
     return ttl;
+  }
+
+  /**
+   * Pretty prints a collection of any type to a string. Relies on toString() implementation of the
+   * object type.
+   * @param collection collection to pretty print.
+   * @return Pretty printed string for the collection.
+   */
+  public static String toString(Collection<?> collection) {
+    List<String> stringList = new ArrayList<>();
+    for (Object o: collection) {
+      stringList.add(Objects.toString(o));
+    }
+    return "[" + String.join(",", stringList) + "]";
   }
 
 }
