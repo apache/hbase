@@ -528,10 +528,9 @@ public abstract class CommonFSUtils {
       }
 
       // check for lack of HDFS-7228
-      final Throwable exception = e.getCause();
-      if (exception instanceof RemoteException &&
+      if (e instanceof RemoteException &&
           HadoopIllegalArgumentException.class.getName().equals(
-            ((RemoteException)exception).getClassName())) {
+            ((RemoteException)e).getClassName())) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Given storage policy, '" +storagePolicy +"', was rejected and probably " +
             "isn't a valid policy for the version of Hadoop you're running. I.e. if you're " +
