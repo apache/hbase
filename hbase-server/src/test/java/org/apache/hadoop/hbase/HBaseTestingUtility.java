@@ -1082,6 +1082,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     this.hbaseCluster =
         new MiniHBaseCluster(c, option.getNumMasters(), option.getNumRegionServers(),
             option.getRsPorts(), option.getMasterClass(), option.getRsClass());
+    // Populate the master address configuration from mini cluster configuration.
+    conf.set(HConstants.MASTER_ADDRS_KEY,
+        c.get(HConstants.MASTER_ADDRS_KEY, HConstants.MASTER_ADDRS_DEFAULT));
     // Don't leave here till we've done a successful scan of the hbase:meta
     Table t = getConnection().getTable(TableName.META_TABLE_NAME);
     ResultScanner s = t.getScanner(new Scan());
