@@ -113,11 +113,21 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   private boolean dropOnDeletedTables;
   private boolean isSerial = false;
 
+  /*
+   * Some implementations of HBaseInterClusterReplicationEndpoint may require instantiate different
+   * Connection implementations, or initialize it in a different way, so defining createConnection
+   * as protected for possible overridings.
+   */
   protected AsyncClusterConnection createConnection(Configuration conf) throws IOException {
     return ClusterConnectionFactory.createAsyncClusterConnection(conf,
       null, User.getCurrent());
   }
 
+  /*
+   * Some implementations of HBaseInterClusterReplicationEndpoint may require instantiate different
+   * ReplicationSinkManager implementations, or initialize it in a different way,
+   * so defining createReplicationSinkManager as protected for possible overridings.
+   */
   protected ReplicationSinkManager createReplicationSinkManager(AsyncClusterConnection conn) {
     return new ReplicationSinkManager(conn, this, this.conf);
   }
@@ -140,7 +150,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     // TODO: This connection is replication specific or we should make it particular to
     // replication and make replication specific settings such as compression or codec to use
     // passing Cells.
-    this.conn = (AsyncClusterConnection) createConnection(this.conf);
+    this.conn = createConnection(this.conf);
     this.sleepForRetries =
         this.conf.getLong("replication.source.sleepforretries", 1000);
     this.metrics = context.getMetrics();
