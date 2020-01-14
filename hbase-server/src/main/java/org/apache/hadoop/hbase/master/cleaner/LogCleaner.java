@@ -26,6 +26,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -111,8 +113,13 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate>
         results.add(new CleanerContext(file));
       }
     }
+    if (results.isEmpty()) {
+      return 0;
+    }
 
-    LOG.debug("Old WAL files pending deletion: {}", results);
+    LOG.debug("Old WALs for delete: {}",
+      results.stream().map(cc -> cc.target.getPath().getName()).
+        collect(Collectors.joining(", ")));
     pendingDelete.addAll(results);
 
     int deletedFiles = 0;
@@ -140,7 +147,7 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate>
   }
 
   private List<Thread> createOldWalsCleaner(int size) {
-    LOG.info("Creating {} OldWALs cleaner threads", size);
+    LOG.info("Creating {} old WALs cleaner threads", size);
 
     List<Thread> oldWALsCleaner = new ArrayList<>(size);
     for (int i = 0; i < size; i++) {
@@ -168,12 +175,12 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate>
         Preconditions.checkNotNull(context);
         FileStatus oldWalFile = context.getTargetToClean();
         try {
-          LOG.debug("Attempting to delete old WAL file: {}", oldWalFile);
+          LOG.debug("Deleting {}", oldWalFile);
           boolean succeed = this.fs.delete(oldWalFile.getPath(), false);
           context.setResult(succeed);
         } catch (IOException e) {
           // fs.delete() fails.
-          LOG.warn("Failed to clean old WAL file", e);
+          LOG.warn("Failed to delete old WAL file", e);
           context.setResult(false);
         }
       } catch (InterruptedException ite) {
@@ -184,7 +191,7 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate>
         Thread.currentThread().interrupt();
         return;
       }
-      LOG.debug("Exiting");
+      LOG.trace("Exiting");
     }
   }
 
@@ -217,7 +224,7 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate>
         boolean completed = this.remainingResults.await(waitIfNotFinished,
             TimeUnit.MILLISECONDS);
         if (!completed) {
-          LOG.warn("Spend too much time [{}ms] to delete old WAL file: {}",
+          LOG.warn("Spent too much time [{}ms] deleting old WAL file: {}",
               waitIfNotFinished, target);
           return false;
         }

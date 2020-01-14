@@ -348,8 +348,8 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
 
   private static <T extends Comparable<T>> void addToRunQueue(FairQueue<T> fairq, Queue<T> queue,
       Supplier<String> reason) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Add {} to run queue because: {}", queue, reason.get());
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Add {} to run queue because: {}", queue, reason.get());
     }
     if (!AvlIterableList.isLinked(queue) && !queue.isEmpty()) {
       fairq.add(queue);
@@ -358,8 +358,8 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
 
   private static <T extends Comparable<T>> void removeFromRunQueue(FairQueue<T> fairq,
       Queue<T> queue, Supplier<String> reason) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Remove {} from run queue because: {}", queue, reason.get());
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Remove {} from run queue because: {}", queue, reason.get());
     }
     if (AvlIterableList.isLinked(queue)) {
       fairq.remove(queue);

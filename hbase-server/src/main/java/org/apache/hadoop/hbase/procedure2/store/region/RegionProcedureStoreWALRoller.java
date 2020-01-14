@@ -87,7 +87,7 @@ final class RegionProcedureStoreWALRoller extends AbstractWALRoller<Abortable> {
         Path newFile = new Path(globalWALArchiveDir,
           file.getName() + MasterProcedureUtil.ARCHIVED_PROC_WAL_SUFFIX);
         if (fs.rename(file, newFile)) {
-          LOG.info("Successfully moved {} to {}", file, newFile);
+          LOG.info("Moved {} to {}", file, newFile);
         } else {
           LOG.warn("Failed to move archived wal from {} to global place {}", file, newFile);
         }
