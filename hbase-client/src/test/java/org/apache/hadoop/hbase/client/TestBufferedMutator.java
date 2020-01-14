@@ -23,6 +23,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -58,7 +59,7 @@ public class TestBufferedMutator {
   public void testAlternateBufferedMutatorImpl() throws IOException {
     BufferedMutatorParams params =  new BufferedMutatorParams(TableName.valueOf(name.getMethodName()));
     Configuration conf = HBaseConfiguration.create();
-    conf.set(ConnectionRegistryFactory.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
+    conf.set(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
         DoNothingConnectionRegistry.class.getName());
     try (Connection connection = ConnectionFactory.createConnection(conf)) {
       BufferedMutator bm = connection.getBufferedMutator(params);
