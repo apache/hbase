@@ -40,7 +40,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.yetus.audience.InterfaceAudience;
 
+@InterfaceAudience.Private
 public class ShadeSaslClientAuthenticationProvider extends ShadeSaslAuthenticationProvider
     implements SaslClientAuthenticationProvider {
 
@@ -54,7 +56,9 @@ public class ShadeSaslClientAuthenticationProvider extends ShadeSaslAuthenticati
 
   @Override
   public UserInformation getUserInfo(UserGroupInformation user) {
-    return null;
+    UserInformation.Builder userInfoPB = UserInformation.newBuilder();
+    userInfoPB.setEffectiveUser(user.getUserName());
+    return userInfoPB.build();
   }
 
   static class ShadeSaslClientCallbackHandler implements CallbackHandler {
@@ -62,7 +66,13 @@ public class ShadeSaslClientAuthenticationProvider extends ShadeSaslAuthenticati
     private final char[] password;
     public ShadeSaslClientCallbackHandler(
         Token<? extends TokenIdentifier> token) throws IOException {
-      this.username = token.decodeIdentifier().getUser().getUserName();
+      TokenIdentifier id = token.decodeIdentifier();
+      if (id == null) {
+        // Something is wrong with the environment if we can't get our Identifier back out.
+        throw new IllegalStateException("Could not extract Identifier from Token");
+      }
+      UserGroupInformation ugi = id.getUser();
+      this.username = ugi.getUserName();
       this.password = Bytes.toString(token.getPassword()).toCharArray();
     }
 

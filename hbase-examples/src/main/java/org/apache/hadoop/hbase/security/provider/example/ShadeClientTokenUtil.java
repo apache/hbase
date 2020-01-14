@@ -24,10 +24,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Used to acquire tokens for the ShadeSaslAuthenticationProvider.
  */
+@InterfaceAudience.Private
 public class ShadeClientTokenUtil {
 
   private ShadeClientTokenUtil() {}

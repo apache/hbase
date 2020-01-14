@@ -21,11 +21,13 @@ import org.apache.hadoop.hbase.security.provider.SaslAuthMethod;
 import org.apache.hadoop.hbase.security.provider.SaslAuthenticationProvider;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
+import org.apache.yetus.audience.InterfaceAudience;
 
+@InterfaceAudience.Private
 public abstract class ShadeSaslAuthenticationProvider implements SaslAuthenticationProvider {
   public static final SaslAuthMethod METHOD = new SaslAuthMethod(
       "SHADE", (byte) 15, "PLAIN", AuthenticationMethod.TOKEN);
-  public static final Text TOKEN_KIND = new Text("SHADE_TOKEN");
+  public static final Text TOKEN_KIND = new Text("HBASE_EXAMPLE_SHADE_TOKEN");
 
   @Override public SaslAuthMethod getSaslAuthMethod() {
     return METHOD;

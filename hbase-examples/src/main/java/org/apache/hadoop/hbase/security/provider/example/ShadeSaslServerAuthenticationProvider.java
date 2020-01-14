@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.security.provider.example;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -40,11 +41,14 @@ import org.apache.hadoop.hbase.security.provider.AttemptingUserProvidingSaslServ
 import org.apache.hadoop.hbase.security.provider.SaslServerAuthenticationProvider;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@InterfaceAudience.Private
 public class ShadeSaslServerAuthenticationProvider extends ShadeSaslAuthenticationProvider
     implements SaslServerAuthenticationProvider {
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -131,7 +135,9 @@ public class ShadeSaslServerAuthenticationProvider extends ShadeSaslAuthenticati
       this.passwordDatabase = passwordDatabase;
     }
 
-    @Override public void handle(Callback[] callbacks) throws UnsupportedCallbackException {
+    @Override public void handle(Callback[] callbacks)
+        throws InvalidToken, UnsupportedCallbackException {
+      LOG.info("SaslServerCallbackHandler called", new Exception());
       NameCallback nc = null;
       PasswordCallback pc = null;
       AuthorizeCallback ac = null;
@@ -155,13 +161,11 @@ public class ShadeSaslServerAuthenticationProvider extends ShadeSaslAuthenticati
         UserGroupInformation ugi = createUgiForRemoteUser(username);
         attemptingUser.set(ugi);
 
+        char[] clientPassword = pc.getPassword();
         char[] actualPassword = passwordDatabase.get(username);
-        if (actualPassword == null) {
-          // How should we gracefully fail the authentication?
-          throw new RuntimeException("Could not obtain password for user");
+        if (!Arrays.equals(clientPassword, actualPassword)) {
+          throw new InvalidToken("Authentication failed for " + username);
         }
-
-        pc.setPassword(actualPassword);
       }
 
       if (ac != null) {

@@ -122,7 +122,7 @@ abstract class RpcConnection {
     this.provider = pair.getFirst();
     this.token = pair.getSecond();
 
-    LOG.debug("Using {} authentication for service{}, sasl={}",
+    LOG.debug("Using {} authentication for service={}, sasl={}",
         provider.getSaslAuthMethod().getName(), remoteId.serviceName, useSasl);
     reloginMaxBackoff = conf.getInt("hbase.security.relogin.maxbackoff", 5000);
     this.remoteId = remoteId;
