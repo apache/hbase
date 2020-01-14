@@ -51,4 +51,5 @@
   <suppress checks="EmptyBlock" files="org.apache.hadoop.hbase.TestTimeout"/>
   <suppress checks="InnerAssignment" files="org.apache.hadoop.hbase.rest.PerformanceEvaluation"/>
   <suppress checks="EmptyBlock" files="org.apache.hadoop.hbase.rest.PerformanceEvaluation"/>
+  <suppress checks="HideUtilityClassConstructor" files="org.apache.hadoop.hbase.util.ByteRangeUtils"/>
 </suppressions>
