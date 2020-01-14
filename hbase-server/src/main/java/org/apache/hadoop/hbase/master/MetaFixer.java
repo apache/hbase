@@ -21,26 +21,23 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
-
-import org.apache.hadoop.conf.Configuration;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 
@@ -56,6 +53,7 @@ class MetaFixer {
   private static final Logger LOG = LoggerFactory.getLogger(MetaFixer.class);
   private static final String MAX_MERGE_COUNT_KEY = "hbase.master.metafixer.max.merge.count";
   private static final int MAX_MERGE_COUNT_DEFAULT = 10;
+
   private final MasterServices masterServices;
   /**
    * Maximum for many regions to merge at a time.
@@ -86,72 +84,131 @@ class MetaFixer {
    * If hole, it papers it over by adding a region in the filesystem and to hbase:meta.
    * Does not assign.
    */
-  void fixHoles(CatalogJanitor.Report report) throws IOException {
-    List<Pair<RegionInfo, RegionInfo>> holes = report.getHoles();
+  void fixHoles(CatalogJanitor.Report report) {
+    final List<Pair<RegionInfo, RegionInfo>> holes = report.getHoles();
     if (holes.isEmpty()) {
-      LOG.debug("No holes.");
+      LOG.info("CatalogJanitor Report contains no holes to fix. Skipping.");
       return;
     }
-    for (Pair<RegionInfo, RegionInfo> p: holes) {
-      RegionInfo ri = getHoleCover(p);
-      if (ri == null) {
-        continue;
-      }
-      Configuration configuration = this.masterServices.getConfiguration();
-      HRegion.createRegionDir(configuration, ri, FSUtils.getRootDir(configuration));
-      // If an error here, then we'll have a region in the filesystem but not
-      // in hbase:meta (if the below fails). Should be able to rerun the fix.
-      // Add to hbase:meta and then update in-memory state so it knows of new
-      // Region; addRegionToMeta adds region and adds a state column set to CLOSED.
-      MetaTableAccessor.addRegionToMeta(this.masterServices.getConnection(), ri);
-      this.masterServices.getAssignmentManager().getRegionStates().
-          updateRegionState(ri, RegionState.State.CLOSED);
-      LOG.info("Fixed hole by adding {} in CLOSED state; region NOT assigned (assign to ONLINE).",
-          ri);
-    }
+
+    LOG.info("Identified {} region holes to fix. Detailed fixup progress logged at DEBUG.",
+      holes.size());
+
+    final List<RegionInfo> newRegionInfos = createRegionInfosForHoles(holes);
+    final List<RegionInfo> newMetaEntries = createMetaEntries(masterServices, newRegionInfos);
+    final TransitRegionStateProcedure[] assignProcedures = masterServices
+      .getAssignmentManager()
+      .createRoundRobinAssignProcedures(newMetaEntries);
+
+    masterServices.getMasterProcedureExecutor().submitProcedures(assignProcedures);
+    LOG.info(
+      "Scheduled {}/{} new regions for assignment.", assignProcedures.length, holes.size());
   }
 
   /**
-   * @return Calculated RegionInfo that covers the hole <code>hole</code>
+   * Create a new {@link RegionInfo} corresponding to each provided "hole" pair.
    */
-  private RegionInfo getHoleCover(Pair<RegionInfo, RegionInfo> hole) {
-    RegionInfo holeCover = null;
-    RegionInfo left = hole.getFirst();
-    RegionInfo right = hole.getSecond();
+  private static List<RegionInfo> createRegionInfosForHoles(
+    final List<Pair<RegionInfo, RegionInfo>> holes) {
+    final List<RegionInfo> newRegionInfos = holes.stream()
+      .map(MetaFixer::getHoleCover)
+      .filter(Optional::isPresent)
+      .map(Optional::get)
+      .collect(Collectors.toList());
+    LOG.debug("Constructed {}/{} RegionInfo descriptors corresponding to identified holes.",
+      newRegionInfos.size(), holes.size());
+    return newRegionInfos;
+  }
+
+  /**
+   * @return Attempts to calculate a new {@link RegionInfo} that covers the region range described
+   *   in {@code hole}.
+   */
+  private static Optional<RegionInfo> getHoleCover(Pair<RegionInfo, RegionInfo> hole) {
+    final RegionInfo left = hole.getFirst();
+    final RegionInfo right = hole.getSecond();
+
     if (left.getTable().equals(right.getTable())) {
       // Simple case.
       if (Bytes.compareTo(left.getEndKey(), right.getStartKey()) >= 0) {
-        LOG.warn("Skipping hole fix; left-side endKey is not less than right-side startKey; " +
-            "left=<{}>, right=<{}>", left, right);
-        return holeCover;
+        LOG.warn("Skipping hole fix; left-side endKey is not less than right-side startKey;"
+          + " left=<{}>, right=<{}>", left, right);
+        return Optional.empty();
       }
-      holeCover = buildRegionInfo(left.getTable(), left.getEndKey(), right.getStartKey());
-    } else {
-      boolean leftUndefined = left.equals(RegionInfo.UNDEFINED);
-      boolean rightUnefined = right.equals(RegionInfo.UNDEFINED);
-      boolean last = left.isLast();
-      boolean first = right.isFirst();
-      if (leftUndefined && rightUnefined) {
-        LOG.warn("Skipping hole fix; both the hole left-side and right-side RegionInfos are " +
-            "UNDEFINED; left=<{}>, right=<{}>", left, right);
-        return holeCover;
-      }
-      if (leftUndefined || last) {
-        holeCover = buildRegionInfo(right.getTable(), HConstants.EMPTY_START_ROW,
-            right.getStartKey());
-      } else if (rightUnefined || first) {
-        holeCover = buildRegionInfo(left.getTable(), left.getEndKey(), HConstants.EMPTY_END_ROW);
-      } else {
-        LOG.warn("Skipping hole fix; don't know what to do with left=<{}>, right=<{}>",
-            left, right);
-        return holeCover;
-      }
+      return Optional.of(buildRegionInfo(left.getTable(), left.getEndKey(), right.getStartKey()));
     }
-    return holeCover;
+
+    final boolean leftUndefined = left.equals(RegionInfo.UNDEFINED);
+    final boolean rightUndefined = right.equals(RegionInfo.UNDEFINED);
+    final boolean last = left.isLast();
+    final boolean first = right.isFirst();
+    if (leftUndefined && rightUndefined) {
+      LOG.warn("Skipping hole fix; both the hole left-side and right-side RegionInfos are " +
+        "UNDEFINED; left=<{}>, right=<{}>", left, right);
+      return Optional.empty();
+    }
+    if (leftUndefined || last) {
+      return Optional.of(
+        buildRegionInfo(right.getTable(), HConstants.EMPTY_START_ROW, right.getStartKey()));
+    }
+    if (rightUndefined || first) {
+      return Optional.of(
+        buildRegionInfo(left.getTable(), left.getEndKey(), HConstants.EMPTY_END_ROW));
+    }
+    LOG.warn("Skipping hole fix; don't know what to do with left=<{}>, right=<{}>", left, right);
+    return Optional.empty();
   }
 
-  private RegionInfo buildRegionInfo(TableName tn, byte [] start, byte [] end) {
+  private static RegionInfo buildRegionInfo(TableName tn, byte [] start, byte [] end) {
     return RegionInfoBuilder.newBuilder(tn).setStartKey(start).setEndKey(end).build();
+  }
+
+  /**
+   * Create entries in the {@code hbase:meta} for each provided {@link RegionInfo}. Best effort.
+   * @param masterServices used to connect to {@code hbase:meta}
+   * @param newRegionInfos the new {@link RegionInfo} entries to add to the filesystem
+   * @return a list of {@link RegionInfo} entries for which {@code hbase:meta} entries were
+   *   successfully created
+   */
+  private static List<RegionInfo> createMetaEntries(final MasterServices masterServices,
+    final List<RegionInfo> newRegionInfos) {
+
+    final List<Either<RegionInfo, IOException>> addMetaEntriesResults = newRegionInfos.stream()
+      .map(regionInfo -> {
+        try {
+          MetaTableAccessor.addRegionToMeta(masterServices.getConnection(), regionInfo);
+          masterServices.getAssignmentManager()
+            .getRegionStates()
+            .updateRegionState(regionInfo, RegionState.State.CLOSED);
+          return Either.<RegionInfo, IOException>ofLeft(regionInfo);
+        } catch (IOException e) {
+          return Either.<RegionInfo, IOException>ofRight(e);
+        }
+      })
+      .collect(Collectors.toList());
+    final List<RegionInfo> createMetaEntriesSuccesses = addMetaEntriesResults.stream()
+      .filter(Either::hasLeft)
+      .map(Either::getLeft)
+      .collect(Collectors.toList());
+    final List<IOException> createMetaEntriesFailures = addMetaEntriesResults.stream()
+      .filter(Either::hasRight)
+      .map(Either::getRight)
+      .collect(Collectors.toList());
+    LOG.debug("Added {}/{} entries to hbase:meta",
+      createMetaEntriesSuccesses.size(), newRegionInfos.size());
+
+    if (!createMetaEntriesFailures.isEmpty()) {
+      LOG.warn("Failed to create entries in hbase:meta for {}/{} RegionInfo descriptors. First"
+          + " failure message included; full list of failures with accompanying stack traces is"
+          + " available at log level DEBUG. message={}", createMetaEntriesFailures.size(),
+        addMetaEntriesResults.size(), createMetaEntriesFailures.get(0).getMessage());
+      if (LOG.isDebugEnabled()) {
+        createMetaEntriesFailures.forEach(
+          ioe -> LOG.debug("Attempt to fix region hole in hbase:meta failed.", ioe));
+      }
+    }
+
+    return createMetaEntriesSuccesses;
   }
 
   /**
@@ -243,5 +300,48 @@ class MetaFixer {
       return false;
     }
     return ri.isOverlap(pair.getFirst()) || ri.isOverlap(pair.getSecond());
+  }
+
+  /**
+   * A union over {@link L} and {@link R}.
+   */
+  private static class Either<L, R> {
+    private final L left;
+    private final R right;
+
+    public static <L, R> Either<L, R> ofLeft(L left) {
+      return new Either<>(left, null);
+    }
+
+    public static <L, R> Either<L, R> ofRight(R right) {
+      return new Either<>(null, right);
+    }
+
+    Either(L left, R right) {
+      this.left = left;
+      this.right = right;
+    }
+
+    public boolean hasLeft() {
+      return left != null;
+    }
+
+    public L getLeft() {
+      if (!hasLeft()) {
+        throw new IllegalStateException("Either contains no left.");
+      }
+      return left;
+    }
+
+    public boolean hasRight() {
+      return right != null;
+    }
+
+    public R getRight() {
+      if (!hasRight()) {
+        throw new IllegalStateException("Either contains no right.");
+      }
+      return right;
+    }
   }
 }
