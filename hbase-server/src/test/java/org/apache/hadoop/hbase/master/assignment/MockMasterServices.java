@@ -335,7 +335,7 @@ public class MockMasterServices extends MockNoopMasterServices {
       }
 
       @Override
-      public void add(TableDescriptor htd) throws IOException {
+      public void update(TableDescriptor htd) throws IOException {
         // noop
       }
 

@@ -304,11 +304,18 @@ public class MetaTableAccessor {
    */
   public static HRegionLocation getRegionLocation(Connection connection, RegionInfo regionInfo)
       throws IOException {
-    byte[] row = getMetaKeyForRegion(regionInfo);
-    Get get = new Get(row);
+    return getRegionLocation(getCatalogFamilyRow(connection, regionInfo),
+        regionInfo, regionInfo.getReplicaId());
+  }
+
+  /**
+   * @return Return the {@link HConstants#CATALOG_FAMILY} row from hbase:meta.
+   */
+  public static Result getCatalogFamilyRow(Connection connection, RegionInfo ri)
+      throws IOException {
+    Get get = new Get(getMetaKeyForRegion(ri));
     get.addFamily(HConstants.CATALOG_FAMILY);
-    Result r = get(getMetaHTable(connection), get);
-    return getRegionLocation(r, regionInfo, regionInfo.getReplicaId());
+    return get(getMetaHTable(connection), get);
   }
 
   /** Returns the row key to use for this regionInfo */
@@ -1141,6 +1148,7 @@ public class MetaTableAccessor {
 
   /**
    * Updates state in META
+   * Do not use. For internal use only.
    * @param conn connection to use
    * @param tableName table to look for
    */
