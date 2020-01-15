@@ -2227,6 +2227,30 @@ Patches larger than one screen, or patches that will be tricky to review, should
 For more information on how to use ReviewBoard, see link:http://www.reviewboard.org/docs/manual/1.5/[the ReviewBoard
                         documentation].
 
+[[github]]
+==== GitHub
+Submitting link:https://github.com/apache/hbase[GitHub] pull requests is another accepted form of
+contributing patches. Refer to GitHub link:https://help.github.com/[documentation] for details on
+how to create pull requests.
+
+NOTE: This section is incomplete and needs to be updated. Refer to
+link:https://issues.apache.org/jira/browse/HBASE-23557[HBASE-23557]
+
+===== GitHub Tooling
+
+====== Browser bookmarks
+
+Following is a useful javascript based browser bookmark that redirects from GitHub pull
+requests to the corresponding jira work item. This redirects based on the HBase jira  ID mentioned
+in the issue title for the PR. Add the following javascript snippet as a browser bookmark to the
+tool bar. Clicking on it while you are on an HBase GitHub PR page redirects you to the corresponding
+jira item.
+
+[source, javascript]
+-----
+javascript:location.href='https://issues.apache.org/jira/browse/'+document.getElementsByClassName("js-issue-title")[0].innerHTML.match(/HBASE-\d+/)[0];
+-----
+
 ==== Guide for HBase Committers
 
 ===== Becoming a committer
