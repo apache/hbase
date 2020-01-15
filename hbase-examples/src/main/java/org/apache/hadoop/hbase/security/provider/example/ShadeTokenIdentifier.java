@@ -30,6 +30,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class ShadeTokenIdentifier extends TokenIdentifier {
+  private static final Text TEXT_TOKEN_KIND = new Text(ShadeSaslAuthenticationProvider.TOKEN_KIND);
   private String username;
 
   public ShadeTokenIdentifier() {
@@ -52,7 +53,7 @@ public class ShadeTokenIdentifier extends TokenIdentifier {
 
   @Override
   public Text getKind() {
-    return ShadeSaslAuthenticationProvider.TOKEN_KIND;
+    return TEXT_TOKEN_KIND;
   }
 
   @Override

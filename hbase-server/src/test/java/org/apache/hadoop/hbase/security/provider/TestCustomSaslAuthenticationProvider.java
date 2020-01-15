@@ -384,7 +384,7 @@ public class TestCustomSaslAuthenticationProvider {
 
     @Override
     public Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> selectProvider(
-        Text clusterId, UserGroupInformation ugi) {
+        String clusterId, UserGroupInformation ugi) {
       Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> superPair =
           super.selectProvider(clusterId, ugi);
 
