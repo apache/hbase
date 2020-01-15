@@ -37,10 +37,14 @@ import org.apache.yetus.audience.InterfaceStability;
 public interface SaslServerAuthenticationProvider extends SaslAuthenticationProvider {
 
   /**
+   * Allows implementations to initialize themselves, prior to creating a server.
+   */
+  default void init(Configuration conf) throws IOException {}
+
+  /**
    * Creates the SaslServer to accept incoming SASL authentication requests.
    */
-  AttemptingUserProvidingSaslServer createServer(Configuration conf,
-      SecretManager<TokenIdentifier> secretManager,
+  AttemptingUserProvidingSaslServer createServer(SecretManager<TokenIdentifier> secretManager,
       Map<String, String> saslProps) throws IOException;
 
   boolean supportsProtocolAuthentication();

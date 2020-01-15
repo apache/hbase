@@ -274,7 +274,7 @@ public class TestCustomSaslAuthenticationProvider {
       implements SaslServerAuthenticationProvider {
 
     @Override
-    public AttemptingUserProvidingSaslServer createServer(Configuration conf,
+    public AttemptingUserProvidingSaslServer createServer(
         SecretManager<TokenIdentifier> secretManager,
         Map<String, String> saslProps) throws IOException {
       return new AttemptingUserProvidingSaslServer(

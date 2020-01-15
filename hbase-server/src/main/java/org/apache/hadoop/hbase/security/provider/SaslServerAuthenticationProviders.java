@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.security.provider;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Optional;
 import java.util.ServiceLoader;
@@ -150,6 +151,19 @@ public final class SaslServerAuthenticationProviders {
       }
       LOG.trace("Found SaslServerAuthenticationProviders {}", loadedProviders);
     }
+
+    // Initialize the providers once, before we get into the RPC path.
+    providers.forEach((b,provider) -> {
+      try {
+        // Give them a copy, just to make sure there is no funny-business going on.
+        provider.init(new Configuration(conf));
+      } catch (IOException e) {
+        LOG.error("Failed to initialize {}", provider.getClass(), e);
+        throw new RuntimeException(
+            "Failed to initialize " + provider.getClass().getName(), e);
+      }
+    });
+
     return new SaslServerAuthenticationProviders(conf, providers);
   }
 

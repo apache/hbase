@@ -58,13 +58,17 @@ public class ShadeSaslServerAuthenticationProvider extends ShadeSaslAuthenticati
   static final char SEPARATOR = '=';
 
   private AtomicReference<UserGroupInformation> attemptingUser = new AtomicReference<>(null);
+  private Map<String,char[]> passwordDatabase;
 
   @Override
-  public AttemptingUserProvidingSaslServer createServer(Configuration conf,
+  public void init(Configuration conf) throws IOException {
+    passwordDatabase = readPasswordDB(conf);
+  }
+
+  @Override
+  public AttemptingUserProvidingSaslServer createServer(
       SecretManager<TokenIdentifier> secretManager, Map<String, String> saslProps)
           throws IOException {
-    Map<String,char[]> passwordDatabase = readPasswordDB(conf);
-
     return new AttemptingUserProvidingSaslServer(
         new SaslPlainServer(
             new ShadeSaslServerCallbackHandler(attemptingUser, passwordDatabase)),
