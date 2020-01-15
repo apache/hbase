@@ -25,6 +25,7 @@ import javax.security.sasl.SaslClient;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.SecurityInfo;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -44,12 +45,13 @@ public class SimpleSaslClientAuthenticationProvider extends
   }
 
   @Override
-  public UserInformation getUserInfo(UserGroupInformation user) {
+  public UserInformation getUserInfo(User user) {
+    final UserGroupInformation ugi = user.getUGI();
     UserInformation.Builder userInfoPB = UserInformation.newBuilder();
     // Send both effective user and real user for simple auth
-    userInfoPB.setEffectiveUser(user.getUserName());
-    if (user.getRealUser() != null) {
-      userInfoPB.setRealUser(user.getRealUser().getUserName());
+    userInfoPB.setEffectiveUser(ugi.getUserName());
+    if (ugi.getRealUser() != null) {
+      userInfoPB.setRealUser(ugi.getRealUser().getUserName());
     }
     return userInfoPB.build();
   }

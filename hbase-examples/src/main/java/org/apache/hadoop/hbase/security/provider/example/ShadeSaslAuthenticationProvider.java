@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.security.provider.example;
 
 import org.apache.hadoop.hbase.security.provider.SaslAuthMethod;
 import org.apache.hadoop.hbase.security.provider.SaslAuthenticationProvider;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -34,6 +33,6 @@ public abstract class ShadeSaslAuthenticationProvider implements SaslAuthenticat
   }
 
   @Override public String getTokenKind() {
-    return TOKEN_KIND; 
+    return TOKEN_KIND;
   }
 }

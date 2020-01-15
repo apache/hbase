@@ -96,13 +96,13 @@ public class SaslPlainServer implements SaslServer {
       if (parts[0].isEmpty()) { // authz = authn
         parts[0] = parts[1];
       }
-      
+
       NameCallback nc = new NameCallback("SASL PLAIN");
       nc.setName(parts[1]);
       PasswordCallback pc = new PasswordCallback("SASL PLAIN", false);
       pc.setPassword(parts[2].toCharArray());
       AuthorizeCallback ac = new AuthorizeCallback(parts[1], parts[0]);
-      cbh.handle(new Callback[]{nc, pc, ac});      
+      cbh.handle(new Callback[]{nc, pc, ac});
       if (ac.isAuthorized()) {
         authz = ac.getAuthorizedID();
       }
@@ -144,7 +144,7 @@ public class SaslPlainServer implements SaslServer {
     throw new IllegalStateException(
         "PLAIN supports neither integrity nor privacy");
   }
-  
+
   @Override
   public byte[] unwrap(byte[] incoming, int offset, int len)
       throws SaslException {

@@ -26,13 +26,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.security.SecurityInfo;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProvider;
 import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProviders;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.CompressionCodec;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -95,7 +94,7 @@ abstract class RpcConnection {
     this.compressor = compressor;
     this.conf = conf;
 
-    UserGroupInformation ticket = remoteId.getTicket().getUGI();
+    User ticket = remoteId.getTicket();
     this.securityInfo = SecurityInfo.getInfo(remoteId.getServiceName());
     this.useSasl = isSecurityEnabled;
 
@@ -162,7 +161,7 @@ abstract class RpcConnection {
   protected ConnectionHeader getConnectionHeader() {
     final ConnectionHeader.Builder builder = ConnectionHeader.newBuilder();
     builder.setServiceName(remoteId.getServiceName());
-    final UserInformation userInfoPB  = provider.getUserInfo(remoteId.ticket.getUGI());
+    final UserInformation userInfoPB  = provider.getUserInfo(remoteId.ticket);
     if (userInfoPB != null) {
       builder.setUserInfo(userInfoPB);
     }

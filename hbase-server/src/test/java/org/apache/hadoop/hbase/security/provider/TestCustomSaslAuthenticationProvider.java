@@ -76,6 +76,7 @@ import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SecurityInfo;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.token.SecureTestCluster;
 import org.apache.hadoop.hbase.security.token.TokenProvider;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -203,8 +204,8 @@ public class TestCustomSaslAuthenticationProvider {
           SaslUtil.SASL_DEFAULT_REALM, saslProps, new InMemoryClientProviderCallbackHandler(token));
     }
 
-    public Optional<Token<? extends TokenIdentifier>> findToken(UserGroupInformation ugi) {
-      List<Token<? extends TokenIdentifier>> tokens = ugi.getTokens().stream()
+    public Optional<Token<? extends TokenIdentifier>> findToken(User user) {
+      List<Token<? extends TokenIdentifier>> tokens = user.getTokens().stream()
         .filter((token) -> token.getKind().equals(PasswordAuthTokenIdentifier.PASSWORD_AUTH_TOKEN))
         .collect(Collectors.toList());
       if (tokens.isEmpty()) {
@@ -262,7 +263,7 @@ public class TestCustomSaslAuthenticationProvider {
     }
 
     @Override
-    public UserInformation getUserInfo(UserGroupInformation user) {
+    public UserInformation getUserInfo(User user) {
       return null;
     }
   }
@@ -384,11 +385,11 @@ public class TestCustomSaslAuthenticationProvider {
 
     @Override
     public Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> selectProvider(
-        String clusterId, UserGroupInformation ugi) {
+        String clusterId, User user) {
       Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> superPair =
-          super.selectProvider(clusterId, ugi);
+          super.selectProvider(clusterId, user);
 
-      Optional<Token<? extends TokenIdentifier>> optional = inMemoryProvider.findToken(ugi);
+      Optional<Token<? extends TokenIdentifier>> optional = inMemoryProvider.findToken(user);
       if (optional.isPresent()) {
         LOG.info("Using InMemoryClientProvider");
         return new Pair<>(inMemoryProvider, optional.get());

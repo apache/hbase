@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.security.provider;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Collection;
 import java.util.Objects;
 
@@ -27,7 +29,6 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -45,7 +46,7 @@ import org.slf4j.LoggerFactory;
  * implement their own {@link AuthenticationProviderSelector} when writing a custom provider.
  *
  * This implementation is not thread-safe. {@link #configure(Configuration, Collection)} and
- * {@link #selectProvider(Text, UserGroupInformation)} is not safe if they are called concurrently.
+ * {@link #selectProvider(Text, User)} is not safe if they are called concurrently.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)
 @NotThreadSafe
@@ -99,8 +100,9 @@ public class BuiltInProviderSelector implements AuthenticationProviderSelector {
 
   @Override
   public Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> selectProvider(
-      String clusterId, UserGroupInformation ugi) {
-    Objects.requireNonNull(clusterId, "Null clusterId was given");
+      String clusterId, User user) {
+    requireNonNull(clusterId, "Null clusterId was given");
+    requireNonNull(user, "Null user was given");
 
     // Superfluous: we don't do SIMPLE auth over SASL, but we should to simplify.
     if (!User.isHBaseSecurityEnabled(conf)) {
@@ -112,7 +114,7 @@ public class BuiltInProviderSelector implements AuthenticationProviderSelector {
     // Must be digest auth, look for a token.
     // TestGenerateDelegationToken is written expecting DT is used when DT and Krb are both present.
     // (for whatever that's worth).
-    for (Token<? extends TokenIdentifier> token : ugi.getTokens()) {
+    for (Token<? extends TokenIdentifier> token : user.getTokens()) {
       // We need to check for two things:
       //   1. This token is for the HBase cluster we want to talk to
       //   2. We have suppporting client implementation to handle the token (the "kind" of token)
@@ -121,7 +123,7 @@ public class BuiltInProviderSelector implements AuthenticationProviderSelector {
         return new Pair<>(digestAuth, token);
       }
     }
-    if (ugi.hasKerberosCredentials()) {
+    if (user.getUGI().hasKerberosCredentials()) {
       return new Pair<>(krbAuth, null);
     }
     LOG.debug(

@@ -97,7 +97,7 @@ public class TestShadeSaslAuthenticationProvider {
     util.startMiniDFSCluster(1);
     Path testDir = util.getDataTestDirOnTestFS("TestShadeSaslAuthenticationProvider");
     USER_DATABASE_FILE = new Path(testDir, "user-db.txt");
-    
+
     createUserDBFile(
         USER_DATABASE_FILE.getFileSystem(CONF), USER_DATABASE_FILE, userDatabase);
     CONF.set(ShadeSaslServerAuthenticationProvider.PASSWORD_FILE_KEY,
@@ -212,7 +212,7 @@ public class TestShadeSaslAuthenticationProvider {
             assertFalse("Should have read a non-empty Result", r.isEmpty());
             final Cell cell = r.getColumnLatestCell(Bytes.toBytes("f1"), Bytes.toBytes("q1"));
             assertTrue("Unexpected value", CellUtil.matchingValue(cell, Bytes.toBytes("1")));
-  
+
             return null;
           }
         }

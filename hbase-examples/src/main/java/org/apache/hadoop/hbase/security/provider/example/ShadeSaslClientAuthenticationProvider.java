@@ -34,6 +34,7 @@ import javax.security.sasl.SaslClient;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SecurityInfo;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProvider;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -55,9 +56,9 @@ public class ShadeSaslClientAuthenticationProvider extends ShadeSaslAuthenticati
   }
 
   @Override
-  public UserInformation getUserInfo(UserGroupInformation user) {
+  public UserInformation getUserInfo(User user) {
     UserInformation.Builder userInfoPB = UserInformation.newBuilder();
-    userInfoPB.setEffectiveUser(user.getUserName());
+    userInfoPB.setEffectiveUser(user.getUGI().getUserName());
     return userInfoPB.build();
   }
 
@@ -71,8 +72,7 @@ public class ShadeSaslClientAuthenticationProvider extends ShadeSaslAuthenticati
         // Something is wrong with the environment if we can't get our Identifier back out.
         throw new IllegalStateException("Could not extract Identifier from Token");
       }
-      UserGroupInformation ugi = id.getUser();
-      this.username = ugi.getUserName();
+      this.username = id.getUser().getUserName();
       this.password = Bytes.toString(token.getPassword()).toCharArray();
     }
 

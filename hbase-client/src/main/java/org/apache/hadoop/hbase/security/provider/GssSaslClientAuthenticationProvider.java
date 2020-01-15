@@ -71,10 +71,10 @@ public class GssSaslClientAuthenticationProvider extends GssSaslAuthenticationPr
   }
 
   @Override
-  public UserInformation getUserInfo(UserGroupInformation user) {
+  public UserInformation getUserInfo(User user) {
     UserInformation.Builder userInfoPB = UserInformation.newBuilder();
     // Send effective user for Kerberos auth
-    userInfoPB.setEffectiveUser(user.getUserName());
+    userInfoPB.setEffectiveUser(user.getUGI().getUserName());
     return userInfoPB.build();
   }
 

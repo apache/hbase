@@ -57,7 +57,7 @@ public interface SaslClientAuthenticationProvider extends SaslAuthenticationProv
   /**
    * Constructs a {@link UserInformation} from the given {@link UserGroupInformation}
    */
-  UserInformation getUserInfo(UserGroupInformation user);
+  UserInformation getUserInfo(User user);
 
   /**
    * Returns the "real" user, the user who has the credentials being authenticated by the

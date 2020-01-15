@@ -34,7 +34,7 @@ import javax.security.sasl.SaslClient;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SecurityInfo;
-import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -100,7 +100,7 @@ public class DigestSaslClientAuthenticationProvider extends DigestSaslAuthentica
   }
 
   @Override
-  public UserInformation getUserInfo(UserGroupInformation user) {
+  public UserInformation getUserInfo(User user) {
     // Don't send user for token auth. Copied from RpcConnection.
     return null;
   }

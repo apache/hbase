@@ -21,11 +21,11 @@ import java.util.Collection;
 import java.util.Optional;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.provider.BuiltInProviderSelector;
 import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProvider;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -50,11 +50,11 @@ public class ShadeProviderSelector extends BuiltInProviderSelector {
 
   @Override
   public Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> selectProvider(
-      String clusterId, UserGroupInformation ugi) {
+      String clusterId, User user) {
     Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> pair =
-        super.selectProvider(clusterId, ugi);
+        super.selectProvider(clusterId, user);
 
-    Optional<Token<?>> optional = ugi.getTokens().stream()
+    Optional<Token<?>> optional = user.getTokens().stream()
         .filter((t) -> SHADE_TOKEN_KIND_TEXT.equals(t.getKind()))
         .findFirst();
     if (optional.isPresent()) {
