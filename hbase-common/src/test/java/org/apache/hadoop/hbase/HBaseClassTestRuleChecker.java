@@ -41,9 +41,12 @@ public class HBaseClassTestRuleChecker extends RunListener {
   @Override
   public void testStarted(Description description) throws Exception {
     Category[] categories = description.getTestClass().getAnnotationsByType(Category.class);
-    for (Class<?> c : categories[0].value()) {
-      if (c == IntegrationTests.class) {
-        return;
+    // Don't fail if there is a missing category
+    if (categories.length > 0) {
+      for (Class<?> c : categories[0].value()) {
+        if (c == IntegrationTests.class) {
+          return;
+        }
       }
     }
     for (Field field : description.getTestClass().getFields()) {
