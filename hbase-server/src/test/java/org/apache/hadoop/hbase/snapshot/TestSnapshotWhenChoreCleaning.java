@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.snapshot;
 
+import com.google.common.collect.Lists;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,7 +26,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -42,17 +42,14 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.FSVisitor;
 import org.apache.hadoop.hbase.util.FSVisitor.StoreFileVisitor;
-import org.apache.hadoop.hbase.util.TestTableName;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Lists;
 
 /**
  * Test Case for HBASE-21387
@@ -69,9 +66,6 @@ public class TestSnapshotWhenChoreCleaning {
   private static final byte[] QUALIFIER = Bytes.toBytes("qualifier");
   private static final byte[] VALUE = Bytes.toBytes("value");
   private static Table TABLE;
-
-  @Rule
-  public TestTableName TEST_TABLE = new TestTableName();
 
   @BeforeClass
   public static void setUp() throws Exception {
