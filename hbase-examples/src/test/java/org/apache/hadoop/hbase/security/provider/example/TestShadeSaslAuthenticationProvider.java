@@ -56,7 +56,6 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProviders;
 import org.apache.hadoop.hbase.security.provider.SaslServerAuthenticationProviders;
-import org.apache.hadoop.hbase.security.token.SecureTestCluster;
 import org.apache.hadoop.hbase.security.token.TokenProvider;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
@@ -91,7 +90,7 @@ public class TestShadeSaslAuthenticationProvider {
 
     HBaseKerberosUtils.setSecuredConfiguration(util.getConfiguration(),
         servicePrincipal + "@" + kdc.getRealm(), spnegoPrincipal + "@" + kdc.getRealm());
-    HBaseKerberosUtils.setSSLConfiguration(util, SecureTestCluster.class);
+    HBaseKerberosUtils.setSSLConfiguration(util, TestShadeSaslAuthenticationProvider.class);
 
     util.getConfiguration().setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
         TokenProvider.class.getName());
