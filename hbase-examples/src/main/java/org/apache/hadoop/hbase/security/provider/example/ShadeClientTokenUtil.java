@@ -30,7 +30,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Used to acquire tokens for the ShadeSaslAuthenticationProvider.
  */
 @InterfaceAudience.Private
-public class ShadeClientTokenUtil {
+public final class ShadeClientTokenUtil {
 
   private ShadeClientTokenUtil() {}
 

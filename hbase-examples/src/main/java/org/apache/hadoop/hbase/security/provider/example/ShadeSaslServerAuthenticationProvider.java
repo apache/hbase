@@ -72,7 +72,7 @@ public class ShadeSaslServerAuthenticationProvider extends ShadeSaslAuthenticati
     return new AttemptingUserProvidingSaslServer(
         new SaslPlainServer(
             new ShadeSaslServerCallbackHandler(attemptingUser, passwordDatabase)),
-        () -> attemptingUser.get());
+      () -> attemptingUser.get());
   }
 
   Map<String,char[]> readPasswordDB(Configuration conf) throws IOException {
@@ -94,7 +94,7 @@ public class ShadeSaslServerAuthenticationProvider extends ShadeSaslAuthenticati
       String line = null;
       int offset = 0;
       while ((line = reader.readLine()) != null) {
-        line.trim();
+        line = line.trim();
         String[] parts = StringUtils.split(line, SEPARATOR);
         if (parts.length < 2) {
           LOG.warn("Password file contains invalid record on line {}, skipping", offset + 1);

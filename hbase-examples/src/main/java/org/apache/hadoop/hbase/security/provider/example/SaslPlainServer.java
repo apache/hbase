@@ -22,7 +22,10 @@ import java.nio.charset.StandardCharsets;
 import java.security.Provider;
 import java.util.Map;
 
-import javax.security.auth.callback.*;
+import javax.security.auth.callback.Callback;
+import javax.security.auth.callback.CallbackHandler;
+import javax.security.auth.callback.NameCallback;
+import javax.security.auth.callback.PasswordCallback;
 import javax.security.sasl.AuthorizeCallback;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
@@ -63,7 +66,7 @@ public class SaslPlainServer implements SaslServer {
   private CallbackHandler cbh;
   private boolean completed;
   private String authz;
-  
+
   SaslPlainServer(CallbackHandler callback) {
     this.cbh = callback;
   }
