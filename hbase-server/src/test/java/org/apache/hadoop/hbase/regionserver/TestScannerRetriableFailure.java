@@ -30,7 +30,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TestTableName;
+import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -68,7 +68,7 @@ public class TestScannerRetriableFailure {
   private static final String FAMILY_NAME_STR = "f";
   private static final byte[] FAMILY_NAME = Bytes.toBytes(FAMILY_NAME_STR);
 
-  @Rule public TestTableName TEST_TABLE = new TestTableName();
+  @Rule public TableNameTestRule testTable = new TableNameTestRule();
 
   public static class FaultyScannerObserver implements RegionCoprocessor, RegionObserver {
     private int faults = 0;
@@ -116,7 +116,7 @@ public class TestScannerRetriableFailure {
 
   @Test
   public void testFaultyScanner() throws Exception {
-    TableName tableName = TEST_TABLE.getTableName();
+    TableName tableName = testTable.getTableName();
     Table table = UTIL.createTable(tableName, FAMILY_NAME);
     try {
       final int NUM_ROWS = 100;
