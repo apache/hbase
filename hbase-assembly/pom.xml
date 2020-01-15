@@ -72,7 +72,6 @@
       </plugin>
       <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
-        <version>${maven.assembly.version}</version>
         <configuration>
           <!--Else will use hbase-assembly as final name.-->
           <finalName>hbase-${project.version}</finalName>
