@@ -69,7 +69,8 @@ public abstract class RegionTransitionProcedure extends Procedure<MasterProcedur
     return regionInfo;
   }
 
-  protected void setRegionInfo(final RegionInfo regionInfo) {
+  @VisibleForTesting
+  public void setRegionInfo(final RegionInfo regionInfo) {
     this.regionInfo = regionInfo;
   }
 
