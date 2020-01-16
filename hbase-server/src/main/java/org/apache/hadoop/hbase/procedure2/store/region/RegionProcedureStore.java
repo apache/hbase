@@ -364,6 +364,7 @@ public class RegionProcedureStore extends ProcedureStoreBase {
       throw new IOException("Failed to delete the WALProcedureStore migrated proc wal directory " +
         procWALDir);
     }
+    store.stop(true);
     LOG.info("Migration of WALProcedureStore finished");
   }
 
