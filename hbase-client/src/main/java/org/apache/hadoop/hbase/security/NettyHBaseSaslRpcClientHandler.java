@@ -24,6 +24,7 @@ import org.apache.hbase.thirdparty.io.netty.channel.SimpleChannelInboundHandler;
 import org.apache.hbase.thirdparty.io.netty.util.concurrent.Promise;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.conf.Configuration;
@@ -31,6 +32,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.ipc.FallbackDisallowedException;
+import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProvider;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -60,14 +62,14 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
    *          simple.
    */
   public NettyHBaseSaslRpcClientHandler(Promise<Boolean> saslPromise, UserGroupInformation ugi,
-      AuthMethod method, Token<? extends TokenIdentifier> token, String serverPrincipal,
-      boolean fallbackAllowed, Configuration conf)
-      throws IOException {
+      SaslClientAuthenticationProvider provider, Token<? extends TokenIdentifier> token,
+      InetAddress serverAddr, SecurityInfo securityInfo, boolean fallbackAllowed,
+      Configuration conf) throws IOException {
     this.saslPromise = saslPromise;
     this.ugi = ugi;
     this.conf = conf;
-    this.saslRpcClient = new NettyHBaseSaslRpcClient(method, token, serverPrincipal,
-        fallbackAllowed, conf.get(
+    this.saslRpcClient = new NettyHBaseSaslRpcClient(conf, provider, token, serverAddr,
+        securityInfo, fallbackAllowed, conf.get(
         "hbase.rpc.protection", SaslUtil.QualityOfProtection.AUTHENTICATION.name().toLowerCase()));
   }
 

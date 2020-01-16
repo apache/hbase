@@ -17,34 +17,33 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
-import org.apache.hbase.thirdparty.io.netty.util.Timeout;
-import org.apache.hbase.thirdparty.io.netty.util.TimerTask;
-
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.codec.Codec;
+import org.apache.hadoop.hbase.security.SecurityInfo;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProvider;
+import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProviders;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.codec.Codec;
-import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
+
+import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
+import org.apache.hbase.thirdparty.io.netty.util.Timeout;
+import org.apache.hbase.thirdparty.io.netty.util.TimerTask;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeader;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation;
-import org.apache.hadoop.hbase.security.AuthMethod;
-import org.apache.hadoop.hbase.security.SecurityInfo;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.compress.CompressionCodec;
-import org.apache.hadoop.security.SecurityUtil;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.security.token.TokenSelector;
 
 /**
  * Base class for ipc connection.
@@ -56,13 +55,13 @@ abstract class RpcConnection {
 
   protected final ConnectionId remoteId;
 
-  protected final AuthMethod authMethod;
-
   protected final boolean useSasl;
 
   protected final Token<? extends TokenIdentifier> token;
 
-  protected final String serverPrincipal; // server's krb5 principal name
+  protected final InetAddress serverAddress;
+
+  protected final SecurityInfo securityInfo;
 
   protected final int reloginMaxBackoff; // max pause before relogin on sasl failure
 
@@ -81,113 +80,51 @@ abstract class RpcConnection {
   // the last time we were picked up from connection pool.
   protected long lastTouched;
 
+  protected SaslClientAuthenticationProvider provider;
+
   protected RpcConnection(Configuration conf, HashedWheelTimer timeoutTimer, ConnectionId remoteId,
       String clusterId, boolean isSecurityEnabled, Codec codec, CompressionCodec compressor)
       throws IOException {
     if (remoteId.getAddress().isUnresolved()) {
       throw new UnknownHostException("unknown host: " + remoteId.getAddress().getHostName());
     }
+    this.serverAddress = remoteId.getAddress().getAddress();
     this.timeoutTimer = timeoutTimer;
     this.codec = codec;
     this.compressor = compressor;
     this.conf = conf;
 
-    UserGroupInformation ticket = remoteId.getTicket().getUGI();
-    SecurityInfo securityInfo = SecurityInfo.getInfo(remoteId.getServiceName());
+    User ticket = remoteId.getTicket();
+    this.securityInfo = SecurityInfo.getInfo(remoteId.getServiceName());
     this.useSasl = isSecurityEnabled;
-    Token<? extends TokenIdentifier> token = null;
-    String serverPrincipal = null;
+
+    // Choose the correct Token and AuthenticationProvider for this client to use
+    SaslClientAuthenticationProviders providers =
+        SaslClientAuthenticationProviders.getInstance(conf);
+    Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> pair;
     if (useSasl && securityInfo != null) {
-      AuthenticationProtos.TokenIdentifier.Kind tokenKind = securityInfo.getTokenKind();
-      if (tokenKind != null) {
-        TokenSelector<? extends TokenIdentifier> tokenSelector = AbstractRpcClient.TOKEN_HANDLERS
-            .get(tokenKind);
-        if (tokenSelector != null) {
-          token = tokenSelector.selectToken(new Text(clusterId), ticket.getTokens());
-        } else if (LOG.isDebugEnabled()) {
-          LOG.debug("No token selector found for type " + tokenKind);
+      pair = providers.selectProvider(clusterId, ticket);
+      if (pair == null) {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Found no valid authentication method from providers={} with tokens={}",
+              providers.toString(), ticket.getTokens());
         }
+        throw new RuntimeException("Found no valid authentication method from options");
       }
-      String serverKey = securityInfo.getServerPrincipal();
-      if (serverKey == null) {
-        throw new IOException("Can't obtain server Kerberos config key from SecurityInfo");
-      }
-      serverPrincipal = SecurityUtil.getServerPrincipal(conf.get(serverKey),
-        remoteId.address.getAddress().getCanonicalHostName().toLowerCase());
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("RPC Server Kerberos principal name for service=" + remoteId.getServiceName()
-            + " is " + serverPrincipal);
-      }
-    }
-    this.token = token;
-    this.serverPrincipal = serverPrincipal;
-    if (!useSasl) {
-      authMethod = AuthMethod.SIMPLE;
-    } else if (token != null) {
-      authMethod = AuthMethod.DIGEST;
+    } else if (!useSasl) {
+      // Hack, while SIMPLE doesn't go via SASL.
+      pair = providers.getSimpleProvider();
     } else {
-      authMethod = AuthMethod.KERBEROS;
+      throw new RuntimeException("Could not compute valid client authentication provider");
     }
 
-    // Log if debug AND non-default auth, else if trace enabled.
-    // No point logging obvious.
-    if ((LOG.isDebugEnabled() && !authMethod.equals(AuthMethod.SIMPLE)) ||
-        LOG.isTraceEnabled()) {
-      // Only log if not default auth.
-      LOG.debug("Use " + authMethod + " authentication for service " + remoteId.serviceName
-          + ", sasl=" + useSasl);
-    }
+    this.provider = pair.getFirst();
+    this.token = pair.getSecond();
+
+    LOG.debug("Using {} authentication for service={}, sasl={}",
+        provider.getSaslAuthMethod().getName(), remoteId.serviceName, useSasl);
     reloginMaxBackoff = conf.getInt("hbase.security.relogin.maxbackoff", 5000);
     this.remoteId = remoteId;
-  }
-
-  private UserInformation getUserInfo(UserGroupInformation ugi) {
-    if (ugi == null || authMethod == AuthMethod.DIGEST) {
-      // Don't send user for token auth
-      return null;
-    }
-    UserInformation.Builder userInfoPB = UserInformation.newBuilder();
-    if (authMethod == AuthMethod.KERBEROS) {
-      // Send effective user for Kerberos auth
-      userInfoPB.setEffectiveUser(ugi.getUserName());
-    } else if (authMethod == AuthMethod.SIMPLE) {
-      // Send both effective user and real user for simple auth
-      userInfoPB.setEffectiveUser(ugi.getUserName());
-      if (ugi.getRealUser() != null) {
-        userInfoPB.setRealUser(ugi.getRealUser().getUserName());
-      }
-    }
-    return userInfoPB.build();
-  }
-
-  protected UserGroupInformation getUGI() {
-    UserGroupInformation ticket = remoteId.getTicket().getUGI();
-    if (authMethod == AuthMethod.KERBEROS) {
-      if (ticket != null && ticket.getRealUser() != null) {
-        ticket = ticket.getRealUser();
-      }
-    }
-    return ticket;
-  }
-
-  protected boolean shouldAuthenticateOverKrb() throws IOException {
-    UserGroupInformation loginUser = UserGroupInformation.getLoginUser();
-    UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
-    UserGroupInformation realUser = currentUser.getRealUser();
-    return authMethod == AuthMethod.KERBEROS && loginUser != null &&
-    // Make sure user logged in using Kerberos either keytab or TGT
-        loginUser.hasKerberosCredentials() &&
-        // relogin only in case it is the login user (e.g. JT)
-        // or superuser (like oozie).
-        (loginUser.equals(currentUser) || loginUser.equals(realUser));
-  }
-
-  protected void relogin() throws IOException {
-    if (UserGroupInformation.isLoginKeytabBased()) {
-      UserGroupInformation.getLoginUser().reloginFromKeytab();
-    } else {
-      UserGroupInformation.getLoginUser().reloginFromTicketCache();
-    }
   }
 
   protected void scheduleTimeoutTask(final Call call) {
@@ -216,16 +153,16 @@ abstract class RpcConnection {
     System.arraycopy(HConstants.RPC_HEADER, 0, preamble, 0, rpcHeaderLen);
     preamble[rpcHeaderLen] = HConstants.RPC_CURRENT_VERSION;
     synchronized (this) {
-      preamble[rpcHeaderLen + 1] = authMethod.code;
+      preamble[rpcHeaderLen + 1] = provider.getSaslAuthMethod().getCode();
     }
     return preamble;
   }
 
   protected ConnectionHeader getConnectionHeader() {
-    ConnectionHeader.Builder builder = ConnectionHeader.newBuilder();
+    final ConnectionHeader.Builder builder = ConnectionHeader.newBuilder();
     builder.setServiceName(remoteId.getServiceName());
-    UserInformation userInfoPB;
-    if ((userInfoPB = getUserInfo(remoteId.ticket.getUGI())) != null) {
+    final UserInformation userInfoPB  = provider.getUserInfo(remoteId.ticket);
+    if (userInfoPB != null) {
       builder.setUserInfo(userInfoPB);
     }
     if (this.codec != null) {
