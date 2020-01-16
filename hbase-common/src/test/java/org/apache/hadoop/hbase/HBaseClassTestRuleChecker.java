@@ -41,8 +41,12 @@ public class HBaseClassTestRuleChecker extends RunListener {
   @Override
   public void testStarted(Description description) throws Exception {
     Category[] categories = description.getTestClass().getAnnotationsByType(Category.class);
+    // This should never happen
+    if (categories.length > 1) {
+      throw new IllegalArgumentException("Code-bug: unsure how to handle more than one Category");
+    }
     // Don't fail if there is a missing category
-    if (categories.length > 0) {
+    if (categories.length == 1) {
       for (Class<?> c : categories[0].value()) {
         if (c == IntegrationTests.class) {
           return;

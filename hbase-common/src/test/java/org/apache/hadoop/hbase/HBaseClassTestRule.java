@@ -59,13 +59,20 @@ public final class HBaseClassTestRule implements TestRule {
 
   private static long getTimeoutInSeconds(Class<?> clazz) {
     Category[] categories = clazz.getAnnotationsByType(Category.class);
-    for (Class<?> c : categories[0].value()) {
-      if (c == SmallTests.class || c == MediumTests.class || c == LargeTests.class) {
-        // All tests have a 13 minutes timeout.
-        return TimeUnit.MINUTES.toSeconds(13);
-      }
-      if (c == IntegrationTests.class) {
-        return TimeUnit.MINUTES.toSeconds(Long.MAX_VALUE);
+    // This should never happen
+    if (categories.length > 1) {
+      throw new IllegalArgumentException("Code-bug: unsure how to handle more than one Category");
+    }
+    // Fail gracefully if there is no Category defined
+    if (categories.length == 1) {
+      for (Class<?> c : categories[0].value()) {
+        if (c == SmallTests.class || c == MediumTests.class || c == LargeTests.class) {
+          // All tests have a 13 minutes timeout.
+          return TimeUnit.MINUTES.toSeconds(13);
+        }
+        if (c == IntegrationTests.class) {
+          return TimeUnit.MINUTES.toSeconds(Long.MAX_VALUE);
+        }
       }
     }
     throw new IllegalArgumentException(
