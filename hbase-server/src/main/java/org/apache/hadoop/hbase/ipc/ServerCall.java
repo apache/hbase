@@ -137,13 +137,6 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
       justification = "Presume the lock on processing request held by caller is protection enough")
   @Override
   public void done() {
-    if (this.cellBlockStream != null) {
-      // This will return back the BBs which we got from pool.
-      this.cellBlockStream.releaseResources();
-      this.cellBlockStream = null;
-    }
-    // If the call was run successfuly, we might have already returned the BB
-    // back to pool. No worries..Then inputCellBlock will be null
     cleanup();
   }
 
@@ -167,6 +160,11 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
 
   @Override
   public void cleanup() {
+    if (this.cellBlockStream != null) {
+      // This will return back the BBs which we got from pool.
+      this.cellBlockStream.releaseResources();
+      this.cellBlockStream = null;
+    }
     release(0b01);
   }
 

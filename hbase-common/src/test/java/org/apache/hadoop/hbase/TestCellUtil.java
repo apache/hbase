@@ -62,12 +62,12 @@ public class TestCellUtil {
   /**
    * CellScanner used in test.
    */
-  private static class TestCellScanner implements CellScanner {
+  public static class TestCellScanner implements CellScanner {
     private int count = 0;
     private Cell current = null;
     private final int cellsCount;
 
-    TestCellScanner(final int cellsCount) {
+    public TestCellScanner(final int cellsCount) {
       this.cellsCount = cellsCount;
     }
 

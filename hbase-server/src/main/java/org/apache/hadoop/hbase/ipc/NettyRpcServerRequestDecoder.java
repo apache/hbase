@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelInboundHandlerAdapter;
@@ -41,6 +42,11 @@ class NettyRpcServerRequestDecoder extends ChannelInboundHandlerAdapter {
   }
 
   private NettyServerRpcConnection connection;
+
+  @VisibleForTesting
+  public NettyServerRpcConnection getConnection() {
+    return connection;
+  }
 
   void setConnection(NettyServerRpcConnection connection) {
     this.connection = connection;

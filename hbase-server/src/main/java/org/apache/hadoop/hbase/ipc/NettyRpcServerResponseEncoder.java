@@ -44,7 +44,6 @@ class NettyRpcServerResponseEncoder extends ChannelOutboundHandlerAdapter {
       RpcResponse resp = (RpcResponse) msg;
       BufferChain buf = resp.getResponse();
       ctx.write(Unpooled.wrappedBuffer(buf.getBuffers()), promise).addListener(f -> {
-        resp.done();
         if (f.isSuccess()) {
           metrics.sentBytes(buf.size());
         }
