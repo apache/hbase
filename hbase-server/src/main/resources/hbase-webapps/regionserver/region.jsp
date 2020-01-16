@@ -32,13 +32,8 @@
   HRegionServer rs = (HRegionServer) getServletContext().getAttribute(HRegionServer.REGIONSERVER);
 
   Region region = rs.getRegion(regionName);
-  String displayName;
-  if (region != null) {
-    displayName = RegionInfoDisplay.getRegionNameAsStringForDisplay(region.getRegionInfo(),
-            rs.getConfiguration());
-  } else {
-    displayName = "region {" + regionName + "} is not currently online on this region server";
-  }
+  String displayName = RegionInfoDisplay.getRegionNameAsStringForDisplay(region.getRegionInfo(),
+    rs.getConfiguration());
   pageContext.setAttribute("pageTitle", "HBase RegionServer: " + rs.getServerName());
 %>
 <jsp:include page="header.jsp">
