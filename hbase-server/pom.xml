@@ -47,6 +47,12 @@
           <include>hbase-webapps/**</include>
         </includes>
       </resource>
+      <resource>
+        <directory>src/main/resources</directory>
+        <includes>
+          <include>**/**</include>
+        </includes>
+      </resource>
     </resources>
     <testResources>
       <!-- Our test artifact has different license info than our source/bin ones -->
