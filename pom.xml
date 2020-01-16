@@ -90,6 +90,10 @@
       <id>apache.snapshots</id>
       <url>https://repository.apache.org/snapshots/</url>
     </pluginRepository>
+    <pluginRepository>
+      <id>central</id>
+      <url>https://repo.maven.apache.org/maven2</url>
+    </pluginRepository>
   </pluginRepositories>
   <scm>
     <connection>scm:git:git://gitbox.apache.org/repos/asf/hbase.git</connection>
@@ -436,6 +440,14 @@
     <repository>
       <id>repository.jboss.org</id>
       <url>https://repository.jboss.org/nexus/content/groups/public-jboss/</url>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+    <repository>
+      <id>central</id>
+      <name>Central Repository</name>
+      <url>https://repo.maven.apache.org/maven2</url>
       <snapshots>
         <enabled>false</enabled>
       </snapshots>
