@@ -1283,10 +1283,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   /**
    * Stops mini hbase, zk, and hdfs clusters.
-   * @throws IOException
    * @see #startMiniCluster(int)
    */
-  public void shutdownMiniCluster() throws Exception {
+  public void shutdownMiniCluster() throws IOException {
     LOG.info("Shutting down minicluster");
     shutdownMiniHBaseCluster();
     shutdownMiniDFSCluster();

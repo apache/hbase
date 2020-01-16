@@ -17,76 +17,96 @@
  * limitations under the License.
  */
 --%>
-<%@page import="java.net.URLEncoder"%>
 <%@ page contentType="text/html;charset=UTF-8"
   import="static org.apache.commons.lang3.StringEscapeUtils.escapeXml"
+  import="java.net.URLEncoder"
   import="java.util.ArrayList"
   import="java.util.Collection"
   import="java.util.HashMap"
   import="java.util.LinkedHashMap"
   import="java.util.List"
   import="java.util.Map"
+  import="java.util.Optional"
   import="java.util.TreeMap"
-  import=" java.util.concurrent.TimeUnit"
+  import="java.util.concurrent.TimeUnit"
   import="org.apache.commons.lang3.StringEscapeUtils"
   import="org.apache.hadoop.conf.Configuration"
-  import="org.apache.hadoop.hbase.HTableDescriptor"
   import="org.apache.hadoop.hbase.HColumnDescriptor"
   import="org.apache.hadoop.hbase.HConstants"
   import="org.apache.hadoop.hbase.HRegionLocation"
+  import="org.apache.hadoop.hbase.HTableDescriptor"
+  import="org.apache.hadoop.hbase.RegionMetrics"
+  import="org.apache.hadoop.hbase.RegionMetricsBuilder"
+  import="org.apache.hadoop.hbase.ServerMetrics"
   import="org.apache.hadoop.hbase.ServerName"
+  import="org.apache.hadoop.hbase.Size"
   import="org.apache.hadoop.hbase.TableName"
   import="org.apache.hadoop.hbase.TableNotFoundException"
   import="org.apache.hadoop.hbase.client.AsyncAdmin"
   import="org.apache.hadoop.hbase.client.AsyncConnection"
   import="org.apache.hadoop.hbase.client.CompactionState"
-  import="org.apache.hadoop.hbase.client.ConnectionFactory"
   import="org.apache.hadoop.hbase.client.RegionInfo"
   import="org.apache.hadoop.hbase.client.RegionInfoBuilder"
   import="org.apache.hadoop.hbase.client.RegionLocator"
   import="org.apache.hadoop.hbase.client.RegionReplicaUtil"
   import="org.apache.hadoop.hbase.client.Table"
   import="org.apache.hadoop.hbase.master.HMaster"
-  import="org.apache.hadoop.hbase.master.assignment.RegionStates"
   import="org.apache.hadoop.hbase.master.RegionState"
+  import="org.apache.hadoop.hbase.master.assignment.RegionStates"
+  import="org.apache.hadoop.hbase.master.webapp.MetaBrowser"
+  import="org.apache.hadoop.hbase.master.webapp.RegionReplicaInfo"
   import="org.apache.hadoop.hbase.quotas.QuotaSettingsFactory"
-  import="org.apache.hadoop.hbase.quotas.QuotaTableUtil"
-  import="org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot"
-  import="org.apache.hadoop.hbase.quotas.ThrottleSettings"
-  import="org.apache.hadoop.hbase.util.Bytes"
-  import="org.apache.hadoop.hbase.util.FSUtils"
-  import="org.apache.hadoop.hbase.zookeeper.MetaTableLocator"
-  import="org.apache.hadoop.util.StringUtils"
-  import="org.apache.hbase.thirdparty.com.google.protobuf.ByteString"%>
+  import="org.apache.hadoop.hbase.quotas.QuotaTableUtil"%>
+<%@ page import="org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot" %>
+<%@ page import="org.apache.hadoop.hbase.quotas.ThrottleSettings" %>
+<%@ page import="org.apache.hadoop.hbase.util.Bytes" %>
+<%@ page import="org.apache.hadoop.hbase.util.FSUtils" %>
+<%@ page import="org.apache.hadoop.hbase.zookeeper.MetaTableLocator" %>
+<%@ page import="org.apache.hadoop.util.StringUtils" %>
+<%@ page import="org.apache.hbase.thirdparty.com.google.protobuf.ByteString" %>
 <%@ page import="org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos" %>
 <%@ page import="org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos" %>
 <%@ page import="org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas" %>
 <%@ page import="org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota" %>
-<%@ page import="org.apache.hadoop.hbase.ServerMetrics" %>
-<%@ page import="org.apache.hadoop.hbase.RegionMetrics" %>
-<%@ page import="org.apache.hadoop.hbase.Size" %>
-<%@ page import="org.apache.hadoop.hbase.RegionMetricsBuilder" %>
 <%!
   /**
    * @return An empty region load stamped with the passed in <code>regionInfo</code>
    * region name.
    */
-  private RegionMetrics getEmptyRegionMetrics(final RegionInfo regionInfo) {
+  private static RegionMetrics getEmptyRegionMetrics(final RegionInfo regionInfo) {
     return RegionMetricsBuilder.toRegionMetrics(ClusterStatusProtos.RegionLoad.newBuilder().
             setRegionSpecifier(HBaseProtos.RegionSpecifier.newBuilder().
                     setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME).
                     setValue(ByteString.copyFrom(regionInfo.getRegionName())).build()).build());
   }
+
+  /**
+   * Given dicey information that may or not be available in meta, render a link to the region on
+   * its region server.
+   * @return an anchor tag if one can be built, {@code null} otherwise.
+   */
+  private static String buildRegionServerLink(final ServerName serverName, final int rsInfoPort,
+    final RegionInfo regionInfo, final RegionState.State regionState) {
+    if (serverName == null || regionInfo == null) { return null; }
+
+    if (regionState != RegionState.State.OPEN) {
+      // region is assigned to RS, but RS knows nothing of it. don't bother with a link.
+      return serverName.getServerName();
+    }
+
+    final String socketAddress = serverName.getHostname() + ":" + rsInfoPort;
+    final String URI = "//" + socketAddress + "/region.jsp"
+      + "?name=" + regionInfo.getEncodedName();
+    return "<a href=\"" + URI + "\">" + serverName.getServerName() + "</a>";
+  }
 %>
 <%
-  final String ZEROKB = "0 KB";
   final String ZEROMB = "0 MB";
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   Configuration conf = master.getConfiguration();
   String fqtn = request.getParameter("name");
   final String escaped_fqtn = StringEscapeUtils.escapeHtml4(fqtn);
   Table table;
-  String tableHeader;
   boolean withReplica = false;
   boolean showFragmentation = conf.getBoolean("hbase.master.ui.fragmentation.enabled", false);
   boolean readOnly = conf.getBoolean("hbase.master.ui.readonly", false);
@@ -127,8 +147,11 @@
       pageTitle = "Table: " + escaped_fqtn;
   }
   pageContext.setAttribute("pageTitle", pageTitle);
-  AsyncConnection connection = ConnectionFactory.createAsyncConnection(master.getConfiguration()).get();
-  AsyncAdmin admin = connection.getAdminBuilder().setOperationTimeout(5, TimeUnit.SECONDS).build();
+  final AsyncConnection connection = master.getAsyncConnection();
+  final AsyncAdmin admin = connection.getAdminBuilder()
+    .setOperationTimeout(5, TimeUnit.SECONDS)
+    .build();
+  final MetaBrowser metaBrowser = new MetaBrowser(connection, request);
 %>
 
 <jsp:include page="header.jsp">
@@ -349,6 +372,134 @@ if (fqtn != null && master.isInitialized()) {
         </tbody>
       </table>
     </div>
+  </div>
+</div>
+<h2 id="meta-entries">Meta Entries</h2>
+<%
+  if (!metaBrowser.getErrorMessages().isEmpty()) {
+    for (final String errorMessage : metaBrowser.getErrorMessages()) {
+%>
+<div class="alert alert-warning" role="alert">
+  <%= errorMessage %>
+</div>
+<%
+    }
+  }
+%>
+<table class="table table-striped">
+  <tr>
+    <th>RegionName</th>
+    <th>Start Key</th>
+    <th>End Key</th>
+    <th>Replica ID</th>
+    <th>RegionState</th>
+    <th>ServerName</th>
+  </tr>
+<%
+  final boolean metaScanHasMore;
+  byte[] lastRow = null;
+  try (final MetaBrowser.Results results = metaBrowser.getResults()) {
+    for (final RegionReplicaInfo regionReplicaInfo : results) {
+      lastRow = Optional.ofNullable(regionReplicaInfo)
+        .map(RegionReplicaInfo::getRow)
+        .orElse(null);
+      if (regionReplicaInfo == null) {
+%>
+  <tr>
+    <td colspan="6">Null result</td>
+  </tr>
+<%
+      continue;
+    }
+
+    final String regionNameDisplay = regionReplicaInfo.getRegionName() != null
+      ? Bytes.toStringBinary(regionReplicaInfo.getRegionName())
+      : "";
+    final String startKeyDisplay = regionReplicaInfo.getStartKey() != null
+      ? Bytes.toStringBinary(regionReplicaInfo.getStartKey())
+      : "";
+    final String endKeyDisplay = regionReplicaInfo.getEndKey() != null
+      ? Bytes.toStringBinary(regionReplicaInfo.getEndKey())
+      : "";
+    final String replicaIdDisplay = regionReplicaInfo.getReplicaId() != null
+      ? regionReplicaInfo.getReplicaId().toString()
+      : "";
+    final String regionStateDisplay = regionReplicaInfo.getRegionState() != null
+      ? regionReplicaInfo.getRegionState().toString()
+      : "";
+
+    final RegionInfo regionInfo = regionReplicaInfo.getRegionInfo();
+    final ServerName serverName = regionReplicaInfo.getServerName();
+    final RegionState.State regionState = regionReplicaInfo.getRegionState();
+    final int rsPort = master.getRegionServerInfoPort(serverName);
+%>
+  <tr>
+    <td><%= regionNameDisplay %></td>
+    <td><%= startKeyDisplay %></td>
+    <td><%= endKeyDisplay %></td>
+    <td><%= replicaIdDisplay %></td>
+    <td><%= regionStateDisplay %></td>
+    <td><%= buildRegionServerLink(serverName, rsPort, regionInfo, regionState) %></td>
+  </tr>
+<%
+    }
+
+    metaScanHasMore = results.hasMoreResults();
+  }
+%>
+</table>
+<div class="row">
+  <div class="col-md-4">
+    <ul class="pagination" style="margin: 20px 0">
+      <li>
+        <a href="<%= metaBrowser.buildFirstPageUrl() %>" aria-label="Previous">
+          <span aria-hidden="true">&#x21E4;</span>
+        </a>
+      </li>
+      <li<%= metaScanHasMore ? "" : " class=\"disabled\"" %>>
+        <a<%= metaScanHasMore ? " href=\"" + metaBrowser.buildNextPageUrl(lastRow) + "\"" : "" %> aria-label="Next">
+          <span aria-hidden="true">&raquo;</span>
+        </a>
+      </li>
+    </ul>
+  </div>
+  <div class="col-md-8">
+    <form action="/table.jsp" method="get" class="form-inline pull-right" style="margin: 20px 0">
+      <input type="hidden" name="name" value="<%= TableName.META_TABLE_NAME %>" />
+      <div class="form-group">
+        <label for="scan-limit">Scan Limit</label>
+        <input type="text" id="scan-limit" name="<%= MetaBrowser.SCAN_LIMIT_PARAM %>"
+          class="form-control" placeholder="<%= MetaBrowser.SCAN_LIMIT_DEFAULT %>"
+          <%= metaBrowser.getScanLimit() != null
+            ? "value=\"" + metaBrowser.getScanLimit() + "\""
+            : ""
+          %>
+          aria-describedby="scan-limit" style="display:inline; width:auto" />
+        <label for="table-name-filter">Table</label>
+        <input type="text" id="table-name-filter" name="<%= MetaBrowser.SCAN_TABLE_PARAM %>"
+          <%= metaBrowser.getScanTable() != null
+            ? "value=\"" + metaBrowser.getScanTable() + "\""
+            : ""
+          %>
+          aria-describedby="scan-filter-table" style="display:inline; width:auto" />
+        <label for="region-state-filter">Region State</label>
+        <select class="form-control" id="region-state-filter" style="display:inline; width:auto"
+          name="<%= MetaBrowser.SCAN_REGION_STATE_PARAM %>">
+          <option></option>
+<%
+  for (final RegionState.State state : RegionState.State.values()) {
+    final boolean selected = metaBrowser.getScanRegionState() == state;
+%>
+          <option<%= selected ? " selected" : "" %>><%= state %></option>
+<%
+  }
+%>
+        </select>
+        <button type="submit" class="btn btn-primary" style="display:inline; width:auto">
+          Filter Results
+        </button>
+      </div>
+    </form>
   </div>
 </div>
 <%} else {
@@ -838,8 +989,6 @@ if (withReplica) {
   for(StackTraceElement element : ex.getStackTrace()) {
     %><%= StringEscapeUtils.escapeHtml4(element.toString()) %><%
   }
-} finally {
-  connection.close();
 }
 } // end else
 %>
