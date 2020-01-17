@@ -77,28 +77,27 @@ public class TestStruct {
     };
 
     Object[][] params = new Object[][] {
-        { SpecializedPojo1Type1.GENERIC, new SpecializedPojo1Type1(), pojo1Args },
-        { SpecializedPojo2Type1.GENERIC, new SpecializedPojo2Type1(), pojo2Args },
+        { SpecializedPojo1Type1.getGeneric(), new SpecializedPojo1Type1(), pojo1Args },
+        { SpecializedPojo2Type1.getGeneric(), new SpecializedPojo2Type1(), pojo2Args },
     };
     return Arrays.asList(params);
   }
 
-  static final Comparator<byte[]> NULL_SAFE_BYTES_COMPARATOR =
-      new Comparator<byte[]>() {
-        @Override
-        public int compare(byte[] o1, byte[] o2) {
-          if (o1 == o2) {
-            return 0;
-          }
-          if (null == o1) {
-            return -1;
-          }
-          if (null == o2) {
-            return 1;
-          }
-          return Bytes.compareTo(o1, o2);
-        }
-      };
+  static final Comparator<byte[]> NULL_SAFE_BYTES_COMPARATOR = new Comparator<byte[]>() {
+    @Override
+    public int compare(byte[] o1, byte[] o2) {
+      if (o1 == o2) {
+        return 0;
+      }
+      if (null == o1) {
+        return -1;
+      }
+      if (null == o2) {
+        return 1;
+      }
+      return Bytes.compareTo(o1, o2);
+    }
+  };
 
   /**
    * A simple object to serialize.
@@ -291,8 +290,10 @@ public class TestStruct {
     /**
      * The {@link Struct} equivalent of this type.
      */
-    public static Struct GENERIC = new StructBuilder().add(stringField).add(intField)
-      .add(doubleField).toStruct();
+    public static Struct getGeneric() {
+      return new StructBuilder().add(stringField).add(intField)
+        .add(doubleField).toStruct();
+    }
 
     @Override
     public boolean isOrderPreserving() {
@@ -366,8 +367,10 @@ public class TestStruct {
     /**
      * The {@link Struct} equivalent of this type.
      */
-    public static Struct GENERIC = new StructBuilder().add(byteField1).add(byteField2)
-      .add(stringField).add(byteField3).toStruct();
+    public static Struct getGeneric() {
+      return new StructBuilder().add(byteField1).add(byteField2)
+        .add(stringField).add(byteField3).toStruct();
+    }
 
     @Override
     public boolean isOrderPreserving() {

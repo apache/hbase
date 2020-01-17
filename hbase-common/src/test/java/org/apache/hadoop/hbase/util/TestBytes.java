@@ -558,8 +558,8 @@ public class TestBytes extends TestCase {
       Assert.assertTrue(testString.equalsIgnoreCase(result));
     }
 
-    List<byte[]> testByteData = new ArrayList<>(Arrays.asList(new byte[0], new byte[1], new byte[10],
-      new byte[] { 1, 2, 3, 4, 5 }, new byte[] { (byte) 0xFF }));
+    List<byte[]> testByteData = new ArrayList<>(Arrays.asList(new byte[0], new byte[1],
+      new byte[10], new byte[] { 1, 2, 3, 4, 5 }, new byte[] { (byte) 0xFF }));
     Random r = new Random();
     for (int i = 0; i < 20; i++) {
       byte[] bytes = new byte[r.nextInt(100)];
