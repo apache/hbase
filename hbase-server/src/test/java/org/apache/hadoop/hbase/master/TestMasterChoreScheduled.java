@@ -18,10 +18,8 @@
 
 package org.apache.hadoop.hbase.master;
 
-import java.io.IOException;
 import java.lang.reflect.Field;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ScheduledChore;
@@ -34,7 +32,6 @@ import org.apache.hadoop.hbase.master.cleaner.ReplicationBarrierCleaner;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerChore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -56,17 +53,9 @@ public class TestMasterChoreScheduled {
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
-  public static final class MockHMaster extends HMaster {
-
-    public MockHMaster(Configuration conf) throws IOException, KeeperException {
-      super(conf);
-    }
-  }
-
   @BeforeClass
   public static void setUp() throws Exception {
-    UTIL.startMiniCluster(StartMiniClusterOption.builder().numRegionServers(1)
-      .masterClass(TestCloseAnOpeningRegion.MockHMaster.class).build());
+    UTIL.startMiniCluster(StartMiniClusterOption.builder().numRegionServers(1).build());
     hMaster = UTIL.getMiniHBaseCluster().getMaster();
   }
 
