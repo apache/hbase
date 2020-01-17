@@ -19,22 +19,20 @@
 package org.apache.hadoop.hbase.snapshot;
 
 import static org.junit.Assert.assertEquals;
-
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.coprocessor.BaseMasterObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.util.TestTableName;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -46,7 +44,7 @@ public class TestSnapshotClientRetries {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Log LOG = LogFactory.getLog(TestSnapshotClientRetries.class);
 
-  @Rule public TestTableName TEST_TABLE = new TestTableName();
+  @Rule public TableNameTestRule testTable = new TableNameTestRule();
 
   @Before
   public void setUp() throws Exception {
@@ -63,15 +61,15 @@ public class TestSnapshotClientRetries {
   @Test(timeout = 60000, expected=SnapshotExistsException.class)
   public void testSnapshotAlreadyExist() throws Exception {
     final String snapshotName = "testSnapshotAlreadyExist";
-    TEST_UTIL.createTable(TEST_TABLE.getTableName(), "f");
-    TEST_UTIL.getHBaseAdmin().snapshot(snapshotName, TEST_TABLE.getTableName());
-    snapshotAndAssertOneRetry(snapshotName, TEST_TABLE.getTableName());
+    TEST_UTIL.createTable(testTable.getTableName(), "f");
+    TEST_UTIL.getHBaseAdmin().snapshot(snapshotName, testTable.getTableName());
+    snapshotAndAssertOneRetry(snapshotName, testTable.getTableName());
   }
 
   @Test(timeout = 60000, expected=SnapshotDoesNotExistException.class)
   public void testCloneNonExistentSnapshot() throws Exception {
     final String snapshotName = "testCloneNonExistentSnapshot";
-    cloneAndAssertOneRetry(snapshotName, TEST_TABLE.getTableName());
+    cloneAndAssertOneRetry(snapshotName, testTable.getTableName());
   }
 
   public static class MasterSyncObserver extends BaseMasterObserver {
