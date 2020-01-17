@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.util.Collections;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
@@ -30,6 +32,8 @@ import org.junit.rules.Timeout;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
+
 /**
  * The class level TestRule for all the tests. Every test class should have a {@code ClassRule} with
  * it.
@@ -39,6 +43,8 @@ import org.junit.runners.model.Statement;
  */
 @InterfaceAudience.Private
 public final class HBaseClassTestRule implements TestRule {
+  public static final Set<Class<?>> UNIT_TEST_CLASSES = Collections.unmodifiableSet(
+      Sets.<Class<?>> newHashSet(SmallTests.class, MediumTests.class, LargeTests.class));
 
   private final Class<?> clazz;
 
@@ -59,14 +65,11 @@ public final class HBaseClassTestRule implements TestRule {
 
   private static long getTimeoutInSeconds(Class<?> clazz) {
     Category[] categories = clazz.getAnnotationsByType(Category.class);
-    // This should never happen
-    if (categories.length > 1) {
-      throw new IllegalArgumentException("Code-bug: unsure how to handle more than one Category");
-    }
-    // Fail gracefully if there is no Category defined
+
+    // @Category is not repeatable -- it is only possible to get an array of length zero or one.
     if (categories.length == 1) {
       for (Class<?> c : categories[0].value()) {
-        if (c == SmallTests.class || c == MediumTests.class || c == LargeTests.class) {
+        if (UNIT_TEST_CLASSES.contains(c)) {
           // All tests have a 13 minutes timeout.
           return TimeUnit.MINUTES.toSeconds(13);
         }
