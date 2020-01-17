@@ -777,7 +777,9 @@ public class HttpServer implements FilterContainer {
   }
 
   /**
-   * Adds a servlet in the server that any user can access.
+   * Adds a servlet in the server that any user can access. This method differs from
+   * {@link #addPrivilegedServlet(String, String, Class)} in that any authenticated user
+   * can interact with the servlet added by this method.
    * @param name The name of the servlet (can be passed as null)
    * @param pathSpec The path spec for the servlet
    * @param clazz The servlet class
@@ -788,13 +790,20 @@ public class HttpServer implements FilterContainer {
   }
 
   /**
-   * Adds a servlet in the server that only administrators can access.
+   * Adds a servlet in the server that only administrators can access. This method differs from
+   * {@link #addUnprivilegedServlet(String, String, Class)} in that only those authenticated user
+   * who are identified as administrators can interact with the servlet added by this method.
    */
   public void addPrivilegedServlet(String name, String pathSpec,
       Class<? extends HttpServlet> clazz) {
     addServletWithAuth(name, pathSpec, clazz, true);
   }
 
+  /**
+   * Internal method to add a servlet to the HTTP server. Developers should not call this method
+   * directly, but invoke it via {@link #addUnprivilegedServlet(String, String, Class)} or
+   * {@link #addPrivilegedServlet(String, String, Class)}.
+   */
   void addServletWithAuth(String name, String pathSpec,
       Class<? extends HttpServlet> clazz, boolean requireAuth) {
     addInternalServlet(name, pathSpec, clazz, requireAuth);
