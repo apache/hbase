@@ -361,7 +361,7 @@ public class MetaBrowser {
       return null;
     }
     try {
-      return T.valueOf(clazz, value);
+      return Enum.valueOf(clazz, value);
     } catch (IllegalArgumentException e) {
       return null;
     }
