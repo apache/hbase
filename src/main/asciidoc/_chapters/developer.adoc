@@ -298,8 +298,11 @@ The following plugins are recommended:
 `.editorconfig` file available on branches with
 link:https://issues.apache.org/jira/browse/HBASE-23234[HBASE-23234] or later.
 . link:https://plugins.jetbrains.com/plugin/1065-checkstyle-idea/[Checkstyle-IDEA]. Configure this
-against the configuration file found under `hbase-checkstyle/src/main/resources/hbase/checkstyle.xml`.
-This will highlight style errors in the IDE, so you can fix them before they get flagged during the
+against the configuration file found under `hbase-checkstyle/src/main/resources/hbase/checkstyle.xml`
+(If the Intellij checkstyle plugin complains parsing the volunteered hbase `checkstyle.xml`, make
+sure the plugin's `version` popup menu matches the hbase checkstyle version -- see
+link:https://issues.apache.org/jira/browse/HBASE-23242[HBASE-23242] for more).
+This plugin will highlight style errors in the IDE, so you can fix them before they get flagged during the
 pre-commit process.
 . link:https://plugins.jetbrains.com/plugin/8277-protobuf-support/[Protobuf Support]. HBase uses
 link:https://developers.google.com/protocol-buffers/[Protocol Buffers] in a number of places where
