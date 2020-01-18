@@ -151,7 +151,18 @@ possible configurations would overwhelm and obscure the important.
     so put the cleaner that prunes the most files in front. To
     implement your own BaseHFileCleanerDelegate, just put it in HBase's classpath
     and add the fully qualified class name here. Always add the above
-    default log cleaners in the list as they will be overwritten in
+    default hfile cleaners in the list as they will be overwritten in
+    hbase-site.xml.</description>
+  </property>
+  <property>
+    <name>hbase.procedure.store.region.hfilecleaner.plugins</name>
+    <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner</value>
+    <description>A comma-separated list of BaseHFileCleanerDelegate invoked by
+    the RegionProcedureStore HFileCleaner service. These HFiles cleaners are
+    called in order, so put the cleaner that prunes the most files in front. To
+    implement your own BaseHFileCleanerDelegate, just put it in HBase's classpath
+    and add the fully qualified class name here. Always add the above
+    default hfile cleaners in the list as they will be overwritten in
     hbase-site.xml.</description>
   </property>
   <property>

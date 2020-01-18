@@ -1386,8 +1386,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.executorService.startExecutorService(ExecutorType.MASTER_TABLE_OPERATIONS, 1);
     startProcedureExecutor();
 
-    // Create cleaner thread pool
-    cleanerPool = new DirScanPool(conf);
     // Start log cleaner thread
     int cleanerInterval =
       conf.getInt(HBASE_MASTER_CLEANER_INTERVAL, DEFAULT_HBASE_MASTER_CLEANER_INTERVAL);
@@ -1493,8 +1491,10 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   private void createProcedureExecutor() throws IOException {
     MasterProcedureEnv procEnv = new MasterProcedureEnv(this);
-    procedureStore =
-      new RegionProcedureStore(this, new MasterProcedureEnv.FsUtilsLeaseRecovery(this));
+    // Create cleaner thread pool
+    cleanerPool = new DirScanPool(conf);
+    procedureStore = new RegionProcedureStore(this, cleanerPool,
+      new MasterProcedureEnv.FsUtilsLeaseRecovery(this));
     procedureStore.registerListener(new ProcedureStoreListener() {
 
       @Override
