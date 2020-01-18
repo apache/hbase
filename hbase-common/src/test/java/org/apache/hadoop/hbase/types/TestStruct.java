@@ -45,7 +45,6 @@ import org.junit.runners.Parameterized.Parameters;
 @RunWith(Parameterized.class)
 @Category(SmallTests.class)
 public class TestStruct {
-
   private Struct generic;
   @SuppressWarnings("rawtypes")
   private DataType specialized;
@@ -61,12 +60,12 @@ public class TestStruct {
   @Parameters
   public static Collection<Object[]> params() {
     Object[][] pojo1Args = {
-        new Object[] { "foo", 5,   10.001 },
-        new Object[] { "foo", 100, 7.0    },
-        new Object[] { "foo", 100, 10.001 },
-        new Object[] { "bar", 5,   10.001 },
-        new Object[] { "bar", 100, 10.001 },
-        new Object[] { "baz", 5,   10.001 },
+      new Object[] { "foo", 5,   10.001 },
+      new Object[] { "foo", 100, 7.0    },
+      new Object[] { "foo", 100, 10.001 },
+      new Object[] { "bar", 5,   10.001 },
+      new Object[] { "bar", 100, 10.001 },
+      new Object[] { "baz", 5,   10.001 },
     };
 
     Object[][] pojo2Args = {
@@ -78,22 +77,27 @@ public class TestStruct {
     };
 
     Object[][] params = new Object[][] {
-        { SpecializedPojo1Type1.GENERIC, new SpecializedPojo1Type1(), pojo1Args },
-        { SpecializedPojo2Type1.GENERIC, new SpecializedPojo2Type1(), pojo2Args },
+        { SpecializedPojo1Type1.getGeneric(), new SpecializedPojo1Type1(), pojo1Args },
+        { SpecializedPojo2Type1.getGeneric(), new SpecializedPojo2Type1(), pojo2Args },
     };
     return Arrays.asList(params);
   }
 
-  static final Comparator<byte[]> NULL_SAFE_BYTES_COMPARATOR =
-      new Comparator<byte[]>() {
-        @Override
-        public int compare(byte[] o1, byte[] o2) {
-          if (o1 == o2) return 0;
-          if (null == o1) return -1;
-          if (null == o2) return 1;
-          return Bytes.compareTo(o1, o2);
-        }
-      };
+  static final Comparator<byte[]> NULL_SAFE_BYTES_COMPARATOR = new Comparator<byte[]>() {
+    @Override
+    public int compare(byte[] o1, byte[] o2) {
+      if (o1 == o2) {
+        return 0;
+      }
+      if (null == o1) {
+        return -1;
+      }
+      if (null == o2) {
+        return 1;
+      }
+      return Bytes.compareTo(o1, o2);
+    }
+  };
 
   /**
    * A simple object to serialize.
@@ -161,20 +165,18 @@ public class TestStruct {
         return false;
       }
       Pojo1 other = (Pojo1) obj;
-      if (Double.doubleToLongBits(doubleFieldAsc) != Double.doubleToLongBits(other.doubleFieldAsc)) {
+      if (Double.doubleToLongBits(doubleFieldAsc) !=
+          Double.doubleToLongBits(other.doubleFieldAsc)) {
         return false;
       }
       if (intFieldAsc != other.intFieldAsc) {
         return false;
       }
       if (stringFieldAsc == null) {
-        if (other.stringFieldAsc != null) {
-          return false;
-        }
-      } else if (!stringFieldAsc.equals(other.stringFieldAsc)) {
-        return false;
+        return other.stringFieldAsc == null;
+      } else {
+        return stringFieldAsc.equals(other.stringFieldAsc);
       }
-      return true;
     }
   }
 
@@ -220,16 +222,17 @@ public class TestStruct {
       if (cmp != 0) {
         return cmp;
       }
+
       if (null == stringFieldDsc) {
         cmp = 1;
-      }
-      else if (null == o.stringFieldDsc) {
+      } else if (null == o.stringFieldDsc) {
         cmp = -1;
-      }
-      else if (stringFieldDsc.equals(o.stringFieldDsc)) {
+      } else if (stringFieldDsc.equals(o.stringFieldDsc)) {
         cmp = 0;
+      } else {
+        cmp = -stringFieldDsc.compareTo(o.stringFieldDsc);
       }
-      else cmp = -stringFieldDsc.compareTo(o.stringFieldDsc);
+
       if (cmp != 0) {
         return cmp;
       }
@@ -269,13 +272,10 @@ public class TestStruct {
         return false;
       }
       if (stringFieldDsc == null) {
-        if (other.stringFieldDsc != null) {
-          return false;
-        }
-      } else if (!stringFieldDsc.equals(other.stringFieldDsc)) {
-        return false;
+        return other.stringFieldDsc == null;
+      } else {
+        return stringFieldDsc.equals(other.stringFieldDsc);
       }
-      return true;
     }
   }
 
@@ -283,7 +283,6 @@ public class TestStruct {
    * A custom data type implementation specialized for {@link Pojo1}.
    */
   private static class SpecializedPojo1Type1 implements DataType<Pojo1> {
-
     private static final RawStringTerminated stringField = new RawStringTerminated("/");
     private static final RawInteger intField = new RawInteger();
     private static final RawDouble doubleField = new RawDouble();
@@ -291,34 +290,42 @@ public class TestStruct {
     /**
      * The {@link Struct} equivalent of this type.
      */
-    public static Struct GENERIC =
-        new StructBuilder().add(stringField)
-                           .add(intField)
-                           .add(doubleField)
-                           .toStruct();
+    public static Struct getGeneric() {
+      return new StructBuilder().add(stringField).add(intField)
+        .add(doubleField).toStruct();
+    }
 
     @Override
-    public boolean isOrderPreserving() { return true; }
+    public boolean isOrderPreserving() {
+      return true;
+    }
 
     @Override
-    public Order getOrder() { return null; }
+    public Order getOrder() {
+      return null;
+    }
 
     @Override
-    public boolean isNullable() { return false; }
+    public boolean isNullable() {
+      return false;
+    }
 
     @Override
-    public boolean isSkippable() { return true; }
+    public boolean isSkippable() {
+      return true;
+    }
 
     @Override
     public int encodedLength(Pojo1 val) {
-      return
-          stringField.encodedLength(val.stringFieldAsc) +
+      return stringField.encodedLength(val.stringFieldAsc) +
           intField.encodedLength(val.intFieldAsc) +
           doubleField.encodedLength(val.doubleFieldAsc);
     }
 
     @Override
-    public Class<Pojo1> encodedClass() { return Pojo1.class; }
+    public Class<Pojo1> encodedClass() {
+      return Pojo1.class;
+    }
 
     @Override
     public int skip(PositionedByteRange src) {
@@ -350,7 +357,6 @@ public class TestStruct {
    * A custom data type implementation specialized for {@link Pojo2}.
    */
   private static class SpecializedPojo2Type1 implements DataType<Pojo2> {
-
     private static RawBytesTerminated byteField1 = new RawBytesTerminated("/");
     private static RawBytesTerminated byteField2 =
         new RawBytesTerminated(Order.DESCENDING, "/");
@@ -361,36 +367,43 @@ public class TestStruct {
     /**
      * The {@link Struct} equivalent of this type.
      */
-    public static Struct GENERIC =
-        new StructBuilder().add(byteField1)
-                           .add(byteField2)
-                           .add(stringField)
-                           .add(byteField3)
-                           .toStruct();
+    public static Struct getGeneric() {
+      return new StructBuilder().add(byteField1).add(byteField2)
+        .add(stringField).add(byteField3).toStruct();
+    }
 
     @Override
-    public boolean isOrderPreserving() { return true; }
+    public boolean isOrderPreserving() {
+      return true;
+    }
 
     @Override
-    public Order getOrder() { return null; }
+    public Order getOrder() {
+      return null;
+    }
 
     @Override
-    public boolean isNullable() { return false; }
+    public boolean isNullable() {
+      return false;
+    }
 
     @Override
-    public boolean isSkippable() { return true; }
+    public boolean isSkippable() {
+      return true;
+    }
 
     @Override
     public int encodedLength(Pojo2 val) {
-      return
-          byteField1.encodedLength(val.byteField1Asc) +
+      return byteField1.encodedLength(val.byteField1Asc) +
           byteField2.encodedLength(val.byteField2Dsc) +
           stringField.encodedLength(val.stringFieldDsc) +
           byteField3.encodedLength(val.byteField3Dsc);
     }
 
     @Override
-    public Class<Pojo2> encodedClass() { return Pojo2.class; }
+    public Class<Pojo2> encodedClass() {
+      return Pojo2.class;
+    }
 
     @Override
     public int skip(PositionedByteRange src) {
