@@ -48,9 +48,12 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.assignment.AssignProcedure;
 import org.apache.hadoop.hbase.master.assignment.MoveRegionProcedure;
 import org.apache.hadoop.hbase.master.assignment.UnassignProcedure;
+import org.apache.hadoop.hbase.master.cleaner.DirScanPool;
+import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.procedure.RecoverMetaProcedure;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -65,6 +68,7 @@ import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
@@ -119,7 +123,7 @@ public class RegionProcedureStore extends ProcedureStoreBase {
 
   static final String MASTER_PROCEDURE_DIR = "MasterProcs";
 
-  static final String LOGCLEANER_PLUGINS = "hbase.procedure.store.region.logcleaner.plugins";
+  static final String HFILECLEANER_PLUGINS = "hbase.procedure.store.region.hfilecleaner.plugins";
 
   private static final String REPLAY_EDITS_DIR = "recovered.wals";
 
@@ -138,22 +142,31 @@ public class RegionProcedureStore extends ProcedureStoreBase {
 
   private final Server server;
 
+  private final DirScanPool cleanerPool;
+
   private final LeaseRecovery leaseRecovery;
+
+  // Used to delete the compacted hfiles. Since we put all data on WAL filesystem, it is not
+  // possible to move the compacted hfiles to the global hfile archive directory, we have to do it
+  // by ourselves.
+  private HFileCleaner cleaner;
 
   private WALFactory walFactory;
 
   @VisibleForTesting
   HRegion region;
 
-  private RegionFlusherAndCompactor flusherAndCompactor;
+  @VisibleForTesting
+  RegionFlusherAndCompactor flusherAndCompactor;
 
   @VisibleForTesting
   RegionProcedureStoreWALRoller walRoller;
 
   private int numThreads;
 
-  public RegionProcedureStore(Server server, LeaseRecovery leaseRecovery) {
+  public RegionProcedureStore(Server server, DirScanPool cleanerPool, LeaseRecovery leaseRecovery) {
     this.server = server;
+    this.cleanerPool = cleanerPool;
     this.leaseRecovery = leaseRecovery;
   }
 
@@ -193,6 +206,9 @@ public class RegionProcedureStore extends ProcedureStoreBase {
       return;
     }
     LOG.info("Stopping the Region Procedure Store, isAbort={}", abort);
+    if (cleaner != null) {
+      cleaner.cancel(abort);
+    }
     if (flusherAndCompactor != null) {
       flusherAndCompactor.close();
     }
@@ -423,11 +439,11 @@ public class RegionProcedureStore extends ProcedureStoreBase {
     } else if (maxProcIdSet.longValue() < maxProcIdFromProcs.longValue()) {
       LOG.warn("The WALProcedureStore max pid is less than the max pid of all loaded procedures");
     }
+    store.stop(false);
     if (!fs.delete(procWALDir, true)) {
-      throw new IOException("Failed to delete the WALProcedureStore migrated proc wal directory " +
-        procWALDir);
+      throw new IOException(
+        "Failed to delete the WALProcedureStore migrated proc wal directory " + procWALDir);
     }
-    store.stop(true);
     LOG.info("Migration of WALProcedureStore finished");
   }
 
@@ -463,6 +479,16 @@ public class RegionProcedureStore extends ProcedureStoreBase {
     }
     flusherAndCompactor = new RegionFlusherAndCompactor(conf, server, region);
     walRoller.setFlusherAndCompactor(flusherAndCompactor);
+    int cleanerInterval = conf.getInt(HMaster.HBASE_MASTER_CLEANER_INTERVAL,
+      HMaster.DEFAULT_HBASE_MASTER_CLEANER_INTERVAL);
+    Path archiveDir = HFileArchiveUtil.getArchivePath(conf);
+    if (!fs.mkdirs(archiveDir)) {
+      LOG.warn("Failed to create archive directory {}. Usually this should not happen but it will" +
+        " be created again when we actually archive the hfiles later, so continue", archiveDir);
+    }
+    cleaner = new HFileCleaner("RegionProcedureStoreHFileCleaner", cleanerInterval, server, conf,
+      fs, archiveDir, HFILECLEANER_PLUGINS, cleanerPool, Collections.emptyMap());
+    server.getChoreService().scheduleChore(cleaner);
     tryMigrate(fs);
   }
 

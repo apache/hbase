@@ -95,7 +95,8 @@ public class TestRegionProcedureStoreWALCleaner {
       }
     }, conf, fs, globalWALArchiveDir, dirScanPool);
     choreService.scheduleChore(logCleaner);
-    store = RegionProcedureStoreTestHelper.createStore(conf, new LoadCounter());
+    store = RegionProcedureStoreTestHelper.createStore(conf, choreService, dirScanPool,
+      new LoadCounter());
   }
 
   @After

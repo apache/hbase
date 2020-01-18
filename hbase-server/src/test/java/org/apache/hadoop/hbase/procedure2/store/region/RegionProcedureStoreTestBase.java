@@ -18,8 +18,11 @@
 package org.apache.hadoop.hbase.procedure2.store.region;
 
 import java.io.IOException;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.master.cleaner.DirScanPool;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.LoadCounter;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -32,18 +35,31 @@ public class RegionProcedureStoreTestBase {
 
   protected RegionProcedureStore store;
 
+  protected ChoreService choreService;
+
+  protected DirScanPool cleanerPool;
+
+  protected void configure(Configuration conf) {
+  }
+
   @Before
   public void setUp() throws IOException {
     htu = new HBaseCommonTestingUtility();
     htu.getConfiguration().setBoolean(MemStoreLAB.USEMSLAB_KEY, false);
+    configure(htu.getConfiguration());
     Path testDir = htu.getDataTestDir();
     CommonFSUtils.setWALRootDir(htu.getConfiguration(), testDir);
-    store = RegionProcedureStoreTestHelper.createStore(htu.getConfiguration(), new LoadCounter());
+    choreService = new ChoreService(getClass().getSimpleName());
+    cleanerPool = new DirScanPool(htu.getConfiguration());
+    store = RegionProcedureStoreTestHelper.createStore(htu.getConfiguration(), choreService,
+      cleanerPool, new LoadCounter());
   }
 
   @After
   public void tearDown() throws IOException {
     store.stop(true);
+    cleanerPool.shutdownNow();
+    choreService.shutdown();
     htu.cleanupTestDir();
   }
 }

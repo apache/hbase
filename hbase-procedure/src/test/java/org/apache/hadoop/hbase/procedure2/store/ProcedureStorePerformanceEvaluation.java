@@ -123,11 +123,15 @@ public abstract class ProcedureStorePerformanceEvaluation<T extends ProcedureSto
 
   protected abstract T createProcedureStore(Path storeDir) throws IOException;
 
+  protected void postStop(T store) throws IOException {
+  }
+
   private void tearDownProcedureStore() {
     Path storeDir = null;
     try {
       if (store != null) {
         store.stop(false);
+        postStop(store);
       }
       FileSystem fs = FileSystem.get(conf);
       storeDir = fs.makeQualified(new Path(outputPath));
