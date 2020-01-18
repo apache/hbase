@@ -1517,7 +1517,7 @@
     <asciidoctorj.pdf.version>1.5.0-alpha.15</asciidoctorj.pdf.version>
     <build.helper.maven.version>3.0.0</build.helper.maven.version>
     <buildnumber.maven.version>1.4</buildnumber.maven.version>
-    <checkstyle.version>8.11</checkstyle.version>
+    <checkstyle.version>8.28</checkstyle.version>
     <exec.maven.version>1.6.0</exec.maven.version>
     <error-prone.version>2.3.3</error-prone.version>
     <findbugs-annotations>1.3.9-1</findbugs-annotations>
@@ -1526,7 +1526,7 @@
     <lifecycle.mapping.version>1.0.0</lifecycle.mapping.version>
     <maven.antrun.version>1.8</maven.antrun.version>
     <maven.bundle.version>3.3.0</maven.bundle.version>
-    <maven.checkstyle.version>3.0.0</maven.checkstyle.version>
+    <maven.checkstyle.version>3.1.0</maven.checkstyle.version>
     <maven.eclipse.version>2.10</maven.eclipse.version>
     <maven.warbucks.version>1.1.0</maven.warbucks.version>
     <maven.project.info.report.version>2.9</maven.project.info.report.version>
