@@ -16,7 +16,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
@@ -25,10 +24,10 @@ import java.util.NoSuchElementException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.NeedUnmanagedConnectionException;
 import org.apache.hadoop.hbase.client.Result;
@@ -46,11 +45,10 @@ public class RowResultGenerator extends ResultGenerator {
   public RowResultGenerator(final String tableName, final RowSpec rowspec,
       final Filter filter, final boolean cacheBlocks)
       throws IllegalArgumentException, IOException {
-    Table table = RESTServlet.getInstance().getTable(tableName);
-    try {
+    try (Table table = RESTServlet.getInstance().getTable(tableName)) {
       Get get = new Get(rowspec.getRow());
       if (rowspec.hasColumns()) {
-        for (byte[] col: rowspec.getColumns()) {
+        for (byte[] col : rowspec.getColumns()) {
           byte[][] split = KeyValue.parseColumn(col);
           if (split.length == 1) {
             get.addFamily(split[0]);
@@ -79,8 +77,6 @@ public class RowResultGenerator extends ResultGenerator {
       // help to avoid confusion by leaving a record of what happened here in
       // the log.
       LOG.warn(StringUtils.stringifyException(e));
-    } finally {
-      table.close();
     }
   }
 

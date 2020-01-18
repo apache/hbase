@@ -16,7 +16,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest.filter;
 
 import java.io.IOException;
@@ -28,8 +27,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 @InterfaceAudience.Private
-public class GZIPResponseStream extends ServletOutputStream
-{
+public class GZIPResponseStream extends ServletOutputStream {
   private HttpServletResponse response;
   private GZIPOutputStream out;
 

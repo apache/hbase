@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.rest.filter;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -36,9 +37,9 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
 
 /**
  * This filter provides protection against cross site request forgery (CSRF)
@@ -50,9 +51,7 @@ import org.apache.hadoop.conf.Configuration;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class RestCsrfPreventionFilter implements Filter {
-
-  private static final Log LOG =
-      LogFactory.getLog(RestCsrfPreventionFilter.class);
+  private static final Log LOG = LogFactory.getLog(RestCsrfPreventionFilter.class);
 
   public static final String HEADER_USER_AGENT = "User-Agent";
   public static final String BROWSER_USER_AGENT_PARAM =
@@ -68,7 +67,7 @@ public class RestCsrfPreventionFilter implements Filter {
   private Set<Pattern> browserUserAgents;
 
   @Override
-  public void init(FilterConfig filterConfig) throws ServletException {
+  public void init(FilterConfig filterConfig) {
     String customHeader = filterConfig.getInitParameter(CUSTOM_HEADER_PARAM);
     if (customHeader != null) {
       headerName = customHeader;
@@ -93,7 +92,7 @@ public class RestCsrfPreventionFilter implements Filter {
 
   void parseBrowserUserAgents(String userAgents) {
     String[] agentsArray =  userAgents.split(",");
-    browserUserAgents = new HashSet<Pattern>();
+    browserUserAgents = new HashSet<>();
     for (String patternString : agentsArray) {
       browserUserAgents.add(Pattern.compile(patternString));
     }
@@ -101,10 +100,8 @@ public class RestCsrfPreventionFilter implements Filter {
 
   void parseMethodsToIgnore(String mti) {
     String[] methods = mti.split(",");
-    methodsToIgnore = new HashSet<String>();
-    for (int i = 0; i < methods.length; i++) {
-      methodsToIgnore.add(methods[i]);
-    }
+    methodsToIgnore = new HashSet<>();
+    Collections.addAll(methodsToIgnore, methods);
   }
 
   /**
@@ -145,7 +142,6 @@ public class RestCsrfPreventionFilter implements Filter {
    * container configuration mechanisms to insert the filter.
    */
   public interface HttpInteraction {
-
     /**
      * Returns the value of a header.
      *
@@ -225,8 +221,7 @@ public class RestCsrfPreventionFilter implements Filter {
    * @return mapping of configuration properties to be used for filter
    *     initialization
    */
-  public static Map<String, String> getFilterParams(Configuration conf,
-      String confPrefix) {
+  public static Map<String, String> getFilterParams(Configuration conf, String confPrefix) {
     Map<String, String> filterConfigMap = new HashMap<>();
     for (Map.Entry<String, String> entry : conf) {
       String name = entry.getKey();
@@ -242,9 +237,7 @@ public class RestCsrfPreventionFilter implements Filter {
   /**
    * {@link HttpInteraction} implementation for use in the servlet filter.
    */
-  private static final class ServletFilterHttpInteraction
-      implements HttpInteraction {
-
+  private static final class ServletFilterHttpInteraction implements HttpInteraction {
     private final FilterChain chain;
     private final HttpServletRequest httpRequest;
     private final HttpServletResponse httpResponse;
