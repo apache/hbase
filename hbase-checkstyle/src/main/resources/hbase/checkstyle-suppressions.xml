@@ -34,4 +34,6 @@
   <suppress checks="." files=".*/generated/.*\.java"/>
   <suppress checks="." files=".*/generated-jamon/.*\.java"/>
   <suppress checks="MagicNumberCheck" files=".*Test\.java"/>
+  <!-- Will not have a private constructor, because it is InterfaceAudience.Public -->
+  <suppress checks="HideUtilityClassConstructor" files="org.apache.hadoop.hbase.util.ByteRangeUtils"/>
 </suppressions>
