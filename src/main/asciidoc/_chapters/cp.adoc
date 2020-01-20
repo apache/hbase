@@ -107,9 +107,24 @@ Therefore, the jar file must reside on the server-side HBase classpath.
 
 Coprocessors which are loaded in this way will be active on all regions of all tables.
 These are the system coprocessor introduced earlier.
-The first listed coprocessors will be assigned the priority `Coprocessor.Priority.SYSTEM`.
-Each subsequent coprocessor in the list will have its priority value incremented by one (which reduces its priority, because priorities have the natural sort order of Integers).
 
+The first listed Coprocessors will be assigned the priority `Coprocessor.Priority.SYSTEM`.
+Each subsequent coprocessor in the list will have its priority value incremented by one (which
+reduces its priority, because priorities have the natural sort order of Integers).
+
++
+These priority values can be manually overriden in hbase-site.xml. This can be useful if you
+want to guarantee that a coprocessor will execute after another. For example, in the following
+configuration `SumEndPoint` would be guaranteed to go last, except in the case of a tie with
+another coprocessor:
++
+[source,xml]
+----
+<property>
+    <name>hbase.coprocessor.region.classes</name>
+    <value>org.myname.hbase.coprocessor.endpoint.SumEndPoint|2147483647</value>
+</property>
+----
 When calling out to registered observers, the framework executes their callbacks methods in the sorted order of their priority.
 Ties are broken arbitrarily.
 

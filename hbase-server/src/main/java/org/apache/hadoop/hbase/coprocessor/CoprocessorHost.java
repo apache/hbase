@@ -148,8 +148,16 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     if (defaultCPClasses == null || defaultCPClasses.length == 0)
       return;
 
-    int priority = Coprocessor.PRIORITY_SYSTEM;
+    int currentSystemPriority = Coprocessor.PRIORITY_SYSTEM;
     for (String className : defaultCPClasses) {
+      String[] classNameAndPriority = className.split("\\|");
+      boolean hasPriorityOverride = false;
+      className = classNameAndPriority[0];
+      int overridePriority = Coprocessor.PRIORITY_SYSTEM;
+      if (classNameAndPriority.length > 1){
+        overridePriority = Integer.parseInt(classNameAndPriority[1]);
+        hasPriorityOverride = true;
+      }
       className = className.trim();
       if (findCoprocessor(className) != null) {
         // If already loaded will just continue
@@ -162,10 +170,13 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
         implClass = cl.loadClass(className);
         // Add coprocessors as we go to guard against case where a coprocessor is specified twice
         // in the configuration
-        this.coprocessors.add(loadInstance(implClass, priority, conf));
+        int coprocPriority = hasPriorityOverride ? overridePriority : currentSystemPriority;
+        this.coprocessors.add(loadInstance(implClass, coprocPriority, conf));
         LOG.info("System coprocessor " + className + " was loaded " +
-            "successfully with priority (" + priority + ").");
-        ++priority;
+            "successfully with priority (" + coprocPriority + ").");
+        if (!hasPriorityOverride) {
+          ++currentSystemPriority;
+        }
       } catch (Throwable t) {
         // We always abort if system coprocessors cannot be loaded
         abortServer(className, t);
