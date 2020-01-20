@@ -31,9 +31,7 @@ public class TestSimplePositionedMutableByteRange {
     PositionedByteRange r = new SimplePositionedMutableByteRange(new byte[5], 1, 3);
 
     // exercise single-byte put
-    r.put(Bytes.toBytes("f")[0])
-     .put(Bytes.toBytes("o")[0])
-     .put(Bytes.toBytes("o")[0]);
+    r.put(Bytes.toBytes("f")[0]).put(Bytes.toBytes("o")[0]).put(Bytes.toBytes("o")[0]);
     Assert.assertEquals(3, r.getPosition());
     Assert.assertArrayEquals(
       new byte[] { 0, Bytes.toBytes("f")[0], Bytes.toBytes("o")[0], Bytes.toBytes("o")[0], 0 },
@@ -41,9 +39,7 @@ public class TestSimplePositionedMutableByteRange {
 
     // exercise multi-byte put
     r.setPosition(0);
-    r.put(Bytes.toBytes("f"))
-     .put(Bytes.toBytes("o"))
-     .put(Bytes.toBytes("o"));
+    r.put(Bytes.toBytes("f")).put(Bytes.toBytes("o")).put(Bytes.toBytes("o"));
     Assert.assertEquals(3, r.getPosition());
     Assert.assertArrayEquals(
       new byte[] { 0, Bytes.toBytes("f")[0], Bytes.toBytes("o")[0], Bytes.toBytes("o")[0], 0 },
@@ -69,7 +65,7 @@ public class TestSimplePositionedMutableByteRange {
   }
 
   @Test
-  public void testPutAndGetPrimitiveTypes() throws Exception {
+  public void testPutAndGetPrimitiveTypes() {
     PositionedByteRange pbr = new SimplePositionedMutableByteRange(100);
     int i1 = 18, i2 = 2;
     short s1 = 0;
@@ -95,7 +91,7 @@ public class TestSimplePositionedMutableByteRange {
   }
 
   @Test
-  public void testPutGetAPIsCompareWithBBAPIs() throws Exception {
+  public void testPutGetAPIsCompareWithBBAPIs() {
     // confirm that the long/int/short writing is same as BBs
     PositionedByteRange pbr = new SimplePositionedMutableByteRange(100);
     int i1 = -234, i2 = 2;

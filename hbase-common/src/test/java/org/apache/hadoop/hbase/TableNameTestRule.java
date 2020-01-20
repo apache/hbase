@@ -15,22 +15,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.util;
+package org.apache.hadoop.hbase;
+
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
 
 /**
- * Used by tests to inject an edge into the manager. The intent is to minimise
- * the use of the injectEdge method giving it default permissions, but in
- * testing we may need to use this functionality elsewhere.
+ * Returns a {@code TableName} based on currently running test method name.
  */
-public final class EnvironmentEdgeManagerTestHelper {
-  private EnvironmentEdgeManagerTestHelper() {
+public class TableNameTestRule extends TestWatcher {
+
+  private TableName tableName;
+
+  @Override
+  protected void starting(Description description) {
+    tableName = TableName.valueOf(description.getMethodName());
   }
 
-  public static void reset() {
-    EnvironmentEdgeManager.reset();
-  }
-
-  public static void injectEdge(EnvironmentEdge edge) {
-    EnvironmentEdgeManager.injectEdge(edge);
+  public TableName getTableName() {
+    return tableName;
   }
 }

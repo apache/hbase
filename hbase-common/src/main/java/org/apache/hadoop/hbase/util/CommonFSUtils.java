@@ -44,10 +44,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.ipc.RemoteException;
 
 /**
  * Utility methods for interacting with the underlying file system.
@@ -137,8 +137,7 @@ public abstract class CommonFSUtils {
    * @return True if deleted <code>dir</code>
    * @throws IOException e
    */
-  public static boolean deleteDirectory(final FileSystem fs, final Path dir)
-  throws IOException {
+  public static boolean deleteDirectory(final FileSystem fs, final Path dir) throws IOException {
     return fs.exists(dir) && fs.delete(dir, true);
   }
 
@@ -146,69 +145,22 @@ public abstract class CommonFSUtils {
    * Return the number of bytes that large input files should be optimally
    * be split into to minimize i/o time.
    *
-   * use reflection to search for getDefaultBlockSize(Path f)
-   * if the method doesn't exist, fall back to using getDefaultBlockSize()
-   *
    * @param fs filesystem object
    * @return the default block size for the path's filesystem
-   * @throws IOException e
    */
-  public static long getDefaultBlockSize(final FileSystem fs, final Path path) throws IOException {
-    Method m = null;
-    Class<? extends FileSystem> cls = fs.getClass();
-    try {
-      m = cls.getMethod("getDefaultBlockSize", new Class<?>[] { Path.class });
-    } catch (NoSuchMethodException e) {
-      LOG.info("FileSystem doesn't support getDefaultBlockSize");
-    } catch (SecurityException e) {
-      LOG.info("Doesn't have access to getDefaultBlockSize on FileSystems", e);
-      m = null; // could happen on setAccessible()
-    }
-    if (m == null) {
-      return fs.getDefaultBlockSize(path);
-    } else {
-      try {
-        Object ret = m.invoke(fs, path);
-        return ((Long)ret).longValue();
-      } catch (Exception e) {
-        throw new IOException(e);
-      }
-    }
+  public static long getDefaultBlockSize(final FileSystem fs, final Path path) {
+    return fs.getDefaultBlockSize(path);
   }
 
   /*
    * Get the default replication.
    *
-   * use reflection to search for getDefaultReplication(Path f)
-   * if the method doesn't exist, fall back to using getDefaultReplication()
-   *
    * @param fs filesystem object
    * @param f path of file
    * @return default replication for the path's filesystem
-   * @throws IOException e
    */
-  public static short getDefaultReplication(final FileSystem fs, final Path path)
-      throws IOException {
-    Method m = null;
-    Class<? extends FileSystem> cls = fs.getClass();
-    try {
-      m = cls.getMethod("getDefaultReplication", new Class<?>[] { Path.class });
-    } catch (NoSuchMethodException e) {
-      LOG.info("FileSystem doesn't support getDefaultReplication");
-    } catch (SecurityException e) {
-      LOG.info("Doesn't have access to getDefaultReplication on FileSystems", e);
-      m = null; // could happen on setAccessible()
-    }
-    if (m == null) {
-      return fs.getDefaultReplication(path);
-    } else {
-      try {
-        Object ret = m.invoke(fs, path);
-        return ((Number)ret).shortValue();
-      } catch (Exception e) {
-        throw new IOException(e);
-      }
-    }
+  public static short getDefaultReplication(final FileSystem fs, final Path path) {
+    return fs.getDefaultReplication(path);
   }
 
   /**
@@ -358,11 +310,11 @@ public abstract class CommonFSUtils {
     return p.makeQualified(fs);
   }
 
-  public static void setRootDir(final Configuration c, final Path root) throws IOException {
+  public static void setRootDir(final Configuration c, final Path root) {
     c.set(HConstants.HBASE_DIR, root.toString());
   }
 
-  public static void setFsDefault(final Configuration c, final Path root) throws IOException {
+  public static void setFsDefault(final Configuration c, final Path root) {
     c.set("fs.defaultFS", root.toString());    // for hadoop 0.21+
   }
 
@@ -387,7 +339,7 @@ public abstract class CommonFSUtils {
   }
 
   @VisibleForTesting
-  public static void setWALRootDir(final Configuration c, final Path root) throws IOException {
+  public static void setWALRootDir(final Configuration c, final Path root) {
     c.set(HBASE_WAL_DIR, root.toString());
   }
 
@@ -481,8 +433,7 @@ public abstract class CommonFSUtils {
     setStoragePolicy(fs, path, storagePolicy);
   }
 
-  private static final Map<FileSystem, Boolean> warningMap =
-      new ConcurrentHashMap<FileSystem, Boolean>();
+  private static final Map<FileSystem, Boolean> warningMap = new ConcurrentHashMap<>();
 
   /**
    * Sets storage policy for given path.
@@ -557,70 +508,42 @@ public abstract class CommonFSUtils {
    */
   private static void invokeSetStoragePolicy(final FileSystem fs, final Path path,
       final String storagePolicy) throws IOException {
-    Method m = null;
     Exception toThrow = null;
+
     try {
-      m = fs.getClass().getDeclaredMethod("setStoragePolicy",
-        new Class<?>[] { Path.class, String.class });
-      m.setAccessible(true);
-    } catch (NoSuchMethodException e) {
+      fs.setStoragePolicy(path, storagePolicy);
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Set storagePolicy=" + storagePolicy + " for path=" + path);
+      }
+    } catch (Exception e) {
       toThrow = e;
-      final String msg = "FileSystem doesn't support setStoragePolicy; HDFS-6584 not available";
+      // This swallows FNFE, should we be throwing it? seems more likely to indicate dev
+      // misuse than a runtime problem with HDFS.
       if (!warningMap.containsKey(fs)) {
         warningMap.put(fs, true);
-        LOG.warn(msg, e);
+        LOG.warn("Unable to set storagePolicy=" + storagePolicy + " for path=" + path, e);
       } else if (LOG.isDebugEnabled()) {
-        LOG.debug(msg, e);
+        LOG.debug("Unable to set storagePolicy=" + storagePolicy + " for path=" + path, e);
       }
-      m = null;
-    } catch (SecurityException e) {
-      toThrow = e;
-      final String msg = "No access to setStoragePolicy on FileSystem; HDFS-6584 not available";
-      if (!warningMap.containsKey(fs)) {
-        warningMap.put(fs, true);
-        LOG.warn(msg, e);
-      } else if (LOG.isDebugEnabled()) {
-        LOG.debug(msg, e);
-      }
-      m = null; // could happen on setAccessible()
-    }
-    if (m != null) {
-      try {
-        m.invoke(fs, path, storagePolicy);
+
+      // check for lack of HDFS-7228
+      if (e instanceof RemoteException &&
+          HadoopIllegalArgumentException.class.getName().equals(
+            ((RemoteException)e).getClassName())) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Set storagePolicy=" + storagePolicy + " for path=" + path);
-        }
-      } catch (Exception e) {
-        toThrow = e;
-        // This swallows FNFE, should we be throwing it? seems more likely to indicate dev
-        // misuse than a runtime problem with HDFS.
-        if (!warningMap.containsKey(fs)) {
-          warningMap.put(fs, true);
-          LOG.warn("Unable to set storagePolicy=" + storagePolicy + " for path=" + path, e);
-        } else if (LOG.isDebugEnabled()) {
-          LOG.debug("Unable to set storagePolicy=" + storagePolicy + " for path=" + path, e);
-        }
-        // check for lack of HDFS-7228
-        if (e instanceof InvocationTargetException) {
-          final Throwable exception = e.getCause();
-          if (exception instanceof RemoteException &&
-              HadoopIllegalArgumentException.class.getName().equals(
-                ((RemoteException)exception).getClassName())) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Given storage policy, '" +storagePolicy +"', was rejected and probably " +
-                "isn't a valid policy for the version of Hadoop you're running. I.e. if you're " +
-                "trying to use SSD related policies then you're likely missing HDFS-7228. For " +
-                "more information see the 'ArchivalStorage' docs for your Hadoop release.");
-            }
-          }
+          LOG.debug("Given storage policy, '" +storagePolicy +"', was rejected and probably " +
+            "isn't a valid policy for the version of Hadoop you're running. I.e. if you're " +
+            "trying to use SSD related policies then you're likely missing HDFS-7228. For " +
+            "more information see the 'ArchivalStorage' docs for your Hadoop release.");
         }
       }
     }
+
     if (toThrow != null) {
       throw new IOException(toThrow);
     }
   }
-
 
   /**
    * @param conf must not be null
@@ -647,8 +570,7 @@ public abstract class CommonFSUtils {
    * @return Returns the filesystem of the hbase rootdir.
    * @throws IOException from underlying FileSystem
    */
-  public static FileSystem getCurrentFileSystem(Configuration conf)
-  throws IOException {
+  public static FileSystem getCurrentFileSystem(Configuration conf) throws IOException {
     return getRootDir(conf).getFileSystem(conf);
   }
 
@@ -666,7 +588,7 @@ public abstract class CommonFSUtils {
    * @param filter path filter
    * @return null if dir is empty or doesn't exist, otherwise FileStatus array
    */
-  public static FileStatus [] listStatus(final FileSystem fs,
+  public static FileStatus[] listStatus(final FileSystem fs,
       final Path dir, final PathFilter filter) throws IOException {
     FileStatus [] status = null;
     try {
@@ -753,13 +675,13 @@ public abstract class CommonFSUtils {
    * Log the current state of the filesystem from a certain root directory
    * @param fs filesystem to investigate
    * @param root root file/directory to start logging from
-   * @param LOG log to output information
+   * @param log log to output information
    * @throws IOException if an unexpected exception occurs
    */
-  public static void logFileSystemState(final FileSystem fs, final Path root, Log LOG)
+  public static void logFileSystemState(final FileSystem fs, final Path root, Log log)
       throws IOException {
-    LOG.debug("Current file system:");
-    logFSTree(LOG, fs, root, "|-");
+    log.debug("Current file system:");
+    logFSTree(log, fs, root, "|-");
   }
 
   /**
@@ -767,7 +689,7 @@ public abstract class CommonFSUtils {
    *
    * @see #logFileSystemState(FileSystem, Path, Log)
    */
-  private static void logFSTree(Log LOG, final FileSystem fs, final Path root, String prefix)
+  private static void logFSTree(Log log, final FileSystem fs, final Path root, String prefix)
       throws IOException {
     FileStatus[] files = listStatus(fs, root, null);
     if (files == null) {
@@ -776,10 +698,10 @@ public abstract class CommonFSUtils {
 
     for (FileStatus file : files) {
       if (file.isDirectory()) {
-        LOG.debug(prefix + file.getPath().getName() + "/");
-        logFSTree(LOG, fs, file.getPath(), prefix + "---");
+        log.debug(prefix + file.getPath().getName() + "/");
+        logFSTree(log, fs, file.getPath(), prefix + "---");
       } else {
-        LOG.debug(prefix + file.getPath().getName());
+        log.debug(prefix + file.getPath().getName());
       }
     }
   }
@@ -789,25 +711,6 @@ public abstract class CommonFSUtils {
     // set the modify time for TimeToLive Cleaner
     fs.setTimes(src, EnvironmentEdgeManager.currentTime(), -1);
     return fs.rename(src, dest);
-  }
-
-  /**
-   * Do our short circuit read setup.
-   * Checks buffer size to use and whether to do checksumming in hbase or hdfs.
-   * @param conf must not be null
-   */
-  public static void setupShortCircuitRead(final Configuration conf) {
-    // Check that the user has not set the "dfs.client.read.shortcircuit.skip.checksum" property.
-    boolean shortCircuitSkipChecksum =
-      conf.getBoolean("dfs.client.read.shortcircuit.skip.checksum", false);
-    boolean useHBaseChecksum = conf.getBoolean(HConstants.HBASE_CHECKSUM_VERIFICATION, true);
-    if (shortCircuitSkipChecksum) {
-      LOG.warn("Configuration \"dfs.client.read.shortcircuit.skip.checksum\" should not " +
-        "be set to true." + (useHBaseChecksum ? " HBase checksum doesn't require " +
-        "it, see https://issues.apache.org/jira/browse/HBASE-6868." : ""));
-      assert !shortCircuitSkipChecksum; //this will fail if assertions are on
-    }
-    checkShortCircuitReadBufferSize(conf);
   }
 
   /**
@@ -912,5 +815,4 @@ public abstract class CommonFSUtils {
       super(message);
     }
   }
-
 }

@@ -34,7 +34,6 @@ import org.mortbay.jetty.servlet.ServletHolder;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 
 public class HBaseRESTTestingUtility {
-
   private static final Log LOG = LogFactory.getLog(HBaseRESTTestingUtility.class);
 
   private int testServletPort;
@@ -62,7 +61,7 @@ public class HBaseRESTTestingUtility {
       "jetty");
 
     LOG.info("configured " + ServletContainer.class.getName());
-    
+
     // set up Jetty and run the embedded server
     server = new Server(0);
     server.setSendServerVersion(false);
@@ -86,17 +85,19 @@ public class HBaseRESTTestingUtility {
       // get the port
     testServletPort = server.getConnectors()[0].getLocalPort();
 
-    LOG.info("started " + server.getClass().getName() + " on port " + 
+    LOG.info("started " + server.getClass().getName() + " on port " +
       testServletPort);
   }
 
   public void shutdownServletContainer() {
-    if (server != null) try {
-      server.stop();
-      server = null;
-      RESTServlet.stop();
-    } catch (Exception e) {
-      LOG.warn(StringUtils.stringifyException(e));
+    if (server != null) {
+      try {
+        server.stop();
+        server = null;
+        RESTServlet.stop();
+      } catch (Exception e) {
+        LOG.warn(StringUtils.stringifyException(e));
+      }
     }
   }
 }

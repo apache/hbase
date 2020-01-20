@@ -43,7 +43,7 @@ public class SpanReceiverHost {
   private boolean closed = false;
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="SE_BAD_FIELD")
-  private static enum SingletonHolder {
+  private enum SingletonHolder {
     INSTANCE;
     final Object lock = new Object();
     SpanReceiverHost host = null; // FindBugs: SE_BAD_FIELD
@@ -64,14 +64,13 @@ public class SpanReceiverHost {
   }
 
   SpanReceiverHost(Configuration conf) {
-    receivers = new HashSet<SpanReceiver>();
+    receivers = new HashSet<>();
     this.conf = conf;
   }
 
   /**
    * Reads the names of classes specified in the {@code hbase.trace.spanreceiver.classes} property
    * and instantiates and registers them with the Tracer.
-   *
    */
   public void loadSpanReceivers() {
     String[] receiverNames = conf.getStrings(SPAN_RECEIVERS_CONF_KEY);
@@ -98,7 +97,10 @@ public class SpanReceiverHost {
    * Calls close() on all SpanReceivers created by this SpanReceiverHost.
    */
   public synchronized void closeReceivers() {
-    if (closed) return;
+    if (closed) {
+      return;
+    }
+
     closed = true;
     for (SpanReceiver rcvr : receivers) {
       try {
