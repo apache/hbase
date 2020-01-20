@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -115,17 +116,17 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   private boolean isSerial = false;
 
   /*
-   * Some implementations of HBaseInterClusterReplicationEndpoint may require instantiate different
-   * Connection implementations, or initialize it in a different way, so defining createConnection
-   * as protected for possible overridings.
+   * Some implementations of HBaseInterClusterReplicationEndpoint may require instantiating
+   * different Connection implementations, or initialize it in a different way,
+   * so defining createConnection as protected for possible overridings.
    */
   protected Connection createConnection(Configuration conf) throws IOException {
     return ConnectionFactory.createConnection(conf);
   }
 
   /*
-   * Some implementations of HBaseInterClusterReplicationEndpoint may require instantiate different
-   * ReplicationSinkManager implementations, or initialize it in a different way,
+   * Some implementations of HBaseInterClusterReplicationEndpoint may require instantiating
+   * different ReplicationSinkManager implementations, or initialize it in a different way,
    * so defining createReplicationSinkManager as protected for possible overridings.
    */
   protected ReplicationSinkManager createReplicationSinkManager(Connection conn) {
@@ -152,7 +153,11 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     // TODO: This connection is replication specific or we should make it particular to
     // replication and make replication specific settings such as compression or codec to use
     // passing Cells.
-    this.conn = (ClusterConnection) createConnection(this.conf);
+    Connection connection = createConnection(this.conf);
+    //Since createConnection method may be overridden by extending classes, we need to make sure
+    //it's indeed returning a ClusterConnection instance.
+    Preconditions.checkState(connection instanceof ClusterConnection);
+    this.conn = (ClusterConnection) connection;
     this.sleepForRetries =
         this.conf.getLong("replication.source.sleepforretries", 1000);
     this.metrics = context.getMetrics();
