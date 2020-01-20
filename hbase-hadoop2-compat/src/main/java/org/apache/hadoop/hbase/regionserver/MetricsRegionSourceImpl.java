@@ -51,6 +51,16 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
   private final String regionIncrementKey;
   private final String regionAppendKey;
   private final String regionScanKey;
+  private final String regionSentBytesKey;
+  private final String regionReceivedBytesKey;
+  private final String regionGetBytesKey;
+  private final String regionPutBytesKey;
+  private final String regionScanBytesKey;
+  private final String regionDeleteBytesKey;
+  private final String regionIncrementBytesKey;
+  private final String regionAppendBytesKey;
+  private final String regionBulkLoadBytesKey;
+
 
   /*
    * Implementation note: Do not put histograms per region. With hundreds of regions in a server
@@ -62,6 +72,15 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
   private final MutableFastCounter regionAppend;
   private final MutableFastCounter regionGet;
   private final MutableFastCounter regionScan;
+  private final MutableFastCounter regionSentBytes;
+  private final MutableFastCounter regionReceivedBytes;
+  private final MutableFastCounter regionGetBytes;
+  private final MutableFastCounter regionPutBytes;
+  private final MutableFastCounter regionScanBytes;
+  private final MutableFastCounter regionDeleteBytes;
+  private final MutableFastCounter regionIncrementBytes;
+  private final MutableFastCounter regionAppendBytes;
+  private final MutableFastCounter regionBulkLoadBytes;
 
   private final int hashCode;
 
@@ -101,6 +120,34 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
 
     regionScanKey = regionNamePrefix + MetricsRegionServerSource.SCAN_KEY + suffix;
     regionScan = registry.getCounter(regionScanKey, 0L);
+
+    regionSentBytesKey = regionNamePrefix + MetricsRegionServerSource.SENT_BYTES_KEY;
+    regionSentBytes = registry.getCounter(regionSentBytesKey, 0L);
+
+    regionReceivedBytesKey = regionNamePrefix + MetricsRegionServerSource.RECEIVED_BYTES_KEY;
+    regionReceivedBytes = registry.getCounter(regionReceivedBytesKey, 0L);
+
+    regionGetBytesKey = regionNamePrefix + MetricsRegionServerSource.GET_BYTES_KEY;
+    regionGetBytes = registry.getCounter(regionGetBytesKey, 0L);
+
+    regionPutBytesKey = regionNamePrefix + MetricsRegionServerSource.PUT_BYTES_KEY;
+    regionPutBytes = registry.getCounter(regionPutBytesKey, 0L);
+
+    regionScanBytesKey = regionNamePrefix + MetricsRegionServerSource.SCAN_BYTES_KEY;
+    regionScanBytes = registry.getCounter(regionScanBytesKey, 0L);
+
+    regionDeleteBytesKey = regionNamePrefix + MetricsRegionServerSource.DELETE_BYTES_KEY;
+    regionDeleteBytes = registry.getCounter(regionDeleteBytesKey, 0L);
+
+    regionIncrementBytesKey = regionNamePrefix + MetricsRegionServerSource.INCREMENT_BYTES_KEY;
+    regionIncrementBytes = registry.getCounter(regionIncrementBytesKey, 0L);
+
+    regionAppendBytesKey = regionNamePrefix + MetricsRegionServerSource.APPEND_BYTES_KEY;
+    regionAppendBytes = registry.getCounter(regionAppendBytesKey, 0L);
+
+    regionBulkLoadBytesKey = regionNamePrefix + MetricsRegionServerSource.BULKLOAD_BYTES_KEY;
+    regionBulkLoadBytes = registry.getCounter(regionBulkLoadBytesKey, 0L);
+
   }
 
   @Override
@@ -129,6 +176,16 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
       registry.removeMetric(regionAppendKey);
       registry.removeMetric(regionGetKey);
       registry.removeMetric(regionScanKey);
+
+      registry.removeMetric(regionSentBytesKey);
+      registry.removeMetric(regionReceivedBytesKey);
+      registry.removeMetric(regionGetBytesKey);
+      registry.removeMetric(regionPutBytesKey);
+      registry.removeMetric(regionScanBytesKey);
+      registry.removeMetric(regionDeleteBytesKey);
+      registry.removeMetric(regionIncrementBytesKey);
+      registry.removeMetric(regionAppendBytesKey);
+      registry.removeMetric(regionBulkLoadBytesKey);
 
       regionWrapper = null;
     }
@@ -162,6 +219,51 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
   @Override
   public void updateAppend() {
     regionAppend.incr();
+  }
+
+  @Override
+  public void updateSentBytes(long size) {
+    regionSentBytes.incr(size);
+  }
+
+  @Override
+  public void updateReceivedBytes(long size) {
+    regionReceivedBytes.incr(size);
+  }
+
+  @Override
+  public void updateGetBytes(long size) {
+    regionGetBytes.incr(size);
+  }
+
+  @Override
+  public void updatePutBytes(long size) {
+    regionPutBytes.incr(size);
+  }
+
+  @Override
+  public void updateScanBytes(long size) {
+    regionScanBytes.incr(size);
+  }
+
+  @Override
+  public void updateDeleteBytes(long size) {
+    regionDeleteBytes.incr(size);
+  }
+
+  @Override
+  public void updateIncrementBytes(long size) {
+    regionIncrementBytes.incr(size);
+  }
+
+  @Override
+  public void updateAppendBytes(long size) {
+    regionAppendBytes.incr(size);
+  }
+
+  @Override
+  public void updateBulkLoadBytes(long size) {
+    regionBulkLoadBytes.incr(size);
   }
 
   @Override

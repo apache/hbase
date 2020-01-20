@@ -91,6 +91,51 @@ public interface MetricsRegionSource extends Comparable<MetricsRegionSource> {
   void updateAppend();
 
   /**
+   * Update related bytes of all sent.
+   */
+  void updateSentBytes(long size);
+
+  /**
+   * Update related bytes of all received.
+   */
+  void updateReceivedBytes(long size);
+
+  /**
+   * Update related bytes of gets.
+   */
+  void updateGetBytes(long size);
+
+  /**
+   * Update related bytes of puts.
+   */
+  void updatePutBytes(long size);
+
+  /**
+   * Update related bytes of scans.
+   */
+  void updateScanBytes(long size);
+
+  /**
+   * Update related bytes of deletes.
+   */
+  void updateDeleteBytes(long size);
+
+  /**
+   * Update related bytes of increments.
+   */
+  void updateIncrementBytes(long size);
+
+  /**
+   * Update related bytes of appends.
+   */
+  void updateAppendBytes(long size);
+
+  /**
+   * Update related bytes of bulkloads.
+   */
+  void updateBulkLoadBytes(long size);
+
+  /**
    * Get the aggregate source to which this reports.
    */
   MetricsRegionAggregateSource getAggregateSource();
