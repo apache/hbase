@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -29,33 +29,24 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.FSVisitor;
-import org.apache.hadoop.hbase.util.TestTableName;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 @Category(LargeTests.class)
 public class TestScannerRetriableFailure {
@@ -66,7 +57,7 @@ public class TestScannerRetriableFailure {
   private static final String FAMILY_NAME_STR = "f";
   private static final byte[] FAMILY_NAME = Bytes.toBytes(FAMILY_NAME_STR);
 
-  @Rule public TestTableName TEST_TABLE = new TestTableName();
+  @Rule public TableNameTestRule testTable = new TableNameTestRule();
 
   public static class FaultyScannerObserver extends BaseRegionObserver {
     private int faults = 0;
@@ -109,7 +100,7 @@ public class TestScannerRetriableFailure {
 
   @Test(timeout=180000)
   public void testFaultyScanner() throws Exception {
-    TableName tableName = TEST_TABLE.getTableName();
+    TableName tableName = testTable.getTableName();
     Table table = UTIL.createTable(tableName, FAMILY_NAME);
     try {
       final int NUM_ROWS = 100;
@@ -158,7 +149,9 @@ public class TestScannerRetriableFailure {
 
       while (true) {
         Result result = scanner.next();
-        if (result == null) break;
+        if (result == null) {
+          break;
+        }
         count++;
       }
       assertEquals(numRows, count);

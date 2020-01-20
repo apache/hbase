@@ -15,8 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
+
+import com.google.common.collect.Lists;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -26,19 +27,18 @@ import java.util.Collection;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 
-import com.google.common.collect.Lists;
-
 /**
  * Utility methods for working with {@link ByteRange}.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class ByteRangeUtils {
-
   public static int numEqualPrefixBytes(ByteRange left, ByteRange right, int rightInnerOffset) {
     int maxCompares = Math.min(left.getLength(), right.getLength() - rightInnerOffset);
-    final byte[] lbytes = left.getBytes(), rbytes = right.getBytes();
-    final int loffset = left.getOffset(), roffset = right.getOffset();
+    final byte[] lbytes = left.getBytes();
+    final byte[] rbytes = right.getBytes();
+    final int loffset = left.getOffset();
+    final int roffset = right.getOffset();
     for (int i = 0; i < maxCompares; ++i) {
       if (lbytes[loffset + i] != rbytes[roffset + rightInnerOffset + i]) {
         return i;
@@ -49,7 +49,7 @@ public class ByteRangeUtils {
 
   public static ArrayList<byte[]> copyToNewArrays(Collection<ByteRange> ranges) {
     if (ranges == null) {
-      return new ArrayList<byte[]>(0);
+      return new ArrayList<>(0);
     }
     ArrayList<byte[]> arrays = Lists.newArrayListWithCapacity(ranges.size());
     for (ByteRange range : ranges) {
@@ -60,7 +60,7 @@ public class ByteRangeUtils {
 
   public static ArrayList<ByteRange> fromArrays(Collection<byte[]> arrays) {
     if (arrays == null) {
-      return new ArrayList<ByteRange>(0);
+      return new ArrayList<>(0);
     }
     ArrayList<ByteRange> ranges = Lists.newArrayListWithCapacity(arrays.size());
     for (byte[] array : arrays) {
@@ -78,5 +78,4 @@ public class ByteRangeUtils {
     os.write(byteRange.getBytes(), byteRange.getOffset() + byteRangeInnerOffset,
       byteRange.getLength() - byteRangeInnerOffset);
   }
-
 }
