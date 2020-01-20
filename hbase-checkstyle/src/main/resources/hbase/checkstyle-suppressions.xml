@@ -36,4 +36,6 @@
   <suppress checks="MagicNumberCheck" files=".*Test\.java"/>
   <!-- Will not have a private constructor, because it is InterfaceAudience.Public -->
   <suppress checks="HideUtilityClassConstructor" files="org.apache.hadoop.hbase.util.ByteRangeUtils"/>
+  <suppress checks="InnerAssignment" files="org.apache.hadoop.hbase.rest.PerformanceEvaluation"/>
+  <suppress checks="EmptyBlock" files="org.apache.hadoop.hbase.rest.PerformanceEvaluation"/>
 </suppressions>
