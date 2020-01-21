@@ -616,7 +616,6 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
         try {
           WALEntryBatch entryBatch = entryReader.take();
           shipEdits(entryBatch);
-          releaseBufferQuota((int) entryBatch.getHeapSize());
           if (!entryBatch.hasMoreEntries()) {
             LOG.debug("Finished recovering queue for group "
                     + walGroupId + " of peer " + peerClusterZnode);
@@ -777,6 +776,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
           if (throttler.isEnabled()) {
             throttler.addPushSize(sizeExcludeBulkLoad);
           }
+          releaseBufferQuota(sizeExcludeBulkLoad);
           totalReplicatedEdits.addAndGet(entries.size());
           totalReplicatedOperations.addAndGet(entryBatch.getNbOperations());
           // FIXME check relationship between wal group and overall
