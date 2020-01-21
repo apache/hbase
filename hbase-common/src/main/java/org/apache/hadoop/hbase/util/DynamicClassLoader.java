@@ -25,11 +25,11 @@ import java.util.HashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * This is a class loader that can load classes dynamically from new
@@ -90,8 +90,7 @@ public class DynamicClassLoader extends ClassLoaderBase {
    * @param conf the configuration for the cluster.
    * @param parent the parent ClassLoader to set.
    */
-  public DynamicClassLoader(
-      final Configuration conf, final ClassLoader parent) {
+  public DynamicClassLoader(final Configuration conf, final ClassLoader parent) {
     super(parent);
 
     // Save off the user's original configuration value for the DynamicClassLoader
@@ -116,7 +115,7 @@ public class DynamicClassLoader extends ClassLoaderBase {
   // FindBugs: Making synchronized to avoid IS2_INCONSISTENT_SYNC complaints about
   // remoteDirFs and jarModifiedTime being part synchronized protected.
   private synchronized void initTempDir(final Configuration conf) {
-    jarModifiedTime = new HashMap<String, Long>();
+    jarModifiedTime = new HashMap<>();
     String localDirPath = conf.get(
       LOCAL_DIR_KEY, DEFAULT_LOCAL_DIR) + DYNAMIC_JARS_DIR;
     localDir = new File(localDirPath);
@@ -158,38 +157,40 @@ public class DynamicClassLoader extends ClassLoaderBase {
     }
   }
 
-
-  private Class<?> tryRefreshClass(String name)
-      throws ClassNotFoundException {
+  private Class<?> tryRefreshClass(String name) throws ClassNotFoundException {
     synchronized (getClassLoadingLock(name)) {
-        // Check whether the class has already been loaded:
-        Class<?> clasz = findLoadedClass(name);
-        if (clasz != null) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Class " + name + " already loaded");
-          }
-        }
-        else {
-          try {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Finding class: " + name);
-            }
-            clasz = findClass(name);
-          } catch (ClassNotFoundException cnfe) {
-            // Load new jar files if any
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Loading new jar files, if any");
-            }
-            loadNewJars();
+      // Check whether the class has already been loaded:
+      Class<?> clasz = findLoadedClass(name);
 
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Finding class again: " + name);
-            }
-            clasz = findClass(name);
-          }
+      if (clasz != null) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Class " + name + " already loaded");
         }
-        return clasz;
+      } else {
+        try {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Finding class: " + name);
+          }
+
+          clasz = findClass(name);
+        } catch (ClassNotFoundException cnfe) {
+          // Load new jar files if any
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Loading new jar files, if any");
+          }
+
+          loadNewJars();
+
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Finding class again: " + name);
+          }
+
+          clasz = findClass(name);
+        }
       }
+
+      return clasz;
+    }
   }
 
   private synchronized void loadNewJars() {
@@ -202,7 +203,7 @@ public class DynamicClassLoader extends ClassLoaderBase {
           continue;
         }
         if (file.isFile() && fileName.endsWith(".jar")) {
-          jarModifiedTime.put(fileName, Long.valueOf(file.lastModified()));
+          jarModifiedTime.put(fileName, file.lastModified());
           try {
             URL url = file.toURI().toURL();
             addURL(url);
@@ -228,7 +229,10 @@ public class DynamicClassLoader extends ClassLoaderBase {
     }
 
     for (FileStatus status: statuses) {
-      if (status.isDirectory()) continue; // No recursive lookup
+      if (status.isDirectory()) {
+        continue; // No recursive lookup
+      }
+
       Path path = status.getPath();
       String fileName = path.getName();
       if (!fileName.endsWith(".jar")) {
@@ -240,7 +244,7 @@ public class DynamicClassLoader extends ClassLoaderBase {
       Long cachedLastModificationTime = jarModifiedTime.get(fileName);
       if (cachedLastModificationTime != null) {
         long lastModified = status.getModificationTime();
-        if (lastModified < cachedLastModificationTime.longValue()) {
+        if (lastModified < cachedLastModificationTime) {
           // There could be some race, for example, someone uploads
           // a new one right in the middle the old one is copied to
           // local. We can check the size as well. But it is still
@@ -255,7 +259,7 @@ public class DynamicClassLoader extends ClassLoaderBase {
         // Copy it to local
         File dst = new File(localDir, fileName);
         remoteDirFs.copyToLocalFile(path, new Path(dst.getPath()));
-        jarModifiedTime.put(fileName, Long.valueOf(dst.lastModified()));
+        jarModifiedTime.put(fileName, dst.lastModified());
         URL url = dst.toURI().toURL();
         addURL(url);
       } catch (IOException ioe) {
