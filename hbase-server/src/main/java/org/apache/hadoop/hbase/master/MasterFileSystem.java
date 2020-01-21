@@ -148,7 +148,6 @@ public class MasterFileSystem {
       HConstants.HREGION_LOGDIR_NAME,
       HConstants.HREGION_OLDLOGDIR_NAME,
       HConstants.CORRUPT_DIR_NAME,
-      WALProcedureStore.MASTER_PROCEDURE_LOGDIR,
       ReplicationUtils.REMOTE_WAL_DIR_NAME
     };
     // check if the root directory exists
