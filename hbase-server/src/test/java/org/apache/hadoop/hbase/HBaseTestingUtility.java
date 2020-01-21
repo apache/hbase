@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -490,17 +490,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   private Path getBaseTestDirOnTestFS() throws IOException {
     FileSystem fs = getTestFileSystem();
     return new Path(fs.getWorkingDirectory(), "test-data");
-  }
-
-  /**
-   * @return META table descriptor
-   */
-  public TableDescriptorBuilder getMetaTableDescriptorBuilder() {
-    try {
-      return FSTableDescriptors.createMetaTableDescriptorBuilder(conf);
-    } catch (IOException e) {
-      throw new RuntimeException("Unable to create META table descriptor", e);
-    }
   }
 
   /**

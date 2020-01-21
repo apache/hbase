@@ -36,17 +36,20 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -88,11 +91,11 @@ public class TestGetClosestAtOrBefore  {
     FileSystem filesystem = FileSystem.get(conf);
     Path rootdir = UTIL.getDataTestDirOnTestFS();
     // Up flush size else we bind up when we use default catalog flush of 16k.
-    TableDescriptorBuilder metaBuilder = UTIL.getMetaTableDescriptorBuilder()
-            .setMemStoreFlushSize(64 * 1024 * 1024);
-
+    TableDescriptors tds = new FSTableDescriptors(UTIL.getConfiguration());
+    TableDescriptor td = tds.get(TableName.META_TABLE_NAME);
+    td = TableDescriptorBuilder.newBuilder(td).setMemStoreFlushSize(64 * 1024 * 1024).build();
     HRegion mr = HBaseTestingUtility.createRegionAndWAL(HRegionInfo.FIRST_META_REGIONINFO,
-        rootdir, this.conf, metaBuilder.build());
+        rootdir, this.conf, td);
     try {
       // Write rows for three tables 'A', 'B', and 'C'.
       for (char c = 'A'; c < 'D'; c++) {
