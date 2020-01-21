@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.security.provider;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.Optional;
 import java.util.ServiceLoader;
@@ -120,9 +121,10 @@ public final class SaslServerAuthenticationProviders {
 
       try {
         SaslServerAuthenticationProvider provider =
-            (SaslServerAuthenticationProvider) clz.newInstance();
+            (SaslServerAuthenticationProvider) clz.getConstructor().newInstance();
         addProviderIfNotExists(provider, providers);
-      } catch (InstantiationException | IllegalAccessException e) {
+      } catch (InstantiationException | IllegalAccessException | NoSuchMethodException
+          | InvocationTargetException e) {
         LOG.warn("Failed to instantiate {}", clz, e);
       }
     }
