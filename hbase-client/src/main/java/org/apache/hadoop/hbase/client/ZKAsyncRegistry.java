@@ -196,7 +196,7 @@ class ZKAsyncRegistry implements AsyncRegistry {
     addListener(
       zk.list(znodePaths.baseZNode)
         .thenApply(children -> children.stream()
-          .filter(c -> c.startsWith(znodePaths.metaZNodePrefix)).collect(Collectors.toList())),
+          .filter(c -> this.znodePaths.isMetaZNodePrefix(c)).collect(Collectors.toList())),
       (metaReplicaZNodes, error) -> {
         if (error != null) {
           future.completeExceptionally(error);
