@@ -143,8 +143,16 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
     if (defaultCPClasses == null || defaultCPClasses.length == 0)
       return;
 
-    int priority = Coprocessor.PRIORITY_SYSTEM;
+    int currentSystemPriority = Coprocessor.PRIORITY_SYSTEM;
     for (String className : defaultCPClasses) {
+      String[] classNameAndPriority = className.split("\\|");
+      boolean hasPriorityOverride = false;
+      className = classNameAndPriority[0];
+      int overridePriority = Coprocessor.PRIORITY_SYSTEM;
+      if (classNameAndPriority.length > 1){
+        overridePriority = Integer.parseInt(classNameAndPriority[1]);
+        hasPriorityOverride = true;
+      }
       className = className.trim();
       if (findCoprocessor(className) != null) {
         // If already loaded will just continue
@@ -155,13 +163,16 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
       Thread.currentThread().setContextClassLoader(cl);
       try {
         implClass = cl.loadClass(className);
+        int coprocPriority = hasPriorityOverride ? overridePriority : currentSystemPriority;
         // Add coprocessors as we go to guard against case where a coprocessor is specified twice
         // in the configuration
-        E env = checkAndLoadInstance(implClass, priority, conf);
+        E env = checkAndLoadInstance(implClass, coprocPriority, conf);
         if (env != null) {
           this.coprocEnvironments.add(env);
-          LOG.info("System coprocessor {} loaded, priority={}.", className, priority);
-          ++priority;
+          LOG.info("System coprocessor {} loaded, priority={}.", className, coprocPriority);
+          if (!hasPriorityOverride) {
+            ++currentSystemPriority;
+          }
         }
       } catch (Throwable t) {
         // We always abort if system coprocessors cannot be loaded
