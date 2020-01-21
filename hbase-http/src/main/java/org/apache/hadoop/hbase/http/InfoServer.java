@@ -107,9 +107,31 @@ public class InfoServer {
     return new AccessControlList(userGroups, adminGroups);
   }
 
+  /**
+   * Explicitly invoke {@link #addPrivilegedServlet(String, String, Class)} or
+   * {@link #addUnprivilegedServlet(String, String, Class)} instead of this method.
+   * This method will add a servlet which any authenticated user can access.
+   */
+  @Deprecated
   public void addServlet(String name, String pathSpec,
           Class<? extends HttpServlet> clazz) {
+    addUnprivilegedServlet(name, pathSpec, clazz);
+  }
+
+  /**
+   * @see HttpServer#addUnprivilegedServlet(String, String, Class)
+   */
+  public void addUnprivilegedServlet(String name, String pathSpec,
+          Class<? extends HttpServlet> clazz) {
     this.httpServer.addUnprivilegedServlet(name, pathSpec, clazz);
+  }
+
+  /**
+   * @see HttpServer#addPrivilegedServlet(String, String, Class)
+   */
+  public void addPrivilegedServlet(String name, String pathSpec,
+          Class<? extends HttpServlet> clazz) {
+    this.httpServer.addPrivilegedServlet(name, pathSpec, clazz);
   }
 
   public void setAttribute(String name, Object value) {
