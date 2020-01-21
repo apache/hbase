@@ -123,11 +123,16 @@ public class BuiltInProviderSelector implements AuthenticationProviderSelector {
         return new Pair<>(digestAuth, token);
       }
     }
-    if (user.getUGI().hasKerberosCredentials()) {
+    // Unwrap PROXY auth'n method if that's what we have coming in.
+    if (user.getUGI().hasKerberosCredentials() ||
+        user.getUGI().getRealUser().hasKerberosCredentials()) {
       return new Pair<>(krbAuth, null);
     }
-    LOG.debug(
-        "No matching SASL authentication provider and supporting token found from providers.");
+    // This indicates that a client is requesting some authentication mechanism which the servers
+    // don't know how to process (e.g. there is no provider which can support it). This may be
+    // a bug or simply a misconfiguration of client *or* server.
+    LOG.warn("No matching SASL authentication provider and supporting token found from providers"
+        + " for user: {}", user);
     return null;
   }
 
