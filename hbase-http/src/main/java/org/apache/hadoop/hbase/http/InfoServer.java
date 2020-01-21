@@ -99,7 +99,8 @@ public class InfoServer {
    */
   AccessControlList buildAdminAcl(Configuration conf) {
     final String userGroups = conf.get(HttpServer.HTTP_SPNEGO_AUTHENTICATION_ADMIN_USERS_KEY, null);
-    final String adminGroups = conf.get(HttpServer.HTTP_SPNEGO_AUTHENTICATION_ADMIN_GROUPS_KEY, null);
+    final String adminGroups = conf.get(
+        HttpServer.HTTP_SPNEGO_AUTHENTICATION_ADMIN_GROUPS_KEY, null);
     if (userGroups == null && adminGroups == null) {
       // Backwards compatibility - if the user doesn't have anything set, allow all users in.
       return new AccessControlList("*", null);

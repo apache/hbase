@@ -275,24 +275,21 @@ public class TestInfoServersACL {
   }
 
   private CloseableHttpClient createHttpClient(String clientPrincipal) throws Exception {
-      // Logs in with Kerberos via GSS
-      GSSManager gssManager = GSSManager.getInstance();
-      // jGSS Kerberos login constant
-      Oid oid = new Oid("1.2.840.113554.1.2.2");
-      GSSName gssClient = gssManager.createName(clientPrincipal, GSSName.NT_USER_NAME);
-      GSSCredential credential = gssManager.createCredential(gssClient,
-          GSSCredential.DEFAULT_LIFETIME, oid, GSSCredential.INITIATE_ONLY);
+    // Logs in with Kerberos via GSS
+    GSSManager gssManager = GSSManager.getInstance();
+    // jGSS Kerberos login constant
+    Oid oid = new Oid("1.2.840.113554.1.2.2");
+    GSSName gssClient = gssManager.createName(clientPrincipal, GSSName.NT_USER_NAME);
+    GSSCredential credential = gssManager.createCredential(
+        gssClient, GSSCredential.DEFAULT_LIFETIME, oid, GSSCredential.INITIATE_ONLY);
 
-      Lookup<AuthSchemeProvider> authRegistry = RegistryBuilder.<AuthSchemeProvider>create()
-          .register(AuthSchemes.SPNEGO, new SPNegoSchemeFactory(true, true))
-          .build();
+    Lookup<AuthSchemeProvider> authRegistry = RegistryBuilder.<AuthSchemeProvider>create()
+        .register(AuthSchemes.SPNEGO, new SPNegoSchemeFactory(true, true)).build();
 
-      BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
-      credentialsProvider.setCredentials(AuthScope.ANY, new KerberosCredentials(credential));
+    BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+    credentialsProvider.setCredentials(AuthScope.ANY, new KerberosCredentials(credential));
 
-      return HttpClients.custom()
-          .setDefaultAuthSchemeRegistry(authRegistry)
-          .setDefaultCredentialsProvider(credentialsProvider)
-          .build();
+    return HttpClients.custom().setDefaultAuthSchemeRegistry(authRegistry)
+        .setDefaultCredentialsProvider(credentialsProvider).build();
   }
 }
