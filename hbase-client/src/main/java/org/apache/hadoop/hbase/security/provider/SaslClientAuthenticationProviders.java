@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.security.provider;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -111,13 +112,14 @@ public final class SaslClientAuthenticationProviders {
     Class<? extends AuthenticationProviderSelector> clz = conf.getClass(
         SELECTOR_KEY, BuiltInProviderSelector.class, AuthenticationProviderSelector.class);
     try {
-      AuthenticationProviderSelector selector = clz.newInstance();
+      AuthenticationProviderSelector selector = clz.getConstructor().newInstance();
       selector.configure(conf, providers);
       if (LOG.isTraceEnabled()) {
         LOG.trace("Loaded ProviderSelector {}", selector.getClass());
       }
       return selector;
-    } catch (InstantiationException | IllegalAccessException e) {
+    } catch (InstantiationException | IllegalAccessException | NoSuchMethodException |
+        InvocationTargetException e) {
       throw new RuntimeException("Failed to instantiate " + clz +
           " as the ProviderSelector defined by " + SELECTOR_KEY, e);
     }
@@ -148,8 +150,9 @@ public final class SaslClientAuthenticationProviders {
       // Instantiate it
       SaslClientAuthenticationProvider provider;
       try {
-        provider = (SaslClientAuthenticationProvider) clz.newInstance();
-      } catch (InstantiationException | IllegalAccessException e) {
+        provider = (SaslClientAuthenticationProvider) clz.getConstructor().newInstance();
+      } catch (InstantiationException | IllegalAccessException | NoSuchMethodException
+          | InvocationTargetException e) {
         LOG.warn("Failed to instantiate SaslClientAuthenticationProvider {}", clz, e);
         continue;
       }

@@ -96,6 +96,10 @@ public class TestSaslClientAuthenticationProviders {
   static class ConflictingProvider1 implements SaslClientAuthenticationProvider {
     static final SaslAuthMethod METHOD1 = new SaslAuthMethod(
         "FOO", (byte)12, "DIGEST-MD5", AuthenticationMethod.SIMPLE);
+
+    public ConflictingProvider1() {
+    }
+
     @Override public SaslAuthMethod getSaslAuthMethod() {
       return METHOD1;
     }
@@ -118,6 +122,10 @@ public class TestSaslClientAuthenticationProviders {
   static class ConflictingProvider2 implements SaslClientAuthenticationProvider {
     static final SaslAuthMethod METHOD2 = new SaslAuthMethod(
         "BAR", (byte)12, "DIGEST-MD5", AuthenticationMethod.SIMPLE);
+
+    public ConflictingProvider2() {
+    }
+
     @Override public SaslAuthMethod getSaslAuthMethod() {
       return METHOD2;
     }
