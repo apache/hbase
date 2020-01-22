@@ -112,6 +112,11 @@ public class InfoServer {
    * Explicitly invoke {@link #addPrivilegedServlet(String, String, Class)} or
    * {@link #addUnprivilegedServlet(String, String, Class)} instead of this method.
    * This method will add a servlet which any authenticated user can access.
+   *
+   * @deprecated Use {@link #addUnprivilegedServet(String, String, Class)} or
+   *    {@link #addPrivilegedServlet(String, String, Class)} instead of this
+   *    method which does not state outwardly what kind of authz rules will
+   *    be applied to this servlet.
    */
   @Deprecated
   public void addServlet(String name, String pathSpec,

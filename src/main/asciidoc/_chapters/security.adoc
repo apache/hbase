@@ -179,7 +179,9 @@ Unix groups membership define that `alice` is a member of the group `admins`.
 Given the above configuration, `alice` is allowed to access sensitive endpoints in the Web UI
 as she is a member of the `admins` group. `charlie` is also allowed to access sensitive endpoints
 because he is explicitly listed as an admin in the configuration. `bob` is not allowed to access
-sensitive endpoints, but can still use any non-sensitive endpoints in the Web UI.
+sensitive endpoints because he is not a member of the `admins` group nor is listed as an explicit
+admin user via `hbase.security.authentication.spnego.admin.users`, but can still use any
+non-sensitive endpoints in the Web UI.
 
 If it doesn't go without saying: non-authenticated users cannot access any part of the Web UI.
 
