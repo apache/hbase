@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,31 +18,33 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Rule;
+
 import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestRule;
-import org.junit.rules.Timeout;
 
 @Category({SmallTests.class})
 public class TestTimeout {
-  @Rule public final TestRule timeout = CategoryBasedTimeout.builder()
+  @Rule
+  public final TestRule timeout = CategoryBasedTimeout.builder()
       .withTimeout(this.getClass())
       .withLookingForStuckThread(true)
       .build();
 
-    @Test
-    public void run1() throws InterruptedException {
-        Thread.sleep(100);
-    }
+  @Test
+  public void run1() throws InterruptedException {
+    Thread.sleep(100);
+  }
 
-    /**
-     * Enable to check if timeout works.
-     * Can't enable as it waits 30seconds and expected doesn't do Exception catching
-     */
-    @Ignore @Test
-    public void infiniteLoop() {
-        while (true) {}
-   }
+  /**
+   * Enable to check if timeout works.
+   * Can't enable as it waits 30seconds and expected doesn't do Exception catching
+   */
+  @Ignore
+  @Test
+  public void infiniteLoop() {
+    while (true) {}
+  }
 }
