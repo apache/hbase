@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.filter.TimestampsFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -466,12 +467,92 @@ public class TestMinVersions {
     }
   }
 
+  @Test
+  public void testMinVersionsWithKeepDeletedCellsTTL() throws Exception {
+    int ttl = 4;
+    HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(),
+      2, Integer.MAX_VALUE, ttl, KeepDeletedCells.TTL);
+
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
+
+    long startTS = EnvironmentEdgeManager.currentTime();
+    ManualEnvironmentEdge injectEdge = new ManualEnvironmentEdge();
+    injectEdge.setValue(startTS);
+    EnvironmentEdgeManager.injectEdge(injectEdge);
+
+    long ts = startTS - 2000;
+    // 1st version
+    Put p = new Put(T1, ts-3);
+    p.addColumn(c0, c0, T1);
+    region.put(p);
+
+    // 2nd version
+    p = new Put(T1, ts-2);
+    p.addColumn(c0, c0, T2);
+    region.put(p);
+
+    // 3rd version
+    p = new Put(T1, ts-1);
+    p.addColumn(c0, c0, T3);
+    region.put(p);
+
+    Get g;
+    Result r;
+
+    //check we can still see all versions before compaction
+    g = new Get(T1);
+    g.setMaxVersions();
+    g.setTimeRange(0, ts);
+    r = region.get(g);
+    checkResult(r, c0, T3, T2, T1);
+
+    region.flush(true);
+    region.compact(true);
+    assertEquals(startTS, EnvironmentEdgeManager.currentTime());
+    long expiredTime = EnvironmentEdgeManager.currentTime() - ts - 3;
+    assertTrue("TTL for T1 has expired", expiredTime < (ttl * 1000));
+    //check that nothing was purged yet
+    g = new Get(T1);
+    g.setMaxVersions();
+    g.setTimeRange(0, ts);
+    r = region.get(g);
+    checkResult(r, c0, T3, T2, T1);
+
+    g = new Get(T1);
+    g.setMaxVersions();
+    g.setTimeRange(0, ts -1);
+    r = region.get(g);
+    checkResult(r, c0, T2, T1);
+
+    injectEdge.incValue(ttl * 1000);
+
+    region.flush(true);
+    region.compact(true);
+
+    //check that after compaction (which is after TTL) that only T1 was purged
+    g = new Get(T1);
+    g.setMaxVersions();
+    g.setTimeRange(0, ts);
+    r = region.get(g);
+    checkResult(r, c0, T3, T2);
+
+    g = new Get(T1);
+    g.setMaxVersions();
+    g.setTimeStamp(ts -2);
+    r = region.get(g);
+    checkResult(r, c0, T2);
+  }
+
+
   private void checkResult(Result r, byte[] col, byte[] ... vals) {
     assertEquals(r.size(), vals.length);
     List<Cell> kvs = r.getColumnCells(col, col);
     assertEquals(kvs.size(), vals.length);
     for (int i=0;i<vals.length;i++) {
-      assertTrue(CellUtil.matchingValue(kvs.get(i), vals[i]));
+      String expected = Bytes.toString(vals[i]);
+      String actual = Bytes.toString(CellUtil.cloneValue(kvs.get(i)));
+      assertTrue(expected + " was expected but doesn't match " + actual,
+        CellUtil.matchingValue(kvs.get(i), vals[i]));
     }
   }
 
