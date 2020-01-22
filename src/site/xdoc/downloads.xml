@@ -64,7 +64,7 @@ under the License.
         <a href="https://www.apache.org/dyn/closer.lua/hbase/2.2.3/hbase-2.2.3-bin.tar.gz">bin</a> (<a href="https://apache.org/dist/hbase/2.2.3/hbase-2.2.3-bin.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/2.2.3/hbase-2.2.3-bin.tar.gz.asc">asc</a>) <br />
         <a href="https://www.apache.org/dyn/closer.lua/hbase/2.2.3/hbase-2.2.3-client-bin.tar.gz">client-bin</a> (<a href="https://apache.org/dist/hbase/2.2.3/hbase-2.2.3-client-bin.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/2.2.3/hbase-2.2.3-client-bin.tar.gz.asc">asc</a>)
       </td>
-      <td />
+      <td><em>stable release</em></td>
     </tr>
     <tr>
       <td style="test-align: left">
@@ -91,6 +91,28 @@ under the License.
     </tr>
     <tr>
       <td style="test-align: left">
+        1.5.0
+      </td>
+      <td style="test-align: left">
+        2019/10/14
+      </td>
+      <td style="test-align: left">
+        <a href="https://apache.org/dist/hbase/1.5.0/compat-check-report.html">1.4.10 vs 1.5.0</a>
+      </td>
+      <td style="test-align: left">
+        <a href="https://github.com/apache/hbase/blob/rel/1.5.0/CHANGES.txt">Changes</a>
+      </td>
+      <td style="test-align: left">
+        <a href="https://s.apache.org/hbase-1.5.0-jira-release-notes">Release Notes</a>
+      </td>
+      <td style="test-align: left">
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/1.5.0/hbase-1.5.0-src.tar.gz">src</a> (<a href="https://apache.org/dist/hbase/1.5.0/hbase-1.5.0-src.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/1.5.0/hbase-1.5.0-src.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/1.5.0/hbase-1.5.0-bin.tar.gz">bin</a> (<a href="https://apache.org/dist/hbase/1.5.0/hbase-1.5.0-bin.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/1.5.0/hbase-1.5.0-bin.tar.gz.asc">asc</a>)
+      </td>
+      <td />
+    </tr>
+    <tr>
+      <td style="test-align: left">
         1.4.12
       </td>
       <td style="test-align: left">
@@ -109,7 +131,7 @@ under the License.
         <a href="https://www.apache.org/dyn/closer.lua/hbase/hbase-1.4.12/hbase-1.4.12-src.tar.gz">src</a> (<a href="https://apache.org/dist/hbase/hbase-1.4.12/hbase-1.4.12-src.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/hbase-1.4.12/hbase-1.4.12-src.tar.gz.asc">asc</a>) <br />
         <a href="https://www.apache.org/dyn/closer.lua/hbase/hbase-1.4.12/hbase-1.4.12-bin.tar.gz">bin</a> (<a href="https://apache.org/dist/hbase/hbase-1.4.12/hbase-1.4.12-bin.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/hbase-1.4.12/hbase-1.4.12-bin.tar.gz.asc">asc</a>)
       </td>
-      <td><em>stable release</em></td>
+      <td><em>stable-1 release</em></td>
     </tr>
     <tr>
       <td style="test-align: left">
