@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.nio.ByteBuffer;
 import java.util.Comparator;
-
+import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -31,11 +32,12 @@ import org.apache.yetus.audience.InterfaceStability;
 public interface CellComparator extends Comparator<Cell> {
   /**
    * A comparator for ordering cells in user-space tables. Useful when writing cells in sorted
-   * order as necessary for bulk import (i.e. via MapReduce)
+   * order as necessary for bulk import (i.e. via MapReduce).
    * <p>
    * CAUTION: This comparator may provide inaccurate ordering for cells from system tables,
    * and should not be relied upon in that case.
    */
+  // For internal use, see CellComparatorImpl utility methods.
   static CellComparator getInstance() {
     return CellComparatorImpl.COMPARATOR;
   }
@@ -79,6 +81,24 @@ public interface CellComparator extends Comparator<Cell> {
    *         cells are equal
    */
   int compareRows(Cell cell, byte[] bytes, int offset, int length);
+
+  /**
+   * @param row ByteBuffer that wraps a row; will read from current position and will reading all
+   *            remaining; will not disturb the ByteBuffer internal state.
+   * @return greater than 0 if leftCell is bigger, less than 0 if rightCell is bigger, 0 if both
+   *         cells are equal
+   */
+  default int compareRows(ByteBuffer row, Cell cell) {
+    if (cell instanceof ByteBufferExtendedCell) {
+      return ByteBufferUtils.compareTo(row, row.position(), row.remaining(),
+        ((ByteBufferExtendedCell) cell).getRowByteBuffer(),
+        ((ByteBufferExtendedCell) cell).getRowPosition(),
+        cell.getRowLength());
+    }
+    return ByteBufferUtils.compareTo(row, row.position(), row.remaining(),
+      cell.getRowArray(), cell.getRowOffset(),
+      cell.getRowLength());
+  }
 
   /**
    * Lexographically compares the two cells excluding the row part. It compares family, qualifier,

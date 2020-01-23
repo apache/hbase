@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -35,13 +35,11 @@ import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -124,7 +122,6 @@ public final class MobUtils {
    * Parses the string to a date.
    * @param dateString The string format of a date, it's yyyymmdd.
    * @return A date.
-   * @throws ParseException
    */
   public static Date parseDate(String dateString) throws ParseException {
     return LOCAL_FORMAT.get().parse(dateString);
@@ -288,7 +285,6 @@ public final class MobUtils {
    * @param columnDescriptor The descriptor of the current column family.
    * @param cacheConfig The cacheConfig that disables the block cache.
    * @param current The current time.
-   * @throws IOException
    */
   public static void cleanExpiredMobFiles(FileSystem fs, Configuration conf, TableName tableName,
       ColumnFamilyDescriptor columnDescriptor, CacheConfig cacheConfig, long current)
@@ -384,7 +380,6 @@ public final class MobUtils {
    * Gets the qualified root dir of the mob files.
    * @param conf The current configuration.
    * @return The qualified root dir.
-   * @throws IOException
    */
   public static Path getQualifiedMobRootDir(Configuration conf) throws IOException {
     Path hbaseDir = new Path(conf.get(HConstants.HBASE_DIR));
@@ -505,7 +500,6 @@ public final class MobUtils {
    * @param tableDir The table directory.
    * @param family The name of the column family.
    * @param storeFiles The files to be deleted.
-   * @throws IOException
    */
   public static void removeMobFiles(Configuration conf, FileSystem fs, TableName tableName,
       Path tableDir, byte[] family, Collection<HStoreFile> storeFiles) throws IOException {
@@ -556,7 +550,6 @@ public final class MobUtils {
    * @param cryptoContext The encryption context.
    * @param isCompaction If the writer is used in compaction.
    * @return The writer for the mob file.
-   * @throws IOException
    */
   public static StoreFileWriter createWriter(Configuration conf, FileSystem fs,
       ColumnFamilyDescriptor family, String date, Path basePath, long maxKeyCount,
@@ -580,7 +573,6 @@ public final class MobUtils {
    * @param cryptoContext The encryption context.
    * @param isCompaction If the writer is used in compaction.
    * @return The writer for the mob file.
-   * @throws IOException
    */
   public static StoreFileWriter createRefFileWriter(Configuration conf, FileSystem fs,
     ColumnFamilyDescriptor family, Path basePath, long maxKeyCount, CacheConfig cacheConfig,
@@ -607,7 +599,6 @@ public final class MobUtils {
    * @param cryptoContext The encryption context.
    * @param isCompaction If the writer is used in compaction.
    * @return The writer for the mob file.
-   * @throws IOException
    */
   public static StoreFileWriter createWriter(Configuration conf, FileSystem fs,
       ColumnFamilyDescriptor family, String date, Path basePath, long maxKeyCount,
@@ -633,7 +624,6 @@ public final class MobUtils {
    * @param cacheConfig The current cache config.
    * @param cryptoContext The encryption context.
    * @return The writer for the del file.
-   * @throws IOException
    */
   public static StoreFileWriter createDelFileWriter(Configuration conf, FileSystem fs,
       ColumnFamilyDescriptor family, String date, Path basePath, long maxKeyCount,
@@ -660,10 +650,9 @@ public final class MobUtils {
    * @param cryptoContext The encryption context.
    * @param isCompaction If the writer is used in compaction.
    * @return The writer for the mob file.
-   * @throws IOException
    */
   public static StoreFileWriter createWriter(Configuration conf, FileSystem fs,
-                                             ColumnFamilyDescriptor family, MobFileName mobFileName, Path basePath, long maxKeyCount,
+      ColumnFamilyDescriptor family, MobFileName mobFileName, Path basePath, long maxKeyCount,
       Compression.Algorithm compression, CacheConfig cacheConfig, Encryption.Context cryptoContext,
       boolean isCompaction)
       throws IOException {
@@ -689,7 +678,6 @@ public final class MobUtils {
    * @param bloomType The bloom filter type.
    * @param isCompaction If the writer is used in compaction.
    * @return The writer for the mob file.
-   * @throws IOException
    */
   public static StoreFileWriter createWriter(Configuration conf, FileSystem fs,
       ColumnFamilyDescriptor family, Path path, long maxKeyCount,
@@ -718,8 +706,7 @@ public final class MobUtils {
         .withCreateTime(EnvironmentEdgeManager.currentTime()).build();
 
     StoreFileWriter w = new StoreFileWriter.Builder(conf, writerCacheConf, fs)
-        .withFilePath(path)
-        .withComparator(CellComparator.getInstance()).withBloomType(bloomType)
+        .withFilePath(path).withBloomType(bloomType)
         .withMaxKeyCount(maxKeyCount).withFileContext(hFileContext).build();
     return w;
   }
@@ -732,7 +719,6 @@ public final class MobUtils {
    * @param targetPath The directory path where the source file is renamed to.
    * @param cacheConfig The current cache config.
    * @return The target file path the source file is renamed to.
-   * @throws IOException
    */
   public static Path commitFile(Configuration conf, FileSystem fs, final Path sourceFile,
       Path targetPath, CacheConfig cacheConfig) throws IOException {
@@ -837,7 +823,8 @@ public final class MobUtils {
    * @param allFiles Whether add all mob files into the compaction.
    */
   public static void doMobCompaction(Configuration conf, FileSystem fs, TableName tableName,
-                                     ColumnFamilyDescriptor hcd, ExecutorService pool, boolean allFiles, LockManager.MasterLock lock)
+        ColumnFamilyDescriptor hcd, ExecutorService pool, boolean allFiles,
+        LockManager.MasterLock lock)
       throws IOException {
     String className = conf.get(MobConstants.MOB_COMPACTOR_CLASS_KEY,
         PartitionedMobCompactor.class.getName());
@@ -943,7 +930,8 @@ public final class MobUtils {
    * @param fileDate The date string parsed from the mob file name.
    * @return True if the mob file is expired.
    */
-  public static boolean isMobFileExpired(ColumnFamilyDescriptor column, long current, String fileDate) {
+  public static boolean isMobFileExpired(ColumnFamilyDescriptor column, long current,
+      String fileDate) {
     if (column.getMinVersions() > 0) {
       return false;
     }

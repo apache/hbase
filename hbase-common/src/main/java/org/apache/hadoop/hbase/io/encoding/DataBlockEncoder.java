@@ -20,7 +20,6 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -45,20 +44,13 @@ public interface DataBlockEncoder {
    * Starts encoding for a block of KeyValues. Call
    * {@link #endBlockEncoding(HFileBlockEncodingContext, DataOutputStream, byte[])} to finish
    * encoding of a block.
-   * @param encodingCtx
-   * @param out
-   * @throws IOException
    */
   void startBlockEncoding(HFileBlockEncodingContext encodingCtx, DataOutputStream out)
       throws IOException;
 
   /**
    * Encodes a KeyValue.
-   * @param cell
-   * @param encodingCtx
-   * @param out
    * @return unencoded kv size written
-   * @throws IOException
    */
   int encode(Cell cell, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
       throws IOException;
@@ -66,10 +58,6 @@ public interface DataBlockEncoder {
   /**
    * Ends encoding for a block of KeyValues. Gives a chance for the encoder to do the finishing
    * stuff for the encoded block. It must be called at the end of block encoding.
-   * @param encodingCtx
-   * @param out
-   * @param uncompressedBytesWithHeader
-   * @throws IOException
    */
   void endBlockEncoding(HFileBlockEncodingContext encodingCtx, DataOutputStream out,
       byte[] uncompressedBytesWithHeader) throws IOException;
@@ -77,7 +65,6 @@ public interface DataBlockEncoder {
   /**
    * Decode.
    * @param source Compressed stream of KeyValues.
-   * @param decodingCtx
    * @return Uncompressed block of KeyValues.
    * @throws IOException If there is an error in source.
    */
@@ -96,11 +83,9 @@ public interface DataBlockEncoder {
 
   /**
    * Create a HFileBlock seeker which find KeyValues within a block.
-   * @param comparator what kind of comparison should be used
-   * @param decodingCtx
    * @return A newly created seeker.
    */
-  EncodedSeeker createSeeker(CellComparator comparator, HFileBlockDecodingContext decodingCtx);
+  EncodedSeeker createSeeker(HFileBlockDecodingContext decodingCtx);
 
   /**
    * Creates a encoder specific encoding context
@@ -188,8 +173,6 @@ public interface DataBlockEncoder {
 
     /**
      * Compare the given key against the current key
-     * @param comparator
-     * @param key
      * @return -1 is the passed key is smaller than the current key, 0 if equal and 1 if greater
      */
     public int compareKey(CellComparator comparator, Cell key);

@@ -17,13 +17,11 @@
 package org.apache.hadoop.hbase.io.encoding;
 
 import static org.apache.hadoop.hbase.io.compress.Compression.Algorithm.NONE;
-
 import java.io.ByteArrayInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.SecureRandom;
-
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -36,7 +34,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
@@ -47,8 +44,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
  *
  */
 @InterfaceAudience.Private
-public class HFileBlockDefaultEncodingContext implements
-    HFileBlockEncodingContext {
+public class HFileBlockDefaultEncodingContext implements HFileBlockEncodingContext {
   private BlockType blockType;
   private final DataBlockEncoding encodingAlgo;
 
@@ -113,7 +109,6 @@ public class HFileBlockDefaultEncodingContext implements
 
   /**
    * prepare to start a new encoding.
-   * @throws IOException
    */
   public void prepareEncoding(DataOutputStream out) throws IOException {
     if (encodingAlgo != null && encodingAlgo != DataBlockEncoding.NONE) {
@@ -133,7 +128,8 @@ public class HFileBlockDefaultEncodingContext implements
   }
 
   private Bytes compressAfterEncoding(byte[] uncompressedBytesWithHeaderBuffer,
-        int uncompressedBytesWithHeaderOffset, int uncompressedBytesWithHeaderLength, byte[] headerBytes)
+        int uncompressedBytesWithHeaderOffset, int uncompressedBytesWithHeaderLength,
+        byte[] headerBytes)
       throws IOException {
     Encryption.Context cryptoContext = fileContext.getEncryptionContext();
     if (cryptoContext != Encryption.Context.NONE) {
@@ -158,7 +154,8 @@ public class HFileBlockDefaultEncodingContext implements
         compressedByteStream.reset();
         compressionStream.resetState();
         compressionStream.write(uncompressedBytesWithHeaderBuffer,
-            headerBytes.length + uncompressedBytesWithHeaderOffset, uncompressedBytesWithHeaderLength - headerBytes.length);
+          headerBytes.length + uncompressedBytesWithHeaderOffset,
+          uncompressedBytesWithHeaderLength - headerBytes.length);
         compressionStream.flush();
         compressionStream.finish();
         byte[] plaintext = compressedByteStream.toByteArray();

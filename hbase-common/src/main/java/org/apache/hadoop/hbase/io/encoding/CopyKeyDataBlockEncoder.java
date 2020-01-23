@@ -20,9 +20,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -48,7 +46,8 @@ public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
           + "encoding context.");
     }
 
-    HFileBlockDefaultEncodingContext encodingCtx = (HFileBlockDefaultEncodingContext) blkEncodingCtx;
+    HFileBlockDefaultEncodingContext encodingCtx =
+      (HFileBlockDefaultEncodingContext) blkEncodingCtx;
     encodingCtx.prepareEncoding(out);
 
     NoneEncoder encoder = new NoneEncoder(out, encodingCtx);
@@ -81,9 +80,8 @@ public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
-  public EncodedSeeker createSeeker(CellComparator comparator,
-      final HFileBlockDecodingContext decodingCtx) {
-    return new BufferedEncodedSeeker<SeekerState>(comparator, decodingCtx) {
+  public EncodedSeeker createSeeker(final HFileBlockDecodingContext decodingCtx) {
+    return new BufferedEncodedSeeker<SeekerState>(decodingCtx) {
       @Override
       protected void decodeNext() {
         current.keyLength = currentBuffer.getInt();
