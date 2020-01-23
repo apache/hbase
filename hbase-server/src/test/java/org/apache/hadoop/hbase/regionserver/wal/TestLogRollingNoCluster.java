@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -157,6 +158,8 @@ public class TestLogRollingNoCluster {
       this.log.info(getName() +" started");
       final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
       try {
+        TableDescriptors tds = new FSTableDescriptors(TEST_UTIL.getConfiguration());
+        TableDescriptor htd = tds.get(TableName.META_TABLE_NAME);
         for (int i = 0; i < this.count; i++) {
           long now = System.currentTimeMillis();
           // Roll every ten edits
