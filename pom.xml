@@ -1517,7 +1517,7 @@
     <curator.version>4.2.0</curator.version>
     <!-- Plugin Dependencies -->
     <apache.rat.version>0.13</apache.rat.version>
-    <asciidoctor.plugin.version>1.5.8.1</asciidoctor.plugin.version>
+    <asciidoctor.plugin.version>1.5.8</asciidoctor.plugin.version>
     <asciidoctorj.pdf.version>1.5.0-rc.2</asciidoctorj.pdf.version>
     <build.helper.maven.version>3.0.0</build.helper.maven.version>
     <buildnumber.maven.version>1.4</buildnumber.maven.version>
@@ -1539,7 +1539,7 @@
     <surefire.version>3.0.0-M4</surefire.version>
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
-    <hbase-thirdparty.version>3.1.1</hbase-thirdparty.version>
+    <hbase-thirdparty.version>3.2.0</hbase-thirdparty.version>
     <!-- Intraproject jar naming properties -->
     <!-- TODO this is pretty ugly, but works for the moment.
       Modules are pretty heavy-weight things, so doing this work isn't too bad. -->
@@ -4119,4 +4119,10 @@
       <url>file:///tmp</url>
     </site>
   </distributionManagement>
+  <repositories>
+    <repository>
+      <id>thirdparty</id>
+      <url>https://repository.apache.org/content/repositories/orgapachehbase-1381</url>
+    </repository>
+  </repositories>
 </project>
