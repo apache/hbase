@@ -3927,10 +3927,4 @@
       <url>file:///tmp</url>
     </site>
   </distributionManagement>
-  <repositories>
-    <repository>
-      <id>thirdparty</id>
-      <url>https://repository.apache.org/content/repositories/orgapachehbase-1381</url>
-    </repository>
-  </repositories>
 </project>
