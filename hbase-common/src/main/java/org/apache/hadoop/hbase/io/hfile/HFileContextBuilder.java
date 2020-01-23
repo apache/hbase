@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
@@ -56,6 +57,7 @@ public class HFileContextBuilder {
   private String hfileName = null;
   private byte[] columnFamily = null;
   private byte[] tableName = null;
+  private CellComparator cellComparator;
 
   public HFileContextBuilder() {}
 
@@ -77,6 +79,7 @@ public class HFileContextBuilder {
     this.hfileName = hfc.getHFileName();
     this.columnFamily = hfc.getColumnFamily();
     this.tableName = hfc.getTableName();
+    this.cellComparator = hfc.getCellComparator();
   }
 
   public HFileContextBuilder withHBaseCheckSum(boolean useHBaseCheckSum) {
@@ -149,9 +152,14 @@ public class HFileContextBuilder {
     return this;
   }
 
+  public HFileContextBuilder withCellComparator(CellComparator cellComparator) {
+    this.cellComparator = cellComparator;
+    return this;
+  }
+
   public HFileContext build() {
     return new HFileContext(usesHBaseChecksum, includesMvcc, includesTags, compression,
         compressTags, checksumType, bytesPerChecksum, blocksize, encoding, cryptoContext,
-        fileCreateTime, hfileName, columnFamily, tableName);
+        fileCreateTime, hfileName, columnFamily, tableName, cellComparator);
   }
 }

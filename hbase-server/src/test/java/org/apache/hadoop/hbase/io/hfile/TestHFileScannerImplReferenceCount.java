@@ -37,7 +37,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -165,7 +164,7 @@ public class TestHFileScannerImplReferenceCount {
             .withCompression(compression).withDataBlockEncoding(encoding).build();
     try (HFile.Writer writer =
         new HFile.WriterFactory(conf, new CacheConfig(conf)).withPath(fs, hfilePath)
-            .withFileContext(context).withComparator(CellComparatorImpl.COMPARATOR).create()) {
+            .withFileContext(context).create()) {
       Random rand = new Random(9713312); // Just a fixed seed.
       for (int i = 0; i < cellCount; ++i) {
         byte[] keyBytes = Bytes.add(Bytes.toBytes(i), SUFFIX);

@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.LongAdder;
-
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -52,7 +51,6 @@ import org.apache.hadoop.io.Writable;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
@@ -121,7 +119,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
  * an HFile instance?
  */
 @InterfaceAudience.Private
-public class HFile {
+public final class HFile {
   // LOG is being used in HFileBlock and CheckSumUtil
   static final Logger LOG = LoggerFactory.getLogger(HFile.class);
 
@@ -178,6 +176,11 @@ public class HFile {
   static final MetricsIO metrics = new MetricsIO(new MetricsIOWrapperImpl());
 
   /**
+   * Shutdown constructor.
+   */
+  private HFile() {}
+
+  /**
    * Number of checksum verification failures. It also
    * clears the counter.
    */
@@ -222,10 +225,11 @@ public class HFile {
      */
     void addInlineBlockWriter(InlineBlockWriter bloomWriter);
 
-    // The below three methods take Writables.  We'd like to undo Writables but undoing the below would be pretty
-    // painful.  Could take a byte [] or a Message but we want to be backward compatible around hfiles so would need
-    // to map between Message and Writable or byte [] and current Writable serialization.  This would be a bit of work
-    // to little gain.  Thats my thinking at moment.  St.Ack 20121129
+    // The below three methods take Writables.  We'd like to undo Writables but undoing the below
+    // would be pretty painful.  Could take a byte [] or a Message but we want to be backward
+    // compatible around hfiles so would need to map between Message and Writable or byte [] and
+    // current Writable serialization.  This would be a bit of work to little gain.  Thats my
+    // thinking at moment.  St.Ack 20121129
 
     void appendMetaBlock(String bloomFilterMetaKey, Writable metaWriter);
 
@@ -258,7 +262,6 @@ public class HFile {
     protected FileSystem fs;
     protected Path path;
     protected FSDataOutputStream ostream;
-    protected CellComparator comparator = CellComparator.getInstance();
     protected InetSocketAddress[] favoredNodes;
     private HFileContext fileContext;
     protected boolean shouldDropBehind = false;
@@ -279,12 +282,6 @@ public class HFile {
     public WriterFactory withOutputStream(FSDataOutputStream ostream) {
       Preconditions.checkNotNull(ostream);
       this.ostream = ostream;
-      return this;
-    }
-
-    public WriterFactory withComparator(CellComparator comparator) {
-      Preconditions.checkNotNull(comparator);
-      this.comparator = comparator;
       return this;
     }
 
@@ -319,7 +316,7 @@ public class HFile {
           LOG.debug("Unable to set drop behind on {}", path.getName());
         }
       }
-      return new HFileWriterImpl(conf, cacheConf, path, ostream, comparator, fileContext);
+      return new HFileWriterImpl(conf, cacheConf, path, ostream, fileContext);
     }
   }
 
@@ -349,16 +346,16 @@ public class HFile {
       CacheConfig cacheConf) {
     int version = getFormatVersion(conf);
     switch (version) {
-    case 2:
-      throw new IllegalArgumentException("This should never happen. " +
-        "Did you change hfile.format.version to read v2? This version of the software writes v3" +
-        " hfiles only (but it can read v2 files without having to update hfile.format.version " +
-        "in hbase-site.xml)");
-    case 3:
-      return new HFile.WriterFactory(conf, cacheConf);
-    default:
-      throw new IllegalArgumentException("Cannot create writer for HFile " +
-          "format version " + version);
+      case 2:
+        throw new IllegalArgumentException("This should never happen. " +
+          "Did you change hfile.format.version to read v2? This version of the software writes v3" +
+          " hfiles only (but it can read v2 files without having to update hfile.format.version " +
+          "in hbase-site.xml)");
+      case 3:
+        return new HFile.WriterFactory(conf, cacheConf);
+      default:
+        throw new IllegalArgumentException("Cannot create writer for HFile " +
+            "format version " + version);
     }
   }
 
@@ -372,18 +369,15 @@ public class HFile {
      * Read in a file block.
      * @param offset offset to read.
      * @param onDiskBlockSize size of the block
-     * @param cacheBlock
-     * @param pread
      * @param isCompaction is this block being read as part of a compaction
      * @param expectedBlockType the block type we are expecting to read with this read operation,
-     *  or null to read whatever block type is available and avoid checking (that might reduce
-     *  caching efficiency of encoded data blocks)
+     *   or null to read whatever block type is available and avoid checking (that might reduce
+     *   caching efficiency of encoded data blocks)
      * @param expectedDataBlockEncoding the data block encoding the caller is expecting data blocks
-     *  to be in, or null to not perform this check and return the block irrespective of the
-     *  encoding. This check only applies to data blocks and can be set to null when the caller is
-     *  expecting to read a non-data block and has set expectedBlockType accordingly.
+     *   to be in, or null to not perform this check and return the block irrespective of the
+     *   encoding. This check only applies to data blocks and can be set to null when the caller is
+     *   expecting to read a non-data block and has set expectedBlockType accordingly.
      * @return Block wrapped in a ByteBuffer.
-     * @throws IOException
      */
     HFileBlock readBlock(long offset, long onDiskBlockSize,
         boolean cacheBlock, final boolean pread, final boolean isCompaction,
