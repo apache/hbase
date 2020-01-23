@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -124,8 +125,11 @@ public class BuiltInProviderSelector implements AuthenticationProviderSelector {
       }
     }
     // Unwrap PROXY auth'n method if that's what we have coming in.
-    if (user.getUGI().hasKerberosCredentials() ||
-        user.getUGI().getRealUser().hasKerberosCredentials()) {
+    final UserGroupInformation currentUser = user.getUGI();
+    // May be null if Hadoop AuthenticationMethod is PROXY
+    final UserGroupInformation realUser = currentUser.getRealUser();
+    if (currentUser.hasKerberosCredentials() ||
+        (realUser != null && realUser.hasKerberosCredentials())) {
       return new Pair<>(krbAuth, null);
     }
     // This indicates that a client is requesting some authentication mechanism which the servers
