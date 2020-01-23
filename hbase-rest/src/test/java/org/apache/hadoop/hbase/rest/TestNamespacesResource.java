@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.rest;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
@@ -35,8 +37,6 @@ import org.apache.hadoop.hbase.rest.model.NamespacesModel;
 import org.apache.hadoop.hbase.rest.model.TestNamespacesModel;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import static org.junit.Assert.*;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -79,8 +79,8 @@ public class TestNamespacesResource {
 
   private boolean doesNamespaceExist(Admin admin, String namespaceName) throws IOException {
     NamespaceDescriptor[] nd = admin.listNamespaceDescriptors();
-    for(int i = 0; i < nd.length; i++) {
-      if(nd[i].getName().equals(namespaceName)) {
+    for (NamespaceDescriptor namespaceDescriptor : nd) {
+      if (namespaceDescriptor.getName().equals(namespaceName)) {
         return true;
       }
     }
@@ -152,7 +152,7 @@ public class TestNamespacesResource {
   }
 
   @Test
-  public void testNamespaceListPBandDefault() throws IOException, JAXBException {
+  public void testNamespaceListPBandDefault() throws IOException {
     String schemaPath = "/namespaces/";
     NamespacesModel model;
     Response response;

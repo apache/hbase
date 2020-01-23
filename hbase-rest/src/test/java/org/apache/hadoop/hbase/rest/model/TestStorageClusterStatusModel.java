@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest.model;
 
 import java.util.Iterator;
@@ -29,7 +27,6 @@ import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
 public class TestStorageClusterStatusModel extends TestModelBase<StorageClusterStatusModel> {
-
   public TestStorageClusterStatusModel() throws Exception {
     super(StorageClusterStatusModel.class);
 
@@ -99,7 +96,7 @@ public class TestStorageClusterStatusModel extends TestModelBase<StorageClusterS
     assertEquals(1245219839331L, node.getStartCode());
     assertEquals(128, node.getHeapSizeMB());
     assertEquals(1024, node.getMaxHeapSizeMB());
-    Iterator<StorageClusterStatusModel.Node.Region> regions = 
+    Iterator<StorageClusterStatusModel.Node.Region> regions =
       node.getRegions().iterator();
     StorageClusterStatusModel.Node.Region region = regions.next();
     assertTrue(Bytes.toString(region.getName()).equals(
@@ -138,7 +135,7 @@ public class TestStorageClusterStatusModel extends TestModelBase<StorageClusterS
     assertEquals(1, region.getTotalStaticBloomSizeKB());
     assertEquals(1, region.getTotalCompactingKVs());
     assertEquals(1, region.getCurrentCompactedKVs());
-    
+
     assertFalse(regions.hasNext());
     assertFalse(nodes.hasNext());
   }

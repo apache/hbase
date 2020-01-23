@@ -48,13 +48,12 @@ import org.junit.experimental.categories.Category;
  */
 @Category(SmallTests.class)
 public class TestRemoteHTableRetries {
-
   private static final int SLEEP_TIME = 50;
   private static final int RETRIES = 3;
   private static final long MAX_TIME = SLEEP_TIME * (RETRIES - 1);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  
+
   private static final byte[] ROW_1 = Bytes.toBytes("testrow1");
   private static final byte[] COLUMN_1 = Bytes.toBytes("a");
   private static final byte[] QUALIFIER_1 = Bytes.toBytes("1");
@@ -62,7 +61,7 @@ public class TestRemoteHTableRetries {
 
   private Client client;
   private RemoteHTable remoteTable;
-  
+
   @Before
   public void setup() throws Exception {
     client = mock(Client.class);
@@ -86,7 +85,7 @@ public class TestRemoteHTableRetries {
   public void tearDownAfterClass() throws Exception {
     remoteTable.close();
   }
-  
+
   @Test
   public void testDelete() throws Exception {
     testTimedOutCall(new CallExecutor() {
@@ -98,7 +97,7 @@ public class TestRemoteHTableRetries {
     });
     verify(client, times(RETRIES)).delete(anyString());
   }
-  
+
   @Test
   public void testGet() throws Exception {
     testTimedOutGetCall(new CallExecutor() {
@@ -119,14 +118,13 @@ public class TestRemoteHTableRetries {
     });
     verify(client, times(RETRIES)).put(anyString(), anyString(), any(byte[].class));
   }
-  
+
   @Test
   public void testMultiRowPut() throws Exception {
     testTimedOutCall(new CallExecutor() {
       @Override
       public void run() throws Exception {
-        Put[] puts = { new Put(Bytes.toBytes("Row1")),
-            new Put(Bytes.toBytes("Row2")) };
+        Put[] puts = { new Put(Bytes.toBytes("Row1")), new Put(Bytes.toBytes("Row2")) };
         remoteTable.put(Arrays.asList(puts));
       }
     });
@@ -143,7 +141,7 @@ public class TestRemoteHTableRetries {
     });
     verify(client, times(RETRIES)).post(anyString(), anyString(), any(byte[].class));
   }
-  
+
   @Test
   public void testCheckAndPut() throws Exception {
     testTimedOutCall(new CallExecutor() {
@@ -165,16 +163,16 @@ public class TestRemoteHTableRetries {
         Put put = new Put(ROW_1);
         put.add(COLUMN_1, QUALIFIER_1, VALUE_1);
         Delete delete= new Delete(ROW_1);
-        remoteTable.checkAndDelete(ROW_1, COLUMN_1, QUALIFIER_1,  VALUE_1, delete );
+        remoteTable.checkAndDelete(ROW_1, COLUMN_1, QUALIFIER_1, VALUE_1, delete);
       }
     });
   }
-  
+
   private void testTimedOutGetCall(CallExecutor callExecutor) throws Exception {
     testTimedOutCall(callExecutor);
     verify(client, times(RETRIES)).get(anyString(), anyString());
   }
-  
+
   private void testTimedOutCall(CallExecutor callExecutor) throws Exception {
     long start = System.currentTimeMillis();
     try {
@@ -186,8 +184,7 @@ public class TestRemoteHTableRetries {
     assertTrue((System.currentTimeMillis() - start) > MAX_TIME);
   }
 
-  private static interface CallExecutor {
+  private interface CallExecutor {
     void run() throws Exception;
   }
-
 }

@@ -14,7 +14,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */package org.apache.hadoop.hbase.rest;
+ */
+package org.apache.hadoop.hbase.rest;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -91,7 +92,8 @@ public class TestScannersWithLabels {
   private static Unmarshaller unmarshaller;
   private static Configuration conf;
 
-  private static int insertData(TableName tableName, String column, double prob) throws IOException {
+  private static int insertData(TableName tableName, String column, double prob)
+      throws IOException {
     byte[] k = new byte[3];
     byte[][] famAndQf = KeyValue.parseColumn(Bytes.toBytes(column));
 
@@ -177,6 +179,7 @@ public class TestScannersWithLabels {
     };
     SUPERUSER.runAs(action);
   }
+
   private static void setAuths() throws Exception {
     String[] labels = { SECRET, CONFIDENTIAL, PRIVATE, PUBLIC, TOPSECRET };
     try (Connection conn = ConnectionFactory.createConnection(conf)) {
@@ -185,6 +188,7 @@ public class TestScannersWithLabels {
       throw new IOException(t);
     }
   }
+
   @Test
   public void testSimpleScannerXMLWithLabelsThatReceivesNoData() throws IOException, JAXBException {
     final int BATCH_SIZE = 5;
@@ -237,5 +241,4 @@ public class TestScannersWithLabels {
         .getBody()));
     assertEquals(5, countCellSet(cellSet));
   }
-
 }

@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest;
 
 import static org.junit.Assert.assertEquals;
@@ -46,7 +45,6 @@ import org.junit.experimental.categories.Category;
 
 @Category(MediumTests.class)
 public class TestGetAndPutResource extends RowResourceBase {
-
   private static final MetricsAssertHelper METRICS_ASSERT =
       CompatibilityFactory.getInstance(MetricsAssertHelper.class);
 
@@ -110,7 +108,7 @@ public class TestGetAndPutResource extends RowResourceBase {
   public void testSingleCellGetPutPB() throws IOException, JAXBException {
     Response response = getValuePB(TABLE, ROW_1, COLUMN_1);
     assertEquals(404, response.getCode());
-    
+
     response = putValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
     assertEquals(200, response.getCode());
     checkValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
@@ -130,7 +128,7 @@ public class TestGetAndPutResource extends RowResourceBase {
   }
 
   @Test
-  public void testMultipleCellCheckPutPB() throws IOException, JAXBException {
+  public void testMultipleCellCheckPutPB() throws IOException {
     Response response = getValuePB(TABLE, ROW_1, COLUMN_1);
     assertEquals(404, response.getCode());
 
@@ -143,7 +141,7 @@ public class TestGetAndPutResource extends RowResourceBase {
     assertEquals(200, response.getCode());
     checkValuePB(TABLE, ROW_1, COLUMN_2, VALUE_2);
 
-    HashMap<String,String> otherCells = new HashMap<String, String>();
+    HashMap<String,String> otherCells = new HashMap<>();
     otherCells.put(COLUMN_2,VALUE_3);
 
     // On Success update both the cells
@@ -176,7 +174,7 @@ public class TestGetAndPutResource extends RowResourceBase {
     assertEquals(200, response.getCode());
     checkValueXML(TABLE, ROW_1, COLUMN_2, VALUE_2);
 
-    HashMap<String,String> otherCells = new HashMap<String, String>();
+    HashMap<String,String> otherCells = new HashMap<>();
     otherCells.put(COLUMN_2,VALUE_3);
 
     // On Success update both the cells
@@ -196,7 +194,7 @@ public class TestGetAndPutResource extends RowResourceBase {
   }
 
   @Test
-  public void testMultipleCellCheckDeletePB() throws IOException, JAXBException {
+  public void testMultipleCellCheckDeletePB() throws IOException {
     Response response = getValuePB(TABLE, ROW_1, COLUMN_1);
     assertEquals(404, response.getCode());
 
@@ -214,7 +212,7 @@ public class TestGetAndPutResource extends RowResourceBase {
     checkValuePB(TABLE, ROW_1, COLUMN_3, VALUE_3);
 
     // Deletes the following columns based on Column1 check
-    HashMap<String,String> cellsToDelete = new HashMap<String, String>();
+    HashMap<String,String> cellsToDelete = new HashMap<>();
     cellsToDelete.put(COLUMN_2,VALUE_2); // Value does not matter
     cellsToDelete.put(COLUMN_3,VALUE_3); // Value does not matter
 
@@ -249,7 +247,7 @@ public class TestGetAndPutResource extends RowResourceBase {
     assertEquals(200, response.getCode());
   }
 
- @Test
+  @Test
   public void testSingleCellGetPutBinary() throws IOException {
     final String path = "/" + TABLE + "/" + ROW_3 + "/" + COLUMN_1;
     final byte[] body = Bytes.toBytes(VALUE_3);
@@ -275,7 +273,7 @@ public class TestGetAndPutResource extends RowResourceBase {
   }
 
   @Test
-  public void testSingleCellGetJSON() throws IOException, JAXBException {
+  public void testSingleCellGetJSON() throws IOException {
     final String path = "/" + TABLE + "/" + ROW_4 + "/" + COLUMN_1;
     Response response = client.put(path, Constants.MIMETYPE_BINARY,
       Bytes.toBytes(VALUE_4));
@@ -289,7 +287,7 @@ public class TestGetAndPutResource extends RowResourceBase {
   }
 
   @Test
-  public void testLatestCellGetJSON() throws IOException, JAXBException {
+  public void testLatestCellGetJSON() throws IOException {
     final String path = "/" + TABLE + "/" + ROW_4 + "/" + COLUMN_1;
     CellSetModel cellSetModel = new CellSetModel();
     RowModel rowModel = new RowModel(ROW_4);
@@ -336,7 +334,7 @@ public class TestGetAndPutResource extends RowResourceBase {
   }
 
   @Test
-  public void testNoSuchCF() throws IOException, JAXBException {
+  public void testNoSuchCF() throws IOException {
     final String goodPath = "/" + TABLE + "/" + ROW_1 + "/" + CFA+":";
     final String badPath = "/" + TABLE + "/" + ROW_1 + "/" + "BAD";
     Response response = client.post(goodPath, Constants.MIMETYPE_BINARY,
@@ -524,9 +522,9 @@ public class TestGetAndPutResource extends RowResourceBase {
     response = deleteRow(TABLE, ROW_2);
     assertEquals(200, response.getCode());
   }
-  
+
   @Test
-  public void testMetrics() throws IOException, JAXBException {
+  public void testMetrics() throws IOException {
     final String path = "/" + TABLE + "/" + ROW_4 + "/" + COLUMN_1;
     Response response = client.put(path, Constants.MIMETYPE_BINARY,
         Bytes.toBytes(VALUE_4));
@@ -539,19 +537,19 @@ public class TestGetAndPutResource extends RowResourceBase {
     assertEquals(200, response.getCode());
 
     UserProvider userProvider = UserProvider.instantiate(conf);
-    METRICS_ASSERT.assertCounterGt("requests", 2l,
+    METRICS_ASSERT.assertCounterGt("requests", 2L,
       RESTServlet.getInstance(conf, userProvider).getMetrics().getSource());
 
-    METRICS_ASSERT.assertCounterGt("successfulGet", 0l,
+    METRICS_ASSERT.assertCounterGt("successfulGet", 0L,
       RESTServlet.getInstance(conf, userProvider).getMetrics().getSource());
 
-    METRICS_ASSERT.assertCounterGt("successfulPut", 0l,
+    METRICS_ASSERT.assertCounterGt("successfulPut", 0L,
       RESTServlet.getInstance(conf, userProvider).getMetrics().getSource());
 
-    METRICS_ASSERT.assertCounterGt("successfulDelete", 0l,
+    METRICS_ASSERT.assertCounterGt("successfulDelete", 0L,
       RESTServlet.getInstance(conf, userProvider).getMetrics().getSource());
   }
-  
+
   @Test
   public void testMultiColumnGetXML() throws Exception {
     String path = "/" + TABLE + "/fakerow";
@@ -575,8 +573,8 @@ public class TestGetAndPutResource extends RowResourceBase {
     path = "/" + TABLE + "/" + ROW_1 + "/" + COLUMN_1 + "," + COLUMN_2 + "," + COLUMN_3;
     response = client.get(path, Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
-    CellSetModel cellSet = (CellSetModel) xmlUnmarshaller.unmarshal(new ByteArrayInputStream(response
-        .getBody()));
+    CellSetModel cellSet =
+      (CellSetModel) xmlUnmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
     assertTrue(cellSet.getRows().size() == 1);
     assertTrue(cellSet.getRows().get(0).getCells().size() == 3);
     List<CellModel> cells = cellSet.getRows().get(0).getCells();

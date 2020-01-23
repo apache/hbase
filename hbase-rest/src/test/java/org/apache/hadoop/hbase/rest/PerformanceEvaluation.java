@@ -305,10 +305,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
       return totalRows;
     }
 
-    public int getClients() {
-      return clients;
-    }
-
     public boolean isFlushCommits() {
       return flushCommits;
     }
@@ -486,11 +482,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     @Override
     protected void map(NullWritable key, PeInputSplit value, final Context context)
-           throws IOException, InterruptedException {
+        throws IOException, InterruptedException {
       Status status = new Status() {
         @Override
         public void setStatus(String msg) {
-           context.setStatus(msg);
+          context.setStatus(msg);
         }
       };
 
@@ -631,7 +627,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
                 perClientRows, R,
                  flushCommits, writeToWAL, useTags, noOfTags, connection, new Status() {
                    @Override
-                   public void setStatus(final String msg) throws IOException {
+                   public void setStatus(final String msg) {
                      LOG.info("client-" + getName() + " " + msg);
                    }
                  });
@@ -781,7 +777,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
     private int startRow;
     private int perClientRunRows;
     private int totalRows;
-    private int numClientThreads;
     private TableName tableName;
     private boolean flushCommits;
     private boolean writeToWAL;
@@ -789,13 +784,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
     private int noOfTags;
     private Connection connection;
 
-    TestOptions(int startRow, int perClientRunRows, int totalRows, int numClientThreads,
-        TableName tableName, boolean flushCommits, boolean writeToWAL, boolean useTags,
+    TestOptions(int startRow, int perClientRunRows, int totalRows, TableName tableName,
+        boolean flushCommits, boolean writeToWAL, boolean useTags,
         int noOfTags, Connection connection) {
       this.startRow = startRow;
       this.perClientRunRows = perClientRunRows;
       this.totalRows = totalRows;
-      this.numClientThreads = numClientThreads;
       this.tableName = tableName;
       this.flushCommits = flushCommits;
       this.writeToWAL = writeToWAL;
@@ -814,10 +808,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     public int getTotalRows() {
       return totalRows;
-    }
-
-    public int getNumClientThreads() {
-      return numClientThreads;
     }
 
     public TableName getTableName() {
@@ -1286,7 +1276,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     long totalElapsedTime;
 
     TestOptions options = new TestOptions(startRow, perClientRunRows,
-      totalRows, N, tableName, flushCommits, writeToWAL, useTags, noOfTags, connection);
+      totalRows, tableName, flushCommits, writeToWAL, useTags, noOfTags, connection);
     final Test t;
     try {
       Constructor<? extends Test> constructor = cmd.getDeclaredConstructor(
@@ -1310,7 +1300,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   private void runNIsOne(final Class<? extends Test> cmd) {
     Status status = new Status() {
       @Override
-      public void setStatus(String msg) throws IOException {
+      public void setStatus(String msg) {
         LOG.info(msg);
       }
     };

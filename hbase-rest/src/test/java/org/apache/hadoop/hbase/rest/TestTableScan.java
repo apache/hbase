@@ -47,13 +47,11 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.parsers.SAXParserFactory;
-import javax.xml.stream.XMLStreamException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -66,6 +64,7 @@ import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.CellSetModel;
 import org.apache.hadoop.hbase.rest.model.RowModel;
 import org.apache.hadoop.hbase.rest.provider.JacksonProvider;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -76,7 +75,6 @@ import org.xml.sax.XMLReader;
 
 @Category(MediumTests.class)
 public class TestTableScan {
-
   private static final TableName TABLE = TableName.valueOf("TestScanResource");
   private static final String CFA = "a";
   private static final String CFB = "b";
@@ -96,7 +94,7 @@ public class TestTableScan {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     conf = TEST_UTIL.getConfiguration();
-    conf.set(Constants.CUSTOM_FILTERS, "CustomFilter:" + CustomFilter.class.getName()); 
+    conf.set(Constants.CUSTOM_FILTERS, "CustomFilter:" + CustomFilter.class.getName());
     TEST_UTIL.startMiniCluster();
     REST_TEST_UTIL.startServletContainer(conf);
     client = new Client(new Cluster().add("localhost",
@@ -122,7 +120,7 @@ public class TestTableScan {
   }
 
   @Test
-  public void testSimpleScannerXML() throws IOException, JAXBException, XMLStreamException {
+  public void testSimpleScannerXML() throws IOException, JAXBException {
     // Test scanning particular columns
     StringBuilder builder = new StringBuilder();
     builder.append("/*");
@@ -149,7 +147,7 @@ public class TestTableScan {
     response = client.get("/" + TABLE + builder.toString(),
       Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
-    assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type")); 
+    assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
     model = (CellSetModel) ush.unmarshal(response.getStream());
     count = TestScannerResource.countCellSet(model);
     assertEquals(expectedRows1, count);
@@ -198,7 +196,7 @@ public class TestTableScan {
   }
 
   @Test
-  public void testSimpleScannerJson() throws IOException, JAXBException {
+  public void testSimpleScannerJson() throws IOException {
     // Test scanning particular columns with limit.
     StringBuilder builder = new StringBuilder();
     builder.append("/*");
@@ -285,16 +283,16 @@ public class TestTableScan {
     unmarshaller.setListener(new Unmarshaller.Listener() {
         @Override
         public void beforeUnmarshal(Object target, Object parent) {
-            if (target instanceof ClientSideCellSetModel) {
-                ((ClientSideCellSetModel) target).setCellSetModelListener(listener);
-            }
+          if (target instanceof ClientSideCellSetModel) {
+            ((ClientSideCellSetModel) target).setCellSetModelListener(listener);
+          }
         }
 
         @Override
         public void afterUnmarshal(Object target, Object parent) {
-            if (target instanceof ClientSideCellSetModel) {
-                ((ClientSideCellSetModel) target).setCellSetModelListener(null);
-            }
+          if (target instanceof ClientSideCellSetModel) {
+            ((ClientSideCellSetModel) target).setCellSetModelListener(null);
+          }
         }
     });
 
@@ -396,7 +394,7 @@ public class TestTableScan {
     int rowCount = readProtobufStream(response.getStream());
     assertEquals(15, rowCount);
 
-  //Test with start row and end row.
+    //Test with start row and end row.
     builder = new StringBuilder();
     builder.append("/*");
     builder.append("?");
@@ -455,7 +453,7 @@ public class TestTableScan {
   }
 
   @Test
-  public void testScanningUnknownColumnJson() throws IOException, JAXBException {
+  public void testScanningUnknownColumnJson() throws IOException {
     // Test scanning particular columns with limit.
     StringBuilder builder = new StringBuilder();
     builder.append("/*");
@@ -471,7 +469,7 @@ public class TestTableScan {
     int count = TestScannerResource.countCellSet(model);
     assertEquals(0, count);
   }
-  
+
   @Test
   public void testSimpleFilter() throws IOException, JAXBException {
     StringBuilder builder = new StringBuilder();
@@ -503,7 +501,7 @@ public class TestTableScan {
     builder.append("?");
     builder.append(Constants.SCAN_FILTER + "="
         + URLEncoder.encode("QualifierFilter(=,'binary:1')", "UTF-8"));
-    Response response = 
+    Response response =
         client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
     JAXBContext ctx = JAXBContext.newInstance(CellSetModel.class);
@@ -514,7 +512,6 @@ public class TestTableScan {
     assertEquals("abc", new String(model.getRows().get(0).getCells().get(0).getValue(),
       StandardCharsets.UTF_8));
   }
-
 
   @Test
   public void testCompoundFilter() throws IOException, JAXBException {
@@ -554,7 +551,7 @@ public class TestTableScan {
     assertEquals("abc", new String(model.getRows().get(0).getCells().get(0).getValue(),
       StandardCharsets.UTF_8));
   }
-  
+
   @Test
   public void testNegativeCustomFilter() throws IOException, JAXBException {
     StringBuilder builder = new StringBuilder();
@@ -625,7 +622,7 @@ public class TestTableScan {
   }
 
   @Test
-  public void testColumnWithEmptyQualifier() throws IOException, JAXBException {
+  public void testColumnWithEmptyQualifier() throws IOException {
     // Test scanning with empty qualifier
     StringBuilder builder = new StringBuilder();
     builder.append("/*");
@@ -670,7 +667,7 @@ public class TestTableScan {
     public CustomFilter(byte[] key) {
       super(key);
     }
-    
+
     @Override
     public boolean filterRowKey(byte[] buffer, int offset, int length) {
       int cmp = Bytes.compareTo(buffer, offset, length, this.key, 0, this.key.length);
@@ -690,7 +687,6 @@ public class TestTableScan {
   @XmlRootElement(name = "CellSet")
   @XmlAccessorType(XmlAccessType.FIELD)
   public static class ClientSideCellSetModel implements Serializable {
-
     private static final long serialVersionUID = 1L;
 
     /**
@@ -707,25 +703,23 @@ public class TestTableScan {
      * is removed again.
      */
     public void setCellSetModelListener(final Listener l) {
-        row = (l == null) ? null : new ArrayList<RowModel>() {
+      row = (l == null) ? null : new ArrayList<RowModel>() {
         private static final long serialVersionUID = 1L;
-            @Override
-            public boolean add(RowModel o) {
-                l.handleRowModel(ClientSideCellSetModel.this, o);
-                listenerInvoked = true;
-                return false;
-            }
-        };
+
+        @Override
+        public boolean add(RowModel o) {
+          l.handleRowModel(ClientSideCellSetModel.this, o);
+          listenerInvoked = true;
+          return false;
+        }
+      };
     }
 
     /**
      * This listener is invoked every time a new row model is unmarshalled.
      */
-    public static interface Listener {
-        void handleRowModel(ClientSideCellSetModel helper, RowModel rowModel);
+    public interface Listener {
+      void handleRowModel(ClientSideCellSetModel helper, RowModel rowModel);
     }
   }
 }
-
-
-

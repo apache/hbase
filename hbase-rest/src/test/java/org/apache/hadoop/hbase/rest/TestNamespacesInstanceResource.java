@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,6 +16,11 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.rest;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -51,8 +55,6 @@ import org.apache.hadoop.hbase.rest.provider.JacksonProvider;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import static org.junit.Assert.*;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -61,13 +63,13 @@ import org.junit.experimental.categories.Category;
 @Category(MediumTests.class)
 public class TestNamespacesInstanceResource {
   private static String NAMESPACE1 = "TestNamespacesInstanceResource1";
-  private static Map<String,String> NAMESPACE1_PROPS = new HashMap<String,String>();
+  private static Map<String,String> NAMESPACE1_PROPS = new HashMap<>();
   private static String NAMESPACE2 = "TestNamespacesInstanceResource2";
-  private static Map<String,String> NAMESPACE2_PROPS = new HashMap<String,String>();
+  private static Map<String,String> NAMESPACE2_PROPS = new HashMap<>();
   private static String NAMESPACE3 = "TestNamespacesInstanceResource3";
-  private static Map<String,String> NAMESPACE3_PROPS = new HashMap<String,String>();
+  private static Map<String,String> NAMESPACE3_PROPS = new HashMap<>();
   private static String NAMESPACE4 = "TestNamespacesInstanceResource4";
-  private static Map<String,String> NAMESPACE4_PROPS = new HashMap<String,String>();
+  private static Map<String,String> NAMESPACE4_PROPS = new HashMap<>();
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final HBaseRESTTestingUtility REST_TEST_UTIL =
@@ -87,8 +89,8 @@ public class TestNamespacesInstanceResource {
       REST_TEST_UTIL.getServletPort()));
     testNamespacesInstanceModel = new TestNamespacesInstanceModel();
     context = JAXBContext.newInstance(NamespacesInstanceModel.class, TableListModel.class);
-    jsonMapper = new JacksonProvider()
-    .locateMapper(NamespacesInstanceModel.class, MediaType.APPLICATION_JSON_TYPE);
+    jsonMapper = new JacksonProvider().locateMapper(NamespacesInstanceModel.class,
+      MediaType.APPLICATION_JSON_TYPE);
     NAMESPACE1_PROPS.put("key1", "value1");
     NAMESPACE2_PROPS.put("key2a", "value2a");
     NAMESPACE2_PROPS.put("key2b", "value2b");
@@ -117,9 +119,9 @@ public class TestNamespacesInstanceResource {
 
   private NamespaceDescriptor findNamespace(Admin admin, String namespaceName) throws IOException{
     NamespaceDescriptor[] nd = admin.listNamespaceDescriptors();
-    for(int i = 0; i < nd.length; i++){
-      if(nd[i].getName().equals(namespaceName)){
-        return nd[i];
+    for (NamespaceDescriptor namespaceDescriptor : nd) {
+      if (namespaceDescriptor.getName().equals(namespaceName)) {
+        return namespaceDescriptor;
       }
     }
     return null;
@@ -129,18 +131,18 @@ public class TestNamespacesInstanceResource {
     checkNamespaceProperties(nd.getConfiguration(), testProps);
   }
 
-  private void checkNamespaceProperties(Map<String,String> namespaceProps, 
+  private void checkNamespaceProperties(Map<String,String> namespaceProps,
       Map<String,String> testProps){
     assertTrue(namespaceProps.size() == testProps.size());
-    for(String key: testProps.keySet()){
+    for (String key: testProps.keySet()) {
       assertEquals(testProps.get(key), namespaceProps.get(key));
     }
   }
 
   private void checkNamespaceTables(List<TableModel> namespaceTables, List<String> testTables){
     assertEquals(namespaceTables.size(), testTables.size());
-    for(int i = 0 ; i < namespaceTables.size() ; i++){
-      String tableName = ((TableModel) namespaceTables.get(i)).getName();
+    for (TableModel namespaceTable : namespaceTables) {
+      String tableName = namespaceTable.getName();
       assertTrue(testTables.contains(tableName));
     }
   }
@@ -174,7 +176,7 @@ public class TestNamespacesInstanceResource {
 
     // Create namespace via admin.
     NamespaceDescriptor.Builder nsBuilder = NamespaceDescriptor.create(nsName);
-    NamespaceDescriptor nsd = nsBuilder.build(); 
+    NamespaceDescriptor nsd = nsBuilder.build();
     nsd.setConfiguration("key1", "value1");
     admin.createNamespace(nsd);
 
@@ -189,7 +191,7 @@ public class TestNamespacesInstanceResource {
     table.addFamily(colDesc);
     admin.createTable(table);
 
-    Map<String, String> nsProperties = new HashMap<String,String>();
+    Map<String, String> nsProperties = new HashMap<>();
     nsProperties.put("key1", "value1");
     List<String> nsTables = Arrays.asList("table1", "table2");
 
@@ -357,7 +359,7 @@ public class TestNamespacesInstanceResource {
   }
 
   @Test
-  public void testNamespaceCreateAndDeletePBAndNoBody() throws IOException, JAXBException {
+  public void testNamespaceCreateAndDeletePBAndNoBody() throws IOException {
     String namespacePath3 = "/namespaces/" + NAMESPACE3;
     String namespacePath4 = "/namespaces/" + NAMESPACE4;
     NamespacesInstanceModel model3;
@@ -412,7 +414,7 @@ public class TestNamespacesInstanceResource {
     // Check cannot post tables that already exist.
     response = client.post(namespacePath3, Constants.MIMETYPE_BINARY, new byte[]{});
     assertEquals(403, response.getCode());
-    response = client.post(namespacePath4, Constants.MIMETYPE_PROTOBUF, 
+    response = client.post(namespacePath4, Constants.MIMETYPE_PROTOBUF,
       model4.createProtobufOutput());
     assertEquals(403, response.getCode());
 
