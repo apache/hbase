@@ -143,6 +143,8 @@ public class MasterFileSystem {
         MobConstants.MOB_DIR_NAME
     };
 
+    //With the introduction of RegionProcedureStore,
+    // there's no need to create MasterProcWAL dir here anymore. See HBASE-23715
     final String[] protectedSubLogDirs = new String[] {
       HConstants.HREGION_LOGDIR_NAME,
       HConstants.HREGION_OLDLOGDIR_NAME,
