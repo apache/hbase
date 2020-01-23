@@ -1464,21 +1464,25 @@
     <!-- end HBASE-15925 default hadoop compatibility values -->
     <audience-annotations.version>0.5.0</audience-annotations.version>
     <avro.version>1.7.7</avro.version>
-    <caffeine.version>2.6.2</caffeine.version>
-    <commons-codec.version>1.10</commons-codec.version>
+    <caffeine.version>2.8.1</caffeine.version>
+    <commons-codec.version>1.13</commons-codec.version>
     <commons-validator.version>1.6</commons-validator.version>
     <!-- pretty outdated -->
-    <commons-io.version>2.5</commons-io.version>
+    <commons-io.version>2.6</commons-io.version>
     <commons-lang3.version>3.9</commons-lang3.version>
     <commons-math.version>3.6.1</commons-math.version>
-    <disruptor.version>3.3.6</disruptor.version>
+    <disruptor.version>3.4.2</disruptor.version>
+    <!-- Updating the httpclient will break hbase-rest. It writes out URLs with '//' in it
+      especially when writing out 'no column families'. Later httpclients collapse the '//'
+      into single '/' as double-slash is not legal in an URL. Breaks #testDelete in
+      TestRemoteTable. -->
     <httpclient.version>4.5.3</httpclient.version>
-    <httpcore.version>4.4.6</httpcore.version>
+    <httpcore.version>4.4.13</httpcore.version>
     <metrics-core.version>3.2.6</metrics-core.version>
-    <jackson.version>2.9.10</jackson.version>
-    <jackson.databind.version>2.9.10.1</jackson.databind.version>
+    <jackson.version>2.10.1</jackson.version>
+    <jackson.databind.version>2.10.1</jackson.databind.version>
     <jaxb-api.version>2.2.12</jaxb-api.version>
-    <jetty.version>9.3.27.v20190418</jetty.version>
+    <jetty.version>9.3.28.v20191105</jetty.version>
     <servlet.api.version>3.1.0</servlet.api.version>
     <wx.rs.api.version>2.0.1</wx.rs.api.version>
     <!-- Jersey 2.26 requires jetty 9.4 which breaks hadoop. Tread lightly. -->
@@ -1493,13 +1497,13 @@
     <mockito-core.version>2.28.2</mockito-core.version>
     <!--Internally we use a different version of protobuf. See hbase-protocol-shaded-->
     <external.protobuf.version>2.5.0</external.protobuf.version>
-    <protobuf.plugin.version>0.5.0</protobuf.plugin.version>
+    <protobuf.plugin.version>0.6.1</protobuf.plugin.version>
     <thrift.path>thrift</thrift.path>
     <thrift.version>0.12.0</thrift.version>
-    <zookeeper.version>3.4.10</zookeeper.version>
+    <zookeeper.version>3.4.14</zookeeper.version>
     <!-- What ZooKeeper 3.4.x depends on and nothing more -->
     <jline.version>0.9.94</jline.version>
-    <slf4j.version>1.7.25</slf4j.version>
+    <slf4j.version>1.7.30</slf4j.version>
     <clover.version>4.0.3</clover.version>
     <jamon-runtime.version>2.4.1</jamon-runtime.version>
     <jettison.version>1.3.8</jettison.version>
@@ -1512,14 +1516,14 @@
     <commons-crypto.version>1.0.0</commons-crypto.version>
     <curator.version>4.2.0</curator.version>
     <!-- Plugin Dependencies -->
-    <apache.rat.version>0.12</apache.rat.version>
-    <asciidoctor.plugin.version>1.5.5</asciidoctor.plugin.version>
-    <asciidoctorj.pdf.version>1.5.0-alpha.15</asciidoctorj.pdf.version>
+    <apache.rat.version>0.13</apache.rat.version>
+    <asciidoctor.plugin.version>1.5.8.1</asciidoctor.plugin.version>
+    <asciidoctorj.pdf.version>1.5.0-rc.2</asciidoctorj.pdf.version>
     <build.helper.maven.version>3.0.0</build.helper.maven.version>
     <buildnumber.maven.version>1.4</buildnumber.maven.version>
     <checkstyle.version>8.28</checkstyle.version>
     <exec.maven.version>1.6.0</exec.maven.version>
-    <error-prone.version>2.3.3</error-prone.version>
+    <error-prone.version>2.3.4</error-prone.version>
     <findbugs-annotations>1.3.9-1</findbugs-annotations>
     <findbugs.maven.version>3.0.4</findbugs.maven.version>
     <jamon.plugin.version>2.4.2</jamon.plugin.version>
@@ -1823,6 +1827,16 @@
         <artifactId>hbase-zookeeper</artifactId>
         <groupId>org.apache.hbase</groupId>
         <version>${project.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>com.google.code.findbugs</groupId>
+            <artifactId>jsr305</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.github.spotbugs</groupId>
+            <artifactId>spotbugs-annotations</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <artifactId>hbase-zookeeper</artifactId>
@@ -1944,6 +1958,14 @@
         <artifactId>zookeeper</artifactId>
         <version>${zookeeper.version}</version>
         <exclusions>
+          <exclusion>
+            <groupId>com.google.code.findbugs</groupId>
+            <artifactId>jsr305</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.github.spotbugs</groupId>
+            <artifactId>spotbugs-annotations</artifactId>
+          </exclusion>
           <exclusion>
             <groupId>jline</groupId>
             <artifactId>jline</artifactId>
