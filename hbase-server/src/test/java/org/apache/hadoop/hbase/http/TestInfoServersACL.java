@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.http;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -29,8 +29,12 @@ import java.security.PrivilegedExceptionAction;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.LocalHBaseCluster;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.http.HttpServer;
 import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.security.token.TokenProvider;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -132,6 +136,7 @@ public class TestInfoServersACL {
     conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, true);
     // only user admin will have acl access
     conf.set(HttpServer.HTTP_SPNEGO_AUTHENTICATION_ADMIN_USERS_KEY, USER_ADMIN_STR);
+    //conf.set(HttpServer.FILTER_INITIALIZERS_PROPERTY, "");
 
     CLUSTER = new LocalHBaseCluster(conf, 1);
     CLUSTER.startup();
@@ -238,6 +243,60 @@ public class TestInfoServersACL {
     });
   }
 
+  @Test
+  public void testDumpActionsAvailableForAdmins() throws Exception {
+    final String expectedAuthorizedContent = "Master status for";
+    UserGroupInformation admin = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
+        USER_ADMIN_STR, KEYTAB_FILE.getAbsolutePath());
+    admin.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override public Void run() throws Exception {
+        // Check the expected content is present in the http response
+        Pair<Integer,String> pair = getMasterDumpPage();
+        assertEquals(HttpURLConnection.HTTP_OK, pair.getFirst().intValue());
+        assertTrue("expected=" + expectedAuthorizedContent + ", content=" + pair.getSecond(),
+          pair.getSecond().contains(expectedAuthorizedContent));
+        return null;
+      }
+    });
+
+    UserGroupInformation nonAdmin = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
+        USER_NONE_STR, KEYTAB_FILE.getAbsolutePath());
+    nonAdmin.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override public Void run() throws Exception {
+        Pair<Integer,String> pair = getMasterDumpPage();
+        assertEquals(HttpURLConnection.HTTP_FORBIDDEN, pair.getFirst().intValue());
+        return null;
+      }
+    });
+  }
+
+  @Test
+  public void testStackActionsAvailableForAdmins() throws Exception {
+    final String expectedAuthorizedContent = "Process Thread Dump";
+    UserGroupInformation admin = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
+        USER_ADMIN_STR, KEYTAB_FILE.getAbsolutePath());
+    admin.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override public Void run() throws Exception {
+        // Check the expected content is present in the http response
+        Pair<Integer,String> pair = getStacksPage();
+        assertEquals(HttpURLConnection.HTTP_OK, pair.getFirst().intValue());
+        assertTrue("expected=" + expectedAuthorizedContent + ", content=" + pair.getSecond(),
+          pair.getSecond().contains(expectedAuthorizedContent));
+        return null;
+      }
+    });
+
+    UserGroupInformation nonAdmin = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
+        USER_NONE_STR, KEYTAB_FILE.getAbsolutePath());
+    nonAdmin.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override public Void run() throws Exception {
+        Pair<Integer,String> pair = getStacksPage();
+        assertEquals(HttpURLConnection.HTTP_FORBIDDEN, pair.getFirst().intValue());
+        return null;
+      }
+    });
+  }
+
   private String getInfoServerHostAndPort() {
     return "http://localhost:" + CLUSTER.getActiveMaster().getInfoServer().getPort();
   }
@@ -255,6 +314,16 @@ public class TestInfoServersACL {
 
   private Pair<Integer,String> getLogsPage() throws Exception {
     URL url = new URL(getInfoServerHostAndPort() + "/logs/");
+    return getUrlContent(url);
+  }
+
+  private Pair<Integer,String> getMasterDumpPage() throws Exception {
+    URL url = new URL (getInfoServerHostAndPort() + "/dump");
+    return getUrlContent(url);
+  }
+
+  private Pair<Integer,String> getStacksPage() throws Exception {
+    URL url = new URL (getInfoServerHostAndPort() + "/stacks");
     return getUrlContent(url);
   }
 

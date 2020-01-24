@@ -36,6 +36,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -396,11 +397,6 @@ public class HttpServer implements FilterContainer {
 
       HttpServer server = new HttpServer(this);
 
-      if (this.securityEnabled) {
-        server.initSpnego(conf, hostName, usernameConfKey, keytabConfKey, kerberosNameRulesKey,
-            signatureSecretFileKey);
-      }
-
       for (URI ep : endpoints) {
         ServerConnector listener = null;
         String scheme = ep.getScheme();
@@ -569,11 +565,11 @@ public class HttpServer implements FilterContainer {
     this.adminsAcl = b.adminsAcl;
     this.webAppContext = createWebAppContext(b.name, b.conf, adminsAcl, appDir);
     this.findPort = b.findPort;
-    initializeWebServer(b.name, b.hostName, b.conf, b.pathSpecs);
+    initializeWebServer(b.name, b.hostName, b.conf, b.pathSpecs, b);
   }
 
   private void initializeWebServer(String name, String hostName,
-      Configuration conf, String[] pathSpecs)
+      Configuration conf, String[] pathSpecs, HttpServer.Builder b)
       throws FileNotFoundException, IOException {
 
     Preconditions.checkNotNull(webAppContext);
@@ -598,6 +594,9 @@ public class HttpServer implements FilterContainer {
 
     webAppContext.setAttribute(ADMINS_ACL, adminsAcl);
 
+    // Default apps need to be set first, so that all filters are applied to them.
+    // Because they're added to defaultContexts, we need them there before we start
+    // adding filters
     addDefaultApps(contexts, appDir, conf);
 
     addGlobalFilter("safety", QuotingInputFilter.class.getName(), null);
@@ -609,6 +608,12 @@ public class HttpServer implements FilterContainer {
     addGlobalFilter("securityheaders",
         SecurityHeadersFilter.class.getName(),
         SecurityHeadersFilter.getDefaultParameters(conf));
+
+    // But security needs to be enabled prior to adding the other servlets
+    if (b.securityEnabled) {
+      initSpnego(conf, hostName, b.usernameConfKey, b.keytabConfKey, b.kerberosNameRulesKey,
+          b.signatureSecretFileKey);
+    }
 
     final FilterInitializer[] initializers = getFilterInitializers(conf);
     if (initializers != null) {
@@ -696,7 +701,6 @@ public class HttpServer implements FilterContainer {
       }
       logContext.setDisplayName("logs");
       setContextAttributes(logContext, conf);
-      addNoCacheFilter(webAppContext);
       defaultContexts.put(logContext, true);
     }
     // set up the context for "/static/*"
@@ -814,7 +818,7 @@ public class HttpServer implements FilterContainer {
    * protect with Kerberos authentication.
    * Note: This method is to be used for adding servlets that facilitate
    * internal communication and not for user facing functionality. For
-   +   * servlets added using this method, filters (except internal Kerberos
+   * servlets added using this method, filters (except internal Kerberos
    * filters) are not enabled.
    *
    * @param name The name of the servlet (can be passed as null)
@@ -827,6 +831,15 @@ public class HttpServer implements FilterContainer {
     ServletHolder holder = new ServletHolder(clazz);
     if (name != null) {
       holder.setName(name);
+    }
+    if (requireAuth) {
+      FilterHolder filter = new FilterHolder(AdminAuthorizedFilter.class);
+      filter.setName(AdminAuthorizedFilter.class.getSimpleName());
+      FilterMapping fmap = new FilterMapping();
+      fmap.setPathSpec(pathSpec);
+      fmap.setDispatches(FilterMapping.ALL);
+      fmap.setFilterName(AdminAuthorizedFilter.class.getSimpleName());
+      webAppContext.getServletHandler().addFilter(filter, fmap);
     }
     webAppContext.addServlet(holder, pathSpec);
   }
@@ -1242,6 +1255,13 @@ public class HttpServer implements FilterContainer {
       HttpServletResponse response) throws IOException {
     Configuration conf =
         (Configuration) servletContext.getAttribute(CONF_CONTEXT_ATTRIBUTE);
+    AccessControlList acl = (AccessControlList) servletContext.getAttribute(ADMINS_ACL);
+
+    return hasAdministratorAccess(conf, acl, request, response);
+  }
+
+  public static boolean hasAdministratorAccess(Configuration conf, AccessControlList acl,
+      HttpServletRequest request, HttpServletResponse response) throws IOException {
     // If there is no authorization, anybody has administrator access.
     if (!conf.getBoolean(
         CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, false)) {
@@ -1256,8 +1276,7 @@ public class HttpServer implements FilterContainer {
       return false;
     }
 
-    if (servletContext.getAttribute(ADMINS_ACL) != null &&
-        !userHasAdministratorAccess(servletContext, remoteUser)) {
+    if (acl != null && !userHasAdministratorAccess(acl, remoteUser)) {
       response.sendError(HttpServletResponse.SC_FORBIDDEN, "User "
           + remoteUser + " is unauthorized to access this page.");
       return false;
@@ -1279,9 +1298,13 @@ public class HttpServer implements FilterContainer {
       String remoteUser) {
     AccessControlList adminsAcl = (AccessControlList) servletContext
         .getAttribute(ADMINS_ACL);
+    return userHasAdministratorAccess(adminsAcl, remoteUser);
+  }
+
+  public static boolean userHasAdministratorAccess(AccessControlList acl, String remoteUser) {
     UserGroupInformation remoteUserUGI =
         UserGroupInformation.createRemoteUser(remoteUser);
-    return adminsAcl != null && adminsAcl.isUserAllowed(remoteUserUGI);
+    return acl != null && acl.isUserAllowed(remoteUserUGI);
   }
 
   /**
