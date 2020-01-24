@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -84,6 +84,7 @@ import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -360,10 +361,8 @@ public class TestSplitTransactionOnCluster {
     final TableName tableName = TableName.valueOf(name.getMethodName());
 
     // Create table then get the single region for our new table.
-    Table t = createTableAndWait(tableName, HConstants.CATALOG_FAMILY);
-    List<HRegion> regions = cluster.getRegions(tableName);
-    RegionInfo hri = getAndCheckSingleTableRegion(regions);
-
+    Table t = createTableAndWait(tableName, HConstants.CATALOG_FAMILY); List<HRegion> regions =
+      cluster.getRegions(tableName); RegionInfo hri = getAndCheckSingleTableRegion(regions);
     int tableRegionIndex = ensureTableRegionNotOnSameServerAsMeta(admin, hri);
 
     // Turn off balancer so it doesn't cut in and mess up our placements.
@@ -380,20 +379,31 @@ public class TestSplitTransactionOnCluster {
       admin.splitRegionAsync(hri.getRegionName()).get(2, TimeUnit.MINUTES);
       // Get daughters
       List<HRegion> daughters = checkAndGetDaughters(tableName);
-      HRegion daughterRegion = daughters.get(0);
       // Now split one of the daughters.
+      HRegion daughterRegion = daughters.get(0);
       RegionInfo daughter = daughterRegion.getRegionInfo();
       LOG.info("Daughter we are going to split: " + daughter);
-      // Compact first to ensure we have cleaned up references -- else the split
-      // will fail.
+      // Compact first to ensure we have cleaned up references -- else the split will fail.
+      // May be a compaction going already so compact will return immediately; if so, wait until
+      // compaction completes.
       daughterRegion.compact(true);
-      daughterRegion.getStores().get(0).closeAndArchiveCompactedFiles();
+      HStore store = daughterRegion.getStores().get(0);
+      CompactionProgress progress = store.getCompactionProgress();
+      if (progress != null) {
+        while (progress.getProgressPct() < 1) {
+          LOG.info("Waiting {}", progress);
+          Threads.sleep(1000);
+        }
+      }
+      store.closeAndArchiveCompactedFiles();
       for (int i = 0; i < 100; i++) {
         if (!daughterRegion.hasReferences()) {
+          LOG.info("Break -- no references in {}", daughterRegion);
           break;
         }
         Threads.sleep(100);
       }
+      LOG.info("Finished {} references={}", daughterRegion, daughterRegion.hasReferences());
       assertFalse("Waiting for reference to be compacted", daughterRegion.hasReferences());
       LOG.info("Daughter hri before split (has been compacted): " + daughter);
       admin.splitRegionAsync(daughter.getRegionName()).get(2, TimeUnit.MINUTES);
