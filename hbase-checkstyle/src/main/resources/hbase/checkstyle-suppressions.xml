@@ -51,4 +51,8 @@
   <suppress checks="EmptyBlock" files="org.apache.hadoop.hbase.TestTimeout"/>
   <suppress checks="InnerAssignment" files="org.apache.hadoop.hbase.rest.PerformanceEvaluation"/>
   <suppress checks="EmptyBlock" files="org.apache.hadoop.hbase.rest.PerformanceEvaluation"/>
+  <!-- Will not have a private constructor, because it is InterfaceAudience.Public -->
+  <suppress checks="HideUtilityClassConstructor" files="org.apache.hadoop.hbase.util.ByteRangeUtils"/>
+  <!-- Will not be final, because it is InterfaceAudience.Public -->
+  <suppress checks="FinalClass" files="org.apache.hadoop.hbase.net.Address"/>
 </suppressions>

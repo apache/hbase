@@ -30,10 +30,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  * Utility methods for working with {@link ByteRange}.
  */
 @InterfaceAudience.Public
-public final class ByteRangeUtils {
-  private ByteRangeUtils() {
-  }
-
+public class ByteRangeUtils {
   public static int numEqualPrefixBytes(ByteRange left, ByteRange right, int rightInnerOffset) {
     int maxCompares = Math.min(left.getLength(), right.getLength() - rightInnerOffset);
     final byte[] lbytes = left.getBytes();
