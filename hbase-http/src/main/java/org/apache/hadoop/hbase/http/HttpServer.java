@@ -732,11 +732,11 @@ public class HttpServer implements FilterContainer {
     // Remove when we drop support for hbase on hadoop2.x.
     try {
       Class<?> clz = Class.forName("org.apache.hadoop.metrics.MetricsServlet");
-      addUnprivilegedServlet("metrics", "/metrics", clz.asSubclass(HttpServlet.class));
+      addPrivilegedServlet("metrics", "/metrics", clz.asSubclass(HttpServlet.class));
     } catch (Exception e) {
       // do nothing
     }
-    addUnprivilegedServlet("jmx", "/jmx", JMXJsonServlet.class);
+    addPrivilegedServlet("jmx", "/jmx", JMXJsonServlet.class);
     addUnprivilegedServlet("conf", "/conf", ConfServlet.class);
     final String asyncProfilerHome = ProfileServlet.getAsyncProfilerHome();
     if (asyncProfilerHome != null && !asyncProfilerHome.trim().isEmpty()) {

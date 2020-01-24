@@ -297,6 +297,70 @@ public class TestInfoServersACL {
     });
   }
 
+  @Test
+  public void testJmxAvailableForAdmins() throws Exception {
+    final String expectedAuthorizedContent = "Hadoop:service=HBase";
+    UserGroupInformation admin = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
+        USER_ADMIN_STR, KEYTAB_FILE.getAbsolutePath());
+    admin.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override public Void run() throws Exception {
+        // Check the expected content is present in the http response
+        Pair<Integer,String> pair = getJmxPage();
+        assertEquals(HttpURLConnection.HTTP_OK, pair.getFirst().intValue());
+        assertTrue("expected=" + expectedAuthorizedContent + ", content=" + pair.getSecond(),
+          pair.getSecond().contains(expectedAuthorizedContent));
+        return null;
+      }
+    });
+
+    UserGroupInformation nonAdmin = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
+        USER_NONE_STR, KEYTAB_FILE.getAbsolutePath());
+    nonAdmin.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override public Void run() throws Exception {
+        Pair<Integer,String> pair = getJmxPage();
+        assertEquals(HttpURLConnection.HTTP_FORBIDDEN, pair.getFirst().intValue());
+        return null;
+      }
+    });
+  }
+
+  @Test
+  public void testMetricsAvailableForAdmins() throws Exception {
+    // Looks like there's nothing exported to this, but leave it since
+    // it's Hadoop2 only and will eventually be removed due to that.
+    final String expectedAuthorizedContent = "";
+    UserGroupInformation admin = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
+        USER_ADMIN_STR, KEYTAB_FILE.getAbsolutePath());
+    admin.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override public Void run() throws Exception {
+        // Check the expected content is present in the http response
+        Pair<Integer,String> pair = getMetricsPage();
+        if (HttpURLConnection.HTTP_NOT_FOUND == pair.getFirst()) {
+          // Not on hadoop 2
+          return null;
+        }
+        assertEquals(HttpURLConnection.HTTP_OK, pair.getFirst().intValue());
+        assertTrue("expected=" + expectedAuthorizedContent + ", content=" + pair.getSecond(),
+          pair.getSecond().contains(expectedAuthorizedContent));
+        return null;
+      }
+    });
+
+    UserGroupInformation nonAdmin = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
+        USER_NONE_STR, KEYTAB_FILE.getAbsolutePath());
+    nonAdmin.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override public Void run() throws Exception {
+        Pair<Integer,String> pair = getMetricsPage();
+        if (HttpURLConnection.HTTP_NOT_FOUND == pair.getFirst()) {
+          // Not on hadoop 2
+          return null;
+        }
+        assertEquals(HttpURLConnection.HTTP_FORBIDDEN, pair.getFirst().intValue());
+        return null;
+      }
+    });
+  }
+
   private String getInfoServerHostAndPort() {
     return "http://localhost:" + CLUSTER.getActiveMaster().getInfoServer().getPort();
   }
@@ -324,6 +388,16 @@ public class TestInfoServersACL {
 
   private Pair<Integer,String> getStacksPage() throws Exception {
     URL url = new URL(getInfoServerHostAndPort() + "/stacks");
+    return getUrlContent(url);
+  }
+
+  private Pair<Integer,String> getJmxPage() throws Exception {
+    URL url = new URL(getInfoServerHostAndPort() + "/jmx");
+    return getUrlContent(url);
+  }
+
+  private Pair<Integer,String> getMetricsPage() throws Exception {
+    URL url = new URL(getInfoServerHostAndPort() + "/metrics");
     return getUrlContent(url);
   }
 
