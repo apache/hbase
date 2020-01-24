@@ -283,10 +283,6 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
       }
     });
 
-    // the one and only region server in the group does not get cleared, even though it is stopped
-    List<ServerName> notClearedServers = admin.clearDeadServers(Lists.newArrayList(serverToStop));
-    assertEquals(serverCountToMoveToDeadServerGroup, notClearedServers.size());
-
     Set<Address> ServersInDeadServerGroup =
         rsGroupAdmin.getRSGroupInfo(deadServerGroup.getName()).getServers();
     assertEquals(serverCountToMoveToDeadServerGroup, ServersInDeadServerGroup.size());
