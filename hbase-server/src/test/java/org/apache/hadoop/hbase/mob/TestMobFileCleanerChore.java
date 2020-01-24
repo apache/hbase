@@ -63,11 +63,11 @@ import org.slf4j.LoggerFactory;
  */
 @SuppressWarnings("deprecation")
 @Category(MediumTests.class)
-public class TesMobFileCleanerChore {
-  private static final Logger LOG = LoggerFactory.getLogger(TesMobFileCleanerChore.class);
+public class TestMobFileCleanerChore {
+  private static final Logger LOG = LoggerFactory.getLogger(TestMobFileCleanerChore.class);
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TesMobFileCleanerChore.class);
+      HBaseClassTestRule.forClass(TestMobFileCleanerChore.class);
   @Rule
   public TestName testName = new TestName();
 
@@ -88,7 +88,7 @@ public class TesMobFileCleanerChore {
   private MobFileCleanerChore chore;
   private long minAgeToArchive = 10000;
 
-  public TesMobFileCleanerChore() {
+  public TestMobFileCleanerChore() {
   }
 
 
@@ -150,48 +150,43 @@ public class TesMobFileCleanerChore {
 
   @After
   public void tearDown() throws Exception {
+    admin.disableTable(hdt.getTableName());
+    admin.deleteTable(hdt.getTableName());
     HTU.shutdownMiniCluster();
   }
 
   @Test
   public void testMobFileCleanerChore() throws InterruptedException, IOException {
 
-    try {
-
-      loadData(0, 10);
-      loadData(10, 10);
-      loadData(20, 10);
-      long num = getNumberOfMobFiles(conf, table.getName(), new String(fam));
-      assertEquals(3, num);
-      // Major compact
-      admin.majorCompact(hdt.getTableName(), fam);
-      // wait until compaction is complete
-      while (admin.getCompactionState(hdt.getTableName()) != CompactionState.NONE) {
-        Thread.sleep(100);
-      }
-
-      num = getNumberOfMobFiles(conf, table.getName(), new String(fam));
-      assertEquals(4, num);
-      // We have guarantee, that compcated file discharger will run during this pause
-      // because it has interval less than this wait time
-      LOG.info("Waiting for {}ms", minAgeToArchive + 1000);
-
-      Thread.sleep(minAgeToArchive + 1000);
-      LOG.info("Cleaning up MOB files");
-      // Cleanup again
-      chore.cleanupObsoleteMobFiles(conf, table.getName());
-
-      num = getNumberOfMobFiles(conf, table.getName(), new String(fam));
-      assertEquals(1, num);
-
-      long scanned = scanTable();
-      assertEquals(30, scanned);
-
-    } finally {
-
-      admin.disableTable(hdt.getTableName());
-      admin.deleteTable(hdt.getTableName());
+    loadData(0, 10);
+    loadData(10, 10);
+    loadData(20, 10);
+    long num = getNumberOfMobFiles(conf, table.getName(), new String(fam));
+    assertEquals(3, num);
+    // Major compact
+    admin.majorCompact(hdt.getTableName(), fam);
+    // wait until compaction is complete
+    while (admin.getCompactionState(hdt.getTableName()) != CompactionState.NONE) {
+      Thread.sleep(100);
     }
+
+    num = getNumberOfMobFiles(conf, table.getName(), new String(fam));
+    assertEquals(4, num);
+    // We have guarantee, that compcated file discharger will run during this pause
+    // because it has interval less than this wait time
+    LOG.info("Waiting for {}ms", minAgeToArchive + 1000);
+
+    Thread.sleep(minAgeToArchive + 1000);
+    LOG.info("Cleaning up MOB files");
+    // Cleanup again
+    chore.cleanupObsoleteMobFiles(conf, table.getName());
+
+    num = getNumberOfMobFiles(conf, table.getName(), new String(fam));
+    assertEquals(1, num);
+
+    long scanned = scanTable();
+    assertEquals(30, scanned);
+
     LOG.info("MOB Stress Test finished OK");
 
   }

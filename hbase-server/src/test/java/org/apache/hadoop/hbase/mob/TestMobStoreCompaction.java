@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver;
+package org.apache.hadoop.hbase.mob;
 
 import static org.apache.hadoop.hbase.HBaseTestingUtility.START_KEY;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
@@ -62,6 +62,12 @@ import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
+import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.RegionAsTable;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
@@ -161,9 +167,6 @@ public class TestMobStoreCompaction {
 
   /**
    * During compaction, the mob threshold size is changed.
-   * The test is no longer valid. Major MOB compaction must be triggered by User
-   * HRegion does not provide public API to trigger major-compaction by User
-   * This test will move to mob sub-package.  
    */
   @Test
   public void testLargerValue() throws Exception {
@@ -184,21 +187,21 @@ public class TestMobStoreCompaction {
     // Change the threshold larger than the data size
     setMobThreshold(region, COLUMN_FAMILY, 500);
     region.initialize();
-    
+
     List<HStore> stores = region.getStores();
     for (HStore store: stores) {
       // Force major compaction
       store.triggerMajorCompaction();
-      Optional<CompactionContext> context =  
-          store.requestCompaction(HStore.PRIORITY_USER, CompactionLifeCycleTracker.DUMMY, 
+      Optional<CompactionContext> context =
+          store.requestCompaction(HStore.PRIORITY_USER, CompactionLifeCycleTracker.DUMMY,
             User.getCurrent());
       if (!context.isPresent()) {
         continue;
       }
-      region.compact(context.get(), store, 
+      region.compact(context.get(), store,
         NoLimitThroughputController.INSTANCE, User.getCurrent());
     }
-    
+
     assertEquals("After compaction: store files", 1, countStoreFiles());
     assertEquals("After compaction: mob file count", compactionThreshold, countMobFiles());
     assertEquals("After compaction: referenced mob file count", 0, countReferencedMobFiles());

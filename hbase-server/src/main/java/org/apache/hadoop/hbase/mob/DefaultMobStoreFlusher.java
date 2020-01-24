@@ -254,7 +254,7 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
       status.setStatus("Flushing mob file " + store + ": closing flushed file");
       mobFileWriter.close();
       mobStore.commitFile(mobFileWriter.getPath(), targetPath);
-      LOG.debug("Flush store file: {}", writer.getPath());
+      LOG.debug("Flush store file: {}, store: {}", writer.getPath(), getStoreInfo());
       mobStore.updateMobFlushCount();
       mobStore.updateMobFlushedCellsCount(mobCount);
       mobStore.updateMobFlushedCellsSize(mobSize);
@@ -272,6 +272,7 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
     }
   }
 
+  @Override
   protected void finalizeWriter(StoreFileWriter writer, long cacheFlushSeqNum,
       MonitoredTask status) throws IOException {
     // Write out the log sequence number that corresponds to this output
@@ -282,5 +283,10 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
     writer.appendMobMetadata(mobRefSet.get());
     status.setStatus("Flushing " + store + ": closing flushed file");
     writer.close();
+  }
+
+  private String getStoreInfo() {
+    return String.format("[table=%s family=%s region=%s]", store.getTableName().getNameAsString(),
+      store.getColumnFamilyName(), store.getRegionInfo().getEncodedName()) ;
   }
 }

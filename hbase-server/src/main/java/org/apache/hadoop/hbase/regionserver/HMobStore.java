@@ -243,8 +243,7 @@ public class HMobStore extends HStore {
     }
     Path dstPath = new Path(targetPath, sourceFile.getName());
     validateMobFile(sourceFile);
-    String msg = " FLUSH Renaming flushed file from " + sourceFile + " to " + dstPath;
-    LOG.info(msg);
+    LOG.info(" FLUSH Renaming flushed file from {} to {}", sourceFile, dstPath);
     Path parent = dstPath.getParent();
     if (!region.getFilesystem().exists(parent)) {
       region.getFilesystem().mkdirs(parent);

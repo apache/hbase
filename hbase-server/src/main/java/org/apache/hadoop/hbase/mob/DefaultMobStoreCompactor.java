@@ -72,6 +72,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
   private static final Logger LOG = LoggerFactory.getLogger(DefaultMobStoreCompactor.class);
   protected long mobSizeThreshold;
   protected HMobStore mobStore;
+  protected boolean ioOptimizedMode = false;
 
   /*
    * MOB file reference set thread local variable. It contains set of a MOB file names, which newly
@@ -99,15 +100,15 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
   };
 
   /*
-   * Map : MOB file name - file length Can be expensive for large amount of MOB files?
+   * Map : MOB file name - file length Can be expensive for large amount of MOB files.
    */
   static ThreadLocal<HashMap<String, Long>> mobLengthMap =
-      new ThreadLocal<HashMap<String, Long>>() {
-        @Override
-        protected HashMap<String, Long> initialValue() {
-          return new HashMap<String, Long>();
-        }
-      };
+    new ThreadLocal<HashMap<String, Long>>() {
+      @Override
+      protected HashMap<String, Long> initialValue() {
+        return new HashMap<String, Long>();
+      }
+    };
 
   private final InternalScannerFactory scannerFactory = new InternalScannerFactory() {
 
@@ -145,24 +146,33 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     if (!(store instanceof HMobStore)) {
       throw new IllegalArgumentException("The store " + store + " is not a HMobStore");
     }
-    mobStore = (HMobStore) store;
-    mobSizeThreshold = store.getColumnFamilyDescriptor().getMobThreshold();
+    this.mobStore = (HMobStore) store;
+    this.mobSizeThreshold = store.getColumnFamilyDescriptor().getMobThreshold();
+    this.ioOptimizedMode = conf.get(MobConstants.MOB_COMPACTION_TYPE_KEY,
+      MobConstants.DEFAULT_MOB_COMPACTION_TYPE).
+        equals(MobConstants.OPTIMIZED_MOB_COMPACTION_TYPE);
+
   }
 
   @Override
   public List<Path> compact(CompactionRequestImpl request,
       ThroughputController throughputController, User user) throws IOException {
-    LOG.info("Mob compaction: major=" + request.isMajor() + " isAll=" + request.isAllFiles()
-        + " priority=" + request.getPriority());
+    String tableName = store.getTableName().toString();
+    String regionName = store.getRegionInfo().getRegionNameAsString();
+    String familyName = store.getColumnFamilyName();
+    LOG.info("MOB compaction: major={} isAll={} priority={} throughput controller={}" +
+      " table={} cf={} region={}",
+      request.isMajor(), request.isAllFiles(), request.getPriority(),
+      throughputController, tableName, familyName, regionName);
     if (request.getPriority() == HStore.PRIORITY_USER) {
       userRequest.set(Boolean.TRUE);
     } else {
       userRequest.set(Boolean.FALSE);
     }
-    LOG.info("Mob compaction files: " + request.getFiles());
+    LOG.debug("MOB compaction table={} cf={} region={} files: ", tableName, familyName,
+      regionName, request.getFiles());
     // Check if I/O optimized MOB compaction
-    if (conf.get(MobConstants.MOB_COMPACTION_TYPE_KEY, MobConstants.DEFAULT_MOB_COMPACTION_TYPE)
-        .equals(MobConstants.IO_OPTIMIZED_MOB_COMPACTION_TYPE)) {
+    if (ioOptimizedMode) {
       if (request.isMajor() && request.getPriority() == HStore.PRIORITY_USER) {
         Path mobDir =
             MobUtils.getMobFamilyPath(conf, store.getTableName(), store.getColumnFamilyName());
@@ -170,9 +180,11 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
         if (mobFiles.size() > 0) {
           calculateMobLengthMap(mobFiles);
         }
-        LOG.info("I/O optimized MOB compaction. Total referenced MOB files: {}", mobFiles.size());
+        LOG.info("Table={} cf={} region={}. I/O optimized MOB compaction. "+
+            "Total referenced MOB files: {}", tableName, familyName, regionName, mobFiles.size());
       }
     }
+
     return compact(request, scannerFactory, writerFactory, throughputController, user);
   }
 
@@ -183,7 +195,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     for (Path p : mobFiles) {
       FileStatus st = fs.getFileStatus(p);
       long size = st.getLen();
-      LOG.info("Ref MOB file={} size={}", p, size);
+      LOG.debug("Referenced MOB file={} size={}", p, size);
       map.put(p.getName(), fs.getFileStatus(p).getLen());
     }
   }
@@ -234,20 +246,18 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     mobRefSet.get().clear();
     boolean isUserRequest = userRequest.get();
     boolean compactMOBs = major && isUserRequest;
-    boolean ioOptimizedMode =
-        conf.get(MobConstants.MOB_COMPACTION_TYPE_KEY, MobConstants.DEFAULT_MOB_COMPACTION_TYPE)
-            .equals(MobConstants.IO_OPTIMIZED_MOB_COMPACTION_TYPE);
-
     boolean discardMobMiss = conf.getBoolean(MobConstants.MOB_UNSAFE_DISCARD_MISS_KEY,
       MobConstants.DEFAULT_MOB_DISCARD_MISS);
-
+    if (discardMobMiss) {
+      LOG.warn("{}=true. This is unsafe setting recommended only"+
+        " during upgrade process from MOB 1.0 to MOB 2.0 versions.",
+        MobConstants.MOB_UNSAFE_DISCARD_MISS_KEY);
+    }
     long maxMobFileSize = conf.getLong(MobConstants.MOB_COMPACTION_MAX_FILE_SIZE_KEY,
       MobConstants.DEFAULT_MOB_COMPACTION_MAX_FILE_SIZE);
-    LOG.info("Compact MOB={} optimized={} maximum MOB file size={} major={}", compactMOBs,
-      ioOptimizedMode, maxMobFileSize, major);
-
+    LOG.info("Compact MOB={} optimized={} maximum MOB file size={} major={} store={}", compactMOBs,
+      ioOptimizedMode, maxMobFileSize, major, getStoreInfo());
     FileSystem fs = FileSystem.get(conf);
-
     // Since scanner.next() can return 'false' but still be delivering data,
     // we have to use a do/while loop.
     List<Cell> cells = new ArrayList<>();
@@ -298,7 +308,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
                 mobCell = mobStore.resolve(c, true, false).getCell();
               } catch (FileNotFoundException fnfe) {
                 if (discardMobMiss) {
-                  LOG.debug("Missing MOB cell: file={} not found cell={}", pp, c);
+                  LOG.error("Missing MOB cell: file={} not found cell={}", fName, c);
                   continue;
                 } else {
                   throw fnfe;
@@ -306,11 +316,12 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
               }
 
               if (discardMobMiss && mobCell.getValueLength() == 0) {
-                LOG.error("Missing MOB cell value: file=" + pp + " cell=" + mobCell);
+                LOG.error("Missing MOB cell value: file={} cell={}", pp, mobCell);
                 continue;
               } else if (mobCell.getValueLength() == 0) {
-                // TODO: what to do here? This is data corruption?
-                LOG.warn("Found 0 length MOB cell in a file={} cell={}", pp, mobCell);
+                String errMsg = String.format("Found 0 length MOB cell in a file=%s cell=%s",
+                  fName, mobCell);
+                throw new IOException(errMsg);
               }
 
               if (mobCell.getValueLength() > mobSizeThreshold) {
@@ -329,8 +340,8 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
                   if (size == null) {
                     // FATAL error, abort compaction
                     String msg = String.format(
-                      "Found unreferenced MOB file during compaction %s, aborting.", fName);
-                    LOG.error(msg);
+                      "Found unreferenced MOB file during compaction %s, aborting compaction %s",
+                      fName, getStoreInfo());
                     throw new IOException(msg);
                   }
                   // Can not be null
@@ -344,11 +355,10 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
                       MobUtils.createMobRefCell(mobCell, fileName, this.mobStore.getRefCellTags()));
                     // Update total size of the output (we do not take into account
                     // file compression yet)
-                    long len = getLength(mobFileWriter);
-
+                    long len = mobFileWriter.getPos();
                     if (len > maxMobFileSize) {
-                      LOG.debug("Closing output MOB File, length={} file={}", len,
-                        Bytes.toString(fileName));
+                      LOG.debug("Closing output MOB File, length={} file={}, store=", len,
+                        Bytes.toString(fileName), getStoreInfo());
                       commitOrAbortMobWriter(mobFileWriter, fd.maxSeqId, mobCells, major);
                       mobFileWriter = newMobWriter(fd);
                       fileName = Bytes.toBytes(mobFileWriter.getPath().getName());
@@ -384,7 +394,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
                 if (ioOptimizedMode) {
                   // Update total size of the output (we do not take into account
                   // file compression yet)
-                  long len = getLength(mobFileWriter);
+                  long len = mobFileWriter.getPos();
                   if (len > maxMobFileSize) {
                     commitOrAbortMobWriter(mobFileWriter, fd.maxSeqId, mobCells, major);
                     mobFileWriter = newMobWriter(fd);
@@ -411,9 +421,8 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
               // Add MOB reference to a MOB reference set
               mobRefSet.get().add(MobUtils.getMobFileName(c));
             } else {
-              // TODO ????
-              LOG.error("Corrupted MOB reference: " + c);
-              writer.append(c);
+              String errMsg = String.format("Corrupted MOB reference: %s", c.toString());
+              throw new IOException(errMsg);
             }
           } else if (c.getValueLength() <= mobSizeThreshold) {
             // If the value size of a cell is not larger than the threshold, directly write it to
@@ -431,7 +440,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
             cellsCountCompactedToMob++;
             cellsSizeCompactedToMob += c.getValueLength();
             if (ioOptimizedMode) {
-              long len = getLength(mobFileWriter);
+              long len = mobFileWriter.getPos();
               if (len > maxMobFileSize) {
                 commitOrAbortMobWriter(mobFileWriter, fd.maxSeqId, mobCells, major);
                 mobFileWriter = newMobWriter(fd);
@@ -486,8 +495,9 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
       throw new InterruptedIOException(
           "Interrupted while control throughput of compacting " + compactionName);
     } catch (IOException t) {
-      LOG.error("Mob compaction failed for region:{} ", store.getRegionInfo().getEncodedName());
-      throw t;
+      String msg = "Mob compaction failed for region: " +
+        store.getRegionInfo().getEncodedName();
+      throw new IOException(msg, t);
     } finally {
       // Clone last cell in the final because writer will append last cell when committing. If
       // don't clone here and once the scanner get closed, then the memory of last cell will be
@@ -498,15 +508,15 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
         // Remove all MOB references because compaction failed
         mobRefSet.get().clear();
         // Abort writer
-        LOG.debug("Aborting writer for {} because of a compaction failure",
-          mobFileWriter.getPath());
+        LOG.debug("Aborting writer for {} because of a compaction failure, Store {}",
+          mobFileWriter.getPath(), getStoreInfo());
         abortWriter(mobFileWriter);
       }
     }
 
     // Commit last MOB writer
     commitOrAbortMobWriter(mobFileWriter, fd.maxSeqId, mobCells, major);
-
+    clearThreadLocals();
     mobStore.updateCellsCountCompactedFromMob(cellsCountCompactedFromMob);
     mobStore.updateCellsCountCompactedToMob(cellsCountCompactedToMob);
     mobStore.updateCellsSizeCompactedFromMob(cellsSizeCompactedFromMob);
@@ -515,11 +525,20 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     return true;
   }
 
-  private long getLength(StoreFileWriter mobFileWriter) throws IOException {
-    return mobFileWriter.getPos();
+  private String getStoreInfo() {
+    return String.format("[table=%s family=%s region=%s]", store.getTableName().getNameAsString(),
+      store.getColumnFamilyName(), store.getRegionInfo().getEncodedName()) ;
   }
 
-  private StoreFileWriter newMobWriter(FileDetails fd/* , boolean compactMOBs */)
+  private void clearThreadLocals() {
+    Set<String> set = mobRefSet.get();
+    if (set != null) set.clear();
+    HashMap<String, Long> map = mobLengthMap.get();
+    if (map != null) map.clear();
+  }
+
+
+  private StoreFileWriter newMobWriter(FileDetails fd)
       throws IOException {
     try {
       StoreFileWriter mobFileWriter = mobStore.createWriterInTmp(new Date(fd.latestPutTs),
@@ -530,8 +549,8 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
       return mobFileWriter;
     } catch (IOException e) {
       // Bailing out
-      LOG.error("Failed to create mob writer, ", e);
-      throw e;
+      throw new IOException(String.format("Failed to create mob writer, store=%s",
+        getStoreInfo()), e);
     }
   }
 
@@ -544,8 +563,9 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     // become orphans and will be deleted during next MOB cleaning chore cycle
 
     if (mobFileWriter != null) {
-      LOG.info("Commit or abort size={} mobCells={} major={} file={}", mobFileWriter.getPos(),
-        mobCells, major, mobFileWriter.getPath().getName());
+      LOG.debug("Commit or abort size={} mobCells={} major={} file={}, store={}",
+        mobFileWriter.getPos(), mobCells, major, mobFileWriter.getPath().getName(),
+        getStoreInfo());
       Path path =
           MobUtils.getMobFamilyPath(conf, store.getTableName(), store.getColumnFamilyName());
       if (mobCells > 0) {
@@ -555,20 +575,18 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
         mobStore.commitFile(mobFileWriter.getPath(), path);
       } else {
         // If the mob file is empty, delete it instead of committing.
-        LOG.debug("Aborting writer for {} because there are no MOB cells", mobFileWriter.getPath());
+        LOG.debug("Aborting writer for {} because there are no MOB cells, store={}",
+          mobFileWriter.getPath(), getStoreInfo());
         // Remove MOB file from reference set
         mobRefSet.get().remove(mobFileWriter.getPath().getName());
         abortWriter(mobFileWriter);
       }
     } else {
-      LOG.info("Mob file writer is null, skipping commit/abort.");
+      LOG.debug("Mob file writer is null, skipping commit/abort, store=",
+        getStoreInfo());
     }
   }
 
-  protected static String createKey(TableName tableName, String encodedName,
-      String columnFamilyName) {
-    return tableName.getNameAsString() + "_" + encodedName + "_" + columnFamilyName;
-  }
 
   @Override
   protected List<Path> commitWriter(StoreFileWriter writer, FileDetails fd,

@@ -66,9 +66,9 @@ public class MobStressTool extends AbstractHBaseTool {
       }
     }
 
-    TestMobCompaction test = new TestMobCompaction();
-    test.init(getConf(), numRowsToInsert);
-    test.testMobCompaction();
+    MobStressToolRunner runner = new MobStressToolRunner();
+    runner.init(getConf(), numRowsToInsert);
+    runner.runStressTest();
     return 0;
   }
 

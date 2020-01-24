@@ -38,6 +38,8 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -251,15 +253,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
    */
   public void appendMobMetadata(Set<String> mobRefSet) throws IOException {
     if (mobRefSet != null && mobRefSet.size() > 0) {
-      StringBuilder sb = new StringBuilder(2 * mobRefSet.size() - 1);
-      String[] arr = new String[mobRefSet.size()];
-      arr = mobRefSet.toArray(arr);
-      for (int i = 0; i < arr.length; i++) {
-        sb.append(arr[i]);
-        if (i < arr.length - 1) {
-          sb.append(",");
-        }
-      }
+      String sb = StringUtils.join(mobRefSet, ",");
       byte[] bytes = Bytes.toBytes(sb.toString());
       writer.appendFileInfo(MOB_FILE_REFS, bytes);
     } else {

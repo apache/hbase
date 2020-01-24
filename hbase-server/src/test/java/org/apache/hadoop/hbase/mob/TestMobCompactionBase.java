@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.mob;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -106,16 +107,11 @@ public abstract class TestMobCompactionBase {
     hcd.setMobThreshold(mobLen);
     hcd.setMaxVersions(1);
     hdt.addFamily(hcd);
-    byte[][] splitKeys = generateSplitKeys();
+    RegionSplitter.UniformSplit splitAlgo = new RegionSplitter.UniformSplit();
+    byte[][] splitKeys = splitAlgo.split(numRegions);
     table = HTU.createTable(hdt, splitKeys);
 
   }
-
-  private byte[][] generateSplitKeys() {
-    RegionSplitter.UniformSplit splitAlgo = new RegionSplitter.UniformSplit();
-    return splitAlgo.split(numRegions);
-  }
-
 
   protected void initConf() {
 
@@ -146,55 +142,49 @@ public abstract class TestMobCompactionBase {
       LOG.info("Finished loading {} rows", num);
     } catch (Exception e) {
       LOG.error("MOB file compaction chore test FAILED", e);
-      assertTrue(false);
+      fail("MOB file compaction chore test FAILED");
     }
   }
 
   @After
   public void tearDown() throws Exception {
+    admin.disableTable(hdt.getTableName());
+    admin.deleteTable(hdt.getTableName());
     HTU.shutdownMiniCluster();
   }
 
 
   public void baseTestMobFileCompaction() throws InterruptedException, IOException {
 
-    try {
-
-      // Load and flush data 3 times
-      loadData(rows);
-      loadData(rows);
-      loadData(rows);
-      long num = getNumberOfMobFiles(conf, table.getName(), new String(fam));
-      assertEquals(numRegions * 3, num);
-      // Major MOB compact
-      mobCompact(admin, hdt, hcd);
-      // wait until compaction is complete
-      while (admin.getCompactionState(hdt.getTableName()) != CompactionState.NONE) {
-        Thread.sleep(100);
-      }
-
-      num = getNumberOfMobFiles(conf, table.getName(), new String(fam));
-      assertEquals(numRegions * 4, num);
-      // We have guarantee, that compcated file discharger will run during this pause
-      // because it has interval less than this wait time
-      LOG.info("Waiting for {}ms", minAgeToArchive + 1000);
-
-      Thread.sleep(minAgeToArchive + 1000);
-      LOG.info("Cleaning up MOB files");
-      // Cleanup again
-      cleanerChore.cleanupObsoleteMobFiles(conf, table.getName());
-
-      num = getNumberOfMobFiles(conf, table.getName(), new String(fam));
-      assertEquals(numRegions, num);
-
-      long scanned = scanTable();
-      assertEquals(3 * rows, scanned);
-
-    } finally {
-
-      admin.disableTable(hdt.getTableName());
-      admin.deleteTable(hdt.getTableName());
+    // Load and flush data 3 times
+    loadData(rows);
+    loadData(rows);
+    loadData(rows);
+    long num = getNumberOfMobFiles(conf, table.getName(), new String(fam));
+    assertEquals(numRegions * 3, num);
+    // Major MOB compact
+    mobCompact(admin, hdt, hcd);
+    // wait until compaction is complete
+    while (admin.getCompactionState(hdt.getTableName()) != CompactionState.NONE) {
+      Thread.sleep(100);
     }
+
+    num = getNumberOfMobFiles(conf, table.getName(), new String(fam));
+    assertEquals(numRegions * 4, num);
+    // We have guarantee, that compacted file discharger will run during this pause
+    // because it has interval less than this wait time
+    LOG.info("Waiting for {}ms", minAgeToArchive + 1000);
+
+    Thread.sleep(minAgeToArchive + 1000);
+    LOG.info("Cleaning up MOB files");
+    // Cleanup again
+    cleanerChore.cleanupObsoleteMobFiles(conf, table.getName());
+
+    num = getNumberOfMobFiles(conf, table.getName(), new String(fam));
+    assertEquals(numRegions, num);
+
+    long scanned = scanTable();
+    assertEquals(3 * rows, scanned);
 
   }
 
@@ -228,10 +218,9 @@ public abstract class TestMobCompactionBase {
       }
       return counter;
     } catch (Exception e) {
-      e.printStackTrace();
-      LOG.error("MOB file compaction test FAILED");
+      LOG.error("MOB file compaction test FAILED", e);
       if (HTU != null) {
-        assertTrue(false);
+        fail(e.getMessage());
       } else {
         System.exit(-1);
       }

@@ -61,19 +61,10 @@ public class StoreFileInfo {
   /** Regex that will work for hfiles */
   private static final Pattern HFILE_NAME_PATTERN = Pattern.compile("^(" + HFILE_NAME_REGEX + ")");
 
-  /**
-   * A non-capture group, for del files, so that this can be embedded. A del file has (_del) as
-   * suffix.
-   */
-  public static final String DELFILE_NAME_REGEX = "[0-9a-f]+(?:_del)";
-
-  /** Regex that will work for del files */
-  private static final Pattern DELFILE_NAME_PATTERN =
-      Pattern.compile("^(" + DELFILE_NAME_REGEX + ")");
 
   /**
    * Regex that will work for straight reference names ({@code <hfile>.<parentEncRegion>}) and
-   * hfilelink reference names ({@code 
+   * hfilelink reference names ({@code
    * <table>
    * =<region>-<hfile>.<parentEncRegion>}) If reference, then the regex has more than just one
    * group. Group 1, hfile/hfilelink pattern, is this file's id. Group 2 '(.+)' is the reference's
@@ -249,8 +240,8 @@ public class StoreFileInfo {
     this.coprocessorHost = coprocessorHost;
   }
 
-  /*
-   * @return the Reference object associated to this StoreFileInfo. 
+  /**
+   * @return the Reference object associated to this StoreFileInfo.
    * null if the StoreFile is not a
    * reference.
    */
@@ -438,6 +429,11 @@ public class StoreFileInfo {
     return m.matches() && m.groupCount() > 0;
   }
 
+  /**
+   * Checks if the file is a MOB file
+   * @param path path to a file
+   * @return true, if - yes, false otherwise
+   */
   public static boolean isMobFile(final Path path) {
     String fileName = path.getName();
     String[] parts = fileName.split(MobUtils.SEP);
@@ -449,6 +445,12 @@ public class StoreFileInfo {
     return m.matches() && mm.matches();
   }
 
+  /**
+   * Checks if the file is a MOB reference file,
+   * created by snapshot
+   * @param path path to a file
+   * @return true, if - yes, false otherwise
+   */
   public static boolean isMobRefFile(final Path path) {
     String fileName = path.getName();
     int lastIndex = fileName.lastIndexOf(MobUtils.SEP);
@@ -463,22 +465,6 @@ public class StoreFileInfo {
     return m.matches() && m.groupCount() > 1;
   }
 
-  /**
-   * @param path Path to check.
-   * @return True if the path has format of a del file.
-   */
-  public static boolean isDelFile(final Path path) {
-    return isDelFile(path.getName());
-  }
-
-  /**
-   * @param fileName Sting version of path to validate.
-   * @return True if the file name has format of a del file.
-   */
-  public static boolean isDelFile(final String fileName) {
-    Matcher m = DELFILE_NAME_PATTERN.matcher(fileName);
-    return m.matches() && m.groupCount() > 0;
-  }
 
   /**
    * @param path Path to check.
@@ -537,7 +523,9 @@ public class StoreFileInfo {
    * @return <tt>true</tt> if the file could be a valid store file, <tt>false</tt> otherwise
    */
   public static boolean validateStoreFileName(final String fileName) {
-    if (HFileLink.isHFileLink(fileName) || isReference(fileName)) return (true);
+    if (HFileLink.isHFileLink(fileName) || isReference(fileName)) {
+      return true;
+    }
     return !fileName.contains("-");
   }
 
@@ -549,7 +537,9 @@ public class StoreFileInfo {
   public static boolean isValid(final FileStatus fileStatus) throws IOException {
     final Path p = fileStatus.getPath();
 
-    if (fileStatus.isDirectory()) return false;
+    if (fileStatus.isDirectory()) {
+      return false;
+    }
 
     // Check for empty hfile. Should never be the case but can happen
     // after data loss in hdfs for whatever reason (upgrade, etc.): HBASE-646
@@ -595,25 +585,48 @@ public class StoreFileInfo {
 
   @Override
   public boolean equals(Object that) {
-    if (this == that) return true;
-    if (that == null) return false;
+    if (this == that) {
+      return true;
+    }
+    if (that == null) {
+      return false;
+    }
 
-    if (!(that instanceof StoreFileInfo)) return false;
+    if (!(that instanceof StoreFileInfo)) {
+      return false;
+    }
 
     StoreFileInfo o = (StoreFileInfo) that;
-    if (initialPath != null && o.initialPath == null) return false;
-    if (initialPath == null && o.initialPath != null) return false;
-    if (initialPath != o.initialPath && initialPath != null && !initialPath.equals(o.initialPath))
+    if (initialPath != null && o.initialPath == null) {
       return false;
-
-    if (reference != null && o.reference == null) return false;
-    if (reference == null && o.reference != null) return false;
-    if (reference != o.reference && reference != null && !reference.equals(o.reference))
+    }
+    if (initialPath == null && o.initialPath != null) {
       return false;
+    }
+    if (initialPath != o.initialPath && initialPath != null
+        && !initialPath.equals(o.initialPath)) {
+      return false;
+    }
+    if (reference != null && o.reference == null) {
+      return false;
+    }
+    if (reference == null && o.reference != null) {
+      return false;
+    }
+    if (reference != o.reference && reference != null
+        && !reference.equals(o.reference)) {
+      return false;
+    }
 
-    if (link != null && o.link == null) return false;
-    if (link == null && o.link != null) return false;
-    if (link != o.link && link != null && !link.equals(o.link)) return false;
+    if (link != null && o.link == null) {
+      return false;
+    }
+    if (link == null && o.link != null) {
+      return false;
+    }
+    if (link != o.link && link != null && !link.equals(o.link)) {
+      return false;
+    }
 
     return true;
   }

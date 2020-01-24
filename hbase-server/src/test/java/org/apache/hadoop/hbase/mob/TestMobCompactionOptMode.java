@@ -66,7 +66,7 @@ public class TestMobCompactionOptMode extends TestMobCompactionBase{
   protected void initConf() {
     super.initConf();
     conf.set(MobConstants.MOB_COMPACTION_TYPE_KEY,
-      MobConstants.IO_OPTIMIZED_MOB_COMPACTION_TYPE);
+      MobConstants.OPTIMIZED_MOB_COMPACTION_TYPE);
     conf.setLong(MobConstants.MOB_COMPACTION_MAX_FILE_SIZE_KEY, 1000000);
   }
 

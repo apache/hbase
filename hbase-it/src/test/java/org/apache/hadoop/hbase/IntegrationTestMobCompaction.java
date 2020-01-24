@@ -65,7 +65,6 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
  * @see <a href="https://issues.apache.org/jira/browse/HBASE-22749">HBASE-22749</a>
  * <p>
  * Sample usage:
- *
  * <pre>
  * hbase org.apache.hadoop.hbase.IntegrationTestMobCompaction -Dservers=10 -Drows=1000000
  * -Dfailprob=0.2
@@ -233,8 +232,8 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
     conf.setInt("hbase.hstore.blockingStoreFiles", 150);
     conf.setInt("hbase.hstore.compaction.throughput.lower.bound", 52428800);
     conf.setInt("hbase.hstore.compaction.throughput.higher.bound", 2 * 52428800);
-    conf.setDouble("injected.fault.probability", failureProb);
-    conf.set(MobStoreEngine.DEFAULT_MOB_COMPACTOR_CLASS_KEY,
+    conf.setDouble("hbase.mob.compaction.fault.probability", failureProb);
+    conf.set(MobStoreEngine.MOB_COMPACTOR_CLASS_KEY,
       FaultyMobStoreCompactor.class.getName());
     conf.setBoolean("hbase.table.sanity.checks", false);
     conf.setLong(MobConstants.MIN_AGE_TO_ARCHIVE_KEY, 20000);

@@ -505,13 +505,13 @@ public class TestRegionServerMetrics {
       for (HStore store: stores) {
         // Force major compaction
         store.triggerMajorCompaction();
-        Optional<CompactionContext> context =  
-            store.requestCompaction(HStore.PRIORITY_USER, CompactionLifeCycleTracker.DUMMY, 
+        Optional<CompactionContext> context =
+            store.requestCompaction(HStore.PRIORITY_USER, CompactionLifeCycleTracker.DUMMY,
               User.getCurrent());
         if (!context.isPresent()) {
           continue;
         }
-        region.compact(context.get(), store, 
+        region.compact(context.get(), store,
           NoLimitThroughputController.INSTANCE, User.getCurrent());
       }
       metricsRegionServer.getRegionServerWrapper().forceRecompute();

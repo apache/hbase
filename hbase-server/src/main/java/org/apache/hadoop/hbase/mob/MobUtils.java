@@ -79,12 +79,12 @@ public final class MobUtils {
   public static final String SEP = "_";
 
   private static final ThreadLocal<SimpleDateFormat> LOCAL_FORMAT =
-      new ThreadLocal<SimpleDateFormat>() {
-        @Override
-        protected SimpleDateFormat initialValue() {
-          return new SimpleDateFormat("yyyyMMdd");
-        }
-      };
+    new ThreadLocal<SimpleDateFormat>() {
+      @Override
+      protected SimpleDateFormat initialValue() {
+        return new SimpleDateFormat("yyyyMMdd");
+      }
+    };
 
   /**
    * Private constructor to keep this class from being instantiated.
@@ -662,19 +662,6 @@ public final class MobUtils {
       return false;
     }
     return false;
-  }
-
-  /**
-   * Gets encoded region name from a MOB file name
-   * @param mobFileName MOB file name
-   * @return encoded region name or null
-   */
-  public static String getEncodedRegionName(String mobFileName) {
-    int index = mobFileName.lastIndexOf(MobFileName.REGION_SEP);
-    if (index < 0) {
-      return null;
-    }
-    return mobFileName.substring(index + 1);
   }
 
   /**

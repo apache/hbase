@@ -27,7 +27,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -42,16 +41,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 /**
@@ -65,16 +55,13 @@ import org.slf4j.LoggerFactory;
       c) Trigger archive cleaner (every 3 minutes)
  4. Validate MOB data after complete data load.
 
+ This class is used by MobStressTool only. This is not a unit test
+
  */
 @SuppressWarnings("deprecation")
-@Category(LargeTests.class)
-public class TestMobCompaction {
-  private static final Logger LOG = LoggerFactory.getLogger(TestMobCompaction.class);
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMobCompaction.class);
-  @Rule
-  public TestName testName = new TestName();
+public class MobStressToolRunner {
+  private static final Logger LOG = LoggerFactory.getLogger(MobStressToolRunner.class);
+
 
   private HBaseTestingUtility HTU;
 
@@ -96,13 +83,14 @@ public class TestMobCompaction {
 
   private static volatile boolean run = true;
 
-  public TestMobCompaction() {
+  public MobStressToolRunner() {
 
   }
 
   public void init(Configuration conf, long numRows) throws IOException {
     this.conf = conf;
     this.count = numRows;
+    initConf();
     printConf();
     hdt = createTableDescriptor("testMobCompactTable");
     Connection conn = ConnectionFactory.createConnection(this.conf);
@@ -121,7 +109,7 @@ public class TestMobCompaction {
   }
 
   private void printConf() {
-    LOG.info("To run stress test, please change HBase configuration as following:");
+    LOG.info("Please ensure the following HBase configuration is set:");
     LOG.info("hfile.format.version=3");
     LOG.info("hbase.master.hfilecleaner.ttl=0");
     LOG.info("hbase.hregion.max.filesize=200000000");
@@ -132,7 +120,7 @@ public class TestMobCompaction {
     LOG.info("hbase.hstore.compaction.throughput.higher.bound=100000000");
     LOG.info("hbase.master.mob.cleaner.period=0");
     LOG.info("hbase.mob.default.compactor=org.apache.hadoop.hbase.mob.FaultyMobStoreCompactor");
-    LOG.warn("injected.fault.probability=x, where x is between 0. and 1.");
+    LOG.warn("hbase.mob.compaction.fault.probability=x, where x is between 0. and 1.");
 
   }
 
@@ -147,26 +135,6 @@ public class TestMobCompaction {
       HConstants.FOREVER, HColumnDescriptor.DEFAULT_KEEP_DELETED);
   }
 
-  @Before
-  public void setUp() throws Exception {
-    HTU = new HBaseTestingUtility();
-    hdt = HTU.createTableDescriptor("testMobCompactTable");
-    conf = HTU.getConfiguration();
-
-    initConf();
-
-    // HTU.getConfiguration().setInt("hbase.mob.compaction.chore.period", 0);
-    HTU.startMiniCluster();
-    admin = HTU.getAdmin();
-
-    hcd = new HColumnDescriptor(fam);
-    hcd.setMobEnabled(true);
-    hcd.setMobThreshold(mobLen);
-    hcd.setMaxVersions(1);
-    hdt.addFamily(hcd);
-    table = HTU.createTable(hdt, null);
-  }
-
   private void initConf() {
 
     conf.setInt("hfile.format.version", 3);
@@ -177,21 +145,16 @@ public class TestMobCompaction {
     conf.setInt("hbase.hstore.blockingStoreFiles", 150);
     conf.setInt("hbase.hstore.compaction.throughput.lower.bound", 52428800);
     conf.setInt("hbase.hstore.compaction.throughput.higher.bound", 2 * 52428800);
-    conf.setDouble("injected.fault.probability", failureProb);
+    conf.setDouble("hbase.mob.compaction.fault.probability", failureProb);
 //    conf.set(MobStoreEngine.DEFAULT_MOB_COMPACTOR_CLASS_KEY,
 //      FaultyMobStoreCompactor.class.getName());
     conf.setLong(MobConstants.MOB_COMPACTION_CHORE_PERIOD, 0);
     conf.setLong(MobConstants.MOB_CLEANER_PERIOD, 0);
     conf.setLong(MobConstants.MIN_AGE_TO_ARCHIVE_KEY, 120000);
     conf.set(MobConstants.MOB_COMPACTION_TYPE_KEY,
-      MobConstants.IO_OPTIMIZED_MOB_COMPACTION_TYPE);
+      MobConstants.OPTIMIZED_MOB_COMPACTION_TYPE);
     conf.setLong(MobConstants.MOB_COMPACTION_MAX_FILE_SIZE_KEY, 1000000);
 
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    HTU.shutdownMiniCluster();
   }
 
   class MajorCompaction implements Runnable {
@@ -222,7 +185,7 @@ public class TestMobCompaction {
 
           Thread.sleep(130000);
         } catch (Exception e) {
-          e.printStackTrace();
+          LOG.error("CleanMobAndArchive", e);
         }
       }
     }
@@ -266,9 +229,7 @@ public class TestMobCompaction {
     }
   }
 
-  @Ignore
-  @Test
-  public void testMobCompaction() throws InterruptedException, IOException {
+  public void runStressTest() throws InterruptedException, IOException {
 
     try {
 
@@ -350,16 +311,6 @@ public class TestMobCompaction {
         counter++;
       }
 
-//      for (int i=0; i < count; i++) {
-//        byte[] key = Bytes.toBytes(i);
-//        Get get = new Get(key);
-//        Result res = table.get(get);
-//        assertTrue(Arrays.equals(res.getValue(fam, qualifier),
-//          Bytes.add(key,mobVal)));
-//        if (i % 1000 == 0) {
-//          LOG.info("GET=" + i);
-//        }
-//      }
       assertEquals(count, counter);
     } catch (Exception e) {
       e.printStackTrace();

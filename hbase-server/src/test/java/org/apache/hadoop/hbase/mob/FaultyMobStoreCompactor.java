@@ -58,12 +58,12 @@ import org.slf4j.LoggerFactory;
  *   public void initConfiguration(Configuration conf){
  *     conf.set(MobStoreEngine.DEFAULT_MOB_COMPACTOR_CLASS_KEY,
          FaultyMobStoreCompactor.class.getName());
-       conf.setDouble("injected.fault.probability", 0.1);
+       conf.setDouble("hbase.mob.compaction.fault.probability", 0.1);
  *   }
  * }
  * }</pre>
- * @see org.apache.hadoop.hbase.mob.TestMobCompaction on how to use and configure
- * this class.
+ * @see org.apache.hadoop.hbase.mob.MobStressToolRunner on how to use and configure
+ *   this class.
  *
  */
 @InterfaceAudience.Private
@@ -81,7 +81,7 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
 
   public FaultyMobStoreCompactor(Configuration conf, HStore store) {
     super(conf, store);
-    failureProb = conf.getDouble("injected.fault.probability", 0.1);
+    failureProb = conf.getDouble("hbase.mob.compaction.fault.probability", 0.1);
   }
 
   @Override
