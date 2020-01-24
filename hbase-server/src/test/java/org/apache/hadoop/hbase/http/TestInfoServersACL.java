@@ -318,12 +318,12 @@ public class TestInfoServersACL {
   }
 
   private Pair<Integer,String> getMasterDumpPage() throws Exception {
-    URL url = new URL (getInfoServerHostAndPort() + "/dump");
+    URL url = new URL(getInfoServerHostAndPort() + "/dump");
     return getUrlContent(url);
   }
 
   private Pair<Integer,String> getStacksPage() throws Exception {
-    URL url = new URL (getInfoServerHostAndPort() + "/stacks");
+    URL url = new URL(getInfoServerHostAndPort() + "/stacks");
     return getUrlContent(url);
   }
 
