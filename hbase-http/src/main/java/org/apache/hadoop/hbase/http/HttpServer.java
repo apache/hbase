@@ -175,6 +175,7 @@ public class HttpServer implements FilterContainer {
   protected final boolean findPort;
   protected final Map<ServletContextHandler, Boolean> defaultContexts = new HashMap<>();
   protected final List<String> filterNames = new ArrayList<>();
+  protected final boolean authenticationEnabled;
   static final String STATE_DESCRIPTION_ALIVE = " - alive";
   static final String STATE_DESCRIPTION_NOT_LIVE = " - not live";
 
@@ -565,6 +566,7 @@ public class HttpServer implements FilterContainer {
     this.adminsAcl = b.adminsAcl;
     this.webAppContext = createWebAppContext(b.name, b.conf, adminsAcl, appDir);
     this.findPort = b.findPort;
+    this.authenticationEnabled = b.securityEnabled;
     initializeWebServer(b.name, b.hostName, b.conf, b.pathSpecs, b);
   }
 
@@ -610,7 +612,7 @@ public class HttpServer implements FilterContainer {
         SecurityHeadersFilter.getDefaultParameters(conf));
 
     // But security needs to be enabled prior to adding the other servlets
-    if (b.securityEnabled) {
+    if (authenticationEnabled) {
       initSpnego(conf, hostName, b.usernameConfKey, b.keytabConfKey, b.kerberosNameRulesKey,
           b.signatureSecretFileKey);
     }
@@ -808,8 +810,8 @@ public class HttpServer implements FilterContainer {
    * {@link #addPrivilegedServlet(String, String, Class)}.
    */
   void addServletWithAuth(String name, String pathSpec,
-      Class<? extends HttpServlet> clazz, boolean requireAuth) {
-    addInternalServlet(name, pathSpec, clazz, requireAuth);
+      Class<? extends HttpServlet> clazz, boolean requireAuthz) {
+    addInternalServlet(name, pathSpec, clazz, requireAuthz);
     addFilterPathMapping(pathSpec, webAppContext);
   }
 
@@ -827,12 +829,12 @@ public class HttpServer implements FilterContainer {
    * @param requireAuth Require Kerberos authenticate to access servlet
    */
   void addInternalServlet(String name, String pathSpec,
-      Class<? extends HttpServlet> clazz, boolean requireAuth) {
+      Class<? extends HttpServlet> clazz, boolean requireAuthz) {
     ServletHolder holder = new ServletHolder(clazz);
     if (name != null) {
       holder.setName(name);
     }
-    if (requireAuth) {
+    if (authenticationEnabled && requireAuthz) {
       FilterHolder filter = new FilterHolder(AdminAuthorizedFilter.class);
       filter.setName(AdminAuthorizedFilter.class.getSimpleName());
       FilterMapping fmap = new FilterMapping();
