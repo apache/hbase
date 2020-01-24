@@ -31,7 +31,7 @@ import org.apache.hbase.thirdparty.com.google.common.net.HostAndPort;
  * We cannot have Guava classes in our API hence this Type.
  */
 @InterfaceAudience.Public
-public final class Address implements Comparable<Address> {
+public class Address implements Comparable<Address> {
   private HostAndPort hostAndPort;
 
   private Address(HostAndPort hostAndPort) {

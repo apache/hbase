@@ -148,69 +148,22 @@ public abstract class CommonFSUtils {
    * Return the number of bytes that large input files should be optimally
    * be split into to minimize i/o time.
    *
-   * use reflection to search for getDefaultBlockSize(Path f)
-   * if the method doesn't exist, fall back to using getDefaultBlockSize()
-   *
    * @param fs filesystem object
    * @return the default block size for the path's filesystem
-   * @throws IOException e
    */
-  public static long getDefaultBlockSize(final FileSystem fs, final Path path) throws IOException {
-    Method m = null;
-    Class<? extends FileSystem> cls = fs.getClass();
-    try {
-      m = cls.getMethod("getDefaultBlockSize", Path.class);
-    } catch (NoSuchMethodException e) {
-      LOG.info("FileSystem doesn't support getDefaultBlockSize");
-    } catch (SecurityException e) {
-      LOG.info("Doesn't have access to getDefaultBlockSize on FileSystems", e);
-      m = null; // could happen on setAccessible()
-    }
-    if (m == null) {
-      return fs.getDefaultBlockSize(path);
-    } else {
-      try {
-        Object ret = m.invoke(fs, path);
-        return ((Long)ret).longValue();
-      } catch (Exception e) {
-        throw new IOException(e);
-      }
-    }
+  public static long getDefaultBlockSize(final FileSystem fs, final Path path) {
+    return fs.getDefaultBlockSize(path);
   }
 
   /*
    * Get the default replication.
    *
-   * use reflection to search for getDefaultReplication(Path f)
-   * if the method doesn't exist, fall back to using getDefaultReplication()
-   *
    * @param fs filesystem object
    * @param f path of file
    * @return default replication for the path's filesystem
-   * @throws IOException e
    */
-  public static short getDefaultReplication(final FileSystem fs, final Path path)
-      throws IOException {
-    Method m = null;
-    Class<? extends FileSystem> cls = fs.getClass();
-    try {
-      m = cls.getMethod("getDefaultReplication", Path.class);
-    } catch (NoSuchMethodException e) {
-      LOG.info("FileSystem doesn't support getDefaultReplication");
-    } catch (SecurityException e) {
-      LOG.info("Doesn't have access to getDefaultReplication on FileSystems", e);
-      m = null; // could happen on setAccessible()
-    }
-    if (m == null) {
-      return fs.getDefaultReplication(path);
-    } else {
-      try {
-        Object ret = m.invoke(fs, path);
-        return ((Number)ret).shortValue();
-      } catch (Exception e) {
-        throw new IOException(e);
-      }
-    }
+  public static short getDefaultReplication(final FileSystem fs, final Path path) {
+    return fs.getDefaultReplication(path);
   }
 
   /**
@@ -570,83 +523,52 @@ public abstract class CommonFSUtils {
    */
   private static void invokeSetStoragePolicy(final FileSystem fs, final Path path,
       final String storagePolicy) throws IOException {
-    Method m = null;
     Exception toThrow = null;
+
     try {
-      m = fs.getClass().getDeclaredMethod("setStoragePolicy", Path.class, String.class);
-      m.setAccessible(true);
-    } catch (NoSuchMethodException e) {
+      fs.setStoragePolicy(path, storagePolicy);
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Set storagePolicy={} for path={}", storagePolicy, path);
+      }
+    } catch (Exception e) {
       toThrow = e;
-      final String msg = "FileSystem doesn't support setStoragePolicy; HDFS-6584, HDFS-9345 " +
-          "not available. This is normal and expected on earlier Hadoop versions.";
+      // This swallows FNFE, should we be throwing it? seems more likely to indicate dev
+      // misuse than a runtime problem with HDFS.
       if (!warningMap.containsKey(fs)) {
         warningMap.put(fs, true);
-        LOG.warn(msg, e);
+        LOG.warn("Unable to set storagePolicy=" + storagePolicy + " for path=" + path + ". " +
+            "DEBUG log level might have more details.", e);
       } else if (LOG.isDebugEnabled()) {
-        LOG.debug(msg, e);
+        LOG.debug("Unable to set storagePolicy=" + storagePolicy + " for path=" + path, e);
       }
-      m = null;
-    } catch (SecurityException e) {
-      toThrow = e;
-      final String msg = "No access to setStoragePolicy on FileSystem from the SecurityManager; " +
-          "HDFS-6584, HDFS-9345 not available. This is unusual and probably warrants an email " +
-          "to the user@hbase mailing list. Please be sure to include a link to your configs, and " +
-          "logs that include this message and period of time before it. Logs around service " +
-          "start up will probably be useful as well.";
-      if (!warningMap.containsKey(fs)) {
-        warningMap.put(fs, true);
-        LOG.warn(msg, e);
-      } else if (LOG.isDebugEnabled()) {
-        LOG.debug(msg, e);
-      }
-      m = null; // could happen on setAccessible() or getDeclaredMethod()
-    }
-    if (m != null) {
-      try {
-        m.invoke(fs, path, storagePolicy);
+
+      // check for lack of HDFS-7228
+      if (e instanceof RemoteException &&
+          HadoopIllegalArgumentException.class.getName().equals(
+            ((RemoteException)e).getClassName())) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Set storagePolicy={} for path={}", storagePolicy, path);
+          LOG.debug("Given storage policy, '" +storagePolicy +"', was rejected and probably " +
+            "isn't a valid policy for the version of Hadoop you're running. I.e. if you're " +
+            "trying to use SSD related policies then you're likely missing HDFS-7228. For " +
+            "more information see the 'ArchivalStorage' docs for your Hadoop release.");
         }
-      } catch (Exception e) {
-        toThrow = e;
-        // This swallows FNFE, should we be throwing it? seems more likely to indicate dev
-        // misuse than a runtime problem with HDFS.
-        if (!warningMap.containsKey(fs)) {
-          warningMap.put(fs, true);
-          LOG.warn("Unable to set storagePolicy=" + storagePolicy + " for path=" + path + ". " +
-              "DEBUG log level might have more details.", e);
-        } else if (LOG.isDebugEnabled()) {
-          LOG.debug("Unable to set storagePolicy=" + storagePolicy + " for path=" + path, e);
-        }
-        // check for lack of HDFS-7228
-        if (e instanceof InvocationTargetException) {
-          final Throwable exception = e.getCause();
-          if (exception instanceof RemoteException &&
-              HadoopIllegalArgumentException.class.getName().equals(
-                ((RemoteException)exception).getClassName())) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Given storage policy, '" +storagePolicy +"', was rejected and probably " +
-                "isn't a valid policy for the version of Hadoop you're running. I.e. if you're " +
-                "trying to use SSD related policies then you're likely missing HDFS-7228. For " +
-                "more information see the 'ArchivalStorage' docs for your Hadoop release.");
-            }
-          // Hadoop 2.8+, 3.0-a1+ added FileSystem.setStoragePolicy with a default implementation
-          // that throws UnsupportedOperationException
-          } else if (exception instanceof UnsupportedOperationException) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("The underlying FileSystem implementation doesn't support " +
-                  "setStoragePolicy. This is probably intentional on their part, since HDFS-9345 " +
-                  "appears to be present in your version of Hadoop. For more information check " +
-                  "the Hadoop documentation on 'ArchivalStorage', the Hadoop FileSystem " +
-                  "specification docs from HADOOP-11981, and/or related documentation from the " +
-                  "provider of the underlying FileSystem (its name should appear in the " +
-                  "stacktrace that accompanies this message). Note in particular that Hadoop's " +
-                  "local filesystem implementation doesn't support storage policies.", exception);
-            }
-          }
+      // Hadoop 2.8+, 3.0-a1+ added FileSystem.setStoragePolicy with a default implementation
+      // that throws UnsupportedOperationException
+      } else if (e instanceof UnsupportedOperationException) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("The underlying FileSystem implementation doesn't support " +
+              "setStoragePolicy. This is probably intentional on their part, since HDFS-9345 " +
+              "appears to be present in your version of Hadoop. For more information check " +
+              "the Hadoop documentation on 'ArchivalStorage', the Hadoop FileSystem " +
+              "specification docs from HADOOP-11981, and/or related documentation from the " +
+              "provider of the underlying FileSystem (its name should appear in the " +
+              "stacktrace that accompanies this message). Note in particular that Hadoop's " +
+              "local filesystem implementation doesn't support storage policies.", e);
         }
       }
     }
+
     if (toThrow != null) {
       throw new IOException(toThrow);
     }
