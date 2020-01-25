@@ -105,4 +105,9 @@ public class SharedConnection implements Connection {
   public AsyncConnection toAsyncConnection() {
     return new SharedAsyncConnection(conn.toAsyncConnection());
   }
+
+  @Override
+  public String getClusterId() {
+    return conn.getClusterId();
+  }
 }
