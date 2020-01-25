@@ -56,7 +56,7 @@ public class TestAsyncAdminWithRegionReplicas extends TestAsyncAdminBase {
     try (ConnectionRegistry registry =
              ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration())) {
       RegionReplicaTestHelper
-        .waitUntilAllMetaReplicasAreReady(TEST_UTIL, registry, 3);
+        .waitUntilAllMetaReplicasAreReady(TEST_UTIL, registry);
     }
   }
 

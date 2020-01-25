@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionLocations;
@@ -43,8 +44,10 @@ public final class RegionReplicaTestHelper {
 
   // waits for all replicas to have region location
   static void waitUntilAllMetaReplicasAreReady(HBaseTestingUtility util,
-      ConnectionRegistry registry, int regionReplication) {
+      ConnectionRegistry registry) {
     Configuration conf = util.getConfiguration();
+    int regionReplicaCount = util.getConfiguration().getInt(HConstants.META_REPLICAS_NUM,
+        HConstants.DEFAULT_META_REPLICA_NUM);
     Waiter.waitFor(conf, conf.getLong("hbase.client.sync.wait.timeout.msec", 60000), 200, true,
       new ExplainingPredicate<IOException>() {
         @Override
@@ -56,10 +59,10 @@ public final class RegionReplicaTestHelper {
         public boolean evaluate() {
           try {
             RegionLocations locs = registry.getMetaRegionLocations().get();
-            if (locs.size() < regionReplication) {
+            if (locs.size() < regionReplicaCount) {
               return false;
             }
-            for (int i = 0; i < regionReplication; i++) {
+            for (int i = 0; i < regionReplicaCount; i++) {
               HRegionLocation loc = locs.getRegionLocation(i);
               // Wait until the replica is served by a region server. There could be delay between
               // the replica being available to the connection and region server opening it.
