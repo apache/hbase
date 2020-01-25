@@ -296,5 +296,10 @@ public class TestTableInputFormatBase {
     public AsyncConnection toAsyncConnection() {
       throw new UnsupportedOperationException();
     }
+
+    @Override
+    public String getClusterId() {
+      return null;
+    }
   }
 }
