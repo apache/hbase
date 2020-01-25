@@ -135,6 +135,9 @@ public class HttpServer implements FilterContainer {
       HTTP_SPNEGO_AUTHENTICATION_PREFIX + "admin.users";
   public static final String HTTP_SPNEGO_AUTHENTICATION_ADMIN_GROUPS_KEY =
       HTTP_SPNEGO_AUTHENTICATION_PREFIX + "admin.groups";
+  public static final String HTTP_PRIVILEGED_CONF_KEY =
+      "hbase.security.authentication.ui.config.protected";
+  public static final boolean HTTP_PRIVILEGED_CONF_DEFAULT = false;
 
   // The ServletContext attribute where the daemon Configuration
   // gets stored.
@@ -626,7 +629,7 @@ public class HttpServer implements FilterContainer {
       }
     }
 
-    addDefaultServlets(contexts);
+    addDefaultServlets(contexts, conf);
 
     if (pathSpecs != null) {
       for (String path : pathSpecs) {
@@ -722,8 +725,8 @@ public class HttpServer implements FilterContainer {
   /**
    * Add default servlets.
    */
-  protected void addDefaultServlets(ContextHandlerCollection contexts) throws IOException {
-
+  protected void addDefaultServlets(
+      ContextHandlerCollection contexts, Configuration conf) throws IOException {
     // set up default servlets
     addPrivilegedServlet("stacks", "/stacks", StackServlet.class);
     addPrivilegedServlet("logLevel", "/logLevel", LogLevel.Servlet.class);
@@ -737,7 +740,13 @@ public class HttpServer implements FilterContainer {
       // do nothing
     }
     addPrivilegedServlet("jmx", "/jmx", JMXJsonServlet.class);
-    addUnprivilegedServlet("conf", "/conf", ConfServlet.class);
+    // While we don't expect users to have sensitive information in their configuration, they
+    // might. Give them an option to not expose the service configuration to all users.
+    if (conf.getBoolean(HTTP_PRIVILEGED_CONF_KEY, HTTP_PRIVILEGED_CONF_DEFAULT)) {
+      addPrivilegedServlet("conf", "/conf", ConfServlet.class);
+    } else {
+      addUnprivilegedServlet("conf", "/conf", ConfServlet.class);
+    }
     final String asyncProfilerHome = ProfileServlet.getAsyncProfilerHome();
     if (asyncProfilerHome != null && !asyncProfilerHome.trim().isEmpty()) {
       addPrivilegedServlet("prof", "/prof", ProfileServlet.class);
