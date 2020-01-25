@@ -33,6 +33,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -276,6 +277,15 @@ class AsyncConnectionImpl implements AsyncConnection {
       });
       return future;
     }, stub -> true, "master stub");
+  }
+
+  String getClusterId() {
+    try {
+      return registry.getClusterId().get();
+    } catch (InterruptedException | ExecutionException e) {
+      LOG.error("Error fetching cluster ID: ", e);
+    }
+    return null;
   }
 
   void clearMasterStubCache(MasterService.Interface stub) {
