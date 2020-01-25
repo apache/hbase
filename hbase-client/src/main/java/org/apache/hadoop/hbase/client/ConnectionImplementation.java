@@ -379,6 +379,16 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   }
 
   @Override
+  public String getClusterId() {
+    try {
+      return registry.getClusterId().get();
+    } catch (Exception e) {
+      LOG.error("Error fetching cluster ID: ", e);
+    }
+    return null;
+  }
+
+  @Override
   public BufferedMutator getBufferedMutator(BufferedMutatorParams params) {
     if (params.getTableName() == null) {
       throw new IllegalArgumentException("TableName cannot be null.");

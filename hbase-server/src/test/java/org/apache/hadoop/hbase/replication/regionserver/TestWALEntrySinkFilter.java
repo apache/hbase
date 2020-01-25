@@ -548,6 +548,11 @@ public class TestWALEntrySinkFilter {
     }
 
     @Override
+    public String getClusterId() {
+      return null;
+    }
+
+    @Override
     public void clearRegionLocationCache() {
     }
   }

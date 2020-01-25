@@ -819,6 +819,11 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
   }
 
   @Override
+  public String getClusterId() throws TException {
+    return connectionCache.getClusterId();
+  }
+
+  @Override
   public List<TNamespaceDescriptor> listNamespaceDescriptors() throws TIOError, TException {
     try {
       NamespaceDescriptor[] descriptors = connectionCache.getAdmin().listNamespaceDescriptors();
