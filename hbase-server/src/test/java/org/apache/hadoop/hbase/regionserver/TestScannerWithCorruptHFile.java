@@ -59,7 +59,7 @@ public class TestScannerWithCorruptHFile {
 
   @Rule public TestName name = new TestName();
   private static final byte[] FAMILY_NAME = Bytes.toBytes("f");
-  private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
 
   @BeforeClass

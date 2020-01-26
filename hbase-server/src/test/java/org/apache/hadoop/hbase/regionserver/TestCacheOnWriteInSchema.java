@@ -82,7 +82,7 @@ public class TestCacheOnWriteInSchema {
   private static final Logger LOG = LoggerFactory.getLogger(TestCacheOnWriteInSchema.class);
   @Rule public TestName name = new TestName();
 
-  private static final HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final String DIR = TEST_UTIL.getDataTestDir("TestCacheOnWriteInSchema").toString();
   private static byte [] table;
   private static byte [] family = Bytes.toBytes("family");

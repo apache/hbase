@@ -77,7 +77,7 @@ public class TestScannerFromBucketCache {
   private TableName tableName;
 
   private void setUp(boolean useBucketCache) throws IOException {
-    test_util = HBaseTestingUtility.createLocalHTU();
+    test_util = new HBaseTestingUtility();
     conf = test_util.getConfiguration();
     if (useBucketCache) {
       conf.setInt("hbase.bucketcache.size", 400);
