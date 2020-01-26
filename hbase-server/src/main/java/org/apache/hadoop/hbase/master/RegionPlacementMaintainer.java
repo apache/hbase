@@ -697,7 +697,7 @@ public class RegionPlacementMaintainer {
           LOG.info("Region server " +
               ProtobufUtil.getServerInfo(null, currentRegionServer).getServerName() +
               " has updated " + updateFavoredNodesResponse.getResponse() + " / " +
-              singleServerPlan.getAssignmentMap().size() +
+              singleServerPlan.size() +
               " regions with the assignment plan");
           succeededNum ++;
         }
