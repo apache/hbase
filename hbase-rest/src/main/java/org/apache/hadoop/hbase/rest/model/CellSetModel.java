@@ -16,7 +16,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest.model;
 
 import java.io.IOException;
@@ -29,30 +28,30 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
-import org.apache.hadoop.hbase.util.ByteStringer;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell;
 import org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet;
+import org.apache.hadoop.hbase.util.ByteStringer;
 
 /**
  * Representation of a grouping of cells. May contain cells from more than
  * one row. Encapsulates RowModel and CellModel models.
- * 
+ *
  * <pre>
  * &lt;complexType name="CellSet"&gt;
  *   &lt;sequence&gt;
- *     &lt;element name="row" type="tns:Row" maxOccurs="unbounded" 
+ *     &lt;element name="row" type="tns:Row" maxOccurs="unbounded"
  *       minOccurs="1"&gt;&lt;/element&gt;
  *   &lt;/sequence&gt;
  * &lt;/complexType&gt;
- * 
+ *
  * &lt;complexType name="Row"&gt;
  *   &lt;sequence&gt;
  *     &lt;element name="key" type="base64Binary"&gt;&lt;/element&gt;
- *     &lt;element name="cell" type="tns:Cell" 
+ *     &lt;element name="cell" type="tns:Cell"
  *       maxOccurs="unbounded" minOccurs="1"&gt;&lt;/element&gt;
  *   &lt;/sequence&gt;
  * &lt;/complexType&gt;
@@ -74,19 +73,18 @@ import org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet;
 @XmlAccessorType(XmlAccessType.FIELD)
 @InterfaceAudience.Private
 public class CellSetModel implements Serializable, ProtobufMessageHandler {
-
   private static final long serialVersionUID = 1L;
 
   @XmlElement(name="Row")
   private List<RowModel> rows;
 
-  /**  
+  /**
    * Constructor
    */
   public CellSetModel() {
-    this.rows = new ArrayList<RowModel>();
+    this.rows = new ArrayList<>();
   }
-  
+
   /**
    * @param rows the rows
    */
@@ -94,7 +92,7 @@ public class CellSetModel implements Serializable, ProtobufMessageHandler {
     super();
     this.rows = rows;
   }
-  
+
   /**
    * Add a row to this cell set
    * @param row the row
@@ -113,10 +111,10 @@ public class CellSetModel implements Serializable, ProtobufMessageHandler {
   @Override
   public byte[] createProtobufOutput() {
     CellSet.Builder builder = CellSet.newBuilder();
-    for (RowModel row: getRows()) {
+    for (RowModel row : getRows()) {
       CellSet.Row.Builder rowBuilder = CellSet.Row.newBuilder();
       rowBuilder.setKey(ByteStringer.wrap(row.getKey()));
-      for (CellModel cell: row.getCells()) {
+      for (CellModel cell : row.getCells()) {
         Cell.Builder cellBuilder = Cell.newBuilder();
         cellBuilder.setColumn(ByteStringer.wrap(cell.getColumn()));
         cellBuilder.setData(ByteStringer.wrap(cell.getValue()));
@@ -135,9 +133,9 @@ public class CellSetModel implements Serializable, ProtobufMessageHandler {
       throws IOException {
     CellSet.Builder builder = CellSet.newBuilder();
     ProtobufUtil.mergeFrom(builder, message);
-    for (CellSet.Row row: builder.getRowsList()) {
+    for (CellSet.Row row : builder.getRowsList()) {
       RowModel rowModel = new RowModel(row.getKey().toByteArray());
-      for (Cell cell: row.getValuesList()) {
+      for (Cell cell : row.getValuesList()) {
         long timestamp = HConstants.LATEST_TIMESTAMP;
         if (cell.hasTimestamp()) {
           timestamp = cell.getTimestamp();

@@ -16,7 +16,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest.client;
 
 import java.io.InputStream;
@@ -26,7 +25,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
- * The HTTP result code, response headers, and body of a HTTP response.
+ * The HTTP result code, response headers, and body of an HTTP response.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
@@ -66,7 +65,8 @@ public class Response {
   }
   
   /**
-   * Constructor
+   * Constructor.
+   *
    * @param code the HTTP response code
    * @param headers headers the HTTP response headers
    * @param body the response body, can be null
@@ -103,7 +103,7 @@ public class Response {
   }
 
   public String getHeader(String key) {
-    for (Header header: headers) {
+    for (Header header : headers) {
       if (header.getName().equalsIgnoreCase(key)) {
         return header.getValue();
       }
