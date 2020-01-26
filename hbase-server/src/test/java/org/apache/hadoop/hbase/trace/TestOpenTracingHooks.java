@@ -20,11 +20,14 @@ package org.apache.hadoop.hbase.trace;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 
 import io.opentracing.Scope;
+import io.opentracing.Span;
+import io.opentracing.mock.MockSpan;
+import io.opentracing.mock.MockTracer;
+import io.opentracing.util.GlobalTracer;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
@@ -34,33 +37,25 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.apache.htrace.core.POJOSpanReceiver;
-import org.apache.htrace.core.Sampler;
-import org.apache.htrace.core.Span;
-import org.apache.htrace.core.TraceScope;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
-
-//@Ignore // We don't support htrace in hbase-2.0.0 and this flakey is a little flakey.
 @Category({MiscTests.class, MediumTests.class})
-public class TestHTraceHooks {
+public class TestOpenTracingHooks {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHTraceHooks.class);
+      HBaseClassTestRule.forClass(TestOpenTracingHooks.class);
 
   private static final byte[] FAMILY_BYTES = "family".getBytes();
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static POJOSpanReceiver rcvr;
 
+  private static MockTracer tracer;
   @Rule
   public TestName name = new TestName();
 
@@ -68,35 +63,25 @@ public class TestHTraceHooks {
   public static void before() throws Exception {
     StartMiniClusterOption option = StartMiniClusterOption.builder()
         .numMasters(2).numRegionServers(3).numDataNodes(3).build();
+    TEST_UTIL.getConfiguration().set(TraceUtil.HBASE_OPENTRACING_TRACER,
+      TraceUtil.HBASE_OPENTRACING_MOCKTRACER);
     TEST_UTIL.startMiniCluster(option);
-    rcvr = new POJOSpanReceiver(new HBaseHTraceConfiguration(TEST_UTIL.getConfiguration()));
-    TraceUtil.addReceiver(rcvr);
-    TraceUtil.addSampler(new Sampler() {
-      @Override
-      public boolean next() {
-        return true;
-      }
-    });
+
+    tracer = (MockTracer)GlobalTracer.get();
+    //TraceUtil.addSampler(AlwaysSampler.INSTANCE);
   }
 
   @AfterClass
   public static void after() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
-    TraceUtil.removeReceiver(rcvr);
-    rcvr = null;
   }
 
   @Test
   public void testTraceCreateTable() throws Exception {
     Table table;
-    Span createTableSpan;
-    try (Scope scope = TraceUtil.createOTrace("abc")) {
-      table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY_BYTES);
-
-    }
-
-    try (TraceScope scope = TraceUtil.createTrace("creating table")) {
-      createTableSpan = scope.getSpan();
+    MockSpan createTableSpan;
+    try (Scope scope = TraceUtil.createTrace("creating table")) {
+      createTableSpan = (MockSpan)scope.span();
       table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY_BYTES);
     }
 
@@ -104,19 +89,23 @@ public class TestHTraceHooks {
     // checking to see if the spans are there.
     TEST_UTIL.waitFor(10000, new Waiter.Predicate<Exception>() {
       @Override public boolean evaluate() throws Exception {
-        return (rcvr == null) ? true : rcvr.getSpans().size() >= 5;
+        return tracer.finishedSpans().size() >= 5;
       }
     });
 
-    Collection<Span> spans = Sets.newHashSet(rcvr.getSpans());
+    List<MockSpan> spans = tracer.finishedSpans();
+
+    //Collection<Span> spans = Sets.newHashSet(rcvr.getSpans());
     List<Span> roots = new LinkedList<>();
     TraceTree traceTree = new TraceTree(spans);
-    roots.addAll(traceTree.getSpansByParent().find(createTableSpan.getSpanId()));
+    roots.addAll(traceTree.getSpansByParent().find(createTableSpan.context().spanId()));
+
+
 
     // Roots was made 3 in hbase2. It used to be 1. We changed it back to 1 on upgrade to
     // htrace-4.2 just to get the test to pass (traces are not wholesome in hbase2; TODO).
-    assertEquals(1, roots.size());
-    assertEquals("creating table", createTableSpan.getDescription());
+    assertEquals(2, roots.size());
+    assertEquals("creating table", createTableSpan.operationName());
 
     if (spans != null) {
       assertTrue(spans.size() > 5);
@@ -125,17 +114,17 @@ public class TestHTraceHooks {
     Put put = new Put("row".getBytes());
     put.addColumn(FAMILY_BYTES, "col".getBytes(), "value".getBytes());
 
-    Span putSpan;
+    MockSpan putSpan;
 
-    try (TraceScope scope = TraceUtil.createTrace("doing put")) {
-      putSpan = scope.getSpan();
+    try (Scope scope = TraceUtil.createTrace("doing put")) {
+      putSpan = (MockSpan)scope.span();
       table.put(put);
     }
 
-    spans = rcvr.getSpans();
+    spans = tracer.finishedSpans();
     traceTree = new TraceTree(spans);
     roots.clear();
-    roots.addAll(traceTree.getSpansByParent().find(putSpan.getSpanId()));
+    roots.addAll(traceTree.getSpansByParent().find(putSpan.context().spanId()));
     assertEquals(1, roots.size());
   }
 }

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import io.opentracing.Scope;
 import java.io.DataInput;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -50,9 +51,9 @@ import org.apache.hadoop.hbase.util.ObjectIntPair;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Implementation that can handle all hfile versions of {@link HFile.Reader}.
@@ -1281,7 +1282,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
 
     boolean useLock = false;
     IdLock.Entry lockEntry = null;
-    try (TraceScope traceScope = TraceUtil.createTrace("HFileReaderImpl.readBlock")) {
+    try (Scope traceScope = TraceUtil.createTrace("HFileReaderImpl.readBlock")) {
       while (true) {
         // Check cache for block. If found return.
         if (cacheConf.shouldReadBlockFromCache(expectedBlockType)) {

@@ -44,6 +44,8 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
+
+import io.opentracing.Scope;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -56,7 +58,6 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider.AsyncWriter;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -658,7 +659,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
 
   @Override
   public void sync(boolean forceSync) throws IOException {
-    try (TraceScope scope = TraceUtil.createTrace("AsyncFSWAL.sync")) {
+    try (Scope scope = TraceUtil.createTrace("AsyncFSWAL.sync")) {
       long txid = waitingConsumePayloads.next();
       SyncFuture future;
       try {
@@ -680,7 +681,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     if (highestSyncedTxid.get() >= txid) {
       return;
     }
-    try (TraceScope scope = TraceUtil.createTrace("AsyncFSWAL.sync")) {
+    try (Scope scope = TraceUtil.createTrace("AsyncFSWAL.sync")) {
       // here we do not use ring buffer sequence as txid
       long sequence = waitingConsumePayloads.next();
       SyncFuture future;

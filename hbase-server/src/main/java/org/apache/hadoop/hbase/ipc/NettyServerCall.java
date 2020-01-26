@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.ipc;
 import java.io.IOException;
 import java.net.InetAddress;
 
+import io.opentracing.SpanContext;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.ipc.RpcServer.CallCleanup;
@@ -40,9 +41,9 @@ class NettyServerCall extends ServerCall<NettyServerRpcConnection> {
   NettyServerCall(int id, BlockingService service, MethodDescriptor md, RequestHeader header,
       Message param, CellScanner cellScanner, NettyServerRpcConnection connection, long size,
       InetAddress remoteAddress, long receiveTime, int timeout, ByteBuffAllocator bbAllocator,
-      CellBlockBuilder cellBlockBuilder, CallCleanup reqCleanup) {
+      CellBlockBuilder cellBlockBuilder, CallCleanup reqCleanup, SpanContext spanContext) {
     super(id, service, md, header, param, cellScanner, connection, size, remoteAddress, receiveTime,
-        timeout, bbAllocator, cellBlockBuilder, reqCleanup);
+        timeout, bbAllocator, cellBlockBuilder, reqCleanup, spanContext);
   }
 
   /**

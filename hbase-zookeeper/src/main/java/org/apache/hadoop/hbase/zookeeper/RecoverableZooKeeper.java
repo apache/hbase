@@ -24,11 +24,11 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
+import io.opentracing.Scope;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.RetryCounterFactory;
-import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.CreateMode;
@@ -163,7 +163,7 @@ public class RecoverableZooKeeper {
    * exist.
    */
   public void delete(String path, int version) throws InterruptedException, KeeperException {
-    try (TraceScope scope = TraceUtil.createTrace("RecoverableZookeeper.delete")) {
+    try (Scope scope = TraceUtil.createTrace("RecoverableZookeeper.delete")) {
       RetryCounter retryCounter = retryCounterFactory.create();
       boolean isRetry = false; // False for first attempt, true for all retries.
       while (true) {
@@ -208,7 +208,7 @@ public class RecoverableZooKeeper {
 
   private Stat exists(String path, Watcher watcher, Boolean watch)
           throws InterruptedException, KeeperException {
-    try (TraceScope scope = TraceUtil.createTrace("RecoverableZookeeper.exists")) {
+    try (Scope scope = TraceUtil.createTrace("RecoverableZookeeper.exists")) {
       RetryCounter retryCounter = retryCounterFactory.create();
       while (true) {
         try {
@@ -265,7 +265,7 @@ public class RecoverableZooKeeper {
 
   private List<String> getChildren(String path, Watcher watcher, Boolean watch)
           throws InterruptedException, KeeperException {
-    try (TraceScope scope = TraceUtil.createTrace("RecoverableZookeeper.getChildren")) {
+    try (Scope scope = TraceUtil.createTrace("RecoverableZookeeper.getChildren")) {
       RetryCounter retryCounter = retryCounterFactory.create();
       while (true) {
         try {
@@ -314,7 +314,7 @@ public class RecoverableZooKeeper {
 
   private byte[] getData(String path, Watcher watcher, Boolean watch, Stat stat)
           throws InterruptedException, KeeperException {
-    try (TraceScope scope = TraceUtil.createTrace("RecoverableZookeeper.getData")) {
+    try (Scope scope = TraceUtil.createTrace("RecoverableZookeeper.getData")) {
       RetryCounter retryCounter = retryCounterFactory.create();
       while (true) {
         try {
@@ -360,7 +360,7 @@ public class RecoverableZooKeeper {
    */
   public Stat setData(String path, byte[] data, int version)
     throws KeeperException, InterruptedException {
-    try (TraceScope scope = TraceUtil.createTrace("RecoverableZookeeper.setData")) {
+    try (Scope scope = TraceUtil.createTrace("RecoverableZookeeper.setData")) {
       RetryCounter retryCounter = retryCounterFactory.create();
       byte[] newData = ZKMetadata.appendMetaData(id, data);
       boolean isRetry = false;
@@ -407,7 +407,7 @@ public class RecoverableZooKeeper {
    */
   public List<ACL> getAcl(String path, Stat stat)
     throws KeeperException, InterruptedException {
-    try (TraceScope scope = TraceUtil.createTrace("RecoverableZookeeper.getAcl")) {
+    try (Scope scope = TraceUtil.createTrace("RecoverableZookeeper.getAcl")) {
       RetryCounter retryCounter = retryCounterFactory.create();
       while (true) {
         try {
@@ -436,7 +436,7 @@ public class RecoverableZooKeeper {
    */
   public Stat setAcl(String path, List<ACL> acls, int version)
     throws KeeperException, InterruptedException {
-    try (TraceScope scope = TraceUtil.createTrace("RecoverableZookeeper.setAcl")) {
+    try (Scope scope = TraceUtil.createTrace("RecoverableZookeeper.setAcl")) {
       RetryCounter retryCounter = retryCounterFactory.create();
       while (true) {
         try {
@@ -477,7 +477,7 @@ public class RecoverableZooKeeper {
   public String create(String path, byte[] data, List<ACL> acl,
       CreateMode createMode)
     throws KeeperException, InterruptedException {
-    try (TraceScope scope = TraceUtil.createTrace("RecoverableZookeeper.create")) {
+    try (Scope scope = TraceUtil.createTrace("RecoverableZookeeper.create")) {
       byte[] newData = ZKMetadata.appendMetaData(id, data);
       switch (createMode) {
         case EPHEMERAL:
@@ -606,7 +606,7 @@ public class RecoverableZooKeeper {
    */
   public List<OpResult> multi(Iterable<Op> ops)
     throws KeeperException, InterruptedException {
-    try (TraceScope scope = TraceUtil.createTrace("RecoverableZookeeper.multi")) {
+    try (Scope scope = TraceUtil.createTrace("RecoverableZookeeper.multi")) {
       RetryCounter retryCounter = retryCounterFactory.create();
       Iterable<Op> multiOps = prepareZKMulti(ops);
       while (true) {

@@ -28,6 +28,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+
+import io.opentracing.Scope;
+import io.opentracing.Span;
+import io.opentracing.SpanContext;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.hadoop.hbase.ClusterMetrics;
@@ -60,12 +64,10 @@ import org.apache.hadoop.hbase.ipc.FatalConnectionException;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
+import org.apache.hadoop.hbase.trace.AlwaysSampler;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LoadTestTool;
-import org.apache.htrace.core.AlwaysSampler;
-import org.apache.htrace.core.Span;
-import org.apache.htrace.core.TraceScope;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -370,7 +372,7 @@ public class IntegrationTestMTTR {
    */
   private static class TimingResult {
     DescriptiveStatistics stats = new DescriptiveStatistics();
-    ArrayList<String> traces = new ArrayList<>(10);
+    ArrayList<SpanContext> traces = new ArrayList<>(10);
 
     /**
      * Add a result to this aggregate result.
@@ -383,7 +385,7 @@ public class IntegrationTestMTTR {
       }
       stats.addValue(TimeUnit.MILLISECONDS.convert(time, TimeUnit.NANOSECONDS));
       if (TimeUnit.SECONDS.convert(time, TimeUnit.NANOSECONDS) >= 1) {
-        traces.add(span.getTracerId());
+        traces.add(span.context());
       }
     }
 
@@ -428,9 +430,9 @@ public class IntegrationTestMTTR {
       while (numAfterDone < maxIterations) {
         long start = System.nanoTime();
         Span span = null;
-        try (TraceScope scope = TraceUtil.createTrace(getSpanName())) {
+        try (Scope scope = TraceUtil.createTrace(getSpanName())) {
           if (scope != null) {
-            span = scope.getSpan();
+            span = scope.span();
           }
           boolean actionResult = doAction();
           if (actionResult && future.isDone()) {

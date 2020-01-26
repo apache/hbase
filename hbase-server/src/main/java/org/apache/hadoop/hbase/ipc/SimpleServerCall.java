@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.ipc;
 import java.io.IOException;
 import java.net.InetAddress;
 
+import io.opentracing.SpanContext;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.ipc.RpcServer.CallCleanup;
@@ -45,9 +46,9 @@ class SimpleServerCall extends ServerCall<SimpleServerRpcConnection> {
       SimpleServerRpcConnection connection, long size, final InetAddress remoteAddress,
       long receiveTime, int timeout, ByteBuffAllocator bbAllocator,
       CellBlockBuilder cellBlockBuilder, CallCleanup reqCleanup,
-      SimpleRpcServerResponder responder) {
+      SimpleRpcServerResponder responder, SpanContext spanContext) {
     super(id, service, md, header, param, cellScanner, connection, size, remoteAddress, receiveTime,
-        timeout, bbAllocator, cellBlockBuilder, reqCleanup);
+        timeout, bbAllocator, cellBlockBuilder, reqCleanup, spanContext);
     this.responder = responder;
   }
 

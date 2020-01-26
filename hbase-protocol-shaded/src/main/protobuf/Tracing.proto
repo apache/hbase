@@ -31,4 +31,5 @@ option optimize_for = SPEED;
 message RPCTInfo {
   optional int64 trace_id = 1;
   optional int64 parent_id = 2;
+  optional bytes spanContext = 3; // OpenTracing SpanContext
 }

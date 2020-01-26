@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import io.opentracing.SpanContext;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 
@@ -114,10 +115,10 @@ class NettyServerRpcConnection extends ServerRpcConnection {
   public NettyServerCall createCall(int id, final BlockingService service,
       final MethodDescriptor md, RequestHeader header, Message param, CellScanner cellScanner,
       long size, final InetAddress remoteAddress, int timeout,
-      CallCleanup reqCleanup) {
+      CallCleanup reqCleanup, SpanContext spanContext) {
     return new NettyServerCall(id, service, md, header, param, cellScanner, this, size,
         remoteAddress, System.currentTimeMillis(), timeout, this.rpcServer.bbAllocator,
-        this.rpcServer.cellBlockBuilder, reqCleanup);
+        this.rpcServer.cellBlockBuilder, reqCleanup, spanContext);
   }
 
   @Override

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.trace;
 
+import io.opentracing.Scope;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
@@ -34,8 +35,6 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.htrace.core.Sampler;
-import org.apache.htrace.core.TraceScope;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -122,7 +121,7 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
           public void run() {
             ResultScanner rs = null;
             TraceUtil.addSampler(Sampler.ALWAYS);
-            try (TraceScope scope = TraceUtil.createTrace("Scan")){
+            try (Scope scope = TraceUtil.createTrace("Scan")){
               Table ht = util.getConnection().getTable(tableName);
               Scan s = new Scan();
               s.setStartRow(Bytes.toBytes(rowKeyQueue.take()));
@@ -175,7 +174,7 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
           long accum = 0;
           TraceUtil.addSampler(Sampler.ALWAYS);
           for (int x = 0; x < 5; x++) {
-            try (TraceScope scope = TraceUtil.createTrace("gets")) {
+            try (Scope scope = TraceUtil.createTrace("gets")) {
               long rk = rowKeyQueue.take();
               Result r1 = ht.get(new Get(Bytes.toBytes(rk)));
               if (r1 != null) {
@@ -200,14 +199,14 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
 
   private void createTable() throws IOException {
     TraceUtil.addSampler(Sampler.ALWAYS);
-    try (TraceScope scope = TraceUtil.createTrace("createTable")) {
+    try (Scope scope = TraceUtil.createTrace("createTable")) {
       util.createTable(tableName, familyName);
     }
   }
 
   private void deleteTable() throws IOException {
     TraceUtil.addSampler(Sampler.ALWAYS);
-    try (TraceScope scope = TraceUtil.createTrace("deleteTable")) {
+    try (Scope scope = TraceUtil.createTrace("deleteTable")) {
       if (admin.tableExists(tableName)) {
         util.deleteTable(tableName);
       }
@@ -220,7 +219,7 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
     byte[] value = new byte[300];
     TraceUtil.addSampler(Sampler.ALWAYS);
     for (int x = 0; x < 5000; x++) {
-      try (TraceScope traceScope = TraceUtil.createTrace("insertData")) {
+      try (Scope traceScope = TraceUtil.createTrace("insertData")) {
         for (int i = 0; i < 5; i++) {
           long rk = random.nextLong();
           rowKeys.add(rk);

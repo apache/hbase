@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.regionserver.HStoreFile.MAJOR_COMPACTION_K
 import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
+import io.opentracing.Scope;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -181,7 +182,6 @@ import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.hadoop.hbase.wal.WALSplitUtil.MutationReplay;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -5978,7 +5978,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     RowLockImpl result = null;
 
     boolean success = false;
-    try (TraceScope scope = TraceUtil.createTrace("HRegion.getRowLock")) {
+    try (Scope scope = TraceUtil.createTrace("HRegion.getRowLock")) {
       TraceUtil.addTimelineAnnotation("Getting a " + (readLock?"readLock":"writeLock"));
       // Keep trying until we have a lock or error out.
       // TODO: do we need to add a time component here?

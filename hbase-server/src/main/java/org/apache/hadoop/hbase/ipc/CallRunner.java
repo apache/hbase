@@ -21,6 +21,8 @@ import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.Optional;
 
+import io.opentracing.Scope;
+import io.opentracing.SpanContext;
 import org.apache.hadoop.hbase.CallDroppedException;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -33,7 +35,6 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.htrace.core.TraceScope;
 
 /**
  * The request processing logic, which is usually executed in thread pools provided by an
@@ -117,7 +118,7 @@ public class CallRunner {
       String error = null;
       Pair<Message, CellScanner> resultPair = null;
       RpcServer.CurCall.set(call);
-      TraceScope traceScope = null;
+      Scope traceScope = null;
       try {
         if (!this.rpcServer.isStarted()) {
           InetSocketAddress address = rpcServer.getListenerAddress();
@@ -128,7 +129,7 @@ public class CallRunner {
             call.getService() != null ? call.getService().getDescriptorForType().getName() : "";
         String methodName = (call.getMethod() != null) ? call.getMethod().getName() : "";
         String traceString = serviceName + "." + methodName;
-        traceScope = TraceUtil.createTrace(traceString);
+        traceScope = TraceUtil.createTrace(traceString, call.getSpanContext());
         // make the call
         resultPair = this.rpcServer.call(call, this.status);
       } catch (TimeoutIOException e){

@@ -38,6 +38,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import io.opentracing.Scope;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -57,7 +59,6 @@ import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -722,7 +723,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   }
 
   // Sync all known transactions
-  private void publishSyncThenBlockOnCompletion(TraceScope scope, boolean forceSync) throws IOException {
+  private void publishSyncThenBlockOnCompletion(Scope scope, boolean forceSync) throws IOException {
     SyncFuture syncFuture = publishSyncOnRingBuffer(forceSync);
     blockOnSync(syncFuture);
   }
@@ -755,7 +756,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
 
   @Override
   public void sync(boolean forceSync) throws IOException {
-    try (TraceScope scope = TraceUtil.createTrace("FSHLog.sync")) {
+    try (Scope scope = TraceUtil.createTrace("FSHLog.sync")) {
       publishSyncThenBlockOnCompletion(scope, forceSync);
     }
   }
@@ -771,7 +772,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
       // Already sync'd.
       return;
     }
-    try (TraceScope scope = TraceUtil.createTrace("FSHLog.sync")) {
+    try (Scope scope = TraceUtil.createTrace("FSHLog.sync")) {
       publishSyncThenBlockOnCompletion(scope, forceSync);
     }
   }

@@ -24,6 +24,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import io.opentracing.SpanContext;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
@@ -97,12 +99,14 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
   // the current implementation. We should fix this in the future.
   private final AtomicInteger reference = new AtomicInteger(0b01);
 
+  private final SpanContext spanContext;
+
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NP_NULL_ON_SOME_PATH",
       justification = "Can't figure why this complaint is happening... see below")
   ServerCall(int id, BlockingService service, MethodDescriptor md, RequestHeader header,
       Message param, CellScanner cellScanner, T connection, long size, InetAddress remoteAddress,
       long receiveTime, int timeout, ByteBuffAllocator byteBuffAllocator,
-      CellBlockBuilder cellBlockBuilder, CallCleanup reqCleanup) {
+      CellBlockBuilder cellBlockBuilder, CallCleanup reqCleanup, SpanContext spanContext) {
     this.id = id;
     this.service = service;
     this.md = md;
@@ -114,6 +118,7 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
     this.response = null;
     this.isError = false;
     this.size = size;
+    this.spanContext = spanContext;
     if (connection != null) {
       this.user =  connection.user;
       this.retryImmediatelySupported = connection.retryImmediatelySupported;
@@ -541,5 +546,10 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
   @Override
   public synchronized BufferChain getResponse() {
     return response;
+  }
+
+  @Override
+  public SpanContext getSpanContext() {
+    return spanContext;
   }
 }

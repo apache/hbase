@@ -25,6 +25,7 @@ import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
+import io.jaegertracing.Configuration.SamplerConfiguration;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -35,6 +36,10 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
+
+import io.jaegertracing.internal.samplers.ConstSampler;
+import io.opentracing.Scope;
+import io.opentracing.util.GlobalTracer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
@@ -58,7 +63,7 @@ import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader;
 import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
-import org.apache.hadoop.hbase.trace.HBaseHTraceConfiguration;
+import org.apache.hadoop.hbase.trace.Sampler;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -67,10 +72,6 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.htrace.core.ProbabilitySampler;
-import org.apache.htrace.core.Sampler;
-import org.apache.htrace.core.TraceScope;
-import org.apache.htrace.core.Tracer;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -128,7 +129,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
     private final boolean noSync;
     private final HRegion region;
     private final int syncInterval;
-    private final Sampler loopSampler;
+    private final SamplerConfiguration loopSampler;
     private final NavigableMap<byte[], Integer> scopes;
 
     WALPutBenchmark(final HRegion region, final TableDescriptor htd,
@@ -158,7 +159,9 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
           }
         } else {
           getConf().setDouble("hbase.sampler.fraction", traceFreq);
-          loopSampler = new ProbabilitySampler(new HBaseHTraceConfiguration(getConf()));
+          loopSampler = io.jaegertracing.Configuration.SamplerConfiguration.fromEnv()
+              .withType(ConstSampler.TYPE)
+              .withParam(traceFreq);
         }
       }
     }
@@ -170,13 +173,13 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
       Random rand = new Random(Thread.currentThread().getId());
       WAL wal = region.getWAL();
 
-      try (TraceScope threadScope = TraceUtil.createTrace("WALPerfEval." + Thread.currentThread().getName())) {
+      try (Scope threadScope = TraceUtil.createTrace("WALPerfEval." + Thread.currentThread().getName())) {
         long startTime = System.currentTimeMillis();
         int lastSync = 0;
         TraceUtil.addSampler(loopSampler);
         for (int i = 0; i < numIterations; ++i) {
-          assert Tracer.getCurrentSpan() == threadScope.getSpan() : "Span leak detected.";
-          try (TraceScope loopScope = TraceUtil.createTrace("runLoopIter" + i)) {
+          assert GlobalTracer.get().activeSpan().equals(threadScope.span()) : "Span leak detected.";
+          try (Scope loopScope = TraceUtil.createTrace("runLoopIter" + i)) {
             long now = System.nanoTime();
             Put put = setupPut(rand, key, value, numFamilies);
             WALEdit walEdit = new WALEdit();
@@ -309,9 +312,10 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
     LOG.info("FileSystem={}, rootDir={}", fs, rootRegionDir);
 
     SpanReceiverHost receiverHost = trace ? SpanReceiverHost.getInstance(getConf()) : null;
-    final Sampler sampler = trace ? Sampler.ALWAYS : Sampler.NEVER;
+    final SamplerConfiguration
+        sampler = trace ? Sampler.ALWAYS : Sampler.NEVER;
     TraceUtil.addSampler(sampler);
-    TraceScope scope = TraceUtil.createTrace("WALPerfEval");
+    Scope scope = TraceUtil.createTrace("WALPerfEval");
 
     try {
       rootRegionDir = rootRegionDir.makeQualified(fs.getUri(), fs.getWorkingDirectory());

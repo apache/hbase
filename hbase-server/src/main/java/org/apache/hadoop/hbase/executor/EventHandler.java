@@ -21,11 +21,11 @@ package org.apache.hadoop.hbase.executor;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 
+import io.opentracing.Scope;
+import io.opentracing.Span;
+import io.opentracing.util.GlobalTracer;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.trace.TraceUtil;
-import org.apache.htrace.core.Span;
-import org.apache.htrace.core.TraceScope;
-import org.apache.htrace.core.Tracer;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,7 +75,7 @@ public abstract class EventHandler implements Runnable, Comparable<EventHandler>
    * Default base class constructor.
    */
   public EventHandler(Server server, EventType eventType) {
-    this.parent = Tracer.getCurrentSpan();
+    this.parent = GlobalTracer.get().activeSpan();;
     this.server = server;
     this.eventType = eventType;
     seqid = seqids.incrementAndGet();
@@ -100,7 +100,7 @@ public abstract class EventHandler implements Runnable, Comparable<EventHandler>
 
   @Override
   public void run() {
-    try (TraceScope scope = TraceUtil.createTrace(this.getClass().getSimpleName(), parent)) {
+    try (Scope scope = TraceUtil.createTrace(this.getClass().getSimpleName(), parent)) {
       process();
     } catch(Throwable t) {
       handleException(t);

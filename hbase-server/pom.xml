@@ -512,6 +512,11 @@
       <artifactId>mockito-core</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <artifactId>opentracing-mock</artifactId>
+      <groupId>io.opentracing</groupId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
   <profiles>
     <!-- Needs to make the profile in apache parent pom -->

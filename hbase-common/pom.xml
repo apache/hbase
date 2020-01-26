@@ -214,6 +214,8 @@
       <groupId>log4j</groupId>
       <artifactId>log4j</artifactId>
     </dependency>
+
+    <!-- opentracing -->
     <dependency>
       <groupId>io.opentracing</groupId>
       <artifactId>opentracing-api</artifactId>
@@ -225,7 +227,6 @@
     <dependency>
       <groupId>io.opentracing</groupId>
       <artifactId>opentracing-mock</artifactId>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>io.opentracing.contrib</groupId>
@@ -237,7 +238,6 @@
       <artifactId>hbase-shaded-jaeger</artifactId>
     </dependency>
   </dependencies>
-
   <profiles>
     <!-- Needs to make the profile in apache parent pom -->
     <profile>

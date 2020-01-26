@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase.ipc;
 
+import io.opentracing.SpanContext;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -132,4 +133,6 @@ public interface RpcCall extends RpcCallContext {
    * @return A short string format of this call without possibly lengthy params
    */
   String toShortString();
+
+  SpanContext getSpanContext();
 }

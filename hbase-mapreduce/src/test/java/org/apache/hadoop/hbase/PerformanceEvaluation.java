@@ -42,6 +42,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+
+import io.jaegertracing.internal.samplers.ConstSampler;
+import io.opentracing.Scope;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -80,7 +83,7 @@ import org.apache.hadoop.hbase.io.hfile.RandomDistribution;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.CompactingMemStore;
-import org.apache.hadoop.hbase.trace.HBaseHTraceConfiguration;
+import org.apache.hadoop.hbase.trace.Sampler;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.ByteArrayHashKey;
@@ -99,9 +102,6 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.mapreduce.lib.reduce.LongSumReducer;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.htrace.core.ProbabilitySampler;
-import org.apache.htrace.core.Sampler;
-import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1119,7 +1119,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     protected final TestOptions opts;
 
     private final Status status;
-    private final Sampler traceSampler;
+    private final io.jaegertracing.Configuration.SamplerConfiguration
+        traceSampler;
     private final SpanReceiverHost receiverHost;
 
     private String testName;
@@ -1147,7 +1148,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
         this.traceSampler = Sampler.ALWAYS;
       } else if (options.traceRate > 0.0) {
         conf.setDouble("hbase.sampler.fraction", options.traceRate);
-        this.traceSampler = new ProbabilitySampler(new HBaseHTraceConfiguration(conf));
+        this.traceSampler = io.jaegertracing.Configuration.SamplerConfiguration.fromEnv()
+            .withType(ConstSampler.TYPE).withParam(options.traceRate);
       } else {
         this.traceSampler = Sampler.NEVER;
       }
@@ -1342,7 +1344,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
           if (i % everyN != 0) continue;
           long startTime = System.nanoTime();
           boolean requestSent = false;
-          try (TraceScope scope = TraceUtil.createTrace("test row");){
+          try (Scope scope = TraceUtil.createTrace("test row");){
             requestSent = testRow(i);
           }
           if ( (i - startRow) > opts.measureAfter) {

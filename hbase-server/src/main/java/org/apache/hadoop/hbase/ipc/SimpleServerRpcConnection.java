@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import io.opentracing.SpanContext;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -210,7 +211,7 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
           // Notify the client about the offending request
           SimpleServerCall reqTooBig = new SimpleServerCall(header.getCallId(), this.service, null,
               null, null, null, this, 0, this.addr, System.currentTimeMillis(), 0,
-              this.rpcServer.bbAllocator, this.rpcServer.cellBlockBuilder, null, responder);
+              this.rpcServer.bbAllocator, this.rpcServer.cellBlockBuilder, null, responder, null);
           this.rpcServer.metrics.exception(SimpleRpcServer.REQUEST_TOO_BIG_EXCEPTION);
           // Make sure the client recognizes the underlying exception
           // Otherwise, throw a DoNotRetryIOException.
@@ -325,10 +326,10 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
   @Override
   public SimpleServerCall createCall(int id, BlockingService service, MethodDescriptor md,
       RequestHeader header, Message param, CellScanner cellScanner, long size,
-      InetAddress remoteAddress, int timeout, CallCleanup reqCleanup) {
+      InetAddress remoteAddress, int timeout, CallCleanup reqCleanup, SpanContext spanContext) {
     return new SimpleServerCall(id, service, md, header, param, cellScanner, this, size,
         remoteAddress, System.currentTimeMillis(), timeout, this.rpcServer.bbAllocator,
-        this.rpcServer.cellBlockBuilder, reqCleanup, this.responder);
+        this.rpcServer.cellBlockBuilder, reqCleanup, this.responder, spanContext);
   }
 
   @Override

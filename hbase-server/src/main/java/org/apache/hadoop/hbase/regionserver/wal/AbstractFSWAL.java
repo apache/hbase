@@ -46,6 +46,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
+
+import io.opentracing.Scope;
 import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -80,7 +82,6 @@ import org.apache.hadoop.hbase.wal.WALProvider.WriterBase;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -779,7 +780,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    */
   @VisibleForTesting
   Path replaceWriter(Path oldPath, Path newPath, W nextWriter) throws IOException {
-    try (TraceScope scope = TraceUtil.createTrace("FSHFile.replaceWriter")) {
+    try (Scope scope = TraceUtil.createTrace("FSHFile.replaceWriter")) {
       doReplaceWriter(oldPath, newPath, nextWriter);
       return newPath;
     }
@@ -832,7 +833,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
         return null;
       }
       byte[][] regionsToFlush = null;
-      try (TraceScope scope = TraceUtil.createTrace("FSHLog.rollWriter")) {
+      try (Scope scope = TraceUtil.createTrace("FSHLog.rollWriter")) {
         Path oldPath = getOldPath();
         Path newPath = getNewPath();
         // Any exception from here on is catastrophic, non-recoverable so we currently abort.
@@ -1075,7 +1076,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     long txid = txidHolder.longValue();
     ServerCall<?> rpcCall = RpcServer.getCurrentCall().filter(c -> c instanceof ServerCall)
       .filter(c -> c.getCellScanner() != null).map(c -> (ServerCall) c).orElse(null);
-    try (TraceScope scope = TraceUtil.createTrace(implClassName + ".append")) {
+    try (Scope scope = TraceUtil.createTrace(implClassName + ".append")) {
       FSWALEntry entry = new FSWALEntry(txid, key, edits, hri, inMemstore, rpcCall);
       entry.stampRegionSequenceId(we);
       ringBuffer.get(txid).load(entry);

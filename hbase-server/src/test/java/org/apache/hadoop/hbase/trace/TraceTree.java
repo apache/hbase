@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hbase.trace;
 
-import org.apache.htrace.core.Span;
-import org.apache.htrace.core.SpanId;
+
+
+import io.opentracing.Span;
+import io.opentracing.mock.MockSpan;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -35,76 +37,78 @@ import java.util.TreeSet;
 public class TraceTree {
 
   public static class SpansByParent {
-    private static Comparator<Span> COMPARATOR =
-        new Comparator<Span>() {
+    private static Comparator<MockSpan> COMPARATOR =
+        new Comparator<MockSpan>() {
           @Override
-          public int compare(Span a, Span b) {
-            return a.getSpanId().compareTo(b.getSpanId());
+          public int compare(MockSpan a, MockSpan b) {
+            MockSpan.MockContext ctx1 = a.context();
+            MockSpan.MockContext ctx2 = b.context();
+            return (int)(ctx1.spanId() - ctx2.spanId());
           }
         };
 
-    private final TreeSet<Span> treeSet;
+    private final TreeSet<MockSpan> treeSet;
 
-    private final HashMap<SpanId, LinkedList<Span>> parentToSpans;
+    private final HashMap<Long, LinkedList<MockSpan>> parentToSpans;
 
-    SpansByParent(Collection<Span> spans) {
-      TreeSet<Span> treeSet = new TreeSet<Span>(COMPARATOR);
-      parentToSpans = new HashMap<SpanId, LinkedList<Span>>();
-      for (Span span : spans) {
+    SpansByParent(Collection<MockSpan> spans) {
+      TreeSet<MockSpan> treeSet = new TreeSet<MockSpan>(COMPARATOR);
+      parentToSpans = new HashMap<Long, LinkedList<MockSpan>>();
+      for (MockSpan span : spans) {
         treeSet.add(span);
-        for (SpanId parent : span.getParents()) {
-          LinkedList<Span> list = parentToSpans.get(parent);
-          if (list == null) {
-            list = new LinkedList<Span>();
-            parentToSpans.put(parent, list);
-          }
-          list.add(span);
+        long parentId = span.parentId();
+        LinkedList<MockSpan> list = parentToSpans.get(parentId);
+        if (list == null) {
+          list = new LinkedList<MockSpan>();
+          parentToSpans.put(parentId, list);
         }
-        if (span.getParents().length == 0) {
-          LinkedList<Span> list = parentToSpans.get(SpanId.INVALID);
+        list.add(span);
+
+        /*if (span.getParents().length == 0) {
+          LinkedList<MockSpan> list = parentToSpans.get(SpanId.INVALID);
           if (list == null) {
-            list = new LinkedList<Span>();
+            list = new LinkedList<MockSpan>();
             parentToSpans.put(SpanId.INVALID, list);
           }
           list.add(span);
-        }
+        }*/
       }
       this.treeSet = treeSet;
     }
 
-    public List<Span> find(SpanId parentId) {
-      LinkedList<Span> spans = parentToSpans.get(parentId);
+    public List<MockSpan> find(long parentId) {
+      LinkedList<MockSpan> spans = parentToSpans.get(parentId);
       if (spans == null) {
-        return new LinkedList<Span>();
+        return new LinkedList<MockSpan>();
       }
       return spans;
     }
 
-    public Iterator<Span> iterator() {
+    public Iterator<MockSpan> iterator() {
       return Collections.unmodifiableSortedSet(treeSet).iterator();
     }
   }
 
   public static class SpansByProcessId {
-    private static Comparator<Span> COMPARATOR =
-        new Comparator<Span>() {
+    private static Comparator<MockSpan> COMPARATOR =
+        new Comparator<MockSpan>() {
           @Override
-          public int compare(Span a, Span b) {
-            return a.getSpanId().compareTo(b.getSpanId());
+          public int compare(MockSpan a, MockSpan b) {
+            return (int)(a.context().spanId() - b.context().spanId());
           }
         };
 
-    private final TreeSet<Span> treeSet;
+    private final TreeSet<MockSpan> treeSet;
 
-    SpansByProcessId(Collection<Span> spans) {
-      TreeSet<Span> treeSet = new TreeSet<Span>(COMPARATOR);
-      for (Span span : spans) {
+    SpansByProcessId(Collection<MockSpan> spans) {
+      TreeSet<MockSpan> treeSet = new TreeSet<MockSpan>(COMPARATOR);
+      for (MockSpan span : spans) {
         treeSet.add(span);
       }
       this.treeSet = treeSet;
     }
 
-    public Iterator<Span> iterator() {
+    public Iterator<MockSpan> iterator() {
       return Collections.unmodifiableSortedSet(treeSet).iterator();
     }
   }
@@ -118,7 +122,7 @@ public class TraceTree {
    * @param spans The collection of spans to use to create this TraceTree. Should
    *              have at least one root span.
    */
-  public TraceTree(Collection<Span> spans) {
+  public TraceTree(Collection<MockSpan> spans) {
     if (spans == null) {
       spans = Collections.emptySet();
     }
@@ -138,7 +142,7 @@ public class TraceTree {
   public String toString() {
     StringBuilder bld = new StringBuilder();
     String prefix = "";
-    for (Iterator<Span> iter = spansByParent.iterator(); iter.hasNext();) {
+    for (Iterator<MockSpan> iter = spansByParent.iterator(); iter.hasNext();) {
       Span span = iter.next();
       bld.append(prefix).append(span.toString());
       prefix = "\n";
