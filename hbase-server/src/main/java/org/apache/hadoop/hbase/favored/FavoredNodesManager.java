@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +22,6 @@ import static org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper.FAVORE
 import static org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position.PRIMARY;
 import static org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position.SECONDARY;
 import static org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position.TERTIARY;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -31,9 +29,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -56,22 +53,21 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
  * should be done through this class. There should only be one instance of
  * {@link FavoredNodesManager} in Master. {@link FavoredNodesPlan} and favored node information
  * from {@link SnapshotOfRegionAssignmentFromMeta} should not be used outside this class (except
- * for may be tools that only read or test cases). All other classes including Favored balancers
+ * for tools that only read or fortest cases). All other classes including Favored balancers
  * and {@link FavoredNodeAssignmentHelper} should use {@link FavoredNodesManager} for any
  * read/write/deletes to favored nodes.
  */
 @InterfaceAudience.Private
 public class FavoredNodesManager {
-
   private static final Logger LOG = LoggerFactory.getLogger(FavoredNodesManager.class);
 
-  private FavoredNodesPlan globalFavoredNodesAssignmentPlan;
-  private Map<ServerName, List<RegionInfo>> primaryRSToRegionMap;
-  private Map<ServerName, List<RegionInfo>> secondaryRSToRegionMap;
-  private Map<ServerName, List<RegionInfo>> teritiaryRSToRegionMap;
+  private final FavoredNodesPlan globalFavoredNodesAssignmentPlan;
+  private final Map<ServerName, List<RegionInfo>> primaryRSToRegionMap;
+  private final Map<ServerName, List<RegionInfo>> secondaryRSToRegionMap;
+  private final Map<ServerName, List<RegionInfo>> teritiaryRSToRegionMap;
 
-  private MasterServices masterServices;
-  private RackManager rackManager;
+  private final MasterServices masterServices;
+  private final RackManager rackManager;
 
   /**
    * Datanode port to be used for Favored Nodes.
@@ -87,15 +83,19 @@ public class FavoredNodesManager {
     this.rackManager = new RackManager(masterServices.getConfiguration());
   }
 
-  public void initialize(SnapshotOfRegionAssignmentFromMeta snapshotOfRegionAssignment)
-      throws HBaseIOException {
-    globalFavoredNodesAssignmentPlan = snapshotOfRegionAssignment.getExistingAssignmentPlan();
-    primaryRSToRegionMap = snapshotOfRegionAssignment.getPrimaryToRegionInfoMap();
-    secondaryRSToRegionMap = snapshotOfRegionAssignment.getSecondaryToRegionInfoMap();
-    teritiaryRSToRegionMap = snapshotOfRegionAssignment.getTertiaryToRegionInfoMap();
-    datanodeDataTransferPort = getDataNodePort();
+  public synchronized void initialize(SnapshotOfRegionAssignmentFromMeta snapshot) {
+    // Add snapshot to structures made on creation. Current structures may have picked
+    // up data between construction and the scan of meta needed before this method
+    // is called.  See HBASE-23737 "[Flakey Tests] TestFavoredNodeTableImport fails 30% of the time"
+    this.globalFavoredNodesAssignmentPlan.
+      updateFavoredNodesMap(snapshot.getExistingAssignmentPlan());
+    primaryRSToRegionMap.putAll(snapshot.getPrimaryToRegionInfoMap());
+    secondaryRSToRegionMap.putAll(snapshot.getSecondaryToRegionInfoMap());
+    teritiaryRSToRegionMap.putAll(snapshot.getTertiaryToRegionInfoMap());
+    datanodeDataTransferPort= getDataNodePort();
   }
 
+  @VisibleForTesting
   public int getDataNodePort() {
     HdfsConfiguration.init();
 
@@ -122,18 +122,10 @@ public class FavoredNodesManager {
 
   /**
    * Filter and return regions for which favored nodes is not applicable.
-   *
-   * @param regions - collection of regions
    * @return set of regions for which favored nodes is not applicable
    */
   public static Set<RegionInfo> filterNonFNApplicableRegions(Collection<RegionInfo> regions) {
-    Set<RegionInfo> fnRegions = Sets.newHashSet();
-    for (RegionInfo regionInfo : regions) {
-      if (!isFavoredNodeApplicable(regionInfo)) {
-        fnRegions.add(regionInfo);
-      }
-    }
-    return fnRegions;
+    return regions.stream().filter(r -> !isFavoredNodeApplicable(r)).collect(Collectors.toSet());
   }
 
   /*
@@ -194,8 +186,7 @@ public class FavoredNodesManager {
     }
 
     // Lets do a bulk update to meta since that reduces the RPC's
-    FavoredNodeAssignmentHelper.updateMetaWithFavoredNodesInfo(
-        regionToFavoredNodes,
+    FavoredNodeAssignmentHelper.updateMetaWithFavoredNodesInfo(regionToFavoredNodes,
         masterServices.getConnection());
     deleteFavoredNodesForRegions(regionToFavoredNodes.keySet());
 
@@ -208,8 +199,8 @@ public class FavoredNodesManager {
   }
 
   private synchronized void addToReplicaLoad(RegionInfo hri, List<ServerName> servers) {
-    ServerName serverToUse = ServerName.valueOf(servers.get(PRIMARY.ordinal()).getHostAndPort(),
-        NON_STARTCODE);
+    ServerName serverToUse =
+      ServerName.valueOf(servers.get(PRIMARY.ordinal()).getAddress().toString(), NON_STARTCODE);
     List<RegionInfo> regionList = primaryRSToRegionMap.get(serverToUse);
     if (regionList == null) {
       regionList = new ArrayList<>();
