@@ -75,7 +75,7 @@ public class TestMemStoreSegmentsIterator {
   @Before
   public void setup() throws IOException {
     Configuration conf = new Configuration();
-    HBaseTestingUtility hbaseUtility = HBaseTestingUtility.createLocalHTU(conf);
+    HBaseTestingUtility hbaseUtility = new HBaseTestingUtility(conf);
     TableDescriptorBuilder tableDescriptorBuilder =
       TableDescriptorBuilder.newBuilder(TableName.valueOf(TABLE));
     ColumnFamilyDescriptor columnFamilyDescriptor =

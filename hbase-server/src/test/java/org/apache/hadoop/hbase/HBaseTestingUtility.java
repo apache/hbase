@@ -343,18 +343,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   /**
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
-   *   {@link #HBaseTestingUtility(Configuration)} instead.
-   * @return a normal HBaseTestingUtility
-   * @see #HBaseTestingUtility(Configuration)
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-19841">HBASE-19841</a>
-   */
-  @Deprecated
-  public static HBaseTestingUtility createLocalHTU(Configuration c) {
-    return new HBaseTestingUtility(c);
-  }
-
-  /**
    * Close both the region {@code r} and it's underlying WAL. For use in tests.
    */
   public static void closeRegionAndWAL(final Region r) throws IOException {

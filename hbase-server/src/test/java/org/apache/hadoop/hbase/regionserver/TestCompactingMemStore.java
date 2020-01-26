@@ -107,7 +107,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     conf.setBoolean(MemStoreLAB.USEMSLAB_KEY, true);
     conf.setFloat(MemStoreLAB.CHUNK_POOL_MAXSIZE_KEY, 0.2f);
     conf.setInt(HRegion.MEMSTORE_PERIODIC_FLUSH_INTERVAL, 1000);
-    HBaseTestingUtility hbaseUtility = HBaseTestingUtility.createLocalHTU(conf);
+    HBaseTestingUtility hbaseUtility = new HBaseTestingUtility(conf);
     HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("foobar"));
     htd.addFamily(hcd);
