@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,10 +17,16 @@
  */
 package org.apache.hadoop.hbase;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -30,8 +36,14 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestRule;
 import org.junit.rules.Timeout;
 import org.junit.runner.Description;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 import org.junit.runners.model.Statement;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
@@ -43,8 +55,12 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
  */
 @InterfaceAudience.Private
 public final class HBaseClassTestRule implements TestRule {
+  private static final Logger LOG = LoggerFactory.getLogger(HBaseClassTestRule.class);
   public static final Set<Class<?>> UNIT_TEST_CLASSES = Collections.unmodifiableSet(
       Sets.<Class<?>> newHashSet(SmallTests.class, MediumTests.class, LargeTests.class));
+
+  // Each unit test has this timeout.
+  private static long PER_UNIT_TEST_TIMEOUT_MINS = 13;
 
   private final Class<?> clazz;
 
@@ -65,13 +81,16 @@ public final class HBaseClassTestRule implements TestRule {
 
   private static long getTimeoutInSeconds(Class<?> clazz) {
     Category[] categories = clazz.getAnnotationsByType(Category.class);
-
+    // Starting JUnit 4.13, it appears that the timeout is applied across all the parameterized
+    // runs. So the timeout is multiplied by number of parameterized runs.
+    int numParams = getNumParameters(clazz);
     // @Category is not repeatable -- it is only possible to get an array of length zero or one.
     if (categories.length == 1) {
       for (Class<?> c : categories[0].value()) {
         if (UNIT_TEST_CLASSES.contains(c)) {
-          // All tests have a 13 minutes timeout.
-          return TimeUnit.MINUTES.toSeconds(13);
+          long timeout = numParams * PER_UNIT_TEST_TIMEOUT_MINS;
+          LOG.info("Test {} timeout: {} mins", clazz, timeout);
+          return TimeUnit.MINUTES.toSeconds(timeout);
         }
         if (c == IntegrationTests.class) {
           return TimeUnit.MINUTES.toSeconds(Long.MAX_VALUE);
@@ -80,6 +99,59 @@ public final class HBaseClassTestRule implements TestRule {
     }
     throw new IllegalArgumentException(
         clazz.getName() + " does not have SmallTests/MediumTests/LargeTests in @Category");
+  }
+
+  /**
+   * @param clazz Test class that is running.
+   * @return the number of parameters for this given test class. If the test is not parameterized or
+   *   if there is any issue determining the number of parameters, returns 1.
+   */
+  @VisibleForTesting
+  static int getNumParameters(Class<?> clazz) {
+    RunWith[] runWiths = clazz.getAnnotationsByType(RunWith.class);
+    boolean testParameterized = runWiths != null && Arrays.stream(runWiths).anyMatch(
+      (r) -> r.value().equals(Parameterized.class));
+    if (!testParameterized) {
+      return 1;
+    }
+    for (Method method : clazz.getMethods()) {
+      if (!isParametersMethod(method)) {
+        continue;
+      }
+      // Found the parameters method. Figure out the number of parameters.
+      Object parameters;
+      try {
+        parameters = method.invoke(clazz);
+      } catch (IllegalAccessException | InvocationTargetException e) {
+        LOG.warn("Error invoking parameters method {} in test class {}",
+            method.getName(), clazz, e);
+        continue;
+      }
+      if (parameters instanceof List) {
+        return  ((List) parameters).size();
+      } else if (parameters instanceof Collection) {
+        return  ((Collection) parameters).size();
+      } else if (parameters instanceof Iterable) {
+        return Iterables.size((Iterable) parameters);
+      } else if (parameters instanceof Object[]) {
+        return ((Object[]) parameters).length;
+      }
+    }
+    LOG.warn("Unable to determine parameters size. Returning the default of 1.");
+    return 1;
+  }
+
+  /**
+   * Helper method that checks if the input method is a valid JUnit @Parameters method.
+   * @param method Input method.
+   * @return true if the method is a valid JUnit parameters method, false otherwise.
+   */
+  private static boolean isParametersMethod(@NonNull Method method) {
+    // A valid parameters method is public static and with @Parameters annotation.
+    boolean methodPublicStatic = Modifier.isPublic(method.getModifiers()) &&
+        Modifier.isStatic(method.getModifiers());
+    Parameters[] params = method.getAnnotationsByType(Parameters.class);
+    return methodPublicStatic && (params != null && params.length > 0);
   }
 
   public static HBaseClassTestRule forClass(Class<?> clazz) {

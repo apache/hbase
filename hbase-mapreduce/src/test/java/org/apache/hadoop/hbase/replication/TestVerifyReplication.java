@@ -27,6 +27,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -689,7 +690,7 @@ public class TestVerifyReplication extends TestReplicationBase {
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    htable3.close();
+    IOUtils.closeQuietly(htable3);
     TestReplicationBase.tearDownAfterClass();
   }
 }
