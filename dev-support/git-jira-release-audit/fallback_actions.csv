@@ -15,6 +15,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# This file describes 'Actions' that should be taken for the specified git commit. As new commits
+# land in the repo that have commit messages that are not recognized by the regular expressions
+# in the application, this file provides overrides on a per-sha basis.
+#
 hexsha,action,jira_id
 0057cd8ca7ff09ed6b794af71df301c5c47487f4,SKIP,
 022f30ce0dd3dd931f6045c6778e194ef5c41f7a,SKIP,

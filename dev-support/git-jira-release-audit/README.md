@@ -32,7 +32,7 @@ truth (and, possibly, bugs in this script).
 The system prerequisites are Python3 with VirtualEnv available and Sqlite. Also,
 you'll need the content of this directory and a local checkout of git repository.
 
-Build a VirtualEnv with the script's dependencies with
+Build a VirtualEnv with the script's dependencies with:
 
 ```shell script
 $ python3 --version
@@ -79,7 +79,7 @@ optional arguments:
   --release-line-regexp RELEASE_LINE_REGEXP
                         A regexp used to identify release lines.
   --fallback-actions-path FALLBACK_ACTIONS_PATH
-                        Path to a file containing a cache of user input.
+                        Path to a file containing _DB.Actions applicable to specific git shas.
   --jira-url JIRA_URL   A URL locating the target JIRA instance.
   --branch-1-fix-version BRANCH_1_FIX_VERSION
                         The Jira fixVersion used to indicate an issue is
