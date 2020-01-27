@@ -121,20 +121,13 @@ public class TestReplicationDroppedTables extends TestReplicationBase {
   @Test
   public void testEditsDroppedWithDroppedTableNS() throws Exception {
     // also try with a namespace
-    Connection connection1 = ConnectionFactory.createConnection(CONF1);
-    try (Admin admin1 = connection1.getAdmin()) {
-      admin1.createNamespace(NamespaceDescriptor.create("NS").build());
-    }
-    Connection connection2 = ConnectionFactory.createConnection(CONF2);
-    try (Admin admin2 = connection2.getAdmin()) {
-      admin2.createNamespace(NamespaceDescriptor.create("NS").build());
-    }
-    testEditsBehindDroppedTable(true, "NS:test_dropped");
-    try (Admin admin1 = connection1.getAdmin()) {
-      admin1.deleteNamespace("NS");
-    }
-    try (Admin admin2 = connection2.getAdmin()) {
-      admin2.deleteNamespace("NS");
+    UTIL1.getAdmin().createNamespace(NamespaceDescriptor.create("NS").build());
+    UTIL2.getAdmin().createNamespace(NamespaceDescriptor.create("NS").build());
+    try {
+      testEditsBehindDroppedTable(true, "NS:test_dropped");
+    } finally {
+      UTIL1.getAdmin().deleteNamespace("NS");
+      UTIL2.getAdmin().deleteNamespace("NS");
     }
   }
 
@@ -148,8 +141,7 @@ public class TestReplicationDroppedTables extends TestReplicationBase {
 
     // make sure we have a single region server only, so that all
     // edits for all tables go there
-    UTIL1.shutdownMiniHBaseCluster();
-    UTIL1.startMiniHBaseCluster();
+    restartSourceCluster(1);
 
     TableName tablename = TableName.valueOf(tName);
     byte[] familyName = Bytes.toBytes("fam");
@@ -161,8 +153,8 @@ public class TestReplicationDroppedTables extends TestReplicationBase {
                 .newBuilder(familyName).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
             .build();
 
-    Connection connection1 = ConnectionFactory.createConnection(CONF1);
-    Connection connection2 = ConnectionFactory.createConnection(CONF2);
+    Connection connection1 = ConnectionFactory.createConnection(UTIL1.getConfiguration());
+    Connection connection2 = ConnectionFactory.createConnection(UTIL2.getConfiguration());
     try (Admin admin1 = connection1.getAdmin()) {
       admin1.createTable(table);
     }
@@ -223,8 +215,7 @@ public class TestReplicationDroppedTables extends TestReplicationBase {
 
     // make sure we have a single region server only, so that all
     // edits for all tables go there
-    UTIL1.shutdownMiniHBaseCluster();
-    UTIL1.startMiniHBaseCluster();
+    restartSourceCluster(1);
 
     TableName tablename = TableName.valueOf("testdroppedtimed");
     byte[] familyName = Bytes.toBytes("fam");

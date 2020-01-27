@@ -88,7 +88,7 @@ public class MiniHBaseCluster extends HBaseCluster {
          Class<? extends HMaster> masterClass,
          Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
       throws IOException, InterruptedException {
-    this(conf, numMasters, numRegionServers, null, masterClass, regionserverClass);
+    this(conf, numMasters, 0, numRegionServers, null, masterClass, regionserverClass);
   }
 
   /**
@@ -99,9 +99,8 @@ public class MiniHBaseCluster extends HBaseCluster {
    * @throws IOException
    * @throws InterruptedException
    */
-  public MiniHBaseCluster(Configuration conf, int numMasters, int numRegionServers,
-         List<Integer> rsPorts,
-         Class<? extends HMaster> masterClass,
+  public MiniHBaseCluster(Configuration conf, int numMasters, int numAlwaysStandByMasters,
+         int numRegionServers, List<Integer> rsPorts, Class<? extends HMaster> masterClass,
          Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
       throws IOException, InterruptedException {
     super(conf);
@@ -109,7 +108,8 @@ public class MiniHBaseCluster extends HBaseCluster {
     // Hadoop 2
     CompatibilityFactory.getInstance(MetricsAssertHelper.class).init();
 
-    init(numMasters, numRegionServers, rsPorts, masterClass, regionserverClass);
+    init(numMasters, numAlwaysStandByMasters, numRegionServers, rsPorts, masterClass,
+        regionserverClass);
     this.initialClusterStatus = getClusterMetrics();
   }
 
@@ -225,9 +225,9 @@ public class MiniHBaseCluster extends HBaseCluster {
     }
   }
 
-  private void init(final int nMasterNodes, final int nRegionNodes, List<Integer> rsPorts,
-                 Class<? extends HMaster> masterClass,
-                 Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
+  private void init(final int nMasterNodes, final int numAlwaysStandByMasters,
+      final int nRegionNodes, List<Integer> rsPorts, Class<? extends HMaster> masterClass,
+      Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
   throws IOException, InterruptedException {
     try {
       if (masterClass == null){
@@ -238,7 +238,7 @@ public class MiniHBaseCluster extends HBaseCluster {
       }
 
       // start up a LocalHBaseCluster
-      hbaseCluster = new LocalHBaseCluster(conf, nMasterNodes, 0,
+      hbaseCluster = new LocalHBaseCluster(conf, nMasterNodes, numAlwaysStandByMasters, 0,
           masterClass, regionserverClass);
 
       // manually add the regionservers as other users
@@ -553,6 +553,8 @@ public class MiniHBaseCluster extends HBaseCluster {
     } catch (InterruptedException ie) {
       throw new IOException("Interrupted adding master to cluster", ie);
     }
+    conf.set(HConstants.MASTER_ADDRS_KEY,
+        hbaseCluster.getConfiguration().get(HConstants.MASTER_ADDRS_KEY));
     return t;
   }
 

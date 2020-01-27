@@ -45,7 +45,7 @@ public class TestReplicationStatusAfterLagging extends TestReplicationBase {
   @Test
   public void testReplicationStatusAfterLagging() throws Exception {
     UTIL2.shutdownMiniHBaseCluster();
-    restartHBaseCluster(UTIL1, 1);
+    restartSourceCluster(1);
     // add some values to cluster 1
     for (int i = 0; i < NB_ROWS_IN_BATCH; i++) {
       Put p = new Put(Bytes.toBytes("row" + i));

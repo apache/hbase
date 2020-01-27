@@ -43,7 +43,7 @@ public class TestReplicationStatusSourceStartedTargetStoppedNoOps extends TestRe
   @Test
   public void testReplicationStatusSourceStartedTargetStoppedNoOps() throws Exception {
     UTIL2.shutdownMiniHBaseCluster();
-    restartHBaseCluster(UTIL1, 1);
+    restartSourceCluster(1);
     Admin hbaseAdmin = UTIL1.getAdmin();
     ServerName serverName = UTIL1.getHBaseCluster().getRegionServer(0).getServerName();
     Thread.sleep(10000);
