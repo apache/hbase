@@ -56,15 +56,15 @@ public class ActiveMasterManager extends ZKListener {
   final AtomicBoolean clusterHasActiveMaster = new AtomicBoolean(false);
   final AtomicBoolean clusterShutDown = new AtomicBoolean(false);
 
-  // This server's information.
-  private final ServerName sn;
-  private int infoPort;
-  private final Server master;
+  // This server's information. Package-private for child implementations.
+  int infoPort;
+  final ServerName sn;
+  final Server master;
 
   // Active master's server name. Invalidated anytime active master changes (based on ZK
   // notifications) and lazily fetched on-demand.
   // ServerName is immutable, so we don't need heavy synchronization around it.
-  private volatile ServerName activeMasterServerName;
+  volatile ServerName activeMasterServerName;
 
   /**
    * @param watcher ZK watcher

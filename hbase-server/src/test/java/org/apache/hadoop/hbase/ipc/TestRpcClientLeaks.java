@@ -24,12 +24,15 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketAddress;
+import java.net.UnknownHostException;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -37,6 +40,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
@@ -48,6 +52,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
 
 @Category(MediumTests.class)
 public class TestRpcClientLeaks {
@@ -62,6 +68,9 @@ public class TestRpcClientLeaks {
   private static BlockingQueue<Socket> SAVED_SOCKETS = new LinkedBlockingQueue<>();
 
   public static class MyRpcClientImpl extends BlockingRpcClient {
+
+    // Exceptions thrown only when this is set to false.
+    private static boolean throwException = false;
 
     public MyRpcClientImpl(Configuration conf) {
       super(conf);
@@ -78,11 +87,25 @@ public class TestRpcClientLeaks {
         @Override
         protected synchronized void setupConnection() throws IOException {
           super.setupConnection();
-          SAVED_SOCKETS.add(socket);
-          throw new IOException(
-            "Sample exception for verifying socket closure in case of exceptions.");
+          if (throwException) {
+            SAVED_SOCKETS.add(socket);
+            throw new IOException(
+                "Sample exception for verifying socket closure in case of exceptions.");
+          }
         }
       };
+    }
+
+    // To keep the registry paths happy.
+    @Override
+    public RpcChannel createHedgedRpcChannel(Set<ServerName> sns, User user, int rpcTimeout)
+        throws UnknownHostException {
+      Preconditions.checkState(sns != null && sns.size() == 1);
+      return super.createRpcChannel((ServerName)sns.toArray()[0], user, rpcTimeout);
+    }
+
+    public static void enableThrowExceptions() {
+      throwException = true;
     }
   }
 
@@ -110,6 +133,7 @@ public class TestRpcClientLeaks {
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
     try (Connection connection = ConnectionFactory.createConnection(conf);
       Table table = connection.getTable(TableName.valueOf(name.getMethodName()))) {
+      MyRpcClientImpl.enableThrowExceptions();
       table.get(new Get(Bytes.toBytes("asd")));
       fail("Should fail because the injected error");
     } catch (RetriesExhaustedException e) {
