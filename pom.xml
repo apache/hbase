@@ -1521,6 +1521,9 @@
     <asciidoctorj.pdf.version>1.5.0-rc.2</asciidoctorj.pdf.version>
     <build.helper.maven.version>3.0.0</build.helper.maven.version>
     <buildnumber.maven.version>1.4</buildnumber.maven.version>
+    <!--
+      When updating checkstyle.version, please make the same change in `.idea/checkstyle-idea.xml`
+    -->
     <checkstyle.version>8.28</checkstyle.version>
     <exec.maven.version>1.6.0</exec.maven.version>
     <error-prone.version>2.3.4</error-prone.version>
