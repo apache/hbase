@@ -250,7 +250,7 @@ public class HBaseConfiguration extends Configuration {
    * @return the merged configuration with override properties and cluster key applied
    */
   public static Configuration createClusterConf(Configuration baseConf, String clusterKey,
-                                                String overridePrefix) throws IOException {
+      String overridePrefix) throws IOException {
     Configuration clusterConf = HBaseConfiguration.create(baseConf);
     if (clusterKey != null && !clusterKey.isEmpty()) {
       applyClusterKeyToConf(clusterConf, clusterKey);
@@ -268,14 +268,21 @@ public class HBaseConfiguration extends Configuration {
    * used to communicate with distant clusters
    * @param conf configuration object to configure
    * @param key string that contains the 3 required configuratins
-   * @throws IOException
    */
   private static void applyClusterKeyToConf(Configuration conf, String key)
-      throws IOException{
+      throws IOException {
     ZKConfig.ZKClusterKey zkClusterKey = ZKConfig.transformClusterKey(key);
     conf.set(HConstants.ZOOKEEPER_QUORUM, zkClusterKey.getQuorumString());
     conf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT, zkClusterKey.getClientPort());
     conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, zkClusterKey.getZnodeParent());
+    // Without the right registry, the above configs are useless. Also, we don't use setClass()
+    // here because the ConnectionRegistry* classes are not resolvable from this module.
+    // This will be broken if ZkConnectionRegistry class gets renamed or moved. Is there a better
+    // way?
+    LOG.info("Overriding client registry implementation to {}",
+        HConstants.ZK_CONNECTION_REGISTRY_CLASS);
+    conf.set(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
+        HConstants.ZK_CONNECTION_REGISTRY_CLASS);
   }
 
   /**

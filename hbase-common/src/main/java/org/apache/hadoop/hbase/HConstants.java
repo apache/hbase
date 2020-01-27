@@ -183,6 +183,10 @@ public final class HConstants {
 
   public static final String MASTER_ADDRS_DEFAULT =  "localhost:" + DEFAULT_MASTER_PORT;
 
+  /** Full class name of the Zookeeper based connection registry implementation */
+  public static final String ZK_CONNECTION_REGISTRY_CLASS =
+      "org.apache.hadoop.hbase.client.ZKConnectionRegistry";
+
   /** Configuration to enable hedged reads on master registry **/
   public static final String MASTER_REGISTRY_ENABLE_HEDGED_READS_KEY =
       "hbase.client.master_registry.enable_hedged_reads";
