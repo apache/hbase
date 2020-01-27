@@ -41,6 +41,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -56,6 +57,7 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
@@ -557,6 +559,25 @@ public class TestSimpleRpcScheduler {
     } finally {
       scheduler.stop();
     }
+  }
+
+  @Test
+  public void testFastPathBalancedQueueRpcExecutorWithQueueLength0() throws Exception {
+    String name = "testFastPathBalancedQueueRpcExecutorWithQueueLength0";
+    int handlerCount = 1;
+    String callQueueType = RpcExecutor.CALL_QUEUE_TYPE_CODEL_CONF_VALUE;
+    int maxQueueLength = 0;
+    PriorityFunction priority = mock(PriorityFunction.class);
+    Configuration conf = HBaseConfiguration.create();
+    Abortable abortable = mock(Abortable.class);
+    FastPathBalancedQueueRpcExecutor executor =
+      Mockito.spy(new FastPathBalancedQueueRpcExecutor(name,
+      handlerCount, callQueueType, maxQueueLength, priority, conf, abortable));
+    CallRunner task = mock(CallRunner.class);
+    assertFalse(executor.dispatch(task));
+    //make sure we never internally get a handler, which would skip the queue validation
+    Mockito.verify(executor, Mockito.never()).getHandler(Mockito.any(), Mockito.anyDouble(),
+      Mockito.any(), Mockito.any());
   }
 
   @Test
