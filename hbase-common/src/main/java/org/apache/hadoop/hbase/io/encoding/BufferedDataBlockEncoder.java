@@ -732,9 +732,8 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     protected final ObjectIntPair<ByteBuffer> tmpPair = new ObjectIntPair<>();
     protected STATE current, previous;
 
-    public BufferedEncodedSeeker(CellComparator comparator,
-        HFileBlockDecodingContext decodingCtx) {
-      super(comparator, decodingCtx);
+    public BufferedEncodedSeeker(HFileBlockDecodingContext decodingCtx) {
+      super(decodingCtx);
       if (decodingCtx.getHFileContext().isCompressTags()) {
         try {
           tagCompressionContext = new TagCompressionContext(LRUDictionary.class, Byte.MAX_VALUE);
@@ -1008,11 +1007,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
   }
 
   /**
-   * @param cell
-   * @param out
-   * @param encodingCtx
    * @return unencoded size added
-   * @throws IOException
    */
   protected final int afterEncodingKeyValue(Cell cell, DataOutputStream out,
       HFileBlockDefaultEncodingContext encodingCtx) throws IOException {
@@ -1102,7 +1097,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
   public void startBlockEncoding(HFileBlockEncodingContext blkEncodingCtx, DataOutputStream out)
       throws IOException {
     if (blkEncodingCtx.getClass() != HFileBlockDefaultEncodingContext.class) {
-      throw new IOException (this.getClass().getName() + " only accepts "
+      throw new IOException(this.getClass().getName() + " only accepts "
           + HFileBlockDefaultEncodingContext.class.getName() + " as the " +
           "encoding context.");
     }
@@ -1154,8 +1149,8 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
         .getEncodingState();
     // Write the unencodedDataSizeWritten (with header size)
     Bytes.putInt(uncompressedBytesWithHeader,
-      HConstants.HFILEBLOCK_HEADER_SIZE + DataBlockEncoding.ID_SIZE, state.unencodedDataSizeWritten
-        );
+      HConstants.HFILEBLOCK_HEADER_SIZE + DataBlockEncoding.ID_SIZE,
+      state.unencodedDataSizeWritten);
     postEncoding(encodingCtx);
   }
 

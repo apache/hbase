@@ -21,9 +21,7 @@ import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -195,9 +193,8 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
-  public EncodedSeeker createSeeker(CellComparator comparator,
-      final HFileBlockDecodingContext decodingCtx) {
-    return new BufferedEncodedSeeker<SeekerState>(comparator, decodingCtx) {
+  public EncodedSeeker createSeeker(final HFileBlockDecodingContext decodingCtx) {
+    return new BufferedEncodedSeeker<SeekerState>(decodingCtx) {
       @Override
       protected void decodeNext() {
         current.keyLength = ByteBuff.readCompressedInt(currentBuffer);

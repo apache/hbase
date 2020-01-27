@@ -25,7 +25,6 @@ import java.util.List;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
-import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -69,8 +68,6 @@ public class TestReseekTo {
         TEST_UTIL.getConfiguration(), cacheConf)
             .withOutputStream(fout)
             .withFileContext(context)
-            // NOTE: This test is dependent on this deprecated nonstandard comparator
-            .withComparator(CellComparatorImpl.COMPARATOR)
             .create();
     int numberOfKeys = 1000;
 

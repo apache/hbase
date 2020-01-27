@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.io.encoding;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hbase.io.ByteBuffInputStream;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
@@ -41,11 +40,10 @@ import org.apache.yetus.audience.InterfaceAudience;
  *
  */
 @InterfaceAudience.Private
-public class HFileBlockDefaultDecodingContext implements
-    HFileBlockDecodingContext {
+public class HFileBlockDefaultDecodingContext implements HFileBlockDecodingContext {
   private final HFileContext fileContext;
   private TagCompressionContext tagCompressionContext;
-  
+
   public HFileBlockDefaultDecodingContext(HFileContext fileContext) {
     this.fileContext = fileContext;
   }

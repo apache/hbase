@@ -20,9 +20,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -382,9 +380,8 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
-  public EncodedSeeker createSeeker(CellComparator comparator,
-      HFileBlockDecodingContext decodingCtx) {
-    return new BufferedEncodedSeeker<DiffSeekerState>(comparator, decodingCtx) {
+  public EncodedSeeker createSeeker(HFileBlockDecodingContext decodingCtx) {
+    return new BufferedEncodedSeeker<DiffSeekerState>(decodingCtx) {
       private byte[] familyNameWithSize;
       private static final int TIMESTAMP_WITH_TYPE_LENGTH =
           Bytes.SIZEOF_LONG + Bytes.SIZEOF_BYTE;

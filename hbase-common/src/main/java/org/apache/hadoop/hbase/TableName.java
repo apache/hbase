@@ -286,6 +286,9 @@ public final class TableName implements Comparable<TableName> {
     return qualifierAsString;
   }
 
+  /**
+   * @return A pointer to TableName as String bytes.
+   */
   public byte[] toBytes() {
     return name;
   }

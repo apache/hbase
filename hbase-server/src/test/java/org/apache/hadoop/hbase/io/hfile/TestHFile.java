@@ -50,7 +50,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilder;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
-import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -276,7 +275,7 @@ public class TestHFile  {
     HFileContext meta = new HFileContextBuilder().withBlockSize(64 * 1024).build();
     StoreFileWriter sfw =
         new StoreFileWriter.Builder(conf, fs).withOutputDir(storeFileParentDir)
-            .withComparator(CellComparatorImpl.COMPARATOR).withFileContext(meta).build();
+          .withFileContext(meta).build();
 
     final int rowLen = 32;
     Random RNG = new Random();
@@ -359,7 +358,7 @@ public class TestHFile  {
         .withCompressTags(false)
         .build();
     HFileWriterImpl writer = new HFileWriterImpl(conf, cacheConf, path, mockedOutputStream,
-        CellComparator.getInstance(), fileContext);
+      fileContext);
     CellBuilder cellBuilder = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
     byte[] row = Bytes.toBytes("foo");
     byte[] qualifier = Bytes.toBytes("qualifier");
@@ -515,7 +514,6 @@ public class TestHFile  {
     Writer writer = HFile.getWriterFactory(conf, cacheConf)
         .withOutputStream(fout)
         .withFileContext(meta)
-        .withComparator(CellComparatorImpl.COMPARATOR)
         .create();
     LOG.info(Objects.toString(writer));
     writeRecords(writer, useTags);
