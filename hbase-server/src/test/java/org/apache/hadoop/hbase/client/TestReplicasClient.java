@@ -21,7 +21,6 @@ import com.codahale.metrics.Counter;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
-import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -37,6 +36,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -104,7 +104,6 @@ public class TestReplicasClient {
         new AtomicReference<>(new CountDownLatch(0));
     private static final AtomicReference<CountDownLatch> secondaryCdl =
         new AtomicReference<>(new CountDownLatch(0));
-    Random r = new Random();
     public SlowMeCopro() {
     }
 
@@ -192,7 +191,9 @@ public class TestReplicasClient {
         StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, REFRESH_PERIOD);
     HTU.getConfiguration().setBoolean("hbase.client.log.scanner.activity", true);
     HTU.getConfiguration().setBoolean(MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY, true);
-    HTU.startMiniCluster(NB_SERVERS);
+    StartMiniClusterOption option = StartMiniClusterOption.builder().numRegionServers(1).
+        numAlwaysStandByMasters(1).numMasters(1).build();
+    HTU.startMiniCluster(option);
 
     // Create table then get the single region for our new table.
     HTableDescriptor hdt = HTU.createTableDescriptor(TestReplicasClient.class.getSimpleName());

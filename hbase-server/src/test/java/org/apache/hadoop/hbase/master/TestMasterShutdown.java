@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -132,12 +133,19 @@ public class TestMasterShutdown {
     util.startMiniDFSCluster(3);
     util.startMiniZKCluster();
     util.createRootDir();
-    final LocalHBaseCluster cluster =
-        new LocalHBaseCluster(conf, NUM_MASTERS, NUM_RS, HMaster.class,
-            MiniHBaseCluster.MiniHBaseClusterRegionServer.class);
+    final LocalHBaseCluster cluster = new LocalHBaseCluster(conf, NUM_MASTERS, NUM_RS,
+        HMaster.class, MiniHBaseCluster.MiniHBaseClusterRegionServer.class);
     final int MASTER_INDEX = 0;
     final MasterThread master = cluster.getMasters().get(MASTER_INDEX);
     master.start();
+    // Switching to master registry exposed a race in the master bootstrap that can result in a
+    // lost shutdown command (HBASE-8422). The race is essentially because the server manager in
+    // HMaster is not initialized by the time shutdown() RPC (below) is made to
+    // the master. The reason it was not happening earlier is because the connection creation with
+    // ZK registry is so slow that by then the server manager is init'ed thus masking the problem.
+    // For now, I'm putting a wait() here to workaround the issue, I think the fix for it is a
+    // little delicate and needs to be done separately.
+    Waiter.waitFor(conf, 5000, () -> master.getMaster().getServerManager() != null);
     LOG.info("Called master start on " + master.getName());
     Thread shutdownThread = new Thread("Shutdown-Thread") {
       @Override
