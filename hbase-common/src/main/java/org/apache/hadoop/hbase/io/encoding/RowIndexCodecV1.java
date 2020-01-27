@@ -22,7 +22,10 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
@@ -68,8 +71,7 @@ public class RowIndexCodecV1 extends AbstractDataBlockEncoder {
           + "encoding context.");
     }
 
-    HFileBlockDefaultEncodingContext encodingCtx =
-      (HFileBlockDefaultEncodingContext) blkEncodingCtx;
+    HFileBlockDefaultEncodingContext encodingCtx = (HFileBlockDefaultEncodingContext) blkEncodingCtx;
     encodingCtx.prepareEncoding(out);
 
     RowIndexEncoderV1 encoder = new RowIndexEncoderV1(out, encodingCtx);
@@ -113,7 +115,8 @@ public class RowIndexCodecV1 extends AbstractDataBlockEncoder {
       dup.limit(sourceAsBuffer.position() + onDiskSize);
       return dup.slice();
     } else {
-      RowIndexSeekerV1 seeker = new RowIndexSeekerV1(decodingCtx);
+      RowIndexSeekerV1 seeker = new RowIndexSeekerV1(CellComparatorImpl.COMPARATOR,
+          decodingCtx);
       seeker.setCurrentBuffer(new SingleByteBuff(sourceAsBuffer));
       List<Cell> kvs = new ArrayList<>();
       kvs.add(seeker.getCell());
@@ -147,7 +150,9 @@ public class RowIndexCodecV1 extends AbstractDataBlockEncoder {
   }
 
   @Override
-  public EncodedSeeker createSeeker(HFileBlockDecodingContext decodingCtx) {
-    return new RowIndexSeekerV1(decodingCtx);
+  public EncodedSeeker createSeeker(CellComparator comparator,
+      HFileBlockDecodingContext decodingCtx) {
+    return new RowIndexSeekerV1(comparator, decodingCtx);
   }
+
 }

@@ -1,4 +1,4 @@
-/*
+/**
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -50,14 +51,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesP
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HFileProtos;
 
 /**
- * Metadata Map of attributes for HFile written out as HFile Trailer. Created by the Writer and
- * added to the tail of the file just before close. Metadata includes core attributes such as last
- * key seen, comparator used writing the file, etc. Clients can add their own attributes via
- * {@link #append(byte[], byte[], boolean)} and they'll be persisted and available at read time.
- * Reader creates the HFileInfo on open by reading the tail of the HFile. The parse of the HFile
- * trailer also creates a {@link HFileContext}, a read-only data structure that includes bulk of
- * the HFileInfo and extras that is safe to pass around when working on HFiles.
- * @see HFileContext
+ * Metadata for HFile. Conjured by the writer. Read in by the reader.
  */
 @InterfaceAudience.Private
 public class HFileInfo implements SortedMap<byte[], byte[]> {
@@ -67,6 +61,7 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
   static final byte [] AVG_KEY_LEN = Bytes.toBytes(RESERVED_PREFIX + "AVG_KEY_LEN");
   static final byte [] AVG_VALUE_LEN = Bytes.toBytes(RESERVED_PREFIX + "AVG_VALUE_LEN");
   static final byte [] CREATE_TIME_TS = Bytes.toBytes(RESERVED_PREFIX + "CREATE_TIME_TS");
+  static final byte [] COMPARATOR = Bytes.toBytes(RESERVED_PREFIX + "COMPARATOR");
   static final byte [] TAGS_COMPRESSED = Bytes.toBytes(RESERVED_PREFIX + "TAGS_COMPRESSED");
   public static final byte [] MAX_TAGS_LEN = Bytes.toBytes(RESERVED_PREFIX + "MAX_TAGS_LEN");
   private final SortedMap<byte [], byte []> map = new TreeMap<>(Bytes.BYTES_COMPARATOR);
@@ -383,8 +378,7 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
     HFileContextBuilder builder = new HFileContextBuilder()
       .withHBaseCheckSum(true)
       .withHFileName(path.getName())
-      .withCompression(trailer.getCompressionCodec())
-      .withCellComparator(trailer.createComparator(trailer.getComparatorClassName()));
+      .withCompression(trailer.getCompressionCodec());
     // Check for any key material available
     byte[] keyBytes = trailer.getEncryptionKey();
     if (keyBytes != null) {

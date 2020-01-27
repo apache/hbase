@@ -17,6 +17,8 @@
 package org.apache.hadoop.hbase.io.encoding;
 
 import java.nio.ByteBuffer;
+
+import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.ByteBufferKeyOnlyKeyValue;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
@@ -48,11 +50,10 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
 
   private int rowNumber;
   private ByteBuff rowOffsets = null;
-  private final CellComparator cellComparator;
 
-  public RowIndexSeekerV1(HFileBlockDecodingContext decodingCtx) {
-    super(decodingCtx);
-    this.cellComparator = decodingCtx.getHFileContext().getCellComparator();
+  public RowIndexSeekerV1(CellComparator comparator,
+      HFileBlockDecodingContext decodingCtx) {
+    super(comparator, decodingCtx);
   }
 
   @Override
@@ -130,7 +131,8 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
     int comp = 0;
     while (low <= high) {
       mid = low + ((high - low) >> 1);
-      comp = this.cellComparator.compareRows(getRow(mid), seekCell);
+      ByteBuffer row = getRow(mid);
+      comp = compareRows(row, seekCell);
       if (comp < 0) {
         low = mid + 1;
       } else if (comp > 0) {
@@ -149,6 +151,19 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
       return mid - 1;
     } else {
       return mid;
+    }
+  }
+
+  private int compareRows(ByteBuffer row, Cell seekCell) {
+    if (seekCell instanceof ByteBufferExtendedCell) {
+      return ByteBufferUtils.compareTo(row, row.position(), row.remaining(),
+          ((ByteBufferExtendedCell) seekCell).getRowByteBuffer(),
+          ((ByteBufferExtendedCell) seekCell).getRowPosition(),
+          seekCell.getRowLength());
+    } else {
+      return ByteBufferUtils.compareTo(row, row.position(), row.remaining(),
+          seekCell.getRowArray(), seekCell.getRowOffset(),
+          seekCell.getRowLength());
     }
   }
 
@@ -176,8 +191,8 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
       }
     }
     do {
-      int comp =
-        PrivateCellUtil.compareKeyIgnoresMvcc(this.cellComparator, seekCell, current.currentKey);
+      int comp;
+      comp = PrivateCellUtil.compareKeyIgnoresMvcc(comparator, seekCell, current.currentKey);
       if (comp == 0) { // exact match
         if (seekBefore) {
           if (!previous.isValid()) {
@@ -385,4 +400,5 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
       return ret;
     }
   }
+
 }

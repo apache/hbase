@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
@@ -65,8 +66,9 @@ public class TestHFileReaderImpl {
     HFileContext context =
         new HFileContextBuilder().withBlockSize(blocksize).withIncludesTags(true).build();
     Configuration conf = TEST_UTIL.getConfiguration();
-    HFile.Writer writer = HFile.getWriterFactoryNoCache(conf)
-      .withOutputStream(fout).withFileContext(context).create();
+    HFile.Writer writer =
+        HFile.getWriterFactoryNoCache(conf).withOutputStream(fout).withFileContext(context)
+            .withComparator(CellComparatorImpl.COMPARATOR).create();
     // 4 bytes * 3 * 2 for each key/value +
     // 3 for keys, 15 for values = 42 (woot)
     writer.append(toKV("c"));

@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.regionserver.HStoreFile.BULKLOAD_TASK_KEY;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.BULKLOAD_TIME_KEY;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.EXCLUDE_FROM_MINOR_COMPACTION_KEY;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.MAJOR_COMPACTION_KEY;
+
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
@@ -36,11 +37,13 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -88,6 +91,7 @@ import org.apache.hadoop.mapreduce.lib.partition.TotalOrderPartitioner;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -188,17 +192,18 @@ public class HFileOutputFormat2
     return combineTableNameSuffix(tableName, family);
   }
 
-  static <V extends Cell> RecordWriter<ImmutableBytesWritable, V> createRecordWriter(
-    final TaskAttemptContext context, final OutputCommitter committer) throws IOException {
+  static <V extends Cell> RecordWriter<ImmutableBytesWritable, V>
+      createRecordWriter(final TaskAttemptContext context, final OutputCommitter committer)
+          throws IOException {
 
     // Get the path of the temporary output file
     final Path outputDir = ((FileOutputCommitter)committer).getWorkPath();
     final Configuration conf = context.getConfiguration();
-    final boolean writeMultipleTables =
-      conf.getBoolean(MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_KEY, false);
+    final boolean writeMultipleTables = conf.getBoolean(MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_KEY, false) ;
     final String writeTableNames = conf.get(OUTPUT_TABLE_NAME_CONF_KEY);
-    if (writeTableNames == null || writeTableNames.isEmpty()) {
-      throw new IllegalArgumentException("" + OUTPUT_TABLE_NAME_CONF_KEY + " cannot be empty");
+    if (writeTableNames==null || writeTableNames.isEmpty()) {
+      throw new IllegalArgumentException("Configuration parameter " + OUTPUT_TABLE_NAME_CONF_KEY
+              + " cannot be empty");
     }
     final FileSystem fs = outputDir.getFileSystem(conf);
     // These configs. are from hbase-*.xml
@@ -207,12 +212,18 @@ public class HFileOutputFormat2
     // Invented config.  Add to hbase-*.xml if other than default compression.
     final String defaultCompressionStr = conf.get("hfile.compression",
         Compression.Algorithm.NONE.getName());
-    final Algorithm defaultCompression = HFileWriterImpl.compressionByName(defaultCompressionStr);
+    final Algorithm defaultCompression = HFileWriterImpl
+        .compressionByName(defaultCompressionStr);
     String compressionStr = conf.get(COMPRESSION_OVERRIDE_CONF_KEY);
-    final Algorithm overriddenCompression = compressionStr != null ?
-      Compression.getCompressionAlgorithmByName(compressionStr): null;
+    final Algorithm overriddenCompression;
+    if (compressionStr != null) {
+      overriddenCompression = Compression.getCompressionAlgorithmByName(compressionStr);
+    } else {
+      overriddenCompression = null;
+    }
     final boolean compactionExclude = conf.getBoolean(
         "hbase.mapreduce.hfileoutputformat.compaction.exclude", false);
+
     final Set<String> allTableNames = Arrays.stream(writeTableNames.split(
             Bytes.toString(tableSeparator))).collect(Collectors.toSet());
 
@@ -225,17 +236,24 @@ public class HFileOutputFormat2
     String dataBlockEncodingStr = conf.get(DATABLOCK_ENCODING_OVERRIDE_CONF_KEY);
     final Map<byte[], DataBlockEncoding> datablockEncodingMap
         = createFamilyDataBlockEncodingMap(conf);
-    final DataBlockEncoding overriddenEncoding = dataBlockEncodingStr != null ?
-      DataBlockEncoding.valueOf(dataBlockEncodingStr) : null;
+    final DataBlockEncoding overriddenEncoding;
+    if (dataBlockEncodingStr != null) {
+      overriddenEncoding = DataBlockEncoding.valueOf(dataBlockEncodingStr);
+    } else {
+      overriddenEncoding = null;
+    }
 
     return new RecordWriter<ImmutableBytesWritable, V>() {
       // Map of families to writers and how much has been output on the writer.
-      private final Map<byte[], WriterLength> writers = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-      private final Map<byte[], byte[]> previousRows = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+      private final Map<byte[], WriterLength> writers =
+              new TreeMap<>(Bytes.BYTES_COMPARATOR);
+      private final Map<byte[], byte[]> previousRows =
+              new TreeMap<>(Bytes.BYTES_COMPARATOR);
       private final long now = EnvironmentEdgeManager.currentTime();
 
       @Override
-      public void write(ImmutableBytesWritable row, V cell) throws IOException {
+      public void write(ImmutableBytesWritable row, V cell)
+          throws IOException {
         Cell kv = cell;
         // null input == user explicitly wants to flush
         if (row == null && kv == null) {
@@ -249,15 +267,13 @@ public class HFileOutputFormat2
         byte[] tableNameBytes = null;
         if (writeMultipleTables) {
           tableNameBytes = MultiTableHFileOutputFormat.getTableName(row.get());
-          tableNameBytes = TableName.valueOf(tableNameBytes).toBytes();
           if (!allTableNames.contains(Bytes.toString(tableNameBytes))) {
-            throw new IllegalArgumentException("TableName " + Bytes.toString(tableNameBytes) +
-              " not expected");
+            throw new IllegalArgumentException("TableName '" + Bytes.toString(tableNameBytes) +
+                    "' not" + " expected");
           }
         } else {
           tableNameBytes = Bytes.toBytes(writeTableNames);
         }
-        Path tableRelPath = getTableRelativePath(tableNameBytes);
         byte[] tableAndFamily = getTableNameSuffixedWithFamily(tableNameBytes, family);
         WriterLength wl = this.writers.get(tableAndFamily);
 
@@ -265,7 +281,8 @@ public class HFileOutputFormat2
         if (wl == null) {
           Path writerPath = null;
           if (writeMultipleTables) {
-            writerPath = new Path(outputDir,new Path(tableRelPath, Bytes.toString(family)));
+            writerPath = new Path(outputDir, new Path(Bytes.toString(tableNameBytes), Bytes
+                    .toString(family)));
           }
           else {
             writerPath = new Path(outputDir, Bytes.toString(family));
@@ -292,23 +309,33 @@ public class HFileOutputFormat2
                        connection.getRegionLocator(TableName.valueOf(tableName))) {
                 loc = locator.getRegionLocation(rowKey);
               } catch (Throwable e) {
-                LOG.warn("Something wrong locating rowkey {} in {}",
-                  Bytes.toString(rowKey), tableName, e);
+                LOG.warn("There's something wrong when locating rowkey: " +
+                  Bytes.toString(rowKey) + " for tablename: " + tableName, e);
                 loc = null;
               } }
 
             if (null == loc) {
-              LOG.trace("Failed get of location, use default writer {}", Bytes.toString(rowKey));
+              if (LOG.isTraceEnabled()) {
+                LOG.trace("failed to get region location, so use default writer for rowkey: " +
+                  Bytes.toString(rowKey));
+              }
               wl = getNewWriter(tableNameBytes, family, conf, null);
             } else {
-              LOG.debug("First rowkey: [{}]", Bytes.toString(rowKey));
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("first rowkey: [" + Bytes.toString(rowKey) + "]");
+              }
               InetSocketAddress initialIsa =
                   new InetSocketAddress(loc.getHostname(), loc.getPort());
               if (initialIsa.isUnresolved()) {
-                LOG.trace("Failed resolve address {}, use default writer", loc.getHostnamePort());
+                if (LOG.isTraceEnabled()) {
+                  LOG.trace("failed to resolve bind address: " + loc.getHostname() + ":"
+                      + loc.getPort() + ", so use default writer");
+                }
                 wl = getNewWriter(tableNameBytes, family, conf, null);
               } else {
-                LOG.debug("Use favored nodes writer: {}", initialIsa.getHostString());
+                if (LOG.isDebugEnabled()) {
+                  LOG.debug("use favored nodes writer: " + initialIsa.getHostString());
+                }
                 wl = getNewWriter(tableNameBytes, family, conf, new InetSocketAddress[] { initialIsa
                 });
               }
@@ -327,16 +354,6 @@ public class HFileOutputFormat2
         this.previousRows.put(family, rowKey);
       }
 
-      private Path getTableRelativePath(byte[] tableNameBytes) {
-        String tableName = Bytes.toString(tableNameBytes);
-        String[] tableNameParts = tableName.split(":");
-        Path tableRelPath = new Path(tableName.split(":")[0]);
-        if (tableNameParts.length > 1) {
-          tableRelPath = new Path(tableRelPath, tableName.split(":")[1]);
-        }
-        return tableRelPath;
-      }
-
       private void rollWriters(WriterLength writerLength) throws IOException {
         if (writerLength != null) {
           closeWriter(writerLength);
@@ -349,27 +366,29 @@ public class HFileOutputFormat2
 
       private void closeWriter(WriterLength wl) throws IOException {
         if (wl.writer != null) {
-          LOG.info("Writer=" + wl.writer.getPath() +
-            ((wl.written == 0)? "": ", wrote=" + wl.written));
+          LOG.info(
+              "Writer=" + wl.writer.getPath() + ((wl.written == 0)? "": ", wrote=" + wl.written));
           close(wl.writer);
-          wl.writer = null;
         }
+        wl.writer = null;
         wl.written = 0;
       }
 
       /*
        * Create a new StoreFile.Writer.
+       * @param family
        * @return A WriterLength, containing a new StoreFile.Writer.
+       * @throws IOException
        */
       @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="BX_UNBOXING_IMMEDIATELY_REBOXED",
           justification="Not important")
-      private WriterLength getNewWriter(byte[] tableName, byte[] family, Configuration conf,
-          InetSocketAddress[] favoredNodes) throws IOException {
+      private WriterLength getNewWriter(byte[] tableName, byte[] family, Configuration
+              conf, InetSocketAddress[] favoredNodes) throws IOException {
         byte[] tableAndFamily = getTableNameSuffixedWithFamily(tableName, family);
         Path familydir = new Path(outputDir, Bytes.toString(family));
         if (writeMultipleTables) {
           familydir = new Path(outputDir,
-            new Path(getTableRelativePath(tableName), Bytes.toString(family)));
+                  new Path(Bytes.toString(tableName), Bytes.toString(family)));
         }
         WriterLength wl = new WriterLength();
         Algorithm compression = overriddenCompression;
@@ -387,9 +406,12 @@ public class HFileOutputFormat2
         encoding = encoding == null ? datablockEncodingMap.get(tableAndFamily) : encoding;
         encoding = encoding == null ? DataBlockEncoding.NONE : encoding;
         HFileContextBuilder contextBuilder = new HFileContextBuilder()
-          .withCompression(compression).withChecksumType(HStore.getChecksumType(conf))
-          .withBytesPerCheckSum(HStore.getBytesPerChecksum(conf)).withBlockSize(blockSize)
-          .withColumnFamily(family).withTableName(tableName);
+                                    .withCompression(compression)
+                                    .withChecksumType(HStore.getChecksumType(conf))
+                                    .withBytesPerCheckSum(HStore.getBytesPerChecksum(conf))
+                                    .withBlockSize(blockSize)
+                                    .withColumnFamily(family)
+                                    .withTableName(tableName);
 
         if (HFile.getFormatVersion(conf) >= HFile.MIN_FORMAT_VERSION_WITH_TAGS) {
           contextBuilder.withIncludesTags(true);
@@ -398,13 +420,16 @@ public class HFileOutputFormat2
         contextBuilder.withDataBlockEncoding(encoding);
         HFileContext hFileContext = contextBuilder.build();
         if (null == favoredNodes) {
-          wl.writer = new StoreFileWriter.Builder(conf, CacheConfig.DISABLED, fs)
-            .withOutputDir(familydir).withBloomType(bloomType)
-            .withFileContext(hFileContext).build();
+          wl.writer =
+              new StoreFileWriter.Builder(conf, CacheConfig.DISABLED, fs)
+                  .withOutputDir(familydir).withBloomType(bloomType)
+                  .withComparator(CellComparator.getInstance()).withFileContext(hFileContext).build();
         } else {
-          wl.writer = new StoreFileWriter.Builder(conf, CacheConfig.DISABLED, new HFileSystem(fs))
-            .withOutputDir(familydir).withBloomType(bloomType)
-            .withFileContext(hFileContext).withFavoredNodes(favoredNodes).build();
+          wl.writer =
+              new StoreFileWriter.Builder(conf, CacheConfig.DISABLED, new HFileSystem(fs))
+                  .withOutputDir(familydir).withBloomType(bloomType)
+                  .withComparator(CellComparator.getInstance()).withFileContext(hFileContext)
+                  .withFavoredNodes(favoredNodes).build();
         }
 
         this.writers.put(tableAndFamily, wl);
@@ -413,17 +438,22 @@ public class HFileOutputFormat2
 
       private void close(final StoreFileWriter w) throws IOException {
         if (w != null) {
-          w.appendFileInfo(BULKLOAD_TIME_KEY, Bytes.toBytes(System.currentTimeMillis()));
-          w.appendFileInfo(BULKLOAD_TASK_KEY, Bytes.toBytes(context.getTaskAttemptID().toString()));
-          w.appendFileInfo(MAJOR_COMPACTION_KEY, Bytes.toBytes(true));
-          w.appendFileInfo(EXCLUDE_FROM_MINOR_COMPACTION_KEY, Bytes.toBytes(compactionExclude));
+          w.appendFileInfo(BULKLOAD_TIME_KEY,
+              Bytes.toBytes(System.currentTimeMillis()));
+          w.appendFileInfo(BULKLOAD_TASK_KEY,
+              Bytes.toBytes(context.getTaskAttemptID().toString()));
+          w.appendFileInfo(MAJOR_COMPACTION_KEY,
+              Bytes.toBytes(true));
+          w.appendFileInfo(EXCLUDE_FROM_MINOR_COMPACTION_KEY,
+              Bytes.toBytes(compactionExclude));
           w.appendTrackedTimestampsToMetadata();
           w.close();
         }
       }
 
       @Override
-      public void close(TaskAttemptContext c) throws IOException, InterruptedException {
+      public void close(TaskAttemptContext c)
+      throws IOException, InterruptedException {
         for (WriterLength wl: this.writers.values()) {
           close(wl.writer);
         }
@@ -463,18 +493,21 @@ public class HFileOutputFormat2
           throws IOException {
 
     ArrayList<ImmutableBytesWritable> ret = new ArrayList<>();
-    for(RegionLocator regionLocator : regionLocators) {
+    for(RegionLocator regionLocator : regionLocators)
+    {
       TableName tableName = regionLocator.getName();
       LOG.info("Looking up current regions for table " + tableName);
       byte[][] byteKeys = regionLocator.getStartKeys();
       for (byte[] byteKey : byteKeys) {
         byte[] fullKey = byteKey; //HFileOutputFormat2 use case
-        if (writeMultipleTables) {
+        if (writeMultipleTables)
+        {
           //MultiTableHFileOutputFormat use case
           fullKey = combineTableNameSuffix(tableName.getName(), byteKey);
         }
         if (LOG.isDebugEnabled()) {
-          LOG.debug("SplitPoint startkey for " + tableName + ": " + Bytes.toStringBinary(fullKey));
+          LOG.debug("SplitPoint startkey for table [" + tableName + "]: [" + Bytes.toStringBinary
+                  (fullKey) + "]");
         }
         ret.add(new ImmutableBytesWritable(fullKey));
       }
@@ -501,8 +534,8 @@ public class HFileOutputFormat2
     TreeSet<ImmutableBytesWritable> sorted = new TreeSet<>(startKeys);
     ImmutableBytesWritable first = sorted.first();
     if (writeMultipleTables) {
-      first =
-        new ImmutableBytesWritable(MultiTableHFileOutputFormat.getSuffix(sorted.first().get()));
+      first = new ImmutableBytesWritable(MultiTableHFileOutputFormat.getSuffix(sorted.first
+              ().get()));
     }
     if (!first.equals(HConstants.EMPTY_BYTE_ARRAY)) {
       throw new IllegalArgumentException(
@@ -605,20 +638,19 @@ public class HFileOutputFormat2
 
     /* Now get the region start keys for every table required */
     List<String> allTableNames = new ArrayList<>(multiTableInfo.size());
-    List<RegionLocator> regionLocators = new ArrayList<>(multiTableInfo.size());
-    List<TableDescriptor> tableDescriptors = new ArrayList<>(multiTableInfo.size());
+    List<RegionLocator> regionLocators = new ArrayList<>( multiTableInfo.size());
+    List<TableDescriptor> tableDescriptors = new ArrayList<>( multiTableInfo.size());
 
-    for(TableInfo tableInfo : multiTableInfo) {
+    for( TableInfo tableInfo : multiTableInfo )
+    {
       regionLocators.add(tableInfo.getRegionLocator());
       allTableNames.add(tableInfo.getRegionLocator().getName().getNameAsString());
       tableDescriptors.add(tableInfo.getTableDescriptor());
     }
-    // Record tablenames for creating writer by favored nodes, and decoding compression,
-    // block size and other attributes of columnfamily per table
+    // Record tablenames for creating writer by favored nodes, and decoding compression, block size and other attributes of columnfamily per table
     conf.set(OUTPUT_TABLE_NAME_CONF_KEY, StringUtils.join(allTableNames, Bytes
             .toString(tableSeparator)));
-    List<ImmutableBytesWritable> startKeys =
-      getRegionStartKeys(regionLocators, writeMultipleTables);
+    List<ImmutableBytesWritable> startKeys = getRegionStartKeys(regionLocators, writeMultipleTables);
     // Use table's region boundaries for TOP split points.
     LOG.info("Configuring " + startKeys.size() + " reduce partitions " +
         "to match current region count for all tables");
@@ -814,11 +846,9 @@ public class HFileOutputFormat2
     TotalOrderPartitioner.setPartitionFile(conf, partitionsPath);
   }
 
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value =
-    "RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE")
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE")
   @VisibleForTesting
-  static String serializeColumnFamilyAttribute(Function<ColumnFamilyDescriptor, String> fn,
-        List<TableDescriptor> allTables)
+  static String serializeColumnFamilyAttribute(Function<ColumnFamilyDescriptor, String> fn, List<TableDescriptor> allTables)
       throws UnsupportedEncodingException {
     StringBuilder attributeValue = new StringBuilder();
     int i = 0;
@@ -833,8 +863,8 @@ public class HFileOutputFormat2
           attributeValue.append('&');
         }
         attributeValue.append(URLEncoder.encode(
-          Bytes.toString(combineTableNameSuffix(tableDescriptor.getTableName().getName(),
-            familyDescriptor.getName())), "UTF-8"));
+            Bytes.toString(combineTableNameSuffix(tableDescriptor.getTableName().getName(), familyDescriptor.getName())),
+            "UTF-8"));
         attributeValue.append('=');
         attributeValue.append(URLEncoder.encode(fn.apply(familyDescriptor), "UTF-8"));
       }

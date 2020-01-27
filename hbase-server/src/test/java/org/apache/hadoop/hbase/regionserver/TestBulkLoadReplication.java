@@ -335,7 +335,7 @@ public class TestBulkLoadReplication extends TestReplicationBase {
       new FSDataOutputStream(new FileOutputStream(hFileLocation), null);
     try {
       hFileFactory.withOutputStream(out);
-      hFileFactory.withFileContext(new HFileContextBuilder().build());
+      hFileFactory.withFileContext(new HFileContext());
       HFile.Writer writer = hFileFactory.create();
       try {
         writer.append(new KeyValue(cellBuilder.build()));

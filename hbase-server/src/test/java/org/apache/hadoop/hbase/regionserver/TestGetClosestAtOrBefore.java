@@ -24,7 +24,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -38,8 +40,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -58,8 +58,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * TestGet is a medley of tests of get all done up as a single test.
- * It was originally written to test a method since removed, getClosestAtOrBefore
- * but the test is retained because it runs some interesting exercises.
+ * This class
  */
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestGetClosestAtOrBefore  {
@@ -86,6 +85,7 @@ public class TestGetClosestAtOrBefore  {
 
   @Test
   public void testUsingMetaAndBinary() throws IOException {
+    FileSystem filesystem = FileSystem.get(conf);
     Path rootdir = UTIL.getDataTestDirOnTestFS();
     // Up flush size else we bind up when we use default catalog flush of 16k.
     TableDescriptorBuilder metaBuilder = UTIL.getMetaTableDescriptorBuilder()
@@ -100,14 +100,13 @@ public class TestGetClosestAtOrBefore  {
         final int last = 128;
         final int interval = 2;
         for (int i = 0; i <= last; i += interval) {
-          RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName())
-            .setStartKey(i == 0 ? HConstants.EMPTY_BYTE_ARRAY : Bytes.toBytes((byte)i))
-            .setEndKey(i == last ? HConstants.EMPTY_BYTE_ARRAY :
-              Bytes.toBytes((byte)i + interval)).build();
+          HRegionInfo hri = new HRegionInfo(htd.getTableName(),
+            i == 0 ? HConstants.EMPTY_BYTE_ARRAY : Bytes.toBytes((byte) i),
+            i == last ? HConstants.EMPTY_BYTE_ARRAY : Bytes.toBytes((byte) i + interval));
+
           Put put =
             MetaTableAccessor.makePutFromRegionInfo(hri, EnvironmentEdgeManager.currentTime());
           put.setDurability(Durability.SKIP_WAL);
-          LOG.info("Put {}", put);
           mr.put(put);
         }
       }
@@ -115,7 +114,7 @@ public class TestGetClosestAtOrBefore  {
       try {
         List<Cell> keys = new ArrayList<>();
         while (s.next(keys)) {
-          LOG.info("Scan {}", keys);
+          LOG.info(Objects.toString(keys));
           keys.clear();
         }
       } finally {
@@ -131,14 +130,13 @@ public class TestGetClosestAtOrBefore  {
       findRow(mr, 'C', 46, 46);
       findRow(mr, 'C', 43, 42);
       // Now delete 'C' and make sure I don't get entries from 'B'.
-      byte[] firstRowInC = RegionInfo.createRegionName(TableName.valueOf("" + 'C'),
+      byte[] firstRowInC = HRegionInfo.createRegionName(TableName.valueOf("" + 'C'),
         HConstants.EMPTY_BYTE_ARRAY, HConstants.ZEROES, false);
-      Scan scan = new Scan().withStartRow(firstRowInC);
+      Scan scan = new Scan(firstRowInC);
       s = mr.getScanner(scan);
       try {
         List<Cell> keys = new ArrayList<>();
         while (s.next(keys)) {
-          LOG.info("Delete {}", keys);
           mr.delete(new Delete(CellUtil.cloneRow(keys.get(0))));
           keys.clear();
         }

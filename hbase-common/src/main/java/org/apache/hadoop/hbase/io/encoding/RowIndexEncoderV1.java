@@ -12,7 +12,9 @@ package org.apache.hadoop.hbase.io.encoding;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -30,12 +32,10 @@ public class RowIndexEncoderV1 {
   private NoneEncoder encoder;
   private int startOffset = -1;
   private ByteArrayOutputStream rowsOffsetBAOS = new ByteArrayOutputStream(64 * 4);
-  private final HFileBlockEncodingContext context;
 
   public RowIndexEncoderV1(DataOutputStream out, HFileBlockDefaultEncodingContext encodingCtx) {
     this.out = out;
     this.encoder = new NoneEncoder(out, encodingCtx);
-    this.context = encodingCtx;
   }
 
   public int write(Cell cell) throws IOException {
@@ -56,7 +56,7 @@ public class RowIndexEncoderV1 {
       throw new IOException("Key cannot be null or empty");
     }
     if (lastCell != null) {
-      int keyComp = this.context.getHFileContext().getCellComparator().compareRows(lastCell, cell);
+      int keyComp = CellComparatorImpl.COMPARATOR.compareRows(lastCell, cell);
       if (keyComp > 0) {
         throw new IOException("Added a key not lexically larger than"
             + " previous. Current cell = " + cell + ", lastCell = " + lastCell);

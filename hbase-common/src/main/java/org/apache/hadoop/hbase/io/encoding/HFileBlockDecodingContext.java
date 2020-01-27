@@ -17,18 +17,20 @@
 package org.apache.hadoop.hbase.io.encoding;
 
 import java.io.IOException;
+
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A decoding context that is created by a reader's encoder, and is shared
- * across all of the reader's read operations.
+ * across the reader's all read operations.
  *
  * @see HFileBlockEncodingContext for encoding
  */
 @InterfaceAudience.Private
 public interface HFileBlockDecodingContext {
+
   /**
    * Perform all actions that need to be done before the encoder's real decoding
    * process. Decompression needs to be done if
@@ -44,6 +46,7 @@ public interface HFileBlockDecodingContext {
    *          ByteBuffer pointed after the header but before the data
    * @param onDiskBlock
    *          on disk data to be decoded
+   * @throws IOException
    */
   void prepareDecoding(
     int onDiskSizeWithoutHeader,

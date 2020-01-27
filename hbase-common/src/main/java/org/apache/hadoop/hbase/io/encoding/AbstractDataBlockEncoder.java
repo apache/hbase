@@ -18,8 +18,10 @@ package org.apache.hadoop.hbase.io.encoding;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+
 import org.apache.hadoop.hbase.ByteBufferKeyOnlyKeyValue;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -57,13 +59,14 @@ public abstract class AbstractDataBlockEncoder implements DataBlockEncoder {
     }
   }
 
-  /**
-   * Decorates EncodedSeeker with a {@link HFileBlockDecodingContext}
-   */
-  protected abstract static class AbstractEncodedSeeker implements EncodedSeeker {
+  protected abstract static class AbstractEncodedSeeker implements
+      EncodedSeeker {
     protected HFileBlockDecodingContext decodingCtx;
+    protected final CellComparator comparator;
 
-    public AbstractEncodedSeeker(HFileBlockDecodingContext decodingCtx) {
+    public AbstractEncodedSeeker(CellComparator comparator,
+        HFileBlockDecodingContext decodingCtx) {
+      this.comparator = comparator;
       this.decodingCtx = decodingCtx;
     }
 
@@ -74,5 +77,7 @@ public abstract class AbstractDataBlockEncoder implements DataBlockEncoder {
     protected boolean includesTags() {
       return this.decodingCtx.getHFileContext().isIncludesTags();
     }
+
   }
+
 }

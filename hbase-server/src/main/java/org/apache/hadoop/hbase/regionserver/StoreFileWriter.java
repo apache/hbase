@@ -26,6 +26,7 @@ import static org.apache.hadoop.hbase.regionserver.HStoreFile.MAJOR_COMPACTION_K
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.MAX_SEQ_ID_KEY;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.MOB_CELLS_COUNT;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.TIMERANGE_KEY;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Collection;
@@ -36,13 +37,15 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -59,7 +62,9 @@ import org.apache.hadoop.hbase.util.RowPrefixFixedLengthBloomContext;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
@@ -89,6 +94,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
    * @param fs                     file system to write to
    * @param path                   file name to create
    * @param conf                   user configuration
+   * @param comparator             key comparator
    * @param bloomType              bloom filter setting
    * @param maxKeys                the expected maximum number of keys to be added. Was used
    *                               for Bloom filter size in {@link HFile} format version 1.
@@ -99,14 +105,15 @@ public class StoreFileWriter implements CellSink, ShipperListener {
    * @throws IOException problem writing to FS
    */
   private StoreFileWriter(FileSystem fs, Path path, final Configuration conf, CacheConfig cacheConf,
-      BloomType bloomType, long maxKeys, InetSocketAddress[] favoredNodes, HFileContext fileContext,
-      boolean shouldDropCacheBehind, Supplier<Collection<HStoreFile>> compactedFilesSupplier)
-        throws IOException {
+      final CellComparator comparator, BloomType bloomType, long maxKeys,
+      InetSocketAddress[] favoredNodes, HFileContext fileContext, boolean shouldDropCacheBehind,
+      Supplier<Collection<HStoreFile>> compactedFilesSupplier) throws IOException {
     this.compactedFilesSupplier = compactedFilesSupplier;
     this.timeRangeTracker = TimeRangeTracker.create(TimeRangeTracker.Type.NON_SYNC);
     // TODO : Change all writers to be specifically created for compaction context
     writer = HFile.getWriterFactory(conf, cacheConf)
         .withPath(fs, path)
+        .withComparator(comparator)
         .withFavoredNodes(favoredNodes)
         .withFileContext(fileContext)
         .withShouldDropCacheBehind(shouldDropCacheBehind)
@@ -128,16 +135,14 @@ public class StoreFileWriter implements CellSink, ShipperListener {
       // init bloom context
       switch (bloomType) {
         case ROW:
-          bloomContext =
-            new RowBloomContext(generalBloomFilterWriter, fileContext.getCellComparator());
+          bloomContext = new RowBloomContext(generalBloomFilterWriter, comparator);
           break;
         case ROWCOL:
-          bloomContext =
-            new RowColBloomContext(generalBloomFilterWriter, fileContext.getCellComparator());
+          bloomContext = new RowColBloomContext(generalBloomFilterWriter, comparator);
           break;
         case ROWPREFIX_FIXED_LENGTH:
-          bloomContext = new RowPrefixFixedLengthBloomContext(generalBloomFilterWriter,
-            fileContext.getCellComparator(), Bytes.toInt(bloomParam));
+          bloomContext = new RowPrefixFixedLengthBloomContext(generalBloomFilterWriter, comparator,
+              Bytes.toInt(bloomParam));
           break;
         default:
           throw new IOException(
@@ -154,8 +159,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
       this.deleteFamilyBloomFilterWriter = BloomFilterFactory
           .createDeleteBloomAtWrite(conf, cacheConf,
               (int) Math.min(maxKeys, Integer.MAX_VALUE), writer);
-      deleteFamilyBloomContext =
-        new RowBloomContext(deleteFamilyBloomFilterWriter, fileContext.getCellComparator());
+      deleteFamilyBloomContext = new RowBloomContext(deleteFamilyBloomFilterWriter, comparator);
     } else {
       deleteFamilyBloomFilterWriter = null;
     }
@@ -392,6 +396,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
   }
 
   /**
+   * @param fs
    * @param dir Directory to create file in.
    * @return random filename inside passed <code>dir</code>
    */
@@ -409,6 +414,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     private final CacheConfig cacheConf;
     private final FileSystem fs;
 
+    private CellComparator comparator = CellComparator.getInstance();
     private BloomType bloomType = BloomType.NONE;
     private long maxKeyCount = 0;
     private Path dir;
@@ -464,6 +470,12 @@ public class StoreFileWriter implements CellSink, ShipperListener {
      */
     public Builder withFavoredNodes(InetSocketAddress[] favoredNodes) {
       this.favoredNodes = favoredNodes;
+      return this;
+    }
+
+    public Builder withComparator(CellComparator comparator) {
+      Preconditions.checkNotNull(comparator);
+      this.comparator = comparator;
       return this;
     }
 
@@ -533,7 +545,11 @@ public class StoreFileWriter implements CellSink, ShipperListener {
         }
       }
 
-      return new StoreFileWriter(fs, filePath, conf, cacheConf, bloomType, maxKeyCount,
+      if (comparator == null) {
+        comparator = CellComparator.getInstance();
+      }
+
+      return new StoreFileWriter(fs, filePath, conf, cacheConf, comparator, bloomType, maxKeyCount,
           favoredNodes, fileContext, shouldDropCacheBehind, compactedFilesSupplier);
     }
   }
