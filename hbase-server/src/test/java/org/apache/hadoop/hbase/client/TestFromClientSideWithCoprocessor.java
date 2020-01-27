@@ -43,6 +43,7 @@ public class TestFromClientSideWithCoprocessor extends TestFromClientSide {
   @Parameterized.Parameters
   public static Collection parameters() {
     return Arrays.asList(new Object[][] {
+        { MasterRegistry.class, 1},
         { ZKConnectionRegistry.class, 1}
     });
   }

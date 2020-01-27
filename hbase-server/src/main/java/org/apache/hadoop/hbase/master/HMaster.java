@@ -575,7 +575,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       // Some unit tests don't need a cluster, so no zookeeper at all
       if (!conf.getBoolean("hbase.testing.nocluster", false)) {
         this.metaRegionLocationCache = new MetaRegionLocationCache(this.zooKeeper);
-        this.activeMasterManager = new ActiveMasterManager(zooKeeper, this.serverName, this);
+        this.activeMasterManager = createActiveMasterManager(zooKeeper, serverName, this);
       } else {
         this.metaRegionLocationCache = null;
         this.activeMasterManager = null;
@@ -587,6 +587,15 @@ public class HMaster extends HRegionServer implements MasterServices {
       LOG.error("Failed construction of Master", t);
       throw t;
     }
+  }
+
+  /**
+   * Protected to have custom implementations in tests override the default ActiveMaster
+   * implementation.
+   */
+  protected ActiveMasterManager createActiveMasterManager(
+      ZKWatcher zk, ServerName sn, org.apache.hadoop.hbase.Server server) {
+    return new ActiveMasterManager(zk, sn, server);
   }
 
   @Override
