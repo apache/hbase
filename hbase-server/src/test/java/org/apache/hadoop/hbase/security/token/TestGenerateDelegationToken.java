@@ -21,7 +21,6 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
-
 import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.util.Arrays;
@@ -32,7 +31,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.ipc.BlockingRpcClient;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.NettyRpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
@@ -76,8 +74,10 @@ public class TestGenerateDelegationToken extends SecureTestCluster {
   }
 
   @Parameters(name = "{index}: rpcClientImpl={0}")
-  public static Collection<Object[]> parameters() {
-    return Arrays.asList(new Object[] { BlockingRpcClient.class.getName() },
+  public static Collection<Object> parameters() {
+    // Client connection supports only non-blocking RPCs (due to master registry restriction), hence
+    // we only test NettyRpcClient.
+    return Arrays.asList(
       new Object[] { NettyRpcClient.class.getName() });
   }
 

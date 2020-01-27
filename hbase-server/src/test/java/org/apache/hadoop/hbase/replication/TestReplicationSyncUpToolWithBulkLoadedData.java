@@ -112,7 +112,7 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
   private void mimicSyncUpAfterBulkLoad(Iterator<String> randomHFileRangeListIterator)
       throws Exception {
     LOG.debug("mimicSyncUpAfterBulkLoad");
-    UTIL2.shutdownMiniHBaseCluster();
+    shutDownTargetHBaseCluster();
 
     loadAndReplicateHFiles(false, randomHFileRangeListIterator);
 
@@ -124,8 +124,8 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
     assertEquals("t2_syncup has 406 rows on source, after bulk load of another 203 hfiles", 406,
       rowCount_ht2Source);
 
-    UTIL1.shutdownMiniHBaseCluster();
-    UTIL2.restartHBaseCluster(1);
+    shutDownSourceHBaseCluster();
+    restartTargetHBaseCluster(1);
 
     Thread.sleep(SLEEP_TIME);
 
@@ -146,7 +146,7 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
       if (i == NB_RETRIES - 1) {
         if (rowCountHt1TargetAtPeer1 != 200 || rowCountHt2TargetAtPeer1 != 400) {
           // syncUP still failed. Let's look at the source in case anything wrong there
-          UTIL1.restartHBaseCluster(1);
+          restartSourceHBaseCluster(1);
           rowCount_ht1Source = countRows(ht1Source);
           LOG.debug("t1_syncup should have 206 rows at source, and it is " + rowCount_ht1Source);
           rowCount_ht2Source = countRows(ht2Source);

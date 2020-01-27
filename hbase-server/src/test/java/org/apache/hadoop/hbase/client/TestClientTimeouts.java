@@ -19,11 +19,11 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
@@ -31,8 +31,8 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.exceptions.MasterRegistryFetchException;
 import org.apache.hadoop.hbase.ipc.AbstractRpcClient;
 import org.apache.hadoop.hbase.ipc.BlockingRpcClient;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
@@ -45,7 +45,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
@@ -100,9 +100,9 @@ public class TestClientTimeouts {
           connection = ConnectionFactory.createConnection(conf);
           admin = connection.getAdmin();
           admin.balancerSwitch(false, false);
-        } catch (MasterNotRunningException ex) {
+        } catch (MasterRegistryFetchException ex) {
           // Since we are randomly throwing SocketTimeoutExceptions, it is possible to get
-          // a MasterNotRunningException. It's a bug if we get other exceptions.
+          // a MasterRegistryFetchException. It's a bug if we get other exceptions.
           lastFailed = true;
         } finally {
           if (admin != null) {
@@ -146,6 +146,14 @@ public class TestClientTimeouts {
         throws UnknownHostException {
       return new RandomTimeoutRpcChannel(this, sn, ticket, rpcTimeout);
     }
+
+    @Override
+    public RpcChannel createHedgedRpcChannel(Set<ServerName> sns, User user, int rpcTimeout)
+        throws UnknownHostException {
+      Preconditions.checkArgument(sns != null && sns.size() == 1);
+      return new RandomTimeoutRpcChannel(this, (ServerName)sns.toArray()[0], user, rpcTimeout);
+    }
+
   }
 
   private static AtomicInteger invokations = new AtomicInteger();
