@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
@@ -38,7 +37,7 @@ public class TestCellUtil {
   /**
    * CellScannable used in test. Returns a {@link TestCellScanner}
    */
-  private class TestCellScannable implements CellScannable {
+  private static class TestCellScannable implements CellScannable {
     private final int cellsCount;
     TestCellScannable(final int cellsCount) {
       this.cellsCount = cellsCount;
@@ -47,7 +46,7 @@ public class TestCellUtil {
     public CellScanner cellScanner() {
       return new TestCellScanner(this.cellsCount);
     }
-  };
+  }
 
   /**
    * CellScanner used in test.
@@ -67,7 +66,7 @@ public class TestCellUtil {
     }
 
     @Override
-    public boolean advance() throws IOException {
+    public boolean advance() {
       if (this.count < cellsCount) {
         this.current = new TestCell(this.count);
         this.count++;
@@ -221,34 +220,35 @@ public class TestCellUtil {
       // TODO Auto-generated method stub
       return 0;
     }
-  };
+  }
 
   /**
    * Was overflowing if 100k or so lists of cellscanners to return.
-   * @throws IOException
    */
   @Test
   public void testCreateCellScannerOverflow() throws IOException {
-    consume(doCreateCellScanner(1, 1), 1 * 1);
-    consume(doCreateCellScanner(3, 0), 3 * 0);
+    consume(doCreateCellScanner(1, 1), 1);
+    consume(doCreateCellScanner(3, 0), 0);
     consume(doCreateCellScanner(3, 3), 3 * 3);
-    consume(doCreateCellScanner(0, 1), 0 * 1);
+    consume(doCreateCellScanner(0, 1), 0);
     // Do big number. See HBASE-11813 for why.
     final int hundredK = 100000;
-    consume(doCreateCellScanner(hundredK, 0), hundredK * 0);
+    consume(doCreateCellScanner(hundredK, 0), 0);
     consume(doCreateCellArray(1), 1);
     consume(doCreateCellArray(0), 0);
     consume(doCreateCellArray(3), 3);
-    List<CellScannable> cells = new ArrayList<CellScannable>(hundredK);
+    List<CellScannable> cells = new ArrayList<>(hundredK);
     for (int i = 0; i < hundredK; i++) {
       cells.add(new TestCellScannable(1));
     }
-    consume(CellUtil.createCellScanner(cells), hundredK * 1);
-    NavigableMap<byte [], List<Cell>> m = new TreeMap<byte [], List<Cell>>(Bytes.BYTES_COMPARATOR);
-    List<Cell> cellArray = new ArrayList<Cell>(hundredK);
-    for (int i = 0; i < hundredK; i++) cellArray.add(new TestCell(i));
+    consume(CellUtil.createCellScanner(cells), hundredK);
+    NavigableMap<byte [], List<Cell>> m = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+    List<Cell> cellArray = new ArrayList<>(hundredK);
+    for (int i = 0; i < hundredK; i++) {
+      cellArray.add(new TestCell(i));
+    }
     m.put(new byte [] {'f'}, cellArray);
-    consume(CellUtil.createCellScanner(m), hundredK * 1);
+    consume(CellUtil.createCellScanner(m), hundredK);
   }
 
   private CellScanner doCreateCellArray(final int itemsPerList) {
@@ -259,9 +259,8 @@ public class TestCellUtil {
     return CellUtil.createCellScanner(cells);
   }
 
-  private CellScanner doCreateCellScanner(final int listsCount, final int itemsPerList)
-  throws IOException {
-    List<CellScannable> cells = new ArrayList<CellScannable>(listsCount);
+  private CellScanner doCreateCellScanner(final int listsCount, final int itemsPerList) {
+    List<CellScannable> cells = new ArrayList<>(listsCount);
     for (int i = 0; i < listsCount; i++) {
       CellScannable cs = new CellScannable() {
         @Override
@@ -276,7 +275,9 @@ public class TestCellUtil {
 
   private void consume(final CellScanner scanner, final int expected) throws IOException {
     int count = 0;
-    while (scanner.advance()) count++;
+    while (scanner.advance()) {
+      count++;
+    }
     Assert.assertEquals(expected, count);
   }
 
@@ -384,7 +385,7 @@ public class TestCellUtil {
   @Test
   public void testToString() {
     byte [] row = Bytes.toBytes("row");
-    long ts = 123l;
+    long ts = 123L;
     // Make a KeyValue and a Cell and see if same toString result.
     KeyValue kv = new KeyValue(row, HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY,
         ts, KeyValue.Type.Minimum, HConstants.EMPTY_BYTE_ARRAY);
@@ -400,7 +401,6 @@ public class TestCellUtil {
         HConstants.EMPTY_BYTE_ARRAY);
     cellToString = CellUtil.getCellKeyAsString(cell);
     assertEquals(kv.toString(), cellToString);
-
   }
 
   @Test

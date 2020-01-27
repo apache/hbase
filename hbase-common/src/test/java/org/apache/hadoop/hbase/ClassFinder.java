@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.io.File;
@@ -53,24 +52,32 @@ public class ClassFinder {
 
   public interface ResourcePathFilter {
     boolean isCandidatePath(String resourcePath, boolean isJar);
-  };
+  }
 
   public interface FileNameFilter {
     boolean isCandidateFile(String fileName, String absFilePath);
-  };
+  }
 
   public interface ClassFilter {
     boolean isCandidateClass(Class<?> c);
-  };
+  }
 
   public static class Not implements ResourcePathFilter, FileNameFilter, ClassFilter {
     private ResourcePathFilter resourcePathFilter;
     private FileNameFilter fileNameFilter;
     private ClassFilter classFilter;
 
-    public Not(ResourcePathFilter resourcePathFilter){this.resourcePathFilter = resourcePathFilter;}
-    public Not(FileNameFilter fileNameFilter){this.fileNameFilter = fileNameFilter;}
-    public Not(ClassFilter classFilter){this.classFilter = classFilter;}
+    public Not(ResourcePathFilter resourcePathFilter) {
+      this.resourcePathFilter = resourcePathFilter;
+    }
+
+    public Not(FileNameFilter fileNameFilter) {
+      this.fileNameFilter = fileNameFilter;
+    }
+
+    public Not(ClassFilter classFilter) {
+      this.classFilter = classFilter;
+    }
 
     @Override
     public boolean isCandidatePath(String resourcePath, boolean isJar) {
@@ -90,7 +97,10 @@ public class ClassFinder {
     ClassFilter[] classFilters;
     ResourcePathFilter[] resourcePathFilters;
 
-    public And(ClassFilter...classFilters) { this.classFilters = classFilters; }
+    public And(ClassFilter...classFilters) {
+      this.classFilters = classFilters;
+    }
+
     public And(ResourcePathFilter... resourcePathFilters) {
       this.resourcePathFilters = resourcePathFilters;
     }
@@ -118,10 +128,6 @@ public class ClassFinder {
   // To control which classloader to use while trying to find jars/classes
   public ClassFinder(ClassLoader classLoader) {
     this(null, null, null, classLoader);
-  }
-
-  public ClassFinder() {
-    this(ClassLoader.getSystemClassLoader());
   }
 
   public ClassFinder(ResourcePathFilter resourcePathFilter, FileNameFilter fileNameFilter,
@@ -180,7 +186,7 @@ public class ClassFinder {
       }
     }
 
-    Set<Class<?>> classes = new HashSet<Class<?>>();
+    Set<Class<?>> classes = new HashSet<>();
     for (File directory : dirs) {
       classes.addAll(findClassesFromFiles(directory, packageName, proceedOnExceptions));
     }
@@ -193,7 +199,7 @@ public class ClassFinder {
   private Set<Class<?>> findClassesFromJar(String jarFileName,
       String packageName, boolean proceedOnExceptions)
     throws IOException, ClassNotFoundException, LinkageError {
-    JarInputStream jarFile = null;
+    JarInputStream jarFile;
     try {
       jarFile = new JarInputStream(new FileInputStream(jarFileName));
     } catch (IOException ioEx) {
@@ -201,8 +207,8 @@ public class ClassFinder {
       throw ioEx;
     }
 
-    Set<Class<?>> classes = new HashSet<Class<?>>();
-    JarEntry entry = null;
+    Set<Class<?>> classes = new HashSet<>();
+    JarEntry entry;
     try {
       while (true) {
         try {
@@ -248,7 +254,7 @@ public class ClassFinder {
 
   private Set<Class<?>> findClassesFromFiles(File baseDirectory, String packageName,
       boolean proceedOnExceptions) throws ClassNotFoundException, LinkageError {
-    Set<Class<?>> classes = new HashSet<Class<?>>();
+    Set<Class<?>> classes = new HashSet<>();
     if (!baseDirectory.exists()) {
       LOG.warn("Failed to find " + baseDirectory.getAbsolutePath());
       return classes;
@@ -285,16 +291,11 @@ public class ClassFinder {
       Class<?> c = Class.forName(className, false, classLoader);
       boolean isCandidateClass = null == classFilter || classFilter.isCandidateClass(c);
       return isCandidateClass ? c : null;
-    } catch (ClassNotFoundException classNotFoundEx) {
+    } catch (ClassNotFoundException | LinkageError exception) {
       if (!proceedOnExceptions) {
-        throw classNotFoundEx;
+        throw exception;
       }
-      LOG.debug("Failed to instantiate or check " + className + ": " + classNotFoundEx);
-    } catch (LinkageError linkageEx) {
-      if (!proceedOnExceptions) {
-        throw linkageEx;
-      }
-      LOG.debug("Failed to instantiate or check " + className + ": " + linkageEx);
+      LOG.debug("Failed to instantiate or check " + className + ": " + exception);
     }
     return null;
   }
@@ -313,5 +314,5 @@ public class ClassFinder {
               && (null == nameFilter
                 || nameFilter.isCandidateFile(file.getName(), file.getAbsolutePath())));
     }
-  };
-};
+  }
+}

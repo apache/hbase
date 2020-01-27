@@ -43,7 +43,6 @@ import com.google.common.io.CountingOutputStream;
 
 @Category(SmallTests.class)
 public class TestCellCodecWithTags {
-
   @Test
   public void testCellWithTag() throws IOException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
