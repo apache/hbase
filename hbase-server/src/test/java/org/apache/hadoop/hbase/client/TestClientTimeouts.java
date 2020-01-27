@@ -19,12 +19,13 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -35,6 +36,7 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ipc.AbstractRpcClient;
 import org.apache.hadoop.hbase.ipc.BlockingRpcClient;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -44,10 +46,12 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
@@ -110,7 +114,7 @@ public class TestClientTimeouts {
         } catch (MasterNotRunningException ex) {
           // Since we are randomly throwing SocketTimeoutExceptions, it is possible to get
           // a MasterNotRunningException.  It's a bug if we get other exceptions.
-          lastFailed = true;
+         lastFailed = true;
         } finally {
           if(admin != null) {
             admin.close();
@@ -147,6 +151,19 @@ public class TestClientTimeouts {
         User ticket, int rpcTimeout) throws UnknownHostException {
       return new RandomTimeoutBlockingRpcChannel(this, sn, ticket, rpcTimeout);
     }
+
+    @Override
+    public RpcChannel createRpcChannel(ServerName sn, User ticket, int rpcTimeout)
+        throws UnknownHostException {
+      return new RandomTimeoutRpcChannel(this, sn, ticket, rpcTimeout);
+    }
+
+    @Override
+    public RpcChannel createHedgedRpcChannel(Set<ServerName> sns, User user, int rpcTimeout)
+        throws UnknownHostException {
+      Preconditions.checkArgument(sns != null && sns.size() == 1);
+      return new RandomTimeoutRpcChannel(this, (ServerName)sns.toArray()[0], user, rpcTimeout);
+    }
   }
 
   /**
@@ -175,6 +192,29 @@ public class TestClientTimeouts {
         throw new ServiceException(new SocketTimeoutException("fake timeout"));
       }
       return super.callBlockingMethod(md, controller, param, returnType);
+    }
+  }
+
+  private static class RandomTimeoutRpcChannel extends AbstractRpcClient.RpcChannelImplementation {
+
+    RandomTimeoutRpcChannel(AbstractRpcClient<?> rpcClient, ServerName sn, User ticket,
+                            int rpcTimeout) throws UnknownHostException {
+      super(rpcClient, new InetSocketAddress(sn.getHostname(), sn.getPort()), ticket, rpcTimeout);
+    }
+
+    @Override
+    public void callMethod(MethodDescriptor md, RpcController controller, Message param,
+                           Message returnType, RpcCallback<Message> done) {
+      RandomTimeoutBlockingRpcChannel.invokations.getAndIncrement();
+      if (ThreadLocalRandom.current().nextFloat() < RandomTimeoutBlockingRpcChannel.CHANCE_OF_TIMEOUT) {
+        // throw a ServiceException, because that is the only exception type that
+        // {@link ProtobufRpcEngine} throws. If this RpcEngine is used with a different
+        // "actual" type, this may not properly mimic the underlying RpcEngine.
+        ((HBaseRpcController) controller).setFailed(new SocketTimeoutException("fake timeout"));
+        done.run(null);
+        return;
+      }
+      super.callMethod(md, controller, param, returnType, done);
     }
   }
 }

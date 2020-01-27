@@ -153,6 +153,7 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.impl.Log4jLoggerAdapter;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
@@ -1142,8 +1143,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     Configuration c = new Configuration(this.conf);
     TraceUtil.initTracer(c);
     this.hbaseCluster =
-        new MiniHBaseCluster(c, option.getNumMasters(), option.getNumRegionServers(),
-            option.getRsPorts(), option.getMasterClass(), option.getRsClass());
+        new MiniHBaseCluster(c, option.getNumMasters(), option.getNumAlwaysStandByMasters(),
+            option.getNumRegionServers(), option.getRsPorts(), option.getMasterClass(),
+            option.getRsClass());
     // Populate the master address configuration from mini cluster configuration.
     conf.set(HConstants.MASTER_ADDRS_KEY,
         c.get(HConstants.MASTER_ADDRS_KEY, HConstants.MASTER_ADDRS_DEFAULT));
@@ -1259,6 +1261,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     StartMiniClusterOption option =
         StartMiniClusterOption.builder().numRegionServers(servers).rsPorts(ports).build();
     restartHBaseCluster(option);
+    invalidateConnection();
   }
 
   public void restartHBaseCluster(StartMiniClusterOption option)
@@ -1272,8 +1275,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       this.connection = null;
     }
     this.hbaseCluster =
-        new MiniHBaseCluster(this.conf, option.getNumMasters(), option.getNumRegionServers(),
-            option.getRsPorts(), option.getMasterClass(), option.getRsClass());
+        new MiniHBaseCluster(this.conf, option.getNumMasters(), option.getNumAlwaysStandByMasters(),
+            option.getNumRegionServers(), option.getRsPorts(), option.getMasterClass(),
+            option.getRsClass());
     // Don't leave here till we've done a successful scan of the hbase:meta
     Connection conn = ConnectionFactory.createConnection(this.conf);
     Table t = conn.getTable(TableName.META_TABLE_NAME);
@@ -3096,9 +3100,34 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     return hbaseCluster;
   }
 
+  public void closeConnection() throws IOException {
+    Closeables.close(hbaseAdmin, true);
+    Closeables.close(connection, true);
+    this.hbaseAdmin = null;
+    this.connection = null;
+  }
+
   /**
-   * Get a Connection to the cluster.
-   * Not thread-safe (This class needs a lot of work to make it thread-safe).
+   * Resets the connections so that the next time getConnection() is called, a new connection is
+   * created. This is needed in cases where the entire cluster / all the masters are shutdown and
+   * the connection is not valid anymore.
+   * TODO: There should be a more coherent way of doing this. Unfortunately the way tests are
+   *   written, not all start() stop() calls go through this class. Most tests directly operate on
+   *   the underlying mini/local hbase cluster. That makes it difficult for this wrapper class to
+   *   maintain the connection state automatically. Cleaning this is a much bigger refactor.
+   */
+  public void invalidateConnection() throws IOException {
+    closeConnection();
+    // Update the master addresses if they changed.
+    final String masterConfigBefore = conf.get(HConstants.MASTER_ADDRS_KEY);
+    final String masterConfAfter = getMiniHBaseCluster().conf.get(HConstants.MASTER_ADDRS_KEY);
+    LOG.info("Invalidated connection. Updating master addresses before: {} after: {}",
+        masterConfigBefore, masterConfAfter);
+    conf.set(HConstants.MASTER_ADDRS_KEY,
+        getMiniHBaseCluster().conf.get(HConstants.MASTER_ADDRS_KEY));
+  }
+
+  /**
    * @return A Connection that can be shared. Don't close. Will be closed on shutdown of cluster.
    * @throws IOException
    */

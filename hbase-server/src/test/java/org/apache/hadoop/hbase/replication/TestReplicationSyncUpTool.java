@@ -143,7 +143,7 @@ public class TestReplicationSyncUpTool extends TestReplicationSyncUpToolBase {
 
   private void mimicSyncUpAfterDelete() throws Exception {
     LOG.debug("mimicSyncUpAfterDelete");
-    UTIL2.shutdownMiniHBaseCluster();
+    shutDownTargetHBaseCluster();
 
     List<Delete> list = new ArrayList<>();
     // delete half of the rows
@@ -169,8 +169,8 @@ public class TestReplicationSyncUpTool extends TestReplicationSyncUpToolBase {
     assertEquals("t2_syncup has 101 rows on source, after remove 100 of the replicated colfam", 101,
       rowCount_ht2Source);
 
-    UTIL1.shutdownMiniHBaseCluster();
-    UTIL2.restartHBaseCluster(1);
+    shutDownSourceHBaseCluster();
+    restartTargetHBaseCluster(1);
 
     Thread.sleep(SLEEP_TIME);
 
@@ -188,7 +188,7 @@ public class TestReplicationSyncUpTool extends TestReplicationSyncUpToolBase {
       if (i == NB_RETRIES - 1) {
         if (rowCountHt1TargetAtPeer1 != 50 || rowCountHt2TargetAtPeer1 != 100) {
           // syncUP still failed. Let's look at the source in case anything wrong there
-          UTIL1.restartHBaseCluster(1);
+          restartSourceHBaseCluster(1);
           rowCount_ht1Source = UTIL1.countRows(ht1Source);
           LOG.debug("t1_syncup should have 51 rows at source, and it is " + rowCount_ht1Source);
           rowCount_ht2Source = UTIL1.countRows(ht2Source);
@@ -212,8 +212,8 @@ public class TestReplicationSyncUpTool extends TestReplicationSyncUpToolBase {
 
   private void mimicSyncUpAfterPut() throws Exception {
     LOG.debug("mimicSyncUpAfterPut");
-    UTIL1.restartHBaseCluster(1);
-    UTIL2.shutdownMiniHBaseCluster();
+    restartSourceHBaseCluster(1);
+    shutDownTargetHBaseCluster();
 
     Put p;
     // another 100 + 1 row to t1_syncup
@@ -243,8 +243,8 @@ public class TestReplicationSyncUpTool extends TestReplicationSyncUpToolBase {
     int rowCount_ht2Source = UTIL1.countRows(ht2Source);
     assertEquals("t2_syncup has 202 rows on source", 202, rowCount_ht2Source);
 
-    UTIL1.shutdownMiniHBaseCluster();
-    UTIL2.restartHBaseCluster(1);
+    shutDownSourceHBaseCluster();
+    restartTargetHBaseCluster(1);
 
     Thread.sleep(SLEEP_TIME);
 
@@ -264,7 +264,7 @@ public class TestReplicationSyncUpTool extends TestReplicationSyncUpToolBase {
       if (i == NB_RETRIES - 1) {
         if (rowCountHt1TargetAtPeer1 != 100 || rowCountHt2TargetAtPeer1 != 200) {
           // syncUP still failed. Let's look at the source in case anything wrong there
-          UTIL1.restartHBaseCluster(1);
+          restartSourceHBaseCluster(1);
           rowCount_ht1Source = UTIL1.countRows(ht1Source);
           LOG.debug("t1_syncup should have 102 rows at source, and it is " + rowCount_ht1Source);
           rowCount_ht2Source = UTIL1.countRows(ht2Source);

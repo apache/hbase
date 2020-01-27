@@ -90,6 +90,7 @@ public class MasterRegistry implements ConnectionRegistry {
     } else {
       finalConf = conf;
     }
+    finalConf.set(MASTER_ADDRS_KEY, conf.get(MASTER_ADDRS_KEY, MASTER_ADDRS_DEFAULT));
     rpcTimeoutMs = (int) Math.min(Integer.MAX_VALUE, conf.getLong(HConstants.HBASE_RPC_TIMEOUT_KEY,
         HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
     masterServers = new HashSet<>();
@@ -146,12 +147,13 @@ public class MasterRegistry implements ConnectionRegistry {
       if (rpcResult == null) {
         future.completeExceptionally(
             new MasterRegistryFetchException(masterServers, hrc.getFailed()));
+        return;
       }
       if (!isValidResp.test(rpcResult)) {
         // Rpc returned ok, but result was malformed.
         future.completeExceptionally(new IOException(
             String.format("Invalid result for request %s. Will be retried", debug)));
-
+        return;
       }
       future.complete(transformResult.apply(rpcResult));
     };
