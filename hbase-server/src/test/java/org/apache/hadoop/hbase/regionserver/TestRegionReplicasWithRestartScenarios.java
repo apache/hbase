@@ -137,6 +137,7 @@ public class TestRegionReplicasWithRestartScenarios {
 
   private void assertReplicaDistributed() throws Exception {
     Collection<HRegion> onlineRegions = getRS().getOnlineRegionsLocalContext();
+    LOG.info("ASSERT DISTRIBUTED {}", onlineRegions);
     boolean res = checkDuplicates(onlineRegions);
     assertFalse(res);
     Collection<HRegion> onlineRegions2 = getSecondaryRS().getOnlineRegionsLocalContext();
