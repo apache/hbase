@@ -938,8 +938,9 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
         Path p = rs.getPath();
         FileStatus[] logs = fs.listStatus(p);
         for (FileStatus log : logs) {
-          p = new Path(p, log.getPath().getName());
-          if (p.getName().equals(path.getName())) {
+          String logName = log.getPath().getName();
+          if (logName.equals(path.getName())) {
+            p = new Path(p, log.getPath().getName());
             LOG.info("Log " + p.getName() + " found at " + p);
             return p;
           }
