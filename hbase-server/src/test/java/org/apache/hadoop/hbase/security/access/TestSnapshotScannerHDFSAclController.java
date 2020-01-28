@@ -652,6 +652,7 @@ public class TestSnapshotScannerHDFSAclController {
       admin.restoreSnapshot(snapshot);
       admin.snapshot(snapshot3, table);
 
+      LOG.info("CHECK");
       TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot, -1);
       TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot2, -1);
       TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot3, -1);

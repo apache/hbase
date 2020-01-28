@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
@@ -45,13 +44,37 @@ public class TestReplicationSinkManager {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestReplicationSinkManager.class);
 
-  private HBaseReplicationEndpoint replicationEndpoint;
   private ReplicationSinkManager sinkManager;
+  private HBaseReplicationEndpoint replicationEndpoint;
+
+  /**
+   * Manage the 'getRegionServers' for the tests below. Override the base class handling
+   * of Regionservers. We used to use a mock for this but updated guava/errorprone disallows
+   * mocking of classes that implement Service.
+   */
+  private static class SetServersHBaseReplicationEndpoint extends HBaseReplicationEndpoint {
+    List<ServerName> regionServers;
+
+    @Override
+    public boolean replicate(ReplicateContext replicateContext) {
+      return false;
+    }
+
+    @Override
+    public synchronized void setRegionServers(List<ServerName> regionServers) {
+      this.regionServers = regionServers;
+    }
+
+    @Override
+    public List<ServerName> getRegionServers() {
+      return this.regionServers;
+    }
+  }
 
   @Before
   public void setUp() {
-    replicationEndpoint = mock(HBaseReplicationEndpoint.class);
-    sinkManager = new ReplicationSinkManager(mock(AsyncClusterConnection.class),
+    this.replicationEndpoint = new SetServersHBaseReplicationEndpoint();
+    this.sinkManager = new ReplicationSinkManager(mock(AsyncClusterConnection.class),
       replicationEndpoint, new Configuration());
   }
 
@@ -62,12 +85,8 @@ public class TestReplicationSinkManager {
     for (int i = 0; i < totalServers; i++) {
       serverNames.add(mock(ServerName.class));
     }
-
-    when(replicationEndpoint.getRegionServers())
-          .thenReturn(serverNames);
-
+    replicationEndpoint.setRegionServers(serverNames);
     sinkManager.chooseSinks();
-
     int expected = (int) (totalServers * ReplicationSinkManager.DEFAULT_REPLICATION_SOURCE_RATIO);
     assertEquals(expected, sinkManager.getNumSinks());
 
@@ -77,12 +96,8 @@ public class TestReplicationSinkManager {
   public void testChooseSinks_LessThanRatioAvailable() {
     List<ServerName> serverNames = Lists.newArrayList(mock(ServerName.class),
       mock(ServerName.class));
-
-    when(replicationEndpoint.getRegionServers())
-          .thenReturn(serverNames);
-
+    replicationEndpoint.setRegionServers(serverNames);
     sinkManager.chooseSinks();
-
     assertEquals(1, sinkManager.getNumSinks());
   }
 
@@ -90,9 +105,7 @@ public class TestReplicationSinkManager {
   public void testReportBadSink() {
     ServerName serverNameA = mock(ServerName.class);
     ServerName serverNameB = mock(ServerName.class);
-    when(replicationEndpoint.getRegionServers())
-      .thenReturn(Lists.newArrayList(serverNameA, serverNameB));
-
+    replicationEndpoint.setRegionServers(Lists.newArrayList(serverNameA, serverNameB));
     sinkManager.chooseSinks();
     // Sanity check
     assertEquals(1, sinkManager.getNumSinks());
@@ -117,10 +130,7 @@ public class TestReplicationSinkManager {
     for (int i = 0; i < totalServers; i++) {
       serverNames.add(mock(ServerName.class));
     }
-    when(replicationEndpoint.getRegionServers())
-          .thenReturn(serverNames);
-
-
+    replicationEndpoint.setRegionServers(serverNames);
     sinkManager.chooseSinks();
     // Sanity check
     int expected = (int) (totalServers * ReplicationSinkManager.DEFAULT_REPLICATION_SOURCE_RATIO);
@@ -172,10 +182,7 @@ public class TestReplicationSinkManager {
     for (int i = 0; i < totalServers; i++) {
       serverNames.add(mock(ServerName.class));
     }
-    when(replicationEndpoint.getRegionServers())
-          .thenReturn(serverNames);
-
-
+    replicationEndpoint.setRegionServers(serverNames);
     sinkManager.chooseSinks();
     // Sanity check
     List<ServerName> sinkList = sinkManager.getSinksForTesting();
