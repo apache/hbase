@@ -29,6 +29,10 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.After;
 import org.junit.Before;
 
+/**
+ * This runs on local filesystem. hsync and hflush are not supported. May lose data!
+ * Only use where data loss is not of consequence.
+ */
 public class RegionProcedureStoreTestBase {
 
   protected HBaseCommonTestingUtility htu;
