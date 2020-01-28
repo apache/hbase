@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -130,7 +129,7 @@ public class RegionInfoBuilder {
    * An implementation of RegionInfo that adds mutable methods so can build a RegionInfo instance.
    */
   @InterfaceAudience.Private
-  static class MutableRegionInfo implements RegionInfo, Comparable<RegionInfo> {
+  static class MutableRegionInfo implements RegionInfo {
     /**
      * The new format for a region name contains its encodedName at the end.
      * The encoded name also serves as the directory name for the region
@@ -453,7 +452,7 @@ public class RegionInfoBuilder {
       if (!(o instanceof RegionInfo)) {
         return false;
       }
-      return this.compareTo((RegionInfo)o) == 0;
+      return compareTo((RegionInfo)o) == 0;
     }
 
     /**
@@ -463,11 +462,5 @@ public class RegionInfoBuilder {
     public int hashCode() {
       return this.hashCode;
     }
-
-    @Override
-    public int compareTo(RegionInfo other) {
-      return RegionInfo.COMPARATOR.compare(this, other);
-    }
-
   }
 }
