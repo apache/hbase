@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -124,9 +125,10 @@ public class TestHFileWriterV3 {
   private void writeDataAndReadFromHFile(Path hfilePath,
       Algorithm compressAlgo, int entryCount, boolean findMidKey, boolean useTags) throws IOException {
     HFileContext context = new HFileContextBuilder()
-                           .withBlockSize(4096)
-                           .withIncludesTags(useTags)
-                           .withCompression(compressAlgo).build();
+      .withBlockSize(4096)
+      .withIncludesTags(useTags)
+      .withDataBlockEncoding(DataBlockEncoding.NONE)
+      .withCompression(compressAlgo).build();
     CacheConfig cacheConfig = new CacheConfig(conf);
     HFile.Writer writer = new HFile.WriterFactory(conf, cacheConfig)
             .withPath(fs, hfilePath)
