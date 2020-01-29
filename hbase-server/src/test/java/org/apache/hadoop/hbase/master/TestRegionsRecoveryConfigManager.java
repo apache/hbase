@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -120,7 +119,7 @@ public class TestRegionsRecoveryConfigManager {
 
   // Make it public so that JVMClusterUtil can access it.
   public static class TestHMaster extends HMaster {
-    public TestHMaster(Configuration conf) throws IOException, KeeperException {
+    public TestHMaster(Configuration conf) throws IOException {
       super(conf);
     }
   }
