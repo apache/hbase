@@ -157,10 +157,10 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     Configuration conf = new Configuration();
     conf.setInt(HttpServer.HTTP_MAX_THREADS, MAX_THREADS);
     server = createTestServer(conf);
-    server.addUnprivilegedServlet("echo", "/echo", EchoServlet.class);
-    server.addUnprivilegedServlet("echomap", "/echomap", EchoMapServlet.class);
-    server.addUnprivilegedServlet("htmlcontent", "/htmlcontent", HtmlContentServlet.class);
-    server.addUnprivilegedServlet("longheader", "/longheader", LongHeaderServlet.class);
+    server.addServlet("echo", "/echo", EchoServlet.class);
+    server.addServlet("echomap", "/echomap", EchoMapServlet.class);
+    server.addServlet("htmlcontent", "/htmlcontent", HtmlContentServlet.class);
+    server.addServlet("longheader", "/longheader", LongHeaderServlet.class);
     server.addJerseyResourcePackage(
         JerseyResource.class.getPackage().getName(), "/jersey/*");
     server.start();
@@ -503,8 +503,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     Mockito.when(acls.isUserAllowed(Mockito.<UserGroupInformation>any())).thenReturn(false);
     Mockito.when(context.getAttribute(HttpServer.ADMINS_ACL)).thenReturn(acls);
     Assert.assertFalse(HttpServer.hasAdministratorAccess(context, request, response));
-    Mockito.verify(response).sendError(Mockito.eq(HttpServletResponse.SC_FORBIDDEN),
-            Mockito.anyString());
+    Mockito.verify(response).sendError(Mockito.eq(HttpServletResponse.SC_UNAUTHORIZED), Mockito.anyString());
 
     //authorization ON & user NOT NULL & ACLs NOT NULL & user in in ACLs
     response = Mockito.mock(HttpServletResponse.class);
@@ -594,7 +593,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
             .addEndpoint(new URI("http://localhost:0"))
             .setFindPort(true).setConf(conf).build();
     myServer.setAttribute(HttpServer.CONF_CONTEXT_ATTRIBUTE, conf);
-    myServer.addUnprivilegedServlet("echo", "/echo", EchoServlet.class);
+    myServer.addServlet("echo", "/echo", EchoServlet.class);
     myServer.start();
 
     String serverURL = "http://"
