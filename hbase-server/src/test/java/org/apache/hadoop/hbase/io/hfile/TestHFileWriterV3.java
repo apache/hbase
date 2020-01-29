@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
@@ -116,9 +117,10 @@ public class TestHFileWriterV3 {
   private void writeDataAndReadFromHFile(Path hfilePath,
       Algorithm compressAlgo, int entryCount, boolean findMidKey, boolean useTags) throws IOException {
     HFileContext context = new HFileContextBuilder()
-                           .withBlockSize(4096)
-                           .withIncludesTags(useTags)
-                           .withCompression(compressAlgo).build();
+      .withBlockSize(4096)
+      .withIncludesTags(useTags)
+      .withDataBlockEncoding(DataBlockEncoding.NONE)
+      .withCompression(compressAlgo).build();
     HFileWriterV3 writer = (HFileWriterV3)
         new HFileWriterV3.WriterFactoryV3(conf, new CacheConfig(conf))
             .withPath(fs, hfilePath)
@@ -170,10 +172,11 @@ public class TestHFileWriterV3 {
     assertEquals(3, trailer.getMajorVersion());
     assertEquals(entryCount, trailer.getEntryCount());
     HFileContext meta = new HFileContextBuilder()
-                        .withCompression(compressAlgo)
-                        .withIncludesMvcc(false)
-                        .withIncludesTags(useTags)
-                        .withHBaseCheckSum(true).build();
+      .withCompression(compressAlgo)
+      .withIncludesMvcc(false)
+      .withIncludesTags(useTags)
+      .withDataBlockEncoding(DataBlockEncoding.NONE)
+      .withHBaseCheckSum(true).build();
     HFileBlock.FSReader blockReader =
         new HFileBlock.FSReaderImpl(fsdis, fileSize, meta);
  // Comparator class name is stored in the trailer in version 2.
