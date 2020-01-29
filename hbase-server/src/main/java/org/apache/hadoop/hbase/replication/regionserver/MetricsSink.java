@@ -91,18 +91,6 @@ public class MetricsSink {
   }
 
   /**
-   * Get the TimeStampOfLastAppliedOp. If no replication Op applied yet, the value is the timestamp
-   * at which hbase instance starts
-   * @return timeStampsOfLastAppliedOp;
-   * @deprecated Since 2.0.0. Will be removed in 3.0.0.
-   * @see #getTimestampOfLastAppliedOp()
-   */
-  @Deprecated
-  public long getTimeStampOfLastAppliedOp() {
-    return getTimestampOfLastAppliedOp();
-  }
-
-  /**
    * Get the TimestampOfLastAppliedOp. If no replication Op applied yet, the value is the timestamp
    * at which hbase instance starts
    * @return timeStampsOfLastAppliedOp;
