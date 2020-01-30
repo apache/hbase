@@ -151,6 +151,13 @@
       <unsubscribe>builds-unsubscribe@hbase.apache.org</unsubscribe>
       <archive>https://mail-archives.apache.org/mod_mbox/hbase-builds/</archive>
     </mailingList>
+    <mailingList>
+      <name>User (ZH) List</name>
+      <subscribe>user-zh-subscribe@hbase.apache.org</subscribe>
+      <unsubscribe>user-zh-unsubscribe@hbase.apache.org</unsubscribe>
+      <post>user-zh@hbase.apache.org</post>
+      <archive>https://lists.apache.org/list.html?user-zh@hbase.apache.org</archive>
+    </mailingList>
   </mailingLists>
   <developers>
     <developer>
