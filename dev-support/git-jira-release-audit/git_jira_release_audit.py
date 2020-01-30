@@ -52,10 +52,13 @@ class _DB:
         REVERT = 'REVERT'
         SKIP = 'SKIP'
 
-    def __init__(self, db_path, **_kwargs):
+    def __init__(self, db_path, initialize_db, **_kwargs):
         self._conn = sqlite3.connect(db_path)
-        for table in 'git_commits', 'jira_versions':
-            self._conn.execute("DROP TABLE IF EXISTS %s" % table)
+
+        if initialize_db:
+            for table in 'git_commits', 'jira_versions':
+                self._conn.execute("DROP TABLE IF EXISTS %s" % table)
+
         self._conn.execute("""
         CREATE TABLE IF NOT EXISTS "git_commits"(
           jira_id TEXT NOT NULL,
@@ -93,11 +96,11 @@ class _DB:
             git_sha (str): The commit's SHA.
         """
         if action == _DB.Action.ADD:
-            self._conn.execute(
+            self.conn.execute(
                 "INSERT INTO git_commits(jira_id, branch, git_sha) VALUES (upper(?),?,?)",
                 (jira_id, branch, git_sha))
         elif action == _DB.Action.REVERT:
-            self._conn.execute("""
+            self.conn.execute("""
             DELETE FROM git_commits WHERE
               jira_id=upper(?)
               AND branch=?
@@ -105,7 +108,7 @@ class _DB:
 
     def flush_commits(self):
         """Commit any pending changes to the database."""
-        self._conn.commit()
+        self.conn.commit()
 
     def apply_git_tag(self, branch, git_sha, git_tag):
         """Annotate a commit in the commits database as being a part of the specified release.
@@ -115,8 +118,8 @@ class _DB:
             git_sha (str): The commit's SHA.
             git_tag (str): The first release tag following the commit.
         """
-        self._conn.execute("UPDATE git_commits SET git_tag = ? WHERE branch = ? AND git_sha = ?",
-                           (git_tag, branch, git_sha))
+        self.conn.execute("UPDATE git_commits SET git_tag = ? WHERE branch = ? AND git_sha = ?",
+                          (git_tag, branch, git_sha))
 
     def apply_fix_version(self, jira_id, fix_version):
         """Annotate a Jira issue in the jira database as being part of the specified release
@@ -126,12 +129,12 @@ class _DB:
             jira_id (str): The applicable Issue ID from JIRA.
             fix_version (str): The annotated `fixVersion` as seen in JIRA.
         """
-        self._conn.execute("INSERT INTO jira_versions(jira_id, fix_version) VALUES (upper(?),?)",
-                           (jira_id, fix_version))
+        self.conn.execute("INSERT INTO jira_versions(jira_id, fix_version) VALUES (upper(?),?)",
+                          (jira_id, fix_version))
 
     def unique_jira_ids_from_git(self):
         """Query the commits database for the population of Jira Issue IDs."""
-        results = self._conn.execute("SELECT distinct jira_id FROM git_commits").fetchall()
+        results = self.conn.execute("SELECT distinct jira_id FROM git_commits").fetchall()
         return [x[0] for x in results]
 
     def backup(self, target):
@@ -184,13 +187,14 @@ class _RepoReader:
     _identify_amend_jira_id_pattern = re.compile(r'^amend (.+)', re.IGNORECASE)
 
     def __init__(self, db, fallback_actions_path, remote_name, development_branch,
-                 release_line_regexp, **_kwargs):
+                 release_line_regexp, parse_release_tags, **_kwargs):
         self._db = db
         self._repo = _RepoReader._open_repo()
         self._fallback_actions = _RepoReader._load_fallback_actions(fallback_actions_path)
         self._remote_name = remote_name
         self._development_branch = development_branch
         self._release_line_regexp = release_line_regexp
+        self._parse_release_tags = parse_release_tags
 
     @property
     def repo(self):
@@ -363,10 +367,11 @@ class _RepoReader:
             if cnt % 50 == 0:
                 self._db.flush_commits()
             commits_since_release.append(commit.hexsha)
-            tag = self._extract_release_tag(commit)
-            if tag:
-                self._set_release_tag(release_branch, tag, commits_since_release)
-                commits_since_release = list()
+            if self._parse_release_tags:
+                tag = self._extract_release_tag(commit)
+                if tag:
+                    self._set_release_tag(release_branch, tag, commits_since_release)
+                    commits_since_release = list()
         self._db.flush_commits()
 
     @staticmethod
@@ -394,15 +399,6 @@ class _JiraReader:
         self.client = jira.JIRA(jira_url)
         self.throttle_time_in_sec = 1
 
-    def _fetch_fix_versions(self, jira_id):
-        val = self.client.issue(jira_id, fields='fixVersions')
-        return [version.name for version in val.fields.fixVersions]
-
-    def _fetch_fix_versions_throttled(self, jira_id):
-        val = self._fetch_fix_versions(jira_id)
-        time.sleep(self.throttle_time_in_sec)
-        return val
-
     def populate_db(self):
         """Query Jira for issue IDs found in the commits database, writing them to the jira
         database."""
@@ -427,7 +423,37 @@ class _JiraReader:
                     if cnt % 50:
                         self._db.flush_commits()
             counter.update(incr=len(chunk))
+            time.sleep(5)
         self._db.flush_commits()
+
+    def fetch_issues(self, jira_ids):
+        """Retrieve the specified jira Ids."""
+        global MANAGER
+        logging.info("retrieving %s jira_ids from the issue tracker", len(jira_ids))
+        counter = MANAGER.counter(total=len(jira_ids), desc='fetch from Jira', unit='issue')
+        chunk_size = 50
+        chunks = [jira_ids[i:i + chunk_size] for i in range(0, len(jira_ids), chunk_size)]
+        ret = list()
+        for chunk in chunks:
+            query = "key IN (" + ",".join([("'" + jira_id + "'") for jira_id in chunk]) + ")"\
+                    + " ORDER BY issuetype ASC, priority DESC, key ASC"
+            results = self.client.search_issues(
+                jql_str=query, maxResults=chunk_size,
+                fields='summary,issuetype,priority,resolution,components')
+            for result in results:
+                val = dict()
+                val['key'] = result.key
+                val['summary'] = result.fields.summary.strip()
+                val['priority'] = result.fields.priority.name.strip()
+                val['issue_type'] = result.fields.issuetype.name.strip() \
+                    if result.fields.issuetype else None
+                val['resolution'] = result.fields.resolution.name.strip() \
+                    if result.fields.resolution else None
+                val['components'] = [x.name.strip() for x in result.fields.components if x] \
+                    if result.fields.components else []
+                ret.append(val)
+            counter.update(incr=len(chunk))
+        return ret
 
 
 class Auditor:
@@ -445,6 +471,11 @@ class Auditor:
         self._repo_reader = repo_reader
         self._jira_reader = jira_reader
         self._db = db
+        self._release_line_fix_versions = dict()
+        for k, v in _kwargs.items():
+            if k.endswith('_fix_version'):
+                release_line = k[:-len('_fix_version')]
+                self._release_line_fix_versions[release_line] = v
 
     def populate_db_from_git(self):
         """Process the git repository, populating the commits database."""
@@ -463,55 +494,125 @@ class Auditor:
         self._jira_reader.populate_db()
 
     @staticmethod
+    def _write_report(filename, issues):
+        with open(filename, 'w') as file:
+            fieldnames = ['key', 'issue_type', 'priority', 'summary', 'resolution', 'components']
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            writer.writeheader()
+            for issue in issues:
+                writer.writerow(issue)
+        logging.info('generated report at %s', filename)
+
+    def report_new_for_release_line(self, release_line):
+        """Builds a report of the Jira issues that are new on the target release line, not present
+        on any of the associated release branches. (i.e., on branch-2 but not
+        branch-{2.0,2.1,...})"""
+        matches = [x for x in self._repo_reader.release_line_refs
+                   if x.name == release_line or x.name.endswith('/%s' % release_line)]
+        release_line_ref = next(iter(matches), None)
+        if not release_line_ref:
+            logging.error('release line %s not found. available options are %s.',
+                          release_line, [x.name for x in self._repo_reader.release_line_refs])
+            return
+        cursor = self._db.conn.execute("""
+        SELECT distinct jira_id FROM git_commits
+        WHERE branch = ?
+        EXCEPT SELECT distinct jira_id FROM git_commits
+          WHERE branch LIKE ?
+        """, (release_line_ref.name, '%s.%%' % release_line_ref.name))
+        jira_ids = [x[0] for x in cursor.fetchall()]
+        issues = self._jira_reader.fetch_issues(jira_ids)
+        filename = 'new_for_%s.csv' % release_line.replace('/', '-')
+        Auditor._write_report(filename, issues)
+
+    @staticmethod
+    def _str_to_bool(val):
+        if not val:
+            return False
+        return val.lower() in ['true', 't', 'yes', 'y']
+
+    @staticmethod
     def _build_first_pass_parser():
         parser = argparse.ArgumentParser(add_help=False)
-        parser.add_argument(
+        building_group = parser.add_argument_group(title='Building the audit database')
+        building_group.add_argument(
+            '--populate-from-git',
+            help='When true, populate the audit database from the Git repository.',
+            type=Auditor._str_to_bool,
+            default=True)
+        building_group.add_argument(
+            '--populate-from-jira',
+            help='When true, populate the audit database from Jira.',
+            type=Auditor._str_to_bool,
+            default=True)
+        building_group.add_argument(
             '--db-path',
             help='Path to the database file, or leave unspecified for a transient db.',
             default=':memory:')
-        parser.add_argument(
+        building_group.add_argument(
+            '--initialize-db',
+            help='When true, initialize the database tables. This is destructive to the contents'
+            + ' of an existing database.',
+            type=Auditor._str_to_bool,
+            default=False)
+        report_group = parser.add_argument_group('Generating reports')
+        report_group.add_argument(
+            '--report-new-for-release-line',
+            help=Auditor.report_new_for_release_line.__doc__,
+            type=str,
+            default=None)
+        git_repo_group = parser.add_argument_group('Interactions with the Git repo')
+        git_repo_group.add_argument(
             '--git-repo-path',
             help='Path to the git repo, or leave unspecified to infer from the current'
             + ' file\'s path.',
             default=__file__)
-        parser.add_argument(
+        git_repo_group.add_argument(
             '--remote-name',
-            help='The name of the git remote to use when identifying branches.',
+            help='The name of the git remote to use when identifying branches.'
+            + ' Default: \'origin\'',
             default='origin')
-        parser.add_argument(
+        git_repo_group.add_argument(
             '--development-branch',
-            help='The name of the branch from which all release lines originate.',
+            help='The name of the branch from which all release lines originate.'
+            + ' Default: \'master\'',
             default='master')
-        parser.add_argument(
+        git_repo_group.add_argument(
             '--development-branch-fix-version',
-            help='The Jira fixVersion used to indicate an issue is committed to the development '
-            + 'branch.',
+            help='The Jira fixVersion used to indicate an issue is committed to the development'
+            + ' branch. Default: \'3.0.0\'',
             default='3.0.0')
-        parser.add_argument(
+        git_repo_group.add_argument(
             '--release-line-regexp',
             help='A regexp used to identify release lines.',
             default=r'branch-\d+$')
-        parser.add_argument(
+        git_repo_group.add_argument(
+            '--parse-release-tags',
+            help='When true, look for release tags and annotate commits according to their release'
+            + ' version. An Expensive calculation, disabled by default.',
+            type=Auditor._str_to_bool,
+            default=False)
+        git_repo_group.add_argument(
             '--fallback-actions-path',
             help='Path to a file containing _DB.Actions applicable to specific git shas.',
             default='fallback_actions.csv')
-        parser.add_argument(
+        jira_group = parser.add_argument_group('Interactions with Jira')
+        jira_group.add_argument(
             '--jira-url',
             help='A URL locating the target JIRA instance.',
             default='https://issues.apache.org/jira')
-        return parser
+        return parser, git_repo_group
 
     @staticmethod
-    def _build_second_pass_parser(repo_reader, parent_parser):
-        parser = argparse.ArgumentParser(parents=[parent_parser])
+    def _build_second_pass_parser(repo_reader, parent_parser, git_repo_group):
         for release_line in repo_reader.release_line_refs:
             name = release_line.name
-            parser.add_argument(
+            git_repo_group.add_argument(
                 '--%s-fix-version' % name[len(repo_reader.remote_name) + 1:],
                 help='The Jira fixVersion used to indicate an issue is committed to the specified '
                 + 'release line branch',
                 required=True)
-        return parser
+        return argparse.ArgumentParser(parents=[parent_parser])
 
 
 MANAGER = None
@@ -520,19 +621,26 @@ MANAGER = None
 def main():
     global MANAGER
 
-    first_pass_parser = Auditor._build_first_pass_parser()
-    known_args, extras = first_pass_parser.parse_known_args()
-    known_args = vars(known_args)
-    with _DB(**known_args) as db:
+    first_pass_parser, git_repo_group = Auditor._build_first_pass_parser()
+    first_pass_args, extras = first_pass_parser.parse_known_args()
+    first_pass_args_dict = vars(first_pass_args)
+    with _DB(**first_pass_args_dict) as db:
         logging.basicConfig(level=logging.INFO)
-        repo_reader = _RepoReader(db, **known_args)
-        jira_reader = _JiraReader(db, **known_args)
-        second_pass_parser = Auditor._build_second_pass_parser(repo_reader, first_pass_parser)
-        args = second_pass_parser.parse_args(extras)
-        auditor = Auditor(repo_reader, jira_reader, db, **vars(args))
+        repo_reader = _RepoReader(db, **first_pass_args_dict)
+        jira_reader = _JiraReader(db, **first_pass_args_dict)
+        second_pass_parser = Auditor._build_second_pass_parser(
+            repo_reader, first_pass_parser, git_repo_group)
+        second_pass_args = second_pass_parser.parse_args(extras, first_pass_args)
+        second_pass_args_dict = vars(second_pass_args)
+        auditor = Auditor(repo_reader, jira_reader, db, **second_pass_args_dict)
         with enlighten.get_manager() as MANAGER:
-            auditor.populate_db_from_git()
-            auditor.populate_db_from_jira()
+            if second_pass_args.populate_from_git:
+                auditor.populate_db_from_git()
+            if second_pass_args.populate_from_jira:
+                auditor.populate_db_from_jira()
+            if second_pass_args.report_new_for_release_line:
+                release_line = second_pass_args.report_new_for_release_line
+                auditor.report_new_for_release_line(release_line)
 
 
 if __name__ == '__main__':
