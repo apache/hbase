@@ -17,10 +17,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -50,6 +46,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.Assert.*;
 
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestRegionReplicasWithRestartScenarios {
@@ -127,16 +125,26 @@ public class TestRegionReplicasWithRestartScenarios {
 
   @Test
   public void testWhenRestart() throws Exception {
-    ServerName serverName = getRS().getServerName();
+    // Start Region before stopping other so SCP has three servers to play with when it goes
+    // about assigning instead of two, depending on sequencing of SCP and RS stop/start.
+    // If two only, then it'll be forced to assign replicas alongside primaries.
+    HTU.getHBaseCluster().startRegionServerAndWait(60000).getRegionServer();
+    HRegionServer stopRegionServer = getRS();
+    ServerName serverName = stopRegionServer.getServerName();
+    // Make a copy because this is actual instance from HRegionServer
+    Collection<HRegion> regionsOnStoppedServer =
+      new ArrayList<HRegion>(stopRegionServer.getOnlineRegionsLocalContext());
     HTU.getHBaseCluster().stopRegionServer(serverName);
     HTU.getHBaseCluster().waitForRegionServerToStop(serverName, 60000);
-    HTU.getHBaseCluster().startRegionServerAndWait(60000);
     HTU.waitTableAvailable(this.tableName);
-    assertReplicaDistributed();
+    assertReplicaDistributed(regionsOnStoppedServer);
   }
 
   private void assertReplicaDistributed() throws Exception {
-    Collection<HRegion> onlineRegions = getRS().getOnlineRegionsLocalContext();
+    assertReplicaDistributed(getRS().getOnlineRegionsLocalContext());
+  }
+
+  private void assertReplicaDistributed(Collection<HRegion> onlineRegions) throws Exception {
     LOG.info("ASSERT DISTRIBUTED {}", onlineRegions);
     boolean res = checkDuplicates(onlineRegions);
     assertFalse(res);
@@ -146,7 +154,8 @@ public class TestRegionReplicasWithRestartScenarios {
     Collection<HRegion> onlineRegions3 = getTertiaryRS().getOnlineRegionsLocalContext();
     checkDuplicates(onlineRegions3);
     assertFalse(res);
-    int totalRegions = onlineRegions.size() + onlineRegions2.size() + onlineRegions3.size();
+    int totalRegions = HTU.getMiniHBaseCluster().getLiveRegionServerThreads().stream().
+      mapToInt(l -> l.getRegionServer().getOnlineRegions().size()).sum();
     assertEquals(61, totalRegions);
   }
 
