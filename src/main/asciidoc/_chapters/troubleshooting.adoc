@@ -232,7 +232,9 @@ Search here first when you have an issue as its more than likely someone has alr
 
 Ask a question on the link:https://hbase.apache.org/mail-lists.html[Apache HBase mailing lists].
 The 'dev' mailing list is aimed at the community of developers actually building Apache HBase and for features currently under development, and 'user' is generally used for questions on released versions of Apache HBase.
-Before going to the mailing list, make sure your question has not already been answered by searching the mailing list archives first.
+Before going to the mailing list, make sure your question has not already been answered by searching the mailing list
+archives first. For those who prefer to communicate in Chinese, they can use the 'user-zh' mailing list instead of the
+'user' list.
 Use <<trouble.resources.searchhadoop>>.
 Take some time crafting your question.
 See link:http://www.mikeash.com/getting_answers.html[Getting Answers] for ideas on crafting good questions.
