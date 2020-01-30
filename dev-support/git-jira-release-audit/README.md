@@ -49,44 +49,73 @@ The tool provides basic help docs.
 
 ```shell script
 $ ./venv/bin/python ./git_jira_release_audit.py --help
-usage: git_jira_release_audit.py [-h] [--db-path DB_PATH]
+usage: git_jira_release_audit.py [-h] [--populate-from-git POPULATE_FROM_GIT]
+                                 [--populate-from-jira POPULATE_FROM_JIRA]
+                                 [--db-path DB_PATH]
+                                 [--initialize-db INITIALIZE_DB]
+                                 [--report-new-for-release-line REPORT_NEW_FOR_RELEASE_LINE]
                                  [--git-repo-path GIT_REPO_PATH]
                                  [--remote-name REMOTE_NAME]
                                  [--development-branch DEVELOPMENT_BRANCH]
                                  [--development-branch-fix-version DEVELOPMENT_BRANCH_FIX_VERSION]
                                  [--release-line-regexp RELEASE_LINE_REGEXP]
+                                 [--parse-release-tags PARSE_RELEASE_TAGS]
                                  [--fallback-actions-path FALLBACK_ACTIONS_PATH]
-                                 [--jira-url JIRA_URL] --branch-1-fix-version
-                                 BRANCH_1_FIX_VERSION --branch-2-fix-version
-                                 BRANCH_2_FIX_VERSION
+                                 [--jira-url JIRA_URL]
 
 optional arguments:
   -h, --help            show this help message and exit
+
+Building the audit database:
+  --populate-from-git POPULATE_FROM_GIT
+                        When true, populate the audit database from the Git
+                        repository.
+  --populate-from-jira POPULATE_FROM_JIRA
+                        When true, populate the audit database from Jira.
   --db-path DB_PATH     Path to the database file, or leave unspecified for a
                         transient db.
+  --initialize-db INITIALIZE_DB
+                        When true, initialize the database tables. This is
+                        destructive to the contents of an existing database.
+
+Generating reports:
+  --report-new-for-release-line REPORT_NEW_FOR_RELEASE_LINE
+                        Builds a report of the Jira issues that are new on the
+                        target release line, not present on any of the
+                        associated release branches. (i.e., on branch-2 but
+                        not branch-{2.0,2.1,...})
+
+Interactions with the Git repo:
   --git-repo-path GIT_REPO_PATH
                         Path to the git repo, or leave unspecified to infer
                         from the current file's path.
   --remote-name REMOTE_NAME
                         The name of the git remote to use when identifying
-                        branches.
+                        branches. Default: 'origin'
   --development-branch DEVELOPMENT_BRANCH
                         The name of the branch from which all release lines
-                        originate.
+                        originate. Default: 'master'
   --development-branch-fix-version DEVELOPMENT_BRANCH_FIX_VERSION
                         The Jira fixVersion used to indicate an issue is
-                        committed to the development branch.
+                        committed to the development branch. Default: '3.0.0'
   --release-line-regexp RELEASE_LINE_REGEXP
                         A regexp used to identify release lines.
+  --parse-release-tags PARSE_RELEASE_TAGS
+                        When true, look for release tags and annotate commits
+                        according to their release version. An Expensive
+                        calculation, disabled by default.
   --fallback-actions-path FALLBACK_ACTIONS_PATH
-                        Path to a file containing _DB.Actions applicable to specific git shas.
-  --jira-url JIRA_URL   A URL locating the target JIRA instance.
+                        Path to a file containing _DB.Actions applicable to
+                        specific git shas.
   --branch-1-fix-version BRANCH_1_FIX_VERSION
                         The Jira fixVersion used to indicate an issue is
                         committed to the specified release line branch
   --branch-2-fix-version BRANCH_2_FIX_VERSION
                         The Jira fixVersion used to indicate an issue is
                         committed to the specified release line branch
+
+Interactions with Jira:
+  --jira-url JIRA_URL   A URL locating the target JIRA instance.
 ```
 
 Example Run:
