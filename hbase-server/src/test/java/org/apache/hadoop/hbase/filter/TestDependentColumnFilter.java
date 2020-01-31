@@ -182,7 +182,7 @@ public class TestDependentColumnFilter {
 
     Scan scan = new Scan();
     scan.setFilter(filter);
-    scan.setMaxVersions(Integer.MAX_VALUE);
+    scan.readVersions(Integer.MAX_VALUE);
 
     verifyScan(scan, 2, 8);
 
@@ -190,7 +190,7 @@ public class TestDependentColumnFilter {
     filter = new DependentColumnFilter(FAMILIES[0], QUALIFIER, true);
     scan = new Scan();
     scan.setFilter(filter);
-    scan.setMaxVersions(Integer.MAX_VALUE);
+    scan.readVersions(Integer.MAX_VALUE);
 
     verifyScan(scan, 2, 3);
 
@@ -199,7 +199,7 @@ public class TestDependentColumnFilter {
     CompareOperator.EQUAL, new BinaryComparator(MATCH_VAL));
     scan = new Scan();
     scan.setFilter(filter);
-    scan.setMaxVersions(Integer.MAX_VALUE);
+    scan.readVersions(Integer.MAX_VALUE);
 
     /*
      * expecting to get the following 3 cells
@@ -216,7 +216,7 @@ public class TestDependentColumnFilter {
     CompareOperator.EQUAL, new BinaryComparator(MATCH_VAL));
     scan = new Scan();
     scan.setFilter(filter);
-    scan.setMaxVersions(Integer.MAX_VALUE);
+    scan.readVersions(Integer.MAX_VALUE);
 
     /*
      * expecting to get the following 1 cell

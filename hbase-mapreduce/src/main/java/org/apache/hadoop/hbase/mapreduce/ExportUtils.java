@@ -112,7 +112,7 @@ public final class ExportUtils {
     // Optional arguments.
     // Set Scan Versions
     int versions = args.length > 2? Integer.parseInt(args[2]): 1;
-    s.setMaxVersions(versions);
+    s.readVersions(versions);
     // Set Scan Range
     long startTime = args.length > 3? Long.parseLong(args[3]): 0L;
     long endTime = args.length > 4? Long.parseLong(args[4]): Long.MAX_VALUE;
