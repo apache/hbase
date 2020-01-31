@@ -370,7 +370,7 @@ public class TestSerialization {
       }
 
       // Test filters are serialized properly.
-      scan = new Scan(startRow);
+      scan = new Scan().withStartRow(startRow);
       final String name = "testScan";
       byte [] prefix = Bytes.toBytes(name);
       scan.setFilter(new PrefixFilter(prefix));

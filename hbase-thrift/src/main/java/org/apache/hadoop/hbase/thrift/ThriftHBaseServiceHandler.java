@@ -931,7 +931,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
     Table table = null;
     try {
       table = getTable(tableName);
-      Scan scan = new Scan(getBytes(startRow));
+      Scan scan = new Scan().withStartRow(getBytes(startRow));
       addAttributes(scan, attributes);
       if(columns != null && !columns.isEmpty()) {
         for(ByteBuffer column : columns) {
@@ -992,7 +992,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
     Table table = null;
     try {
       table = getTable(tableName);
-      Scan scan = new Scan(getBytes(startAndPrefix));
+      Scan scan = new Scan().withStartRow(getBytes(startAndPrefix));
       addAttributes(scan, attributes);
       Filter f = new WhileMatchFilter(
           new PrefixFilter(getBytes(startAndPrefix)));
@@ -1024,7 +1024,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
     Table table = null;
     try {
       table = getTable(tableName);
-      Scan scan = new Scan(getBytes(startRow));
+      Scan scan = new Scan().withStartRow(getBytes(startRow));
       addAttributes(scan, attributes);
       scan.setTimeRange(0, timestamp);
       if (columns != null && !columns.isEmpty()) {
@@ -1154,7 +1154,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
 
   private Result getReverseScanResult(byte[] tableName, byte[] row, byte[] family)
       throws IOException {
-    Scan scan = new Scan(row);
+    Scan scan = new Scan().withStartRow(row);
     scan.setReversed(true);
     scan.addFamily(family);
     scan.setStartRow(row);

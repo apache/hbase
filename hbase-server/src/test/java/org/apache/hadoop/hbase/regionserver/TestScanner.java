@@ -378,7 +378,7 @@ public class TestScanner {
     byte [][][] scanColumns = {COLS, EXPLICIT_COLS};
     for(int i = 0; i < scanColumns.length; i++) {
       try {
-        scan = new Scan(FIRST_ROW);
+        scan = new Scan().withStartRow(FIRST_ROW);
         for (int ii = 0; ii < EXPLICIT_COLS.length; ii++) {
           scan.addColumn(COLS[0],  EXPLICIT_COLS[ii]);
         }

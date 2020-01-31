@@ -714,7 +714,7 @@ public class TestFilter {
 
     // Now use start row with inclusive stop filter
     expectedRows = this.numRows / 2;
-    s = new Scan(Bytes.toBytes("testRowOne-0"));
+    s = new Scan().withStartRow(Bytes.toBytes("testRowOne-0"));
     s.setFilter(new InclusiveStopFilter(Bytes.toBytes("testRowOne-3")));
     verifyScan(s, expectedRows, expectedKeys);
 
@@ -729,7 +729,7 @@ public class TestFilter {
 
     // Now use start row with inclusive stop filter
     expectedRows = this.numRows / 2;
-    s = new Scan(Bytes.toBytes("testRowTwo-0"));
+    s = new Scan().withStartRow(Bytes.toBytes("testRowTwo-0"));
     s.setFilter(new InclusiveStopFilter(Bytes.toBytes("testRowTwo-3")));
     verifyScan(s, expectedRows, expectedKeys);
 
@@ -749,7 +749,7 @@ public class TestFilter {
 
     // Now use start row with inclusive stop filter
     expectedRows = this.numRows / 2;
-    s = new Scan(Bytes.toBytes("testRowOne-3"));
+    s = new Scan().withStartRow(Bytes.toBytes("testRowOne-3"));
     s.setReversed(true);
     s.setFilter(new InclusiveStopFilter(Bytes.toBytes("testRowOne-0")));
     verifyScan(s, expectedRows, expectedKeys);
@@ -765,7 +765,7 @@ public class TestFilter {
 
     // Now use start row with inclusive stop filter
     expectedRows = this.numRows / 2;
-    s = new Scan(Bytes.toBytes("testRowTwo-3"));
+    s = new Scan().withStartRow(Bytes.toBytes("testRowTwo-3"));
     s.setReversed(true);
     s.setFilter(new InclusiveStopFilter(Bytes.toBytes("testRowTwo-0")));
     verifyScan(s, expectedRows, expectedKeys);

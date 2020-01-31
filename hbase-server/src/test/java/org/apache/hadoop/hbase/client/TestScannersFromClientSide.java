@@ -649,7 +649,7 @@ public class TestScannersFromClientSide {
       Delete delete = new Delete(ROW);
       delete.addFamilyVersion(FAMILY, 0L);
       table.delete(delete);
-      Scan scan = new Scan(ROW).setRaw(true);
+      Scan scan = new Scan().withStartRow(ROW).setRaw(true);
       ResultScanner scanner = table.getScanner(scan);
       int count = 0;
       while (scanner.next() != null) {

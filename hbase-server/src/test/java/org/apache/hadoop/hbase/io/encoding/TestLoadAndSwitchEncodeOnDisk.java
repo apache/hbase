@@ -116,7 +116,7 @@ public class TestLoadAndSwitchEncodeOnDisk extends TestMiniClusterLoadSequential
     }
     for (HRegionLocation e: regions) {
       byte [] startkey = e.getRegion().getStartKey();
-      Scan s = new Scan(startkey);
+      Scan s = new Scan().withStartRow(startkey);
       ResultScanner scanner = t.getScanner(s);
       Result r = scanner.next();
       org.junit.Assert.assertTrue(r != null && r.size() > 0);

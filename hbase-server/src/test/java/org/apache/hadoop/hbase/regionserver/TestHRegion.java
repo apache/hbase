@@ -2544,7 +2544,7 @@ public class TestHRegion {
     assertArrayEquals(value2, r.getValue(fam1, qual1));
 
     // next:
-    Scan scan = new Scan(row);
+    Scan scan = new Scan().withStartRow(row);
     scan.addColumn(fam1, qual1);
     InternalScanner s = region.getScanner(scan);
 
@@ -2940,7 +2940,7 @@ public class TestHRegion {
     expected.add(kv13);
     expected.add(kv12);
 
-    Scan scan = new Scan(row1);
+    Scan scan = new Scan().withStartRow(row1);
     scan.addColumn(fam1, qf1);
     scan.setMaxVersions(MAX_VERSIONS);
     List<Cell> actual = new ArrayList<>();
@@ -2996,7 +2996,7 @@ public class TestHRegion {
     expected.add(kv23);
     expected.add(kv22);
 
-    Scan scan = new Scan(row1);
+    Scan scan = new Scan().withStartRow(row1);
     scan.addColumn(fam1, qf1);
     scan.addColumn(fam1, qf2);
     scan.setMaxVersions(MAX_VERSIONS);
@@ -3072,7 +3072,7 @@ public class TestHRegion {
     expected.add(kv23);
     expected.add(kv22);
 
-    Scan scan = new Scan(row1);
+    Scan scan = new Scan().withStartRow(row1);
     scan.addColumn(fam1, qf1);
     scan.addColumn(fam1, qf2);
     int versions = 3;
@@ -3129,7 +3129,7 @@ public class TestHRegion {
     expected.add(kv23);
     expected.add(kv22);
 
-    Scan scan = new Scan(row1);
+    Scan scan = new Scan().withStartRow(row1);
     scan.addFamily(fam1);
     scan.setMaxVersions(MAX_VERSIONS);
     List<Cell> actual = new ArrayList<>();
@@ -3184,7 +3184,7 @@ public class TestHRegion {
     expected.add(kv23);
     expected.add(kv22);
 
-    Scan scan = new Scan(row1);
+    Scan scan = new Scan().withStartRow(row1);
     scan.addFamily(fam1);
     scan.setMaxVersions(MAX_VERSIONS);
     List<Cell> actual = new ArrayList<>();
@@ -3300,7 +3300,7 @@ public class TestHRegion {
     expected.add(kv23);
     expected.add(kv22);
 
-    Scan scan = new Scan(row1);
+    Scan scan = new Scan().withStartRow(row1);
     int versions = 3;
     scan.setMaxVersions(versions);
     List<Cell> actual = new ArrayList<>();
@@ -4999,7 +4999,7 @@ public class TestHRegion {
     put.add(kv3);
     region.put(put);
 
-    Scan scan = new Scan(rowC);
+    Scan scan = new Scan().withStartRow(rowC);
     scan.setMaxVersions(5);
     scan.setReversed(true);
     InternalScanner scanner = region.getScanner(scan);
@@ -5053,7 +5053,7 @@ public class TestHRegion {
     put.add(kv3);
     region.put(put);
 
-    Scan scan = new Scan(rowD);
+    Scan scan = new Scan().withStartRow(rowD);
     List<Cell> currRow = new ArrayList<>();
     scan.setReversed(true);
     scan.setMaxVersions(5);
@@ -5385,7 +5385,7 @@ public class TestHRegion {
     put.add(kv5_2_2);
     region.put(put);
     // scan range = ["row4", min), skip the max "row5"
-    Scan scan = new Scan(row4);
+    Scan scan = new Scan().withStartRow(row4);
     scan.setMaxVersions(5);
     scan.setBatch(3);
     scan.setReversed(true);
@@ -5488,7 +5488,7 @@ public class TestHRegion {
     put.add(kv4);
     region.put(put);
     // scan range = ["row4", min)
-    Scan scan = new Scan(row4);
+    Scan scan = new Scan().withStartRow(row4);
     scan.setReversed(true);
     scan.setBatch(10);
     InternalScanner scanner = region.getScanner(scan);
@@ -5537,7 +5537,7 @@ public class TestHRegion {
     put2.addColumn(cf1, col, Bytes.toBytes("val"));
     region.put(put2);
 
-    Scan scan = new Scan(Bytes.toBytes("19998"));
+    Scan scan = new Scan().withStartRow(Bytes.toBytes("19998"));
     scan.setReversed(true);
     InternalScanner scanner = region.getScanner(scan);
 
@@ -5585,7 +5585,7 @@ public class TestHRegion {
     put2.addColumn(cf1, col, Bytes.toBytes("val"));
     region.put(put2);
     // create a reverse scan
-    Scan scan = new Scan(Bytes.toBytes("19996"));
+    Scan scan = new Scan().withStartRow(Bytes.toBytes("19996"));
     scan.setReversed(true);
     RegionScannerImpl scanner = region.getScanner(scan);
 
@@ -5639,7 +5639,7 @@ public class TestHRegion {
     region.put(put2);
 
     // Create a reverse scan
-    Scan scan = new Scan(Bytes.toBytes("199996"));
+    Scan scan = new Scan().withStartRow(Bytes.toBytes("199996"));
     scan.setReversed(true);
     RegionScannerImpl scanner = region.getScanner(scan);
 
