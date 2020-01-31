@@ -503,7 +503,9 @@ public class TestScanner {
   @Test
   @SuppressWarnings("deprecation")
   public void testScanAndConcurrentMajorCompact() throws Exception {
-    HTableDescriptor htd = TEST_UTIL.createTableDescriptor(name.getMethodName());
+    HTableDescriptor htd = TEST_UTIL.createTableDescriptor(TableName.valueOf(name.getMethodName()),
+      HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+      HColumnDescriptor.DEFAULT_KEEP_DELETED);
     this.region = TEST_UTIL.createLocalHRegion(htd, null, null);
     Table hri = new RegionAsTable(region);
 

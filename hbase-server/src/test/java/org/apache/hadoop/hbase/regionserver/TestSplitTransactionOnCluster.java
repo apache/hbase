@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
@@ -565,7 +566,9 @@ public class TestSplitTransactionOnCluster {
   @Test
   public void testSplitWithRegionReplicas() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    HTableDescriptor htd = TESTING_UTIL.createTableDescriptor(name.getMethodName());
+    HTableDescriptor htd = TESTING_UTIL.createTableDescriptor(
+      TableName.valueOf(name.getMethodName()), HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3,
+      HConstants.FOREVER, HColumnDescriptor.DEFAULT_KEEP_DELETED);
     htd.setRegionReplication(2);
     htd.addCoprocessor(SlowMeCopro.class.getName());
     // Create table then get the single region for our new table.
