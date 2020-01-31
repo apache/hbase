@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Appender;
@@ -66,7 +66,7 @@ import org.mockito.runners.MockitoJUnitRunner;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 @RunWith(MockitoJUnitRunner.class)
-@Category({MediumTests.class})
+@Category({LargeTests.class})
 public class TestCanaryTool {
 
   @ClassRule

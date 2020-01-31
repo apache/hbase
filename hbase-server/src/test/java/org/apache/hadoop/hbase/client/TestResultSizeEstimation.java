@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -27,11 +26,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -41,7 +37,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category(LargeTests.class)
+@Category(MediumTests.class)
 public class TestResultSizeEstimation {
 
   @ClassRule
@@ -115,11 +111,11 @@ public class TestResultSizeEstimation {
     Table table = TEST_UTIL.createTable(tableName, FAMILIES);
     Put p = new Put(ROW1);
     p.add(new KeyValue(ROW1, FAMILY, QUALIFIER, Long.MAX_VALUE, VALUE,
-      new Tag[] { new ArrayBackedTag((byte)1, new byte[TAG_DATA_SIZE]) } ));
+      new Tag[] { new ArrayBackedTag((byte)1, new byte[TAG_DATA_SIZE]) }));
     table.put(p);
     p = new Put(ROW2);
     p.add(new KeyValue(ROW2, FAMILY, QUALIFIER, Long.MAX_VALUE, VALUE,
-      new Tag[] { new ArrayBackedTag((byte)1, new byte[TAG_DATA_SIZE]) } ));
+      new Tag[] { new ArrayBackedTag((byte)1, new byte[TAG_DATA_SIZE]) }));
     table.put(p);
 
     Scan s = new Scan();

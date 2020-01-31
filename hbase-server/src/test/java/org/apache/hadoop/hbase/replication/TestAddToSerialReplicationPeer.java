@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils.StreamLacksCapabilityException;
@@ -49,7 +49,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 /**
  * Testcase for HBASE-20147.
  */
-@Category({ ReplicationTests.class, MediumTests.class })
+@Category({ ReplicationTests.class, LargeTests.class })
 public class TestAddToSerialReplicationPeer extends SerialReplicationTestBase {
 
   @ClassRule

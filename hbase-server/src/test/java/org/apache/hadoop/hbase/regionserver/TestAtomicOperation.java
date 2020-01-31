@@ -66,7 +66,7 @@ import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -84,7 +84,7 @@ import org.slf4j.LoggerFactory;
  * Testing of HRegion.incrementColumnValue, HRegion.increment,
  * and HRegion.append
  */
-@Category({VerySlowRegionServerTests.class, MediumTests.class}) // Starts 100 threads
+@Category({VerySlowRegionServerTests.class, LargeTests.class}) // Starts 100 threads
 public class TestAtomicOperation {
 
   @ClassRule

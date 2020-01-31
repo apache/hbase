@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.util.Random;
 import org.apache.hadoop.hbase.Cell;
@@ -97,7 +96,9 @@ public class TestParallelPut {
   @After
   public void tearDown() throws Exception {
     EnvironmentEdgeManagerTestHelper.reset();
-    if (region != null) region.close(true);
+    if (region != null) {
+      region.close(true);
+    }
   }
 
   public String getName() {
@@ -177,9 +178,8 @@ public class TestParallelPut {
     assertTrue(Bytes.compareTo(r, value) == 0);
   }
 
-  private HRegion initHRegion(byte [] tableName, String callingMethod,
-    byte[] ... families)
-  throws IOException {
+  private HRegion initHRegion(byte [] tableName, String callingMethod, byte[] ... families)
+      throws IOException {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
     for(byte [] family : families) {
       htd.addFamily(new HColumnDescriptor(family));

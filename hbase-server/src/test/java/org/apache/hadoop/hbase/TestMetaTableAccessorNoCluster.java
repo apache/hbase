@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,8 +31,8 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.After;
@@ -46,10 +45,8 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
@@ -58,7 +55,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRespon
  * Test MetaTableAccessor but without spinning up a cluster.
  * We mock regionserver back and forth (we do spin up a zk cluster).
  */
-@Category({MiscTests.class, MediumTests.class})
+@Category({MiscTests.class, SmallTests.class})
 public class TestMetaTableAccessorNoCluster {
 
   @ClassRule
@@ -112,8 +109,8 @@ public class TestMetaTableAccessorNoCluster {
     assertTrue(hri == null);
     // OK, give it what it expects
     kvs.clear();
-    kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY, f,
-      HConstants.REGIONINFO_QUALIFIER, RegionInfo.toByteArray(RegionInfoBuilder.FIRST_META_REGIONINFO)));
+    kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY, f, HConstants.REGIONINFO_QUALIFIER,
+      RegionInfo.toByteArray(RegionInfoBuilder.FIRST_META_REGIONINFO)));
     hri = MetaTableAccessor.getRegionInfo(Result.create(kvs));
     assertNotNull(hri);
     assertTrue(RegionInfo.COMPARATOR.compare(hri, RegionInfoBuilder.FIRST_META_REGIONINFO) == 0);
@@ -123,8 +120,6 @@ public class TestMetaTableAccessorNoCluster {
    * Test that MetaTableAccessor will ride over server throwing
    * "Server not running" IOEs.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-3446">HBASE-3446</a>
-   * @throws IOException
-   * @throws InterruptedException
    */
   @Test
   public void testRideOverServerNotRunning()
@@ -190,8 +185,8 @@ public class TestMetaTableAccessorNoCluster {
       // Return the RegionLocations object when locateRegion
       // The ugly format below comes of 'Important gotcha on spying real objects!' from
       // http://mockito.googlecode.com/svn/branches/1.6/javadoc/org/mockito/Mockito.html
-      Mockito.doReturn(rl).when
-      (connection).locateRegion((TableName)Mockito.any(), (byte[])Mockito.any(),
+      Mockito.doReturn(rl).when(connection).
+        locateRegion((TableName)Mockito.any(), (byte[])Mockito.any(),
               Mockito.anyBoolean(), Mockito.anyBoolean(), Mockito.anyInt());
 
       // Now shove our HRI implementation into the spied-upon connection.
@@ -202,14 +197,17 @@ public class TestMetaTableAccessorNoCluster {
       NavigableMap<RegionInfo, Result> hris =
         MetaTableAccessor.getServerUserRegions(connection, sn);
       assertEquals(1, hris.size());
-      assertTrue(RegionInfo.COMPARATOR.compare(hris.firstEntry().getKey(), RegionInfoBuilder.FIRST_META_REGIONINFO) == 0);
+      assertTrue(RegionInfo.COMPARATOR.compare(hris.firstEntry().getKey(),
+        RegionInfoBuilder.FIRST_META_REGIONINFO) == 0);
       assertTrue(Bytes.equals(rowToVerify, hris.firstEntry().getValue().getRow()));
       // Finally verify that scan was called four times -- three times
       // with exception and then on 4th attempt we succeed
       Mockito.verify(implementation, Mockito.times(4)).
         scan((RpcController)Mockito.any(), (ScanRequest)Mockito.any());
     } finally {
-      if (connection != null && !connection.isClosed()) connection.close();
+      if (connection != null && !connection.isClosed()) {
+        connection.close();
+      }
       zkw.close();
     }
   }

@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.testclassification.IOTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.io.BytesWritable;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
@@ -57,7 +57,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
  * Remove after tfile is committed and use the tfile version of this class
  * instead.</p>
  */
-@Category({IOTests.class, MediumTests.class})
+@Category({IOTests.class, SmallTests.class})
 public class TestHFileSeek extends TestCase {
 
   @ClassRule

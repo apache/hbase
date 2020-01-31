@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -29,7 +29,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Enables compression and runs the TestWALReplay tests.
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Category({ RegionServerTests.class, LargeTests.class })
 public class TestWALReplayCompressed extends TestWALReplay {
 
   @ClassRule

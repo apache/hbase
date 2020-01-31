@@ -23,7 +23,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,8 +39,8 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
@@ -54,7 +53,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestKeepDeletes {
 
   @ClassRule
@@ -279,8 +278,9 @@ public class TestKeepDeletes {
     s.setTimeRange(0L, ts+1);
     InternalScanner scanner = region.getScanner(s);
     List<Cell> kvs = new ArrayList<>();
-    while (scanner.next(kvs))
-      ;
+    while (scanner.next(kvs)) {
+      continue;
+    }
     assertTrue(kvs.isEmpty());
 
     // flushing and minor compaction keep delete markers
@@ -820,7 +820,6 @@ public class TestKeepDeletes {
 
   /**
    * Test keeping deleted rows together with min versions set
-   * @throws Exception
    */
   @Test
   public void testWithMinVersions() throws Exception {
@@ -899,7 +898,6 @@ public class TestKeepDeletes {
 
   /**
    * Test keeping deleted rows together with min versions set
-   * @throws Exception
    */
   @Test
   public void testWithTTL() throws Exception {
@@ -965,7 +963,9 @@ public class TestKeepDeletes {
     do {
       hasMore = scan.next(kvs);
       for (Cell kv : kvs) {
-        if(CellUtil.isDelete(kv)) res++;
+        if(CellUtil.isDelete(kv)) {
+          res++;
+        }
       }
       kvs.clear();
     } while (hasMore);

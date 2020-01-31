@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.junit.After;
@@ -54,7 +54,7 @@ import org.slf4j.LoggerFactory;
  * A write/read/verify load test on a mini HBase cluster. Tests reading
  * and then writing.
  */
-@Category({MiscTests.class, LargeTests.class})
+@Category({MiscTests.class, MediumTests.class})
 @RunWith(Parameterized.class)
 public class TestMiniClusterLoadSequential {
 

@@ -48,7 +48,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileReaderImpl.HFileScannerImpl;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.io.hfile.bucket.TestBucketCache;
 import org.apache.hadoop.hbase.testclassification.IOTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Assert;
@@ -67,7 +67,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @RunWith(Parameterized.class)
-@Category({ IOTests.class, SmallTests.class })
+@Category({ IOTests.class, LargeTests.class })
 public class TestHFileScannerImplReferenceCount {
 
   @ClassRule
