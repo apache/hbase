@@ -3356,7 +3356,7 @@ public class TestHRegion {
     region.put(put);
 
     Scan scan = new Scan(row3, row4);
-    scan.setMaxVersions();
+    scan.readAllVersions();
     scan.addColumn(family, col1);
     InternalScanner s = region.getScanner(scan);
 

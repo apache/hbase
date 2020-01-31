@@ -315,7 +315,7 @@ public class TestFromClientSide {
 
       Scan s = new Scan(T1);
       s.setTimeRange(0, ts + 3);
-      s.setMaxVersions();
+      s.readAllVersions();
       ResultScanner scanner = h.getScanner(s);
       Cell[] kvs = scanner.next().rawCells();
       assertArrayEquals(T2, CellUtil.cloneValue(kvs[0]));
@@ -324,7 +324,7 @@ public class TestFromClientSide {
 
       s = new Scan(T1);
       s.setRaw(true);
-      s.setMaxVersions();
+      s.readAllVersions();
       scanner = h.getScanner(s);
       kvs = scanner.next().rawCells();
       assertTrue(PrivateCellUtil.isDeleteFamily(kvs[0]));
@@ -1525,7 +1525,7 @@ public class TestFromClientSide {
 
       scan = new Scan(ROW);
       scan.addColumn(FAMILY, QUALIFIER);
-      scan.setMaxVersions();
+      scan.readAllVersions();
       result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILY, QUALIFIER,
           new long[]{STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7],
@@ -1544,7 +1544,7 @@ public class TestFromClientSide {
           0, 7);
 
       scan = new Scan(ROW);
-      scan.setMaxVersions();
+      scan.readAllVersions();
       result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILY, QUALIFIER,
           new long[]{STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7],
@@ -5698,7 +5698,7 @@ public class TestFromClientSide {
       int versions = 4;
       Scan s = new Scan(row);
       // get all the possible versions
-      s.setMaxVersions();
+      s.readAllVersions();
       s.setRaw(true);
 
       try (ResultScanner scanner = table.getScanner(s)) {

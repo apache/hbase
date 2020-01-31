@@ -341,7 +341,7 @@ public class Scan extends Query {
    * returned, up the number of versions beyond the default.
    * @param minStamp minimum timestamp value, inclusive
    * @param maxStamp maximum timestamp value, exclusive
-   * @see #setMaxVersions()
+   * @see #readAllVersions()
    * @see #setMaxVersions(int)
    * @return this
    */
@@ -356,7 +356,7 @@ public class Scan extends Query {
    * and you want all versions returned, up the number of versions beyond the
    * defaut.
    * @param timestamp version timestamp
-   * @see #setMaxVersions()
+   * @see #readAllVersions()
    * @see #setMaxVersions(int)
    * @return this
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
@@ -374,7 +374,7 @@ public class Scan extends Query {
    * and you want all versions returned, up the number of versions beyond the
    * defaut.
    * @param timestamp version timestamp
-   * @see #setMaxVersions()
+   * @see #readAllVersions()
    * @see #setMaxVersions(int)
    * @return this
    */
@@ -540,19 +540,6 @@ public class Scan extends Query {
       this.setStopRow(ClientUtil.calculateTheClosestNextRowKeyForPrefix(rowPrefix));
     }
     return this;
-  }
-
-  /**
-   * Get all available versions.
-   * @return this
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. It is easy to misunderstand with column
-   *   family's max versions, so use {@link #readAllVersions()} instead.
-   * @see #readAllVersions()
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17125">HBASE-17125</a>
-   */
-  @Deprecated
-  public Scan setMaxVersions() {
-    return readAllVersions();
   }
 
   /**
