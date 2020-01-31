@@ -785,6 +785,9 @@ public class TestStripeCompactionPolicy {
     when(
       store.createWriterInTmp(anyLong(), any(), anyBoolean(),
         anyBoolean(), anyBoolean(), anyBoolean())).thenAnswer(writers);
+    when(
+      store.createWriterInTmp(anyLong(), any(), anyBoolean(),
+        anyBoolean(), anyBoolean(), anyBoolean(), anyLong())).thenAnswer(writers);
 
     Configuration conf = HBaseConfiguration.create();
     conf.setBoolean("hbase.regionserver.compaction.private.readers", usePrivateReaders);

@@ -208,6 +208,8 @@ public class TestStripeCompactor {
     when(store.getRegionInfo()).thenReturn(new HRegionInfo(TABLE_NAME));
     when(store.createWriterInTmp(anyLong(), any(), anyBoolean(),
       anyBoolean(), anyBoolean(), anyBoolean())).thenAnswer(writers);
+    when(store.createWriterInTmp(anyLong(), any(), anyBoolean(),
+      anyBoolean(), anyBoolean(), anyBoolean(), anyLong())).thenAnswer(writers);
     when(store.getComparator()).thenReturn(CellComparatorImpl.COMPARATOR);
 
     return new StripeCompactor(conf, store) {
