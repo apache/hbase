@@ -125,7 +125,7 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
             try (TraceScope scope = TraceUtil.createTrace("Scan")){
               Table ht = util.getConnection().getTable(tableName);
               Scan s = new Scan();
-              s.setStartRow(Bytes.toBytes(rowKeyQueue.take()));
+              s.withStartRow(Bytes.toBytes(rowKeyQueue.take()));
               s.setBatch(7);
               rs = ht.getScanner(s);
               // Something to keep the jvm from removing the loop.

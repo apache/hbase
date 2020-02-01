@@ -446,7 +446,7 @@ public class TestTags {
       increment.setAttribute("visibility", Bytes.toBytes("tag2"));
       table.increment(increment);
       TestCoprocessorForTags.checkTagPresence = true;
-      scanner = table.getScanner(new Scan().setStartRow(row2));
+      scanner = table.getScanner(new Scan().withStartRow(row2));
       result = scanner.next();
       kv = KeyValueUtil.ensureKeyValue(result.getColumnLatestCell(f, q));
       tags = TestCoprocessorForTags.tags;
@@ -466,7 +466,7 @@ public class TestTags {
       append.addColumn(f, q, Bytes.toBytes("b"));
       table.append(append);
       TestCoprocessorForTags.checkTagPresence = true;
-      scanner = table.getScanner(new Scan().setStartRow(row3));
+      scanner = table.getScanner(new Scan().withStartRow(row3));
       result = scanner.next();
       kv = KeyValueUtil.ensureKeyValue(result.getColumnLatestCell(f, q));
       tags = TestCoprocessorForTags.tags;
@@ -480,7 +480,7 @@ public class TestTags {
       append.setAttribute("visibility", Bytes.toBytes("tag2"));
       table.append(append);
       TestCoprocessorForTags.checkTagPresence = true;
-      scanner = table.getScanner(new Scan().setStartRow(row3));
+      scanner = table.getScanner(new Scan().withStartRow(row3));
       result = scanner.next();
       kv = KeyValueUtil.ensureKeyValue(result.getColumnLatestCell(f, q));
       tags = TestCoprocessorForTags.tags;
@@ -504,7 +504,7 @@ public class TestTags {
       append.setAttribute("visibility", Bytes.toBytes("tag2"));
       table.append(append);
       TestCoprocessorForTags.checkTagPresence = true;
-      scanner = table.getScanner(new Scan().setStartRow(row4));
+      scanner = table.getScanner(new Scan().withStartRow(row4));
       result = scanner.next();
       kv = KeyValueUtil.ensureKeyValue(result.getColumnLatestCell(f, q));
       tags = TestCoprocessorForTags.tags;

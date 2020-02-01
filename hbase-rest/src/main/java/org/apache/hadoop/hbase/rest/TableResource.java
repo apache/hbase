@@ -140,7 +140,7 @@ public class TableResource extends ResourceBase {
         byte[] prefixBytes = Bytes.toBytes(prefix);
         prefixFilter = new PrefixFilter(Bytes.toBytes(prefix));
         if (startRow.isEmpty()) {
-          tableScan.setStartRow(prefixBytes);
+          tableScan.withStartRow(prefixBytes);
         }
       }
       if (LOG.isTraceEnabled()) {
@@ -154,7 +154,7 @@ public class TableResource extends ResourceBase {
       tableScan.setMaxVersions(maxVersions);
       tableScan.setTimeRange(startTime, endTime);
       if (!startRow.isEmpty()) {
-        tableScan.setStartRow(Bytes.toBytes(startRow));
+        tableScan.withStartRow(Bytes.toBytes(startRow));
       }
       tableScan.setStopRow(Bytes.toBytes(endRow));
       for (String col : column) {

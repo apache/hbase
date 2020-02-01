@@ -879,7 +879,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
       Scan scan = new Scan();
       addAttributes(scan, attributes);
       if (tScan.isSetStartRow()) {
-        scan.setStartRow(tScan.getStartRow());
+        scan.withStartRow(tScan.getStartRow());
       }
       if (tScan.isSetStopRow()) {
         scan.setStopRow(tScan.getStopRow());
@@ -1157,7 +1157,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
     Scan scan = new Scan(row);
     scan.setReversed(true);
     scan.addFamily(family);
-    scan.setStartRow(row);
+    scan.withStartRow(row);
     try (Table table = getTable(tableName);
          ResultScanner scanner = table.getScanner(scan)) {
       return scanner.next();
