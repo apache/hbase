@@ -837,7 +837,7 @@ public class TestFromClientSide {
       result = getSingleScanResult(ht, scan);
       assertNullResult(result);
 
-      scan = new Scan(ROWS[0], ROWS[1]);
+      scan = new Scan().withStartRow(ROWS[0]).withStopRow(ROWS[1]);
       result = getSingleScanResult(ht, scan);
       assertNullResult(result);
 
@@ -879,7 +879,7 @@ public class TestFromClientSide {
       result = getSingleScanResult(ht, scan);
       assertNullResult(result);
 
-      scan = new Scan(ROWS[0], ROWS[2]);
+      scan = new Scan().withStartRow(ROWS[0]).withStopRow(ROWS[2]);
       result = getSingleScanResult(ht, scan);
       assertNullResult(result);
 
@@ -905,11 +905,11 @@ public class TestFromClientSide {
       result = getSingleScanResult(ht, scan);
       assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
 
-      scan = new Scan(ROWS[0], ROWS[3]);
+      scan = new Scan().withStartRow(ROWS[0]).withStopRow(ROWS[3]);
       result = getSingleScanResult(ht, scan);
       assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
 
-      scan = new Scan(ROWS[2], ROWS[3]);
+      scan = new Scan().withStartRow(ROWS[2]).withStopRow(ROWS[3]);
       result = getSingleScanResult(ht, scan);
       assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
     }
@@ -3178,12 +3178,12 @@ public class TestFromClientSide {
     assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
         QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
 
-    scan = new Scan(ROWS[ROWIDX], ROWS[ROWIDX+1]);
+    scan = new Scan().withStartRow(ROWS[ROWIDX]).withStopRow(ROWS[ROWIDX+1]);
     result = getSingleScanResult(ht, scan);
     assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
         QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
 
-    scan = new Scan(HConstants.EMPTY_START_ROW, ROWS[ROWIDX+1]);
+    scan = new Scan().withStartRow(HConstants.EMPTY_START_ROW).withStopRow(ROWS[ROWIDX+1]);
     result = getSingleScanResult(ht, scan);
     assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
         QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
@@ -3254,11 +3254,11 @@ public class TestFromClientSide {
     Result result = getSingleScanResult(ht, scan);
     assertNullResult(result);
 
-    scan = new Scan(ROWS[ROWIDX+1],ROWS[ROWIDX+2]);
+    scan = new Scan().withStartRow(ROWS[ROWIDX + 1]).withStopRow(ROWS[ROWIDX + 2]);
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
 
-    scan = new Scan(HConstants.EMPTY_START_ROW, ROWS[ROWIDX]);
+    scan = new Scan().withStartRow(HConstants.EMPTY_START_ROW).withStopRow(ROWS[ROWIDX]);
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
 
@@ -5809,7 +5809,8 @@ public class TestFromClientSide {
       }
 
       // small scan
-      Scan scan = new Scan(HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
+      Scan scan = new Scan().withStartRow(HConstants.EMPTY_START_ROW)
+        .withStopRow(HConstants.EMPTY_END_ROW);
       scan.setSmall(true);
       scan.setCaching(2);
       try (ResultScanner scanner = table.getScanner(scan)) {
@@ -5857,8 +5858,8 @@ public class TestFromClientSide {
       put = new Put(Bytes.toBytes("0-b22222-0000000000000000009"));
       put.addColumn(FAMILY, QUALIFIER, VALUE);
       ht.put(put);
-      Scan scan = new Scan(Bytes.toBytes("0-b11111-9223372036854775807"),
-              Bytes.toBytes("0-b11111-0000000000000000000"));
+      Scan scan = new Scan().withStartRow(Bytes.toBytes("0-b11111-9223372036854775807"))
+        .withStopRow(Bytes.toBytes("0-b11111-0000000000000000000"));
       scan.setReversed(true);
       try (ResultScanner scanner = ht.getScanner(scan)) {
         Result result = scanner.next();
@@ -5969,7 +5970,7 @@ public class TestFromClientSide {
       result = getSingleScanResult(ht, scan);
       assertNullResult(result);
 
-      scan = new Scan(ROWS[0], ROWS[1]);
+      scan = new Scan().withStartRow(ROWS[0]).withStopRow(ROWS[1]);
       scan.setReversed(true);
       result = getSingleScanResult(ht, scan);
       assertNullResult(result);
@@ -5998,12 +5999,12 @@ public class TestFromClientSide {
       result = getSingleScanResult(ht, scan);
       assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
 
-      scan = new Scan(ROWS[3], ROWS[0]);
+      scan = new Scan().withStartRow(ROWS[3]).withStopRow(ROWS[0]);
       scan.setReversed(true);
       result = getSingleScanResult(ht, scan);
       assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
 
-      scan = new Scan(ROWS[2], ROWS[1]);
+      scan = new Scan().withStartRow(ROWS[2]).withStopRow(ROWS[1]);
       scan.setReversed(true);
       result = getSingleScanResult(ht, scan);
       assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);

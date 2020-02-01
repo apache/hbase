@@ -455,7 +455,7 @@ public class TestMultipleTimestamps {
         Collections.min( Arrays.asList(rowIndexes)));
     byte endRow[] = Bytes.toBytes("row:" +
         Collections.max( Arrays.asList(rowIndexes))+1);
-    Scan scan = new Scan(startRow, endRow);
+    Scan scan = new Scan().withStartRow(startRow).withStopRow(endRow);
     for (Integer colIdx: columnIndexes) {
       byte column[] = Bytes.toBytes("column:" + colIdx);
       scan.addColumn(cf, column);

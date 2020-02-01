@@ -997,7 +997,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     @Override
     void testRow(final int i) throws IOException {
       Pair<byte[], byte[]> startAndStopRow = getStartAndStopRow();
-      Scan scan = new Scan(startAndStopRow.getFirst(), startAndStopRow.getSecond());
+      Scan scan = new Scan().withStartRow(startAndStopRow.getFirst())
+        .withStopRow(startAndStopRow.getSecond());
       scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
       ResultScanner s = this.table.getScanner(scan);
       int count = 0;

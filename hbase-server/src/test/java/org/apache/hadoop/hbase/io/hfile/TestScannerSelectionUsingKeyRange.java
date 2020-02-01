@@ -121,7 +121,7 @@ public class TestScannerSelectionUsingKeyRange {
       region.flush(true);
     }
 
-    Scan scan = new Scan(Bytes.toBytes("aaa"), Bytes.toBytes("aaz"));
+    Scan scan = new Scan().withStartRow(Bytes.toBytes("aaa")).withStopRow(Bytes.toBytes("aaz"));
     BlockCache cache = BlockCacheFactory.createBlockCache(conf);
     InternalScanner scanner = region.getScanner(scan);
     List<Cell> results = new ArrayList<>();

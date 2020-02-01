@@ -565,7 +565,7 @@ public class TestHStoreFile extends HBaseTestCase {
       TreeSet<byte[]> columns = new TreeSet<>(Bytes.BYTES_COMPARATOR);
       columns.add(Bytes.toBytes("family:col"));
 
-      Scan scan = new Scan(Bytes.toBytes(row),Bytes.toBytes(row));
+      Scan scan = new Scan().withStartRow(Bytes.toBytes(row)).withStopRow(Bytes.toBytes(row));
       scan.addColumn(Bytes.toBytes("family"), Bytes.toBytes("family:col"));
       HStore store = mock(HStore.class);
       when(store.getColumnFamilyDescriptor())
@@ -785,7 +785,7 @@ public class TestHStoreFile extends HBaseTestCase {
           TreeSet<byte[]> columns = new TreeSet<>(Bytes.BYTES_COMPARATOR);
           columns.add(Bytes.toBytes("col" + col));
 
-          Scan scan = new Scan(Bytes.toBytes(row),Bytes.toBytes(row));
+          Scan scan = new Scan().withStartRow(Bytes.toBytes(row)).withStopRow(Bytes.toBytes(row));
           scan.addColumn(Bytes.toBytes("family"), Bytes.toBytes(("col"+col)));
 
           boolean exists =

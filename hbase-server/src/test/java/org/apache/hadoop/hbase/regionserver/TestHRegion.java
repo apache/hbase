@@ -3232,7 +3232,7 @@ public class TestHRegion {
     put.addColumn(family, col1, Bytes.toBytes(40L));
     region.put(put);
 
-    Scan scan = new Scan(row3, row4);
+    Scan scan = new Scan().withStartRow(row3).withStopRow(row4);
     scan.setMaxVersions();
     scan.addColumn(family, col1);
     InternalScanner s = region.getScanner(scan);
@@ -3661,7 +3661,8 @@ public class TestHRegion {
 
       flushThread.start();
 
-      Scan scan = new Scan(Bytes.toBytes("row0"), Bytes.toBytes("row1"));
+      Scan scan = new Scan().withStartRow(Bytes.toBytes("row0"))
+        .withStopRow(Bytes.toBytes("row1"));
 
       int expectedCount = numFamilies * numQualifiers;
       List<Cell> res = new ArrayList<>();
@@ -5169,7 +5170,7 @@ public class TestHRegion {
     put.add(kv5);
     region.put(put);
     region.flush(true);
-    Scan scan = new Scan(rowD, rowA);
+    Scan scan = new Scan().withStartRow(rowD).withStopRow(rowA);
     scan.addColumn(families[0], col1);
     scan.setReversed(true);
     List<Cell> currRow = new ArrayList<>();
@@ -5193,7 +5194,7 @@ public class TestHRegion {
     assertFalse(hasNext);
     scanner.close();
 
-    scan = new Scan(rowD, rowA);
+    scan = new Scan().withStartRow(rowD).withStopRow(rowA);
     scan.addColumn(families[0], col2);
     scan.setReversed(true);
     currRow.clear();
@@ -5247,7 +5248,7 @@ public class TestHRegion {
     put.add(kv5);
     region.put(put);
     region.flush(true);
-    Scan scan = new Scan(rowD, rowA);
+    Scan scan = new Scan().withStartRow(rowD).withStopRow(rowA);
     scan.addColumn(families[0], col1);
     scan.setReversed(true);
     List<Cell> currRow = new ArrayList<>();
@@ -5271,7 +5272,7 @@ public class TestHRegion {
     assertFalse(hasNext);
     scanner.close();
 
-    scan = new Scan(rowD, rowA);
+    scan = new Scan().withStartRow(rowD).withStopRow(rowA);
     scan.addColumn(families[0], col2);
     scan.setReversed(true);
     currRow.clear();

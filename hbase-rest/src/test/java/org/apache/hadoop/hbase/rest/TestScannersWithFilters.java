@@ -480,8 +480,8 @@ public class TestScannersWithFilters {
     // If we just use start/stop row, we get total/2 - 1 rows
     long expectedRows = (numRows / 2) - 1;
     long expectedKeys = colsPerRow;
-    Scan s = new Scan(Bytes.toBytes("testRowOne-0"),
-        Bytes.toBytes("testRowOne-3"));
+    Scan s = new Scan().withStartRow(Bytes.toBytes("testRowOne-0"))
+      .withStopRow(Bytes.toBytes("testRowOne-3"));
     verifyScan(s, expectedRows, expectedKeys);
 
     // Now use start row with inclusive stop filter
@@ -495,8 +495,8 @@ public class TestScannersWithFilters {
     // If we just use start/stop row, we get total/2 - 1 rows
     expectedRows = (numRows / 2) - 1;
     expectedKeys = colsPerRow;
-    s = new Scan(Bytes.toBytes("testRowTwo-0"),
-        Bytes.toBytes("testRowTwo-3"));
+    s = new Scan().withStartRow(Bytes.toBytes("testRowTwo-0"))
+      .withStopRow(Bytes.toBytes("testRowTwo-3"));
     verifyScan(s, expectedRows, expectedKeys);
 
     // Now use start row with inclusive stop filter
@@ -542,7 +542,8 @@ public class TestScannersWithFilters {
     expectedKeys = 4;
     f = new QualifierFilter(CompareOperator.NOT_EQUAL,
         new BinaryComparator(Bytes.toBytes("testQualifierOne-2")));
-    s = new Scan(HConstants.EMPTY_START_ROW, Bytes.toBytes("testRowTwo"));
+    s = new Scan().withStartRow(HConstants.EMPTY_START_ROW)
+      .withStopRow(Bytes.toBytes("testRowTwo"));
     s.setFilter(f);
     verifyScanNoEarlyOut(s, expectedRows, expectedKeys);
 
@@ -552,7 +553,8 @@ public class TestScannersWithFilters {
     expectedKeys = 4;
     f = new QualifierFilter(CompareOperator.GREATER_OR_EQUAL,
         new BinaryComparator(Bytes.toBytes("testQualifierOne-2")));
-    s = new Scan(HConstants.EMPTY_START_ROW, Bytes.toBytes("testRowTwo"));
+    s = new Scan().withStartRow(HConstants.EMPTY_START_ROW)
+      .withStopRow(Bytes.toBytes("testRowTwo"));
     s.setFilter(f);
     verifyScanNoEarlyOut(s, expectedRows, expectedKeys);
 
@@ -562,7 +564,8 @@ public class TestScannersWithFilters {
     expectedKeys = 2;
     f = new QualifierFilter(CompareOperator.GREATER,
         new BinaryComparator(Bytes.toBytes("testQualifierOne-2")));
-    s = new Scan(HConstants.EMPTY_START_ROW, Bytes.toBytes("testRowTwo"));
+    s = new Scan().withStartRow(HConstants.EMPTY_START_ROW)
+      .withStopRow(Bytes.toBytes("testRowTwo"));
     s.setFilter(f);
     verifyScanNoEarlyOut(s, expectedRows, expectedKeys);
 

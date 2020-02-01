@@ -708,8 +708,8 @@ public class TestFilter {
     // If we just use start/stop row, we get total/2 - 1 rows
     long expectedRows = (this.numRows / 2) - 1;
     long expectedKeys = this.colsPerRow;
-    Scan s = new Scan(Bytes.toBytes("testRowOne-0"),
-        Bytes.toBytes("testRowOne-3"));
+    Scan s = new Scan().withStartRow(Bytes.toBytes("testRowOne-0"))
+      .withStopRow(Bytes.toBytes("testRowOne-3"));
     verifyScan(s, expectedRows, expectedKeys);
 
     // Now use start row with inclusive stop filter
@@ -723,8 +723,8 @@ public class TestFilter {
     // If we just use start/stop row, we get total/2 - 1 rows
     expectedRows = (this.numRows / 2) - 1;
     expectedKeys = this.colsPerRow;
-    s = new Scan(Bytes.toBytes("testRowTwo-0"),
-        Bytes.toBytes("testRowTwo-3"));
+    s = new Scan().withStartRow(Bytes.toBytes("testRowTwo-0"))
+      .withStopRow(Bytes.toBytes("testRowTwo-3"));
     verifyScan(s, expectedRows, expectedKeys);
 
     // Now use start row with inclusive stop filter
@@ -743,7 +743,8 @@ public class TestFilter {
     // If we just use start/stop row, we get total/2 - 1 rows
     long expectedRows = (this.numRows / 2) - 1;
     long expectedKeys = this.colsPerRow;
-    Scan s = new Scan(Bytes.toBytes("testRowOne-3"), Bytes.toBytes("testRowOne-0"));
+    Scan s = new Scan().withStartRow(Bytes.toBytes("testRowOne-3"))
+      .withStopRow(Bytes.toBytes("testRowOne-0"));
     s.setReversed(true);
     verifyScan(s, expectedRows, expectedKeys);
 
@@ -759,7 +760,8 @@ public class TestFilter {
     // If we just use start/stop row, we get total/2 - 1 rows
     expectedRows = (this.numRows / 2) - 1;
     expectedKeys = this.colsPerRow;
-    s = new Scan(Bytes.toBytes("testRowTwo-3"), Bytes.toBytes("testRowTwo-0"));
+    s = new Scan().withStartRow(Bytes.toBytes("testRowTwo-3"))
+      .withStopRow(Bytes.toBytes("testRowTwo-0"));
     s.setReversed(true);
     verifyScan(s, expectedRows, expectedKeys);
 
@@ -811,7 +813,8 @@ public class TestFilter {
     expectedKeys = 4;
     f = new QualifierFilter(CompareOperator.NOT_EQUAL,
         new BinaryComparator(Bytes.toBytes("testQualifierOne-2")));
-    s = new Scan(HConstants.EMPTY_START_ROW, Bytes.toBytes("testRowTwo"));
+    s = new Scan().withStartRow(HConstants.EMPTY_START_ROW)
+      .withStopRow(Bytes.toBytes("testRowTwo"));
     s.setFilter(f);
     verifyScanNoEarlyOut(s, expectedRows, expectedKeys);
 
@@ -822,7 +825,8 @@ public class TestFilter {
     expectedKeys = 4;
     f = new QualifierFilter(CompareOperator.GREATER_OR_EQUAL,
         new BinaryComparator(Bytes.toBytes("testQualifierOne-2")));
-    s = new Scan(HConstants.EMPTY_START_ROW, Bytes.toBytes("testRowTwo"));
+    s = new Scan().withStartRow(HConstants.EMPTY_START_ROW)
+      .withStopRow(Bytes.toBytes("testRowTwo"));
     s.setFilter(f);
     verifyScanNoEarlyOut(s, expectedRows, expectedKeys);
 
@@ -833,7 +837,8 @@ public class TestFilter {
     expectedKeys = 2;
     f = new QualifierFilter(CompareOperator.GREATER,
         new BinaryComparator(Bytes.toBytes("testQualifierOne-2")));
-    s = new Scan(HConstants.EMPTY_START_ROW, Bytes.toBytes("testRowTwo"));
+    s = new Scan().withStartRow(HConstants.EMPTY_START_ROW)
+      .withStopRow(Bytes.toBytes("testRowTwo"));
     s.setFilter(f);
     verifyScanNoEarlyOut(s, expectedRows, expectedKeys);
 
@@ -966,7 +971,8 @@ public class TestFilter {
       expectedKeys = this.colsPerRow / 2;
       f = new FamilyFilter(CompareOperator.NOT_EQUAL,
           new BinaryComparator(Bytes.toBytes("testFamilyOne")));
-      s = new Scan(HConstants.EMPTY_START_ROW, Bytes.toBytes("testRowTwo"));
+      s = new Scan().withStartRow(HConstants.EMPTY_START_ROW)
+        .withStopRow(Bytes.toBytes("testRowTwo"));
       s.setFilter(f);
       verifyScanNoEarlyOut(s, expectedRows, expectedKeys);
 
@@ -976,7 +982,8 @@ public class TestFilter {
       expectedKeys = this.colsPerRow;
       f = new FamilyFilter(CompareOperator.GREATER_OR_EQUAL,
           new BinaryComparator(Bytes.toBytes("testFamilyOne")));
-      s = new Scan(HConstants.EMPTY_START_ROW, Bytes.toBytes("testRowTwo"));
+      s = new Scan().withStartRow(HConstants.EMPTY_START_ROW)
+        .withStopRow(Bytes.toBytes("testRowTwo"));
       s.setFilter(f);
       verifyScanNoEarlyOut(s, expectedRows, expectedKeys);
 
@@ -986,7 +993,8 @@ public class TestFilter {
       expectedKeys = this.colsPerRow / 2;
       f = new FamilyFilter(CompareOperator.GREATER,
           new BinaryComparator(Bytes.toBytes("testFamilyOne")));
-      s = new Scan(HConstants.EMPTY_START_ROW, Bytes.toBytes("testRowTwo"));
+      s = new Scan().withStartRow(HConstants.EMPTY_START_ROW)
+        .withStopRow(Bytes.toBytes("testRowTwo"));
       s.setFilter(f);
       verifyScanNoEarlyOut(s, expectedRows, expectedKeys);
 
@@ -1569,7 +1577,7 @@ public class TestFilter {
     filters.add(new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS_ONE[2],
       CompareOperator.EQUAL, VALUES[1]));
     Filter f = new FilterList(Operator.MUST_PASS_ALL, filters);
-    Scan s = new Scan(ROWS_ONE[0], ROWS_TWO[0]);
+    Scan s = new Scan().withStartRow(ROWS_ONE[0]).withStopRow(ROWS_TWO[0]);
     s.addFamily(FAMILIES[0]);
     s.setFilter(f);
     // Expect only one row, all qualifiers
@@ -1589,7 +1597,7 @@ public class TestFilter {
     filters.add(new SkipFilter(new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS_ONE[2],
       CompareOperator.EQUAL, VALUES[1])));
     f = new FilterList(Operator.MUST_PASS_ALL, filters);
-    s = new Scan(ROWS_ONE[0], ROWS_TWO[0]);
+    s = new Scan().withStartRow(ROWS_ONE[0]).withStopRow(ROWS_TWO[0]);
     s.addFamily(FAMILIES[0]);
     s.setFilter(f);
     // Expect same KVs
@@ -1623,7 +1631,7 @@ public class TestFilter {
     // Expect 3 rows (0, 2, 3)
     SingleColumnValueFilter scvf = new SingleColumnValueFilter(FAMILIES[0],
         QUALIFIERS_ONE[0], CompareOperator.EQUAL, VALUES[0]);
-    s = new Scan(ROWS_THREE[0], Bytes.toBytes("rowThree-4"));
+    s = new Scan().withStartRow(ROWS_THREE[0]).withStopRow(Bytes.toBytes("rowThree-4"));
     s.addFamily(FAMILIES[0]);
     s.setFilter(scvf);
     kvs = new KeyValue [] { srcKVs[0], srcKVs[2], srcKVs[3] };
@@ -1634,7 +1642,7 @@ public class TestFilter {
     scvf = new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS_ONE[0],
     CompareOperator.EQUAL, VALUES[0]);
     scvf.setFilterIfMissing(true);
-    s = new Scan(ROWS_THREE[0], Bytes.toBytes("rowThree-4"));
+    s = new Scan().withStartRow(ROWS_THREE[0]).withStopRow(Bytes.toBytes("rowThree-4"));
     s.addFamily(FAMILIES[0]);
     s.setFilter(scvf);
     kvs = new KeyValue [] { srcKVs[0] };
@@ -1645,7 +1653,7 @@ public class TestFilter {
     scvf = new SingleColumnValueFilter(FAMILIES[0],
         QUALIFIERS_ONE[1], CompareOperator.EQUAL, VALUES[1]);
     scvf.setFilterIfMissing(true);
-    s = new Scan(ROWS_THREE[0], Bytes.toBytes("rowThree-4"));
+    s = new Scan().withStartRow(ROWS_THREE[0]).withStopRow(Bytes.toBytes("rowThree-4"));
     s.addFamily(FAMILIES[0]);
     s.setFilter(scvf);
     kvs = new KeyValue [] { srcKVs[3] };
@@ -1660,7 +1668,7 @@ public class TestFilter {
     scvf = new SingleColumnValueFilter(FAMILIES[0],
         QUALIFIERS_ONE[1], CompareOperator.EQUAL, VALUES[1]);
     scvf.setFilterIfMissing(true);
-    s = new Scan(ROWS_THREE[0], Bytes.toBytes("rowThree-4"));
+    s = new Scan().withStartRow(ROWS_THREE[0]).withStopRow(Bytes.toBytes("rowThree-4"));
     s.addFamily(FAMILIES[0]);
     s.setFilter(scvf);
     kvs = new KeyValue [] { srcKVs[3] };

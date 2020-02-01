@@ -134,7 +134,8 @@ public class TestScanner {
       HBaseTestCase.addContent(this.region, HConstants.CATALOG_FAMILY);
       List<Cell> results = new ArrayList<>();
       // Do simple test of getting one row only first.
-      Scan scan = new Scan(Bytes.toBytes("abc"), Bytes.toBytes("abd"));
+      Scan scan = new Scan().withStartRow(Bytes.toBytes("abc"))
+        .withStopRow(Bytes.toBytes("abd"));
       scan.addFamily(HConstants.CATALOG_FAMILY);
 
       InternalScanner s = region.getScanner(scan);
@@ -145,7 +146,7 @@ public class TestScanner {
       s.close();
       assertEquals(0, count);
       // Now do something a bit more imvolved.
-      scan = new Scan(startrow, stoprow);
+      scan = new Scan().withStartRow(startrow).withStopRow(stoprow);
       scan.addFamily(HConstants.CATALOG_FAMILY);
 
       s = region.getScanner(scan);
