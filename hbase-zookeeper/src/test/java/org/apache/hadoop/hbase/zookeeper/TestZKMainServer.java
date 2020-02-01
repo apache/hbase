@@ -101,7 +101,7 @@ public class TestZKMainServer {
   public void testHostPortParse() {
     ZKMainServer parser = new ZKMainServer();
     Configuration c = HBaseConfiguration.create();
-    assertEquals("localhost:" + c.get(HConstants.ZOOKEEPER_CLIENT_PORT), parser.parse(c));
+    assertEquals("127.0.0.1:" + c.get(HConstants.ZOOKEEPER_CLIENT_PORT), parser.parse(c));
     final String port = "1234";
     c.set(HConstants.ZOOKEEPER_CLIENT_PORT, port);
     c.set("hbase.zookeeper.quorum", "example.com");

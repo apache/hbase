@@ -72,7 +72,10 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.zookeeper.quorum</name>
-    <value>localhost</value>
+    <!--Ideally we should be using a hostname here instead of IP address. Please refer to
+    https://issues.apache.org/jira/browse/HBASE-23764 for why we switched to IP address. Should be
+    changed once we fix the underlying ZK issue.-->
+    <value>127.0.0.1</value>
     <description>Comma separated list of servers in the ZooKeeper ensemble
     (This config. should have been named hbase.zookeeper.ensemble).
     For example, "host1.mydomain.com,host2.mydomain.com,host3.mydomain.com".

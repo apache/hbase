@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
+import static org.apache.hadoop.hbase.HConstants.ZOOKEEPER_QUORUM;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -312,7 +312,7 @@ public class TestMasterNoCluster {
   @Test
   public void testMasterInitWithSameClientServerZKQuorum() throws Exception {
     Configuration conf = new Configuration(TESTUTIL.getConfiguration());
-    conf.set(HConstants.CLIENT_ZOOKEEPER_QUORUM, HConstants.LOCALHOST);
+    conf.set(HConstants.CLIENT_ZOOKEEPER_QUORUM, conf.get(ZOOKEEPER_QUORUM));
     conf.setInt(HConstants.CLIENT_ZOOKEEPER_CLIENT_PORT, TESTUTIL.getZkCluster().getClientPort());
     HMaster master = new HMaster(conf);
     master.start();

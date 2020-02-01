@@ -101,7 +101,7 @@ public class TestZKAsyncRegistry {
   public void testIndependentZKConnections() throws IOException {
     try (ReadOnlyZKClient zk1 = REGISTRY.getZKClient()) {
       Configuration otherConf = new Configuration(TEST_UTIL.getConfiguration());
-      otherConf.set(HConstants.ZOOKEEPER_QUORUM, "127.0.0.1");
+      otherConf.set(HConstants.ZOOKEEPER_QUORUM, "localhost");
       try (ZKAsyncRegistry otherRegistry = new ZKAsyncRegistry(otherConf)) {
         ReadOnlyZKClient zk2 = otherRegistry.getZKClient();
         assertNotSame("Using a different configuration / quorum should result in different " +
