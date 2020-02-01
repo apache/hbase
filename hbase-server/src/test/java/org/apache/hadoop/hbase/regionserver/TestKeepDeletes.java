@@ -61,7 +61,7 @@ public class TestKeepDeletes {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestKeepDeletes.class);
 
-  HBaseTestingUtility hbu = HBaseTestingUtility.createLocalHTU();
+  HBaseTestingUtility hbu = new HBaseTestingUtility();
   private final byte[] T0 = Bytes.toBytes("0");
   private final byte[] T1 = Bytes.toBytes("1");
   private final byte[] T2 = Bytes.toBytes("2");

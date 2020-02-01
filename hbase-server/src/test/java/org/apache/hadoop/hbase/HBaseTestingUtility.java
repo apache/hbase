@@ -302,11 +302,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * <p>Initially, all tmp files are written to a local test data directory.
    * Once {@link #startMiniDFSCluster} is called, either directly or via
    * {@link #startMiniCluster()}, tmp data will be written to the DFS directory instead.
-   *
-   * <p>Previously, there was a distinction between the type of utility returned by
-   * {@link #createLocalHTU()} and this constructor; this is no longer the case. All
-   * HBaseTestingUtility objects will behave as local until a DFS cluster is started,
-   * at which point they will switch to using mini DFS for storage.
    */
   public HBaseTestingUtility() {
     this(HBaseConfiguration.create());
@@ -318,11 +313,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * <p>Initially, all tmp files are written to a local test data directory.
    * Once {@link #startMiniDFSCluster} is called, either directly or via
    * {@link #startMiniCluster()}, tmp data will be written to the DFS directory instead.
-   *
-   * <p>Previously, there was a distinction between the type of utility returned by
-   * {@link #createLocalHTU()} and this constructor; this is no longer the case. All
-   * HBaseTestingUtility objects will behave as local until a DFS cluster is started,
-   * at which point they will switch to using mini DFS for storage.
    *
    * @param conf The configuration to use for further operations
    */
@@ -350,18 +340,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     // tests opt-out for random port assignment
     this.conf.setBoolean(LocalHBaseCluster.ASSIGN_RANDOM_PORTS,
         this.conf.getBoolean(LocalHBaseCluster.ASSIGN_RANDOM_PORTS, true));
-  }
-
-  /**
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use {@link #HBaseTestingUtility()}
-   *   instead.
-   * @return a normal HBaseTestingUtility
-   * @see #HBaseTestingUtility()
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-19841">HBASE-19841</a>
-   */
-  @Deprecated
-  public static HBaseTestingUtility createLocalHTU() {
-    return new HBaseTestingUtility();
   }
 
   /**

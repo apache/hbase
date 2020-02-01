@@ -75,7 +75,7 @@ public class TestScanner {
   @Rule public TestName name = new TestName();
 
   private static final Logger LOG = LoggerFactory.getLogger(TestScanner.class);
-  private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private static final byte [] FIRST_ROW = HConstants.EMPTY_START_ROW;
   private static final byte [][] COLS = { HConstants.CATALOG_FAMILY };

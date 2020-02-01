@@ -76,7 +76,7 @@ public class TestCompactionArchiveConcurrentClose {
 
   @Before
   public void setup() throws Exception {
-    testUtil = HBaseTestingUtility.createLocalHTU();
+    testUtil = new HBaseTestingUtility();
     testDir = testUtil.getDataTestDir("TestStoreFileRefresherChore");
     FSUtils.setRootDir(testUtil.getConfiguration(), testDir);
   }

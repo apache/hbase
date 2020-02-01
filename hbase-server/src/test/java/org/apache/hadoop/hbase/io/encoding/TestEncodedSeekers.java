@@ -79,7 +79,7 @@ public class TestEncodedSeekers {
   private static final int NUM_HFILES = 4;
   private static final int NUM_ROWS_PER_FLUSH = NUM_ROWS / NUM_HFILES;
 
-  private final HBaseTestingUtility testUtil = HBaseTestingUtility.createLocalHTU();
+  private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
   private final DataBlockEncoding encoding;
   private final boolean includeTags;
   private final boolean compressTags;

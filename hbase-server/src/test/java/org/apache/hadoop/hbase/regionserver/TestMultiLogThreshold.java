@@ -65,7 +65,7 @@ public class TestMultiLogThreshold {
   @BeforeClass
   public static void setup() throws Exception {
     final TableName tableName = TableName.valueOf("tableName");
-    TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+    TEST_UTIL = new HBaseTestingUtility();
     CONF = TEST_UTIL.getConfiguration();
     THRESHOLD = CONF.getInt(RSRpcServices.BATCH_ROWS_THRESHOLD_NAME,
       RSRpcServices.BATCH_ROWS_THRESHOLD_DEFAULT);

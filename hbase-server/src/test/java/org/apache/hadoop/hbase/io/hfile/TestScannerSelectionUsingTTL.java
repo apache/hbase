@@ -68,7 +68,7 @@ public class TestScannerSelectionUsingTTL {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestScannerSelectionUsingTTL.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static TableName TABLE = TableName.valueOf("myTable");
   private static String FAMILY = "myCF";
   private static byte[] FAMILY_BYTES = Bytes.toBytes(FAMILY);

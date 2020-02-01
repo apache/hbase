@@ -58,7 +58,7 @@ public class TestHMasterRPCException {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHMasterRPCException.class);
 
-  private final HBaseTestingUtility testUtil = HBaseTestingUtility.createLocalHTU();
+  private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
 
   private HMaster master;
 

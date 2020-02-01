@@ -71,7 +71,7 @@ public class TestSnapshotManifest {
 
   @Before
   public void setup() throws Exception {
-    TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+    TEST_UTIL = new HBaseTestingUtility();
 
     rootDir = TEST_UTIL.getDataTestDir(TABLE_NAME_STR);
     fs = TEST_UTIL.getTestFileSystem();

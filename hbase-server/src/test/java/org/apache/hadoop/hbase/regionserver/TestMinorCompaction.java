@@ -59,7 +59,7 @@ public class TestMinorCompaction {
 
   @Rule public TestName name = new TestName();
   private static final Logger LOG = LoggerFactory.getLogger(TestMinorCompaction.class.getName());
-  private static final HBaseTestingUtility UTIL = HBaseTestingUtility.createLocalHTU();
+  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   protected Configuration conf = UTIL.getConfiguration();
 
   private HRegion r = null;
