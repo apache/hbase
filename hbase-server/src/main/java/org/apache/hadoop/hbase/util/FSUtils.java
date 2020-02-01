@@ -66,6 +66,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -1080,7 +1081,7 @@ public abstract class FSUtils extends CommonFSUtils {
     protected boolean accept(Path p, @CheckForNull Boolean isDir) {
       try {
         // throws IAE if invalid
-        HColumnDescriptor.isLegalFamilyName(Bytes.toBytes(p.getName()));
+        ColumnFamilyDescriptorBuilder.isLegalColumnFamilyName(Bytes.toBytes(p.getName()));
       } catch (IllegalArgumentException iae) {
         // path name is an invalid family name and thus is excluded.
         return false;
