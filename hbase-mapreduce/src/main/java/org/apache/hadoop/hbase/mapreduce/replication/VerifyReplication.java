@@ -208,7 +208,7 @@ public class VerifyReplication extends Configured implements Tool {
           endRow = ((TableSplit) tableSplit).getEndRow();
         }
 
-        scan.setStopRow(endRow);
+        scan.withStopRow(endRow);
 
         String peerSnapshotName = conf.get(NAME + ".peerSnapshotName", null);
         if (peerSnapshotName != null) {
@@ -514,7 +514,7 @@ public class VerifyReplication extends Configured implements Tool {
     scan.setStartRow(startPrefixRow);
     byte[] stopRow = Bytes.add(Bytes.head(lastPrefixRow, lastPrefixRow.length - 1),
         new byte[]{(byte) (lastPrefixRow[lastPrefixRow.length - 1] + 1)});
-    scan.setStopRow(stopRow);
+    scan.withStopRow(stopRow);
   }
 
   @VisibleForTesting

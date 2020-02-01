@@ -882,7 +882,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
         scan.setStartRow(tScan.getStartRow());
       }
       if (tScan.isSetStopRow()) {
-        scan.setStopRow(tScan.getStopRow());
+        scan.withStopRow(tScan.getStopRow());
       }
       if (tScan.isSetTimestamp()) {
         scan.setTimeRange(0, tScan.getTimestamp());

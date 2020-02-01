@@ -205,11 +205,11 @@ public class TestScan {
       fail("expected IllegalArgumentException to be thrown");
     }
 
-    scan.setStopRow(null);
-    scan.setStopRow(new byte[1]);
-    scan.setStopRow(new byte[HConstants.MAX_ROW_LENGTH]);
+    scan.withStopRow(null);
+    scan.withStopRow(new byte[1]);
+    scan.withStopRow(new byte[HConstants.MAX_ROW_LENGTH]);
     try {
-      scan.setStopRow(new byte[HConstants.MAX_ROW_LENGTH+1]);
+      scan.withStopRow(new byte[HConstants.MAX_ROW_LENGTH+1]);
       fail("should've thrown exception");
     } catch (IllegalArgumentException iae) {
     } catch (Exception e) {

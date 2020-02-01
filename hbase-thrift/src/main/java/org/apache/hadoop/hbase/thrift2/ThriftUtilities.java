@@ -516,7 +516,7 @@ public final class ThriftUtilities {
       out.setStartRow(in.getStartRow());
     }
     if (in.isSetStopRow()) {
-      out.setStopRow(in.getStopRow());
+      out.withStopRow(in.getStopRow());
     }
     if (in.isSetCaching()) {
       out.setCaching(in.getCaching());

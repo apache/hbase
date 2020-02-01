@@ -1641,8 +1641,9 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       if (cmd.hasOption("s"))
         scan.setStartRow(Bytes.toBytesBinary(cmd.getOptionValue("s")));
 
-      if (cmd.hasOption("e"))
-        scan.setStopRow(Bytes.toBytesBinary(cmd.getOptionValue("e")));
+      if (cmd.hasOption("e")) {
+        scan.withStopRow(Bytes.toBytesBinary(cmd.getOptionValue("e")));
+      }
 
       int limit = 0;
       if (cmd.hasOption("l"))

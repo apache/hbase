@@ -159,7 +159,7 @@ public class TestFilterListOrOperatorWithBlkCnt {
       scan.setStartRow(startRow);
     }
     if(!Bytes.toString(stopRow).isEmpty()) {
-      scan.setStopRow(stopRow);
+      scan.withStopRow(stopRow);
     }
     ResultScanner scanner = ht.getScanner(scan);
     List<Cell> kvList = new ArrayList<>();
