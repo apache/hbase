@@ -845,7 +845,7 @@ if (withReplica) {
 </table>
 <% }
 } catch(Exception ex) { %>
-  Unknown Regions
+  Unknown Issue with Regions
   <div onclick="document.getElementById('closeRegion').style.display='block';document.getElementById('openRegion').style.display='none';">
     <a id="openRegion" style="cursor:pointer;"> Show StackTrace</a>
   </div>
@@ -860,8 +860,6 @@ if (withReplica) {
   %>
   </div>
   <%
-} finally {
-  connection.close();
 }
 } // end else
 %>
