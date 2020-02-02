@@ -857,9 +857,6 @@ if (withReplica) {
   for(StackTraceElement element : ex.getStackTrace()) {
     %><%= StringEscapeUtils.escapeHtml4(element.toString() + "\n") %><%
   }
-  %>
-  </div>
-  <%
 }
 } // end else
 %>
