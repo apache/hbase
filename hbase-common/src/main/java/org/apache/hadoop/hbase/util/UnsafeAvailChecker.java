@@ -21,50 +21,64 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import sun.misc.Unsafe;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@SuppressWarnings("restriction")
 @InterfaceAudience.Private
 public class UnsafeAvailChecker {
 
+  private static final Unsafe UNSAFE;
   private static final String CLASS_NAME = "sun.misc.Unsafe";
   private static final Logger LOG = LoggerFactory.getLogger(UnsafeAvailChecker.class);
-  private static boolean avail = false;
   private static boolean unaligned = false;
+  // Split java.version on non-digit chars:
+  private static final int majorVersion =
+      Integer.parseInt(System.getProperty("java.version").split("\\D+")[0]);
 
   static {
-    avail = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
+    UNSAFE = AccessController.doPrivileged(new PrivilegedAction<Unsafe>() {
       @Override
-      public Boolean run() {
+      public Unsafe run() {
         try {
           Class<?> clazz = Class.forName(CLASS_NAME);
           Field f = clazz.getDeclaredField("theUnsafe");
           f.setAccessible(true);
-          return f.get(null) != null;
+          return (Unsafe) f.get(null);
         } catch (Throwable e) {
           LOG.warn("sun.misc.Unsafe is not available/accessible", e);
         }
-        return false;
+        return null;
       }
     });
     // When Unsafe itself is not available/accessible consider unaligned as false.
-    if (avail) {
+    if (UNSAFE != null) {
       String arch = System.getProperty("os.arch");
       if ("ppc64".equals(arch) || "ppc64le".equals(arch) || "aarch64".equals(arch)) {
         // java.nio.Bits.unaligned() wrongly returns false on ppc (JDK-8165231),
         unaligned = true;
       } else {
         try {
-          // Using java.nio.Bits#unaligned() to check for unaligned-access capability
-          Class<?> clazz = Class.forName("java.nio.Bits");
-          Method m = clazz.getDeclaredMethod("unaligned");
-          m.setAccessible(true);
-          unaligned = (Boolean) m.invoke(null);
-        } catch (Exception e) {
-          LOG.warn("java.nio.Bits#unaligned() check failed."
-              + "Unsafe based read/write of primitive types won't be used", e);
+          Class<?> bitsClass =
+              Class.forName("java.nio.Bits", false, ClassLoader.getSystemClassLoader());
+          if (majorVersion >= 9) {
+            // Java 9/10 and 11/12 have different field names.
+            Field unalignedField =
+                bitsClass.getDeclaredField(majorVersion >= 11 ? "UNALIGNED" : "unaligned");
+            unaligned = UNSAFE.getBoolean(UNSAFE.staticFieldBase(unalignedField),
+              UNSAFE.staticFieldOffset(unalignedField));
+          } else {
+            // Using java.nio.Bits#unaligned() to check for unaligned-access capability
+            Method unalignedMethod = bitsClass.getDeclaredMethod("unaligned");
+            unalignedMethod.setAccessible(true);
+            unaligned = (Boolean) unalignedMethod.invoke(null);
+          }
+        } catch (Throwable t) {
+          LOG.warn(
+            "unaligned check failed. Unsafe based read/write of primitive types won't be used", t);
         }
       }
     }
@@ -75,7 +89,7 @@ public class UnsafeAvailChecker {
    *         accessible.
    */
   public static boolean isAvailable() {
-    return avail;
+    return UNSAFE != null;
   }
 
   /**
