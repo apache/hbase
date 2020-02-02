@@ -535,11 +535,21 @@ if (fqtn != null && master.isInitialized()) {
       CompactionState compactionState = admin.getCompactionState(table.getName()).get();
       %><%= compactionState %><%
     } catch (Exception e) {
-      // Nothing really to do here
+    // Nothing really to do here
+    %>
+    Unknown
+    <div onclick="document.getElementById('closeCompaction').style.display='block';document.getElementById('openCompaction').style.display='none';">
+      <a id="openCompaction" style="cursor:pointer;"> Show StackTrace</a>
+    </div>
+    <div id="closeCompaction" style="display:none;clear:both;">
+      <div onclick="document.getElementById('closeCompaction').style.display='none';document.getElementById('openCompaction').style.display='block';">
+        <a style="cursor:pointer;"> Close StackTrace</a>
+      </div>
+    <%
       for(StackTraceElement element : e.getStackTrace()) {
-        %><%= StringEscapeUtils.escapeHtml4(element.toString()) %><%
+        %><%= StringEscapeUtils.escapeHtml4(element.toString() + "\n") %><%
       }
-      %> Unknown <%
+      %></div><%
     }
   } else {
     %><%= CompactionState.NONE %><%
@@ -986,9 +996,18 @@ if (withReplica) {
 </tbody>
 </table>
 <% }
-} catch(Exception ex) {
+} catch(Exception ex) { %>
+  Unknown Issue with Regions
+  <div onclick="document.getElementById('closeRegion').style.display='block';document.getElementById('openRegion').style.display='none';">
+    <a id="openRegion" style="cursor:pointer;"> Show StackTrace</a>
+  </div>
+  <div id="closeRegion" style="display:none;clear:both;">
+    <div onclick="document.getElementById('closeRegion').style.display='none';document.getElementById('openRegion').style.display='block';">
+      <a style="cursor:pointer;"> Close StackTrace</a>
+    </div>
+  <%
   for(StackTraceElement element : ex.getStackTrace()) {
-    %><%= StringEscapeUtils.escapeHtml4(element.toString()) %><%
+    %><%= StringEscapeUtils.escapeHtml4(element.toString() + "\n") %><%
   }
 }
 } // end else
