@@ -471,6 +471,26 @@ Caution: the version timestamp is used internally by HBase for things like time-
 It's usually best to avoid setting this timestamp yourself.
 Prefer using a separate timestamp attribute of the row, or have the timestamp as a part of the row key, or both.
 
+===== Cell Version Example
+
+The following Put uses a method getCellBuilder() to get a CellBuilder instance
+that already has relevant Type and Row set.
+
+[source,java]
+----
+
+public static final byte[] CF = "cf".getBytes();
+public static final byte[] ATTR = "attr".getBytes();
+...
+
+Put put = new Put(Bytes.toBytes(row));
+put.add(put.getCellBuilder().setQualifier(ATTR)
+   .setFamily(CF)
+   .setValue(Bytes.toBytes(data))
+   .build());
+table.put(put);
+----
+
 [[version.delete]]
 ==== Delete
 

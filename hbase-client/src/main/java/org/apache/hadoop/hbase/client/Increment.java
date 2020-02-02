@@ -25,6 +25,8 @@ import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.UUID;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilder;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.TimeRange;
@@ -310,5 +312,10 @@ public class Increment extends Mutation {
   @Override
   public Increment setPriority(int priority) {
     return (Increment) super.setPriority(priority);
+  }
+
+  @Override
+  public CellBuilder getCellBuilder(CellBuilderType type) {
+    return getCellBuilder(type, Cell.Type.Put);
   }
 }
