@@ -166,7 +166,6 @@ public class TestVisibilityLabelsReplication {
     TEST_UTIL.startMiniZKCluster();
     MiniZooKeeperCluster miniZK = TEST_UTIL.getZkCluster();
     zkw1 = new ZKWatcher(conf, "cluster1", null, true);
-    admin = TEST_UTIL.getAdmin();
 
     // Base conf2 on conf1 so it gets the right zk cluster.
     conf1 = HBaseConfiguration.create(conf);
@@ -184,6 +183,7 @@ public class TestVisibilityLabelsReplication {
     zkw2 = new ZKWatcher(conf1, "cluster2", null, true);
 
     TEST_UTIL.startMiniCluster(1);
+    admin = TEST_UTIL.getAdmin();
     // Wait for the labels table to become available
     TEST_UTIL.waitTableEnabled(LABELS_TABLE_NAME.getName(), 50000);
     TEST_UTIL1.startMiniCluster(1);
