@@ -521,6 +521,9 @@ public class TestAdmin2 extends TestAdminBase {
   public void testCheckHBaseAvailableWithoutCluster() {
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
 
+    // Test makes sense only when ZK connection registry is in use.
+    conf.set(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
+        HConstants.ZK_CONNECTION_REGISTRY_CLASS);
     // Change the ZK address to go to something not used.
     conf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT,
       conf.getInt(HConstants.ZOOKEEPER_CLIENT_PORT, 9999)+10);

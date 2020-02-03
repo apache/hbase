@@ -74,6 +74,10 @@ public class TestZooKeeper {
   public static void setUpBeforeClass() throws Exception {
     // Test we can first start the ZK cluster by itself
     Configuration conf = TEST_UTIL.getConfiguration();
+    // A couple of tests rely on master expiring ZK session, hence killing the only master. So it
+    // makes sense only for ZK registry. Enforcing it.
+    conf.set(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
+        HConstants.ZK_CONNECTION_REGISTRY_CLASS);
     TEST_UTIL.startMiniDFSCluster(2);
     TEST_UTIL.startMiniZKCluster();
     conf.setInt(HConstants.ZK_SESSION_TIMEOUT, 1000);

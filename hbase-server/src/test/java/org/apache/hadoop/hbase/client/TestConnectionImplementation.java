@@ -842,11 +842,13 @@ public class TestConnectionImplementation {
   public void testConnection() throws Exception{
     // We create an empty config and add the ZK address.
     Configuration c = new Configuration();
+    // This test only makes sense for ZK based connection registry.
+    c.set(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
+        HConstants.ZK_CONNECTION_REGISTRY_CLASS);
     c.set(HConstants.ZOOKEEPER_QUORUM,
       TEST_UTIL.getConfiguration().get(HConstants.ZOOKEEPER_QUORUM));
     c.set(HConstants.ZOOKEEPER_CLIENT_PORT,
       TEST_UTIL.getConfiguration().get(HConstants.ZOOKEEPER_CLIENT_PORT));
-
     // This should be enough to connect
     ClusterConnection conn = (ClusterConnection) ConnectionFactory.createConnection(c);
     assertTrue(conn.isMasterRunning());
@@ -1028,6 +1030,9 @@ public class TestConnectionImplementation {
   @Test
   public void testConnectionRideOverClusterRestart() throws IOException, InterruptedException {
     Configuration config = new Configuration(TEST_UTIL.getConfiguration());
+    // This test only makes sense for ZK based connection registry.
+    config.set(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
+        HConstants.ZK_CONNECTION_REGISTRY_CLASS);
 
     final TableName tableName = TableName.valueOf(name.getMethodName());
     TEST_UTIL.createTable(tableName, new byte[][] {FAM_NAM}).close();

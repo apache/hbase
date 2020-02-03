@@ -114,7 +114,7 @@ public class TestClientTimeouts {
         } catch (MasterNotRunningException ex) {
           // Since we are randomly throwing SocketTimeoutExceptions, it is possible to get
           // a MasterNotRunningException.  It's a bug if we get other exceptions.
-         lastFailed = true;
+          lastFailed = true;
         } finally {
           if(admin != null) {
             admin.close();
@@ -206,7 +206,8 @@ public class TestClientTimeouts {
     public void callMethod(MethodDescriptor md, RpcController controller, Message param,
                            Message returnType, RpcCallback<Message> done) {
       RandomTimeoutBlockingRpcChannel.invokations.getAndIncrement();
-      if (ThreadLocalRandom.current().nextFloat() < RandomTimeoutBlockingRpcChannel.CHANCE_OF_TIMEOUT) {
+      if (ThreadLocalRandom.current().nextFloat() <
+          RandomTimeoutBlockingRpcChannel.CHANCE_OF_TIMEOUT) {
         // throw a ServiceException, because that is the only exception type that
         // {@link ProtobufRpcEngine} throws. If this RpcEngine is used with a different
         // "actual" type, this may not properly mimic the underlying RpcEngine.
