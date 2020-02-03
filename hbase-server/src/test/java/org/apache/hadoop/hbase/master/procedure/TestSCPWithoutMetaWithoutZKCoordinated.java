@@ -20,12 +20,12 @@ package org.apache.hadoop.hbase.master.procedure;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
-@Category({ MasterTests.class, LargeTests.class })
+@Category({ MasterTests.class, MediumTests.class })
 public class TestSCPWithoutMetaWithoutZKCoordinated extends TestSCPWithoutMeta {
 
   @ClassRule

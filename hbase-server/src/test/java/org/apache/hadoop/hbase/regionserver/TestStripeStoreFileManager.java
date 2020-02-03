@@ -23,7 +23,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -40,8 +39,8 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
@@ -50,7 +49,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestStripeStoreFileManager {
 
   @ClassRule
@@ -121,7 +120,9 @@ public class TestStripeStoreFileManager {
 
   private static ArrayList<HStoreFile> dumpIterator(Iterator<HStoreFile> iter) {
     ArrayList<HStoreFile> result = new ArrayList<>();
-    for (; iter.hasNext(); result.add(iter.next()));
+    for (; iter.hasNext(); result.add(iter.next())) {
+      continue;
+    }
     return result;
   }
 
@@ -519,8 +520,7 @@ public class TestStripeStoreFileManager {
   }
 
   private void testPriorityScenario(int expectedPriority,
-      int limit, int stripes, int filesInStripe, int l0Files) throws Exception
-  {
+      int limit, int stripes, int filesInStripe, int l0Files) throws Exception {
     final byte[][] keys = { KEY_A, KEY_B, KEY_C, KEY_D };
     assertTrue(stripes <= keys.length + 1);
     Configuration conf = TEST_UTIL.getConfiguration();
@@ -544,8 +544,8 @@ public class TestStripeStoreFileManager {
       ArrayList<HStoreFile> filesToCompact, ArrayList<HStoreFile> filesToInsert) throws Exception {
     Collection<HStoreFile> allFiles = manager.getStorefiles();
     try {
-       manager.addCompactionResults(filesToCompact, filesToInsert);
-       fail("Should have thrown");
+      manager.addCompactionResults(filesToCompact, filesToInsert);
+      fail("Should have thrown");
     } catch (IOException ex) {
       // Ignore it.
     }

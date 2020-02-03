@@ -28,14 +28,14 @@ import org.apache.hadoop.hbase.TestChoreService.ScheduledChoreSamples.FailInitia
 import org.apache.hadoop.hbase.TestChoreService.ScheduledChoreSamples.SampleStopper;
 import org.apache.hadoop.hbase.TestChoreService.ScheduledChoreSamples.SleepingChore;
 import org.apache.hadoop.hbase.TestChoreService.ScheduledChoreSamples.SlowChore;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(SmallTests.class)
+@Category(MediumTests.class)
 public class TestChoreService {
 
   @ClassRule

@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.junit.BeforeClass;
@@ -48,7 +48,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Test the load balancer that is created by default.
  */
-@Category({MasterTests.class, MediumTests.class})
+@Category({MasterTests.class, SmallTests.class})
 public class TestDefaultLoadBalancer extends BalancerTestBase {
 
   @ClassRule

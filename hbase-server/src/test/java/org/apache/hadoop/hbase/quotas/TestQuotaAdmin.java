@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.After;
@@ -69,7 +69,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitR
 /**
  * minicluster tests that validate that quota  entries are properly set in the quota table
  */
-@Category({ClientTests.class, MediumTests.class})
+@Category({ClientTests.class, LargeTests.class})
 public class TestQuotaAdmin {
 
   @ClassRule
