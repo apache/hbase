@@ -910,6 +910,11 @@ public class TestSnapshotScannerHDFSAclController {
     TEST_UTIL.restartHBaseCluster(1);
     TEST_UTIL.waitUntilNoRegionsInTransition();
 
+    // reset the cached configs after restart
+    conf = TEST_UTIL.getConfiguration();
+    admin = TEST_UTIL.getAdmin();
+    helper = new SnapshotScannerHDFSAclHelper(conf, admin.getConnection());
+
     Path tmpNsDir = helper.getPathHelper().getTmpNsDir(namespace);
     assertTrue(fs.exists(tmpNsDir));
     // check all regions in tmp table2 dir are archived
@@ -917,7 +922,6 @@ public class TestSnapshotScannerHDFSAclController {
 
     // create table1 and snapshot
     TestHDFSAclHelper.createTableAndPut(TEST_UTIL, table);
-    admin = TEST_UTIL.getAdmin();
     aclTable = TEST_UTIL.getConnection().getTable(PermissionStorage.ACL_TABLE_NAME);
     admin.snapshot(snapshot, table);
     TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot, 6);

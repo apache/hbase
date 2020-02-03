@@ -21,7 +21,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
 import java.io.ByteArrayInputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
@@ -30,13 +29,14 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
-
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.callback.NameCallback;
@@ -47,7 +47,6 @@ import javax.security.sasl.RealmCallback;
 import javax.security.sasl.RealmChoiceCallback;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -57,6 +56,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
@@ -68,7 +68,10 @@ import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.exceptions.MasterRegistryFetchException;
 import org.apache.hadoop.hbase.ipc.BlockingRpcClient;
+import org.apache.hadoop.hbase.ipc.NettyRpcClient;
+import org.apache.hadoop.hbase.ipc.NettyRpcServer;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcServerFactory;
 import org.apache.hadoop.hbase.ipc.SimpleRpcServer;
@@ -93,6 +96,7 @@ import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -100,10 +104,11 @@ import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation;
 
 /**
@@ -112,6 +117,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformati
  * This tests holds a "user database" in memory as a hashmap. Clients provide their password
  * in the client Hadoop configuration. The servers validate this password via the "user database".
  */
+@RunWith(Parameterized.class)
 @Category({MediumTests.class, SecurityTests.class})
 public class TestCustomSaslAuthenticationProvider {
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -125,6 +131,27 @@ public class TestCustomSaslAuthenticationProvider {
 
   private static final String USER1_PASSWORD = "foobarbaz";
   private static final String USER2_PASSWORD = "bazbarfoo";
+
+  @Parameterized.Parameters(name = "{index}: rpcClientImpl={0}, rpcServerImpl={1}")
+  public static Collection<Object[]> parameters() {
+    List<Object[]> params = new ArrayList<>();
+    List<String> rpcClientImpls = Arrays.asList(
+        BlockingRpcClient.class.getName(), NettyRpcClient.class.getName());
+    List<String> rpcServerImpls = Arrays.asList(
+        SimpleRpcServer.class.getName(), NettyRpcServer.class.getName());
+    for (String rpcClientImpl : rpcClientImpls) {
+      for (String rpcServerImpl : rpcServerImpls) {
+        params.add(new Object[] { rpcClientImpl, rpcServerImpl });
+      }
+    }
+    return params;
+  }
+
+  @Parameterized.Parameter(0)
+  public String rpcClientImpl;
+
+  @Parameterized.Parameter(1)
+  public String rpcServerImpl;
 
   private static Map<String,String> createUserDatabase() {
     Map<String,String> db = new ConcurrentHashMap<>();
@@ -400,7 +427,7 @@ public class TestCustomSaslAuthenticationProvider {
     }
   }
 
-  static LocalHBaseCluster createCluster(HBaseTestingUtility util, File keytabFile,
+  static void createBaseCluster(HBaseTestingUtility util, File keytabFile,
       MiniKdc kdc) throws Exception {
     String servicePrincipal = "hbase/localhost";
     String spnegoPrincipal = "HTTP/localhost";
@@ -416,8 +443,6 @@ public class TestCustomSaslAuthenticationProvider {
     util.startMiniDFSCluster(1);
     Path rootdir = util.getDataTestDirOnTestFS("TestGenerateDelegationToken");
     FSUtils.setRootDir(util.getConfiguration(), rootdir);
-    LocalHBaseCluster cluster = new LocalHBaseCluster(util.getConfiguration(), 1);
-    return cluster;
   }
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -431,10 +456,6 @@ public class TestCustomSaslAuthenticationProvider {
         UTIL.getDataTestDir("keytab").toUri().getPath());
     final MiniKdc kdc = UTIL.setupMiniKdc(KEYTAB_FILE);
 
-    // Switch back to NIO for now.
-    CONF.set(RpcClientFactory.CUSTOM_RPC_CLIENT_IMPL_CONF_KEY, BlockingRpcClient.class.getName());
-    CONF.set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY, SimpleRpcServer.class.getName());
-
     // Adds our test impls instead of creating service loader entries which
     // might inadvertently get them loaded on a real cluster.
     CONF.setStrings(SaslClientAuthenticationProviders.EXTRA_PROVIDERS_KEY,
@@ -443,9 +464,23 @@ public class TestCustomSaslAuthenticationProvider {
         InMemoryServerProvider.class.getName());
     CONF.set(SaslClientAuthenticationProviders.SELECTOR_KEY,
         InMemoryProviderSelector.class.getName());
+    createBaseCluster(UTIL, KEYTAB_FILE, kdc);
+  }
 
-    CLUSTER = createCluster(UTIL, KEYTAB_FILE, kdc);
+  @Before
+  public void setUpBeforeTest() throws Exception {
+    CONF.unset(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY);
+    CONF.set(RpcClientFactory.CUSTOM_RPC_CLIENT_IMPL_CONF_KEY, rpcClientImpl);
+    CONF.set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY, rpcServerImpl);
+    if (rpcClientImpl.equals(BlockingRpcClient.class.getName())) {
+      // Set the connection registry to ZKConnectionRegistry since hedging is not supported on
+      // blocking rpc clients.
+      CONF.set(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
+          HConstants.ZK_CONNECTION_REGISTRY_CLASS);
+    }
+    CLUSTER = new LocalHBaseCluster(CONF, 1);
     CLUSTER.startup();
+    createTable();
   }
 
   @AfterClass
@@ -457,14 +492,21 @@ public class TestCustomSaslAuthenticationProvider {
     UTIL.shutdownMiniZKCluster();
   }
 
+  @After
+  public void shutDownCluster() throws IOException {
+    if (CLUSTER != null) {
+      UTIL.deleteTable(name.getTableName());
+      CLUSTER.shutdown();
+    }
+  }
+
   @Rule
-  public TestName name = new TestName();
+  public TableNameTestRule name = new TableNameTestRule();
   TableName tableName;
   String clusterId;
 
-  @Before
   public void createTable() throws Exception {
-    tableName = TableName.valueOf(name.getMethodName());
+    tableName = name.getTableName();
 
     // Create a table and write a record as the service user (hbase)
     UserGroupInformation serviceUgi = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
@@ -517,7 +559,7 @@ public class TestCustomSaslAuthenticationProvider {
     });
   }
 
-  @Test(expected = RetriesExhaustedException.class)
+  @Test
   public void testNegativeAuthentication() throws Exception {
     // Validate that we can read that record back out as the user with our custom auth'n
     final Configuration clientConf = new Configuration(CONF);
@@ -527,12 +569,26 @@ public class TestCustomSaslAuthenticationProvider {
     user1.addToken(createPasswordToken("user1", "definitely not the password", clusterId));
     user1.doAs(new PrivilegedExceptionAction<Void>() {
       @Override public Void run() throws Exception {
+        // Depending on the registry in use, the following code can throw exceptions at different
+        // places. Master registry fails at the createConnection() step because the RPC to the
+        // master fails with sasl auth. With ZK registry, connection creation succeeds (since there
+        // is no RPC to HBase services involved) but the subsequent get() fails. The root cause
+        // should still be a SaslException in both the cases.
         try (Connection conn = ConnectionFactory.createConnection(clientConf);
             Table t = conn.getTable(tableName)) {
           t.get(new Get(Bytes.toBytes("r1")));
           fail("Should not successfully authenticate with HBase");
-          return null;
+        } catch (MasterRegistryFetchException mfe) {
+          Throwable cause = mfe.getCause();
+          assertTrue(cause.getMessage(), cause.getMessage().contains("SaslException"));
+        } catch (RetriesExhaustedException re) {
+          assertTrue(re.getMessage(), re.getMessage().contains("SaslException"));
+        } catch (Exception e) {
+          // Any other exception is unexpected.
+          fail("Unexpected exception caught, was expecting a authentication error: "
+              + Throwables.getStackTraceAsString(e));
         }
+        return null;
       }
     });
   }
