@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotManager;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
@@ -47,7 +47,7 @@ import org.slf4j.LoggerFactory;
  * TODO This is essentially a clone of TestRestoreSnapshotFromClient.  This is worth refactoring
  * this because there will be a few more flavors of snapshots that need to run these tests.
  */
-@Category({RegionServerTests.class, LargeTests.class})
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestRestoreFlushSnapshotFromClient {
 
   @ClassRule

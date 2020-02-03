@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
@@ -64,7 +64,7 @@ import org.slf4j.LoggerFactory;
  * Testing writing a version 3 {@link HFile} for all encoded blocks
  */
 @RunWith(Parameterized.class)
-@Category({IOTests.class, SmallTests.class})
+@Category({IOTests.class, MediumTests.class})
 public class TestHFileWriterV3WithDataEncoders {
 
   @ClassRule

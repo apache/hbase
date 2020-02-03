@@ -20,12 +20,10 @@ package org.apache.hadoop.hbase.http;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
 import java.io.File;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.security.PrivilegedExceptionAction;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.Path;
@@ -37,8 +35,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.security.token.TokenProvider;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.minikdc.MiniKdc;
@@ -73,7 +71,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Testing info servers for admin acl.
  */
-@Category({ MiscTests.class, SmallTests.class })
+@Category({ MiscTests.class, MediumTests.class })
 public class TestInfoServersACL {
 
   @ClassRule

@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.master.snapshot;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -34,8 +33,8 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils.SnapshotMock;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -49,7 +48,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Test that we correctly reload the cache, filter directories, etc.
  */
-@Category({MasterTests.class, MediumTests.class})
+@Category({MasterTests.class, LargeTests.class})
 public class TestSnapshotFileCache {
 
   @ClassRule
@@ -109,8 +108,8 @@ public class TestSnapshotFileCache {
 
   @Test
   public void testSnapshotTempDirReload() throws IOException {
-    SnapshotFileCache cache =
-        new SnapshotFileCache(fs, rootDir, PERIOD, 10000000, "test-snapshot-file-cache-refresh", new SnapshotFiles());
+    SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, PERIOD, 10000000,
+      "test-snapshot-file-cache-refresh", new SnapshotFiles());
 
     // Add a new non-tmp snapshot
     createAndTestSnapshotV1(cache, "snapshot0v1", false, false, false);

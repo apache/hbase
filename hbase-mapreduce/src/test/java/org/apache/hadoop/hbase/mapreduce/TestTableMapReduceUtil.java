@@ -24,7 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -36,7 +36,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Test different variants of initTableMapperJob method
  */
-@Category({MapReduceTests.class, SmallTests.class})
+@Category({MapReduceTests.class, MediumTests.class})
 public class TestTableMapReduceUtil {
 
   @ClassRule

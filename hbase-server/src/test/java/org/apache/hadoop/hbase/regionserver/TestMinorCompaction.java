@@ -22,7 +22,6 @@ import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam2;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestCase;
@@ -33,8 +32,8 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
@@ -50,7 +49,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Test minor compactions
  */
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestMinorCompaction {
 
   @ClassRule
@@ -167,7 +166,8 @@ public class TestMinorCompaction {
     testMinorCompactionWithDelete(delete, 0);
   }
 
-  private void testMinorCompactionWithDelete(Delete delete, int expectedResultsAfterDelete) throws Exception {
+  private void testMinorCompactionWithDelete(Delete delete, int expectedResultsAfterDelete)
+      throws Exception {
     Table loader = new RegionAsTable(r);
     for (int i = 0; i < compactionThreshold + 1; i++) {
       HBaseTestCase.addContent(loader, Bytes.toString(fam1), Bytes.toString(col1), firstRowBytes,

@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.replication;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,7 +54,7 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -68,7 +67,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ReplicationTests.class, LargeTests.class})
+@Category({ReplicationTests.class, MediumTests.class})
 public class TestReplicationWithTags {
 
   @ClassRule
@@ -162,9 +161,6 @@ public class TestReplicationWithTags {
     htable2 = utility2.getConnection().getTable(TABLE_NAME);
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     utility2.shutdownMiniCluster();
@@ -193,14 +189,14 @@ public class TestReplicationWithTags {
           Thread.sleep(SLEEP_TIME);
         } else {
           assertArrayEquals(ROW, res.value());
-          assertEquals(1, TestCoprocessorForTagsAtSink.tags.size());
-          Tag tag = TestCoprocessorForTagsAtSink.tags.get(0);
+          assertEquals(1, TestCoprocessorForTagsAtSink.TAGS.size());
+          Tag tag = TestCoprocessorForTagsAtSink.TAGS.get(0);
           assertEquals(TAG_TYPE, tag.getType());
           break;
         }
       }
     } finally {
-      TestCoprocessorForTagsAtSink.tags = null;
+      TestCoprocessorForTagsAtSink.TAGS = null;
     }
   }
 
@@ -243,7 +239,7 @@ public class TestReplicationWithTags {
   }
 
   public static class TestCoprocessorForTagsAtSink implements RegionCoprocessor, RegionObserver {
-    public static List<Tag> tags = null;
+    private static List<Tag> TAGS = null;
 
     @Override
     public Optional<RegionObserver> getRegionObserver() {
@@ -257,7 +253,7 @@ public class TestReplicationWithTags {
         // Check tag presence in the 1st cell in 1st Result
         if (!results.isEmpty()) {
           Cell cell = results.get(0);
-          tags = PrivateCellUtil.getTags(cell);
+          TAGS = PrivateCellUtil.getTags(cell);
         }
       }
     }

@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureLoader;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -56,7 +56,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @SuppressWarnings("deprecation")
-@Category({ MasterTests.class, MediumTests.class })
+@Category({ MasterTests.class, SmallTests.class })
 public class TestRegionProcedureStoreMigration {
 
   @ClassRule

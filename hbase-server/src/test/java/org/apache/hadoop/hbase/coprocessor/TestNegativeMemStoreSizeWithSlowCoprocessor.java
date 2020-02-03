@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.junit.AfterClass;
@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory;
  * slow/expensive and a flush is triggered at the same time the coprocessow is doing its work. To
  * simulate this we call flush from the coprocessor itself
  */
-@Category(LargeTests.class)
+@Category(MediumTests.class)
 public class TestNegativeMemStoreSizeWithSlowCoprocessor {
 
   @ClassRule

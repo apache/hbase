@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -43,8 +42,8 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -61,7 +60,7 @@ import org.slf4j.LoggerFactory;
  * It was originally written to test a method since removed, getClosestAtOrBefore
  * but the test is retained because it runs some interesting exercises.
  */
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestGetClosestAtOrBefore  {
 
   @ClassRule

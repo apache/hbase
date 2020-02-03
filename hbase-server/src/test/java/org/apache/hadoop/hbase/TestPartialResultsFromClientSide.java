@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.filter.FirstKeyValueMatchingQualifiersFilter;
 import org.apache.hadoop.hbase.filter.RandomRowFilter;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.Pair;
@@ -67,7 +67,7 @@ import org.slf4j.LoggerFactory;
  * Unless the flag {@link Scan#setAllowPartialResults(boolean)} has been set to true, the caller of
  * {@link ResultScanner#next()} should never see partial results.
  */
-@Category(MediumTests.class)
+@Category(LargeTests.class)
 public class TestPartialResultsFromClientSide {
 
   @ClassRule

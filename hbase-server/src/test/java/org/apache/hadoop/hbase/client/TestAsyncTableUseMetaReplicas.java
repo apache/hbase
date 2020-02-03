@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertArrayEquals;
-
 import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
@@ -35,7 +34,7 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.junit.After;
@@ -45,7 +44,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ ClientTests.class, LargeTests.class })
+@Category({ ClientTests.class, MediumTests.class })
 public class TestAsyncTableUseMetaReplicas {
 
   @ClassRule

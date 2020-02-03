@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.io.hfile;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,8 +42,8 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.junit.After;
@@ -56,7 +55,7 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestScannerFromBucketCache {
 
   @ClassRule
@@ -69,7 +68,7 @@ public class TestScannerFromBucketCache {
 
   HRegion region = null;
   private HBaseTestingUtility test_util;
-  public Configuration conf;
+  private Configuration conf;
   private final int MAX_VERSIONS = 2;
   byte[] val = new byte[512 * 1024];
 

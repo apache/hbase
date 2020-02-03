@@ -24,7 +24,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -33,7 +32,6 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
@@ -48,8 +46,8 @@ import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
@@ -63,7 +61,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 // Can't be small as it plays with EnvironmentEdgeManager
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestStoreScanner {
 
   @ClassRule
@@ -162,7 +160,7 @@ public class TestStoreScanner {
 
     CellGridStoreScanner(final Scan scan, ScanInfo scanInfo) throws IOException {
       super(scan, scanInfo, scan.getFamilyMap().get(CF), Arrays.<KeyValueScanner> asList(
-        new KeyValueScanner[] { new KeyValueScanFixture(CellComparator.getInstance(), CELL_GRID) }));
+        new KeyValueScanner[] {new KeyValueScanFixture(CellComparator.getInstance(), CELL_GRID)}));
     }
 
     @Override
@@ -234,7 +232,7 @@ public class TestStoreScanner {
     CellWithVersionsStoreScanner(final Scan scan, ScanInfo scanInfo) throws IOException {
       super(scan, scanInfo, scan.getFamilyMap().get(CF),
           Arrays.<KeyValueScanner> asList(new KeyValueScanner[] {
-              new KeyValueScanFixture(CellComparator.getInstance(), CELL_WITH_VERSIONS) }));
+            new KeyValueScanFixture(CellComparator.getInstance(), CELL_WITH_VERSIONS) }));
     }
 
     @Override
@@ -262,8 +260,8 @@ public class TestStoreScanner {
 
     CellWithVersionsNoOptimizeStoreScanner(Scan scan, ScanInfo scanInfo) throws IOException {
       super(scan, scanInfo, scan.getFamilyMap().get(CF),
-          Arrays.<KeyValueScanner> asList(new KeyValueScanner[] {
-              new KeyValueScanFixture(CellComparator.getInstance(), CELL_WITH_VERSIONS) }));
+        Arrays.<KeyValueScanner> asList(new KeyValueScanner[] {
+          new KeyValueScanFixture(CellComparator.getInstance(), CELL_WITH_VERSIONS) }));
     }
 
     @Override
@@ -377,7 +375,6 @@ public class TestStoreScanner {
   /**
    * Test optimize in StoreScanner. Test that we skip to the next 'block' when we it makes sense
    * reading the block 'index'.
-   * @throws IOException
    */
   @Test
   public void testOptimize() throws IOException {
@@ -405,7 +402,6 @@ public class TestStoreScanner {
    * work... seeking to start of block and then SKIPPING until we find the wanted Cell.
    * This 'simple' scenario mimics case of all Cells fitting inside a single HFileBlock.
    * See HBASE-15392. This test is a little cryptic. Takes a bit of staring to figure what it up to.
-   * @throws IOException
    */
   @Test
   public void testOptimizeAndGet() throws IOException {
@@ -434,7 +430,6 @@ public class TestStoreScanner {
    * because we had to exhaust all Cells in the current row making us load the next block just to
    * discard what we read there. This test is a little cryptic. Takes a bit of staring to figure
    * what it up to.
-   * @throws IOException
    */
   @Test
   public void testOptimizeAndGetWithFakedNextBlockIndexStart() throws IOException {
@@ -467,9 +462,7 @@ public class TestStoreScanner {
         create(r1, CF_STR, "a", 5, KeyValue.Type.Put, "dont-care"),
     };
     List<KeyValueScanner> scanners = Arrays.<KeyValueScanner>asList(
-        new KeyValueScanner[] {
-            new KeyValueScanFixture(CellComparator.getInstance(), kvs)
-    });
+      new KeyValueScanner[] {new KeyValueScanFixture(CellComparator.getInstance(), kvs)});
     Scan scanSpec = new Scan().withStartRow(Bytes.toBytes(r1));
     scanSpec.setTimeRange(0, 6);
     scanSpec.readAllVersions();
@@ -518,9 +511,7 @@ public class TestStoreScanner {
         create("R1", "cf", "a", 1, KeyValue.Type.Put, "dont-care"),
     };
     List<KeyValueScanner> scanners = Arrays.asList(
-        new KeyValueScanner[] {
-            new KeyValueScanFixture(CellComparator.getInstance(), kvs)
-        });
+      new KeyValueScanner[] {new KeyValueScanFixture(CellComparator.getInstance(), kvs)});
 
     Scan scanSpec = new Scan().withStartRow(Bytes.toBytes("R1"));
     // this only uses maxVersions (default=1) and TimeRange (default=all)
@@ -868,10 +859,10 @@ public class TestStoreScanner {
   public void testExpiredDeleteFamily() throws Exception {
     long now = System.currentTimeMillis();
     KeyValue[] kvs = new KeyValue[] {
-        new KeyValue(Bytes.toBytes("R1"), Bytes.toBytes("cf"), null, now-1000,
-            KeyValue.Type.DeleteFamily),
-        create("R1", "cf", "a", now-10, KeyValue.Type.Put,
-            "dont-care"),
+      new KeyValue(Bytes.toBytes("R1"), Bytes.toBytes("cf"), null, now-1000,
+        KeyValue.Type.DeleteFamily),
+      create("R1", "cf", "a", now-10, KeyValue.Type.Put,
+        "dont-care"),
     };
     List<KeyValueScanner> scanners = scanFixture(kvs);
     Scan scan = new Scan();
@@ -965,9 +956,9 @@ public class TestStoreScanner {
   public void testPreadNotEnabledForCompactionStoreScanners() throws Exception {
     long now = System.currentTimeMillis();
     KeyValue[] kvs = new KeyValue[] {
-        new KeyValue(Bytes.toBytes("R1"), Bytes.toBytes("cf"), null, now - 1000,
-            KeyValue.Type.DeleteFamily),
-        create("R1", "cf", "a", now - 10, KeyValue.Type.Put, "dont-care"), };
+      new KeyValue(Bytes.toBytes("R1"), Bytes.toBytes("cf"), null, now - 1000,
+        KeyValue.Type.DeleteFamily),
+      create("R1", "cf", "a", now - 10, KeyValue.Type.Put, "dont-care"), };
     List<KeyValueScanner> scanners = scanFixture(kvs);
     ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, 1, 500, KeepDeletedCells.FALSE,
         HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.getInstance(), false);

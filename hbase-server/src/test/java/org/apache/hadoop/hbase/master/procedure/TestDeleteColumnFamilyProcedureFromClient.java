@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.master.procedure;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -35,8 +34,8 @@ import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
@@ -49,7 +48,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MasterTests.class, LargeTests.class})
+@Category({MasterTests.class, MediumTests.class})
 public class TestDeleteColumnFamilyProcedureFromClient {
 
   @ClassRule
@@ -65,8 +64,6 @@ public class TestDeleteColumnFamilyProcedureFromClient {
 
   /**
    * Start up a mini cluster and put a small table of empty regions into it.
-   *
-   * @throws Exception
    */
   @BeforeClass
   public static void beforeAllTests() throws Exception {
