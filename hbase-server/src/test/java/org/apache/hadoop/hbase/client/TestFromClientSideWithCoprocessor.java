@@ -49,10 +49,7 @@ public class TestFromClientSideWithCoprocessor extends TestFromClientSide {
   }
 
   public TestFromClientSideWithCoprocessor(Class registry, int numHedgedReqs) throws Exception {
-    if (TEST_UTIL == null) {
-      // It is ok to initialize once because the test is parameterized for a single dimension.
-      initialize(registry, numHedgedReqs, NoOpScanPolicyObserver.class,
-          MultiRowMutationEndpoint.class);
-    }
+    initialize(registry, numHedgedReqs, NoOpScanPolicyObserver.class,
+        MultiRowMutationEndpoint.class);
   }
 }
