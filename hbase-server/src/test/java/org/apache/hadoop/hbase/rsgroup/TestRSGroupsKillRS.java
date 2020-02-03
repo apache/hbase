@@ -51,7 +51,6 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
@@ -231,9 +230,6 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
     TEST_UTIL.waitTableAvailable(tableName, 30000);
   }
 
-  // TODO: can not change meta group for now as we can not change the table descriptor of meta
-  // table, this has to be done before we merge back to master.
-  @Ignore
   @Test
   public void testLowerMetaGroupVersion() throws Exception {
     // create a rsgroup and move one regionserver to it
@@ -247,7 +243,6 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
     ADMIN.setRSGroup(toAddTables, groupName);
     assertTrue(RS_GROUP_ADMIN_CLIENT.getRSGroupInfo(groupName).getTables()
       .contains(TableName.META_TABLE_NAME));
-    TEST_UTIL.waitTableAvailable(tableName, 30000);
 
     // restart the regionserver in meta_group, and lower its version
     String originVersion = "";
