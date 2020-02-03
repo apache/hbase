@@ -22,7 +22,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-
+import java.util.Collections;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.Region;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
@@ -44,7 +44,7 @@ import org.junit.rules.TestName;
 /**
  * Test being able to edit hbase:meta.
  */
-@Category({MiscTests.class, LargeTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 public class TestHBaseMetaEdit {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -63,6 +63,23 @@ public class TestHBaseMetaEdit {
     UTIL.shutdownMiniCluster();
   }
 
+  // make sure that with every possible way, we get the same meta table descriptor.
+  private TableDescriptor getMetaDescriptor() throws TableNotFoundException, IOException {
+    Admin admin = UTIL.getAdmin();
+    TableDescriptor get = admin.getDescriptor(TableName.META_TABLE_NAME);
+    TableDescriptor list = admin.listTableDescriptors(null, true).stream()
+      .filter(td -> td.isMetaTable()).findAny().get();
+    TableDescriptor listByName =
+      admin.listTableDescriptors(Collections.singletonList(TableName.META_TABLE_NAME)).get(0);
+    TableDescriptor listByNs =
+      admin.listTableDescriptorsByNamespace(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME).stream()
+        .filter(td -> td.isMetaTable()).findAny().get();
+    assertEquals(get, list);
+    assertEquals(get, listByName);
+    assertEquals(get, listByNs);
+    return get;
+  }
+
   /**
    * Set versions, set HBASE-16213 indexed block encoding, and add a column family.
    * Delete the column family. Then try to delete a core hbase:meta family (should fail).
@@ -73,7 +90,7 @@ public class TestHBaseMetaEdit {
   public void testEditMeta() throws IOException {
     Admin admin = UTIL.getAdmin();
     admin.tableExists(TableName.META_TABLE_NAME);
-    TableDescriptor originalDescriptor = admin.getDescriptor(TableName.META_TABLE_NAME);
+    TableDescriptor originalDescriptor = getMetaDescriptor();
     ColumnFamilyDescriptor cfd = originalDescriptor.getColumnFamily(HConstants.CATALOG_FAMILY);
     int oldVersions = cfd.getMaxVersions();
     // Add '1' to current versions count. Set encoding too.
@@ -85,11 +102,11 @@ public class TestHBaseMetaEdit {
     ColumnFamilyDescriptor newCfd =
       ColumnFamilyDescriptorBuilder.newBuilder(extraColumnFamilyName).build();
     admin.addColumnFamily(TableName.META_TABLE_NAME, newCfd);
-    TableDescriptor descriptor = admin.getDescriptor(TableName.META_TABLE_NAME);
+    TableDescriptor descriptor = getMetaDescriptor();
     // Assert new max versions is == old versions plus 1.
     assertEquals(oldVersions + 1,
         descriptor.getColumnFamily(HConstants.CATALOG_FAMILY).getMaxVersions());
-    descriptor = admin.getDescriptor(TableName.META_TABLE_NAME);
+    descriptor = getMetaDescriptor();
     // Assert new max versions is == old versions plus 1.
     assertEquals(oldVersions + 1,
         descriptor.getColumnFamily(HConstants.CATALOG_FAMILY).getMaxVersions());
@@ -107,7 +124,7 @@ public class TestHBaseMetaEdit {
     assertTrue(r.getStore(extraColumnFamilyName) != null);
     // Assert we can't drop critical hbase:meta column family but we can drop any other.
     admin.deleteColumnFamily(TableName.META_TABLE_NAME, newCfd.getName());
-    descriptor = admin.getDescriptor(TableName.META_TABLE_NAME);
+    descriptor = getMetaDescriptor();
     assertTrue(descriptor.getColumnFamily(newCfd.getName()) == null);
     try {
       admin.deleteColumnFamily(TableName.META_TABLE_NAME, HConstants.CATALOG_FAMILY);
