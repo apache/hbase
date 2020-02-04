@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -68,7 +68,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.StopMaster
 /**
  * Confirm that we will set the priority in {@link HBaseRpcController} for several admin operations.
  */
-@Category({ ClientTests.class, MediumTests.class })
+@Category({ ClientTests.class, SmallTests.class })
 public class TestAsyncAdminRpcPriority {
 
   @ClassRule

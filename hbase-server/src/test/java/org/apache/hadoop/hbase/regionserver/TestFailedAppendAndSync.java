@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.Threads;
@@ -58,7 +58,7 @@ import org.slf4j.LoggerFactory;
  * Testing sync/append failures.
  * Copied from TestHRegion.
  */
-@Category({MediumTests.class})
+@Category({SmallTests.class})
 public class TestFailedAppendAndSync {
 
   @ClassRule

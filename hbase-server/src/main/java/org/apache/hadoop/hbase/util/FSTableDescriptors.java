@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Comparator;
@@ -27,8 +28,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import edu.umd.cs.findbugs.annotations.Nullable;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -37,23 +36,24 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableDescriptors;
+import org.apache.hadoop.hbase.TableInfoMissingException;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.CoprocessorDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
-import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.Coprocessor;
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.HConstants;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.primitives.Ints;
-import org.apache.hadoop.hbase.TableDescriptors;
-import org.apache.hadoop.hbase.TableInfoMissingException;
-import org.apache.hadoop.hbase.TableName;
 
 /**
  * Implementation of {@link TableDescriptors} that reads descriptors from the
@@ -100,11 +100,6 @@ public class FSTableDescriptors implements TableDescriptors {
   private final Map<TableName, TableDescriptor> cache = new ConcurrentHashMap<>();
 
   /**
-   * Table descriptor for <code>hbase:meta</code> catalog table
-   */
-  private final TableDescriptor metaTableDescriptor;
-
-  /**
    * Construct a FSTableDescriptors instance using the hbase root dir of the given
    * conf and the filesystem where that root dir lives.
    * This instance can do write operations (is not read only).
@@ -135,33 +130,30 @@ public class FSTableDescriptors implements TableDescriptors {
    *                     see HMaster#finishActiveMasterInitialization
    *                     TODO: This is a workaround. Should remove this ugly code...
    */
-  public FSTableDescriptors(final Configuration conf, final FileSystem fs,
-       final Path rootdir, final boolean fsreadonly, final boolean usecache,
-       Function<TableDescriptorBuilder, TableDescriptorBuilder> metaObserver) throws IOException {
+  public FSTableDescriptors(final Configuration conf, final FileSystem fs, final Path rootdir,
+    final boolean fsreadonly, final boolean usecache,
+    Function<TableDescriptorBuilder, TableDescriptorBuilder> metaObserver) throws IOException {
     this.fs = fs;
     this.rootdir = rootdir;
     this.fsreadonly = fsreadonly;
     this.usecache = usecache;
-    TableDescriptor td = null;
-    try {
-      td = getTableDescriptorFromFs(fs, rootdir, TableName.META_TABLE_NAME);
-    } catch (TableInfoMissingException e) {
-      td = metaObserver == null? createMetaTableDescriptor(conf):
-        metaObserver.apply(createMetaTableDescriptorBuilder(conf)).build();
-      if (!fsreadonly) {
+    if (!fsreadonly) {
+      // see if we already have meta descriptor on fs. Write one if not.
+      try {
+        getTableDescriptorFromFs(fs, rootdir, TableName.META_TABLE_NAME);
+      } catch (TableInfoMissingException e) {
+        TableDescriptorBuilder builder = createMetaTableDescriptorBuilder(conf);
+        if (metaObserver != null) {
+          builder = metaObserver.apply(builder);
+        }
+        TableDescriptor td = builder.build();
         LOG.info("Creating new hbase:meta table default descriptor/schema {}", td);
         updateTableDescriptor(td);
       }
     }
-    this.metaTableDescriptor = td;
   }
 
-  /**
-   *
-   * Make this private as soon as we've undone test dependency.
-   */
-  @VisibleForTesting
-  public static TableDescriptorBuilder createMetaTableDescriptorBuilder(final Configuration conf)
+  private static TableDescriptorBuilder createMetaTableDescriptorBuilder(final Configuration conf)
     throws IOException {
     // TODO We used to set CacheDataInL1 for META table. When we have BucketCache in file mode, now
     // the META table data goes to File mode BC only. Test how that affect the system. If too much,
@@ -208,12 +200,6 @@ public class FSTableDescriptors implements TableDescriptors {
       .setCoprocessor(CoprocessorDescriptorBuilder.newBuilder(
         MultiRowMutationEndpoint.class.getName())
         .setPriority(Coprocessor.PRIORITY_SYSTEM).build());
-  }
-
-  @VisibleForTesting
-  public static TableDescriptor createMetaTableDescriptor(final Configuration conf)
-      throws IOException {
-    return createMetaTableDescriptorBuilder(conf).build();
   }
 
   @Override
@@ -276,16 +262,12 @@ public class FSTableDescriptors implements TableDescriptors {
    * Returns a map from table name to table descriptor for all tables.
    */
   @Override
-  public Map<String, TableDescriptor> getAll()
-  throws IOException {
+  public Map<String, TableDescriptor> getAll() throws IOException {
     Map<String, TableDescriptor> tds = new TreeMap<>();
-
     if (fsvisited && usecache) {
       for (Map.Entry<TableName, TableDescriptor> entry: this.cache.entrySet()) {
         tds.put(entry.getKey().getNameWithNamespaceInclAsString(), entry.getValue());
       }
-      // add hbase:meta to the response
-      tds.put(this.metaTableDescriptor.getTableName().getNameAsString(), metaTableDescriptor);
     } else {
       LOG.trace("Fetching table descriptors from the filesystem.");
       boolean allvisited = true;
@@ -568,15 +550,17 @@ public class FSTableDescriptors implements TableDescriptors {
    * @throws IOException Thrown if failed update.
    * @throws NotImplementedException if in read only mode
    */
-  @VisibleForTesting Path updateTableDescriptor(TableDescriptor td)
-  throws IOException {
+  @VisibleForTesting
+  Path updateTableDescriptor(TableDescriptor td) throws IOException {
     if (fsreadonly) {
       throw new NotImplementedException("Cannot update a table descriptor - in read only mode");
     }
     TableName tableName = td.getTableName();
     Path tableDir = getTableDir(tableName);
     Path p = writeTableDescriptor(fs, td, tableDir, getTableInfoPath(tableDir));
-    if (p == null) throw new IOException("Failed update");
+    if (p == null) {
+      throw new IOException("Failed update");
+    }
     LOG.info("Updated tableinfo=" + p);
     if (usecache) {
       this.cache.put(td.getTableName(), td);

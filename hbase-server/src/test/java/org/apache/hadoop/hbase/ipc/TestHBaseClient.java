@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.ipc;
 import java.net.InetSocketAddress;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.junit.Assert;
@@ -29,9 +29,8 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RPCTests.class, MediumTests.class})   // Can't be small, we're playing with the EnvironmentEdge
+@Category({RPCTests.class, SmallTests.class})
 public class TestHBaseClient {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestHBaseClient.class);
@@ -39,47 +38,48 @@ public class TestHBaseClient {
   @Test
   public void testFailedServer(){
     ManualEnvironmentEdge ee = new ManualEnvironmentEdge();
-    EnvironmentEdgeManager.injectEdge(  ee );
+    EnvironmentEdgeManager.injectEdge(ee);
     FailedServers fs = new FailedServers(new Configuration());
     Throwable testThrowable = new Throwable();//throwable already tested in TestFailedServers.java
 
     InetSocketAddress ia = InetSocketAddress.createUnresolved("bad", 12);
-    InetSocketAddress ia2 = InetSocketAddress.createUnresolved("bad", 12);  // same server as ia
+     // same server as ia
+    InetSocketAddress ia2 = InetSocketAddress.createUnresolved("bad", 12);
     InetSocketAddress ia3 = InetSocketAddress.createUnresolved("badtoo", 12);
     InetSocketAddress ia4 = InetSocketAddress.createUnresolved("badtoo", 13);
 
 
-    Assert.assertFalse( fs.isFailedServer(ia) );
+    Assert.assertFalse(fs.isFailedServer(ia));
 
     fs.addToFailedServers(ia,testThrowable);
-    Assert.assertTrue( fs.isFailedServer(ia) );
-    Assert.assertTrue( fs.isFailedServer(ia2) );
+    Assert.assertTrue(fs.isFailedServer(ia));
+    Assert.assertTrue(fs.isFailedServer(ia2));
 
-    ee.incValue( 1 );
-    Assert.assertTrue( fs.isFailedServer(ia) );
-    Assert.assertTrue( fs.isFailedServer(ia2) );
+    ee.incValue(1);
+    Assert.assertTrue(fs.isFailedServer(ia));
+    Assert.assertTrue(fs.isFailedServer(ia2));
 
-    ee.incValue( RpcClient.FAILED_SERVER_EXPIRY_DEFAULT + 1 );
-    Assert.assertFalse( fs.isFailedServer(ia) );
-    Assert.assertFalse( fs.isFailedServer(ia2) );
+    ee.incValue(RpcClient.FAILED_SERVER_EXPIRY_DEFAULT + 1);
+    Assert.assertFalse(fs.isFailedServer(ia));
+    Assert.assertFalse(fs.isFailedServer(ia2));
 
     fs.addToFailedServers(ia,testThrowable);
     fs.addToFailedServers(ia3,testThrowable);
     fs.addToFailedServers(ia4,testThrowable);
 
-    Assert.assertTrue( fs.isFailedServer(ia) );
-    Assert.assertTrue( fs.isFailedServer(ia2) );
-    Assert.assertTrue( fs.isFailedServer(ia3) );
-    Assert.assertTrue( fs.isFailedServer(ia4) );
+    Assert.assertTrue(fs.isFailedServer(ia));
+    Assert.assertTrue(fs.isFailedServer(ia2));
+    Assert.assertTrue(fs.isFailedServer(ia3));
+    Assert.assertTrue(fs.isFailedServer(ia4));
 
-    ee.incValue( RpcClient.FAILED_SERVER_EXPIRY_DEFAULT + 1 );
-    Assert.assertFalse( fs.isFailedServer(ia) );
-    Assert.assertFalse( fs.isFailedServer(ia2) );
-    Assert.assertFalse( fs.isFailedServer(ia3) );
-    Assert.assertFalse( fs.isFailedServer(ia4) );
+    ee.incValue(RpcClient.FAILED_SERVER_EXPIRY_DEFAULT + 1);
+    Assert.assertFalse(fs.isFailedServer(ia));
+    Assert.assertFalse(fs.isFailedServer(ia2));
+    Assert.assertFalse(fs.isFailedServer(ia3));
+    Assert.assertFalse(fs.isFailedServer(ia4));
 
 
     fs.addToFailedServers(ia3,testThrowable);
-    Assert.assertFalse( fs.isFailedServer(ia4) );
+    Assert.assertFalse(fs.isFailedServer(ia4));
   }
 }

@@ -25,7 +25,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -51,8 +50,8 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.InclusiveStopFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -65,7 +64,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Test of a long-lived scanner validating as we go.
  */
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestScanner {
 
   @ClassRule
@@ -125,7 +124,6 @@ public class TestScanner {
 
   /**
    * Test basic stop row filter works.
-   * @throws Exception
    */
   @Test
   public void testStopRow() throws Exception {
@@ -227,7 +225,6 @@ public class TestScanner {
   /**
    * Test that closing a scanner while a client is using it doesn't throw
    * NPEs but instead a UnknownScannerException. HBASE-2503
-   * @throws Exception
    */
   @Test
   public void testRaceBetweenClientAndTimeout() throws Exception {
@@ -252,7 +249,6 @@ public class TestScanner {
   }
 
   /** The test!
-   * @throws IOException
    */
   @Test
   public void testScanner() throws IOException {
@@ -375,15 +371,11 @@ public class TestScanner {
 
   /** Use a scanner to get the region info and then validate the results */
   private void scan(boolean validateStartcode, String serverName)
-  throws IOException {
+      throws IOException {
     InternalScanner scanner = null;
     Scan scan = null;
     List<Cell> results = new ArrayList<>();
-    byte [][][] scanColumns = {
-        COLS,
-        EXPLICIT_COLS
-    };
-
+    byte [][][] scanColumns = {COLS, EXPLICIT_COLS};
     for(int i = 0; i < scanColumns.length; i++) {
       try {
         scan = new Scan(FIRST_ROW);
@@ -463,16 +455,15 @@ public class TestScanner {
    * Tests to do a sync flush during the middle of a scan. This is testing the StoreScanner
    * update readers code essentially.  This is not highly concurrent, since its all 1 thread.
    * HBase-910.
-   * @throws Exception
    */
   @Test
   public void testScanAndSyncFlush() throws Exception {
     this.region = TEST_UTIL.createLocalHRegion(TESTTABLEDESC, null, null);
     Table hri = new RegionAsTable(region);
     try {
-        LOG.info("Added: " +
-          HBaseTestCase.addContent(hri, Bytes.toString(HConstants.CATALOG_FAMILY),
-            Bytes.toString(HConstants.REGIONINFO_QUALIFIER)));
+      LOG.info("Added: " +
+        HBaseTestCase.addContent(hri, Bytes.toString(HConstants.CATALOG_FAMILY),
+          Bytes.toString(HConstants.REGIONINFO_QUALIFIER)));
       int count = count(hri, -1, false);
       assertEquals(count, count(hri, 100, false)); // do a sync flush.
     } catch (Exception e) {
@@ -486,17 +477,15 @@ public class TestScanner {
   /**
    * Tests to do a concurrent flush (using a 2nd thread) while scanning.  This tests both
    * the StoreScanner update readers and the transition from memstore -> snapshot -> store file.
-   *
-   * @throws Exception
    */
   @Test
   public void testScanAndRealConcurrentFlush() throws Exception {
     this.region = TEST_UTIL.createLocalHRegion(TESTTABLEDESC, null, null);
     Table hri = new RegionAsTable(region);
     try {
-        LOG.info("Added: " +
-          HBaseTestCase.addContent(hri, Bytes.toString(HConstants.CATALOG_FAMILY),
-            Bytes.toString(HConstants.REGIONINFO_QUALIFIER)));
+      LOG.info("Added: " +
+        HBaseTestCase.addContent(hri, Bytes.toString(HConstants.CATALOG_FAMILY),
+          Bytes.toString(HConstants.REGIONINFO_QUALIFIER)));
       int count = count(hri, -1, false);
       assertEquals(count, count(hri, 100, true)); // do a true concurrent background thread flush
     } catch (Exception e) {
@@ -510,8 +499,6 @@ public class TestScanner {
   /**
    * Make sure scanner returns correct result when we run a major compaction
    * with deletes.
-   *
-   * @throws Exception
    */
   @Test
   @SuppressWarnings("deprecation")
@@ -573,7 +560,7 @@ public class TestScanner {
    * @throws IOException
    */
   private int count(final Table countTable, final int flushIndex, boolean concurrent)
-  throws IOException {
+      throws IOException {
     LOG.info("Taking out counting scan");
     Scan scan = new Scan();
     for (byte [] qualifier: EXPLICIT_COLS) {

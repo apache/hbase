@@ -55,7 +55,7 @@ import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.RAMCache;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.RAMQueueEntry;
 import org.apache.hadoop.hbase.testclassification.IOTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -74,7 +74,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
  * Tests will ensure that blocks' data correctness under several threads concurrency
  */
 @RunWith(Parameterized.class)
-@Category({ IOTests.class, MediumTests.class })
+@Category({ IOTests.class, LargeTests.class })
 public class TestBucketCache {
 
   @ClassRule

@@ -28,8 +28,8 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.http.ssl.KeyStoreTestUtil;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.ssl.SSLFactory;
@@ -46,7 +46,7 @@ import org.slf4j.LoggerFactory;
  * HTTPS using the created certficates and calls an echo servlet using the
  * corresponding HTTPS URL.
  */
-@Category({MiscTests.class, SmallTests.class})
+@Category({MiscTests.class, MediumTests.class})
 public class TestSSLHttpServer extends HttpServerFunctionalTest {
 
   @ClassRule
