@@ -24,7 +24,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -155,7 +154,7 @@ public class HBaseCommonTestingUtility {
     return new Path(getBaseTestDir(), getRandomUUID().toString());
   }
 
-  public UUID getRandomUUID() {
+  public static UUID getRandomUUID() {
     return new UUID(ThreadLocalRandom.current().nextLong(),
                     ThreadLocalRandom.current().nextLong());
   }

@@ -41,10 +41,9 @@ import java.security.cert.X509Certificate;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-
 import javax.security.auth.x500.X500Principal;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.security.ssl.FileBasedKeyStoresFactory;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.bouncycastle.x509.X509V1CertificateGenerator;
@@ -169,17 +168,27 @@ public final class KeyStoreTestUtil {
     saveKeyStore(ks, filename, password);
   }
 
-  public static void cleanupSSLConfig(String keystoresDir, String sslConfDir)
+  public static void cleanupSSLConfig(Configuration conf)
     throws Exception {
-    File f = new File(keystoresDir + "/clientKS.jks");
+    File f = new File(conf.get(FileBasedKeyStoresFactory.resolvePropertyName(SSLFactory.Mode.SERVER,
+        FileBasedKeyStoresFactory.SSL_TRUSTSTORE_LOCATION_TPL_KEY)));
     f.delete();
-    f = new File(keystoresDir + "/serverKS.jks");
+    f = new File(conf.get(FileBasedKeyStoresFactory.resolvePropertyName(SSLFactory.Mode.SERVER,
+        FileBasedKeyStoresFactory.SSL_KEYSTORE_LOCATION_TPL_KEY)));
     f.delete();
-    f = new File(keystoresDir + "/trustKS.jks");
+
+    String clientKeyStore = conf.get(FileBasedKeyStoresFactory
+        .resolvePropertyName(SSLFactory.Mode.CLIENT,
+            FileBasedKeyStoresFactory.SSL_KEYSTORE_LOCATION_TPL_KEY));
+    if (clientKeyStore != null) {
+      f = new File(clientKeyStore);
+      f.delete();
+    }
+    f = new File(KeyStoreTestUtil.getClasspathDir(KeyStoreTestUtil.class) + "/" + conf
+        .get(SSLFactory.SSL_CLIENT_CONF_KEY));
     f.delete();
-    f = new File(sslConfDir + "/ssl-client.xml");
-    f.delete();
-    f = new File(sslConfDir +  "/ssl-server.xml");
+    f = new File(KeyStoreTestUtil.getClasspathDir(KeyStoreTestUtil.class) + "/" + conf
+        .get(SSLFactory.SSL_SERVER_CONF_KEY));
     f.delete();
   }
 
@@ -206,8 +215,12 @@ public final class KeyStoreTestUtil {
     String trustKS = keystoresDir + "/trustKS.jks";
     String trustPassword = "trustP";
 
-    File sslClientConfFile = new File(sslConfDir + "/ssl-client.xml");
-    File sslServerConfFile = new File(sslConfDir + "/ssl-server.xml");
+    File sslClientConfFile = new File(
+        sslConfDir + "/ssl-client-" + System.nanoTime() + "-" + HBaseCommonTestingUtility
+            .getRandomUUID() + ".xml");
+    File sslServerConfFile = new File(
+        sslConfDir + "/ssl-server-" + System.nanoTime() + "-" + HBaseCommonTestingUtility
+            .getRandomUUID() + ".xml");
 
     Map<String, X509Certificate> certs = new HashMap<>();
 
@@ -242,6 +255,9 @@ public final class KeyStoreTestUtil {
     conf.set(SSLFactory.SSL_HOSTNAME_VERIFIER_KEY, "ALLOW_ALL");
     conf.set(SSLFactory.SSL_CLIENT_CONF_KEY, sslClientConfFile.getName());
     conf.set(SSLFactory.SSL_SERVER_CONF_KEY, sslServerConfFile.getName());
+    conf.set("dfs.https.server.keystore.resource", sslServerConfFile.getName());
+
+
     conf.setBoolean(SSLFactory.SSL_REQUIRE_CLIENT_CERT_KEY, useClientCert);
   }
 
