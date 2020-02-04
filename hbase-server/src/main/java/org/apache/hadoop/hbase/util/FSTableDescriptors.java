@@ -144,7 +144,7 @@ public class FSTableDescriptors implements TableDescriptors {
       } catch (TableInfoMissingException e) {
         TableDescriptorBuilder builder = createMetaTableDescriptorBuilder(conf);
         if (metaObserver != null) {
-          metaObserver.apply(builder);
+          builder = metaObserver.apply(builder);
         }
         TableDescriptor td = builder.build();
         LOG.info("Creating new hbase:meta table default descriptor/schema {}", td);
