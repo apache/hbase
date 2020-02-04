@@ -87,10 +87,4 @@ public class TestMasterNotCarryTable {
     // no need to instantiate mob file cache.
     assertFalse(master.getMobFileCache().isPresent());
   }
-
-  @Test
-  public void testMasterMemStoreLAB() {
-    // no need to instantiate MemStoreLAB.
-    assertNull(ChunkCreator.getInstance());
-  }
 }
