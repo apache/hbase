@@ -80,7 +80,7 @@ function personality_globals
   # TODO use PATCH_BRANCH to select jdk versions to use.
 
   # Override the maven options
-  MAVEN_OPTS="${MAVEN_OPTS:-"-Xmx3100M"}"
+  MAVEN_OPTS="${MAVEN_OPTS:-"-Xms4G -Xmx4G"}"
   # Pass maven a -T argument. Should make it run faster. Pass conservative value.
   # Default is one thread. 0.5C on an apache box of 24 cores and 2 executors should
   # make for 6 threads? Lets see. Setting this here for yetus to pick up. See
