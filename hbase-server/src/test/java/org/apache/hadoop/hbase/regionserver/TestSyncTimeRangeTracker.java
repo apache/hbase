@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicLongArray;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -34,7 +36,7 @@ public class TestSyncTimeRangeTracker extends TestSimpleTimeRangeTracker {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestSyncTimeRangeTracker.class);
 
-  private static final int NUM_KEYS = 10000000;
+  private static final int NUM_KEYS = 1000000;
   private static final int NUM_OF_THREADS = 20;
 
   @Override
@@ -84,23 +86,23 @@ public class TestSyncTimeRangeTracker extends TestSimpleTimeRangeTracker {
     assertTrue(trr.getMin() == 0);
   }
 
-  static class RandomTestData {
-    private long[] keys = new long[NUM_KEYS];
-    private long min = Long.MAX_VALUE;
-    private long max = 0;
+ static class RandomTestData {
+    private final AtomicLongArray keys = new AtomicLongArray(NUM_KEYS);
+    private long min = Long.MAX_VALUE; // effectively final
+    private long max = 0; // effectively final
 
     public RandomTestData() {
       if (ThreadLocalRandom.current().nextInt(NUM_OF_THREADS) % 2 == 0) {
         for (int i = 0; i < NUM_KEYS; i++) {
-          keys[i] = i + ThreadLocalRandom.current().nextLong(NUM_OF_THREADS);
-          if (keys[i] < min) min = keys[i];
-          if (keys[i] > max) max = keys[i];
+          keys.set(i, i + ThreadLocalRandom.current().nextLong(NUM_OF_THREADS));
+          if (keys.get(i) < min) min = keys.get(i);
+          if (keys.get(i) > max) max = keys.get(i);
         }
       } else {
         for (int i = NUM_KEYS - 1; i >= 0; i--) {
-          keys[i] = i + ThreadLocalRandom.current().nextLong(NUM_OF_THREADS);
-          if (keys[i] < min) min = keys[i];
-          if (keys[i] > max) max = keys[i];
+          keys.set(i, i + ThreadLocalRandom.current().nextLong(NUM_OF_THREADS));
+          if (keys.get(i) < min) min = keys.get(i);
+          if (keys.get(i) > max) max = keys.get(i);
         }
       }
     }
@@ -125,8 +127,8 @@ public class TestSyncTimeRangeTracker extends TestSimpleTimeRangeTracker {
 
     @Override
     public void run() {
-      for (long key : data.keys) {
-        trt.includeTimestamp(key);
+      for (int i = 0; i < data.keys.length(); i++) {
+        trt.includeTimestamp(data.keys.get(i));
       }
     }
   }
