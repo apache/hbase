@@ -88,7 +88,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Test mob store compaction
  */
-@Category(SmallTests.class)
+@Category(MediumTests.class)
 public class TestMobStoreCompaction {
 
   @ClassRule
