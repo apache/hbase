@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.util.FutureUtils;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -870,6 +871,17 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<List<TableName>> listTablesInRSGroup(String groupName) {
+    return wrap(rawAdmin.listTablesInRSGroup(groupName));
+  }
+
+  @Override
+  public CompletableFuture<Pair<List<String>, List<TableName>>>
+    getConfiguredNamespacesAndTablesInRSGroup(String groupName) {
+    return wrap(rawAdmin.getConfiguredNamespacesAndTablesInRSGroup(groupName));
+  }
+
+  @Override
   public CompletableFuture<RSGroupInfo> getRSGroup(Address hostPort) {
     return wrap(rawAdmin.getRSGroup(hostPort));
   }
@@ -888,5 +900,4 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   public CompletableFuture<Void> setRSGroup(Set<TableName> tables, String groupName) {
     return wrap(rawAdmin.setRSGroup(tables, groupName));
   }
-
 }

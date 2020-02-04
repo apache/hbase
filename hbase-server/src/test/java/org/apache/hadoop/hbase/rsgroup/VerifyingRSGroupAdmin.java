@@ -76,6 +76,7 @@ import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
@@ -775,6 +776,17 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
 
   public List<RSGroupInfo> listRSGroups() throws IOException {
     return admin.listRSGroups();
+  }
+
+  @Override
+  public List<TableName> listTablesInRSGroup(String groupName) throws IOException {
+    return admin.listTablesInRSGroup(groupName);
+  }
+
+  @Override
+  public Pair<List<String>, List<TableName>>
+    getConfiguredNamespacesAndTablesInRSGroup(String groupName) throws IOException {
+    return admin.getConfiguredNamespacesAndTablesInRSGroup(groupName);
   }
 
   public void removeRSGroup(String groupName) throws IOException {

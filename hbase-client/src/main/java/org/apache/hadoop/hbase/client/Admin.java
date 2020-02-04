@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -2298,6 +2299,30 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   List<RSGroupInfo> listRSGroups() throws IOException;
+
+  /**
+   * Get all tables in this RegionServer group.
+   * @param groupName the group name
+   * @throws IOException if a remote or network exception occurs
+   * @see #getConfiguredNamespacesAndTablesInRSGroup(String)
+   */
+  List<TableName> listTablesInRSGroup(String groupName) throws IOException;
+
+  /**
+   * Get the namespaces and tables which have this RegionServer group in descriptor.
+   * <p/>
+   * The difference between this method and {@link #listTablesInRSGroup(String)} is that, this
+   * method will not include the table which is actually in this RegionServr group but without the
+   * RegionServer group configuration in its {@link TableDescriptor}. For example, we have a group
+   * 'A', and we make namespace 'nsA' in this group, then all the tables under this namespace will
+   * in the group 'A', but this method will not return these tables but only the namespace 'nsA',
+   * while the {@link #listTablesInRSGroup(String)} will return all these tables.
+   * @param groupName the group name
+   * @throws IOException if a remote or network exception occurs
+   * @see #listTablesInRSGroup(String)
+   */
+  Pair<List<String>, List<TableName>> getConfiguredNamespacesAndTablesInRSGroup(String groupName)
+    throws IOException;
 
   /**
    * Remove RegionServer group associated with the given name

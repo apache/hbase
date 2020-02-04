@@ -1113,6 +1113,12 @@ service MasterService {
 
   rpc RemoveServers(RemoveServersRequest)
     returns (RemoveServersResponse);
+
+  rpc ListTablesInRSGroup(ListTablesInRSGroupRequest)
+    returns (ListTablesInRSGroupResponse);
+
+  rpc GetConfiguredNamespacesAndTablesInRSGroup(GetConfiguredNamespacesAndTablesInRSGroupRequest)
+    returns (GetConfiguredNamespacesAndTablesInRSGroupResponse);
 }
 
 // HBCK Service definitions.

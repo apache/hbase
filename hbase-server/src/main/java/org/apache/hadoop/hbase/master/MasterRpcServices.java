@@ -95,6 +95,7 @@ import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
+import org.apache.hadoop.hbase.rsgroup.RSGroupUtil;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
@@ -311,6 +312,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.AddR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.AddRSGroupResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.BalanceRSGroupRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.BalanceRSGroupResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetConfiguredNamespacesAndTablesInRSGroupRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetConfiguredNamespacesAndTablesInRSGroupResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoOfServerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoOfServerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoOfTableRequest;
@@ -319,6 +322,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.ListRSGroupInfosRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.ListRSGroupInfosResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.ListTablesInRSGroupRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.ListTablesInRSGroupResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.MoveServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.MoveServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupRequest;
@@ -3150,6 +3155,65 @@ public class MasterRpcServices extends RSRpcServices implements MasterService.Bl
       master.getRSGroupInfoManager().removeServers(servers);
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().postRemoveServers(servers);
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return builder.build();
+  }
+
+  @Override
+  public ListTablesInRSGroupResponse listTablesInRSGroup(RpcController controller,
+    ListTablesInRSGroupRequest request) throws ServiceException {
+    ListTablesInRSGroupResponse.Builder builder = ListTablesInRSGroupResponse.newBuilder();
+    String groupName = request.getGroupName();
+    LOG.info(master.getClientIdAuditPrefix() + " list tables in rsgroup " + groupName);
+    try {
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preListTablesInRSGroup(groupName);
+      }
+      boolean isDefaultGroup = RSGroupInfo.DEFAULT_GROUP.equals(groupName);
+      for (TableDescriptor td : master.getTableDescriptors().getAll().values()) {
+        // no config means in default group
+        if (RSGroupUtil.getRSGroupInfo(master, master.getRSGroupInfoManager(), td.getTableName())
+          .map(g -> g.getName().equals(groupName)).orElse(isDefaultGroup)) {
+          builder.addTableName(ProtobufUtil.toProtoTableName(td.getTableName()));
+        }
+      }
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postListTablesInRSGroup(groupName);
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return builder.build();
+  }
+
+  @Override
+  public GetConfiguredNamespacesAndTablesInRSGroupResponse
+    getConfiguredNamespacesAndTablesInRSGroup(RpcController controller,
+      GetConfiguredNamespacesAndTablesInRSGroupRequest request) throws ServiceException {
+    GetConfiguredNamespacesAndTablesInRSGroupResponse.Builder builder =
+      GetConfiguredNamespacesAndTablesInRSGroupResponse.newBuilder();
+    String groupName = request.getGroupName();
+    LOG.info(master.getClientIdAuditPrefix() + " get configured namespaces and tables in rsgroup " +
+      groupName);
+    try {
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preGetConfiguredNamespacesAndTablesInRSGroup(groupName);
+      }
+      for (NamespaceDescriptor nd : master.getClusterSchema().getNamespaces()) {
+        if (groupName.equals(nd.getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP))) {
+          builder.addNamespace(nd.getName());
+        }
+      }
+      for (TableDescriptor td : master.getTableDescriptors().getAll().values()) {
+        if (td.getRegionServerGroup().map(g -> g.equals(groupName)).orElse(false)) {
+          builder.addTableName(ProtobufUtil.toProtoTableName(td.getTableName()));
+        }
+      }
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postGetConfiguredNamespacesAndTablesInRSGroup(groupName);
       }
     } catch (IOException e) {
       throw new ServiceException(e);
