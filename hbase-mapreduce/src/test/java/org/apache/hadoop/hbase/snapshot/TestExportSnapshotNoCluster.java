@@ -18,9 +18,7 @@
 package org.apache.hadoop.hbase.snapshot;
 
 import static org.junit.Assert.assertTrue;
-
 import java.net.URI;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
@@ -34,7 +32,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils.SnapshotMock;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -53,12 +51,11 @@ public class TestExportSnapshotNoCluster {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestExportSnapshotNoCluster.class);
 
-  protected final static HBaseCommonTestingUtility TEST_UTIL = new HBaseCommonTestingUtility();
+  private final HBaseCommonTestingUtility testUtil = new HBaseCommonTestingUtility();
+  private FileSystem fs;
+  private Path testDir;
 
-  private static FileSystem fs;
-  private static Path testDir;
-
-  public static void setUpBaseConf(Configuration conf) {
+  public void setUpBaseConf(Configuration conf) {
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
     conf.setInt("hbase.regionserver.msginterval", 100);
     conf.setInt("hbase.client.pause", 250);
@@ -68,29 +65,29 @@ public class TestExportSnapshotNoCluster {
     conf.set(HConstants.HBASE_DIR, testDir.toString());
   }
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
+  @Before
+  public void setUpBefore() throws Exception {
     // Make sure testDir is on LocalFileSystem
-    testDir = TEST_UTIL.getDataTestDir().makeQualified(URI.create("file:///"), new Path("/"));
-    fs = testDir.getFileSystem(TEST_UTIL.getConfiguration());
+    testDir = testUtil.getDataTestDir().makeQualified(URI.create("file:///"), new Path("/"));
+    fs = testDir.getFileSystem(testUtil.getConfiguration());
     assertTrue("FileSystem '" + fs + "' is not local", fs instanceof LocalFileSystem);
 
-    setUpBaseConf(TEST_UTIL.getConfiguration());
+    setUpBaseConf(testUtil.getConfiguration());
   }
 
-  /**
-   * Mock a snapshot with files in the archive dir,
-   * two regions, and one reference file.
-   */
   @Test
-  public void testSnapshotWithRefsExportFileSystemState() throws Exception {
-    SnapshotMock snapshotMock = new SnapshotMock(TEST_UTIL.getConfiguration(), fs, testDir);
-    SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV2("tableWithRefsV1",
+  public void testSnapshotV1WithRefsExportFileSystemState() throws Exception {
+    final SnapshotMock snapshotMock = new SnapshotMock(testUtil.getConfiguration(), fs, testDir);
+    final SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV1("tableWithRefsV1",
       "tableWithRefsV1");
     testSnapshotWithRefsExportFileSystemState(builder);
+  }
 
-    snapshotMock = new SnapshotMock(TEST_UTIL.getConfiguration(), fs, testDir);
-    builder = snapshotMock.createSnapshotV2("tableWithRefsV2", "tableWithRefsV2");
+  @Test
+  public void testSnapshotV2WithRefsExportFileSystemState() throws Exception {
+    final SnapshotMock snapshotMock = new SnapshotMock(testUtil.getConfiguration(), fs, testDir);
+    final SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV2("tableWithRefsV2",
+      "tableWithRefsV2");
     testSnapshotWithRefsExportFileSystemState(builder);
   }
 
@@ -107,7 +104,7 @@ public class TestExportSnapshotNoCluster {
 
     byte[] snapshotName = Bytes.toBytes(builder.getSnapshotDescription().getName());
     TableName tableName = builder.getTableDescriptor().getTableName();
-    TestExportSnapshot.testExportFileSystemState(TEST_UTIL.getConfiguration(),
+    TestExportSnapshot.testExportFileSystemState(testUtil.getConfiguration(),
       tableName, snapshotName, snapshotName, snapshotFilesCount,
       testDir, getDestinationDir(), false, null, true);
   }
