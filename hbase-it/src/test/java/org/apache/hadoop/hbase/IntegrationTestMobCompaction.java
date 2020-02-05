@@ -64,7 +64,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
  * argument 'failprob'.
  * @see <a href="https://issues.apache.org/jira/browse/HBASE-22749">HBASE-22749</a>
  * <p>
- * Sample usage:
+ *   Sample usage:
  * <pre>
  * hbase org.apache.hadoop.hbase.IntegrationTestMobCompaction -Dservers=10 -Drows=1000000
  * -Dfailprob=0.2

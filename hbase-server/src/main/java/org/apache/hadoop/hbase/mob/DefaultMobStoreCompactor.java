@@ -37,7 +37,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.CellSink;
 import org.apache.hadoop.hbase.regionserver.HMobStore;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -516,7 +515,6 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
 
     // Commit last MOB writer
     commitOrAbortMobWriter(mobFileWriter, fd.maxSeqId, mobCells, major);
-    clearThreadLocals();
     mobStore.updateCellsCountCompactedFromMob(cellsCountCompactedFromMob);
     mobStore.updateCellsCountCompactedToMob(cellsCountCompactedToMob);
     mobStore.updateCellsSizeCompactedFromMob(cellsSizeCompactedFromMob);
@@ -532,11 +530,14 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
 
   private void clearThreadLocals() {
     Set<String> set = mobRefSet.get();
-    if (set != null) set.clear();
+    if (set != null) {
+      set.clear();
+    }
     HashMap<String, Long> map = mobLengthMap.get();
-    if (map != null) map.clear();
+    if (map != null) {
+      map.clear();
+    }
   }
-
 
   private StoreFileWriter newMobWriter(FileDetails fd)
       throws IOException {
@@ -597,6 +598,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     Set<String> refSet = mobRefSet.get();
     writer.appendMobMetadata(refSet);
     writer.close();
+    clearThreadLocals();
     return newFiles;
   }
 

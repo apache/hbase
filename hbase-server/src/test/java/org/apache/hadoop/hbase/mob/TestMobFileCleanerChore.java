@@ -197,7 +197,7 @@ public class TestMobFileCleanerChore {
     Path dir = MobUtils.getMobFamilyPath(conf, tableName, family);
     FileStatus[] stat = fs.listStatus(dir);
     for (FileStatus st : stat) {
-      LOG.debug("MOB Directory content: {}", st.getPath());
+      LOG.debug("DDDD MOB Directory content: {} size={}", st.getPath(), st.getLen());
     }
     LOG.debug("MOB Directory content total files: {}", stat.length);
 

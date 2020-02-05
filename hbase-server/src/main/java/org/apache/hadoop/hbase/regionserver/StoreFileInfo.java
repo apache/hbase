@@ -242,8 +242,8 @@ public class StoreFileInfo {
 
   /**
    * @return the Reference object associated to this StoreFileInfo.
-   * null if the StoreFile is not a
-   * reference.
+   *   null if the StoreFile is not a
+   *   reference.
    */
   public Reference getReference() {
     return this.reference;

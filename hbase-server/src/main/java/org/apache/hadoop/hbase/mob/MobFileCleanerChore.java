@@ -235,6 +235,8 @@ public class MobFileCleanerChore extends ScheduledChore {
                     LOG.debug("Found: {} mob references", mobs.length);
                   }
                   regionMobs.addAll(Arrays.asList(mobs));
+                } else {
+                  LOG.debug("File {} does not have mob references", currentPath);
                 }
               }
             } catch (FileNotFoundException e) {
