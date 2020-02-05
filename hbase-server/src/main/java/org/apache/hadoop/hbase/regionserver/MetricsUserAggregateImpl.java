@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -41,7 +40,7 @@ public class MetricsUserAggregateImpl implements MetricsUserAggregate{
   public MetricsUserAggregateImpl(Configuration conf) {
     source = CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
         .getUserAggregate();
-    userMetricLossyCounting = new LossyCounting<MetricsUserSource>("userMetrics",
+    userMetricLossyCounting = new LossyCounting<>("userMetrics", conf,
       new LossyCounting.LossyCountingListener<MetricsUserSource>() {
         @Override
         public void sweep(MetricsUserSource key) {

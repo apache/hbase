@@ -1,24 +1,29 @@
-/**
- * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
- * agreements. See the NOTICE file distributed with this work for additional information regarding
- * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License. You may obtain a
- * copy of the License at http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable
- * law or agreed to in writing, software distributed under the License is distributed on an "AS IS"
- * BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
- * for the specific language governing permissions and limitations under the License.
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package org.apache.hadoop.hbase.coprocessor;
 
+import com.google.common.collect.ImmutableMap;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
-import com.google.common.collect.ImmutableMap;
-
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.TableName;
@@ -31,6 +36,7 @@ import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LossyCounting;
 
 /**
@@ -48,15 +54,18 @@ public class MetaTableMetrics extends BaseRegionObserver {
   private MetricRegistry registry;
   private LossyCounting<String> clientMetricsLossyCounting, regionMetricsLossyCounting;
   private boolean active = false;
-  private Set<String> metrics = new HashSet<String>();
+  private Set<String> metrics = new HashSet<>();
 
   enum MetaTableOps {
-    GET, PUT, DELETE;
+    GET, PUT, DELETE,
   }
 
-  private ImmutableMap<Class<?>, MetaTableOps> opsNameMap =
-      ImmutableMap.<Class<?>, MetaTableOps>builder().put(Put.class, MetaTableOps.PUT)
-          .put(Get.class, MetaTableOps.GET).put(Delete.class, MetaTableOps.DELETE).build();
+  private ImmutableMap<Class<? extends Row>, MetaTableOps> opsNameMap =
+      ImmutableMap.<Class<? extends Row>, MetaTableOps>builder()
+              .put(Put.class, MetaTableOps.PUT)
+              .put(Get.class, MetaTableOps.GET)
+              .put(Delete.class, MetaTableOps.DELETE)
+              .build();
 
   @Override
   public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get, List<Cell> results)
@@ -93,13 +102,12 @@ public class MetaTableMetrics extends BaseRegionObserver {
    * @param op such as get, put or delete.
    */
   private String getTableNameFromOp(Row op) {
-    String tableName = null;
-    String tableRowKey = new String(((Row) op).getRow(), StandardCharsets.UTF_8);
+    final String tableRowKey = Bytes.toString(op.getRow());
     if (tableRowKey.isEmpty()) {
       return null;
     }
-    tableName = tableRowKey.split(",").length > 0 ? tableRowKey.split(",")[0] : null;
-    return tableName;
+    final String[] splits = tableRowKey.split(",");
+    return splits.length > 0 ? splits[0] : null;
   }
 
   /**
@@ -108,13 +116,12 @@ public class MetaTableMetrics extends BaseRegionObserver {
    * @param op such as get, put or delete.
    */
   private String getRegionIdFromOp(Row op) {
-    String regionId = null;
-    String tableRowKey = new String(((Row) op).getRow(), StandardCharsets.UTF_8);
+    final String tableRowKey = Bytes.toString(op.getRow());
     if (tableRowKey.isEmpty()) {
       return null;
     }
-    regionId = tableRowKey.split(",").length > 2 ? tableRowKey.split(",")[2] : null;
-    return regionId;
+    final String[] splits = tableRowKey.split(",");
+    return splits.length > 2 ? splits[2] : null;
   }
 
   private boolean isMetaTableOp(ObserverContext<RegionCoprocessorEnvironment> e) {
@@ -258,8 +265,9 @@ public class MetaTableMetrics extends BaseRegionObserver {
             metrics.remove(key);
           }
       };
-      clientMetricsLossyCounting = new LossyCounting<String>("clientMetaMetrics",listener);
-      regionMetricsLossyCounting = new LossyCounting<String>("regionMetaMetrics",listener);
+      final Configuration conf = regionCoprocessorEnv.getConfiguration();
+      clientMetricsLossyCounting = new LossyCounting<>("clientMetaMetrics", conf, listener);
+      regionMetricsLossyCounting = new LossyCounting<>("regionMetaMetrics", conf, listener);
       // only be active mode when this region holds meta table.
       active = true;
     }
