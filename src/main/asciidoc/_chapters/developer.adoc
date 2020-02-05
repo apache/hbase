@@ -1272,12 +1272,17 @@ Small Tests (((SmallTests)))::
   _Small_ test cases are executed in a shared JVM and each test suite/test class should
    run in 15 seconds or less; i.e. a link:https://en.wikipedia.org/wiki/JUnit[junit test fixture], a java object made
    up of test methods, should finish in under 15 seconds, no matter how many or how few test methods
-   it has. These test cases should not use a minicluster.
+   it has. These test cases should not use a minicluster as a minicluster starts many services,
+   most unrelated to what is being tested. Multiple start/stops may leak resources or just overwhelm
+   the single JVM context.
 
 Medium Tests (((MediumTests)))::
   _Medium_ test cases are executed in separate JVM and individual test suites or test classes or in
   junit parlance, link:https://en.wikipedia.org/wiki/JUnit[test fixture], should run in 50 seconds
-   or less. These test cases can use a mini cluster.
+   or less. These test cases can use a mini cluster. Since we start up a JVM per test fixture (and
+   often a cluster too), be sure to make the startup pay by writing test fixtures that do a lot of
+   testing running tens of seconds perhaps combining test rather than spin up a jvm (and cluster)
+   per test method; this practice will help w/ overall test times.
 
 Large Tests (((LargeTests)))::
   _Large_ test cases are everything else. They are typically large-scale tests, regression tests
@@ -1339,13 +1344,13 @@ For convenience, you can run `mvn test -P runDevTests` to execute both small and
 [[hbase.unittests.test.faster]]
 ==== Running tests faster
 
-By default, `$ mvn test -P runAllTests` runs 5 tests in parallel.
-It can be increased on a developer's machine.
-Allowing that you can have 2 tests in parallel per core, and you need about 2GB of memory per test (at the extreme), if you have an 8 core, 24GB box, you can have 16 tests in parallel.
-but the memory available limits it to 12 (24/2), To run all tests with 12 tests in parallel, do this: +mvn test -P runAllTests
-                        -Dsurefire.secondPartForkCount=12+.
-If using a version earlier than  2.0, do: +mvn test -P runAllTests -Dsurefire.secondPartThreadCount=12
-                    +.
+By default, `$ mvn test -P runAllTests` runs all small tests in 1 forked instance and the medium and large tests in 5 parallel forked instances. Up these counts to get the build to run faster (you may run into
+rare issues of test mutual interference). For example,
+allowing that you want to have 2 tests in parallel per core, and you need about 2GB of memory per test (at the extreme), if you have an 8 core, 24GB box, you can have 16 tests in parallel.
+but the memory available limits it to 12 (24/2), To run all tests with 12 tests in parallel, do this: +mvn test -P runAllTests -Dsurefire.secondPartForkCount=12+.
+If using a version earlier than  2.0, do: +mvn test -P runAllTests -Dsurefire.secondPartThreadCount=12 +.
+You can also increase the fork count for the first party by setting -Dsurefire.firstPartForkCount to a value > 1.
+The values passed as fork counts can be specified as a fraction of CPU as follows: for two forks per available CPU, set the value to 2.0C; for a fork for every two CPUs, set it to 0.5C.
 To increase the speed, you can as well use a ramdisk.
 You will need 2GB  of memory to run all tests.
 You will also need to delete the files between two  test run.
