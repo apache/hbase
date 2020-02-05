@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IdLock;
+import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -129,7 +130,7 @@ public class TestSCPGetRegionsRace {
 
   public static final class HMasterForTest extends HMaster {
 
-    public HMasterForTest(Configuration conf) throws IOException {
+    public HMasterForTest(Configuration conf) throws IOException, KeeperException {
       super(conf);
     }
 

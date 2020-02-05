@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.replication.ReplicationPeerManager;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
+import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -133,7 +134,7 @@ public class TestReplicationProcedureRetry {
 
     private ReplicationPeerManager manager;
 
-    public MockHMaster(Configuration conf) throws IOException {
+    public MockHMaster(Configuration conf) throws IOException, KeeperException {
       super(conf);
     }
 

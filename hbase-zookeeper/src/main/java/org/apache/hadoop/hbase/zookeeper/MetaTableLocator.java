@@ -34,7 +34,12 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.MetaRegionServer;
 
 /**
@@ -261,17 +266,40 @@ public final class MetaTableLocator {
    * @throws KeeperException if a ZooKeeper operation fails
    */
   public static RegionState getMetaRegionState(ZKWatcher zkw, int replicaId)
-      throws KeeperException {
-    RegionState regionState = null;
+          throws KeeperException {
+    RegionState.State state = RegionState.State.OPEN;
+    ServerName serverName = null;
     try {
       byte[] data = ZKUtil.getData(zkw, zkw.getZNodePaths().getZNodeForReplica(replicaId));
-      regionState = ProtobufUtil.parseMetaRegionStateFrom(data, replicaId);
+      if (data != null && data.length > 0 && ProtobufUtil.isPBMagicPrefix(data)) {
+        try {
+          int prefixLen = ProtobufUtil.lengthOfPBMagic();
+          ZooKeeperProtos.MetaRegionServer rl =
+            ZooKeeperProtos.MetaRegionServer.parser().parseFrom(data, prefixLen,
+                    data.length - prefixLen);
+          if (rl.hasState()) {
+            state = RegionState.State.convert(rl.getState());
+          }
+          HBaseProtos.ServerName sn = rl.getServer();
+          serverName = ServerName.valueOf(
+            sn.getHostName(), sn.getPort(), sn.getStartCode());
+        } catch (InvalidProtocolBufferException e) {
+          throw new DeserializationException("Unable to parse meta region location");
+        }
+      } else {
+        // old style of meta region location?
+        serverName = ProtobufUtil.parseServerNameFrom(data);
+      }
     } catch (DeserializationException e) {
       throw ZKUtil.convert(e);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }
-    return regionState;
+    if (serverName == null) {
+      state = RegionState.State.OFFLINE;
+    }
+    return new RegionState(RegionReplicaUtil.getRegionInfoForReplica(
+        RegionInfoBuilder.FIRST_META_REGIONINFO, replicaId), state, serverName);
   }
 
   /**

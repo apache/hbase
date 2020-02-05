@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.zookeeper.KeeperException;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -163,7 +164,7 @@ public class TestClusterRestartFailover extends AbstractTestRestartCluster {
 
   public static final class HMasterForTest extends HMaster {
 
-    public HMasterForTest(Configuration conf) throws IOException {
+    public HMasterForTest(Configuration conf) throws IOException, KeeperException {
       super(conf);
     }
 
