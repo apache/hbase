@@ -401,9 +401,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * value unintentionally -- but not anything can do about it at moment;
    * single instance only is how the minidfscluster works.
    *
-   * We also create the underlying directory for
+   * We also create the underlying directory names for
    *  hadoop.log.dir, mapreduce.cluster.local.dir and hadoop.tmp.dir, and set the values
-   *  in the conf, and as a system property for hadoop.tmp.dir
+   *  in the conf, and as a system property for hadoop.tmp.dir (We do not create them!).
    *
    * @return The calculated data test build directory, if newly-created.
    */
