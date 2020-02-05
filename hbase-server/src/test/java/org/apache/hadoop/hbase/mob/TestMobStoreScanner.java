@@ -139,8 +139,8 @@ public class TestMobStoreScanner {
 
   @Test
   public void testMobStoreScanner() throws Exception {
-	  testGetFromFiles(false);
-	  testGetFromMemStore(false);
+    testGetFromFiles(false);
+    testGetFromMemStore(false);
     testGetReferences(false);
     testMobThreshold(false);
     testGetFromArchive(false);
@@ -148,8 +148,8 @@ public class TestMobStoreScanner {
 
   @Test
   public void testReversedMobStoreScanner() throws Exception {
-	  testGetFromFiles(true);
-	  testGetFromMemStore(true);
+    testGetFromFiles(true);
+    testGetFromMemStore(true);
     testGetReferences(true);
     testMobThreshold(true);
     testGetFromArchive(true);
