@@ -191,10 +191,12 @@ public class MobFileCleanerChore extends ScheduledChore {
           Path storePath = new Path(regionPath, family);
           boolean succeed = false;
           Set<String> regionMobs = new HashSet<String>();
+          
           while (!succeed) {
             if (!fs.exists(storePath)) {
               LOG.warn("Directory {} was deleted during cleaner procedure execution,"
-                  +" skipping region {}", storePath, regionPath.getName());
+                  + " skipping region {}",
+                storePath, regionPath.getName());
               continue region;
             }
             RemoteIterator<LocatedFileStatus> rit = fs.listLocatedStatus(storePath);
@@ -244,18 +246,16 @@ public class MobFileCleanerChore extends ScheduledChore {
                 }
               }
             } catch (FileNotFoundException e) {
-              String warnMsg =
-                  String.format("Missing file:%s" +
-                      " Starting MOB cleaning cycle from the beginning due to error",
-                      currentPath);
+              String warnMsg = String.format(
+                "Missing file:%s" + " Starting MOB cleaning cycle from the beginning due to error",
+                currentPath);
               LOG.warn(warnMsg, e);
+              regionMobs.clear();
               continue;
             }
             succeed = true;
           }
-          if (!succeed) {
-            continue; // continue next cf
-          }
+          
           // Add MOB references for current region/family
           allActiveMobFileName.addAll(regionMobs);
         } // END column families
