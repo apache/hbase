@@ -2661,6 +2661,20 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
+  public void preListTablesInRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    String groupName) throws IOException {
+    accessChecker.requirePermission(getActiveUser(ctx), "listTablesInRSGroup",
+      null, Permission.Action.ADMIN);
+  }
+
+  @Override
+  public void preGetConfiguredNamespacesAndTablesInRSGroup(
+    ObserverContext<MasterCoprocessorEnvironment> ctx, String groupName) throws IOException {
+    accessChecker.requirePermission(getActiveUser(ctx), "getConfiguredNamespacesAndTablesInRSGroup",
+      null, Permission.Action.ADMIN);
+  }
+
+  @Override
   public void preGetRSGroupInfoOfServer(ObserverContext<MasterCoprocessorEnvironment> ctx,
       Address server) throws IOException {
     accessChecker.requirePermission(getActiveUser(ctx), "getRSGroupInfoOfServer",
