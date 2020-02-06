@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.nio.ByteBuffer;
 import java.util.Comparator;
-
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -26,7 +26,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.primitives.Longs;
 
 /**
@@ -378,6 +377,26 @@ public class CellComparatorImpl implements CellComparator {
     }
 
     @Override
+    public int compareRows(ByteBuffer row, Cell cell) {
+      byte [] array;
+      int offset;
+      int len = row.remaining();
+      if (row.hasArray()) {
+        array = row.array();
+        offset = row.position() + row.arrayOffset();
+      } else {
+        // We copy the row array if offheap just so we can do a compare. We do this elsewhere too
+        // in BBUtils when Cell is backed by an offheap ByteBuffer. Needs fixing so no copy. TODO.
+        array = new byte[len];
+        offset = 0;
+        ByteBufferUtils.copyFromBufferToArray(array, row, row.position(),
+          0, len);
+      }
+      // Reverse result since we swap the order of the params we pass below.
+      return -compareRows(cell, array, offset, len);
+    }
+
+    @Override
     public Comparator getSimpleComparator() {
       return this;
     }
@@ -386,5 +405,25 @@ public class CellComparatorImpl implements CellComparator {
   @Override
   public Comparator getSimpleComparator() {
     return new BBKVComparator(this);
+  }
+
+  /**
+   * Utility method that makes a guess at comparator to use based off passed tableName.
+   * Use in extreme when no comparator specified.
+   * @return CellComparator to use going off the {@code tableName} passed.
+   */
+  public static CellComparator getCellComparator(TableName tableName) {
+    return getCellComparator(tableName.toBytes());
+  }
+
+  /**
+   * Utility method that makes a guess at comparator to use based off passed tableName.
+   * Use in extreme when no comparator specified.
+   * @return CellComparator to use going off the {@code tableName} passed.
+   */
+  public static CellComparator getCellComparator(byte [] tableName) {
+    // FYI, TableName.toBytes does not create an array; just returns existing array pointer.
+    return Bytes.equals(tableName, TableName.META_TABLE_NAME.toBytes())?
+      CellComparatorImpl.META_COMPARATOR: CellComparatorImpl.COMPARATOR;
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -119,7 +119,6 @@ import org.apache.hadoop.hbase.security.visibility.VisibilityLabelsCache;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
@@ -303,11 +302,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * <p>Initially, all tmp files are written to a local test data directory.
    * Once {@link #startMiniDFSCluster} is called, either directly or via
    * {@link #startMiniCluster()}, tmp data will be written to the DFS directory instead.
-   *
-   * <p>Previously, there was a distinction between the type of utility returned by
-   * {@link #createLocalHTU()} and this constructor; this is no longer the case. All
-   * HBaseTestingUtility objects will behave as local until a DFS cluster is started,
-   * at which point they will switch to using mini DFS for storage.
    */
   public HBaseTestingUtility() {
     this(HBaseConfiguration.create());
@@ -319,11 +313,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * <p>Initially, all tmp files are written to a local test data directory.
    * Once {@link #startMiniDFSCluster} is called, either directly or via
    * {@link #startMiniCluster()}, tmp data will be written to the DFS directory instead.
-   *
-   * <p>Previously, there was a distinction between the type of utility returned by
-   * {@link #createLocalHTU()} and this constructor; this is no longer the case. All
-   * HBaseTestingUtility objects will behave as local until a DFS cluster is started,
-   * at which point they will switch to using mini DFS for storage.
    *
    * @param conf The configuration to use for further operations
    */
@@ -351,18 +340,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     // tests opt-out for random port assignment
     this.conf.setBoolean(LocalHBaseCluster.ASSIGN_RANDOM_PORTS,
         this.conf.getBoolean(LocalHBaseCluster.ASSIGN_RANDOM_PORTS, true));
-  }
-
-  /**
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use {@link #HBaseTestingUtility()}
-   *   instead.
-   * @return a normal HBaseTestingUtility
-   * @see #HBaseTestingUtility()
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-19841">HBASE-19841</a>
-   */
-  @Deprecated
-  public static HBaseTestingUtility createLocalHTU() {
-    return new HBaseTestingUtility();
   }
 
   /**
@@ -424,9 +401,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * value unintentionally -- but not anything can do about it at moment;
    * single instance only is how the minidfscluster works.
    *
-   * We also create the underlying directory for
+   * We also create the underlying directory names for
    *  hadoop.log.dir, mapreduce.cluster.local.dir and hadoop.tmp.dir, and set the values
-   *  in the conf, and as a system property for hadoop.tmp.dir
+   *  in the conf, and as a system property for hadoop.tmp.dir (We do not create them!).
    *
    * @return The calculated data test build directory, if newly-created.
    */
@@ -490,17 +467,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   private Path getBaseTestDirOnTestFS() throws IOException {
     FileSystem fs = getTestFileSystem();
     return new Path(fs.getWorkingDirectory(), "test-data");
-  }
-
-  /**
-   * @return META table descriptor
-   */
-  public TableDescriptorBuilder getMetaTableDescriptorBuilder() {
-    try {
-      return FSTableDescriptors.createMetaTableDescriptorBuilder(conf);
-    } catch (IOException e) {
-      throw new RuntimeException("Unable to create META table descriptor", e);
-    }
   }
 
   /**
@@ -1283,10 +1249,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   /**
    * Stops mini hbase, zk, and hdfs clusters.
-   * @throws IOException
    * @see #startMiniCluster(int)
    */
-  public void shutdownMiniCluster() throws Exception {
+  public void shutdownMiniCluster() throws IOException {
     LOG.info("Shutting down minicluster");
     shutdownMiniHBaseCluster();
     shutdownMiniDFSCluster();
@@ -1935,19 +1900,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   public static final String START_KEY = new String(START_KEY_BYTES, HConstants.UTF8_CHARSET);
 
   /**
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
-   *   {@link #createTableDescriptor(TableName, int, int, int, KeepDeletedCells)} instead.
-   * @see #createTableDescriptor(TableName, int, int, int, KeepDeletedCells)
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-13893">HBASE-13893</a>
-   */
-  @Deprecated
-  public HTableDescriptor createTableDescriptor(final String name,
-      final int minVersions, final int versions, final int ttl, KeepDeletedCells keepDeleted) {
-    return this.createTableDescriptor(TableName.valueOf(name), minVersions, versions, ttl,
-        keepDeleted);
-  }
-
-  /**
    * Create a table of name <code>name</code>.
    * @param name Name to give table.
    * @return Column descriptor.
@@ -2043,32 +1995,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   public HRegion createLocalHRegion(RegionInfo info, TableDescriptor desc, WAL wal)
       throws IOException {
     return HRegion.createHRegion(info, getDataTestDir(), getConfiguration(), desc, wal);
-  }
-
-  /**
-   * @param tableName the name of the table
-   * @param startKey the start key of the region
-   * @param stopKey the stop key of the region
-   * @param callingMethod the name of the calling method probably a test method
-   * @param conf the configuration to use
-   * @param isReadOnly {@code true} if the table is read only, {@code false} otherwise
-   * @param families the column families to use
-   * @throws IOException if an IO problem is encountered
-   * @return A region on which you must call {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)}
-   *         when done.
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
-   *   {@link #createLocalHRegion(TableName, byte[], byte[], boolean, Durability, WAL, byte[]...)}
-   *   instead.
-   * @see #createLocalHRegion(TableName, byte[], byte[], boolean, Durability, WAL, byte[]...)
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-13893">HBASE-13893</a>
-   */
-  @Deprecated
-  public HRegion createLocalHRegion(byte[] tableName, byte[] startKey, byte[] stopKey,
-      String callingMethod, Configuration conf, boolean isReadOnly, Durability durability,
-      WAL wal, byte[]... families) throws IOException {
-    return this
-        .createLocalHRegion(TableName.valueOf(tableName), startKey, stopKey, isReadOnly, durability,
-            wal, families);
   }
 
   /**
@@ -3605,8 +3531,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
                       return false;
                     }
                   }
-                  if (RegionStateStore.getRegionState(r,
-                    info.getReplicaId(), info) != RegionState.State.OPEN) {
+                  if (RegionStateStore.getRegionState(r, info) != RegionState.State.OPEN) {
                     return false;
                   }
                 }
@@ -4294,7 +4219,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * encoding, bloom codecs available.
    * @return the list of column descriptors
    */
-  public static List<HColumnDescriptor> generateColumnDescriptors() {
+  public static List<ColumnFamilyDescriptor> generateColumnDescriptors() {
     return generateColumnDescriptors("");
   }
 
@@ -4304,23 +4229,24 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @param prefix family names prefix
    * @return the list of column descriptors
    */
-  public static List<HColumnDescriptor> generateColumnDescriptors(final String prefix) {
-    List<HColumnDescriptor> htds = new ArrayList<>();
+  public static List<ColumnFamilyDescriptor> generateColumnDescriptors(final String prefix) {
+    List<ColumnFamilyDescriptor> columnFamilyDescriptors = new ArrayList<>();
     long familyId = 0;
     for (Compression.Algorithm compressionType: getSupportedCompressionAlgorithms()) {
       for (DataBlockEncoding encodingType: DataBlockEncoding.values()) {
         for (BloomType bloomType: BloomType.values()) {
           String name = String.format("%s-cf-!@#&-%d!@#", prefix, familyId);
-          HColumnDescriptor htd = new HColumnDescriptor(name);
-          htd.setCompressionType(compressionType);
-          htd.setDataBlockEncoding(encodingType);
-          htd.setBloomFilterType(bloomType);
-          htds.add(htd);
+          ColumnFamilyDescriptorBuilder columnFamilyDescriptorBuilder =
+            ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(name));
+          columnFamilyDescriptorBuilder.setCompressionType(compressionType);
+          columnFamilyDescriptorBuilder.setDataBlockEncoding(encodingType);
+          columnFamilyDescriptorBuilder.setBloomFilterType(bloomType);
+          columnFamilyDescriptors.add(columnFamilyDescriptorBuilder.build());
           familyId++;
         }
       }
     }
-    return htds;
+    return columnFamilyDescriptors;
   }
 
   /**

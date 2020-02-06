@@ -30,12 +30,13 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -75,14 +76,18 @@ public class TestMemStoreSegmentsIterator {
   public void setup() throws IOException {
     Configuration conf = new Configuration();
     HBaseTestingUtility hbaseUtility = HBaseTestingUtility.createLocalHTU(conf);
-    HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TABLE));
-    htd.addFamily(hcd);
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(TABLE));
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(FAMILY)).build();
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+
     HRegionInfo info = new HRegionInfo(TableName.valueOf(TABLE), null, null, false);
     Path rootPath = hbaseUtility.getDataTestDir(ROOT_SUB_PATH);
     this.wal = hbaseUtility.createWal(conf, rootPath, info);
-    this.region = HRegion.createHRegion(info, rootPath, conf, htd, this.wal, true);
-    this.store = new HStore(this.region, hcd, conf, false);
+    this.region = HRegion.createHRegion(info, rootPath, conf,
+      tableDescriptorBuilder.build(), this.wal, true);
+    this.store = new HStore(this.region, columnFamilyDescriptor, conf, false);
     this.comparator = CellComparator.getInstance();
     this.compactionKVMax = HConstants.COMPACTION_KV_MAX_DEFAULT;
   }

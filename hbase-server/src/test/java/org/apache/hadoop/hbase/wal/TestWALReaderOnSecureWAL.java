@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.wal;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -42,7 +41,6 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
-// imports for things that haven't moved from regionserver.wal yet.
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.SecureAsyncProtobufLogWriter;
@@ -50,8 +48,8 @@ import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader;
 import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.SecureWALCellCodec;
 import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
@@ -65,7 +63,7 @@ import org.junit.rules.TestName;
 /**
  * Test that verifies WAL written by SecureProtobufLogWriter is not readable by ProtobufLogReader
  */
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestWALReaderOnSecureWAL {
 
   @ClassRule
@@ -90,7 +88,8 @@ public class TestWALReaderOnSecureWAL {
     FSUtils.setRootDir(conf, TEST_UTIL.getDataTestDir());
   }
 
-  private Path writeWAL(final WALFactory wals, final String tblName, boolean offheap) throws IOException {
+  private Path writeWAL(final WALFactory wals, final String tblName, boolean offheap)
+      throws IOException {
     Configuration conf = TEST_UTIL.getConfiguration();
     String clsName = conf.get(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, WALCellCodec.class.getName());
     conf.setClass(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, SecureWALCellCodec.class,

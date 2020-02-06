@@ -31,13 +31,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TestTableName;
+import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotHFileCleaner;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.FSVisitor;
@@ -57,7 +57,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 /**
  * Test Case for HBASE-21387
  */
-@Category({ LargeTests.class })
+@Category({ MediumTests.class })
 public class TestSnapshotWhenChoreCleaning {
 
   @ClassRule
@@ -75,7 +75,7 @@ public class TestSnapshotWhenChoreCleaning {
   private static Table TABLE;
 
   @Rule
-  public TestTableName TEST_TABLE = new TestTableName();
+  public TableNameTestRule testTable = new TableNameTestRule();
 
   @BeforeClass
   public static void setUp() throws Exception {

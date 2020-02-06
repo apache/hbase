@@ -19,8 +19,11 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -31,8 +34,10 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
+import org.apache.hadoop.hbase.regionserver.Region;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 
-final class RegionReplicaTestHelper {
+public final class RegionReplicaTestHelper {
 
   private RegionReplicaTestHelper() {
   }
@@ -155,5 +160,33 @@ final class RegionReplicaTestHelper {
     // for replica 2
     assertEquals(newServerName2,
       locator.getRegionLocations(tableName, 2, false).getRegionLocation(2).getServerName());
+  }
+
+  public static void assertReplicaDistributed(HBaseTestingUtility util, Table t)
+    throws IOException {
+    if (t.getDescriptor().getRegionReplication() <= 1) {
+      return;
+    }
+    List<RegionInfo> regionInfos = new ArrayList<>();
+    for (JVMClusterUtil.RegionServerThread rs : util.getMiniHBaseCluster()
+      .getRegionServerThreads()) {
+      regionInfos.clear();
+      for (Region r : rs.getRegionServer().getRegions(t.getName())) {
+        if (contains(regionInfos, r.getRegionInfo())) {
+          fail("Replica regions should be assigned to different region servers");
+        } else {
+          regionInfos.add(r.getRegionInfo());
+        }
+      }
+    }
+  }
+
+  private static boolean contains(List<RegionInfo> regionInfos, RegionInfo regionInfo) {
+    for (RegionInfo info : regionInfos) {
+      if (RegionReplicaUtil.isReplicasForSameRegion(info, regionInfo)) {
+        return true;
+      }
+    }
+    return false;
   }
 }

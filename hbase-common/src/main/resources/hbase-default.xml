@@ -72,7 +72,10 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.zookeeper.quorum</name>
-    <value>localhost</value>
+    <!--Ideally we should be using a hostname here instead of IP address. Please refer to
+    https://issues.apache.org/jira/browse/HBASE-23764 for why we switched to IP address. Should be
+    changed once we fix the underlying ZK issue.-->
+    <value>127.0.0.1</value>
     <description>Comma separated list of servers in the ZooKeeper ensemble
     (This config. should have been named hbase.zookeeper.ensemble).
     For example, "host1.mydomain.com,host2.mydomain.com,host3.mydomain.com".
@@ -151,7 +154,18 @@ possible configurations would overwhelm and obscure the important.
     so put the cleaner that prunes the most files in front. To
     implement your own BaseHFileCleanerDelegate, just put it in HBase's classpath
     and add the fully qualified class name here. Always add the above
-    default log cleaners in the list as they will be overwritten in
+    default hfile cleaners in the list as they will be overwritten in
+    hbase-site.xml.</description>
+  </property>
+  <property>
+    <name>hbase.procedure.store.region.hfilecleaner.plugins</name>
+    <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner</value>
+    <description>A comma-separated list of BaseHFileCleanerDelegate invoked by
+    the RegionProcedureStore HFileCleaner service. These HFiles cleaners are
+    called in order, so put the cleaner that prunes the most files in front. To
+    implement your own BaseHFileCleanerDelegate, just put it in HBase's classpath
+    and add the fully qualified class name here. Always add the above
+    default hfile cleaners in the list as they will be overwritten in
     hbase-site.xml.</description>
   </property>
   <property>
@@ -619,6 +633,12 @@ possible configurations would overwhelm and obscure the important.
     <name>hbase.normalizer.min.region.count</name>
     <value>3</value>
     <description>configure the minimum number of regions</description>
+  </property>
+  <property>
+    <name>hbase.normalizer.min.region.merge.age</name>
+    <value>3</value>
+    <description>configure the minimum age in days for region before it is considered for merge while
+      normalizing</description>
   </property>
   <property>
     <name>hbase.regions.slop</name>
@@ -1915,19 +1935,25 @@ possible configurations would overwhelm and obscure the important.
     <name>hbase.regions.recovery.store.file.ref.count</name>
     <value>-1</value>
     <description>
-      Very large ref count on a file indicates
-      that it is a ref leak on that object. Such files
-      can not be removed even after it is invalidated
-      via compaction. Only way to recover in such
-      scenario is to reopen the region which can
-      release all resources, like the refcount, leases, etc.
-      This config represents Store files Ref Count threshold
-      value considered for reopening regions.
-      Any region with store files ref count > this value
-      would be eligible for reopening by master.
-      Default value -1 indicates this feature is turned off.
-      Only positive integer value should be provided to enable
-      this feature.
+      Very large number of ref count on a compacted
+      store file indicates that it is a ref leak
+      on that object(compacted store file).
+      Such files can not be removed after
+      it is invalidated via compaction.
+      Only way to recover in such scenario is to
+      reopen the region which can release
+      all resources, like the refcount,
+      leases, etc. This config represents Store files Ref
+      Count threshold value considered for reopening
+      regions. Any region with compacted store files
+      ref count > this value would be eligible for
+      reopening by master. Here, we get the max
+      refCount among all refCounts on all
+      compacted away store files that belong to a
+      particular region. Default value -1 indicates
+      this feature is turned off. Only positive
+      integer value should be provided to
+      enable this feature.
     </description>
   </property>
 </configuration>

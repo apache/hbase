@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -48,8 +47,8 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.RandomKeyValueUtil;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
@@ -72,7 +71,7 @@ import org.slf4j.LoggerFactory;
  * index blocks, and Bloom filter blocks, as specified by the column family.
  */
 @RunWith(Parameterized.class)
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestCacheOnWriteInSchema {
 
   @ClassRule
@@ -82,7 +81,7 @@ public class TestCacheOnWriteInSchema {
   private static final Logger LOG = LoggerFactory.getLogger(TestCacheOnWriteInSchema.class);
   @Rule public TestName name = new TestName();
 
-  private static final HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final String DIR = TEST_UTIL.getDataTestDir("TestCacheOnWriteInSchema").toString();
   private static byte [] table;
   private static byte [] family = Bytes.toBytes("family");
@@ -243,7 +242,10 @@ public class TestCacheOnWriteInSchema {
           offset);
         boolean isCached = cache.getBlock(blockCacheKey, true, false, true) != null;
         boolean shouldBeCached = cowType.shouldBeCached(block.getBlockType());
-        if (shouldBeCached != isCached) {
+        final BlockType blockType = block.getBlockType();
+
+        if (shouldBeCached != isCached &&
+            (cowType.blockType1.equals(blockType) || cowType.blockType2.equals(blockType))) {
           throw new AssertionError(
             "shouldBeCached: " + shouldBeCached+ "\n" +
             "isCached: " + isCached + "\n" +
@@ -265,8 +267,7 @@ public class TestCacheOnWriteInSchema {
     } else {
       KeyValue.Type keyType =
           KeyValue.Type.values()[1 + rand.nextInt(NUM_VALID_KEY_TYPES)];
-      if (keyType == KeyValue.Type.Minimum || keyType == KeyValue.Type.Maximum)
-      {
+      if (keyType == KeyValue.Type.Minimum || keyType == KeyValue.Type.Maximum) {
         throw new RuntimeException("Generated an invalid key type: " + keyType
             + ". " + "Probably the layout of KeyValue.Type has changed.");
       }

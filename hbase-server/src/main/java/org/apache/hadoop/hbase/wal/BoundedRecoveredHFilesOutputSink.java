@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.wal;
 
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.HashMap;
@@ -29,7 +28,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -208,7 +206,7 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
             .withFilePath(outputFile);
     HFileContextBuilder hFileContextBuilder = new HFileContextBuilder();
     if (isMetaTable) {
-      writerBuilder.withComparator(CellComparatorImpl.META_COMPARATOR);
+      hFileContextBuilder.withCellComparator(CellComparatorImpl.META_COMPARATOR);
     } else {
       configContextForNonMetaWriter(tableName, familyName, hFileContextBuilder, writerBuilder);
     }
@@ -224,9 +222,9 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
     TableDescriptor tableDesc = tableDescCache.get(tableName);
     ColumnFamilyDescriptor cfd = tableDesc.getColumnFamily(Bytes.toBytesBinary(familyName));
     hFileContextBuilder.withCompression(cfd.getCompressionType()).withBlockSize(cfd.getBlocksize())
-        .withCompressTags(cfd.isCompressTags()).withDataBlockEncoding(cfd.getDataBlockEncoding());
-    writerBuilder.withBloomType(cfd.getBloomFilterType())
-        .withComparator(CellComparatorImpl.COMPARATOR);
+        .withCompressTags(cfd.isCompressTags()).withDataBlockEncoding(cfd.getDataBlockEncoding())
+        .withCellComparator(CellComparatorImpl.COMPARATOR);
+    writerBuilder.withBloomType(cfd.getBloomFilterType());
   }
 
   private void checkPathValid(Path outputFile) throws IOException {

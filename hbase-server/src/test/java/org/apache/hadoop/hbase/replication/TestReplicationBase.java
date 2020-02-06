@@ -138,6 +138,11 @@ public class TestReplicationBase {
 
   protected static void waitForReplication(int expectedRows, int retries)
       throws IOException, InterruptedException {
+    waitForReplication(htable2, expectedRows, retries);
+  }
+
+  protected static void waitForReplication(Table htable2, int expectedRows, int retries)
+      throws IOException, InterruptedException {
     Scan scan;
     for (int i = 0; i < retries; i++) {
       scan = new Scan();

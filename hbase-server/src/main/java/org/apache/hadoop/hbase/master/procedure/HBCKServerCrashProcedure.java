@@ -20,21 +20,31 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.master.assignment.RegionStateStore;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A SCP that differs from default only in how it gets the list of
- * Regions hosted on the crashed-server; it also reads hbase:meta directly rather
- * than rely solely on Master memory for list of Regions that were on crashed server.
- * This version of SCP is for external invocation as part of fix-up (e.g. HBCK2's
- * scheduleRecoveries). It is for the case where meta has references to 'Unknown Servers',
+ * Acts like the super class in all cases except when no Regions found in the
+ * current Master in-memory context. In this latter case, when the call to
+ * super#getRegionsOnCrashedServer returns nothing, this SCP will scan
+ * hbase:meta for references to the passed ServerName. If any found, we'll
+ * clean them up.
+ *
+ * <p>This version of SCP is for external invocation as part of fix-up (e.g. HBCK2's
+ * scheduleRecoveries); the super class is used during normal recovery operations.
+ * It is for the case where meta has references to 'Unknown Servers',
  * servers that are in hbase:meta but not in live-server or dead-server lists; i.e. Master
  * and hbase:meta content have deviated. It should never happen in normal running
  * cluster but if we do drop accounting of servers, we need a means of fix-up.
@@ -65,31 +75,97 @@ public class HBCKServerCrashProcedure extends ServerCrashProcedure {
   public HBCKServerCrashProcedure() {}
 
   /**
-   * Adds Regions found by super method any found scanning hbase:meta.
+   * If no Regions found in Master context, then we will search hbase:meta for references
+   * to the passed server. Operator may have passed ServerName because they have found
+   * references to 'Unknown Servers'. They are using HBCKSCP to clear them out.
    */
   @Override
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH_EXCEPTION",
     justification="FindBugs seems confused on ps in below.")
   List<RegionInfo> getRegionsOnCrashedServer(MasterProcedureEnv env) {
-    // Super can return immutable emptyList.
+    // Super will return an immutable list (empty if nothing on this server).
     List<RegionInfo> ris = super.getRegionsOnCrashedServer(env);
-    List<Pair<RegionInfo, ServerName>> ps = null;
-    try {
-      ps = MetaTableAccessor.getTableRegionsAndLocations(env.getMasterServices().getConnection(),
-              null, false);
-    } catch (IOException ioe) {
-      LOG.warn("Failed get of all regions; continuing", ioe);
-    }
-    if (ps == null || ps.isEmpty()) {
-      LOG.warn("No regions found in hbase:meta");
+    if (!ris.isEmpty()) {
       return ris;
     }
-    List<RegionInfo> aggregate = ris == null || ris.isEmpty()?
-        new ArrayList<>(): new ArrayList<>(ris);
-    int before = aggregate.size();
-    ps.stream().filter(p -> p.getSecond() != null && p.getSecond().equals(getServerName())).
-        forEach(p -> aggregate.add(p.getFirst()));
-    LOG.info("Found {} mentions of {} in hbase:meta", aggregate.size() - before, getServerName());
-    return aggregate;
+    // Nothing in in-master context. Check for Unknown Server! in hbase:meta.
+    // If super list is empty, then allow that an operator scheduled an SCP because they are trying
+    // to purge 'Unknown Servers' -- servers that are neither online nor in dead servers
+    // list but that ARE in hbase:meta and so showing as unknown in places like 'HBCK Report'.
+    // This mis-accounting does not happen in normal circumstance but may arise in-extremis
+    // when cluster has been damaged in operation.
+    UnknownServerVisitor visitor =
+        new UnknownServerVisitor(env.getMasterServices().getConnection(), getServerName());
+    try {
+      MetaTableAccessor.scanMetaForTableRegions(env.getMasterServices().getConnection(),
+          visitor, null);
+    } catch (IOException ioe) {
+      LOG.warn("Failed scan of hbase:meta for 'Unknown Servers'", ioe);
+      return ris;
+    }
+    LOG.info("Found {} mentions of {} in hbase:meta of OPEN/OPENING Regions: {}",
+        visitor.getReassigns().size(), getServerName(),
+        visitor.getReassigns().stream().map(RegionInfo::getEncodedName).
+            collect(Collectors.joining(",")));
+    return visitor.getReassigns();
+  }
+
+  /**
+   * Visitor for hbase:meta that 'fixes' Unknown Server issues. Collects
+   * a List of Regions to reassign as 'result'.
+   */
+  private static class UnknownServerVisitor implements MetaTableAccessor.Visitor {
+    private final List<RegionInfo> reassigns = new ArrayList<>();
+    private final ServerName unknownServerName;
+    private final Connection connection;
+
+    private UnknownServerVisitor(Connection connection, ServerName unknownServerName) {
+      this.connection = connection;
+      this.unknownServerName = unknownServerName;
+    }
+
+    @Override
+    public boolean visit(Result result) throws IOException {
+      RegionLocations rls = MetaTableAccessor.getRegionLocations(result);
+      if (rls == null) {
+        return true;
+      }
+      for (HRegionLocation hrl: rls.getRegionLocations()) {
+        if (hrl == null) {
+          continue;
+        }
+        if (hrl.getRegion() == null) {
+          continue;
+        }
+        if (hrl.getServerName() == null) {
+          continue;
+        }
+        if (!hrl.getServerName().equals(this.unknownServerName)) {
+          continue;
+        }
+        RegionState.State state = RegionStateStore.getRegionState(result, hrl.getRegion());
+        RegionState rs = new RegionState(hrl.getRegion(), state, hrl.getServerName());
+        if (rs.isClosing()) {
+          // Move region to CLOSED in hbase:meta.
+          LOG.info("Moving {} from CLOSING to CLOSED in hbase:meta",
+              hrl.getRegion().getRegionNameAsString());
+          try {
+            MetaTableAccessor.updateRegionState(this.connection, hrl.getRegion(),
+                RegionState.State.CLOSED);
+          } catch (IOException ioe) {
+            LOG.warn("Failed moving {} from CLOSING to CLOSED", ioe);
+          }
+        } else if (rs.isOpening() || rs.isOpened()) {
+          this.reassigns.add(hrl.getRegion());
+        } else {
+          LOG.info("Passing {}", rs);
+        }
+      }
+      return true;
+    }
+
+    private List<RegionInfo> getReassigns() {
+      return this.reassigns;
+    }
   }
 }

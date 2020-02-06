@@ -27,12 +27,12 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
-@Category({ RPCTests.class, SmallTests.class })
+@Category({ RPCTests.class, MediumTests.class })
 public class TestBlockingIPC extends AbstractTestIPC {
 
   @ClassRule

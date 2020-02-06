@@ -39,8 +39,9 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.net.Address;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.VersionInfo;
@@ -56,7 +57,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
-@Category({ MediumTests.class })
+@Category({ LargeTests.class })
 public class TestRSGroupsKillRS extends TestRSGroupsBase {
 
   @ClassRule
@@ -237,12 +238,11 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
     addGroup(groupName, groupRSCount);
 
     // move hbase:meta to meta_group
-    tableName = TableName.META_TABLE_NAME;
     Set<TableName> toAddTables = new HashSet<>();
-    toAddTables.add(tableName);
+    toAddTables.add(TableName.META_TABLE_NAME);
     rsGroupAdmin.moveTables(toAddTables, groupName);
-    assertTrue(rsGroupAdmin.getRSGroupInfo(groupName).getTables().contains(tableName));
-    TEST_UTIL.waitTableAvailable(tableName, 30000);
+    assertTrue(
+        rsGroupAdmin.getRSGroupInfo(groupName).getTables().contains(TableName.META_TABLE_NAME));
 
     // restart the regionserver in meta_group, and lower its version
     String originVersion = "";
@@ -268,7 +268,9 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
     assertTrue(VersionInfo.compareVersion(originVersion,
         master.getRegionServerVersion(getServerName(servers.iterator().next()))) > 0);
     LOG.debug("wait for META assigned...");
-    TEST_UTIL.waitTableAvailable(tableName, 30000);
+    // SCP finished, which means all regions assigned too.
+    TEST_UTIL.waitFor(60000, () -> !TEST_UTIL.getHBaseCluster().getMaster().getProcedures().stream()
+        .filter(p -> (p instanceof ServerCrashProcedure)).findAny().isPresent());
   }
 
   private static void setFinalStatic(Field field, Object newValue) throws Exception {

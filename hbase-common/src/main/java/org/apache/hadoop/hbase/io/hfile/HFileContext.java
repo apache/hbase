@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -28,9 +30,10 @@ import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * This carries the information on some of the meta data about the HFile. This
- * meta data is used across the HFileWriter/Readers and the HFileBlocks.
- * This helps to add new information to the HFile.
+ * Read-only HFile Context Information. Meta data that is used by HFileWriter/Readers and by
+ * HFileBlocks. Create one using the {@link HFileContextBuilder} (See HFileInfo and the HFile
+ * Trailer class).
+ * @see HFileContextBuilder
  */
 @InterfaceAudience.Private
 public class HFileContext implements HeapSize, Cloneable {
@@ -42,7 +45,7 @@ public class HFileContext implements HeapSize, Cloneable {
       //byte[] headers for column family and table name
       2 * ClassSize.ARRAY + 2 * ClassSize.REFERENCE);
 
-  public static final int DEFAULT_BYTES_PER_CHECKSUM = 16 * 1024;
+  private static final int DEFAULT_BYTES_PER_CHECKSUM = 16 * 1024;
 
   /** Whether checksum is enabled or not**/
   private boolean usesHBaseChecksum = true;
@@ -67,6 +70,7 @@ public class HFileContext implements HeapSize, Cloneable {
   private String hfileName;
   private byte[] columnFamily;
   private byte[] tableName;
+  private CellComparator cellComparator;
 
   //Empty constructor.  Go with setters
   public HFileContext() {
@@ -74,7 +78,6 @@ public class HFileContext implements HeapSize, Cloneable {
 
   /**
    * Copy constructor
-   * @param context
    */
   public HFileContext(HFileContext context) {
     this.usesHBaseChecksum = context.usesHBaseChecksum;
@@ -91,13 +94,14 @@ public class HFileContext implements HeapSize, Cloneable {
     this.hfileName = context.hfileName;
     this.columnFamily = context.columnFamily;
     this.tableName = context.tableName;
+    this.cellComparator = context.cellComparator;
   }
 
   HFileContext(boolean useHBaseChecksum, boolean includesMvcc, boolean includesTags,
                Compression.Algorithm compressAlgo, boolean compressTags, ChecksumType checksumType,
                int bytesPerChecksum, int blockSize, DataBlockEncoding encoding,
                Encryption.Context cryptoContext, long fileCreateTime, String hfileName,
-               byte[] columnFamily, byte[] tableName) {
+               byte[] columnFamily, byte[] tableName, CellComparator cellComparator) {
     this.usesHBaseChecksum = useHBaseChecksum;
     this.includesMvcc =  includesMvcc;
     this.includesTags = includesTags;
@@ -114,11 +118,14 @@ public class HFileContext implements HeapSize, Cloneable {
     this.hfileName = hfileName;
     this.columnFamily = columnFamily;
     this.tableName = tableName;
+    // If no cellComparator specified, make a guess based off tablename. If hbase:meta, then should
+    // be the meta table comparator. Comparators are per table.
+    this.cellComparator = cellComparator != null ? cellComparator : this.tableName != null ?
+      CellComparatorImpl.getCellComparator(this.tableName) : CellComparator.getInstance();
   }
 
   /**
-   * @return true when on-disk blocks from this file are compressed, and/or encrypted;
-   * false otherwise.
+   * @return true when on-disk blocks are compressed, and/or encrypted; false otherwise.
    */
   public boolean isCompressedOrEncrypted() {
     Compression.Algorithm compressAlgo = getCompression();
@@ -208,6 +215,11 @@ public class HFileContext implements HeapSize, Cloneable {
   public byte[] getTableName() {
     return this.tableName;
   }
+
+  public CellComparator getCellComparator() {
+    return this.cellComparator;
+  }
+
   /**
    * HeapSize implementation. NOTE : The heap size should be altered when new state variable are
    * added.
@@ -263,8 +275,9 @@ public class HFileContext implements HeapSize, Cloneable {
       sb.append(", columnFamily=");
       sb.append(Bytes.toStringBinary(columnFamily));
     }
+    sb.append(", cellComparator=");
+    sb.append(this.cellComparator);
     sb.append("]");
     return sb.toString();
   }
-
 }

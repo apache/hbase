@@ -23,7 +23,8 @@ import java.io.IOException;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.filter.TimestampsFilter;
@@ -44,7 +45,7 @@ public class TestTimestampFilterSeekHint {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestTimestampFilterSeekHint.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static String RK = "myRK";
   private final static byte[] RK_BYTES = Bytes.toBytes(RK);
 
@@ -94,12 +95,14 @@ public class TestTimestampFilterSeekHint {
 
   @Before
   public void prepareRegion() throws IOException {
-    region =
-        TEST_UTIL.createTestRegion("TestTimestampFilterSeekHint" + regionCount++,
-            new HColumnDescriptor(FAMILY)
-                .setBlocksize(1024)
-                .setMaxVersions(MAX_VERSIONS)
-        );
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder
+        .newBuilder(Bytes.toBytes(FAMILY))
+        .setBlocksize(1024)
+        .setMaxVersions(MAX_VERSIONS)
+        .build();
+    region = TEST_UTIL
+      .createTestRegion("TestTimestampFilterSeekHint" + regionCount++, columnFamilyDescriptor);
 
     for (long i = 0; i <MAX_VERSIONS - 2; i++) {
       Put p = new Put(RK_BYTES, i);

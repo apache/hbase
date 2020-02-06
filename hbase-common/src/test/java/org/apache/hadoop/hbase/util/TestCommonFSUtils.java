@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
@@ -30,8 +29,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -42,7 +41,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Test {@link CommonFSUtils}.
  */
-@Category({MiscTests.class, MediumTests.class})
+@Category({MiscTests.class, SmallTests.class})
 public class TestCommonFSUtils {
 
   @ClassRule

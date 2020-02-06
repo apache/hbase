@@ -20,10 +20,14 @@ package org.apache.hadoop.hbase.http;
 import java.io.IOException;
 import java.net.URI;
 
+import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -81,13 +85,59 @@ public class InfoServer {
         .setSignatureSecretFileKey(
             HttpServer.HTTP_AUTHENTICATION_SIGNATURE_SECRET_FILE_KEY)
         .setSecurityEnabled(true);
+
+      // Set an admin ACL on sensitive webUI endpoints
+      AccessControlList acl = buildAdminAcl(c);
+      builder.setACL(acl);
     }
     this.httpServer = builder.build();
   }
 
+  /**
+   * Builds an ACL that will restrict the users who can issue commands to endpoints on the UI
+   * which are meant only for administrators.
+   */
+  AccessControlList buildAdminAcl(Configuration conf) {
+    final String userGroups = conf.get(HttpServer.HTTP_SPNEGO_AUTHENTICATION_ADMIN_USERS_KEY, null);
+    final String adminGroups = conf.get(
+        HttpServer.HTTP_SPNEGO_AUTHENTICATION_ADMIN_GROUPS_KEY, null);
+    if (userGroups == null && adminGroups == null) {
+      // Backwards compatibility - if the user doesn't have anything set, allow all users in.
+      return new AccessControlList("*", null);
+    }
+    return new AccessControlList(userGroups, adminGroups);
+  }
+
+  /**
+   * Explicitly invoke {@link #addPrivilegedServlet(String, String, Class)} or
+   * {@link #addUnprivilegedServlet(String, String, Class)} instead of this method.
+   * This method will add a servlet which any authenticated user can access.
+   *
+   * @deprecated Use {@link #addUnprivilegedServlet(String, String, Class)} or
+   *    {@link #addPrivilegedServlet(String, String, Class)} instead of this
+   *    method which does not state outwardly what kind of authz rules will
+   *    be applied to this servlet.
+   */
+  @Deprecated
   public void addServlet(String name, String pathSpec,
           Class<? extends HttpServlet> clazz) {
-    this.httpServer.addServlet(name, pathSpec, clazz);
+    addUnprivilegedServlet(name, pathSpec, clazz);
+  }
+
+  /**
+   * @see HttpServer#addUnprivilegedServlet(String, String, Class)
+   */
+  public void addUnprivilegedServlet(String name, String pathSpec,
+          Class<? extends HttpServlet> clazz) {
+    this.httpServer.addUnprivilegedServlet(name, pathSpec, clazz);
+  }
+
+  /**
+   * @see HttpServer#addPrivilegedServlet(String, String, Class)
+   */
+  public void addPrivilegedServlet(String name, String pathSpec,
+          Class<? extends HttpServlet> clazz) {
+    this.httpServer.addPrivilegedServlet(name, pathSpec, clazz);
   }
 
   public void setAttribute(String name, Object value) {
@@ -109,5 +159,25 @@ public class InfoServer {
 
   public void stop() throws Exception {
     this.httpServer.stop();
+  }
+
+
+  /**
+   * Returns true if and only if UI authentication (spnego) is enabled, UI authorization is enabled,
+   * and the requesting user is defined as an administrator. If the UI is set to readonly, this
+   * method always returns false.
+   */
+  public static boolean canUserModifyUI(
+      HttpServletRequest req, ServletContext ctx, Configuration conf) {
+    if (conf.getBoolean("hbase.master.ui.readonly", false)) {
+      return false;
+    }
+    String remoteUser = req.getRemoteUser();
+    if ("kerberos".equals(conf.get(HttpServer.HTTP_UI_AUTHENTICATION)) &&
+        conf.getBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, false) &&
+        remoteUser != null) {
+      return HttpServer.userHasAdministratorAccess(ctx, remoteUser);
+    }
+    return false;
   }
 }

@@ -129,10 +129,10 @@ public class FieldScreenView extends AbstractScreenView {
     }
   }
 
-  public void showScreenDescription(String sortKeyHeader) {
+  public void showScreenDescription(String sortFieldHeader) {
     TerminalPrinter printer = getTerminalPrinter(SCREEN_DESCRIPTION_START_ROW);
     printer.startBold().print("Fields Management").stopBold().endOfLine();
-    printer.print("Current Sort Field: ").startBold().print(sortKeyHeader).stopBold().endOfLine();
+    printer.print("Current Sort Field: ").startBold().print(sortFieldHeader).stopBold().endOfLine();
     printer.print("Navigate with up/down, Right selects for move then <Enter> or Left commits,")
       .endOfLine();
     printer.print("'d' or <Space> toggles display, 's' sets sort. Use 'q' or <Esc> to end!")

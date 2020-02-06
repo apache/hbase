@@ -31,12 +31,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
-import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -73,6 +73,7 @@ import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
@@ -89,7 +90,7 @@ public class TestCacheOnWrite {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCacheOnWrite.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private Configuration conf;
   private CacheConfig cacheConf;
   private FileSystem fs;
@@ -108,6 +109,27 @@ public class TestCacheOnWrite {
   private static final int BLOOM_BLOCK_SIZE = 4096;
   private static final BloomType BLOOM_TYPE = BloomType.ROWCOL;
   private static final int CKBYTES = 512;
+
+
+  private static final Set<BlockType> INDEX_BLOCK_TYPES = ImmutableSet.of(
+    BlockType.INDEX_V1,
+    BlockType.INTERMEDIATE_INDEX,
+    BlockType.ROOT_INDEX,
+    BlockType.LEAF_INDEX
+  );
+  private static final Set<BlockType> BLOOM_BLOCK_TYPES = ImmutableSet.of(
+    BlockType.BLOOM_CHUNK,
+    BlockType.GENERAL_BLOOM_META,
+    BlockType.DELETE_FAMILY_BLOOM_META
+  );
+  private static final Set<BlockType> DATA_BLOCK_TYPES = ImmutableSet.of(
+    BlockType.ENCODED_DATA,
+    BlockType.DATA
+  );
+
+  // All test cases are supposed to generate files for compaction within this range
+  private static final long CACHE_COMPACTION_LOW_THRESHOLD = 10L;
+  private static final long CACHE_COMPACTION_HIGH_THRESHOLD = 1 * 1024 * 1024 * 1024L;
 
   /** The number of valid key types possible in a store file */
   private static final int NUM_VALID_KEY_TYPES =
@@ -375,7 +397,7 @@ public class TestCacheOnWrite {
         .withDataBlockEncoding(NoOpDataBlockEncoder.INSTANCE.getDataBlockEncoding())
         .withIncludesTags(useTags).build();
     StoreFileWriter sfw = new StoreFileWriter.Builder(conf, cacheConf, fs)
-        .withOutputDir(storeFileParentDir).withComparator(CellComparatorImpl.COMPARATOR)
+        .withOutputDir(storeFileParentDir)
         .withFileContext(meta)
         .withBloomType(BLOOM_TYPE).withMaxKeyCount(NUM_KV).build();
     byte[] cf = Bytes.toBytes("fam");
@@ -406,14 +428,30 @@ public class TestCacheOnWrite {
   }
 
   private void testCachingDataBlocksDuringCompactionInternals(boolean useTags,
-      boolean cacheBlocksOnCompaction) throws IOException, InterruptedException {
+    boolean cacheBlocksOnCompaction, long cacheBlocksOnCompactionThreshold)
+    throws IOException, InterruptedException {
     // create a localConf
-    boolean localValue = conf.getBoolean(CacheConfig.CACHE_COMPACTED_BLOCKS_ON_WRITE_KEY,
-      false);
+    boolean localValue = conf.getBoolean(CacheConfig.CACHE_COMPACTED_BLOCKS_ON_WRITE_KEY, false);
+    long localCacheCompactedBlocksThreshold = conf
+      .getLong(CacheConfig.CACHE_COMPACTED_BLOCKS_ON_WRITE_THRESHOLD_KEY,
+        CacheConfig.DEFAULT_CACHE_COMPACTED_BLOCKS_ON_WRITE_THRESHOLD);
+    boolean localCacheBloomBlocksValue = conf
+      .getBoolean(CacheConfig.CACHE_BLOOM_BLOCKS_ON_WRITE_KEY,
+        CacheConfig.DEFAULT_CACHE_BLOOMS_ON_WRITE);
+    boolean localCacheIndexBlocksValue = conf
+      .getBoolean(CacheConfig.CACHE_INDEX_BLOCKS_ON_WRITE_KEY,
+        CacheConfig.DEFAULT_CACHE_INDEXES_ON_WRITE);
+
     try {
       // Set the conf if testing caching compacted blocks on write
       conf.setBoolean(CacheConfig.CACHE_COMPACTED_BLOCKS_ON_WRITE_KEY,
         cacheBlocksOnCompaction);
+
+      // set size threshold if testing compaction size threshold
+      if (cacheBlocksOnCompactionThreshold > 0) {
+        conf.setLong(CacheConfig.CACHE_COMPACTED_BLOCKS_ON_WRITE_THRESHOLD_KEY,
+          cacheBlocksOnCompactionThreshold);
+      }
 
       // TODO: need to change this test if we add a cache size threshold for
       // compactions, or if we implement some other kind of intelligent logic for
@@ -422,9 +460,13 @@ public class TestCacheOnWrite {
       final String cf = "myCF";
       final byte[] cfBytes = Bytes.toBytes(cf);
       final int maxVersions = 3;
-      ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.newBuilder(cfBytes)
-          .setCompressionType(compress).setBloomFilterType(BLOOM_TYPE).setMaxVersions(maxVersions)
-          .setDataBlockEncoding(NoOpDataBlockEncoder.INSTANCE.getDataBlockEncoding()).build();
+      ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder
+        .newBuilder(cfBytes)
+        .setCompressionType(compress)
+        .setBloomFilterType(BLOOM_TYPE)
+        .setMaxVersions(maxVersions)
+        .setDataBlockEncoding(NoOpDataBlockEncoder.INSTANCE.getDataBlockEncoding())
+        .build();
       HRegion region = TEST_UTIL.createTestRegion(table, cfd, blockCache);
       int rowIdx = 0;
       long ts = EnvironmentEdgeManager.currentTime();
@@ -445,7 +487,9 @@ public class TestCacheOnWrite {
                     HConstants.LATEST_TIMESTAMP, Bytes.toBytes(valueStr), tags);
                 p.add(kv);
               } else {
-                p.addColumn(cfBytes, Bytes.toBytes(qualStr), ts++, Bytes.toBytes(valueStr));
+                KeyValue kv = new KeyValue(Bytes.toBytes(rowStr), cfBytes, Bytes.toBytes(qualStr),
+                  ts++, Bytes.toBytes(valueStr));
+                p.add(kv);
               }
             }
           }
@@ -462,26 +506,67 @@ public class TestCacheOnWrite {
       LOG.debug("compactStores() returned");
 
       boolean dataBlockCached = false;
+      boolean bloomBlockCached = false;
+      boolean indexBlockCached = false;
+
       for (CachedBlock block : blockCache) {
-        if (BlockType.ENCODED_DATA.equals(block.getBlockType())
-            || BlockType.DATA.equals(block.getBlockType())) {
+        if (DATA_BLOCK_TYPES.contains(block.getBlockType())) {
           dataBlockCached = true;
-          break;
+        } else if (BLOOM_BLOCK_TYPES.contains(block.getBlockType())) {
+          bloomBlockCached = true;
+        } else if (INDEX_BLOCK_TYPES.contains(block.getBlockType())) {
+          indexBlockCached = true;
         }
       }
 
       // Data blocks should be cached in instances where we are caching blocks on write. In the case
       // of testing
       // BucketCache, we cannot verify block type as it is not stored in the cache.
-      assertTrue(
-        "\nTest description: " + testDescription + "\ncacheBlocksOnCompaction: "
-            + cacheBlocksOnCompaction + "\n",
-        (cacheBlocksOnCompaction && !(blockCache instanceof BucketCache)) == dataBlockCached);
+      boolean cacheOnCompactAndNonBucketCache = cacheBlocksOnCompaction
+        && !(blockCache instanceof BucketCache);
+
+      String assertErrorMessage = "\nTest description: " + testDescription +
+        "\ncacheBlocksOnCompaction: "
+        + cacheBlocksOnCompaction + "\n";
+
+      if (cacheOnCompactAndNonBucketCache && cacheBlocksOnCompactionThreshold > 0) {
+        if (cacheBlocksOnCompactionThreshold == CACHE_COMPACTION_HIGH_THRESHOLD) {
+          assertTrue(assertErrorMessage, dataBlockCached);
+          assertTrue(assertErrorMessage, bloomBlockCached);
+          assertTrue(assertErrorMessage, indexBlockCached);
+        } else {
+          assertFalse(assertErrorMessage, dataBlockCached);
+
+          if (localCacheBloomBlocksValue) {
+            assertTrue(assertErrorMessage, bloomBlockCached);
+          } else {
+            assertFalse(assertErrorMessage, bloomBlockCached);
+          }
+
+          if (localCacheIndexBlocksValue) {
+            assertTrue(assertErrorMessage, indexBlockCached);
+          } else {
+            assertFalse(assertErrorMessage, indexBlockCached);
+          }
+        }
+      } else {
+        assertEquals(assertErrorMessage, cacheOnCompactAndNonBucketCache, dataBlockCached);
+
+        if (cacheOnCompactAndNonBucketCache) {
+          assertTrue(assertErrorMessage, bloomBlockCached);
+          assertTrue(assertErrorMessage, indexBlockCached);
+        }
+      }
+
 
       region.close();
     } finally {
       // reset back
       conf.setBoolean(CacheConfig.CACHE_COMPACTED_BLOCKS_ON_WRITE_KEY, localValue);
+      conf.setLong(CacheConfig.CACHE_COMPACTED_BLOCKS_ON_WRITE_THRESHOLD_KEY,
+        localCacheCompactedBlocksThreshold);
+      conf.setBoolean(CacheConfig.CACHE_BLOOM_BLOCKS_ON_WRITE_KEY, localCacheBloomBlocksValue);
+      conf.setBoolean(CacheConfig.CACHE_INDEX_BLOCKS_ON_WRITE_KEY, localCacheIndexBlocksValue);
     }
   }
 
@@ -493,7 +578,15 @@ public class TestCacheOnWrite {
 
   @Test
   public void testCachingDataBlocksDuringCompaction() throws IOException, InterruptedException {
-    testCachingDataBlocksDuringCompactionInternals(false, false);
-    testCachingDataBlocksDuringCompactionInternals(true, true);
+    testCachingDataBlocksDuringCompactionInternals(false, false, -1);
+    testCachingDataBlocksDuringCompactionInternals(true, true, -1);
   }
+
+  @Test
+  public void testCachingDataBlocksThresholdDuringCompaction()
+    throws IOException, InterruptedException {
+    testCachingDataBlocksDuringCompactionInternals(false, true, CACHE_COMPACTION_HIGH_THRESHOLD);
+    testCachingDataBlocksDuringCompactionInternals(false, true, CACHE_COMPACTION_LOW_THRESHOLD);
+  }
+
 }

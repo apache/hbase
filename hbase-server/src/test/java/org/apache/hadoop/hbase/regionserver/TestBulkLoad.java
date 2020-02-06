@@ -52,7 +52,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -281,7 +281,7 @@ public class TestBulkLoad {
     FSDataOutputStream out = new FSDataOutputStream(new FileOutputStream(hFileLocation), null);
     try {
       hFileFactory.withOutputStream(out);
-      hFileFactory.withFileContext(new HFileContext());
+      hFileFactory.withFileContext(new HFileContextBuilder().build());
       HFile.Writer writer = hFileFactory.create();
       try {
         writer.append(new KeyValue(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)

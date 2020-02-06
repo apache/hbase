@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,12 +20,12 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-
+import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.TableName;
@@ -36,12 +36,11 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LossyCounting;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
-
 
 /**
  * A coprocessor that collects metrics from meta table.
@@ -57,16 +56,16 @@ public class MetaTableMetrics implements RegionCoprocessor {
 
   private ExampleRegionObserverMeta observer;
   private MetricRegistry registry;
-  private LossyCounting clientMetricsLossyCounting, regionMetricsLossyCounting;
+  private LossyCounting<String> clientMetricsLossyCounting, regionMetricsLossyCounting;
   private boolean active = false;
-  private Set<String> metrics = new HashSet<String>();
+  private Set<String> metrics = new HashSet<>();
 
   enum MetaTableOps {
-    GET, PUT, DELETE;
+    GET, PUT, DELETE,
   }
 
-  private ImmutableMap<Class, MetaTableOps> opsNameMap =
-      ImmutableMap.<Class, MetaTableOps>builder()
+  private ImmutableMap<Class<? extends Row>, MetaTableOps> opsNameMap =
+      ImmutableMap.<Class<? extends Row>, MetaTableOps>builder()
               .put(Put.class, MetaTableOps.PUT)
               .put(Get.class, MetaTableOps.GET)
               .put(Delete.class, MetaTableOps.DELETE)
@@ -93,7 +92,7 @@ public class MetaTableMetrics implements RegionCoprocessor {
 
     @Override
     public void preDelete(ObserverContext<RegionCoprocessorEnvironment> e, Delete delete,
-        WALEdit edit, Durability durability) throws IOException {
+        WALEdit edit, Durability durability) {
       registerAndMarkMetrics(e, delete);
     }
 
@@ -113,13 +112,12 @@ public class MetaTableMetrics implements RegionCoprocessor {
      * @param op such as get, put or delete.
      */
     private String getTableNameFromOp(Row op) {
-      String tableName = null;
-      String tableRowKey = new String(((Row) op).getRow(), StandardCharsets.UTF_8);
-      if (tableRowKey.isEmpty()) {
+      final String tableRowKey = Bytes.toString(op.getRow());
+      if (StringUtils.isEmpty(tableRowKey)) {
         return null;
       }
-      tableName = tableRowKey.split(",").length > 0 ? tableRowKey.split(",")[0] : null;
-      return tableName;
+      final String[] splits = tableRowKey.split(",");
+      return splits.length > 0 ? splits[0] : null;
     }
 
     /**
@@ -127,13 +125,12 @@ public class MetaTableMetrics implements RegionCoprocessor {
      * @param op  such as get, put or delete.
      */
     private String getRegionIdFromOp(Row op) {
-      String regionId = null;
-      String tableRowKey = new String(((Row) op).getRow(), StandardCharsets.UTF_8);
-      if (tableRowKey.isEmpty()) {
+      final String tableRowKey = Bytes.toString(op.getRow());
+      if (StringUtils.isEmpty(tableRowKey)) {
         return null;
       }
-      regionId = tableRowKey.split(",").length > 2 ? tableRowKey.split(",")[2] : null;
-      return regionId;
+      final String[] splits = tableRowKey.split(",");
+      return splits.length > 2 ? splits[2] : null;
     }
 
     private boolean isMetaTableOp(ObserverContext<RegionCoprocessorEnvironment> e) {
@@ -279,13 +276,13 @@ public class MetaTableMetrics implements RegionCoprocessor {
           .equals(TableName.META_TABLE_NAME)) {
       RegionCoprocessorEnvironment regionCoprocessorEnv = (RegionCoprocessorEnvironment) env;
       registry = regionCoprocessorEnv.getMetricRegistryForRegionServer();
-      LossyCounting.LossyCountingListener listener =
-          (LossyCounting.LossyCountingListener<String>) key -> {
-            registry.remove(key);
-            metrics.remove(key);
-          };
-      clientMetricsLossyCounting = new LossyCounting<String>("clientMetaMetrics",listener);
-      regionMetricsLossyCounting = new LossyCounting<String>("regionMetaMetrics",listener);
+      LossyCounting.LossyCountingListener<String> listener = key -> {
+        registry.remove(key);
+        metrics.remove(key);
+      };
+      final Configuration conf = regionCoprocessorEnv.getConfiguration();
+      clientMetricsLossyCounting = new LossyCounting<>("clientMetaMetrics", conf, listener);
+      regionMetricsLossyCounting = new LossyCounting<>("regionMetaMetrics", conf, listener);
       // only be active mode when this region holds meta table.
       active = true;
     }

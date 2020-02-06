@@ -48,7 +48,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.RandomKeyValueUtil;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
@@ -64,7 +64,7 @@ import org.slf4j.LoggerFactory;
  * Tests writing Bloom filter blocks in the same part of the file as data
  * blocks.
  */
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({RegionServerTests.class, LargeTests.class})
 public class TestCompoundBloomFilter {
 
   @ClassRule

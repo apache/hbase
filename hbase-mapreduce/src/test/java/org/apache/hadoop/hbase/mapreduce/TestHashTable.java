@@ -52,7 +52,6 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
  */
 @Category(LargeTests.class)
 public class TestHashTable {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestHashTable.class);
@@ -109,11 +108,12 @@ public class TestHashTable {
 
     long batchSize = 300;
     int code = hashTable.run(new String[] {
-        "--batchsize=" + batchSize,
-        "--numhashfiles=" + numHashFiles,
-        "--scanbatch=2",
-        tableName.getNameAsString(),
-        testDir.toString()});
+      "--batchsize=" + batchSize,
+      "--numhashfiles=" + numHashFiles,
+      "--scanbatch=2",
+      tableName.getNameAsString(),
+      testDir.toString()
+    });
     assertEquals("test job failed", 0, code);
 
     FileSystem fs = TEST_UTIL.getTestFileSystem();
@@ -159,7 +159,7 @@ public class TestHashTable {
       MapFile.Reader reader = new MapFile.Reader(hashPath, fs.getConf());
       ImmutableBytesWritable key = new ImmutableBytesWritable();
       ImmutableBytesWritable hash = new ImmutableBytesWritable();
-      while(reader.next(key, hash)) {
+      while (reader.next(key, hash)) {
         String keyString = Bytes.toHex(key.get(), key.getOffset(), key.getLength());
         LOG.debug("Key: " + (keyString.isEmpty() ? "-1" : Integer.parseInt(keyString, 16))
             + " Hash: " + Bytes.toHex(hash.get(), hash.getOffset(), hash.getLength()));
@@ -194,6 +194,4 @@ public class TestHashTable {
     TEST_UTIL.deleteTable(tableName);
     TEST_UTIL.cleanupDataTestDirOnTestFS();
   }
-
-
 }

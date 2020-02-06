@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.regionserver.TestHRegionServerBulkLoad;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -64,6 +65,8 @@ public class TestHFilePrettyPrinter {
   @Before
   public void setup() throws Exception {
     conf = UTIL.getConfiguration();
+    // Runs on local filesystem. Test does not need sync. Turn off checks.
+    conf.setBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, false);
     fs = UTIL.getTestFileSystem();
     stream = new ByteArrayOutputStream();
     ps = new PrintStream(stream);

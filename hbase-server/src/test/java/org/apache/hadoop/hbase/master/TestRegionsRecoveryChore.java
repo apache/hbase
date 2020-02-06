@@ -214,7 +214,7 @@ public class TestRegionsRecoveryChore {
     Mockito.verify(hMaster, Mockito.times(0)).reopenRegions(Mockito.any(), Mockito.anyList(),
       Mockito.anyLong(), Mockito.anyLong());
 
-    // default maxStoreFileRefCount is -1 (no regions to be reopened using AM)
+    // default maxCompactedStoreFileRefCount is -1 (no regions to be reopened using AM)
     Mockito.verify(hMaster, Mockito.times(0)).getAssignmentManager();
     Mockito.verify(assignmentManager, Mockito.times(0))
       .getRegionInfo(Mockito.any());
@@ -380,7 +380,7 @@ public class TestRegionsRecoveryChore {
     return serverMetrics;
   }
 
-  private static RegionMetrics getRegionMetrics(byte[] regionName, int storeRefCount) {
+  private static RegionMetrics getRegionMetrics(byte[] regionName, int compactedStoreRefCount) {
     RegionMetrics regionMetrics = new RegionMetrics() {
 
       @Override
@@ -485,12 +485,12 @@ public class TestRegionsRecoveryChore {
 
       @Override
       public int getStoreRefCount() {
-        return storeRefCount;
+        return compactedStoreRefCount;
       }
 
       @Override
-      public int getMaxStoreFileRefCount() {
-        return storeRefCount;
+      public int getMaxCompactedStoreFileRefCount() {
+        return compactedStoreRefCount;
       }
 
     };

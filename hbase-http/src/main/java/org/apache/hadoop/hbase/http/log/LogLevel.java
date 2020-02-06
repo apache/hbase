@@ -324,6 +324,14 @@ public final class LogLevel {
           response)) {
         return;
       }
+      // Disallow modification of the LogLevel if explicitly set to readonly
+      Configuration conf = (Configuration) getServletContext().getAttribute(
+          HttpServer.CONF_CONTEXT_ATTRIBUTE);
+      if (conf.getBoolean("hbase.master.ui.readonly", false)) {
+        response.sendError(HttpServletResponse.SC_FORBIDDEN, "Modification of HBase via"
+            + " the UI is disallowed in configuration.");
+        return;
+      }
       response.setContentType("text/html");
       PrintWriter out;
       try {

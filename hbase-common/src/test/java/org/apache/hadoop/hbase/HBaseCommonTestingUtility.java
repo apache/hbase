@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,7 +23,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -114,12 +112,12 @@ public class HBaseCommonTestingUtility {
   }
 
   /**
-   * @param subdirName the name of the subdirectory in the test data directory
-   * @return Path to a subdirectory named {code subdirName} under
-   *  {@link #getDataTestDir()}. Does *NOT* create it if it does not exist.
+   * @param name the name of a subdirectory or file in the test data directory
+   * @return Path to a subdirectory or file named {code subdirName} under
+   *  {@link #getDataTestDir()}. Does *NOT* create the directory or file if it does not exist.
    */
-  public Path getDataTestDir(final String subdirName) {
-    return new Path(getDataTestDir(), subdirName);
+  public Path getDataTestDir(final String name) {
+    return new Path(getDataTestDir(), name);
   }
 
   /**
@@ -155,7 +153,7 @@ public class HBaseCommonTestingUtility {
     return new Path(getBaseTestDir(), getRandomUUID().toString());
   }
 
-  public UUID getRandomUUID() {
+  public static UUID getRandomUUID() {
     return new UUID(ThreadLocalRandom.current().nextLong(),
                     ThreadLocalRandom.current().nextLong());
   }

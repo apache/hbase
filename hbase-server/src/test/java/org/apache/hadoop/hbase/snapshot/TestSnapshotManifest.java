@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 
-@Category({MasterTests.class, SmallTests.class})
+@Category({MasterTests.class, MediumTests.class})
 public class TestSnapshotManifest {
 
   @ClassRule
@@ -71,7 +71,7 @@ public class TestSnapshotManifest {
 
   @Before
   public void setup() throws Exception {
-    TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+    TEST_UTIL = new HBaseTestingUtility();
 
     rootDir = TEST_UTIL.getDataTestDir(TABLE_NAME_STR);
     fs = TEST_UTIL.getTestFileSystem();

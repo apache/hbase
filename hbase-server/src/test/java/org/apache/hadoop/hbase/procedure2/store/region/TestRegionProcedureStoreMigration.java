@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.procedure2.store.region;
 
+import static org.hamcrest.CoreMatchers.startsWith;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
@@ -30,8 +32,14 @@ import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseIOException;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.master.assignment.AssignProcedure;
+import org.apache.hadoop.hbase.master.cleaner.DirScanPool;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.LoadCounter;
 import org.apache.hadoop.hbase.procedure2.store.LeaseRecovery;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureIterator;
@@ -39,7 +47,7 @@ import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureLoader;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -48,7 +56,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @SuppressWarnings("deprecation")
-@Category({ MasterTests.class, MediumTests.class })
+@Category({ MasterTests.class, SmallTests.class })
 public class TestRegionProcedureStoreMigration {
 
   @ClassRule
@@ -61,11 +69,17 @@ public class TestRegionProcedureStoreMigration {
 
   private WALProcedureStore walStore;
 
+  private ChoreService choreService;
+
+  private DirScanPool cleanerPool;
+
   @Before
   public void setUp() throws IOException {
     htu = new HBaseCommonTestingUtility();
     Configuration conf = htu.getConfiguration();
     conf.setBoolean(MemStoreLAB.USEMSLAB_KEY, false);
+    // Runs on local filesystem. Test does not need sync. Turn off checks.
+    htu.getConfiguration().setBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, false);
     Path testDir = htu.getDataTestDir();
     CommonFSUtils.setWALRootDir(conf, testDir);
     walStore = new WALProcedureStore(conf, new LeaseRecovery() {
@@ -77,6 +91,8 @@ public class TestRegionProcedureStoreMigration {
     walStore.start(1);
     walStore.recoverLease();
     walStore.load(new LoadCounter());
+    choreService = new ChoreService(getClass().getSimpleName());
+    cleanerPool = new DirScanPool(htu.getConfiguration());
   }
 
   @After
@@ -85,6 +101,8 @@ public class TestRegionProcedureStoreMigration {
       store.stop(true);
     }
     walStore.stop(true);
+    cleanerPool.shutdownNow();
+    choreService.shutdown();
     htu.cleanupTestDir();
   }
 
@@ -103,8 +121,8 @@ public class TestRegionProcedureStoreMigration {
     SortedSet<RegionProcedureStoreTestProcedure> loadedProcs =
       new TreeSet<>((p1, p2) -> Long.compare(p1.getProcId(), p2.getProcId()));
     MutableLong maxProcIdSet = new MutableLong(0);
-    store =
-      RegionProcedureStoreTestHelper.createStore(htu.getConfiguration(), new ProcedureLoader() {
+    store = RegionProcedureStoreTestHelper.createStore(htu.getConfiguration(), choreService,
+      cleanerPool, new ProcedureLoader() {
 
         @Override
         public void setMaxProcId(long maxProcId) {
@@ -139,5 +157,22 @@ public class TestRegionProcedureStoreMigration {
     Path oldProcWALDir = new Path(testDir, WALProcedureStore.MASTER_PROCEDURE_LOGDIR);
     // make sure the old proc wal directory has been deleted.
     assertFalse(fs.exists(oldProcWALDir));
+  }
+
+  @Test
+  public void testMigrateWithUnsupportedProcedures() throws IOException {
+    AssignProcedure assignProc = new AssignProcedure();
+    assignProc.setProcId(1L);
+    assignProc.setRegionInfo(RegionInfoBuilder.newBuilder(TableName.valueOf("table")).build());
+    walStore.insert(assignProc, null);
+    walStore.stop(true);
+
+    try {
+      store = RegionProcedureStoreTestHelper.createStore(htu.getConfiguration(), choreService,
+        cleanerPool, new LoadCounter());
+      fail("Should fail since AssignProcedure is not supported");
+    } catch (HBaseIOException e) {
+      assertThat(e.getMessage(), startsWith("Unsupported"));
+    }
   }
 }

@@ -53,7 +53,8 @@ if [[ -z "$ASF_PASSWORD" ]]; then
   stty -echo && printf "ASF password: " && read ASF_PASSWORD && printf '\n' && stty echo
 fi
 
-for env in ASF_USERNAME ASF_PASSWORD RELEASE_VERSION RELEASE_TAG NEXT_VERSION GIT_EMAIL GIT_NAME GIT_BRANCH; do
+for env in ASF_USERNAME ASF_PASSWORD RELEASE_VERSION RELEASE_TAG NEXT_VERSION GIT_EMAIL \
+    GIT_NAME GIT_BRANCH GPG_KEY; do
   if [ -z "${!env}" ]; then
     echo "$env must be set to run this script"
     exit 1

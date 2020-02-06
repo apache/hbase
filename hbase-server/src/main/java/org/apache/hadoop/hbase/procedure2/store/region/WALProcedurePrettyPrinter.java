@@ -49,7 +49,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
  * <p/>
  * The different between this and {@link WALPrettyPrinter} is that, this class will decode the
  * procedure in the WALEdit for better debugging. You are free to use {@link WALPrettyPrinter} to
- * dump the safe file as well.
+ * dump the same file as well.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @InterfaceStability.Evolving

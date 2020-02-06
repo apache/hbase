@@ -61,6 +61,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
@@ -75,6 +77,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
@@ -410,13 +413,18 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction modifyTable = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTableDescriptor htd = new HTableDescriptor(TEST_TABLE);
-        htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
-        htd.addFamily(new HColumnDescriptor("fam_" + User.getCurrent().getShortName()));
+        TableDescriptorBuilder tableDescriptorBuilder =
+          TableDescriptorBuilder.newBuilder(TEST_TABLE);
+        ColumnFamilyDescriptor columnFamilyDescriptor =
+          ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY).build();
+        tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+        columnFamilyDescriptor = ColumnFamilyDescriptorBuilder
+          .newBuilder(Bytes.toBytes("fam_" + User.getCurrent().getShortName())).build();
+        tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
         ACCESS_CONTROLLER.preModifyTable(ObserverContextImpl.createAndPrepare(CP_ENV),
             TEST_TABLE,
             null,  // not needed by AccessController
-            htd);
+            tableDescriptorBuilder.build());
         return null;
       }
     };

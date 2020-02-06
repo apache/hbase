@@ -25,6 +25,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -37,19 +38,23 @@ import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.CoprocessorDescriptor;
+import org.apache.hadoop.hbase.client.CoprocessorDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.TestServerCustomProtocol;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassLoaderTestHelper;
 import org.apache.hadoop.hbase.util.CoprocessorClassLoader;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -167,14 +172,15 @@ public class TestClassLoading {
     LOG.info("Copied jar file to HDFS: " + jarFileOnHDFS2);
 
     // create a table that references the coprocessors
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    htd.addFamily(new HColumnDescriptor("test"));
-      // without configuration values
-    htd.setValue("COPROCESSOR$1", jarFileOnHDFS1.toString() + "|" + cpName1 +
-      "|" + Coprocessor.PRIORITY_USER);
-      // with configuration values
-    htd.setValue("COPROCESSOR$2", jarFileOnHDFS2.toString() + "|" + cpName2 +
-      "|" + Coprocessor.PRIORITY_USER + "|k1=v1,k2=v2,k3=v3");
+    TableDescriptorBuilder tdb = TableDescriptorBuilder.newBuilder(tableName);
+    tdb.setColumnFamily(ColumnFamilyDescriptorBuilder
+      .newBuilder(Bytes.toBytes("test")).build());
+    // without configuration values
+    tdb.setValue("COPROCESSOR$1", jarFileOnHDFS1 + "|" + cpName1
+      + "|" + Coprocessor.PRIORITY_USER);
+    // with configuration values
+    tdb.setValue("COPROCESSOR$2", jarFileOnHDFS2 + "|" + cpName2
+      + "|" + Coprocessor.PRIORITY_USER + "|k1=v1,k2=v2,k3=v3");
     Admin admin = TEST_UTIL.getAdmin();
     if (admin.tableExists(tableName)) {
       if (admin.isTableEnabled(tableName)) {
@@ -185,8 +191,9 @@ public class TestClassLoading {
     CoprocessorClassLoader.clearCache();
     byte[] startKey = {10, 63};
     byte[] endKey = {12, 43};
-    admin.createTable(htd, startKey, endKey, 4);
-    waitForTable(htd.getTableName());
+    TableDescriptor tableDescriptor = tdb.build();
+    admin.createTable(tableDescriptor, startKey, endKey, 4);
+    waitForTable(tableDescriptor.getTableName());
 
     // verify that the coprocessors were loaded
     boolean foundTableRegion=false;
@@ -253,13 +260,15 @@ public class TestClassLoading {
     File jarFile = buildCoprocessorJar(cpName3);
 
     // create a table that references the jar
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(cpName3));
-    htd.addFamily(new HColumnDescriptor("test"));
-    htd.setValue("COPROCESSOR$1", getLocalPath(jarFile) + "|" + cpName3 + "|" +
+    TableDescriptorBuilder tdb = TableDescriptorBuilder.newBuilder(TableName.valueOf(cpName3));
+    tdb.setColumnFamily(ColumnFamilyDescriptorBuilder
+      .newBuilder(Bytes.toBytes("test")).build());
+    tdb.setValue("COPROCESSOR$1", getLocalPath(jarFile) + "|" + cpName3 + "|" +
       Coprocessor.PRIORITY_USER);
+    TableDescriptor tableDescriptor = tdb.build();
     Admin admin = TEST_UTIL.getAdmin();
-    admin.createTable(htd);
-    waitForTable(htd.getTableName());
+    admin.createTable(tableDescriptor);
+    waitForTable(tableDescriptor.getTableName());
 
     // verify that the coprocessor was loaded
     boolean found = false;
@@ -278,13 +287,15 @@ public class TestClassLoading {
     File jarFile = buildCoprocessorJar(cpName4);
 
     // create a table that references the jar
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(cpName4));
-    htd.addFamily(new HColumnDescriptor("test"));
-    htd.setValue("COPROCESSOR$1", getLocalPath(jarFile) + "|" + cpName4 + "|" +
+    TableDescriptorBuilder tdb = TableDescriptorBuilder.newBuilder(TableName.valueOf(cpName4));
+    tdb.setColumnFamily(ColumnFamilyDescriptorBuilder
+      .newBuilder(Bytes.toBytes("test")).build());
+    tdb.setValue("COPROCESSOR$1", getLocalPath(jarFile) + "|" + cpName4 + "|" +
       Coprocessor.PRIORITY_USER);
+    TableDescriptor tableDescriptor = tdb.build();
     Admin admin = TEST_UTIL.getAdmin();
-    admin.createTable(htd);
-    waitForTable(htd.getTableName());
+    admin.createTable(tableDescriptor);
+    waitForTable(tableDescriptor.getTableName());
 
     // verify that the coprocessor was loaded correctly
     boolean found = false;
@@ -325,23 +336,35 @@ public class TestClassLoading {
         " | org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver | | k=v ";
 
     // create a table that references the jar
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    htd.addFamily(new HColumnDescriptor("test"));
+    TableDescriptorBuilder tdb = TableDescriptorBuilder.newBuilder(tableName);
+    tdb.setColumnFamily(ColumnFamilyDescriptorBuilder
+      .newBuilder(Bytes.toBytes("test")).build());
 
     // add 3 coprocessors by setting htd attributes directly.
-    htd.setValue(cpKey1, cpValue1);
-    htd.setValue(cpKey2, cpValue2);
-    htd.setValue(cpKey3, cpValue3);
+    tdb.setValue(cpKey1, cpValue1);
+    tdb.setValue(cpKey2, cpValue2);
+    tdb.setValue(cpKey3, cpValue3);
 
     // add 2 coprocessor by using new htd.setCoprocessor() api
-    htd.addCoprocessor(cpName5, new Path(getLocalPath(jarFile5)),
-        Coprocessor.PRIORITY_USER, null);
+    CoprocessorDescriptor coprocessorDescriptor = CoprocessorDescriptorBuilder
+      .newBuilder(cpName5)
+      .setJarPath(new Path(getLocalPath(jarFile5)).toString())
+      .setPriority(Coprocessor.PRIORITY_USER)
+      .setProperties(Collections.emptyMap())
+      .build();
+    tdb.setCoprocessor(coprocessorDescriptor);
     Map<String, String> kvs = new HashMap<>();
     kvs.put("k1", "v1");
     kvs.put("k2", "v2");
     kvs.put("k3", "v3");
-    htd.addCoprocessor(cpName6, new Path(getLocalPath(jarFile6)),
-        Coprocessor.PRIORITY_USER, kvs);
+
+    coprocessorDescriptor = CoprocessorDescriptorBuilder
+      .newBuilder(cpName6)
+      .setJarPath(new Path(getLocalPath(jarFile6)).toString())
+      .setPriority(Coprocessor.PRIORITY_USER)
+      .setProperties(kvs)
+      .build();
+    tdb.setCoprocessor(coprocessorDescriptor);
 
     Admin admin = TEST_UTIL.getAdmin();
     if (admin.tableExists(tableName)) {
@@ -350,8 +373,10 @@ public class TestClassLoading {
       }
       admin.deleteTable(tableName);
     }
-    admin.createTable(htd);
-    waitForTable(htd.getTableName());
+
+    TableDescriptor tableDescriptor = tdb.build();
+    admin.createTable(tableDescriptor);
+    waitForTable(tableDescriptor.getTableName());
 
     // verify that the coprocessor was loaded
     boolean found_2 = false, found_1 = false, found_3 = false,
@@ -426,14 +451,15 @@ public class TestClassLoading {
     LOG.info("Copied jar file to HDFS: " + jarFileOnHDFS);
 
     // create a table that references the coprocessors
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    htd.addFamily(new HColumnDescriptor("test"));
+    TableDescriptorBuilder tdb = TableDescriptorBuilder.newBuilder(tableName);
+    tdb.setColumnFamily(ColumnFamilyDescriptorBuilder
+      .newBuilder(Bytes.toBytes("test")).build());
       // without configuration values
-    htd.setValue("COPROCESSOR$1", jarFileOnHDFS.toString() + "|" + cpName1 +
-      "|" + Coprocessor.PRIORITY_USER);
+    tdb.setValue("COPROCESSOR$1", jarFileOnHDFS + "|" + cpName1
+      + "|" + Coprocessor.PRIORITY_USER);
       // with configuration values
-    htd.setValue("COPROCESSOR$2", jarFileOnHDFS.toString() + "|" + cpName2 +
-      "|" + Coprocessor.PRIORITY_USER + "|k1=v1,k2=v2,k3=v3");
+    tdb.setValue("COPROCESSOR$2", jarFileOnHDFS + "|" + cpName2
+      + "|" + Coprocessor.PRIORITY_USER + "|k1=v1,k2=v2,k3=v3");
     Admin admin = TEST_UTIL.getAdmin();
     if (admin.tableExists(tableName)) {
       if (admin.isTableEnabled(tableName)) {
@@ -441,8 +467,10 @@ public class TestClassLoading {
       }
       admin.deleteTable(tableName);
     }
-    admin.createTable(htd);
-    waitForTable(htd.getTableName());
+
+    TableDescriptor tableDescriptor = tdb.build();
+    admin.createTable(tableDescriptor);
+    waitForTable(tableDescriptor.getTableName());
 
     // verify that the coprocessors were loaded
     boolean found1 = false, found2 = false, found2_k1 = false,

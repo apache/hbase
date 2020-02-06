@@ -2183,19 +2183,25 @@ The percent of region server RPC threads failed to abort RS.
 +
 .Description
 
-      Very large ref count on a file indicates
-      that it is a ref leak on that object. Such files
-      can not be removed even after it is invalidated
-      via compaction. Only way to recover in such
-      scenario is to reopen the region which can
-      release all resources, like the refcount, leases, etc.
-      This config represents Store files Ref Count threshold
-      value considered for reopening regions.
-      Any region with store files ref count > this value
-      would be eligible for reopening by master.
-      Default value -1 indicates this feature is turned off.
-      Only positive integer value should be provided to enable
-      this feature.
+      Very large number of ref count on a compacted
+      store file indicates that it is a ref leak
+      on that object(compacted store file).
+      Such files can not be removed after
+      it is invalidated via compaction.
+      Only way to recover in such scenario is to
+      reopen the region which can release
+      all resources, like the refcount,
+      leases, etc. This config represents Store files Ref
+      Count threshold value considered for reopening
+      regions. Any region with compacted store files
+      ref count > this value would be eligible for
+      reopening by master. Here, we get the max
+      refCount among all refCounts on all
+      compacted away store files that belong to a
+      particular region. Default value -1 indicates
+      this feature is turned off. Only positive
+      integer value should be provided to
+      enable this feature.
 
 +
 .Default

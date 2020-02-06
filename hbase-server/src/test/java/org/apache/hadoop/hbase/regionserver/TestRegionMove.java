@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.client.DoNotRetryRegionException;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -48,7 +48,7 @@ import org.junit.rules.TestName;
 /**
  * Test move fails when table disabled
  */
-@Category({LargeTests.class})
+@Category({MediumTests.class})
 public class TestRegionMove {
 
   @ClassRule

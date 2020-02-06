@@ -54,10 +54,8 @@ import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HadoopShims;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PerformanceEvaluation;
@@ -67,6 +65,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
@@ -76,6 +76,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
@@ -856,15 +857,21 @@ public class TestHFileOutputFormat2  {
 
   private void setupMockColumnFamiliesForCompression(Table table,
       Map<String, Compression.Algorithm> familyToCompression) throws IOException {
-    HTableDescriptor mockTableDescriptor = new HTableDescriptor(TABLE_NAMES[0]);
+
+    TableDescriptorBuilder mockTableDescriptor =
+      TableDescriptorBuilder.newBuilder(TABLE_NAMES[0]);
     for (Entry<String, Compression.Algorithm> entry : familyToCompression.entrySet()) {
-      mockTableDescriptor.addFamily(new HColumnDescriptor(entry.getKey())
-          .setMaxVersions(1)
-          .setCompressionType(entry.getValue())
-          .setBlockCacheEnabled(false)
-          .setTimeToLive(0));
+      ColumnFamilyDescriptor columnFamilyDescriptor = ColumnFamilyDescriptorBuilder
+        .newBuilder(Bytes.toBytes(entry.getKey()))
+        .setMaxVersions(1)
+        .setCompressionType(entry.getValue())
+        .setBlockCacheEnabled(false)
+        .setTimeToLive(0)
+        .build();
+
+      mockTableDescriptor.setColumnFamily(columnFamilyDescriptor);
     }
-    Mockito.doReturn(mockTableDescriptor).when(table).getDescriptor();
+    Mockito.doReturn(mockTableDescriptor.build()).when(table).getDescriptor();
   }
 
   /**
@@ -929,13 +936,16 @@ public class TestHFileOutputFormat2  {
 
   private void setupMockColumnFamiliesForBloomType(Table table,
       Map<String, BloomType> familyToDataBlockEncoding) throws IOException {
-    HTableDescriptor mockTableDescriptor = new HTableDescriptor(TABLE_NAMES[0]);
+    TableDescriptorBuilder mockTableDescriptor =
+      TableDescriptorBuilder.newBuilder(TABLE_NAMES[0]);
     for (Entry<String, BloomType> entry : familyToDataBlockEncoding.entrySet()) {
-      mockTableDescriptor.addFamily(new HColumnDescriptor(entry.getKey())
-          .setMaxVersions(1)
-          .setBloomFilterType(entry.getValue())
-          .setBlockCacheEnabled(false)
-          .setTimeToLive(0));
+      ColumnFamilyDescriptor columnFamilyDescriptor = ColumnFamilyDescriptorBuilder
+        .newBuilder(Bytes.toBytes(entry.getKey()))
+        .setMaxVersions(1)
+        .setBloomFilterType(entry.getValue())
+        .setBlockCacheEnabled(false)
+        .setTimeToLive(0).build();
+      mockTableDescriptor.setColumnFamily(columnFamilyDescriptor);
     }
     Mockito.doReturn(mockTableDescriptor).when(table).getDescriptor();
   }
@@ -1001,13 +1011,16 @@ public class TestHFileOutputFormat2  {
 
   private void setupMockColumnFamiliesForBlockSize(Table table,
       Map<String, Integer> familyToDataBlockEncoding) throws IOException {
-    HTableDescriptor mockTableDescriptor = new HTableDescriptor(TABLE_NAMES[0]);
+    TableDescriptorBuilder mockTableDescriptor =
+      TableDescriptorBuilder.newBuilder(TABLE_NAMES[0]);
     for (Entry<String, Integer> entry : familyToDataBlockEncoding.entrySet()) {
-      mockTableDescriptor.addFamily(new HColumnDescriptor(entry.getKey())
-          .setMaxVersions(1)
-          .setBlocksize(entry.getValue())
-          .setBlockCacheEnabled(false)
-          .setTimeToLive(0));
+      ColumnFamilyDescriptor columnFamilyDescriptor = ColumnFamilyDescriptorBuilder
+        .newBuilder(Bytes.toBytes(entry.getKey()))
+        .setMaxVersions(1)
+        .setBlocksize(entry.getValue())
+        .setBlockCacheEnabled(false)
+        .setTimeToLive(0).build();
+      mockTableDescriptor.setColumnFamily(columnFamilyDescriptor);
     }
     Mockito.doReturn(mockTableDescriptor).when(table).getDescriptor();
   }
@@ -1077,13 +1090,16 @@ public class TestHFileOutputFormat2  {
 
   private void setupMockColumnFamiliesForDataBlockEncoding(Table table,
       Map<String, DataBlockEncoding> familyToDataBlockEncoding) throws IOException {
-    HTableDescriptor mockTableDescriptor = new HTableDescriptor(TABLE_NAMES[0]);
+    TableDescriptorBuilder mockTableDescriptor =
+      TableDescriptorBuilder.newBuilder(TABLE_NAMES[0]);
     for (Entry<String, DataBlockEncoding> entry : familyToDataBlockEncoding.entrySet()) {
-      mockTableDescriptor.addFamily(new HColumnDescriptor(entry.getKey())
-          .setMaxVersions(1)
-          .setDataBlockEncoding(entry.getValue())
-          .setBlockCacheEnabled(false)
-          .setTimeToLive(0));
+      ColumnFamilyDescriptor columnFamilyDescriptor = ColumnFamilyDescriptorBuilder
+        .newBuilder(Bytes.toBytes(entry.getKey()))
+        .setMaxVersions(1)
+        .setDataBlockEncoding(entry.getValue())
+        .setBlockCacheEnabled(false)
+        .setTimeToLive(0).build();
+      mockTableDescriptor.setColumnFamily(columnFamilyDescriptor);
     }
     Mockito.doReturn(mockTableDescriptor).when(table).getDescriptor();
   }
@@ -1142,10 +1158,12 @@ public class TestHFileOutputFormat2  {
     // Setup table descriptor
     Table table = Mockito.mock(Table.class);
     RegionLocator regionLocator = Mockito.mock(RegionLocator.class);
-    HTableDescriptor htd = new HTableDescriptor(TABLE_NAMES[0]);
-    Mockito.doReturn(htd).when(table).getDescriptor();
-    for (HColumnDescriptor hcd: HBaseTestingUtility.generateColumnDescriptors()) {
-      htd.addFamily(hcd);
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(TABLE_NAMES[0]);
+
+    Mockito.doReturn(tableDescriptorBuilder.build()).when(table).getDescriptor();
+    for (ColumnFamilyDescriptor hcd : HBaseTestingUtility.generateColumnDescriptors()) {
+      tableDescriptorBuilder.setColumnFamily(hcd);
     }
 
     // set up the table to return some mock keys
@@ -1170,7 +1188,8 @@ public class TestHFileOutputFormat2  {
       writer = hof.getRecordWriter(context);
 
       // write out random rows
-      writeRandomKeyValues(writer, context, htd.getFamiliesKeys(), ROWSPERSPLIT);
+      writeRandomKeyValues(writer, context,
+        tableDescriptorBuilder.build().getColumnFamilyNames(), ROWSPERSPLIT);
       writer.close(context);
 
       // Make sure that a directory was created for every CF
@@ -1180,10 +1199,11 @@ public class TestHFileOutputFormat2  {
       hof.getOutputCommitter(context).commitTask(context);
       hof.getOutputCommitter(context).commitJob(context);
       FileStatus[] families = FSUtils.listStatus(fs, dir, new FSUtils.FamilyDirFilter(fs));
-      assertEquals(htd.getFamilies().size(), families.length);
+      assertEquals(tableDescriptorBuilder.build().getColumnFamilies().length, families.length);
       for (FileStatus f : families) {
         String familyStr = f.getPath().getName();
-        HColumnDescriptor hcd = htd.getFamily(Bytes.toBytes(familyStr));
+        ColumnFamilyDescriptor hcd = tableDescriptorBuilder.build()
+          .getColumnFamily(Bytes.toBytes(familyStr));
         // verify that the compression on this file matches the configured
         // compression
         Path dataFilePath = fs.listStatus(f.getPath())[0].getPath();

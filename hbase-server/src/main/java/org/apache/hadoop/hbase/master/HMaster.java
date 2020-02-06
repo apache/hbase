@@ -98,14 +98,11 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.master.MasterRpcServices.BalanceSwitchMode;
-import org.apache.hadoop.hbase.master.assignment.AssignProcedure;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.MergeTableRegionsProcedure;
-import org.apache.hadoop.hbase.master.assignment.MoveRegionProcedure;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
-import org.apache.hadoop.hbase.master.assignment.UnassignProcedure;
 import org.apache.hadoop.hbase.master.balancer.BalancerChore;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.master.balancer.ClusterStatusChore;
@@ -135,7 +132,6 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil.NonceProcedu
 import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
-import org.apache.hadoop.hbase.master.procedure.RecoverMetaProcedure;
 import org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.master.procedure.TruncateTableProcedure;
@@ -225,7 +221,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
@@ -747,7 +742,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   @Override
   protected void configureInfoServer() {
-    infoServer.addServlet("master-status", "/master-status", MasterStatusServlet.class);
+    infoServer.addUnprivilegedServlet("master-status", "/master-status", MasterStatusServlet.class);
     infoServer.setAttribute(MASTER, this);
     if (LoadBalancer.isTablesOnMaster(conf)) {
       super.configureInfoServer();
@@ -831,45 +826,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.mpmHost.register(new MasterFlushTableProcedureManager());
     this.mpmHost.loadProcedures(conf);
     this.mpmHost.initialize(this, this.metricsMaster);
-  }
-
-  private static final ImmutableSet<Class<? extends Procedure>> UNSUPPORTED_PROCEDURES =
-    ImmutableSet.of(RecoverMetaProcedure.class, AssignProcedure.class, UnassignProcedure.class,
-      MoveRegionProcedure.class);
-
-  /**
-   * In HBASE-20811, we have introduced a new TRSP to assign/unassign/move regions, and it is
-   * incompatible with the old AssignProcedure/UnassignProcedure/MoveRegionProcedure. So we need to
-   * make sure that there are none these procedures when upgrading. If there are, the master will
-   * quit, you need to go back to the old version to finish these procedures first before upgrading.
-   */
-  private void checkUnsupportedProcedure(
-      Map<Class<? extends Procedure>, List<Procedure<MasterProcedureEnv>>> procsByType)
-      throws HBaseIOException {
-    // Confirm that we do not have unfinished assign/unassign related procedures. It is not easy to
-    // support both the old assign/unassign procedures and the new TransitRegionStateProcedure as
-    // there will be conflict in the code for AM. We should finish all these procedures before
-    // upgrading.
-    for (Class<? extends Procedure> clazz : UNSUPPORTED_PROCEDURES) {
-      List<Procedure<MasterProcedureEnv>> procs = procsByType.get(clazz);
-      if (procs != null) {
-        LOG.error(
-          "Unsupported procedure type {} found, please rollback your master to the old" +
-            " version to finish them, and then try to upgrade again. The full procedure list: {}",
-          clazz, procs);
-        throw new HBaseIOException("Unsupported procedure type " + clazz + " found");
-      }
-    }
-    // A special check for SCP, as we do not support RecoverMetaProcedure any more so we need to
-    // make sure that no one will try to schedule it but SCP does have a state which will schedule
-    // it.
-    if (procsByType.getOrDefault(ServerCrashProcedure.class, Collections.emptyList()).stream()
-      .map(p -> (ServerCrashProcedure) p).anyMatch(ServerCrashProcedure::isInRecoverMetaState)) {
-      LOG.error("At least one ServerCrashProcedure is going to schedule a RecoverMetaProcedure," +
-        " which is not supported any more. Please rollback your master to the old version to" +
-        " finish them, and then try to upgrade again.");
-      throw new HBaseIOException("Unsupported procedure state found for ServerCrashProcedure");
-    }
   }
 
   // Will be overriden in test to inject customized AssignmentManager
@@ -965,12 +921,9 @@ public class HMaster extends HRegionServer implements MasterServices {
       this.splitWALManager = new SplitWALManager(this);
     }
     createProcedureExecutor();
-    @SuppressWarnings("rawtypes")
-    Map<Class<? extends Procedure>, List<Procedure<MasterProcedureEnv>>> procsByType =
+    Map<Class<?>, List<Procedure<MasterProcedureEnv>>> procsByType =
       procedureExecutor.getActiveProceduresNoCopy().stream()
         .collect(Collectors.groupingBy(p -> p.getClass()));
-
-    checkUnsupportedProcedure(procsByType);
 
     // Create Assignment Manager
     this.assignmentManager = createAssignmentManager(this);
@@ -1046,7 +999,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     RegionState rs = this.assignmentManager.getRegionStates().
         getRegionState(RegionInfoBuilder.FIRST_META_REGIONINFO);
     LOG.info("hbase:meta {}", rs);
-    if (rs.isOffline()) {
+    if (rs != null && rs.isOffline()) {
       Optional<InitMetaProcedure> optProc = procedureExecutor.getProcedures().stream()
         .filter(p -> p instanceof InitMetaProcedure).map(o -> (InitMetaProcedure) o).findAny();
       initMetaProc = optProc.orElseGet(() -> {
@@ -1460,8 +1413,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.executorService.startExecutorService(ExecutorType.MASTER_TABLE_OPERATIONS, 1);
     startProcedureExecutor();
 
-    // Create cleaner thread pool
-    cleanerPool = new DirScanPool(conf);
     // Start log cleaner thread
     int cleanerInterval =
       conf.getInt(HBASE_MASTER_CLEANER_INTERVAL, DEFAULT_HBASE_MASTER_CLEANER_INTERVAL);
@@ -1567,8 +1518,10 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   private void createProcedureExecutor() throws IOException {
     MasterProcedureEnv procEnv = new MasterProcedureEnv(this);
-    procedureStore =
-      new RegionProcedureStore(this, new MasterProcedureEnv.FsUtilsLeaseRecovery(this));
+    // Create cleaner thread pool
+    cleanerPool = new DirScanPool(conf);
+    procedureStore = new RegionProcedureStore(this, cleanerPool,
+      new MasterProcedureEnv.FsUtilsLeaseRecovery(this));
     procedureStore.registerListener(new ProcedureStoreListener() {
 
       @Override
@@ -1688,12 +1641,10 @@ public class HMaster extends HRegionServer implements MasterServices {
    * @return Maximum time we should run balancer for
    */
   private int getMaxBalancingTime() {
-    int maxBalancingTime = getConfiguration().getInt(HConstants.HBASE_BALANCER_MAX_BALANCING, -1);
-    if (maxBalancingTime == -1) {
-      // if max balancing time isn't set, defaulting it to period time
-      maxBalancingTime = getConfiguration().getInt(HConstants.HBASE_BALANCER_PERIOD,
-        HConstants.DEFAULT_HBASE_BALANCER_PERIOD);
-    }
+    // if max balancing time isn't set, defaulting it to period time
+    int maxBalancingTime = getConfiguration().getInt(HConstants.HBASE_BALANCER_MAX_BALANCING,
+      getConfiguration()
+        .getInt(HConstants.HBASE_BALANCER_PERIOD, HConstants.DEFAULT_HBASE_BALANCER_PERIOD));
     return maxBalancingTime;
   }
 
@@ -1855,16 +1806,19 @@ public class HMaster extends HRegionServer implements MasterServices {
         } catch (HBaseIOException hioe) {
           //should ignore failed plans here, avoiding the whole balance plans be aborted
           //later calls of balance() can fetch up the failed and skipped plans
-          LOG.warn("Failed balance plan: {}, just skip it", plan, hioe);
+          LOG.warn("Failed balance plan {}, skipping...", plan, hioe);
         }
         //rpCount records balance plans processed, does not care if a plan succeeds
         rpCount++;
 
-        balanceThrottling(balanceStartTime + rpCount * balanceInterval, maxRegionsInTransition,
+        if (this.maxBlancingTime > 0) {
+          balanceThrottling(balanceStartTime + rpCount * balanceInterval, maxRegionsInTransition,
             cutoffTime);
+        }
 
         // if performing next balance exceeds cutoff time, exit the loop
-        if (rpCount < plans.size() && System.currentTimeMillis() > cutoffTime) {
+        if (this.maxBlancingTime > 0 && rpCount < plans.size()
+          && System.currentTimeMillis() > cutoffTime) {
           // TODO: After balance, there should not be a cutoff time (keeping it as
           // a security net for now)
           LOG.debug("No more balancing till next balance run; maxBalanceTime="

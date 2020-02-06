@@ -25,7 +25,10 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -45,6 +48,14 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.assignment.AssignProcedure;
+import org.apache.hadoop.hbase.master.assignment.MoveRegionProcedure;
+import org.apache.hadoop.hbase.master.assignment.UnassignProcedure;
+import org.apache.hadoop.hbase.master.cleaner.DirScanPool;
+import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
+import org.apache.hadoop.hbase.master.procedure.RecoverMetaProcedure;
+import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.store.LeaseRecovery;
@@ -57,6 +68,7 @@ import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
@@ -65,6 +77,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hbase.thirdparty.com.google.common.math.IntMath;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
@@ -110,19 +123,17 @@ public class RegionProcedureStore extends ProcedureStoreBase {
 
   static final String MASTER_PROCEDURE_DIR = "MasterProcs";
 
-  static final String LOGCLEANER_PLUGINS = "hbase.procedure.store.region.logcleaner.plugins";
+  static final String HFILECLEANER_PLUGINS = "hbase.procedure.store.region.hfilecleaner.plugins";
 
-  private static final String DATA_DIR = "data";
-
-  private static final String REPLAY_EDITS_DIR = "replay";
+  private static final String REPLAY_EDITS_DIR = "recovered.wals";
 
   private static final String DEAD_WAL_DIR_SUFFIX = "-dead";
 
-  private static final TableName TABLE_NAME = TableName.valueOf("master:procedure");
+  static final TableName TABLE_NAME = TableName.valueOf("master:procedure");
 
   static final byte[] FAMILY = Bytes.toBytes("p");
 
-  private static final byte[] PROC_QUALIFIER = Bytes.toBytes("d");
+  static final byte[] PROC_QUALIFIER = Bytes.toBytes("d");
 
   private static final int REGION_ID = 1;
 
@@ -131,22 +142,31 @@ public class RegionProcedureStore extends ProcedureStoreBase {
 
   private final Server server;
 
+  private final DirScanPool cleanerPool;
+
   private final LeaseRecovery leaseRecovery;
+
+  // Used to delete the compacted hfiles. Since we put all data on WAL filesystem, it is not
+  // possible to move the compacted hfiles to the global hfile archive directory, we have to do it
+  // by ourselves.
+  private HFileCleaner cleaner;
 
   private WALFactory walFactory;
 
   @VisibleForTesting
   HRegion region;
 
-  private RegionFlusherAndCompactor flusherAndCompactor;
+  @VisibleForTesting
+  RegionFlusherAndCompactor flusherAndCompactor;
 
   @VisibleForTesting
   RegionProcedureStoreWALRoller walRoller;
 
   private int numThreads;
 
-  public RegionProcedureStore(Server server, LeaseRecovery leaseRecovery) {
+  public RegionProcedureStore(Server server, DirScanPool cleanerPool, LeaseRecovery leaseRecovery) {
     this.server = server;
+    this.cleanerPool = cleanerPool;
     this.leaseRecovery = leaseRecovery;
   }
 
@@ -186,6 +206,9 @@ public class RegionProcedureStore extends ProcedureStoreBase {
       return;
     }
     LOG.info("Stopping the Region Procedure Store, isAbort={}", abort);
+    if (cleaner != null) {
+      cleaner.cancel(abort);
+    }
     if (flusherAndCompactor != null) {
       flusherAndCompactor.close();
     }
@@ -231,27 +254,26 @@ public class RegionProcedureStore extends ProcedureStoreBase {
     return wal;
   }
 
-  private HRegion bootstrap(Configuration conf, FileSystem fs, Path rootDir, Path dataDir)
-    throws IOException {
+  private HRegion bootstrap(Configuration conf, FileSystem fs, Path rootDir) throws IOException {
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(TABLE_NAME).setRegionId(REGION_ID).build();
-    Path tmpDataDir = new Path(dataDir.getParent(), dataDir.getName() + "-tmp");
-    if (fs.exists(tmpDataDir) && !fs.delete(tmpDataDir, true)) {
-      throw new IOException("Can not delete partial created proc region " + tmpDataDir);
+    Path tmpTableDir = CommonFSUtils.getTableDir(rootDir, TableName
+      .valueOf(TABLE_NAME.getNamespaceAsString(), TABLE_NAME.getQualifierAsString() + "-tmp"));
+    if (fs.exists(tmpTableDir) && !fs.delete(tmpTableDir, true)) {
+      throw new IOException("Can not delete partial created proc region " + tmpTableDir);
     }
-    Path tableDir = CommonFSUtils.getTableDir(tmpDataDir, TABLE_NAME);
-    HRegion.createHRegion(conf, regionInfo, fs, tableDir, TABLE_DESC).close();
-    if (!fs.rename(tmpDataDir, dataDir)) {
-      throw new IOException("Can not rename " + tmpDataDir + " to " + dataDir);
+    HRegion.createHRegion(conf, regionInfo, fs, tmpTableDir, TABLE_DESC).close();
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, TABLE_NAME);
+    if (!fs.rename(tmpTableDir, tableDir)) {
+      throw new IOException("Can not rename " + tmpTableDir + " to " + tableDir);
     }
     WAL wal = createWAL(fs, rootDir, regionInfo);
     return HRegion.openHRegionFromTableDir(conf, fs, tableDir, regionInfo, TABLE_DESC, wal, null,
       null);
   }
 
-  private HRegion open(Configuration conf, FileSystem fs, Path rootDir, Path dataDir)
-    throws IOException {
+  private HRegion open(Configuration conf, FileSystem fs, Path rootDir) throws IOException {
     String factoryId = server.getServerName().toString();
-    Path tableDir = CommonFSUtils.getTableDir(dataDir, TABLE_NAME);
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, TABLE_NAME);
     Path regionDir =
       fs.listStatus(tableDir, p -> RegionInfo.isEncodedRegionName(Bytes.toBytes(p.getName())))[0]
         .getPath();
@@ -302,6 +324,46 @@ public class RegionProcedureStore extends ProcedureStoreBase {
   }
 
   @SuppressWarnings("deprecation")
+  private static final ImmutableSet<Class<?>> UNSUPPORTED_PROCEDURES =
+    ImmutableSet.of(RecoverMetaProcedure.class, AssignProcedure.class, UnassignProcedure.class,
+      MoveRegionProcedure.class);
+
+  /**
+   * In HBASE-20811, we have introduced a new TRSP to assign/unassign/move regions, and it is
+   * incompatible with the old AssignProcedure/UnassignProcedure/MoveRegionProcedure. So we need to
+   * make sure that there are none these procedures when upgrading. If there are, the master will
+   * quit, you need to go back to the old version to finish these procedures first before upgrading.
+   */
+  private void checkUnsupportedProcedure(Map<Class<?>, List<Procedure<?>>> procsByType)
+    throws HBaseIOException {
+    // Confirm that we do not have unfinished assign/unassign related procedures. It is not easy to
+    // support both the old assign/unassign procedures and the new TransitRegionStateProcedure as
+    // there will be conflict in the code for AM. We should finish all these procedures before
+    // upgrading.
+    for (Class<?> clazz : UNSUPPORTED_PROCEDURES) {
+      List<Procedure<?>> procs = procsByType.get(clazz);
+      if (procs != null) {
+        LOG.error("Unsupported procedure type {} found, please rollback your master to the old" +
+          " version to finish them, and then try to upgrade again." +
+          " See https://hbase.apache.org/book.html#upgrade2.2 for more details." +
+          " The full procedure list: {}", clazz, procs);
+        throw new HBaseIOException("Unsupported procedure type " + clazz + " found");
+      }
+    }
+    // A special check for SCP, as we do not support RecoverMetaProcedure any more so we need to
+    // make sure that no one will try to schedule it but SCP does have a state which will schedule
+    // it.
+    if (procsByType.getOrDefault(ServerCrashProcedure.class, Collections.emptyList()).stream()
+      .map(p -> (ServerCrashProcedure) p).anyMatch(ServerCrashProcedure::isInRecoverMetaState)) {
+      LOG.error("At least one ServerCrashProcedure is going to schedule a RecoverMetaProcedure," +
+        " which is not supported any more. Please rollback your master to the old version to" +
+        " finish them, and then try to upgrade again." +
+        " See https://hbase.apache.org/book.html#upgrade2.2 for more details.");
+      throw new HBaseIOException("Unsupported procedure state found for ServerCrashProcedure");
+    }
+  }
+
+  @SuppressWarnings("deprecation")
   private void tryMigrate(FileSystem fs) throws IOException {
     Configuration conf = server.getConfiguration();
     Path procWALDir =
@@ -309,12 +371,13 @@ public class RegionProcedureStore extends ProcedureStoreBase {
     if (!fs.exists(procWALDir)) {
       return;
     }
-    LOG.info("The old procedure wal directory {} exists, start migrating", procWALDir);
+    LOG.info("The old WALProcedureStore wal directory {} exists, migrating...", procWALDir);
     WALProcedureStore store = new WALProcedureStore(conf, leaseRecovery);
     store.start(numThreads);
     store.recoverLease();
     MutableLong maxProcIdSet = new MutableLong(-1);
-    MutableLong maxProcIdFromProcs = new MutableLong(-1);
+    List<Procedure<?>> procs = new ArrayList<>();
+    Map<Class<?>, List<Procedure<?>>> activeProcsByType = new HashMap<>();
     store.load(new ProcedureLoader() {
 
       @Override
@@ -324,16 +387,13 @@ public class RegionProcedureStore extends ProcedureStoreBase {
 
       @Override
       public void load(ProcedureIterator procIter) throws IOException {
-        long procCount = 0;
         while (procIter.hasNext()) {
           Procedure<?> proc = procIter.next();
-          update(proc);
-          procCount++;
-          if (proc.getProcId() > maxProcIdFromProcs.longValue()) {
-            maxProcIdFromProcs.setValue(proc.getProcId());
+          procs.add(proc);
+          if (!proc.isFinished()) {
+            activeProcsByType.computeIfAbsent(proc.getClass(), k -> new ArrayList<>()).add(proc);
           }
         }
-        LOG.info("Migrated {} procedures", procCount);
       }
 
       @Override
@@ -350,7 +410,23 @@ public class RegionProcedureStore extends ProcedureStoreBase {
         }
       }
     });
-    LOG.info("The max pid is {}, and the max pid of all loaded procedures is {}",
+
+    // check whether there are unsupported procedures, this could happen when we are migrating from
+    // 2.1-. We used to do this in HMaster, after loading all the procedures from procedure store,
+    // but here we have to do it before migrating, otherwise, if we find some unsupported
+    // procedures, the users can not go back to 2.1 to finish them any more, as all the data are now
+    // in the new region based procedure store, which is not supported in 2.1-.
+    checkUnsupportedProcedure(activeProcsByType);
+
+    MutableLong maxProcIdFromProcs = new MutableLong(-1);
+    for (Procedure<?> proc : procs) {
+      update(proc);
+      if (proc.getProcId() > maxProcIdFromProcs.longValue()) {
+        maxProcIdFromProcs.setValue(proc.getProcId());
+      }
+    }
+    LOG.info("Migrated {} existing procedures from the old storage format.", procs.size());
+    LOG.info("The WALProcedureStore max pid is {}, and the max pid of all loaded procedures is {}",
       maxProcIdSet.longValue(), maxProcIdFromProcs.longValue());
     // Theoretically, the maxProcIdSet should be greater than or equal to maxProcIdFromProcs, but
     // anyway, let's do a check here.
@@ -361,12 +437,14 @@ public class RegionProcedureStore extends ProcedureStoreBase {
           PROC_QUALIFIER, EMPTY_BYTE_ARRAY));
       }
     } else if (maxProcIdSet.longValue() < maxProcIdFromProcs.longValue()) {
-      LOG.warn("The max pid is less than the max pid of all loaded procedures");
+      LOG.warn("The WALProcedureStore max pid is less than the max pid of all loaded procedures");
     }
+    store.stop(false);
     if (!fs.delete(procWALDir, true)) {
-      throw new IOException("Failed to delete the migrated proc wal directory " + procWALDir);
+      throw new IOException(
+        "Failed to delete the WALProcedureStore migrated proc wal directory " + procWALDir);
     }
-    LOG.info("Migration finished");
+    LOG.info("Migration of WALProcedureStore finished");
   }
 
   @Override
@@ -391,16 +469,26 @@ public class RegionProcedureStore extends ProcedureStoreBase {
     walRoller.start();
 
     walFactory = new WALFactory(conf, server.getServerName().toString(), false);
-    Path dataDir = new Path(rootDir, DATA_DIR);
-    if (fs.exists(dataDir)) {
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, TABLE_NAME);
+    if (fs.exists(tableDir)) {
       // load the existing region.
-      region = open(conf, fs, rootDir, dataDir);
+      region = open(conf, fs, rootDir);
     } else {
       // bootstrapping...
-      region = bootstrap(conf, fs, rootDir, dataDir);
+      region = bootstrap(conf, fs, rootDir);
     }
     flusherAndCompactor = new RegionFlusherAndCompactor(conf, server, region);
     walRoller.setFlusherAndCompactor(flusherAndCompactor);
+    int cleanerInterval = conf.getInt(HMaster.HBASE_MASTER_CLEANER_INTERVAL,
+      HMaster.DEFAULT_HBASE_MASTER_CLEANER_INTERVAL);
+    Path archiveDir = HFileArchiveUtil.getArchivePath(conf);
+    if (!fs.mkdirs(archiveDir)) {
+      LOG.warn("Failed to create archive directory {}. Usually this should not happen but it will" +
+        " be created again when we actually archive the hfiles later, so continue", archiveDir);
+    }
+    cleaner = new HFileCleaner("RegionProcedureStoreHFileCleaner", cleanerInterval, server, conf,
+      fs, archiveDir, HFILECLEANER_PLUGINS, cleanerPool, Collections.emptyMap());
+    server.getChoreService().scheduleChore(cleaner);
     tryMigrate(fs);
   }
 

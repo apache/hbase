@@ -30,10 +30,13 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -211,23 +214,26 @@ public class TestNamespace {
     String nsName = prefix + "_" + name.getMethodName();
     LOG.info(name.getMethodName());
 
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(nsName + ":" + name.getMethodName()));
-    HColumnDescriptor colDesc = new HColumnDescriptor("my_cf");
-    desc.addFamily(colDesc);
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(nsName + ":" + name.getMethodName()));
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("my_cf")).build();
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    TableDescriptor tableDescriptor = tableDescriptorBuilder.build();
     try {
-      admin.createTable(desc);
+      admin.createTable(tableDescriptor);
       fail("Expected no namespace exists exception");
     } catch (NamespaceNotFoundException ex) {
     }
     //create table and in new namespace
     admin.createNamespace(NamespaceDescriptor.create(nsName).build());
-    admin.createTable(desc);
-    TEST_UTIL.waitTableAvailable(desc.getTableName().getName(), 10000);
+    admin.createTable(tableDescriptor);
+    TEST_UTIL.waitTableAvailable(tableDescriptor.getTableName().getName(), 10000);
     FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
     assertTrue(fs.exists(
         new Path(master.getMasterFileSystem().getRootDir(),
             new Path(HConstants.BASE_NAMESPACE_DIR,
-                new Path(nsName, desc.getTableName().getQualifierAsString())))));
+                new Path(nsName, tableDescriptor.getTableName().getQualifierAsString())))));
     assertEquals(1, admin.listTableDescriptors().size());
 
     //verify non-empty namespace can't be removed
@@ -239,42 +245,48 @@ public class TestNamespace {
     }
 
     //sanity check try to write and read from table
-    Table table = TEST_UTIL.getConnection().getTable(desc.getTableName());
+    Table table = TEST_UTIL.getConnection().getTable(tableDescriptor.getTableName());
     Put p = new Put(Bytes.toBytes("row1"));
     p.addColumn(Bytes.toBytes("my_cf"), Bytes.toBytes("my_col"), Bytes.toBytes("value1"));
     table.put(p);
     //flush and read from disk to make sure directory changes are working
-    admin.flush(desc.getTableName());
+    admin.flush(tableDescriptor.getTableName());
     Get g = new Get(Bytes.toBytes("row1"));
     assertTrue(table.exists(g));
 
     //normal case of removing namespace
-    TEST_UTIL.deleteTable(desc.getTableName());
+    TEST_UTIL.deleteTable(tableDescriptor.getTableName());
     admin.deleteNamespace(nsName);
   }
 
   @Test
   public void createTableInDefaultNamespace() throws Exception {
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
-    HColumnDescriptor colDesc = new HColumnDescriptor("cf1");
-    desc.addFamily(colDesc);
-    admin.createTable(desc);
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("cf1")).build();
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    TableDescriptor tableDescriptor = tableDescriptorBuilder.build();
+    admin.createTable(tableDescriptor);
     assertTrue(admin.listTableDescriptors().size() == 1);
-    admin.disableTable(desc.getTableName());
-    admin.deleteTable(desc.getTableName());
+    admin.disableTable(tableDescriptor.getTableName());
+    admin.deleteTable(tableDescriptor.getTableName());
   }
 
   @Test
   public void createTableInSystemNamespace() throws Exception {
     final TableName tableName = TableName.valueOf("hbase:" + name.getMethodName());
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    HColumnDescriptor colDesc = new HColumnDescriptor("cf1");
-    desc.addFamily(colDesc);
-    admin.createTable(desc);
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(tableName);
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("cf1")).build();
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    TableDescriptor tableDescriptor = tableDescriptorBuilder.build();
+    admin.createTable(tableDescriptor);
     assertEquals(0, admin.listTableDescriptors().size());
     assertTrue(admin.tableExists(tableName));
-    admin.disableTable(desc.getTableName());
-    admin.deleteTable(desc.getTableName());
+    admin.disableTable(tableDescriptor.getTableName());
+    admin.deleteTable(tableDescriptor.getTableName());
   }
 
   @Test
@@ -295,10 +307,12 @@ public class TestNamespace {
     runWithExpectedException(new Callable<Void>() {
       @Override
       public Void call() throws Exception {
-        HTableDescriptor htd =
-            new HTableDescriptor(TableName.valueOf("non_existing_namespace", name.getMethodName()));
-        htd.addFamily(new HColumnDescriptor("family1"));
-        admin.createTable(htd);
+        TableDescriptorBuilder tableDescriptorBuilder = TableDescriptorBuilder
+          .newBuilder(TableName.valueOf("non_existing_namespace", name.getMethodName()));
+        ColumnFamilyDescriptor columnFamilyDescriptor =
+          ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("family1")).build();
+        tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+        admin.createTable(tableDescriptorBuilder.build());
         return null;
       }
     }, NamespaceNotFoundException.class);
@@ -341,9 +355,12 @@ public class TestNamespace {
     }, NamespaceNotFoundException.class);
 
     // get table descriptors for existing namespace
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(prefix + "ns1", name.getMethodName()));
-    htd.addFamily(new HColumnDescriptor("family1"));
-    admin.createTable(htd);
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(prefix + "ns1", name.getMethodName()));
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("family1")).build();
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    admin.createTable(tableDescriptorBuilder.build());
     List<TableDescriptor> htds =
       admin.listTableDescriptorsByNamespace(Bytes.toBytes(prefix + "ns1"));
     assertNotNull("Should have not returned null", htds);

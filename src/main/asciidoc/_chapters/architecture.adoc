@@ -905,8 +905,9 @@ benefit of NOT provoking GC.
 From HBase 2.0.0 onwards, the notions of L1 and L2 have been deprecated. When BucketCache is turned on, the DATA blocks will always go to BucketCache and INDEX/BLOOM blocks go to on heap LRUBlockCache. `cacheDataInL1` support hase been removed.
 ====
 
-The BucketCache Block Cache can be deployed _off-heap_, _file_ or _mmaped_ file mode.
-
+[[bc.deloy.modes]]
+====== BucketCache Deploy Modes
+The BucketCache Block Cache can be deployed _offheap_, _file_ or _mmaped_ file mode.
 
 You set which via the `hbase.bucketcache.ioengine` setting.
 Setting it to `offheap` will have BucketCache make its allocations off-heap, and an ioengine setting of `file:PATH_TO_FILE` will direct BucketCache to use file caching (Useful in particular if you have some fast I/O attached to the box such as SSDs). From 2.0.0, it is possible to have more than one file backing the BucketCache. This is very useful specially when the Cache size requirement is high. For multiple backing files, configure ioengine as `files:PATH_TO_FILE1,PATH_TO_FILE2,PATH_TO_FILE3`. BucketCache can be configured to use an mmapped file also. Configure ioengine as `mmap:PATH_TO_FILE` for this.
@@ -925,6 +926,7 @@ See the link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/io/hfil
 To check it enabled, look for the log line describing cache setup; it will detail how BucketCache has been deployed.
 Also see the UI. It will detail the cache tiering and their configuration.
 
+[[bc.example]]
 ====== BucketCache Example Configuration
 This sample provides a configuration for a 4 GB off-heap BucketCache with a 1 GB on-heap cache.
 

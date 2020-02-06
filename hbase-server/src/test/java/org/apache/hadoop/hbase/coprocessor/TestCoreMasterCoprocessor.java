@@ -49,7 +49,7 @@ public class TestCoreMasterCoprocessor {
       HBaseClassTestRule.forClass(TestCoreMasterCoprocessor.class);
 
   @Rule public TestName name = new TestName();
-  private static final HBaseTestingUtility HTU = HBaseTestingUtility.createLocalHTU();
+  private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
   private MasterServices ms;
   private MasterCoprocessorHost mch;
 

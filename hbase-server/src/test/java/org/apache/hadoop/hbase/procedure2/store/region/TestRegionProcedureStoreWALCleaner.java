@@ -72,6 +72,8 @@ public class TestRegionProcedureStoreWALCleaner {
     htu = new HBaseCommonTestingUtility();
     Configuration conf = htu.getConfiguration();
     conf.setBoolean(MemStoreLAB.USEMSLAB_KEY, false);
+    // Runs on local filesystem. Test does not need sync. Turn off checks.
+    htu.getConfiguration().setBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, false);
     Path testDir = htu.getDataTestDir();
     fs = testDir.getFileSystem(conf);
     CommonFSUtils.setWALRootDir(conf, testDir);
@@ -95,7 +97,8 @@ public class TestRegionProcedureStoreWALCleaner {
       }
     }, conf, fs, globalWALArchiveDir, dirScanPool);
     choreService.scheduleChore(logCleaner);
-    store = RegionProcedureStoreTestHelper.createStore(conf, new LoadCounter());
+    store = RegionProcedureStoreTestHelper.createStore(conf, choreService, dirScanPool,
+      new LoadCounter());
   }
 
   @After
