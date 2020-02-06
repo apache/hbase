@@ -535,14 +535,20 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
-    # Merge two regions
-    def merge_region(region_a_name, region_b_name, force)
-      @admin.mergeRegionsAsync(
-        region_a_name.to_java_bytes,
-        region_b_name.to_java_bytes,
-        java.lang.Boolean.valueOf(force)
+    # Merge multiple regions
+    def merge_region(regions = [], force)
+      region_array = Java::byte[][regions.length].new
+      i = 0
+      while i < regions.length
+        region_array[i] = regions[i].to_java_bytes
+        i += 1
+      end
+      org.apache.hadoop.hbase.util.FutureUtils.get(
+          @admin.mergeRegionsAsync(
+              region_array,
+              java.lang.Boolean.valueOf(force)
+          )
       )
-      return nil
     end
 
     #----------------------------------------------------------------------------------------------

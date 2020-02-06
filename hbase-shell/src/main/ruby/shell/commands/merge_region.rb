@@ -22,7 +22,7 @@ module Shell
     class MergeRegion < Command
       def help
         <<-EOF
-Merge two regions. Passing 'true' as the optional third parameter will force
+Merge multiple (2 or more) regions. Passing 'true' as the optional third parameter will force
 a merge ('force' merges regardless else merge will fail unless passed
 adjacent regions. 'force' is for expert use only).
 
@@ -33,16 +33,18 @@ the encoded region name portion is 527db22f95c8a9e0116f0cc13c680396
 
 Examples:
 
-  hbase> merge_region 'FULL_REGIONNAME', 'FULL_REGIONNAME'
-  hbase> merge_region 'FULL_REGIONNAME', 'FULL_REGIONNAME', true
+  hbase> merge_region ['FULL_REGIONNAME', 'FULL_REGIONNAME']
+  hbase> merge_region ['FULL_REGIONNAME', 'FULL_REGIONNAME', 'FULL_REGIONNAME', ...]
+  hbase> merge_region ['FULL_REGIONNAME', 'FULL_REGIONNAME', 'FULL_REGIONNAME', ...], true
 
-  hbase> merge_region 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME'
-  hbase> merge_region 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', true
+  hbase> merge_region ['ENCODED_REGIONNAME', 'ENCODED_REGIONNAME']
+  hbase> merge_region ['ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', ...]
+  hbase> merge_region ['ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', ...], true
 EOF
       end
 
-      def command(region_a_name, region_b_name, force = 'false')
-        admin.merge_region(region_a_name, region_b_name, force)
+      def command(regions = [], force = 'false')
+        admin.merge_region(regions, force)
       end
     end
   end

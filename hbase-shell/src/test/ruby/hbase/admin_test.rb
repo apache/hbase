@@ -595,15 +595,45 @@ module Hbase
       command(:list_regions, @test_name)
     end
 
-    define_test 'merge two regions' do
+    define_test 'merge regions' do
       @t_name = 'hbase_shell_merge'
       drop_test_table(@t_name)
       admin.create(@t_name, 'a', NUMREGIONS => 10, SPLITALGO => 'HexStringSplit')
-      r1 = command(:locate_region, @t_name, '')
-      r2 = command(:locate_region, @t_name, '1')
+      r1 = command(:locate_region, @t_name, '1')
+      r2 = command(:locate_region, @t_name, '2')
+      r3 = command(:locate_region, @t_name, '4')
+      r4 = command(:locate_region, @t_name, '5')
+      r5 = command(:locate_region, @t_name, '7')
+      r6 = command(:locate_region, @t_name, '8')
       region1 = r1.getRegion.getRegionNameAsString
       region2 = r2.getRegion.getRegionNameAsString
-      command(:merge_region, region1, region2, true)
+      region3 = r3.getRegion.getRegionNameAsString
+      region4 = r4.getRegion.getRegionNameAsString
+      region5 = r5.getRegion.getRegionNameAsString
+      region6 = r6.getRegion.getRegionNameAsString
+      # only 1 region
+      begin
+        command(:merge_region, ['a'], true)
+        assert(false, "should have failed")
+      rescue java.lang.IllegalArgumentException => e
+        assert(true, "single region can't be merged")
+      end
+      # non-existing region
+      assert_raise(RuntimeError) do
+        command(:merge_region, ['a','b'])
+      end
+      # duplicate regions
+      assert_raise(RuntimeError) do
+        command(:merge_region, [region1,region1,region1])
+      end
+      # 3 non-adjacent regions without forcible=true
+      assert_raise(RuntimeError) do
+        command(:merge_region, [region1,region2,region4])
+      end
+      # 2 adjacent regions
+      command(:merge_region, [region1,region2])
+      # 3 non-adjacent regions with forcible=true
+      command(:merge_region, [region3,region5,region6], true)
     end
   end
 
