@@ -122,6 +122,23 @@ message RemoveServersRequest {
 message RemoveServersResponse {
 }
 
+message ListTablesInRSGroupRequest {
+  required string group_name = 1;
+}
+
+message ListTablesInRSGroupResponse {
+  repeated TableName table_name = 1;
+}
+
+message GetConfiguredNamespacesAndTablesInRSGroupRequest {
+  required string group_name = 1;
+}
+
+message GetConfiguredNamespacesAndTablesInRSGroupResponse {
+  repeated string namespace = 1;
+  repeated TableName table_name = 2;
+}
+
 service RSGroupAdminService {
   rpc GetRSGroupInfo(GetRSGroupInfoRequest)
     returns (GetRSGroupInfoResponse);

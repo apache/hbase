@@ -326,8 +326,9 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
 
     LOG.debug("Print group info : " + ADMIN.listRSGroups());
     int oldDefaultGroupServerSize = ADMIN.getRSGroup(RSGroupInfo.DEFAULT_GROUP).getServers().size();
-    int oldDefaultGroupTableSize =
-      RS_GROUP_ADMIN_CLIENT.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getTables().size();
+    int oldDefaultGroupTableSize = ADMIN.listTablesInRSGroup(RSGroupInfo.DEFAULT_GROUP).size();
+    assertTrue(OBSERVER.preListTablesInRSGroupCalled);
+    assertTrue(OBSERVER.postListTablesInRSGroupCalled);
 
     // test fail bogus server move
     try {
@@ -350,11 +351,14 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     assertEquals(oldDefaultGroupServerSize,
       ADMIN.getRSGroup(RSGroupInfo.DEFAULT_GROUP).getServers().size());
     assertEquals(oldDefaultGroupTableSize,
-      RS_GROUP_ADMIN_CLIENT.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getTables().size());
+      ADMIN.listTablesInRSGroup(RSGroupInfo.DEFAULT_GROUP).size());
 
     // verify new group info
     assertEquals(1, ADMIN.getRSGroup(newGroup.getName()).getServers().size());
-    assertEquals(0, RS_GROUP_ADMIN_CLIENT.getRSGroupInfo(newGroup.getName()).getTables().size());
+    assertEquals(0,
+      ADMIN.getConfiguredNamespacesAndTablesInRSGroup(newGroup.getName()).getSecond().size());
+    assertTrue(OBSERVER.preGetConfiguredNamespacesAndTablesInRSGroupCalled);
+    assertTrue(OBSERVER.postGetConfiguredNamespacesAndTablesInRSGroupCalled);
 
     // get all region to move targetServer
     List<String> regionList = getTableRegionMap().get(tableName);
@@ -396,12 +400,12 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
 
     // verify tables' not exist in old group
     Set<TableName> defaultTables =
-      RS_GROUP_ADMIN_CLIENT.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getTables();
+      Sets.newHashSet(ADMIN.listTablesInRSGroup(RSGroupInfo.DEFAULT_GROUP));
     assertFalse(defaultTables.contains(tableName));
 
     // verify tables' exist in new group
-    Set<TableName> newGroupTables =
-      RS_GROUP_ADMIN_CLIENT.getRSGroupInfo(newGroup.getName()).getTables();
+    Set<TableName> newGroupTables = Sets
+      .newHashSet(ADMIN.getConfiguredNamespacesAndTablesInRSGroup(newGroup.getName()).getSecond());
     assertTrue(newGroupTables.contains(tableName));
 
     // verify that all region still assign on targetServer

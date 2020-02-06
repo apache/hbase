@@ -27,7 +27,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedSet;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
@@ -186,7 +185,7 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     addGroup("bar", 3);
     TEST_UTIL.createTable(tableName, Bytes.toBytes("f"));
     ADMIN.setRSGroup(Sets.newHashSet(tableName), "bar");
-    RSGroupInfo barGroup = RS_GROUP_ADMIN_CLIENT.getRSGroupInfo("bar");
+    RSGroupInfo barGroup = ADMIN.getRSGroup("bar");
     // group is not empty therefore it should fail
     try {
       ADMIN.removeRSGroup(barGroup.getName());
@@ -200,7 +199,7 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     } catch (IOException e) {
     }
 
-    ADMIN.setRSGroup(barGroup.getTables(), RSGroupInfo.DEFAULT_GROUP);
+    ADMIN.setRSGroup(Sets.newHashSet(ADMIN.listTablesInRSGroup("bar")), RSGroupInfo.DEFAULT_GROUP);
     try {
       ADMIN.removeRSGroup(barGroup.getName());
       fail("Expected move servers to fail");
@@ -257,12 +256,12 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
 
     // verify tables' not exist in old group
     Set<TableName> defaultTables =
-      RS_GROUP_ADMIN_CLIENT.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getTables();
+      Sets.newHashSet(ADMIN.listTablesInRSGroup(RSGroupInfo.DEFAULT_GROUP));
     assertFalse(defaultTables.contains(tableNameA));
     assertFalse(defaultTables.contains(tableNameB));
 
     // verify tables' exist in new group
-    Set<TableName> newGroupTables = RS_GROUP_ADMIN_CLIENT.getRSGroupInfo(newGroupName).getTables();
+    Set<TableName> newGroupTables = Sets.newHashSet(ADMIN.listTablesInRSGroup(newGroupName));
     assertTrue(newGroupTables.contains(tableNameA));
     assertTrue(newGroupTables.contains(tableNameB));
   }
@@ -316,13 +315,13 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     // test truncate
     ADMIN.disableTable(tableName);
     ADMIN.truncateTable(tableName, true);
-    assertEquals(1, RS_GROUP_ADMIN_CLIENT.getRSGroupInfo(newGroup.getName()).getTables().size());
-    assertEquals(tableName,
-      RS_GROUP_ADMIN_CLIENT.getRSGroupInfo(newGroup.getName()).getTables().first());
+    List<TableName> tablesInGroup = ADMIN.listTablesInRSGroup(newGroup.getName());
+    assertEquals(1, tablesInGroup.size());
+    assertEquals(tableName, tablesInGroup.get(0));
 
     // verify removed table is removed from group
     TEST_UTIL.deleteTable(tableName);
-    assertEquals(0, RS_GROUP_ADMIN_CLIENT.getRSGroupInfo(newGroup.getName()).getTables().size());
+    assertEquals(0, ADMIN.listTablesInRSGroup(newGroup.getName()).size());
   }
 
   @Test
@@ -418,14 +417,16 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
       assertTrue("Constraint not violated for table " + tableDescTwo.getTableName(),
         constraintViolated);
     }
-    List<RSGroupInfo> rsGroupInfoList = RS_GROUP_ADMIN_CLIENT.listRSGroups();
+    List<RSGroupInfo> rsGroupInfoList = ADMIN.listRSGroups();
     boolean foundTable2 = false;
     boolean foundTable1 = false;
     for (int i = 0; i < rsGroupInfoList.size(); i++) {
-      if (rsGroupInfoList.get(i).getTables().contains(tableDescTwo.getTableName())) {
+      Set<TableName> tables =
+        Sets.newHashSet(ADMIN.listTablesInRSGroup(rsGroupInfoList.get(i).getName()));
+      if (tables.contains(tableDescTwo.getTableName())) {
         foundTable2 = true;
       }
-      if (rsGroupInfoList.get(i).getTables().contains(tableDescOne.getTableName())) {
+      if (tables.contains(tableDescOne.getTableName())) {
         foundTable1 = true;
       }
     }
@@ -458,11 +459,10 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     TEST_UTIL.waitFor(5000, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return (MASTER.getMasterProcedureExecutor().getActiveExecutorCount() == 0);
+        return MASTER.getMasterProcedureExecutor().getActiveExecutorCount() == 0;
       }
     });
-    SortedSet<TableName> tables =
-      RS_GROUP_ADMIN_CLIENT.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getTables();
+    Set<TableName> tables = Sets.newHashSet(ADMIN.listTablesInRSGroup(RSGroupInfo.DEFAULT_GROUP));
     assertTrue("Table 't1' must be in 'default' rsgroup", tables.contains(tn1));
 
     // Cleanup

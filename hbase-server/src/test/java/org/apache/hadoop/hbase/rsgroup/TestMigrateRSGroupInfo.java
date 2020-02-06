@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
@@ -42,8 +43,8 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RSGroupTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.KeeperException;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -64,18 +65,25 @@ public class TestMigrateRSGroupInfo extends TestRSGroupsBase {
 
   private static byte[] FAMILY = Bytes.toBytes("family");
 
-  @Before
-  public void setUp() throws Exception {
+  private static RSGroupAdminClient RS_GROUP_ADMIN_CLIENT;
+
+  @BeforeClass
+  public static void setUp() throws Exception {
     TEST_UTIL.getConfiguration().setClass(HConstants.MASTER_IMPL, HMasterForTest.class,
       HMaster.class);
+    // confirm that we could enable rs group by setting the old CP.
+    TEST_UTIL.getConfiguration().setBoolean(RSGroupInfoManager.RS_GROUP_ENABLED, false);
+    TEST_UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
+      RSGroupAdminEndpoint.class.getName());
     setUpTestBeforeClass();
+    RS_GROUP_ADMIN_CLIENT = new RSGroupAdminClient(TEST_UTIL.getConnection());
     for (int i = 0; i < NUM_TABLES; i++) {
       TEST_UTIL.createTable(TableName.valueOf(TABLE_NAME_PREFIX + i), FAMILY);
     }
   }
 
-  @After
-  public void tearDown() throws Exception {
+  @AfterClass
+  public static void tearDown() throws Exception {
     tearDownAfterClass();
   }
 
