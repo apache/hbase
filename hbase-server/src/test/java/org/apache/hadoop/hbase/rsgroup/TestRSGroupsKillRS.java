@@ -164,7 +164,8 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
     Set<TableName> toAddTables = new HashSet<>();
     toAddTables.add(tableName);
     ADMIN.setRSGroup(toAddTables, groupName);
-    assertTrue(RS_GROUP_ADMIN_CLIENT.getRSGroupInfo(groupName).getTables().contains(tableName));
+    assertTrue(
+      ADMIN.getConfiguredNamespacesAndTablesInRSGroup(groupName).getSecond().contains(tableName));
     TEST_UTIL.waitTableAvailable(tableName, 30000);
 
     // check my_group servers and table regions
@@ -241,7 +242,7 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
     Set<TableName> toAddTables = new HashSet<>();
     toAddTables.add(TableName.META_TABLE_NAME);
     ADMIN.setRSGroup(toAddTables, groupName);
-    assertTrue(RS_GROUP_ADMIN_CLIENT.getRSGroupInfo(groupName).getTables()
+    assertTrue(ADMIN.getConfiguredNamespacesAndTablesInRSGroup(groupName).getSecond()
       .contains(TableName.META_TABLE_NAME));
 
     // restart the regionserver in meta_group, and lower its version
