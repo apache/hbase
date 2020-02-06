@@ -342,7 +342,10 @@ public class ReplicationSource implements ReplicationSourceInterface {
       return;
     }
 
-    LOG.debug("{} Register worker for wallGroupID {}", logPeerId(), walGroupId);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("{} Register worker for wallGroupID {}", logPeerId(), walGroupId);
+    }
+
     ReplicationSourceShipper worker = createNewShipper(walGroupId, queue);
 
     ReplicationSourceWALReader walReader =
@@ -623,7 +626,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     this.workerThreads.values().forEach(worker -> worker.stopWorker());
 
     final boolean shutdownSuccess = MoreExecutors.shutdownAndAwaitTermination(this.executorService,
-      10L, TimeUnit.SECONDS);
+      workerThreads.values().size() * this.sleepForRetries, TimeUnit.SECONDS);
     if (!shutdownSuccess) {
       LOG.info("{} Unable to shutdown thread pool completely", logPeerId());
     }
