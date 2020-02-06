@@ -57,10 +57,8 @@ import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ScheduledChore;
@@ -70,6 +68,7 @@ import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
@@ -80,6 +79,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.tool.CanaryTool.RegionTask.TaskType;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -1542,12 +1542,11 @@ public class CanaryTool implements Tool, Canary {
         "(current lower limit of regions per server is {} and you can change it with config {}).",
           numberOfServers, numberOfRegions, regionsLowerLimit,
           HConstants.HBASE_CANARY_WRITE_PERSERVER_REGIONS_LOWERLIMIT_KEY);
-      HTableDescriptor desc = new HTableDescriptor(writeTableName);
-      HColumnDescriptor family = new HColumnDescriptor(CANARY_TABLE_FAMILY_NAME);
-      family.setMaxVersions(1);
-      family.setTimeToLive(writeDataTTL);
-
-      desc.addFamily(family);
+      ColumnFamilyDescriptor family = ColumnFamilyDescriptorBuilder
+        .newBuilder(Bytes.toBytes(CANARY_TABLE_FAMILY_NAME)).setMaxVersions(1)
+        .setTimeToLive(writeDataTTL).build();
+      TableDescriptor desc = TableDescriptorBuilder.newBuilder(writeTableName)
+        .setColumnFamily(family).build();
       byte[][] splits = new RegionSplitter.HexStringSplit().split(numberOfRegions);
       admin.createTable(desc, splits);
     }

@@ -63,7 +63,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.mob.MobUtils;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -79,7 +79,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Test mob store compaction
  */
-@Category(MediumTests.class)
+@Category(SmallTests.class)
 public class TestMobStoreCompaction {
 
   @ClassRule

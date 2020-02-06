@@ -261,17 +261,6 @@ public class MetricsSource implements BaseSource {
   }
 
   /**
-   * Get the timeStampsOfLastShippedOp, if there are multiple groups, return the latest one
-   * @return lastTimestampForAge
-   * @deprecated Since 2.0.0. Removed in 3.0.0.
-   * @see #getTimestampOfLastShippedOp()
-   */
-  @Deprecated
-  public long getTimeStampOfLastShippedOp() {
-    return getTimestampOfLastShippedOp();
-  }
-
-  /**
    * Get the timestampsOfLastShippedOp, if there are multiple groups, return the latest one
    * @return lastTimestampForAge
    */

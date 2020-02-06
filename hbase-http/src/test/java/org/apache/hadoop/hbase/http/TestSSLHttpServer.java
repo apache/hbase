@@ -26,10 +26,11 @@ import javax.net.ssl.HttpsURLConnection;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.http.ssl.KeyStoreTestUtil;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.ssl.SSLFactory;
@@ -46,7 +47,7 @@ import org.slf4j.LoggerFactory;
  * HTTPS using the created certficates and calls an echo servlet using the
  * corresponding HTTPS URL.
  */
-@Category({MiscTests.class, SmallTests.class})
+@Category({MiscTests.class, MediumTests.class})
 public class TestSSLHttpServer extends HttpServerFunctionalTest {
 
   @ClassRule
@@ -57,56 +58,60 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
       "target/test-dir") + "/" + TestSSLHttpServer.class.getSimpleName();
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSSLHttpServer.class);
-  private static Configuration conf;
+  private static Configuration serverConf;
   private static HttpServer server;
   private static URL baseUrl;
-  private static String keystoresDir;
+  private static File keystoresDir;
   private static String sslConfDir;
   private static SSLFactory clientSslFactory;
+  private static HBaseCommonTestingUtility HTU;
 
   @BeforeClass
   public static void setup() throws Exception {
-    conf = new Configuration();
-    conf.setInt(HttpServer.HTTP_MAX_THREADS, TestHttpServer.MAX_THREADS);
 
-    File base = new File(BASEDIR);
-    FileUtil.fullyDelete(base);
-    base.mkdirs();
-    keystoresDir = new File(BASEDIR).getAbsolutePath();
+    HTU = new HBaseCommonTestingUtility();
+    serverConf = HTU.getConfiguration();
+
+    serverConf.setInt(HttpServer.HTTP_MAX_THREADS, TestHttpServer.MAX_THREADS);
+
+    keystoresDir = new File(HTU.getDataTestDir("keystore").toString());
+    keystoresDir.mkdirs();
+
     sslConfDir = KeyStoreTestUtil.getClasspathDir(TestSSLHttpServer.class);
 
-    KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfDir, conf, false);
-    Configuration sslConf = new Configuration(false);
-    sslConf.addResource("ssl-server.xml");
-    sslConf.addResource("ssl-client.xml");
-
-    clientSslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, sslConf);
+    KeyStoreTestUtil.setupSSLConfig(keystoresDir.getAbsolutePath(), sslConfDir, serverConf, false);
+    Configuration clientConf = new Configuration(false);
+    clientConf.addResource(serverConf.get(SSLFactory.SSL_CLIENT_CONF_KEY));
+    serverConf.addResource(serverConf.get(SSLFactory.SSL_SERVER_CONF_KEY));
+    clientConf.set(SSLFactory.SSL_CLIENT_CONF_KEY, serverConf.get(SSLFactory.SSL_CLIENT_CONF_KEY));
+    
+    clientSslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, clientConf);
     clientSslFactory.init();
 
     server = new HttpServer.Builder()
-        .setName("test")
-        .addEndpoint(new URI("https://localhost"))
-        .setConf(conf)
-        .keyPassword(HBaseConfiguration.getPassword(sslConf, "ssl.server.keystore.keypassword",
-            null))
-        .keyStore(sslConf.get("ssl.server.keystore.location"),
-            HBaseConfiguration.getPassword(sslConf, "ssl.server.keystore.password", null),
-            sslConf.get("ssl.server.keystore.type", "jks"))
-        .trustStore(sslConf.get("ssl.server.truststore.location"),
-            HBaseConfiguration.getPassword(sslConf, "ssl.server.truststore.password", null),
-            sslConf.get("ssl.server.truststore.type", "jks")).build();
-    server.addServlet("echo", "/echo", TestHttpServer.EchoServlet.class);
+      .setName("test")
+      .addEndpoint(new URI("https://localhost"))
+      .setConf(serverConf)
+      .keyPassword(HBaseConfiguration.getPassword(serverConf, "ssl.server.keystore.keypassword",
+        null))
+      .keyStore(serverConf.get("ssl.server.keystore.location"),
+        HBaseConfiguration.getPassword(serverConf, "ssl.server.keystore.password", null),
+        clientConf.get("ssl.server.keystore.type", "jks"))
+      .trustStore(serverConf.get("ssl.server.truststore.location"),
+        HBaseConfiguration.getPassword(serverConf, "ssl.server.truststore.password", null),
+        serverConf.get("ssl.server.truststore.type", "jks")).build();
+    server.addUnprivilegedServlet("echo", "/echo", TestHttpServer.EchoServlet.class);
     server.start();
     baseUrl = new URL("https://"
-        + NetUtils.getHostPortString(server.getConnectorAddress(0)));
+      + NetUtils.getHostPortString(server.getConnectorAddress(0)));
     LOG.info("HTTP server started: " + baseUrl);
   }
 
   @AfterClass
   public static void cleanup() throws Exception {
     server.stop();
-    FileUtil.fullyDelete(new File(BASEDIR));
-    KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, sslConfDir);
+    FileUtil.fullyDelete(new File(HTU.getDataTestDir().toString()));
+    KeyStoreTestUtil.cleanupSSLConfig(serverConf);
     clientSslFactory.destroy();
   }
 

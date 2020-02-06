@@ -21,9 +21,7 @@ import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -397,9 +395,8 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
-  public EncodedSeeker createSeeker(CellComparator comparator,
-      final HFileBlockDecodingContext decodingCtx) {
-    return new BufferedEncodedSeeker<FastDiffSeekerState>(comparator, decodingCtx) {
+  public EncodedSeeker createSeeker(final HFileBlockDecodingContext decodingCtx) {
+    return new BufferedEncodedSeeker<FastDiffSeekerState>(decodingCtx) {
       private void decode(boolean isFirst) {
         byte flag = currentBuffer.get();
         if ((flag & FLAG_SAME_KEY_LENGTH) == 0) {

@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -45,7 +45,7 @@ import org.slf4j.LoggerFactory;
  * Test the synchronization of token authentication master keys through
  * ZKSecretWatcher
  */
-@Category({SecurityTests.class, LargeTests.class})
+@Category({SecurityTests.class, MediumTests.class})
 public class TestZKSecretWatcher {
 
   @ClassRule

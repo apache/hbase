@@ -39,6 +39,8 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
@@ -48,6 +50,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.metrics.Counter;
 import org.apache.hadoop.hbase.metrics.Metric;
@@ -309,10 +312,12 @@ public class TestCoprocessorMetrics {
       Timer createTableTimer = (Timer)metric.get();
       long prevCount = createTableTimer.getHistogram().getCount();
       LOG.info("Creating table");
-      admin.createTable(
-          new HTableDescriptor(TableName.valueOf(name.getMethodName()))
-              .addFamily(new HColumnDescriptor("foo")));
-
+      TableDescriptorBuilder tableDescriptorBuilder =
+        TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+      ColumnFamilyDescriptor columnFamilyDescriptor =
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("foo")).build();
+      tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+      admin.createTable(tableDescriptorBuilder.build());
       assertEquals(1, createTableTimer.getHistogram().getCount() - prevCount);
     }
   }
@@ -353,9 +358,12 @@ public class TestCoprocessorMetrics {
 
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
          Admin admin = connection.getAdmin()) {
-      admin.createTable(
-          new HTableDescriptor(TableName.valueOf(name.getMethodName()))
-              .addFamily(new HColumnDescriptor("foo")));
+      TableDescriptorBuilder tableDescriptorBuilder =
+        TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+      ColumnFamilyDescriptor columnFamilyDescriptor =
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("foo")).build();
+      tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+      admin.createTable(tableDescriptorBuilder.build());
 
       Counter rollWalRequests = (Counter)metric.get();
       long prevCount = rollWalRequests.getCount();

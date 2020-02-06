@@ -63,7 +63,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -73,7 +73,7 @@ import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({CoprocessorTests.class, SmallTests.class})
+@Category({CoprocessorTests.class, MediumTests.class})
 public class TestCoprocessorInterface {
 
   @ClassRule
@@ -82,7 +82,7 @@ public class TestCoprocessorInterface {
 
   @Rule public TestName name = new TestName();
   private static final Logger LOG = LoggerFactory.getLogger(TestCoprocessorInterface.class);
-  private static final HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   static final Path DIR = TEST_UTIL.getDataTestDir();
 
   private static class CustomScanner implements RegionScanner {

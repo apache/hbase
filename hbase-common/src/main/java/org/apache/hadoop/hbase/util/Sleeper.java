@@ -42,7 +42,7 @@ public class Sleeper {
   /**
    * @param sleep sleep time in milliseconds
    * @param stopper When {@link Stoppable#isStopped()} is true, this thread will
-   * cleanup and exit cleanly.
+   *    cleanup and exit cleanly.
    */
   public Sleeper(final int sleep, final Stoppable stopper) {
     this.period = sleep;
@@ -77,16 +77,18 @@ public class Sleeper {
       long woke = -1;
       try {
         synchronized (sleepLock) {
-          if (triggerWake) break;
+          if (triggerWake) {
+            break;
+          }
+
           sleepLock.wait(currentSleepTime);
         }
         woke = System.currentTimeMillis();
         long slept = woke - now;
         if (slept - this.period > MINIMAL_DELTA_FOR_LOGGING) {
-          LOG.warn("We slept " + slept + "ms instead of " + this.period +
-              "ms, this is likely due to a long " +
+          LOG.warn("We slept {}ms instead of {}ms, this is likely due to a long " +
               "garbage collecting pause and it's usually bad, see " +
-              "http://hbase.apache.org/book.html#trouble.rs.runtime.zkexpired");
+              "http://hbase.apache.org/book.html#trouble.rs.runtime.zkexpired", slept, this.period);
         }
       } catch(InterruptedException iex) {
         // We we interrupted because we're meant to stop?  If not, just

@@ -38,9 +38,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.RepeatingTestThread;
@@ -48,12 +46,15 @@ import org.apache.hadoop.hbase.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
@@ -311,14 +312,18 @@ public class TestHRegionServerBulkLoad {
   public void setupTable(TableName table, int cfs) throws IOException {
     try {
       LOG.info("Creating table " + table);
-      HTableDescriptor htd = new HTableDescriptor(table);
-      htd.addCoprocessor(MyObserver.class.getName());
+      TableDescriptorBuilder tableDescriptorBuilder =
+        TableDescriptorBuilder.newBuilder(table);
+
+      tableDescriptorBuilder.setCoprocessor(MyObserver.class.getName());
       MyObserver.sleepDuration = this.sleepDuration;
       for (int i = 0; i < 10; i++) {
-        htd.addFamily(new HColumnDescriptor(family(i)));
+        ColumnFamilyDescriptor columnFamilyDescriptor =
+          ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(family(i))).build();
+        tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
       }
 
-      UTIL.getAdmin().createTable(htd);
+      UTIL.getAdmin().createTable(tableDescriptorBuilder.build());
     } catch (TableExistsException tee) {
       LOG.info("Table " + table + " already exists");
     }

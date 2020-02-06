@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseZKTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.testclassification.ZKTests;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -40,7 +40,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Test for HQuorumPeer.
  */
-@Category({ ZKTests.class, MediumTests.class })
+@Category({ ZKTests.class, SmallTests.class })
 public class TestHQuorumPeer {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -74,7 +74,7 @@ public class TestHQuorumPeer {
     assertEquals(dataDir.toString(), (String)properties.get("dataDir"));
     assertEquals(Integer.valueOf(PORT_NO),
       Integer.valueOf(properties.getProperty("clientPort")));
-    assertEquals("localhost:2888:3888", properties.get("server.0"));
+    assertEquals("127.0.0.1:2888:3888", properties.get("server.0"));
     assertNull(properties.get("server.1"));
 
     String oldValue = conf.get(HConstants.ZOOKEEPER_QUORUM);

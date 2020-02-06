@@ -368,7 +368,7 @@ public class RestoreSnapshotProcedure
    * @throws IOException
    **/
   private void updateTableDescriptor(final MasterProcedureEnv env) throws IOException {
-    env.getMasterServices().getTableDescriptors().add(modifiedTableDescriptor);
+    env.getMasterServices().getTableDescriptors().update(modifiedTableDescriptor);
   }
 
   /**

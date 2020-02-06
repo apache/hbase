@@ -61,7 +61,6 @@ import org.junit.experimental.categories.Category;
 
 @Category({RestTests.class, MediumTests.class})
 public class TestRemoteTable {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestRemoteTable.class);
@@ -116,7 +115,10 @@ public class TestRemoteTable {
   public void before() throws Exception  {
     Admin admin = TEST_UTIL.getAdmin();
     if (admin.tableExists(TABLE)) {
-      if (admin.isTableEnabled(TABLE)) admin.disableTable(TABLE);
+      if (admin.isTableEnabled(TABLE)) {
+        admin.disableTable(TABLE);
+      }
+
       admin.deleteTable(TABLE);
     }
     HTableDescriptor htd = new HTableDescriptor(TABLE);
@@ -155,7 +157,7 @@ public class TestRemoteTable {
   public void testGetTableDescriptor() throws IOException {
     try (Table table = TEST_UTIL.getConnection().getTable(TABLE)) {
       TableDescriptor local = table.getDescriptor();
-      assertEquals(remoteTable.getDescriptor(), new HTableDescriptor(local));
+      assertEquals(remoteTable.getDescriptor(), local);
     }
   }
 
@@ -217,7 +219,6 @@ public class TestRemoteTable {
     assertTrue(Bytes.equals(VALUE_2, value2));
 
     // test timestamp
-
     get = new Get(ROW_2);
     get.addFamily(COLUMN_1);
     get.addFamily(COLUMN_2);
@@ -230,7 +231,6 @@ public class TestRemoteTable {
     assertNull(value2);
 
     // test timerange
-
     get = new Get(ROW_2);
     get.addFamily(COLUMN_1);
     get.addFamily(COLUMN_2);
@@ -243,7 +243,6 @@ public class TestRemoteTable {
     assertNull(value2);
 
     // test maxVersions
-
     get = new Get(ROW_2);
     get.addFamily(COLUMN_1);
     get.readVersions(2);
@@ -315,7 +314,6 @@ public class TestRemoteTable {
     assertTrue(Bytes.equals(VALUE_1, value));
 
     // multiput
-
     List<Put> puts = new ArrayList<>(3);
     put = new Put(ROW_3);
     put.addColumn(COLUMN_2, QUALIFIER_2, VALUE_2);
@@ -343,7 +341,8 @@ public class TestRemoteTable {
     assertNotNull(value);
     assertTrue(Bytes.equals(VALUE_2, value));
 
-    assertTrue(Bytes.equals(Bytes.toBytes("TestRemoteTable" + VALID_TABLE_NAME_CHARS), remoteTable.getTableName()));
+    assertTrue(Bytes.equals(Bytes.toBytes("TestRemoteTable" + VALID_TABLE_NAME_CHARS),
+        remoteTable.getTableName()));
   }
 
   @Test
@@ -489,7 +488,6 @@ public class TestRemoteTable {
     assertTrue(Bytes.equals(ROW_4, results[3].getRow()));
     scanner.close();
     assertTrue(remoteTable.isAutoFlush());
-
   }
 
   @Test
@@ -576,8 +574,9 @@ public class TestRemoteTable {
 
   /**
    * Tests keeping a HBase scanner alive for long periods of time. Each call to next() should reset
-   * the ConnectionCache timeout for the scanner's connection
-   * @throws Exception
+   * the ConnectionCache timeout for the scanner's connection.
+   *
+   * @throws Exception if starting the servlet container or disabling or truncating the table fails
    */
   @Test
   public void testLongLivedScan() throws Exception {

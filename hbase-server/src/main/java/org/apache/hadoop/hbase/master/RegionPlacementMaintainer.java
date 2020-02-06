@@ -697,7 +697,7 @@ public class RegionPlacementMaintainer implements Closeable {
             FutureUtils.get(rsAdmin.getServerInfo(RequestConverter.buildGetServerInfoRequest()))
               .getServerInfo() +
             " has updated " + updateFavoredNodesResponse.getResponse() + " / " +
-            singleServerPlan.getAssignmentMap().size() + " regions with the assignment plan");
+            singleServerPlan.size() + " regions with the assignment plan");
           succeededNum++;
         }
       } catch (Exception e) {

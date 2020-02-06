@@ -42,8 +42,8 @@ import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.LoadCounter;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
 import org.apache.hadoop.hbase.procedure2.SequentialProcedure;
+import org.apache.hadoop.hbase.procedure2.store.LeaseRecovery;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
-import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreTracker;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.io.IOUtils;
@@ -627,7 +627,7 @@ public class TestWALProcedureStore {
 
     // simulate another active master removing the wals
     procStore = new WALProcedureStore(htu.getConfiguration(), logDir, null,
-      new WALProcedureStore.LeaseRecovery() {
+      new LeaseRecovery() {
         private int count = 0;
 
         @Override
@@ -795,7 +795,7 @@ public class TestWALProcedureStore {
   }
 
   private WALProcedureStore createWALProcedureStore(Configuration conf) throws IOException {
-    return new WALProcedureStore(conf, new WALProcedureStore.LeaseRecovery() {
+    return new WALProcedureStore(conf, new LeaseRecovery() {
       @Override
       public void recoverFileLease(FileSystem fs, Path path) throws IOException {
         // no-op

@@ -380,7 +380,6 @@ public class HFilePerformanceEvaluation {
       writer = HFile.getWriterFactoryNoCache(conf)
           .withPath(fs, mf)
           .withFileContext(hFileContext)
-          .withComparator(CellComparator.getInstance())
           .create();
     }
     

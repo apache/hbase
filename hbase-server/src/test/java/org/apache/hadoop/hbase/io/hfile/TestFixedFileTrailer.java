@@ -131,6 +131,10 @@ public class TestFixedFileTrailer {
           t.createComparator(KeyValue.META_COMPARATOR.getClass().getName()).getClass());
       assertEquals(CellComparatorImpl.MetaCellComparator.class, t.createComparator(
           CellComparatorImpl.MetaCellComparator.META_COMPARATOR.getClass().getName()).getClass());
+      assertEquals(CellComparatorImpl.META_COMPARATOR.getClass(), t.createComparator(
+        CellComparatorImpl.MetaCellComparator.META_COMPARATOR.getClass().getName()).getClass());
+      assertEquals(CellComparatorImpl.COMPARATOR.getClass(), t.createComparator(
+        CellComparatorImpl.MetaCellComparator.COMPARATOR.getClass().getName()).getClass());
       assertNull(t.createComparator(Bytes.BYTES_RAWCOMPARATOR.getClass().getName()));
       assertNull(t.createComparator("org.apache.hadoop.hbase.KeyValue$RawBytesComparator"));
     } catch (IOException e) {

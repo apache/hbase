@@ -18,7 +18,8 @@
 #
 DRY_RUN=${DRY_RUN:-0}
 GPG="gpg --pinentry-mode loopback --no-tty --batch"
-YETUS_VERSION=0.11.0
+YETUS_VERSION=${YETUS_VERSION:-0.11.1}
+set -x
 
 function error {
   echo "$*"
@@ -296,7 +297,7 @@ function update_releasenotes {
   local release_version="$2"
   local yetus="apache-yetus-${YETUS_VERSION}"
   wget -qO- "https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=/yetus/${YETUS_VERSION}/${yetus}-bin.tar.gz" | \
-    tar xvz -C .
+    tar xvz -C . || exit
   cd ./${yetus} || exit
   ./bin/releasedocmaker -p HBASE --fileversions -v ${release_version} -l --sortorder=newer --skip-credits
   # First clear out the changes written by previous RCs.

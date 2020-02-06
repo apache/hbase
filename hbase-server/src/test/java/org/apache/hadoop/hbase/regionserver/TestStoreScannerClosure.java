@@ -30,12 +30,10 @@ import java.util.Random;
 import java.util.TreeSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -52,8 +50,8 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.RandomKeyValueUtil;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -68,7 +66,7 @@ import org.slf4j.LoggerFactory;
  * {@link StoreScanner#updateReaders(List, List)} works perfectly ensuring
  * that there are no references on the existing Storescanner readers.
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestStoreScannerClosure {
 
   @ClassRule
@@ -184,7 +182,7 @@ public class TestStoreScannerClosure {
     Path storeFileParentDir = new Path(TEST_UTIL.getDataTestDir(), "TestHFile");
     HFileContext meta = new HFileContextBuilder().withBlockSize(64 * 1024).build();
     StoreFileWriter sfw = new StoreFileWriter.Builder(CONF, fs).withOutputDir(storeFileParentDir)
-        .withComparator(CellComparatorImpl.COMPARATOR).withFileContext(meta).build();
+        .withFileContext(meta).build();
 
     final int rowLen = 32;
     Random RNG = new Random();

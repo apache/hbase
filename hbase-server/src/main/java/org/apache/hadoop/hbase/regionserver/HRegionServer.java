@@ -56,6 +56,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Function;
 import javax.management.MalformedObjectNameException;
 import javax.servlet.http.HttpServlet;
+
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
@@ -209,6 +210,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.Coprocesso
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionLoad;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.UserLoad;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.Coprocessor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.Coprocessor.Builder;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair;
@@ -758,7 +760,7 @@ public class HRegionServer extends HasThread implements
   }
 
   protected void configureInfoServer() {
-    infoServer.addServlet("rs-status", "/rs-status", RSStatusServlet.class);
+    infoServer.addUnprivilegedServlet("rs-status", "/rs-status", RSStatusServlet.class);
     infoServer.setAttribute(REGIONSERVER, this);
   }
 
@@ -1357,7 +1359,14 @@ public class HRegionServer extends HasThread implements
     } else {
       serverLoad.setInfoServerPort(-1);
     }
-
+    MetricsUserAggregateSource userSource =
+        metricsRegionServer.getMetricsUserAggregate().getSource();
+    if (userSource != null) {
+      Map<String, MetricsUserSource> userMetricMap = userSource.getUserSources();
+      for (Entry<String, MetricsUserSource> entry : userMetricMap.entrySet()) {
+        serverLoad.addUserLoads(createUserLoad(entry.getKey(), entry.getValue()));
+      }
+    }
     // for the replicationLoad purpose. Only need to get from one executorService
     // either source or sink will get the same info
     ReplicationSourceService rsources = getReplicationSourceService();
@@ -1629,7 +1638,7 @@ public class HRegionServer extends HasThread implements
     int stores = 0;
     int storefiles = 0;
     int storeRefCount = 0;
-    int maxStoreFileRefCount = 0;
+    int maxCompactedStoreFileRefCount = 0;
     int storeUncompressedSizeMB = 0;
     int storefileSizeMB = 0;
     int memstoreSizeMB = (int) (r.getMemStoreDataSize() / 1024 / 1024);
@@ -1645,8 +1654,9 @@ public class HRegionServer extends HasThread implements
       storefiles += store.getStorefilesCount();
       int currentStoreRefCount = store.getStoreRefCount();
       storeRefCount += currentStoreRefCount;
-      int currentMaxStoreFileRefCount = store.getMaxStoreFileRefCount();
-      maxStoreFileRefCount = Math.max(maxStoreFileRefCount, currentMaxStoreFileRefCount);
+      int currentMaxCompactedStoreFileRefCount = store.getMaxCompactedStoreFileRefCount();
+      maxCompactedStoreFileRefCount = Math.max(maxCompactedStoreFileRefCount,
+        currentMaxCompactedStoreFileRefCount);
       storeUncompressedSizeMB += (int) (store.getStoreSizeUncompressed() / 1024 / 1024);
       storefileSizeMB += (int) (store.getStorefilesSize() / 1024 / 1024);
       //TODO: storefileIndexSizeKB is same with rootLevelIndexSizeKB?
@@ -1675,7 +1685,7 @@ public class HRegionServer extends HasThread implements
       .setStores(stores)
       .setStorefiles(storefiles)
       .setStoreRefCount(storeRefCount)
-      .setMaxStoreFileRefCount(maxStoreFileRefCount)
+      .setMaxCompactedStoreFileRefCount(maxCompactedStoreFileRefCount)
       .setStoreUncompressedSizeMB(storeUncompressedSizeMB)
       .setStorefileSizeMB(storefileSizeMB)
       .setMemStoreSizeMB(memstoreSizeMB)
@@ -1694,6 +1704,19 @@ public class HRegionServer extends HasThread implements
     r.setCompleteSequenceId(regionLoadBldr);
 
     return regionLoadBldr.build();
+  }
+
+  private UserLoad createUserLoad(String user, MetricsUserSource userSource) {
+    UserLoad.Builder userLoadBldr = UserLoad.newBuilder();
+    userLoadBldr.setUserName(user);
+    userSource.getClientMetrics().values().stream().map(
+      clientMetrics -> ClusterStatusProtos.ClientMetrics.newBuilder()
+            .setHostName(clientMetrics.getHostName())
+            .setWriteRequestsCount(clientMetrics.getWriteRequestsCount())
+            .setFilteredRequestsCount(clientMetrics.getFilteredReadRequests())
+            .setReadRequestsCount(clientMetrics.getReadRequestsCount()).build())
+        .forEach(userLoadBldr::addClientMetrics);
+    return userLoadBldr.build();
   }
 
   public RegionLoad createRegionLoad(final String encodedRegionName) throws IOException {
@@ -2101,7 +2124,7 @@ public class HRegionServer extends HasThread implements
     while (true) {
       try {
         this.infoServer = new InfoServer(getProcessName(), addr, port, false, this.conf);
-        infoServer.addServlet("dump", "/dump", getDumpServlet());
+        infoServer.addPrivilegedServlet("dump", "/dump", getDumpServlet());
         configureInfoServer();
         this.infoServer.start();
         break;
@@ -3147,7 +3170,7 @@ public class HRegionServer extends HasThread implements
 
   /**
    * Close asynchronously a region, can be called from the master or internally by the regionserver
-   * when stopping. If called from the master, the region will update the znode status.
+   * when stopping. If called from the master, the region will update the status.
    *
    * <p>
    * If an opening was in progress, this method will cancel it, but will not start a new close. The
@@ -3177,6 +3200,7 @@ public class HRegionServer extends HasThread implements
       }
     }
 
+    // previous can come back 'null' if not in map.
     final Boolean previous = this.regionsInTransitionInRS.putIfAbsent(Bytes.toBytes(encodedName),
         Boolean.FALSE);
 
@@ -3198,6 +3222,8 @@ public class HRegionServer extends HasThread implements
         throw new NotServingRegionException("The region " + encodedName +
           " was opening but not yet served. Opening is cancelled.");
       }
+    } else if (previous == null) {
+      LOG.info("Received CLOSE for {}", encodedName);
     } else if (Boolean.FALSE.equals(previous)) {
       LOG.info("Received CLOSE for the region: " + encodedName +
         ", which we are already trying to CLOSE, but not completed yet");

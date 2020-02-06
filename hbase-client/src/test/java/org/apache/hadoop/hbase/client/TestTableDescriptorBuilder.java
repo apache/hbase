@@ -310,4 +310,21 @@ public class TestTableDescriptorBuilder {
             .build();
     assertEquals(42, htd.getPriority());
   }
+
+  @Test
+  public void testStringCustomizedValues() {
+    byte[] familyName = Bytes.toBytes("cf");
+    ColumnFamilyDescriptor hcd = ColumnFamilyDescriptorBuilder.newBuilder(familyName)
+            .setBlocksize(1000)
+            .build();
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+            .setColumnFamily(hcd)
+            .setDurability(Durability.ASYNC_WAL)
+            .build();
+
+    assertEquals(
+      "'testStringCustomizedValues', " +
+        "{TABLE_ATTRIBUTES => {DURABILITY => 'ASYNC_WAL'}}, {NAME => 'cf', BLOCKSIZE => '1000'}",
+      htd.toStringCustomizedValues());
+  }
 }

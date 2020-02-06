@@ -52,7 +52,9 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaHelperForTests.NoFilesToDischarge;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaHelperForTests.SpaceQuotaSnapshotPredicate;
 import org.apache.hadoop.hbase.regionserver.HStore;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
+import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil.SnapshotVisitor;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -71,7 +73,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
 /**
  * Test class for the {@link SnapshotQuotaObserverChore}.
  */
-@Category(MediumTests.class)
+@Category(LargeTests.class)
 public class TestSnapshotQuotaObserverChore {
 
   @ClassRule

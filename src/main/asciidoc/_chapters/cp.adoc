@@ -242,12 +242,28 @@ following entry in RegionServer's 'hbase-site.xml' file (generally located under
 If multiple classes are specified for loading, the class names must be comma-separated.
 The framework attempts to load all the configured classes using the default class loader.
 Therefore, the jar file must reside on the server-side HBase classpath.
+
 +
 Coprocessors which are loaded in this way will be active on all regions of all tables.
 These are also called system Coprocessor.
 The first listed Coprocessors will be assigned the priority `Coprocessor.Priority.SYSTEM`.
 Each subsequent coprocessor in the list will have its priority value incremented by one (which
 reduces its priority, because priorities have the natural sort order of Integers).
+
++
+These priority values can be manually overriden in hbase-site.xml. This can be useful if you
+want to guarantee that a coprocessor will execute after another. For example, in the following
+configuration `SumEndPoint` would be guaranteed to go last, except in the case of a tie with
+another coprocessor:
++
+[source,xml]
+----
+<property>
+    <name>hbase.coprocessor.region.classes</name>
+    <value>org.myname.hbase.coprocessor.endpoint.SumEndPoint|2147483647</value>
+</property>
+----
+
 +
 When calling out to registered observers, the framework executes their callbacks methods in the
 sorted order of their priority. +
@@ -758,7 +774,7 @@ Restricting arbitrary user coprocessors can be a big concern in multitenant envi
 
 - `hbase.coprocessor.enabled`: Enables or disables all coprocessors. This will limit the functionality of HBase, as disabling all coprocessors will disable some security providers. An example coproccessor so affected is `org.apache.hadoop.hbase.security.access.AccessController`.
 * `hbase.coprocessor.user.enabled`: Enables or disables loading coprocessors on tables (i.e. user coprocessors).
-* One can statically load coprocessors via the following tunables in `hbase-site.xml`:
+* One can statically load coprocessors, and optionally tune their priorities, via the following tunables in `hbase-site.xml`:
 ** `hbase.coprocessor.regionserver.classes`: A comma-separated list of coprocessors that are loaded by region servers
 ** `hbase.coprocessor.region.classes`: A comma-separated list of RegionObserver and Endpoint coprocessors
 ** `hbase.coprocessor.user.region.classes`: A comma-separated list of coprocessors that are loaded by all regions

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -84,6 +84,7 @@ import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -361,10 +362,8 @@ public class TestSplitTransactionOnCluster {
     final TableName tableName = TableName.valueOf(name.getMethodName());
 
     // Create table then get the single region for our new table.
-    Table t = createTableAndWait(tableName, HConstants.CATALOG_FAMILY);
-    List<HRegion> regions = cluster.getRegions(tableName);
-    RegionInfo hri = getAndCheckSingleTableRegion(regions);
-
+    Table t = createTableAndWait(tableName, HConstants.CATALOG_FAMILY); List<HRegion> regions =
+      cluster.getRegions(tableName); RegionInfo hri = getAndCheckSingleTableRegion(regions);
     int tableRegionIndex = ensureTableRegionNotOnSameServerAsMeta(admin, hri);
 
     // Turn off balancer so it doesn't cut in and mess up our placements.
@@ -381,22 +380,12 @@ public class TestSplitTransactionOnCluster {
       admin.splitRegionAsync(hri.getRegionName()).get(2, TimeUnit.MINUTES);
       // Get daughters
       List<HRegion> daughters = checkAndGetDaughters(tableName);
-      HRegion daughterRegion = daughters.get(0);
       // Now split one of the daughters.
+      HRegion daughterRegion = daughters.get(0);
       RegionInfo daughter = daughterRegion.getRegionInfo();
       LOG.info("Daughter we are going to split: " + daughter);
-      // Compact first to ensure we have cleaned up references -- else the split
-      // will fail.
-      daughterRegion.compact(true);
-      daughterRegion.getStores().get(0).closeAndArchiveCompactedFiles();
-      for (int i = 0; i < 100; i++) {
-        if (!daughterRegion.hasReferences()) {
-          break;
-        }
-        Threads.sleep(100);
-      }
-      assertFalse("Waiting for reference to be compacted", daughterRegion.hasReferences());
-      LOG.info("Daughter hri before split (has been compacted): " + daughter);
+      clearReferences(daughterRegion);
+      LOG.info("Finished {} references={}", daughterRegion, daughterRegion.hasReferences());
       admin.splitRegionAsync(daughter.getRegionName()).get(2, TimeUnit.MINUTES);
       // Get list of daughters
       daughters = cluster.getRegions(tableName);
@@ -426,6 +415,26 @@ public class TestSplitTransactionOnCluster {
       admin.balancerSwitch(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
       t.close();
+    }
+  }
+
+  private void clearReferences(HRegion region) throws IOException {
+    // Presumption.
+    assertEquals(1, region.getStores().size());
+    HStore store = region.getStores().get(0);
+    while (store.hasReferences()) {
+      // Wait on any current compaction to complete first.
+      CompactionProgress progress = store.getCompactionProgress();
+      if (progress != null && progress.getProgressPct() < 1.0f) {
+        while (progress.getProgressPct() < 1.0f) {
+          LOG.info("Waiting, progress={}", progress.getProgressPct());
+          Threads.sleep(1000);
+        }
+      } else {
+        // Run new compaction. Shoudn't be any others running.
+        region.compact(true);
+      }
+      store.closeAndArchiveCompactedFiles();
     }
   }
 
@@ -526,8 +535,7 @@ public class TestSplitTransactionOnCluster {
       HMaster master = abortAndWaitForMaster();
       // Now call compact on the daughters and clean up any references.
       for (HRegion daughter : daughters) {
-        daughter.compact(true);
-        daughter.getStores().get(0).closeAndArchiveCompactedFiles();
+        clearReferences(daughter);
         assertFalse(daughter.hasReferences());
       }
       // BUT calling compact on the daughters is not enough. The CatalogJanitor looks
@@ -810,8 +818,6 @@ public class TestSplitTransactionOnCluster {
   /**
    * Ensure single table region is not on same server as the single hbase:meta table
    * region.
-   * @param admin
-   * @param hri
    * @return Index of the server hosting the single table region
    * @throws UnknownRegionException
    * @throws MasterNotRunningException

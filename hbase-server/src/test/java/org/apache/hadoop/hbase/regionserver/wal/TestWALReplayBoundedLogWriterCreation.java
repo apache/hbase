@@ -18,13 +18,13 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
-@Category(MediumTests.class)
+@Category(LargeTests.class)
 public class TestWALReplayBoundedLogWriterCreation extends TestWALReplay {
 
   @ClassRule

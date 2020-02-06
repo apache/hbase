@@ -23,6 +23,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public interface MetricsUserAggregate {
 
+  /**
+   * @return return a singleton instance of MetricsUserAggregateSource or null in case of NoOp
+   */
+  MetricsUserAggregateSource getSource();
+
   void updatePut(long t);
 
   void updateDelete(long t);
@@ -36,4 +41,8 @@ public interface MetricsUserAggregate {
   void updateReplay(long t);
 
   void updateScanTime(long t);
+
+  void updateFilteredReadRequests();
+
+  void updateReadRequestCount();
 }

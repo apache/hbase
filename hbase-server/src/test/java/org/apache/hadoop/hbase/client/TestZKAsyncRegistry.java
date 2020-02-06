@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,7 +25,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.IntStream;
@@ -84,11 +83,8 @@ public class TestZKAsyncRegistry {
     String expectedClusterId = TEST_UTIL.getHBaseCluster().getMaster().getClusterId();
     assertEquals("Expected " + expectedClusterId + ", found=" + clusterId, expectedClusterId,
       clusterId);
-    assertEquals(TEST_UTIL.getHBaseCluster().getClusterMetrics().getLiveServerMetrics().size(),
-      REGISTRY.getCurrentNrHRS().get().intValue());
     assertEquals(TEST_UTIL.getHBaseCluster().getMaster().getServerName(),
       REGISTRY.getMasterAddress().get());
-    assertEquals(-1, REGISTRY.getMasterInfoPort().get().intValue());
     RegionReplicaTestHelper
       .waitUntilAllMetaReplicasHavingRegionLocation(TEST_UTIL.getConfiguration(), REGISTRY, 3);
     RegionLocations locs = REGISTRY.getMetaRegionLocation().get();
@@ -105,7 +101,7 @@ public class TestZKAsyncRegistry {
   public void testIndependentZKConnections() throws IOException {
     try (ReadOnlyZKClient zk1 = REGISTRY.getZKClient()) {
       Configuration otherConf = new Configuration(TEST_UTIL.getConfiguration());
-      otherConf.set(HConstants.ZOOKEEPER_QUORUM, "127.0.0.1");
+      otherConf.set(HConstants.ZOOKEEPER_QUORUM, "localhost");
       try (ZKAsyncRegistry otherRegistry = new ZKAsyncRegistry(otherConf)) {
         ReadOnlyZKClient zk2 = otherRegistry.getZKClient();
         assertNotSame("Using a different configuration / quorum should result in different " +

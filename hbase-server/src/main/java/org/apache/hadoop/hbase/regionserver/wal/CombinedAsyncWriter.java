@@ -74,10 +74,10 @@ public final class CombinedAsyncWriter implements AsyncWriter {
   }
 
   @Override
-  public CompletableFuture<Long> sync() {
+  public CompletableFuture<Long> sync(boolean forceSync) {
     CompletableFuture<Long> future = new CompletableFuture<>();
     AtomicInteger remaining = new AtomicInteger(writers.size());
-    writers.forEach(w -> addListener(w.sync(), (length, error) -> {
+    writers.forEach(w -> addListener(w.sync(forceSync), (length, error) -> {
       if (error != null) {
         future.completeExceptionally(error);
         return;

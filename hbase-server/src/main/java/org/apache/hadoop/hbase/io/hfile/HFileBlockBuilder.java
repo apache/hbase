@@ -108,7 +108,7 @@ public class HFileBlockBuilder {
     } else {
       return new ExclusiveMemHFileBlock(blockType, onDiskSizeWithoutHeader,
           uncompressedSizeWithoutHeader, prevBlockOffset, buf, fillHeader, offset,
-          nextBlockOnDiskSize, onDiskDataSizeWithHeader, fileContext);
+          nextBlockOnDiskSize, onDiskDataSizeWithHeader, fileContext, allocator);
     }
   }
 }

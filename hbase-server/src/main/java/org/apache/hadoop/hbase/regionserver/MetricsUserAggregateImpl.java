@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,8 +19,8 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.util.Optional;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.ipc.RpcServer;
@@ -29,8 +29,6 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.LossyCounting;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 @InterfaceAudience.Private
 public class MetricsUserAggregateImpl implements MetricsUserAggregate{
 
@@ -38,13 +36,12 @@ public class MetricsUserAggregateImpl implements MetricsUserAggregate{
   private final UserProvider userProvider;
 
   private final MetricsUserAggregateSource source;
-  private final LossyCounting userMetricLossyCounting;
+  private final LossyCounting<MetricsUserSource> userMetricLossyCounting;
 
   public MetricsUserAggregateImpl(Configuration conf) {
     source = CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
         .getUserAggregate();
-    userMetricLossyCounting = new LossyCounting<MetricsUserSource>("userMetrics",
-        (LossyCounting.LossyCountingListener<MetricsUserSource>) key -> source.deregister(key));
+    userMetricLossyCounting = new LossyCounting<>("userMetrics", conf, source::deregister);
     this.userProvider = UserProvider.instantiate(conf);
   }
 
@@ -62,11 +59,11 @@ public class MetricsUserAggregateImpl implements MetricsUserAggregate{
       } catch (IOException ignore) {
       }
     }
-    return user.isPresent() ? user.get().getShortName() : null;
+    return user.map(User::getShortName).orElse(null);
   }
 
-  @VisibleForTesting
-  MetricsUserAggregateSource getSource() {
+  @Override
+  public MetricsUserAggregateSource getSource() {
     return source;
   }
 
@@ -74,7 +71,36 @@ public class MetricsUserAggregateImpl implements MetricsUserAggregate{
   public void updatePut(long t) {
     String user = getActiveUser();
     if (user != null) {
-      getOrCreateMetricsUser(user).updatePut(t);
+      MetricsUserSource userSource = getOrCreateMetricsUser(user);
+      userSource.updatePut(t);
+      incrementClientWriteMetrics(userSource);
+    }
+
+  }
+
+  private String getClient() {
+    Optional<InetAddress> ipOptional = RpcServer.getRemoteAddress();
+    return ipOptional.map(InetAddress::getHostName).orElse(null);
+  }
+
+  private void incrementClientReadMetrics(MetricsUserSource userSource) {
+    String client = getClient();
+    if (client != null && userSource != null) {
+      userSource.getOrCreateMetricsClient(client).incrementReadRequest();
+    }
+  }
+
+  private void incrementFilteredReadRequests(MetricsUserSource userSource) {
+    String client = getClient();
+    if (client != null && userSource != null) {
+      userSource.getOrCreateMetricsClient(client).incrementFilteredReadRequests();
+    }
+  }
+
+  private void incrementClientWriteMetrics(MetricsUserSource userSource) {
+    String client = getClient();
+    if (client != null && userSource != null) {
+      userSource.getOrCreateMetricsClient(client).incrementWriteRequest();
     }
   }
 
@@ -82,7 +108,9 @@ public class MetricsUserAggregateImpl implements MetricsUserAggregate{
   public void updateDelete(long t) {
     String user = getActiveUser();
     if (user != null) {
-      getOrCreateMetricsUser(user).updateDelete(t);
+      MetricsUserSource userSource = getOrCreateMetricsUser(user);
+      userSource.updateDelete(t);
+      incrementClientWriteMetrics(userSource);
     }
   }
 
@@ -90,7 +118,8 @@ public class MetricsUserAggregateImpl implements MetricsUserAggregate{
   public void updateGet(long t) {
     String user = getActiveUser();
     if (user != null) {
-      getOrCreateMetricsUser(user).updateGet(t);
+      MetricsUserSource userSource = getOrCreateMetricsUser(user);
+      userSource.updateGet(t);
     }
   }
 
@@ -98,7 +127,9 @@ public class MetricsUserAggregateImpl implements MetricsUserAggregate{
   public void updateIncrement(long t) {
     String user = getActiveUser();
     if (user != null) {
-      getOrCreateMetricsUser(user).updateIncrement(t);
+      MetricsUserSource userSource = getOrCreateMetricsUser(user);
+      userSource.updateIncrement(t);
+      incrementClientWriteMetrics(userSource);
     }
   }
 
@@ -106,7 +137,9 @@ public class MetricsUserAggregateImpl implements MetricsUserAggregate{
   public void updateAppend(long t) {
     String user = getActiveUser();
     if (user != null) {
-      getOrCreateMetricsUser(user).updateAppend(t);
+      MetricsUserSource userSource = getOrCreateMetricsUser(user);
+      userSource.updateAppend(t);
+      incrementClientWriteMetrics(userSource);
     }
   }
 
@@ -114,7 +147,9 @@ public class MetricsUserAggregateImpl implements MetricsUserAggregate{
   public void updateReplay(long t) {
     String user = getActiveUser();
     if (user != null) {
-      getOrCreateMetricsUser(user).updateReplay(t);
+      MetricsUserSource userSource = getOrCreateMetricsUser(user);
+      userSource.updateReplay(t);
+      incrementClientWriteMetrics(userSource);
     }
   }
 
@@ -122,7 +157,24 @@ public class MetricsUserAggregateImpl implements MetricsUserAggregate{
   public void updateScanTime(long t) {
     String user = getActiveUser();
     if (user != null) {
-      getOrCreateMetricsUser(user).updateScanTime(t);
+      MetricsUserSource userSource = getOrCreateMetricsUser(user);
+      userSource.updateScanTime(t);
+    }
+  }
+
+  @Override public void updateFilteredReadRequests() {
+    String user = getActiveUser();
+    if (user != null) {
+      MetricsUserSource userSource = getOrCreateMetricsUser(user);
+      incrementFilteredReadRequests(userSource);
+    }
+  }
+
+  @Override public void updateReadRequestCount() {
+    String user = getActiveUser();
+    if (user != null) {
+      MetricsUserSource userSource = getOrCreateMetricsUser(user);
+      incrementClientReadMetrics(userSource);
     }
   }
 

@@ -92,7 +92,7 @@ public class TestCompaction {
       HBaseClassTestRule.forClass(TestCompaction.class);
 
   @Rule public TestName name = new TestName();
-  private static final HBaseTestingUtility UTIL = HBaseTestingUtility.createLocalHTU();
+  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   protected Configuration conf = UTIL.getConfiguration();
 
   private HRegion r = null;

@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.HRegion.FlushResult;
 import org.apache.hadoop.hbase.regionserver.HRegion.PrepareFlushResult;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -61,7 +61,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Testcase for https://issues.apache.org/jira/browse/HBASE-13811
  */
-@Category({ MediumTests.class })
+@Category({ LargeTests.class })
 public class TestSplitWalDataLoss {
 
   @ClassRule

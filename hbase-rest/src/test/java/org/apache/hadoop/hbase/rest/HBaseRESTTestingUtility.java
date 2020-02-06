@@ -25,7 +25,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class HBaseRESTTestingUtility {
-
   private static final Logger LOG = LoggerFactory.getLogger(HBaseRESTTestingUtility.class);
 
   private RESTServer server;
@@ -52,12 +51,14 @@ public class HBaseRESTTestingUtility {
   }
 
   public void shutdownServletContainer() {
-    if (server != null) try {
-      server.stop();
-      server = null;
-      RESTServlet.stop();
-    } catch (Exception e) {
-      LOG.warn(StringUtils.stringifyException(e));
+    if (server != null) {
+      try {
+        server.stop();
+        server = null;
+        RESTServlet.stop();
+      } catch (Exception e) {
+        LOG.warn(StringUtils.stringifyException(e));
+      }
     }
   }
 }

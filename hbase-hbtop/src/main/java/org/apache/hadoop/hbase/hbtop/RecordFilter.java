@@ -55,6 +55,9 @@ public final class RecordFilter {
     return parse(filterString, Arrays.asList(Field.values()), ignoreCase);
   }
 
+  /*
+   * Parse a filter string and build a RecordFilter instance.
+   */
   public static RecordFilter parse(String filterString, List<Field> fields, boolean ignoreCase) {
     int index = 0;
 
@@ -141,6 +144,10 @@ public final class RecordFilter {
     this.field = Objects.requireNonNull(field);
     this.operator = Objects.requireNonNull(operator);
     this.value = Objects.requireNonNull(value);
+  }
+
+  public Field getField() {
+    return field;
   }
 
   public boolean execute(Record record) {

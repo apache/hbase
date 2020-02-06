@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,7 +26,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.regex.Pattern;
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -51,11 +50,19 @@ public final class HConstants {
 
   /** Used as a magic return value while optimized index key feature enabled(HBASE-7845) */
   public final static int INDEX_KEY_MAGIC = -2;
+
   /*
-     * Name of directory that holds recovered edits written by the wal log
-     * splitting code, one per region
-     */
+   * Name of directory that holds recovered edits written by the wal log
+   * splitting code, one per region
+   */
   public static final String RECOVERED_EDITS_DIR = "recovered.edits";
+
+  /*
+   * Name of directory that holds recovered hfiles written by the wal log
+   * splitting code, one per region
+   */
+  public static final String RECOVERED_HFILES_DIR = "recovered.hfiles";
+
   /**
    * The first four bytes of Hadoop RPC connections
    */
@@ -1180,12 +1187,6 @@ public final class HConstants {
     Collections.unmodifiableList(Arrays.asList(new String[] {
       HBCK_SIDELINEDIR_NAME, HBASE_TEMP_DIRECTORY, MIGRATION_NAME
     }));
-
-  /** Directories that are not HBase user table directories */
-  public static final List<String> HBASE_NON_USER_TABLE_DIRS =
-    Collections.unmodifiableList(Arrays.asList((String[])ArrayUtils.addAll(
-      new String[] { TableName.META_TABLE_NAME.getNameAsString() },
-      HBASE_NON_TABLE_DIRS.toArray())));
 
   /** Health script related settings. */
   public static final String HEALTH_SCRIPT_LOC = "hbase.node.health.script.location";

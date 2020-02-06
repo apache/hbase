@@ -1,0 +1,258 @@
+<?xml version="1.0"?>
+<assembly xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.1 http://maven.apache.org/xsd/assembly-1.1.1.xsd">
+<!--
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+-->
+
+  <!--This 'all' id is not appended to the produced bundle because we do this: http://maven.apache.org/plugins/maven-assembly-plugin/faq.html#required-classifiers -->
+  <id>bin</id>
+  <formats>
+    <format>tar.gz</format>
+  </formats>
+  <componentDescriptors>
+    <componentDescriptor>src/main/assembly/components.xml</componentDescriptor>
+  </componentDescriptors>
+  <moduleSets>
+    <moduleSet>
+      <useAllReactorProjects>true</useAllReactorProjects>
+      <includes>
+        <!-- Keep this list sorted by name -->
+        <include>org.apache.hbase:hbase-annotations</include>
+        <include>org.apache.hbase:hbase-backup</include>
+        <include>org.apache.hbase:hbase-client</include>
+        <include>org.apache.hbase:hbase-common</include>
+        <include>org.apache.hbase:hbase-endpoint</include>
+        <include>org.apache.hbase:hbase-examples</include>
+        <include>org.apache.hbase:hbase-external-blockcache</include>
+        <include>org.apache.hbase:hbase-hadoop-compat</include>
+        <include>org.apache.hbase:hbase-hadoop2-compat</include>
+        <include>org.apache.hbase:hbase-http</include>
+        <include>org.apache.hbase:hbase-it</include>
+        <include>org.apache.hbase:hbase-mapreduce</include>
+        <include>org.apache.hbase:hbase-metrics</include>
+        <include>org.apache.hbase:hbase-metrics-api</include>
+        <include>org.apache.hbase:hbase-procedure</include>
+        <include>org.apache.hbase:hbase-protocol</include>
+        <include>org.apache.hbase:hbase-protocol-shaded</include>
+        <include>org.apache.hbase:hbase-replication</include>
+        <include>org.apache.hbase:hbase-rest</include>
+        <include>org.apache.hbase:hbase-rsgroup</include>
+        <include>org.apache.hbase:hbase-server</include>
+        <include>org.apache.hbase:hbase-shell</include>
+        <include>org.apache.hbase:hbase-testing-util</include>
+        <include>org.apache.hbase:hbase-thrift</include>
+        <include>org.apache.hbase:hbase-zookeeper</include>
+      </includes>
+      <!-- Binaries for the dependencies also go in the hbase-jars directory -->
+      <binaries>
+        <outputDirectory>lib</outputDirectory>
+        <unpack>false</unpack>
+        <dependencySets>
+          <dependencySet>
+            <excludes>
+            <!-- Exclude J2EE libraries that get pulled in when building on JDK11 -->
+              <exclude>com.sun.activation:javax.activation</exclude>
+              <!-- The following artifacts are transitive dependencies of com.sun.xml.ws:jaxws-ri:pom
+                   They are needed to be included in lib/jdk11 to be added to classpath during
+                   Java 11 runtime hence excluding from main lib.
+              -->
+              <exclude>com.sun.xml.ws:*</exclude>
+              <exclude>jakarta.annotation:jakarta.annotation-api</exclude>
+              <exclude>org.glassfish.jaxb:*</exclude>
+              <exclude>com.sun.istack:istack-commons-runtime</exclude>
+              <exclude>org.glassfish.gmbal:gmbal</exclude>
+              <exclude>org.glassfish.external:management-api</exclude>
+              <exclude>org.glassfish.pfl:*</exclude>
+              <exclude>org.jvnet.staxex:stax-ex</exclude>
+              <exclude>com.sun.xml.stream.buffer:streambuffer</exclude>
+              <exclude>org.jvnet.mimepull:mimepull</exclude>
+              <exclude>com.sun.xml.fastinfoset:FastInfoset</exclude>
+              <exclude>org.glassfish.ha:ha-api</exclude>
+              <exclude>com.sun.xml.messaging.saaj:saaj-impl</exclude>
+              <exclude>jakarta.activation:jakarta.activation-api</exclude>
+              <exclude>com.sun.xml.bind:jaxb-xjc</exclude>
+              <exclude>com.sun.xml.bind:jaxb-jxc</exclude>
+              <exclude>jakarta.mail:jakarta.mail-api</exclude>
+              <exclude>jakarta.persistence:jakarta.persistence-api</exclude>
+              <exclude>org.eclipse.persistence:*</exclude>
+              <exclude>jakarta.xml.ws:jakarta.xml.ws-api</exclude>
+              <exclude>jakarta.xml.bind:jakarta.xml.bind-api</exclude>
+              <exclude>jakarta.xml.soap:jakarta.xml.soap-api</exclude>
+              <exclude>jakarta.jws:jakarta.jws-api</exclude>
+            <!-- Exclude libraries that we put in their own dirs under lib/ -->
+              <exclude>org.jruby:jruby-complete</exclude>
+              <exclude>com.sun.jersey:*</exclude>
+              <exclude>com.sun.jersey.contribs:*</exclude>
+              <exclude>jline:jline</exclude>
+              <exclude>org.apache.hbase:hbase-shaded-client</exclude>
+              <exclude>org.apache.hbase:hbase-shaded-client-byo-hadoop</exclude>
+              <exclude>org.apache.hbase:hbase-shaded-mapreduce</exclude>
+              <exclude>com.github.stephenc.findbugs:findbugs-annotations</exclude>
+              <exclude>commons-logging:commons-logging</exclude>
+              <exclude>log4j:log4j</exclude>
+              <exclude>org.apache.htrace:htrace-core4</exclude>
+              <exclude>org.apache.htrace:htrace-core</exclude>
+              <exclude>org.apache.yetus:audience-annotations</exclude>
+              <exclude>org.slf4j:slf4j-api</exclude>
+              <exclude>org.slf4j:slf4j-log4j12</exclude>
+            </excludes>
+          </dependencySet>
+        </dependencySets>
+      </binaries>
+    </moduleSet>
+    <!-- Include shaded clients in their own directory -->
+    <moduleSet>
+      <useAllReactorProjects>true</useAllReactorProjects>
+      <includes>
+        <include>org.apache.hbase:hbase-shaded-client</include>
+        <include>org.apache.hbase:hbase-shaded-mapreduce</include>
+        <include>org.apache.hbase:hbase-shaded-client-byo-hadoop</include>
+      </includes>
+      <binaries>
+        <outputDirectory>lib/shaded-clients</outputDirectory>
+        <unpack>false</unpack>
+        <dependencySets>
+          <dependencySet>
+            <includes>
+              <include>org.apache.hbase:hbase-shaded-client</include>
+              <include>org.apache.hbase:hbase-shaded-mapreduce</include>
+              <include>org.apache.hbase:hbase-shaded-client-byo-hadoop</include>
+            </includes>
+          </dependencySet>
+        </dependencySets>
+      </binaries>
+    </moduleSet>
+  </moduleSets>
+  <!-- Include the generated LICENSE and NOTICE files -->
+  <files>
+    <file>
+      <source>${project.build.directory}/maven-shared-archive-resources/META-INF/LICENSE</source>
+      <outputDirectory>.</outputDirectory>
+      <destName>LICENSE.txt</destName>
+      <lineEnding>unix</lineEnding>
+    </file>
+    <file>
+      <source>${project.build.directory}/NOTICE.aggregate</source>
+      <outputDirectory>.</outputDirectory>
+      <destName>NOTICE.txt</destName>
+      <lineEnding>unix</lineEnding>
+    </file>
+    <file>
+      <source>${basedir}/src/main/resources/META-INF/LEGAL</source>
+      <outputDirectory>.</outputDirectory>
+      <destName>LEGAL</destName>
+      <lineEnding>unix</lineEnding>
+    </file>
+  </files>
+
+  <dependencySets>
+    <!-- Add jruby-complete to hbase_home/lib/ruby.
+         Update JRUBY_PACKAGED_WITH_HBASE in bin/hbase and hbase.cmd if you would like to update outputDirectory below -->
+    <dependencySet>
+      <outputDirectory>lib/ruby</outputDirectory>
+      <includes>
+        <include>org.jruby:jruby-complete</include>
+      </includes>
+    </dependencySet>
+    <!-- Include third party dependencies the shaded clients expose in the lib directory
+      -->
+    <dependencySet>
+      <outputDirectory>lib/client-facing-thirdparty</outputDirectory>
+      <useTransitiveDependencies>true</useTransitiveDependencies>
+      <!-- Unfortunately, we have to whitelist these because Maven
+           currently doesn't use the dependency-reduced-pom after
+           the shaded module has done its thing. That means if we
+           did this as "transitives of the shaded modules" we'd
+           get a duplication of all the jars we already have in our
+           shaded artifacts. See MNG-5899.
+
+           Check that things match by listing files and making
+           sure the runtime scoped things are all present in the
+           tarball. e.g.:
+
+           for module in hbase-shaded-mapreduce hbase-shaded-client; do
+             mvn dependency:list -f hbase-shaded/${module}/dependency-reduced-pom.xml
+           done | \
+           grep -E "runtime|compile" | \
+           grep -v -E "junit|(optional)" | \
+           cut -d ' ' -f 3- | \
+           sort -u
+
+           TODO we should check this in nightly
+
+           Alternatively, we could
+           stop waiting for Maven to fix this and build the client
+           tarball in a different build.
+        -->
+      <includes>
+        <include>com.github.stephenc.findbugs:findbugs-annotations</include>
+        <include>commons-logging:commons-logging</include>
+        <include>log4j:log4j</include>
+        <include>org.apache.htrace:htrace-core4</include>
+        <include>org.apache.htrace:htrace-core</include>
+        <include>org.apache.yetus:audience-annotations</include>
+        <include>org.slf4j:slf4j-api</include>
+        <include>org.slf4j:slf4j-log4j12</include>
+      </includes>
+    </dependencySet>
+    <dependencySet>
+      <outputDirectory>lib/zkcli</outputDirectory>
+      <includes>
+        <include>jline:jline</include>
+      </includes>
+    </dependencySet>
+    <dependencySet>
+      <outputDirectory>lib/jdk11</outputDirectory>
+      <useTransitiveDependencies>true</useTransitiveDependencies>
+      <includes>
+          <include>com.sun.activation:javax.activation</include>
+        <!-- The following artifacts are transitive dependencies of com.sun.xml.ws:jaxws-ri:pom
+             They are needed to be included in lib/jdk11 to be added to classpath during
+             Java 11 runtime
+        -->
+        <include>com.sun.xml.ws:*</include>
+        <include>jakarta.annotation:jakarta.annotation-api</include>
+        <include>org.glassfish.jaxb:*</include>
+        <include>com.sun.istack:istack-commons-runtime</include>
+        <include>org.glassfish.gmbal:gmbal</include>
+        <include>org.glassfish.external:management-api</include>
+        <include>org.glassfish.pfl:*</include>
+        <include>org.jvnet.staxex:stax-ex</include>
+        <include>com.sun.xml.stream.buffer:streambuffer</include>
+        <include>org.jvnet.mimepull:mimepull</include>
+        <include>com.sun.xml.fastinfoset:FastInfoset</include>
+        <include>org.glassfish.ha:ha-api</include>
+        <include>com.sun.xml.messaging.saaj:saaj-impl</include>
+        <include>com.fasterxml.woodstox:woodstox-core</include>
+        <include>org.codehaus.woodstox:stax2-api</include>
+        <include>jakarta.activation:jakarta.activation-api</include>
+        <include>com.sun.xml.bind:jaxb-xjc</include>
+        <include>com.sun.xml.bind:jaxb-jxc</include>
+        <include>jakarta.mail:jakarta.mail-api</include>
+        <include>jakarta.persistence:jakarta.persistence-api</include>
+        <include>org.eclipse.persistence:*</include>
+        <include>jakarta.xml.ws:jakarta.xml.ws-api</include>
+        <include>jakarta.xml.bind:jakarta.xml.bind-api</include>
+        <include>jakarta.xml.soap:jakarta.xml.soap-api</include>
+        <include>jakarta.jws:jakarta.jws-api</include>
+      </includes>
+    </dependencySet>
+  </dependencySets>
+
+</assembly>

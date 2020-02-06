@@ -16,17 +16,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest.client;
 
 import java.io.IOException;
 import java.io.InputStream;
 
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
+
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The HTTP result code, response headers, and body of an HTTP response.
@@ -71,12 +72,12 @@ public class Response {
   }
   
   /**
-   * Constructor
+   * Constructor. Note: this is not thread-safe
+   *
    * @param code the HTTP response code
    * @param headers headers the HTTP response headers
    * @param resp the response
    * @param in Inputstream if the response had one.
-   * Note: this is not thread-safe
    */
   public Response(int code, Header[] headers, HttpResponse resp, InputStream in) {
     this.code = code;
@@ -110,7 +111,7 @@ public class Response {
   }
 
   public String getHeader(String key) {
-    for (Header header: headers) {
+    for (Header header : headers) {
       if (header.getName().equalsIgnoreCase(key)) {
         return header.getValue();
       }

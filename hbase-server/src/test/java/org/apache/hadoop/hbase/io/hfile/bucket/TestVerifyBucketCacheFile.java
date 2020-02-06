@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -44,7 +44,7 @@ import org.junit.runners.Parameterized;
  * Basic test for check file's integrity before start BucketCache in fileIOEngine
  */
 @RunWith(Parameterized.class)
-@Category(MediumTests.class)
+@Category(SmallTests.class)
 public class TestVerifyBucketCacheFile {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =

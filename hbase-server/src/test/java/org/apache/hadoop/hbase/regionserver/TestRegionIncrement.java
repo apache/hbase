@@ -72,7 +72,7 @@ public class TestRegionIncrement {
 
   @Before
   public void setUp() throws Exception {
-    TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+    TEST_UTIL = new HBaseTestingUtility();
   }
 
   @After

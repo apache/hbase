@@ -407,6 +407,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
     <script src="/static/js/jquery.tablesorter.min.js" type="text/javascript"></script>
     <script src="/static/js/bootstrap.min.js" type="text/javascript"></script>
     <script src="/static/js/tab.js" type="text/javascript"></script>
+    <script src="/static/js/jqSpager.js" type="text/javascript"></script>
     <script>
     $(document).ready(function()
         {
@@ -483,6 +484,34 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
             });
 
             $("#userTables").tablesorter();
+
+            function showRitPages() {
+                if (!$("#rit_page_num")) {
+                  return;
+                }
+                var ritTotalNum = parseInt($("#rit_page_num").val());
+                if (!ritTotalNum || ritTotalNum < 1) {
+                  return;
+                }
+
+                 $("#rit_pagination").sPage({
+                      page:1,
+                      total:ritTotalNum,
+                      pageSize:5,
+                      noData: false,
+                      showPN:true,
+                      prevPage:"prev",
+                      nextPage:"next",
+                      fastForward: 5,
+                      backFun:function(page){
+                          $("div[id^='tab_rits']").removeClass('active');
+                          $("#tab_rits"+page).addClass('active');
+                      }
+                  });
+
+            }
+            showRitPages();
+
         }
     );
     </script>

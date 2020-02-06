@@ -5317,15 +5317,19 @@ public class TestFromClientSide {
         put.addColumn(FAMILY, QUALIFIER, data);
         table.put(put);
         assertTrue(Bytes.equals(table.get(new Get(ROW)).value(), data));
+
         // data was in memstore so don't expect any changes
         assertEquals(startBlockCount, cache.getBlockCount());
         assertEquals(startBlockHits, cache.getStats().getHitCount());
         assertEquals(startBlockMiss, cache.getStats().getMissCount());
+
         // flush the data
-        System.out.println("Flushing cache");
+        LOG.debug("Flushing cache");
         region.flush(true);
-        // expect one more block in cache, no change in hits/misses
-        long expectedBlockCount = startBlockCount + 1;
+
+        // expect two more blocks in cache - DATA and ROOT_INDEX
+        // , no change in hits/misses
+        long expectedBlockCount = startBlockCount + 2;
         long expectedBlockHits = startBlockHits;
         long expectedBlockMiss = startBlockMiss;
         assertEquals(expectedBlockCount, cache.getBlockCount());
@@ -5351,7 +5355,10 @@ public class TestFromClientSide {
         // flush, one new block
         System.out.println("Flushing cache");
         region.flush(true);
-        assertEquals(++expectedBlockCount, cache.getBlockCount());
+
+        // + 1 for Index Block, +1 for data block
+        expectedBlockCount += 2;
+        assertEquals(expectedBlockCount, cache.getBlockCount());
         assertEquals(expectedBlockHits, cache.getStats().getHitCount());
         assertEquals(expectedBlockMiss, cache.getStats().getMissCount());
         // compact, net minus two blocks, two hits, no misses
@@ -5362,7 +5369,8 @@ public class TestFromClientSide {
         store.closeAndArchiveCompactedFiles();
         waitForStoreFileCount(store, 1, 10000); // wait 10 seconds max
         assertEquals(1, store.getStorefilesCount());
-        expectedBlockCount -= 2; // evicted two blocks, cached none
+        // evicted two data blocks and two index blocks and compaction does not cache new blocks
+        expectedBlockCount = 0;
         assertEquals(expectedBlockCount, cache.getBlockCount());
         expectedBlockHits += 2;
         assertEquals(expectedBlockMiss, cache.getStats().getMissCount());

@@ -35,15 +35,16 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 import org.apache.hadoop.hbase.rest.client.Client;
 import org.apache.hadoop.hbase.rest.client.Cluster;
@@ -71,7 +72,6 @@ import org.junit.experimental.categories.Category;
 
 @Category({RestTests.class, MediumTests.class})
 public class TestScannersWithLabels {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestScannersWithLabels.class);
@@ -96,7 +96,8 @@ public class TestScannersWithLabels {
   private static Unmarshaller unmarshaller;
   private static Configuration conf;
 
-  private static int insertData(TableName tableName, String column, double prob) throws IOException {
+  private static int insertData(TableName tableName, String column, double prob)
+      throws IOException {
     byte[] k = new byte[3];
     byte[][] famAndQf = CellUtil.parseColumn(Bytes.toBytes(column));
 
@@ -153,10 +154,15 @@ public class TestScannersWithLabels {
     if (admin.tableExists(TABLE)) {
       return;
     }
-    HTableDescriptor htd = new HTableDescriptor(TABLE);
-    htd.addFamily(new HColumnDescriptor(CFA));
-    htd.addFamily(new HColumnDescriptor(CFB));
-    admin.createTable(htd);
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(TABLE);
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(CFA)).build();
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(CFB)).build();
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    admin.createTable(tableDescriptorBuilder.build());
     insertData(TABLE, COLUMN_1, 1.0);
     insertData(TABLE, COLUMN_2, 0.5);
   }
@@ -168,20 +174,18 @@ public class TestScannersWithLabels {
   }
 
   private static void createLabels() throws IOException, InterruptedException {
-    PrivilegedExceptionAction<VisibilityLabelsResponse> action = new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
-      @Override
-      public VisibilityLabelsResponse run() throws Exception {
-        String[] labels = { SECRET, CONFIDENTIAL, PRIVATE, PUBLIC, TOPSECRET };
-        try (Connection conn = ConnectionFactory.createConnection(conf)) {
-          VisibilityClient.addLabels(conn, labels);
-        } catch (Throwable t) {
-          throw new IOException(t);
-        }
-        return null;
+    PrivilegedExceptionAction<VisibilityLabelsResponse> action = () -> {
+      String[] labels = { SECRET, CONFIDENTIAL, PRIVATE, PUBLIC, TOPSECRET };
+      try (Connection conn = ConnectionFactory.createConnection(conf)) {
+        VisibilityClient.addLabels(conn, labels);
+      } catch (Throwable t) {
+        throw new IOException(t);
       }
+      return null;
     };
     SUPERUSER.runAs(action);
   }
+
   private static void setAuths() throws Exception {
     String[] labels = { SECRET, CONFIDENTIAL, PRIVATE, PUBLIC, TOPSECRET };
     try (Connection conn = ConnectionFactory.createConnection(conf)) {
@@ -190,6 +194,7 @@ public class TestScannersWithLabels {
       throw new IOException(t);
     }
   }
+
   @Test
   public void testSimpleScannerXMLWithLabelsThatReceivesNoData() throws IOException, JAXBException {
     final int BATCH_SIZE = 5;
@@ -242,5 +247,4 @@ public class TestScannersWithLabels {
         .getBody()));
     assertEquals(5, countCellSet(cellSet));
   }
-
 }

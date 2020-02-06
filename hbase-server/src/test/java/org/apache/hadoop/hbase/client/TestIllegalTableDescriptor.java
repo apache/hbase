@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -110,6 +111,11 @@ public class TestIllegalTableDescriptor {
     htd.setRegionSplitPolicyClassName("nonexisting.foo.class");
     checkTableIsIllegal(htd);
     htd.setRegionSplitPolicyClassName(null);
+    checkTableIsLegal(htd);
+
+    htd.setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY, "nonexisting.foo.class");
+    checkTableIsIllegal(htd);
+    htd.remove(HConstants.HBASE_REGION_SPLIT_POLICY_KEY);
     checkTableIsLegal(htd);
 
     hcd.setBlocksize(0);

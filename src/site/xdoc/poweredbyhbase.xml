@@ -91,6 +91,13 @@ under the License.
     features to quickly extract data based on their trading, risk and clearing
     activities from one single location.</dd>
 
+   <dt><a href="https://esgyn.com/">EsgynDB</a></dt>
+   <dd>EsgynDB, powered by Apache Trafodion&#153;, provides enterprise SQL on Hadoop.
+     It includes full ACID transactions, online transaction processing and online
+     analytic processing, along with enterprise features such as disaster recovery
+     and full backup/restore. Native tables are stored in HBase, but read and write
+     access to various other file formats such as Apache Parquet and ORC is also supported. </dd>
+
   <dt><a href="http://www.explorys.net">Explorys</a></dt>
   <dd>Explorys uses an HBase cluster containing over a billion anonymized clinical
     records, to enable subscribers to search and analyze patient populations,
@@ -313,6 +320,10 @@ under the License.
   <dd>Traackr uses HBase to store and serve online influencer data in real-time.
     We use MapReduce to frequently re-score our entire data set as we keep updating
     influencer metrics on a daily basis.</dd>
+
+   <dt><a href="https://trafodion.apache.org/">Trafodion</a></dt>
+   <dd>Apache Trafodion&#153; is a webscale SQL-on-Hadoop solution enabling transactional
+     or operational workloads. It uses HBase as its storage engine for SQL tables.</dd>
 
   <dt><a href="http://trendmicro.com/">Trend Micro</a></dt>
   <dd>Trend Micro uses HBase as a foundation for cloud scale storage for a variety

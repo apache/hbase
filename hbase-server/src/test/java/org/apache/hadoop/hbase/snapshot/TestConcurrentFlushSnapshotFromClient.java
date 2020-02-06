@@ -21,14 +21,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ ClientTests.class, LargeTests.class })
+@Category({ ClientTests.class, MediumTests.class })
 public class TestConcurrentFlushSnapshotFromClient extends TestFlushSnapshotFromClient {
   private static final Logger LOG = LoggerFactory.getLogger(TestFlushSnapshotFromClient.class);
 
