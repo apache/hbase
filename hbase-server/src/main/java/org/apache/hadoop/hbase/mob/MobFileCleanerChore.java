@@ -53,8 +53,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import edu.umd.cs.findbugs.annotations.SuppressWarnings;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -154,7 +152,7 @@ public class MobFileCleanerChore extends ScheduledChore {
    * @throws IOException exception
    */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "UC_USELESS_CONDITION",
-  justification = "Intentional")
+      justification = "Intentional")
   public void cleanupObsoleteMobFiles(Configuration conf, TableName table) throws IOException {
 
     long minAgeToArchive =
