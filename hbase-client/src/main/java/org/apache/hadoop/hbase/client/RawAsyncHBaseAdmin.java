@@ -98,6 +98,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -289,6 +290,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.AddR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.AddRSGroupResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.BalanceRSGroupRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.BalanceRSGroupResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetConfiguredNamespacesAndTablesInRSGroupRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetConfiguredNamespacesAndTablesInRSGroupResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoOfServerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoOfServerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoOfTableRequest;
@@ -297,6 +300,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.ListRSGroupInfosRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.ListRSGroupInfosResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.ListTablesInRSGroupRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.ListTablesInRSGroupResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.MoveServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.MoveServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupRequest;
@@ -335,6 +340,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
  */
 @InterfaceAudience.Private
 class RawAsyncHBaseAdmin implements AsyncAdmin {
+
   public static final String FLUSH_TABLE_PROCEDURE_SIGNATURE = "flush-table-proc";
 
   private static final Logger LOG = LoggerFactory.getLogger(AsyncHBaseAdmin.class);
@@ -3952,6 +3958,33 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
                   .map(r -> ProtobufUtil.toGroupInfo(r))
                   .collect(Collectors.toList())))
         .call();
+  }
+
+  @Override
+  public CompletableFuture<List<TableName>> listTablesInRSGroup(String groupName) {
+    return this.<List<TableName>> newMasterCaller()
+      .action((controller, stub) -> this
+        .<ListTablesInRSGroupRequest, ListTablesInRSGroupResponse, List<TableName>> call(controller,
+          stub, ListTablesInRSGroupRequest.newBuilder().setGroupName(groupName).build(),
+          (s, c, req, done) -> s.listTablesInRSGroup(c, req, done), resp -> resp.getTableNameList()
+            .stream().map(ProtobufUtil::toTableName).collect(Collectors.toList())))
+      .call();
+  }
+
+  @Override
+  public CompletableFuture<Pair<List<String>, List<TableName>>>
+    getConfiguredNamespacesAndTablesInRSGroup(String groupName) {
+    return this.<Pair<List<String>, List<TableName>>> newMasterCaller()
+      .action((controller, stub) -> this
+        .<GetConfiguredNamespacesAndTablesInRSGroupRequest,
+          GetConfiguredNamespacesAndTablesInRSGroupResponse,
+          Pair<List<String>, List<TableName>>> call(controller, stub,
+          GetConfiguredNamespacesAndTablesInRSGroupRequest.newBuilder().setGroupName(groupName)
+            .build(),
+            (s, c, req, done) -> s.getConfiguredNamespacesAndTablesInRSGroup(c, req, done),
+            resp -> Pair.newPair(resp.getNamespaceList(), resp.getTableNameList().stream()
+              .map(ProtobufUtil::toTableName).collect(Collectors.toList()))))
+      .call();
   }
 
   @Override

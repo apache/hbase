@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.thrift2.generated.TNamespaceDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TTableDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TTableName;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.thrift.TException;
 import org.apache.thrift.transport.TTransport;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -1212,5 +1213,16 @@ public class ThriftAdmin implements Admin {
   @Override
   public Future<Void> splitRegionAsync(byte[] regionName) throws IOException {
     return splitRegionAsync(regionName, null);
+  }
+
+  @Override
+  public List<TableName> listTablesInRSGroup(String groupName) throws IOException {
+    throw new NotImplementedException("setRSGroup not supported in ThriftAdmin");
+  }
+
+  @Override
+  public Pair<List<String>, List<TableName>>
+    getConfiguredNamespacesAndTablesInRSGroup(String groupName) throws IOException {
+    throw new NotImplementedException("setRSGroup not supported in ThriftAdmin");
   }
 }

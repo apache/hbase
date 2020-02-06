@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase.rsgroup;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.Waiter;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.junit.After;
 import org.junit.Before;
@@ -47,13 +46,11 @@ public class IntegrationTestRSGroup extends TestRSGroupsBase {
       TEST_UTIL = new IntegrationTestingUtility();
       TEST_UTIL.getConfiguration().set(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
         RSGroupBasedLoadBalancer.class.getName());
-      TEST_UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-        RSGroupAdminEndpoint.class.getName());
+      TEST_UTIL.getConfiguration().setBoolean(RSGroupInfoManager.RS_GROUP_ENABLED, true);
       ((IntegrationTestingUtility) TEST_UTIL).initializeCluster(NUM_SLAVES_BASE);
       // set shared configs
       ADMIN = TEST_UTIL.getAdmin();
       CLUSTER = TEST_UTIL.getHBaseClusterInterface();
-      RS_GROUP_ADMIN_CLIENT = new RSGroupAdminClient(TEST_UTIL.getConnection());
       LOG.info("Done initializing cluster");
       initialized = true;
       // cluster may not be clean

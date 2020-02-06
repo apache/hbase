@@ -31,6 +31,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseCluster;
@@ -76,7 +77,6 @@ public abstract class TestRSGroupsBase {
   protected static HMaster MASTER;
   protected boolean INIT = false;
   protected static CPMasterObserver OBSERVER;
-  protected static RSGroupAdminClient RS_GROUP_ADMIN_CLIENT;
 
   public final static long WAIT_TIMEOUT = 60000;
   public final static int NUM_SLAVES_BASE = 4; // number of slaves for the smallest cluster
@@ -92,14 +92,23 @@ public abstract class TestRSGroupsBase {
   }
 
   public static void setUpTestBeforeClass() throws Exception {
-    TEST_UTIL.getConfiguration().setFloat("hbase.master.balancer.stochastic.tableSkewCost", 6000);
-    TEST_UTIL.getConfiguration().setBoolean(RSGroupInfoManager.RS_GROUP_ENABLED, true);
-    TEST_UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-      RSGroupAdminEndpoint.class.getName() + "," + CPMasterObserver.class.getName());
-    TEST_UTIL.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART,
+    Configuration conf = TEST_UTIL.getConfiguration();
+    conf.setFloat("hbase.master.balancer.stochastic.tableSkewCost", 6000);
+    if (conf.get(RSGroupInfoManager.RS_GROUP_ENABLED) == null) {
+      conf.setBoolean(RSGroupInfoManager.RS_GROUP_ENABLED, true);
+    }
+    if (conf.get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY) != null) {
+      conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
+        conf.get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY) + "," +
+          CPMasterObserver.class.getName());
+    } else {
+      conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, CPMasterObserver.class.getName());
+    }
+
+    conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART,
       NUM_SLAVES_BASE - 1);
-    TEST_UTIL.getConfiguration().setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
-    TEST_UTIL.getConfiguration().setInt("hbase.rpc.timeout", 100000);
+    conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
+    conf.setInt("hbase.rpc.timeout", 100000);
 
     TEST_UTIL.startMiniCluster(NUM_SLAVES_BASE - 1);
     initialize();
@@ -121,7 +130,6 @@ public abstract class TestRSGroupsBase {
     ADMIN.balancerSwitch(false, true);
     MasterCoprocessorHost host = MASTER.getMasterCoprocessorHost();
     OBSERVER = (CPMasterObserver) host.findCoprocessor(CPMasterObserver.class.getName());
-    RS_GROUP_ADMIN_CLIENT = new RSGroupAdminClient(TEST_UTIL.getConnection());
   }
 
   public static void tearDownAfterClass() throws Exception {
@@ -319,6 +327,10 @@ public abstract class TestRSGroupsBase {
     boolean postGetRSGroupInfoOfServerCalled = false;
     boolean preSetRSGroupForTablesCalled = false;
     boolean postSetRSGroupForTablesCalled = false;
+    boolean preListTablesInRSGroupCalled = false;
+    boolean postListTablesInRSGroupCalled = false;
+    boolean preGetConfiguredNamespacesAndTablesInRSGroupCalled = false;
+    boolean postGetConfiguredNamespacesAndTablesInRSGroupCalled = false;
 
     public void resetFlags() {
       preBalanceRSGroupCalled = false;
@@ -345,6 +357,10 @@ public abstract class TestRSGroupsBase {
       postGetRSGroupInfoOfServerCalled = false;
       preSetRSGroupForTablesCalled = false;
       postSetRSGroupForTablesCalled = false;
+      preListTablesInRSGroupCalled = false;
+      postListTablesInRSGroupCalled = false;
+      preGetConfiguredNamespacesAndTablesInRSGroupCalled = false;
+      postGetConfiguredNamespacesAndTablesInRSGroupCalled = false;
     }
 
     @Override
@@ -483,6 +499,29 @@ public abstract class TestRSGroupsBase {
       final Address server) throws IOException {
       postGetRSGroupInfoOfServerCalled = true;
     }
-  }
 
+    @Override
+    public void preListTablesInRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      String groupName) throws IOException {
+      preListTablesInRSGroupCalled = true;
+    }
+
+    @Override
+    public void postListTablesInRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      String groupName) throws IOException {
+      postListTablesInRSGroupCalled = true;
+    }
+
+    @Override
+    public void preGetConfiguredNamespacesAndTablesInRSGroup(
+      ObserverContext<MasterCoprocessorEnvironment> ctx, String groupName) throws IOException {
+      preGetConfiguredNamespacesAndTablesInRSGroupCalled = true;
+    }
+
+    @Override
+    public void postGetConfiguredNamespacesAndTablesInRSGroup(
+      ObserverContext<MasterCoprocessorEnvironment> ctx, String groupName) throws IOException {
+      postGetConfiguredNamespacesAndTablesInRSGroupCalled = true;
+    }
+  }
 }
