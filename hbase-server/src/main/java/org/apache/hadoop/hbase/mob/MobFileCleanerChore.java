@@ -189,7 +189,7 @@ public class MobFileCleanerChore extends ScheduledChore {
           Path storePath = new Path(regionPath, family);
           boolean succeed = false;
           Set<String> regionMobs = new HashSet<String>();
-          
+
           while (!succeed) {
             if (!fs.exists(storePath)) {
               LOG.warn("Directory {} was deleted during cleaner procedure execution,"
@@ -253,7 +253,7 @@ public class MobFileCleanerChore extends ScheduledChore {
             }
             succeed = true;
           }
-          
+
           // Add MOB references for current region/family
           allActiveMobFileName.addAll(regionMobs);
         } // END column families
