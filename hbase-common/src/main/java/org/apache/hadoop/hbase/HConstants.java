@@ -181,8 +181,6 @@ public final class HConstants {
   /** Configuration key for the list of master host:ports **/
   public static final String MASTER_ADDRS_KEY = "hbase.masters";
 
-  public static final String MASTER_ADDRS_DEFAULT =  "localhost:" + DEFAULT_MASTER_PORT;
-
   /** Full class name of the Zookeeper based connection registry implementation */
   public static final String ZK_CONNECTION_REGISTRY_CLASS =
       "org.apache.hadoop.hbase.client.ZKConnectionRegistry";
