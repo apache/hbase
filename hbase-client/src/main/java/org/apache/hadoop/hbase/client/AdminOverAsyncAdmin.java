@@ -66,6 +66,7 @@ import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1005,6 +1006,17 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
+  public List<TableName> listTablesInRSGroup(String groupName) throws IOException {
+    return get(admin.listTablesInRSGroup(groupName));
+  }
+
+  @Override
+  public Pair<List<String>, List<TableName>>
+    getConfiguredNamespacesAndTablesInRSGroup(String groupName) throws IOException {
+    return get(admin.getConfiguredNamespacesAndTablesInRSGroup(groupName));
+  }
+
+  @Override
   public RSGroupInfo getRSGroup(Address hostPort) throws IOException {
     return get(admin.getRSGroup(hostPort));
   }
@@ -1023,5 +1035,4 @@ class AdminOverAsyncAdmin implements Admin {
   public void setRSGroup(Set<TableName> tables, String groupName) throws IOException {
     get(admin.setRSGroup(tables, groupName));
   }
-
 }
