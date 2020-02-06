@@ -81,13 +81,14 @@ function personality_globals
 
   # Override the maven options
   MAVEN_OPTS="${MAVEN_OPTS:-"-Xms4G -Xmx4G"}"
+
   # Pass maven a -T argument. Should make it run faster. Pass conservative value.
   # Default is one thread. 0.5C on an apache box of 24 cores and 2 executors should
   # make for 6 threads? Lets see. Setting this here for yetus to pick up. See
   # https://yetus.apache.org/documentation/0.11.1/precommit-advanced/#global-definitions
   # See below for more on -T:
   # https://cwiki.apache.org/confluence/display/MAVEN/Parallel+builds+in+Maven+3
-  export MAVEN_ARGS="-T0.5C ${MAVEN_ARGS}"
+  MAVEN_ARGS=("-T0.5C" "${MAVEN_ARGS[@]}")
 
   # Yetus 0.7.0 enforces limits. Default proclimit is 1000.
   # Up it. See HBASE-19902 for how we arrived at this number.
