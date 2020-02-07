@@ -74,6 +74,8 @@ public class TestAsyncTableScanException {
 
   private static volatile boolean DO_NOT_RETRY;
 
+  private static final int ROW_COUNT = 100;
+
   public static final class ErrorCP implements RegionObserver, RegionCoprocessor {
 
     @Override
@@ -99,13 +101,13 @@ public class TestAsyncTableScanException {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    UTIL.startMiniCluster(3);
+    UTIL.startMiniCluster(1);
     UTIL.getAdmin()
       .createTable(TableDescriptorBuilder.newBuilder(TABLE_NAME)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
         .setCoprocessor(ErrorCP.class.getName()).build());
     try (Table table = UTIL.getConnection().getTable(TABLE_NAME)) {
-      for (int i = 0; i < 100; i++) {
+      for (int i = 0; i < ROW_COUNT; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(FAMILY, QUAL, Bytes.toBytes(i)));
       }
     }
@@ -151,7 +153,7 @@ public class TestAsyncTableScanException {
 
   private void count() throws IOException {
     try (ResultScanner scanner = CONN.getTable(TABLE_NAME).getScanner(new Scan().setCaching(1))) {
-      for (int i = 0; i < 100; i++) {
+      for (int i = 0; i < ROW_COUNT; i++) {
         Result result = scanner.next();
         assertArrayEquals(Bytes.toBytes(i), result.getRow());
         assertArrayEquals(Bytes.toBytes(i), result.getValue(FAMILY, QUAL));

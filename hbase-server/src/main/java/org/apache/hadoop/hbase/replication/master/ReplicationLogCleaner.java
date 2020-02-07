@@ -84,8 +84,8 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
         }
         String wal = file.getPath().getName();
         boolean logInReplicationQueue = wals.contains(wal);
-          if (logInReplicationQueue) {
-            LOG.debug("Found up in ZooKeeper, NOT deleting={}", wal);
+        if (logInReplicationQueue) {
+          LOG.debug("Found up in ZooKeeper, NOT deleting={}", wal);
         }
         return !logInReplicationQueue && (file.getModificationTime() < readZKTimestamp);
       }
