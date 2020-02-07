@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,10 +18,11 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
+import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -33,23 +34,34 @@ import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
-@Category({MasterTests.class, LargeTests.class})
+@Category({MasterTests.class, MediumTests.class})
 public class TestMasterShutdown {
+  private static final Logger LOG = LoggerFactory.getLogger(TestMasterShutdown.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMasterShutdown.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestMasterShutdown.class);
+  private HBaseTestingUtility htu;
+
+  @Before
+  public void shutdownCluster() throws IOException {
+    if (htu != null) {
+      LOG.warn("found non-null TestingUtility -- previous test did not terminate cleanly.");
+      htu.shutdownMiniCluster();
+    }
+  }
 
   /**
    * Simple test of shutdown.
@@ -66,43 +78,45 @@ public class TestMasterShutdown {
     Configuration conf = HBaseConfiguration.create();
 
     // Start the cluster
-    HBaseTestingUtility htu = new HBaseTestingUtility(conf);
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
-        .numMasters(NUM_MASTERS).numRegionServers(NUM_RS).numDataNodes(NUM_RS).build();
-    htu.startMiniCluster(option);
-    MiniHBaseCluster cluster = htu.getHBaseCluster();
+    try {
+      htu = new HBaseTestingUtility(conf);
+      StartMiniClusterOption option = StartMiniClusterOption.builder()
+        .numMasters(NUM_MASTERS)
+        .numRegionServers(NUM_RS)
+        .numDataNodes(NUM_RS)
+        .build();
+      final MiniHBaseCluster cluster = htu.startMiniCluster(option);
 
-    // get all the master threads
-    List<MasterThread> masterThreads = cluster.getMasterThreads();
+      // wait for all master thread to spawn and start their run loop.
+      final long thirtySeconds = TimeUnit.SECONDS.toMillis(30);
+      final long oneSecond = TimeUnit.SECONDS.toMillis(1);
+      assertNotEquals(-1, htu.waitFor(thirtySeconds, oneSecond, () -> {
+        final List<MasterThread> masterThreads = cluster.getMasterThreads();
+        return CollectionUtils.isNotEmpty(masterThreads)
+          && masterThreads.size() >= 3
+          && masterThreads.stream().allMatch(Thread::isAlive);
+      }));
 
-    // wait for each to come online
-    for (MasterThread mt : masterThreads) {
-      assertTrue(mt.isAlive());
-    }
+      // find the active master
+      final HMaster active = cluster.getMaster();
+      assertNotNull(active);
 
-    // find the active master
-    HMaster active = null;
-    for (int i = 0; i < masterThreads.size(); i++) {
-      if (masterThreads.get(i).getMaster().isActiveMaster()) {
-        active = masterThreads.get(i).getMaster();
-        break;
+      // make sure the other two are backup masters
+      ClusterMetrics status = active.getClusterMetrics();
+      assertEquals(2, status.getBackupMasterNames().size());
+
+      // tell the active master to shutdown the cluster
+      active.shutdown();
+      assertNotEquals(-1, htu.waitFor(thirtySeconds, oneSecond,
+        () -> CollectionUtils.isEmpty(cluster.getLiveMasterThreads())));
+      assertNotEquals(-1, htu.waitFor(thirtySeconds, oneSecond,
+        () -> CollectionUtils.isEmpty(cluster.getLiveRegionServerThreads())));
+    } finally {
+      if (htu != null) {
+        htu.shutdownMiniCluster();
+        htu = null;
       }
     }
-    assertNotNull(active);
-    // make sure the other two are backup masters
-    ClusterMetrics status = active.getClusterMetrics();
-    assertEquals(2, status.getBackupMasterNames().size());
-
-    // tell the active master to shutdown the cluster
-    active.shutdown();
-
-    for (int i = NUM_MASTERS - 1; i >= 0 ;--i) {
-      cluster.waitOnMaster(i);
-    }
-    // make sure all the masters properly shutdown
-    assertEquals(0, masterThreads.size());
-
-    htu.shutdownMiniCluster();
   }
 
   private Connection createConnection(HBaseTestingUtility util) throws InterruptedException {
@@ -128,41 +142,50 @@ public class TestMasterShutdown {
     conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
 
     // Start the cluster
-    final HBaseTestingUtility util = new HBaseTestingUtility(conf);
-    util.startMiniDFSCluster(3);
-    util.startMiniZKCluster();
-    util.createRootDir();
-    final LocalHBaseCluster cluster =
-        new LocalHBaseCluster(conf, NUM_MASTERS, NUM_RS, HMaster.class,
-            MiniHBaseCluster.MiniHBaseClusterRegionServer.class);
-    final int MASTER_INDEX = 0;
-    final MasterThread master = cluster.getMasters().get(MASTER_INDEX);
-    master.start();
-    LOG.info("Called master start on " + master.getName());
-    Thread shutdownThread = new Thread("Shutdown-Thread") {
-      @Override
-      public void run() {
-        LOG.info("Before call to shutdown master");
-        try (Connection connection = createConnection(util); Admin admin = connection.getAdmin()) {
-          admin.shutdown();
-        } catch (Exception e) {
-          LOG.info("Error while calling Admin.shutdown, which is expected: " + e.getMessage());
+    LocalHBaseCluster cluster = null;
+    try {
+      htu = new HBaseTestingUtility(conf);
+      htu.startMiniDFSCluster(3);
+      htu.startMiniZKCluster();
+      htu.createRootDir();
+      cluster = new LocalHBaseCluster(conf, NUM_MASTERS, NUM_RS, HMaster.class,
+        MiniHBaseCluster.MiniHBaseClusterRegionServer.class);
+      final int MASTER_INDEX = 0;
+      final MasterThread master = cluster.getMasters().get(MASTER_INDEX);
+      master.start();
+      LOG.info("Called master start on " + master.getName());
+      final LocalHBaseCluster finalCluster = cluster;
+      Thread shutdownThread = new Thread("Shutdown-Thread") {
+        @Override
+        public void run() {
+          LOG.info("Before call to shutdown master");
+          try (Connection connection = createConnection(htu); Admin admin = connection.getAdmin()) {
+            admin.shutdown();
+          } catch (Exception e) {
+            LOG.info("Error while calling Admin.shutdown, which is expected: " + e.getMessage());
+          }
+          LOG.info("After call to shutdown master");
+          finalCluster.waitOnMaster(MASTER_INDEX);
         }
-        LOG.info("After call to shutdown master");
-        cluster.waitOnMaster(MASTER_INDEX);
+      };
+      shutdownThread.start();
+      LOG.info("Called master join on " + master.getName());
+      master.join();
+      shutdownThread.join();
+
+      List<MasterThread> masterThreads = cluster.getMasters();
+      // make sure all the masters properly shutdown
+      assertEquals(0, masterThreads.size());
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
       }
-    };
-    shutdownThread.start();
-    LOG.info("Called master join on " + master.getName());
-    master.join();
-    shutdownThread.join();
-
-    List<MasterThread> masterThreads = cluster.getMasters();
-    // make sure all the masters properly shutdown
-    assertEquals(0, masterThreads.size());
-
-    util.shutdownMiniZKCluster();
-    util.shutdownMiniDFSCluster();
-    util.cleanupTestDir();
+      if (htu != null) {
+        htu.shutdownMiniZKCluster();
+        htu.shutdownMiniDFSCluster();
+        htu.cleanupTestDir();
+        htu = null;
+      }
+    }
   }
 }
