@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.util;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -29,8 +28,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
-
-import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.slf4j.Logger;
@@ -46,7 +44,6 @@ import org.slf4j.LoggerFactory;
  * Based on paper:
  * http://www.vldb.org/conf/2002/S10P03.pdf
  */
-
 @InterfaceAudience.Private
 public class LossyCounting<T> {
   private static final Logger LOG = LoggerFactory.getLogger(LossyCounting.class);
@@ -56,14 +53,18 @@ public class LossyCounting<T> {
   private Map<T, Integer> data;
   private long totalDataCount;
   private final String name;
-  private LossyCountingListener listener;
-  private static AtomicReference<Future> fut = new AtomicReference<>(null);
+  private LossyCountingListener<T> listener;
+  private static AtomicReference<Future<?>> fut = new AtomicReference<>(null);
 
   public interface LossyCountingListener<T> {
     void sweep(T key);
   }
 
-  public LossyCounting(double errorRate, String name, LossyCountingListener listener) {
+  LossyCounting(String name, double errorRate) {
+    this(name, errorRate, null);
+  }
+
+  public LossyCounting(String name, double errorRate, LossyCountingListener<T> listener) {
     if (errorRate < 0.0 || errorRate > 1.0) {
       throw new IllegalArgumentException(" Lossy Counting error rate should be within range [0,1]");
     }
@@ -78,9 +79,12 @@ public class LossyCounting<T> {
       new ThreadFactoryBuilder().setDaemon(true).setNameFormat("lossy-count-%d").build());
   }
 
-  public LossyCounting(String name, LossyCountingListener listener) {
-    this(HBaseConfiguration.create().getDouble(HConstants.DEFAULT_LOSSY_COUNTING_ERROR_RATE, 0.02),
-      name, listener);
+  LossyCounting(String name, Configuration conf) {
+    this(name, conf, null);
+  }
+
+  public LossyCounting(String name, Configuration conf, LossyCountingListener<T> listener) {
+    this(name, conf.getDouble(HConstants.DEFAULT_LOSSY_COUNTING_ERROR_RATE, 0.02), listener);
   }
 
   private void addByOne(T key) {
@@ -101,7 +105,7 @@ public class LossyCounting<T> {
     if(totalDataCount % bucketSize == 0) {
       //sweep the entries at bucket boundaries
       //run Sweep
-      Future future = fut.get();
+      Future<?> future = fut.get();
       if (future != null && !future.isDone()){
         return;
       }
@@ -166,7 +170,7 @@ public class LossyCounting<T> {
     }
   }
 
-  @VisibleForTesting public Future getSweepFuture() {
+  @VisibleForTesting public Future<?> getSweepFuture() {
     return fut.get();
   }
 }
