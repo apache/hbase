@@ -342,8 +342,12 @@ public class TestReplicationBase {
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    htable2.close();
-    htable1.close();
+    if (htable2 != null) {
+      htable2.close();
+    }
+    if (htable1 != null) {
+      htable1.close();
+    }
     UTIL2.shutdownMiniCluster();
     UTIL1.shutdownMiniCluster();
   }
