@@ -339,6 +339,10 @@ public class ReplicationSource implements ReplicationSourceInterface {
       final PriorityBlockingQueue<Path> queue) {
 
     if (workerThreads.containsKey(walGroupId)) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("{} Someone has beat us to start a worker thread for wal group {}", logPeerId(),
+          walGroupId);
+      }
       return;
     }
 
