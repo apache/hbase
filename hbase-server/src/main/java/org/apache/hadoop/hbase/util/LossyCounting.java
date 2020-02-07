@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,13 +19,13 @@
 
 package org.apache.hadoop.hbase.util;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * LossyCounting utility, bounded data structure that maintains approximate high frequency
@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  * Based on paper:
  * http://www.vldb.org/conf/2002/S10P03.pdf
  */
-
 @InterfaceAudience.Private
 public class LossyCounting {
   private long bucketSize;
@@ -48,6 +47,10 @@ public class LossyCounting {
 
   public interface LossyCountingListener {
     void sweep(String key);
+  }
+
+  LossyCounting(double errorRate) {
+    this(errorRate, null);
   }
 
   public LossyCounting(double errorRate, LossyCountingListener listener) {
@@ -62,9 +65,12 @@ public class LossyCounting {
     calculateCurrentTerm();
   }
 
-  public LossyCounting(LossyCountingListener listener) {
-    this(HBaseConfiguration.create().getDouble(HConstants.DEFAULT_LOSSY_COUNTING_ERROR_RATE, 0.02),
-        listener);
+  LossyCounting(Configuration conf) {
+    this(conf, null);
+  }
+
+  public LossyCounting(Configuration conf, LossyCountingListener listener) {
+    this(conf.getDouble(HConstants.DEFAULT_LOSSY_COUNTING_ERROR_RATE, 0.02), listener);
   }
 
   private void addByOne(String key) {
@@ -82,7 +88,7 @@ public class LossyCounting {
 
   public void add(String key) {
     addByOne(key);
-    if(totalDataCount % bucketSize == 0) {
+    if (totalDataCount % bucketSize == 0) {
       //sweep the entries at bucket boundaries
       sweep();
     }
