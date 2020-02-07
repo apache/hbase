@@ -350,8 +350,8 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
       } catch (InterruptedException ie) {
         iox = new IOException(ie);
       } catch (ExecutionException ee) {
-        // cause must be an IOException
-        iox = (IOException) ee.getCause();
+        iox = ee.getCause() instanceof IOException?
+          (IOException)ee.getCause(): new IOException(ee.getCause());
       }
     }
     if (iox != null) {
