@@ -271,7 +271,7 @@ public class TestCanaryTool {
     verify(mockAppender, times(1)).doAppend(argThat(new ArgumentMatcher<LoggingEvent>() {
       @Override
       public boolean matches(LoggingEvent argument) {
-        return ((LoggingEvent) argument).getRenderedMessage().contains("exceeded the configured read timeout.");
+        return argument.getRenderedMessage().contains("exceeded the configured read timeout.");
       }
     }));
     verify(mockAppender, times(2)).doAppend(argThat(new ArgumentMatcher<LoggingEvent>() {

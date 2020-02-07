@@ -267,9 +267,12 @@ public class TestLogsCleaner {
   public void testZooKeeperNormal() throws Exception {
     ReplicationLogCleaner cleaner = new ReplicationLogCleaner();
 
+    // Subtract 1000 from current time so modtime is for sure older
+    // than 'now'.
+    long modTime = System.currentTimeMillis() - 1000;
     List<FileStatus> dummyFiles = Arrays.asList(
-        new FileStatus(100, false, 3, 100, System.currentTimeMillis(), new Path("log1")),
-        new FileStatus(100, false, 3, 100, System.currentTimeMillis(), new Path("log2"))
+        new FileStatus(100, false, 3, 100, modTime, new Path("log1")),
+        new FileStatus(100, false, 3, 100, modTime, new Path("log2"))
     );
 
     ZKWatcher zkw = new ZKWatcher(conf, "testZooKeeperAbort-normal", null);

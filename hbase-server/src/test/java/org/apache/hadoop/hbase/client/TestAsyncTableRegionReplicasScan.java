@@ -66,7 +66,7 @@ public class TestAsyncTableRegionReplicasScan extends AbstractTestAsyncTableRegi
       scan.setReplicaId(replicaId);
     }
     try (ResultScanner scanner = table.getScanner(scan)) {
-      for (int i = 0; i < 1000; i++) {
+      for (int i = 0; i < ROW_COUNT; i++) {
         Result result = scanner.next();
         assertNotNull(result);
         assertArrayEquals(getValue(i), result.getValue(FAMILY, QUALIFIER));
