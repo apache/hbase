@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.procedure2;
 
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayDeque;
@@ -732,7 +733,10 @@ public class ProcedureExecutor<TEnvironment> {
    * Add a chore procedure to the executor
    * @param chore the chore to add
    */
-  public void addChore(ProcedureInMemoryChore<TEnvironment> chore) {
+  public void addChore(@Nullable ProcedureInMemoryChore<TEnvironment> chore) {
+    if (chore == null) {
+      return;
+    }
     chore.setState(ProcedureState.WAITING_TIMEOUT);
     timeoutExecutor.add(chore);
   }
@@ -742,7 +746,10 @@ public class ProcedureExecutor<TEnvironment> {
    * @param chore the chore to remove
    * @return whether the chore is removed, or it will be removed later
    */
-  public boolean removeChore(ProcedureInMemoryChore<TEnvironment> chore) {
+  public boolean removeChore(@Nullable ProcedureInMemoryChore<TEnvironment> chore) {
+    if (chore == null) {
+      return true;
+    }
     chore.setState(ProcedureState.SUCCESS);
     return timeoutExecutor.remove(chore);
   }
