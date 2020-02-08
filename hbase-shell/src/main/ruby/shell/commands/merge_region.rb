@@ -33,18 +33,29 @@ the encoded region name portion is 527db22f95c8a9e0116f0cc13c680396
 
 Examples:
 
-  hbase> merge_region ['FULL_REGIONNAME', 'FULL_REGIONNAME']
-  hbase> merge_region ['FULL_REGIONNAME', 'FULL_REGIONNAME', 'FULL_REGIONNAME', ...]
-  hbase> merge_region ['FULL_REGIONNAME', 'FULL_REGIONNAME', 'FULL_REGIONNAME', ...], true
+  hbase> merge_region 'FULL_REGIONNAME', 'FULL_REGIONNAME'
+  hbase> merge_region 'FULL_REGIONNAME', 'FULL_REGIONNAME', 'FULL_REGIONNAME', ...
+  hbase> merge_region 'FULL_REGIONNAME', 'FULL_REGIONNAME', 'FULL_REGIONNAME', ..., true
 
-  hbase> merge_region ['ENCODED_REGIONNAME', 'ENCODED_REGIONNAME']
-  hbase> merge_region ['ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', ...]
-  hbase> merge_region ['ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', ...], true
+  hbase> merge_region 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME'
+  hbase> merge_region 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', ...
+  hbase> merge_region 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', ..., true
 EOF
       end
 
-      def command(regions = [], force = 'false')
-        admin.merge_region(regions, force)
+      def command(*args)
+        args = args.flatten.compact
+        args_len = args.length
+        raise(ArgumentError, 'Must pass atleast 2 regions to merge') unless args_len > 1
+        force = false
+        if(args_len > 2)
+          last = args[args_len-1]
+          if [true, false].include? last
+            force = last
+            args = args[0...-1]
+          end
+        end
+        admin.merge_region(args, force)
       end
     end
   end

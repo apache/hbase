@@ -909,6 +909,7 @@ public interface Admin extends Abortable, Closeable {
    * @deprecated since 2.3.0 and will be removed in 4.0.0. Multi-region merge feature is now
    *             supported. Use {@link #mergeRegionsAsync(byte[][], boolean)} instead.
    */
+  @Deprecated
   default Future<Void> mergeRegionsAsync(byte[] nameOfRegionA, byte[] nameOfRegionB,
       boolean forcible) throws IOException {
     byte[][] nameofRegionsToMerge = new byte[2][];

@@ -536,10 +536,19 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Merge multiple regions
-    def merge_region(regions = [], force)
+    def merge_region(regions, force)
+      unless regions.is_a?(Array)
+        raise(ArgumentError, "Type of #{regions.inspect} is #{regions.class}, but expected Array")
+      end
       region_array = Java::byte[][regions.length].new
       i = 0
       while i < regions.length
+        unless regions[i].is_a?(String)
+          raise(
+              ArgumentError,
+              "Type of #{regions[i].inspect} is #{regions[i].class}, but expected String"
+          )
+        end
         region_array[i] = regions[i].to_java_bytes
         i += 1
       end

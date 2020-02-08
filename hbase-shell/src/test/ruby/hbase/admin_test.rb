@@ -612,28 +612,29 @@ module Hbase
       region5 = r5.getRegion.getRegionNameAsString
       region6 = r6.getRegion.getRegionNameAsString
       # only 1 region
-      begin
-        command(:merge_region, ['a'], true)
-        assert(false, "should have failed")
-      rescue java.lang.IllegalArgumentException => e
-        assert(true, "single region can't be merged")
+      assert_raise(ArgumentError) do
+        command(:merge_region, 'a')
+      end
+      # only 1 region with force=true
+      assert_raise(ArgumentError) do
+        command(:merge_region, 'a', true)
       end
       # non-existing region
       assert_raise(RuntimeError) do
-        command(:merge_region, ['a','b'])
+        command(:merge_region, 'a','b')
       end
       # duplicate regions
       assert_raise(RuntimeError) do
-        command(:merge_region, [region1,region1,region1])
+        command(:merge_region, region1,region1,region1)
       end
       # 3 non-adjacent regions without forcible=true
       assert_raise(RuntimeError) do
-        command(:merge_region, [region1,region2,region4])
+        command(:merge_region, region1,region2,region4)
       end
       # 2 adjacent regions
-      command(:merge_region, [region1,region2])
+      command(:merge_region, region1,region2)
       # 3 non-adjacent regions with forcible=true
-      command(:merge_region, [region3,region5,region6], true)
+      command(:merge_region, region3,region5,region6, true)
     end
   end
 

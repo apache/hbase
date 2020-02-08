@@ -513,8 +513,10 @@ public interface AsyncAdmin {
    * @param nameOfRegionB encoded or full name of region b
    * @param forcible true if do a compulsory merge, otherwise we will only merge two adjacent
    *          regions
-   * @deprecated since 2.3.0 and will be removed in 4.0.0. Use {@link #mergeRegions(List, boolean)} instead.
+   * @deprecated since 2.3.0 and will be removed in 4.0.0.Use {@link #mergeRegions(List, boolean)}
+   *             instead.
    */
+  @Deprecated
   default CompletableFuture<Void> mergeRegions(byte[] nameOfRegionA, byte[] nameOfRegionB,
       boolean forcible) {
     return mergeRegions(Arrays.asList(nameOfRegionA, nameOfRegionB), forcible);
