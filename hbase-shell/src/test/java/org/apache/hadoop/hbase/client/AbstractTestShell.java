@@ -24,8 +24,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.rsgroup.RSGroupAdminEndpoint;
-import org.apache.hadoop.hbase.rsgroup.RSGroupBasedLoadBalancer;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
 import org.apache.hadoop.hbase.security.visibility.VisibilityTestUtil;
 import org.jruby.embed.ScriptingContainer;
@@ -70,13 +68,6 @@ public abstract class AbstractTestShell {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     setUpConfig();
-
-    // enable rs group
-    TEST_UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-      TEST_UTIL.getConfiguration().get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY) + "," +
-        RSGroupAdminEndpoint.class.getName());
-    TEST_UTIL.getConfiguration().set(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
-      RSGroupBasedLoadBalancer.class.getName());
 
     // Start mini cluster
     TEST_UTIL.startMiniCluster(1);
