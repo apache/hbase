@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -51,7 +51,7 @@ public class TestExportSnapshotNoCluster {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestExportSnapshotNoCluster.class);
 
-  private final HBaseCommonTestingUtility testUtil = new HBaseCommonTestingUtility();
+  private HBaseCommonTestingUtility testUtil;
   private FileSystem fs;
   private Path testDir;
 
@@ -67,6 +67,7 @@ public class TestExportSnapshotNoCluster {
 
   @Before
   public void setUpBefore() throws Exception {
+    this.testUtil = new HBaseCommonTestingUtility();
     // Make sure testDir is on LocalFileSystem
     testDir = testUtil.getDataTestDir().makeQualified(URI.create("file:///"), new Path("/"));
     fs = testDir.getFileSystem(testUtil.getConfiguration());
