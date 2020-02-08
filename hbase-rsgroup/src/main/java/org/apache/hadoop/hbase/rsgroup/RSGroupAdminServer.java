@@ -294,7 +294,8 @@ public class RSGroupAdminServer implements RSGroupAdmin {
         }
 
         if (!hasRegionsToMove) {
-          LOG.info("No more regions to move from {} to RSGroup", getOwnerName.apply(owner));
+          LOG.info("No more regions to move from {} to RSGroup {}", getOwnerName.apply(owner),
+            targetGroupName);
           iter.remove();
         }
       }
