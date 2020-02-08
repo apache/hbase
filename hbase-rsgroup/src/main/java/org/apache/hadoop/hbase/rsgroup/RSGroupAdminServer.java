@@ -282,7 +282,8 @@ public class RSGroupAdminServer implements RSGroupAdmin {
         }
 
         if (!hasRegionsToMove) {
-          LOG.info("Table {} has no more regions to move for RSGroup", table.getNameAsString());
+          LOG.info("Table {} has no more regions to move for RSGroup {}", table.getNameAsString(),
+            targetGroupName);
           iter.remove();
         }
       }
