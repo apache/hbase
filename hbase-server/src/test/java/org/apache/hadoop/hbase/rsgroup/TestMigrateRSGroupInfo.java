@@ -72,7 +72,7 @@ public class TestMigrateRSGroupInfo extends TestRSGroupsBase {
     TEST_UTIL.getConfiguration().setClass(HConstants.MASTER_IMPL, HMasterForTest.class,
       HMaster.class);
     // confirm that we could enable rs group by setting the old CP.
-    TEST_UTIL.getConfiguration().setBoolean(RSGroupInfoManager.RS_GROUP_ENABLED, false);
+    TEST_UTIL.getConfiguration().setBoolean(RSGroupUtil.RS_GROUP_ENABLED, false);
     TEST_UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
       RSGroupAdminEndpoint.class.getName());
     setUpTestBeforeClass();

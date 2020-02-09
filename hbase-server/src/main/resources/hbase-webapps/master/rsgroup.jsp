@@ -27,7 +27,6 @@
   import="java.util.stream.Stream"
   import="java.util.stream.Collectors"
   import="org.apache.hadoop.hbase.HTableDescriptor"
-  import="org.apache.hadoop.hbase.RSGroupTableAccessor"
   import="org.apache.hadoop.hbase.ServerName"
   import="org.apache.hadoop.hbase.TableName"
   import="org.apache.hadoop.hbase.client.Admin"
@@ -38,6 +37,7 @@
   import="org.apache.hadoop.hbase.master.RegionState"
   import="org.apache.hadoop.hbase.net.Address"
   import="org.apache.hadoop.hbase.rsgroup.RSGroupInfo"
+  import="org.apache.hadoop.hbase.rsgroup.RSGroupUtil"
   import="org.apache.hadoop.hbase.util.Bytes"
   import="org.apache.hadoop.hbase.util.VersionInfo"
   import="org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix"%>
@@ -57,7 +57,7 @@
   RSGroupInfo rsGroupInfo = null;
   final String ZEROKB = "0 KB";
   final String ZEROMB = "0 MB";
-  if (!RSGroupTableAccessor.isRSGroupsEnabled(master.getConnection())) {
+  if (!RSGroupUtil.isRSGroupEnabled(master.getConfiguration())) {
 %>
   <div class="row inner_header">
     <div class="page-header">
@@ -67,8 +67,8 @@
   <jsp:include page="redirect.jsp" />
 <%
   } else if (rsGroupName == null || rsGroupName.isEmpty() ||
-      (rsGroupInfo = RSGroupTableAccessor.getRSGroupInfo(
-          master.getConnection(), Bytes.toBytes(rsGroupName))) == null) {
+      (rsGroupInfo = master.getRSGroupInfoManager().getRSGroup(
+          rsGroupName)) == null) {
 %>
   <div class="row inner_header">
     <div class="page-header">
@@ -81,7 +81,7 @@
     List<Address> rsGroupServers = new ArrayList<>();
     List<TableName> rsGroupTables = new ArrayList<>();
     rsGroupServers.addAll(rsGroupInfo.getServers());
-    rsGroupTables.addAll(rsGroupInfo.getTables());
+    rsGroupTables.addAll(RSGroupUtil.listTablesInRSGroup(master, rsGroupInfo.getName()));
     Collections.sort(rsGroupServers);
     rsGroupTables.sort((o1, o2) -> {
       int compare = Bytes.compareTo(o1.getNamespace(), o2.getNamespace());

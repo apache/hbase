@@ -94,8 +94,8 @@ public abstract class TestRSGroupsBase {
   public static void setUpTestBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setFloat("hbase.master.balancer.stochastic.tableSkewCost", 6000);
-    if (conf.get(RSGroupInfoManager.RS_GROUP_ENABLED) == null) {
-      conf.setBoolean(RSGroupInfoManager.RS_GROUP_ENABLED, true);
+    if (conf.get(RSGroupUtil.RS_GROUP_ENABLED) == null) {
+      RSGroupUtil.enableRSGroup(conf);
     }
     if (conf.get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY) != null) {
       conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,

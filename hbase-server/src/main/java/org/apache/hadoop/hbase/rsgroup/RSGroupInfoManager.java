@@ -32,8 +32,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public interface RSGroupInfoManager {
 
-  public static final String RS_GROUP_ENABLED = "hbase.balancer.rsgroup.enabled";
-
   void start();
 
   /**
@@ -84,7 +82,7 @@ public interface RSGroupInfoManager {
   RSGroupInfo getRSGroupForTable(TableName tableName) throws IOException;
 
   static RSGroupInfoManager create(MasterServices master) throws IOException {
-    if (master.getConfiguration().getBoolean(RS_GROUP_ENABLED, false)) {
+    if (RSGroupUtil.isRSGroupEnabled(master.getConfiguration())) {
       return RSGroupInfoManagerImpl.getInstance(master);
     } else {
       return new DisabledRSGroupInfoManager(master.getServerManager());

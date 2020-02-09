@@ -11,9 +11,12 @@
 package org.apache.hadoop.hbase.rsgroup;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -31,7 +34,31 @@ public final class RSGroupUtil {
 
   private static final Logger LOG = LoggerFactory.getLogger(RSGroupUtil.class);
 
+  public static final String RS_GROUP_ENABLED = "hbase.balancer.rsgroup.enabled";
+
   private RSGroupUtil() {
+  }
+
+  public static boolean isRSGroupEnabled(Configuration conf) {
+    return conf.getBoolean(RS_GROUP_ENABLED, false);
+  }
+
+  public static void enableRSGroup(Configuration conf) {
+    conf.setBoolean(RS_GROUP_ENABLED, true);
+  }
+
+  public static List<TableName> listTablesInRSGroup(MasterServices master, String groupName)
+    throws IOException {
+    List<TableName> tables = new ArrayList<>();
+    boolean isDefaultGroup = RSGroupInfo.DEFAULT_GROUP.equals(groupName);
+    for (TableDescriptor td : master.getTableDescriptors().getAll().values()) {
+      // no config means in default group
+      if (RSGroupUtil.getRSGroupInfo(master, master.getRSGroupInfoManager(), td.getTableName())
+        .map(g -> g.getName().equals(groupName)).orElse(isDefaultGroup)) {
+        tables.add(td.getTableName());
+      }
+    }
+    return tables;
   }
 
   /**
