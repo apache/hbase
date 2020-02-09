@@ -59,7 +59,7 @@
           <h1>Procedures</h1>
       </div>
   </div>
-  <p>We do not list Procedures that have completed SUCCESSfully; their number makes it hard to spot the problematics.</p>
+  <p>We do not list procedures that have completed successfully; their number makes it hard to spot the problematics.</p>
   <table class="table table-striped" width="90%" >
     <tr>
         <th>Id</th>
