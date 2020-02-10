@@ -24,7 +24,6 @@ import java.io.UncheckedIOException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.BindException;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -141,7 +140,6 @@ import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
-import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
@@ -1225,13 +1223,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     final InetSocketAddress initialIsa;
     final InetSocketAddress bindAddress;
     if(this instanceof MasterRpcServices) {
-      String hostname = getHostname(conf, true);
+      String hostname = DNS.getHostname(conf, DNS.ServerType.MASTER);
       int port = conf.getInt(HConstants.MASTER_PORT, HConstants.DEFAULT_MASTER_PORT);
       // Creation of a HSA will force a resolve.
       initialIsa = new InetSocketAddress(hostname, port);
       bindAddress = new InetSocketAddress(conf.get("hbase.master.ipc.address", hostname), port);
     } else {
-      String hostname = getHostname(conf, false);
+      String hostname = DNS.getHostname(conf, DNS.ServerType.REGIONSERVER);
       int port = conf.getInt(HConstants.REGIONSERVER_PORT,
         HConstants.DEFAULT_REGIONSERVER_PORT);
       // Creation of a HSA will force a resolve.
@@ -1316,22 +1314,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   protected void requirePermission(String request, Permission.Action perm) throws IOException {
     if (accessChecker != null) {
       accessChecker.requirePermission(RpcServer.getRequestUser().orElse(null), request, null, perm);
-    }
-  }
-
-
-  public static String getHostname(Configuration conf, boolean isMaster)
-      throws UnknownHostException {
-    String hostname = conf.get(isMaster? HRegionServer.MASTER_HOSTNAME_KEY :
-      HRegionServer.RS_HOSTNAME_KEY);
-    if (hostname == null || hostname.isEmpty()) {
-      String masterOrRS = isMaster ? "master" : "regionserver";
-      return Strings.domainNamePointerToHostName(DNS.getDefaultHost(
-        conf.get("hbase." + masterOrRS + ".dns.interface", "default"),
-        conf.get("hbase." + masterOrRS + ".dns.nameserver", "default")));
-    } else {
-      LOG.info("hostname is configured to be " + hostname);
-      return hostname;
     }
   }
 
