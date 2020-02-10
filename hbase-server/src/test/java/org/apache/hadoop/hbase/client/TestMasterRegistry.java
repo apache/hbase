@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.HConstants.META_REPLICAS_NUM;
 import static org.junit.Assert.assertEquals;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -76,7 +77,7 @@ public class TestMasterRegistry {
   /**
    * Makes sure the master registry parses the master end points in the configuration correctly.
    */
-  @Test public void testMasterAddressParsing() {
+  @Test public void testMasterAddressParsing() throws UnknownHostException {
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     int numMasters = 10;
     conf.set(HConstants.MASTER_ADDRS_KEY, generateDummyMastersList(numMasters));
