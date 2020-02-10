@@ -140,7 +140,11 @@ function personality_modules
 
   clear_personality_queue
 
-  extra="-DHBasePatchProcess"
+  # Pass maven a -T argument. Should make it run faster. Pass conservative value.
+  # Default is one thread. 0.5C on an apache box of 24 cores and 2 executors should
+  # make for 6 threads? Lets see. See below for more on -T:
+  # https://cwiki.apache.org/confluence/display/MAVEN/Parallel+builds+in+Maven+3
+  extra="--threads=0.5C -DHBasePatchProcess"
   if [[ "${PATCH_BRANCH}" = branch-1* ]]; then
     extra="${extra} -Dhttps.protocols=TLSv1.2"
   fi

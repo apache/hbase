@@ -120,6 +120,7 @@ if [ -z "${MAVEN_HOME}" ]; then
   export PATH="${MAVEN_HOME}/bin:${PATH}"
 fi
 export MAVEN_OPTS="${MAVEN_OPTS} -Dmaven.repo.local=${local_repo}"
+export MAVEN_ARGS="--threads=0.5C ${MAVEN_ARGS}"
 
 # Verify the Maven version
 mvn -version
@@ -172,15 +173,14 @@ echo "Building HBase"
 # breaks for me is hbase-server trying to find hbase-http:test and hbase-zookeeper:test.
 # But! some sunshine: because we're doing a full install before running site, we can skip all the
 # compiling in the forked executions. We have to do it awkwardly because MJAVADOC-444.
-if mvn \
-    --batch-mode \
+if mvn --batch-mode \
     -Psite-install-step \
     --log-file="${working_dir}/hbase-install-log-${CURRENT_HBASE_COMMIT}.txt" \
     clean install \
-  && mvn site \
-    --batch-mode \
+  && mvn --batch-mode \
     -Psite-build-step \
-    --log-file="${working_dir}/hbase-site-log-${CURRENT_HBASE_COMMIT}.txt"; then
+    --log-file="${working_dir}/hbase-site-log-${CURRENT_HBASE_COMMIT}.txt" \
+    site; then
   echo "Successfully built site."
 else
   status=$?
@@ -190,8 +190,7 @@ fi
 
 # Stage the site
 echo "Staging HBase site"
-mvn \
-  --batch-mode \
+mvn --batch-mode \
   --log-file="${working_dir}/hbase-stage-log-${CURRENT_HBASE_COMMIT}.txt" \
   site:stage
 status=$?
