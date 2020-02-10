@@ -44,17 +44,13 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableStateManager;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.Mutation;
-import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
-import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ConfigUtil;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -741,13 +737,11 @@ public class RegionStates {
   public List<HRegionInfo> serverOffline(final ZooKeeperWatcher watcher, final ServerName sn) {
     // Offline all regions on this server not already in transition.
     List<HRegionInfo> rits = new ArrayList<HRegionInfo>();
-    Set<Pair<HRegionInfo, HRegionInfo>> regionsToClean =
-      new HashSet<Pair<HRegionInfo, HRegionInfo>>();
+    Set<HRegionInfo> regionsToClean = new HashSet<HRegionInfo>();
     // Offline regions outside the loop and synchronized block to avoid
     // ConcurrentModificationException and deadlock in case of meta anassigned,
     // but RegionState a blocked.
     Set<HRegionInfo> regionsToOffline = new HashSet<HRegionInfo>();
-    Map<String, HRegionInfo> daughter2Parent = new HashMap<>();
     synchronized (this) {
       Set<HRegionInfo> assignedRegions = serverHoldings.get(sn);
       if (assignedRegions == null) {
@@ -764,20 +758,8 @@ public class RegionStates {
             // Delete the ZNode if exists
             ZKAssign.deleteNodeFailSilent(watcher, region);
             regionsToOffline.add(region);
-            PairOfSameType<HRegionInfo> daughterRegions =
-              MetaTableAccessor.getDaughterRegionsFromParent(this.server.getConnection(), region);
-            if (daughterRegions != null) {
-              if (daughterRegions.getFirst() != null) {
-                daughter2Parent.put(daughterRegions.getFirst().getEncodedName(), region);
-              }
-              if (daughterRegions.getSecond() != null) {
-                daughter2Parent.put(daughterRegions.getSecond().getEncodedName(), region);
-              }
-            }
           } catch (KeeperException ke) {
             server.abort("Unexpected ZK exception deleting node " + region, ke);
-          } catch (IOException e) {
-            LOG.warn("get daughter from meta exception " + region, e);
           }
         }
       }
@@ -801,20 +783,10 @@ public class RegionStates {
             LOG.info("Found region in " + state +
               " to be reassigned by ServerCrashProcedure for " + sn);
             rits.add(hri);
-          } else if (state.isSplittingNew() || state.isMergingNew()) {
-            LOG.info(
-              "Offline/Cleanup region if no meta entry exists, hri: " + hri + " state: " + state);
-            if (daughter2Parent.containsKey(hri.getEncodedName())) {
-              HRegionInfo parent = daughter2Parent.get(hri.getEncodedName());
-              HRegionInfo info = getHRIFromMeta(parent);
-              if (info != null && info.isSplit() && info.isOffline()) {
-                regionsToClean.add(Pair.newPair(state.getRegion(), info));
-              } else {
-                regionsToClean.add(Pair.<HRegionInfo, HRegionInfo>newPair(state.getRegion(), null));
-              }
-            } else {
-              regionsToClean.add(Pair.<HRegionInfo, HRegionInfo>newPair(state.getRegion(), null));
-            }
+          } else if(state.isSplittingNew() || state.isMergingNew()) {
+            LOG.info("Offline/Cleanup region if no meta entry exists, hri: " + hri +
+                " state: " + state);
+            regionsToClean.add(state.getRegion());
           } else {
             LOG.warn("THIS SHOULD NOT HAPPEN: unexpected " + state);
           }
@@ -831,19 +803,6 @@ public class RegionStates {
     return rits;
   }
 
-  private HRegionInfo getHRIFromMeta(HRegionInfo parent) {
-    Result result = null;
-    try {
-      result =
-        MetaTableAccessor.getRegionResult(this.server.getConnection(), parent.getRegionName());
-      HRegionInfo info = MetaTableAccessor.getHRegionInfo(result);
-      return info;
-    } catch (IOException e) {
-      LOG.error("got exception when query meta with region " + parent.getEncodedName(), e);
-      return null;
-    }
-  }
-
   /**
    * This method does an RPC to hbase:meta. Do not call this method with a lock/synchronize held.
    * In ZK mode we rollback and hence cleanup daughters/merged region. We also cleanup if
@@ -851,14 +810,12 @@ public class RegionStates {
    *
    * @param hris The hris to check if empty in hbase:meta and if so, clean them up.
    */
-  private void cleanFailedSplitMergeRegions(Set<Pair<HRegionInfo, HRegionInfo>> hris) {
+  private void cleanFailedSplitMergeRegions(Set<HRegionInfo> hris) {
     if (hris.isEmpty()) {
       return;
     }
 
-    for (Pair<HRegionInfo, HRegionInfo> hriPair : hris) {
-      HRegionInfo hri = hriPair.getFirst();
-      HRegionInfo parentInfo = hriPair.getSecond();
+    for (HRegionInfo hri : hris) {
       // This is RPC to meta table. It is done while we have a synchronize on
       // regionstates. No progress will be made if meta is not available at this time.
       // This is a cleanup task. Not critical.
@@ -871,15 +828,6 @@ public class RegionStates {
           // If we use ZK, then we can cleanup entries from meta, since we roll back.
           if (regionPair != null) {
             MetaTableAccessor.deleteRegion(this.server.getConnection(), hri);
-          }
-          if (parentInfo != null) {
-            List<Mutation> mutations = new ArrayList<Mutation>();
-            HRegionInfo copyOfParent = new HRegionInfo(parentInfo);
-            copyOfParent.setOffline(false);
-            copyOfParent.setSplit(false);
-            Put putParent = MetaTableAccessor.makePutFromRegionInfo(copyOfParent);
-            mutations.add(putParent);
-            MetaTableAccessor.mutateMetaTable(this.server.getConnection(), mutations);
           }
           LOG.debug("Cleaning up HDFS since no meta entry exists, hri: " + hri);
           FSUtils.deleteRegionDir(server.getConfiguration(), hri);
