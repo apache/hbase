@@ -16,9 +16,12 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.lang.reflect.Method;
 import java.net.UnknownHostException;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -28,6 +31,14 @@ import org.apache.yetus.audience.InterfaceAudience;
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="REC_CATCH_EXCEPTION",
   justification="If exception, presume HAS_NEW_DNS_GET_DEFAULT_HOST_API false")
 public final class DNS {
+  // key to the config parameter of server hostname
+  // the specification of server hostname is optional. The hostname should be resolvable from
+  // both master and region server
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
+  public static final String RS_HOSTNAME_KEY = "hbase.regionserver.hostname";
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
+  public static final String MASTER_HOSTNAME_KEY = "hbase.master.hostname";
+
   private static boolean HAS_NEW_DNS_GET_DEFAULT_HOST_API;
   private static Method GET_DEFAULT_HOST_METHOD;
 
@@ -38,6 +49,20 @@ public final class DNS {
       HAS_NEW_DNS_GET_DEFAULT_HOST_API = true;
     } catch (Exception e) {
       HAS_NEW_DNS_GET_DEFAULT_HOST_API = false; // FindBugs: Causes REC_CATCH_EXCEPTION. Suppressed
+    }
+  }
+
+  public enum ServerType {
+    MASTER("master"),
+    REGIONSERVER("regionserver");
+
+    private String name;
+    ServerType(String name) {
+      this.name = name;
+    }
+
+    public String getName() {
+      return name;
     }
   }
 
@@ -64,6 +89,34 @@ public final class DNS {
       }
     } else {
       return org.apache.hadoop.net.DNS.getDefaultHost(strInterface, nameserver);
+    }
+  }
+
+  /**
+   * Get the configured hostname for a given ServerType. Gets the default hostname if not specified
+   * in the configuration.
+   * @param conf Configuration to look up.
+   * @param serverType ServerType to look up in the configuration for overrides.
+   */
+  public static String getHostname(@NonNull Configuration conf, @NonNull ServerType serverType)
+      throws UnknownHostException {
+    String hostname;
+    switch (serverType) {
+      case MASTER:
+        hostname = conf.get(MASTER_HOSTNAME_KEY);
+        break;
+      case REGIONSERVER:
+        hostname = conf.get(RS_HOSTNAME_KEY);
+        break;
+      default:
+        hostname = null;
+    }
+    if (hostname == null || hostname.isEmpty()) {
+      return Strings.domainNamePointerToHostName(getDefaultHost(
+          conf.get("hbase." + serverType.getName() + ".dns.interface", "default"),
+          conf.get("hbase." + serverType.getName() + ".dns.nameserver", "default")));
+    } else {
+      return hostname;
     }
   }
 }

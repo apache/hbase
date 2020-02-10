@@ -72,6 +72,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Hbck;
+import org.apache.hadoop.hbase.client.MasterRegistry;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -1084,8 +1085,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
             option.getNumRegionServers(), option.getRsPorts(), option.getMasterClass(),
             option.getRsClass());
     // Populate the master address configuration from mini cluster configuration.
-    conf.set(HConstants.MASTER_ADDRS_KEY,
-        c.get(HConstants.MASTER_ADDRS_KEY, HConstants.MASTER_ADDRS_DEFAULT));
+    conf.set(HConstants.MASTER_ADDRS_KEY, MasterRegistry.getMasterAddr(c));
     // Don't leave here till we've done a successful scan of the hbase:meta
     Table t = getConnection().getTable(TableName.META_TABLE_NAME);
     ResultScanner s = t.getScanner(new Scan());

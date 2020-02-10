@@ -17,11 +17,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.HConstants.MASTER_ADDRS_DEFAULT;
 import static org.apache.hadoop.hbase.HConstants.MASTER_ADDRS_KEY;
 import static org.apache.hadoop.hbase.HConstants.MASTER_REGISTRY_ENABLE_HEDGED_READS_DEFAULT;
 import static org.apache.hadoop.hbase.HConstants.MASTER_REGISTRY_ENABLE_HEDGED_READS_KEY;
+import static org.apache.hadoop.hbase.util.DNS.getHostname;
 import java.io.IOException;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -41,9 +42,11 @@ import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.DNS.ServerType;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 import org.apache.hbase.thirdparty.com.google.common.net.HostAndPort;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -78,7 +81,7 @@ public class MasterRegistry implements ConnectionRegistry {
   private final RpcControllerFactory rpcControllerFactory;
   private final int rpcTimeoutMs;
 
-  MasterRegistry(Configuration conf) {
+  MasterRegistry(Configuration conf) throws UnknownHostException {
     boolean hedgedReadsEnabled = conf.getBoolean(MASTER_REGISTRY_ENABLE_HEDGED_READS_KEY,
         MASTER_REGISTRY_ENABLE_HEDGED_READS_DEFAULT);
     Configuration finalConf;
@@ -90,13 +93,28 @@ public class MasterRegistry implements ConnectionRegistry {
     } else {
       finalConf = conf;
     }
-    finalConf.set(MASTER_ADDRS_KEY, conf.get(MASTER_ADDRS_KEY, MASTER_ADDRS_DEFAULT));
+    if (conf.get(MASTER_ADDRS_KEY) != null) {
+      finalConf.set(MASTER_ADDRS_KEY, conf.get(MASTER_ADDRS_KEY));
+    }
     rpcTimeoutMs = (int) Math.min(Integer.MAX_VALUE, conf.getLong(HConstants.HBASE_RPC_TIMEOUT_KEY,
         HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
     masterServers = new HashSet<>();
     parseMasterAddrs(finalConf);
     rpcClient = RpcClientFactory.createClient(finalConf, HConstants.CLUSTER_ID_DEFAULT);
     rpcControllerFactory = RpcControllerFactory.instantiate(finalConf);
+  }
+
+  /**
+   * Builds the default master address end point if it is not specified in the configuration.
+   */
+  public static String getMasterAddr(Configuration conf) throws UnknownHostException  {
+    String masterAddrFromConf = conf.get(MASTER_ADDRS_KEY);
+    if (!Strings.isNullOrEmpty(masterAddrFromConf)) {
+      return masterAddrFromConf;
+    }
+    String hostname = getHostname(conf, ServerType.MASTER);
+    int port = conf.getInt(HConstants.MASTER_PORT, HConstants.DEFAULT_MASTER_PORT);
+    return String.format("%s:%d", hostname, port);
   }
 
   /**
@@ -113,8 +131,8 @@ public class MasterRegistry implements ConnectionRegistry {
    * assumed.
    * @param conf Configuration to parse from.
    */
-  private void parseMasterAddrs(Configuration conf) {
-    String configuredMasters = conf.get(MASTER_ADDRS_KEY, MASTER_ADDRS_DEFAULT);
+  private void parseMasterAddrs(Configuration conf) throws UnknownHostException {
+    String configuredMasters = getMasterAddr(conf);
     for (String masterAddr: configuredMasters.split(MASTER_ADDRS_CONF_SEPARATOR)) {
       HostAndPort masterHostPort =
           HostAndPort.fromString(masterAddr.trim()).withDefaultPort(HConstants.DEFAULT_MASTER_PORT);
