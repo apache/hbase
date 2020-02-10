@@ -843,6 +843,20 @@ public class MetaTableAccessor {
   /**
    * Returns the daughter regions by reading the corresponding columns of the catalog table
    * Result.
+   * @param connection connection we're using
+   * @param parent region information of parent
+   * @return a pair of HRegionInfo or PairOfSameType(null, null) if the region is not a split
+   *   parent
+   */
+  public static PairOfSameType<HRegionInfo> getDaughterRegionsFromParent(
+    final Connection connection, HRegionInfo parent) throws IOException {
+    Result parentResult = getRegionResult(connection, parent.getRegionName());
+    return getDaughterRegions(parentResult);
+  }
+
+  /**
+   * Returns the daughter regions by reading the corresponding columns of the catalog table
+   * Result.
    * @param data a Result object from the catalog table scan
    * @return a pair of HRegionInfo or PairOfSameType(null, null) if the region is not a split
    * parent
