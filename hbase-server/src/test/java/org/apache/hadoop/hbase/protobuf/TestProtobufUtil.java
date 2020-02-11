@@ -21,10 +21,12 @@ package org.apache.hadoop.hbase.protobuf;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
 
-import org.apache.hadoop.hbase.util.ByteStringer;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -38,6 +40,8 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Col
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.DeleteType;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -218,6 +222,43 @@ public class TestProtobufUtil {
     Increment increment = ProtobufUtil.toIncrement(proto, null);
     assertEquals(mutateBuilder.build(),
       ProtobufUtil.toMutation(increment, MutationProto.newBuilder(), HConstants.NO_NONCE));
+  }
+
+  @Test
+  public void testIncrementRequestConversion() throws Exception {
+    Increment inc = new Increment(Bytes.toBytes("row1"));
+    inc.addColumn(Bytes.toBytes("f1"), Bytes.toBytes("q1"), 10);
+    inc.addColumn(Bytes.toBytes("f1"), Bytes.toBytes("q2"), 20);
+    inc.addColumn(Bytes.toBytes("f2"), Bytes.toBytes("q3"), 30);
+    MutationProto proto =
+        ProtobufUtil.toMutation(inc, MutationProto.newBuilder(), HConstants.NO_NONCE);
+    Increment deSerializedIncrement = ProtobufUtil.toIncrement(proto, null);
+    List<Cell> cellList = deSerializedIncrement.getFamilyCellMap().get(Bytes.toBytes("f1"));
+    Collections.sort(cellList, KeyValue.COMPARATOR);
+    Cell cell0 = inc.getFamilyCellMap().get(Bytes.toBytes("f1")).get(0);
+    Cell cell1 = inc.getFamilyCellMap().get(Bytes.toBytes("f2")).get(0);
+    // We do not serialize TS for increment, hence need to compare parts of cell individually
+    // Compare cell0
+    assertEquals(Bytes.compareTo(cell0.getRowArray(), cell0.getRowOffset(), cell0.getRowLength(),
+      cellList.get(0).getRowArray(), cellList.get(0).getRowOffset(),
+      cellList.get(0).getRowLength()), 0);
+    assertEquals(Bytes.compareTo(cell0.getQualifierArray(), cell0.getQualifierOffset(),
+      cell0.getQualifierLength(), cellList.get(0).getQualifierArray(),
+      cellList.get(0).getQualifierOffset(), cellList.get(0).getQualifierLength()), 0);
+    assertEquals(Bytes.compareTo(cell0.getValueArray(), cell0.getValueOffset(),
+      cell0.getValueLength(), cellList.get(0).getValueArray(), cellList.get(0).getValueOffset(),
+      cellList.get(0).getValueLength()), 0);
+    // Compare cell1
+    Cell deSerCell = deSerializedIncrement.getFamilyCellMap().get(Bytes.toBytes("f2")).get(0);
+    assertEquals(Bytes.compareTo(cell1.getRowArray(), cell1.getRowOffset(), cell1.getRowLength(),
+      deSerCell.getRowArray(), deSerCell.getRowOffset(), deSerCell.getRowLength()), 0);
+    assertEquals(Bytes.compareTo(cell1.getQualifierArray(), cell1.getQualifierOffset(),
+      cell1.getQualifierLength(), deSerCell.getQualifierArray(), deSerCell.getQualifierOffset(),
+      deSerCell.getQualifierLength()), 0);
+    assertEquals(
+      Bytes.compareTo(cell1.getValueArray(), cell1.getValueOffset(), cell1.getValueLength(),
+        deSerCell.getValueArray(), deSerCell.getValueOffset(), deSerCell.getValueLength()),
+      0);
   }
 
   /**
