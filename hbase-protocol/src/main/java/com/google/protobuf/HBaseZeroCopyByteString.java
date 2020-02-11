@@ -65,7 +65,7 @@ public final class HBaseZeroCopyByteString extends LiteralByteString {
    * @return byte[] representation
    */
   public static byte[] zeroCopyGetBytes(final ByteString buf) {
-    if (buf instanceof LiteralByteString) {
+    if (buf.getClass().equals(LiteralByteString.class)) {
       return ((LiteralByteString) buf).bytes;
     }
     // In case it's BoundedByteString
