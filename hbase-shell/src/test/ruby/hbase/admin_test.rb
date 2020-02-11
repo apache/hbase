@@ -597,7 +597,9 @@ module Hbase
 
     define_test 'merge regions' do
       @t_name = 'hbase_shell_merge'
+      @t_name2 = 'hbase_shell_merge_2'
       drop_test_table(@t_name)
+      drop_test_table(@t_name2)
       admin.create(@t_name, 'a', NUMREGIONS => 10, SPLITALGO => 'HexStringSplit')
       r1 = command(:locate_region, @t_name, '1')
       r2 = command(:locate_region, @t_name, '2')
@@ -635,6 +637,17 @@ module Hbase
       command(:merge_region, region1,region2)
       # 3 non-adjacent regions with forcible=true
       command(:merge_region, region3,region5,region6, true)
+
+      admin.create(@t_name2, 'a', NUMREGIONS => 5, SPLITALGO => 'HexStringSplit')
+      r1 = command(:locate_region, @t_name2, '1')
+      r2 = command(:locate_region, @t_name2, '4')
+      r3 = command(:locate_region, @t_name2, '7')
+      region1 = r1.getRegion.getRegionNameAsString
+      region2 = r2.getRegion.getRegionNameAsString
+      region3 = r3.getRegion.getRegionNameAsString
+
+      # accept array of regions
+      command(:merge_region, [region1,region2,region3])
     end
   end
 
