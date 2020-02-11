@@ -1,0 +1,112 @@
+////
+/**
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+////
+
+= HBASE-18095: Zookeeper-less client connection
+
+
+== Context
+Currently, Zookeeper (ZK) lies in the critical code path of connection init. To set up a connection to a given HBase cluster, client relies on the zookeeper quorum configured in the client hbase-site.xml and attempts to fetch the following information.
+
+* ClusterID
+* Active HMaster server name
+* Meta table region locations
+
+ZK is deemed the source of truth since other processes that maintain the cluster state persist the changes to this data into ZK. So it is an obvious place to look at for clients to fetch the latest cluster state.  However this comes with it’s own set of problems, some of them are below.
+
+* Timeouts and retry logic for ZK clients are managed separately from HBase configuration. This is more administration overhead for end users (example: multiple timeouts are to be configured for different types of RPCs. client->master, client->ZK etc.). This prevents HBase from having a single holistic timeout configuration that applies to any RPCs.
+* If there is any issue with ZK (like connection overload / timeouts), the entire HBase service appears frozen and there is little visibility into it.
+* Exposing zookeeper to all the clients can be risky since it can potentially be abused to DDOS.
+* Embedded ZK client is bundled with hbase client jar as a dependency along with (with it’s log spew :-]). The embedded client also needs separate JAAS configuration management for secure clusters.
+
+== Goal
+
+We would like to remove this ZK dependency in the HBase client and instead have the clients query a preconfigured list of active and standby master host:port addresses. This brings all the client interactions with HBase under the same RPC framework that is holistically controlled by a set of hbase client configuration parameters. This also alleviates the pressure on ZK cluster which is critical from an operational standpoint as some core processes like replication, log splitting, master election etc. depend on it. The next section describes the kind of changes needed on both server and client side to support this behavior.
+
+== Proposed design
+
+As mentioned above, clients now get a pre configured list active and standby master addresses that they can query to fetch the meta information needed for connection setup. Something like,
+
+[source, xml]
+-----
+<property>
+  <name>hbase.masters</name>
+  <value>master1:16000,master2:16001,master3:16000</value>
+</property>
+-----
+
+Clients should be robust enough to handle configuration changes to this parameter since master hosts can change (added/removed) over time and not every client can afford a restart.
+
+One thing to note here is that having masters in the init/read/write path for clients means that
+
+* At least one active/standby master is now needed for connection creation. Earlier this was not a requirement because the clients looked up the cluster ID from the relevant znode and init successfully. So, technically a master need not be around to create a connection to the cluster.
+* Masters are now active part of read write path in client life cycle. If the client  cache of meta locations/active master is purged/stale, at least one master (active/stand-by) serving the latest information should exist. Earlier this information was served by ZK and clients look up the latest cluster ID/active master/meta locations from the relevant znodes and get going.
+* There is a higher connection load on the masters than before.
+* More state synchronization traffic (see below)
+
+End users should factor these requirements into their cluster deployment if they intend to use this feature.
+
+=== Server side changes
+
+Now that the master end points are considered as source of truth for clients, they should track the latest meta information for clusterID, active master and meta table locations. Since the clients can connect to any master end point (details below), all the masters (active/standby) now track all the relevant meta information. The idea is to implement an in-memory cache local to all the masters and it should keep up with changes to this metadata. This is tracked in the following jiras.
+
+* Clusterid tracking - https://issues.apache.org/jira/browse/HBASE-23257[HBASE-23257]
+* Active master tracking - https://issues.apache.org/jira/browse/HBASE-23275[HBASE-23275]
+* Meta location tracking - https://issues.apache.org/jira/browse/HBASE-23281[HBASE-23281]
+
+Masters and region servers (all cluster internal processes) still use ZK for cluster state coordination. Masters additionally cache this information in-memory and rely on ZK listeners and watchers to track the changes to them. New RPC endpoints are added to serve this information to the clients. Having an in-memory cache can speed up client lookups rather than fetching from ZK synchronously with the client lookup RPCs.
+
+=== Client side changes
+
+The proposal is to implement a new AsyncRegistry (https://issues.apache.org/jira/browse/HBASE-23305[HBASE-23305]) based on the master RPC endpoints discussed above. Few interesting optimizations on the client side as follows.
+
+* Each client randomly picks a master from the list of host:ports passed in the configuration. This avoids hotspotting on a single master.
+* Client can also do hedged lookups, meaning a single RPC to fetch meta information (say active master) can be sent to multiple masters and which ever returns first can be passed along to the caller. This can be done under a config flag since it comes with an additional RPC load. The default behavior is to randomly probe masters until the list is exhausted.
+* Callers are expected to cache the meta information in higher levels and only probe again if the cached information is stale (which is quite possible).
+
+One user noted that there are some clients that rely on cluster ID for delegation token based auth. So there is a proposal to expose it on an auth-less end point for delegation auth support (https://issues.apache.org/jira/browse/HBASE-23330[HBASE-23330]).
+
+== Compatibility matrix / Upgrade scenarios
+
+Since rolling upgrades are quite common in HBase deployments, we need to think of a proper upgrade path for customers to deploy this feature.  Here are some scenarios with old/new server and client combinations during upgrades.
+
+* old client -> old server works (duh!)
+* old client -> new server works (backwards compatible since the patch does not change any existing RPC signatures)
+* new client -> old server - does not work, the channel will be closed on error because the end points it is looking up would still not be implemented on the server side.
+* new client -> new server works (duh!)
+
+Given this compatibility matrix,
+
+* Client-server compatibility - clients and servers are not allowed to upgrade out of sync. Servers should be upgraded first before upgrading the clients.
+* Server-server compatibility - unaffected.
+* File format compatibility - unaffected.
+* Client API compatibility - unaffected.
+* Client binary compatibility - unaffected. (only configuration changes needed)
+* Server side limited API compatibility - unaffected.
+* Dependency compatibility - unaffected.
+
+== Testing plan
+
+* Unit tests should be added to all the patches covering most critical code paths
+* Mini clusters tests simulating real world scenarios (like stale meta/master etc) should be added.
+* Consider making this the default registry implementation and let the code bakein for a while before release.
+* Deploy the bits on a real distributed cluster and test a long running application that is heavy on these RPCs and inject faults.
+
+
