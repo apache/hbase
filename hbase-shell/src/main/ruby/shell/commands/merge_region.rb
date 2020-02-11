@@ -31,15 +31,26 @@ region name is the hash suffix on region names: e.g. if the region name were
 TestTable,0094429456,1289497600452.527db22f95c8a9e0116f0cc13c680396. then
 the encoded region name portion is 527db22f95c8a9e0116f0cc13c680396
 
+You can either pass the list of regions as comma separated values or as an
+array of regions as shown:
+
 Examples:
 
   hbase> merge_region 'FULL_REGIONNAME', 'FULL_REGIONNAME'
   hbase> merge_region 'FULL_REGIONNAME', 'FULL_REGIONNAME', 'FULL_REGIONNAME', ...
   hbase> merge_region 'FULL_REGIONNAME', 'FULL_REGIONNAME', 'FULL_REGIONNAME', ..., true
 
+  hbase> merge_region ['FULL_REGIONNAME', 'FULL_REGIONNAME']
+  hbase> merge_region ['FULL_REGIONNAME', 'FULL_REGIONNAME', 'FULL_REGIONNAME', ...]
+  hbase> merge_region ['FULL_REGIONNAME', 'FULL_REGIONNAME', 'FULL_REGIONNAME', ..., true]
+
   hbase> merge_region 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME'
   hbase> merge_region 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', ...
   hbase> merge_region 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', ..., true
+
+  hbase> merge_region ['ENCODED_REGIONNAME', 'ENCODED_REGIONNAME']
+  hbase> merge_region ['ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', ...]
+  hbase> merge_region ['ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', ..., true]
 EOF
       end
 
