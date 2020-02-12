@@ -53,7 +53,7 @@ public class TestRSGroupMajorCompactionTTL extends TestMajorCompactorTTL {
   public void setUp() throws Exception {
     utility = new HBaseTestingUtility();
     Configuration conf = utility.getConfiguration();
-    conf.setBoolean(RSGroupInfoManager.RS_GROUP_ENABLED, true);
+    RSGroupUtil.enableRSGroup(conf);
     conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, NUM_SLAVES_BASE);
     conf.setInt("hbase.hfile.compaction.discharger.interval", 10);
     utility.startMiniCluster(NUM_SLAVES_BASE);
