@@ -33,7 +33,7 @@ public class TestEnableRSGroups extends EnableRSGroupsTestBase {
 
   @Override
   protected void enableRSGroup(Configuration conf) {
-    conf.setBoolean(RSGroupInfoManager.RS_GROUP_ENABLED, true);
+    conf.setBoolean(RSGroupUtil.RS_GROUP_ENABLED, true);
   }
 
 }

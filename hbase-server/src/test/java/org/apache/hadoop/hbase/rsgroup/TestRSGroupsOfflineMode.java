@@ -77,7 +77,7 @@ public class TestRSGroupsOfflineMode extends TestRSGroupsBase {
   @BeforeClass
   public static void setUp() throws Exception {
     TEST_UTIL = new HBaseTestingUtility();
-    TEST_UTIL.getConfiguration().setBoolean(RSGroupInfoManager.RS_GROUP_ENABLED, true);
+    RSGroupUtil.enableRSGroup(TEST_UTIL.getConfiguration());
     TEST_UTIL.getConfiguration().set(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, "1");
     StartMiniClusterOption option =
       StartMiniClusterOption.builder().numMasters(2).numRegionServers(3).numDataNodes(3).build();

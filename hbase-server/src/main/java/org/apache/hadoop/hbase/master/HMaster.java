@@ -189,6 +189,7 @@ import org.apache.hadoop.hbase.replication.regionserver.ReplicationStatus;
 import org.apache.hadoop.hbase.rsgroup.RSGroupAdminEndpoint;
 import org.apache.hadoop.hbase.rsgroup.RSGroupBasedLoadBalancer;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfoManager;
+import org.apache.hadoop.hbase.rsgroup.RSGroupUtil;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -807,7 +808,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (cpClasses != null) {
       for (String cpClass : cpClasses) {
         if (RSGroupAdminEndpoint.class.getName().equals(cpClass)) {
-          conf.setBoolean(RSGroupInfoManager.RS_GROUP_ENABLED, true);
+          RSGroupUtil.enableRSGroup(conf);
           break;
         }
       }

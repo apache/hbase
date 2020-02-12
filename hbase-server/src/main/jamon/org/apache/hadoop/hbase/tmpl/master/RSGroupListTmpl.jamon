@@ -33,10 +33,10 @@ ServerManager serverManager;
     org.apache.hadoop.hbase.RegionMetrics;
     org.apache.hadoop.hbase.ServerMetrics;
     org.apache.hadoop.hbase.Size;
-    org.apache.hadoop.hbase.RSGroupTableAccessor;
     org.apache.hadoop.hbase.master.ServerManager;
     org.apache.hadoop.hbase.net.Address;
     org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
+    org.apache.hadoop.hbase.rsgroup.RSGroupUtil;
     org.apache.hadoop.util.StringUtils;
     org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 </%import>
@@ -128,7 +128,7 @@ if (master.getServerManager() != null) {
           deadServers++;
         }
       }
-      tables = rsGroupInfo.getTables().size();
+      tables = RSGroupUtil.listTablesInRSGroup(master, rsGroupInfo.getName()).size();
       totalTables += tables;
       double avgLoad = onlineServers == 0 ? 0 :
             (double)numRegionsOnline / (double)onlineServers;

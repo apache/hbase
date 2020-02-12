@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.rsgroup.RSGroupInfoManager;
+import org.apache.hadoop.hbase.rsgroup.RSGroupUtil;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.jruby.embed.PathType;
@@ -40,7 +40,7 @@ public class TestRSGroupShell extends AbstractTestShell {
     setUpConfig();
 
     // enable rs group
-    TEST_UTIL.getConfiguration().setBoolean(RSGroupInfoManager.RS_GROUP_ENABLED, true);
+    RSGroupUtil.enableRSGroup(TEST_UTIL.getConfiguration());
 
     TEST_UTIL.startMiniCluster(3);
 

@@ -3177,14 +3177,8 @@ public class MasterRpcServices extends RSRpcServices implements
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().preListTablesInRSGroup(groupName);
       }
-      boolean isDefaultGroup = RSGroupInfo.DEFAULT_GROUP.equals(groupName);
-      for (TableDescriptor td : master.getTableDescriptors().getAll().values()) {
-        // no config means in default group
-        if (RSGroupUtil.getRSGroupInfo(master, master.getRSGroupInfoManager(), td.getTableName())
-          .map(g -> g.getName().equals(groupName)).orElse(isDefaultGroup)) {
-          builder.addTableName(ProtobufUtil.toProtoTableName(td.getTableName()));
-        }
-      }
+      RSGroupUtil.listTablesInRSGroup(master, groupName).stream()
+        .map(ProtobufUtil::toProtoTableName).forEach(builder::addTableName);
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().postListTablesInRSGroup(groupName);
       }
