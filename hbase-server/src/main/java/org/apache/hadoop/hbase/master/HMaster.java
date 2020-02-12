@@ -505,8 +505,8 @@ public class HMaster extends HRegionServer implements MasterServices {
    * </ol>
    * <p>
    * Remaining steps of initialization occur in
-   * #finishActiveMasterInitialization(MonitoredTask) after
-   * the master becomes the active one.
+   * {@link #finishActiveMasterInitialization(MonitoredTask)} after the master becomes the
+   * active one.
    */
   public HMaster(final Configuration conf)
       throws IOException, KeeperException {
@@ -2804,9 +2804,15 @@ public class HMaster extends HRegionServer implements MasterServices {
    * Master runs a coordinated stop of all RegionServers and then itself.
    */
   public void shutdown() throws IOException {
+    if (!isInitialized()) {
+      LOG.info("Shutdown requested but we're not the active master. Proceeding as a stop.");
+      stopMaster();
+    }
+
     if (cpHost != null) {
       cpHost.preShutdown();
     }
+
     // Tell the servermanager cluster shutdown has been called. This makes it so when Master is
     // last running server, it'll stop itself. Next, we broadcast the cluster shutdown by setting
     // the cluster status as down. RegionServers will notice this change in state and will start

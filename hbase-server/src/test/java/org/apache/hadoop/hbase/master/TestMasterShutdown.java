@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.Waiter;
@@ -130,6 +131,7 @@ public class TestMasterShutdown {
    */
   @Test
   public void testMasterShutdownBeforeStartingAnyRegionServer() throws Exception {
+    LocalHBaseCluster hbaseCluster = null;
     try {
       htu =  new HBaseTestingUtility(
         createMasterShutdownBeforeStartingAnyRegionServerConfiguration());
@@ -139,18 +141,22 @@ public class TestMasterShutdown {
         .numDataNodes(1)
         .numMasters(1)
         .numRegionServers(0)
+        .masterClass(HMaster.class)
         .rsClass(MiniHBaseCluster.MiniHBaseClusterRegionServer.class)
         .createRootDir(true)
         .build();
 
-      final CompletableFuture<MiniHBaseCluster> clusterFuture =
-        CompletableFuture.supplyAsync(() -> {
-          try {
-            return htu.startMiniCluster(options);
-          } catch (Exception e) {
-            throw new CompletionException(e);
-          }
-        });
+      // Can't simply `htu.startMiniCluster(options)` because that method waits for the master to
+      // start completely. However, this test's premise is that a partially started master should
+      // still respond to a shutdown RPC. So instead, we manage each component lifecycle
+      // independently.
+      // I think it's not worth refactoring HTU's helper methods just for this class.
+      htu.startMiniDFSCluster(options.getNumDataNodes());
+      htu.startMiniZKCluster(options.getNumZkServers());
+      htu.createRootDir();
+      hbaseCluster = new LocalHBaseCluster(htu.getConfiguration(), options.getNumMasters(),
+        options.getNumRegionServers(), options.getMasterClass(), options.getRsClass());
+      final MasterThread masterThread = hbaseCluster.getMasters().get(0);
 
       final CompletableFuture<Void> shutdownFuture = CompletableFuture.runAsync(() -> {
         // Switching to master registry exacerbated a race in the master bootstrap that can result
@@ -161,6 +167,22 @@ public class TestMasterShutdown {
         // usually init'ed in time for the RPC to be made. For now, adding an explicit wait() in
         // the test, waiting for the server manager to become available.
         final long timeout = TimeUnit.MINUTES.toMillis(10);
+//        assertNotEquals("timeout waiting for server manager to become available.",
+//          -1, Waiter.waitFor(htu.getConfiguration(), timeout, () -> {
+//            final MiniHBaseCluster cluster = htu.getMiniHBaseCluster();
+//            if (cluster == null) {
+//              LOG.debug("cluster is null.");
+//              return false;
+//            }
+//            final HMaster master = cluster.getMaster();
+//            if (master == null) {
+//              LOG.debug("master is null.");
+//              return false;
+//            }
+//            return master.getServerManager() != null;
+//          }));
+
+        // Master has come up far enough that we can terminate it without creating a zombie.
         final long result = Waiter.waitFor(htu.getConfiguration(), timeout, 500, () -> {
           final Configuration conf = createResponsiveZkConfig(htu.getConfiguration());
           LOG.debug("Attempting to establish connection.");
@@ -170,7 +192,7 @@ public class TestMasterShutdown {
             LOG.debug("Sending shutdown RPC.");
             try {
               conn.getAdmin().shutdown().join();
-              LOG.debug("Shutdown RPC sent. Waiting for master thread to terminate.");
+              LOG.debug("Shutdown RPC sent.");
               return true;
             } catch (CompletionException e) {
               LOG.debug("Failure sending shutdown RPC.");
@@ -186,14 +208,13 @@ public class TestMasterShutdown {
           -1, result);
       });
 
-      LOG.debug("Scheduling background tasks.");
-      CompletableFuture.allOf(clusterFuture, shutdownFuture).get(10, TimeUnit.MINUTES);
-      final MiniHBaseCluster cluster = clusterFuture.join();
+      masterThread.start();
       shutdownFuture.join();
-
-      LOG.debug("Background tasks complete. Waiting for master to terminate.");
-      cluster.getMasterThread().join(TimeUnit.MINUTES.toMillis(10));
+      masterThread.join();
     } finally {
+      if (hbaseCluster != null) {
+        hbaseCluster.shutdown();
+      }
       if (htu != null) {
         htu.shutdownMiniCluster();
         htu = null;
