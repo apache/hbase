@@ -18,8 +18,9 @@
 package org.apache.hadoop.hbase.snapshot;
 
 import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
 import java.net.URI;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
@@ -41,63 +42,62 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Test Export Snapshot Tool
+ * Tests V1 snapshots only. Used to ALSO test v2 but strange failure so separate the tests.
+ * See companion file for test of v2 snapshot.
+ * @see TestExportSnapshotV2NoCluster
  */
 @Category({MapReduceTests.class, MediumTests.class})
-public class TestExportSnapshotNoCluster {
-
+public class TestExportSnapshotV1NoCluster {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestExportSnapshotNoCluster.class);
+      HBaseClassTestRule.forClass(TestExportSnapshotV1NoCluster.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestExportSnapshotV1NoCluster.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestExportSnapshotNoCluster.class);
-
-  private HBaseCommonTestingUtility testUtil;
-  private FileSystem fs;
+  private HBaseCommonTestingUtility testUtil = new HBaseCommonTestingUtility();
   private Path testDir;
-
-  public void setUpBaseConf(Configuration conf) {
-    conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
-    conf.setInt("hbase.regionserver.msginterval", 100);
-    conf.setInt("hbase.client.pause", 250);
-    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 6);
-    conf.setBoolean("hbase.master.enabletable.roundrobin", true);
-    conf.setInt("mapreduce.map.maxattempts", 10);
-    conf.set(HConstants.HBASE_DIR, testDir.toString());
-  }
 
   @Before
   public void setUpBefore() throws Exception {
-    this.testUtil = new HBaseCommonTestingUtility();
-    // Make sure testDir is on LocalFileSystem
-    testDir = testUtil.getDataTestDir().makeQualified(URI.create("file:///"), new Path("/"));
-    fs = testDir.getFileSystem(testUtil.getConfiguration());
-    assertTrue("FileSystem '" + fs + "' is not local", fs instanceof LocalFileSystem);
-
-    setUpBaseConf(testUtil.getConfiguration());
+    this.testDir = setup(this.testUtil);
   }
 
+  /**
+   * Setup for test. Returns path to test data dir.
+   */
+  static Path setup(HBaseCommonTestingUtility hctu) throws IOException {
+    // Make sure testDir is on LocalFileSystem
+    Path testDir =
+      hctu.getDataTestDir().makeQualified(URI.create("file:///"), new Path("/"));
+    FileSystem fs = testDir.getFileSystem(hctu.getConfiguration());
+    assertTrue("FileSystem '" + fs + "' is not local", fs instanceof LocalFileSystem);
+    hctu.getConfiguration().setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
+    hctu.getConfiguration().setInt("hbase.regionserver.msginterval", 100);
+    hctu.getConfiguration().setInt("hbase.client.pause", 250);
+    hctu.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 6);
+    hctu.getConfiguration().setBoolean("hbase.master.enabletable.roundrobin", true);
+    hctu.getConfiguration().setInt("mapreduce.map.maxattempts", 10);
+    hctu.getConfiguration().set(HConstants.HBASE_DIR, testDir.toString());
+    return testDir;
+  }
+
+  /**
+   * V1 snapshot test
+   */
   @Test
-  public void testSnapshotV1WithRefsExportFileSystemState() throws Exception {
-    final SnapshotMock snapshotMock = new SnapshotMock(testUtil.getConfiguration(), fs, testDir);
+  public void testSnapshotWithRefsExportFileSystemState() throws Exception {
+    final SnapshotMock snapshotMock = new SnapshotMock(testUtil.getConfiguration(),
+      testDir.getFileSystem(testUtil.getConfiguration()), testDir);
     final SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV1("tableWithRefsV1",
       "tableWithRefsV1");
-    testSnapshotWithRefsExportFileSystemState(builder);
-  }
-
-  @Test
-  public void testSnapshotV2WithRefsExportFileSystemState() throws Exception {
-    final SnapshotMock snapshotMock = new SnapshotMock(testUtil.getConfiguration(), fs, testDir);
-    final SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV2("tableWithRefsV2",
-      "tableWithRefsV2");
-    testSnapshotWithRefsExportFileSystemState(builder);
+    testSnapshotWithRefsExportFileSystemState(builder, testUtil, testDir);
   }
 
   /**
    * Generates a couple of regions for the specified SnapshotMock,
    * and then it will run the export and verification.
    */
-  private void testSnapshotWithRefsExportFileSystemState(SnapshotMock.SnapshotBuilder builder)
-      throws Exception {
+  static void testSnapshotWithRefsExportFileSystemState(SnapshotMock.SnapshotBuilder builder,
+      HBaseCommonTestingUtility testUtil, Path testDir) throws Exception {
     Path[] r1Files = builder.addRegion();
     Path[] r2Files = builder.addRegion();
     builder.commit();
@@ -107,10 +107,10 @@ public class TestExportSnapshotNoCluster {
     TableName tableName = builder.getTableDescriptor().getTableName();
     TestExportSnapshot.testExportFileSystemState(testUtil.getConfiguration(),
       tableName, snapshotName, snapshotName, snapshotFilesCount,
-      testDir, getDestinationDir(), false, null, true);
+      testDir, getDestinationDir(testDir), false, null, true);
   }
 
-  private Path getDestinationDir() {
+  static Path getDestinationDir(Path testDir) {
     Path path = new Path(new Path(testDir, "export-test"), "export-" + System.currentTimeMillis());
     LOG.info("HDFS export destination path: " + path);
     return path;
