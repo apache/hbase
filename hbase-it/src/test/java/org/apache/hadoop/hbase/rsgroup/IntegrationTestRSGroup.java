@@ -46,7 +46,7 @@ public class IntegrationTestRSGroup extends TestRSGroupsBase {
       TEST_UTIL = new IntegrationTestingUtility();
       TEST_UTIL.getConfiguration().set(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
         RSGroupBasedLoadBalancer.class.getName());
-      TEST_UTIL.getConfiguration().setBoolean(RSGroupInfoManager.RS_GROUP_ENABLED, true);
+      RSGroupUtil.enableRSGroup(TEST_UTIL.getConfiguration());
       ((IntegrationTestingUtility) TEST_UTIL).initializeCluster(NUM_SLAVES_BASE);
       // set shared configs
       ADMIN = TEST_UTIL.getAdmin();

@@ -107,7 +107,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
     // Verify enableSecurity sets up what we require
     verifyConfiguration(conf);
     // Enable rsgroup
-    conf.setBoolean(RSGroupInfoManager.RS_GROUP_ENABLED, true);
+    RSGroupUtil.enableRSGroup(conf);
 
     TEST_UTIL.startMiniCluster();
     // Wait for the ACL table to become available
