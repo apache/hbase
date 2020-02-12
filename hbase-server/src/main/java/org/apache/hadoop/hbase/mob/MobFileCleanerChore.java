@@ -107,9 +107,6 @@ public class MobFileCleanerChore extends ScheduledChore {
   }
 
   @Override
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "REC_CATCH_EXCEPTION",
-      justification = "Intentional")
-
   protected void chore() {
     TableDescriptors htds = master.getTableDescriptors();
 
@@ -126,9 +123,8 @@ public class MobFileCleanerChore extends ScheduledChore {
           try {
             cleaner.cleanExpiredMobFiles(htd.getTableName().getNameAsString(), hcd);
           } catch (IOException e) {
-            String errMsg = String.format("Failed to clean the expired mob files table=%s" +
-                " family=%s", htd.getTableName().getNameAsString(), hcd.getNameAsString());
-            LOG.error(errMsg, e);
+            LOG.error("Failed to clean the expired mob files table={} family={}",
+              htd.getTableName().getNameAsString(), hcd.getNameAsString(), e);
           }
         }
       }
@@ -138,9 +134,7 @@ public class MobFileCleanerChore extends ScheduledChore {
         cleanupObsoleteMobFiles(master.getConfiguration(), htd.getTableName());
         LOG.info("Cleaning obsolete MOB files finished for table={}", htd.getTableName());
       } catch (IOException e) {
-        String errMsg =
-            String.format("Failed to clean the obsolete mob files for table=",htd.getTableName());
-        LOG.error(errMsg, e);
+        LOG.error("Failed to clean the obsolete mob files for table={}",htd.getTableName(), e);
       }
     }
   }
@@ -151,8 +145,6 @@ public class MobFileCleanerChore extends ScheduledChore {
    * @param table table name
    * @throws IOException exception
    */
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "UC_USELESS_CONDITION",
-      justification = "Intentional")
   public void cleanupObsoleteMobFiles(Configuration conf, TableName table) throws IOException {
 
     long minAgeToArchive =
@@ -164,8 +156,6 @@ public class MobFileCleanerChore extends ScheduledChore {
     // So, if MOB file creation time is greater than this maxTimeToArchive,
     // this will be skipped and won't be archived.
     long maxCreationTimeToArchive = EnvironmentEdgeManager.currentTime() - minAgeToArchive;
-    LOG.info("Only MOB files whose creation time older than {} will be archived, table={}",
-      maxCreationTimeToArchive, table);
     try (final Connection conn = ConnectionFactory.createConnection(conf);
         final Admin admin = conn.getAdmin();) {
       TableDescriptor htd = admin.getDescriptor(table);
@@ -173,6 +163,9 @@ public class MobFileCleanerChore extends ScheduledChore {
       if (list.size() == 0) {
         LOG.info("Skipping non-MOB table [{}]", table);
         return;
+      } else {
+        LOG.info("Only MOB files whose creation time older than {} will be archived, table={}",
+          maxCreationTimeToArchive, table);
       }
 
       Path rootDir = FSUtils.getRootDir(conf);
@@ -244,10 +237,8 @@ public class MobFileCleanerChore extends ScheduledChore {
                 }
               }
             } catch (FileNotFoundException e) {
-              String warnMsg = String.format(
-                "Missing file:%s" + " Starting MOB cleaning cycle from the beginning due to error",
-                currentPath);
-              LOG.warn(warnMsg, e);
+              LOG.warn("Missing file:{} Starting MOB cleaning cycle from the beginning"+
+                " due to error", currentPath, e);
               regionMobs.clear();
               continue;
             }

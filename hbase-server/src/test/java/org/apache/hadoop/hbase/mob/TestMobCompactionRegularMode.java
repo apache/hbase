@@ -55,9 +55,6 @@ public class TestMobCompactionRegularMode extends TestMobCompactionBase{
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMobCompactionRegularMode.class);
-  @Rule
-  public TestName testName = new TestName();
-
 
   public TestMobCompactionRegularMode() {
   }

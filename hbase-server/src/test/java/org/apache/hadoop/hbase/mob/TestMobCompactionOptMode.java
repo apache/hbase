@@ -55,9 +55,6 @@ public class TestMobCompactionOptMode extends TestMobCompactionBase{
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMobCompactionOptMode.class);
-  @Rule
-  public TestName testName = new TestName();
-
 
   public TestMobCompactionOptMode() {
   }

@@ -92,7 +92,7 @@ public class MobStressToolRunner {
     this.count = numRows;
     initConf();
     printConf();
-    hdt = createTableDescriptor("testMobCompactTable");
+    hdt = new HTableDescriptor(TableName.valueOf("testMobCompactTable"));
     Connection conn = ConnectionFactory.createConnection(this.conf);
     this.admin = conn.getAdmin();
     this.hcd = new HColumnDescriptor(fam);
@@ -122,17 +122,6 @@ public class MobStressToolRunner {
     LOG.info("hbase.mob.default.compactor=org.apache.hadoop.hbase.mob.FaultyMobStoreCompactor");
     LOG.warn("hbase.mob.compaction.fault.probability=x, where x is between 0. and 1.");
 
-  }
-
-  private HTableDescriptor createTableDescriptor(final String name, final int minVersions,
-      final int versions, final int ttl, KeepDeletedCells keepDeleted) {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
-    return htd;
-  }
-
-  private HTableDescriptor createTableDescriptor(final String name) {
-    return createTableDescriptor(name, HColumnDescriptor.DEFAULT_MIN_VERSIONS, 1,
-      HConstants.FOREVER, HColumnDescriptor.DEFAULT_KEEP_DELETED);
   }
 
   private void initConf() {

@@ -49,7 +49,7 @@ public class MobStoreEngine extends DefaultStoreEngine {
     try {
       compactor = ReflectionUtils.instantiateWithCustomCtor(className,
         new Class[] { Configuration.class, HStore.class }, new Object[] { conf, store });
-    } catch (Exception e) {
+    } catch (RuntimeException e) {
       throw new IOException("Unable to load configured compactor '" + className + "'", e);
     }
   }

@@ -68,8 +68,6 @@ public class TestMobFileCleanerChore {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMobFileCleanerChore.class);
-  @Rule
-  public TestName testName = new TestName();
 
   private HBaseTestingUtility HTU;
 
@@ -186,9 +184,6 @@ public class TestMobFileCleanerChore {
 
     long scanned = scanTable();
     assertEquals(30, scanned);
-
-    LOG.info("MOB Stress Test finished OK");
-
   }
 
   private  long getNumberOfMobFiles(Configuration conf, TableName tableName, String family)

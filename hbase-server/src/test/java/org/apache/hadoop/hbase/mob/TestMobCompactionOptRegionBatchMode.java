@@ -57,8 +57,6 @@ public class TestMobCompactionOptRegionBatchMode extends TestMobCompactionBase{
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMobCompactionOptRegionBatchMode.class);
-  @Rule
-  public TestName testName = new TestName();
 
   private int batchSize = 7;
   private MobFileCompactionChore compactionChore;

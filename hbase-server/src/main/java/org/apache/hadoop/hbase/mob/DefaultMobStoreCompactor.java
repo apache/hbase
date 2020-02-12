@@ -168,7 +168,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     } else {
       userRequest.set(Boolean.FALSE);
     }
-    LOG.debug("MOB compaction table={} cf={} region={} files: ", tableName, familyName,
+    LOG.debug("MOB compaction table={} cf={} region={} files: {}", tableName, familyName,
       regionName, request.getFiles());
     // Check if I/O optimized MOB compaction
     if (ioOptimizedMode) {
@@ -188,7 +188,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
   }
 
   private void calculateMobLengthMap(List<Path> mobFiles) throws IOException {
-    FileSystem fs = mobFiles.get(0).getFileSystem(this.conf);
+    FileSystem fs = store.getFileSystem();
     HashMap<String, Long> map = mobLengthMap.get();
     map.clear();
     for (Path p : mobFiles) {
@@ -248,15 +248,15 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     boolean discardMobMiss = conf.getBoolean(MobConstants.MOB_UNSAFE_DISCARD_MISS_KEY,
       MobConstants.DEFAULT_MOB_DISCARD_MISS);
     if (discardMobMiss) {
-      LOG.warn("{}=true. This is unsafe setting recommended only"+
-        " during upgrade process from MOB 1.0 to MOB 2.0 versions.",
-        MobConstants.MOB_UNSAFE_DISCARD_MISS_KEY);
+      LOG.warn("{}=true. This is unsafe setting recommended only when first upgrading to a version"+
+        " with the distributed mob compaction feature on a cluster that has experienced MOB data " +
+        "corruption.", MobConstants.MOB_UNSAFE_DISCARD_MISS_KEY);
     }
     long maxMobFileSize = conf.getLong(MobConstants.MOB_COMPACTION_MAX_FILE_SIZE_KEY,
       MobConstants.DEFAULT_MOB_COMPACTION_MAX_FILE_SIZE);
     LOG.info("Compact MOB={} optimized={} maximum MOB file size={} major={} store={}", compactMOBs,
       ioOptimizedMode, maxMobFileSize, major, getStoreInfo());
-    FileSystem fs = FileSystem.get(conf);
+    FileSystem fs = store.getFileSystem();
     // Since scanner.next() can return 'false' but still be delivering data,
     // we have to use a do/while loop.
     List<Cell> cells = new ArrayList<>();
@@ -300,8 +300,6 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
           if (compactMOBs) {
             if (MobUtils.isMobReferenceCell(c)) {
               String fName = MobUtils.getMobFileName(c);
-              Path pp = new Path(new Path(fs.getUri()), new Path(path, fName));
-
               // Added to support migration
               try {
                 mobCell = mobStore.resolve(c, true, false).getCell();
@@ -315,11 +313,13 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
               }
 
               if (discardMobMiss && mobCell.getValueLength() == 0) {
-                LOG.error("Missing MOB cell value: file={} cell={}", pp, mobCell);
+                LOG.error("Missing MOB cell value: file={} mob cell={} cell={}", fName,
+                  mobCell, c);
                 continue;
               } else if (mobCell.getValueLength() == 0) {
-                String errMsg = String.format("Found 0 length MOB cell in a file=%s cell=%s",
-                  fName, mobCell);
+                String errMsg = String.format("Found 0 length MOB cell in a file=%s mob cell=%s "
+                    + " cell=%s",
+                  fName, mobCell, c);
                 throw new IOException(errMsg);
               }
 
@@ -337,9 +337,11 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
                   // greater than threshold
                   Long size = mobLengthMap.get().get(fName);
                   if (size == null) {
-                    // FATAL error, abort compaction
+                    // FATAL error (we should never get here though), abort compaction
+                    // This error means that meta section of store file does not contain
+                    // MOB file, which has references in at least one cell from this store file
                     String msg = String.format(
-                      "Found unreferenced MOB file during compaction %s, aborting compaction %s",
+                      "Found an unexpected MOB file during compaction %s, aborting compaction %s",
                       fName, getStoreInfo());
                     throw new IOException(msg);
                   }
@@ -356,8 +358,8 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
                     // file compression yet)
                     long len = mobFileWriter.getPos();
                     if (len > maxMobFileSize) {
-                      LOG.debug("Closing output MOB File, length={} file={}, store=", len,
-                        Bytes.toString(fileName), getStoreInfo());
+                      LOG.debug("Closing output MOB File, length={} file={}, store={}", len,
+                        mobFileWriter.getPath().getName(), getStoreInfo());
                       commitOrAbortMobWriter(mobFileWriter, fd.maxSeqId, mobCells, major);
                       mobFileWriter = newMobWriter(fd);
                       fileName = Bytes.toBytes(mobFileWriter.getPath().getName());
@@ -544,7 +546,8 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     try {
       StoreFileWriter mobFileWriter = mobStore.createWriterInTmp(new Date(fd.latestPutTs),
         fd.maxKeyCount, compactionCompression, store.getRegionInfo().getStartKey(), true);
-      LOG.debug("New MOB writer created={}", mobFileWriter.getPath().getName());
+      LOG.debug("New MOB writer created={} store={}", mobFileWriter.getPath().getName(),
+        getStoreInfo());
       // Add reference we get for compact MOB
       mobRefSet.get().add(mobFileWriter.getPath().getName());
       return mobFileWriter;

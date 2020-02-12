@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
@@ -59,7 +58,6 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 public class MobFileCompactionChore extends ScheduledChore {
 
   private static final Logger LOG = LoggerFactory.getLogger(MobFileCompactionChore.class);
-  private Configuration conf;
   private HMaster master;
   private int regionBatchSize = 0;// not set - compact all
 
@@ -71,7 +69,6 @@ public class MobFileCompactionChore extends ScheduledChore {
           MobConstants.DEFAULT_MOB_COMPACTION_CHORE_PERIOD),
         TimeUnit.SECONDS);
     this.master = master;
-    this.conf = master.getConfiguration();
     this.regionBatchSize =
         master.getConfiguration().getInt(MobConstants.MOB_MAJOR_COMPACTION_REGION_BATCH_SIZE,
           MobConstants.DEFAULT_MOB_MAJOR_COMPACTION_REGION_BATCH_SIZE);
@@ -80,7 +77,6 @@ public class MobFileCompactionChore extends ScheduledChore {
 
   @VisibleForTesting
   public MobFileCompactionChore(Configuration conf, int batchSize) {
-    this.conf = conf;
     this.regionBatchSize = batchSize;
   }
 
@@ -89,7 +85,7 @@ public class MobFileCompactionChore extends ScheduledChore {
 
     boolean reported = false;
 
-    try (Connection conn = ConnectionFactory.createConnection(conf);
+    try (Connection conn = master.getConnection();
         Admin admin = conn.getAdmin();) {
 
       TableDescriptors htds = master.getTableDescriptors();
@@ -125,19 +121,17 @@ public class MobFileCompactionChore extends ScheduledChore {
                 performMajorCompactionInBatches(admin, htd, hcd);
               }
             } else {
-              LOG.info("Skipping table={} column family={} because it is not MOB-enabled",
+              LOG.debug("Skipping table={} column family={} because it is not MOB-enabled",
                 htd.getTableName(), hcd.getNameAsString());
             }
           } catch (IOException e) {
-            String errMsg = String.format("Failed to compact table=%s cf=%s",
-              htd.getTableName(), hcd.getNameAsString());
-            LOG.error(errMsg, e);
+            LOG.error("Failed to compact table={} cf={}",
+              htd.getTableName(), hcd.getNameAsString(), e);
           } catch (InterruptedException ee) {
             Thread.currentThread().interrupt();
             master.reportMobCompactionEnd(htd.getTableName());
-            String warnMsg = String.format("Failed to compact table=%s cf=%s",
-              htd.getTableName(), hcd.getNameAsString());
-            LOG.warn(warnMsg, ee);
+            LOG.warn("Failed to compact table={} cf={}",
+              htd.getTableName(), hcd.getNameAsString(), ee);
             // Quit the chore
             return;
           }
@@ -168,7 +162,7 @@ public class MobFileCompactionChore extends ScheduledChore {
     // Shuffle list of regions in case if they come ordered by region server
     Collections.shuffle(regions);
     // Create first batch
-    List<RegionInfo> toCompact = new ArrayList<RegionInfo>(regions.size());
+    List<RegionInfo> toCompact = new ArrayList<RegionInfo>(this.regionBatchSize);
     for (int i = 0; i < this.regionBatchSize; i++) {
       toCompact.add(regions.remove(0));
     }
@@ -188,7 +182,7 @@ public class MobFileCompactionChore extends ScheduledChore {
           if (admin.getCompactionStateForRegion(ri.getRegionName()) == CompactionState.NONE) {
             totalCompacted++;
             LOG.info(
-              "Finished major MOB compaction: table={} cf={} region={}," + " compacted regions={}",
+              "Finished major MOB compaction: table={} cf={} region={} compacted regions={}",
               htd.getTableName(), hcd.getNameAsString(), ri.getRegionNameAsString(),
               totalCompacted);
             compacted.add(ri);
@@ -203,17 +197,15 @@ public class MobFileCompactionChore extends ScheduledChore {
       }
       // Remove failed regions to avoid
       // endless compaction loop
-      for(RegionInfo ri: failed) {
-        toCompact.remove(ri);
-      }
+      toCompact.removeAll(failed);
       failed.clear();
       // Update batch: remove compacted regions and add new ones
       for (RegionInfo ri : compacted) {
         toCompact.remove(ri);
         if (regions.size() > 0) {
           RegionInfo region = regions.remove(0);
-          startCompaction(admin, htd.getTableName(), region, hcd.getName());
           toCompact.add(region);
+          startCompaction(admin, htd.getTableName(), region, hcd.getName());
         }
       }
       compacted.clear();

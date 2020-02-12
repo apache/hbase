@@ -113,7 +113,7 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
       }
     }
 
-    FileSystem fs = FileSystem.get(conf);
+    FileSystem fs = store.getFileSystem();
 
     // Since scanner.next() can return 'false' but still be delivering data,
     // we have to use a do/while loop.
@@ -152,7 +152,6 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
 
     try {
       try {
-        // If the mob file writer could not be created, directly write the cell to the store file.
         mobFileWriter = mobStore.createWriterInTmp(new Date(fd.latestPutTs), fd.maxKeyCount,
           compactionCompression, store.getRegionInfo().getStartKey(), true);
         fileName = Bytes.toBytes(mobFileWriter.getPath().getName());
@@ -177,18 +176,16 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
           if (compactMOBs) {
             if (MobUtils.isMobReferenceCell(c)) {
               if (counter == countFailAt) {
-                LOG.warn("\n\n INJECTED FAULT mobCounter=" + mobCounter.get() + "\n\n");
+                LOG.warn("INJECTED FAULT mobCounter={}", mobCounter.get());
                 throw new CorruptHFileException("injected fault");
               }
               String fName = MobUtils.getMobFileName(c);
-              Path pp = new Path(new Path(fs.getUri()), new Path(path, fName));
-
               // Added to support migration
               try {
                 mobCell = mobStore.resolve(c, true, false).getCell();
               } catch (FileNotFoundException fnfe) {
                 if (discardMobMiss) {
-                  LOG.error("Missing MOB cell: file=" + pp + " not found");
+                  LOG.error("Missing MOB cell: file={} not found", fName);
                   continue;
                 } else {
                   throw fnfe;
@@ -196,7 +193,7 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
               }
 
               if (discardMobMiss && mobCell.getValueLength() == 0) {
-                LOG.error("Missing MOB cell value: file=" + pp + " cell=" + mobCell);
+                LOG.error("Missing MOB cell value: file={} cell={}", fName, mobCell);
                 continue;
               }
 
@@ -206,15 +203,14 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
                 mobFileWriter.append(mobCell);
                 writer.append(
                   MobUtils.createMobRefCell(mobCell, fileName, this.mobStore.getRefCellTags()));
-                cellsCountCompactedFromMob++;
-                cellsSizeCompactedFromMob += mobCell.getValueLength();
                 mobCells++;
               } else {
                 // If MOB value is less than threshold, append it directly to a store file
                 PrivateCellUtil.setSequenceId(mobCell, c.getSequenceId());
                 writer.append(mobCell);
+                cellsCountCompactedFromMob++;
+                cellsSizeCompactedFromMob += mobCell.getValueLength();
               }
-
             } else {
               // Not a MOB reference cell
               int size = c.getValueLength();
@@ -223,6 +219,8 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
                 writer
                     .append(MobUtils.createMobRefCell(c, fileName, this.mobStore.getRefCellTags()));
                 mobCells++;
+                cellsCountCompactedToMob++;
+                cellsSizeCompactedToMob += c.getValueLength();
               } else {
                 writer.append(c);
               }
@@ -263,8 +261,7 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
                 }
               }
             } else {
-              // TODO ????
-              LOG.error("Corrupted MOB reference: " + c);
+              LOG.error("Corrupted MOB reference: {}", c);
               writer.append(c);
             }
           } else if (c.getValueLength() <= mobSizeThreshold) {
