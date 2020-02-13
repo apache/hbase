@@ -494,6 +494,12 @@
       <timezone>+8</timezone>
     </developer>
     <developer>
+      <id>pankajkumar</id>
+      <name>Pankaj Kumar</name>
+      <email>pankajkumar@apache.org</email>
+      <timezone>+5</timezone>
+    </developer>
+    <developer>
       <id>psomogyi</id>
       <name>Peter Somogyi</name>
       <email>psomogyi@apache.org</email>

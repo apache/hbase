@@ -31,9 +31,12 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ MiscTests.class, MediumTests.class })
 public class TestFullLogReconstruction {
+  private static final Logger LOG = LoggerFactory.getLogger(TestFullLogReconstruction.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -82,7 +85,9 @@ public class TestFullLogReconstruction {
       TEST_UTIL.loadTable(table, FAMILY);
     }
     RegionServerThread rsThread = TEST_UTIL.getHBaseCluster().getRegionServerThreads().get(0);
-    TEST_UTIL.expireRegionServerSession(0);
+    int index = 0;
+    LOG.info("Expiring {}", TEST_UTIL.getMiniHBaseCluster().getRegionServer(index));
+    TEST_UTIL.expireRegionServerSession(index);
     // make sure that the RS is fully down before reading, so that we will read the data from other
     // RSes.
     TEST_UTIL.waitFor(30000, new ExplainingPredicate<Exception>() {
@@ -97,6 +102,7 @@ public class TestFullLogReconstruction {
         return rsThread.getRegionServer() + " is still alive";
       }
     });
+    LOG.info("Starting count");
 
     int newCount = TEST_UTIL.countRows(table);
     assertEquals(count, newCount);
