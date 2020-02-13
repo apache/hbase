@@ -1,5 +1,94 @@
 HBase Change Log
 
+Release Notes - HBase - Version 1.6.0 02/21/2020
+
+** Sub-task
+    * [HBASE-23151] - Backport HBASE-23083 (Collect Executor status info periodically and report to metrics system) to branch-1
+    * [HBASE-23246] - Fix error prone warning in TestMetricsUserSourceImpl
+    * [HBASE-23288] - Backport HBASE-23251 (Add Column Family and Table Names to HFileContext) to branch-1
+    * [HBASE-23707] - Add IntelliJ check style plugin configuration
+
+** Bug
+    * [HBASE-18439] - Subclasses of o.a.h.h.chaos.actions.Action all use the same logger
+    * [HBASE-19663] - javadoc creation needs jsr305
+    * [HBASE-21776] - Duplicate "Set storagePolicy" debug logging
+    * [HBASE-22096] - /storeFile.jsp shows CorruptHFileException when the storeFile is a reference file
+    * [HBASE-22441] - BucketCache NullPointerException in cacheBlock
+    * [HBASE-23045] -  currentPath may be stitched in a loop in replication source code.
+    * [HBASE-23056] - Block count is 0 when BucketCache using persistent IOEngine and retrieve from file 
+    * [HBASE-23149] - hbase shouldPerformMajorCompaction logic is not correct
+    * [HBASE-23153] - PrimaryRegionCountSkewCostFunction SLB function should implement CostFunction#isNeeded
+    * [HBASE-23177] - If fail to open reference because FNFE, make it plain it is a Reference
+    * [HBASE-23185] - High cpu usage because getTable()#put() gets config value every time
+    * [HBASE-23237] - Negative 'Requests per Second' counts in UI
+    * [HBASE-23254] - Release replication buffer quota correctly, when batch includes bulk loaded hfiles
+    * [HBASE-23261] - Region stuck in transition while splitting
+    * [HBASE-23273] - Table header is not correct on table.jsp when table name is hbase:meta
+    * [HBASE-23287] - WALs not aged off of HDFS because LogCleaner is not added to choreService
+    * [HBASE-23337] - Several modules missing in nexus for Apache HBase 2.2.2
+    * [HBASE-23359] - RS going down with NPE when splitting a region with compaction disabled in branch-1
+    * [HBASE-23360] - [CLI] Fix help command "set_quota" to explain removing quota
+    * [HBASE-23364] - HRegionServer sometimes does not shut down.
+    * [HBASE-23375] - Backport HBASE-22441 to branch-1
+    * [HBASE-23590] - Update maxStoreFileRefCount to maxCompactedStoreFileRefCount
+    * [HBASE-23698] - Switch central repo to https on branch-1
+    * [HBASE-23825] - Increment proto conversion is broken
+
+** New Feature
+    * [HBASE-23073] - Add an optional costFunction to balance regions according to a capacity rule
+    * [HBASE-23210] - Backport HBASE-15519 (Add per-user metrics) to branch-1
+    * [HBASE-23710] - Priority configuration for system coprocessors
+
+** Improvement
+    * [HBASE-20626] - Change the value of "Requests Per Second" on WEBUI
+    * [HBASE-22701] - Better handle invalid local directory for DynamicClassLoader
+    * [HBASE-23114] - Use archiveArtifacts in Jenkinsfiles
+    * [HBASE-23172] - HBase Canary region success count metrics reflect column family successes, not region successes
+    * [HBASE-23174] - Upgrade jackson and jackson-databind to 2.9.10 (branch-1)
+    * [HBASE-23207] - Log a region open journal
+    * [HBASE-23208] - Unit formatting in Master & RS UI
+    * [HBASE-23212] - Provide config reload for Auto Region Reopen based on storeFile ref count
+    * [HBASE-23228] - Allow for jdk8 specific modules on branch-1 in precommit/nightly testing
+    * [HBASE-23238] - Additional test and checks for null references on ScannerCallableWithReplicas
+    * [HBASE-23245] - All MutableHistogram implementations should remove maxExpected
+    * [HBASE-23278] -  Add a table-level compaction progress display on the UI
+    * [HBASE-23283] - Provide clear and consistent logging about the period of enabled chores
+    * [HBASE-23335] - Improve cost functions array copy in StochasticLoadBalancer
+    * [HBASE-23362] - WalPrettyPrinter should include the table name
+    * [HBASE-23621] - Reduce number of Checkstyle violations in tests of hbase-common
+    * [HBASE-23622] - Reduce number of Checkstyle violations in hbase-common
+    * [HBASE-23623] - Reduce number of Checkstyle violations in hbase-rest
+    * [HBASE-23625] - Reduce number of Checkstyle violations in hbase-common
+    * [HBASE-23626] - Reduce number of Checkstyle violations in tests of hbase-common
+    * [HBASE-23627] - Resolve remaining Checkstyle violations in hbase-thrift
+    * [HBASE-23645] - Fix remaining Checkstyle violations in tests of hbase-common
+    * [HBASE-23646] - Fix remaining Checkstyle violations in tests of hbase-rest
+    * [HBASE-23661] - Reduce number of Checkstyle violations in hbase-rest
+    * [HBASE-23675] - Move to Apache parent POM version 22
+    * [HBASE-23802] - Remove unnecessary Configuration instantiation in LossyAccounting
+
+** Test
+    * [HBASE-23259] - Ability to run mini cluster using pre-determined available random ports
+    * [HBASE-23552] - Format Javadocs on ITBLL
+    * [HBASE-23569] - Validate that the log cleaner actually cleans oldWALs as expected
+    * [HBASE-23665] - Split unit tests from TestTableName into a separate test only class
+    * [HBASE-23711] - Add test for MinVersions and KeepDeletedCells TTL
+    * [HBASE-23749] - TestHFileWriterV3 should have tests for all data block encodings
+    * [HBASE-23793] - Increase maven heap allocation to 4G in Yetus personality
+
+
+** Task
+    * [HBASE-23053] - Disable concurrent nightly builds
+    * [HBASE-23213] - Backport HBASE-22460 to branch-1
+    * [HBASE-23219] - Re-enable ZKLess tests for branch-1 (Revert HBASE-14622)
+    * [HBASE-23227] - Upgrade jackson-databind to 2.9.10.1 to avoid recent CVEs
+    * [HBASE-23229] - Update branch-1 to 1.6.0-SNAPSHOT
+    * [HBASE-23234] - Provide .editorconfig based on checkstyle configuration
+    * [HBASE-23236] - Upgrade to yetus 0.11.1
+    * [HBASE-23250] - Log message about CleanerChore delegate initialization should be at INFO
+    * [HBASE-23774] - Announce user-zh list
+
+
 Release Notes - HBase - Version 1.5.0 10/14/2019
 
 ** Sub-task
