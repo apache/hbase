@@ -167,19 +167,8 @@ public class TestMasterShutdown {
         // wait() in the test, waiting for the server manager to become available.
         final long timeout = TimeUnit.MINUTES.toMillis(10);
         assertNotEquals("timeout waiting for server manager to become available.",
-          -1, Waiter.waitFor(htu.getConfiguration(), timeout, () -> {
-            final MiniHBaseCluster cluster = htu.getMiniHBaseCluster();
-            if (cluster == null) {
-              LOG.debug("cluster is null.");
-              return false;
-            }
-            final HMaster master = cluster.getMaster();
-            if (master == null) {
-              LOG.debug("master is null.");
-              return false;
-            }
-            return master.getServerManager() != null;
-          }));
+          -1, Waiter.waitFor(htu.getConfiguration(), timeout,
+            () -> masterThread.getMaster().getServerManager() != null));
 
         // Master has come up far enough that we can terminate it without creating a zombie.
         final long result = Waiter.waitFor(htu.getConfiguration(), timeout, 500, () -> {
