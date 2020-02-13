@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,7 +20,9 @@
 package org.apache.hadoop.hbase.util;
 
 import static org.junit.Assert.assertEquals;
-
+import static org.junit.Assert.assertTrue;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 
@@ -30,31 +32,33 @@ import org.junit.experimental.categories.Category;
 @Category({MiscTests.class, SmallTests.class})
 public class TestLossyCounting {
 
+  private final Configuration conf = HBaseConfiguration.create();
+
   @Test
   public void testBucketSize() {
-    LossyCounting lossyCounting = new LossyCounting(0.01, null);
+    LossyCounting lossyCounting = new LossyCounting(0.01);
     assertEquals(100L, lossyCounting.getBucketSize());
-    LossyCounting lossyCounting2 = new LossyCounting(null);
+    LossyCounting lossyCounting2 = new LossyCounting(conf);
     assertEquals(50L, lossyCounting2.getBucketSize());
   }
 
   @Test
   public void testAddByOne() {
-    LossyCounting lossyCounting = new LossyCounting(0.01, null);
+    LossyCounting lossyCounting = new LossyCounting(0.01);
     for(int i = 0; i < 100; i++){
       String key = "" + i;
       lossyCounting.add(key);
     }
     assertEquals(100L, lossyCounting.getDataSize());
-    for(int i = 0; i < 100; i++){
+    for (int i = 0; i < 100; i++) {
       String key = "" + i;
-      assertEquals(true, lossyCounting.contains(key));
+      assertTrue(lossyCounting.contains(key));
     }
   }
 
   @Test
   public void testSweep1() {
-    LossyCounting lossyCounting = new LossyCounting(0.01, null);
+    LossyCounting lossyCounting = new LossyCounting(0.01);
     for(int i = 0; i < 400; i++){
       String key = "" + i;
       lossyCounting.add(key);
@@ -66,7 +70,7 @@ public class TestLossyCounting {
 
   @Test
   public void testSweep2() {
-    LossyCounting lossyCounting = new LossyCounting(0.1, null);
+    LossyCounting lossyCounting = new LossyCounting(0.1);
     for(int i = 0; i < 10; i++){
       String key = "" + i;
       lossyCounting.add(key);
@@ -78,6 +82,4 @@ public class TestLossyCounting {
     }
     assertEquals(1L, lossyCounting.getDataSize());
   }
-
-
 }
