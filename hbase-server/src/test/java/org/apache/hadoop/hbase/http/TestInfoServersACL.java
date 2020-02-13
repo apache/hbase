@@ -138,6 +138,7 @@ public class TestInfoServersACL {
 
     CLUSTER = new LocalHBaseCluster(conf, 1);
     CLUSTER.startup();
+    CLUSTER.getActiveMaster().waitForMetaOnline();
   }
 
   /**
