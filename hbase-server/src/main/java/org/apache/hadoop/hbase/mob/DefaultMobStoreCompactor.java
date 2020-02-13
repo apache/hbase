@@ -256,7 +256,6 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
       MobConstants.DEFAULT_MOB_COMPACTION_MAX_FILE_SIZE);
     LOG.info("Compact MOB={} optimized={} maximum MOB file size={} major={} store={}", compactMOBs,
       ioOptimizedMode, maxMobFileSize, major, getStoreInfo());
-    FileSystem fs = store.getFileSystem();
     // Since scanner.next() can return 'false' but still be delivering data,
     // we have to use a do/while loop.
     List<Cell> cells = new ArrayList<>();
@@ -269,7 +268,6 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     String compactionName = ThroughputControlUtil.getNameForThrottling(store, "compaction");
     long now = 0;
     boolean hasMore;
-    Path path = MobUtils.getMobFamilyPath(conf, store.getTableName(), store.getColumnFamilyName());
     byte[] fileName = null;
     StoreFileWriter mobFileWriter = null;
     /*
