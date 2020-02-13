@@ -983,6 +983,23 @@
             </execution>
           </executions>
         </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-enforcer-plugin</artifactId>
+          <version>${enforcer.version}</version>
+          <dependencies>
+            <dependency>
+              <groupId>org.codehaus.mojo</groupId>
+              <artifactId>extra-enforcer-rules</artifactId>
+              <version>${extra.enforcer.version}</version>
+            </dependency>
+            <dependency>
+              <groupId>de.skuzzle.enforcer</groupId>
+              <artifactId>restrict-imports-enforcer-rule</artifactId>
+              <version>${restrict-imports.enforcer.version}</version>
+            </dependency>
+          </dependencies>
+        </plugin>
       </plugins>
     </pluginManagement>
     <plugins>
@@ -1021,20 +1038,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <version>${enforcer.version}</version>
-        <dependencies>
-          <dependency>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>extra-enforcer-rules</artifactId>
-            <version>${extra.enforcer.version}</version>
-          </dependency>
-          <dependency>
-            <groupId>de.skuzzle.enforcer</groupId>
-            <artifactId>restrict-imports-enforcer-rule</artifactId>
-            <version>${restrict-imports.enforcer.version}</version>
-          </dependency>
-        </dependencies>
-        <!-- version set by parent -->
         <executions>
           <execution>
             <id>hadoop-profile-min-maven-min-java-banned-xerces</id>
@@ -2390,10 +2393,45 @@
       <activation>
         <jdk>[1.11,)</jdk>
       </activation>
-      <dependencyManagement>
-        <dependencies>
-        </dependencies>
-      </dependencyManagement>
+      <properties>
+        <!-- TODO: replicate logic for windows support -->
+        <argLine>--add-opens=java.base/jdk.internal.ref=ALL-UNNAMED ${hbase-surefire.argLine}</argLine>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-enforcer-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>hadoop3-profile-required</id>
+                <goals>
+                  <goal>enforce</goal>
+                </goals>
+                <configuration>
+                  <rules>
+                    <requireProperty>
+                      <!--
+                        $ JAVA_HOME=... mvn -Dhadoop.profile=3.0 -PrunSmallTests help:active-profiles enforcer:display-info clean test
+                        enforcer plugin does not see active profiles on sub-modules, so enforce based
+                        on the presence of the activation property and value.
+                      -->
+                      <property>hadoop.profile</property>
+                      <regex>.*3\.0$</regex>
+                      <message>
+                        HBase with JDK11 requires Hadoop3. Activate the profile with `-Dhadoop.profile=3.0`.
+                      </message>
+                      <regexMessage>
+                        HBase with JDK11 requires Hadoop3. Activate the profile with `-Dhadoop.profile=3.0`.
+                      </regexMessage>
+                    </requireProperty>
+                  </rules>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
     <!-- profile activated by the Jenkins patch testing job -->
     <profile>
@@ -2867,6 +2905,16 @@
             </exclusions>
           </dependency>
           <dependency>
+            <!--
+              a missing transitive dependency on JDK9+ (obsoleted by Hadoop-3.3.0+, HADOOP-15775)
+              duplicated here because hadoop-3.0 piggy-backs off the hadoop-2.0 profile.
+            -->
+            <groupId>javax.activation</groupId>
+            <artifactId>javax.activation-api</artifactId>
+            <version>1.2.0</version>
+            <scope>test</scope>
+          </dependency>
+          <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-client</artifactId>
             <version>${hadoop-two.version}</version>
@@ -3207,6 +3255,15 @@
                <artifactId>jackson-mapper-asl</artifactId>
              </exclusion>
            </exclusions>
+         </dependency>
+         <dependency>
+           <!--
+             a missing transitive dependency on JDK9+ (obsoleted by Hadoop-3.3.0+, HADOOP-15775)
+           -->
+           <groupId>javax.activation</groupId>
+           <artifactId>javax.activation-api</artifactId>
+           <version>1.2.0</version>
+           <scope>test</scope>
          </dependency>
          <dependency>
            <groupId>org.apache.hadoop</groupId>
