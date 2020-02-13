@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.snapshot;
 
 import static org.junit.Assert.assertTrue;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import org.apache.hadoop.fs.FileSystem;
@@ -102,16 +103,17 @@ public class TestExportSnapshotV1NoCluster {
     Path[] r2Files = builder.addRegion();
     builder.commit();
     int snapshotFilesCount = r1Files.length + r2Files.length;
-
     byte[] snapshotName = Bytes.toBytes(builder.getSnapshotDescription().getName());
     TableName tableName = builder.getTableDescriptor().getTableName();
     TestExportSnapshot.testExportFileSystemState(testUtil.getConfiguration(),
       tableName, snapshotName, snapshotName, snapshotFilesCount,
-      testDir, getDestinationDir(testDir), false, null, true);
+      testDir, getDestinationDir(testUtil, testDir), false, null, true);
   }
 
-  static Path getDestinationDir(Path testDir) {
-    Path path = new Path(new Path(testDir, "export-test"), "export-" + System.currentTimeMillis());
+  static Path getDestinationDir(HBaseCommonTestingUtility hctu, Path testDir) throws IOException {
+    FileSystem fs = FileSystem.get(hctu.getConfiguration());
+    Path path = new Path(new Path(testDir, "export-test"),
+      "export-" + System.currentTimeMillis()).makeQualified(fs.getUri(), testDir);
     LOG.info("HDFS export destination path: " + path);
     return path;
   }
