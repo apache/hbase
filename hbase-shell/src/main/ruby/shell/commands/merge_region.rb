@@ -42,7 +42,7 @@ Examples:
 
   hbase> merge_region ['FULL_REGIONNAME', 'FULL_REGIONNAME']
   hbase> merge_region ['FULL_REGIONNAME', 'FULL_REGIONNAME', 'FULL_REGIONNAME', ...]
-  hbase> merge_region ['FULL_REGIONNAME', 'FULL_REGIONNAME', 'FULL_REGIONNAME', ..., true]
+  hbase> merge_region ['FULL_REGIONNAME', 'FULL_REGIONNAME', 'FULL_REGIONNAME', ...], true
 
   hbase> merge_region 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME'
   hbase> merge_region 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', ...
@@ -50,7 +50,7 @@ Examples:
 
   hbase> merge_region ['ENCODED_REGIONNAME', 'ENCODED_REGIONNAME']
   hbase> merge_region ['ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', ...]
-  hbase> merge_region ['ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', ..., true]
+  hbase> merge_region ['ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', ...], true
 EOF
       end
 
