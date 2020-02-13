@@ -57,7 +57,7 @@ EOF
       def command(*args)
         args = args.flatten.compact
         args_len = args.length
-        raise(ArgumentError, 'Must pass atleast 2 regions to merge') unless args_len > 1
+        raise(ArgumentError, 'Must pass at least 2 regions to merge') unless args_len > 1
         force = false
         if(args_len > 2)
           last = args[args_len-1]
