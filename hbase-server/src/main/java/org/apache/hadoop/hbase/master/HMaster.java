@@ -2804,11 +2804,6 @@ public class HMaster extends HRegionServer implements MasterServices {
    * Master runs a coordinated stop of all RegionServers and then itself.
    */
   public void shutdown() throws IOException {
-    if (!isInitialized()) {
-      LOG.info("Shutdown requested but we're not the active master. Proceeding as a stop.");
-      stopMaster();
-    }
-
     if (cpHost != null) {
       cpHost.preShutdown();
     }

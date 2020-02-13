@@ -62,6 +62,8 @@ public class TestMasterShutdown {
   @Before
   public void shutdownCluster() throws IOException {
     if (htu != null) {
+      // an extra check in case the test cluster was not terminated after HBaseClassTestRule's
+      // Timeout interrupted the test thread.
       LOG.warn("found non-null TestingUtility -- previous test did not terminate cleanly.");
       htu.shutdownMiniCluster();
     }
@@ -75,9 +77,6 @@ public class TestMasterShutdown {
    */
   @Test
   public void testMasterShutdown() throws Exception {
-    final int NUM_MASTERS = 3;
-    final int NUM_RS = 3;
-
     // Create config to use for this cluster
     Configuration conf = HBaseConfiguration.create();
 
@@ -85,9 +84,9 @@ public class TestMasterShutdown {
     try {
       htu = new HBaseTestingUtility(conf);
       StartMiniClusterOption option = StartMiniClusterOption.builder()
-        .numMasters(NUM_MASTERS)
-        .numRegionServers(NUM_RS)
-        .numDataNodes(NUM_RS)
+        .numMasters(3)
+        .numRegionServers(3)
+        .numDataNodes(3)
         .build();
       final MiniHBaseCluster cluster = htu.startMiniCluster(option);
 
@@ -160,27 +159,27 @@ public class TestMasterShutdown {
 
       final CompletableFuture<Void> shutdownFuture = CompletableFuture.runAsync(() -> {
         // Switching to master registry exacerbated a race in the master bootstrap that can result
-        // in a lost shutdown command (HBASE-8422). The race is essentially because the server
-        // manager in HMaster is not initialized by the time shutdown() RPC (below) is made to the
-        // master. The suspected reason as to why it was uncommon before HBASE-18095 is because the
-        // connection creation with ZK registry is so slow that by then the server manager is
-        // usually init'ed in time for the RPC to be made. For now, adding an explicit wait() in
-        // the test, waiting for the server manager to become available.
+        // in a lost shutdown command (HBASE-8422, HBASE-23836). The race is essentially because
+        // the server manager in HMaster is not initialized by the time shutdown() RPC (below) is
+        // made to the master. The suspected reason as to why it was uncommon before HBASE-18095
+        // is because the connection creation with ZK registry is so slow that by then the server
+        // manager is usually init'ed in time for the RPC to be made. For now, adding an explicit
+        // wait() in the test, waiting for the server manager to become available.
         final long timeout = TimeUnit.MINUTES.toMillis(10);
-//        assertNotEquals("timeout waiting for server manager to become available.",
-//          -1, Waiter.waitFor(htu.getConfiguration(), timeout, () -> {
-//            final MiniHBaseCluster cluster = htu.getMiniHBaseCluster();
-//            if (cluster == null) {
-//              LOG.debug("cluster is null.");
-//              return false;
-//            }
-//            final HMaster master = cluster.getMaster();
-//            if (master == null) {
-//              LOG.debug("master is null.");
-//              return false;
-//            }
-//            return master.getServerManager() != null;
-//          }));
+        assertNotEquals("timeout waiting for server manager to become available.",
+          -1, Waiter.waitFor(htu.getConfiguration(), timeout, () -> {
+            final MiniHBaseCluster cluster = htu.getMiniHBaseCluster();
+            if (cluster == null) {
+              LOG.debug("cluster is null.");
+              return false;
+            }
+            final HMaster master = cluster.getMaster();
+            if (master == null) {
+              LOG.debug("master is null.");
+              return false;
+            }
+            return master.getServerManager() != null;
+          }));
 
         // Master has come up far enough that we can terminate it without creating a zombie.
         final long result = Waiter.waitFor(htu.getConfiguration(), timeout, 500, () -> {
@@ -228,7 +227,6 @@ public class TestMasterShutdown {
    */
   private static Configuration createMasterShutdownBeforeStartingAnyRegionServerConfiguration() {
     final Configuration conf = HBaseConfiguration.create();
-    // conf.setInt("hbase.ipc.client.failed.servers.expiry", 200);
     // make sure the master will wait forever in the absence of a RS.
     conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
     // don't need a long write pipeline for this test.
