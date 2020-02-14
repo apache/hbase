@@ -98,6 +98,23 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     }
   };
 
+  
+  /*
+   * Disable IO mode. IO mode can be forcefully disabled if compactor finds
+   * old MOB file (pre-distributed compaction). This means that migration has not 
+   * been completed yet. During data migration (upgrade) process only general compaction
+   * is allowed.
+   *  
+   */
+  
+  static ThreadLocal<Boolean> disableIO = new ThreadLocal<Boolean>() {
+
+    @Override
+    protected Boolean initialValue() {
+      return Boolean.FALSE;
+    }    
+  };
+  
   /*
    * Map : MOB file name - file length Can be expensive for large amount of MOB files.
    */
@@ -176,6 +193,8 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
         Path mobDir =
             MobUtils.getMobFamilyPath(conf, store.getTableName(), store.getColumnFamilyName());
         List<Path> mobFiles = MobUtils.getReferencedMobFiles(request.getFiles(), mobDir);
+        //reset disableIO
+        disableIO.set(Boolean.FALSE);
         if (mobFiles.size() > 0) {
           calculateMobLengthMap(mobFiles);
         }
@@ -192,6 +211,9 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     HashMap<String, Long> map = mobLengthMap.get();
     map.clear();
     for (Path p : mobFiles) {
+      if (MobFileName.isOldMobFileName(p.getName())) {
+        disableIO.set(Boolean.TRUE);
+      }
       FileStatus st = fs.getFileStatus(p);
       long size = st.getLen();
       LOG.debug("Referenced MOB file={} size={}", p, size);
@@ -254,8 +276,10 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     }
     long maxMobFileSize = conf.getLong(MobConstants.MOB_COMPACTION_MAX_FILE_SIZE_KEY,
       MobConstants.DEFAULT_MOB_COMPACTION_MAX_FILE_SIZE);
-    LOG.info("Compact MOB={} optimized={} maximum MOB file size={} major={} store={}", compactMOBs,
-      ioOptimizedMode, maxMobFileSize, major, getStoreInfo());
+    boolean ioOptimizedMode = this.ioOptimizedMode && !disableIO.get();
+    LOG.info("Compact MOB={} optimized configured={} optimized enabled={} maximum MOB file size={} "+
+      "major={} store={}", compactMOBs,
+      this.ioOptimizedMode, ioOptimizedMode, maxMobFileSize, major, getStoreInfo());
     // Since scanner.next() can return 'false' but still be delivering data,
     // we have to use a do/while loop.
     List<Cell> cells = new ArrayList<>();

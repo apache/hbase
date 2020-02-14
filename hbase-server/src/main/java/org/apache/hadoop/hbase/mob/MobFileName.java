@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.util.MD5Hash;
  * TTL easily. If this timestamp is older than the TTL, it's regarded as expired.
  */
 @InterfaceAudience.Private
-public final class MobFileName {
+public final class MobFileName{
   private final String date;
   private final String startKey;
   private final String uuid;
@@ -124,6 +124,7 @@ public final class MobFileName {
    */
   public static MobFileName create(String fileName) {
     // The format of a file name is md5HexString(0-31bytes) + date(32-39bytes) + UUID
+    // + "_" + region
     // The date format is yyyyMMdd
     String startKey = fileName.substring(0, STARTKEY_END_INDEX);
     String date = fileName.substring(STARTKEY_END_INDEX, DATE_END_INDEX);
@@ -132,6 +133,11 @@ public final class MobFileName {
     return new MobFileName(startKey, date, uuid, regionName);
   }
 
+  
+  public static boolean isOldMobFileName(String name) {
+    return name.indexOf(REGION_SEP) < 0;
+  }
+  
   /**
    * get startKey from MobFileName.
    * @param fileName file name.
