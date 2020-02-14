@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -39,8 +38,8 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -57,26 +56,25 @@ public class TestRegionStateStore {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionStateStore.class);
 
-  protected HBaseTestingUtility util;
+  private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
-  @Before
-  public void setup() throws Exception {
-    util = new HBaseTestingUtility();
-    util.startMiniCluster();
+  @BeforeClass
+  public static void beforeClass() throws Exception {
+    UTIL.startMiniCluster();
   }
 
-  @After
-  public void tearDown() throws Exception {
-    util.shutdownMiniCluster();
+  @AfterClass
+  public static void tearDown() throws Exception {
+    UTIL.shutdownMiniCluster();
   }
 
   @Test
   public void testVisitMetaForRegionExistingRegion() throws Exception {
     final TableName tableName = TableName.valueOf("testVisitMetaForRegion");
-    util.createTable(tableName, "cf");
-    final List<HRegion> regions = util.getHBaseCluster().getRegions(tableName);
+    UTIL.createTable(tableName, "cf");
+    final List<HRegion> regions = UTIL.getHBaseCluster().getRegions(tableName);
     final String encodedName = regions.get(0).getRegionInfo().getEncodedName();
-    final RegionStateStore regionStateStore = util.getHBaseCluster().getMaster().
+    final RegionStateStore regionStateStore = UTIL.getHBaseCluster().getMaster().
       getAssignmentManager().getRegionStateStore();
     final AtomicBoolean visitorCalled = new AtomicBoolean(false);
     regionStateStore.visitMetaForRegion(encodedName, new RegionStateStore.RegionStateVisitor() {
@@ -93,10 +91,10 @@ public class TestRegionStateStore {
   @Test
   public void testVisitMetaForBadRegionState() throws Exception {
     final TableName tableName = TableName.valueOf("testVisitMetaForBadRegionState");
-    util.createTable(tableName, "cf");
-    final List<HRegion> regions = util.getHBaseCluster().getRegions(tableName);
+    UTIL.createTable(tableName, "cf");
+    final List<HRegion> regions = UTIL.getHBaseCluster().getRegions(tableName);
     final String encodedName = regions.get(0).getRegionInfo().getEncodedName();
-    final RegionStateStore regionStateStore = util.getHBaseCluster().getMaster().
+    final RegionStateStore regionStateStore = UTIL.getHBaseCluster().getMaster().
         getAssignmentManager().getRegionStateStore();
 
     // add the BAD_STATE which does not exist in enum RegionState.State
@@ -105,7 +103,7 @@ public class TestRegionStateStore {
     put.addColumn(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER,
         Bytes.toBytes("BAD_STATE"));
 
-    try (Table table = util.getConnection().getTable(TableName.META_TABLE_NAME)) {
+    try (Table table = UTIL.getConnection().getTable(TableName.META_TABLE_NAME)) {
       table.put(put);
     }
 
@@ -126,7 +124,7 @@ public class TestRegionStateStore {
   @Test
   public void testVisitMetaForRegionNonExistingRegion() throws Exception {
     final String encodedName = "fakeencodedregionname";
-    final RegionStateStore regionStateStore = util.getHBaseCluster().getMaster().
+    final RegionStateStore regionStateStore = UTIL.getHBaseCluster().getMaster().
       getAssignmentManager().getRegionStateStore();
     final AtomicBoolean visitorCalled = new AtomicBoolean(false);
     regionStateStore.visitMetaForRegion(encodedName, new RegionStateStore.RegionStateVisitor() {
@@ -138,5 +136,4 @@ public class TestRegionStateStore {
     });
     assertFalse("Visitor has been called, but it shouldn't.", visitorCalled.get());
   }
-
 }
