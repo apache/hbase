@@ -1620,6 +1620,17 @@ public final class HConstants {
    */
   public static final int BATCH_ROWS_THRESHOLD_DEFAULT = 5000;
 
+  /**
+   * when zookeeper data does not exist on master during meta bootstrap, default to remove the
+   * meta table directory that is considered as partial meta.
+   *
+   * TODO we can remove this feature if we come up a way to define partial meta on during bootstrap
+   *      cluster that does not come with Zookeeper data
+   */
+  public static final String REMOVE_META_ON_RESTART = "hbase.master.remove.meta.on.restart";
+  public static final boolean DEFAULT_REMOVE_META_ON_RESTART = true;
+
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

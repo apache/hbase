@@ -1441,6 +1441,35 @@ public class AssignmentManager {
     }
   }
 
+  /**
+   * Create assign procedure for non-offline regions of enabled table that are assigned
+   * to `unknown` servers after hbase:meta is online.
+   *
+   * This is a special case when WAL directory, SCP WALs and ZK data are cleared,
+   * cluster restarts with hbase:meta table and other tables with storefiles.
+   */
+  public void processRegionsOnUnknownServers() {
+    List<RegionInfo> regionsOnUnknownServers = regionStates.getRegionStates().stream()
+      .filter(s -> !s.isOffline())
+      .filter(s -> isTableEnabled(s.getRegion().getTable()))
+      .filter(s -> !regionStates.isRegionInTransition(s.getRegion()))
+      .filter(s -> {
+        ServerName serverName = regionStates.getRegionServerOfRegion(s.getRegion());
+        if (serverName == null) {
+          return false;
+        }
+        return master.getServerManager().isServerKnownAndOnline(serverName)
+          .equals(ServerManager.ServerLiveState.UNKNOWN);
+      })
+      .map(RegionState::getRegion).collect(Collectors.toList());
+    if (!regionsOnUnknownServers.isEmpty()) {
+      LOG.info("Found regions {} on unknown servers, reassign them to online servers",
+        regionsOnUnknownServers);
+      master.getMasterProcedureExecutor().submitProcedures(
+        master.getAssignmentManager().createRoundRobinAssignProcedures(regionsOnUnknownServers));
+    }
+  }
+
   /* AM internal RegionStateStore.RegionStateVisitor implementation. To be used when
    * scanning META table for region rows, using RegionStateStore utility methods. RegionStateStore
    * methods will convert Result into proper RegionInfo instances, but those would still need to be

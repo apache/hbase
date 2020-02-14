@@ -1078,6 +1078,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     // complete before we do this next step processing offline regions else it fails reading
     // table states messing up master launch (namespace table, etc., are not assigned).
     this.assignmentManager.processOfflineRegions();
+    this.assignmentManager.processRegionsOnUnknownServers();
     // Initialize after meta is up as below scans meta
     if (favoredNodesManager != null && !maintenanceMode) {
       SnapshotOfRegionAssignmentFromMeta snapshotOfRegionAssignment =

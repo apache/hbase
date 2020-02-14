@@ -71,7 +71,11 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
     LOG.info("BOOTSTRAP: creating hbase:meta region");
     FileSystem fs = rootDir.getFileSystem(conf);
     Path tableDir = CommonFSUtils.getTableDir(rootDir, TableName.META_TABLE_NAME);
-    if (fs.exists(tableDir) && !fs.delete(tableDir, true)) {
+    boolean removeMeta = conf.getBoolean(HConstants.REMOVE_META_ON_RESTART,
+      HConstants.DEFAULT_REMOVE_META_ON_RESTART);
+    // we use zookeeper data to tell if this is a partial created meta, if so we should delete
+    // and recreate the meta table.
+    if (removeMeta && fs.exists(tableDir) && !fs.delete(tableDir, true)) {
       LOG.warn("Can not delete partial created meta table, continue...");
     }
     // Bootstrapping, make sure blockcache is off. Else, one will be
