@@ -906,7 +906,10 @@ public interface Admin extends Abortable, Closeable {
    * @param forcible <code>true</code> if do a compulsory merge, otherwise we will only merge two
    *          adjacent regions
    * @throws IOException if a remote or network exception occurs
+   * @deprecated since 2.3.0 and will be removed in 4.0.0. Multi-region merge feature is now
+   *             supported. Use {@link #mergeRegionsAsync(byte[][], boolean)} instead.
    */
+  @Deprecated
   default Future<Void> mergeRegionsAsync(byte[] nameOfRegionA, byte[] nameOfRegionB,
       boolean forcible) throws IOException {
     byte[][] nameofRegionsToMerge = new byte[2][];
@@ -916,11 +919,7 @@ public interface Admin extends Abortable, Closeable {
   }
 
   /**
-   * Merge regions. Asynchronous operation.
-   * <p/>
-   * You may get a {@code DoNotRetryIOException} if you pass more than two regions in but the master
-   * does not support merging more than two regions. At least till 2.2.0, we still only support
-   * merging two regions.
+   * Merge multiple regions (>=2). Asynchronous operation.
    * @param nameofRegionsToMerge encoded or full name of daughter regions
    * @param forcible <code>true</code> if do a compulsory merge, otherwise we will only merge
    *          adjacent regions
