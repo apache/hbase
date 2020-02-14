@@ -72,7 +72,7 @@ public class MobFileCleanerChore extends ScheduledChore {
   }
 
   public MobFileCleanerChore(HMaster master) {
-    super(master.getServerName() + "-ExpiredMobFileCleanerChore", master,
+    super(master.getServerName() + "-MobFileCleanerChore", master,
         master.getConfiguration().getInt(MobConstants.MOB_CLEANER_PERIOD,
           MobConstants.DEFAULT_MOB_CLEANER_PERIOD),
         master.getConfiguration().getInt(MobConstants.MOB_CLEANER_PERIOD,
@@ -176,7 +176,6 @@ public class MobFileCleanerChore extends ScheduledChore {
       Set<String> allActiveMobFileName = new HashSet<String>();
       FileSystem fs = FileSystem.get(conf);
       for (Path regionPath : regionDirs) {
-        region:
         for (ColumnFamilyDescriptor hcd : list) {
           String family = hcd.getNameAsString();
           Path storePath = new Path(regionPath, family);
@@ -185,10 +184,11 @@ public class MobFileCleanerChore extends ScheduledChore {
 
           while (!succeed) {
             if (!fs.exists(storePath)) {
-              LOG.warn("Directory {} was deleted during cleaner procedure execution,"
-                  + " skipping region {}",
-                storePath, regionPath.getName());
-              continue region;
+              String errMsg = 
+                  String.format("Directory %s was deleted during MOB file cleaner chore"
+                  + " execution, aborting MOB file cleaner chore.",
+                storePath);
+              throw new IOException(errMsg);
             }
             RemoteIterator<LocatedFileStatus> rit = fs.listLocatedStatus(storePath);
             List<Path> storeFiles = new ArrayList<Path>();
