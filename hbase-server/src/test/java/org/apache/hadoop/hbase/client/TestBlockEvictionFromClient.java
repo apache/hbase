@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -569,10 +570,9 @@ public class TestBlockEvictionFromClient {
 
   @Test
   public void testBlockRefCountAfterSplits() throws IOException, InterruptedException {
-    Table table = null;
-    try {
-      final TableName tableName = TableName.valueOf(name.getMethodName());
-      table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    try (Table table =
+        TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024)) {
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegion().getEncodedName();
@@ -604,16 +604,18 @@ public class TestBlockEvictionFromClient {
       LOG.info("About to SPLIT on " + Bytes.toString(ROW1));
       TEST_UTIL.getAdmin().split(tableName, ROW1);
       // Wait for splits
-      TEST_UTIL.waitFor(60000, () -> TEST_UTIL.getAdmin().getRegions(rs).size() > regionCount);
+      TEST_UTIL.waitFor(60000,
+        () -> TEST_UTIL.getAdmin().getRegions(rs).size() > regionCount);
+      LOG.info("Split finished");
+      while (region.getCompactionState().compareTo(CompactionState.NONE) != 0) {
+        Threads.sleep(10);
+      }
       region.compact(true);
+      LOG.info("Compaction finished");
       Iterator<CachedBlock> iterator = cache.iterator();
       // Though the split had created the HalfStorefileReader - the firstkey and lastkey scanners
       // should be closed inorder to return those blocks
       iterateBlockCache(cache, iterator);
-    } finally {
-      if (table != null) {
-        table.close();
-      }
     }
   }
 
