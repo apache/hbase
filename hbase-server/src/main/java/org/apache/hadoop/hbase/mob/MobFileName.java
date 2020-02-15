@@ -133,11 +133,10 @@ public final class MobFileName{
     return new MobFileName(startKey, date, uuid, regionName);
   }
 
-  
   public static boolean isOldMobFileName(String name) {
     return name.indexOf(REGION_SEP) < 0;
   }
-  
+
   /**
    * get startKey from MobFileName.
    * @param fileName file name.

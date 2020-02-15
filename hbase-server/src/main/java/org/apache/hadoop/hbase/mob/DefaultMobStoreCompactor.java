@@ -98,15 +98,15 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     }
   };
 
-  
+
   /*
    * Disable IO mode. IO mode can be forcefully disabled if compactor finds
-   * old MOB file (pre-distributed compaction). This means that migration has not 
+   * old MOB file (pre-distributed compaction). This means that migration has not
    * been completed yet. During data migration (upgrade) process only general compaction
    * is allowed.
-   *  
+   *
    */
-  
+
   static ThreadLocal<Boolean> disableIO = new ThreadLocal<Boolean>() {
 
     @Override
@@ -114,7 +114,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
       return Boolean.FALSE;
     }    
   };
-  
+
   /*
    * Map : MOB file name - file length Can be expensive for large amount of MOB files.
    */
@@ -277,8 +277,8 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     long maxMobFileSize = conf.getLong(MobConstants.MOB_COMPACTION_MAX_FILE_SIZE_KEY,
       MobConstants.DEFAULT_MOB_COMPACTION_MAX_FILE_SIZE);
     boolean ioOptimizedMode = this.ioOptimizedMode && !disableIO.get();
-    LOG.info("Compact MOB={} optimized configured={} optimized enabled={} maximum MOB file size={} "+
-      "major={} store={}", compactMOBs,
+    LOG.info("Compact MOB={} optimized configured={} optimized enabled={} maximum MOB file size={}"
+      + " major={} store={}", compactMOBs,
       this.ioOptimizedMode, ioOptimizedMode, maxMobFileSize, major, getStoreInfo());
     // Since scanner.next() can return 'false' but still be delivering data,
     // we have to use a do/while loop.
