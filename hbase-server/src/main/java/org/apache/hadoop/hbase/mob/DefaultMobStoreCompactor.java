@@ -112,7 +112,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     @Override
     protected Boolean initialValue() {
       return Boolean.FALSE;
-    }    
+    }
   };
 
   /*

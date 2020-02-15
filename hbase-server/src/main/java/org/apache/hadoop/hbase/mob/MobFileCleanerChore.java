@@ -184,7 +184,7 @@ public class MobFileCleanerChore extends ScheduledChore {
 
           while (!succeed) {
             if (!fs.exists(storePath)) {
-              String errMsg = 
+              String errMsg =
                   String.format("Directory %s was deleted during MOB file cleaner chore"
                   + " execution, aborting MOB file cleaner chore.",
                 storePath);
