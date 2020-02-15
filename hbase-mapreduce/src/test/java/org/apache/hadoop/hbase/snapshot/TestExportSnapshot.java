@@ -213,8 +213,7 @@ public class TestExportSnapshot {
       final RegionPredicate bypassregionPredicate, boolean success) throws Exception {
     URI hdfsUri = FileSystem.get(conf).getUri();
     FileSystem fs = FileSystem.get(copyDir.toUri(), conf);
-    copyDir = copyDir.makeQualified(hdfsUri, copyDir);
-
+    copyDir = copyDir.makeQualified(fs.getUri(), fs.getWorkingDirectory());
     List<String> opts = new ArrayList<>();
     opts.add("--snapshot");
     opts.add(snapshotName);
@@ -227,10 +226,8 @@ public class TestExportSnapshot {
     if (overwrite) opts.add("--overwrite");
 
     // Export Snapshot
-    ExportSnapshot es = new ExportSnapshot();
-    es.setConf(conf);
-    int res = run(conf, es, opts.toArray(new String[opts.size()]));
-    assertEquals(success ? 0 : 1, res);
+    int res = run(conf, new ExportSnapshot(), opts.toArray(new String[opts.size()]));
+    assertEquals("success " + success + ", res=" + res, success ? 0 : 1, res);
     if (!success) {
       final Path targetDir = new Path(HConstants.SNAPSHOT_DIR_NAME, targetName);
       assertFalse(copyDir.toString() + " " + targetDir.toString(),
