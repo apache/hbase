@@ -1017,14 +1017,14 @@ public final class RequestConverter {
   }
 
   public static MergeTableRegionsRequest buildMergeTableRegionsRequest(
-      final byte[][] encodedNameOfdaughaterRegions,
+      final byte[][] encodedNameOfDaughterRegions,
       final boolean forcible,
       final long nonceGroup,
       final long nonce) throws DeserializationException {
     MergeTableRegionsRequest.Builder builder = MergeTableRegionsRequest.newBuilder();
-    for (int i = 0; i< encodedNameOfdaughaterRegions.length; i++) {
+    for (int i = 0; i< encodedNameOfDaughterRegions.length; i++) {
       builder.addRegion(buildRegionSpecifier(
-        RegionSpecifierType.ENCODED_REGION_NAME, encodedNameOfdaughaterRegions[i]));
+        RegionSpecifierType.ENCODED_REGION_NAME, encodedNameOfDaughterRegions[i]));
     }
     builder.setForcible(forcible);
     builder.setNonceGroup(nonceGroup);

@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -26,19 +27,12 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
-import org.apache.hadoop.hbase.Coprocessor;
-import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
-import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
-import org.apache.hadoop.hbase.coprocessor.MasterObserver;
-import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
@@ -116,12 +110,6 @@ public class TestHbck {
     TEST_UTIL.createMultiRegionTable(TABLE_NAME, Bytes.toBytes("family1"), 5);
     procExec = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
-    TEST_UTIL.getHBaseCluster().getMaster().getMasterCoprocessorHost().load(
-      FailingMergeAfterMetaUpdatedMasterObserver.class, Coprocessor.PRIORITY_USER,
-      TEST_UTIL.getHBaseCluster().getMaster().getConfiguration());
-    TEST_UTIL.getHBaseCluster().getMaster().getMasterCoprocessorHost().load(
-      FailingSplitAfterMetaUpdatedMasterObserver.class, Coprocessor.PRIORITY_USER,
-      TEST_UTIL.getHBaseCluster().getMaster().getConfiguration());
   }
 
   @AfterClass
@@ -287,57 +275,70 @@ public class TestHbck {
     }
   }
 
-  public static class FailingSplitAfterMetaUpdatedMasterObserver
-      implements MasterCoprocessor, MasterObserver {
-    public volatile CountDownLatch latch;
+  @Test
+  public void testMergeRegions() throws Exception {
+    Hbck hbck = getHbck();
+    TableName tn = TableName.valueOf(async ? "testMergeRegionsAsync" : "testMergeRegionsSync");
+    TEST_UTIL.createMultiRegionTable(tn, Bytes.toBytes("family1"), 4);
+    try (Admin admin = TEST_UTIL.getAdmin()) {
+      List<RegionInfo> regions = admin.getRegions(tn);
+      List<byte[]> regionsList = new ArrayList<>();
+      List<Long> pids = new ArrayList<>();
 
-    @Override
-    public void start(CoprocessorEnvironment e) throws IOException {
-      resetLatch();
-    }
+      // test num of regions < 2
+      regionsList.add(regions.get(0).getEncodedNameAsBytes());
+      try{
+        hbck.mergeRegions(regionsList, false, HConstants.NO_NONCE, HConstants.NO_NONCE);
+        fail("Should have failed with : Need two Regions at least to run a Merge");
+      } catch (IOException ioe) {
+      }
 
-    @Override
-    public Optional<MasterObserver> getMasterObserver() {
-      return Optional.of(this);
-    }
+      // test dummy region
+      regionsList.add("dummy_region".getBytes());
+      try{
+        hbck.mergeRegions(regionsList, false, HConstants.NO_NONCE, HConstants.NO_NONCE);
+        fail("Should have failed with : UnknownRegionException");
+      } catch (IOException ioe) {
+      }
 
-    @Override
-    public void preSplitRegionAfterMETAAction(ObserverContext<MasterCoprocessorEnvironment> ctx)
-        throws IOException {
-      LOG.info("I'm here");
-      latch.countDown();
-      throw new IOException("this procedure will fail at here forever");
-    }
+      // test duplicate region
+      regionsList.set(1,regionsList.get(0));
+      try{
+        hbck.mergeRegions(regionsList, false, HConstants.NO_NONCE, HConstants.NO_NONCE);
+        fail("Should have failed MergeRegionException: Duplicate regions specified; cannot merge a region to itself");
+      } catch (IOException ioe) {
+      }
 
-    public void resetLatch() {
-      this.latch = new CountDownLatch(1);
-    }
-  }
+      // test non-adjacent region merge
+      regionsList.set(1,regions.get(2).getEncodedNameAsBytes());
+      try{
+        hbck.mergeRegions(regionsList, false, HConstants.NO_NONCE, HConstants.NO_NONCE);
+        fail("Should have failed with MergeRegionException: Unable to merge non-adjacent or non-overlapping regions");
+      } catch (IOException ioe) {
+      }
 
-  public static class FailingMergeAfterMetaUpdatedMasterObserver
-      implements MasterCoprocessor, MasterObserver {
-    public volatile CountDownLatch latch;
+      // test multiple regions (>2) & non adjacent regions with force and without force
+      regionsList.add(regions.get(1).getEncodedNameAsBytes());
+      regionsList.add(regions.get(3).getEncodedNameAsBytes());
+      // regionsList now contains r0, r2, r1, r3
 
-    @Override
-    public void start(CoprocessorEnvironment e) throws IOException {
-      resetLatch();
-    }
+      try{
+        // without force, hence should fail
+        hbck.mergeRegions(regionsList, false, HConstants.NO_NONCE, HConstants.NO_NONCE);
+        fail("Should have failed with MergeRegionException: Unable to merge non-adjacent or non-overlapping regions");
+      } catch (IOException ioe) {
+      }
 
-    @Override
-    public Optional<MasterObserver> getMasterObserver() {
-      return Optional.of(this);
-    }
-
-    public void resetLatch() {
-      this.latch = new CountDownLatch(1);
-    }
-
-    @Override
-    public void postMergeRegionsCommitAction(
-        final ObserverContext<MasterCoprocessorEnvironment> ctx, final RegionInfo[] regionsToMerge,
-        final RegionInfo mergedRegion) throws IOException {
-      latch.countDown();
-      throw new IOException("this procedure will fail at here forever");
+      // with force, hence should pass and result in exactly 1 region
+      pids.add(hbck.mergeRegions(regionsList, true, HConstants.NO_NONCE, HConstants.NO_NONCE));
+      LOG.info("pid for the mergeRegion created is {}", pids.get(0));
+      waitOnPids(pids);
+      regions = admin.getRegions(tn);
+      assertEquals(1, regions.size());
+      RegionState rs =
+        TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
+          .getRegionState(regions.get(0).getEncodedName());
+      assertTrue(rs.toString() + "not yet in opened state", rs.isOpened());
     }
   }
 

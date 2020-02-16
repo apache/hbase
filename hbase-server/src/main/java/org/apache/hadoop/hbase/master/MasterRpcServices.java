@@ -25,6 +25,7 @@ import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -68,6 +69,7 @@ import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.RpcServerFactory;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
+import org.apache.hadoop.hbase.master.assignment.MergeTableRegionsProcedure;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -822,24 +824,7 @@ public class MasterRpcServices extends RSRpcServices
       throw new ServiceException(ioe);
     }
 
-    RegionStates regionStates = master.getAssignmentManager().getRegionStates();
-
-    RegionInfo[] regionsToMerge = new RegionInfo[request.getRegionCount()];
-    for (int i = 0; i < request.getRegionCount(); i++) {
-      final byte[] encodedNameOfRegion = request.getRegion(i).getValue().toByteArray();
-      if (request.getRegion(i).getType() != RegionSpecifierType.ENCODED_REGION_NAME) {
-        LOG.warn("MergeRegions specifier type: expected: "
-          + RegionSpecifierType.ENCODED_REGION_NAME + " actual: region " + i + " ="
-          + request.getRegion(i).getType());
-      }
-      RegionState regionState = regionStates.getRegionState(Bytes.toString(encodedNameOfRegion));
-      if (regionState == null) {
-        throw new ServiceException(
-          new UnknownRegionException(Bytes.toStringBinary(encodedNameOfRegion)));
-      }
-      regionsToMerge[i] = regionState.getRegion();
-    }
-
+    RegionInfo[] regionsToMerge = extractRegionInfos(request);
     try {
       long procId = master.mergeRegions(
         regionsToMerge,
@@ -2457,6 +2442,48 @@ public class MasterRpcServices extends RSRpcServices
   }
  
   // HBCK Services
+
+  @Override
+  public MergeTableRegionsResponse mergeRegions(RpcController c, MergeTableRegionsRequest request)
+    throws ServiceException {
+    try {
+      if (this.master.getMasterProcedureExecutor() == null) {
+        throw new ServiceException("Master's ProcedureExecutor not initialized; retry later");
+      }
+      String aid = master.getClientIdAuditPrefix();
+      LOG.info("{} hbck merge regions request", aid);
+      RegionInfo[] regionsToMerge = extractRegionInfos(request);
+      long pid = this.master
+        .mergeRegionsSkipInitCheck(regionsToMerge, request.getForcible(), request.getNonceGroup(),
+          request.getNonce());
+      return MergeTableRegionsResponse.newBuilder().setProcId(pid).build();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+  }
+
+  // Utility function to extract regioninfos from the protobuf request object
+  private RegionInfo[] extractRegionInfos(MergeTableRegionsRequest request)
+    throws ServiceException {
+    RegionStates regionStates = master.getAssignmentManager().getRegionStates();
+
+    RegionInfo[] regionsToMerge = new RegionInfo[request.getRegionCount()];
+    for (int i = 0; i < request.getRegionCount(); i++) {
+      final byte[] encodedNameOfRegion = request.getRegion(i).getValue().toByteArray();
+      if (request.getRegion(i).getType() != RegionSpecifierType.ENCODED_REGION_NAME) {
+        LOG.warn("MergeRegions specifier type: expected: "
+          + RegionSpecifierType.ENCODED_REGION_NAME + " actual: region " + i + " ="
+          + request.getRegion(i).getType());
+      }
+      RegionState regionState = regionStates.getRegionState(Bytes.toString(encodedNameOfRegion));
+      if (regionState == null) {
+        throw new ServiceException(
+          new UnknownRegionException(Bytes.toStringBinary(encodedNameOfRegion)));
+      }
+      regionsToMerge[i] = regionState.getRegion();
+    }
+    return regionsToMerge;
+  }
 
   @Override
   public RunHbckChoreResponse runHbckChore(RpcController c, RunHbckChoreRequest req)

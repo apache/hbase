@@ -1199,4 +1199,12 @@ service HbckService {
   /** Schedule a fix meta run. */
   rpc FixMeta(FixMetaRequest)
     returns(FixMetaResponse);
+
+  /**
+   * Merge the specified list of regions. Similar to the one at Admin's
+   * jus the difference being, it skips the master initialization check
+   * and just needs the procedure executor to be up
+   */
+  rpc MergeRegions(MergeTableRegionsRequest)
+  returns(MergeTableRegionsResponse);
 }

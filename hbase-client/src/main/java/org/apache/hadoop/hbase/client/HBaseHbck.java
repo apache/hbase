@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
 
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.ServerName;
@@ -37,11 +38,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.BypassProc
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FixMetaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.HbckService.BlockingInterface;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTableRegionsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTableRegionsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunHbckChoreRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunHbckChoreResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ScheduleServerCrashProcedureResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignsResponse;
 
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.yetus.audience.InterfaceAudience;
@@ -218,5 +222,27 @@ public class HBaseHbck implements Hbck {
     } catch (ServiceException se) {
       throw new IOException(se);
     }
+  }
+
+  @Override
+  public long mergeRegions(List<byte[]> regions, boolean forcible, long nonceGroup, long nonce)
+    throws IOException {
+    byte[][] encodedNameOfRegionsToMerge =
+      regions.stream().map(this::toEncodeRegionName).toArray(byte[][]::new);
+
+    try {
+      MergeTableRegionsRequest request = RequestConverter
+        .buildMergeTableRegionsRequest(encodedNameOfRegionsToMerge, forcible, nonceGroup, nonce);
+      MergeTableRegionsResponse response = this.hbck.mergeRegions(rpcControllerFactory.newController(), request);
+      return response.getProcId();
+    } catch (ServiceException | DeserializationException ex) {
+      LOG.debug("Failed to run mergeRegions", ex);
+      throw new IOException(ex);
+    }
+  }
+  /** Utility function to get encoded region name from a given region-name */
+  private byte[] toEncodeRegionName(byte[] regionName) {
+    return RegionInfo.isEncodedRegionName(regionName) ? regionName :
+      Bytes.toBytes(RegionInfo.encodeRegionName(regionName));
   }
 }

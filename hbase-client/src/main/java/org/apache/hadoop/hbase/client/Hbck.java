@@ -143,4 +143,17 @@ public interface Hbck extends Abortable, Closeable {
    * Fix Meta.
    */
   void fixMeta() throws IOException;
+
+  /**
+   *
+   * @param regions List of regions to be merged
+   * @param forcible boolean value which decides whether to force merge
+   *                 of non-adjacent/non-overlapping regions
+   * @param nonceGroup the nonce group
+   * @param nonce the nonce value
+   * @return pid of the procedure if created, else throws IOException with relevant cause
+   * @throws IOException
+   */
+  long mergeRegions(List<byte[]> regions, boolean forcible, long nonceGroup, long nonce)
+    throws IOException;
 }

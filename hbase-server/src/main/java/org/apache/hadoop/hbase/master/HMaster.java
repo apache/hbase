@@ -1925,7 +1925,19 @@ public class HMaster extends HRegionServer implements MasterServices {
       final long ng,
       final long nonce) throws IOException {
     checkInitialized();
+    return mergeRegionsHelper(regionsToMerge, forcible, ng, nonce);
+  }
 
+  /**
+   * To be used by hbck
+   */
+  public long mergeRegionsSkipInitCheck(final RegionInfo[] regionsToMerge, final boolean forcible,
+    final long ng, final long nonce) throws IOException {
+    return mergeRegionsHelper(regionsToMerge, forcible, ng, nonce);
+  }
+
+  private long mergeRegionsHelper(final RegionInfo[] regionsToMerge, final boolean forcible,
+    final long ng, final long nonce) throws IOException {
     final String mergeRegionsStr = Arrays.stream(regionsToMerge).
       map(r -> RegionInfo.getShortNameToLog(r)).collect(Collectors.joining(", "));
     return MasterProcedureUtil.submitProcedure(new NonceProcedureRunnable(this, ng, nonce) {
