@@ -601,17 +601,24 @@ public class TestBlockEvictionFromClient {
       region.flush(true);
       ServerName rs = Iterables.getOnlyElement(TEST_UTIL.getAdmin().getRegionServers());
       int regionCount = TEST_UTIL.getAdmin().getRegions(rs).size();
-      LOG.info("About to SPLIT on " + Bytes.toString(ROW1));
+      LOG.info("About to SPLIT on {}", Bytes.toString(ROW1));
       TEST_UTIL.getAdmin().split(tableName, ROW1);
       // Wait for splits
       TEST_UTIL.waitFor(60000,
         () -> TEST_UTIL.getAdmin().getRegions(rs).size() > regionCount);
       LOG.info("Split finished");
+      LOG.info("Compaction state {} {}", region, region.getCompactionState());
       while (region.getCompactionState().compareTo(CompactionState.NONE) != 0) {
         Threads.sleep(10);
       }
+      region.waitForFlushesAndCompactions();
+      region.compactStores();
       region.compact(true);
-      LOG.info("Compaction finished");
+      LOG.info("Compaction after {} {}", region, region.getCompactionState());
+      while (region.getCompactionState().compareTo(CompactionState.NONE) != 0) {
+        Threads.sleep(10);
+      }
+      LOG.info("Compaction finished {} {}", region, region.getCompactionState());
       Iterator<CachedBlock> iterator = cache.iterator();
       // Though the split had created the HalfStorefileReader - the firstkey and lastkey scanners
       // should be closed inorder to return those blocks
