@@ -90,8 +90,8 @@ org.apache.hadoop.hbase.io.util.MemorySizeUtil;
     <tr>
         <td><% String.format("%.0f", mWrap.getRequestsPerSecond()) %></td>
         <td><% mWrap.getNumOnlineRegions() %></td>
-        <td><% mWrap.getPercentFileLocal() %></td>
-        <td><% mWrap.getPercentFileLocalSecondaryRegions() %></td>
+        <td><% String.format("%.3f",mWrap.getPercentFileLocal()) %><% "%" %></td>
+        <td><% String.format("%.3f",mWrap.getPercentFileLocalSecondaryRegions()) %><% "%" %></td>
         <td><% mWrap.getNumWALSlowAppend() %></td>
     </tr>
 </table>
