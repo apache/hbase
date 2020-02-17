@@ -238,20 +238,20 @@ ByteBuffAllocator bbAllocator;
 </%args>
 <table class="table table-striped">
 <tr>
-    <th>Total Heap Allocation(Bytes)</th>
-    <th>Total Pool Allocation(Bytes)</th>
+    <th>Total Heap Allocation</th>
+    <th>Total Pool Allocation</th>
     <th>Heap Allocation Ratio</th>
     <th>Total Buffer Count</th>
     <th>Used Buffer Count</th>
-    <th>Buffer Size(Bytes)</th>
+    <th>Buffer Size</th>
 </tr>
 <tr>
-    <td><% ByteBuffAllocator.getHeapAllocationBytes(bbAllocator, ByteBuffAllocator.HEAP) %></td>
-    <td><% bbAllocator.getPoolAllocationBytes() %></td>
+    <td><% TraditionalBinaryPrefix.long2String(ByteBuffAllocator.getHeapAllocationBytes(bbAllocator, ByteBuffAllocator.HEAP), "B", 1) %></td>
+    <td><% TraditionalBinaryPrefix.long2String(bbAllocator.getPoolAllocationBytes(), "B", 1) %></td>
     <td><% String.format("%.3f", ByteBuffAllocator.getHeapAllocationRatio(bbAllocator, ByteBuffAllocator.HEAP) * 100) %><% "%" %></td>
     <td><% bbAllocator.getTotalBufferCount() %></td>
     <td><% bbAllocator.getUsedBufferCount() %></td>
-    <td><% bbAllocator.getBufferSize() %></td>
+    <td><% TraditionalBinaryPrefix.long2String(bbAllocator.getBufferSize(), "B", 1) %></td>
 </tr>
 </table>
 </%def>
