@@ -131,7 +131,7 @@ public class CacheConfig {
   private boolean cacheBloomsOnWrite;
 
   /** Whether blocks of a file should be evicted when the file is closed */
-  private boolean evictOnClose;
+  private volatile boolean evictOnClose;
 
   /** Whether data blocks should be stored in compressed and/or encrypted form in the cache */
   private final boolean cacheDataCompressed;
@@ -210,7 +210,6 @@ public class CacheConfig {
 
   /**
    * Constructs a cache configuration copied from the specified configuration.
-   * @param cacheConf
    */
   public CacheConfig(CacheConfig cacheConf) {
     this.cacheDataOnRead = cacheConf.cacheDataOnRead;
