@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -210,11 +209,25 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     final String id = "testInterClusterReplication";
 
     List<HRegion> regions = UTIL1.getHBaseCluster().getRegions(tableName);
+    // This trick of waiting on peer to show up is taken from test above.
+    int peerCount = admin.getPeersCount();
+    admin.addPeer(id,
+        new ReplicationPeerConfig().setClusterKey(ZKConfig.getZooKeeperClusterKey(CONF2))
+            .setReplicationEndpointImpl(InterClusterReplicationEndpointForTest.class.getName()),
+        null);
+    // This test is flakey and then there is so much stuff flying around in here its, hard to
+    // debug.  Peer needs to be up for the edit to make it across. This wait on
+    // peer count seems to be a hack that has us not progress till peer is up.
+    if (admin.getPeersCount() <= peerCount) {
+      LOG.info("Waiting on peercount to go up from " + peerCount);
+      Threads.sleep(100);
+    }
+
     int totEdits = 0;
 
     // Make sure edits are spread across regions because we do region based batching
     // before shipping edits.
-    for(HRegion region: regions) {
+    for (HRegion region: regions) {
       RegionInfo hri = region.getRegionInfo();
       byte[] row = hri.getStartKey();
       for (int i = 0; i < 100; i++) {
@@ -227,12 +240,8 @@ public class TestReplicationEndpoint extends TestReplicationBase {
       }
     }
 
-    admin.addPeer(id,
-        new ReplicationPeerConfig().setClusterKey(ZKConfig.getZooKeeperClusterKey(CONF2))
-            .setReplicationEndpointImpl(InterClusterReplicationEndpointForTest.class.getName()),
-        null);
-
     final int numEdits = totEdits;
+    LOG.info("Waiting on replication of {}", numEdits);
     Waiter.waitFor(CONF1, 30000, new Waiter.ExplainingPredicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
@@ -560,7 +569,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
       return entry;
     }
 
-    public static boolean hasPassedAnEntry(){
+    public static boolean hasPassedAnEntry() {
       return passedEntry;
     }
   }
