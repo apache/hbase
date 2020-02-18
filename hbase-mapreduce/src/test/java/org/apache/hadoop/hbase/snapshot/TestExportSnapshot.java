@@ -87,13 +87,15 @@ public class TestExportSnapshot {
   public static void setUpBaseConf(Configuration conf) {
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
     conf.setInt("hbase.regionserver.msginterval", 100);
+    // If a single node has enough failures (default 3), resource manager will blacklist it.
+    // With only 2 nodes and tests injecting faults, we don't want that.
+    conf.setInt("mapreduce.job.maxtaskfailures.per.tracker", 100);
+    /*
     conf.setInt("hbase.client.pause", 250);
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 6);
     conf.setBoolean("hbase.master.enabletable.roundrobin", true);
     conf.setInt("mapreduce.map.maxattempts", 10);
-    // If a single node has enough failures (default 3), resource manager will blacklist it.
-    // With only 2 nodes and tests injecting faults, we don't want that.
-    conf.setInt("mapreduce.job.maxtaskfailures.per.tracker", 100);
+    */
   }
 
   @BeforeClass
@@ -213,6 +215,7 @@ public class TestExportSnapshot {
       final RegionPredicate bypassregionPredicate, boolean success) throws Exception {
     URI hdfsUri = FileSystem.get(conf).getUri();
     FileSystem fs = FileSystem.get(copyDir.toUri(), conf);
+    LOG.info("DEBUG FS {} {} {}, hdfsUri={}", fs, copyDir, copyDir.toUri(), hdfsUri);
     copyDir = copyDir.makeQualified(fs.getUri(), fs.getWorkingDirectory());
     List<String> opts = new ArrayList<>();
     opts.add("--snapshot");
