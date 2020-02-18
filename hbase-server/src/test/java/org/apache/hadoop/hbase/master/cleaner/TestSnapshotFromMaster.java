@@ -533,7 +533,7 @@ public class TestSnapshotFromMaster {
     UTIL.waitFor(30000, new Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return UTIL.getHBaseAdmin().listSnapshots(Pattern.compile(snapshotName)).size() == 1;
+        return master.getSnapshotManager().isTakingAnySnapshot();
       }
     });
   }
