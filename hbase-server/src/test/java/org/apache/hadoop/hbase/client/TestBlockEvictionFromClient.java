@@ -583,7 +583,7 @@ public class TestBlockEvictionFromClient {
       region.flush(true);
       ServerName rs = Iterables.getOnlyElement(TEST_UTIL.getAdmin().getRegionServers());
       int regionCount = TEST_UTIL.getAdmin().getRegions(rs).size();
-      LOG.info("About to SPLIT on {}", Bytes.toString(ROW1));
+      LOG.info("About to SPLIT on {} {}", Bytes.toString(ROW1), region.getRegionInfo());
       TEST_UTIL.getAdmin().split(tableName, ROW1);
       // Wait for splits
       TEST_UTIL.waitFor(60000, () -> TEST_UTIL.getAdmin().getRegions(rs).size() > regionCount);
@@ -1189,8 +1189,10 @@ public class TestBlockEvictionFromClient {
       CachedBlock next = iterator.next();
       BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
       if (cache instanceof BucketCache) {
+        LOG.info("BucketCache {}", cacheKey);
         refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
       } else if (cache instanceof CombinedBlockCache) {
+        LOG.info("CombinedBlockCache {}", cacheKey);
         refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
       } else {
         continue;
