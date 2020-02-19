@@ -978,8 +978,8 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     Path outputSnapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(targetName, outputRoot);
     Path initialOutputSnapshotDir = skipTmp ? outputSnapshotDir : snapshotTmpDir;
     LOG.debug("inputFs={}, inputRoot={}", inputFs.getUri().toString(), inputRoot);
-    LOG.debug("outputFs={}, outputRoot={}, outputFs.getUri().toString(), " +
-        "initialOutputSnapshotDir={}", outputRoot.toString(), skipTmp, initialOutputSnapshotDir);
+    LOG.debug("outputFs={}, outputRoot={}, skipTmp={}, initialOutputSnapshotDir={}",
+      outputFs, outputRoot.toString(), skipTmp, initialOutputSnapshotDir);
 
     // Find the necessary directory which need to change owner and group
     Path needSetOwnerDir = SnapshotDescriptionUtils.getSnapshotRootDir(outputRoot);

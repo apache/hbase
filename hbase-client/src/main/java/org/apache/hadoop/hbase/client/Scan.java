@@ -181,17 +181,6 @@ public class Scan extends Query {
   public Scan() {}
 
   /**
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
-   *   {@code new Scan().withStartRow(startRow).setFilter(filter)} instead.
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17320">HBASE-17320</a>
-   */
-  @Deprecated
-  public Scan(byte[] startRow, Filter filter) {
-    this(startRow);
-    this.filter = filter;
-  }
-
-  /**
    * Create a Scan operation starting at the specified row.
    * <p>
    * If the specified row does not exist, the Scanner will start from the next closest row after the

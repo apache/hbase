@@ -112,7 +112,7 @@ public class TestExportSnapshotV1NoCluster {
   static Path getDestinationDir(HBaseCommonTestingUtility hctu, Path testDir) throws IOException {
     FileSystem fs = FileSystem.get(hctu.getConfiguration());
     Path path = new Path(new Path(testDir, "export-test"),
-      "export-" + System.currentTimeMillis()).makeQualified(fs.getUri(), testDir);
+      "export-" + System.currentTimeMillis()).makeQualified(fs.getUri(), fs.getWorkingDirectory());
     LOG.info("HDFS export destination path: " + path);
     return path;
   }
