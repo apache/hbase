@@ -22,6 +22,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
+import java.lang.management.ManagementFactory;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.security.PrivilegedExceptionAction;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.security.token.TokenProvider;
@@ -41,6 +43,7 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.http.auth.AuthSchemeProvider;
@@ -69,6 +72,10 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.management.InstanceNotFoundException;
+import javax.management.MBeanInfo;
+import javax.management.ObjectName;
 
 /**
  * Testing info servers for admin acl.
@@ -300,6 +307,19 @@ public class TestInfoServersACL {
   @Test
   public void testJmxAvailableForAdmins() throws Exception {
     final String expectedAuthorizedContent = "Hadoop:service=HBase";
+    UTIL.waitFor(30000, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        for (ObjectName name: ManagementFactory.getPlatformMBeanServer().
+          queryNames(new ObjectName("*:*"), null)) {
+          if (name.toString().contains(expectedAuthorizedContent)) {
+            LOG.info("{}", name);
+            return true;
+          }
+        }
+        return false;
+      }
+    });
     UserGroupInformation admin = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
         USER_ADMIN_STR, KEYTAB_FILE.getAbsolutePath());
     admin.doAs(new PrivilegedExceptionAction<Void>() {

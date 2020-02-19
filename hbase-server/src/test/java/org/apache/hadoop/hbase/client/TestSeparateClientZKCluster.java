@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,7 +48,8 @@ import org.slf4j.LoggerFactory;
 public class TestSeparateClientZKCluster {
   private static final Logger LOG = LoggerFactory.getLogger(TestSeparateClientZKCluster.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final File clientZkDir = new File("/tmp/TestSeparateClientZKCluster");
+  private static final File clientZkDir =
+    new File(TEST_UTIL.getDataTestDir("TestSeparateClientZKCluster").toString());
   private static final int ZK_SESSION_TIMEOUT = 5000;
   private static MiniZooKeeperCluster clientZkCluster;
 

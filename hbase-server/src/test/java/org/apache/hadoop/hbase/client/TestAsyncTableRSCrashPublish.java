@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,15 +18,16 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertNotEquals;
-
 import java.io.IOException;
+import java.util.concurrent.ExecutionException;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -34,9 +35,10 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
-
-@Category({ MediumTests.class, ClientTests.class })
+// Categorized as a large test so not run as part of general 'test' suite (which is small
+// and mediums). This test fails if networking is odd -- say if you are connected to a
+// VPN... See HBASE-23850
+@Category({ LargeTests.class, ClientTests.class })
 public class TestAsyncTableRSCrashPublish {
 
   @ClassRule
@@ -45,40 +47,56 @@ public class TestAsyncTableRSCrashPublish {
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
-  private static AsyncConnectionImpl CONN;
-
   private static TableName TABLE_NAME = TableName.valueOf("Publish");
 
   private static byte[] FAMILY = Bytes.toBytes("family");
 
   @BeforeClass
-  public static void setUp() throws Exception {
+  public static void beforeClass() throws Exception {
     UTIL.getConfiguration().setBoolean(HConstants.STATUS_PUBLISHED, true);
+    /* Below is code for choosing a NetworkInterface and then setting it into
+      configs so can be picked up by the client and server.
+    String niName = UTIL.getConfiguration().get(HConstants.STATUS_MULTICAST_NI_NAME);
+    NetworkInterface ni;
+    if (niName != null) {
+      ni = NetworkInterface.getByName(niName);
+    } else {
+      String mcAddress = UTIL.getConfiguration().get(HConstants.STATUS_MULTICAST_ADDRESS,
+        HConstants.DEFAULT_STATUS_MULTICAST_ADDRESS);
+      InetAddress ina = InetAddress.getByName(mcAddress);
+      boolean inet6Address = ina instanceof Inet6Address;
+      ni = NetworkInterface.getByInetAddress(inet6Address?
+        Addressing.getIp6Address(): Addressing.getIp4Address());
+    }
+    UTIL.getConfiguration().set(HConstants.STATUS_MULTICAST_NI_NAME, ni.getName());
+    */
     UTIL.startMiniCluster(2);
     UTIL.createTable(TABLE_NAME, FAMILY);
     UTIL.waitTableAvailable(TABLE_NAME);
-    CONN =
-      (AsyncConnectionImpl) ConnectionFactory.createAsyncConnection(UTIL.getConfiguration()).get();
   }
 
   @AfterClass
-  public static void tearDown() throws Exception {
-    Closeables.close(CONN, true);
+  public static void afterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
   @Test
-  public void test() throws IOException {
-    AsyncNonMetaRegionLocator locator = CONN.getLocator().getNonMetaRegionLocator();
-    CONN.getTable(TABLE_NAME).get(new Get(Bytes.toBytes(0))).join();
-    ServerName serverName = locator.getRegionLocationInCache(TABLE_NAME, HConstants.EMPTY_START_ROW)
-      .getDefaultRegionLocation().getServerName();
-    UTIL.getMiniHBaseCluster().stopRegionServer(serverName);
-    UTIL.waitFor(60000,
-      () -> locator.getRegionLocationInCache(TABLE_NAME, HConstants.EMPTY_START_ROW) == null);
-    CONN.getTable(TABLE_NAME).get(new Get(Bytes.toBytes(0))).join();
-    assertNotEquals(serverName,
-      locator.getRegionLocationInCache(TABLE_NAME, HConstants.EMPTY_START_ROW)
-        .getDefaultRegionLocation().getServerName());
+  public void test() throws IOException, ExecutionException, InterruptedException {
+    Configuration conf = UTIL.getHBaseCluster().getMaster().getConfiguration();
+    try (AsyncConnection connection = ConnectionFactory.createAsyncConnection(conf).get()) {
+      AsyncNonMetaRegionLocator locator =
+        ((AsyncConnectionImpl) connection).getLocator().getNonMetaRegionLocator();
+      connection.getTable(TABLE_NAME).get(new Get(Bytes.toBytes(0))).join();
+      ServerName serverName =
+        locator.getRegionLocationInCache(TABLE_NAME, HConstants.EMPTY_START_ROW)
+        .getDefaultRegionLocation().getServerName();
+      UTIL.getMiniHBaseCluster().stopRegionServer(serverName);
+      UTIL.waitFor(60000,
+        () -> locator.getRegionLocationInCache(TABLE_NAME, HConstants.EMPTY_START_ROW) == null);
+      connection.getTable(TABLE_NAME).get(new Get(Bytes.toBytes(0))).join();
+      assertNotEquals(serverName,
+        locator.getRegionLocationInCache(TABLE_NAME, HConstants.EMPTY_START_ROW)
+          .getDefaultRegionLocation().getServerName());
+    }
   }
 }
