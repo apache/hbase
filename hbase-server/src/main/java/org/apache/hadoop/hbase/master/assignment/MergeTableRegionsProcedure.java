@@ -453,6 +453,10 @@ public class MergeTableRegionsProcedure
       throw new MergeRegionException("Skip merging regions " +
           RegionInfo.getShortNameToLog(regionsToMerge) + ", because we are snapshotting " + tn);
     }
+
+    // Mostly this check is not used because we already check the switch before submit a merge
+    // procedure. Just for safe, check the switch again. This procedure can be rollbacked if
+    // the switch was set to false after submit.
     if (!env.getMasterServices().isSplitOrMergeEnabled(MasterSwitchType.MERGE)) {
       String regionsStr = Arrays.deepToString(this.regionsToMerge);
       LOG.warn("Merge switch is off! skip merge of " + regionsStr);
