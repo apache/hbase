@@ -368,8 +368,8 @@ public class TestCheckAndMutate {
   @Test(expected = NullPointerException.class)
   public void testCheckAndMutateWithNotSpecifyingCondition() throws Throwable {
     try (Table table = createTable()) {
-        table.checkAndMutate(ROWKEY, FAMILY)
-          .thenPut(new Put(ROWKEY).addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")));
+      table.checkAndMutate(ROWKEY, FAMILY)
+        .thenPut(new Put(ROWKEY).addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")));
     }
   }
 }
