@@ -28,7 +28,11 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN DEBIAN_FRONTEND=noninteractive apt-get -qq update && \
   DEBIAN_FRONTEND=noninteractive apt-get -qq install --no-install-recommends -y \
     ca-certificates=20180409 \
-    curl=7.58.0-2ubuntu3.8
+    curl=7.58.0-2ubuntu3.8 \
+    locales=2.27-3ubuntu1
+
+RUN locale-gen en_US.UTF-8
+ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
 
 ##
 # download sundry dependencies
