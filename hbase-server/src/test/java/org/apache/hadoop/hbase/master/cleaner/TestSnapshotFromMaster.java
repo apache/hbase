@@ -533,7 +533,7 @@ public class TestSnapshotFromMaster {
     UTIL.waitFor(30000, new Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return master.getSnapshotManager().isTakingAnySnapshot();
+        return !master.getSnapshotManager().isTakingAnySnapshot();
       }
     });
   }
