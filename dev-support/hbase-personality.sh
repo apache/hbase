@@ -79,9 +79,6 @@ function personality_globals
 
   # TODO use PATCH_BRANCH to select jdk versions to use.
 
-  # Override the maven options
-  MAVEN_OPTS="${MAVEN_OPTS:-"-Xms6G -Xmx6G"}"
-
   # Yetus 0.7.0 enforces limits. Default proclimit is 1000.
   # Up it. See HBASE-19902 for how we arrived at this number.
   #shellcheck disable=SC2034

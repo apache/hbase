@@ -27,17 +27,31 @@ pipeline {
         buildDiscarder(logRotator(numToKeepStr: '15'))
         timeout (time: 7, unit: 'HOURS')
         timestamps()
-        checkoutToSubdirectory('src')
+        skipDefaultCheckout()
     }
 
     environment {
-        SOURCEDIR = 'src'
-        // will also need to change notification section below
-        PATCHDIR = 'out'
-        DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile"
-        YETUS='yetus'
+        SRC_REL = 'src'
+        PATCH_REL = 'output'
+        YETUS_REL = 'yetus'
+        DOCKERFILE_REL = "${SRC_REL}/dev-support/docker/Dockerfile"
+        YETUS_DRIVER_REL = "${SRC_REL}/dev-support/jenkins_precommit_github_yetus.sh"
         // Branch or tag name.  Yetus release tags are 'rel/X.Y.Z'
-        YETUS_VERSION='rel/0.11.1'
+        YETUS_VERSION = 'rel/0.11.1'
+        GENERAL_CHECK_PLUGINS = 'all,-compile,-javac,-javadoc,-jira,-shadedjars,-unit'
+        JDK_SPECIFIC_PLUGINS = 'compile,github,htmlout,javac,javadoc,maven,mvninstall,shadedjars,unit'
+        // output from surefire; sadly the archive function in yetus only works on file names.
+        ARCHIVE_PATTERN_LIST = 'TEST-*.xml,org.apache.h*.txt,*.dumpstream,*.dump'
+        // These tests currently have known failures. Once they burn down to 0, remove from here so that new problems will cause a failure.
+        TESTS_FILTER = 'cc,checkstyle,javac,javadoc,pylint,shellcheck,whitespace,perlcritic,ruby-lint,rubocop,mvnsite'
+        EXCLUDE_TESTS_URL = "${JENKINS_URL}/job/HBase-Find-Flaky-Tests/job/${CHANGE_TARGET}/lastSuccessfulBuild/artifact/excludes"
+
+        // a global view of paths. parallel stages can land on the same host concurrently, so each
+        // stage works in its own subdirectory. there is an "output" under each of these
+        // directories, which we retrieve after the build is complete.
+        WORKDIR_REL_GENERAL_CHECK = 'yetus-general-check'
+        WORKDIR_REL_JDK8_HADOOP2_CHECK = 'yetus-jdk8-hadoop2-check'
+        WORKDIR_REL_JDK11_HADOOP3_CHECK = 'yetus-jdk11-hadoop3-check'
     }
 
     parameters {
@@ -47,163 +61,304 @@ pipeline {
     }
 
     stages {
-        stage ('install yetus') {
-            steps {
-                dir("${WORKSPACE}/${YETUS}") {
-                    checkout([
-                        $class: 'GitSCM',
-                        branches: [[name: "${env.YETUS_VERSION}"]],
-                        userRemoteConfigs: [[ url: 'https://github.com/apache/yetus.git']]]
-                    )
-                }
-            }
-        }
-
-        stage ('precommit-run') {
-            steps {
-                withCredentials(
-                    [usernamePassword(credentialsId: 'apache-hbase-at-github.com',
+        stage ('precommit checks') {
+            parallel {
+                stage ('yetus general check') {
+                    agent {
+                        node {
+                            label 'Hadoop'
+                        }
+                    }
+                    environment {
+                        // customized per parallel stage
+                        PLUGINS = "${GENERAL_CHECK_PLUGINS}"
+                        SET_JAVA_HOME = '/usr/lib/jvm/java-8'
+                        WORKDIR_REL = "${WORKDIR_REL_GENERAL_CHECK}"
+                        // identical for all parallel stages
+                        WORKDIR = "${WORKSPACE}/${WORKDIR_REL}"
+                        YETUSDIR = "${WORKDIR}/${YETUS_REL}"
+                        SOURCEDIR = "${WORKDIR}/${SRC_REL}"
+                        PATCHDIR = "${WORKDIR}/${PATCH_REL}"
+                        BUILD_URL_ARTIFACTS = "artifact/${WORKDIR_REL}/${PATCH_REL}"
+                        DOCKERFILE = "${WORKDIR}/${DOCKERFILE_REL}"
+                        YETUS_DRIVER = "${WORKDIR}/${YETUS_DRIVER_REL}"
+                    }
+                    steps {
+                        dir("${SOURCEDIR}") {
+                            checkout scm
+                        }
+                        dir("${YETUSDIR}") {
+                            checkout([
+                              $class           : 'GitSCM',
+                              branches         : [[name: "${YETUS_VERSION}"]],
+                              userRemoteConfigs: [[url: 'https://github.com/apache/yetus.git']]]
+                            )
+                        }
+                        dir("${WORKDIR}") {
+                            withCredentials([
+                                usernamePassword(
+                                  credentialsId: 'apache-hbase-at-github.com',
                                   passwordVariable: 'GITHUB_PASSWORD',
-                                  usernameVariable: 'GITHUB_USER'),
-                    usernamePassword(credentialsId: 'hbaseqa-at-asf-jira',
-                                        passwordVariable: 'JIRA_PASSWORD',
-                                        usernameVariable: 'JIRA_USER')]) {
-                        sh '''#!/usr/bin/env bash
-                        set -e
-                        TESTPATCHBIN="${WORKSPACE}/${YETUS}/precommit/src/main/shell/test-patch.sh"
-                        # this must be clean for every run
-                        if [[ -d "${WORKSPACE}/${PATCHDIR}" ]]; then
-                          rm -rf "${WORKSPACE}/${PATCHDIR}"
-                        fi
-                        mkdir -p "${WORKSPACE}/${PATCHDIR}"
-
-                        ## Checking on H* machine nonsense
-                        echo "JAVA_HOME: ${JAVA_HOME}"
-                        ls -l "${JAVA_HOME}" || true
-                        echo "MAVEN_HOME: ${MAVEN_HOME}"
-                        echo "maven version:"
-                        mvn --offline --version  || true
-                        mkdir "${PATCHDIR}/machine"
-                       "${SOURCEDIR}/dev-support/gather_machine_environment.sh" "${PATCHDIR}/machine"
-                        ## /H*
-
-                        # If CHANGE_URL is set (e.g., Github Branch Source plugin), process it.
-                        # Otherwise exit, because we don't want HBase to do a
-                        # full build.  We wouldn't normally do this check for smaller
-                        # projects. :)
-                        if [[ -z "${CHANGE_URL}" ]]; then
-                            echo "Full build skipped" > "${WORKSPACE}/${PATCHDIR}/report.html"
-                            exit 0
-                        fi
-                        # enable debug output for yetus
-                        if [[ "true" = "${DEBUG}" ]]; then
-                            YETUS_ARGS+=("--debug")
-                        fi
-                        # If we're doing docker, make sure we don't accidentally pollute the image with a host java path
-                        if [ -n "${JAVA_HOME}" ]; then
-                          unset JAVA_HOME
-                        fi
-                        YETUS_ARGS+=("--patch-dir=${WORKSPACE}/${PATCHDIR}")
-                        # where the source is located
-                        YETUS_ARGS+=("--basedir=${WORKSPACE}/${SOURCEDIR}")
-                        # our project defaults come from a personality file
-                        # which will get loaded automatically by setting the project name
-                        YETUS_ARGS+=("--project=hbase")
-                        # lots of different output formats
-                        YETUS_ARGS+=("--brief-report-file=${WORKSPACE}/${PATCHDIR}/brief.txt")
-                        YETUS_ARGS+=("--console-report-file=${WORKSPACE}/${PATCHDIR}/console.txt")
-                        YETUS_ARGS+=("--html-report-file=${WORKSPACE}/${PATCHDIR}/report.html")
-                        # enable writing back to Github
-                        YETUS_ARGS+=(--github-password="${GITHUB_PASSWORD}")
-                        YETUS_ARGS+=(--github-user=${GITHUB_USER})
-                        # enable writing back to ASF JIRA
-                        YETUS_ARGS+=(--jira-password="${JIRA_PASSWORD}")
-                        YETUS_ARGS+=(--jira-user="${JIRA_USER}")
-                        # auto-kill any surefire stragglers during unit test runs
-                        YETUS_ARGS+=("--reapermode=kill")
-                        YETUS_ARGS+=("--multijdktests=compile")
-                        # set relatively high limits for ASF machines
-                        # changing these to higher values may cause problems
-                        # with other jobs on systemd-enabled machines
-                        YETUS_ARGS+=("--proclimit=10000")
-                        YETUS_ARGS+=("--dockermemlimit=20g")
-                        # -1 findbugs issues that show up prior to the patch being applied
-                        YETUS_ARGS+=("--findbugs-strict-precheck")
-                        # rsync these files back into the archive dir
-                        YETUS_ARGS+=("--archive-list=rat.txt")
-                        # URL for user-side presentation in reports and such to our artifacts
-                        # (needs to match the archive bits below)
-                        YETUS_ARGS+=("--build-url-artifacts=artifact/out")
-                        # plugins to enable
-                        YETUS_ARGS+=("--plugins=all")
-                        # don't let these tests cause -1s because we aren't really paying that
-                        # much attention to them
-                        YETUS_ARGS+=("--tests-filter=ruby-lint,test4tests")
-                        # run in docker mode and specifically point to our
-                        # Dockerfile since we don't want to use the auto-pulled version.
-                        YETUS_ARGS+=("--docker")
-                        YETUS_ARGS+=("--dockerfile=${DOCKERFILE}")
-                        YETUS_ARGS+=("--mvn-custom-repos")
-                        YETUS_ARGS+=("--multijdkdirs=/usr/lib/jvm/java-8-openjdk-amd64")
-                        YETUS_ARGS+=("--findbugs-home=/usr")
-                        YETUS_ARGS+=("--whitespace-eol-ignore-list=.*/generated/.*")
-                        YETUS_ARGS+=("--whitespace-tabs-ignore-list=.*/generated/.*")
-                        YETUS_ARGS+=("--personality=${SOURCEDIR}/dev-support/hbase-personality.sh")
-                        YETUS_ARGS+=("--quick-hadoopcheck")
-                        YETUS_ARGS+=("--skip-errorprone")
-                        # effectively treat dev-support as a custom maven module
-                        YETUS_ARGS+=("--skip-dirs=dev-support")
-                        # help keep the ASF boxes clean
-                        YETUS_ARGS+=("--sentinel")
-                        # use emoji vote so it is easier to find the broken line
-                        YETUS_ARGS+=("--github-use-emoji-vote")
-                        "${TESTPATCHBIN}" "${YETUS_ARGS[@]}"
-                        '''
+                                  usernameVariable: 'GITHUB_USER'
+                                )]) {
+                                sh label: 'test-patch', script: '''
+                                    hostname -a ; pwd ; ls -la
+                                    printenv 2>&1 | sort
+                                    echo "[INFO] Launching Yetus via ${YETUS_DRIVER}"
+                                    "${YETUS_DRIVER}"
+                                '''
+                            }
+                        }
+                    }
+                    post {
+                        always {
+                            // Has to be relative to WORKSPACE.
+                            archiveArtifacts artifacts: "${WORKDIR_REL}/${PATCH_REL}/*", excludes: "${WORKDIR_REL}/${PATCH_REL}/precommit"
+                            archiveArtifacts artifacts: "${WORKDIR_REL}/${PATCH_REL}/**/*", excludes: "${WORKDIR_REL}/${PATCH_REL}/precommit/**/*"
+                            publishHTML target: [
+                              allowMissing: true,
+                              keepAll: true,
+                              alwaysLinkToLastBuild: true,
+                              // Has to be relative to WORKSPACE
+                              reportDir: "${WORKDIR_REL}/${PATCH_REL}",
+                              reportFiles: 'report.html',
+                              reportName: 'PR General Check Report'
+                            ]
+                        }
+                        // Jenkins pipeline jobs fill slaves on PRs without this :(
+                        cleanup() {
+                            script {
+                                sh label: 'Cleanup workspace', script: '''
+                                    # See YETUS-764
+                                    if [ -f "${PATCHDIR}/pidfile.txt" ]; then
+                                      echo "test-patch process appears to still be running: killing"
+                                      kill `cat "${PATCHDIR}/pidfile.txt"` || true
+                                      sleep 10
+                                    fi
+                                    if [ -f "${PATCHDIR}/cidfile.txt" ]; then
+                                      echo "test-patch container appears to still be running: killing"
+                                      docker kill `cat "${PATCHDIR}/cidfile.txt"` || true
+                                    fi
+                                    # See HADOOP-13951
+                                    chmod -R u+rxw "${WORKSPACE}"
+                                '''
+                                dir ("${WORKDIR}") {
+                                    deleteDir()
+                                }
+                            }
+                        }
+                    }
+                }
+                stage ('yetus jdk8 Hadoop2 checks') {
+                    agent {
+                        node {
+                            label 'Hadoop'
+                        }
+                    }
+                    environment {
+                        // customized per parallel stage
+                        PLUGINS = "${JDK_SPECIFIC_PLUGINS}"
+                        SET_JAVA_HOME = '/usr/lib/jvm/java-8'
+                        WORKDIR_REL = "${WORKDIR_REL_JDK8_HADOOP2_CHECK}"
+                        // identical for all parallel stages
+                        WORKDIR = "${WORKSPACE}/${WORKDIR_REL}"
+                        YETUSDIR = "${WORKDIR}/${YETUS_REL}"
+                        SOURCEDIR = "${WORKDIR}/${SRC_REL}"
+                        PATCHDIR = "${WORKDIR}/${PATCH_REL}"
+                        BUILD_URL_ARTIFACTS = "artifact/${WORKDIR_REL}/${PATCH_REL}"
+                        DOCKERFILE = "${WORKDIR}/${DOCKERFILE_REL}"
+                        YETUS_DRIVER = "${WORKDIR}/${YETUS_DRIVER_REL}"
+                    }
+                    steps {
+                        dir("${SOURCEDIR}") {
+                            checkout scm
+                        }
+                        dir("${YETUSDIR}") {
+                            checkout([
+                              $class           : 'GitSCM',
+                              branches         : [[name: "${YETUS_VERSION}"]],
+                              userRemoteConfigs: [[url: 'https://github.com/apache/yetus.git']]]
+                            )
+                        }
+                        dir("${WORKDIR}") {
+                            withCredentials([
+                              usernamePassword(
+                                credentialsId: 'apache-hbase-at-github.com',
+                                passwordVariable: 'GITHUB_PASSWORD',
+                                usernameVariable: 'GITHUB_USER'
+                              )]) {
+                                sh label: 'test-patch', script: '''
+                                    hostname -a ; pwd ; ls -la
+                                    printenv 2>&1 | sort
+                                    echo "[INFO] Launching Yetus via ${YETUS_DRIVER}"
+                                    "${YETUS_DRIVER}"
+                                '''
+                            }
+                        }
+                    }
+                    post {
+                        always {
+                            junit testResults: "${WORKDIR_REL}/${SRC_REL}/**/target/**/TEST-*.xml", allowEmptyResults: true
+                            sh label: 'zip surefire reports', script: '''
+                                if [ -d "${PATCHDIR}/archiver" ]; then
+                                  count=$(find "${PATCHDIR}/archiver" -type f | wc -l)
+                                  if [[ 0 -ne ${count} ]]; then
+                                    echo "zipping ${count} archived files"
+                                    zip -q -m -r "${PATCHDIR}/test_logs.zip" "${PATCHDIR}/archiver"
+                                  else
+                                    echo "No archived files, skipping compressing."
+                                  fi
+                                else
+                                  echo "No archiver directory, skipping compressing."
+                                fi
+                            '''
+                            // Has to be relative to WORKSPACE.
+                            archiveArtifacts artifacts: "${WORKDIR_REL}/${PATCH_REL}/*", excludes: "${WORKDIR_REL}/${PATCH_REL}/precommit"
+                            archiveArtifacts artifacts: "${WORKDIR_REL}/${PATCH_REL}/**/*", excludes: "${WORKDIR_REL}/${PATCH_REL}/precommit/**/*"
+                            publishHTML target: [
+                              allowMissing: true,
+                              keepAll: true,
+                              alwaysLinkToLastBuild: true,
+                              // Has to be relative to WORKSPACE
+                              reportDir: "${WORKDIR_REL}/${PATCH_REL}",
+                              reportFiles: 'report.html',
+                              reportName: 'PR JDK8 Hadoop2 Check Report'
+                            ]
+                        }
+                        // Jenkins pipeline jobs fill slaves on PRs without this :(
+                        cleanup() {
+                            script {
+                                sh label: 'Cleanup workspace', script: '''
+                                    # See YETUS-764
+                                    if [ -f "${PATCHDIR}/pidfile.txt" ]; then
+                                      echo "test-patch process appears to still be running: killing"
+                                      kill `cat "${PATCHDIR}/pidfile.txt"` || true
+                                      sleep 10
+                                    fi
+                                    if [ -f "${PATCHDIR}/cidfile.txt" ]; then
+                                      echo "test-patch container appears to still be running: killing"
+                                      docker kill `cat "${PATCHDIR}/cidfile.txt"` || true
+                                    fi
+                                    # See HADOOP-13951
+                                    chmod -R u+rxw "${WORKSPACE}"
+                                '''
+                                dir ("${WORKDIR}") {
+                                    deleteDir()
+                                }
+                            }
+                        }
+                    }
+                }
+                stage ('yetus jdk11 hadoop3 checks') {
+                    agent {
+                        node {
+                            label 'Hadoop'
+                        }
+                    }
+                    environment {
+                        // customized per parallel stage
+                        PLUGINS = "${JDK_SPECIFIC_PLUGINS}"
+                        SET_JAVA_HOME = '/usr/lib/jvm/java-11'
+                        HADOOP_PROFILE = '3.0'
+                        WORKDIR_REL = "${WORKDIR_REL_JDK11_HADOOP3_CHECK}"
+                        // identical for all parallel stages
+                        WORKDIR = "${WORKSPACE}/${WORKDIR_REL}"
+                        YETUSDIR = "${WORKDIR}/${YETUS_REL}"
+                        SOURCEDIR = "${WORKDIR}/${SRC_REL}"
+                        PATCHDIR = "${WORKDIR}/${PATCH_REL}"
+                        BUILD_URL_ARTIFACTS = "artifact/${WORKDIR_REL}/${PATCH_REL}"
+                        DOCKERFILE = "${WORKDIR}/${DOCKERFILE_REL}"
+                        YETUS_DRIVER = "${WORKDIR}/${YETUS_DRIVER_REL}"
+                    }
+                    steps {
+                        dir("${SOURCEDIR}") {
+                            checkout scm
+                        }
+                        dir("${YETUSDIR}") {
+                            checkout([
+                              $class           : 'GitSCM',
+                              branches         : [[name: "${YETUS_VERSION}"]],
+                              userRemoteConfigs: [[url: 'https://github.com/apache/yetus.git']]]
+                            )
+                        }
+                        dir("${WORKDIR}") {
+                            withCredentials([
+                              usernamePassword(
+                                credentialsId: 'apache-hbase-at-github.com',
+                                passwordVariable: 'GITHUB_PASSWORD',
+                                usernameVariable: 'GITHUB_USER'
+                              )]) {
+                                sh label: 'test-patch', script: '''
+                                    hostname -a ; pwd ; ls -la
+                                    printenv 2>&1 | sort
+                                    echo "[INFO] Launching Yetus via ${YETUS_DRIVER}"
+                                    "${YETUS_DRIVER}"
+                                '''
+                            }
+                        }
+                    }
+                    post {
+                        always {
+                            junit testResults: "${WORKDIR_REL}/${SRC_REL}/**/target/**/TEST-*.xml", allowEmptyResults: true
+                            sh label: 'zip surefire reports', script: '''
+                                if [ -d "${PATCHDIR}/archiver" ]; then
+                                  count=$(find "${PATCHDIR}/archiver" -type f | wc -l)
+                                  if [[ 0 -ne ${count} ]]; then
+                                    echo "zipping ${count} archived files"
+                                    zip -q -m -r "${PATCHDIR}/test_logs.zip" "${PATCHDIR}/archiver"
+                                  else
+                                    echo "No archived files, skipping compressing."
+                                  fi
+                                else
+                                  echo "No archiver directory, skipping compressing."
+                                fi
+                            '''
+                            // Has to be relative to WORKSPACE.
+                            archiveArtifacts artifacts: "${WORKDIR_REL}/${PATCH_REL}/*", excludes: "${WORKDIR_REL}/${PATCH_REL}/precommit"
+                            archiveArtifacts artifacts: "${WORKDIR_REL}/${PATCH_REL}/**/*", excludes: "${WORKDIR_REL}/${PATCH_REL}/precommit/**/*"
+                            publishHTML target: [
+                              allowMissing: true,
+                              keepAll: true,
+                              alwaysLinkToLastBuild: true,
+                              // Has to be relative to WORKSPACE
+                              reportDir: "${WORKDIR_REL}/${PATCH_REL}",
+                              reportFiles: 'report.html',
+                              reportName: 'PR JDK11 Hadoop3 Check Report'
+                            ]
+                        }
+                        // Jenkins pipeline jobs fill slaves on PRs without this :(
+                        cleanup() {
+                            script {
+                                sh label: 'Cleanup workspace', script: '''
+                                    # See YETUS-764
+                                    if [ -f "${PATCHDIR}/pidfile.txt" ]; then
+                                      echo "test-patch process appears to still be running: killing"
+                                      kill `cat "${PATCHDIR}/pidfile.txt"` || true
+                                      sleep 10
+                                    fi
+                                    if [ -f "${PATCHDIR}/cidfile.txt" ]; then
+                                      echo "test-patch container appears to still be running: killing"
+                                      docker kill `cat "${PATCHDIR}/cidfile.txt"` || true
+                                    fi
+                                    # See HADOOP-13951
+                                    chmod -R u+rxw "${WORKSPACE}"
+                                '''
+                                dir ("${WORKDIR}") {
+                                    deleteDir()
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
-
     }
 
     post {
-        always {
-          script {
-            // Yetus output
-            archiveArtifacts "${env.PATCHDIR}/**"
-            // Publish the HTML report so that it can be looked at
-            // Has to be relative to WORKSPACE.
-            publishHTML (target: [
-                          allowMissing: true,
-                          keepAll: true,
-                          alwaysLinkToLastBuild: true,
-                          // Has to be relative to WORKSPACE
-                          reportDir: "${env.PATCHDIR}",
-                          reportFiles: 'report.html',
-                          reportName: 'Yetus Report'
-            ])
-            // Publish JUnit results
-            try {
-                junit "${env.SOURCEDIR}/**/target/surefire-reports/*.xml"
-            } catch(e) {
-                echo 'junit processing: ' + e.toString()
-            }
-          }
-        }
-
         // Jenkins pipeline jobs fill slaves on PRs without this :(
         cleanup() {
             script {
-                sh '''
-                    # See YETUS-764
-                    if [ -f "${WORKSPACE}/${PATCHDIR}/pidfile.txt" ]; then
-                      echo "test-patch process appears to still be running: killing"
-                      kill `cat "${WORKSPACE}/${PATCHDIR}/pidfile.txt"` || true
-                      sleep 10
-                    fi
-                    if [ -f "${WORKSPACE}/${PATCHDIR}/cidfile.txt" ]; then
-                      echo "test-patch container appears to still be running: killing"
-                      docker kill `cat "${WORKSPACE}/${PATCHDIR}/cidfile.txt"` || true
-                    fi
+                sh label: 'Cleanup workspace', script: '''
                     # See HADOOP-13951
                     chmod -R u+rxw "${WORKSPACE}"
                     '''
