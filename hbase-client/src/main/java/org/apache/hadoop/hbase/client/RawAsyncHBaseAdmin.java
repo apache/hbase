@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 import static org.apache.hadoop.hbase.util.FutureUtils.unwrapCompletionException;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcChannel;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -45,6 +46,7 @@ import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
 import org.apache.hadoop.hbase.CacheEvictionStats;
@@ -103,6 +105,8 @@ import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
 import org.apache.hbase.thirdparty.io.netty.util.Timeout;
 import org.apache.hbase.thirdparty.io.netty.util.TimerTask;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos;
@@ -3872,6 +3876,65 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
                 MasterService.Interface::isSnapshotCleanupEnabled,
                 IsSnapshotCleanupEnabledResponse::getEnabled))
         .call();
+  }
+
+  @Override
+  public CompletableFuture<List<SlowLogRecord>> getSlowLogResponses(
+    @Nullable final Set<ServerName> serverNames,
+    final SlowLogQueryFilter slowLogQueryFilter) {
+    if (CollectionUtils.isEmpty(serverNames)) {
+      return CompletableFuture.completedFuture(Collections.emptyList());
+    }
+    return CompletableFuture.supplyAsync(() -> serverNames.stream()
+      .map((ServerName serverName) ->
+        getSlowLogResponseFromServer(serverName, slowLogQueryFilter))
+      .map(CompletableFuture::join)
+      .flatMap(List::stream)
+      .collect(Collectors.toList()));
+  }
+
+  private CompletableFuture<List<SlowLogRecord>> getSlowLogResponseFromServer(
+    final ServerName serverName, final SlowLogQueryFilter slowLogQueryFilter) {
+    return this.<List<SlowLogRecord>>newAdminCaller()
+      .action((controller, stub) -> this
+        .adminCall(
+          controller, stub, RequestConverter.buildSlowLogResponseRequest(slowLogQueryFilter),
+          AdminService.Interface::getSlowLogResponses,
+          ProtobufUtil::toSlowLogPayloads))
+      .serverName(serverName).call();
+  }
+
+  @Override
+  public CompletableFuture<List<Boolean>> clearSlowLogResponses(
+      @Nullable Set<ServerName> serverNames) {
+    if (CollectionUtils.isEmpty(serverNames)) {
+      return CompletableFuture.completedFuture(Collections.emptyList());
+    }
+    List<CompletableFuture<Boolean>> clearSlowLogResponseList = serverNames.stream()
+      .map(this::clearSlowLogsResponses)
+      .collect(Collectors.toList());
+    return convertToFutureOfList(clearSlowLogResponseList);
+  }
+
+  private CompletableFuture<Boolean> clearSlowLogsResponses(final ServerName serverName) {
+    return this.<Boolean>newAdminCaller()
+      .action(((controller, stub) -> this
+        .adminCall(
+          controller, stub, RequestConverter.buildClearSlowLogResponseRequest(),
+          AdminService.Interface::clearSlowLogsResponses,
+          ProtobufUtil::toClearSlowLogPayload))
+      ).serverName(serverName).call();
+  }
+
+  private static <T> CompletableFuture<List<T>> convertToFutureOfList(
+    List<CompletableFuture<T>> futures) {
+    CompletableFuture<Void> allDoneFuture =
+      CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+    return allDoneFuture.thenApply(v ->
+      futures.stream()
+        .map(CompletableFuture::join)
+        .collect(Collectors.toList())
+    );
   }
 
 }

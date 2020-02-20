@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
@@ -105,6 +106,7 @@ import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure2.RSProcedureCallable;
@@ -126,6 +128,7 @@ import org.apache.hadoop.hbase.regionserver.handler.OpenMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenPriorityRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.UnassignRegionHandler;
+import org.apache.hadoop.hbase.regionserver.slowlog.SlowLogRecorder;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.regionserver.RejectReplicationRequestStateChecker;
 import org.apache.hadoop.hbase.replication.regionserver.RejectRequestsFromClientStateChecker;
@@ -171,6 +174,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompac
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearRegionBlockCacheRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearRegionBlockCacheResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearSlowLogResponses;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
@@ -200,6 +205,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWA
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SlowLogResponseRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SlowLogResponses;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationRequest;
@@ -247,6 +254,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuo
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshot;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog.SlowLogPayload;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.FlushDescriptor;
@@ -1249,6 +1257,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     ConnectionUtils.setServerSideHConnectionRetriesConfig(conf, name, LOG);
     rpcServer = createRpcServer(rs, rpcSchedulerFactory, bindAddress, name);
     rpcServer.setRsRpcServices(this);
+    if (!(rs instanceof HMaster)) {
+      rpcServer.setSlowLogRecorder(rs.getSlowLogRecorder());
+    }
     scannerLeaseTimeoutPeriod = conf.getInt(
       HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,
       HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD);
@@ -3798,6 +3809,36 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     } catch (IOException e) {
       throw new ServiceException(e);
     }
+  }
+
+  @Override
+  @QosPriority(priority = HConstants.ADMIN_QOS)
+  public SlowLogResponses getSlowLogResponses(final RpcController controller,
+    final SlowLogResponseRequest request) {
+    final SlowLogRecorder slowLogRecorder =
+      this.regionServer.getSlowLogRecorder();
+    final List<SlowLogPayload> slowLogPayloads;
+    slowLogPayloads = slowLogRecorder != null
+      ? slowLogRecorder.getSlowLogPayloads(request)
+      : Collections.emptyList();
+    SlowLogResponses slowLogResponses = SlowLogResponses.newBuilder()
+      .addAllSlowLogPayloads(slowLogPayloads)
+      .build();
+    return slowLogResponses;
+  }
+
+  @Override
+  @QosPriority(priority = HConstants.ADMIN_QOS)
+  public ClearSlowLogResponses clearSlowLogsResponses(final RpcController controller,
+    final ClearSlowLogResponseRequest request) {
+    final SlowLogRecorder slowLogRecorder =
+      this.regionServer.getSlowLogRecorder();
+    boolean slowLogsCleaned = Optional.ofNullable(slowLogRecorder)
+      .map(SlowLogRecorder::clearSlowLogPayloads).orElse(false);
+    ClearSlowLogResponses clearSlowLogResponses = ClearSlowLogResponses.newBuilder()
+      .setIsCleaned(slowLogsCleaned)
+      .build();
+    return clearSlowLogResponses;
   }
 
   @VisibleForTesting
