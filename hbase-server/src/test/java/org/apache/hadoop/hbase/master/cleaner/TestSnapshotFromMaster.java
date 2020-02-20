@@ -365,7 +365,7 @@ public class TestSnapshotFromMaster {
     isSnapshotCleanupEnabledResponse =
         master.getMasterRpcServices().isSnapshotCleanupEnabled(null,
             isSnapshotCleanupEnabledRequest);
-    Assert.assertFalse(isSnapshotCleanupEnabledResponse.getEnabled());
+    assertFalse(isSnapshotCleanupEnabledResponse.getEnabled());
   }
 
   /**
@@ -530,8 +530,11 @@ public class TestSnapshotFromMaster {
         return UTIL.getHBaseAdmin().listSnapshots(Pattern.compile(snapshotName)).size() == 1;
       }
     });
-    assertTrue(master.getSnapshotManager().isTakingAnySnapshot());
-    Thread.sleep(11 * 1000L);
-    assertFalse(master.getSnapshotManager().isTakingAnySnapshot());
+    UTIL.waitFor(30000, new Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return !master.getSnapshotManager().isTakingAnySnapshot();
+      }
+    });
   }
 }
