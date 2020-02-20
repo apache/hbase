@@ -32,7 +32,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -43,7 +42,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.DoNotRetryRegionException;
-import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionStatesCount;
@@ -1009,12 +1007,6 @@ public class AssignmentManager {
         " hriA=" + hriA + " hriB=" + hriB);
     }
 
-    if (!master.isSplitOrMergeEnabled(MasterSwitchType.SPLIT)) {
-      LOG.warn("Split switch is off! skip split of " + parent);
-      throw new IOException("Split region " + parent.getRegionNameAsString() +
-          " failed due to split switch off");
-    }
-
     // Submit the Split procedure
     final byte[] splitKey = hriB.getStartKey();
     if (LOG.isDebugEnabled()) {
@@ -1038,12 +1030,6 @@ public class AssignmentManager {
       throw new UnexpectedStateException("Unsupported merge regionState=" + state +
         " for regionA=" + hriA + " regionB=" + hriB + " merged=" + merged +
         " maybe an old RS (< 2.0) had the operation in progress");
-    }
-
-    if (!master.isSplitOrMergeEnabled(MasterSwitchType.MERGE)) {
-      LOG.warn("Merge switch is off! skip merge of regionA=" + hriA + " regionB=" + hriB);
-      throw new IOException("Merge of regionA=" + hriA + " regionB=" + hriB +
-        " failed because merge switch is off");
     }
 
     // Submit the Merge procedure
