@@ -20,9 +20,14 @@
 # Built in multiple stages so as to avoid re-downloading large binaries when
 # tweaking unrelated aspects of the image.
 
-# start with a minimal image into which we can install remote tarballs
+# start with a minimal image into which we can download remote tarballs
 FROM ubuntu:18.04 AS BASE_IMAGE
-RUN apt-get -q update && apt-get -q install --no-install-recommends -y ca-certificates curl
+ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
+
+RUN DEBIAN_FRONTEND=noninteractive apt-get -qq update && \
+  DEBIAN_FRONTEND=noninteractive apt-get -qq install --no-install-recommends -y \
+    ca-certificates \
+    curl
 
 ##
 # download sundry dependencies
@@ -78,7 +83,7 @@ FROM BASE_IMAGE
 # the second set are dependencies required to enable various precommit
 # checks/features.
 
-RUN apt-get -q install --no-install-recommends -y \
+RUN DEBIAN_FRONTEND=noninteractive apt-get -qq install --no-install-recommends -y \
   bash \
   build-essential \
   curl \
@@ -89,7 +94,7 @@ RUN apt-get -q install --no-install-recommends -y \
 
 # be careful not to install any system packages (i.e., findbugs) that will
 # pull in the default-jre.
-RUN apt-get -q install --no-install-recommends -y \
+RUN DEBIAN_FRONTEND=noninteractive apt-get -qq install --no-install-recommends -y \
   bats \
   libperl-critic-perl \
   python3 \
