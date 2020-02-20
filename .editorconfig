@@ -460,6 +460,7 @@ ij_javascript_while_on_new_line = false
 ij_javascript_wrap_comments = false
 
 [{*.gradle,*.groovy,*.gant,*.gdsl,*.gy,*.gson,Jenkinsfile*}]
+indent_size = 4
 ij_groovy_align_group_field_declarations = false
 ij_groovy_align_multiline_array_initializer_expression = false
 ij_groovy_align_multiline_assignment = false
