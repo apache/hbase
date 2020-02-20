@@ -4158,4 +4158,5 @@
       <url>file:///tmp</url>
     </site>
   </distributionManagement>
+  <!-- precommit rebuild the project -->
 </project>
