@@ -90,7 +90,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -qq install --no-install-recommends -
   diffutils \
   git \
   rsync \
-  tar
+  tar \
+  wget
 
 # be careful not to install any system packages (i.e., findbugs) that will
 # pull in the default-jre.
