@@ -127,6 +127,12 @@ public class CacheConfig {
       "hbase.rs.prefetchblocksonopen";
 
   /**
+   * Configuration key to cache blocks when a compacted file is written
+   */
+  public static final String CACHE_COMPACTED_BLOCKS_ON_WRITE_KEY =
+    "hbase.rs.cachecompactedblocksonwrite";
+
+  /**
    * The target block size used by blockcache instances. Defaults to
    * {@link HConstants#DEFAULT_BLOCKSIZE}.
    */
@@ -183,6 +189,7 @@ public class CacheConfig {
   public static final boolean DEFAULT_EVICT_ON_CLOSE = false;
   public static final boolean DEFAULT_CACHE_DATA_COMPRESSED = false;
   public static final boolean DEFAULT_PREFETCH_ON_OPEN = false;
+  public static final boolean DEFAULT_CACHE_COMPACTED_BLOCKS_ON_WRITE = false;
 
   /** Local reference to the block cache, null if completely disabled */
   private final BlockCache blockCache;
@@ -215,6 +222,11 @@ public class CacheConfig {
 
   /** Whether data blocks should be prefetched into the cache */
   private final boolean prefetchOnOpen;
+
+  /**
+   * Whether data blocks should be cached when compacted file is written
+   */
+  private final boolean cacheCompactedDataOnWrite;
 
   /**
    * If true and if more than one tier in this cache deploy -- e.g. CombinedBlockCache has an L1
@@ -250,8 +262,10 @@ public class CacheConfig {
             DEFAULT_PREFETCH_ON_OPEN) || family.isPrefetchBlocksOnOpen(),
         conf.getBoolean(HColumnDescriptor.CACHE_DATA_IN_L1,
             HColumnDescriptor.DEFAULT_CACHE_DATA_IN_L1) || family.isCacheDataInL1(),
-        conf.getBoolean(DROP_BEHIND_CACHE_COMPACTION_KEY,DROP_BEHIND_CACHE_COMPACTION_DEFAULT)
-     );
+        conf.getBoolean(DROP_BEHIND_CACHE_COMPACTION_KEY,DROP_BEHIND_CACHE_COMPACTION_DEFAULT),
+        conf.getBoolean(CACHE_COMPACTED_BLOCKS_ON_WRITE_KEY,
+          DEFAULT_CACHE_COMPACTED_BLOCKS_ON_WRITE)
+    );
     LOG.info("Created cacheConfig for " + family.getNameAsString() + ": " + this);
   }
 
@@ -275,7 +289,9 @@ public class CacheConfig {
         conf.getBoolean(PREFETCH_BLOCKS_ON_OPEN_KEY, DEFAULT_PREFETCH_ON_OPEN),
         conf.getBoolean(HColumnDescriptor.CACHE_DATA_IN_L1,
           HColumnDescriptor.DEFAULT_CACHE_DATA_IN_L1),
-        conf.getBoolean(DROP_BEHIND_CACHE_COMPACTION_KEY,DROP_BEHIND_CACHE_COMPACTION_DEFAULT)
+        conf.getBoolean(DROP_BEHIND_CACHE_COMPACTION_KEY,DROP_BEHIND_CACHE_COMPACTION_DEFAULT),
+        conf.getBoolean(CACHE_COMPACTED_BLOCKS_ON_WRITE_KEY,
+          DEFAULT_CACHE_COMPACTED_BLOCKS_ON_WRITE)
      );
     LOG.info("Created cacheConfig: " + this);
   }
@@ -301,7 +317,8 @@ public class CacheConfig {
       final boolean cacheDataOnWrite, final boolean cacheIndexesOnWrite,
       final boolean cacheBloomsOnWrite, final boolean evictOnClose,
       final boolean cacheDataCompressed, final boolean prefetchOnOpen,
-      final boolean cacheDataInL1, final boolean dropBehindCompaction) {
+      final boolean cacheDataInL1, final boolean dropBehindCompaction,
+      final boolean cacheCompactedDataOnWrite) {
     this.blockCache = blockCache;
     this.cacheDataOnRead = cacheDataOnRead;
     this.inMemory = inMemory;
@@ -313,6 +330,7 @@ public class CacheConfig {
     this.prefetchOnOpen = prefetchOnOpen;
     this.cacheDataInL1 = cacheDataInL1;
     this.dropBehindCompaction = dropBehindCompaction;
+    this.cacheCompactedDataOnWrite = cacheCompactedDataOnWrite;
   }
 
   /**
@@ -324,7 +342,15 @@ public class CacheConfig {
         cacheConf.cacheDataOnWrite, cacheConf.cacheIndexesOnWrite,
         cacheConf.cacheBloomsOnWrite, cacheConf.evictOnClose,
         cacheConf.cacheDataCompressed, cacheConf.prefetchOnOpen,
-        cacheConf.cacheDataInL1, cacheConf.dropBehindCompaction);
+        cacheConf.cacheDataInL1, cacheConf.dropBehindCompaction,
+        cacheConf.cacheCompactedDataOnWrite);
+  }
+
+  /**
+   * @return true if blocks should be cached while writing during compaction, false if not
+   */
+  public boolean shouldCacheCompactedBlocksOnWrite() {
+    return this.cacheCompactedDataOnWrite;
   }
 
   /**
