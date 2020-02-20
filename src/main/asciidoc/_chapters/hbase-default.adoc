@@ -2207,3 +2207,41 @@ The percent of region server RPC threads failed to abort RS.
 .Default
 `-1`
 
+
+[[hbase.regionserver.slowlog.ringbuffer.size]]
+*`hbase.regionserver.slowlog.ringbuffer.size`*::
++
+.Description
+
+      Default size of ringbuffer to be maintained by each RegionServer in order
+      to store online slowlog responses. This is an in-memory ring buffer of
+      requests that were judged to be too slow in addition to the responseTooSlow
+      logging. The in-memory representation would be complete.
+      For more details, please look into Doc Section:
+      <<slow_log_responses, slow_log_responses>>
+
+
++
+.Default
+`256`
+
+
+
+[[hbase.regionserver.slowlog.buffer.enabled]]
+*`hbase.regionserver.slowlog.buffer.enabled`*::
++
+.Description
+
+      Indicates whether RegionServers have ring buffer running for storing
+      Online Slow logs in FIFO manner with limited entries. The size of
+      the ring buffer is indicated by config: hbase.regionserver.slowlog.ringbuffer.size
+      The default value is false, turn this on and get latest slowlog
+      responses with complete data.
+      For more details, please look into Doc Section:
+      <<slow_log_responses, slow_log_responses>>
+
+
++
+.Default
+`false`
+

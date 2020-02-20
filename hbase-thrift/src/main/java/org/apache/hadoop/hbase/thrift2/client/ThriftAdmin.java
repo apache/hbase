@@ -44,6 +44,8 @@ import org.apache.hadoop.hbase.client.CompactType;
 import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.SlowLogQueryFilter;
+import org.apache.hadoop.hbase.client.SlowLogRecord;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -1155,6 +1157,17 @@ public class ThriftAdmin implements Admin {
   @Override
   public boolean isSnapshotCleanupEnabled() {
     throw new NotImplementedException("isSnapshotCleanupEnabled not supported in ThriftAdmin");
+  }
+
+  @Override
+  public List<SlowLogRecord> getSlowLogResponses(final Set<ServerName> serverNames,
+      final SlowLogQueryFilter slowLogQueryFilter) {
+    throw new NotImplementedException("getSlowLogResponses not supported in ThriftAdmin");
+  }
+
+  @Override
+  public List<Boolean> clearSlowLogResponses(final Set<ServerName> serverNames) {
+    throw new NotImplementedException("clearSlowLogsResponses not supported in ThriftAdmin");
   }
 
   @Override

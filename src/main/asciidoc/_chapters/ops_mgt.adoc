@@ -1914,6 +1914,120 @@ In the case that the call is not a client operation, that detailed fingerprint i
 
 This particular example, for example, would indicate that the likely cause of slowness is simply a very large (on the order of 100MB) multiput, as we can tell by the "vlen," or value length, fields of each put in the multiPut.
 
+[[slow_log_responses]]
+==== Get Slow Response Log from shell
+When an individual RPC exceeds a configurable time bound we log a complaint
+by way of the logging subsystem
+
+e.g.
+
+----
+2019-10-02 10:10:22,195 WARN [,queue=15,port=60020] ipc.RpcServer - (responseTooSlow):
+{"call":"Scan(org.apache.hadoop.hbase.protobuf.generated.ClientProtos$ScanRequest)",
+"starttimems":1567203007549,
+"responsesize":6819737,
+"method":"Scan",
+"param":"region { type: REGION_NAME value: \"t1,\\000\\000\\215\\f)o\\\\\\024\\302\\220\\000\\000\\000\\000\\000\\001\\000\\000\\000\\000\\000\\006\\000\\000\\000\\000\\000\\005\\000\\000<TRUNCATED>",
+"processingtimems":28646,
+"client":"10.253.196.215:41116",
+"queuetimems":22453,
+"class":"HRegionServer"}
+----
+
+Unfortunately often the request parameters are truncated as per above Example.
+The truncation is unfortunate because it eliminates much of the utility of
+the warnings. For example, the region name, the start and end keys, and the
+filter hierarchy are all important clues for debugging performance problems
+caused by moderate to low selectivity queries or queries made at a high rate.
+
+HBASE-22978 introduces maintaining an in-memory ring buffer of requests that were judged to
+be too slow in addition to the responseTooSlow logging. The in-memory representation can be
+complete. There is some chance a high rate of requests will cause information on other
+interesting requests to be overwritten before it can be read. This is an acceptable trade off.
+
+In order to enable the in-memory ring buffer at RegionServers, we need to enable
+config:
+----
+hbase.regionserver.slowlog.buffer.enabled
+----
+
+One more config determines the size of the ring buffer:
+----
+hbase.regionserver.slowlog.ringbuffer.size
+----
+
+Check the config section for the detailed description.
+
+This config would be disabled by default. Turn it on and these shell commands
+would provide expected results from the ring-buffers.
+
+
+shell commands to retrieve slowlog responses from RegionServers:
+
+----
+Retrieve latest SlowLog Responses maintained by each or specific RegionServers.
+Specify '*' to include all RS otherwise array of server names for specific
+RS. A server name is the host, port plus startcode of a RegionServer.
+e.g.: host187.example.com,60020,1289493121758 (find servername in
+master ui or when you do detailed status in shell)
+
+Provide optional filter parameters as Hash.
+Default Limit of each server for providing no of slow log records is 10. User can specify
+more limit by 'LIMIT' param in case more than 10 records should be retrieved.
+
+Examples:
+
+  hbase> get_slowlog_responses '*'                                 => get slowlog responses from all RS
+  hbase> get_slowlog_responses '*', {'LIMIT' => 50}                => get slowlog responses from all RS
+                                                                      with 50 records limit (default limit: 10)
+  hbase> get_slowlog_responses ['SERVER_NAME1', 'SERVER_NAME2']    => get slowlog responses from SERVER_NAME1,
+                                                                      SERVER_NAME2
+  hbase> get_slowlog_responses '*', {'REGION_NAME' => 'hbase:meta,,1'}
+                                                                   => get slowlog responses only related to meta
+                                                                      region
+  hbase> get_slowlog_responses '*', {'TABLE_NAME' => 't1'}         => get slowlog responses only related to t1 table
+  hbase> get_slowlog_responses '*', {'CLIENT_IP' => '192.162.1.40:60225', 'LIMIT' => 100}
+                                                                   => get slowlog responses with given client
+                                                                      IP address and get 100 records limit
+                                                                      (default limit: 10)
+  hbase> get_slowlog_responses '*', {'REGION_NAME' => 'hbase:meta,,1', 'TABLE_NAME' => 't1'}
+                                                                   => get slowlog responses with given region name
+                                                                      or table name
+  hbase> get_slowlog_responses '*', {'USER' => 'user_name', 'CLIENT_IP' => '192.162.1.40:60225'}
+                                                                   => get slowlog responses that match either
+                                                                      provided client IP address or user name
+
+
+----
+
+Sometimes output can be long pretty printed json for user to scroll in
+a single screen and hence user might prefer
+redirecting output of get_slowlog_responses to a file.
+
+Example:
+----
+echo "get_slowlog_responses '*'" | hbase shell > xyz.out 2>&1
+----
+
+
+shell command to clear slowlog responses from RegionServer:
+
+----
+Clears SlowLog Responses maintained by each or specific RegionServers.
+Specify array of server names for specific RS. A server name is
+the host, port plus startcode of a RegionServer.
+e.g.: host187.example.com,60020,1289493121758 (find servername in
+master ui or when you do detailed status in shell)
+
+Examples:
+
+  hbase> clear_slowlog_responses                                     => clears slowlog responses from all RS
+  hbase> clear_slowlog_responses ['SERVER_NAME1', 'SERVER_NAME2']    => clears slowlog responses from SERVER_NAME1,
+                                                                        SERVER_NAME2
+
+
+----
+
 === Block Cache Monitoring
 
 Starting with HBase 0.98, the HBase Web UI includes the ability to monitor and report on the performance of the block cache.

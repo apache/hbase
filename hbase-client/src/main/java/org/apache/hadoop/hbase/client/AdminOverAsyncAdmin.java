@@ -960,4 +960,16 @@ class AdminOverAsyncAdmin implements Admin {
     return get(admin.isSnapshotCleanupEnabled());
   }
 
+  @Override
+  public List<SlowLogRecord> getSlowLogResponses(final Set<ServerName> serverNames,
+      final SlowLogQueryFilter slowLogQueryFilter) throws IOException {
+    return get(admin.getSlowLogResponses(serverNames, slowLogQueryFilter));
+  }
+
+  @Override
+  public List<Boolean> clearSlowLogResponses(final Set<ServerName> serverNames)
+      throws IOException {
+    return get(admin.clearSlowLogResponses(serverNames));
+  }
+
 }
