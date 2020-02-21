@@ -18,8 +18,7 @@
 package org.apache.hadoop.hbase.util;
 
 import com.google.protobuf.ByteString;
-import com.google.protobuf.HBaseZeroCopyByteString;
-
+import com.google.protobuf.UnsafeByteOperations;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,15 +35,15 @@ public final class ByteStringer {
    */
   private static boolean USE_ZEROCOPYBYTESTRING = true;
 
-  // Can I classload HBaseZeroCopyByteString without IllegalAccessError?
+  // Can I classload UnsafeByteOperations without IllegalAccessError?
   // If we can, use it passing ByteStrings to pb else use native ByteString though more costly
   // because it makes a copy of the passed in array.
   static {
     try {
-      HBaseZeroCopyByteString.wrap(new byte [0]);
+      UnsafeByteOperations.unsafeWrap(new byte [0]);
     } catch (IllegalAccessError iae) {
       USE_ZEROCOPYBYTESTRING = false;
-      LOG.debug("Failed to classload HBaseZeroCopyByteString: " + iae.toString());
+      LOG.debug("Failed to classload UnsafeByteOperations: ", iae);
     }
   }
 
@@ -56,14 +55,14 @@ public final class ByteStringer {
    * Wraps a byte array in a {@link ByteString} without copying it.
    */
   public static ByteString wrap(final byte[] array) {
-    return USE_ZEROCOPYBYTESTRING? HBaseZeroCopyByteString.wrap(array): ByteString.copyFrom(array);
+    return USE_ZEROCOPYBYTESTRING? UnsafeByteOperations.unsafeWrap(array): ByteString.copyFrom(array);
   }
 
   /**
    * Wraps a subset of a byte array in a {@link ByteString} without copying it.
    */
   public static ByteString wrap(final byte[] array, int offset, int length) {
-    return USE_ZEROCOPYBYTESTRING? HBaseZeroCopyByteString.wrap(array, offset, length):
+    return USE_ZEROCOPYBYTESTRING? UnsafeByteOperations.unsafeWrap(array, offset, length):
       ByteString.copyFrom(array, offset, length);
   }
 }
