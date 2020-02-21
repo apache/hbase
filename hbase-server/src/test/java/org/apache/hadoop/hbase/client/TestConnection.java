@@ -315,6 +315,8 @@ public class TestConnection {
     assertTrue(c1.getConfiguration() == c2.getConfiguration());
   }
 
+  /*
+  ====> With MasterRegistry, connections cannot outlast the masters' lifetime.
   @Test
   public void testConnectionRideOverClusterRestart() throws IOException, InterruptedException {
     Configuration config = new Configuration(TEST_UTIL.getConfiguration());
@@ -337,6 +339,7 @@ public class TestConnection {
     table.close();
     connection.close();
   }
+   */
 
   @Test
   public void testLocateRegionsWithRegionReplicas() throws IOException {

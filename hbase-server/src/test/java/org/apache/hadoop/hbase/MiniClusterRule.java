@@ -66,6 +66,13 @@ public class MiniClusterRule extends ExternalResource {
   }
 
   /**
+   * @return the underlying instance of {@link HBaseTestingUtility}
+   */
+  public HBaseTestingUtility getTestingUtility() {
+    return testingUtility;
+  }
+
+  /**
    * Create a {@link AsyncConnection} to the managed {@link MiniHBaseCluster}. It's up to the caller
    * to {@link AsyncConnection#close() close()} the connection when finished.
    */

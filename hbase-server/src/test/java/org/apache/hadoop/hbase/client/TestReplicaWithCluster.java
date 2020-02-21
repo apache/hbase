@@ -588,11 +588,12 @@ public class TestReplicaWithCluster {
   }
 
   @Test
-  public void testReplicaGetWithRpcClientImpl() throws IOException {
+  public void testReplicaGetWithAsyncRpcClientImpl() throws IOException {
     HTU.getConfiguration().setBoolean("hbase.ipc.client.specificThreadForWriting", true);
-    HTU.getConfiguration().set("hbase.rpc.client.impl", "org.apache.hadoop.hbase.ipc.RpcClientImpl");
+    HTU.getConfiguration().set(
+        "hbase.rpc.client.impl", "org.apache.hadoop.hbase.ipc.AsyncRpcClient");
     // Create table then get the single region for our new table.
-    HTableDescriptor hdt = HTU.createTableDescriptor("testReplicaGetWithRpcClientImpl");
+    HTableDescriptor hdt = HTU.createTableDescriptor("testReplicaGetWithAsyncRpcClientImpl");
     hdt.setRegionReplication(NB_SERVERS);
     hdt.addCoprocessor(SlowMeCopro.class.getName());
 

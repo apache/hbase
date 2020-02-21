@@ -21,7 +21,7 @@ import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_COORDINATED
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_WAL_MAX_SPLITTER;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
-
+import static org.apache.hadoop.hbase.util.DNS.RS_HOSTNAME_KEY;
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.management.MemoryType;
@@ -56,7 +56,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Function;
 import javax.management.MalformedObjectNameException;
 import javax.servlet.http.HttpServlet;
-
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
@@ -189,7 +188,6 @@ import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sun.misc.Signal;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
@@ -201,7 +199,6 @@ import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceCall;
@@ -449,14 +446,6 @@ public class HRegionServer extends HasThread implements
    * hostname specified by hostname config
    */
   protected String useThisHostnameInstead;
-
-  // key to the config parameter of server hostname
-  // the specification of server hostname is optional. The hostname should be resolvable from
-  // both master and region server
-  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-  final static String RS_HOSTNAME_KEY = "hbase.regionserver.hostname";
-  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-  protected final static String MASTER_HOSTNAME_KEY = "hbase.master.hostname";
 
   /**
    * HBASE-18226: This config and hbase.regionserver.hostname are mutually exclusive.
@@ -789,8 +778,17 @@ public class HRegionServer extends HasThread implements
     return true;
   }
 
-  private Configuration unsetClientZookeeperQuorum() {
+  private Configuration cleanupConfiguration() {
     Configuration conf = this.conf;
+    // We use ZKConnectionRegistry for all the internal communication, primarily for these reasons:
+    // - Decouples RS and master life cycles. RegionServers can continue be up independent of
+    //   masters' availability.
+    // - Configuration management for region servers (cluster internal) is much simpler when adding
+    //   new masters or removing existing masters, since only clients' config needs to be updated.
+    // - We need to retain ZKConnectionRegistry for replication use anyway, so we just extend it for
+    //   other internal connections too.
+    conf.set(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
+        HConstants.ZK_CONNECTION_REGISTRY_CLASS);
     if (conf.get(HConstants.CLIENT_ZOOKEEPER_QUORUM) != null) {
       // Use server ZK cluster for server-issued connections, so we clone
       // the conf and unset the client ZK related properties
@@ -824,7 +822,7 @@ public class HRegionServer extends HasThread implements
    */
   protected final synchronized void setupClusterConnection() throws IOException {
     if (asyncClusterConnection == null) {
-      Configuration conf = unsetClientZookeeperQuorum();
+      Configuration conf = cleanupConfiguration();
       InetSocketAddress localAddress = new InetSocketAddress(this.rpcServices.isa.getAddress(), 0);
       User user = userProvider.getCurrent();
       asyncClusterConnection =

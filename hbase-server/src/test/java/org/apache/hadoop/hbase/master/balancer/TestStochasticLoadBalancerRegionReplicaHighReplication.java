@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,13 +18,13 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ MasterTests.class, LargeTests.class })
+@Category({ MasterTests.class, MediumTests.class })
 public class TestStochasticLoadBalancerRegionReplicaHighReplication extends BalancerTestBase2 {
 
   @ClassRule
@@ -36,9 +36,9 @@ public class TestStochasticLoadBalancerRegionReplicaHighReplication extends Bala
     conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 4000000L);
     conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 120 * 1000); // 120 sec
     loadBalancer.setConf(conf);
-    int numNodes = 80;
+    int numNodes = 40;
     int numRegions = 6 * numNodes;
-    int replication = 80; // 80 replicas per region, one for each server
+    int replication = 40; // 40 replicas per region, one for each server
     int numRegionsPerServer = 5;
     int numTables = 10;
     testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, false, true);

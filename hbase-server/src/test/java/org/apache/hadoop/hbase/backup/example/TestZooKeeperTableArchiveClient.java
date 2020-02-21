@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,7 +39,7 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.DummyAsyncRegistry;
+import org.apache.hadoop.hbase.client.DummyConnectionRegistry;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
 import org.apache.hadoop.hbase.master.cleaner.DirScanPool;
@@ -92,7 +91,7 @@ public class TestZooKeeperTableArchiveClient {
   private static RegionServerServices rss;
   private static DirScanPool POOL;
 
-  public static final class MockRegistry extends DummyAsyncRegistry {
+  public static final class MockRegistry extends DummyConnectionRegistry {
 
     public MockRegistry(Configuration conf) {
     }
@@ -110,8 +109,8 @@ public class TestZooKeeperTableArchiveClient {
   public static void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniZKCluster();
-    UTIL.getConfiguration().setClass("hbase.client.registry.impl", MockRegistry.class,
-      DummyAsyncRegistry.class);
+    UTIL.getConfiguration().setClass(MockRegistry.REGISTRY_IMPL_CONF_KEY, MockRegistry.class,
+      DummyConnectionRegistry.class);
     CONNECTION = ConnectionFactory.createConnection(UTIL.getConfiguration());
     archivingClient = new ZKTableArchiveClient(UTIL.getConfiguration(), CONNECTION);
     // make hfile archiving node so we can archive files
@@ -147,9 +146,13 @@ public class TestZooKeeperTableArchiveClient {
 
   @AfterClass
   public static void cleanupTest() throws Exception {
-    CONNECTION.close();
+    if (CONNECTION != null) {
+      CONNECTION.close();
+    }
     UTIL.shutdownMiniZKCluster();
-    POOL.shutdownNow();
+    if (POOL != null) {
+      POOL.shutdownNow();
+    }
   }
 
   /**
@@ -353,6 +356,7 @@ public class TestZooKeeperTableArchiveClient {
    * @throws IOException on failure
    * @throws KeeperException on failure
    */
+  @SuppressWarnings("checkstyle:EmptyBlock")
   private List<BaseHFileCleanerDelegate> turnOnArchiving(String tableName, HFileCleaner cleaner)
       throws IOException, KeeperException {
     // turn on hfile retention

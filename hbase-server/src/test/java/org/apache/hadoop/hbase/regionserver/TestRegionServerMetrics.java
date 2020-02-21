@@ -25,6 +25,8 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -53,6 +55,10 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.LoadBalancer;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
+import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -494,7 +500,20 @@ public class TestRegionServerMetrics {
       setMobThreshold(region, cf, 100);
       // metrics are reset by the region initialization
       region.initialize();
-      region.compact(true);
+      // This is how we MOB compact region
+      List<HStore> stores = region.getStores();
+      for (HStore store: stores) {
+        // Force major compaction
+        store.triggerMajorCompaction();
+        Optional<CompactionContext> context =
+            store.requestCompaction(HStore.PRIORITY_USER, CompactionLifeCycleTracker.DUMMY,
+              User.getCurrent());
+        if (!context.isPresent()) {
+          continue;
+        }
+        region.compact(context.get(), store,
+          NoLimitThroughputController.INSTANCE, User.getCurrent());
+      }
       metricsRegionServer.getRegionServerWrapper().forceRecompute();
       assertCounter("cellsCountCompactedFromMob", numHfiles);
       assertCounter("cellsCountCompactedToMob", 0);

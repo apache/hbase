@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.replication;
 
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_SCOPE_GLOBAL;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
@@ -108,7 +109,7 @@ public abstract class TestReplicationSyncUpToolBase {
     UTIL1.shutdownMiniCluster();
   }
 
-  protected final void setupReplication() throws Exception {
+  final void setupReplication() throws Exception {
     Admin admin1 = UTIL1.getAdmin();
     admin1.createTable(t1SyncupSource);
     admin1.createTable(t2SyncupSource);
@@ -135,7 +136,33 @@ public abstract class TestReplicationSyncUpToolBase {
     admin1.addReplicationPeer("1", rpc);
   }
 
-  protected final void syncUp(HBaseTestingUtility util) throws Exception {
+  final void syncUp(HBaseTestingUtility util) throws Exception {
     ToolRunner.run(util.getConfiguration(), new ReplicationSyncUp(), new String[0]);
+  }
+
+  // Utilities that manager shutdown / restart of source / sink clusters. They take care of
+  // invalidating stale connections after shutdown / restarts.
+  final void shutDownSourceHBaseCluster() throws Exception {
+    IOUtils.closeQuietly(ht1Source, ht2Source);
+    UTIL1.shutdownMiniHBaseCluster();
+  }
+
+  final void shutDownTargetHBaseCluster() throws Exception {
+    IOUtils.closeQuietly(ht1TargetAtPeer1, ht2TargetAtPeer1);
+    UTIL2.shutdownMiniHBaseCluster();
+  }
+
+  final void restartSourceHBaseCluster(int numServers) throws Exception {
+    IOUtils.closeQuietly(ht1Source, ht2Source);
+    UTIL1.restartHBaseCluster(numServers);
+    ht1Source = UTIL1.getConnection().getTable(TN1);
+    ht2Source = UTIL1.getConnection().getTable(TN2);
+  }
+
+  final void restartTargetHBaseCluster(int numServers) throws Exception {
+    IOUtils.closeQuietly(ht1TargetAtPeer1, ht2TargetAtPeer1);
+    UTIL2.restartHBaseCluster(numServers);
+    ht1TargetAtPeer1 = UTIL2.getConnection().getTable(TN1);
+    ht2TargetAtPeer1 = UTIL2.getConnection().getTable(TN2);
   }
 }

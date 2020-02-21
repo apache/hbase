@@ -179,9 +179,18 @@ public final class HConstants {
   public static final String MASTER_INFO_PORT = "hbase.master.info.port";
 
   /** Configuration key for the list of master host:ports **/
-  public static final String MASTER_ADDRS_KEY = "hbase.master.addrs";
+  public static final String MASTER_ADDRS_KEY = "hbase.masters";
 
-  public static final String MASTER_ADDRS_DEFAULT =  "localhost:" + DEFAULT_MASTER_PORT;
+  /** Full class name of the Zookeeper based connection registry implementation */
+  public static final String ZK_CONNECTION_REGISTRY_CLASS =
+      "org.apache.hadoop.hbase.client.ZKConnectionRegistry";
+
+  /** Configuration to enable hedged reads on master registry **/
+  public static final String MASTER_REGISTRY_ENABLE_HEDGED_READS_KEY =
+      "hbase.client.master_registry.enable_hedged_reads";
+
+  /** Default value for enabling hedging reads on master registry **/
+  public static final boolean MASTER_REGISTRY_ENABLE_HEDGED_READS_DEFAULT = false;
 
   /** Parameter name for the master type being backup (waits for primary to go inactive). */
   public static final String MASTER_TYPE_BACKUP = "hbase.master.backup";
@@ -908,6 +917,12 @@ public final class HConstants {
    */
   public static final String HBASE_RPC_TIMEOUT_KEY = "hbase.rpc.timeout";
 
+  /** Configuration key that controls the fan out of requests in hedged channel implementation. **/
+  public static final String HBASE_RPCS_HEDGED_REQS_FANOUT_KEY = "hbase.rpc.hedged.fanout";
+
+  /** Default value for the fan out of hedged requests. **/
+  public static final int HBASE_RPCS_HEDGED_REQS_FANOUT_DEFAULT = 2;
+
   /**
    * timeout for each read RPC
    */
@@ -939,6 +954,11 @@ public final class HConstants {
    */
   public static final long NO_SEQNUM = -1;
 
+  /**
+   * Registry implementation to be used on the client side.
+   */
+  public static final String CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY =
+      "hbase.client.registry.impl";
 
   /*
    * cluster replication constants.

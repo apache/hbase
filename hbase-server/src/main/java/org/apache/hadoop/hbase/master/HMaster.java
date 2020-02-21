@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.master;
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK;
-
+import static org.apache.hadoop.hbase.util.DNS.MASTER_HOSTNAME_KEY;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Service;
 import java.io.IOException;
@@ -56,8 +56,10 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClusterId;
@@ -147,7 +149,8 @@ import org.apache.hadoop.hbase.master.replication.UpdatePeerConfigProcedure;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.master.zksyncer.MasterAddressSyncer;
 import org.apache.hadoop.hbase.master.zksyncer.MetaLocationSyncer;
-import org.apache.hadoop.hbase.mob.MobConstants;
+import org.apache.hadoop.hbase.mob.MobFileCleanerChore;
+import org.apache.hadoop.hbase.mob.MobFileCompactionChore;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -219,11 +222,9 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.webapp.WebAppContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
@@ -355,6 +356,12 @@ public class HMaster extends HRegionServer implements MasterServices {
   // manager of assignment nodes in zookeeper
   private AssignmentManager assignmentManager;
 
+  /**
+   * Cache for the meta region replica's locations. Also tracks their changes to avoid stale
+   * cache entries.
+   */
+  private final MetaRegionLocationCache metaRegionLocationCache;
+
   // manager of replication
   private ReplicationPeerManager replicationPeerManager;
 
@@ -396,9 +403,8 @@ public class HMaster extends HRegionServer implements MasterServices {
   private LogCleaner logCleaner;
   private HFileCleaner hfileCleaner;
   private ReplicationBarrierCleaner replicationBarrierCleaner;
-  private ExpiredMobFileCleanerChore expiredMobFileCleanerChore;
-  private MobCompactionChore mobCompactChore;
-  private MasterMobCompactionThread mobCompactThread;
+  private MobFileCleanerChore mobFileCleanerChore;
+  private MobFileCompactionChore mobFileCompactionChore;
   // used to synchronize the mobCompactionStates
   private final IdLock mobCompactionLock = new IdLock();
   // save the information of mob compactions in tables.
@@ -508,8 +514,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    * {@link #finishActiveMasterInitialization(MonitoredTask)} after the master becomes the
    * active one.
    */
-  public HMaster(final Configuration conf)
-      throws IOException, KeeperException {
+  public HMaster(final Configuration conf) throws IOException {
     super(conf);
     TraceUtil.initTracer(conf);
     try {
@@ -522,7 +527,6 @@ public class HMaster extends HRegionServer implements MasterServices {
       } else {
         maintenanceMode = false;
       }
-
       this.rsFatals = new MemoryBoundedLogMessageBuffer(
           conf.getLong("hbase.master.buffer.for.rs.fatals", 1 * 1024 * 1024));
       LOG.info("hbase.rootdir={}, hbase.cluster.distributed={}", getDataRootDir(),
@@ -570,8 +574,10 @@ public class HMaster extends HRegionServer implements MasterServices {
 
       // Some unit tests don't need a cluster, so no zookeeper at all
       if (!conf.getBoolean("hbase.testing.nocluster", false)) {
-        this.activeMasterManager = new ActiveMasterManager(zooKeeper, this.serverName, this);
+        this.metaRegionLocationCache = new MetaRegionLocationCache(this.zooKeeper);
+        this.activeMasterManager = createActiveMasterManager(zooKeeper, serverName, this);
       } else {
+        this.metaRegionLocationCache = null;
         this.activeMasterManager = null;
       }
       cachedClusterId = new CachedClusterId(conf);
@@ -581,6 +587,15 @@ public class HMaster extends HRegionServer implements MasterServices {
       LOG.error("Failed construction of Master", t);
       throw t;
     }
+  }
+
+  /**
+   * Protected to have custom implementations in tests override the default ActiveMaster
+   * implementation.
+   */
+  protected ActiveMasterManager createActiveMasterManager(
+      ZKWatcher zk, ServerName sn, org.apache.hadoop.hbase.Server server) {
+    return new ActiveMasterManager(zk, sn, server);
   }
 
   @Override
@@ -907,8 +922,15 @@ public class HMaster extends HRegionServer implements MasterServices {
     // hbck1s against an hbase2 cluster; it could do damage. To skip this behavior, set
     // hbase.write.hbck1.lock.file to false.
     if (this.conf.getBoolean("hbase.write.hbck1.lock.file", true)) {
-      HBaseFsck.checkAndMarkRunningHbck(this.conf,
-          HBaseFsck.createLockRetryCounterFactory(this.conf).create());
+      Pair<Path, FSDataOutputStream> result = null;
+      try {
+        result = HBaseFsck.checkAndMarkRunningHbck(this.conf,
+            HBaseFsck.createLockRetryCounterFactory(this.conf).create());
+      } finally {
+        if (result != null) {
+          IOUtils.closeQuietly(result.getSecond());
+        }
+      }
     }
 
     status.setStatus("Initialize ServerManager and schedule SCP for crash servers");
@@ -1265,14 +1287,10 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   private void initMobCleaner() {
-    this.expiredMobFileCleanerChore = new ExpiredMobFileCleanerChore(this);
-    getChoreService().scheduleChore(expiredMobFileCleanerChore);
-
-    int mobCompactionPeriod = conf.getInt(MobConstants.MOB_COMPACTION_CHORE_PERIOD,
-        MobConstants.DEFAULT_MOB_COMPACTION_CHORE_PERIOD);
-    this.mobCompactChore = new MobCompactionChore(this, mobCompactionPeriod);
-    getChoreService().scheduleChore(mobCompactChore);
-    this.mobCompactThread = new MasterMobCompactionThread(this);
+    this.mobFileCleanerChore = new MobFileCleanerChore(this);
+    getChoreService().scheduleChore(mobFileCleanerChore);
+    this.mobFileCompactionChore = new MobFileCompactionChore(this);
+    getChoreService().scheduleChore(mobFileCompactionChore);
   }
 
   /**
@@ -1475,9 +1493,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       }
     }
     stopChores();
-    if (this.mobCompactThread != null) {
-      this.mobCompactThread.close();
-    }
+
     super.stopServiceThreads();
     if (cleanerPool != null) {
       cleanerPool.shutdownNow();
@@ -1600,8 +1616,8 @@ public class HMaster extends HRegionServer implements MasterServices {
   private void stopChores() {
     ChoreService choreService = getChoreService();
     if (choreService != null) {
-      choreService.cancelChore(this.expiredMobFileCleanerChore);
-      choreService.cancelChore(this.mobCompactChore);
+      choreService.cancelChore(this.mobFileCleanerChore);
+      choreService.cancelChore(this.mobFileCompactionChore);
       choreService.cancelChore(this.balancerChore);
       choreService.cancelChore(this.normalizerChore);
       choreService.cancelChore(this.clusterStatusChore);
@@ -3444,16 +3460,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
   }
 
-  /**
-   * Requests mob compaction.
-   * @param tableName The table the compact.
-   * @param columns The compacted columns.
-   * @param allFiles Whether add all mob files into the compaction.
-   */
-  public void requestMobCompaction(TableName tableName,
-                                   List<ColumnFamilyDescriptor> columns, boolean allFiles) throws IOException {
-    mobCompactThread.requestMobCompaction(conf, getFileSystem(), tableName, columns, allFiles);
-  }
 
   /**
    * Queries the state of the {@link LoadBalancerTracker}. If the balancer is not initialized,
@@ -3843,11 +3849,19 @@ public class HMaster extends HRegionServer implements MasterServices {
     return cachedClusterId.getFromCacheOrFetch();
   }
 
+  public Optional<ServerName> getActiveMaster() {
+    return activeMasterManager.getActiveMasterServerName();
+  }
+
   @Override
   public void runReplicationBarrierCleaner() {
     ReplicationBarrierCleaner rbc = this.replicationBarrierCleaner;
     if (rbc != null) {
       rbc.chore();
     }
+  }
+
+  public MetaRegionLocationCache getMetaRegionLocationCache() {
+    return this.metaRegionLocationCache;
   }
 }

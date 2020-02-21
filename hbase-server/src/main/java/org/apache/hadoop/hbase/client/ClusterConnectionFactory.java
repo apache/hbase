@@ -49,7 +49,7 @@ public final class ClusterConnectionFactory {
    */
   public static AsyncClusterConnection createAsyncClusterConnection(Configuration conf,
       SocketAddress localAddress, User user) throws IOException {
-    AsyncRegistry registry = AsyncRegistryFactory.getRegistry(conf);
+    ConnectionRegistry registry = ConnectionRegistryFactory.getRegistry(conf);
     String clusterId = FutureUtils.get(registry.getClusterId());
     Class<? extends AsyncClusterConnection> clazz =
       conf.getClass(HBASE_SERVER_CLUSTER_CONNECTION_IMPL, AsyncClusterConnectionImpl.class,

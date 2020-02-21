@@ -46,6 +46,14 @@ public final class StartMiniClusterOption {
    * can find the active/primary master with {@link MiniHBaseCluster#getMaster()}.
    */
   private final int numMasters;
+
+  /**
+   * Number of masters that always remain standby. These set of masters never transition to active
+   * even if an active master does not exist. These are needed for testing scenarios where there are
+   * no active masters in the cluster but the cluster connection (backed by master registry) should
+   * still work.
+   */
+  private final int numAlwaysStandByMasters;
   /**
    * The class to use as HMaster, or null for default.
    */
@@ -99,11 +107,12 @@ public final class StartMiniClusterOption {
   /**
    * Private constructor. Use {@link Builder#build()}.
    */
-  private StartMiniClusterOption(int numMasters, Class<? extends HMaster> masterClass,
-      int numRegionServers, List<Integer> rsPorts,
+  private StartMiniClusterOption(int numMasters, int numAlwaysStandByMasters,
+      Class<? extends HMaster> masterClass, int numRegionServers, List<Integer> rsPorts,
       Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> rsClass, int numDataNodes,
       String[] dataNodeHosts, int numZkServers, boolean createRootDir, boolean createWALDir) {
     this.numMasters = numMasters;
+    this.numAlwaysStandByMasters = numAlwaysStandByMasters;
     this.masterClass = masterClass;
     this.numRegionServers = numRegionServers;
     this.rsPorts = rsPorts;
@@ -117,6 +126,10 @@ public final class StartMiniClusterOption {
 
   public int getNumMasters() {
     return numMasters;
+  }
+
+  public int getNumAlwaysStandByMasters() {
+    return numAlwaysStandByMasters;
   }
 
   public Class<? extends HMaster> getMasterClass() {
@@ -179,6 +192,7 @@ public final class StartMiniClusterOption {
    */
   public static final class Builder {
     private int numMasters = 1;
+    private int numAlwaysStandByMasters = 0;
     private Class<? extends HMaster> masterClass = null;
     private int numRegionServers = 1;
     private List<Integer> rsPorts = null;
@@ -196,12 +210,18 @@ public final class StartMiniClusterOption {
       if (dataNodeHosts != null && dataNodeHosts.length != 0) {
         numDataNodes = dataNodeHosts.length;
       }
-      return new StartMiniClusterOption(numMasters, masterClass, numRegionServers, rsPorts, rsClass,
-          numDataNodes, dataNodeHosts, numZkServers, createRootDir, createWALDir);
+      return new StartMiniClusterOption(numMasters,numAlwaysStandByMasters, masterClass,
+          numRegionServers, rsPorts, rsClass, numDataNodes, dataNodeHosts, numZkServers,
+          createRootDir, createWALDir);
     }
 
     public Builder numMasters(int numMasters) {
       this.numMasters = numMasters;
+      return this;
+    }
+
+    public Builder numAlwaysStandByMasters(int numAlwaysStandByMasters) {
+      this.numAlwaysStandByMasters = numAlwaysStandByMasters;
       return this;
     }
 

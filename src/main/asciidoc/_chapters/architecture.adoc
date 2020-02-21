@@ -260,6 +260,73 @@ For region name, we only accept `byte[]` as the parameter type and it may be a f
 
 Information on non-Java clients and custom protocols is covered in <<external_apis>>
 
+[[client.masterregistry]]
+=== Master registry (new as of release 3.0.0)
+
+Client internally works with a _connection registry_ to fetch the metadata needed by connections.
+This connection registry implementation is responsible for fetching the following metadata.
+
+* Active master address
+* Current meta region(s) locations
+* Cluster ID (unique to this cluster)
+
+This information is needed as a part of various client operations like connection set up, scans,
+gets etc. Up until releases 2.x.y, the default connection registry is based on ZooKeeper as the
+source of truth and the the clients fetched the metadata from zookeeper znodes. As of release 3.0.0,
+the default implementation for connection registry has been switched  to a master based
+implementation. With this change, the clients now fetch the required metadata from master RPC end
+points directly. This change was done for the following reasons.
+
+* Reduce load on ZooKeeper since that is critical for cluster operation.
+* Holistic client timeout and retry configurations since the new registry brings all the client
+operations under HBase rpc framework.
+* Remove the ZooKeeper client dependency on HBase client library.
+
+This means that
+
+* At least a single active or stand by master is needed for cluster connection setup. Refer to
+<<master.runtime>> for more details.
+* Master can be in a critical path of read/write operations, especially if the client metadata cache
+is empty or stale.
+* There is higher connection load on the masters that before since the clients talk directly to
+HMasters instead of ZooKeeper ensemble`
+
+To reduce hot-spotting on a single master, all the masters (active & stand-by) expose the needed
+service to fetch the connection metadata. This lets the client connect to any master (not just active).
+
+==== RPC hedging
+
+This feature also implements an new RPC channel that can hedge requests to multiple masters. This
+lets the client make the same request to multiple servers and which ever responds first is returned
+back to the client and the other other in-flight requests are canceled. This improves the
+performance, especially when a subset of servers are under load. The hedging fan out size is
+configurable, meaning the number of requests that are hedged in a single attempt, using the
+configuration key _hbase.rpc.hedged.fanout_ in the client configuration. It defaults to 2. With this
+default, the RPCs are tried in batches of 2. The hedging policy is still primitive and does not
+adapt to any sort of live rpc performance metrics.
+
+==== Additional Notes
+
+* Clients hedge the requests in a randomized order to avoid hot-spotting a single server.
+* Cluster internal connections (master<->regionservers) still use ZooKeeper based connection
+registry.
+* Cluster internal state is still tracked in Zookeeper, hence ZK availability requirements are same
+as before.
+* Inter cluster replication still uses ZooKeeper based connection registry to simplify configuration
+management.
+
+For more implementation details, please refer to the https://github.com/apache/hbase/tree/master/dev-support/design-docs[design doc] and
+https://issues.apache.org/jira/browse/HBASE-18095[HBASE-18095].
+
+'''
+NOTE: (Advanced) In case of any issues with the master based registry, use the following
+configuration to fallback to the ZooKeeper based connection registry implementation.
+[source, xml]
+<property>
+    <name>hbase.client.registry.impl</name>
+    <value>org.apache.hadoop.hbase.client.ZKConnectionRegistry</value>
+ </property>
+
 [[client.filter]]
 == Client Request Filters
 
@@ -577,10 +644,23 @@ If the active Master loses its lease in ZooKeeper (or the Master shuts down), th
 [[master.runtime]]
 === Runtime Impact
 
-A common dist-list question involves what happens to an HBase cluster when the Master goes down.
+A common dist-list question involves what happens to an HBase cluster when the Master goes down. This information has changed staring 3.0.0.
+
+==== Up until releases 2.x.y
 Because the HBase client talks directly to the RegionServers, the cluster can still function in a "steady state". Additionally, per <<arch.catalog>>, `hbase:meta` exists as an HBase table and is not resident in the Master.
 However, the Master controls critical functions such as RegionServer failover and completing region splits.
 So while the cluster can still run for a short time without the Master, the Master should be restarted as soon as possible.
+
+==== Staring release 3.0.0
+As mentioned in section <<client.masterregistry>>, the default connection registry for clients is now based on master rpc end points. Hence the requirements for
+masters' uptime are even tighter starting this release.
+
+- At least one active or stand by master is needed for a connection set up, unlike before when all the clients needed was a ZooKeeper ensemble.
+- Master is now in critical path for read/write operations. For example, if the meta region bounces off to a different region server, clients
+need master to fetch the new locations. Earlier this was done by fetching this information directly from ZooKeeper.
+- Masters will now have higher connection load than before. So, the server side configuration might need adjustment depending on the load.
+
+Overall, the master uptime requirements, when this feature is enabled, are even higher for the client operations to go through.
 
 [[master.api]]
 === Interface
