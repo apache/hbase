@@ -522,7 +522,7 @@ EOF
         scan = if stoprow
                  org.apache.hadoop.hbase.client.Scan.new(startrow.to_java_bytes, stoprow.to_java_bytes)
                else
-                 org.apache.hadoop.hbase.client.Scan.new(startrow.to_java_bytes)
+                 org.apache.hadoop.hbase.client.Scan.new.with_start_row(startrow.to_java_bytes)
                end
 
         # This will overwrite any startrow/stoprow settings
