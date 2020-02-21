@@ -55,7 +55,9 @@ public final class ByteStringer {
    * Wraps a byte array in a {@link ByteString} without copying it.
    */
   public static ByteString wrap(final byte[] array) {
-    return USE_ZEROCOPYBYTESTRING? UnsafeByteOperations.unsafeWrap(array): ByteString.copyFrom(array);
+    return USE_ZEROCOPYBYTESTRING
+      ? UnsafeByteOperations.unsafeWrap(array)
+      : ByteString.copyFrom(array);
   }
 
   /**
