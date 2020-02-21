@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.RegionLocations;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.ClusterConnectionFactory;
@@ -115,7 +116,9 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     }
     HTU.getConfiguration().set(CoprocessorHost.WAL_COPROCESSOR_CONF_KEY,
       walCoprocs);
-    HTU.startMiniCluster(NB_SERVERS);
+    StartMiniClusterOption option = StartMiniClusterOption.builder().numAlwaysStandByMasters(1).
+        numRegionServers(NB_SERVERS).numDataNodes(NB_SERVERS).build();
+    HTU.startMiniCluster(option);
 
     // Create table then get the single region for our new table.
     HTableDescriptor htd = HTU.createTableDescriptor(TableName.valueOf(tableName.getNameAsString()),

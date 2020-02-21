@@ -279,7 +279,7 @@ public class ConnectionFactory {
   public static CompletableFuture<AsyncConnection> createAsyncConnection(Configuration conf,
       final User user) {
     CompletableFuture<AsyncConnection> future = new CompletableFuture<>();
-    AsyncRegistry registry = AsyncRegistryFactory.getRegistry(conf);
+    ConnectionRegistry registry = ConnectionRegistryFactory.getRegistry(conf);
     addListener(registry.getClusterId(), (clusterId, error) -> {
       if (error != null) {
         registry.close();

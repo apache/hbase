@@ -15,36 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.client;
+package org.apache.hadoop.hbase.exceptions;
 
-import java.util.concurrent.CompletableFuture;
-import org.apache.hadoop.hbase.RegionLocations;
+import java.util.Set;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.util.PrettyPrinter;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Can be overridden in UT if you only want to implement part of the methods in
- * {@link AsyncRegistry}.
+ * Exception thrown when an master registry RPC fails in client. The exception includes the list of
+ * masters to which RPC was attempted and the last exception encountered. Prior exceptions are
+ * included in the logs.
  */
-public class DummyAsyncRegistry implements AsyncRegistry {
-
-  public static final String REGISTRY_IMPL_CONF_KEY = AsyncRegistryFactory.REGISTRY_IMPL_CONF_KEY;
-
-  @Override
-  public CompletableFuture<RegionLocations> getMetaRegionLocation() {
-    return null;
-  }
-
-  @Override
-  public CompletableFuture<String> getClusterId() {
-    return null;
-  }
-
-  @Override
-  public CompletableFuture<ServerName> getMasterAddress() {
-    return null;
-  }
-
-  @Override
-  public void close() {
+@InterfaceAudience.Private
+public class MasterRegistryFetchException extends HBaseIOException {
+  public MasterRegistryFetchException(Set<ServerName> masters, Throwable failure) {
+    super(String.format("Exception making rpc to masters %s", PrettyPrinter.toString(masters)),
+        failure);
   }
 }

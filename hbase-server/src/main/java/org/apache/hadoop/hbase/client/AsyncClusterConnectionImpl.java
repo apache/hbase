@@ -50,8 +50,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpeci
 @InterfaceAudience.Private
 class AsyncClusterConnectionImpl extends AsyncConnectionImpl implements AsyncClusterConnection {
 
-  public AsyncClusterConnectionImpl(Configuration conf, AsyncRegistry registry, String clusterId,
-      SocketAddress localAddress, User user) {
+  public AsyncClusterConnectionImpl(Configuration conf, ConnectionRegistry registry,
+      String clusterId, SocketAddress localAddress, User user) {
     super(conf, registry, clusterId, localAddress, user);
   }
 

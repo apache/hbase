@@ -146,7 +146,9 @@ public class TestRegionServerNoMaster {
   @AfterClass
   public static void afterClass() throws Exception {
     HRegionServer.TEST_SKIP_REPORTING_TRANSITION = false;
-    table.close();
+    if (table != null) {
+      table.close();
+    }
     HTU.shutdownMiniCluster();
   }
 

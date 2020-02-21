@@ -132,6 +132,8 @@ public class ServerManager {
   public static final int FLUSHEDSEQUENCEID_FLUSHER_INTERVAL_DEFAULT =
       3 * 60 * 60 * 1000; // 3 hours
 
+  public static final String MAX_CLOCK_SKEW_MS = "hbase.master.maxclockskew";
+
   private static final Logger LOG = LoggerFactory.getLogger(ServerManager.class);
 
   // Set if we are to shutdown the cluster.
@@ -179,7 +181,7 @@ public class ServerManager {
   public ServerManager(final MasterServices master) {
     this.master = master;
     Configuration c = master.getConfiguration();
-    maxSkew = c.getLong("hbase.master.maxclockskew", 30000);
+    maxSkew = c.getLong(MAX_CLOCK_SKEW_MS, 30000);
     warningSkew = c.getLong("hbase.master.warningclockskew", 10000);
     persistFlushedSequenceId = c.getBoolean(PERSIST_FLUSHEDSEQUENCEID,
         PERSIST_FLUSHEDSEQUENCEID_DEFAULT);

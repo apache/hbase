@@ -263,9 +263,9 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     byte[][] families = { Bytes.toBytes("mob") };
     loadData(tableName, families, 3000, 8);
 
-    admin.majorCompact(tableName, CompactType.MOB).get();
+    admin.majorCompact(tableName).get();
 
-    CompactionState state = admin.getCompactionState(tableName, CompactType.MOB).get();
+    CompactionState state = admin.getCompactionState(tableName).get();
     assertNotEquals(CompactionState.NONE, state);
 
     waitUntilMobCompactionFinished(tableName);

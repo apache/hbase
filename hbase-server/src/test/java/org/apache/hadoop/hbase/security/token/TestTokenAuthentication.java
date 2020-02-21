@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
@@ -382,6 +383,10 @@ public class TestTokenAuthentication {
   @Before
   public void setUp() throws Exception {
     TEST_UTIL = new HBaseTestingUtility();
+    // Override the connection registry to avoid spinning up a mini cluster for the connection below
+    // to go through.
+    TEST_UTIL.getConfiguration().set(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
+        HConstants.ZK_CONNECTION_REGISTRY_CLASS);
     TEST_UTIL.startMiniZKCluster();
     // register token type for protocol
     SecurityInfo.addInfo(AuthenticationProtos.AuthenticationService.getDescriptor().getName(),

@@ -29,7 +29,21 @@ public class TableNameTestRule extends TestWatcher {
 
   @Override
   protected void starting(Description description) {
-    tableName = TableName.valueOf(description.getMethodName());
+    tableName = TableName.valueOf(cleanUpTestName(description.getMethodName()));
+  }
+
+  /**
+   * Helper to handle parameterized method names. Unlike regular test methods, parameterized method
+   * names look like 'foo[x]'. This is problematic for tests that use this name for HBase tables.
+   * This helper strips out the parameter suffixes.
+   * @return current test method name with out parameterized suffixes.
+   */
+  private static String cleanUpTestName(String methodName) {
+    int index = methodName.indexOf('[');
+    if (index == -1) {
+      return methodName;
+    }
+    return methodName.substring(0, index);
   }
 
   public TableName getTableName() {

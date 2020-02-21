@@ -24,16 +24,17 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Implementations hold cluster information such as this cluster's id, location of hbase:meta, etc..
+ * Registry for meta information needed for connection setup to a HBase cluster. Implementations
+ * hold cluster information such as this cluster's id, location of hbase:meta, etc..
  * Internal use only.
  */
 @InterfaceAudience.Private
-interface AsyncRegistry extends Closeable {
+interface ConnectionRegistry extends Closeable {
 
   /**
-   * Get the location of meta region.
+   * Get the location of meta region(s).
    */
-  CompletableFuture<RegionLocations> getMetaRegionLocation();
+  CompletableFuture<RegionLocations> getMetaRegionLocations();
 
   /**
    * Should only be called once.
@@ -43,9 +44,9 @@ interface AsyncRegistry extends Closeable {
   CompletableFuture<String> getClusterId();
 
   /**
-   * Get the address of HMaster.
+   * Get the address of active HMaster.
    */
-  CompletableFuture<ServerName> getMasterAddress();
+  CompletableFuture<ServerName> getActiveMaster();
 
   /**
    * Closes this instance and releases any system resources associated with it

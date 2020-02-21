@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,49 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.mob.compactions;
+package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * The compaction request for mob files.
+ * Factory class to get the instance of configured connection registry.
  */
 @InterfaceAudience.Private
-public abstract class MobCompactionRequest {
+final class ConnectionRegistryFactory {
 
-  protected long selectionTime;
-  protected CompactionType type = CompactionType.PART_FILES;
-
-  public void setCompactionType(CompactionType type) {
-    this.type = type;
+  private ConnectionRegistryFactory() {
   }
 
   /**
-   * Gets the selection time.
-   * @return The selection time.
+   * @return The connection registry implementation to use.
    */
-  public long getSelectionTime() {
-    return this.selectionTime;
-  }
-
-  /**
-   * Gets the compaction type.
-   * @return The compaction type.
-   */
-  public CompactionType getCompactionType() {
-    return type;
-  }
-
-  protected enum CompactionType {
-
-    /**
-     * Part of mob files are selected.
-     */
-    PART_FILES,
-
-    /**
-     * All of mob files are selected.
-     */
-    ALL_FILES
+  static ConnectionRegistry getRegistry(Configuration conf) {
+    Class<? extends ConnectionRegistry> clazz = conf.getClass(
+        CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY, MasterRegistry.class,
+        ConnectionRegistry.class);
+    return ReflectionUtils.newInstance(clazz, conf);
   }
 }

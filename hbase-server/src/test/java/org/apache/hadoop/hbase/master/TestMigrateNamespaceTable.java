@@ -24,6 +24,7 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
@@ -55,11 +56,13 @@ public class TestMigrateNamespaceTable {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    UTIL.startMiniCluster(1);
+    StartMiniClusterOption option = StartMiniClusterOption.builder().numMasters(1).
+        numAlwaysStandByMasters(1).numRegionServers(1).build();
+    UTIL.startMiniCluster(option);
   }
 
   @AfterClass
-  public static void tearDow() throws Exception {
+  public static void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
@@ -82,6 +85,7 @@ public class TestMigrateNamespaceTable {
     masterThread.getMaster().stop("For testing");
     masterThread.join();
     UTIL.getMiniHBaseCluster().startMaster();
+
     // 5 + default and system('hbase')
     assertEquals(7, UTIL.getAdmin().listNamespaceDescriptors().length);
     for (int i = 0; i < 5; i++) {
@@ -95,7 +99,6 @@ public class TestMigrateNamespaceTable {
     masterThread = UTIL.getMiniHBaseCluster().getMasterThread();
     masterThread.getMaster().stop("For testing");
     masterThread.join();
-
     UTIL.getMiniHBaseCluster().startMaster();
 
     // make sure that we could still restart the cluster after disabling the namespace table.

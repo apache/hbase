@@ -724,6 +724,17 @@ Insure the JCE jars are on the classpath on both server and client systems.
 You may also need to download the link:http://www.oracle.com/technetwork/java/javase/downloads/jce-6-download-429243.html[unlimited strength JCE policy files].
 Uncompress and extract the downloaded file, and install the policy jars into _<java-home>/lib/security_.
 
+[[trouble.client.masterregistry]]
+=== Trouble shooting master registry issues
+
+* For connectivity issues, usually an exception like "MasterRegistryFetchException: Exception making rpc to masters..." is logged in the client logs. The logging includes the
+list of master end points that were attempted by the client. The bottom part of the stack trace should include the underlying reason. If you suspect connectivity
+issues (ConnectionRefused?), make sure the master end points are accessible from client.
+* If there is a suspicion of higher load on the masters due to hedging of RPCs, it can be controlled by either reducing the hedging fan out (via _hbase.rpc.hedged.fanout_) or
+by restricting the set of masters that clients can access for the master registry purposes (via _hbase.masters_).
+
+Refer to <<client.masterregistry>> and <<client_dependencies>> for more details.
+
 [[trouble.mapreduce]]
 == MapReduce
 
