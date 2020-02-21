@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.Admin;
@@ -35,8 +36,6 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.replication.regionserver.TestRegionReplicaReplicationEndpoint;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -69,7 +68,6 @@ public class TestRegionReplicaFailover {
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
 
   private static final int NB_SERVERS = 3;
-  private static final int ROWS = 100;
 
   protected final byte[][] families = new byte[][] {HBaseTestingUtility.fam1,
       HBaseTestingUtility.fam2, HBaseTestingUtility.fam3};
@@ -81,12 +79,12 @@ public class TestRegionReplicaFailover {
 
   @Rule public TestName name = new TestName();
 
-  private TableDescriptor htd;
+  private HTableDescriptor htd;
 
   @Before
   public void before() throws Exception {
     Configuration conf = HTU.getConfiguration();
-    // Up the handlers; this test needs more than usual.
+   // Up the handlers; this test needs more than usual.
     conf.setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
     conf.setBoolean(ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_CONF_KEY, true);
     conf.setBoolean(ServerRegionReplicaUtil.REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH_CONF_KEY, true);
@@ -94,20 +92,15 @@ public class TestRegionReplicaFailover {
     conf.setBoolean("hbase.tests.use.shortcircuit.reads", false);
 
     HTU.startMiniCluster(NB_SERVERS);
-    // Set replication. Have to do it this awkward way of building a TD with HTU so it adds all
-    // the column families, and then creating a new one so we can set region replication.
-    TableDescriptor tableDescriptor =
-      HTU.createTableDescriptor(TableName.valueOf(name.getMethodName().
-      substring(0, name.getMethodName().length() - 3)));
-    this.htd = TableDescriptorBuilder.newBuilder(tableDescriptor).setRegionReplication(3).build();
+    htd = HTU.createTableDescriptor(
+      name.getMethodName().substring(0, name.getMethodName().length()-3));
+    htd.setRegionReplication(3);
     HTU.getAdmin().createTable(htd);
   }
 
   @After
   public void after() throws Exception {
-    if (this.htd != null) {
-      HTU.deleteTableIfAny(htd.getTableName());
-    }
+    HTU.deleteTableIfAny(htd.getTableName());
     HTU.shutdownMiniCluster();
   }
 
@@ -132,6 +125,7 @@ public class TestRegionReplicaFailover {
   /**
    * Tests the case where if there is some data in the primary region, reopening the region replicas
    * (enable/disable table, etc) makes the region replicas readable.
+   * @throws IOException
    */
   @Test
   public void testSecondaryRegionWithNonEmptyRegion() throws IOException {
@@ -139,10 +133,13 @@ public class TestRegionReplicaFailover {
     // than disable and enable the table again and verify the data from secondary
     try (Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
         Table table = connection.getTable(htd.getTableName())) {
-      HTU.loadNumericRows(table, fam, 0, ROWS);
+
+      HTU.loadNumericRows(table, fam, 0, 1000);
+
       HTU.getAdmin().disableTable(htd.getTableName());
       HTU.getAdmin().enableTable(htd.getTableName());
-      HTU.verifyNumericRows(table, fam, 0, ROWS, 1);
+
+      HTU.verifyNumericRows(table, fam, 0, 1000, 1);
     }
   }
 
@@ -154,11 +151,11 @@ public class TestRegionReplicaFailover {
     try (Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
         Table table = connection.getTable(htd.getTableName())) {
 
-      HTU.loadNumericRows(table, fam, 0, ROWS);
+      HTU.loadNumericRows(table, fam, 0, 1000);
 
       // wal replication is async, we have to wait until the replication catches up, or we timeout
-      verifyNumericRowsWithTimeout(table, fam, 0, ROWS, 1, 30000);
-      verifyNumericRowsWithTimeout(table, fam, 0, ROWS, 2, 30000);
+      verifyNumericRowsWithTimeout(table, fam, 0, 1000, 1, 30000);
+      verifyNumericRowsWithTimeout(table, fam, 0, 1000, 2, 30000);
 
       // we should not have flushed files now, but data in memstores of primary and secondary
       // kill the primary region replica now, and ensure that when it comes back up, we can still
@@ -177,10 +174,13 @@ public class TestRegionReplicaFailover {
       assertTrue(aborted);
 
       // wal replication is async, we have to wait until the replication catches up, or we timeout
-      verifyNumericRowsWithTimeout(table, fam, 0, ROWS, 0, 30000);
-      verifyNumericRowsWithTimeout(table, fam, 0, ROWS, 1, 30000);
-      verifyNumericRowsWithTimeout(table, fam, 0, ROWS, 2, 30000);
+      verifyNumericRowsWithTimeout(table, fam, 0, 1000, 0, 30000);
+      verifyNumericRowsWithTimeout(table, fam, 0, 1000, 1, 30000);
+      verifyNumericRowsWithTimeout(table, fam, 0, 1000, 2, 30000);
     }
+
+    // restart the region server
+    HTU.getMiniHBaseCluster().startRegionServer();
   }
 
   /** wal replication is async, we have to wait until the replication catches up, or we timeout
@@ -213,11 +213,11 @@ public class TestRegionReplicaFailover {
   public void testSecondaryRegionKill() throws Exception {
     try (Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
         Table table = connection.getTable(htd.getTableName())) {
-      HTU.loadNumericRows(table, fam, 0, ROWS);
+      HTU.loadNumericRows(table, fam, 0, 1000);
 
       // wait for some time to ensure that async wal replication does it's magic
-      verifyNumericRowsWithTimeout(table, fam, 0, ROWS, 1, 30000);
-      verifyNumericRowsWithTimeout(table, fam, 0, ROWS, 2, 30000);
+      verifyNumericRowsWithTimeout(table, fam, 0, 1000, 1, 30000);
+      verifyNumericRowsWithTimeout(table, fam, 0, 1000, 2, 30000);
 
       // we should not have flushed files now, but data in memstores of primary and secondary
       // kill the secondary region replica now, and ensure that when it comes back up, we can still
@@ -237,9 +237,12 @@ public class TestRegionReplicaFailover {
 
       Threads.sleep(5000);
 
-      HTU.verifyNumericRows(table, fam, 0, ROWS, 1);
-      HTU.verifyNumericRows(table, fam, 0, ROWS, 2);
+      HTU.verifyNumericRows(table, fam, 0, 1000, 1);
+      HTU.verifyNumericRows(table, fam, 0, 1000, 2);
     }
+
+    // restart the region server
+    HTU.getMiniHBaseCluster().startRegionServer();
   }
 
   /**
@@ -253,9 +256,9 @@ public class TestRegionReplicaFailover {
         Table table = connection.getTable(htd.getTableName());
         Admin admin = connection.getAdmin()) {
       // start a thread to do the loading of primary
-      HTU.loadNumericRows(table, fam, 0, ROWS); // start with some base
+      HTU.loadNumericRows(table, fam, 0, 1000); // start with some base
       admin.flush(table.getName());
-      HTU.loadNumericRows(table, fam, ROWS, 2000);
+      HTU.loadNumericRows(table, fam, 1000, 2000);
 
       final AtomicReference<Throwable> ex = new AtomicReference<>(null);
       final AtomicBoolean done = new AtomicBoolean(false);
@@ -266,8 +269,8 @@ public class TestRegionReplicaFailover {
         public void run() {
           while (!done.get()) {
             try {
-              HTU.loadNumericRows(table, fam, key.get(), key.get()+ROWS);
-              key.addAndGet(ROWS);
+              HTU.loadNumericRows(table, fam, key.get(), key.get()+1000);
+              key.addAndGet(1000);
             } catch (Throwable e) {
               ex.compareAndSet(null, e);
             }
@@ -304,12 +307,15 @@ public class TestRegionReplicaFailover {
 
       assertNull(ex.get());
 
-      assertTrue(key.get() > ROWS); // assert that the test is working as designed
+      assertTrue(key.get() > 1000); // assert that the test is working as designed
       LOG.info("Loaded up to key :" + key.get());
       verifyNumericRowsWithTimeout(table, fam, 0, key.get(), 0, 30000);
       verifyNumericRowsWithTimeout(table, fam, 0, key.get(), 1, 30000);
       verifyNumericRowsWithTimeout(table, fam, 0, key.get(), 2, 30000);
     }
+
+    // restart the region server
+    HTU.getMiniHBaseCluster().startRegionServer();
   }
 
   /**
@@ -318,25 +324,21 @@ public class TestRegionReplicaFailover {
    */
   @Test
   public void testLotsOfRegionReplicas() throws IOException {
-    int numRegions = NB_SERVERS * 10;
-    int regionReplication = 5;
-    // Different table name. Different replication. Have to do it this awkward way of building
-    // a TD with HTU so it adds all the column families, and then creating a new one so we can
-    // set region replication.
-    TableName tableName = TableName.valueOf(htd.getTableName().getNameAsString() + "2");
-    TableDescriptor tableDescriptor = HTU.createTableDescriptor(tableName);
-    this.htd = TableDescriptorBuilder.newBuilder(tableDescriptor).
-      setRegionReplication(regionReplication).build();
-    TableDescriptor td = TableDescriptorBuilder.newBuilder(this.htd).
-      setRegionReplication(regionReplication).build();
+    int numRegions = NB_SERVERS * 20;
+    int regionReplication = 10;
+    String tableName = htd.getTableName().getNameAsString() + "2";
+    htd = HTU.createTableDescriptor(tableName);
+    htd.setRegionReplication(regionReplication);
 
     // dont care about splits themselves too much
     byte[] startKey = Bytes.toBytes("aaa");
     byte[] endKey = Bytes.toBytes("zzz");
     byte[][] splits = HTU.getRegionSplitStartKeys(startKey, endKey, numRegions);
-    HTU.getAdmin().createTable(td, startKey, endKey, numRegions);
+    HTU.getAdmin().createTable(htd, startKey, endKey, numRegions);
+
     try (Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
-        Table table = connection.getTable(td.getTableName())) {
+        Table table = connection.getTable(htd.getTableName())) {
+
       for (int i = 1; i < splits.length; i++) {
         for (int j = 0; j < regionReplication; j++) {
           Get get = new Get(splits[i]);
@@ -346,5 +348,7 @@ public class TestRegionReplicaFailover {
         }
       }
     }
+
+    HTU.deleteTableIfAny(TableName.valueOf(tableName));
   }
 }
