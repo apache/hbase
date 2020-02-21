@@ -35,8 +35,9 @@ pipeline {
     // where we'll write everything from different steps. Need a copy here so the final step can check for success/failure.
     OUTPUT_DIR_RELATIVE_GENERAL = 'output-general'
     OUTPUT_DIR_RELATIVE_JDK7 = 'output-jdk7'
-    OUTPUT_DIR_RELATIVE_HADOOP2 = 'output-jdk8-hadoop2'
-    OUTPUT_DIR_RELATIVE_HADOOP3 = 'output-jdk8-hadoop3'
+    OUTPUT_DIR_RELATIVE_JDK8_HADOOP2 = 'output-jdk8-hadoop2'
+    OUTPUT_DIR_RELATIVE_JDK8_HADOOP3 = 'output-jdk8-hadoop3'
+    OUTPUT_DIR_RELATIVE_JDK11 = 'output-jdk11'
 
     PROJECT = 'hbase'
     PROJECT_PERSONALITY = 'https://raw.githubusercontent.com/apache/hbase/master/dev-support/hbase-personality.sh'
@@ -177,8 +178,9 @@ pipeline {
         // we skip some due to e.g. branch-specific JDK or Hadoop support
         stash name: 'general-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_GENERAL}/doesn't-match"
         stash name: 'jdk7-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_JDK7}/doesn't-match"
-        stash name: 'hadoop2-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_HADOOP2}/doesn't-match"
-        stash name: 'hadoop3-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_HADOOP3}/doesn't-match"
+        stash name: 'jdk8-hadoop2-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_JDK8_HADOOP2}/doesn't-match"
+        stash name: 'jdk8-hadoop3-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_JDK8_HADOOP3}/doesn't-match"
+        stash name: 'jdk11-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_JDK11}/doesn't-match"
         stash name: 'srctarball-result', allowEmpty: true, includes: "output-srctarball/doesn't-match"
       }
     }
@@ -195,9 +197,7 @@ pipeline {
             // TODO does hadoopcheck need to be jdk specific?
             // Should be things that work with multijdk
             TESTS = 'all,-unit,-findbugs'
-            // on branches that don't support jdk7, this will already be JAVA_HOME, so we'll end up not
-            // doing multijdk there.
-            MULTIJDK = '/usr/lib/jvm/java-8-openjdk-amd64'
+            SET_JAVA_HOME = '/usr/lib/jvm/java-8'
             OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_GENERAL}"
             OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE_GENERAL}"
           }
@@ -267,7 +267,7 @@ pipeline {
             TESTS = 'maven,mvninstall,compile,javac,unit,htmlout'
             OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_JDK7}"
             OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE_JDK7}"
-            // On branches where we do jdk7 checks, jdk7 will be JAVA_HOME already.
+            SET_JAVA_HOME = "/usr/lib/jvm/java-7"
           }
           steps {
             // Must do prior to anything else, since if one of them timesout we'll stash the commentfile
@@ -343,11 +343,9 @@ pipeline {
           environment {
             BASEDIR = "${env.WORKSPACE}/component"
             TESTS = 'maven,mvninstall,compile,javac,unit,findbugs,htmlout'
-            OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_HADOOP2}"
-            OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE_HADOOP2}"
-            // This isn't strictly needed on branches that only support jdk8, but doesn't hurt
-            // and is needed on branches that do both jdk7 and jdk8
-            SET_JAVA_HOME = '/usr/lib/jvm/java-8-openjdk-amd64'
+            OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_JDK8_HADOOP2}"
+            OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE_JDK8_HADOOP2}"
+            SET_JAVA_HOME = '/usr/lib/jvm/java-8'
           }
           steps {
             // Must do prior to anything else, since if one of them timesout we'll stash the commentfile
@@ -383,7 +381,7 @@ pipeline {
           }
           post {
             always {
-              stash name: 'hadoop2-result', includes: "${OUTPUT_DIR_RELATIVE}/commentfile"
+              stash name: 'jdk8-hadoop2-result', includes: "${OUTPUT_DIR_RELATIVE}/commentfile"
               junit testResults: "${env.OUTPUT_DIR_RELATIVE}/**/target/**/TEST-*.xml", allowEmptyResults: true
               // zip surefire reports.
               sh '''#!/bin/bash -e
@@ -428,11 +426,9 @@ pipeline {
           environment {
             BASEDIR = "${env.WORKSPACE}/component"
             TESTS = 'maven,mvninstall,compile,javac,unit,htmlout'
-            OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_HADOOP3}"
-            OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE_HADOOP3}"
-            // This isn't strictly needed on branches that only support jdk8, but doesn't hurt
-            // and is needed on branches that do both jdk7 and jdk8
-            SET_JAVA_HOME = '/usr/lib/jvm/java-8-openjdk-amd64'
+            OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_JDK8_HADOOP3}"
+            OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE_JDK8_HADOOP3}"
+            SET_JAVA_HOME = '/usr/lib/jvm/java-8'
             // Activates hadoop 3.0 profile in maven runs.
             HADOOP_PROFILE = '3.0'
           }
@@ -470,7 +466,7 @@ pipeline {
           }
           post {
             always {
-              stash name: 'hadoop3-result', includes: "${OUTPUT_DIR_RELATIVE}/commentfile"
+              stash name: 'jdk8-hadoop3-result', includes: "${OUTPUT_DIR_RELATIVE}/commentfile"
               junit testResults: "${env.OUTPUT_DIR_RELATIVE}/**/target/**/TEST-*.xml", allowEmptyResults: true
               // zip surefire reports.
               sh '''#!/bin/bash -e
@@ -501,8 +497,92 @@ pipeline {
             }
           }
         }
+        stage ('yetus jdk11 checks') {
+          agent {
+            node {
+              label 'Hadoop'
+            }
+          }
+          when {
+            branch 'master'
+          }
+          environment {
+            BASEDIR = "${env.WORKSPACE}/component"
+            TESTS = 'maven,mvninstall,compile,javac,unit,htmlout'
+            OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_JDK11}"
+            OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE_JDK11}"
+            SET_JAVA_HOME = "/usr/lib/jvm/java-11"
+            // Activates hadoop 3.0 profile in maven runs.
+            HADOOP_PROFILE = '3.0'
+          }
+          steps {
+            // Must do prior to anything else, since if one of them timesout we'll stash the commentfile
+            sh '''#!/usr/bin/env bash
+              set -e
+              rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
+              echo '(x) {color:red}-1 jdk11 checks{color}' >"${OUTPUT_DIR}/commentfile"
+              echo "-- Something went wrong running this stage, please [check relevant console output|${BUILD_URL}/console]." >> "${OUTPUT_DIR}/commentfile"
+'''
+            unstash 'yetus'
+            dir('component') {
+              checkout scm
+            }
+            sh '''#!/usr/bin/env bash
+              set -e
+              rm -rf "${OUTPUT_DIR}/machine" && mkdir "${OUTPUT_DIR}/machine"
+              "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
+              echo "got the following saved stats in '${OUTPUT_DIR_RELATIVE}/machine'"
+              ls -lh "${OUTPUT_DIR_RELATIVE}/machine"
+'''
+            sh '''#!/usr/bin/env bash
+              set -e
+              declare -i status=0
+              if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
+                echo '(/) {color:green}+1 jdk11 checks{color}' > "${OUTPUT_DIR}/commentfile"
+              else
+                echo '(x) {color:red}-1 jdk11 checks{color}' > "${OUTPUT_DIR}/commentfile"
+                status=1
+              fi
+              echo "-- For more information [see jdk11 report|${BUILD_URL}/JDK11_Nightly_Build_Report/]" >> "${OUTPUT_DIR}/commentfile"
+              exit "${status}"
+            '''
+          }
+          post {
+            always {
+              stash name: 'jdk11-result', includes: "${OUTPUT_DIR_RELATIVE}/commentfile"
+              junit testResults: "${env.OUTPUT_DIR_RELATIVE}/**/target/**/TEST-*.xml", allowEmptyResults: true
+              // zip surefire reports.
+              sh '''#!/bin/bash -e
+                if [ -d "${OUTPUT_DIR}/archiver" ]; then
+                  count=$(find "${OUTPUT_DIR}/archiver" -type f | wc -l)
+                  if [[ 0 -ne ${count} ]]; then
+                    echo "zipping ${count} archived files"
+                    zip -q -m -r "${OUTPUT_DIR}/test_logs.zip" "${OUTPUT_DIR}/archiver"
+                  else
+                    echo "No archived files, skipping compressing."
+                  fi
+                else
+                  echo "No archiver directory, skipping compressing."
+                fi
+'''
+              // Has to be relative to WORKSPACE.
+              archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/*"
+              archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/**/*"
+              publishHTML target: [
+                allowMissing         : true,
+                keepAll              : true,
+                alwaysLinkToLastBuild: true,
+                // Has to be relative to WORKSPACE.
+                reportDir            : "${env.OUTPUT_DIR_RELATIVE}",
+                reportFiles          : 'console-report.html',
+                reportName           : 'JDK11 Nightly Build Report'
+              ]
+            }
+          }
+        }
         // This is meant to mimic what a release manager will do to create RCs.
         // See http://hbase.apache.org/book.html#maven.release
+        // TODO (HBASE-23870): replace this with invocation of the release tool
         stage ('packaging and integration') {
           tools {
             maven 'Maven (latest)'
@@ -636,14 +716,16 @@ pipeline {
          try {
            unstash 'general-result'
            unstash 'jdk7-result'
-           unstash 'hadoop2-result'
-           unstash 'hadoop3-result'
+           unstash 'jdk8-hadoop2-result'
+           unstash 'jdk8-hadoop3-result'
+           unstash 'jdk11-result'
            unstash 'srctarball-result'
            sh "printenv"
            def results = ["${env.OUTPUT_DIR_RELATIVE_GENERAL}/commentfile",
                           "${env.OUTPUT_DIR_RELATIVE_JDK7}/commentfile",
-                          "${env.OUTPUT_DIR_RELATIVE_HADOOP2}/commentfile",
-                          "${env.OUTPUT_DIR_RELATIVE_HADOOP3}/commentfile",
+                          "${env.OUTPUT_DIR_RELATIVE_JDK8_HADOOP2}/commentfile",
+                          "${env.OUTPUT_DIR_RELATIVE_JDK8_HADOOP3}/commentfile",
+                          "${env.OUTPUT_DIR_RELATIVE_JDK11}/commentfile",
                           'output-srctarball/commentfile',
                           'output-integration/commentfile']
            echo env.BRANCH_NAME
