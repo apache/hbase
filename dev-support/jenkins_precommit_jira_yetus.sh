@@ -61,7 +61,7 @@ ps -Awwf >"${PATCHPROCESS}/machine/ps-Awwf" 2>&1 || true
 ifconfig -a >"${PATCHPROCESS}/machine/ifconfig-a" 2>&1 || true
 lsblk -ta >"${PATCHPROCESS}/machine/lsblk-ta" 2>&1 || true
 lsblk -fa >"${PATCHPROCESS}/machine/lsblk-fa" 2>&1 || true
-cat /proc/loadavg >"${output}/loadavg" 2>&1 || true
+cat /proc/loadavg >"${PATCHPROCESS}/loadavg" 2>&1 || true
 ulimit -a >"${PATCHPROCESS}/machine/ulimit-a" 2>&1 || true
 
 ## /H*
@@ -70,7 +70,7 @@ ulimit -a >"${PATCHPROCESS}/machine/ulimit-a" 2>&1 || true
 if [[ "true" != "${USE_YETUS_PRERELEASE}" ]]; then
   if [ ! -d "${TEST_FRAMEWORK}/yetus-${YETUS_RELEASE}" ]; then
     mkdir -p "${TEST_FRAMEWORK}"
-    cd "${TEST_FRAMEWORK}"
+    cd "${TEST_FRAMEWORK}" || exit 1
     # clear out any cached 'use a prerelease' versions
     rm -rf apache-yetus-*
 
@@ -89,14 +89,14 @@ if [[ "true" != "${USE_YETUS_PRERELEASE}" ]]; then
   TESTPATCHBIN=${TEST_FRAMEWORK}/apache-yetus-${YETUS_RELEASE}/bin/test-patch
   TESTPATCHLIB=${TEST_FRAMEWORK}/apache-yetus-${YETUS_RELEASE}/lib/precommit
 else
-  prerelease_dirs=(${TEST_FRAMEWORK}/${YETUS_PRERELEASE_GITHUB/\//-}-*)
+  prerelease_dirs=("${TEST_FRAMEWORK}/${YETUS_PRERELEASE_GITHUB/\//-}-*")
   if [ ! -d "${prerelease_dirs[0]}" ]; then
     mkdir -p "${TEST_FRAMEWORK}"
-    cd "${TEST_FRAMEWORK}"
+    cd "${TEST_FRAMEWORK}" || exit
     ## from github
     curl -L --fail "https://api.github.com/repos/${YETUS_PRERELEASE_GITHUB}/tarball/HEAD" > yetus.tar.gz
     tar xvpf yetus.tar.gz
-    prerelease_dirs=(${TEST_FRAMEWORK}/${YETUS_PRERELEASE_GITHUB/\//-}-*)
+    prerelease_dirs=("${TEST_FRAMEWORK}/${YETUS_PRERELEASE_GITHUB/\//-}-*")
   fi
   TESTPATCHBIN=${prerelease_dirs[0]}/precommit/test-patch.sh
   TESTPATCHLIB=${prerelease_dirs[0]}/precommit
@@ -110,7 +110,7 @@ if [[ "true" = "${DEBUG}" ]]; then
   if [ -d "${COMPONENT}/dev-support/test-patch.d" ]; then
     ls -la "${COMPONENT}/dev-support/test-patch.d/"
   fi
-  YETUS_ARGS=(--debug ${YETUS_ARGS[@]})
+  YETUS_ARGS=(--debug "${YETUS_ARGS[@]}")
 fi
 
 
@@ -120,7 +120,7 @@ if [ ! -x "${TESTPATCHBIN}" ] && [ -n "${TEST_FRAMEWORK}" ] && [ -d "${TEST_FRAM
   exit 1
 fi
 
-cd "${WORKSPACE}"
+cd "${WORKSPACE}" || exit
 
 
 #
@@ -135,22 +135,27 @@ cd "${WORKSPACE}"
 #         --multijdkdirs="/usr/lib/jvm/java-8-openjdk-amd64" \
 
 if [[ "true" = "${RUN_IN_DOCKER}" ]]; then
-  YETUS_ARGS=( --docker --multijdkdirs="/usr/lib/jvm/java-8-openjdk-amd64" --findbugs-home=/usr ${YETUS_ARGS[@]})
+  YETUS_ARGS=(
+    --docker \
+    "--multijdkdirs=/usr/lib/jvm/java-8-openjdk-amd64" \
+    "--findbugs-home=/usr" \
+    "${YETUS_ARGS[@]}" \
+  )
   if [ -r "${COMPONENT}/dev-support/docker/Dockerfile" ]; then
-    YETUS_ARGS=(--dockerfile="${COMPONENT}/dev-support/docker/Dockerfile" ${YETUS_ARGS[@]})
+    YETUS_ARGS=("--dockerfile=${COMPONENT}/dev-support/docker/Dockerfile" "${YETUS_ARGS[@]}")
   fi
 else
-  YETUS_ARGS=(--findbugs-home=/home/jenkins/tools/findbugs/latest ${YETUS_ARGS[@]})
+  YETUS_ARGS=("--findbugs-home=/home/jenkins/tools/findbugs/latest" "${YETUS_ARGS[@]}")
 fi
 
 if [ -d "${COMPONENT}/dev-support/test-patch.d" ]; then
-  YETUS_ARGS=("--user-plugins=${COMPONENT}/dev-support/test-patch.d" ${YETUS_ARGS[@]})
+  YETUS_ARGS=("--user-plugins=${COMPONENT}/dev-support/test-patch.d" "${YETUS_ARGS[@]}")
 fi
 
 # I don't trust Yetus compat enough yet, so in prerelease mode, skip our personality.
 # this should give us an incentive to update the Yetus exemplar for HBase periodically.
 if [ -r "${COMPONENT}/dev-support/hbase-personality.sh" ] && [[ "true" != "${USE_YETUS_PRERELEASE}" ]] ; then
-  YETUS_ARGS=("--personality=${COMPONENT}/dev-support/hbase-personality.sh" ${YETUS_ARGS[@]})
+  YETUS_ARGS=("--personality=${COMPONENT}/dev-support/hbase-personality.sh" "${YETUS_ARGS[@]}")
 fi
 
 if [[ true == "${QUICK_HADOOPCHECK}" ]]; then
