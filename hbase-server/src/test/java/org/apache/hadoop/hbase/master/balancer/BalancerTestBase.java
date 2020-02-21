@@ -67,7 +67,7 @@ public class BalancerTestBase {
 
   @BeforeClass
   public static void beforeAllTests() throws Exception {
-    conf = HBaseConfiguration.create();
+    conf = HBaseConfiguration.create(false);
     conf.setClass("hbase.util.ip.to.rack.determiner", MockMapping.class, DNSToSwitchMapping.class);
     conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 0.75f);
     conf.setFloat("hbase.regions.slop", 0.0f);

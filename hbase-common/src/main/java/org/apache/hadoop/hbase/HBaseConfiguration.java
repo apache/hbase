@@ -85,16 +85,69 @@ public class HBaseConfiguration extends Configuration {
     return conf;
   }
 
+  public static Configuration create() {
+    return create(true);
+  }
+
   /**
    * Creates a Configuration with HBase resources
    * @return a Configuration with HBase resources
    */
-  public static Configuration create() {
+  public static Configuration create(boolean lowLimits) {
     Configuration conf = new Configuration();
     // In case HBaseConfiguration is loaded from a different classloader than
     // Configuration, conf needs to be set with appropriate class loader to resolve
     // HBase resources.
     conf.setClassLoader(HBaseConfiguration.class.getClassLoader());
+
+
+    if (lowLimits) {
+
+      // can't set this for every test currently
+      // conf.set("hbase.regionserver.hostname", "127.0.0.1");
+
+      conf.setInt("hbase.hfilearchiver.thread.pool.max", 2);
+      conf.setInt("hbase.loadincremental.threads.max", 3);
+
+
+      conf.setInt("hbase.client.sync.wait.timeout.msec", 30000);
+      conf.setInt("zookeeper.recovery.retry", 5);
+      conf.setInt("hbase.client.retries.number", 10);
+      conf.setInt("hbase.hstore.open.and.close.threads.max", 1);
+      conf.setInt(HConstants.REGION_SERVER_REPLICATION_HANDLER_COUNT, 2);
+
+      conf.setInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS, 3);
+
+      conf.setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 2);
+
+
+      conf.setInt(HConstants.REPLICATION_SOURCE_MAXTHREADS_KEY, 1);
+
+      conf.setInt("hbase.netty.worker.count", 1);
+
+      conf.setInt(HConstants.MASTER_OPEN_REGION_THREADS, 3);
+
+      //      conf.setInt(HConstants.MASTER_CLOSE_REGION_THREADS, 3);
+      //      conf.setInt(HConstants.MASTER_SERVER_OPERATIONS_THREADS, 2);
+      //      conf.setInt(HConstants.MASTER_META_SERVER_OPERATIONS_THREADS, 2);
+      //      conf.setInt(HConstants.MASTER_LOG_REPLAY_OPS_THREADS, 2);
+      //      conf.setInt(HConstants.ZOOKEEPER_MAX_CLIENT_CNXNS, 5);
+
+      conf.setInt("hbase.hconnection.threads.max", 30);
+      conf.setInt("hbase.hconnection.threads.keepalivetime", 30);
+      conf.setInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS, 10);
+
+
+
+      conf.setInt(HConstants.REGION_SERVER_HANDLER_COUNT, 2);
+      conf.setInt("hbase.master.procedure.threads", 1);
+
+      conf.setInt("dfs.namenode.handler.count", 5);
+      //      conf.setInt("dfs.datanode.handler.count", 5);
+      //      conf.setInt("dfs.datanode.max.transfer.threads", 5);
+      //      conf.setInt("dfs.client.file-block-storage-locations.num-threads", 5);
+    }
+
     return addHbaseResources(conf);
   }
 

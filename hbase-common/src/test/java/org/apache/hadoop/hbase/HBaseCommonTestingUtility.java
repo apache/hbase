@@ -72,7 +72,11 @@ public class HBaseCommonTestingUtility {
   }
 
   public HBaseCommonTestingUtility(Configuration conf) {
-    this.conf = (conf == null ? HBaseConfiguration.create() : conf);
+    this(conf, true);
+  }
+
+  public HBaseCommonTestingUtility(Configuration conf, boolean lowLimits) {
+    this.conf = (conf == null ? HBaseConfiguration.create(lowLimits) : conf);
   }
 
   /**
