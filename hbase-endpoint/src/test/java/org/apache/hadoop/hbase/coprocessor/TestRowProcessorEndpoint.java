@@ -350,7 +350,7 @@ public class TestRowProcessorEndpoint {
           List<Mutation> mutations, WALEdit walEdit) throws IOException {
         // Scan current counter
         List<Cell> kvs = new ArrayList<>();
-        Scan scan = new Scan().withStartRow(row).withStopRow(row);
+        Scan scan = new Scan();
         scan.addColumn(FAM, COUNTER);
         doScan(region, scan, kvs);
         counter = kvs.isEmpty() ? 0 :
@@ -434,13 +434,13 @@ public class TestRowProcessorEndpoint {
           List<Mutation> mutations, WALEdit walEdit) throws IOException {
         List<Cell> kvs = new ArrayList<>();
         { // First scan to get friends of the person
-          Scan scan = new Scan().withStartRow(row).withStopRow(row);
+          Scan scan = new Scan();
           scan.addColumn(FAM, person);
           doScan(region, scan, kvs);
         }
 
         // Second scan to get friends of friends
-        Scan scan = new Scan().withStartRow(row).withStopRow(row);
+        Scan scan = new Scan();
         for (Cell kv : kvs) {
           byte[] friends = CellUtil.cloneValue(kv);
           for (byte f : friends) {
