@@ -604,8 +604,9 @@ public class TestReplicaWithCluster {
         "hbase.rpc.client.impl", "org.apache.hadoop.hbase.ipc.AsyncRpcClient");
     // Create table then get the single region for our new table.
     HTableDescriptor hdt = HTU.createTableDescriptor(
-      TableName.valueOf("testReplicaGetWithAsyncRpcClientImpl"), HColumnDescriptor.DEFAULT_MIN_VERSIONS,
-      3, HConstants.FOREVER, HColumnDescriptor.DEFAULT_KEEP_DELETED);
+      TableName.valueOf("testReplicaGetWithAsyncRpcClientImpl"),
+      HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+      HColumnDescriptor.DEFAULT_KEEP_DELETED);
     hdt.setRegionReplication(NB_SERVERS);
     hdt.addCoprocessor(SlowMeCopro.class.getName());
 
