@@ -1011,7 +1011,7 @@ public class AssignmentManager {
 
     if (!master.isSplitOrMergeEnabled(MasterSwitchType.SPLIT)) {
       LOG.warn("Split switch is off! skip split of " + parent);
-      throw new IOException("Split region " + parent.getRegionNameAsString() +
+      throw new DoNotRetryIOException("Split region " + parent.getRegionNameAsString() +
           " failed due to split switch off");
     }
 
@@ -1042,7 +1042,7 @@ public class AssignmentManager {
 
     if (!master.isSplitOrMergeEnabled(MasterSwitchType.MERGE)) {
       LOG.warn("Merge switch is off! skip merge of regionA=" + hriA + " regionB=" + hriB);
-      throw new IOException("Merge of regionA=" + hriA + " regionB=" + hriB +
+      throw new DoNotRetryIOException("Merge of regionA=" + hriA + " regionB=" + hriB +
         " failed because merge switch is off");
     }
 

@@ -1945,7 +1945,8 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (!isSplitOrMergeEnabled(MasterSwitchType.MERGE)) {
       String regionsStr = Arrays.deepToString(regionsToMerge);
       LOG.warn("Merge switch is off! skip merge of " + regionsStr);
-      throw new IOException("Merge of " + regionsStr + " failed because merge switch is off");
+      throw new DoNotRetryIOException("Merge of " + regionsStr +
+          " failed because merge switch is off");
     }
 
     final String mergeRegionsStr = Arrays.stream(regionsToMerge).
@@ -1976,7 +1977,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     if (!isSplitOrMergeEnabled(MasterSwitchType.SPLIT)) {
       LOG.warn("Split switch is off! skip split of " + regionInfo);
-      throw new IOException("Split region " + regionInfo.getRegionNameAsString() +
+      throw new DoNotRetryIOException("Split region " + regionInfo.getRegionNameAsString() +
           " failed due to split switch off");
     }
 
