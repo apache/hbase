@@ -523,8 +523,9 @@ public class SplitTableRegionProcedure
       return false;
     }
 
-    // Since we have the lock and the master is coordinating the operation
-    // we are always able to split the region
+    // Mostly this check is not used because we already check the switch before submit a split
+    // procedure. Just for safe, check the switch again. This procedure can be rollbacked if
+    // the switch was set to false after submit.
     if (!env.getMasterServices().isSplitOrMergeEnabled(MasterSwitchType.SPLIT)) {
       LOG.warn("pid=" + getProcId() + " split switch is off! skip split of " + parentHRI);
       setFailure(new IOException("Split region " + parentHRI.getRegionNameAsString() +
@@ -543,6 +544,8 @@ public class SplitTableRegionProcedure
     // set node state as SPLITTING
     node.setState(State.SPLITTING);
 
+    // Since we have the lock and the master is coordinating the operation
+    // we are always able to split the region
     return true;
   }
 
