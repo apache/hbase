@@ -28,6 +28,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -96,7 +97,12 @@ public class TestSplitOrMergeStatus {
     boolean[] results = admin.setSplitOrMergeEnabled(false, false, MasterSwitchType.SPLIT);
     assertEquals(1, results.length);
     assertTrue(results[0]);
-    admin.split(t.getName());
+    try {
+      admin.split(t.getName());
+      fail("Should not get here.");
+    } catch (DoNotRetryIOException e) {
+      // Expected.
+    }
     int count = admin.getTableRegions(tableName).size();
     assertTrue(originalCount == count);
     results = admin.setSplitOrMergeEnabled(true, false, MasterSwitchType.SPLIT);
