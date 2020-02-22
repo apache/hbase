@@ -783,13 +783,6 @@ HADOOP_CLASSPATH=`hbase classpath` hadoop jar $HBASE_HOME/hbase-mapreduce-VERSIO
 
 See <<hbase.mapreduce.classpath,HBase, MapReduce, and the CLASSPATH>> for more information on HBase MapReduce jobs and classpaths.
 
-[[trouble.hbasezerocopybytestring]]
-=== Launching a job, you get java.lang.IllegalAccessError: com/google/protobuf/HBaseZeroCopyByteString or class com.google.protobuf.ZeroCopyLiteralByteString cannot access its superclass com.google.protobuf.LiteralByteString
-
-See link:https://issues.apache.org/jira/browse/HBASE-10304[HBASE-10304 Running an hbase job jar: IllegalAccessError: class com.google.protobuf.ZeroCopyLiteralByteString cannot access its superclass com.google.protobuf.LiteralByteString] and link:https://issues.apache.org/jira/browse/HBASE-11118[HBASE-11118 non environment variable solution for "IllegalAccessError: class com.google.protobuf.ZeroCopyLiteralByteString cannot access its superclass com.google.protobuf.LiteralByteString"].
-The issue can also show up when trying to run spark jobs.
-See link:https://issues.apache.org/jira/browse/HBASE-10877[HBASE-10877 HBase non-retriable exception list should be expanded].
-
 [[trouble.namenode]]
 == NameNode
 
