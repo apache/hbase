@@ -206,7 +206,7 @@ public class Scan extends Query {
   @Deprecated
   public Scan(byte[] startRow, byte[] stopRow) {
     setStartRow(startRow);
-    withStopRow(stopRow);
+    withStopRow(stopRow, true);
   }
 
   /**
