@@ -1,5 +1,30 @@
 HBase Change Log
 
+Release Notes - HBase - Version 1.4.13
+
+** Bug
+    * [HBASE-22096] - /storeFile.jsp shows CorruptHFileException when the storeFile is a reference file
+    * [HBASE-22441] - BucketCache NullPointerException in cacheBlock
+    * [HBASE-23205] - Correctly update the position of WALs currently being replicated.
+    * [HBASE-23337] - Several modules missing in nexus for Apache HBase 2.2.2
+    * [HBASE-23359] - RS going down with NPE when splitting a region with compaction disabled in branch-1
+    * [HBASE-23360] - [CLI] Fix help command "set_quota" to explain removing quota
+    * [HBASE-23375] - Backport HBASE-22441 to branch-1
+    * [HBASE-23585] - MetricsRegionServerWrapperImpl.getL1CacheHitCount always returns 200
+    * [HBASE-23698] - Switch central repo to https on branch-1
+    * [HBASE-23825] - Increment proto conversion is broken
+
+** Improvement
+    * [HBASE-23802] - Remove unnecessary Configuration instantiation in LossyAccounting
+
+** Test
+    * [HBASE-23793] - Increase maven heap allocation to 4G in Yetus personality
+
+** Task
+    * [HBASE-23743] - Release 1.4.13
+    * [HBASE-23862] - Fix flaky TestSnapshotFromMaster in 1.x versions
+
+
 Release Notes - HBase - Version 1.4.12 11/29/2019
 
 ** Bug
