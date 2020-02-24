@@ -150,7 +150,7 @@ public class HMasterCommandLine extends ServerCommandLine {
 
   private int startMaster() {
     Configuration conf = getConf();
-    TraceUtil.initTracer(conf);
+    TraceUtil.initTracer(conf, "HMaster");
 
     try {
       // If 'local', defer to LocalHBaseCluster instance.  Starts master

@@ -69,6 +69,10 @@
                                     <exclude>com.google.code.findbugs:*</exclude>
                                     <exclude>com.github.stephenc.findbugs:*</exclude>
                                     <exclude>org.apache.htrace:*</exclude>
+                                    <exclude>io.opentracing:*</exclude>
+                                    <exclude>io.opentracing.contrib:*</exclude>
+                                    <exclude>org.apache.hbase.thirdparty:hbase-shaded-jaeger</exclude>
+                                    <exclude>org.apache.hadoop.thirdparty:hadoop-jaeger</exclude>
                                     <exclude>org.apache.yetus:*</exclude>
                                     <exclude>log4j:*</exclude>
                                     <exclude>commons-logging:*</exclude>

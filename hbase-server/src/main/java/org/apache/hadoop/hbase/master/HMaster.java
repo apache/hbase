@@ -516,7 +516,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    */
   public HMaster(final Configuration conf) throws IOException {
     super(conf);
-    TraceUtil.initTracer(conf);
+    TraceUtil.initTracer(conf, "HMaster");
     try {
       if (conf.getBoolean(MAINTENANCE_MODE, false)) {
         LOG.info("Detected {}=true via configuration.", MAINTENANCE_MODE);

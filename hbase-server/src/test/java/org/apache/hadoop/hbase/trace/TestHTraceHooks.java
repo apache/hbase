@@ -23,6 +23,8 @@ import static org.junit.Assert.assertTrue;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
+
+import io.opentracing.Scope;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
@@ -47,7 +49,7 @@ import org.junit.rules.TestName;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
-@Ignore // We don't support htrace in hbase-2.0.0 and this flakey is a little flakey.
+//@Ignore // We don't support htrace in hbase-2.0.0 and this flakey is a little flakey.
 @Category({MiscTests.class, MediumTests.class})
 public class TestHTraceHooks {
 
@@ -88,6 +90,11 @@ public class TestHTraceHooks {
   public void testTraceCreateTable() throws Exception {
     Table table;
     Span createTableSpan;
+    try (Scope scope = TraceUtil.createOTrace("abc")) {
+      table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY_BYTES);
+
+    }
+
     try (TraceScope scope = TraceUtil.createTrace("creating table")) {
       createTableSpan = scope.getSpan();
       table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY_BYTES);

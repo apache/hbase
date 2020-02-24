@@ -17,6 +17,13 @@
  */
 package org.apache.hadoop.hbase.trace;
 
+import io.opentracing.Scope;
+import io.opentracing.SpanContext;
+import io.opentracing.propagation.Format;
+import io.opentracing.propagation.TextMapExtractAdapter;
+import io.opentracing.propagation.TextMapInjectAdapter;
+import io.opentracing.util.GlobalTracer;
+import org.apache.commons.codec.binary.Hex;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.htrace.core.HTraceConfiguration;
 import org.apache.htrace.core.Sampler;
@@ -25,6 +32,16 @@ import org.apache.htrace.core.SpanReceiver;
 import org.apache.htrace.core.TraceScope;
 import org.apache.htrace.core.Tracer;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * This wrapper class provides functions for accessing htrace 4+ functionality in a simplified way.
@@ -34,17 +51,24 @@ public final class TraceUtil {
   private static HTraceConfiguration conf;
   private static Tracer tracer;
 
+  private static io.opentracing.Tracer otTracer;
+
+  private static final Logger LOG = LoggerFactory.getLogger(TraceUtil.class.getName());
+
+
   private TraceUtil() {
   }
 
-  public static void initTracer(Configuration c) {
-    if (c != null) {
-      conf = new HBaseHTraceConfiguration(c);
-    }
+  public static void initTracer(Configuration c, String serviceName) {
+    if (!GlobalTracer.isRegistered()) {
+      io.jaegertracing.Configuration conf = io.jaegertracing.Configuration.fromEnv(serviceName);
+      io.opentracing.Tracer tracer = conf.getTracerBuilder().build();
 
-    if (tracer == null && conf != null) {
-      tracer = new Tracer.Builder("Tracer").conf(conf).build();
+      GlobalTracer.register(tracer);
+      otTracer = tracer;
     }
+    LOG.debug("tracer enabled.");
+    return;
   }
 
   /**
@@ -53,6 +77,10 @@ public final class TraceUtil {
    */
   public static TraceScope createTrace(String description) {
     return (tracer == null) ? null : tracer.newScope(description);
+  }
+
+  public static Scope createOTrace(String description) {
+    return (tracer == null) ? null : otTracer.buildSpan(description).startActive(true);
   }
 
   /**
@@ -124,5 +152,59 @@ public final class TraceUtil {
    */
   public static Runnable wrap(Runnable runnable, String description) {
     return (tracer == null) ? runnable : tracer.wrap(runnable, description);
+  }
+
+  public static SpanContext byteArrayToSpanContext(byte[] byteArray) {
+    if (byteArray == null || byteArray.length == 0) {
+      LOG.debug("The provided serialized context was null or empty");
+      return null;
+    }
+
+    SpanContext context = null;
+    ByteArrayInputStream stream = new ByteArrayInputStream(byteArray);
+
+    try {
+      ObjectInputStream objStream = new ObjectInputStream(stream);
+      Map<String, String> carrier = (Map<String, String>) objStream.readObject();
+
+      context = GlobalTracer.get().extract(Format.Builtin.TEXT_MAP,
+        new TextMapExtractAdapter(carrier));
+    } catch (Exception e) {
+      LOG.warn("Could not deserialize context {}", Hex.encodeHexString(byteArray), e);
+    }
+
+    return context;
+  }
+
+  public static byte[] spanContextToByteArray(SpanContext context) {
+    if (context == null) {
+      LOG.debug("No SpanContext was provided");
+      return null;
+    }
+
+    Map<String, String> carrier = new HashMap<String, String>();
+    GlobalTracer.get().inject(context, Format.Builtin.TEXT_MAP,
+      new TextMapInjectAdapter(carrier));
+    if (carrier.isEmpty()) {
+      LOG.warn("SpanContext was not properly injected by the Tracer.");
+      return null;
+    }
+
+    byte[] byteArray = null;
+    ByteArrayOutputStream stream = new ByteArrayOutputStream();
+
+    try {
+      ObjectOutputStream objStream = new ObjectOutputStream(stream);
+      objStream.writeObject(carrier);
+      objStream.flush();
+
+      byteArray = stream.toByteArray();
+      LOG.debug("SpanContext serialized, resulting byte length is {}",
+        byteArray.length);
+    } catch (IOException e) {
+      LOG.warn("Could not serialize context {}", context, e);
+    }
+
+    return byteArray;
   }
 }

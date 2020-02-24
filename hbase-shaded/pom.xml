@@ -149,6 +149,9 @@
                                         <exclude>com.google.code.findbugs:*</exclude>
                                         <exclude>com.github.stephenc.findbugs:*</exclude>
                                         <exclude>org.apache.htrace:*</exclude>
+                                        <exclude>io.opentracing:*</exclude>
+                                        <exclude>io.opentracing.contrib:*</exclude>
+                                        <exclude>org.apache.hbase.thirdparty:hbase-shaded-jaeger</exclude>
                                         <exclude>org.apache.yetus:*</exclude>
                                         <exclude>log4j:*</exclude>
                                         <exclude>commons-logging:*</exclude>
@@ -444,7 +447,6 @@
                                         <pattern>net/</pattern>
                                         <shadedPattern>${shaded.prefix}.net.</shadedPattern>
                                     </relocation>
-
                                 </relocations>
                                 <transformers>
                                   <!-- Need to filter out some extraneous license files.

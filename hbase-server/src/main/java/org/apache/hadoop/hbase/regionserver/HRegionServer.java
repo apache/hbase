@@ -547,7 +547,7 @@ public class HRegionServer extends HasThread implements
    */
   public HRegionServer(final Configuration conf) throws IOException {
     super("RegionServer");  // thread name
-    TraceUtil.initTracer(conf);
+    TraceUtil.initTracer(conf, "HRegionServer");
     try {
       this.startcode = System.currentTimeMillis();
       this.conf = conf;
