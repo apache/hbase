@@ -18,12 +18,18 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
@@ -173,6 +179,30 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
     regionLocations = AsyncMetaTableAccessor
       .getTableHRegionLocations(metaTable, tableName).get();
     assertEquals(1, regionLocations.size());
+  }
+
+  @Test
+  public void testMergeRegionsInvalidRegionCount() throws InterruptedException {
+    byte[][] splitRows = new byte[][] { Bytes.toBytes("3"), Bytes.toBytes("6") };
+    createTableWithDefaultConf(tableName, splitRows);
+    List<RegionInfo> regions = admin.getRegions(tableName).join();
+    // 0
+    try {
+      admin.mergeRegions(Collections.emptyList(), false).get();
+      fail();
+    } catch (ExecutionException e) {
+      // expected
+      assertThat(e.getCause(), instanceOf(IllegalArgumentException.class));
+    }
+    // 1
+    try {
+      admin.mergeRegions(regions.stream().limit(1).map(RegionInfo::getEncodedNameAsBytes)
+        .collect(Collectors.toList()), false).get();
+      fail();
+    } catch (ExecutionException e) {
+      // expected
+      assertThat(e.getCause(), instanceOf(IllegalArgumentException.class));
+    }
   }
 
   @Test
