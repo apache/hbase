@@ -607,6 +607,8 @@ The internal changes to HBase during this upgrade were sufficient for compilatio
 
 If you previously relied on client side tracing integrated with HBase operations, it is recommended that you upgrade your usage to HTrace 4 as well.
 
+After the Apache HTrace project moved to the Attic/retired, the traces in HBase are left broken and unmaintained since HBase 2.0. A new project link:https://issues.apache.org/jira/browse/HBASE-22120[HBASE-22120] will replace HTrace with OpenTracing.
+
 [[upgrade2.0.hfile.compatability]]
 .HFile lose forward compatability
 
