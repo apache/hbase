@@ -415,9 +415,11 @@ public class LruBlockCache implements FirstLevelBlockCache {
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory) {
 
     if (cacheDataBlockPercent != 100 && buf.getBlockType().isData()) {
-      // Don't cache this DATA block if we have limit on BlockCache, good for performance (HBASE-23887)
-      if (cacheKey.getOffset() % 100 >= cacheDataBlockPercent)
+      // Don't cache this DATA block if we have limit on BlockCache,
+      // good for performance (HBASE-23887)
+      if (cacheKey.getOffset() % 100 >= cacheDataBlockPercent) {
         return;
+      }
     }
 
     if (buf.heapSize() > maxBlockSize) {
