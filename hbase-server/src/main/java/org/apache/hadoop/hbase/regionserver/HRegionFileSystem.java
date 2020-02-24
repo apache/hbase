@@ -248,7 +248,7 @@ public class HRegionFileSystem {
         // recovered.hfiles directory is expected inside CF path when hbase.wal.split.to.hfile to
         // true, refer HBASE-23740
         if (!HConstants.RECOVERED_HFILES_DIR.equals(status.getPath().getName())) {
-          LOG.warn("Invalid StoreFile: " + status.getPath());
+          LOG.warn("Invalid StoreFile: {}", status.getPath());
         }
         continue;
       }
@@ -285,7 +285,7 @@ public class HRegionFileSystem {
         // recovered.hfiles directory is expected inside CF path when hbase.wal.split.to.hfile to
         // true, refer HBASE-23740
         if (!HConstants.RECOVERED_HFILES_DIR.equals(status.getPath().getName())) {
-          LOG.warn("Invalid StoreFile: " + status.getPath());
+          LOG.warn("Invalid StoreFile: {}", status.getPath());
         }
       } else {
         validStoreFiles.add(status);
