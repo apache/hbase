@@ -94,7 +94,7 @@ public abstract class TestMobCompactionBase {
   @Before
   public void setUp() throws Exception {
     HTU = new HBaseTestingUtility();
-    hdt = HTU.createTableDescriptor(getClass().getName());
+    hdt = HTU.createTableDescriptor(TableName.valueOf(getClass().getName()));
     conf = HTU.getConfiguration();
 
     initConf();

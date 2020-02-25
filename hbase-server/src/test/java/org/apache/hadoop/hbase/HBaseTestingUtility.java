@@ -1893,21 +1893,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   public static final byte [] START_KEY_BYTES = {FIRST_CHAR, FIRST_CHAR, FIRST_CHAR};
   public static final String START_KEY = new String(START_KEY_BYTES, HConstants.UTF8_CHARSET);
 
-  /**
-   * Create a table of name <code>name</code>.
-   * @param name Name to give table.
-   * @return Column descriptor.
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
-   *   {@link #createTableDescriptor(TableName, int, int, int, KeepDeletedCells)} instead.
-   * @see #createTableDescriptor(TableName, int, int, int, KeepDeletedCells)
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-13893">HBASE-13893</a>
-   */
-  @Deprecated
-  public HTableDescriptor createTableDescriptor(final String name) {
-    return createTableDescriptor(TableName.valueOf(name),  HColumnDescriptor.DEFAULT_MIN_VERSIONS,
-        MAXVERSIONS, HConstants.FOREVER, HColumnDescriptor.DEFAULT_KEEP_DELETED);
-  }
-
   public HTableDescriptor createTableDescriptor(final TableName name,
       final int minVersions, final int versions, final int ttl, KeepDeletedCells keepDeleted) {
     HTableDescriptor htd = new HTableDescriptor(name);

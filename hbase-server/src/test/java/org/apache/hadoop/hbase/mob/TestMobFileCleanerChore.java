@@ -91,7 +91,7 @@ public class TestMobFileCleanerChore {
   @Before
   public void setUp() throws Exception {
     HTU = new HBaseTestingUtility();
-    hdt = HTU.createTableDescriptor("testMobCompactTable");
+    hdt = HTU.createTableDescriptor(TableName.valueOf("testMobCompactTable"));
     conf = HTU.getConfiguration();
 
     initConf();

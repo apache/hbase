@@ -124,7 +124,7 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
 
   private void createTestTable() throws IOException {
     // Create test table
-    hdt = util.createTableDescriptor("testMobCompactTable");
+    hdt = util.createTableDescriptor(TableName.valueOf("testMobCompactTable"));
     hcd = new HColumnDescriptor(fam);
     hcd.setMobEnabled(true);
     hcd.setMobThreshold(mobLen);

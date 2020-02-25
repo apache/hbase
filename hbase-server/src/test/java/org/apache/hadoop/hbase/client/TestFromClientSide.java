@@ -237,7 +237,9 @@ public class TestFromClientSide {
    */
   @Test
   public void testDuplicateAppend() throws Exception {
-    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor(name.getTableName());
+    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor(name.getTableName(),
+      HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+      HColumnDescriptor.DEFAULT_KEEP_DELETED);
     Map<String, String> kvs = new HashMap<>();
     kvs.put(SleepAtFirstRpcCall.SLEEP_TIME_CONF_KEY, "2000");
     hdt.addCoprocessor(SleepAtFirstRpcCall.class.getName(), null, 1, kvs);
