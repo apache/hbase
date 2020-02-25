@@ -139,11 +139,12 @@ message GetResponse {
  */
 message Condition {
   required bytes row = 1;
-  required bytes family = 2;
-  required bytes qualifier = 3;
-  required CompareType compare_type = 4;
-  required Comparator comparator = 5;
+  optional bytes family = 2;
+  optional bytes qualifier = 3;
+  optional CompareType compare_type = 4;
+  optional Comparator comparator = 5;
   optional TimeRange time_range = 6;
+  optional Filter filter = 7;
 }
 
 
