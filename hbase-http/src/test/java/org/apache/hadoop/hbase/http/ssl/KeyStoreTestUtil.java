@@ -53,9 +53,13 @@ public final class KeyStoreTestUtil {
   }
 
   public static String getClasspathDir(Class<?> klass) throws Exception {
-    String file = klass.getName();
-    file = file.replace('.', '/') + ".class";
+    String file = "hbase-test-util-dependent";
     URL url = Thread.currentThread().getContextClassLoader().getResource(file);
+    if(url == null) {
+      file = klass.getName();
+      file = file.replace('.', '/') + ".class";
+      url = Thread.currentThread().getContextClassLoader().getResource(file);
+    }
     String baseDir = url.toURI().getPath();
     baseDir = baseDir.substring(0, baseDir.length() - file.length() - 1);
     return baseDir;
