@@ -107,19 +107,19 @@ public class LruBlockCache implements FirstLevelBlockCache {
    * Acceptable size of cache (no evictions if size < acceptable)
    */
   private static final String LRU_ACCEPTABLE_FACTOR_CONFIG_NAME =
-    "hbase.lru.blockcache.acceptable.factor";
+      "hbase.lru.blockcache.acceptable.factor";
 
   /**
    * Hard capacity limit of cache, will reject any put if size > this * acceptable
    */
   static final String LRU_HARD_CAPACITY_LIMIT_FACTOR_CONFIG_NAME =
-    "hbase.lru.blockcache.hard.capacity.limit.factor";
+      "hbase.lru.blockcache.hard.capacity.limit.factor";
   private static final String LRU_SINGLE_PERCENTAGE_CONFIG_NAME =
-    "hbase.lru.blockcache.single.percentage";
+      "hbase.lru.blockcache.single.percentage";
   private static final String LRU_MULTI_PERCENTAGE_CONFIG_NAME =
-    "hbase.lru.blockcache.multi.percentage";
+      "hbase.lru.blockcache.multi.percentage";
   private static final String LRU_MEMORY_PERCENTAGE_CONFIG_NAME =
-    "hbase.lru.blockcache.memory.percentage";
+      "hbase.lru.blockcache.memory.percentage";
 
   /**
    * Configuration key to force data-block always (except in-memory are too much)
@@ -127,7 +127,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
    * configuration, inMemoryForceMode is a cluster-wide configuration
    */
   private static final String LRU_IN_MEMORY_FORCE_MODE_CONFIG_NAME =
-    "hbase.lru.rs.inmemoryforcemode";
+      "hbase.lru.rs.inmemoryforcemode";
 
   /* Default Configuration Parameters*/
 
@@ -258,33 +258,33 @@ public class LruBlockCache implements FirstLevelBlockCache {
    */
   public LruBlockCache(long maxSize, long blockSize, boolean evictionThread) {
     this(maxSize, blockSize, evictionThread,
-      (int) Math.ceil(1.2 * maxSize / blockSize),
-      DEFAULT_LOAD_FACTOR, DEFAULT_CONCURRENCY_LEVEL,
-      DEFAULT_MIN_FACTOR, DEFAULT_ACCEPTABLE_FACTOR,
-      DEFAULT_SINGLE_FACTOR,
-      DEFAULT_MULTI_FACTOR,
-      DEFAULT_MEMORY_FACTOR,
-      DEFAULT_HARD_CAPACITY_LIMIT_FACTOR,
-      false,
-      DEFAULT_MAX_BLOCK_SIZE,
-      DEFAULT_LRU_CACHE_DATA_BLOCK_PERCENT);
+        (int) Math.ceil(1.2 * maxSize / blockSize),
+        DEFAULT_LOAD_FACTOR, DEFAULT_CONCURRENCY_LEVEL,
+        DEFAULT_MIN_FACTOR, DEFAULT_ACCEPTABLE_FACTOR,
+        DEFAULT_SINGLE_FACTOR,
+        DEFAULT_MULTI_FACTOR,
+        DEFAULT_MEMORY_FACTOR,
+        DEFAULT_HARD_CAPACITY_LIMIT_FACTOR,
+        false,
+        DEFAULT_MAX_BLOCK_SIZE,
+        DEFAULT_LRU_CACHE_DATA_BLOCK_PERCENT);
   }
 
   public LruBlockCache(long maxSize, long blockSize, boolean evictionThread, Configuration conf) {
     this(maxSize, blockSize, evictionThread,
-      (int) Math.ceil(1.2 * maxSize / blockSize),
-      DEFAULT_LOAD_FACTOR,
-      DEFAULT_CONCURRENCY_LEVEL,
-      conf.getFloat(LRU_MIN_FACTOR_CONFIG_NAME, DEFAULT_MIN_FACTOR),
-      conf.getFloat(LRU_ACCEPTABLE_FACTOR_CONFIG_NAME, DEFAULT_ACCEPTABLE_FACTOR),
-      conf.getFloat(LRU_SINGLE_PERCENTAGE_CONFIG_NAME, DEFAULT_SINGLE_FACTOR),
-      conf.getFloat(LRU_MULTI_PERCENTAGE_CONFIG_NAME, DEFAULT_MULTI_FACTOR),
-      conf.getFloat(LRU_MEMORY_PERCENTAGE_CONFIG_NAME, DEFAULT_MEMORY_FACTOR),
-      conf.getFloat(LRU_HARD_CAPACITY_LIMIT_FACTOR_CONFIG_NAME,
-        DEFAULT_HARD_CAPACITY_LIMIT_FACTOR),
-      conf.getBoolean(LRU_IN_MEMORY_FORCE_MODE_CONFIG_NAME, DEFAULT_IN_MEMORY_FORCE_MODE),
-      conf.getLong(LRU_MAX_BLOCK_SIZE, DEFAULT_MAX_BLOCK_SIZE),
-      conf.getInt(LRU_CACHE_DATA_BLOCK_PERCENT, DEFAULT_LRU_CACHE_DATA_BLOCK_PERCENT));
+        (int) Math.ceil(1.2 * maxSize / blockSize),
+        DEFAULT_LOAD_FACTOR,
+        DEFAULT_CONCURRENCY_LEVEL,
+        conf.getFloat(LRU_MIN_FACTOR_CONFIG_NAME, DEFAULT_MIN_FACTOR),
+        conf.getFloat(LRU_ACCEPTABLE_FACTOR_CONFIG_NAME, DEFAULT_ACCEPTABLE_FACTOR),
+        conf.getFloat(LRU_SINGLE_PERCENTAGE_CONFIG_NAME, DEFAULT_SINGLE_FACTOR),
+        conf.getFloat(LRU_MULTI_PERCENTAGE_CONFIG_NAME, DEFAULT_MULTI_FACTOR),
+        conf.getFloat(LRU_MEMORY_PERCENTAGE_CONFIG_NAME, DEFAULT_MEMORY_FACTOR),
+        conf.getFloat(LRU_HARD_CAPACITY_LIMIT_FACTOR_CONFIG_NAME,
+                      DEFAULT_HARD_CAPACITY_LIMIT_FACTOR),
+        conf.getBoolean(LRU_IN_MEMORY_FORCE_MODE_CONFIG_NAME, DEFAULT_IN_MEMORY_FORCE_MODE),
+        conf.getLong(LRU_MAX_BLOCK_SIZE, DEFAULT_MAX_BLOCK_SIZE),
+        conf.getInt(LRU_CACHE_DATA_BLOCK_PERCENT, DEFAULT_LRU_CACHE_DATA_BLOCK_PERCENT));
   }
 
   public LruBlockCache(long maxSize, long blockSize, Configuration conf) {
@@ -307,15 +307,15 @@ public class LruBlockCache implements FirstLevelBlockCache {
    * @param memoryFactor        percentage of total size for in-memory blocks
    */
   public LruBlockCache(long maxSize, long blockSize, boolean evictionThread,
-                       int mapInitialSize, float mapLoadFactor, int mapConcurrencyLevel,
-                       float minFactor, float acceptableFactor, float singleFactor,
-                       float multiFactor, float memoryFactor, float hardLimitFactor,
-                       boolean forceInMemory, long maxBlockSize, int cacheDataBlockPercent) {
+      int mapInitialSize, float mapLoadFactor, int mapConcurrencyLevel,
+      float minFactor, float acceptableFactor, float singleFactor,
+      float multiFactor, float memoryFactor, float hardLimitFactor,
+      boolean forceInMemory, long maxBlockSize, int cacheDataBlockPercent) {
     this.maxBlockSize = maxBlockSize;
     if(singleFactor + multiFactor + memoryFactor != 1 ||
-      singleFactor < 0 || multiFactor < 0 || memoryFactor < 0) {
+        singleFactor < 0 || multiFactor < 0 || memoryFactor < 0) {
       throw new IllegalArgumentException("Single, multi, and memory factors " +
-        " should be non-negative and total 1.0");
+          " should be non-negative and total 1.0");
     }
     if (minFactor >= acceptableFactor) {
       throw new IllegalArgumentException("minFactor must be smaller than acceptableFactor");
@@ -354,7 +354,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
     // TODO: Add means of turning this off.  Bit obnoxious running thread just to make a log
     // every five minutes.
     this.scheduleThreadPool.scheduleAtFixedRate(new StatisticsThread(this), STAT_THREAD_PERIOD,
-      STAT_THREAD_PERIOD, TimeUnit.SECONDS);
+                                                STAT_THREAD_PERIOD, TimeUnit.SECONDS);
   }
 
   @Override
@@ -427,10 +427,10 @@ public class LruBlockCache implements FirstLevelBlockCache {
       // So we log 2%
       if (stats.failInsert() % 50 == 0) {
         LOG.warn("Trying to cache too large a block "
-          + cacheKey.getHfileName() + " @ "
-          + cacheKey.getOffset()
-          + " is " + buf.heapSize()
-          + " which is larger than " + maxBlockSize);
+            + cacheKey.getHfileName() + " @ "
+            + cacheKey.getOffset()
+            + " is " + buf.heapSize()
+            + " which is larger than " + maxBlockSize);
       }
       return;
     }
@@ -462,7 +462,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
     map.put(cacheKey, cb);
     long val = elements.incrementAndGet();
     if (buf.getBlockType().isData()) {
-      dataBlockElements.increment();
+       dataBlockElements.increment();
     }
     if (LOG.isTraceEnabled()) {
       long size = map.size();
@@ -519,7 +519,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
       heapsize *= -1;
     }
     if (bt != null && bt.isData()) {
-      dataBlockSize.add(heapsize);
+       dataBlockSize.add(heapsize);
     }
     return size.addAndGet(heapsize);
   }
@@ -538,7 +538,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
    */
   @Override
   public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching, boolean repeat,
-                            boolean updateCacheMetrics) {
+      boolean updateCacheMetrics) {
     LruCachedBlock cb = map.computeIfPresent(cacheKey, (key, val) -> {
       // It will be referenced by RPC path, so increase here. NOTICE: Must do the retain inside
       // this block. because if retain outside the map#computeIfPresent, the evictBlock may remove
@@ -770,7 +770,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
           long overflow = bucket.overflow();
           if (overflow > 0) {
             long bucketBytesToFree =
-              Math.min(overflow, (bytesToFree - bytesFreed) / remainingBuckets);
+                Math.min(overflow, (bytesToFree - bytesFreed) / remainingBuckets);
             bytesFreed += bucket.free(bucketBytesToFree);
           }
           remainingBuckets--;
@@ -973,7 +973,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
     }
 
     @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NN_NAKED_NOTIFY",
-      justification="This is what we want")
+        justification="This is what we want")
     public void evict() {
       synchronized (this) {
         this.notifyAll();
@@ -1017,20 +1017,20 @@ public class LruBlockCache implements FirstLevelBlockCache {
     long totalSize = heapSize();
     long freeSize = maxSize - totalSize;
     LruBlockCache.LOG.info("totalSize=" + StringUtils.byteDesc(totalSize) + ", " +
-      "freeSize=" + StringUtils.byteDesc(freeSize) + ", " +
-      "max=" + StringUtils.byteDesc(this.maxSize) + ", " +
-      "blockCount=" + getBlockCount() + ", " +
-      "accesses=" + stats.getRequestCount() + ", " +
-      "hits=" + stats.getHitCount() + ", " +
-      "hitRatio=" + (stats.getHitCount() == 0 ?
-      "0" : (StringUtils.formatPercent(stats.getHitRatio(), 2)+ ", ")) + ", " +
-      "cachingAccesses=" + stats.getRequestCachingCount() + ", " +
-      "cachingHits=" + stats.getHitCachingCount() + ", " +
-      "cachingHitsRatio=" + (stats.getHitCachingCount() == 0 ?
-      "0,": (StringUtils.formatPercent(stats.getHitCachingRatio(), 2) + ", ")) +
-      "evictions=" + stats.getEvictionCount() + ", " +
-      "evicted=" + stats.getEvictedCount() + ", " +
-      "evictedPerRun=" + stats.evictedPerEviction());
+        "freeSize=" + StringUtils.byteDesc(freeSize) + ", " +
+        "max=" + StringUtils.byteDesc(this.maxSize) + ", " +
+        "blockCount=" + getBlockCount() + ", " +
+        "accesses=" + stats.getRequestCount() + ", " +
+        "hits=" + stats.getHitCount() + ", " +
+        "hitRatio=" + (stats.getHitCount() == 0 ?
+        "0" : (StringUtils.formatPercent(stats.getHitRatio(), 2)+ ", ")) + ", " +
+        "cachingAccesses=" + stats.getRequestCachingCount() + ", " +
+        "cachingHits=" + stats.getHitCachingCount() + ", " +
+        "cachingHitsRatio=" + (stats.getHitCachingCount() == 0 ?
+        "0,": (StringUtils.formatPercent(stats.getHitCachingRatio(), 2) + ", ")) +
+        "evictions=" + stats.getEvictionCount() + ", " +
+        "evicted=" + stats.getEvictedCount() + ", " +
+        "evictedPerRun=" + stats.evictedPerEviction());
   }
 
   /**
@@ -1045,7 +1045,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
   }
 
   public final static long CACHE_FIXED_OVERHEAD = ClassSize.align(
-    (4 * Bytes.SIZEOF_LONG) + (11 * ClassSize.REFERENCE) +
+      (4 * Bytes.SIZEOF_LONG) + (11 * ClassSize.REFERENCE) +
       (6 * Bytes.SIZEOF_FLOAT) + (2 * Bytes.SIZEOF_BOOLEAN)
       + ClassSize.OBJECT);
 
@@ -1057,8 +1057,8 @@ public class LruBlockCache implements FirstLevelBlockCache {
   private static long calculateOverhead(long maxSize, long blockSize, int concurrency) {
     // FindBugs ICAST_INTEGER_MULTIPLY_CAST_TO_LONG
     return CACHE_FIXED_OVERHEAD + ClassSize.CONCURRENT_HASHMAP
-      + ((long) Math.ceil(maxSize * 1.2 / blockSize) * ClassSize.CONCURRENT_HASHMAP_ENTRY)
-      + ((long) concurrency * ClassSize.CONCURRENT_HASHMAP_SEGMENT);
+           + ((long) Math.ceil(maxSize * 1.2 / blockSize) * ClassSize.CONCURRENT_HASHMAP_ENTRY)
+           + ((long) concurrency * ClassSize.CONCURRENT_HASHMAP_SEGMENT);
   }
 
   @Override
