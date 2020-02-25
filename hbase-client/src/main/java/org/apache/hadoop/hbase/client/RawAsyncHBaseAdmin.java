@@ -1208,18 +1208,17 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         return;
       }
 
-        addListener(
-          this.<MergeTableRegionsRequest, MergeTableRegionsResponse> procedureCall(request,
-            (s, c, req, done) -> s.mergeTableRegions(c, req, done), (resp) -> resp.getProcId(),
-            new MergeTableRegionProcedureBiConsumer(tableName)),
-          (ret, err2) -> {
-            if (err2 != null) {
-              future.completeExceptionally(err2);
-            } else {
-              future.complete(ret);
-            }
-          });
+      addListener(this.<MergeTableRegionsRequest, MergeTableRegionsResponse>procedureCall(request,
+          (s, c, req, done) -> s.mergeTableRegions(c, req, done), (resp) -> resp.getProcId(),
+          new MergeTableRegionProcedureBiConsumer(tableName)), (ret, err2) -> {
+        if (err2 != null) {
+          future.completeExceptionally(err2);
+        } else {
+          future.complete(ret);
+        }
       });
+    });
+
     return future;
   }
 
