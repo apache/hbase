@@ -22,7 +22,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-@InterfaceAudience.Private
+@InterfaceAudience.Public
 public interface MonkeyConstants {
 
   String PERIODIC_ACTION1_PERIOD = "sdm.action1.period";

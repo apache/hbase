@@ -44,8 +44,7 @@ import org.slf4j.LoggerFactory;
  * user the daemon is running as)
  */
 @InterfaceAudience.Public
-public class HBaseClusterManager extends Configured implements
-  org.apache.hadoop.hbase.ClusterManager {
+public class HBaseClusterManager extends Configured implements ClusterManager {
   private static final String SIGKILL = "SIGKILL";
   private static final String SIGSTOP = "SIGSTOP";
   private static final String SIGCONT = "SIGCONT";
