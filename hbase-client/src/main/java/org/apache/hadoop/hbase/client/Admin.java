@@ -1358,11 +1358,7 @@ public interface Admin extends Abortable, Closeable {
   }
 
   /**
-   * Merge regions. Asynchronous operation.
-   * <p/>
-   * You may get a {@code DoNotRetryIOException} if you pass more than two regions in but the master
-   * does not support merging more than two regions. At least till 2.2.0, we still only support
-   * merging two regions.
+   * Merge multiple regions (>=2). Asynchronous operation.
    * @param nameofRegionsToMerge encoded or full name of daughter regions
    * @param forcible <code>true</code> if do a compulsory merge, otherwise we will only merge
    *          adjacent regions
