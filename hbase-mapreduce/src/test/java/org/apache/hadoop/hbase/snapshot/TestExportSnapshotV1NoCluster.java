@@ -19,9 +19,7 @@ package org.apache.hadoop.hbase.snapshot;
 
 import static org.junit.Assert.assertTrue;
 
-import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
@@ -56,21 +54,24 @@ public class TestExportSnapshotV1NoCluster {
 
   private HBaseCommonTestingUtility testUtil = new HBaseCommonTestingUtility();
   private Path testDir;
+  private FileSystem fs;
 
   @Before
   public void setUpBefore() throws Exception {
-    this.testDir = setup(this.testUtil);
+    // Make sure testDir is on LocalFileSystem
+    this.fs = FileSystem.getLocal(this.testUtil.getConfiguration());
+    this.testDir = setup(fs, this.testUtil);
+    LOG.info("fs={}, fsuri={}, fswd={}, testDir={}", this.fs, this.fs.getUri(),
+      this.fs.getWorkingDirectory(), this.testDir);
+    assertTrue("FileSystem '" + fs + "' is not local", fs instanceof LocalFileSystem);
   }
 
   /**
-   * Setup for test. Returns path to test data dir.
+   * Setup for test. Returns path to test data dir. Sets configuration into the passed
+   * hctu.getConfiguration.
    */
-  static Path setup(HBaseCommonTestingUtility hctu) throws IOException {
-    // Make sure testDir is on LocalFileSystem
-    Path testDir =
-      hctu.getDataTestDir().makeQualified(URI.create("file:///"), new Path("/"));
-    FileSystem fs = testDir.getFileSystem(hctu.getConfiguration());
-    assertTrue("FileSystem '" + fs + "' is not local", fs instanceof LocalFileSystem);
+  static Path setup(FileSystem fs, HBaseCommonTestingUtility hctu) throws IOException {
+    Path testDir = hctu.getDataTestDir().makeQualified(fs.getUri(), fs.getWorkingDirectory());
     hctu.getConfiguration().setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
     hctu.getConfiguration().setInt("hbase.regionserver.msginterval", 100);
     hctu.getConfiguration().setInt("hbase.client.pause", 250);
@@ -78,7 +79,7 @@ public class TestExportSnapshotV1NoCluster {
     hctu.getConfiguration().setBoolean("hbase.master.enabletable.roundrobin", true);
     hctu.getConfiguration().setInt("mapreduce.map.maxattempts", 10);
     hctu.getConfiguration().set(HConstants.HBASE_DIR, testDir.toString());
-    return testDir;
+    return testDir.makeQualified(fs.getUri(), fs.getWorkingDirectory());
   }
 
   /**
@@ -87,18 +88,19 @@ public class TestExportSnapshotV1NoCluster {
   @Test
   public void testSnapshotWithRefsExportFileSystemState() throws Exception {
     final SnapshotMock snapshotMock = new SnapshotMock(testUtil.getConfiguration(),
-      testDir.getFileSystem(testUtil.getConfiguration()), testDir);
+      this.fs, testDir);
     final SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV1("tableWithRefsV1",
       "tableWithRefsV1");
-    testSnapshotWithRefsExportFileSystemState(builder, testUtil, testDir);
+    testSnapshotWithRefsExportFileSystemState(this.fs, builder, testUtil, testDir);
   }
 
   /**
    * Generates a couple of regions for the specified SnapshotMock,
    * and then it will run the export and verification.
    */
-  static void testSnapshotWithRefsExportFileSystemState(SnapshotMock.SnapshotBuilder builder,
-      HBaseCommonTestingUtility testUtil, Path testDir) throws Exception {
+  static void testSnapshotWithRefsExportFileSystemState(FileSystem fs,
+     SnapshotMock.SnapshotBuilder builder, HBaseCommonTestingUtility testUtil, Path testDir)
+        throws Exception {
     Path[] r1Files = builder.addRegion();
     Path[] r2Files = builder.addRegion();
     builder.commit();
@@ -107,14 +109,16 @@ public class TestExportSnapshotV1NoCluster {
     TableName tableName = builder.getTableDescriptor().getTableName();
     TestExportSnapshot.testExportFileSystemState(testUtil.getConfiguration(),
       tableName, snapshotName, snapshotName, snapshotFilesCount,
-      testDir, getDestinationDir(testUtil, testDir), false, null, true);
+      testDir, getDestinationDir(fs, testUtil, testDir), false, null, true);
   }
 
-  static Path getDestinationDir(HBaseCommonTestingUtility hctu, Path testDir) throws IOException {
-    FileSystem fs = FileSystem.get(hctu.getConfiguration());
+  static Path getDestinationDir(FileSystem fs, HBaseCommonTestingUtility hctu, Path testDir)
+      throws IOException {
     Path path = new Path(new Path(testDir, "export-test"),
-      "export-" + System.currentTimeMillis()).makeQualified(fs.getUri(), fs.getWorkingDirectory());
-    LOG.info("HDFS export destination path: " + path);
+      "export-" + System.currentTimeMillis()).makeQualified(fs.getUri(),
+      fs.getWorkingDirectory());
+    LOG.info("Export destination={}, fs={}, fsurl={}, fswd={}, testDir={}", path, fs, fs.getUri(),
+      fs.getWorkingDirectory(), testDir);
     return path;
   }
 }

@@ -363,7 +363,8 @@ public class TestCompaction {
   /**
    * Test no new Compaction requests are generated after calling stop compactions
    */
-  @Test public void testStopStartCompaction() throws IOException {
+  @Test
+  public void testStopStartCompaction() throws IOException {
     // setup a compact/split thread on a mock server
     HRegionServer mockServer = Mockito.mock(HRegionServer.class);
     Mockito.when(mockServer.getConfiguration()).thenReturn(r.getBaseConf());
@@ -376,19 +377,21 @@ public class TestCompaction {
       createStoreFile(r);
     }
     thread.switchCompaction(false);
-    thread
-        .requestCompaction(r, store, "test", Store.PRIORITY_USER, CompactionLifeCycleTracker.DUMMY,
-            null);
+    thread.requestCompaction(r, store, "test", Store.PRIORITY_USER,
+      CompactionLifeCycleTracker.DUMMY, null);
     assertEquals(false, thread.isCompactionsEnabled());
-    assertEquals(0, thread.getLongCompactions().getActiveCount() + thread.getShortCompactions()
-        .getActiveCount());
+    int longCompactions = thread.getLongCompactions().getActiveCount();
+    int shortCompactions = thread.getShortCompactions().getActiveCount();
+    assertEquals("longCompactions=" + longCompactions + "," +
+        "shortCompactions=" + shortCompactions, 0, longCompactions + shortCompactions);
     thread.switchCompaction(true);
     assertEquals(true, thread.isCompactionsEnabled());
-    thread
-        .requestCompaction(r, store, "test", Store.PRIORITY_USER, CompactionLifeCycleTracker.DUMMY,
-            null);
-    assertEquals(1, thread.getLongCompactions().getActiveCount() + thread.getShortCompactions()
-        .getActiveCount());
+    thread.requestCompaction(r, store, "test", Store.PRIORITY_USER,
+      CompactionLifeCycleTracker.DUMMY, null);
+    longCompactions = thread.getLongCompactions().getActiveCount();
+    shortCompactions = thread.getShortCompactions().getActiveCount();
+    assertEquals("longCompactions=" + longCompactions + "," +
+        "shortCompactions=" + shortCompactions, 1, longCompactions + shortCompactions);
   }
 
   @Test public void testInterruptingRunningCompactions() throws Exception {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -188,15 +188,14 @@ public class TestThriftHBaseServiceHandler {
 
   @BeforeClass
   public static void beforeClass() throws Exception {
-    UTIL.getConfiguration().set("hbase.client.retries.number", "3");
     UTIL.startMiniCluster();
-    Admin admin = UTIL.getAdmin();
     HTableDescriptor tableDescriptor = new HTableDescriptor(TableName.valueOf(tableAname));
     for (HColumnDescriptor family : families) {
       tableDescriptor.addFamily(family);
     }
-    admin.createTable(tableDescriptor);
-    admin.close();
+    try (Admin admin = UTIL.getAdmin()) {
+      admin.createTable(tableDescriptor);
+    }
   }
 
   @AfterClass

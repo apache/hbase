@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +23,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -61,7 +60,7 @@ public class TestAlwaysSetScannerId {
 
   private static final int COUNT = 10;
 
-  private static HRegionInfo HRI;
+  private static RegionInfo HRI;
 
   private static ClientProtos.ClientService.BlockingInterface STUB;
 
@@ -72,8 +71,8 @@ public class TestAlwaysSetScannerId {
       for (int i = 0; i < COUNT; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
       }
+      HRI = table.getRegionLocator().getAllRegionLocations().get(0).getRegion();
     }
-    HRI = UTIL.getAdmin().getTableRegions(TABLE_NAME).get(0);
     STUB = ((ConnectionImplementation) UTIL.getConnection())
         .getClient(UTIL.getHBaseCluster().getRegionServer(0).getServerName());
   }
