@@ -50,6 +50,13 @@ public class TestWideScanner extends HBaseTestCase {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestWideScanner.class);
 
+  private static final UpdateReaderParams UPDATE_READER_PARAMS =
+    new UpdateReaderParams.UpdateReaderParamsBuilder()
+      .setIsFlushEvent(true)
+      .setStoreFiles(Collections.EMPTY_LIST)
+      .setMemStoreScanners(Collections.EMPTY_LIST)
+      .build();
+
   private static final Logger LOG = LoggerFactory.getLogger(TestWideScanner.class);
 
   static final byte[] A = Bytes.toBytes("A");
@@ -135,7 +142,7 @@ public class TestWideScanner extends HBaseTestCase {
           ((HRegion.RegionScannerImpl)s).storeHeap.getHeap().iterator();
         while (scanners.hasNext()) {
           StoreScanner ss = (StoreScanner)scanners.next();
-          ss.updateReaders(Collections.EMPTY_LIST, Collections.EMPTY_LIST);
+          ss.updateReaders(UPDATE_READER_PARAMS);
         }
       } while (more);
 

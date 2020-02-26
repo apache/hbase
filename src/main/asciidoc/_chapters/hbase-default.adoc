@@ -2207,3 +2207,30 @@ The percent of region server RPC threads failed to abort RS.
 .Default
 `-1`
 
+
+[[hbase.hstore.file.force.archive]]
+*`hbase.hstore.file.force.archive`*::
++
+.Description
+
+      We might have open scanners on compacted away store files which
+      could prevent archival of compacted store files. refCount as
+      low as 1 could also prevent the archival. In order to deal with
+      such situation, if this config value is true (enabled), discharger
+      thread would try notifying all readers to reset the current
+      scanners. Subsequent next(), seek() for existing scanner would
+      reset the current scanners and update heap with new ones.
+      Client should not face issues while scanning the file.
+      After reset, we would expect ongoing scans to use
+      new HFiles instead of compacted ones. If this
+      config is false (default), we would not notify readers for scanner reset
+      and hence a buggy client/coprocessor holding reader reference
+      on compacted away files could prevent archival for indefinite
+      time. It is recommended to keep this config value to true if we
+      are worried about client/coprocessor not closing scanners on
+      compacted away store files and preventing archival and causing
+      space issues.
+
++
+.Default
+`false`
