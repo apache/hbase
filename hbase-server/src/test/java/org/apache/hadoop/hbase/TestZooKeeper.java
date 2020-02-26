@@ -74,11 +74,11 @@ public class TestZooKeeper {
   public static void setUpBeforeClass() throws Exception {
     // Test we can first start the ZK cluster by itself
     Configuration conf = TEST_UTIL.getConfiguration();
-    TEST_UTIL.startMiniDFSCluster(2);
     TEST_UTIL.startMiniZKCluster();
     conf.setInt(HConstants.ZK_SESSION_TIMEOUT, 1000);
     conf.setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, MockLoadBalancer.class,
         LoadBalancer.class);
+    TEST_UTIL.startMiniDFSCluster(2);
   }
 
   @AfterClass

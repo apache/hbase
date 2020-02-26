@@ -333,7 +333,9 @@ public class TestReplicationBase {
     if (htable1 != null) {
       htable1.close();
     }
-    admin.close();
+    if (admin != null) {
+      admin.close();
+    }
     UTIL2.shutdownMiniCluster();
     UTIL1.shutdownMiniCluster();
   }

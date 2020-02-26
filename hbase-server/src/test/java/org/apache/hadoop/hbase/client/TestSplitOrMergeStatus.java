@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -94,20 +94,16 @@ public class TestSplitOrMergeStatus {
 
     Admin admin = TEST_UTIL.getAdmin();
     initSwitchStatus(admin);
-    boolean[] results = admin.setSplitOrMergeEnabled(false, false, MasterSwitchType.SPLIT);
-    assertEquals(1, results.length);
-    assertTrue(results[0]);
+    assertTrue(admin.splitSwitch(false, false));
     try {
       admin.split(t.getName());
-      fail("Should not get here.");
-    } catch (DoNotRetryIOException e) {
-      // Expected.
+      fail("Shouldn't get here");
+    } catch (DoNotRetryIOException dnioe) {
+      // Expected
     }
     int count = admin.getTableRegions(tableName).size();
     assertTrue(originalCount == count);
-    results = admin.setSplitOrMergeEnabled(true, false, MasterSwitchType.SPLIT);
-    assertEquals(1, results.length);
-    assertFalse(results[0]);
+    assertFalse(admin.splitSwitch(true, false));
     admin.split(t.getName());
     while ((count = admin.getTableRegions(tableName).size()) == originalCount) {
       Threads.sleep(1);;
@@ -230,13 +226,13 @@ public class TestSplitOrMergeStatus {
   }
 
   private void initSwitchStatus(Admin admin) throws IOException {
-    if (!admin.isSplitOrMergeEnabled(MasterSwitchType.SPLIT)) {
-      admin.setSplitOrMergeEnabled(true, false, MasterSwitchType.SPLIT);
+    if (!admin.isSplitEnabled()) {
+      admin.splitSwitch(true, false);
     }
-    if (!admin.isSplitOrMergeEnabled(MasterSwitchType.MERGE)) {
-      admin.setSplitOrMergeEnabled(true, false, MasterSwitchType.MERGE);
+    if (!admin.isMergeEnabled()) {
+      admin.mergeSwitch(true, false);
     }
-    assertTrue(admin.isSplitOrMergeEnabled(MasterSwitchType.SPLIT));
-    assertTrue(admin.isSplitOrMergeEnabled(MasterSwitchType.MERGE));
+    assertTrue(admin.isSplitEnabled());
+    assertTrue(admin.isMergeEnabled());
   }
 }

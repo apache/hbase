@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -101,7 +101,8 @@ public class TestMasterAbortWhileMergingTable {
         .getMiniHBaseCluster().getMaster().isInitialized());
     UTIL.waitFor(30000, () -> UTIL.getMiniHBaseCluster().getMaster()
       .getMasterProcedureExecutor().isFinished(procID));
-    Assert.assertTrue("Found region RIT, that's impossible!",
+    Assert.assertTrue("Found region RIT, that's impossible! " +
+      UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionsInTransition(),
       UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
         .getRegionsInTransition().size() == 0);
   }
