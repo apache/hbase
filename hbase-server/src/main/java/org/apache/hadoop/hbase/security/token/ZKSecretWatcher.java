@@ -91,6 +91,7 @@ public class ZKSecretWatcher extends ZKListener {
       try {
         Integer id = Integer.valueOf(keyId);
         secretManager.removeKey(id);
+        LOG.info("Node deleted id={}", id);
       } catch (NumberFormatException nfe) {
         LOG.error("Invalid znode name for key ID '"+keyId+"'", nfe);
       }

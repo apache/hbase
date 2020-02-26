@@ -90,7 +90,7 @@ public class TestThrift2ServerCmdLine extends TestThriftServerCmdLine {
         client.createTable(tTableDescriptor, new ArrayList<>());
         tableCreated = true;
       }
-      Assert.assertTrue(client.tableExists(tTableName));
+      Assert.assertTrue("tableCreated " + tableCreated, client.tableExists(tTableName));
     } finally {
       sock.close();
     }
