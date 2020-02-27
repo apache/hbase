@@ -19,8 +19,14 @@ package org.apache.hadoop.hbase.procedure2;
 
 import static org.junit.Assert.assertEquals;
 
+import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+
+import io.opentracing.Scope;
+import io.opentracing.mock.MockSpan;
+import io.opentracing.mock.MockTracer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
@@ -28,6 +34,8 @@ import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.NoopProcedure;
 import org.apache.hadoop.hbase.procedure2.store.NoopProcedureStore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.trace.TraceTree;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.Before;
@@ -190,4 +198,46 @@ public class TestProcedureExecutor {
   }
 
   private static class TestProcEnv { }
+
+  @Test
+  public void testTrace() throws Exception {
+    Configuration conf = htu.getConfiguration();
+    conf.set(TraceUtil.HBASE_OPENTRACING_TRACER, TraceUtil.HBASE_OPENTRACING_MOCKTRACER);
+
+    TraceUtil.initTracer(conf, "ProcedureExecutor");
+
+    Procedure[] procs;
+    MockSpan procedureParentSpan;
+    // create the root span and initialize Procedure objects
+    try (Scope scope = TraceUtil.createTrace("create procedure")){
+      procedureParentSpan = (MockSpan)scope.span();
+      procs = new Procedure[1];
+      for (int i = 0; i < procs.length; ++i) {
+        procs[i] = new NoopProcedure<TestProcEnv>();
+      }
+    }
+
+    // submit procedures
+    createNewExecutor(htu.getConfiguration(), 3);
+    procExecutor.submitProcedures(procs);
+
+    // wait for procs to be completed
+    for (int i = 0; i < procs.length; ++i) {
+      final long procId = procs[i].getProcId();
+      ProcedureTestingUtility.waitProcedure(procExecutor, procId);
+      ProcedureTestingUtility.assertProcNotFailed(procExecutor, procId);
+    }
+
+    // there are two spans: one root span, and the other is for executing the procedure
+    MockTracer tracer = (MockTracer)TraceUtil.getTracer();
+    List<MockSpan> spans = tracer.finishedSpans();
+    assertEquals(spans.size(), 2);
+
+    // make sure the child span is for the NoopProcedure
+    TraceTree traceTree = new TraceTree(spans);
+    List<MockSpan> roots = new LinkedList<>(traceTree.getSpansByParent()
+      .find(procedureParentSpan.context().spanId()));
+    assertEquals(roots.size(), 1);
+    assertEquals(roots.get(0).operationName(), procs[0].getProcName());
+  }
 }

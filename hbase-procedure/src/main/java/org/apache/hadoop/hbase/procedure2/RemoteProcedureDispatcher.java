@@ -29,11 +29,14 @@ import java.util.concurrent.DelayQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import io.opentracing.Scope;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.procedure2.util.DelayedUtil;
 import org.apache.hadoop.hbase.procedure2.util.DelayedUtil.DelayedContainerWithTimestamp;
 import org.apache.hadoop.hbase.procedure2.util.DelayedUtil.DelayedWithTimeout;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -313,7 +316,9 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
         if (task instanceof DelayedTask) {
           threadPool.execute(((DelayedTask) task).getObject());
         } else {
-          ((BufferNode) task).dispatch();
+          try (Scope scope = TraceUtil.createTrace("ProcedureDispatcherTimeoutThread")) {
+            ((BufferNode) task).dispatch();
+          }
         }
       }
     }

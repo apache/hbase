@@ -21,6 +21,10 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+
+import io.opentracing.Span;
+import io.opentracing.SpanContext;
+import io.opentracing.util.GlobalTracer;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.metrics.Counter;
 import org.apache.hadoop.hbase.metrics.Histogram;
@@ -142,6 +146,15 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
   private volatile boolean locked = false;
 
   private boolean lockedWhenLoading = false;
+
+  protected SpanContext spanContext = null;
+
+  public Procedure() {
+    Span activeSpan = GlobalTracer.get().activeSpan();
+    if (GlobalTracer.isRegistered() && activeSpan != null) {
+      this.spanContext = activeSpan.context();
+    }
+  }
 
   /**
    * Used for override complete of the procedure without actually doing any logic in the procedure.

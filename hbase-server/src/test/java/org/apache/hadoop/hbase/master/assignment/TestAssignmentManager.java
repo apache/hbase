@@ -18,11 +18,19 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+
+import io.opentracing.Scope;
+import io.opentracing.mock.MockSpan;
+import io.opentracing.mock.MockTracer;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -34,6 +42,8 @@ import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.trace.TraceTree;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -249,6 +259,48 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
     assertEquals(closeFailedCount, closeProcMetrics.getFailedCounter().getCount());
     assertEquals(openSubmittedCount + 1, openProcMetrics.getSubmittedCounter().getCount());
     assertEquals(openFailedCount, openProcMetrics.getFailedCounter().getCount());
+  }
+
+  @Test
+  public void testTrace() throws Exception {
+    TableName tableName = TableName.valueOf("trace");
+    RegionInfo hri = createRegionInfo(tableName, 1);
+    rsDispatcher.setMockRsExecutor(new GoodRsExecutor());
+
+    try (Scope scope = TraceUtil.createTrace("testTrace")) {
+      am.assign(hri);
+    }
+
+    MockTracer tracer = (MockTracer)TraceUtil.getTracer();
+    List<MockSpan> spans = tracer.finishedSpans();
+
+    MockSpan rootSpan = null;
+    TraceTree traceTree = new TraceTree(spans);
+    for (MockSpan span: spans) {
+      if (span.operationName().equals("testTrace")) {
+        rootSpan = span;
+      }
+    }
+    assertNotNull(rootSpan);
+    assertEquals(0, rootSpan.parentId()); // the span 'testTrace' is a root.
+
+    List<MockSpan> transitRegionStateProcedureSpan = new LinkedList<>(traceTree.getSpansByParent()
+      .find(rootSpan.context().spanId()));
+    assertEquals(transitRegionStateProcedureSpan.size(), 3);
+
+    MockSpan transitionOpenSpan = null;
+    for (MockSpan span: transitRegionStateProcedureSpan) {
+      if (span.operationName().contains(TransitRegionStateProcedure.class.getSimpleName()) &&
+        span.operationName().contains("REGION_STATE_TRANSITION_OPEN")) {
+        transitionOpenSpan = span;
+      }
+    }
+    assertNotNull(transitionOpenSpan);
+
+    List<MockSpan> openRegionProcedureSpans = new LinkedList<>(traceTree.getSpansByParent()
+      .find(transitionOpenSpan.context().spanId()));
+    assertEquals(2, openRegionProcedureSpans.size());
+    assertTrue(openRegionProcedureSpans.get(0).operationName().contains(OpenRegionProcedure.class.getName()));
   }
 
   @Test

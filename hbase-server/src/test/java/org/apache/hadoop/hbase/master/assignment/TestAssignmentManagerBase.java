@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.regionserver.RegionServerAbortedException;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.ipc.RemoteException;
@@ -153,6 +154,10 @@ public abstract class TestAssignmentManagerBase {
   @Before
   public void setUp() throws Exception {
     util = new HBaseTestingUtility();
+    Configuration conf = util.getConfiguration();
+    conf.set(TraceUtil.HBASE_OPENTRACING_TRACER, TraceUtil.HBASE_OPENTRACING_MOCKTRACER);
+    TraceUtil.initTracer(conf, "TestAssignmentManagerBase");
+
     this.executor = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder()
       .setUncaughtExceptionHandler((t, e) -> LOG.warn("Uncaught: ", e)).build());
     setupConfiguration(util.getConfiguration());

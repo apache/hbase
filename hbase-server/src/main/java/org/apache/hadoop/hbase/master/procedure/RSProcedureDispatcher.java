@@ -22,6 +22,10 @@ import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+
+import io.opentracing.Scope;
+import io.opentracing.Span;
+import io.opentracing.util.GlobalTracer;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ServerName;
@@ -33,6 +37,7 @@ import org.apache.hadoop.hbase.master.ServerListener;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher;
 import org.apache.hadoop.hbase.regionserver.RegionServerAbortedException;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.ipc.RemoteException;
@@ -212,11 +217,13 @@ public class RSProcedureDispatcher
     private long maxWaitTime = -1;
 
     private ExecuteProceduresRequest.Builder request = null;
+    private Span span;
 
     public ExecuteProceduresRemoteCall(final ServerName serverName,
         final Set<RemoteProcedure> remoteProcedures) {
       this.serverName = serverName;
       this.remoteProcedures = remoteProcedures;
+      this.span = GlobalTracer.get().activeSpan();
     }
 
     private AsyncRegionServerAdmin  getRsAdmin() throws IOException {
@@ -305,7 +312,7 @@ public class RSProcedureDispatcher
       }
       splitAndResolveOperation(getServerName(), remoteProcedures, this);
 
-      try {
+      try (Scope scope = TraceUtil.createTrace("ExecuteProceduresRemoteCall", this.span)) {
         sendRequest(getServerName(), request.build());
       } catch (IOException e) {
         e = unwrapException(e);
