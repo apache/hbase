@@ -43,15 +43,18 @@ public class RollingBatchSuspendResumeRsAction extends Action {
   private float ratio;
   private long sleepTime;
   private int maxSuspendedServers; // number of maximum suspended servers at any given time.
+  private boolean killMetaRs;
 
-  public RollingBatchSuspendResumeRsAction(long sleepTime, float ratio) {
-    this(sleepTime, ratio, 5);
+  public RollingBatchSuspendResumeRsAction(long sleepTime, float ratio, boolean killMetaRs) {
+    this(sleepTime, ratio, 5, killMetaRs);
   }
 
-  public RollingBatchSuspendResumeRsAction(long sleepTime, float ratio, int maxSuspendedServers) {
+  public RollingBatchSuspendResumeRsAction(long sleepTime, float ratio, int maxSuspendedServers,
+    boolean killMetaRs) {
     this.ratio = ratio;
     this.sleepTime = sleepTime;
     this.maxSuspendedServers = maxSuspendedServers;
+    this.killMetaRs = killMetaRs;
   }
 
   enum SuspendOrResume {
@@ -63,6 +66,11 @@ public class RollingBatchSuspendResumeRsAction extends Action {
     LOG.info(String.format("Performing action: Rolling batch restarting %d%% of region servers",
         (int) (ratio * 100)));
     List<ServerName> selectedServers = selectServers();
+
+    if(!killMetaRs){
+      ServerName metaServer = cluster.getServerHoldingMeta();
+      selectedServers.remove(metaServer);
+    }
 
     Queue<ServerName> serversToBeSuspended = new LinkedList<>(selectedServers);
     Queue<ServerName> suspendedServers = new LinkedList<>();

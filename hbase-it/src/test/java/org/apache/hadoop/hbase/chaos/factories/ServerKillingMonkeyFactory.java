@@ -41,6 +41,7 @@ public class ServerKillingMonkeyFactory extends MonkeyFactory {
   private long gracefulRollingRestartTSSLeepTime;
   private long rollingBatchSuspendRSSleepTime;
   private float rollingBatchSuspendtRSRatio;
+  private boolean killMetaRs;
 
   @Override
   public ChaosMonkey build() {
@@ -52,9 +53,9 @@ public class ServerKillingMonkeyFactory extends MonkeyFactory {
         new RestartActiveMasterAction(5000),
         new RollingBatchRestartRsExceptMetaAction(5000, 1.0f, 2), //only allow 2 servers to be dead
       new ForceBalancerAction(),
-      new GracefulRollingRestartRsAction(gracefulRollingRestartTSSLeepTime),
+      new GracefulRollingRestartRsAction(gracefulRollingRestartTSSLeepTime, killMetaRs),
       new RollingBatchSuspendResumeRsAction(rollingBatchSuspendRSSleepTime,
-          rollingBatchSuspendtRSRatio)
+          rollingBatchSuspendtRSRatio, killMetaRs)
     };
 
     // Action to log more info for debugging
@@ -79,5 +80,8 @@ public class ServerKillingMonkeyFactory extends MonkeyFactory {
     rollingBatchSuspendtRSRatio = Float.parseFloat(this.properties.getProperty(
         MonkeyConstants.ROLLING_BATCH_SUSPEND_RS_RATIO,
         MonkeyConstants.DEFAULT_ROLLING_BATCH_SUSPEND_RS_RATIO + ""));
+    killMetaRs = Boolean.parseBoolean(this.properties.getProperty(
+      MonkeyConstants.KILL_META_RS,
+      MonkeyConstants.DEFAULT_KILL_META_RS + ""));
   }
 }

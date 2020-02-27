@@ -35,14 +35,22 @@ import org.slf4j.LoggerFactory;
 public class GracefulRollingRestartRsAction extends RestartActionBaseAction {
   private static final Logger LOG = LoggerFactory.getLogger(GracefulRollingRestartRsAction.class);
 
-  public GracefulRollingRestartRsAction(long sleepTime) {
+  private boolean killMetaRs;
+
+  public GracefulRollingRestartRsAction(long sleepTime, boolean killMetaRs) {
     super(sleepTime);
+    this.killMetaRs = killMetaRs;
   }
 
   @Override
   public void perform() throws Exception {
     LOG.info("Performing action: Rolling restarting non-master region servers");
     List<ServerName> selectedServers = selectServers();
+
+    if(!killMetaRs){
+      ServerName metaServer = cluster.getServerHoldingMeta();
+      selectedServers.remove(metaServer);
+    }
 
     LOG.info("Disabling balancer to make unloading possible");
     setBalancer(false, true);

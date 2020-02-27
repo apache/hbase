@@ -49,6 +49,7 @@ public class StressAssignmentManagerMonkeyFactory extends MonkeyFactory {
   private long gracefulRollingRestartTSSLeepTime;
   private long rollingBatchSuspendRSSleepTime;
   private float rollingBatchSuspendtRSRatio;
+  private boolean killMetaRs;
 
   @Override
   public ChaosMonkey build() {
@@ -81,9 +82,9 @@ public class StressAssignmentManagerMonkeyFactory extends MonkeyFactory {
         new SplitAllRegionOfTableAction(tableName),
         new DecreaseMaxHFileSizeAction(MonkeyConstants.DEFAULT_DECREASE_HFILE_SIZE_SLEEP_TIME,
             tableName),
-      new GracefulRollingRestartRsAction(gracefulRollingRestartTSSLeepTime),
+      new GracefulRollingRestartRsAction(gracefulRollingRestartTSSLeepTime, killMetaRs),
       new RollingBatchSuspendResumeRsAction(rollingBatchSuspendRSSleepTime,
-          rollingBatchSuspendtRSRatio)
+          rollingBatchSuspendtRSRatio, killMetaRs)
     };
 
     // Action to log more info for debugging
@@ -110,5 +111,8 @@ public class StressAssignmentManagerMonkeyFactory extends MonkeyFactory {
     rollingBatchSuspendtRSRatio = Float.parseFloat(this.properties.getProperty(
         MonkeyConstants.ROLLING_BATCH_SUSPEND_RS_RATIO,
         MonkeyConstants.DEFAULT_ROLLING_BATCH_SUSPEND_RS_RATIO + ""));
+    killMetaRs = Boolean.parseBoolean(this.properties.getProperty(
+      MonkeyConstants.KILL_META_RS,
+      MonkeyConstants.DEFAULT_KILL_META_RS + ""));
   }
 }
