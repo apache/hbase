@@ -23,6 +23,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.NavigableMap;
 import org.apache.hadoop.hbase.client.ClusterConnection;
@@ -30,7 +31,10 @@ import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -40,7 +44,9 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.internal.matchers.Any;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
@@ -86,6 +92,19 @@ public class TestMetaTableAccessorNoCluster {
   @After
   public void after() throws IOException {
     UTIL.shutdownMiniZKCluster();
+  }
+
+  /**
+   * Expect a IOE to come out of multiMutate, even if down in the depths we throw
+   * a RuntimeException. See HBASE-23904
+   */
+  @Test (expected = IOException.class)
+  public void testMultiMutate() throws Throwable {
+    Table table = Mockito.mock(Table.class);
+    Mockito.when(table.coprocessorService(Mockito.any(),
+      Mockito.any(byte [].class), Mockito.any(byte [].class), Mockito.any(Batch.Call.class))).
+      thenThrow(new RuntimeException("FAIL TEST WITH RuntimeException!"));
+    MetaTableAccessor.multiMutate(table, HConstants.LAST_ROW, Collections.emptyList());
   }
 
   @Test
