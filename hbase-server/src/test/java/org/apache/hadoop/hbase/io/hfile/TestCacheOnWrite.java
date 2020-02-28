@@ -30,7 +30,9 @@ import java.util.Collection;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -96,6 +98,23 @@ public class TestCacheOnWrite {
   private static final int BLOOM_BLOCK_SIZE = 4096;
   private static final BloomType BLOOM_TYPE = BloomType.ROWCOL;
   private static final int CKBYTES = 512;
+
+
+  private static final Set<BlockType> INDEX_BLOCK_TYPES = ImmutableSet.of(
+    BlockType.INDEX_V1,
+    BlockType.INTERMEDIATE_INDEX,
+    BlockType.ROOT_INDEX,
+    BlockType.LEAF_INDEX
+  );
+  private static final Set<BlockType> BLOOM_BLOCK_TYPES = ImmutableSet.of(
+    BlockType.BLOOM_CHUNK,
+    BlockType.GENERAL_BLOOM_META,
+    BlockType.DELETE_FAMILY_BLOOM_META
+  );
+  private static final Set<BlockType> DATA_BLOCK_TYPES = ImmutableSet.of(
+    BlockType.ENCODED_DATA,
+    BlockType.DATA
+  );
 
   /** The number of valid key types possible in a store file */
   private static final int NUM_VALID_KEY_TYPES =
@@ -442,20 +461,34 @@ public class TestCacheOnWrite {
       LOG.debug("compactStores() returned");
 
       boolean dataBlockCached = false;
+      boolean bloomBlockCached = false;
+      boolean indexBlockCached = false;
+
       for (CachedBlock block : blockCache) {
-        if (BlockType.ENCODED_DATA.equals(block.getBlockType())
-          || BlockType.DATA.equals(block.getBlockType())) {
+        if (DATA_BLOCK_TYPES.contains(block.getBlockType())) {
           dataBlockCached = true;
-          break;
+        } else if (BLOOM_BLOCK_TYPES.contains(block.getBlockType())) {
+          bloomBlockCached = true;
+        } else if (INDEX_BLOCK_TYPES.contains(block.getBlockType())) {
+          indexBlockCached = true;
         }
       }
       // Data blocks should be cached in instances where we are caching blocks on write. In the case
       // of testing
       // BucketCache, we cannot verify block type as it is not stored in the cache.
-      assertTrue(
-        "\nTest description: " + testDescription + "\ncacheBlocksOnCompaction: "
-          + cacheBlocksOnCompaction + "\n",
-        (cacheBlocksOnCompaction && !(blockCache instanceof BucketCache)) == dataBlockCached);
+      boolean cacheOnCompactAndNonBucketCache = cacheBlocksOnCompaction
+        && !(blockCache instanceof BucketCache);
+
+      String assertErrorMessage = "\nTest description: " + testDescription +
+        "\ncacheBlocksOnCompaction: "
+        + cacheBlocksOnCompaction + "\n";
+
+      assertEquals(assertErrorMessage, cacheOnCompactAndNonBucketCache, dataBlockCached);
+
+      if (cacheOnCompactAndNonBucketCache) {
+        assertTrue(assertErrorMessage, bloomBlockCached);
+        assertTrue(assertErrorMessage, indexBlockCached);
+      }
 
       ((HRegion)region).close();
     } finally {

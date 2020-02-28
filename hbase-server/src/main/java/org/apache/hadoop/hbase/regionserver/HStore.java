@@ -145,6 +145,8 @@ public class HStore implements Store {
   private AtomicLong storeSize = new AtomicLong();
   private AtomicLong totalUncompressedBytes = new AtomicLong();
 
+  private boolean cacheOnWriteLogged;
+
   /**
    * RWLock for store operations.
    * Locked in shared mode when the list of component stores is looked at:
@@ -371,6 +373,7 @@ public class HStore implements Store {
       ", storagePolicy=" + policyName + ", verifyBulkLoads=" + verifyBulkLoads +
       ", encoding=" + family.getDataBlockEncoding() +
       ", compression=" + family.getCompressionType());
+    cacheOnWriteLogged = false;
   }
 
   /**
@@ -1113,9 +1116,34 @@ public class HStore implements Store {
     if (isCompaction) {
       // Don't cache data on write on compactions, unless specifically configured to do so
       writerCacheConf = new CacheConfig(cacheConf);
-      writerCacheConf.setCacheDataOnWrite(cacheConf.shouldCacheCompactedBlocksOnWrite());
+      final boolean cacheCompactedBlocksOnWrite =
+        cacheConf.shouldCacheCompactedBlocksOnWrite();
+      // if data blocks are to be cached on write
+      // during compaction, we should forcefully
+      // cache index and bloom blocks as well
+      if (cacheCompactedBlocksOnWrite) {
+        writerCacheConf.enableCacheOnWrite();
+        if (!cacheOnWriteLogged) {
+          LOG.info("For Store " + getColumnFamilyName() +
+            " , cacheCompactedBlocksOnWrite is true, hence enabled " +
+            "cacheOnWrite for Data blocks, Index blocks and Bloom filter blocks");
+          cacheOnWriteLogged = true;
+        }
+      } else {
+        writerCacheConf.setCacheDataOnWrite(false);
+      }
     } else {
       writerCacheConf = cacheConf;
+      final boolean shouldCacheDataOnWrite = cacheConf.shouldCacheDataOnWrite();
+      if (shouldCacheDataOnWrite) {
+        writerCacheConf.enableCacheOnWrite();
+        if (!cacheOnWriteLogged) {
+          LOG.info("For Store " + getColumnFamilyName() +
+            " , cacheDataOnWrite is true, hence enabled cacheOnWrite for " +
+            "Index blocks and Bloom filter blocks");
+          cacheOnWriteLogged = true;
+        }
+      }
     }
     InetSocketAddress[] favoredNodes = null;
     if (region.getRegionServerServices() != null) {
