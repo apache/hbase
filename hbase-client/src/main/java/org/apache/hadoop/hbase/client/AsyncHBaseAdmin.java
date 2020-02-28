@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import com.google.protobuf.RpcChannel;
+
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -836,6 +837,17 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<Boolean> isSnapshotCleanupEnabled() {
     return wrap(rawAdmin.isSnapshotCleanupEnabled());
+  }
+
+  @Override
+  public CompletableFuture<List<SlowLogRecord>> getSlowLogResponses(
+      final Set<ServerName> serverNames, final SlowLogQueryFilter slowLogQueryFilter) {
+    return wrap(rawAdmin.getSlowLogResponses(serverNames, slowLogQueryFilter));
+  }
+
+  @Override
+  public CompletableFuture<List<Boolean>> clearSlowLogResponses(Set<ServerName> serverNames) {
+    return wrap(rawAdmin.clearSlowLogResponses(serverNames));
   }
 
 }
