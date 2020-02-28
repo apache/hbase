@@ -109,7 +109,7 @@ public class SecureTestCluster {
       }
       TEST_UTIL.shutdownMiniCluster();
     } finally {
-      SecureTestCluster.testRunnerClass = SecureTestCluster.class;
+      setTestRunner(SecureTestCluster.class);
     }
   }
 }
