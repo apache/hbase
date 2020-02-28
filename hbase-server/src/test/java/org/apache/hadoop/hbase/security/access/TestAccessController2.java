@@ -28,14 +28,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
@@ -43,6 +42,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
@@ -186,12 +186,14 @@ public class TestAccessController2 extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTableDescriptor desc = new HTableDescriptor(testTable.getTableName());
-        desc.addFamily(new HColumnDescriptor(TEST_FAMILY));
+        TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+          new TableDescriptorBuilder.ModifyableTableDescriptor(testTable.getTableName());
+        tableDescriptor.setColumnFamily(
+          new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY));
         try (Connection connection =
             ConnectionFactory.createConnection(TEST_UTIL.getConfiguration(), testUser)) {
           try (Admin admin = connection.getAdmin()) {
-            createTable(TEST_UTIL, admin, desc);
+            createTable(TEST_UTIL, admin, tableDescriptor);
           }
         }
         return null;
@@ -219,12 +221,14 @@ public class TestAccessController2 extends SecureTestUtil {
       AccessTestAction createAction = new AccessTestAction() {
         @Override
         public Object run() throws Exception {
-          HTableDescriptor desc = new HTableDescriptor(testTable.getTableName());
-          desc.addFamily(new HColumnDescriptor(TEST_FAMILY));
+          TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+            new TableDescriptorBuilder.ModifyableTableDescriptor(testTable.getTableName());
+          tableDescriptor.setColumnFamily(
+            new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY));
           try (Connection connection =
               ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
             try (Admin admin = connection.getAdmin()) {
-              admin.createTable(desc);
+              admin.createTable(tableDescriptor);
             }
           }
           return null;
@@ -507,9 +511,11 @@ public class TestAccessController2 extends SecureTestUtil {
 
     final TableName table = TableName.valueOf(ns, "testACLZNodeDeletionTable");
     final byte[] family = Bytes.toBytes("f1");
-    HTableDescriptor htd = new HTableDescriptor(table);
-    htd.addFamily(new HColumnDescriptor(family));
-    createTable(TEST_UTIL, htd);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(table);
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
+    createTable(TEST_UTIL, tableDescriptor);
 
     // Namespace needs this, as they follow the lazy creation of ACL znode.
     grantOnNamespace(TEST_UTIL, TESTGROUP1_USER1.getShortName(), ns, Action.ADMIN);

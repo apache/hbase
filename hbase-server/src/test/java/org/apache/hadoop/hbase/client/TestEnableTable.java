@@ -25,9 +25,7 @@ import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -86,10 +84,13 @@ public class TestEnableTable {
   throws IOException, InterruptedException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final Admin admin = TEST_UTIL.getAdmin();
-    final HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(new HColumnDescriptor(FAMILYNAME));
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    ColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILYNAME);
+    tableDescriptor.setColumnFamily(familyDescriptor);
     try {
-      createTable(TEST_UTIL, desc, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+      createTable(TEST_UTIL, tableDescriptor, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
     } catch (Exception e) {
       e.printStackTrace();
       fail("Got an exception while creating " + tableName);
@@ -163,8 +164,8 @@ public class TestEnableTable {
   }
 
   public static void createTable(HBaseTestingUtility testUtil,
-    HTableDescriptor htd, byte [][] splitKeys)
-  throws Exception {
+      TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor, byte [][] splitKeys)
+      throws Exception {
     // NOTE: We need a latch because admin is not sync,
     // so the postOp coprocessor method may be called after the admin operation returned.
     MasterSyncObserver observer = testUtil.getHBaseCluster().getMaster()
@@ -172,13 +173,13 @@ public class TestEnableTable {
     observer.tableCreationLatch = new CountDownLatch(1);
     Admin admin = testUtil.getAdmin();
     if (splitKeys != null) {
-      admin.createTable(htd, splitKeys);
+      admin.createTable(tableDescriptor, splitKeys);
     } else {
-      admin.createTable(htd);
+      admin.createTable(tableDescriptor);
     }
     observer.tableCreationLatch.await();
     observer.tableCreationLatch = null;
-    testUtil.waitUntilAllRegionsAssigned(htd.getTableName());
+    testUtil.waitUntilAllRegionsAssigned(tableDescriptor.getTableName());
   }
 
   public static void deleteTable(HBaseTestingUtility testUtil, TableName tableName)

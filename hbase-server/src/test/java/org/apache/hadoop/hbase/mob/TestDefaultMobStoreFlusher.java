@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,14 +22,14 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
@@ -73,31 +73,38 @@ public class TestDefaultMobStoreFlusher {
  @Test
  public void testFlushNonMobFile() throws Exception {
    final TableName tableName = TableName.valueOf(name.getMethodName());
-   HTableDescriptor desc = new HTableDescriptor(tableName);
-   HColumnDescriptor hcd = new HColumnDescriptor(family);
-   hcd.setMaxVersions(4);
-   desc.addFamily(hcd);
+   TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+     new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
 
-   testFlushFile(desc);
+   ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+     new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family);
+   familyDescriptor.setMaxVersions(4);
+   tableDescriptor.setColumnFamily(familyDescriptor);
+
+   testFlushFile(tableDescriptor);
  }
 
  @Test
  public void testFlushMobFile() throws Exception {
    final TableName tableName = TableName.valueOf(name.getMethodName());
-   HTableDescriptor desc = new HTableDescriptor(tableName);
-   HColumnDescriptor hcd = new HColumnDescriptor(family);
+   TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+     new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+
+   ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor hcd =
+     new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family);
    hcd.setMobEnabled(true);
    hcd.setMobThreshold(3L);
    hcd.setMaxVersions(4);
-   desc.addFamily(hcd);
+   tableDescriptor.setColumnFamily(hcd);
 
-   testFlushFile(desc);
+   testFlushFile(tableDescriptor);
  }
 
- private void testFlushFile(HTableDescriptor htd) throws Exception {
+ private void testFlushFile(TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor)
+      throws Exception {
     Table table = null;
     try {
-      table = TEST_UTIL.createTable(htd, null);
+      table = TEST_UTIL.createTable(tableDescriptor, null);
 
       //put data
       Put put0 = new Put(row1);
@@ -110,7 +117,7 @@ public class TestDefaultMobStoreFlusher {
       table.put(put1);
 
       //flush
-      TEST_UTIL.flush(htd.getTableName());
+      TEST_UTIL.flush(tableDescriptor.getTableName());
 
       //Scan
       Scan scan = new Scan();

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,12 +24,12 @@ import java.util.Collection;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
@@ -82,11 +82,13 @@ public class TestIncrementalBackup extends TestBackupBase {
     final byte[] fam3Name = Bytes.toBytes("f3");
     final byte[] mobName = Bytes.toBytes("mob");
 
-    table1Desc.addFamily(new HColumnDescriptor(fam3Name));
-    HColumnDescriptor mobHcd = new HColumnDescriptor(mobName);
+    table1Desc.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam3Name));
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor mobHcd =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(mobName);
     mobHcd.setMobEnabled(true);
     mobHcd.setMobThreshold(5L);
-    table1Desc.addFamily(mobHcd);
+    table1Desc.setColumnFamily(mobHcd);
     HBaseTestingUtility.modifyTableSync(TEST_UTIL.getAdmin(), table1Desc);
 
     try (Connection conn = ConnectionFactory.createConnection(conf1)) {
@@ -154,10 +156,11 @@ public class TestIncrementalBackup extends TestBackupBase {
 
       // add column family f2 to table1
       final byte[] fam2Name = Bytes.toBytes("f2");
-      table1Desc.addFamily(new HColumnDescriptor(fam2Name));
+      table1Desc.setColumnFamily(
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam2Name));
 
       // drop column family f3
-      table1Desc.removeFamily(fam3Name);
+      table1Desc.removeColumnFamily(fam3Name);
       HBaseTestingUtility.modifyTableSync(TEST_UTIL.getAdmin(), table1Desc);
 
       int NB_ROWS_FAM2 = 7;

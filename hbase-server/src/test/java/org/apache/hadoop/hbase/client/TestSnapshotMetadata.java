@@ -28,7 +28,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -156,26 +155,32 @@ public class TestSnapshotMetadata {
     originalTableName = TableName.valueOf(sourceTableNameAsString);
 
     // enable replication on a column family
-    HColumnDescriptor maxVersionsColumn = new HColumnDescriptor(MAX_VERSIONS_FAM);
-    HColumnDescriptor bloomFilterColumn = new HColumnDescriptor(BLOOMFILTER_FAM);
-    HColumnDescriptor dataBlockColumn = new HColumnDescriptor(COMPRESSED_FAM);
-    HColumnDescriptor blockSizeColumn = new HColumnDescriptor(BLOCKSIZE_FAM);
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor maxVersionsColumn =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(MAX_VERSIONS_FAM);
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor bloomFilterColumn =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(BLOOMFILTER_FAM);
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor dataBlockColumn =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(COMPRESSED_FAM);
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor blockSizeColumn =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(BLOCKSIZE_FAM);
 
     maxVersionsColumn.setMaxVersions(MAX_VERSIONS);
     bloomFilterColumn.setBloomFilterType(BLOOM_TYPE);
     dataBlockColumn.setDataBlockEncoding(DATA_BLOCK_ENCODING_TYPE);
     blockSizeColumn.setBlocksize(BLOCK_SIZE);
 
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(sourceTableNameAsString));
-    htd.addFamily(maxVersionsColumn);
-    htd.addFamily(bloomFilterColumn);
-    htd.addFamily(dataBlockColumn);
-    htd.addFamily(blockSizeColumn);
-    htd.setValue(TEST_CUSTOM_VALUE, TEST_CUSTOM_VALUE);
-    htd.setConfiguration(TEST_CONF_CUSTOM_VALUE, TEST_CONF_CUSTOM_VALUE);
-    assertTrue(htd.getConfiguration().size() > 0);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(
+        TableName.valueOf(sourceTableNameAsString));
+    tableDescriptor.setColumnFamily(maxVersionsColumn);
+    tableDescriptor.setColumnFamily(bloomFilterColumn);
+    tableDescriptor.setColumnFamily(dataBlockColumn);
+    tableDescriptor.setColumnFamily(blockSizeColumn);
+    tableDescriptor.setValue(TEST_CUSTOM_VALUE, TEST_CUSTOM_VALUE);
+    tableDescriptor.setValue(TEST_CONF_CUSTOM_VALUE, TEST_CONF_CUSTOM_VALUE);
+    assertTrue(tableDescriptor.getConfiguration().size() > 0);
 
-    admin.createTable(htd);
+    admin.createTable(tableDescriptor);
     Table original = UTIL.getConnection().getTable(originalTableName);
     originalTableName = TableName.valueOf(sourceTableNameAsString);
     originalTableDescriptor = new HTableDescriptor(admin.getDescriptor(originalTableName));
@@ -299,8 +304,9 @@ public class TestSnapshotMetadata {
       final byte[] newFamilyName = Bytes.toBytes(newFamilyNameAsString);
 
       admin.disableTable(originalTableName);
-      HColumnDescriptor hcd = new HColumnDescriptor(newFamilyName);
-      admin.addColumnFamily(originalTableName, hcd);
+      ColumnFamilyDescriptor familyDescriptor =
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(newFamilyName);
+      admin.addColumnFamily(originalTableName, familyDescriptor);
       assertTrue("New column family was not added.",
         admin.getDescriptor(originalTableName).toString().contains(newFamilyNameAsString));
     }

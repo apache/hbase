@@ -30,10 +30,12 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
 import org.apache.hadoop.hbase.mob.FaultyMobStoreCompactor;
 import org.apache.hadoop.hbase.mob.MobConstants;
@@ -96,8 +98,8 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
       .toBytes("01234567890123456789012345678901234567890123456789012345678901234567890123456789");
 
   private static Configuration conf;
-  private static HTableDescriptor hdt;
-  private static HColumnDescriptor hcd;
+  private static TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor;
+  private static ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor;
   private static Admin admin;
   private static Table table = null;
   private static MobFileCleanerChore chore;
@@ -124,13 +126,13 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
 
   private void createTestTable() throws IOException {
     // Create test table
-    hdt = util.createTableDescriptor(TableName.valueOf("testMobCompactTable"));
-    hcd = new HColumnDescriptor(fam);
-    hcd.setMobEnabled(true);
-    hcd.setMobThreshold(mobLen);
-    hcd.setMaxVersions(1);
-    hdt.addFamily(hcd);
-    table = util.createTable(hdt, null);
+    tableDescriptor = util.createModifyableTableDescriptor("testMobCompactTable");
+    familyDescriptor = new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam);
+    familyDescriptor.setMobEnabled(true);
+    familyDescriptor.setMobThreshold(mobLen);
+    familyDescriptor.setMaxVersions(1);
+    tableDescriptor.setColumnFamily(familyDescriptor);
+    table = util.createTable(tableDescriptor, null);
   }
 
   @After
@@ -247,7 +249,7 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
     public void run() {
       while (run) {
         try {
-          admin.majorCompact(hdt.getTableName(), fam);
+          admin.majorCompact(tableDescriptor.getTableName(), fam);
           Thread.sleep(120000);
         } catch (Exception e) {
           LOG.error("MOB Stress Test FAILED", e);
@@ -355,8 +357,8 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
 
     } finally {
 
-      admin.disableTable(hdt.getTableName());
-      admin.deleteTable(hdt.getTableName());
+      admin.disableTable(tableDescriptor.getTableName());
+      admin.deleteTable(tableDescriptor.getTableName());
     }
     LOG.info("MOB Stress Test finished OK");
     printStats(rowsToLoad);

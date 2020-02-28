@@ -35,6 +35,8 @@ import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -660,6 +662,19 @@ public class TableDescriptorBuilder {
     public Map<Bytes, Bytes> getValues() {
       // shallow pointer copy
       return Collections.unmodifiableMap(values);
+    }
+
+    /**
+     * Getter for fetching an unmodifiable map.
+     */
+    public Map<String, String> getConfiguration() {
+      return getValues().entrySet().stream()
+        .collect(Collectors.toMap(
+          e -> Bytes.toString(e.getKey().get(), e.getKey().getOffset(),
+            e.getKey().getLength()),
+          e -> Bytes.toString(e.getValue().get(), e.getValue().getOffset(),
+            e.getValue().getLength())
+        ));
     }
 
     /**

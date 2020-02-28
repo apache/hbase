@@ -27,10 +27,13 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.FlakeyTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -75,7 +78,7 @@ public class TestRegionRebalancing {
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionRebalancing.class);
   private final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private RegionLocator regionLocator;
-  private HTableDescriptor desc;
+  private TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor;
   private String balancerName;
 
   public TestRegionRebalancing(String balancerName) {
@@ -93,8 +96,11 @@ public class TestRegionRebalancing {
     UTIL.getConfiguration().set("hbase.master.loadbalancer.class", this.balancerName);
     // set minCostNeedBalance to 0, make sure balancer run
     UTIL.startMiniCluster(1);
-    this.desc = new HTableDescriptor(TableName.valueOf("test"));
-    this.desc.addFamily(new HColumnDescriptor(FAMILY_NAME));
+
+    this.tableDescriptor = new TableDescriptorBuilder.ModifyableTableDescriptor(
+      TableName.valueOf("test"));
+    this.tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY_NAME));
   }
 
   /**
@@ -108,9 +114,9 @@ public class TestRegionRebalancing {
   throws IOException, InterruptedException {
     try(Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
         Admin admin = connection.getAdmin()) {
-      admin.createTable(this.desc, Arrays.copyOfRange(HBaseTestingUtility.KEYS,
+      admin.createTable(this.tableDescriptor, Arrays.copyOfRange(HBaseTestingUtility.KEYS,
           1, HBaseTestingUtility.KEYS.length));
-      this.regionLocator = connection.getRegionLocator(this.desc.getTableName());
+      this.regionLocator = connection.getRegionLocator(this.tableDescriptor.getTableName());
 
       MetaTableAccessor.fullScanMetaAndPrint(admin.getConnection());
 
