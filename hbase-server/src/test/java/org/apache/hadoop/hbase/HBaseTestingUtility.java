@@ -1752,25 +1752,25 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       int numVersions, int blockSize, String cpName) throws IOException {
     TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
       new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-      for (byte[] family : families) {
-        ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-          new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family)
-            .setMaxVersions(numVersions)
-            .setBlocksize(blockSize);
-        if (isNewVersionBehaviorEnabled()) {
-          familyDescriptor.setNewVersionBehavior(true);
-        }
-        tableDescriptor.setColumnFamily(familyDescriptor);
+    for (byte[] family : families) {
+      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family)
+          .setMaxVersions(numVersions)
+          .setBlocksize(blockSize);
+      if (isNewVersionBehaviorEnabled()) {
+        familyDescriptor.setNewVersionBehavior(true);
       }
-      if(cpName != null) {
-        tableDescriptor.setCoprocessor(cpName);
-      }
-      getAdmin().createTable(tableDescriptor);
-      // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are
-      // assigned
-      waitUntilAllRegionsAssigned(tableName);
-      return getConnection().getTable(tableName);
+      tableDescriptor.setColumnFamily(familyDescriptor);
     }
+    if (cpName != null) {
+      tableDescriptor.setCoprocessor(cpName);
+    }
+    getAdmin().createTable(tableDescriptor);
+    // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are
+    // assigned
+    waitUntilAllRegionsAssigned(tableName);
+    return getConnection().getTable(tableName);
+  }
 
   /**
    * Create a table.

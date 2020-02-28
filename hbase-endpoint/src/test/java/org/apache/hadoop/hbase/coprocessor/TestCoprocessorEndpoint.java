@@ -103,8 +103,6 @@ public class TestCoprocessorEndpoint {
       new TableDescriptorBuilder.ModifyableTableDescriptor(TEST_TABLE);
     tableDescriptor.setColumnFamily(
       new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY));
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY));
     admin.createTable(tableDescriptor, new byte[][]{ROWS[rowSeperator1], ROWS[rowSeperator2]});
     util.waitUntilAllRegionsAssigned(TEST_TABLE);
 

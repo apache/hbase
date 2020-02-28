@@ -91,8 +91,8 @@ public class TestFilterFromRegionSide {
       tableDescriptor.setColumnFamily(familyDescriptor);
     }
     HRegionInfo info = new HRegionInfo(tableDescriptor.getTableName(), null, null, false);
-    REGION = HBaseTestingUtility
-        .createRegionAndWAL(info, TEST_UTIL.getDataTestDir(), TEST_UTIL.getConfiguration(), tableDescriptor);
+    REGION = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
+      TEST_UTIL.getConfiguration(), tableDescriptor);
     for(Put put:createPuts(ROWS, FAMILIES, QUALIFIERS, VALUE)){
       REGION.put(put);
     }

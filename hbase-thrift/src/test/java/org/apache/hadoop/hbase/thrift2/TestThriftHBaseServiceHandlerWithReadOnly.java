@@ -82,7 +82,7 @@ public class TestThriftHBaseServiceHandlerWithReadOnly {
         .setMaxVersions(3),
       new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(familyBname)
         .setMaxVersions(2)
-  };
+    };
 
   @BeforeClass
   public static void beforeClass() throws Exception {

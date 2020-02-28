@@ -639,7 +639,8 @@ public class TestPerColumnFamilyFlush {
     TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
       new TableDescriptorBuilder.ModifyableTableDescriptor(TABLENAME);
     tableDescriptor.setMaxFileSize(10L * 1024 * 1024 * 1024);
-    tableDescriptor.setValue(HTableDescriptor.SPLIT_POLICY, ConstantSizeRegionSplitPolicy.class.getName());
+    tableDescriptor.setValue(HTableDescriptor.SPLIT_POLICY,
+      ConstantSizeRegionSplitPolicy.class.getName());
     tableDescriptor.setColumnFamily(
       new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY1));
     tableDescriptor.setColumnFamily(

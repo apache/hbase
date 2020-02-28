@@ -153,7 +153,7 @@ public class TestThriftHBaseServiceHandler {
         .setMaxVersions(3),
       new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(familyBname)
         .setMaxVersions(2)
-  };
+    };
 
 
   private static final MetricsAssertHelper metricsHelper =

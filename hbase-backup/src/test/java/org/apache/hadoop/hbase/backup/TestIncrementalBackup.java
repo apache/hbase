@@ -107,7 +107,6 @@ public class TestIncrementalBackup extends TestBackupBase {
       Assert.assertEquals(HBaseTestingUtility.countRows(t1),
               NB_ROWS_IN_BATCH + ADD_ROWS + NB_ROWS_FAM3);
       LOG.debug("written " + ADD_ROWS + " rows to " + table1);
-
       // additionally, insert rows to MOB cf
       int NB_ROWS_MOB = 111;
       insertIntoTable(conn, table1, mobName, 3, NB_ROWS_MOB);
@@ -115,7 +114,6 @@ public class TestIncrementalBackup extends TestBackupBase {
       t1.close();
       Assert.assertEquals(HBaseTestingUtility.countRows(t1),
               NB_ROWS_IN_BATCH + ADD_ROWS + NB_ROWS_MOB);
-
       Table t2 = conn.getTable(table2);
       Put p2;
       for (int i = 0; i < 5; i++) {
@@ -126,13 +124,11 @@ public class TestIncrementalBackup extends TestBackupBase {
       Assert.assertEquals(NB_ROWS_IN_BATCH + 5, HBaseTestingUtility.countRows(t2));
       t2.close();
       LOG.debug("written " + 5 + " rows to " + table2);
-
       // split table1
       MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
       List<HRegion> regions = cluster.getRegions(table1);
       byte[] name = regions.get(0).getRegionInfo().getRegionName();
       long startSplitTime = EnvironmentEdgeManager.currentTime();
-
       try {
         admin.splitRegionAsync(name).get();
       } catch (Exception e) {
@@ -143,7 +139,6 @@ public class TestIncrementalBackup extends TestBackupBase {
       while (!admin.isTableAvailable(table1)) {
         Thread.sleep(100);
       }
-
       long endSplitTime = EnvironmentEdgeManager.currentTime();
       // split finished
       LOG.debug("split finished in =" + (endSplitTime - startSplitTime));

@@ -90,8 +90,8 @@ public class MobStressToolRunner {
     this.count = numRows;
     initConf();
     printConf();
-    tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf("testMobCompactTable"));
+    tableDescriptor = new TableDescriptorBuilder.ModifyableTableDescriptor(
+      TableName.valueOf("testMobCompactTable"));
     Connection conn = ConnectionFactory.createConnection(this.conf);
     this.admin = conn.getAdmin();
     this.familyDescriptor = new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam);

@@ -395,7 +395,8 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-          new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(name.getMethodName()));
+          new TableDescriptorBuilder.ModifyableTableDescriptor(
+            TableName.valueOf(name.getMethodName()));
         tableDescriptor.setColumnFamily(
           new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY));
         ACCESS_CONTROLLER.preCreateTable(ObserverContextImpl.createAndPrepare(CP_ENV),

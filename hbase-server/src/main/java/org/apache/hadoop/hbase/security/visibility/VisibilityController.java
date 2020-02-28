@@ -216,8 +216,9 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
       ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
         new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(LABELS_TABLE_FAMILY);
       familyDescriptor.setBloomFilterType(BloomType.NONE);
-      familyDescriptor.setBlockCacheEnabled(false); // We will cache all the labels. No need of normal
-                                                 // table block cache.
+      familyDescriptor.setBlockCacheEnabled(false);
+      // We will cache all the labels. No need of normal
+      // table block cache.
       tableDescriptor.setColumnFamily(familyDescriptor);
       // Let the "labels" table having only one region always. We are not expecting too many labels in
       // the system.

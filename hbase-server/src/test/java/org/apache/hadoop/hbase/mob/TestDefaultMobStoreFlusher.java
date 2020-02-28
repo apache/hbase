@@ -70,37 +70,37 @@ public class TestDefaultMobStoreFlusher {
    TEST_UTIL.shutdownMiniCluster();
  }
 
- @Test
- public void testFlushNonMobFile() throws Exception {
-   final TableName tableName = TableName.valueOf(name.getMethodName());
-   TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-     new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+  @Test
+  public void testFlushNonMobFile() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
 
-   ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-     new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family);
-   familyDescriptor.setMaxVersions(4);
-   tableDescriptor.setColumnFamily(familyDescriptor);
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family);
+    familyDescriptor.setMaxVersions(4);
+    tableDescriptor.setColumnFamily(familyDescriptor);
 
-   testFlushFile(tableDescriptor);
- }
+    testFlushFile(tableDescriptor);
+  }
 
- @Test
- public void testFlushMobFile() throws Exception {
-   final TableName tableName = TableName.valueOf(name.getMethodName());
-   TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-     new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+  @Test
+  public void testFlushMobFile() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
 
-   ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor hcd =
-     new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family);
-   hcd.setMobEnabled(true);
-   hcd.setMobThreshold(3L);
-   hcd.setMaxVersions(4);
-   tableDescriptor.setColumnFamily(hcd);
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor hcd =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family);
+    hcd.setMobEnabled(true);
+    hcd.setMobThreshold(3L);
+    hcd.setMaxVersions(4);
+    tableDescriptor.setColumnFamily(hcd);
 
-   testFlushFile(tableDescriptor);
- }
+    testFlushFile(tableDescriptor);
+  }
 
- private void testFlushFile(TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor)
+  private void testFlushFile(TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor)
       throws Exception {
     Table table = null;
     try {
@@ -127,7 +127,7 @@ public class TestDefaultMobStoreFlusher {
 
       //Compare
       int size = 0;
-      for (Result result: scanner) {
+      for (Result result : scanner) {
         size++;
         List<Cell> cells = result.getColumnCells(family, qf1);
         // Verify the cell size

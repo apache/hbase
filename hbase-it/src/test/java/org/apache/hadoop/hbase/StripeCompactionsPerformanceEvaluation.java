@@ -277,7 +277,8 @@ public class StripeCompactionsPerformanceEvaluation extends AbstractHBaseTool {
     String noSplitsPolicy = DisabledRegionSplitPolicy.class.getName();
     tableDescriptor.setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY, noSplitsPolicy);
     if (isStripe) {
-      tableDescriptor.setValue(StoreEngine.STORE_ENGINE_CLASS_KEY, StripeStoreEngine.class.getName());
+      tableDescriptor.setValue(StoreEngine.STORE_ENGINE_CLASS_KEY,
+        StripeStoreEngine.class.getName());
       if (initialStripeCount != null) {
         tableDescriptor.setValue(
             StripeStoreConfig.INITIAL_STRIPE_COUNT_KEY, initialStripeCount.toString());

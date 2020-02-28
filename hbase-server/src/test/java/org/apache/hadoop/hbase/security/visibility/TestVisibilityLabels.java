@@ -710,7 +710,9 @@ public abstract class TestVisibilityLabels {
     TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
       new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
     ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam);// Default max versions is 1.
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam);
+    // Default max versions is 1.
+
     tableDescriptor.setColumnFamily(familyDescriptor);
     familyDescriptor = new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam2);
     familyDescriptor.setMaxVersions(5);

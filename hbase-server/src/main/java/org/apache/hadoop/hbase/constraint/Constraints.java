@@ -242,7 +242,7 @@ public final class Constraints {
    * the list. The same logic applies between two Constraints over time (earlier
    * added is run first on the regionserver).
    *
-   * @param tableDescriptor {@link TableDescriptorBuilder.ModifyableTableDescriptor}
+   * @param tableDescriptor TableDescriptorBuilder.ModifyableTableDescriptor
    *   to add {@link Constraint Constraints}
    * @param constraints {@link Constraint Constraints} to add. All constraints are
    *   considered automatically enabled on add
