@@ -314,6 +314,10 @@ Quitting...
 . Verify HBase contents–use the HBase shell to list tables and scan some known values.
 
 == Upgrade Paths
+[[upgrade3.0]]
+=== Upgrade from 2.x to 3.x
+The RegionServer Grouping feature has been reimplemented. See section
+<<migrating.rsgroup>> in <<ops_mgt>> for more details.
 
 [[upgrade2.2]]
 === Upgrade from 2.0 or 2.1 to 2.2+
