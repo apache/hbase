@@ -127,12 +127,17 @@ public class TestSeparateClientZKCluster {
       // switch active master
       HMaster master = cluster.getMaster();
       master.stopMaster();
+      LOG.info("Stopped master {}", master.getServerName());
       while (!master.isShutDown()) {
         Thread.sleep(200);
       }
+      LOG.info("Shutdown master {}", master.getServerName());
       while (cluster.getMaster() == null || !cluster.getMaster().isInitialized()) {
+        LOG.info("Get master {}", cluster.getMaster() == null? "null":
+          cluster.getMaster().getServerName());
         Thread.sleep(200);
       }
+      LOG.info("Got master {}", cluster.getMaster().getServerName());
       // confirm client access still works
       Assert.assertTrue(admin.balance(false));
     }

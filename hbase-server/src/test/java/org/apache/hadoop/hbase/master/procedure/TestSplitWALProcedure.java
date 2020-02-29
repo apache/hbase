@@ -71,8 +71,10 @@ public class TestSplitWALProcedure {
 
   @After
   public void teardown() throws Exception {
-    ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(
-            master.getMasterProcedureExecutor(), false);
+    if (this.master != null) {
+      ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(
+        master.getMasterProcedureExecutor(), false);
+    }
     TEST_UTIL.shutdownMiniCluster();
   }
 

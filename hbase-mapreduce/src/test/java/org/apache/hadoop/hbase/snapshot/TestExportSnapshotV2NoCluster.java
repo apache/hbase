@@ -16,7 +16,9 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.snapshot;
-
+import static org.junit.Assert.assertTrue;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
@@ -44,10 +46,15 @@ public class TestExportSnapshotV2NoCluster {
 
   private HBaseCommonTestingUtility testUtil = new HBaseCommonTestingUtility();
   private Path testDir;
+  private FileSystem fs;
 
   @Before
   public void before() throws Exception {
-    this.testDir = TestExportSnapshotV1NoCluster.setup(this.testUtil);
+    // Make sure testDir is on LocalFileSystem
+    this.fs = FileSystem.getLocal(this.testUtil.getConfiguration());
+    this.testDir = TestExportSnapshotV1NoCluster.setup(this.fs, this.testUtil);
+    LOG.info("fs={}, testDir={}", this.fs, this.testDir);
+    assertTrue("FileSystem '" + fs + "' is not local", fs instanceof LocalFileSystem);
   }
 
   @Test
@@ -56,7 +63,7 @@ public class TestExportSnapshotV2NoCluster {
       testDir.getFileSystem(testUtil.getConfiguration()), testDir);
     final SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV2("tableWithRefsV2",
       "tableWithRefsV2");
-    TestExportSnapshotV1NoCluster.testSnapshotWithRefsExportFileSystemState(builder, this.testUtil,
-      this.testDir);
+    TestExportSnapshotV1NoCluster.testSnapshotWithRefsExportFileSystemState(this.fs, builder,
+      this.testUtil, this.testDir);
   }
 }
