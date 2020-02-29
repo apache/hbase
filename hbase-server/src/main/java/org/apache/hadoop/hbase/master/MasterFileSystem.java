@@ -297,7 +297,7 @@ public class MasterFileSystem {
     // assume, created table descriptor is for enabling table
     // meta table is a system table, so descriptors are predefined,
     // we should get them from registry.
-    FSTableDescriptors fsd = new FSTableDescriptors(c, fs, rd);
+    FSTableDescriptors fsd = new FSTableDescriptors(fs, rd);
     fsd.createTableDescriptor(fsd.get(TableName.META_TABLE_NAME));
 
     return rd;
@@ -403,6 +403,7 @@ public class MasterFileSystem {
       // created here in bootstrap and it'll need to be cleaned up.  Better to
       // not make it in first place.  Turn off block caching for bootstrap.
       // Enable after.
+      FSTableDescriptors.tryUpdateMetaTableDescriptor(c);
       TableDescriptor metaDescriptor = new FSTableDescriptors(c).get(TableName.META_TABLE_NAME);
       HRegion meta = HRegion.createHRegion(RegionInfoBuilder.FIRST_META_REGIONINFO, rd,
           c, setInfoFamilyCachingForMeta(metaDescriptor, false), null);

@@ -53,7 +53,6 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.function.Function;
 import javax.management.MalformedObjectNameException;
 import javax.servlet.http.HttpServlet;
 import org.apache.commons.lang3.RandomUtils;
@@ -91,7 +90,6 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
-import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.locking.EntityLock;
 import org.apache.hadoop.hbase.client.locking.LockServiceClient;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
@@ -717,23 +715,19 @@ public class HRegionServer extends HasThread implements
     FSUtils.setFsDefault(this.conf, FSUtils.getRootDir(this.conf));
     this.dataFs = new HFileSystem(this.conf, useHBaseChecksum);
     this.dataRootDir = FSUtils.getRootDir(this.conf);
-    this.tableDescriptors = getFsTableDescriptors();
-  }
-
-  private TableDescriptors getFsTableDescriptors() throws IOException {
-    return new FSTableDescriptors(this.conf,
-      this.dataFs, this.dataRootDir, !canUpdateTableDescriptor(), false, getMetaTableObserver());
-  }
-
-  protected Function<TableDescriptorBuilder, TableDescriptorBuilder> getMetaTableObserver() {
-    return null;
+    this.tableDescriptors =
+        new FSTableDescriptors(this.dataFs, this.dataRootDir, !canUpdateTableDescriptor(), false);
+    if (this instanceof HMaster) {
+      FSTableDescriptors.tryUpdateMetaTableDescriptor(this.conf, this.dataFs, this.dataRootDir,
+        builder -> builder.setRegionReplication(
+          conf.getInt(HConstants.META_REPLICAS_NUM, HConstants.DEFAULT_META_REPLICA_NUM)));
+    }
   }
 
   protected void login(UserProvider user, String host) throws IOException {
     user.login(SecurityConstants.REGIONSERVER_KRB_KEYTAB_FILE,
       SecurityConstants.REGIONSERVER_KRB_PRINCIPAL, host);
   }
-
 
   /**
    * Wait for an active Master.
