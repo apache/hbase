@@ -3402,40 +3402,38 @@ full implications and have a sufficient background in managing HBase clusters.
 It was developed by Yahoo! and they run it at scale on their large grid cluster.
 See link:http://www.slideshare.net/HBaseCon/keynote-apache-hbase-at-yahoo-scale[HBase at Yahoo! Scale].
 
-RSGroups are defined and managed with shell commands. The shell drives a
-Coprocessor Endpoint whose API is marked private given this is an evolving
-feature; the Coprocessor API is not for public consumption.
+RSGroups can be defined and managed with both admin methods and shell commands.
 A server can be added to a group with hostname and port pair and tables
 can be moved to this group so that only regionservers in the same rsgroup can
-host the regions of the table. RegionServers and tables can only belong to one
-rsgroup at a time. By default, all tables and regionservers belong to the
-`default` rsgroup. System tables can also be put into a rsgroup using the regular
-APIs. A custom balancer implementation tracks assignments per rsgroup and makes
-sure to move regions to the relevant regionservers in that rsgroup. The rsgroup
-information is stored in a regular HBase table, and a zookeeper-based read-only
-cache is used at cluster bootstrap time.
+host the regions of the table. The group for a table is stored in its
+TableDescriptor, the property name is `hbase.rsgroup.name`. You can also set
+this property on a namespace, so it will cause all the tables under this
+namespace to be placed into this group. RegionServers and tables can only
+belong to one rsgroup at a time. By default, all tables and regionservers
+belong to the `default` rsgroup. System tables can also be put into a
+rsgroup using the regular APIs. A custom balancer implementation tracks
+assignments per rsgroup and makes sure to move regions to the relevant
+regionservers in that rsgroup. The rsgroup information is stored in a regular
+HBase table, and a zookeeper-based read-only cache is used at cluster bootstrap
+time.
 
 To enable, add the following to your hbase-site.xml and restart your Master:
 
 [source,xml]
 ----
  <property>
-   <name>hbase.coprocessor.master.classes</name>
-   <value>org.apache.hadoop.hbase.rsgroup.RSGroupAdminEndpoint</value>
- </property>
- <property>
-   <name>hbase.master.loadbalancer.class</name>
-   <value>org.apache.hadoop.hbase.rsgroup.RSGroupBasedLoadBalancer</value>
+   <name>hbase.balancer.rsgroup.enabled</name>
+   <value>true</value>
  </property>
 ----
 
-Then use the shell _rsgroup_ commands to create and manipulate RegionServer
-groups: e.g. to add a rsgroup and then add a server to it. To see the list of
-rsgroup commands available in the hbase shell type:
+Then use the admin/shell _rsgroup_ methods/commands to create and manipulate
+RegionServer groups: e.g. to add a rsgroup and then add a server to it.
+To see the list of rsgroup commands available in the hbase shell type:
 
 [source, bash]
 ----
- hbase(main):008:0> help ‘rsgroup’
+ hbase(main):008:0> help 'rsgroup'
  Took 0.5610 seconds
 ----
 
@@ -3449,7 +3447,8 @@ Master UI home page. If you click on a table, you can see what servers it is
 deployed across. You should see here a reflection of the grouping done with
 your shell commands. View the master log if issues.
 
-Here is example using a few of the rsgroup  commands. To add a group, do as follows:
+Here is example using a few of the rsgroup commands. To add a group, do as
+follows:
 
 [source, bash]
 ----
@@ -3461,20 +3460,10 @@ Here is example using a few of the rsgroup  commands. To add a group, do as foll
 .RegionServer Groups must be Enabled
 [NOTE]
 ====
-If you have not enabled the rsgroup Coprocessor Endpoint in the master and
-you run the any of the rsgroup shell commands, you will see an error message
-like the below:
-
-[source,java]
-----
-ERROR: org.apache.hadoop.hbase.exceptions.UnknownProtocolException: No registered master coprocessor service found for name RSGroupAdminService
-    at org.apache.hadoop.hbase.master.MasterRpcServices.execMasterService(MasterRpcServices.java:604)
-    at org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos$MasterService$2.callBlockingMethod(MasterProtos.java)
-    at org.apache.hadoop.hbase.ipc.RpcServer.call(RpcServer.java:1140)
-    at org.apache.hadoop.hbase.ipc.CallRunner.run(CallRunner.java:133)
-    at org.apache.hadoop.hbase.ipc.RpcExecutor$Handler.run(RpcExecutor.java:277)
-    at org.apache.hadoop.hbase.ipc.RpcExecutor$Handler.run(RpcExecutor.java:257)
-----
+If you have not enabled the rsgroup feature and you call any of the rsgroup
+admin methods or shell commands the call will fail with a
+`DoNotRetryIOException` with a detail message that says the rsgroup feature
+is disabled.
 ====
 
 Add a server (specified by hostname + port) to the just-made group using the
@@ -3500,23 +3489,21 @@ Servers come and go over the lifetime of a Cluster. Currently, you must
 manually align the servers referenced in rsgroups with the actual state of
 nodes in the running cluster. What we mean by this is that if you decommission
 a server, then you must update rsgroups as part of your server decommission
-process removing references.
+process removing references. Notice that, by calling `clearDeadServers`
+manually will also remove the dead servers from any rsgroups, but the problem
+is that we will lost track of the dead servers after master restarts, which
+means you still need to update the rsgroup by your own.
 
-But, there is no _remove_offline_servers_rsgroup_command you say!
-
-The way to remove a server is to move it to the `default` group. The `default`
-group is special. All rsgroups, but the `default` rsgroup, are static in that
-edits via the shell commands are persisted to the system `hbase:rsgroup` table.
-If they reference a decommissioned server, then they need to be updated to undo
-the reference.
+Please use `Admin.removeServersFromRSGroup` or shell command
+_remove_servers_rsgroup_ to remove decommission servers from rsgroup.
 
 The `default` group is not like other rsgroups in that it is dynamic. Its server
 list mirrors the current state of the cluster; i.e. if you shutdown a server that
 was part of the `default` rsgroup, and then do a _get_rsgroup_ `default` to list
-its content in the shell, the server will no longer be listed. For non-`default`
-groups, though a mode may be offline, it will persist in the non-`default` group’s
+its content in the shell, the server will no longer be listed. For non-default
+groups, though a mode may be offline, it will persist in the non-default group’s
 list of servers. But if you move the offline server from the non-default rsgroup
-to default, it  will not show in the `default` list. It will just be dropped.
+to default, it will not show in the `default` list. It will just be dropped.
 
 === Best Practice
 The authors of the rsgroup feature, the Yahoo! HBase Engineering team, have been
@@ -3526,7 +3513,7 @@ practices informed by their experience.
 ==== Isolate System Tables
 Either have a system rsgroup where all the system tables are or just leave the
 system tables in `default` rsgroup and have all user-space tables are in
-non-`default` rsgroups.
+non-default rsgroups.
 
 ==== Dead Nodes
 Yahoo! Have found it useful at their scale to keep a special rsgroup of dead or
@@ -3541,10 +3528,23 @@ Viewing the Master log will give you insight on rsgroup operation.
 If it appears stuck, restart the Master process.
 
 === Remove RegionServer Grouping
-Removing RegionServer Grouping feature from a cluster on which it was enabled involves
-more steps in addition to removing the relevant properties from `hbase-site.xml`. This is 
-to clean the RegionServer grouping related meta data so that if the feature is re-enabled 
-in the future, the old meta data will not affect the functioning of the cluster.
+Simply disable RegionServer Grouping feature is easy, just remove the
+'hbase.balancer.rsgroup.enabled' from hbase-site.xml or explicitly set it to
+false in hbase-site.xml.
+
+[source,xml]
+----
+ <property>
+   <name>hbase.balancer.rsgroup.enabled</name>
+   <value>false</value>
+ </property>
+----
+
+But if you change the 'hbase.balancer.rsgroup.enabled' to true, the old rsgroup
+configs will take effect again. So if you want to completely remove the
+RegionServer Grouping feature from a cluster, so that if the feature is
+re-enabled in the future, the old meta data will not affect the functioning of
+the cluster, there are more steps to do.
 
 - Move all tables in non-default rsgroups to `default` regionserver group
 [source,bash]
@@ -3592,6 +3592,56 @@ To enable ACL, add the following to your hbase-site.xml and restart your Master:
   <value>true</value>
 <property>
 ----
+[[migrating.rsgroup]]
+=== Migrating From Old Implementation
+The coprocessor `org.apache.hadoop.hbase.rsgroup.RSGroupAdminEndpoint` is
+deprected, but for compatible, if you want the pre 3.0.0 hbase client/shell
+to communicate with the new hbase cluster, you still need to add this
+coprocessor to master.
+
+The `hbase.rsgroup.grouploadbalancer.class` config has been deprecated, as now
+the top level load balancer will always be `RSGroupBasedLoadBalaner`, and the
+`hbase.master.loadbalancer.class` config is for configuring the balancer within
+a group. This also means you should not set `hbase.master.loadbalancer.class`
+to `RSGroupBasedLoadBalaner` any more even if rsgroup feature is enabled.
+
+And we have done some special changes for compatibility. First, if coprocessor
+`org.apache.hadoop.hbase.rsgroup.RSGroupAdminEndpoint` is specified, the
+`hbase.balancer.rsgroup.enabled` flag will be set to true automatically to
+enable rs group feature. Second, we will load
+`hbase.rsgroup.grouploadbalancer.class` prior to
+`hbase.master.loadbalancer.class`. And last, if you do not set
+`hbase.rsgroup.grouploadbalancer.class` but only set
+`hbase.master.loadbalancer.class` to `RSGroupBasedLoadBalancer`, we will load
+the default load balancer to avoid infinite nesting. This means you do not need
+to change anything when upgrading if you have already enabled rs group feature.
+
+The main difference comparing to the old implementation is that, now the
+rsgroup for a table is stored in `TableDescriptor`, instead of in
+`RSGroupInfo`, so the `getTables` method of `RSGroupInfo` has been deprecated.
+And if you use the `Admin` methods to get the `RSGroupInfo`, its `getTables`
+method will always return empty. This is because that in the old
+implementation, this method is a bit broken as you can set rsgroup on namespace
+and make all the tables under this namespace into this group but you can not
+get these tables through `RSGroupInfo.getTables`. Now you should use the two
+new methods `listTablesInRSGroup` and
+`getConfiguredNamespacesAndTablesInRSGroup` in `Admin` to get tables and
+namespaces in a rsgroup.
+
+Of course the behavior for the old RSGroupAdminEndpoint is not changed,
+we will fill the tables field of the RSGroupInfo before returning, to make it
+compatible with old hbase client/shell.
+
+When upgrading, the migration between the RSGroupInfo and TableDescriptor will
+be done automatically. It will take sometime, but it is fine to restart master
+in the middle, the migration will continue after restart. And during the
+migration, the rs group feature will still work and in most cases the region
+will not be misplaced(since this is only a one time job and will not last too
+long so we have not test it very seriously to make sure the region will not be
+misplaced always, so we use the word 'in most cases'). The implementation is a
+bit tricky, you can see the code in `RSGroupInfoManagerImpl.migrate` if
+interested.
+
 
 
 
