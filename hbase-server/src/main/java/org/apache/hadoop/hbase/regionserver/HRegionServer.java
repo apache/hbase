@@ -138,6 +138,7 @@ import org.apache.hadoop.hbase.regionserver.handler.CloseMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.CloseRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.RSProcedureHandler;
 import org.apache.hadoop.hbase.regionserver.handler.RegionReplicaFlushHandler;
+import org.apache.hadoop.hbase.regionserver.slowlog.SlowLogRecorder;
 import org.apache.hadoop.hbase.regionserver.throttle.FlushThroughputControllerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationLoad;
@@ -528,6 +529,11 @@ public class HRegionServer extends HasThread implements
   private final NettyEventLoopGroupConfig eventLoopGroupConfig;
 
   /**
+   * Provide online slow log responses from ringbuffer
+   */
+  private SlowLogRecorder slowLogRecorder;
+
+  /**
    * True if this RegionServer is coming up in a cluster where there is no Master;
    * means it needs to just come up and make do without a Master to talk to: e.g. in test or
    * HRegionServer is doing other than its usual duties: e.g. as an hollowed-out host whose only
@@ -586,6 +592,9 @@ public class HRegionServer extends HasThread implements
       this.abortRequested = false;
       this.stopped = false;
 
+      if (!(this instanceof HMaster)) {
+        this.slowLogRecorder = new SlowLogRecorder(this.conf);
+      }
       rpcServices = createRpcServices();
       useThisHostnameInstead = getUseThisHostnameInstead(conf);
       String hostName =
@@ -1494,6 +1503,15 @@ public class HRegionServer extends HasThread implements
   }
 
   /**
+   * get Online SlowLog Provider to add slow logs to ringbuffer
+   *
+   * @return Online SlowLog Provider
+   */
+  public SlowLogRecorder getSlowLogRecorder() {
+    return this.slowLogRecorder;
+  }
+
+  /*
    * Run init. Sets up wal and starts up all server threads.
    *
    * @param c Extra configuration.

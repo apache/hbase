@@ -1566,6 +1566,12 @@ public final class HConstants {
       "hbase.master.executor.logreplayops.threads";
   public static final int MASTER_LOG_REPLAY_OPS_THREADS_DEFAULT = 10;
 
+  public static final int DEFAULT_SLOW_LOG_RING_BUFFER_SIZE = 256;
+
+  public static final String SLOW_LOG_BUFFER_ENABLED_KEY =
+    "hbase.regionserver.slowlog.buffer.enabled";
+  public static final boolean DEFAULT_ONLINE_LOG_PROVIDER_ENABLED = false;
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

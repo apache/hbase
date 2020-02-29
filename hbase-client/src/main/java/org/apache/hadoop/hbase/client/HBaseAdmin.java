@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcController;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -111,6 +112,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
@@ -4356,6 +4358,70 @@ public class HBaseAdmin implements Admin {
       }
     });
 
+  }
+
+  @Override
+  public List<SlowLogRecord> getSlowLogResponses(@Nullable final Set<ServerName> serverNames,
+      final SlowLogQueryFilter slowLogQueryFilter) throws IOException {
+    if (CollectionUtils.isEmpty(serverNames)) {
+      return Collections.emptyList();
+    }
+    return serverNames.stream().map(serverName -> {
+        try {
+          return getSlowLogResponseFromServer(serverName, slowLogQueryFilter);
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      }
+    ).flatMap(List::stream).collect(Collectors.toList());
+  }
+
+  private List<SlowLogRecord> getSlowLogResponseFromServer(final ServerName serverName,
+      final SlowLogQueryFilter slowLogQueryFilter) throws IOException {
+    return getSlowLogResponsesFromServer(this.connection.getAdmin(serverName), slowLogQueryFilter);
+  }
+
+  private List<SlowLogRecord> getSlowLogResponsesFromServer(AdminService.BlockingInterface admin,
+      SlowLogQueryFilter slowLogQueryFilter) throws IOException {
+    return executeCallable(new RpcRetryingCallable<List<SlowLogRecord>>() {
+      @Override
+      protected List<SlowLogRecord> rpcCall(int callTimeout) throws Exception {
+        HBaseRpcController controller = rpcControllerFactory.newController();
+        AdminProtos.SlowLogResponses slowLogResponses =
+          admin.getSlowLogResponses(controller,
+            RequestConverter.buildSlowLogResponseRequest(slowLogQueryFilter));
+        return ProtobufUtil.toSlowLogPayloads(slowLogResponses);
+      }
+    });
+  }
+
+  @Override
+  public List<Boolean> clearSlowLogResponses(@Nullable final Set<ServerName> serverNames)
+      throws IOException {
+    if (CollectionUtils.isEmpty(serverNames)) {
+      return Collections.emptyList();
+    }
+    return serverNames.stream().map(serverName -> {
+      try {
+        return clearSlowLogsResponses(serverName);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }).collect(Collectors.toList());
+  }
+
+  private Boolean clearSlowLogsResponses(final ServerName serverName) throws IOException {
+    AdminService.BlockingInterface admin = this.connection.getAdmin(serverName);
+    return executeCallable(new RpcRetryingCallable<Boolean>() {
+      @Override
+      protected Boolean rpcCall(int callTimeout) throws Exception {
+        HBaseRpcController controller = rpcControllerFactory.newController();
+        AdminProtos.ClearSlowLogResponses clearSlowLogResponses =
+          admin.clearSlowLogsResponses(controller,
+            RequestConverter.buildClearSlowLogResponseRequest());
+        return ProtobufUtil.toClearSlowLogPayload(clearSlowLogResponses);
+      }
+    });
   }
 
 }
