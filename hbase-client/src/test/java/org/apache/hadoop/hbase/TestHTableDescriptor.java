@@ -317,16 +317,16 @@ public class TestHTableDescriptor {
         TableName.valueOf(name.getMethodName()));
     byte[] familyName = Bytes.toBytes("cf");
     ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(familyName);
-    familyDescriptor.setBlocksize(1000);
-    familyDescriptor.setDFSReplication((short) 3);
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(familyName)
+        .setBlocksize(1000)
+        .setDFSReplication((short) 3);
     tableDescriptor.setColumnFamily(familyDescriptor);
     assertEquals(1000, tableDescriptor.getColumnFamily(familyName).getBlocksize());
     assertEquals(3, tableDescriptor.getColumnFamily(familyName).getDFSReplication());
     familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(familyName);
-    familyDescriptor.setBlocksize(2000);
-    familyDescriptor.setDFSReplication((short) 1);
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(familyName)
+        .setBlocksize(2000)
+        .setDFSReplication((short) 1);
     tableDescriptor.modifyColumnFamily(familyDescriptor);
     assertEquals(2000, tableDescriptor.getColumnFamily(familyName).getBlocksize());
     assertEquals(1, tableDescriptor.getColumnFamily(familyName).getDFSReplication());
@@ -350,13 +350,13 @@ public class TestHTableDescriptor {
         TableName.valueOf(name.getMethodName()));
     byte[] familyName = Bytes.toBytes("cf");
     ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(familyName);
-    familyDescriptor.setBlocksize(1000);
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(familyName)
+        .setBlocksize(1000);
     tableDescriptor.setColumnFamily(familyDescriptor);
     assertEquals(1000, tableDescriptor.getColumnFamily(familyName).getBlocksize());
     familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(familyName);
-    familyDescriptor.setBlocksize(2000);
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(familyName)
+        .setBlocksize(2000);
     tableDescriptor.setColumnFamily(familyDescriptor);
   }
 

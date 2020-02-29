@@ -191,8 +191,6 @@ public class TestTags {
       ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
         new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam);
       familyDescriptor.setBlockCacheEnabled(true);
-      // colDesc.setDataBlockEncoding(DataBlockEncoding.NONE);
-      // colDesc.setDataBlockEncoding(DataBlockEncoding.PREFIX_TREE);
       tableDescriptor.setColumnFamily(familyDescriptor);
       Admin admin = TEST_UTIL.getAdmin();
       admin.createTable(tableDescriptor);

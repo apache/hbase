@@ -243,8 +243,8 @@ public final class Constraints {
    * added is run first on the regionserver).
    *
    * @param tableDescriptor TableDescriptorBuilder.ModifyableTableDescriptor
-   *   to add {@link Constraint Constraints}
-   * @param constraints {@link Constraint Constraints} to add. All constraints are
+   *   to add {@link Constraint}
+   * @param constraints {@link Constraint} to add. All constraints are
    *   considered automatically enabled on add
    * @throws IOException If constraint could not be serialized/added to table
    */
@@ -398,7 +398,7 @@ public final class Constraints {
 
   private static void writeConstraint(
       TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor, String key,
-    Configuration conf) throws IOException {
+      Configuration conf) throws IOException {
     // store the key and conf in the descriptor
     tableDescriptor.setValue(key, serializeConfiguration(conf));
   }

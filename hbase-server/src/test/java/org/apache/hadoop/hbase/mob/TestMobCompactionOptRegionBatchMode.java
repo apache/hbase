@@ -77,7 +77,7 @@ public class TestMobCompactionOptRegionBatchMode extends TestMobCompactionBase{
   }
 
   @Override
-  protected void mobCompact(Admin admin2, TableDescriptor tableDescriptor,
+  protected void mobCompact(Admin admin, TableDescriptor tableDescriptor,
       ColumnFamilyDescriptor familyDescriptor) throws IOException, InterruptedException {
     // Major compact with batch mode enabled
     compactionChore.performMajorCompactionInBatches(admin, tableDescriptor, familyDescriptor);

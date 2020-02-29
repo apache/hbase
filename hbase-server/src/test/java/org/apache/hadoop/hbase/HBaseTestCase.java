@@ -158,7 +158,8 @@ public abstract class HBaseTestCase extends TestCase {
    * @param startKey Start Key
    * @param endKey End Key
    * @return An {@link HRegion}
-   * @throws IOException If thrown by createNewHRegion
+   * @throws IOException If thrown by
+   *   {@link #createNewHRegion(TableDescriptor, byte[], byte[], Configuration)}
    */
   public HRegion createNewHRegion(TableDescriptor tableDescriptor, byte [] startKey,
       byte [] endKey)

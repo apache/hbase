@@ -58,7 +58,7 @@ public class TestMobCompactionRegularMode extends TestMobCompactionBase{
   }
 
   @Override
-  protected void mobCompact(Admin admin2, TableDescriptor tableDescriptor,
+  protected void mobCompact(Admin admin, TableDescriptor tableDescriptor,
       ColumnFamilyDescriptor familyDescriptor) throws IOException, InterruptedException {
     // Major compact MOB table
     admin.majorCompact(tableDescriptor.getTableName(), familyDescriptor.getName());
