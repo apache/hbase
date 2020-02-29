@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release Notes - HBase - Version 1.4.13
+Release Notes - HBase - Version 1.4.13 02/29/2020
 
 ** Bug
     * [HBASE-22096] - /storeFile.jsp shows CorruptHFileException when the storeFile is a reference file
