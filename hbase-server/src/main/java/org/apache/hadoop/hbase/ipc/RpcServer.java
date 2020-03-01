@@ -39,6 +39,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.RequestIOCorruptionException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.exceptions.RequestTooBigException;
@@ -88,6 +89,8 @@ public abstract class RpcServer implements RpcServerInterface,
   public static final Logger LOG = LoggerFactory.getLogger(RpcServer.class);
   protected static final CallQueueTooBigException CALL_QUEUE_TOO_BIG_EXCEPTION
       = new CallQueueTooBigException();
+  protected static final RequestIOCorruptionException REQUEST_IO_MESS_UP_EXCEPTION
+      = new RequestIOCorruptionException();
 
   private static final String MULTI_GETS = "multi.gets";
   private static final String MULTI_MUTATIONS = "multi.mutations";

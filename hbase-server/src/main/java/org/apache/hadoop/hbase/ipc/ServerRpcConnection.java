@@ -482,9 +482,7 @@ abstract class ServerRpcConnection implements Closeable {
     if (buf.hasArray()) {
       this.connectionHeader = ConnectionHeader.parseFrom(buf.array());
     } else {
-      CodedInputStream cis = UnsafeByteOperations.unsafeWrap(
-          new ByteBuffByteInput(buf, 0, buf.limit()), 0, buf.limit()).newCodedInput();
-      cis.enableAliasing(true);
+      CodedInputStream cis = getCodedInputStream(buf);
       this.connectionHeader = ConnectionHeader.parseFrom(cis);
     }
     String serviceName = connectionHeader.getServiceName();
@@ -575,6 +573,21 @@ abstract class ServerRpcConnection implements Closeable {
   protected abstract void doRespond(RpcResponse resp) throws IOException;
 
   /**
+   * get CodedInputStream from ByteBuff
+   */
+  protected CodedInputStream getCodedInputStream(ByteBuff buf) {
+    CodedInputStream cis;
+    if (buf.hasArray()) {
+      cis = UnsafeByteOperations.unsafeWrap(buf.array(), 0, buf.limit()).newCodedInput();
+    } else {
+      cis = UnsafeByteOperations
+          .unsafeWrap(new ByteBuffByteInput(buf, 0, buf.limit()), 0, buf.limit()).newCodedInput();
+    }
+    cis.enableAliasing(true);
+    return cis;
+  }
+
+  /**
    * @param buf
    *          Has the request header and the request param and optionally
    *          encoded data buffer all in this one array.
@@ -588,14 +601,7 @@ abstract class ServerRpcConnection implements Closeable {
     // Here we read in the header. We avoid having pb
     // do its default 4k allocation for CodedInputStream. We force it to use
     // backing array.
-    CodedInputStream cis;
-    if (buf.hasArray()) {
-      cis = UnsafeByteOperations.unsafeWrap(buf.array(), 0, buf.limit()).newCodedInput();
-    } else {
-      cis = UnsafeByteOperations
-          .unsafeWrap(new ByteBuffByteInput(buf, 0, buf.limit()), 0, buf.limit()).newCodedInput();
-    }
-    cis.enableAliasing(true);
+    CodedInputStream cis = getCodedInputStream(buf);
     int headerSize = cis.readRawVarint32();
     offset = cis.getTotalBytesRead();
     Message.Builder builder = RequestHeader.newBuilder();
@@ -775,7 +781,7 @@ abstract class ServerRpcConnection implements Closeable {
       RequestHeader header, Message param, CellScanner cellScanner, long size,
       InetAddress remoteAddress, int timeout, CallCleanup reqCleanup);
 
-  private static class ByteBuffByteInput extends ByteInput {
+  static class ByteBuffByteInput extends ByteInput {
 
     private ByteBuff buf;
     private int offset;

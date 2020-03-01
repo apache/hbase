@@ -17,10 +17,17 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.SERVICE;
+import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.newBlockingStub;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
 import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -29,8 +36,16 @@ import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
+import org.apache.hadoop.util.StringUtils;
 import org.junit.ClassRule;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
+import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos.EchoRequestProto;
+import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface;
 
 @Category({ RPCTests.class, MediumTests.class })
 public class TestBlockingIPC extends AbstractTestIPC {
@@ -105,5 +120,63 @@ public class TestBlockingIPC extends AbstractTestIPC {
       List<RpcServer.BlockingServiceAndInterface> services, InetSocketAddress bindAddress,
       Configuration conf, RpcScheduler scheduler) throws IOException {
     return new TestFailingRpcServer(server, name, services, bindAddress, conf, scheduler);
+  }
+
+  private static class TestIOMessUpRpcServer extends SimpleRpcServer {
+    TestIOMessUpRpcServer(Server server, String name,
+        List<RpcServer.BlockingServiceAndInterface> services, InetSocketAddress bindAddress,
+        Configuration conf, RpcScheduler scheduler) throws IOException {
+      super(server, name, services, bindAddress, conf, scheduler, true);
+    }
+
+    @Override
+    protected SimpleServerRpcConnection getConnection(SocketChannel channel, long time) {
+      return new SimpleServerRpcConnection(this, channel, time) {
+        private boolean ioMessUp = true;
+        @Override
+        void initByteBuffToReadInto(int length) {
+          if (connectionHeaderRead && connectionPreambleRead && ioMessUp) {
+            // mock that the request has mess up
+            ioMessUp = false;
+            super.initByteBuffToReadInto(length + 100);
+          } else {
+            super.initByteBuffToReadInto(length);
+          }
+        }
+      };
+    }
+  }
+
+  private RpcServer createIOMessUpRpcServer(Server server, String name,
+      List<RpcServer.BlockingServiceAndInterface> services, InetSocketAddress bindAddress,
+      Configuration conf, RpcScheduler scheduler) throws IOException {
+    return new TestIOMessUpRpcServer(server, name, services, bindAddress, conf, scheduler);
+  }
+
+  @Test
+  public void testRequestIOCorruption() throws IOException, ServiceException {
+    String msg = "hello";
+    Configuration conf = new Configuration(CONF);
+    RpcServer rpcServer = createIOMessUpRpcServer(null, "testRpcServer",
+        Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(
+            SERVICE, null)), new InetSocketAddress("localhost", 0), conf,
+        new FifoRpcScheduler(conf, 1));
+
+    try (AbstractRpcClient<?> client = createRpcClient(conf)) {
+      rpcServer.start();
+      BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
+      EchoRequestProto param = EchoRequestProto.newBuilder().setMessage(msg).build();
+      try {
+        stub.echo(null, param);
+        fail("RPC should have failed because request IO mess up.");
+      } catch (ServiceException e) {
+        assertTrue(e.toString(),
+            StringUtils.stringifyException(e).contains("RequestIOCorruptionException"));
+        // mess up IO don't blocking subsequent requests
+        assertEquals(msg, stub.echo(null, param).getMessage());
+      }
+    } finally {
+      rpcServer.stop();
+    }
   }
 }
