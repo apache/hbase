@@ -35,11 +35,11 @@ import org.mockito.runners.MockitoJUnitRunner;
 
 @Category(SmallTests.class)
 @RunWith(MockitoJUnitRunner.class)
-public class MessageModeScreenPresenterTest {
+public class TestMessageModeScreenPresenter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(MessageModeScreenPresenterTest.class);
+    HBaseClassTestRule.forClass(TestMessageModeScreenPresenter.class);
 
   private static final String TEST_MESSAGE = "test message";
 

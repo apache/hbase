@@ -18,10 +18,13 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.OptionalDouble;
 import java.util.OptionalLong;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.StringUtils;
@@ -106,6 +109,8 @@ class MetricsRegionServerWrapperImpl
   private volatile long mobFileCacheCount = 0;
   private volatile long blockedRequestsCount = 0L;
   private volatile long averageRegionSize = 0L;
+  protected final Map<String, ArrayList<Long>>
+      requestsCountCache = new ConcurrentHashMap<String, ArrayList<Long>>();
 
   private CacheStats cacheStats;
   private CacheStats l1Stats = null;
@@ -646,7 +651,6 @@ class MetricsRegionServerWrapperImpl
   public class RegionServerMetricsWrapperRunnable implements Runnable {
 
     private long lastRan = 0;
-    private long lastRequestCount = 0;
 
     @Override
     synchronized public void run() {
@@ -691,7 +695,40 @@ class MetricsRegionServerWrapperImpl
         long tempMobScanCellsSize = 0;
         long tempBlockedRequestsCount = 0;
         int regionCount = 0;
+
+        long currentReadRequestsCount = 0;
+        long currentWriteRequestsCount = 0;
+        long lastReadRequestsCount = 0;
+        long lastWriteRequestsCount = 0;
+        long readRequestsDelta = 0;
+        long writeRequestsDelta = 0;
+        long totalReadRequestsDelta = 0;
+        long totalWriteRequestsDelta = 0;
+        String encodedRegionName;
         for (HRegion r : regionServer.getOnlineRegionsLocalContext()) {
+          encodedRegionName = r.getRegionInfo().getEncodedName();
+          currentReadRequestsCount = r.getReadRequestsCount();
+          currentWriteRequestsCount = r.getWriteRequestsCount();
+          if (requestsCountCache.containsKey(encodedRegionName)) {
+            lastReadRequestsCount = requestsCountCache.get(encodedRegionName).get(0);
+            lastWriteRequestsCount = requestsCountCache.get(encodedRegionName).get(1);
+            readRequestsDelta = currentReadRequestsCount - lastReadRequestsCount;
+            writeRequestsDelta = currentWriteRequestsCount - lastWriteRequestsCount;
+            totalReadRequestsDelta += readRequestsDelta;
+            totalWriteRequestsDelta += writeRequestsDelta;
+            //Update cache for our next comparision
+            requestsCountCache.get(encodedRegionName).set(0,currentReadRequestsCount);
+            requestsCountCache.get(encodedRegionName).set(1,currentWriteRequestsCount);
+          } else {
+            // List[0] -> readRequestCount
+            // List[1] -> writeRequestCount
+            ArrayList<Long> requests = new ArrayList<Long>(2);
+            requests.add(currentReadRequestsCount);
+            requests.add(currentWriteRequestsCount);
+            requestsCountCache.put(encodedRegionName, requests);
+            totalReadRequestsDelta += currentReadRequestsCount;
+            totalWriteRequestsDelta += currentWriteRequestsCount;
+          }
           tempNumMutationsWithoutWAL += r.getNumMutationsWithoutWAL();
           tempDataInMemoryWithoutWAL += r.getDataInMemoryWithoutWAL();
           tempReadRequestsCount += r.getReadRequestsCount();
@@ -778,10 +815,8 @@ class MetricsRegionServerWrapperImpl
         }
         // If we've time traveled keep the last requests per second.
         if ((currentTime - lastRan) > 0) {
-          long currentRequestCount = getTotalRowActionRequestCount();
-          requestsPerSecond = (currentRequestCount - lastRequestCount) /
+          requestsPerSecond = (totalReadRequestsDelta + totalWriteRequestsDelta) /
               ((currentTime - lastRan) / 1000.0);
-          lastRequestCount = currentRequestCount;
         }
         lastRan = currentTime;
 

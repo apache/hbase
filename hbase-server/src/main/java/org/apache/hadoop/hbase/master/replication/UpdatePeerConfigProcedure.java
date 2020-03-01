@@ -128,15 +128,15 @@ public class UpdatePeerConfigProcedure extends ModifyPeerProcedure {
         continue;
       }
       TableName tn = td.getTableName();
-      if (ReplicationUtils.contains(oldPeerConfig, tn)) {
-        if (!ReplicationUtils.contains(peerConfig, tn)) {
+      if (oldPeerConfig.needToReplicate(tn)) {
+        if (!peerConfig.needToReplicate(tn)) {
           // removed from peer config
           for (String encodedRegionName : MetaTableAccessor
             .getTableEncodedRegionNamesForSerialReplication(conn, tn)) {
             addToList(encodedRegionNames, encodedRegionName, queueStorage);
           }
         }
-      } else if (ReplicationUtils.contains(peerConfig, tn)) {
+      } else if (peerConfig.needToReplicate(tn)) {
         // newly added to peer config
         setLastPushedSequenceIdForTable(env, tn, lastSeqIds);
       }

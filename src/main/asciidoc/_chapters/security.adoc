@@ -37,9 +37,11 @@ HBase adheres to the Apache Software Foundation's policy on reported vulnerabili
 If you wish to send an encrypted report, you can use the GPG details provided for the general ASF security list. This will likely increase the response time to your report.
 ====
 
+== Web UI Security
+
 HBase provides mechanisms to secure various components and aspects of HBase and how it relates to the rest of the Hadoop infrastructure, as well as clients and resources outside Hadoop.
 
-== Using Secure HTTP (HTTPS) for the Web UI
+=== Using Secure HTTP (HTTPS) for the Web UI
 
 A default HBase install uses insecure HTTP connections for Web UIs for the master and region servers.
 To enable secure HTTP (HTTPS) connections instead, set `hbase.ssl.enabled` to `true` in _hbase-site.xml_.
@@ -70,7 +72,7 @@ If you know how to fix this without opening a second port for HTTPS, patches are
 ====
 
 [[hbase.secure.spnego.ui]]
-== Using SPNEGO for Kerberos authentication with Web UIs
+=== Using SPNEGO for Kerberos authentication with Web UIs
 
 Kerberos-authentication to HBase Web UIs can be enabled via configuring SPNEGO with the `hbase.security.authentication.ui`
 property in _hbase-site.xml_. Enabling this authentication requires that HBase is also configured to use Kerberos authentication
@@ -119,6 +121,85 @@ A number of properties exist to configure SPNEGO authentication for the web serv
   <description>Optional, a file whose contents will be used as a secret to sign the HTTP cookies
   as a part of the SPNEGO authentication handshake. If this is not provided, Java's `Random` library
   will be used for the secret.</description>
+</property>
+----
+
+=== Defining administrators of the Web UI
+
+In the previous section, we cover how to enable authentication for the Web UI via SPNEGO.
+However, some portions of the Web UI could be used to impact the availability and performance
+of an HBase cluster. As such, it is desirable to ensure that only those with proper authority
+can interact with these sensitive endpoints.
+
+HBase allows the adminstrators to be defined via a list of usernames or groups in hbase-site.xml
+
+[source,xml]
+----
+<property>
+  <name>hbase.security.authentication.spnego.admin.users</name>
+  <value></value>
+</property>
+<property>
+  <name>hbase.security.authentication.spnego.admin.groups</name>
+  <value></value>
+</property>
+----
+
+The usernames are those which the Kerberos identity maps to, given the Hadoop `auth_to_local` rules
+in core-site.xml. The groups here are the Unix groups associated with the mapped usernames.
+
+Consider the following scenario to describe how the configuration properties operate. Consider
+three users which are defined in the Kerberos KDC:
+
+* `alice@COMPANY.COM`
+* `bob@COMPANY.COM`
+* `charlie@COMPANY.COM`
+
+The default Hadoop `auth_to_local` rules map these principals to the "shortname":
+
+* `alice`
+* `bob`
+* `charlie`
+
+Unix groups membership define that `alice` is a member of the group `admins`.
+`bob` and `charlie` are not members of the `admins` group.
+
+[source,xml]
+----
+<property>
+  <name>hbase.security.authentication.spnego.admin.users</name>
+  <value>charlie</value>
+</property>
+<property>
+  <name>hbase.security.authentication.spnego.admin.groups</name>
+  <value>admins</value>
+</property>
+----
+
+Given the above configuration, `alice` is allowed to access sensitive endpoints in the Web UI
+as she is a member of the `admins` group. `charlie` is also allowed to access sensitive endpoints
+because he is explicitly listed as an admin in the configuration. `bob` is not allowed to access
+sensitive endpoints because he is not a member of the `admins` group nor is listed as an explicit
+admin user via `hbase.security.authentication.spnego.admin.users`, but can still use any
+non-sensitive endpoints in the Web UI.
+
+If it doesn't go without saying: non-authenticated users cannot access any part of the Web UI.
+
+=== Other UI security-related configuration
+
+While it is a clear anti-pattern for HBase developers, the developers acknowledge that the HBase
+configuration (including Hadoop configuration files) may contain sensitive information. As such,
+a user may find that they do not want to expose the HBase service-level configuration to all
+authenticated users. They may configure HBase to require a user must be an admin to access
+the service-level configuration via the HBase UI. This configuration is *false* by default
+(any authenticated user may access the configuration).
+
+Users who wish to change this would set the following in their hbase-site.xml:
+[source,xml]
+----
+<property>
+  <name>hbase.security.authentication.ui.config.protected</name>
+  <value>true</value>
 </property>
 ----
 

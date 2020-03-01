@@ -32,34 +32,45 @@ import org.junit.experimental.categories.Category;
 
 
 @Category(SmallTests.class)
-public class RegionServerModeTest extends ModeTestBase {
+public class TestTableMode extends TestModeBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(RegionServerModeTest.class);
+    HBaseClassTestRule.forClass(TestTableMode.class);
 
   @Override
   protected Mode getMode() {
-    return Mode.REGION_SERVER;
+    return Mode.TABLE;
   }
 
   @Override
   protected void assertRecords(List<Record> records) {
-    TestUtils.assertRecordsInRegionServerMode(records);
+    TestUtils.assertRecordsInTableMode(records);
   }
 
   @Override
   protected void assertDrillDown(Record currentRecord, DrillDownInfo drillDownInfo) {
     assertThat(drillDownInfo.getNextMode(), is(Mode.REGION));
-    assertThat(drillDownInfo.getInitialFilters().size(), is(1));
+    assertThat(drillDownInfo.getInitialFilters().size(), is(2));
 
-    switch (currentRecord.get(Field.REGION_SERVER).asString()) {
-      case "host1:1000":
-        assertThat(drillDownInfo.getInitialFilters().get(0).toString(), is("RS==host1:1000"));
+    String tableName = String.format("%s:%s", currentRecord.get(Field.NAMESPACE).asString(),
+      currentRecord.get(Field.TABLE).asString());
+
+    switch (tableName) {
+      case "default:table1":
+        assertThat(drillDownInfo.getInitialFilters().get(0).toString(), is("NAMESPACE==default"));
+        assertThat(drillDownInfo.getInitialFilters().get(1).toString(), is("TABLE==table1"));
         break;
 
-      case "host2:1001":
-        assertThat(drillDownInfo.getInitialFilters().get(0).toString(), is("RS==host2:1001"));
+      case "default:table2":
+        assertThat(drillDownInfo.getInitialFilters().get(0).toString(), is("NAMESPACE==default"));
+        assertThat(drillDownInfo.getInitialFilters().get(1).toString(), is("TABLE==table2"));
+        break;
+
+      case "namespace:table3":
+        assertThat(drillDownInfo.getInitialFilters().get(0).toString(),
+          is("NAMESPACE==namespace"));
+        assertThat(drillDownInfo.getInitialFilters().get(1).toString(), is("TABLE==table3"));
         break;
 
       default:

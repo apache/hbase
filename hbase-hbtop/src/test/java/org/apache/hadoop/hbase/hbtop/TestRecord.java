@@ -30,11 +30,11 @@ import org.junit.experimental.categories.Category;
 
 
 @Category(SmallTests.class)
-public class RecordTest {
+public class TestRecord {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(RecordTest.class);
+    HBaseClassTestRule.forClass(TestRecord.class);
 
   @Test
   public void testBuilder() {

@@ -15,32 +15,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.hbtop.mode;
+package org.apache.hadoop.hbase.hbtop.terminal.impl;
 
-import java.util.List;
-import org.apache.hadoop.hbase.hbtop.Record;
-import org.apache.hadoop.hbase.hbtop.TestUtils;
-import org.junit.Test;
+import java.util.concurrent.TimeUnit;
+
+import org.apache.hadoop.hbase.hbtop.terminal.KeyPress;
+import org.apache.hadoop.hbase.hbtop.terminal.Terminal;
 
 
-public abstract class ModeTestBase {
+public final class TestKeyPress {
 
-  @Test
-  public void testGetRecords() {
-    List<Record> records = getMode().getRecords(TestUtils.createDummyClusterMetrics());
-    assertRecords(records);
+  private TestKeyPress() {
   }
 
-  protected abstract Mode getMode();
-  protected abstract void assertRecords(List<Record> records);
+  public static void main(String[] args) throws Exception {
+    try (Terminal terminal = new TerminalImpl()) {
+      terminal.hideCursor();
+      terminal.refresh();
 
-  @Test
-  public void testDrillDown() {
-    List<Record> records = getMode().getRecords(TestUtils.createDummyClusterMetrics());
-    for (Record record : records) {
-      assertDrillDown(record, getMode().drillDown(record));
+      while (true) {
+        KeyPress keyPress = terminal.pollKeyPress();
+        if (keyPress == null) {
+          TimeUnit.MILLISECONDS.sleep(100);
+          continue;
+        }
+
+        terminal.getTerminalPrinter(0).print(keyPress.toString()).endOfLine();
+        terminal.refresh();
+
+        if (keyPress.getType() == KeyPress.Type.F12) {
+          break;
+        }
+      }
     }
   }
-
-  protected abstract void assertDrillDown(Record currentRecord, DrillDownInfo drillDownInfo);
 }

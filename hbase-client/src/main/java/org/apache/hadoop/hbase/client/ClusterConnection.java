@@ -322,12 +322,6 @@ public interface ClusterConnection extends Connection {
   boolean hasCellBlockSupport();
 
   /**
-   * @return the number of region servers that are currently running
-   * @throws IOException if a remote or network exception occurs
-   */
-  int getCurrentNrHRS() throws IOException;
-
-  /**
    * Retrieve an Hbck implementation to fix an HBase cluster.
    * The returned Hbck is not guaranteed to be thread-safe. A new instance should be created by
    * each thread. This is a lightweight operation. Pooling or caching of the returned Hbck instance

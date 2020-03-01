@@ -88,7 +88,7 @@ public class ZKLeaderManager extends ZKListener {
     try {
       synchronized(lock) {
         if (ZKUtil.watchAndCheckExists(watcher, leaderZNode)) {
-          LOG.info("Found new leader for znode: "+leaderZNode);
+          LOG.info("Found new leader for znode: {}", leaderZNode);
           leaderExists.set(true);
         } else {
           LOG.info("Leader change, but no new leader found");
@@ -127,7 +127,7 @@ public class ZKLeaderManager extends ZKListener {
           ZKUtil.deleteNode(watcher, leaderZNode);
           leaderExists.set(false);
         } else {
-          LOG.info("Found existing leader with ID: "+Bytes.toStringBinary(nodeId));
+          LOG.info("Found existing leader with ID: {}", Bytes.toStringBinary(nodeId));
           leaderExists.set(true);
         }
       } catch (KeeperException ke) {

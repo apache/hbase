@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -632,9 +633,9 @@ public class TestAdmin1 {
     assertFalse(this.admin.tableExists(tableName));
   }
 
-  protected void verifyRoundRobinDistribution(ClusterConnection c, RegionLocator regionLocator, int
-      expectedRegions) throws IOException {
-    int numRS = c.getCurrentNrHRS();
+  private void verifyRoundRobinDistribution(RegionLocator regionLocator, int expectedRegions)
+      throws IOException {
+    int numRS = TEST_UTIL.getMiniHBaseCluster().getNumLiveRegionServers();
     List<HRegionLocation> regions = regionLocator.getAllRegionLocations();
     Map<ServerName, List<RegionInfo>> server2Regions = new HashMap<>();
     for (HRegionLocation loc : regions) {
@@ -779,7 +780,7 @@ public class TestAdmin1 {
       assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[8]));
       assertTrue(hri.getEndKey() == null || hri.getEndKey().length == 0);
 
-      verifyRoundRobinDistribution(conn, l, expectedRegions);
+      verifyRoundRobinDistribution(l, expectedRegions);
     }
 
 
@@ -840,7 +841,7 @@ public class TestAdmin1 {
       assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 }));
       assertTrue(hri.getEndKey() == null || hri.getEndKey().length == 0);
 
-      verifyRoundRobinDistribution(conn, l, expectedRegions);
+      verifyRoundRobinDistribution(l, expectedRegions);
     }
 
     // Try once more with something that divides into something infinite
@@ -864,7 +865,7 @@ public class TestAdmin1 {
           "but only found " + regions.size(), expectedRegions, regions.size());
       System.err.println("Found " + regions.size() + " regions");
 
-      verifyRoundRobinDistribution(conn, l, expectedRegions);
+      verifyRoundRobinDistribution(l, expectedRegions);
     }
 
 
@@ -1433,6 +1434,41 @@ public class TestAdmin1 {
     } finally {
       this.admin.disableTable(tableName);
       this.admin.deleteTable(tableName);
+    }
+  }
+
+  @Test
+  public void testMergeRegionsInvalidRegionCount()
+      throws IOException, InterruptedException, ExecutionException {
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("d")).build();
+    byte[][] splitRows = new byte[2][];
+    splitRows[0] = new byte[] { (byte) '3' };
+    splitRows[1] = new byte[] { (byte) '6' };
+    try {
+      TEST_UTIL.createTable(td, splitRows);
+      TEST_UTIL.waitTableAvailable(tableName);
+
+      List<RegionInfo> tableRegions = admin.getRegions(tableName);
+      // 0
+      try {
+        admin.mergeRegionsAsync(new byte[0][0], false).get();
+        fail();
+      } catch (IllegalArgumentException e) {
+        // expected
+      }
+      // 1
+      try {
+        admin.mergeRegionsAsync(new byte[][] { tableRegions.get(0).getEncodedNameAsBytes() }, false)
+          .get();
+        fail();
+      } catch (IllegalArgumentException e) {
+        // expected
+      }
+    } finally {
+      admin.disableTable(tableName);
+      admin.deleteTable(tableName);
     }
   }
 

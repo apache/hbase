@@ -279,10 +279,10 @@ class MemStoreFlusher implements FlushRequester {
       } else {
         LOG.info("Flush of region " + regionToFlush + " due to global heap pressure. " +
             "Flush type=" + flushType.toString() +
-            "Total Memstore Heap size=" +
+            ", Total Memstore Heap size=" +
             TraditionalBinaryPrefix.long2String(
                 server.getRegionServerAccounting().getGlobalMemStoreHeapSize(), "", 1) +
-            "Total Memstore Off-Heap size=" +
+            ", Total Memstore Off-Heap size=" +
             TraditionalBinaryPrefix.long2String(
                 server.getRegionServerAccounting().getGlobalMemStoreOffHeapSize(), "", 1) +
             ", Region memstore size=" +

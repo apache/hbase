@@ -63,7 +63,8 @@ public abstract class CommonFSUtils {
   public static final String HBASE_WAL_DIR = "hbase.wal.dir";
 
   /** Parameter to disable stream capability enforcement checks */
-  public static final String UNSAFE_STREAM_CAPABILITY_ENFORCE = "hbase.unsafe.stream.capability.enforce";
+  public static final String UNSAFE_STREAM_CAPABILITY_ENFORCE =
+    "hbase.unsafe.stream.capability.enforce";
 
   /** Full access permissions (starting point for a umask) */
   public static final String FULL_RWX_PERMISSIONS = "777";
@@ -139,8 +140,7 @@ public abstract class CommonFSUtils {
    * @return True if deleted <code>dir</code>
    * @throws IOException e
    */
-  public static boolean deleteDirectory(final FileSystem fs, final Path dir)
-  throws IOException {
+  public static boolean deleteDirectory(final FileSystem fs, final Path dir) throws IOException {
     return fs.exists(dir) && fs.delete(dir, true);
   }
 
@@ -148,69 +148,22 @@ public abstract class CommonFSUtils {
    * Return the number of bytes that large input files should be optimally
    * be split into to minimize i/o time.
    *
-   * use reflection to search for getDefaultBlockSize(Path f)
-   * if the method doesn't exist, fall back to using getDefaultBlockSize()
-   *
    * @param fs filesystem object
    * @return the default block size for the path's filesystem
-   * @throws IOException e
    */
-  public static long getDefaultBlockSize(final FileSystem fs, final Path path) throws IOException {
-    Method m = null;
-    Class<? extends FileSystem> cls = fs.getClass();
-    try {
-      m = cls.getMethod("getDefaultBlockSize", new Class<?>[] { Path.class });
-    } catch (NoSuchMethodException e) {
-      LOG.info("FileSystem doesn't support getDefaultBlockSize");
-    } catch (SecurityException e) {
-      LOG.info("Doesn't have access to getDefaultBlockSize on FileSystems", e);
-      m = null; // could happen on setAccessible()
-    }
-    if (m == null) {
-      return fs.getDefaultBlockSize(path);
-    } else {
-      try {
-        Object ret = m.invoke(fs, path);
-        return ((Long)ret).longValue();
-      } catch (Exception e) {
-        throw new IOException(e);
-      }
-    }
+  public static long getDefaultBlockSize(final FileSystem fs, final Path path) {
+    return fs.getDefaultBlockSize(path);
   }
 
   /*
    * Get the default replication.
    *
-   * use reflection to search for getDefaultReplication(Path f)
-   * if the method doesn't exist, fall back to using getDefaultReplication()
-   *
    * @param fs filesystem object
    * @param f path of file
    * @return default replication for the path's filesystem
-   * @throws IOException e
    */
-  public static short getDefaultReplication(final FileSystem fs, final Path path)
-      throws IOException {
-    Method m = null;
-    Class<? extends FileSystem> cls = fs.getClass();
-    try {
-      m = cls.getMethod("getDefaultReplication", new Class<?>[] { Path.class });
-    } catch (NoSuchMethodException e) {
-      LOG.info("FileSystem doesn't support getDefaultReplication");
-    } catch (SecurityException e) {
-      LOG.info("Doesn't have access to getDefaultReplication on FileSystems", e);
-      m = null; // could happen on setAccessible()
-    }
-    if (m == null) {
-      return fs.getDefaultReplication(path);
-    } else {
-      try {
-        Object ret = m.invoke(fs, path);
-        return ((Number)ret).shortValue();
-      } catch (Exception e) {
-        throw new IOException(e);
-      }
-    }
+  public static short getDefaultReplication(final FileSystem fs, final Path path) {
+    return fs.getDefaultReplication(path);
   }
 
   /**
@@ -247,7 +200,7 @@ public abstract class CommonFSUtils {
   public static FSDataOutputStream create(FileSystem fs, Path path,
       FsPermission perm, boolean overwrite) throws IOException {
     if (LOG.isTraceEnabled()) {
-      LOG.trace("Creating file=" + path + " with permission=" + perm + ", overwrite=" + overwrite);
+      LOG.trace("Creating file={} with permission={}, overwrite={}", path, perm, overwrite);
     }
     return fs.create(path, perm, overwrite, getDefaultBufferSize(fs),
         getDefaultReplication(fs, path), getDefaultBlockSize(fs, path), null);
@@ -362,11 +315,11 @@ public abstract class CommonFSUtils {
     return p.makeQualified(fs.getUri(), fs.getWorkingDirectory());
   }
 
-  public static void setRootDir(final Configuration c, final Path root) throws IOException {
+  public static void setRootDir(final Configuration c, final Path root) {
     c.set(HConstants.HBASE_DIR, root.toString());
   }
 
-  public static void setFsDefault(final Configuration c, final Path root) throws IOException {
+  public static void setFsDefault(final Configuration c, final Path root) {
     c.set("fs.defaultFS", root.toString());    // for hadoop 0.21+
   }
 
@@ -392,7 +345,7 @@ public abstract class CommonFSUtils {
   }
 
   @VisibleForTesting
-  public static void setWALRootDir(final Configuration c, final Path root) throws IOException {
+  public static void setWALRootDir(final Configuration c, final Path root) {
     c.set(HBASE_WAL_DIR, root.toString());
   }
 
@@ -501,8 +454,7 @@ public abstract class CommonFSUtils {
   // this mapping means that under a federated FileSystem implementation, we'll
   // only log the first failure from any of the underlying FileSystems at WARN and all others
   // will be at DEBUG.
-  private static final Map<FileSystem, Boolean> warningMap =
-      new ConcurrentHashMap<FileSystem, Boolean>();
+  private static final Map<FileSystem, Boolean> warningMap = new ConcurrentHashMap<>();
 
   /**
    * Sets storage policy for given path.
@@ -574,8 +526,7 @@ public abstract class CommonFSUtils {
     Method m = null;
     Exception toThrow = null;
     try {
-      m = fs.getClass().getDeclaredMethod("setStoragePolicy",
-        new Class<?>[] { Path.class, String.class });
+      m = fs.getClass().getDeclaredMethod("setStoragePolicy", Path.class, String.class);
       m.setAccessible(true);
     } catch (NoSuchMethodException e) {
       toThrow = e;
@@ -607,7 +558,7 @@ public abstract class CommonFSUtils {
       try {
         m.invoke(fs, path, storagePolicy);
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Set storagePolicy=" + storagePolicy + " for path=" + path);
+          LOG.debug("Set storagePolicy={} for path={}", storagePolicy, path);
         }
       } catch (Exception e) {
         toThrow = e;
@@ -625,15 +576,15 @@ public abstract class CommonFSUtils {
           final Throwable exception = e.getCause();
           if (exception instanceof RemoteException &&
               HadoopIllegalArgumentException.class.getName().equals(
-                ((RemoteException)exception).getClassName())) {
+                  ((RemoteException)exception).getClassName())) {
             if (LOG.isDebugEnabled()) {
               LOG.debug("Given storage policy, '" +storagePolicy +"', was rejected and probably " +
-                "isn't a valid policy for the version of Hadoop you're running. I.e. if you're " +
-                "trying to use SSD related policies then you're likely missing HDFS-7228. For " +
-                "more information see the 'ArchivalStorage' docs for your Hadoop release.");
+                  "isn't a valid policy for the version of Hadoop you're running. I.e. if you're " +
+                  "trying to use SSD related policies then you're likely missing HDFS-7228. For " +
+                  "more information see the 'ArchivalStorage' docs for your Hadoop release.");
             }
-          // Hadoop 2.8+, 3.0-a1+ added FileSystem.setStoragePolicy with a default implementation
-          // that throws UnsupportedOperationException
+            // Hadoop 2.8+, 3.0-a1+ added FileSystem.setStoragePolicy with a default implementation
+            // that throws UnsupportedOperationException
           } else if (exception instanceof UnsupportedOperationException) {
             if (LOG.isDebugEnabled()) {
               LOG.debug("The underlying FileSystem implementation doesn't support " +
@@ -679,8 +630,7 @@ public abstract class CommonFSUtils {
    * @return Returns the filesystem of the hbase rootdir.
    * @throws IOException from underlying FileSystem
    */
-  public static FileSystem getCurrentFileSystem(Configuration conf)
-  throws IOException {
+  public static FileSystem getCurrentFileSystem(Configuration conf) throws IOException {
     return getRootDir(conf).getFileSystem(conf);
   }
 
@@ -698,7 +648,7 @@ public abstract class CommonFSUtils {
    * @param filter path filter
    * @return null if dir is empty or doesn't exist, otherwise FileStatus array
    */
-  public static FileStatus [] listStatus(final FileSystem fs,
+  public static FileStatus[] listStatus(final FileSystem fs,
       final Path dir, final PathFilter filter) throws IOException {
     FileStatus [] status = null;
     try {
@@ -706,7 +656,7 @@ public abstract class CommonFSUtils {
     } catch (FileNotFoundException fnfe) {
       // if directory doesn't exist, return null
       if (LOG.isTraceEnabled()) {
-        LOG.trace(dir + " doesn't exist");
+        LOG.trace("{} doesn't exist", dir);
       }
     }
     if (status == null || status.length < 1) {
@@ -749,7 +699,7 @@ public abstract class CommonFSUtils {
     } catch (FileNotFoundException fnfe) {
       // if directory doesn't exist, return null
       if (LOG.isTraceEnabled()) {
-        LOG.trace(dir + " doesn't exist");
+        LOG.trace("{} doesn't exist", dir);
       }
     }
     return status;
@@ -785,13 +735,13 @@ public abstract class CommonFSUtils {
    * Log the current state of the filesystem from a certain root directory
    * @param fs filesystem to investigate
    * @param root root file/directory to start logging from
-   * @param LOG log to output information
+   * @param log log to output information
    * @throws IOException if an unexpected exception occurs
    */
-  public static void logFileSystemState(final FileSystem fs, final Path root, Logger LOG)
+  public static void logFileSystemState(final FileSystem fs, final Path root, Logger log)
       throws IOException {
-    LOG.debug("File system contents for path " + root);
-    logFSTree(LOG, fs, root, "|-");
+    log.debug("File system contents for path {}", root);
+    logFSTree(log, fs, root, "|-");
   }
 
   /**
@@ -799,7 +749,7 @@ public abstract class CommonFSUtils {
    *
    * @see #logFileSystemState(FileSystem, Path, Logger)
    */
-  private static void logFSTree(Logger LOG, final FileSystem fs, final Path root, String prefix)
+  private static void logFSTree(Logger log, final FileSystem fs, final Path root, String prefix)
       throws IOException {
     FileStatus[] files = listStatus(fs, root, null);
     if (files == null) {
@@ -808,10 +758,10 @@ public abstract class CommonFSUtils {
 
     for (FileStatus file : files) {
       if (file.isDirectory()) {
-        LOG.debug(prefix + file.getPath().getName() + "/");
-        logFSTree(LOG, fs, file.getPath(), prefix + "---");
+        log.debug(prefix + file.getPath().getName() + "/");
+        logFSTree(log, fs, file.getPath(), prefix + "---");
       } else {
-        LOG.debug(prefix + file.getPath().getName());
+        log.debug(prefix + file.getPath().getName());
       }
     }
   }
@@ -821,25 +771,6 @@ public abstract class CommonFSUtils {
     // set the modify time for TimeToLive Cleaner
     fs.setTimes(src, EnvironmentEdgeManager.currentTime(), -1);
     return fs.rename(src, dest);
-  }
-
-  /**
-   * Do our short circuit read setup.
-   * Checks buffer size to use and whether to do checksumming in hbase or hdfs.
-   * @param conf must not be null
-   */
-  public static void setupShortCircuitRead(final Configuration conf) {
-    // Check that the user has not set the "dfs.client.read.shortcircuit.skip.checksum" property.
-    boolean shortCircuitSkipChecksum =
-      conf.getBoolean("dfs.client.read.shortcircuit.skip.checksum", false);
-    boolean useHBaseChecksum = conf.getBoolean(HConstants.HBASE_CHECKSUM_VERIFICATION, true);
-    if (shortCircuitSkipChecksum) {
-      LOG.warn("Configuration \"dfs.client.read.shortcircuit.skip.checksum\" should not " +
-        "be set to true." + (useHBaseChecksum ? " HBase checksum doesn't require " +
-        "it, see https://issues.apache.org/jira/browse/HBASE-6868." : ""));
-      assert !shortCircuitSkipChecksum; //this will fail if assertions are on
-    }
-    checkShortCircuitReadBufferSize(conf);
   }
 
   /**

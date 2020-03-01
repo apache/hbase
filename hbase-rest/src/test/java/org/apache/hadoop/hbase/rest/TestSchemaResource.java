@@ -52,18 +52,13 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Category({RestTests.class, MediumTests.class})
 @RunWith(Parameterized.class)
 public class TestSchemaResource {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestSchemaResource.class);
-
-  private static final Logger LOG = LoggerFactory.getLogger(TestSchemaResource.class);
 
   private static String TABLE1 = "TestSchemaResource1";
   private static String TABLE2 = "TestSchemaResource2";
@@ -146,7 +141,8 @@ public class TestSchemaResource {
     Response response;
 
     Admin admin = TEST_UTIL.getAdmin();
-    assertFalse("Table " + TABLE1 + " should not exist", admin.tableExists(TableName.valueOf(TABLE1)));
+    assertFalse("Table " + TABLE1 + " should not exist",
+        admin.tableExists(TableName.valueOf(TABLE1)));
 
     // create the table
     model = testTableSchemaModel.buildTestModel(TABLE1);
@@ -200,7 +196,7 @@ public class TestSchemaResource {
   }
 
   @Test
-  public void testTableCreateAndDeletePB() throws IOException, JAXBException {
+  public void testTableCreateAndDeletePB() throws IOException {
     String schemaPath = "/" + TABLE2 + "/schema";
     TableSchemaModel model;
     Response response;
@@ -263,6 +259,4 @@ public class TestSchemaResource {
     assertEquals(200, response.getCode());
     assertFalse(admin.tableExists(TableName.valueOf(TABLE2)));
   }
-
 }
-
