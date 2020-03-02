@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.Random;
 import java.util.Set;
 
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -29,13 +30,15 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Action that removes a column family.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
+@InterfaceStability.Evolving
 public class RemoveColumnAction extends Action {
   private static final Logger LOG =
       LoggerFactory.getLogger(RemoveColumnAction.class);

@@ -20,16 +20,19 @@ package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Action that adds high cpu load to a random regionserver for a given duration
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
+@InterfaceStability.Evolving
 public class AddCPULoadAction extends SudoCommandAction {
   protected static final Logger LOG = LoggerFactory.getLogger(AddCPULoadAction.class);
   private static final String CPU_LOAD_COMMAND =

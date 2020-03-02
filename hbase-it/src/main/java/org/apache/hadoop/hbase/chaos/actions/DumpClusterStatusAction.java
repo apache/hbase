@@ -20,14 +20,17 @@ package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Action to dump the cluster status.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
+@InterfaceStability.Evolving
 public class DumpClusterStatusAction extends Action {
   private static final Logger LOG =
       LoggerFactory.getLogger(DumpClusterStatusAction.class);

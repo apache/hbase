@@ -19,15 +19,18 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import org.apache.hadoop.hbase.ClusterMetrics;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
 * Action that tries to restart the HRegionServer holding Meta.
 */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
+@InterfaceStability.Evolving
 public class RestartRsHoldingMetaAction extends RestartActionBaseAction {
   private static final Logger LOG =
       LoggerFactory.getLogger(RestartRsHoldingMetaAction.class);

@@ -18,17 +18,20 @@
 
 package org.apache.hadoop.hbase.chaos.policies;
 
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.chaos.actions.Action;
 import org.apache.hadoop.hbase.util.StoppableImplementation;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * A policy to introduce chaos to the cluster
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
+@InterfaceStability.Evolving
 public abstract class Policy extends StoppableImplementation implements Runnable {
 
   protected static final Logger LOG = LoggerFactory.getLogger(Policy.class);

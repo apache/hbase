@@ -23,14 +23,17 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.DistributedHBaseCluster;
 import org.apache.hadoop.hbase.HBaseCluster;
 import org.apache.hadoop.hbase.HBaseClusterManager;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Base class for performing Actions based on linux commands requiring sudo privileges
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
+@InterfaceStability.Evolving
 abstract public class SudoCommandAction extends Action {
   private static final Logger LOG = LoggerFactory.getLogger(SudoCommandAction.class);
 

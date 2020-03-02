@@ -20,14 +20,17 @@ package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.List;
 
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Same as in {@link RollingBatchRestartRsAction} except that this action
  * does not restart the region server holding the META table.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
+@InterfaceStability.Evolving
 public class RollingBatchRestartRsExceptMetaAction extends RollingBatchRestartRsAction {
 
   public RollingBatchRestartRsExceptMetaAction(long sleepTime, float ratio, int maxDeadServers) {

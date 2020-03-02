@@ -22,6 +22,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Facility for <strong>integration/system</strong> tests. This extends {@link HBaseTestingUtility}
@@ -40,7 +41,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  * via {@link #initializeCluster(int)}. Individual tests should not directly call
  * {@link #setUseDistributedCluster(Configuration)}.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
+@InterfaceStability.Evolving
 public class IntegrationTestingUtility extends HBaseTestingUtility {
 
   public IntegrationTestingUtility() {

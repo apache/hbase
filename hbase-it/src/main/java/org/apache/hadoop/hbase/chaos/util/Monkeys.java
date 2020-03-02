@@ -26,8 +26,10 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,7 +39,8 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
 /**
  * This class can be used to control chaos monkeys life cycle.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
+@InterfaceStability.Evolving
 public class Monkeys implements Closeable {
   private static final Logger LOG = LoggerFactory.getLogger(Monkeys.class);
 

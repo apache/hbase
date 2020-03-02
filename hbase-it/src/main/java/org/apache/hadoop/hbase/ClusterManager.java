@@ -22,14 +22,15 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * ClusterManager is an api to manage servers in a distributed environment. It provides services
  * for starting / stopping / killing Hadoop/HBase daemons. Concrete implementations provide actual
  * functionality for carrying out deployment-specific tasks.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
+@InterfaceStability.Evolving
 public interface ClusterManager extends Configurable {
   /**
    * Type of the service daemon

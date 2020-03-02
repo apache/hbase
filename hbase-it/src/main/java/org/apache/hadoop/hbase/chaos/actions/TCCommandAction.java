@@ -18,12 +18,15 @@
 
 package org.apache.hadoop.hbase.chaos.actions;
 
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Base class for tc command actions
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
+@InterfaceStability.Evolving
 abstract public class TCCommandAction extends SudoCommandAction {
   protected static final String ADD = "add";
   protected static final String DELETE = "del";

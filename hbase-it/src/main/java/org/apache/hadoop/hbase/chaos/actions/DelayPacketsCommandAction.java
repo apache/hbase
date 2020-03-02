@@ -20,16 +20,19 @@ package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Action adds latency to communication on a random regionserver.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
+@InterfaceStability.Evolving
 public class DelayPacketsCommandAction extends TCCommandAction {
   private static final Logger LOG = LoggerFactory.getLogger(DelayPacketsCommandAction.class);
   private long delay;

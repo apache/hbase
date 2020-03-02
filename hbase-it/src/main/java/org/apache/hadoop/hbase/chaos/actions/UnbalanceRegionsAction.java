@@ -24,15 +24,18 @@ import java.util.List;
 
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hbase.ClusterMetrics;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
 * Action that tries to unbalance the regions of a cluster.
 */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
+@InterfaceStability.Evolving
 public class UnbalanceRegionsAction extends Action {
   private static final Logger LOG =
       LoggerFactory.getLogger(UnbalanceRegionsAction.class);

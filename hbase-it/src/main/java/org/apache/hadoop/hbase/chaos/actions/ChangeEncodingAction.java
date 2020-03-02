@@ -21,16 +21,19 @@ package org.apache.hadoop.hbase.chaos.actions;
 import java.io.IOException;
 import java.util.Random;
 
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Action that changes the encoding on a column family from a list of tables.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
+@InterfaceStability.Evolving
 public class ChangeEncodingAction extends Action {
   private final TableName tableName;
   private final Random random;

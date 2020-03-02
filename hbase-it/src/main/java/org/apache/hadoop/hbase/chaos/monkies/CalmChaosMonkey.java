@@ -18,12 +18,15 @@
 
 package org.apache.hadoop.hbase.chaos.monkies;
 
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Chaos Monkey that does nothing.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
+@InterfaceStability.Evolving
 public class CalmChaosMonkey extends ChaosMonkey {
   @Override
   public void start() throws Exception {

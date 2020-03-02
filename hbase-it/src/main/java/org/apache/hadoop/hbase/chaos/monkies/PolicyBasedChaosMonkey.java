@@ -24,17 +24,20 @@ import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.lang3.RandomUtils;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.chaos.policies.Policy;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Chaos monkey that given multiple policies will run actions against the cluster.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
+@InterfaceStability.Evolving
 public class PolicyBasedChaosMonkey extends ChaosMonkey {
 
   private static final Logger LOG = LoggerFactory.getLogger(PolicyBasedChaosMonkey.class);

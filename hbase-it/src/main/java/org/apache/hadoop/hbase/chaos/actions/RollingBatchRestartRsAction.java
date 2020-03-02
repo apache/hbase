@@ -25,9 +25,11 @@ import java.util.List;
 import java.util.Queue;
 
 import org.apache.commons.lang3.RandomUtils;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,7 +39,8 @@ import org.slf4j.LoggerFactory;
  * The parameter maxDeadServers limits the maximum number of servers that
  * can be down at the same time during rolling restarts.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
+@InterfaceStability.Evolving
 public class RollingBatchRestartRsAction extends BatchRestartRsAction {
   private static final Logger LOG = LoggerFactory.getLogger(RollingBatchRestartRsAction.class);
   protected int maxDeadServers; // number of maximum dead servers at any given time. Defaults to 5

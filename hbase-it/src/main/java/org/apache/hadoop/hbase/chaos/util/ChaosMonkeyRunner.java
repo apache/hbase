@@ -24,6 +24,7 @@ import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.TableName;
@@ -32,12 +33,14 @@ import org.apache.hadoop.hbase.chaos.monkies.ChaosMonkey;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
+@InterfaceStability.Evolving
 public class ChaosMonkeyRunner extends AbstractHBaseTool {
   private static final Logger LOG = LoggerFactory.getLogger(ChaosMonkeyRunner.class);
 

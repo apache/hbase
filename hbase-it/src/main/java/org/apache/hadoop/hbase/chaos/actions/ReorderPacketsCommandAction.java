@@ -20,9 +20,11 @@ package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,7 +32,8 @@ import org.slf4j.LoggerFactory;
  *
  * Reorder network packets on a random regionserver.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
+@InterfaceStability.Evolving
 public class ReorderPacketsCommandAction extends TCCommandAction {
   private static final Logger LOG = LoggerFactory.getLogger(ReorderPacketsCommandAction.class);
   private float ratio;

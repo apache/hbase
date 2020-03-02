@@ -18,11 +18,14 @@
 
 package org.apache.hadoop.hbase.chaos.actions;
 
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
+@InterfaceStability.Evolving
 public class RestartRandomRsExceptMetaAction extends RestartRandomRsAction {
   public RestartRandomRsExceptMetaAction(long sleepTime) {
     super(sleepTime);

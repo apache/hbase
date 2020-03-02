@@ -26,14 +26,17 @@ import java.util.Set;
 
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hbase.ClusterMetrics;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** This action is too specific to put in ChaosMonkey; put it here */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
+@InterfaceStability.Evolving
 public class UnbalanceKillAndRebalanceAction extends Action {
   private static final Logger LOG =
       LoggerFactory.getLogger(UnbalanceKillAndRebalanceAction.class);

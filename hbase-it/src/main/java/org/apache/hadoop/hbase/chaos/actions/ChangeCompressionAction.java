@@ -21,17 +21,20 @@ package org.apache.hadoop.hbase.chaos.actions;
 import java.io.IOException;
 import java.util.Random;
 
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Action that changes the compression algorithm on a column family from a list of tables.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
+@InterfaceStability.Evolving
 public class ChangeCompressionAction extends Action {
   private final TableName tableName;
   private final Random random;

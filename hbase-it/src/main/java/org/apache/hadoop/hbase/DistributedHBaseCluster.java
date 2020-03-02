@@ -36,12 +36,14 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Manages the interactions with an already deployed distributed cluster (as opposed to
  * a pseudo-distributed, or mini/local cluster). This is used by integration and system tests.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
+@InterfaceStability.Evolving
 public class DistributedHBaseCluster extends HBaseCluster {
   private Admin admin;
   private final Connection connection;

@@ -18,11 +18,13 @@
 
 package org.apache.hadoop.hbase.chaos.policies;
 
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.chaos.actions.Action;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -33,7 +35,8 @@ import java.util.concurrent.Future;
  * Chaos Monkey policy that will run two different actions at the same time.
  * A random action from each array of actions will be chosen and then run in parallel.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
+@InterfaceStability.Evolving
 public class TwoConcurrentActionPolicy extends PeriodicPolicy {
   private final Action[] actionsOne;
   private final Action[] actionsTwo;

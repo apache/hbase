@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.monkies.ChaosMonkey;
@@ -29,13 +30,15 @@ import org.apache.hadoop.hbase.chaos.monkies.ChaosMonkey;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Base class of the factory that will create a ChaosMonkey.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
+@InterfaceStability.Evolving
 public abstract class MonkeyFactory {
   private static final Logger LOG = LoggerFactory.getLogger(MonkeyFactory.class);
 

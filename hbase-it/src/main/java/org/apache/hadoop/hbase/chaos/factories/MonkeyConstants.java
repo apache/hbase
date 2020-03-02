@@ -17,12 +17,15 @@
  */
 package org.apache.hadoop.hbase.chaos.factories;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
+@InterfaceStability.Evolving
 public interface MonkeyConstants {
 
   String PERIODIC_ACTION1_PERIOD = "sdm.action1.period";

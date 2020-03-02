@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.util.RetryCounter.RetryConfig;
 import org.apache.hadoop.hbase.util.RetryCounterFactory;
 import org.apache.hadoop.util.Shell;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,7 +44,8 @@ import org.slf4j.LoggerFactory;
  * servers on the remote machines (for example, the test user could be the same user as the
  * user the daemon is running as)
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
+@InterfaceStability.Evolving
 public class HBaseClusterManager extends Configured implements ClusterManager {
   private static final String SIGKILL = "SIGKILL";
   private static final String SIGSTOP = "SIGSTOP";

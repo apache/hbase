@@ -19,7 +19,9 @@
 package org.apache.hadoop.hbase.chaos.monkies;
 
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * A utility to injects faults in a running cluster.
@@ -42,7 +44,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  * ChaosMonkey class is indeed inspired by the Netflix's same-named tool:
  * http://techblog.netflix.com/2012/07/chaos-monkey-released-into-wild.html
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
+@InterfaceStability.Evolving
 public abstract class ChaosMonkey implements Stoppable {
   public abstract void start() throws Exception;
 

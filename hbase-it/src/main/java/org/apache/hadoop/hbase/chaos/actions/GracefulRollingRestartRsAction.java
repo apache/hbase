@@ -22,10 +22,12 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.commons.lang3.RandomUtils;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.RegionMover;
 import org.apache.hadoop.util.Shell;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,7 +35,8 @@ import org.slf4j.LoggerFactory;
  * Gracefully restarts every regionserver in a rolling fashion. At each step, it unloads,
  * restarts the loads every rs server sleeping randomly (0-sleepTime) in between servers.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
+@InterfaceStability.Evolving
 public class GracefulRollingRestartRsAction extends RestartActionBaseAction {
   private static final Logger LOG = LoggerFactory.getLogger(GracefulRollingRestartRsAction.class);
 

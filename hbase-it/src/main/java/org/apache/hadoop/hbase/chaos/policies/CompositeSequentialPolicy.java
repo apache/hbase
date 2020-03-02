@@ -18,12 +18,15 @@
 
 package org.apache.hadoop.hbase.chaos.policies;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import java.util.Arrays;
 import java.util.List;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /** A policy that runs multiple other policies one after the other */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
+@InterfaceStability.Evolving
 public class CompositeSequentialPolicy extends Policy {
   private List<Policy> policies;
   public CompositeSequentialPolicy(Policy... policies) {

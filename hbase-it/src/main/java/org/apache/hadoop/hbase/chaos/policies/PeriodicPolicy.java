@@ -19,11 +19,14 @@
 package org.apache.hadoop.hbase.chaos.policies;
 
 import org.apache.commons.lang3.RandomUtils;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /** A policy which does stuff every time interval. */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
+@InterfaceStability.Evolving
 public abstract class PeriodicPolicy extends Policy {
   private long periodMs;
 

@@ -21,16 +21,19 @@ package org.apache.hadoop.hbase.chaos.actions;
 import java.util.List;
 
 import org.apache.commons.lang3.RandomUtils;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
 * Action that restarts an HRegionServer holding one of the regions of the table.
 */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
+@InterfaceStability.Evolving
 public class RestartRsHoldingTableAction extends RestartActionBaseAction {
   private static final Logger LOG =
       LoggerFactory.getLogger(RestartRsHoldingTableAction.class);

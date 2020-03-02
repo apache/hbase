@@ -20,10 +20,12 @@ package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.Random;
 
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,7 +33,8 @@ import org.slf4j.LoggerFactory;
  * Action that tries to adjust the bloom filter setting on all the columns of a
  * table
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
+@InterfaceStability.Evolving
 public class ChangeBloomFilterAction extends Action {
   private final long sleepTime;
   private final TableName tableName;
