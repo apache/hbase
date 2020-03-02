@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -372,17 +372,18 @@ public class TestReplicaWithCluster {
   @SuppressWarnings("deprecation")
   @Test
   public void testReplicaAndReplication() throws Exception {
-    HTableDescriptor hdt = HTU.createTableDescriptor(TableName.valueOf("testReplicaAndReplication"),
-      HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
-      HColumnDescriptor.DEFAULT_KEEP_DELETED);
-    hdt.setRegionReplication(NB_SERVERS);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      HTU.createModifyableTableDescriptor("testReplicaAndReplication");
+    tableDescriptor.setRegionReplication(NB_SERVERS);
 
-    HColumnDescriptor fam = new HColumnDescriptor(row);
-    fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    hdt.addFamily(fam);
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(row);
 
-    hdt.addCoprocessor(SlowMeCopro.class.getName());
-    HTU.getAdmin().createTable(hdt, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+    familyDescriptor.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
+    tableDescriptor.setColumnFamily(familyDescriptor);
+
+    tableDescriptor.setCoprocessor(SlowMeCopro.class.getName());
+    HTU.getAdmin().createTable(tableDescriptor, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
 
     Configuration conf2 = HBaseConfiguration.create(HTU.getConfiguration());
     conf2.set(HConstants.HBASE_CLIENT_INSTANCE_ID, String.valueOf(-1));
@@ -393,7 +394,7 @@ public class TestReplicaWithCluster {
     HTU2.setZkCluster(miniZK);
     HTU2.startMiniCluster(NB_SERVERS);
     LOG.info("Setup second Zk");
-    HTU2.getAdmin().createTable(hdt, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+    HTU2.getAdmin().createTable(tableDescriptor, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
 
     Admin admin = ConnectionFactory.createConnection(HTU.getConfiguration()).getAdmin();
 
@@ -404,7 +405,7 @@ public class TestReplicaWithCluster {
 
     Put p = new Put(row);
     p.addColumn(row, row, row);
-    final Table table = HTU.getConnection().getTable(hdt.getTableName());
+    final Table table = HTU.getConnection().getTable(tableDescriptor.getTableName());
     table.put(p);
 
     HTU.getAdmin().flush(table.getName());
@@ -428,7 +429,7 @@ public class TestReplicaWithCluster {
     table.close();
     LOG.info("stale get on the first cluster done. Now for the second.");
 
-    final Table table2 = HTU.getConnection().getTable(hdt.getTableName());
+    final Table table2 = HTU.getConnection().getTable(tableDescriptor.getTableName());
     Waiter.waitFor(HTU.getConfiguration(), 1000, new Waiter.Predicate<Exception>() {
       @Override public boolean evaluate() throws Exception {
         try {
@@ -446,11 +447,11 @@ public class TestReplicaWithCluster {
     });
     table2.close();
 
-    HTU.getAdmin().disableTable(hdt.getTableName());
-    HTU.deleteTable(hdt.getTableName());
+    HTU.getAdmin().disableTable(tableDescriptor.getTableName());
+    HTU.deleteTable(tableDescriptor.getTableName());
 
-    HTU2.getAdmin().disableTable(hdt.getTableName());
-    HTU2.deleteTable(hdt.getTableName());
+    HTU2.getAdmin().disableTable(tableDescriptor.getTableName());
+    HTU2.deleteTable(tableDescriptor.getTableName());
 
     // We shutdown HTU2 minicluster later, in afterClass(), as shutting down
     // the minicluster has negative impact of deleting all HConnections in JVM.

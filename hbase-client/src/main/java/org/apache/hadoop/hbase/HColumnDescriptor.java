@@ -113,7 +113,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
    */
   @Deprecated
   public HColumnDescriptor(final String familyName) {
-    this(Bytes.toBytes(familyName));
+    this(new ModifyableColumnFamilyDescriptor(Bytes.toBytes(familyName)));
   }
 
   /**

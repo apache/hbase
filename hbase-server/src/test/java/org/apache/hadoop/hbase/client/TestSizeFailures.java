@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,8 +26,6 @@ import java.util.Map.Entry;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -72,16 +70,19 @@ public class TestSizeFailures {
       qualifiers.add(Bytes.toBytes(Integer.toString(i)));
     }
 
-    HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
-    HTableDescriptor desc = new HTableDescriptor(TABLENAME);
-    desc.addFamily(hcd);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLENAME);
+    ColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY);
+
+    tableDescriptor.setColumnFamily(familyDescriptor);
     byte[][] splits = new byte[9][2];
     for (int i = 1; i < 10; i++) {
       int split = 48 + i;
       splits[i - 1][0] = (byte) (split >>> 8);
       splits[i - 1][0] = (byte) (split);
     }
-    TEST_UTIL.getAdmin().createTable(desc, splits);
+    TEST_UTIL.getAdmin().createTable(tableDescriptor, splits);
     Connection conn = TEST_UTIL.getConnection();
 
     try (Table table = conn.getTable(TABLENAME)) {

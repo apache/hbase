@@ -30,18 +30,18 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
@@ -84,7 +84,7 @@ public class TestMultiSlaveReplication {
   private static final byte[] row3 = Bytes.toBytes("row3");
   private static final byte[] noRepfamName = Bytes.toBytes("norep");
 
-  private static HTableDescriptor table;
+  private static TableDescriptorBuilder.ModifyableTableDescriptor table;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -122,12 +122,14 @@ public class TestMultiSlaveReplication {
     utility3.setZkCluster(miniZK);
     new ZKWatcher(conf3, "cluster3", null, true);
 
-    table = new HTableDescriptor(tableName);
-    HColumnDescriptor fam = new HColumnDescriptor(famName);
-    fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    table.addFamily(fam);
-    fam = new HColumnDescriptor(noRepfamName);
-    table.addFamily(fam);
+    table = new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(famName);
+    familyDescriptor.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
+    table.setColumnFamily(familyDescriptor);
+    familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(noRepfamName);
+    table.setColumnFamily(familyDescriptor);
   }
 
   @Test

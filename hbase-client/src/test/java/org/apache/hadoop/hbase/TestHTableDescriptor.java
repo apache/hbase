@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,7 +25,10 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.regex.Pattern;
+
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -309,41 +312,52 @@ public class TestHTableDescriptor {
 
   @Test
   public void testModifyFamily() {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(
+        TableName.valueOf(name.getMethodName()));
     byte[] familyName = Bytes.toBytes("cf");
-    HColumnDescriptor hcd = new HColumnDescriptor(familyName);
-    hcd.setBlocksize(1000);
-    hcd.setDFSReplication((short) 3);
-    htd.addFamily(hcd);
-    assertEquals(1000, htd.getFamily(familyName).getBlocksize());
-    assertEquals(3, htd.getFamily(familyName).getDFSReplication());
-    hcd = new HColumnDescriptor(familyName);
-    hcd.setBlocksize(2000);
-    hcd.setDFSReplication((short) 1);
-    htd.modifyFamily(hcd);
-    assertEquals(2000, htd.getFamily(familyName).getBlocksize());
-    assertEquals(1, htd.getFamily(familyName).getDFSReplication());
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(familyName)
+        .setBlocksize(1000)
+        .setDFSReplication((short) 3);
+    tableDescriptor.setColumnFamily(familyDescriptor);
+    assertEquals(1000, tableDescriptor.getColumnFamily(familyName).getBlocksize());
+    assertEquals(3, tableDescriptor.getColumnFamily(familyName).getDFSReplication());
+    familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(familyName)
+        .setBlocksize(2000)
+        .setDFSReplication((short) 1);
+    tableDescriptor.modifyColumnFamily(familyDescriptor);
+    assertEquals(2000, tableDescriptor.getColumnFamily(familyName).getBlocksize());
+    assertEquals(1, tableDescriptor.getColumnFamily(familyName).getDFSReplication());
   }
 
   @Test(expected=IllegalArgumentException.class)
   public void testModifyInexistentFamily() {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(
+        TableName.valueOf(name.getMethodName()));
     byte[] familyName = Bytes.toBytes("cf");
-    HColumnDescriptor hcd = new HColumnDescriptor(familyName);
-    htd.modifyFamily(hcd);
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(familyName);
+    tableDescriptor.modifyColumnFamily(familyDescriptor);
   }
 
   @Test(expected=IllegalArgumentException.class)
   public void testAddDuplicateFamilies() {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(
+        TableName.valueOf(name.getMethodName()));
     byte[] familyName = Bytes.toBytes("cf");
-    HColumnDescriptor hcd = new HColumnDescriptor(familyName);
-    hcd.setBlocksize(1000);
-    htd.addFamily(hcd);
-    assertEquals(1000, htd.getFamily(familyName).getBlocksize());
-    hcd = new HColumnDescriptor(familyName);
-    hcd.setBlocksize(2000);
-    htd.addFamily(hcd);
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(familyName)
+        .setBlocksize(1000);
+    tableDescriptor.setColumnFamily(familyDescriptor);
+    assertEquals(1000, tableDescriptor.getColumnFamily(familyName).getBlocksize());
+    familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(familyName)
+        .setBlocksize(2000);
+    tableDescriptor.setColumnFamily(familyDescriptor);
   }
 
   @Test

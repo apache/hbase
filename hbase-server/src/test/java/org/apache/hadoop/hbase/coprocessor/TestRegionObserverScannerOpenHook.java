@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
@@ -31,12 +32,12 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.CoprocessorDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -44,6 +45,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
@@ -183,15 +185,17 @@ public class TestRegionObserverScannerOpenHook {
 
   HRegion initHRegion(byte[] tableName, String callingMethod, Configuration conf,
       byte[]... families) throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(tableName));
     for (byte[] family : families) {
-      htd.addFamily(new HColumnDescriptor(family));
+      tableDescriptor.setColumnFamily(
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
     }
     ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
-    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
+    HRegionInfo info = new HRegionInfo(tableDescriptor.getTableName(), null, null, false);
     Path path = new Path(DIR + callingMethod);
     WAL wal = HBaseTestingUtility.createWal(conf, path, info);
-    HRegion r = HRegion.createHRegion(info, path, conf, htd, wal);
+    HRegion r = HRegion.createHRegion(info, path, conf, tableDescriptor, wal);
     // this following piece is a hack. currently a coprocessorHost
     // is secretly loaded at OpenRegionHandler. we don't really
     // start a region server here, so just manually create cphost
@@ -303,24 +307,37 @@ public class TestRegionObserverScannerOpenHook {
     UTIL.startMiniCluster();
     byte[] ROW = Bytes.toBytes("testRow");
     byte[] A = Bytes.toBytes("A");
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
-    desc.addFamily(new HColumnDescriptor(A));
-    desc.addCoprocessor(EmptyRegionObsever.class.getName(), null, Coprocessor.PRIORITY_USER, null);
-    desc.addCoprocessor(NoDataFromCompaction.class.getName(), null, Coprocessor.PRIORITY_HIGHEST,
-      null);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(
+        TableName.valueOf(name.getMethodName()));
+
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(A));
+    tableDescriptor.setCoprocessor(
+      CoprocessorDescriptorBuilder.newBuilder(EmptyRegionObsever.class.getName())
+        .setJarPath(null)
+        .setPriority(Coprocessor.PRIORITY_USER)
+        .setProperties(Collections.emptyMap())
+        .build());
+    tableDescriptor.setCoprocessor(
+      CoprocessorDescriptorBuilder.newBuilder(NoDataFromCompaction.class.getName())
+        .setJarPath(null)
+        .setPriority(Coprocessor.PRIORITY_HIGHEST)
+        .setProperties(Collections.emptyMap())
+        .build());
 
     Admin admin = UTIL.getAdmin();
-    admin.createTable(desc);
+    admin.createTable(tableDescriptor);
 
-    Table table = UTIL.getConnection().getTable(desc.getTableName());
+    Table table = UTIL.getConnection().getTable(tableDescriptor.getTableName());
 
     // put a row and flush it to disk
     Put put = new Put(ROW);
     put.addColumn(A, A, A);
     table.put(put);
 
-    HRegionServer rs = UTIL.getRSForFirstRegionInTable(desc.getTableName());
-    List<HRegion> regions = rs.getRegions(desc.getTableName());
+    HRegionServer rs = UTIL.getRSForFirstRegionInTable(tableDescriptor.getTableName());
+    List<HRegion> regions = rs.getRegions(tableDescriptor.getTableName());
     assertEquals("More than 1 region serving test table with 1 row", 1, regions.size());
     Region region = regions.get(0);
     admin.flushRegion(region.getRegionInfo().getRegionName());

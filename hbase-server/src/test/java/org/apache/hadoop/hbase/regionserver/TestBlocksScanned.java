@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,14 +28,14 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -77,32 +77,34 @@ public class TestBlocksScanned {
   @Test
   public void testBlocksScanned() throws Exception {
     byte [] tableName = Bytes.toBytes("TestBlocksScanned");
-    HTableDescriptor table = new HTableDescriptor(TableName.valueOf(tableName));
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(tableName));
 
-    table.addFamily(
-        new HColumnDescriptor(FAMILY)
+    tableDescriptor.setColumnFamily(
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY)
         .setMaxVersions(10)
         .setBlockCacheEnabled(true)
         .setBlocksize(BLOCK_SIZE)
         .setCompressionType(Compression.Algorithm.NONE)
         );
-    _testBlocksScanned(table);
+    _testBlocksScanned(tableDescriptor);
   }
 
   @Test
   public void testBlocksScannedWithEncoding() throws Exception {
     byte [] tableName = Bytes.toBytes("TestBlocksScannedWithEncoding");
-    HTableDescriptor table = new HTableDescriptor(TableName.valueOf(tableName));
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(tableName));
 
-    table.addFamily(
-        new HColumnDescriptor(FAMILY)
+    tableDescriptor.setColumnFamily(
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY)
         .setMaxVersions(10)
         .setBlockCacheEnabled(true)
         .setDataBlockEncoding(DataBlockEncoding.FAST_DIFF)
         .setBlocksize(BLOCK_SIZE)
         .setCompressionType(Compression.Algorithm.NONE)
         );
-    _testBlocksScanned(table);
+    _testBlocksScanned(tableDescriptor);
   }
 
   private void _testBlocksScanned(TableDescriptor td) throws Exception {

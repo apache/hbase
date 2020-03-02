@@ -21,12 +21,11 @@ package org.apache.hbase.archetypes.exemplars.shaded_client;
 import java.io.IOException;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
@@ -34,6 +33,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -110,8 +110,10 @@ public final class HelloHBase {
               + "], with one Column Family ["
               + Bytes.toString(MY_COLUMN_FAMILY_NAME) + "].");
 
-      admin.createTable(new HTableDescriptor(MY_TABLE_NAME)
-              .addFamily(new HColumnDescriptor(MY_COLUMN_FAMILY_NAME)));
+      admin.createTable(new TableDescriptorBuilder.ModifyableTableDescriptor(MY_TABLE_NAME)
+        .setColumnFamily(
+          new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(
+            MY_COLUMN_FAMILY_NAME)));
     }
   }
 

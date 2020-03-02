@@ -931,11 +931,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * Getter for fetching an unmodifiable map.
    */
   public Map<String, String> getConfiguration() {
-    return delegatee.getValues().entrySet().stream()
-            .collect(Collectors.toMap(
-                    e -> Bytes.toString(e.getKey().get(), e.getKey().getOffset(), e.getKey().getLength()),
-                    e -> Bytes.toString(e.getValue().get(), e.getValue().getOffset(), e.getValue().getLength())
-            ));
+    return delegatee.getConfiguration();
   }
 
   /**

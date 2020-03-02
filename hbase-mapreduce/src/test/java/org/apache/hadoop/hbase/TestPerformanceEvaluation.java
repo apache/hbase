@@ -42,6 +42,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.PerformanceEvaluation.RandomReadTest;
 import org.apache.hadoop.hbase.PerformanceEvaluation.TestOptions;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.regionserver.CompactingMemStore;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -66,10 +68,10 @@ public class TestPerformanceEvaluation {
         new PerformanceEvaluation.TestOptions();
     assertEquals(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_DEFAULT,
         defaultOpts.getInMemoryCompaction().toString());
-    HTableDescriptor htd = PerformanceEvaluation.getTableDescriptor(defaultOpts);
-    for (HColumnDescriptor hcd: htd.getFamilies()) {
+    TableDescriptor tableDescriptor = PerformanceEvaluation.getTableDescriptor(defaultOpts);
+    for (ColumnFamilyDescriptor familyDescriptor : tableDescriptor.getColumnFamilies()) {
       assertEquals(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_DEFAULT,
-          hcd.getInMemoryCompaction().toString());
+        familyDescriptor.getInMemoryCompaction().toString());
     }
   }
 

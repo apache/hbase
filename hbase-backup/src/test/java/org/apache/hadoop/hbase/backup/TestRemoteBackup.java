@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,10 +23,10 @@ import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
@@ -93,12 +93,14 @@ public class TestRemoteBackup extends TestBackupBase {
     });
     t.start();
 
-    table1Desc.addFamily(new HColumnDescriptor(fam3Name));
+    table1Desc.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam3Name));
     // family 2 is MOB enabled
-    HColumnDescriptor hcd = new HColumnDescriptor(fam2Name);
-    hcd.setMobEnabled(true);
-    hcd.setMobThreshold(0L);
-    table1Desc.addFamily(hcd);
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam2Name);
+    familyDescriptor.setMobEnabled(true);
+    familyDescriptor.setMobThreshold(0L);
+    table1Desc.setColumnFamily(familyDescriptor);
     HBaseTestingUtility.modifyTableSync(TEST_UTIL.getAdmin(), table1Desc);
 
     SnapshotTestingUtils.loadData(TEST_UTIL, table1, 50, fam2Name);

@@ -26,11 +26,11 @@ import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContextImpl;
@@ -206,12 +206,14 @@ public class TestAccessController3 extends SecureTestUtil {
   }
 
   private static void setUpTableAndUserPermissions() throws Exception {
-    HTableDescriptor htd = new HTableDescriptor(TEST_TABLE);
-    HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY);
-    hcd.setMaxVersions(100);
-    htd.addFamily(hcd);
-    htd.setOwner(USER_OWNER);
-    createTable(TEST_UTIL, htd, new byte[][] { Bytes.toBytes("s") });
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TEST_TABLE);
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY);
+    familyDescriptor.setMaxVersions(100);
+    tableDescriptor.setColumnFamily(familyDescriptor);
+    tableDescriptor.setOwner(USER_OWNER);
+    createTable(TEST_UTIL, tableDescriptor, new byte[][] { Bytes.toBytes("s") });
 
     HRegion region = TEST_UTIL.getHBaseCluster().getRegions(TEST_TABLE).get(0);
     RegionCoprocessorHost rcpHost = region.getCoprocessorHost();
@@ -281,9 +283,13 @@ public class TestAccessController3 extends SecureTestUtil {
     AccessTestAction createTable = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
-        htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
-        ACCESS_CONTROLLER.preCreateTable(ObserverContextImpl.createAndPrepare(CP_ENV), htd, null);
+        TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+          new TableDescriptorBuilder.ModifyableTableDescriptor(
+            TableName.valueOf(name.getMethodName()));
+        tableDescriptor.setColumnFamily(
+          new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY));
+        ACCESS_CONTROLLER.preCreateTable(ObserverContextImpl.createAndPrepare(CP_ENV),
+          tableDescriptor, null);
         return null;
       }
     };
