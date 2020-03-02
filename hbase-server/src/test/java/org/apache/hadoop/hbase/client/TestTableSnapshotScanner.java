@@ -321,8 +321,6 @@ public class TestTableSnapshotScanner {
     Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
     long timeout = 20000; // 20s
     try (Admin admin = UTIL.getAdmin()) {
-      List<String> serverList = admin.getRegionServers().stream().map(sn -> sn.getServerName())
-          .collect(Collectors.toList());
       // create table with 3 regions
       Table table = UTIL.createTable(tableName, FAMILIES, 1, bbb, yyy, 3);
       List<RegionInfo> regions = admin.getRegions(tableName);
@@ -380,7 +378,8 @@ public class TestTableSnapshotScanner {
           }
           Path tableDir = FSUtils.getTableDir(rootDir, tableName);
           HRegionFileSystem regionFs = HRegionFileSystem
-              .openRegionFromFileSystem(UTIL.getConfiguration(), fs, tableDir, mergedRegion, true);
+              .openRegionFromFileSystem(UTIL.getConfiguration(), fs,
+                  tableDir, mergedRegion, true);
           return !regionFs.hasReferences(admin.getDescriptor(tableName));
         } catch (IOException e) {
           LOG.warn("Failed check merged region has no reference", e);
@@ -405,19 +404,23 @@ public class TestTableSnapshotScanner {
         }
       });
       // set file modify time and then run cleaner
-      long time = System.currentTimeMillis() - TimeToLiveHFileCleaner.DEFAULT_TTL * 1000;
+      long cleanerTtl =  conf.getLong("hbase.master.hfilecleaner.ttl",
+          TimeToLiveHFileCleaner.DEFAULT_TTL);
+      long time = System.currentTimeMillis() - cleanerTtl * 1000;
       traverseAndSetFileTime(HFileArchiveUtil.getArchivePath(conf), time);
       UTIL.getMiniHBaseCluster().getMaster().getHFileCleaner().runCleaner();
       // scan snapshot
       try (TableSnapshotScanner scanner = new TableSnapshotScanner(conf,
           UTIL.getDataTestDirOnTestFS(snapshotName), snapshotName, new Scan(bbb, yyy))) {
         verifyScanner(scanner, bbb, yyy);
+      } catch (IOException e) {
+        Assert.assertTrue(e.getCause() != null);
+        Assert.assertTrue(e.getCause().getCause() instanceof FileNotFoundException);
+        Assert.fail("Should not throw FileNotFoundException");
       }
     } catch (Exception e) {
       LOG.error("scan snapshot error", e);
-      Assert.fail("Should not throw FileNotFoundException");
-      Assert.assertTrue(e.getCause() != null);
-      Assert.assertTrue(e.getCause().getCause() instanceof FileNotFoundException);
+      Assert.fail();
     } finally {
       tearDownCluster();
     }
