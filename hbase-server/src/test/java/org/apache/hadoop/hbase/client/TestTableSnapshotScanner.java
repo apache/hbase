@@ -413,15 +413,8 @@ public class TestTableSnapshotScanner {
       try (TableSnapshotScanner scanner = new TableSnapshotScanner(conf,
           UTIL.getDataTestDirOnTestFS(snapshotName), snapshotName, new Scan(bbb, yyy))) {
         verifyScanner(scanner, bbb, yyy);
-      } catch (IOException e) {
-        Assert.assertTrue(e.getCause() != null);
-        Assert.assertTrue(e.getCause().getCause() instanceof FileNotFoundException);
-        Assert.fail("Should not throw FileNotFoundException");
       }
-    } catch (Exception e) {
-      LOG.error("scan snapshot error", e);
-      Assert.fail();
-    } finally {
+    }  finally {
       tearDownCluster();
     }
   }
