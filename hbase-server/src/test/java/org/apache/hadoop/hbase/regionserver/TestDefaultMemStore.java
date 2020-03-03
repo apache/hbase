@@ -950,6 +950,7 @@ public class TestDefaultMemStore {
     edge.setCurrentTimeMillis(1234);
     WALFactory wFactory = new WALFactory(conf, "1234");
     TableDescriptors tds = new FSTableDescriptors(conf);
+    FSTableDescriptors.tryUpdateMetaTableDescriptor(conf);
     HRegion meta = HRegion.createHRegion(RegionInfoBuilder.FIRST_META_REGIONINFO, testDir,
         conf, tds.get(TableName.META_TABLE_NAME),
         wFactory.getWAL(RegionInfoBuilder.FIRST_META_REGIONINFO));
