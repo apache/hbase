@@ -4781,7 +4781,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         LOG.warn("Null or non-existent edits file: " + edits);
         continue;
       }
-      if (isZeroLengthThenDelete(fs, edits)) continue;
+      if (isZeroLengthThenDelete(fs, fs.getFileStatus(edits), edits)) {
+        continue;
+      }
 
       long maxSeqId;
       String fileName = edits.getName();
@@ -4801,27 +4803,27 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // if seqId is greater
         seqid = Math.max(seqid, replayRecoveredEdits(edits, maxSeqIdInStores, reporter, fs));
       } catch (IOException e) {
-        boolean skipErrors = conf.getBoolean(
-            HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS,
-            conf.getBoolean(
-                "hbase.skip.errors",
-                HConstants.DEFAULT_HREGION_EDITS_REPLAY_SKIP_ERRORS));
-        if (conf.get("hbase.skip.errors") != null) {
-          LOG.warn(
-              "The property 'hbase.skip.errors' has been deprecated. Please use " +
-                  HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS + " instead.");
-        }
-        if (skipErrors) {
-          Path p = WALSplitUtil.moveAsideBadEditsFile(fs, edits);
-          LOG.error(HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS
-              + "=true so continuing. Renamed " + edits +
-              " as " + p, e);
-        } else {
-          throw e;
-        }
+        handleException(fs, edits, e);
       }
     }
     return seqid;
+  }
+
+  private void handleException(FileSystem fs, Path edits, IOException e) throws IOException {
+    boolean skipErrors = conf.getBoolean(HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS,
+      conf.getBoolean("hbase.skip.errors", HConstants.DEFAULT_HREGION_EDITS_REPLAY_SKIP_ERRORS));
+    if (conf.get("hbase.skip.errors") != null) {
+      LOG.warn("The property 'hbase.skip.errors' has been deprecated. Please use "
+          + HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS + " instead.");
+    }
+    if (skipErrors) {
+      Path p = WALSplitUtil.moveAsideBadEditsFile(fs, edits);
+      LOG.error(HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS + "=true so continuing. Renamed "
+          + edits + " as " + p,
+        e);
+    } else {
+      throw e;
+    }
   }
 
   /**
@@ -5423,12 +5425,21 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           WALSplitUtil.getRecoveredHFiles(fs.getFileSystem(), regionDir, familyName);
       if (files != null && files.length != 0) {
         for (FileStatus file : files) {
-          store.assertBulkLoadHFileOk(file.getPath());
-          Pair<Path, Path> pair = store.preBulkLoadHFile(file.getPath().toString(), -1);
+          Path filePath = file.getPath();
+          // If file length is zero then delete it
+          if (isZeroLengthThenDelete(fs.getFileSystem(), file, filePath)) {
+            continue;
+          }
+
+          try {
+            store.assertBulkLoadHFileOk(filePath);
+          } catch (IOException e) {
+            handleException(fs.getFileSystem(), filePath, e);
+          }
+          Pair<Path, Path> pair = store.preBulkLoadHFile(filePath.toString(), -1);
           store.bulkLoadHFile(Bytes.toBytes(familyName), pair.getFirst().toString(),
-              pair.getSecond());
-          maxSeqId =
-              Math.max(maxSeqId, WALSplitUtil.getSeqIdForRecoveredHFile(file.getPath().getName()));
+            pair.getSecond());
+          maxSeqId = Math.max(maxSeqId, WALSplitUtil.getSeqIdForRecoveredHFile(filePath.getName()));
         }
         if (this.rsServices != null && store.needsCompaction()) {
           this.rsServices.getCompactionRequestor()
@@ -5907,9 +5918,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @return True if file was zero-length (and if so, we'll delete it in here).
    * @throws IOException
    */
-  private static boolean isZeroLengthThenDelete(final FileSystem fs, final Path p)
-      throws IOException {
-    FileStatus stat = fs.getFileStatus(p);
+  private static boolean isZeroLengthThenDelete(final FileSystem fs, final FileStatus stat,
+      final Path p) throws IOException {
     if (stat.getLen() > 0) {
       return false;
     }
