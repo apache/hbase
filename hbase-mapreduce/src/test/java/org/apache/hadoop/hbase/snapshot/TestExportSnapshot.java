@@ -213,6 +213,7 @@ public class TestExportSnapshot {
     opts.add("--snapshot");
     opts.add(snapshotName);
     opts.add("--copy-to");
+    opts.add(tgtDir.toString());
     if (!targetName.equals(snapshotName)) {
       opts.add("--target");
       opts.add(targetName);
