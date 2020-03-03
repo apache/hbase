@@ -556,7 +556,8 @@ public class TestSlowLogRecorder {
           .build();
         break;
       }
-
+      default:
+        throw new RuntimeException("Not supposed to get here?");
     }
 
     return message;
