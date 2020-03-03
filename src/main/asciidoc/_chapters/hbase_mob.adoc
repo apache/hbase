@@ -193,13 +193,15 @@ By default, the periodic MOB compaction coordination chore will attempt to keep 
 busy doing compactions in parallel in order to maximize the amount of work done on the cluster.
 If you need to tune the amount of IO this compaction generates on the underlying filesystem, you
 can control how many concurrent region-level compaction requests are allowed by setting
-`hbase.mob.major.compaction.region.batch.size` to an integer number greater than zero.
+`hbase.mob.major.compaction.region.batch.size` to an integer number greater than zero. If you set
+the configuration to 0 then you will get the default behavior of attempting to do all regions in
+parallel.
 
 ====
 [source,xml]
 ----
 <property>
-    <name>hbase.mob.major.compcation.region.batch.size</name>
+    <name>hbase.mob.major.compaction.region.batch.size</name>
     <value>1</value>
     <description>Example of switching from "as parallel as possible" to "serially"</description>
 </property>
@@ -224,9 +226,10 @@ To determine if a MOB HFile meets the second criteria the chore extracts metadat
 HFiles for each MOB enabled column family for a given table. That metadata enumerates the complete
 set of MOB HFiles needed to satisfy the references stored in the normal HFile area.
 
-The period of the cleaner chore can be configued by setting `hbase.master.mob.cleaner.period`. It
-defaults to running daily. You should not need to tune it unless you have a very aggressive TTL or
-a very high rate of MOB updates with a correspondingly high rate of non-MOB compactions.
+The period of the cleaner chore can be configued by setting `hbase.master.mob.cleaner.period` to a
+positive integer number of seconds. It defaults to running daily. You should not need to tune it
+unless you have a very aggressive TTL or a very high rate of MOB updates with a correspondingly
+high rate of non-MOB compactions.
 
 === MOB Optimization Tasks
 
@@ -341,16 +344,24 @@ This same request can be made via the `Admin.majorCompact` Java API.
 ==== Adjusting the MOB cleaner's tolerance for new hfiles
 
 The MOB cleaner chore ignores all MOB hfiles that were created more recently than an hour prior to
-the start of the shore to ensure we don't miss the reference metadata from teh corresponding regular
+the start of the chore to ensure we don't miss the reference metadata from the corresponding regular
 hfile. Without this safety check it would be possible for the cleaner chore to see a MOB hfile for
 an in progress flush or compaction and prematurely archive the MOB data. This default buffer should
 be sufficient for normal use.
 
-You will need to adjust the tolerance if it takes longer than an hour for the two HDFS move
-operations needed to commit both the MOB hfile and the normal hfile that references it. You will
-also need to adjust it if you use write amplification optimized MOB compaction and the combination
-of your underlying filesystem performance and data shape is such that it could take more than
-an hour to complete major compaction of a single region.
+You will need to adjust the tolerance if you use write amplification optimized MOB compaction and
+the combination of your underlying filesystem performance and data shape is such that it could take
+more than an hour to complete major compaction of a single region. For example, if your MOB data is
+distributed such that your largest region adds 80GB of MOB data between compactions that include
+rewriting MOB data and your HDFS cluster is only capable of writing 20MB/s for a single file then
+when performing the optimized compaction the Region Server will take about a minute to write the
+first 1GB MOB hfile and then another hour and seven minutes to write the remaining seventy-nine 1GB
+MOB hfiles before finally committing the new reference hfile at the end of the compaction. Given
+this example, you would need a larger tolerance window.
+
+You will also need to adjust the tolerance if Region Server flush operations take longer than an
+hour for the two HDFS move operations needed to commit both the MOB hfile and the normal hfile that
+references it. Such a delay should not happen with a normally configured and healthy HDFS and HBase.
 
 The cleaner's window for "too recent" is controlled by setting `hbase.mob.min.age.archive` to a
 positive integer number of milliseconds.
