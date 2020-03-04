@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -39,7 +40,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
-import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
@@ -53,7 +53,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiReque
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionAction;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.CompareType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -676,14 +675,16 @@ public class HTable implements Table {
   @Deprecated
   public boolean checkAndPut(final byte [] row, final byte [] family, final byte [] qualifier,
       final byte [] value, final Put put) throws IOException {
-    return doCheckAndPut(row, family, qualifier, CompareOperator.EQUAL.name(), value, null, put);
+    return doCheckAndPut(row, family, qualifier, CompareOperator.EQUAL, value, null, null,
+      put);
   }
 
   @Override
   @Deprecated
   public boolean checkAndPut(final byte [] row, final byte [] family, final byte [] qualifier,
       final CompareOp compareOp, final byte [] value, final Put put) throws IOException {
-    return doCheckAndPut(row, family, qualifier, compareOp.name(), value, null, put);
+    return doCheckAndPut(row, family, qualifier, toCompareOperator(compareOp), value, null,
+      null, put);
   }
 
   @Override
@@ -692,21 +693,20 @@ public class HTable implements Table {
       final CompareOperator op, final byte [] value, final Put put) throws IOException {
     // The name of the operators in CompareOperator are intentionally those of the
     // operators in the filter's CompareOp enum.
-    return doCheckAndPut(row, family, qualifier, op.name(), value, null, put);
+    return doCheckAndPut(row, family, qualifier, op, value, null, null, put);
   }
 
   private boolean doCheckAndPut(final byte[] row, final byte[] family, final byte[] qualifier,
-    final String opName, final byte[] value, final TimeRange timeRange, final Put put)
-    throws IOException {
+    final CompareOperator op, final byte[] value, final Filter filter, final TimeRange timeRange,
+    final Put put) throws IOException {
     ClientServiceCallable<Boolean> callable =
         new ClientServiceCallable<Boolean>(this.connection, getName(), row,
             this.rpcControllerFactory.newController(), put.getPriority()) {
       @Override
       protected Boolean rpcCall() throws Exception {
-        CompareType compareType = CompareType.valueOf(opName);
         MutateRequest request = RequestConverter.buildMutateRequest(
-            getLocation().getRegionInfo().getRegionName(), row, family, qualifier,
-            new BinaryComparator(value), compareType, timeRange, put);
+          getLocation().getRegionInfo().getRegionName(), row, family, qualifier, op, value,
+          filter, timeRange, put);
         MutateResponse response = doMutate(request);
         return Boolean.valueOf(response.getProcessed());
       }
@@ -719,37 +719,37 @@ public class HTable implements Table {
   @Deprecated
   public boolean checkAndDelete(final byte[] row, final byte[] family, final byte[] qualifier,
     final byte[] value, final Delete delete) throws IOException {
-    return doCheckAndDelete(row, family, qualifier, CompareOperator.EQUAL.name(), value, null,
-      delete);
+    return doCheckAndDelete(row, family, qualifier, CompareOperator.EQUAL, value, null,
+      null, delete);
   }
 
   @Override
   @Deprecated
   public boolean checkAndDelete(final byte[] row, final byte[] family, final byte[] qualifier,
     final CompareOp compareOp, final byte[] value, final Delete delete) throws IOException {
-    return doCheckAndDelete(row, family, qualifier, compareOp.name(), value, null, delete);
+    return doCheckAndDelete(row, family, qualifier, toCompareOperator(compareOp), value, null,
+      null, delete);
   }
 
   @Override
   @Deprecated
   public boolean checkAndDelete(final byte[] row, final byte[] family, final byte[] qualifier,
     final CompareOperator op, final byte[] value, final Delete delete) throws IOException {
-    return doCheckAndDelete(row, family, qualifier, op.name(), value, null, delete);
+    return doCheckAndDelete(row, family, qualifier, op, value, null, null, delete);
   }
 
   private boolean doCheckAndDelete(final byte[] row, final byte[] family, final byte[] qualifier,
-    final String opName, final byte[] value, final TimeRange timeRange, final Delete delete)
-    throws IOException {
+    final CompareOperator op, final byte[] value, final Filter filter, final TimeRange timeRange,
+    final Delete delete) throws IOException {
     CancellableRegionServerCallable<SingleResponse> callable =
       new CancellableRegionServerCallable<SingleResponse>(this.connection, getName(), row,
         this.rpcControllerFactory.newController(), writeRpcTimeoutMs,
         new RetryingTimeTracker().start(), delete.getPriority()) {
         @Override
         protected SingleResponse rpcCall() throws Exception {
-          CompareType compareType = CompareType.valueOf(opName);
           MutateRequest request = RequestConverter
             .buildMutateRequest(getLocation().getRegionInfo().getRegionName(), row, family,
-              qualifier, new BinaryComparator(value), compareType, timeRange, delete);
+              qualifier, op, value, filter, timeRange, delete);
           MutateResponse response = doMutate(request);
           return ResponseConverter.getResult(request, response, getRpcControllerCellScanner());
         }
@@ -776,8 +776,14 @@ public class HTable implements Table {
     return new CheckAndMutateBuilderImpl(row, family);
   }
 
+  @Override
+  public CheckAndMutateWithFilterBuilder checkAndMutate(byte[] row, Filter filter) {
+    return new CheckAndMutateWithFilterBuilderImpl(row, filter);
+  }
+
   private boolean doCheckAndMutate(final byte[] row, final byte[] family, final byte[] qualifier,
-    final String opName, final byte[] value, final TimeRange timeRange, final RowMutations rm)
+    final CompareOperator op, final byte[] value, final Filter filter, final TimeRange timeRange,
+    final RowMutations rm)
     throws IOException {
     CancellableRegionServerCallable<MultiResponse> callable =
     new CancellableRegionServerCallable<MultiResponse>(connection, getName(), rm.getRow(),
@@ -785,10 +791,9 @@ public class HTable implements Table {
         rm.getMaxPriority()) {
       @Override
       protected MultiResponse rpcCall() throws Exception {
-        CompareType compareType = CompareType.valueOf(opName);
         MultiRequest request = RequestConverter
-          .buildMutateRequest(getLocation().getRegionInfo().getRegionName(), row, family, qualifier,
-            new BinaryComparator(value), compareType, timeRange, rm);
+          .buildMutateRequest(getLocation().getRegionInfo().getRegionName(), row, family,
+            qualifier, op, value, filter, timeRange, rm);
         ClientProtos.MultiResponse response = doMulti(request);
         ClientProtos.RegionActionResult res = response.getRegionActionResultList().get(0);
         if (res.hasException()) {
@@ -833,14 +838,43 @@ public class HTable implements Table {
   public boolean checkAndMutate(final byte [] row, final byte [] family, final byte [] qualifier,
     final CompareOp compareOp, final byte [] value, final RowMutations rm)
   throws IOException {
-    return doCheckAndMutate(row, family, qualifier, compareOp.name(), value, null, rm);
+    return doCheckAndMutate(row, family, qualifier, toCompareOperator(compareOp), value, null,
+      null, rm);
   }
 
   @Override
   @Deprecated
   public boolean checkAndMutate(final byte [] row, final byte [] family, final byte [] qualifier,
       final CompareOperator op, final byte [] value, final RowMutations rm) throws IOException {
-    return doCheckAndMutate(row, family, qualifier, op.name(), value, null, rm);
+    return doCheckAndMutate(row, family, qualifier, op, value, null, null, rm);
+  }
+
+  private CompareOperator toCompareOperator(CompareOp compareOp) {
+    switch (compareOp) {
+      case LESS:
+        return CompareOperator.LESS;
+
+      case LESS_OR_EQUAL:
+        return CompareOperator.LESS_OR_EQUAL;
+
+      case EQUAL:
+        return CompareOperator.EQUAL;
+
+      case NOT_EQUAL:
+        return CompareOperator.NOT_EQUAL;
+
+      case GREATER_OR_EQUAL:
+        return CompareOperator.GREATER_OR_EQUAL;
+
+      case GREATER:
+        return CompareOperator.GREATER;
+
+      case NO_OP:
+        return CompareOperator.NO_OP;
+
+      default:
+        throw new AssertionError();
+    }
   }
 
   @Override
@@ -1247,19 +1281,54 @@ public class HTable implements Table {
     public boolean thenPut(Put put) throws IOException {
       validatePut(put);
       preCheck();
-      return doCheckAndPut(row, family, qualifier, op.name(), value, timeRange, put);
+      return doCheckAndPut(row, family, qualifier, op, value, null, timeRange, put);
     }
 
     @Override
     public boolean thenDelete(Delete delete) throws IOException {
       preCheck();
-      return doCheckAndDelete(row, family, qualifier, op.name(), value, timeRange, delete);
+      return doCheckAndDelete(row, family, qualifier, op, value, null, timeRange, delete);
     }
 
     @Override
     public boolean thenMutate(RowMutations mutation) throws IOException {
       preCheck();
-      return doCheckAndMutate(row, family, qualifier, op.name(), value, timeRange, mutation);
+      return doCheckAndMutate(row, family, qualifier, op, value, null, timeRange,
+        mutation);
+    }
+  }
+
+  private class CheckAndMutateWithFilterBuilderImpl implements CheckAndMutateWithFilterBuilder {
+
+    private final byte[] row;
+    private final Filter filter;
+    private TimeRange timeRange;
+
+    CheckAndMutateWithFilterBuilderImpl(byte[] row, Filter filter) {
+      this.row = Preconditions.checkNotNull(row, "row is null");
+      this.filter = Preconditions.checkNotNull(filter, "filter is null");
+    }
+
+    @Override
+    public CheckAndMutateWithFilterBuilder timeRange(TimeRange timeRange) {
+      this.timeRange = timeRange;
+      return this;
+    }
+
+    @Override
+    public boolean thenPut(Put put) throws IOException {
+      validatePut(put);
+      return doCheckAndPut(row, null, null, null, null, filter, timeRange, put);
+    }
+
+    @Override
+    public boolean thenDelete(Delete delete) throws IOException {
+      return doCheckAndDelete(row, null, null, null, null, filter, timeRange, delete);
+    }
+
+    @Override
+    public boolean thenMutate(RowMutations mutation) throws IOException {
+      return doCheckAndMutate(row, null, null, null, null, filter, timeRange, mutation);
     }
   }
 }

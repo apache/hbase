@@ -88,6 +88,7 @@ import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -613,9 +614,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * @param cellScanner if non-null, the mutation data -- the Cell content.
    */
   private boolean checkAndRowMutate(final HRegion region, final List<ClientProtos.Action> actions,
-    final CellScanner cellScanner, byte[] row, byte[] family, byte[] qualifier, CompareOperator op,
-    ByteArrayComparable comparator, TimeRange timeRange, RegionActionResult.Builder builder,
-    ActivePolicyEnforcement spaceQuotaEnforcement) throws IOException {
+    final CellScanner cellScanner, byte[] row, byte[] family, byte[] qualifier,
+    CompareOperator op, ByteArrayComparable comparator, Filter filter, TimeRange timeRange,
+    RegionActionResult.Builder builder, ActivePolicyEnforcement spaceQuotaEnforcement)
+    throws IOException {
     int countOfCompleteMutation = 0;
     try {
       if (!region.getRegionInfo().isMetaRegion()) {
@@ -658,7 +660,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         builder.addResultOrException(
           resultOrExceptionOrBuilder.build());
       }
-      return region.checkAndRowMutate(row, family, qualifier, op, comparator, timeRange, rm);
+
+      if (filter != null) {
+        return region.checkAndRowMutate(row, filter, timeRange, rm);
+      } else {
+        return region.checkAndRowMutate(row, family, qualifier, op, comparator, timeRange, rm);
+      }
     } finally {
       // Currently, the checkAndMutate isn't supported by batch so it won't mess up the cell scanner
       // even if the malformed cells are not skipped.
@@ -2728,18 +2735,21 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           if (request.hasCondition()) {
             Condition condition = request.getCondition();
             byte[] row = condition.getRow().toByteArray();
-            byte[] family = condition.getFamily().toByteArray();
-            byte[] qualifier = condition.getQualifier().toByteArray();
-            CompareOperator op =
-              CompareOperator.valueOf(condition.getCompareType().name());
-            ByteArrayComparable comparator =
-                ProtobufUtil.toComparator(condition.getComparator());
+            byte[] family = condition.hasFamily() ? condition.getFamily().toByteArray() : null;
+            byte[] qualifier = condition.hasQualifier() ?
+              condition.getQualifier().toByteArray() : null;
+            CompareOperator op = condition.hasCompareType() ?
+              CompareOperator.valueOf(condition.getCompareType().name()) : null;
+            ByteArrayComparable comparator = condition.hasComparator() ?
+              ProtobufUtil.toComparator(condition.getComparator()) : null;
+            Filter filter = condition.hasFilter() ?
+              ProtobufUtil.toFilter(condition.getFilter()) : null;
             TimeRange timeRange = condition.hasTimeRange() ?
               ProtobufUtil.toTimeRange(condition.getTimeRange()) :
               TimeRange.allTime();
             processed =
               checkAndRowMutate(region, regionAction.getActionList(), cellScanner, row, family,
-                qualifier, op, comparator, timeRange, regionActionResultBuilder,
+                qualifier, op, comparator, filter, timeRange, regionActionResultBuilder,
                 spaceQuotaEnforcement);
           } else {
             doAtomicBatchOp(regionActionResultBuilder, region, quota, regionAction.getActionList(),
@@ -2878,24 +2888,41 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           if (request.hasCondition()) {
             Condition condition = request.getCondition();
             byte[] row = condition.getRow().toByteArray();
-            byte[] family = condition.getFamily().toByteArray();
-            byte[] qualifier = condition.getQualifier().toByteArray();
-            CompareOperator compareOp =
-              CompareOperator.valueOf(condition.getCompareType().name());
-            ByteArrayComparable comparator = ProtobufUtil.toComparator(condition.getComparator());
+            byte[] family = condition.hasFamily() ? condition.getFamily().toByteArray() : null;
+            byte[] qualifier = condition.hasQualifier() ?
+              condition.getQualifier().toByteArray() : null;
+            CompareOperator op = condition.hasCompareType() ?
+              CompareOperator.valueOf(condition.getCompareType().name()) : null;
+            ByteArrayComparable comparator = condition.hasComparator() ?
+              ProtobufUtil.toComparator(condition.getComparator()) : null;
+            Filter filter = condition.hasFilter() ?
+              ProtobufUtil.toFilter(condition.getFilter()) : null;
             TimeRange timeRange = condition.hasTimeRange() ?
               ProtobufUtil.toTimeRange(condition.getTimeRange()) :
               TimeRange.allTime();
             if (region.getCoprocessorHost() != null) {
-              processed = region.getCoprocessorHost().preCheckAndPut(row, family, qualifier,
-                  compareOp, comparator, put);
+              if (filter != null) {
+                processed = region.getCoprocessorHost().preCheckAndPut(row, filter, put);
+              } else {
+                processed = region.getCoprocessorHost()
+                  .preCheckAndPut(row, family, qualifier, op, comparator, put);
+              }
             }
             if (processed == null) {
-              boolean result = region.checkAndMutate(row, family,
-                qualifier, compareOp, comparator, timeRange, put);
+              boolean result;
+              if (filter != null) {
+                result = region.checkAndMutate(row, filter, timeRange, put);
+              } else {
+                result = region.checkAndMutate(row, family, qualifier, op, comparator, timeRange,
+                  put);
+              }
               if (region.getCoprocessorHost() != null) {
-                result = region.getCoprocessorHost().postCheckAndPut(row, family,
-                  qualifier, compareOp, comparator, put, result);
+                if (filter != null) {
+                  result = region.getCoprocessorHost().postCheckAndPut(row, filter, put, result);
+                } else {
+                  result = region.getCoprocessorHost()
+                    .postCheckAndPut(row, family, qualifier, op, comparator, put, result);
+                }
               }
               processed = result;
             }
@@ -2912,23 +2939,42 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           if (request.hasCondition()) {
             Condition condition = request.getCondition();
             byte[] row = condition.getRow().toByteArray();
-            byte[] family = condition.getFamily().toByteArray();
-            byte[] qualifier = condition.getQualifier().toByteArray();
-            CompareOperator op = CompareOperator.valueOf(condition.getCompareType().name());
-            ByteArrayComparable comparator = ProtobufUtil.toComparator(condition.getComparator());
+            byte[] family = condition.hasFamily() ? condition.getFamily().toByteArray() : null;
+            byte[] qualifier = condition.hasQualifier() ?
+              condition.getQualifier().toByteArray() : null;
+            CompareOperator op = condition.hasCompareType() ?
+              CompareOperator.valueOf(condition.getCompareType().name()) : null;
+            ByteArrayComparable comparator = condition.hasComparator() ?
+              ProtobufUtil.toComparator(condition.getComparator()) : null;
+            Filter filter = condition.hasFilter() ?
+              ProtobufUtil.toFilter(condition.getFilter()) : null;
             TimeRange timeRange = condition.hasTimeRange() ?
               ProtobufUtil.toTimeRange(condition.getTimeRange()) :
               TimeRange.allTime();
             if (region.getCoprocessorHost() != null) {
-              processed = region.getCoprocessorHost().preCheckAndDelete(row, family, qualifier, op,
-                  comparator, delete);
+              if (filter != null) {
+                processed = region.getCoprocessorHost().preCheckAndDelete(row, filter, delete);
+              } else {
+                processed = region.getCoprocessorHost()
+                  .preCheckAndDelete(row, family, qualifier, op, comparator, delete);
+              }
             }
             if (processed == null) {
-              boolean result = region.checkAndMutate(row, family,
-                qualifier, op, comparator, timeRange, delete);
+              boolean result;
+              if (filter != null) {
+                result = region.checkAndMutate(row, filter, timeRange, delete);
+              } else {
+                result = region.checkAndMutate(row, family, qualifier, op, comparator, timeRange,
+                  delete);
+              }
               if (region.getCoprocessorHost() != null) {
-                result = region.getCoprocessorHost().postCheckAndDelete(row, family,
-                  qualifier, op, comparator, delete, result);
+                if (filter != null) {
+                  result = region.getCoprocessorHost().postCheckAndDelete(row, filter, delete,
+                    result);
+                } else {
+                  result = region.getCoprocessorHost()
+                    .postCheckAndDelete(row, family, qualifier, op, comparator, delete, result);
+                }
               }
               processed = result;
             }
@@ -2979,7 +3025,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           break;
         default:
           break;
-
         }
       }
     }

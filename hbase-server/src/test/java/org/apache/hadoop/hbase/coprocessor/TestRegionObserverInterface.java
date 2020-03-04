@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -60,6 +61,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.filter.FilterAllFilter;
+import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -263,12 +265,26 @@ public class TestRegionObserverInterface {
       p = new Put(Bytes.toBytes(0));
       p.addColumn(A, A, A);
       verifyMethodResult(SimpleRegionObserver.class,
-        new String[] { "hadPreCheckAndPut", "hadPreCheckAndPutAfterRowLock", "hadPostCheckAndPut" },
-        tableName, new Boolean[] { false, false, false });
+        new String[] { "getPreCheckAndPut", "getPreCheckAndPutAfterRowLock", "getPostCheckAndPut",
+          "getPreCheckAndPutWithFilter", "getPreCheckAndPutWithFilterAfterRowLock",
+          "getPostCheckAndPutWithFilter" },
+        tableName, new Integer[] { 0, 0, 0, 0, 0, 0 });
+
       table.checkAndMutate(Bytes.toBytes(0), A).qualifier(A).ifEquals(A).thenPut(p);
       verifyMethodResult(SimpleRegionObserver.class,
-        new String[] { "hadPreCheckAndPut", "hadPreCheckAndPutAfterRowLock", "hadPostCheckAndPut" },
-        tableName, new Boolean[] { true, true, true });
+        new String[] { "getPreCheckAndPut", "getPreCheckAndPutAfterRowLock", "getPostCheckAndPut",
+          "getPreCheckAndPutWithFilter", "getPreCheckAndPutWithFilterAfterRowLock",
+          "getPostCheckAndPutWithFilter" },
+        tableName, new Integer[] { 1, 1, 1, 0, 0, 0 });
+
+      table.checkAndMutate(Bytes.toBytes(0),
+          new SingleColumnValueFilter(A, A, CompareOperator.EQUAL, A))
+        .thenPut(p);
+      verifyMethodResult(SimpleRegionObserver.class,
+        new String[] { "getPreCheckAndPut", "getPreCheckAndPutAfterRowLock", "getPostCheckAndPut",
+          "getPreCheckAndPutWithFilter", "getPreCheckAndPutWithFilterAfterRowLock",
+          "getPostCheckAndPutWithFilter" },
+        tableName, new Integer[] { 1, 1, 1, 1, 1, 1 });
     } finally {
       util.deleteTable(tableName);
     }
@@ -285,14 +301,29 @@ public class TestRegionObserverInterface {
       Delete d = new Delete(Bytes.toBytes(0));
       table.delete(d);
       verifyMethodResult(
-        SimpleRegionObserver.class, new String[] { "hadPreCheckAndDelete",
-            "hadPreCheckAndDeleteAfterRowLock", "hadPostCheckAndDelete" },
-        tableName, new Boolean[] { false, false, false });
+        SimpleRegionObserver.class, new String[] { "getPreCheckAndDelete",
+          "getPreCheckAndDeleteAfterRowLock", "getPostCheckAndDelete",
+          "getPreCheckAndDeleteWithFilter", "getPreCheckAndDeleteWithFilterAfterRowLock",
+          "getPostCheckAndDeleteWithFilter" },
+        tableName, new Integer[] { 0, 0, 0, 0, 0, 0 });
+
       table.checkAndMutate(Bytes.toBytes(0), A).qualifier(A).ifEquals(A).thenDelete(d);
       verifyMethodResult(
-        SimpleRegionObserver.class, new String[] { "hadPreCheckAndDelete",
-            "hadPreCheckAndDeleteAfterRowLock", "hadPostCheckAndDelete" },
-        tableName, new Boolean[] { true, true, true });
+        SimpleRegionObserver.class, new String[] { "getPreCheckAndDelete",
+          "getPreCheckAndDeleteAfterRowLock", "getPostCheckAndDelete",
+          "getPreCheckAndDeleteWithFilter", "getPreCheckAndDeleteWithFilterAfterRowLock",
+          "getPostCheckAndDeleteWithFilter" },
+        tableName, new Integer[] { 1, 1, 1, 0, 0, 0 });
+
+      table.checkAndMutate(Bytes.toBytes(0),
+          new SingleColumnValueFilter(A, A, CompareOperator.EQUAL, A))
+        .thenDelete(d);
+      verifyMethodResult(
+        SimpleRegionObserver.class, new String[] { "getPreCheckAndDelete",
+          "getPreCheckAndDeleteAfterRowLock", "getPostCheckAndDelete",
+          "getPreCheckAndDeleteWithFilter", "getPreCheckAndDeleteWithFilterAfterRowLock",
+          "getPostCheckAndDeleteWithFilter" },
+        tableName, new Integer[] { 1, 1, 1, 1, 1, 1 });
     } finally {
       util.deleteTable(tableName);
       table.close();
