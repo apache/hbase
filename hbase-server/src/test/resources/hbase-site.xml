@@ -158,4 +158,36 @@
     <name>hbase.hconnection.threads.keepalivetime</name>
     <value>3</value>
   </property>
+  <property>
+    <name>hbase.netty.worker.count</name>
+    <value>5</value>
+    <description>Default is 0</description>
+  </property>
+  <property>
+    <name>hbase.hconnection.threads.max</name>
+    <value>6</value>
+    <description>Default is 256</description>
+  </property>
+  <property>
+    <name>hbase.htable.threads.max</name>
+    <value>6</value>
+    <description>Default is MAX_INTEGER</description>
+  </property>
+  <property>
+    <name>hbase.region.replica.replication.threads.max</name>
+    <value>10</value>
+    <description>Default is 256</description>
+  </property>
+  <property>
+    <name>dfs.datanode.handler.count</name>
+    <value>3</value>
+    <description>Default is 10</description>
+  </property>
+  <property>
+    <name>hbase.rest.threads.max</name>
+    <value>5</value>
+    <description>Default is 100</description>
+  </property>
+
+
 </configuration>
