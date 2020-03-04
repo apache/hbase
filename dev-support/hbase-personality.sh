@@ -218,7 +218,7 @@ function personality_modules
   if [[ ${testtype} == unit ]]; then
     local tests_arg=""
     get_include_exclude_tests_arg tests_arg
-    extra="${extra} -PrunAllTests ${tests_arg}"
+    extra="${extra} -PrunAllTests -Dsurefire.secondPartForkCount=5 ${tests_arg}"
 
     # Inject the jenkins build-id for our surefire invocations
     # Used by zombie detection stuff, even though we're not including that yet.
