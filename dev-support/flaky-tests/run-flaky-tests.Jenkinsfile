@@ -61,7 +61,7 @@ pipeline {
             else
               echo "Skipped gathering machine environment because we couldn't read the script to do so."
             fi
-            c="0.25C" mvn -T${c} package "${mvn_args[@]}" -Dtest="$(cat includes.txt)" -Dmaven.test.redirectTestOutputToFile=true -Dsurefire.firstPartForkCount=${c} -Dsurefire.secondPartForkCount=${c}
+            c="0.25C"; mvn -T"${c}" package "${mvn_args[@]}" -Dtest="$(cat includes.txt)" -Dmaven.test.redirectTestOutputToFile=true -Dsurefire.firstPartForkCount="${c}" -Dsurefire.secondPartForkCount="${c}"
           else
             echo "set of flaky tests is currently empty."
           fi
