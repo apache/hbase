@@ -58,11 +58,8 @@ public class NettyRpcClient extends AbstractRpcClient<NettyRpcConnection> {
         .getEventLoopConfig(conf);
     if (groupAndChannelClass == null) {
       // Use our own EventLoopGroup.
-      int count =
-        Integer.getInteger(DefaultNettyEventLoopConfig.HBASE_NETTY_EVENTLOOP_DEFAULT_POOL_KEY, 0);
-      System.out.println("COUNT="+ count);
-      this.group = new NioEventLoopGroup(count,
-          new DefaultThreadFactory("IPC-NioEventLoopGroup", true, Thread.NORM_PRIORITY));
+      this.group = new NioEventLoopGroup(0,
+          new DefaultThreadFactory("IPC-NioEventLoopGroup", true, Thread.MAX_PRIORITY));
       this.channelClass = NioSocketChannel.class;
       this.shutdownGroupWhenClose = true;
     } else {

@@ -22,6 +22,7 @@ import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioSocketChannel;
 import org.apache.hbase.thirdparty.io.netty.util.concurrent.DefaultThreadFactory;
+
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Pair;
 
@@ -30,16 +31,10 @@ import org.apache.hadoop.hbase.util.Pair;
  */
 @InterfaceAudience.Private
 class DefaultNettyEventLoopConfig {
-  /**
-   * Name of system property to set to change default netty eventloop pool size.
-   * Default is 0.
-   */
-  public static final String HBASE_NETTY_EVENTLOOP_DEFAULT_POOL_KEY =
-    "hbase.netty.eventloop.default.pool";
 
   public static final Pair<EventLoopGroup, Class<? extends Channel>> GROUP_AND_CHANNEL_CLASS = Pair
       .<EventLoopGroup, Class<? extends Channel>> newPair(
-        new NioEventLoopGroup(Integer.getInteger(HBASE_NETTY_EVENTLOOP_DEFAULT_POOL_KEY, 0),
-            new DefaultThreadFactory("Default-IPC-NioEventLoopGroup", true,
-              Thread.NORM_PRIORITY)), NioSocketChannel.class);
+        new NioEventLoopGroup(0,
+            new DefaultThreadFactory("Default-IPC-NioEventLoopGroup", true, Thread.MAX_PRIORITY)),
+        NioSocketChannel.class);
 }

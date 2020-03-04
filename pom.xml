@@ -586,8 +586,6 @@
             <redirectTestOutputToFile>${test.output.tofile}</redirectTestOutputToFile>
             <systemPropertyVariables>
               <test.build.classes>${test.build.classes}</test.build.classes>
-              <!--For testing, set this do a low number: 5-->
-              <hbase.netty.eventloop.default.pool>5</hbase.netty.eventloop.default.pool>
             </systemPropertyVariables>
             <excludes>
               <!-- users can add -D option to skip particular test classes
