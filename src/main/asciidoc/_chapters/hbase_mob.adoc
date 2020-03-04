@@ -93,11 +93,18 @@ $ sudo -u hbase hbase org.apache.hadoop.hbase.IntegrationTestIngestWithMOB \
 
 === MOB architecture
 
-==== Overview
 This section is derived from information found in
-link:https://issues.apache.org/jira/browse/HBASE-11339[HBASE-11339]. For more information see
-the last version of the design doc created during that work:
-"link:https://github.com/apache/hbase/blob/master/dev-support/design-docs/HBASE-11339%20MOB%20GA%20design.pdf[HBASE-11339 MOB GA design.pdf]".
+link:https://issues.apache.org/jira/browse/HBASE-11339[HBASE-11339], which covered the initial GA
+implementation of MOB in HBase and
+link:https://issues.apache.org/jira/browse/HBASE-22749[HBASE-22749], which improved things by
+parallelizing MOB maintenance across the RegionServers. For more information see
+the last version of the design doc created during the initial work,
+"link:https://github.com/apache/hbase/blob/master/dev-support/design-docs/HBASE-11339%20MOB%20GA%20design.pdf[HBASE-11339 MOB GA design.pdf]",
+and the design doc for the distributed mob compaction feature,
+"link:https://github.com/apache/hbase/blob/master/dev-support/design-docs/HBASE-22749%20MOB%20distributed%20compaction.pdf[HBASE-22749 MOB distributed compaction.pdf]".
+
+
+==== Overview
 
 The MOB feature reduces the overall IO load for configured column families by storing values that
 are larger than the configured threshold outside of the normal regions to avoid splits, merges, and
@@ -151,7 +158,9 @@ can coexist with them in the regular archive storage area:
 ----
 
 The same hfile cleaning chores that take care of eventually deleting unneeded archived files from
-normal regions thus also will take care of these MOB hfiles.
+normal regions thus also will take care of these MOB hfiles. As such, if there is a snapshot of a
+MOB enabled table then the cleaning system will make sure those MOB files stick around in the
+archive area as long as they are needed by a snapshot or a clone of a snapshot.
 
 ==== MOB compaction
 
@@ -173,9 +182,11 @@ HDFS does, then even if we do not have deletes or updates of MOB cells eventuall
 sufficient number of MOB hfiles that we will need to coallesce them.
 
 Periodically a chore in the master coordinates having the region servers
-perform a special major compaction that also handles rewritting new MOB files. Because this
-rewriting has the advantage of looking across all active cells for the region our several small MOB
-files should end up as a single MOB file per region. The chore defaults to running weekly and can be
+perform a special major compaction that also handles rewritting new MOB files. Like all compactions
+the Region Server will create updated hfiles that hold both the cells that are smaller than the MOB
+threshold and cells that hold references to the newly rewritten MOB file. Because this rewriting has
+the advantage of looking across all active cells for the region our several small MOB files should
+end up as a single MOB file per region. The chore defaults to running weekly and can be
 configured by setting `hbase.mob.compaction.chore.period` to the desired period in seconds.
 
 ====
@@ -275,6 +286,21 @@ default MOB size threshold in this mode is set to 1GB. It can be changed by sett
 ----
 ====
 
+Additionally, when operating in this mode the compaction process will seek to avoid writing MOB
+files that are over the max file threshold. As it is writing out a additional MOB values into a MOB
+hfile it will check to see if the additional data causes the hfile to be over the max file size.
+When the hfile of MOB values reaches limit, the MOB hfile is committed to the MOB storage area and
+a new one is created. The hfile with reference cells will track the complete set of MOB hfiles it
+needs in its metadata.
+
+.Be mindful of total time to complete compaction of a region
+[WARNING]
+====
+When using the write amplification optimized compaction mode you need to watch for the maximum time
+to compact a single region. If it nears an hour you should read through the troubleshooting section
+below <<mob.troubleshoot.cleaner.toonew>>. Failure to make the adjustments discussed there could
+lead to dataloss.
+====
 
 [[mob.cache.configure]]
 ==== Configuring the MOB Cache
@@ -341,6 +367,7 @@ This same request can be made via the `Admin.majorCompact` Java API.
 
 === MOB Troubleshooting
 
+[[mob.troubleshoot.cleaner.toonew]]
 ==== Adjusting the MOB cleaner's tolerance for new hfiles
 
 The MOB cleaner chore ignores all MOB hfiles that were created more recently than an hour prior to
@@ -621,9 +648,19 @@ of the following changes:
   until a given table has been through the needed compactions operators should expect to see an
   increased amount of storage used by the MOB feature.
 * Performing a compaction with type "MOB" no longer has special handling to compact specifically the
-  MOB hfiles. Instead it will issue a warning and do a major compaction of the table. Similarly,
-  manually performing a major compaction on a table or region will also handle compacting the MOB
-  stored values for that table or region respectively.
+  MOB hfiles. Instead it will issue a warning and do a compaction of the table. For example using
+  the HBase shell as follows will result in a warning in the Master logs followed by a major
+  compaction of the 'example' table in its entirety or for the 'big' column respectively.
++
+----
+hbase> major_compact 'example', nil, 'MOB'
+hbase> major_compact 'example', 'big', 'MOB'
+----
++
+The same is true for directly using the Java API for
+`admin.majorCompact(TableName.valueOf("example"), CompactType.MOB)`.
+* Similarly, manually performing a major compaction on a table or region will also handle compacting
+  the MOB stored values for that table or region respectively.
 
 The following configuration setting has been deprecated and replaced:
 
