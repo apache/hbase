@@ -1122,21 +1122,16 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
       }
     }
     StreamUtils.writeInt(out, 0); // DUMMY length. This will be updated in endBlockEncoding()
-    blkEncodingCtx.setEncodingState(new BufferedDataBlockEncodingState());
-  }
-
-  private static class BufferedDataBlockEncodingState extends EncodingState {
-    int unencodedDataSizeWritten = 0;
+    blkEncodingCtx.setEncodingState(new EncodingState());
   }
 
   @Override
-  public int encode(Cell cell, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
+  public void encode(Cell cell, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
       throws IOException {
-    BufferedDataBlockEncodingState state = (BufferedDataBlockEncodingState) encodingCtx
-        .getEncodingState();
+    EncodingState state = encodingCtx.getEncodingState();
+    int posBeforeEncode = out.size();
     int encodedKvSize = internalEncode(cell, (HFileBlockDefaultEncodingContext) encodingCtx, out);
-    state.unencodedDataSizeWritten += encodedKvSize;
-    return encodedKvSize;
+    state.postCellEncode(encodedKvSize, out.size() - posBeforeEncode);
   }
 
   public abstract int internalEncode(Cell cell, HFileBlockDefaultEncodingContext encodingCtx,
@@ -1145,12 +1140,11 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
   @Override
   public void endBlockEncoding(HFileBlockEncodingContext encodingCtx, DataOutputStream out,
       byte[] uncompressedBytesWithHeader) throws IOException {
-    BufferedDataBlockEncodingState state = (BufferedDataBlockEncodingState) encodingCtx
-        .getEncodingState();
+    EncodingState state = encodingCtx.getEncodingState();
     // Write the unencodedDataSizeWritten (with header size)
     Bytes.putInt(uncompressedBytesWithHeader,
       HConstants.HFILEBLOCK_HEADER_SIZE + DataBlockEncoding.ID_SIZE,
-      state.unencodedDataSizeWritten);
+      state.getUnencodedDataSizeWritten());
     postEncoding(encodingCtx);
   }
 
