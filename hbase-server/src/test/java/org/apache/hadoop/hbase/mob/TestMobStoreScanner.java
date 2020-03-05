@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,10 +28,9 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.ConnectionConfiguration;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
@@ -41,6 +40,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.hfile.CorruptHFileException;
 import org.apache.hadoop.hbase.io.hfile.TestHFile;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -73,8 +73,8 @@ public class TestMobStoreScanner {
   protected final byte[] qf3 = Bytes.toBytes("qualifier3");
   private static Table table;
   private static Admin admin;
-  private static HColumnDescriptor hcd;
-  private static HTableDescriptor desc;
+  private static ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor;
+  private static TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor;
   private static Random random = new Random();
   private static long defaultThreshold = 10;
   private FileSystem fs;
@@ -99,14 +99,14 @@ public class TestMobStoreScanner {
   public void setUp(long threshold, TableName tn) throws Exception {
     conf = TEST_UTIL.getConfiguration();
     fs = FileSystem.get(conf);
-    desc = new HTableDescriptor(tn);
-    hcd = new HColumnDescriptor(family);
-    hcd.setMobEnabled(true);
-    hcd.setMobThreshold(threshold);
-    hcd.setMaxVersions(4);
-    desc.addFamily(hcd);
+    tableDescriptor = new TableDescriptorBuilder.ModifyableTableDescriptor(tn);
+    familyDescriptor = new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family);
+    familyDescriptor.setMobEnabled(true);
+    familyDescriptor.setMobThreshold(threshold);
+    familyDescriptor.setMaxVersions(4);
+    tableDescriptor.setColumnFamily(familyDescriptor);
     admin = TEST_UTIL.getAdmin();
-    admin.createTable(desc);
+    admin.createTable(tableDescriptor);
     table = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())
             .getTable(tn);
   }
@@ -401,7 +401,7 @@ public class TestMobStoreScanner {
     // Get the files in the mob path
     Path mobFamilyPath;
     mobFamilyPath = MobUtils.getMobFamilyPath(
-      TEST_UTIL.getConfiguration(), tn, hcd.getNameAsString());
+      TEST_UTIL.getConfiguration(), tn, familyDescriptor.getNameAsString());
     FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
     FileStatus[] files = fs.listStatus(mobFamilyPath);
 
@@ -458,7 +458,7 @@ public class TestMobStoreScanner {
     int valLen = Bytes.toInt(referenceValue, 0, Bytes.SIZEOF_INT);
     Assert.assertEquals(value.length, valLen);
     Path mobFamilyPath = MobUtils.getMobFamilyPath(
-      TEST_UTIL.getConfiguration(), tn, hcd.getNameAsString());
+      TEST_UTIL.getConfiguration(), tn, familyDescriptor.getNameAsString());
     Path targetPath = new Path(mobFamilyPath, fileName);
     FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
     Assert.assertTrue(fs.exists(targetPath));

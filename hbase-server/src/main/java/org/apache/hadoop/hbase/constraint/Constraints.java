@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -94,6 +95,18 @@ public final class Constraints {
     desc.addCoprocessor(clazz);
   }
 
+  public static void enable(TableDescriptorBuilder.ModifyableTableDescriptor desc)
+      throws IOException {
+    // if the CP has already been loaded, do nothing
+    String clazz = ConstraintProcessor.class.getName();
+    if (desc.hasCoprocessor(clazz)) {
+      return;
+    }
+
+    // add the constrain processor CP to the table
+    desc.setCoprocessor(clazz);
+  }
+
   /**
    * Turn off processing constraints for a given table, even if constraints have
    * been turned on or added.
@@ -104,6 +117,10 @@ public final class Constraints {
    */
   public static void disable(HTableDescriptor desc) {
     desc.removeCoprocessor(ConstraintProcessor.class.getName());
+  }
+
+  public static void disable(TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor) {
+    tableDescriptor.removeCoprocessor(ConstraintProcessor.class.getName());
   }
 
   /**
@@ -170,6 +187,16 @@ public final class Constraints {
     return value == null ? null : new Pair<>(key, value);
   }
 
+  private static Pair<String, String> getKeyValueForClass(
+      TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor,
+      Class<? extends Constraint> clazz) {
+    // get the serialized version of the constraint
+    String key = serializeConstraintClass(clazz);
+    String value = tableDescriptor.getValue(key);
+
+    return value == null ? null : new Pair<>(key, value);
+  }
+
   /**
    * Add configuration-less constraints to the table.
    * <p>
@@ -201,6 +228,38 @@ public final class Constraints {
       addConstraint(desc, clazz, null, priority++);
     }
     updateLatestPriority(desc, priority);
+  }
+
+  /**
+   * Add configuration-less constraints to the table.
+   * <p>
+   * This will overwrite any configuration associated with the previous
+   * constraint of the same class.
+   * <p>
+   * Each constraint, when added to the table, will have a specific priority,
+   * dictating the order in which the {@link Constraint} will be run. A
+   * {@link Constraint} earlier in the list will be run before those later in
+   * the list. The same logic applies between two Constraints over time (earlier
+   * added is run first on the regionserver).
+   *
+   * @param tableDescriptor TableDescriptorBuilder.ModifyableTableDescriptor
+   *   to add {@link Constraint}
+   * @param constraints {@link Constraint} to add. All constraints are
+   *   considered automatically enabled on add
+   * @throws IOException If constraint could not be serialized/added to table
+   */
+  public static void add(TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor,
+    Class<? extends Constraint>... constraints) throws IOException {
+    // make sure constraints are enabled
+    enable(tableDescriptor);
+    long priority = getNextPriority(tableDescriptor);
+
+    // store each constraint
+    for (Class<? extends Constraint> clazz : constraints) {
+      writeConstraint(tableDescriptor, serializeConstraintClass(clazz),
+        configure(null, true, priority));
+    }
+    updateLatestPriority(tableDescriptor, priority);
   }
 
   /**
@@ -337,6 +396,13 @@ public final class Constraints {
     desc.setValue(key, serializeConfiguration(conf));
   }
 
+  private static void writeConstraint(
+      TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor, String key,
+      Configuration conf) throws IOException {
+    // store the key and conf in the descriptor
+    tableDescriptor.setValue(key, serializeConfiguration(conf));
+  }
+
   /**
    * Write the configuration to a String
    * 
@@ -385,7 +451,7 @@ public final class Constraints {
     return readConfiguration(Bytes.toBytes(bytes));
   }
 
-  private static long getNextPriority(HTableDescriptor desc) {
+  private static long getNextPriority(TableDescriptor desc) {
     String value = desc.getValue(COUNTER_KEY);
 
     long priority;
@@ -402,6 +468,12 @@ public final class Constraints {
   private static void updateLatestPriority(HTableDescriptor desc, long priority) {
     // update the max priority
     desc.setValue(COUNTER_KEY, Long.toString(priority));
+  }
+
+  private static void updateLatestPriority(
+      TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor, long priority) {
+    // update the max priority
+    tableDescriptor.setValue(COUNTER_KEY, Long.toString(priority));
   }
 
   /**
@@ -493,6 +565,12 @@ public final class Constraints {
     changeConstraintEnabled(desc, clazz, false);
   }
 
+  public static void disableConstraint(
+      TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor,
+      Class<? extends Constraint> clazz) throws IOException {
+    changeConstraintEnabled(tableDescriptor, clazz, false);
+  }
+
   /**
    * Change the whether the constraint (if it is already present) is enabled or
    * disabled.
@@ -514,6 +592,26 @@ public final class Constraints {
 
     // write it back out
     writeConstraint(desc, entry.getFirst(), conf);
+  }
+
+  private static void changeConstraintEnabled(
+      TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor,
+    Class<? extends Constraint> clazz, boolean enabled) throws IOException {
+    // get the original constraint
+    Pair<String, String> entry = getKeyValueForClass(tableDescriptor, clazz);
+    if (entry == null) {
+      throw new IllegalArgumentException("Constraint: " + clazz.getName()
+        + " is not associated with this table. You can't enable it!");
+    }
+
+    // create a new configuration from that conf
+    Configuration conf = readConfiguration(entry.getSecond());
+
+    // set that it is enabled
+    conf.setBoolean(ENABLED_KEY, enabled);
+
+    // write it back out
+    writeConstraint(tableDescriptor, entry.getFirst(), conf);
   }
 
   /**

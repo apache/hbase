@@ -26,13 +26,13 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -83,10 +83,14 @@ public class TestFavoredNodeTableImport {
     admin.balancerSwitch(false, true);
 
     String tableName = "testFNImport";
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
-    desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
-    admin.createTable(desc, Bytes.toBytes("a"), Bytes.toBytes("z"), REGION_NUM);
-    UTIL.waitTableAvailable(desc.getTableName());
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(tableName));
+
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(
+        HConstants.CATALOG_FAMILY));
+    admin.createTable(tableDescriptor, Bytes.toBytes("a"), Bytes.toBytes("z"), REGION_NUM);
+    UTIL.waitTableAvailable(tableDescriptor.getTableName());
     admin.balancerSwitch(true, true);
 
     LOG.info("Shutting down cluster");
@@ -101,7 +105,7 @@ public class TestFavoredNodeTableImport {
     while (!master.isInitialized()) {
       Threads.sleep(1);
     }
-    UTIL.waitTableAvailable(desc.getTableName());
+    UTIL.waitTableAvailable(tableDescriptor.getTableName());
     UTIL.waitUntilNoRegionsInTransition(10000);
     assertTrue(master.isBalancerOn());
 

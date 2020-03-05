@@ -32,11 +32,32 @@ public class EncodingState {
    */
   protected Cell prevCell = null;
 
+  // Size of actual data being written. Not considering the block encoding/compression. This
+  // includes the header size also.
+  protected int unencodedDataSizeWritten = 0;
+
+  // Size of actual data being written. considering the block encoding. This
+  // includes the header size also.
+  protected int encodedDataSizeWritten = 0;
+
   public void beforeShipped() {
     if (this.prevCell != null) {
       // can't use KeyValueUtil#toNewKeyCell, because we need both key and value
       // from the prevCell in FastDiffDeltaEncoder
       this.prevCell = KeyValueUtil.copyToNewKeyValue(this.prevCell);
     }
+  }
+
+  public void postCellEncode(int unencodedCellSizeWritten, int encodedCellSizeWritten) {
+    this.unencodedDataSizeWritten += unencodedCellSizeWritten;
+    this.encodedDataSizeWritten += encodedCellSizeWritten;
+  }
+
+  public int getUnencodedDataSizeWritten() {
+    return unencodedDataSizeWritten;
+  }
+
+  public int getEncodedDataSizeWritten() {
+    return encodedDataSizeWritten;
   }
 }

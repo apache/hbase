@@ -34,16 +34,16 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.FilterList.Operator;
@@ -323,9 +323,12 @@ public class TestReversibleScanners {
   @Test
   public void testReversibleRegionScanner() throws IOException {
     byte[] FAMILYNAME2 = Bytes.toBytes("testCf2");
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()))
-        .addFamily(new HColumnDescriptor(FAMILYNAME))
-        .addFamily(new HColumnDescriptor(FAMILYNAME2));
+    TableDescriptorBuilder.ModifyableTableDescriptor htd =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(name.getMethodName()))
+        .setColumnFamily(new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(
+          FAMILYNAME))
+        .setColumnFamily(new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(
+          FAMILYNAME2));
     HRegion region = TEST_UTIL.createLocalHRegion(htd, null, null);
     loadDataToRegion(region, FAMILYNAME2);
 

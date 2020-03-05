@@ -26,8 +26,6 @@ import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -113,13 +111,15 @@ public class TestJoinedScanners {
     byte[][] families = {cf_essential, cf_joined};
 
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
     for (byte[] family : families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family);
-      hcd.setDataBlockEncoding(blockEncoding);
-      desc.addFamily(hcd);
+      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family);
+      familyDescriptor.setDataBlockEncoding(blockEncoding);
+      tableDescriptor.setColumnFamily(familyDescriptor);
     }
-    TEST_UTIL.getAdmin().createTable(desc);
+    TEST_UTIL.getAdmin().createTable(tableDescriptor);
     Table ht = TEST_UTIL.getConnection().getTable(tableName);
 
     long rows_to_insert = 1000;

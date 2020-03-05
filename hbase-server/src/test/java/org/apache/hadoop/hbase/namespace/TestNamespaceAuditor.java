@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,9 +39,7 @@ import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
@@ -346,9 +344,11 @@ public class TestNamespaceAuditor {
     ADMIN.createNamespace(nspDesc);
     final TableName tableTwo = TableName.valueOf(nsp1 + TableName.NAMESPACE_DELIM + "table2");
     byte[] columnFamily = Bytes.toBytes("info");
-    HTableDescriptor tableDescOne = new HTableDescriptor(tableTwo);
-    tableDescOne.addFamily(new HColumnDescriptor(columnFamily));
-    ADMIN.createTable(tableDescOne, Bytes.toBytes("0"), Bytes.toBytes("9"), initialRegions);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableTwo);
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(columnFamily));
+    ADMIN.createTable(tableDescriptor, Bytes.toBytes("0"), Bytes.toBytes("9"), initialRegions);
     Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
     try (Table table = connection.getTable(tableTwo)) {
       UTIL.loadNumericRows(table, Bytes.toBytes("info"), 1000, 1999);
@@ -442,12 +442,15 @@ public class TestNamespaceAuditor {
     ADMIN.createNamespace(nspDesc);
     final TableName tableOne = TableName.valueOf(nsp1 + TableName.NAMESPACE_DELIM + "table1");
     byte[] columnFamily = Bytes.toBytes("info");
-    HTableDescriptor tableDescOne = new HTableDescriptor(tableOne);
-    tableDescOne.addFamily(new HColumnDescriptor(columnFamily));
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableOne);
+
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(columnFamily));
     MasterSyncObserver.throwExceptionInPreCreateTableAction = true;
     try {
       try {
-        ADMIN.createTable(tableDescOne);
+        ADMIN.createTable(tableDescriptor);
         fail("Table " + tableOne.toString() + "creation should fail.");
       } catch (Exception exp) {
         LOG.error(exp.toString(), exp);
@@ -460,7 +463,7 @@ public class TestNamespaceAuditor {
 
       MasterSyncObserver.throwExceptionInPreCreateTableAction = false;
       try {
-        ADMIN.createTable(tableDescOne);
+        ADMIN.createTable(tableDescriptor);
       } catch (Exception e) {
         fail("Table " + tableOne.toString() + "creation should succeed.");
         LOG.error(e.toString(), e);

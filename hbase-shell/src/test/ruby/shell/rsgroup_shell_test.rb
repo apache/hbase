@@ -26,8 +26,7 @@ module Hbase
       @hbase = ::Hbase::Hbase.new($TEST_CLUSTER.getConfiguration)
       @shell = Shell::Shell.new(@hbase)
       connection = $TEST_CLUSTER.getConnection
-      @rsgroup_admin =
-          org.apache.hadoop.hbase.rsgroup.RSGroupAdminClient.new(connection)
+      @admin = connection.getAdmin
     end
 
     define_test 'Test Basic RSGroup Commands' do
@@ -37,37 +36,36 @@ module Hbase
       @shell.command('create', table_name, 'f')
 
       @shell.command('add_rsgroup', group_name)
-      assert_not_nil(@rsgroup_admin.getRSGroupInfo(group_name))
+      assert_not_nil(@admin.getRSGroup(group_name))
 
       @shell.command('remove_rsgroup', group_name)
-      assert_nil(@rsgroup_admin.getRSGroupInfo(group_name))
+      assert_nil(@admin.getRSGroup(group_name))
 
       @shell.command('add_rsgroup', group_name)
-      group = @rsgroup_admin.getRSGroupInfo(group_name)
+      group = @admin.getRSGroup(group_name)
       assert_not_nil(group)
       assert_equal(0, group.getServers.count)
 
-      hostport = @rsgroup_admin.getRSGroupInfo('default').getServers.iterator.next
+      hostport = @admin.getRSGroup('default').getServers.iterator.next
       @shell.command('get_rsgroup', 'default')
       hostPortStr = hostport.toString
       @shell.command('get_server_rsgroup', hostPortStr)
       @shell.command('move_servers_rsgroup',
                      group_name,
                      [hostPortStr])
-      assert_equal(1, @rsgroup_admin.getRSGroupInfo(group_name).getServers.count)
-      assert_equal(group_name, @rsgroup_admin.getRSGroupOfServer(hostport).getName)
+      assert_equal(1, @admin.getRSGroup(group_name).getServers.count)
+      assert_equal(group_name, @admin.getRSGroup(hostport).getName)
 
       @shell.command('move_tables_rsgroup',
                      group_name,
                      [table_name])
-      assert_equal(1, @rsgroup_admin.getRSGroupInfo(group_name).getTables.count)
+      assert_equal(1, @admin.listTablesInRSGroup(group_name).count)
 
       group = @hbase.rsgroup_admin.get_rsgroup(group_name)
       assert_not_nil(group)
       assert_equal(1, group.getServers.count)
-      assert_equal(1, group.getTables.count)
       assert_equal(hostPortStr, group.getServers.iterator.next.toString)
-      assert_equal(table_name, group.getTables.iterator.next.toString)
+      assert_equal(table_name, @admin.listTablesInRSGroup(group_name).iterator.next.toString)
 
       assert_equal(2, @hbase.rsgroup_admin.list_rs_groups.count)
 
@@ -86,11 +84,11 @@ module Hbase
       @shell.command('move_namespaces_rsgroup',
                      group_name,
                      [namespace_name])
-      assert_equal(2, @rsgroup_admin.getRSGroupInfo(group_name).getTables.count)
+      assert_equal(2, @admin.listTablesInRSGroup(group_name).count)
 
       group = @hbase.rsgroup_admin.get_rsgroup(group_name)
       assert_not_nil(group)
-      assert_equal(ns_table_name, group.getTables.iterator.next.toString)
+      assert_true(@admin.listTablesInRSGroup(group_name).contains(org.apache.hadoop.hbase.TableName.valueOf(ns_table_name)))
     end
 
     define_test 'Test RSGroup Move Server Namespace RSGroup Commands' do
@@ -99,13 +97,13 @@ module Hbase
       ns_table_name = 'test_namespace:test_ns_table'
 
       @shell.command('add_rsgroup', ns_group_name)
-      assert_not_nil(@rsgroup_admin.getRSGroupInfo(ns_group_name))
+      assert_not_nil(@admin.getRSGroup(ns_group_name))
 
       @shell.command('move_tables_rsgroup',
                      'default',
                      [ns_table_name])
 
-      group_servers = @rsgroup_admin.getRSGroupInfo('default').getServers
+      group_servers = @admin.getRSGroup('default').getServers
       hostport_str = group_servers.iterator.next.toString
       @shell.command('move_servers_namespaces_rsgroup',
                      ns_group_name,
@@ -114,7 +112,7 @@ module Hbase
       ns_group = @hbase.rsgroup_admin.get_rsgroup(ns_group_name)
       assert_not_nil(ns_group)
       assert_equal(hostport_str, ns_group.getServers.iterator.next.toString)
-      assert_equal(ns_table_name, ns_group.getTables.iterator.next.toString)
+      assert_equal(ns_table_name, @admin.listTablesInRSGroup(ns_group_name).iterator.next.toString)
     end
 
     # we test exceptions that could be thrown by the ruby wrappers

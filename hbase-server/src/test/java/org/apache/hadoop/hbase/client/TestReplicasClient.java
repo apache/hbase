@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -196,7 +197,10 @@ public class TestReplicasClient {
     HTU.startMiniCluster(option);
 
     // Create table then get the single region for our new table.
-    HTableDescriptor hdt = HTU.createTableDescriptor(TestReplicasClient.class.getSimpleName());
+    HTableDescriptor hdt = HTU.createTableDescriptor(
+      TableName.valueOf(TestReplicasClient.class.getSimpleName()),
+      HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+      HColumnDescriptor.DEFAULT_KEEP_DELETED);
     hdt.addCoprocessor(SlowMeCopro.class.getName());
     HTU.createTable(hdt, new byte[][]{f}, null);
     TABLE_NAME = hdt.getTableName();

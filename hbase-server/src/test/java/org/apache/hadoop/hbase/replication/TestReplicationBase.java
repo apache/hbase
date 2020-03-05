@@ -363,6 +363,9 @@ public class TestReplicationBase {
     if (htable1 != null) {
       htable1.close();
     }
+    if (hbaseAdmin != null) {
+      hbaseAdmin.close();
+    }
     UTIL2.shutdownMiniCluster();
     UTIL1.shutdownMiniCluster();
   }

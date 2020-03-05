@@ -31,10 +31,9 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Durability;
@@ -43,6 +42,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
@@ -150,12 +150,14 @@ public class TestTimeRangeMapRed {
 
   @Test
   public void testTimeRangeMapRed()
-  throws IOException, InterruptedException, ClassNotFoundException {
-    final HTableDescriptor desc = new HTableDescriptor(TABLE_NAME);
-    final HColumnDescriptor col = new HColumnDescriptor(FAMILY_NAME);
-    col.setMaxVersions(Integer.MAX_VALUE);
-    desc.addFamily(col);
-    admin.createTable(desc);
+      throws IOException, InterruptedException, ClassNotFoundException {
+    final TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLE_NAME);
+    final ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY_NAME);
+    familyDescriptor.setMaxVersions(Integer.MAX_VALUE);
+    tableDescriptor.setColumnFamily(familyDescriptor);
+    admin.createTable(tableDescriptor);
     List<Put> puts = new ArrayList<>();
     for (Map.Entry<Long, Boolean> entry : TIMESTAMP.entrySet()) {
       Put put = new Put(KEY);
@@ -163,7 +165,7 @@ public class TestTimeRangeMapRed {
       put.addColumn(FAMILY_NAME, COLUMN_NAME, entry.getKey(), Bytes.toBytes(false));
       puts.add(put);
     }
-    Table table = UTIL.getConnection().getTable(desc.getTableName());
+    Table table = UTIL.getConnection().getTable(tableDescriptor.getTableName());
     table.put(puts);
     runTestOnTable();
     verify(table);

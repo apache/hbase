@@ -25,7 +25,6 @@ import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -36,6 +35,7 @@ import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContextImpl;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
@@ -175,12 +176,14 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
   public void setUp() throws Exception {
     // Create the test table (owner added to the _acl_ table)
     Admin admin = TEST_UTIL.getAdmin();
-    HTableDescriptor htd = new HTableDescriptor(testTable.getTableName());
-    HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY);
-    hcd.setMaxVersions(100);
-    htd.addFamily(hcd);
-    htd.setOwner(USER_OWNER);
-    admin.createTable(htd, new byte[][] { Bytes.toBytes("s") });
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(testTable.getTableName());
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY);
+    familyDescriptor.setMaxVersions(100);
+    tableDescriptor.setColumnFamily(familyDescriptor);
+    tableDescriptor.setOwner(USER_OWNER);
+    admin.createTable(tableDescriptor, new byte[][] { Bytes.toBytes("s") });
     TEST_UTIL.waitUntilAllRegionsAssigned(testTable.getTableName());
 
     HRegion region = TEST_UTIL.getHBaseCluster().getRegions(testTable.getTableName()).get(0);
@@ -470,10 +473,12 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTableDescriptor htd = new HTableDescriptor(testTable.getTableName());
-        htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
-        ACCESS_CONTROLLER.preCreateTable(ObserverContextImpl.createAndPrepare(CP_ENV), htd,
-          null);
+        TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+          new TableDescriptorBuilder.ModifyableTableDescriptor(testTable.getTableName());
+        tableDescriptor.setColumnFamily(
+          new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY));
+        ACCESS_CONTROLLER.preCreateTable(ObserverContextImpl.createAndPrepare(CP_ENV),
+          tableDescriptor, null);
         return null;
       }
     }, SUPERUSER, USER_ADMIN, USER_RW, USER_RO, USER_OWNER, USER_CREATE, USER_QUAL, USER_NONE);
@@ -482,13 +487,16 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTableDescriptor htd = new HTableDescriptor(testTable.getTableName());
-        htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
-        htd.addFamily(new HColumnDescriptor(TEST_FAMILY2));
+        TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+          new TableDescriptorBuilder.ModifyableTableDescriptor(testTable.getTableName());
+        tableDescriptor.setColumnFamily(
+          new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY));
+        tableDescriptor.setColumnFamily(
+          new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY2));
         ACCESS_CONTROLLER.preModifyTable(ObserverContextImpl.createAndPrepare(CP_ENV),
           testTable.getTableName(),
           null,  // not needed by AccessController
-          htd);
+          tableDescriptor);
         return null;
       }
     }, SUPERUSER, USER_ADMIN, USER_RW, USER_RO, USER_OWNER, USER_CREATE, USER_QUAL, USER_NONE);

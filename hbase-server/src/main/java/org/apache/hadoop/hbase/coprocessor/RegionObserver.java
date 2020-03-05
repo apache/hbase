@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -511,13 +512,32 @@ public interface RegionObserver {
    * @param op the comparison operation
    * @param comparator the comparator
    * @param put data to put if check succeeds
-   * @param result
-   * @return the return value to return to client if bypassing default
-   * processing
+   * @param result the default value of the result
+   * @return the return value to return to client if bypassing default processing
    */
   default boolean preCheckAndPut(ObserverContext<RegionCoprocessorEnvironment> c, byte[] row,
       byte[] family, byte[] qualifier, CompareOperator op, ByteArrayComparable comparator, Put put,
       boolean result) throws IOException {
+    return result;
+  }
+
+  /**
+   * Called before checkAndPut.
+   * <p>
+   * Call CoprocessorEnvironment#bypass to skip default actions.
+   * If 'bypass' is set, we skip out on calling any subsequent chained coprocessors.
+   * <p>
+   * Note: Do not retain references to any Cells in 'put' beyond the life of this invocation.
+   * If need a Cell reference for later use, copy the cell and use that.
+   * @param c the environment provided by the region server
+   * @param row row to check
+   * @param filter filter
+   * @param put data to put if check succeeds
+   * @param result the default value of the result
+   * @return the return value to return to client if bypassing default processing
+   */
+  default boolean preCheckAndPut(ObserverContext<RegionCoprocessorEnvironment> c, byte[] row,
+    Filter filter, Put put, boolean result) throws IOException {
     return result;
   }
 
@@ -540,13 +560,36 @@ public interface RegionObserver {
    * @param op the comparison operation
    * @param comparator the comparator
    * @param put data to put if check succeeds
-   * @param result
-   * @return the return value to return to client if bypassing default
-   * processing
+   * @param result the default value of the result
+   * @return the return value to return to client if bypassing default processing
    */
   default boolean preCheckAndPutAfterRowLock(ObserverContext<RegionCoprocessorEnvironment> c,
       byte[] row, byte[] family, byte[] qualifier, CompareOperator op,
       ByteArrayComparable comparator, Put put, boolean result) throws IOException {
+    return result;
+  }
+
+  /**
+   * Called before checkAndPut but after acquiring rowlock.
+   * <p>
+   * <b>Note:</b> Caution to be taken for not doing any long time operation in this hook.
+   * Row will be locked for longer time. Trying to acquire lock on another row, within this,
+   * can lead to potential deadlock.
+   * <p>
+   * Call CoprocessorEnvironment#bypass to skip default actions.
+   * If 'bypass' is set, we skip out on calling any subsequent chained coprocessors.
+   * <p>
+   * Note: Do not retain references to any Cells in 'put' beyond the life of this invocation.
+   * If need a Cell reference for later use, copy the cell and use that.
+   * @param c the environment provided by the region server
+   * @param row row to check
+   * @param filter filter
+   * @param put data to put if check succeeds
+   * @param result the default value of the result
+   * @return the return value to return to client if bypassing default processing
+   */
+  default boolean preCheckAndPutAfterRowLock(ObserverContext<RegionCoprocessorEnvironment> c,
+    byte[] row, Filter filter, Put put, boolean result) throws IOException {
     return result;
   }
 
@@ -572,6 +615,23 @@ public interface RegionObserver {
   }
 
   /**
+   * Called after checkAndPut
+   * <p>
+   * Note: Do not retain references to any Cells in 'put' beyond the life of this invocation.
+   * If need a Cell reference for later use, copy the cell and use that.
+   * @param c the environment provided by the region server
+   * @param row row to check
+   * @param filter filter
+   * @param put data to put if check succeeds
+   * @param result from the checkAndPut
+   * @return the possibly transformed return value to return to client
+   */
+  default boolean postCheckAndPut(ObserverContext<RegionCoprocessorEnvironment> c, byte[] row,
+    Filter filter, Put put, boolean result) throws IOException {
+    return result;
+  }
+
+  /**
    * Called before checkAndDelete.
    * <p>
    * Call CoprocessorEnvironment#bypass to skip default actions.
@@ -586,12 +646,32 @@ public interface RegionObserver {
    * @param op the comparison operation
    * @param comparator the comparator
    * @param delete delete to commit if check succeeds
-   * @param result
+   * @param result the default value of the result
    * @return the value to return to client if bypassing default processing
    */
   default boolean preCheckAndDelete(ObserverContext<RegionCoprocessorEnvironment> c, byte[] row,
       byte[] family, byte[] qualifier, CompareOperator op, ByteArrayComparable comparator,
       Delete delete, boolean result) throws IOException {
+    return result;
+  }
+
+  /**
+   * Called before checkAndDelete.
+   * <p>
+   * Call CoprocessorEnvironment#bypass to skip default actions.
+   * If 'bypass' is set, we skip out on calling any subsequent chained coprocessors.
+   * <p>
+   * Note: Do not retain references to any Cells in 'delete' beyond the life of this invocation.
+   * If need a Cell reference for later use, copy the cell and use that.
+   * @param c the environment provided by the region server
+   * @param row row to check
+   * @param filter column family
+   * @param delete delete to commit if check succeeds
+   * @param result the default value of the result
+   * @return the value to return to client if bypassing default processing
+   */
+  default boolean preCheckAndDelete(ObserverContext<RegionCoprocessorEnvironment> c, byte[] row,
+    Filter filter, Delete delete, boolean result) throws IOException {
     return result;
   }
 
@@ -614,12 +694,36 @@ public interface RegionObserver {
    * @param op the comparison operation
    * @param comparator the comparator
    * @param delete delete to commit if check succeeds
-   * @param result
+   * @param result the default value of the result
    * @return the value to return to client if bypassing default processing
    */
   default boolean preCheckAndDeleteAfterRowLock(ObserverContext<RegionCoprocessorEnvironment> c,
       byte[] row, byte[] family, byte[] qualifier, CompareOperator op,
       ByteArrayComparable comparator, Delete delete, boolean result) throws IOException {
+    return result;
+  }
+
+  /**
+   * Called before checkAndDelete but after acquiring rowock.
+   * <p>
+   * <b>Note:</b> Caution to be taken for not doing any long time operation in this hook.
+   * Row will be locked for longer time. Trying to acquire lock on another row, within this,
+   * can lead to potential deadlock.
+   * <p>
+   * Call CoprocessorEnvironment#bypass to skip default actions.
+   * If 'bypass' is set, we skip out on calling any subsequent chained coprocessors.
+   * <p>
+   * Note: Do not retain references to any Cells in 'delete' beyond the life of this invocation.
+   * If need a Cell reference for later use, copy the cell and use that.
+   * @param c the environment provided by the region server
+   * @param row row to check
+   * @param filter filter
+   * @param delete delete to commit if check succeeds
+   * @param result the default value of the result
+   * @return the value to return to client if bypassing default processing
+   */
+  default boolean preCheckAndDeleteAfterRowLock(ObserverContext<RegionCoprocessorEnvironment> c,
+    byte[] row, Filter filter, Delete delete, boolean result) throws IOException {
     return result;
   }
 
@@ -641,6 +745,23 @@ public interface RegionObserver {
   default boolean postCheckAndDelete(ObserverContext<RegionCoprocessorEnvironment> c, byte[] row,
       byte[] family, byte[] qualifier, CompareOperator op, ByteArrayComparable comparator,
       Delete delete, boolean result) throws IOException {
+    return result;
+  }
+
+  /**
+   * Called after checkAndDelete
+   * <p>
+   * Note: Do not retain references to any Cells in 'delete' beyond the life of this invocation.
+   * If need a Cell reference for later use, copy the cell and use that.
+   * @param c the environment provided by the region server
+   * @param row row to check
+   * @param filter filter
+   * @param delete delete to commit if check succeeds
+   * @param result from the CheckAndDelete
+   * @return the possibly transformed returned value to return to client
+   */
+  default boolean postCheckAndDelete(ObserverContext<RegionCoprocessorEnvironment> c, byte[] row,
+    Filter filter, Delete delete, boolean result) throws IOException {
     return result;
   }
 

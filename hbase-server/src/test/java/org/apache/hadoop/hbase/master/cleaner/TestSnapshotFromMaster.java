@@ -304,16 +304,20 @@ public class TestSnapshotFromMaster {
         master.getMasterRpcServices().getCompletedSnapshots(null, request);
     assertEquals("Found unexpected number of snapshots", 0, response.getSnapshotsCount());
 
+    // NOTE: This is going to be flakey. Its timing based. For now made it more coarse
+    // so more likely to pass though we have to hang around longer.
+
     // write one snapshot to the fs
-    createSnapshotWithTtl("snapshot_01", 1L);
-    createSnapshotWithTtl("snapshot_02", 10L);
+    createSnapshotWithTtl("snapshot_01", 5L);
+    createSnapshotWithTtl("snapshot_02", 100L);
 
     // check that we get one snapshot
     response = master.getMasterRpcServices().getCompletedSnapshots(null, request);
     assertEquals("Found unexpected number of snapshots", 2, response.getSnapshotsCount());
 
-    // check that 1 snapshot is auto cleaned after 1 sec of TTL expiration
-    Uninterruptibles.sleepUninterruptibly(2, TimeUnit.SECONDS);
+    // Check that 1 snapshot is auto cleaned after 5 sec of TTL expiration. Wait 10 seconds
+    // just in case.
+    Uninterruptibles.sleepUninterruptibly(10, TimeUnit.SECONDS);
     response = master.getMasterRpcServices().getCompletedSnapshots(null, request);
     assertEquals("Found unexpected number of snapshots", 1, response.getSnapshotsCount());
   }

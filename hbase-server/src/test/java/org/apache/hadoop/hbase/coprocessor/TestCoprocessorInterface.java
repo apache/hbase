@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,14 +40,14 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -412,9 +412,11 @@ public class TestCoprocessorInterface {
   HRegion initHRegion (TableName tableName, String callingMethod,
       Configuration conf, Class<?> [] implClasses, byte [][] families)
       throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    for(byte [] family : families) {
-      htd.addFamily(new HColumnDescriptor(family));
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    for (byte[] family : families) {
+      tableDescriptor.setColumnFamily(
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
     }
     ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
     RegionInfo info = RegionInfoBuilder.newBuilder(tableName)
@@ -423,7 +425,7 @@ public class TestCoprocessorInterface {
         .setSplit(false)
         .build();
     Path path = new Path(DIR + callingMethod);
-    HRegion r = HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);
+    HRegion r = HBaseTestingUtility.createRegionAndWAL(info, path, conf, tableDescriptor);
 
     // this following piece is a hack.
     RegionCoprocessorHost host =

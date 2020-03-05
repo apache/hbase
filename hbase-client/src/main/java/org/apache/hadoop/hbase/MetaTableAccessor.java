@@ -233,8 +233,7 @@ public class MetaTableAccessor {
    * @return An {@link Table} for <code>hbase:meta</code>
    * @throws NullPointerException if {@code connection} is {@code null}
    */
-  public static Table getMetaHTable(final Connection connection)
-  throws IOException {
+  public static Table getMetaHTable(final Connection connection) throws IOException {
     // We used to pass whole CatalogTracker in here, now we just pass in Connection
     Objects.requireNonNull(connection, "Connection cannot be null");
     if (connection.isClosed()) {
@@ -1674,44 +1673,47 @@ public class MetaTableAccessor {
   }
 
   /**
-   * Performs an atomic multi-mutate operation against the given table.
+   * Performs an atomic multi-mutate operation against the given table. Used by the likes of
+   * merge and split as these want to make atomic mutations across multiple rows.
+   * @throws IOException even if we encounter a RuntimeException, we'll still wrap it in an IOE.
    */
-  private static void multiMutate(final Table table, byte[] row, final List<Mutation> mutations)
+  @VisibleForTesting
+  static void multiMutate(final Table table, byte[] row, final List<Mutation> mutations)
       throws IOException {
     debugLogMutations(mutations);
-    Batch.Call<MultiRowMutationService, MutateRowsResponse> callable =
-      new Batch.Call<MultiRowMutationService, MutateRowsResponse>() {
-
-        @Override
-        public MutateRowsResponse call(MultiRowMutationService instance) throws IOException {
-          MutateRowsRequest.Builder builder = MutateRowsRequest.newBuilder();
-          for (Mutation mutation : mutations) {
-            if (mutation instanceof Put) {
-              builder.addMutationRequest(
-                ProtobufUtil.toMutation(ClientProtos.MutationProto.MutationType.PUT, mutation));
-            } else if (mutation instanceof Delete) {
-              builder.addMutationRequest(
-                ProtobufUtil.toMutation(ClientProtos.MutationProto.MutationType.DELETE, mutation));
-            } else {
-              throw new DoNotRetryIOException(
-                "multi in MetaEditor doesn't support " + mutation.getClass().getName());
-            }
-          }
-          ServerRpcController controller = new ServerRpcController();
-          CoprocessorRpcUtils.BlockingRpcCallback<MutateRowsResponse> rpcCallback =
-            new CoprocessorRpcUtils.BlockingRpcCallback<>();
-          instance.mutateRows(controller, builder.build(), rpcCallback);
-          MutateRowsResponse resp = rpcCallback.get();
-          if (controller.failedOnException()) {
-            throw controller.getFailedOn();
-          }
-          return resp;
+    Batch.Call<MultiRowMutationService, MutateRowsResponse> callable = instance -> {
+      MutateRowsRequest.Builder builder = MutateRowsRequest.newBuilder();
+      for (Mutation mutation : mutations) {
+        if (mutation instanceof Put) {
+          builder.addMutationRequest(
+            ProtobufUtil.toMutation(ClientProtos.MutationProto.MutationType.PUT, mutation));
+        } else if (mutation instanceof Delete) {
+          builder.addMutationRequest(
+            ProtobufUtil.toMutation(ClientProtos.MutationProto.MutationType.DELETE, mutation));
+        } else {
+          throw new DoNotRetryIOException(
+            "multi in MetaEditor doesn't support " + mutation.getClass().getName());
         }
-      };
+      }
+      ServerRpcController controller = new ServerRpcController();
+      CoprocessorRpcUtils.BlockingRpcCallback<MutateRowsResponse> rpcCallback =
+        new CoprocessorRpcUtils.BlockingRpcCallback<>();
+      instance.mutateRows(controller, builder.build(), rpcCallback);
+      MutateRowsResponse resp = rpcCallback.get();
+      if (controller.failedOnException()) {
+        throw controller.getFailedOn();
+      }
+      return resp;
+    };
     try {
       table.coprocessorService(MultiRowMutationService.class, row, row, callable);
     } catch (Throwable e) {
-      Throwables.propagateIfPossible(e, IOException.class);
+      // Throw if an IOE else wrap in an IOE EVEN IF IT IS a RuntimeException (e.g.
+      // a RejectedExecutionException because the hosting exception is shutting down.
+      // This is old behavior worth reexamining. Procedures doing merge or split
+      // currently don't handle RuntimeExceptions coming up out of meta table edits.
+      // Would have to work on this at least. See HBASE-23904.
+      Throwables.throwIfInstanceOf(e, IOException.class);
       throw new IOException(e);
     }
   }

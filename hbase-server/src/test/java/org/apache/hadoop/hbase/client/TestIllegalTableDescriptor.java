@@ -30,9 +30,7 @@ import java.lang.reflect.Field;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -86,125 +84,128 @@ public class TestIllegalTableDescriptor {
 
   @Test
   public void testIllegalTableDescriptor() throws Exception {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
-    HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(
+        TableName.valueOf(name.getMethodName()));
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY);
 
     // create table with 0 families
-    checkTableIsIllegal(htd);
-    htd.addFamily(hcd);
-    checkTableIsLegal(htd);
+    checkTableIsIllegal(tableDescriptor);
+    tableDescriptor.setColumnFamily(familyDescriptor);
+    checkTableIsLegal(tableDescriptor);
 
-    htd.setMaxFileSize(1024); // 1K
-    checkTableIsIllegal(htd);
-    htd.setMaxFileSize(0);
-    checkTableIsIllegal(htd);
-    htd.setMaxFileSize(1024 * 1024 * 1024); // 1G
-    checkTableIsLegal(htd);
+    tableDescriptor.setMaxFileSize(1024); // 1K
+    checkTableIsIllegal(tableDescriptor);
+    tableDescriptor.setMaxFileSize(0);
+    checkTableIsIllegal(tableDescriptor);
+    tableDescriptor.setMaxFileSize(1024 * 1024 * 1024); // 1G
+    checkTableIsLegal(tableDescriptor);
 
-    htd.setMemStoreFlushSize(1024);
-    checkTableIsIllegal(htd);
-    htd.setMemStoreFlushSize(0);
-    checkTableIsIllegal(htd);
-    htd.setMemStoreFlushSize(128 * 1024 * 1024); // 128M
-    checkTableIsLegal(htd);
+    tableDescriptor.setMemStoreFlushSize(1024);
+    checkTableIsIllegal(tableDescriptor);
+    tableDescriptor.setMemStoreFlushSize(0);
+    checkTableIsIllegal(tableDescriptor);
+    tableDescriptor.setMemStoreFlushSize(128 * 1024 * 1024); // 128M
+    checkTableIsLegal(tableDescriptor);
 
-    htd.setRegionSplitPolicyClassName("nonexisting.foo.class");
-    checkTableIsIllegal(htd);
-    htd.setRegionSplitPolicyClassName(null);
-    checkTableIsLegal(htd);
+    tableDescriptor.setRegionSplitPolicyClassName("nonexisting.foo.class");
+    checkTableIsIllegal(tableDescriptor);
+    tableDescriptor.setRegionSplitPolicyClassName(null);
+    checkTableIsLegal(tableDescriptor);
 
-    htd.setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY, "nonexisting.foo.class");
-    checkTableIsIllegal(htd);
-    htd.remove(HConstants.HBASE_REGION_SPLIT_POLICY_KEY);
-    checkTableIsLegal(htd);
+    tableDescriptor.setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY, "nonexisting.foo.class");
+    checkTableIsIllegal(tableDescriptor);
+    tableDescriptor.removeValue(Bytes.toBytes(HConstants.HBASE_REGION_SPLIT_POLICY_KEY));
+    checkTableIsLegal(tableDescriptor);
 
-    hcd.setBlocksize(0);
-    checkTableIsIllegal(htd);
-    hcd.setBlocksize(1024 * 1024 * 128); // 128M
-    checkTableIsIllegal(htd);
-    hcd.setBlocksize(1024);
-    checkTableIsLegal(htd);
+    familyDescriptor.setBlocksize(0);
+    checkTableIsIllegal(tableDescriptor);
+    familyDescriptor.setBlocksize(1024 * 1024 * 128); // 128M
+    checkTableIsIllegal(tableDescriptor);
+    familyDescriptor.setBlocksize(1024);
+    checkTableIsLegal(tableDescriptor);
 
-    hcd.setTimeToLive(0);
-    checkTableIsIllegal(htd);
-    hcd.setTimeToLive(-1);
-    checkTableIsIllegal(htd);
-    hcd.setTimeToLive(1);
-    checkTableIsLegal(htd);
+    familyDescriptor.setTimeToLive(0);
+    checkTableIsIllegal(tableDescriptor);
+    familyDescriptor.setTimeToLive(-1);
+    checkTableIsIllegal(tableDescriptor);
+    familyDescriptor.setTimeToLive(1);
+    checkTableIsLegal(tableDescriptor);
 
-    hcd.setMinVersions(-1);
-    checkTableIsIllegal(htd);
-    hcd.setMinVersions(3);
+    familyDescriptor.setMinVersions(-1);
+    checkTableIsIllegal(tableDescriptor);
+    familyDescriptor.setMinVersions(3);
     try {
-      hcd.setMaxVersions(2);
+      familyDescriptor.setMaxVersions(2);
       fail();
     } catch (IllegalArgumentException ex) {
       // expected
-      hcd.setMaxVersions(10);
+      familyDescriptor.setMaxVersions(10);
     }
-    checkTableIsLegal(htd);
+    checkTableIsLegal(tableDescriptor);
 
     // HBASE-13776 Setting illegal versions for HColumnDescriptor
     //  does not throw IllegalArgumentException
     // finally, minVersions must be less than or equal to maxVersions
-    hcd.setMaxVersions(4);
-    hcd.setMinVersions(5);
-    checkTableIsIllegal(htd);
-    hcd.setMinVersions(3);
+    familyDescriptor.setMaxVersions(4);
+    familyDescriptor.setMinVersions(5);
+    checkTableIsIllegal(tableDescriptor);
+    familyDescriptor.setMinVersions(3);
 
-    hcd.setScope(-1);
-    checkTableIsIllegal(htd);
-    hcd.setScope(0);
-    checkTableIsLegal(htd);
+    familyDescriptor.setScope(-1);
+    checkTableIsIllegal(tableDescriptor);
+    familyDescriptor.setScope(0);
+    checkTableIsLegal(tableDescriptor);
 
-    hcd.setValue(ColumnFamilyDescriptorBuilder.IN_MEMORY_COMPACTION, "INVALID");
-    checkTableIsIllegal(htd);
-    hcd.setValue(ColumnFamilyDescriptorBuilder.IN_MEMORY_COMPACTION, "NONE");
-    checkTableIsLegal(htd);
+    familyDescriptor.setValue(ColumnFamilyDescriptorBuilder.IN_MEMORY_COMPACTION, "INVALID");
+    checkTableIsIllegal(tableDescriptor);
+    familyDescriptor.setValue(ColumnFamilyDescriptorBuilder.IN_MEMORY_COMPACTION, "NONE");
+    checkTableIsLegal(tableDescriptor);
 
     try {
-      hcd.setDFSReplication((short) -1);
+      familyDescriptor.setDFSReplication((short) -1);
       fail("Illegal value for setDFSReplication did not throw");
     } catch (IllegalArgumentException e) {
       // pass
     }
     // set an illegal DFS replication value by hand
-    hcd.setValue(HColumnDescriptor.DFS_REPLICATION, "-1");
-    checkTableIsIllegal(htd);
+    familyDescriptor.setValue(ColumnFamilyDescriptorBuilder.DFS_REPLICATION, "-1");
+    checkTableIsIllegal(tableDescriptor);
     try {
-      hcd.setDFSReplication((short) -1);
+      familyDescriptor.setDFSReplication((short) -1);
       fail("Should throw exception if an illegal value is explicitly being set");
     } catch (IllegalArgumentException e) {
       // pass
     }
 
     // check the conf settings to disable sanity checks
-    htd.setMemStoreFlushSize(0);
+    tableDescriptor.setMemStoreFlushSize(0);
 
     // Check that logs warn on invalid table but allow it.
-    htd.setConfiguration(TableDescriptorChecker.TABLE_SANITY_CHECKS, Boolean.FALSE.toString());
-    checkTableIsLegal(htd);
+    tableDescriptor.setValue(TableDescriptorChecker.TABLE_SANITY_CHECKS, Boolean.FALSE.toString());
+    checkTableIsLegal(tableDescriptor);
 
     verify(LOGGER).warn(contains("MEMSTORE_FLUSHSIZE for table "
         + "descriptor or \"hbase.hregion.memstore.flush.size\" (0) is too small, which might "
         + "cause very frequent flushing."));
   }
 
-  private void checkTableIsLegal(HTableDescriptor htd) throws IOException {
+  private void checkTableIsLegal(TableDescriptor tableDescriptor) throws IOException {
     Admin admin = TEST_UTIL.getAdmin();
-    admin.createTable(htd);
-    assertTrue(admin.tableExists(htd.getTableName()));
-    TEST_UTIL.deleteTable(htd.getTableName());
+    admin.createTable(tableDescriptor);
+    assertTrue(admin.tableExists(tableDescriptor.getTableName()));
+    TEST_UTIL.deleteTable(tableDescriptor.getTableName());
   }
 
-  private void checkTableIsIllegal(HTableDescriptor htd) throws IOException {
+  private void checkTableIsIllegal(TableDescriptor tableDescriptor) throws IOException {
     Admin admin = TEST_UTIL.getAdmin();
     try {
-      admin.createTable(htd);
+      admin.createTable(tableDescriptor);
       fail();
     } catch(Exception ex) {
       // should throw ex
     }
-    assertFalse(admin.tableExists(htd.getTableName()));
+    assertFalse(admin.tableExists(tableDescriptor.getTableName()));
   }
 }

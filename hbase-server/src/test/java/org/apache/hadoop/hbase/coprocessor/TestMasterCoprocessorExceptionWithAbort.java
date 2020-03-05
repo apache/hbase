@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,14 +29,15 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
@@ -88,11 +89,14 @@ public class TestMasterCoprocessorExceptionWithAbort {
     public void run() {
       // create a table : master coprocessor will throw an exception and not
       // catch it.
-      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TEST_TABLE));
-      htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
+      TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+        new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(TEST_TABLE));
+      ColumnFamilyDescriptor familyDescriptor =
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY);
+      tableDescriptor.setColumnFamily(familyDescriptor);
       try {
         Admin admin = UTIL.getAdmin();
-        admin.createTable(htd);
+        admin.createTable(tableDescriptor);
         fail("BuggyMasterObserver failed to throw an exception.");
       } catch (IOException e) {
         assertEquals("HBaseAdmin threw an interrupted IOException as expected.",

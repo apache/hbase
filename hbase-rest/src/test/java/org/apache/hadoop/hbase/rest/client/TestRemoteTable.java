@@ -32,10 +32,9 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -44,6 +43,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.rest.HBaseRESTTestingUtility;
 import org.apache.hadoop.hbase.rest.RESTServlet;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -121,11 +121,19 @@ public class TestRemoteTable {
 
       admin.deleteTable(TABLE);
     }
-    HTableDescriptor htd = new HTableDescriptor(TABLE);
-    htd.addFamily(new HColumnDescriptor(COLUMN_1).setMaxVersions(3));
-    htd.addFamily(new HColumnDescriptor(COLUMN_2).setMaxVersions(3));
-    htd.addFamily(new HColumnDescriptor(COLUMN_3).setMaxVersions(3));
-    admin.createTable(htd);
+
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLE);
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(COLUMN_1)
+        .setMaxVersions(3));
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(COLUMN_2)
+        .setMaxVersions(3));
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(COLUMN_3)
+        .setMaxVersions(3));
+    admin.createTable(tableDescriptor);
     try (Table table = TEST_UTIL.getConnection().getTable(TABLE)) {
       Put put = new Put(ROW_1);
       put.addColumn(COLUMN_1, QUALIFIER_1, TS_2, VALUE_1);
