@@ -18,12 +18,13 @@
 
 package org.apache.hadoop.hbase.chaos.policies;
 
+import java.util.Properties;
+
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.chaos.actions.Action;
 import org.apache.hadoop.hbase.util.StoppableImplementation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.Properties;
 
 /**
  * A policy to introduce chaos to the cluster

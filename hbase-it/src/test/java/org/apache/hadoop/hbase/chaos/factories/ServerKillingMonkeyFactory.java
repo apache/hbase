@@ -50,7 +50,7 @@ public class ServerKillingMonkeyFactory extends MonkeyFactory {
     Action[] actions1 = new Action[] {
         new RestartRandomRsExceptMetaAction(60000),
         new RestartActiveMasterAction(5000),
-        new RollingBatchRestartRsAction(5000, 1.0f, 2,
+      new RollingBatchRestartRsAction(5000, 1.0f, 2,
           true), //only allow 2 servers to be dead
       new ForceBalancerAction(),
       new GracefulRollingRestartRsAction(gracefulRollingRestartTSSLeepTime),
