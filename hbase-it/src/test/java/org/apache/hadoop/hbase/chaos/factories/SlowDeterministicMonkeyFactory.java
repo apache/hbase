@@ -71,7 +71,6 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
   private long gracefulRollingRestartTSSLeepTime;
   private long rollingBatchSuspendRSSleepTime;
   private float rollingBatchSuspendtRSRatio;
-  private boolean killMetaRs;
 
   @Override
   public ChaosMonkey build() {
@@ -116,9 +115,9 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
         new RestartRsHoldingMetaAction(restartRsHoldingMetaSleepTime),
         new DecreaseMaxHFileSizeAction(decreaseHFileSizeSleepTime, tableName),
         new SplitAllRegionOfTableAction(tableName),
-      new GracefulRollingRestartRsAction(gracefulRollingRestartTSSLeepTime, killMetaRs),
+      new GracefulRollingRestartRsAction(gracefulRollingRestartTSSLeepTime),
       new RollingBatchSuspendResumeRsAction(rollingBatchSuspendRSSleepTime,
-          rollingBatchSuspendtRSRatio, killMetaRs)
+          rollingBatchSuspendtRSRatio)
     };
 
     // Action to log more info for debugging
@@ -126,7 +125,7 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
         new DumpClusterStatusAction()
     };
 
-    return new PolicyBasedChaosMonkey(util,
+    return new PolicyBasedChaosMonkey(properties, util,
         new PeriodicRandomActionPolicy(action1Period, actions1),
         new PeriodicRandomActionPolicy(action2Period, actions2),
         new CompositeSequentialPolicy(
@@ -197,8 +196,5 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
     rollingBatchSuspendtRSRatio = Float.parseFloat(this.properties.getProperty(
         MonkeyConstants.ROLLING_BATCH_SUSPEND_RS_RATIO,
         MonkeyConstants.DEFAULT_ROLLING_BATCH_SUSPEND_RS_RATIO + ""));
-    killMetaRs = Boolean.parseBoolean(this.properties.getProperty(
-      MonkeyConstants.KILL_META_RS,
-      MonkeyConstants.DEFAULT_KILL_META_RS + ""));
   }
 }

@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.chaos.actions.RestartActiveMasterAction;
 import org.apache.hadoop.hbase.chaos.actions.RestartRandomDataNodeAction;
 import org.apache.hadoop.hbase.chaos.actions.RestartRandomRsExceptMetaAction;
 import org.apache.hadoop.hbase.chaos.actions.RestartRandomZKNodeAction;
-import org.apache.hadoop.hbase.chaos.actions.RollingBatchRestartRsExceptMetaAction;
+import org.apache.hadoop.hbase.chaos.actions.RollingBatchRestartRsAction;
 import org.apache.hadoop.hbase.chaos.actions.RollingBatchSuspendResumeRsAction;
 import org.apache.hadoop.hbase.chaos.monkies.ChaosMonkey;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
@@ -43,7 +43,6 @@ public class ServerAndDependenciesKillingMonkeyFactory extends MonkeyFactory {
   private long gracefulRollingRestartTSSLeepTime;
   private long rollingBatchSuspendRSSleepTime;
   private float rollingBatchSuspendtRSRatio;
-  private boolean killMetaRs;
 
   @Override
   public ChaosMonkey build() {
@@ -53,13 +52,14 @@ public class ServerAndDependenciesKillingMonkeyFactory extends MonkeyFactory {
     Action[] actions1 = new Action[]{
       new RestartRandomRsExceptMetaAction(60000),
       new RestartActiveMasterAction(5000),
-      new RollingBatchRestartRsExceptMetaAction(5000, 1.0f, 2), // only allow 2 servers to be dead.
+      new RollingBatchRestartRsAction(5000, 1.0f, 2,
+        true), // only allow 2 servers to be dead.
       new ForceBalancerAction(),
       new RestartRandomDataNodeAction(60000),
       new RestartRandomZKNodeAction(60000),
-      new GracefulRollingRestartRsAction(gracefulRollingRestartTSSLeepTime, killMetaRs),
+      new GracefulRollingRestartRsAction(gracefulRollingRestartTSSLeepTime),
       new RollingBatchSuspendResumeRsAction(rollingBatchSuspendRSSleepTime,
-          rollingBatchSuspendtRSRatio, killMetaRs)
+          rollingBatchSuspendtRSRatio)
     };
 
     // Action to log more info for debugging
@@ -67,7 +67,7 @@ public class ServerAndDependenciesKillingMonkeyFactory extends MonkeyFactory {
       new DumpClusterStatusAction()
     };
 
-    return new PolicyBasedChaosMonkey(util,
+    return new PolicyBasedChaosMonkey(properties, util,
       new CompositeSequentialPolicy(
         new DoActionsOncePolicy(60 * 1000, actions1),
         new PeriodicRandomActionPolicy(60 * 1000, actions1)),
@@ -84,8 +84,5 @@ public class ServerAndDependenciesKillingMonkeyFactory extends MonkeyFactory {
     rollingBatchSuspendtRSRatio = Float.parseFloat(this.properties.getProperty(
         MonkeyConstants.ROLLING_BATCH_SUSPEND_RS_RATIO,
         MonkeyConstants.DEFAULT_ROLLING_BATCH_SUSPEND_RS_RATIO + ""));
-    killMetaRs = Boolean.parseBoolean(this.properties.getProperty(
-      MonkeyConstants.KILL_META_RS,
-      MonkeyConstants.DEFAULT_KILL_META_RS + ""));
   }
 }

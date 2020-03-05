@@ -23,6 +23,7 @@ import org.apache.hadoop.hbase.chaos.actions.Action;
 import org.apache.hadoop.hbase.util.StoppableImplementation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.util.Properties;
 
 /**
  * A policy to introduce chaos to the cluster
@@ -47,8 +48,8 @@ public abstract class Policy extends StoppableImplementation implements Runnable
 
     Policy policy = null;
 
-    public PolicyContext(IntegrationTestingUtility util) {
-      super(util);
+    public PolicyContext(Properties monkeyProps, IntegrationTestingUtility util) {
+      super(monkeyProps, util);
     }
 
     @Override

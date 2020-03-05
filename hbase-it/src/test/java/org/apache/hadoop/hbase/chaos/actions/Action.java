@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -34,11 +35,13 @@ import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseCluster;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.IntegrationTestBase;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.chaos.factories.MonkeyConstants;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -90,6 +93,7 @@ public class Action {
   protected HBaseCluster cluster;
   protected ClusterMetrics initialStatus;
   protected ServerName[] initialServers;
+  protected Properties monkeyProps;
 
   protected long killMasterTimeout;
   protected long startMasterTimeout;
@@ -101,6 +105,7 @@ public class Action {
   protected long startDataNodeTimeout;
   protected long killNameNodeTimeout;
   protected long startNameNodeTimeout;
+  protected boolean skipMetaRS;
 
   public void init(ActionContext context) throws IOException {
     this.context = context;
@@ -109,25 +114,34 @@ public class Action {
     Collection<ServerName> regionServers = initialStatus.getLiveServerMetrics().keySet();
     initialServers = regionServers.toArray(new ServerName[regionServers.size()]);
 
-    killMasterTimeout = cluster.getConf().getLong(KILL_MASTER_TIMEOUT_KEY,
-      KILL_MASTER_TIMEOUT_DEFAULT);
-    startMasterTimeout = cluster.getConf().getLong(START_MASTER_TIMEOUT_KEY,
-      START_MASTER_TIMEOUT_DEFAULT);
-    killRsTimeout = cluster.getConf().getLong(KILL_RS_TIMEOUT_KEY, KILL_RS_TIMEOUT_DEFAULT);
-    startRsTimeout = cluster.getConf().getLong(START_RS_TIMEOUT_KEY, START_RS_TIMEOUT_DEFAULT);
-    killZkNodeTimeout = cluster.getConf().getLong(KILL_ZK_NODE_TIMEOUT_KEY,
-      KILL_ZK_NODE_TIMEOUT_DEFAULT);
-    startZkNodeTimeout = cluster.getConf().getLong(START_ZK_NODE_TIMEOUT_KEY,
-      START_ZK_NODE_TIMEOUT_DEFAULT);
-    killDataNodeTimeout = cluster.getConf().getLong(KILL_DATANODE_TIMEOUT_KEY,
-      KILL_DATANODE_TIMEOUT_DEFAULT);
-    startDataNodeTimeout = cluster.getConf().getLong(START_DATANODE_TIMEOUT_KEY,
-      START_DATANODE_TIMEOUT_DEFAULT);
-    killNameNodeTimeout =
-        cluster.getConf().getLong(KILL_NAMENODE_TIMEOUT_KEY, KILL_NAMENODE_TIMEOUT_DEFAULT);
-    startNameNodeTimeout =
-        cluster.getConf().getLong(START_NAMENODE_TIMEOUT_KEY, START_NAMENODE_TIMEOUT_DEFAULT);
+    monkeyProps = context.getMonkeyProps();
+    if (monkeyProps == null){
+      monkeyProps = new Properties();
+      IntegrationTestBase.loadMonkeyProperties(monkeyProps, cluster.getConf());
+    }
 
+    killMasterTimeout = Long.parseLong(monkeyProps.getProperty(
+      KILL_MASTER_TIMEOUT_KEY, KILL_MASTER_TIMEOUT_DEFAULT + ""));
+    startMasterTimeout = Long.parseLong(monkeyProps.getProperty(START_MASTER_TIMEOUT_KEY,
+      START_MASTER_TIMEOUT_DEFAULT + ""));
+    killRsTimeout = Long.parseLong(monkeyProps.getProperty(KILL_RS_TIMEOUT_KEY,
+      KILL_RS_TIMEOUT_DEFAULT + ""));
+    startRsTimeout = Long.parseLong(monkeyProps.getProperty(START_RS_TIMEOUT_KEY,
+      START_RS_TIMEOUT_DEFAULT+ ""));
+    killZkNodeTimeout = Long.parseLong(monkeyProps.getProperty(KILL_ZK_NODE_TIMEOUT_KEY,
+      KILL_ZK_NODE_TIMEOUT_DEFAULT + ""));
+    startZkNodeTimeout = Long.parseLong(monkeyProps.getProperty(START_ZK_NODE_TIMEOUT_KEY,
+      START_ZK_NODE_TIMEOUT_DEFAULT + ""));
+    killDataNodeTimeout = Long.parseLong(monkeyProps.getProperty(KILL_DATANODE_TIMEOUT_KEY,
+      KILL_DATANODE_TIMEOUT_DEFAULT + ""));
+    startDataNodeTimeout = Long.parseLong(monkeyProps.getProperty(START_DATANODE_TIMEOUT_KEY,
+      START_DATANODE_TIMEOUT_DEFAULT + ""));
+    killNameNodeTimeout = Long.parseLong(monkeyProps.getProperty(KILL_NAMENODE_TIMEOUT_KEY,
+      KILL_NAMENODE_TIMEOUT_DEFAULT + ""));
+    startNameNodeTimeout = Long.parseLong(monkeyProps.getProperty(START_NAMENODE_TIMEOUT_KEY,
+      START_NAMENODE_TIMEOUT_DEFAULT + ""));
+    skipMetaRS = Boolean.parseBoolean(monkeyProps.getProperty(MonkeyConstants.SKIP_META_RS,
+      MonkeyConstants.DEFAULT_SKIP_META_RS + ""));
   }
 
   public void perform() throws Exception { }
@@ -147,6 +161,12 @@ public class Action {
     ArrayList<ServerName> tmp = new ArrayList<>(count);
     tmp.addAll(regionServers);
     tmp.removeAll(masters);
+
+    if(skipMetaRS){
+      ServerName metaServer = cluster.getServerHoldingMeta();
+      tmp.remove(metaServer);
+    }
+
     return tmp.toArray(new ServerName[tmp.size()]);
   }
 
@@ -358,9 +378,19 @@ public class Action {
    */
   public static class ActionContext {
     private IntegrationTestingUtility util;
+    private Properties monkeyProps = null;
 
     public ActionContext(IntegrationTestingUtility util) {
       this.util = util;
+    }
+
+    public ActionContext(Properties monkeyProps, IntegrationTestingUtility util) {
+      this.util = util;
+      this.monkeyProps = monkeyProps;
+    }
+
+    public Properties getMonkeyProps(){
+      return monkeyProps;
     }
 
     public IntegrationTestingUtility getHBaseIntegrationTestingUtility() {
