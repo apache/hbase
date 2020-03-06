@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.wal;
 
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.HashMap;
@@ -28,25 +29,20 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.commons.io.IOUtils;
-import org.apache.hadoop.fs.FileSystem;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.regionserver.CellSet;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.EntryBuffers.RegionEntryBuffer;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -61,10 +57,6 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
   public static final boolean DEFAULT_WAL_SPLIT_TO_HFILE = false;
 
   private final WALSplitter walSplitter;
-  private final Map<TableName, TableDescriptor> tableDescCache;
-  private Connection connection;
-  private Admin admin;
-  private FileSystem rootFS;
 
   // Since the splitting process may create multiple output files, we need a map
   // to track the output count of each region.
@@ -72,19 +64,13 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
   // Need a counter to track the opening writers.
   private final AtomicInteger openingWritersNum = new AtomicInteger(0);
 
+  private final ConcurrentMap<TableName, TableDescriptor> tableDescCache;
+
   public BoundedRecoveredHFilesOutputSink(WALSplitter walSplitter,
     WALSplitter.PipelineController controller, EntryBuffers entryBuffers, int numWriters) {
     super(controller, entryBuffers, numWriters);
     this.walSplitter = walSplitter;
-    tableDescCache = new HashMap<>();
-  }
-
-  @Override
-  public void startWriterThreads() throws IOException {
-    connection = ConnectionFactory.createConnection(walSplitter.conf);
-    admin = connection.getAdmin();
-    rootFS = FSUtils.getRootDirFileSystem(walSplitter.conf);
-    super.startWriterThreads();
+    this.tableDescCache = new ConcurrentHashMap<>();
   }
 
   @Override
@@ -137,8 +123,6 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
     } finally {
       isSuccessful &= writeRemainingEntryBuffers();
     }
-    IOUtils.closeQuietly(admin);
-    IOUtils.closeQuietly(connection);
     return isSuccessful ? splits : null;
   }
 
@@ -199,10 +183,10 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
       long seqId, String familyName, boolean isMetaTable) throws IOException {
     Path outputFile = WALSplitUtil
       .getRegionRecoveredHFilePath(tableName, regionName, familyName, seqId,
-        walSplitter.getFileBeingSplit().getPath().getName(), walSplitter.conf, rootFS);
+        walSplitter.getFileBeingSplit().getPath().getName(), walSplitter.conf, walSplitter.rootFS);
     checkPathValid(outputFile);
     StoreFileWriter.Builder writerBuilder =
-        new StoreFileWriter.Builder(walSplitter.conf, CacheConfig.DISABLED, rootFS)
+        new StoreFileWriter.Builder(walSplitter.conf, CacheConfig.DISABLED, walSplitter.rootFS)
             .withFilePath(outputFile);
     HFileContextBuilder hFileContextBuilder = new HFileContextBuilder();
     if (isMetaTable) {
@@ -216,10 +200,11 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
   private void configContextForNonMetaWriter(TableName tableName, String familyName,
       HFileContextBuilder hFileContextBuilder, StoreFileWriter.Builder writerBuilder)
       throws IOException {
-    if (!tableDescCache.containsKey(tableName)) {
-      tableDescCache.put(tableName, admin.getDescriptor(tableName));
+    TableDescriptor tableDesc =
+        tableDescCache.computeIfAbsent(tableName, t -> getTableDescriptor(t));
+    if (tableDesc == null) {
+      throw new IOException("Failed to get table descriptor for table " + tableName);
     }
-    TableDescriptor tableDesc = tableDescCache.get(tableName);
     ColumnFamilyDescriptor cfd = tableDesc.getColumnFamily(Bytes.toBytesBinary(familyName));
     hFileContextBuilder.withCompression(cfd.getCompressionType()).withBlockSize(cfd.getBlocksize())
         .withCompressTags(cfd.isCompressTags()).withDataBlockEncoding(cfd.getDataBlockEncoding())
@@ -228,11 +213,27 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
   }
 
   private void checkPathValid(Path outputFile) throws IOException {
-    if (rootFS.exists(outputFile)) {
+    if (walSplitter.rootFS.exists(outputFile)) {
       LOG.warn("this file {} may be left after last failed split ", outputFile);
-      if (!rootFS.delete(outputFile, false)) {
+      if (!walSplitter.rootFS.delete(outputFile, false)) {
         LOG.warn("delete old generated HFile {} failed", outputFile);
       }
+    }
+  }
+
+  private TableDescriptor getTableDescriptor(TableName tableName) {
+    if (walSplitter.rsServices != null) {
+      try {
+        return walSplitter.rsServices.getConnection().getAdmin().getDescriptor(tableName);
+      } catch (IOException e) {
+        LOG.warn("Failed to get table descriptor for table {}", tableName, e);
+      }
+    }
+    try {
+      return walSplitter.tableDescriptors.get(tableName);
+    } catch (IOException e) {
+      LOG.warn("Failed to get table descriptor for table {}", tableName, e);
+      return null;
     }
   }
 }
