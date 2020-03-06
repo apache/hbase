@@ -22,8 +22,12 @@
 # dev-support/flaky-tests/flaky-reporting.Jenkinsfile
 FROM ubuntu:18.04
 
-ADD . /hbase/dev-support
+COPY . /hbase/dev-support
 
-RUN apt-get -y update \
-    && apt-get -y install curl python-pip \
+RUN DEBIAN_FRONTEND=noninteractive apt-get -qq -y update \
+    && DEBIAN_FRONTEND=noninteractive apt-get -qq -y install --no-install-recommends \
+      curl=7.58.0-2ubuntu3.8 \
+      python-pip=9.0.1-2.3~ubuntu1.18.04.1 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
     && pip install -r /hbase/dev-support/python-requirements.txt
