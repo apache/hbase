@@ -60,6 +60,8 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -67,6 +69,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
 import org.apache.hadoop.hbase.regionserver.DefaultStoreFlusher;
@@ -278,8 +282,9 @@ public abstract class AbstractTestWALReplay {
     Path basedir = FSUtils.getTableDir(hbaseRootDir, tableName);
     deleteDir(basedir);
 
-    HTableDescriptor htd = createBasic3FamilyHTD(tableName);
-    Region region2 = HBaseTestingUtility.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
+    TableDescriptor tableDescriptor = createBasic3FamilyHTD(tableName);
+    Region region2 = HBaseTestingUtility.createRegionAndWAL(hri, hbaseRootDir, this.conf,
+      tableDescriptor);
     HBaseTestingUtility.closeRegionAndWAL(region2);
     final byte [] rowName = tableName.getName();
 
@@ -288,28 +293,29 @@ public abstract class AbstractTestWALReplay {
     final int countPerFamily = 1000;
 
     NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-    for(byte[] fam : htd.getFamiliesKeys()) {
+    for(byte[] fam : tableDescriptor.getColumnFamilyNames()) {
       scopes.put(fam, 0);
     }
-    for (HColumnDescriptor hcd: htd.getFamilies()) {
-      addWALEdits(tableName, hri, rowName, hcd.getName(), countPerFamily, ee,
-          wal1, htd, mvcc, scopes);
+    for (ColumnFamilyDescriptor familyDescriptor: tableDescriptor.getColumnFamilies()) {
+      addWALEdits(tableName, hri, rowName, familyDescriptor.getName(), countPerFamily, ee,
+          wal1, mvcc, scopes);
     }
     wal1.shutdown();
     runWALSplit(this.conf);
 
     WAL wal2 = createWAL(this.conf, hbaseRootDir, logName);
     // Add 1k to each family.
-    for (HColumnDescriptor hcd: htd.getFamilies()) {
-      addWALEdits(tableName, hri, rowName, hcd.getName(), countPerFamily,
-          ee, wal2, htd, mvcc, scopes);
+    for (ColumnFamilyDescriptor familyDescriptor: tableDescriptor.getColumnFamilies()) {
+      addWALEdits(tableName, hri, rowName, familyDescriptor.getName(), countPerFamily,
+          ee, wal2, mvcc, scopes);
     }
     wal2.shutdown();
     runWALSplit(this.conf);
 
     WAL wal3 = createWAL(this.conf, hbaseRootDir, logName);
     try {
-      HRegion region = HRegion.openHRegion(this.conf, this.fs, hbaseRootDir, hri, htd, wal3);
+      HRegion region = HRegion.openHRegion(this.conf, this.fs, hbaseRootDir, hri,
+        tableDescriptor, wal3);
       long seqid = region.getOpenSeqNum();
       // The regions opens with sequenceId as 1. With 6k edits, its sequence number reaches 6k + 1.
       // When opened, this region would apply 6k edits, and increment the sequenceId by 1
@@ -343,7 +349,7 @@ public abstract class AbstractTestWALReplay {
     final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
     final Path basedir = new Path(this.hbaseRootDir, tableName.getNameAsString());
     deleteDir(basedir);
-    final HTableDescriptor htd = createBasic3FamilyHTD(tableName);
+    final HTableDescriptor htd = new HTableDescriptor(createBasic3FamilyHTD(tableName));
     Region region2 = HBaseTestingUtility.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
     HBaseTestingUtility.closeRegionAndWAL(region2);
     WAL wal = createWAL(this.conf, hbaseRootDir, logName);
@@ -409,7 +415,7 @@ public abstract class AbstractTestWALReplay {
     final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
     final Path basedir = new Path(this.hbaseRootDir, tableName.getNameAsString());
     deleteDir(basedir);
-    final HTableDescriptor htd = createBasic3FamilyHTD(tableName);
+    final HTableDescriptor htd = new HTableDescriptor(createBasic3FamilyHTD(tableName));
     HRegion region2 = HBaseTestingUtility.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
     HBaseTestingUtility.closeRegionAndWAL(region2);
     WAL wal = createWAL(this.conf, hbaseRootDir, logName);
@@ -481,7 +487,7 @@ public abstract class AbstractTestWALReplay {
     deleteDir(basedir);
     final byte[] rowName = tableName.getName();
     final int countPerFamily = 10;
-    final HTableDescriptor htd = createBasic3FamilyHTD(tableName);
+    final HTableDescriptor htd = new HTableDescriptor(createBasic3FamilyHTD(tableName));
     HRegion region3 = HBaseTestingUtility.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
     HBaseTestingUtility.closeRegionAndWAL(region3);
     // Write countPerFamily edits into the three families.  Do a flush on one
@@ -589,7 +595,7 @@ public abstract class AbstractTestWALReplay {
     deleteDir(basedir);
     final byte[] rowName = tableName.getName();
     final int countPerFamily = 10;
-    final HTableDescriptor htd = createBasic3FamilyHTD(tableName);
+    final HTableDescriptor htd = new HTableDescriptor(createBasic3FamilyHTD(tableName));
     HRegion region3 = HBaseTestingUtility.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
     HBaseTestingUtility.closeRegionAndWAL(region3);
     // Write countPerFamily edits into the three families.  Do a flush on one
@@ -672,7 +678,7 @@ public abstract class AbstractTestWALReplay {
     final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
     final Path basedir = FSUtils.getTableDir(this.hbaseRootDir, tableName);
     deleteDir(basedir);
-    final HTableDescriptor htd = createBasic3FamilyHTD(tableName);
+    final HTableDescriptor htd = new HTableDescriptor(createBasic3FamilyHTD(tableName));
     HRegion region3 = HBaseTestingUtility.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
     HBaseTestingUtility.closeRegionAndWAL(region3);
     // Write countPerFamily edits into the three families. Do a flush on one
@@ -772,7 +778,7 @@ public abstract class AbstractTestWALReplay {
     final Path basedir = FSUtils.getTableDir(hbaseRootDir, tableName);
     deleteDir(basedir);
 
-    final HTableDescriptor htd = createBasic3FamilyHTD(tableName);
+    final HTableDescriptor htd = new HTableDescriptor(createBasic3FamilyHTD(tableName));
     HRegion region2 = HBaseTestingUtility.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
     HBaseTestingUtility.closeRegionAndWAL(region2);
     final WAL wal = createWAL(this.conf, hbaseRootDir, logName);
@@ -788,7 +794,7 @@ public abstract class AbstractTestWALReplay {
     }
     for (HColumnDescriptor hcd: htd.getFamilies()) {
       addWALEdits(tableName, hri, rowName, hcd.getName(), countPerFamily,
-          ee, wal, htd, mvcc, scopes);
+          ee, wal, mvcc, scopes);
       familyNames.add(hcd.getName());
     }
 
@@ -901,8 +907,8 @@ public abstract class AbstractTestWALReplay {
     FileStatus[] listStatus = wal.getFiles();
     assertNotNull(listStatus);
     assertTrue(listStatus.length > 0);
-    WALSplitter.splitLogFile(hbaseRootDir, listStatus[0],
-        this.fs, this.conf, null, null, null, wals);
+    WALSplitter.splitLogFile(hbaseRootDir, listStatus[0], this.fs, this.conf, null, null, null,
+      wals, null);
     FileStatus[] listStatus1 = this.fs.listStatus(new Path(FSUtils.getWALTableDir(conf, tableName),
         new Path(hri.getEncodedName(), "recovered.edits")),
       new PathFilter() {
@@ -1052,8 +1058,8 @@ public abstract class AbstractTestWALReplay {
       first = fs.getFileStatus(smallFile);
       second = fs.getFileStatus(largeFile);
     }
-    WALSplitter.splitLogFile(hbaseRootDir, first, fs, conf, null, null, null, wals);
-    WALSplitter.splitLogFile(hbaseRootDir, second, fs, conf, null, null, null, wals);
+    WALSplitter.splitLogFile(hbaseRootDir, first, fs, conf, null, null, null, wals, null);
+    WALSplitter.splitLogFile(hbaseRootDir, second, fs, conf, null, null, null, wals, null);
     WAL wal = createWAL(this.conf, hbaseRootDir, logName);
     region = HRegion.openHRegion(conf, this.fs, hbaseRootDir, hri, htd, wal);
     assertTrue(region.getOpenSeqNum() > mvcc.getWritePoint());
@@ -1088,10 +1094,12 @@ public abstract class AbstractTestWALReplay {
   }
 
   private HTableDescriptor createBasic1FamilyHTD(final TableName tableName) {
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    HColumnDescriptor a = new HColumnDescriptor(Bytes.toBytes("a"));
-    htd.addFamily(a);
-    return htd;
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(Bytes.toBytes("a"));
+    tableDescriptor.setColumnFamily(familyDescriptor);
+    return new HTableDescriptor(tableDescriptor);
   }
 
   private MockWAL createMockWAL() throws IOException {
@@ -1164,7 +1172,7 @@ public abstract class AbstractTestWALReplay {
 
   private void addWALEdits(final TableName tableName, final HRegionInfo hri, final byte[] rowName,
       final byte[] family, final int count, EnvironmentEdge ee, final WAL wal,
-      final HTableDescriptor htd, final MultiVersionConcurrencyControl mvcc,
+      final MultiVersionConcurrencyControl mvcc,
       NavigableMap<byte[], Integer> scopes) throws IOException {
     for (int j = 0; j < count; j++) {
       wal.appendData(hri, createWALKey(tableName, hri, mvcc, scopes),
@@ -1212,15 +1220,20 @@ public abstract class AbstractTestWALReplay {
     return splits.get(0);
   }
 
-  private HTableDescriptor createBasic3FamilyHTD(final TableName tableName) {
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    HColumnDescriptor a = new HColumnDescriptor(Bytes.toBytes("a"));
-    htd.addFamily(a);
-    HColumnDescriptor b = new HColumnDescriptor(Bytes.toBytes("b"));
-    htd.addFamily(b);
-    HColumnDescriptor c = new HColumnDescriptor(Bytes.toBytes("c"));
-    htd.addFamily(c);
-    return htd;
+  private TableDescriptorBuilder.ModifyableTableDescriptor createBasic3FamilyHTD(
+      final TableName tableName) {
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor a =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(Bytes.toBytes("a"));
+    tableDescriptor.setColumnFamily(a);
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor b =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(Bytes.toBytes("b"));
+    tableDescriptor.setColumnFamily(b);
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor c =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(Bytes.toBytes("c"));
+    tableDescriptor.setColumnFamily(c);
+    return tableDescriptor;
   }
 
   private void writerWALFile(Path file, List<FSWALEntry> entries) throws IOException,

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -234,8 +234,12 @@ public class BalancerTestBase {
     int max = numRegions % numServers == 0 ? min : min + 1;
 
     for (ServerAndLoad server : servers) {
-      if (server.getLoad() < 0 || server.getLoad() > max + tablenum/2 + 1  || server.getLoad() < min - tablenum/2 - 1)
+      if (server.getLoad() < 0 || server.getLoad() > max + tablenum/2 + 1  ||
+          server.getLoad() < min - tablenum/2 - 1) {
+        LOG.warn("server={}, load={}, max={}, tablenum={}, min={}",
+          server.getServerName(), server.getLoad(), max, tablenum, min);
         return false;
+      }
     }
     return true;
   }

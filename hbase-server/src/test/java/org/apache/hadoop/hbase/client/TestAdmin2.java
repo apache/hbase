@@ -24,15 +24,16 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -92,8 +93,13 @@ public class TestAdmin2 extends TestAdminBase {
       msg.contains(TableName.META_TABLE_NAME.getNameAsString()));
 
     // Now try and do concurrent creation with a bunch of threads.
-    final HTableDescriptor threadDesc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
-    threadDesc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(
+        TableName.valueOf(name.getMethodName()));
+    ColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(
+        HConstants.CATALOG_FAMILY);
+    tableDescriptor.setColumnFamily(familyDescriptor);
     int count = 10;
     Thread [] threads = new Thread [count];
     final AtomicInteger successes = new AtomicInteger(0);
@@ -104,7 +110,7 @@ public class TestAdmin2 extends TestAdminBase {
         @Override
         public void run() {
           try {
-            localAdmin.createTable(threadDesc);
+            localAdmin.createTable(tableDescriptor);
             successes.incrementAndGet();
           } catch (TableExistsException e) {
             failures.incrementAndGet();
@@ -139,14 +145,21 @@ public class TestAdmin2 extends TestAdminBase {
   @Test
   public void testTableNameClash() throws Exception {
     final String name = this.name.getMethodName();
-    HTableDescriptor htd1 = new HTableDescriptor(TableName.valueOf(name + "SOMEUPPERCASE"));
-    HTableDescriptor htd2 = new HTableDescriptor(TableName.valueOf(name));
-    htd1.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
-    htd2.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
-    ADMIN.createTable(htd1);
-    ADMIN.createTable(htd2);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor1 =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(
+        TableName.valueOf(name + "SOMEUPPERCASE"));
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor2 =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(name));
+    tableDescriptor1.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(
+        HConstants.CATALOG_FAMILY));
+    tableDescriptor2.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(
+        HConstants.CATALOG_FAMILY));
+    ADMIN.createTable(tableDescriptor1);
+    ADMIN.createTable(tableDescriptor2);
     // Before fix, below would fail throwing a NoServerForRegionException.
-    TEST_UTIL.getConnection().getTable(htd2.getTableName()).close();
+    TEST_UTIL.getConnection().getTable(tableDescriptor2.getTableName()).close();
   }
 
   /***
@@ -167,9 +180,12 @@ public class TestAdmin2 extends TestAdminBase {
       byte [] startKey = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
       byte [] endKey =   { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 };
       Admin hbaseadmin = TEST_UTIL.getAdmin();
-      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
-      htd.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
-      hbaseadmin.createTable(htd, startKey, endKey, expectedRegions);
+      TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+        new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(name));
+      tableDescriptor.setColumnFamily(
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(
+          HConstants.CATALOG_FAMILY));
+      hbaseadmin.createTable(tableDescriptor, startKey, endKey, expectedRegions);
     } finally {
       TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, oldTimeout);
     }
@@ -387,9 +403,12 @@ public class TestAdmin2 extends TestAdminBase {
     byte [] endKey =   { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 };
 
 
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
-    ADMIN.createTable(desc, startKey, endKey, expectedRegions);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(
+        HConstants.CATALOG_FAMILY));
+    ADMIN.createTable(tableDescriptor, startKey, endKey, expectedRegions);
 
     List<RegionInfo> RegionInfos = ADMIN.getRegions(tableName);
 
@@ -485,9 +504,12 @@ public class TestAdmin2 extends TestAdminBase {
     TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME).close();
 
     // Create the test table and open it
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
-    ADMIN.createTable(desc);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(
+        HConstants.CATALOG_FAMILY));
+    ADMIN.createTable(tableDescriptor);
     Table table = TEST_UTIL.getConnection().getTable(tableName);
 
     HRegionServer regionServer = TEST_UTIL.getRSForFirstRegionInTable(tableName);
@@ -518,11 +540,15 @@ public class TestAdmin2 extends TestAdminBase {
     }
     // Before the fix for HBASE-6146, the below table creation was failing as the hbase:meta table
     // actually getting disabled by the disableTable() call.
-    HTableDescriptor htd =
-        new HTableDescriptor(TableName.valueOf(Bytes.toBytes(name.getMethodName())));
-    HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toBytes("cf1"));
-    htd.addFamily(hcd);
-    TEST_UTIL.getAdmin().createTable(htd);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(
+        TableName.valueOf(Bytes.toBytes(name.getMethodName())));
+    ColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(
+        Bytes.toBytes("cf1"));
+
+    tableDescriptor.setColumnFamily(familyDescriptor);
+    TEST_UTIL.getAdmin().createTable(tableDescriptor);
   }
 
   @Test
@@ -811,6 +837,31 @@ public class TestAdmin2 extends TestAdminBase {
     assertEquals(!initialState, prevState);
     // Current state should be the original state again
     assertEquals(initialState, ADMIN.isSnapshotCleanupEnabled());
+  }
+
+  @Test
+  public void testSlowLogResponses() throws Exception {
+    // get all live server names
+    Collection<ServerName> serverNames = ADMIN.getRegionServers();
+    List<ServerName> serverNameList = new ArrayList<>(serverNames);
+
+    // clean up slowlog responses maintained in memory by RegionServers
+    List<Boolean> areSlowLogsCleared = ADMIN.clearSlowLogResponses(new HashSet<>(serverNameList));
+
+    int countFailedClearSlowResponse = 0;
+    for (Boolean isSlowLogCleared : areSlowLogsCleared) {
+      if (!isSlowLogCleared) {
+        ++countFailedClearSlowResponse;
+      }
+    }
+    Assert.assertEquals(countFailedClearSlowResponse, 0);
+
+    SlowLogQueryFilter slowLogQueryFilter = new SlowLogQueryFilter();
+    List<SlowLogRecord> slowLogRecords = ADMIN.getSlowLogResponses(new HashSet<>(serverNames),
+      slowLogQueryFilter);
+
+    // after cleanup of slowlog responses, total count of slowlog payloads should be 0
+    Assert.assertEquals(slowLogRecords.size(), 0);
   }
 
 }

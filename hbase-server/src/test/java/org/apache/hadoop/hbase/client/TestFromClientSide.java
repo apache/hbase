@@ -282,12 +282,15 @@ public class TestFromClientSide {
     final byte[] T1 = Bytes.toBytes("T1");
     final byte[] T2 = Bytes.toBytes("T2");
     final byte[] T3 = Bytes.toBytes("T3");
-    HColumnDescriptor hcd =
-        new HColumnDescriptor(FAMILY).setKeepDeletedCells(KeepDeletedCells.TRUE).setMaxVersions(3);
+    ColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY)
+        .setKeepDeletedCells(KeepDeletedCells.TRUE)
+        .setMaxVersions(3);
 
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(hcd);
-    TEST_UTIL.getAdmin().createTable(desc);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    tableDescriptor.setColumnFamily(familyDescriptor);
+    TEST_UTIL.getAdmin().createTable(tableDescriptor);
     try (Table h = TEST_UTIL.getConnection().getTable(tableName)) {
       long ts = System.currentTimeMillis();
       Put p = new Put(T1, ts);
@@ -6492,12 +6495,15 @@ public class TestFromClientSide {
   @Test
   public void testCellSizeLimit() throws IOException {
     final TableName tableName = TableName.valueOf("testCellSizeLimit");
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    htd.setConfiguration(HRegion.HBASE_MAX_CELL_SIZE_KEY, Integer.toString(10 * 1024)); // 10K
-    HColumnDescriptor fam = new HColumnDescriptor(FAMILY);
-    htd.addFamily(fam);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName)
+        .setValue(HRegion.HBASE_MAX_CELL_SIZE_KEY, Integer.toString(10 * 1024));
+    ColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY);
+
+    tableDescriptor.setColumnFamily(familyDescriptor);
     try (Admin admin = TEST_UTIL.getAdmin()) {
-      admin.createTable(htd);
+      admin.createTable(tableDescriptor);
     }
     // Will succeed
     try (Table t = TEST_UTIL.getConnection().getTable(tableName)) {

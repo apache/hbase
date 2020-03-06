@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,14 +20,14 @@ package org.apache.hadoop.hbase.mob;
 import java.util.Random;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -52,8 +52,9 @@ public class TestMobDataBlockEncoding {
   protected final byte[] qf3 = Bytes.toBytes("qualifier3");
   private static Table table;
   private static Admin admin;
-  private static HColumnDescriptor hcd;
-  private static HTableDescriptor desc;
+  private static ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor
+    columnFamilyDescriptor;
+  private static TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor;
   private static Random random = new Random();
   private static long defaultThreshold = 10;
 
@@ -69,17 +70,19 @@ public class TestMobDataBlockEncoding {
 
   public void setUp(long threshold, String TN, DataBlockEncoding encoding)
       throws Exception {
-    desc = new HTableDescriptor(TableName.valueOf(TN));
-    hcd = new HColumnDescriptor(family);
-    hcd.setMobEnabled(true);
-    hcd.setMobThreshold(threshold);
-    hcd.setMaxVersions(4);
-    hcd.setDataBlockEncoding(encoding);
-    desc.addFamily(hcd);
+    tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(TN));
+    columnFamilyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family);
+    columnFamilyDescriptor.setMobEnabled(true);
+    columnFamilyDescriptor.setMobThreshold(threshold);
+    columnFamilyDescriptor.setMaxVersions(4);
+    columnFamilyDescriptor.setDataBlockEncoding(encoding);
+    tableDescriptor.setColumnFamily(columnFamilyDescriptor);
     admin = TEST_UTIL.getAdmin();
-    admin.createTable(desc);
+    admin.createTable(tableDescriptor);
     table = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())
-            .getTable(TableName.valueOf(TN));
+      .getTable(TableName.valueOf(TN));
   }
 
   /**

@@ -52,7 +52,7 @@ public class TestFSTableDescriptorForceCreation {
     final String name = this.name.getMethodName();
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     Path rootdir = new Path(UTIL.getDataTestDir(), name);
-    FSTableDescriptors fstd = new FSTableDescriptors(UTIL.getConfiguration(), fs, rootdir);
+    FSTableDescriptors fstd = new FSTableDescriptors(fs, rootdir);
 
     assertTrue("Should create new table descriptor",
       fstd.createTableDescriptor(TableDescriptorBuilder.newBuilder(TableName.valueOf(name)).build(), false));
@@ -65,7 +65,7 @@ public class TestFSTableDescriptorForceCreation {
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     // Cleanup old tests if any detritus laying around.
     Path rootdir = new Path(UTIL.getDataTestDir(), name);
-    FSTableDescriptors fstd = new FSTableDescriptors(UTIL.getConfiguration(), fs, rootdir);
+    FSTableDescriptors fstd = new FSTableDescriptors(fs, rootdir);
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name)).build();
     fstd.update(htd);
     assertFalse("Should not create new table descriptor", fstd.createTableDescriptor(htd, false));
@@ -77,7 +77,7 @@ public class TestFSTableDescriptorForceCreation {
     final String name = this.name.getMethodName();
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     Path rootdir = new Path(UTIL.getDataTestDir(), name);
-    FSTableDescriptors fstd = new FSTableDescriptors(UTIL.getConfiguration(), fs, rootdir);
+    FSTableDescriptors fstd = new FSTableDescriptors(fs, rootdir);
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name)).build();
     fstd.createTableDescriptor(htd, false);
     assertTrue("Should create new table descriptor",

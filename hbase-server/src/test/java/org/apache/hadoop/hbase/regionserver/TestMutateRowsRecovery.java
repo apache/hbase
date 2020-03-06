@@ -24,11 +24,10 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Durability;
@@ -37,6 +36,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -101,9 +101,11 @@ public class TestMutateRowsRecovery {
     try {
       admin = connection.getAdmin();
       hTable = connection.getTable(tableName);
-      HTableDescriptor desc = new HTableDescriptor(tableName);
-      desc.addFamily(new HColumnDescriptor(fam1));
-      admin.createTable(desc);
+      TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+        new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+      tableDescriptor.setColumnFamily(
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam1));
+      admin.createTable(tableDescriptor);
 
       // Add a multi
       RowMutations rm = new RowMutations(row1);

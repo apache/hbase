@@ -33,12 +33,12 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.InclusiveStopFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
@@ -84,15 +85,15 @@ public class TestScanner {
       //HConstants.STARTCODE_QUALIFIER
   };
 
-  static final HTableDescriptor TESTTABLEDESC =
-    new HTableDescriptor(TableName.valueOf("testscanner"));
+  static final TableDescriptorBuilder.ModifyableTableDescriptor TESTTABLEDESC =
+    new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf("testscanner"));
   static {
-    TESTTABLEDESC.addFamily(
-        new HColumnDescriptor(HConstants.CATALOG_FAMILY)
-            // Ten is an arbitrary number.  Keep versions to help debugging.
-            .setMaxVersions(10)
-            .setBlockCacheEnabled(false)
-            .setBlocksize(8 * 1024)
+    TESTTABLEDESC.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(HConstants.CATALOG_FAMILY)
+        // Ten is an arbitrary number.  Keep versions to help debugging.
+        .setMaxVersions(10)
+        .setBlockCacheEnabled(false)
+        .setBlocksize(8 * 1024)
     );
   }
   /** HRegionInfo for root region */
@@ -504,8 +505,8 @@ public class TestScanner {
   @SuppressWarnings("deprecation")
   public void testScanAndConcurrentMajorCompact() throws Exception {
     HTableDescriptor htd = TEST_UTIL.createTableDescriptor(TableName.valueOf(name.getMethodName()),
-      HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
-      HColumnDescriptor.DEFAULT_KEEP_DELETED);
+      ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+      ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED);
     this.region = TEST_UTIL.createLocalHRegion(htd, null, null);
     Table hri = new RegionAsTable(region);
 

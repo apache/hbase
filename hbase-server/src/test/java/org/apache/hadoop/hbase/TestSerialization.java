@@ -589,19 +589,23 @@ public class TestSerialization {
    */
   protected HTableDescriptor createTableDescriptor(final String name,
       final int versions) {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
-    htd.addFamily(new HColumnDescriptor(fam1)
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(name));
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam1)
         .setMaxVersions(versions)
         .setBlockCacheEnabled(false)
     );
-    htd.addFamily(new HColumnDescriptor(fam2)
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam2)
         .setMaxVersions(versions)
         .setBlockCacheEnabled(false)
     );
-    htd.addFamily(new HColumnDescriptor(fam3)
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam3)
         .setMaxVersions(versions)
         .setBlockCacheEnabled(false)
     );
-    return htd;
+    return new HTableDescriptor(tableDescriptor);
   }
 }

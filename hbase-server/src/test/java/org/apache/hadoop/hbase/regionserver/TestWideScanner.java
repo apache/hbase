@@ -28,12 +28,12 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -57,11 +57,12 @@ public class TestWideScanner extends HBaseTestCase {
   static final byte[] C = Bytes.toBytes("C");
   static byte[][] COLUMNS = { A, B, C };
   static final Random rng = new Random();
-  static final HTableDescriptor TESTTABLEDESC =
-    new HTableDescriptor(TableName.valueOf("testwidescan"));
+  static final TableDescriptorBuilder.ModifyableTableDescriptor TESTTABLEDESC =
+    new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf("testwidescan"));
   static {
     for (byte[] cfName : new byte[][] { A, B, C }) {
-      TESTTABLEDESC.addFamily(new HColumnDescriptor(cfName)
+      TESTTABLEDESC.setColumnFamily(
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(cfName)
           // Keep versions to help debugging.
           .setMaxVersions(100)
           .setBlocksize(8 * 1024)

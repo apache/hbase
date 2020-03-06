@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -30,15 +30,17 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.junit.After;
@@ -77,8 +79,8 @@ public abstract class TestMobCompactionBase {
       .toBytes("01234567890123456789012345678901234567890123456789012345678901234567890123456789");
 
   protected Configuration conf;
-  protected HTableDescriptor hdt;
-  private HColumnDescriptor hcd;
+  protected TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor;
+  private ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor;
   protected Admin admin;
   protected Table table = null;
   protected long minAgeToArchive = 10000;
@@ -94,7 +96,7 @@ public abstract class TestMobCompactionBase {
   @Before
   public void setUp() throws Exception {
     HTU = new HBaseTestingUtility();
-    hdt = HTU.createTableDescriptor(TableName.valueOf(getClass().getName()));
+    tableDescriptor = HTU.createModifyableTableDescriptor(getClass().getName());
     conf = HTU.getConfiguration();
 
     initConf();
@@ -102,14 +104,14 @@ public abstract class TestMobCompactionBase {
     HTU.startMiniCluster();
     admin = HTU.getAdmin();
     cleanerChore = new MobFileCleanerChore();
-    hcd = new HColumnDescriptor(fam);
-    hcd.setMobEnabled(true);
-    hcd.setMobThreshold(mobLen);
-    hcd.setMaxVersions(1);
-    hdt.addFamily(hcd);
+    familyDescriptor = new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam);
+    familyDescriptor.setMobEnabled(true);
+    familyDescriptor.setMobThreshold(mobLen);
+    familyDescriptor.setMaxVersions(1);
+    tableDescriptor.setColumnFamily(familyDescriptor);
     RegionSplitter.UniformSplit splitAlgo = new RegionSplitter.UniformSplit();
     byte[][] splitKeys = splitAlgo.split(numRegions);
-    table = HTU.createTable(hdt, splitKeys);
+    table = HTU.createTable(tableDescriptor, splitKeys);
 
   }
 
@@ -148,8 +150,8 @@ public abstract class TestMobCompactionBase {
 
   @After
   public void tearDown() throws Exception {
-    admin.disableTable(hdt.getTableName());
-    admin.deleteTable(hdt.getTableName());
+    admin.disableTable(tableDescriptor.getTableName());
+    admin.deleteTable(tableDescriptor.getTableName());
     HTU.shutdownMiniCluster();
   }
 
@@ -163,9 +165,9 @@ public abstract class TestMobCompactionBase {
     long num = getNumberOfMobFiles(conf, table.getName(), new String(fam));
     assertEquals(numRegions * 3, num);
     // Major MOB compact
-    mobCompact(admin, hdt, hcd);
+    mobCompact(admin, tableDescriptor, familyDescriptor);
     // wait until compaction is complete
-    while (admin.getCompactionState(hdt.getTableName()) != CompactionState.NONE) {
+    while (admin.getCompactionState(tableDescriptor.getTableName()) != CompactionState.NONE) {
       Thread.sleep(100);
     }
 
@@ -188,8 +190,8 @@ public abstract class TestMobCompactionBase {
 
   }
 
-  protected abstract void mobCompact(Admin admin2, HTableDescriptor hdt2, HColumnDescriptor hcd2)
-      throws IOException, InterruptedException;
+  protected abstract void mobCompact(Admin admin2, TableDescriptor tableDescriptor,
+      ColumnFamilyDescriptor familyDescriptor) throws IOException, InterruptedException;
 
 
   protected  long getNumberOfMobFiles(Configuration conf, TableName tableName, String family)

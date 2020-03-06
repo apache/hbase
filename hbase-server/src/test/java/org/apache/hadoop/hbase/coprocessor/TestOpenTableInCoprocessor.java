@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,16 +29,16 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Threads;
@@ -164,18 +164,24 @@ public class TestOpenTableInCoprocessor {
       throws Throwable {
     // Check if given class implements RegionObserver.
     assert(RegionObserver.class.isAssignableFrom(clazz));
-    HTableDescriptor primary = new HTableDescriptor(primaryTable);
-    primary.addFamily(new HColumnDescriptor(family));
-    // add our coprocessor
-    primary.addCoprocessor(clazz.getName());
+    TableDescriptorBuilder.ModifyableTableDescriptor primaryDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(primaryTable);
 
-    HTableDescriptor other = new HTableDescriptor(otherTable);
-    other.addFamily(new HColumnDescriptor(family));
+    primaryDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
+    // add our coprocessor
+    primaryDescriptor.setCoprocessor(clazz.getName());
+
+    TableDescriptorBuilder.ModifyableTableDescriptor otherDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(otherTable);
+
+    otherDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
 
 
     Admin admin = UTIL.getAdmin();
-    admin.createTable(primary);
-    admin.createTable(other);
+    admin.createTable(primaryDescriptor);
+    admin.createTable(otherDescriptor);
 
     Table table = UTIL.getConnection().getTable(TableName.valueOf("primary"));
     Put p = new Put(new byte[] { 'a' });

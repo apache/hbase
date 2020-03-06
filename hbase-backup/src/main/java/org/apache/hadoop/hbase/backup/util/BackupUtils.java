@@ -138,8 +138,7 @@ public final class BackupUtils {
       // write a copy of descriptor to the target directory
       Path target = new Path(backupInfo.getTableBackupDir(table));
       FileSystem targetFs = target.getFileSystem(conf);
-      FSTableDescriptors descriptors =
-          new FSTableDescriptors(conf, targetFs, FSUtils.getRootDir(conf));
+      FSTableDescriptors descriptors = new FSTableDescriptors(targetFs, FSUtils.getRootDir(conf));
       descriptors.createTableDescriptorForTableDirectory(target, orig, false);
       LOG.debug("Attempting to copy table info for:" + table + " target: " + target
           + " descriptor: " + orig);
