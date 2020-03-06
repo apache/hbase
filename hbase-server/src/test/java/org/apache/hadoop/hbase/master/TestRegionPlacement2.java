@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -26,7 +27,6 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -82,7 +82,7 @@ public class TestRegionPlacement2 {
   }
 
   @Test
-  public void testFavoredNodesPresentForRoundRobinAssignment() throws HBaseIOException {
+  public void testFavoredNodesPresentForRoundRobinAssignment() throws IOException {
     LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(TEST_UTIL.getConfiguration());
     balancer.setMasterServices(TEST_UTIL.getMiniHBaseCluster().getMaster());
     balancer.initialize();
@@ -143,7 +143,7 @@ public class TestRegionPlacement2 {
   }
 
   @Test
-  public void testFavoredNodesPresentForRandomAssignment() throws HBaseIOException {
+  public void testFavoredNodesPresentForRandomAssignment() throws IOException {
     LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(TEST_UTIL.getConfiguration());
     balancer.setMasterServices(TEST_UTIL.getMiniHBaseCluster().getMaster());
     balancer.initialize();

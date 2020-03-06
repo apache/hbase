@@ -26,7 +26,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.SlowLogQueryFilter;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
@@ -58,6 +59,7 @@ import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -66,9 +68,12 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.security.token.Token;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearRegionBlockCacheRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
@@ -78,6 +83,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerIn
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionRequest.RegionOpenInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SlowLogResponseRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesRequest.RegionUpdateInfo;
@@ -119,8 +125,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsCatalogJ
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsCleanerChoreEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsMasterRunningRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos
-    .IsSnapshotCleanupEnabledRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTableRegionsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyColumnRequest;
@@ -136,8 +141,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetBalance
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetCleanerChoreRunningRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetNormalizerRunningRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetRegionStateInMetaRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos
-    .SetSnapshotCleanupRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetSplitOrMergeEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetTableStateInMetaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SplitTableRegionRequest;
@@ -146,6 +150,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRe
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.MoveServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerRequest;
@@ -1745,4 +1751,68 @@ public final class RequestConverter {
     return IsSnapshotCleanupEnabledRequest.newBuilder().build();
   }
 
+  /**
+   * Create a protocol buffer {@link SlowLogResponseRequest}
+   *
+   * @param slowLogQueryFilter filter to use if provided
+   * @return a protocol buffer SlowLogResponseRequest
+   */
+  public static SlowLogResponseRequest buildSlowLogResponseRequest(
+      final SlowLogQueryFilter slowLogQueryFilter) {
+    SlowLogResponseRequest.Builder builder = SlowLogResponseRequest.newBuilder();
+    if (slowLogQueryFilter == null) {
+      return builder.build();
+    }
+    final String clientAddress = slowLogQueryFilter.getClientAddress();
+    if (StringUtils.isNotEmpty(clientAddress)) {
+      builder.setClientAddress(clientAddress);
+    }
+    final String regionName = slowLogQueryFilter.getRegionName();
+    if (StringUtils.isNotEmpty(regionName)) {
+      builder.setRegionName(regionName);
+    }
+    final String tableName = slowLogQueryFilter.getTableName();
+    if (StringUtils.isNotEmpty(tableName)) {
+      builder.setTableName(tableName);
+    }
+    final String userName = slowLogQueryFilter.getUserName();
+    if (StringUtils.isNotEmpty(userName)) {
+      builder.setUserName(userName);
+    }
+    return builder.setLimit(slowLogQueryFilter.getLimit()).build();
+  }
+
+  /**
+   * Create a protocol buffer {@link ClearSlowLogResponseRequest}
+   *
+   * @return a protocol buffer ClearSlowLogResponseRequest
+   */
+  public static ClearSlowLogResponseRequest buildClearSlowLogResponseRequest() {
+    return ClearSlowLogResponseRequest.newBuilder().build();
+  }
+
+  public static MoveServersRequest buildMoveServersRequest(Set<Address> servers,
+      String targetGroup) {
+    Set<HBaseProtos.ServerName> hostPorts = Sets.newHashSet();
+    for (Address el : servers) {
+      hostPorts.add(
+          HBaseProtos.ServerName.newBuilder().setHostName(el.getHostname()).setPort(el.getPort())
+              .build());
+    }
+    return MoveServersRequest.newBuilder().setTargetGroup(targetGroup).addAllServers(hostPorts)
+            .build();
+  }
+
+  public static RemoveServersRequest buildRemoveServersRequest(Set<Address> servers) {
+    Set<HBaseProtos.ServerName> hostPorts = Sets.newHashSet();
+    for(Address el: servers) {
+      hostPorts.add(HBaseProtos.ServerName.newBuilder()
+          .setHostName(el.getHostname())
+          .setPort(el.getPort())
+          .build());
+    }
+    return RemoveServersRequest.newBuilder()
+        .addAllServers(hostPorts)
+        .build();
+  }
 }

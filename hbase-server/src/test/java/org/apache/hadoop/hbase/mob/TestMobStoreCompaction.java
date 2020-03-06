@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,11 +40,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
@@ -100,8 +97,8 @@ public class TestMobStoreCompaction {
   private Configuration conf = null;
 
   private HRegion region = null;
-  private HTableDescriptor htd = null;
-  private HColumnDescriptor hcd = null;
+  private TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor = null;
+  private ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor = null;
   private long mobCellThreshold = 1000;
 
   private FileSystem fs;
@@ -116,18 +113,17 @@ public class TestMobStoreCompaction {
     HBaseTestingUtility UTIL = new HBaseTestingUtility(conf);
 
     compactionThreshold = conf.getInt("hbase.hstore.compactionThreshold", 3);
-    htd = UTIL.createTableDescriptor(TableName.valueOf(name.getMethodName()),
-      HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
-      HColumnDescriptor.DEFAULT_KEEP_DELETED);
-    hcd = new HColumnDescriptor(COLUMN_FAMILY);
-    hcd.setMobEnabled(true);
-    hcd.setMobThreshold(mobThreshold);
-    hcd.setMaxVersions(1);
-    htd.modifyFamily(hcd);
+    tableDescriptor = UTIL.createModifyableTableDescriptor(name.getMethodName());
+    familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(COLUMN_FAMILY);
+    familyDescriptor.setMobEnabled(true);
+    familyDescriptor.setMobThreshold(mobThreshold);
+    familyDescriptor.setMaxVersions(1);
+    tableDescriptor.modifyColumnFamily(familyDescriptor);
 
-    RegionInfo regionInfo = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
-    region = HBaseTestingUtility
-        .createRegionAndWAL(regionInfo, UTIL.getDataTestDir(), conf, htd, new MobFileCache(conf));
+    RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
+    region = HBaseTestingUtility.createRegionAndWAL(regionInfo,
+      UTIL.getDataTestDir(), conf, tableDescriptor, new MobFileCache(conf));
     fs = FileSystem.get(conf);
   }
 
@@ -234,7 +230,7 @@ public class TestMobStoreCompaction {
     byte[] dummyData = makeDummyData(600);
 
     Path hbaseRootDir = FSUtils.getRootDir(conf);
-    Path basedir = new Path(hbaseRootDir, htd.getNameAsString());
+    Path basedir = new Path(hbaseRootDir, tableDescriptor.getTableName().getNameAsString());
     List<Pair<byte[], String>> hfiles = new ArrayList<>(1);
     for (int i = 0; i < compactionThreshold; i++) {
       Path hpath = new Path(basedir, "hfile" + i);
@@ -300,7 +296,8 @@ public class TestMobStoreCompaction {
   }
 
   private int countMobFiles() throws IOException {
-    Path mobDirPath = MobUtils.getMobFamilyPath(conf, htd.getTableName(), hcd.getNameAsString());
+    Path mobDirPath = MobUtils.getMobFamilyPath(conf, tableDescriptor.getTableName(),
+      familyDescriptor.getNameAsString());
     if (fs.exists(mobDirPath)) {
       FileStatus[] files = UTIL.getTestFileSystem().listStatus(mobDirPath);
       return files.length;
@@ -310,7 +307,8 @@ public class TestMobStoreCompaction {
 
   private long countMobCellsInMetadata() throws IOException {
     long mobCellsCount = 0;
-    Path mobDirPath = MobUtils.getMobFamilyPath(conf, htd.getTableName(), hcd.getNameAsString());
+    Path mobDirPath = MobUtils.getMobFamilyPath(conf, tableDescriptor.getTableName(),
+      familyDescriptor.getNameAsString());
     Configuration copyOfConf = new Configuration(conf);
     copyOfConf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0f);
     CacheConfig cacheConfig = new CacheConfig(copyOfConf);
@@ -411,8 +409,8 @@ public class TestMobStoreCompaction {
           continue;
         }
         files.add(fileName);
-        Path familyPath = MobUtils.getMobFamilyPath(conf, htd.getTableName(),
-            hcd.getNameAsString());
+        Path familyPath = MobUtils.getMobFamilyPath(conf, tableDescriptor.getTableName(),
+            familyDescriptor.getNameAsString());
         assertTrue(fs.exists(new Path(familyPath, fileName)));
       }
     } while (hasMore);

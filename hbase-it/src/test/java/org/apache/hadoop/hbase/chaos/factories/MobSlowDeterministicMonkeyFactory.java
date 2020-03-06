@@ -117,7 +117,7 @@ public class MobSlowDeterministicMonkeyFactory extends MonkeyFactory {
             new DumpClusterStatusAction()
     };
 
-    return new PolicyBasedChaosMonkey(util,
+    return new PolicyBasedChaosMonkey(properties, util,
             new PeriodicRandomActionPolicy(action1Period, actions1),
             new PeriodicRandomActionPolicy(action2Period, actions2),
             new CompositeSequentialPolicy(

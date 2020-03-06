@@ -28,14 +28,14 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -73,10 +73,14 @@ public class TestResettingCounters {
     byte [][] rows = new byte [numRows][];
     for (int i=0; i<numRows; i++) rows[i] = Bytes.toBytes("r" + i);
 
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(table));
-    for (byte [] family : families) htd.addFamily(new HColumnDescriptor(family));
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(table));
+    for (byte[] family : families) {
+      tableDescriptor.setColumnFamily(
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
+    }
 
-    HRegionInfo hri = new HRegionInfo(htd.getTableName(), null, null, false);
+    HRegionInfo hri = new HRegionInfo(tableDescriptor.getTableName(), null, null, false);
     String testDir = htu.getDataTestDir() + "/TestResettingCounters/";
     Path path = new Path(testDir);
     if (fs.exists(path)) {
@@ -84,7 +88,7 @@ public class TestResettingCounters {
         throw new IOException("Failed delete of " + path);
       }
     }
-    HRegion region = HBaseTestingUtility.createRegionAndWAL(hri, path, conf, htd);
+    HRegion region = HBaseTestingUtility.createRegionAndWAL(hri, path, conf, tableDescriptor);
     try {
       Increment odd = new Increment(rows[0]);
       odd.setDurability(Durability.SKIP_WAL);

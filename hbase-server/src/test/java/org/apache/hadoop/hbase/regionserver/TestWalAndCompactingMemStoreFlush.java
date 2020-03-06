@@ -29,13 +29,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -74,23 +74,26 @@ public class TestWalAndCompactingMemStoreFlush {
 
   private HRegion initHRegion(String callingMethod, Configuration conf) throws IOException {
     int i = 0;
-    HTableDescriptor htd = new HTableDescriptor(TABLENAME);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLENAME);
     for (byte[] family : FAMILIES) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family);
+      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family);
       // even column families are going to have compacted memstore
       if (i % 2 == 0) {
-        hcd.setInMemoryCompaction(MemoryCompactionPolicy
+        familyDescriptor.setInMemoryCompaction(MemoryCompactionPolicy
             .valueOf(conf.get(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY)));
       } else {
-        hcd.setInMemoryCompaction(MemoryCompactionPolicy.NONE);
+        familyDescriptor.setInMemoryCompaction(MemoryCompactionPolicy.NONE);
       }
-      htd.addFamily(hcd);
+      tableDescriptor.setColumnFamily(familyDescriptor);
       i++;
     }
 
     HRegionInfo info = new HRegionInfo(TABLENAME, null, null, false);
     Path path = new Path(DIR, callingMethod);
-    HRegion region = HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd, false);
+    HRegion region = HBaseTestingUtility.createRegionAndWAL(info, path, conf,
+      tableDescriptor, false);
     region.regionServicesForStores = Mockito.spy(region.regionServicesForStores);
     ThreadPoolExecutor pool = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
     Mockito.when(region.regionServicesForStores.getInMemoryCompactionPool()).thenReturn(pool);

@@ -23,7 +23,9 @@ import java.io.IOException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -80,10 +82,12 @@ public class TestHColumnDescriptorDefaultVersions {
   public void testCreateTableWithDefault() throws IOException {
     Admin admin = TEST_UTIL.getAdmin();
     // Create a table with one family
-    HTableDescriptor baseHtd = new HTableDescriptor(TABLE_NAME);
-    HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
-    baseHtd.addFamily(hcd);
-    admin.createTable(baseHtd);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLE_NAME);
+    ColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY);
+    tableDescriptor.setColumnFamily(familyDescriptor);
+    admin.createTable(tableDescriptor);
     admin.disableTable(TABLE_NAME);
     try {
       // Verify the column descriptor
@@ -101,11 +105,13 @@ public class TestHColumnDescriptorDefaultVersions {
 
     Admin admin = TEST_UTIL.getAdmin();
     // Create a table with one family
-    HTableDescriptor baseHtd = new HTableDescriptor(TABLE_NAME);
-    HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
-    hcd.setMaxVersions(TEST_UTIL.getConfiguration().getInt("hbase.column.max.version", 1));
-    baseHtd.addFamily(hcd);
-    admin.createTable(baseHtd);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLE_NAME);
+    ColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY)
+        .setMaxVersions(TEST_UTIL.getConfiguration().getInt("hbase.column.max.version", 1));
+    tableDescriptor.setColumnFamily(familyDescriptor);
+    admin.createTable(tableDescriptor);
     admin.disableTable(TABLE_NAME);
     try {
       // Verify the column descriptor
@@ -123,11 +129,13 @@ public class TestHColumnDescriptorDefaultVersions {
 
     Admin admin = TEST_UTIL.getAdmin();
     // Create a table with one family
-    HTableDescriptor baseHtd = new HTableDescriptor(TABLE_NAME);
-    HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
-    hcd.setMaxVersions(5);
-    baseHtd.addFamily(hcd);
-    admin.createTable(baseHtd);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLE_NAME);
+    ColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY)
+        .setMaxVersions(5);
+    tableDescriptor.setColumnFamily(familyDescriptor);
+    admin.createTable(tableDescriptor);
     admin.disableTable(TABLE_NAME);
     try {
       // Verify the column descriptor
@@ -140,15 +148,16 @@ public class TestHColumnDescriptorDefaultVersions {
 
   @Test
   public void testHColumnDescriptorCachedMaxVersions() throws Exception {
-    HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
-    hcd.setMaxVersions(5);
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY);
+    familyDescriptor.setMaxVersions(5);
     // Verify the max version
-    assertEquals(5, hcd.getMaxVersions());
+    assertEquals(5, familyDescriptor.getMaxVersions());
 
     // modify the max version
-    hcd.setValue(Bytes.toBytes(HConstants.VERSIONS), Bytes.toBytes("8"));
+    familyDescriptor.setValue(Bytes.toBytes(HConstants.VERSIONS), Bytes.toBytes("8"));
     // Verify the max version
-    assertEquals(8, hcd.getMaxVersions());
+    assertEquals(8, familyDescriptor.getMaxVersions());
   }
 
   private void verifyHColumnDescriptor(int expected, final TableName tableName,

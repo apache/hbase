@@ -31,16 +31,16 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -140,15 +140,17 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
     rpc.setClusterKey(TEST_UTIL1.getClusterKey());
     admin.addReplicationPeer("2", rpc);
 
-    HTableDescriptor table = new HTableDescriptor(TABLE_NAME);
-    HColumnDescriptor desc = new HColumnDescriptor(fam);
-    desc.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    table.addFamily(desc);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLE_NAME);
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam);
+    familyDescriptor.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
+    tableDescriptor.setColumnFamily(familyDescriptor);
     try (Admin hBaseAdmin = TEST_UTIL.getAdmin()) {
-      hBaseAdmin.createTable(table);
+      hBaseAdmin.createTable(tableDescriptor);
     }
     try (Admin hBaseAdmin1 = TEST_UTIL1.getAdmin()){
-      hBaseAdmin1.createTable(table);
+      hBaseAdmin1.createTable(tableDescriptor);
     }
     addLabels();
     setAuths(conf);

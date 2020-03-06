@@ -1469,6 +1469,79 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Retrieve SlowLog Responses from RegionServers
+    def get_slowlog_responses(server_names, args)
+      unless server_names.is_a?(Array) || server_names.is_a?(String)
+        raise(ArgumentError,
+              "#{server_names.class} of #{server_names.inspect} is not of Array/String type")
+      end
+      if server_names == '*'
+        server_names = getServerNames([], true)
+      else
+        server_names_list = to_server_names(server_names)
+        server_names = getServerNames(server_names_list, false)
+      end
+      filter_params = get_filter_params(args)
+      slow_log_responses = @admin.getSlowLogResponses(java.util.HashSet.new(server_names),
+                                                      filter_params)
+      slow_log_responses_arr = []
+      for slow_log_response in slow_log_responses
+        slow_log_responses_arr << slow_log_response.toJsonPrettyPrint
+      end
+      puts 'Retrieved SlowLog Responses from RegionServers'
+      puts slow_log_responses_arr
+    end
+
+    def get_filter_params(args)
+      filter_params = org.apache.hadoop.hbase.client.SlowLogQueryFilter.new
+      if args.key? 'REGION_NAME'
+        region_name = args['REGION_NAME']
+        filter_params.setRegionName(region_name)
+      end
+      if args.key? 'TABLE_NAME'
+        table_name = args['TABLE_NAME']
+        filter_params.setTableName(table_name)
+      end
+      if args.key? 'CLIENT_IP'
+        client_ip = args['CLIENT_IP']
+        filter_params.setClientAddress(client_ip)
+      end
+      if args.key? 'USER'
+        user = args['USER']
+        filter_params.setUserName(user)
+      end
+      if args.key? 'LIMIT'
+        limit = args['LIMIT']
+        filter_params.setLimit(limit)
+      end
+      filter_params
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Clears SlowLog Responses from RegionServers
+    def clear_slowlog_responses(server_names)
+      unless server_names.nil? || server_names.is_a?(Array) || server_names.is_a?(String)
+        raise(ArgumentError,
+              "#{server_names.class} of #{server_names.inspect} is not of correct type")
+      end
+      if server_names.nil?
+        server_names = getServerNames([], true)
+      else
+        server_names_list = to_server_names(server_names)
+        server_names = getServerNames(server_names_list, false)
+      end
+      clear_log_responses = @admin.clearSlowLogResponses(java.util.HashSet.new(server_names))
+      clear_log_success_count = 0
+      clear_log_responses.each do |response|
+        if response
+          clear_log_success_count += 1
+        end
+      end
+      puts 'Cleared Slowlog responses from ' \
+           "#{clear_log_success_count}/#{clear_log_responses.size} RegionServers"
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Decommission a list of region servers, optionally offload corresponding regions
     def decommission_regionservers(host_or_servers, should_offload)
       # Fail if host_or_servers is neither a string nor an array
@@ -1541,6 +1614,16 @@ module Hbase
     # Stop the given RegionServer
     def stop_regionserver(hostport)
       @admin.stopRegionServer(hostport)
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Get list of server names
+    def to_server_names(server_names)
+      if server_names.is_a?(Array)
+        server_names
+      else
+        java.util.Arrays.asList(server_names)
+      end
     end
   end
   # rubocop:enable Metrics/ClassLength

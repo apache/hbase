@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -29,15 +29,15 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -77,8 +77,8 @@ public class TestMobFileCleanerChore {
       .toBytes("01234567890123456789012345678901234567890123456789012345678901234567890123456789");
 
   private Configuration conf;
-  private HTableDescriptor hdt;
-  private HColumnDescriptor hcd;
+  private TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor;
+  private ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor;
   private Admin admin;
   private Table table = null;
   private MobFileCleanerChore chore;
@@ -87,11 +87,10 @@ public class TestMobFileCleanerChore {
   public TestMobFileCleanerChore() {
   }
 
-
   @Before
   public void setUp() throws Exception {
     HTU = new HBaseTestingUtility();
-    hdt = HTU.createTableDescriptor(TableName.valueOf("testMobCompactTable"));
+    tableDescriptor = HTU.createModifyableTableDescriptor("testMobCompactTable");
     conf = HTU.getConfiguration();
 
     initConf();
@@ -99,12 +98,12 @@ public class TestMobFileCleanerChore {
     HTU.startMiniCluster();
     admin = HTU.getAdmin();
     chore = new MobFileCleanerChore();
-    hcd = new HColumnDescriptor(fam);
-    hcd.setMobEnabled(true);
-    hcd.setMobThreshold(mobLen);
-    hcd.setMaxVersions(1);
-    hdt.addFamily(hcd);
-    table = HTU.createTable(hdt, null);
+    familyDescriptor = new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam);
+    familyDescriptor.setMobEnabled(true);
+    familyDescriptor.setMobThreshold(mobLen);
+    familyDescriptor.setMaxVersions(1);
+    tableDescriptor.setColumnFamily(familyDescriptor);
+    table = HTU.createTable(tableDescriptor, null);
   }
 
   private void initConf() {
@@ -146,8 +145,8 @@ public class TestMobFileCleanerChore {
 
   @After
   public void tearDown() throws Exception {
-    admin.disableTable(hdt.getTableName());
-    admin.deleteTable(hdt.getTableName());
+    admin.disableTable(tableDescriptor.getTableName());
+    admin.deleteTable(tableDescriptor.getTableName());
     HTU.shutdownMiniCluster();
   }
 
@@ -160,9 +159,9 @@ public class TestMobFileCleanerChore {
     long num = getNumberOfMobFiles(conf, table.getName(), new String(fam));
     assertEquals(3, num);
     // Major compact
-    admin.majorCompact(hdt.getTableName(), fam);
+    admin.majorCompact(tableDescriptor.getTableName(), fam);
     // wait until compaction is complete
-    while (admin.getCompactionState(hdt.getTableName()) != CompactionState.NONE) {
+    while (admin.getCompactionState(tableDescriptor.getTableName()) != CompactionState.NONE) {
       Thread.sleep(100);
     }
 

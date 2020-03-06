@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,7 +25,6 @@ import java.util.Collection;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
@@ -33,6 +32,7 @@ import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.backup.impl.TableBackupClient;
 import org.apache.hadoop.hbase.backup.impl.TableBackupClient.Stage;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
@@ -83,7 +83,8 @@ public class TestIncrementalBackupWithFailures extends TestBackupBase {
 
     List<TableName> tables = Lists.newArrayList(table1, table2);
     final byte[] fam3Name = Bytes.toBytes("f3");
-    table1Desc.addFamily(new HColumnDescriptor(fam3Name));
+    table1Desc.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam3Name));
     HBaseTestingUtility.modifyTableSync(TEST_UTIL.getAdmin(), table1Desc);
 
     Connection conn = ConnectionFactory.createConnection(conf1);

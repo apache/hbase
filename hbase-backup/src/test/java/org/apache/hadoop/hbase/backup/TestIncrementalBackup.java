@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,12 +24,12 @@ import java.util.Collection;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
@@ -82,11 +82,13 @@ public class TestIncrementalBackup extends TestBackupBase {
     final byte[] fam3Name = Bytes.toBytes("f3");
     final byte[] mobName = Bytes.toBytes("mob");
 
-    table1Desc.addFamily(new HColumnDescriptor(fam3Name));
-    HColumnDescriptor mobHcd = new HColumnDescriptor(mobName);
+    table1Desc.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam3Name));
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor mobHcd =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(mobName);
     mobHcd.setMobEnabled(true);
     mobHcd.setMobThreshold(5L);
-    table1Desc.addFamily(mobHcd);
+    table1Desc.setColumnFamily(mobHcd);
     HBaseTestingUtility.modifyTableSync(TEST_UTIL.getAdmin(), table1Desc);
 
     try (Connection conn = ConnectionFactory.createConnection(conf1)) {
@@ -105,7 +107,6 @@ public class TestIncrementalBackup extends TestBackupBase {
       Assert.assertEquals(HBaseTestingUtility.countRows(t1),
               NB_ROWS_IN_BATCH + ADD_ROWS + NB_ROWS_FAM3);
       LOG.debug("written " + ADD_ROWS + " rows to " + table1);
-
       // additionally, insert rows to MOB cf
       int NB_ROWS_MOB = 111;
       insertIntoTable(conn, table1, mobName, 3, NB_ROWS_MOB);
@@ -113,7 +114,6 @@ public class TestIncrementalBackup extends TestBackupBase {
       t1.close();
       Assert.assertEquals(HBaseTestingUtility.countRows(t1),
               NB_ROWS_IN_BATCH + ADD_ROWS + NB_ROWS_MOB);
-
       Table t2 = conn.getTable(table2);
       Put p2;
       for (int i = 0; i < 5; i++) {
@@ -124,13 +124,11 @@ public class TestIncrementalBackup extends TestBackupBase {
       Assert.assertEquals(NB_ROWS_IN_BATCH + 5, HBaseTestingUtility.countRows(t2));
       t2.close();
       LOG.debug("written " + 5 + " rows to " + table2);
-
       // split table1
       MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
       List<HRegion> regions = cluster.getRegions(table1);
       byte[] name = regions.get(0).getRegionInfo().getRegionName();
       long startSplitTime = EnvironmentEdgeManager.currentTime();
-
       try {
         admin.splitRegionAsync(name).get();
       } catch (Exception e) {
@@ -141,7 +139,6 @@ public class TestIncrementalBackup extends TestBackupBase {
       while (!admin.isTableAvailable(table1)) {
         Thread.sleep(100);
       }
-
       long endSplitTime = EnvironmentEdgeManager.currentTime();
       // split finished
       LOG.debug("split finished in =" + (endSplitTime - startSplitTime));
@@ -154,10 +151,11 @@ public class TestIncrementalBackup extends TestBackupBase {
 
       // add column family f2 to table1
       final byte[] fam2Name = Bytes.toBytes("f2");
-      table1Desc.addFamily(new HColumnDescriptor(fam2Name));
+      table1Desc.setColumnFamily(
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam2Name));
 
       // drop column family f3
-      table1Desc.removeFamily(fam3Name);
+      table1Desc.removeColumnFamily(fam3Name);
       HBaseTestingUtility.modifyTableSync(TEST_UTIL.getAdmin(), table1Desc);
 
       int NB_ROWS_FAM2 = 7;

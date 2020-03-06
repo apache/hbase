@@ -91,6 +91,7 @@ public class TestGetClosestAtOrBefore  {
     Path rootdir = UTIL.getDataTestDirOnTestFS();
     // Up flush size else we bind up when we use default catalog flush of 16k.
     TableDescriptors tds = new FSTableDescriptors(UTIL.getConfiguration());
+    FSTableDescriptors.tryUpdateMetaTableDescriptor(UTIL.getConfiguration());
     TableDescriptor td = tds.get(TableName.META_TABLE_NAME);
     td = TableDescriptorBuilder.newBuilder(td).setMemStoreFlushSize(64 * 1024 * 1024).build();
     HRegion mr = HBaseTestingUtility.createRegionAndWAL(HRegionInfo.FIRST_META_REGIONINFO,

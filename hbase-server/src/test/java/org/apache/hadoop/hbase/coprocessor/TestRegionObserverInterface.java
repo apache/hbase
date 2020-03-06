@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,8 +37,6 @@ import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
@@ -530,10 +528,13 @@ public class TestRegionObserverInterface {
       admin.deleteTable(compactTable);
     }
 
-    HTableDescriptor htd = new HTableDescriptor(compactTable);
-    htd.addFamily(new HColumnDescriptor(A));
-    htd.addCoprocessor(EvenOnlyCompactor.class.getName());
-    admin.createTable(htd);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(compactTable);
+
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(A));
+    tableDescriptor.setCoprocessor(EvenOnlyCompactor.class.getName());
+    admin.createTable(tableDescriptor);
 
     Table table = util.getConnection().getTable(compactTable);
     for (long i = 1; i <= 10; i++) {
