@@ -799,14 +799,6 @@ public class HFileBlock implements Cacheable {
      */
     private DataOutputStream userDataStream;
 
-    // Size of actual data being written. Not considering the block encoding/compression. This
-    // includes the header size also.
-    private int unencodedDataSizeWritten;
-
-    // Size of actual data being written. considering the block encoding. This
-    // includes the header size also.
-    private int encodedDataSizeWritten;
-
     /**
      * Bytes to be written to the file system, including the header. Compressed
      * if compression is turned on. It also includes the checksum data that
@@ -912,8 +904,6 @@ public class HFileBlock implements Cacheable {
       if (newBlockType == BlockType.DATA) {
         this.dataBlockEncoder.startBlockEncoding(dataBlockEncodingCtx, userDataStream);
       }
-      this.unencodedDataSizeWritten = 0;
-      this.encodedDataSizeWritten = 0;
       return userDataStream;
     }
 
@@ -922,10 +912,7 @@ public class HFileBlock implements Cacheable {
      */
     void write(Cell cell) throws IOException{
       expectState(State.WRITING);
-      int posBeforeEncode = this.userDataStream.size();
-      this.unencodedDataSizeWritten +=
-          this.dataBlockEncoder.encode(cell, dataBlockEncodingCtx, this.userDataStream);
-      this.encodedDataSizeWritten += this.userDataStream.size() - posBeforeEncode;
+      this.dataBlockEncoder.encode(cell, dataBlockEncodingCtx, this.userDataStream);
     }
 
     /**
@@ -1156,7 +1143,7 @@ public class HFileBlock implements Cacheable {
      * @return the number of bytes written
      */
     public int encodedBlockSizeWritten() {
-      return state != State.WRITING ? 0 : this.encodedDataSizeWritten;
+      return state != State.WRITING ? 0 : this.getEncodingState().getEncodedDataSizeWritten();
     }
 
     /**
@@ -1167,7 +1154,7 @@ public class HFileBlock implements Cacheable {
      * @return the number of bytes written
      */
     int blockSizeWritten() {
-      return state != State.WRITING ? 0 : this.unencodedDataSizeWritten;
+      return state != State.WRITING ? 0 : this.getEncodingState().getUnencodedDataSizeWritten();
     }
 
     /**
