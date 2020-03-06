@@ -14,37 +14,78 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM ubuntu:14.04
+FROM ubuntu:18.04 AS BASE_IMAGE
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-# Install Git, which is missing from the Ubuntu base images.
-RUN apt-get update && apt-get install -y git
+# hadolint ignore=DL3009
+RUN DEBIAN_FRONTEND=noninteractive apt-get -qq update && \
+  DEBIAN_FRONTEND=noninteractive apt-get -qq install --no-install-recommends -y \
+    ca-certificates=20180409 \
+    curl=7.58.0-2ubuntu3.8 \
+    locales=2.27-3ubuntu1
 
-# Add the dependencies from the hbase_docker folder and delete ones we don't need.
-WORKDIR /root
-ADD . /root
-RUN find . -not -name "*tar.gz" -delete
+RUN locale-gen en_US.UTF-8
+ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
 
-# Install Java.
-RUN mkdir -p /usr/java
-RUN tar xzf *jdk* --strip-components 1 -C /usr/java
-ENV JAVA_HOME /usr/java
+FROM BASE_IMAGE AS MAVEN_DOWNLOAD_IMAGE
+ENV MAVEN_VERSION='3.5.4'
+ENV MAVEN_URL "https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz"
+ENV MAVEN_SHA256 'ce50b1c91364cb77efe3776f756a6d92b76d9038b0a0782f7d53acf1e997a14d'
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN curl --location --fail --silent --show-error --output /tmp/maven.tar.gz "${MAVEN_URL}" && \
+  echo "${MAVEN_SHA256} */tmp/maven.tar.gz" | sha256sum -c -
 
-# Install Maven.
-RUN mkdir -p /usr/local/apache-maven
-RUN tar xzf *maven* --strip-components 1 -C /usr/local/apache-maven
-ENV MAVEN_HOME /usr/local/apache-maven
+FROM BASE_IMAGE AS OPENJDK8_DOWNLOAD_IMAGE
+ENV OPENJDK8_URL 'https://github.com/AdoptOpenJDK/openjdk8-binaries/releases/download/jdk8u232-b09/OpenJDK8U-jdk_x64_linux_hotspot_8u232b09.tar.gz'
+ENV OPENJDK8_SHA256 '7b7884f2eb2ba2d47f4c0bf3bb1a2a95b73a3a7734bd47ebf9798483a7bcc423'
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN curl --location --fail --silent --show-error --output /tmp/adoptopenjdk8.tar.gz "${OPENJDK8_URL}" && \
+  echo "${OPENJDK8_SHA256} */tmp/adoptopenjdk8.tar.gz" | sha256sum -c -
 
-# Add Java and Maven to the path.
-ENV PATH /usr/java/bin:/usr/local/apache-maven/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+FROM BASE_IMAGE
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+RUN DEBIAN_FRONTEND=noninteractive apt-get -qq install --no-install-recommends -y \
+  git=1:2.17.1-1ubuntu0.5 \
+  && \
+  apt-get clean && \
+  rm -rf /var/lib/apt/lists/*
+
+#
+# when updating java or maven versions here, consider also updating
+# `dev-support/docker/Dockerfile` as well.
+#
+
+# hadolint ignore=DL3010
+COPY --from=MAVEN_DOWNLOAD_IMAGE /tmp/maven.tar.gz /tmp/maven.tar.gz
+RUN tar xzf /tmp/maven.tar.gz -C /opt && \
+  ln -s "/opt/$(dirname "$(tar -tf /tmp/maven.tar.gz | head -n1)")" /opt/maven && \
+  rm /tmp/maven.tar.gz
+
+# hadolint ignore=DL3010
+COPY --from=OPENJDK8_DOWNLOAD_IMAGE /tmp/adoptopenjdk8.tar.gz /tmp/adoptopenjdk8.tar.gz
+RUN mkdir -p /usr/lib/jvm && \
+  tar xzf /tmp/adoptopenjdk8.tar.gz -C /usr/lib/jvm && \
+  ln -s "/usr/lib/jvm/$(basename "$(tar -tf /tmp/adoptopenjdk8.tar.gz | head -n1)")" /usr/lib/jvm/java-8-adoptopenjdk && \
+  ln -s /usr/lib/jvm/java-8-adoptopenjdk /usr/lib/jvm/java-8 && \
+  rm /tmp/adoptopenjdk8.tar.gz
+
+ENV MAVEN_HOME '/opt/maven'
+ENV JAVA_HOME '/usr/lib/jvm/java-8'
+ENV PATH '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+ENV PATH "${JAVA_HOME}/bin:${MAVEN_HOME}/bin:${PATH}"
 
 # Pull down HBase and build it into /root/hbase-bin.
+WORKDIR /root
 RUN git clone https://gitbox.apache.org/repos/asf/hbase.git -b master
 RUN mvn clean install -DskipTests assembly:single -f ./hbase/pom.xml
 RUN mkdir -p hbase-bin
-RUN tar xzf /root/hbase/hbase-assembly/target/*tar.gz --strip-components 1 -C /root/hbase-bin
+RUN find /root/hbase/hbase-assembly/target -iname '*.tar.gz' -not -iname '*client*' \
+  | head -n 1 \
+  | xargs -I{} tar xzf {} --strip-components 1 -C /root/hbase-bin
 
 # Set HBASE_HOME, add it to the path, and start HBase.
 ENV HBASE_HOME /root/hbase-bin
-ENV PATH /root/hbase-bin/bin:/usr/java/bin:/usr/local/apache-maven/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ENV PATH "/root/hbase-bin/bin:${PATH}"
 
 CMD ["/bin/bash", "-c", "start-hbase.sh; hbase shell"]

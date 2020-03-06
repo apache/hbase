@@ -152,6 +152,9 @@ RUN tar xzf /tmp/maven.tar.gz -C /opt && \
 # ensure JVMs are available under `/usr/lib/jvm` and prefix each installation
 # as `java-` so as to conform with Yetus's assumptions.
 #
+# when updating java or maven versions here, consider also updating
+# `dev-support/hbase_docker/Dockerfile` as well.
+#
 
 # hadolint ignore=DL3010
 COPY --from=OPENJDK7_DOWNLOAD_IMAGE /tmp/zuluopenjdk7.tar.gz /tmp/zuluopenjdk7.tar.gz
