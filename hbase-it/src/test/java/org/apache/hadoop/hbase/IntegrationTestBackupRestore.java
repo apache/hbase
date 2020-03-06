@@ -139,7 +139,7 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
   public void setUpMonkey() throws Exception {
     Policy p = new PeriodicRandomActionPolicy(sleepTime,
       new RestartRandomRsExceptMetaAction(sleepTime));
-    this.monkey = new PolicyBasedChaosMonkey(null, util, p);
+    this.monkey = new PolicyBasedChaosMonkey(util, p);
     startMonkey();
   }
 

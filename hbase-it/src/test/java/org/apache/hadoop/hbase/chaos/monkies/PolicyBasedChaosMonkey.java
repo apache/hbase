@@ -51,6 +51,14 @@ public class PolicyBasedChaosMonkey extends ChaosMonkey {
    * @param util the HBaseIntegrationTestingUtility already configured
    * @param policies custom policies to use
    */
+  public PolicyBasedChaosMonkey(IntegrationTestingUtility util, Policy... policies) {
+    this(null, util, policies);
+  }
+
+  public PolicyBasedChaosMonkey(IntegrationTestingUtility util, Collection<Policy> policies) {
+    this(null, util, policies);
+  }
+
   public PolicyBasedChaosMonkey(Properties monkeyProps, IntegrationTestingUtility util,
     Policy... policies) {
     this.monkeyProps = monkeyProps;

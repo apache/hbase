@@ -195,7 +195,7 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
     Policy p = new PeriodicRandomActionPolicy(sleepTime,
       new RestartRandomRsExceptMetaAction(sleepTime),
       new MoveRandomRegionOfTableAction(tableName));
-    this.monkey = new PolicyBasedChaosMonkey(null, util, p);
+    this.monkey = new PolicyBasedChaosMonkey(util, p);
     // don't start monkey right away
   }
 
