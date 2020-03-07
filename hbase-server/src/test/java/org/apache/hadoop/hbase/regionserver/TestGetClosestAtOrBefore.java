@@ -89,7 +89,6 @@ public class TestGetClosestAtOrBefore  {
     // Up flush size else we bind up when we use default catalog flush of 16k.
     TableDescriptorBuilder metaBuilder = UTIL.getMetaTableDescriptorBuilder()
             .setMemStoreFlushSize(64 * 1024 * 1024);
-
     HRegion mr = HBaseTestingUtility.createRegionAndWAL(HRegionInfo.FIRST_META_REGIONINFO,
         rootdir, this.conf, metaBuilder.build());
     try {
