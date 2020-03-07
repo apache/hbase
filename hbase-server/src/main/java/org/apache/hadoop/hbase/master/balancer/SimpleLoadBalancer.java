@@ -107,16 +107,21 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
   }
 
   @Override
-  public void setClusterLoad(Map<TableName, Map<ServerName, List<RegionInfo>>> clusterLoad){
+  public void setClusterLoad(Map<TableName, Map<ServerName, List<RegionInfo>>> clusterLoad) {
     serverLoadList = new ArrayList<>();
+    Map<ServerName, Integer> server2LoadMap = new HashMap<>();
     float sum = 0;
-    for(Map.Entry<TableName, Map<ServerName, List<RegionInfo>>> clusterEntry : clusterLoad.entrySet()){
-      for(Map.Entry<ServerName, List<RegionInfo>> entry : clusterEntry.getValue().entrySet()){
-        if(entry.getKey().equals(masterServerName)) continue; // we shouldn't include master as potential assignee
-        serverLoadList.add(new ServerAndLoad(entry.getKey(), entry.getValue().size()));
-        sum += entry.getValue().size();
+    for (Map.Entry<TableName, Map<ServerName, List<RegionInfo>>> clusterEntry : clusterLoad.entrySet()) {
+      for (Map.Entry<ServerName, List<RegionInfo>> entry : clusterEntry.getValue().entrySet()) {
+        if (entry.getKey().equals(masterServerName)) continue; // we shouldn't include master as potential assignee
+        int regionNum = entry.getValue().size();
+        server2LoadMap.compute(entry.getKey(), (k, v) -> v == null ? regionNum : regionNum + v);
+        sum += regionNum;
       }
     }
+    server2LoadMap.forEach((k, v) -> {
+      serverLoadList.add(new ServerAndLoad(k, v));
+    });
     avgLoadOverall = sum / serverLoadList.size();
   }
 
