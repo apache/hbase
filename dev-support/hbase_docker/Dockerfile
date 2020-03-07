@@ -17,25 +17,21 @@
 FROM ubuntu:14.04
 
 # Install Git, which is missing from the Ubuntu base images.
-RUN DEBIAN_FRONTEND=noninteractive apt-get -qq -y update \
-  && DEBIAN_FRONTEND=noninteractive apt-get -qq -y install --no-install-recommends \
-    git=1:1.9.1-1ubuntu0.10 \
-  && apt-get clean \
-  && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y git
 
 # Add the dependencies from the hbase_docker folder and delete ones we don't need.
 WORKDIR /root
-COPY . /root
+ADD . /root
 RUN find . -not -name "*tar.gz" -delete
 
 # Install Java.
 RUN mkdir -p /usr/java
-RUN tar xzf ./*jdk* --strip-components 1 -C /usr/java
+RUN tar xzf *jdk* --strip-components 1 -C /usr/java
 ENV JAVA_HOME /usr/java
 
 # Install Maven.
 RUN mkdir -p /usr/local/apache-maven
-RUN tar xzf ./*maven* --strip-components 1 -C /usr/local/apache-maven
+RUN tar xzf *maven* --strip-components 1 -C /usr/local/apache-maven
 ENV MAVEN_HOME /usr/local/apache-maven
 
 # Add Java and Maven to the path.
