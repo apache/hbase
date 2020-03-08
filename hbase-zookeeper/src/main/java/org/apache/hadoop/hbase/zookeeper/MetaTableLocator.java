@@ -73,10 +73,10 @@ public final class MetaTableLocator {
    */
   public static List<Pair<RegionInfo, ServerName>> getMetaRegionsAndLocations(ZKWatcher zkw,
       int replicaId) {
-    ServerName serverName = getMetaRegionLocation(zkw, replicaId);
+    ServerName serverName = getRootRegionLocation(zkw, replicaId);
     List<Pair<RegionInfo, ServerName>> list = new ArrayList<>(1);
     list.add(new Pair<>(RegionReplicaUtil.getRegionInfoForReplica(
-        RegionInfoBuilder.FIRST_META_REGIONINFO, replicaId), serverName));
+        RegionInfoBuilder.ROOT_REGIONINFO, replicaId), serverName));
     return list;
   }
 
@@ -120,9 +120,9 @@ public final class MetaTableLocator {
    * @param zkw zookeeper connection to use
    * @return server name or null if we failed to get the data.
    */
-  public static ServerName getMetaRegionLocation(final ZKWatcher zkw) {
+  public static ServerName getRootRegionLocation(final ZKWatcher zkw) {
     try {
-      RegionState state = getMetaRegionState(zkw);
+      RegionState state = getRootRegionState(zkw);
       return state.isOpened() ? state.getServerName() : null;
     } catch (KeeperException ke) {
       return null;
@@ -135,9 +135,9 @@ public final class MetaTableLocator {
    * @param replicaId the ID of the replica
    * @return server name
    */
-  public static ServerName getMetaRegionLocation(final ZKWatcher zkw, int replicaId) {
+  public static ServerName getRootRegionLocation(final ZKWatcher zkw, int replicaId) {
     try {
-      RegionState state = getMetaRegionState(zkw, replicaId);
+      RegionState state = getRootRegionState(zkw, replicaId);
       return state.isOpened() ? state.getServerName() : null;
     } catch (KeeperException ke) {
       return null;
@@ -248,8 +248,8 @@ public final class MetaTableLocator {
   /**
    * Load the meta region state from the meta server ZNode.
    */
-  public static RegionState getMetaRegionState(ZKWatcher zkw) throws KeeperException {
-    return getMetaRegionState(zkw, RegionInfo.DEFAULT_REPLICA_ID);
+  public static RegionState getRootRegionState(ZKWatcher zkw) throws KeeperException {
+    return getRootRegionState(zkw, RegionInfo.DEFAULT_REPLICA_ID);
   }
 
   /**
@@ -260,12 +260,12 @@ public final class MetaTableLocator {
    * @return regionstate
    * @throws KeeperException if a ZooKeeper operation fails
    */
-  public static RegionState getMetaRegionState(ZKWatcher zkw, int replicaId)
+  public static RegionState getRootRegionState(ZKWatcher zkw, int replicaId)
       throws KeeperException {
     RegionState regionState = null;
     try {
       byte[] data = ZKUtil.getData(zkw, zkw.getZNodePaths().getZNodeForReplica(replicaId));
-      regionState = ProtobufUtil.parseMetaRegionStateFrom(data, replicaId);
+      regionState = ProtobufUtil.parseRootRegionStateFrom(data, replicaId);
     } catch (DeserializationException e) {
       throw ZKUtil.convert(e);
     } catch (InterruptedException e) {
@@ -331,7 +331,7 @@ public final class MetaTableLocator {
     }
     for (int replicaId = 1; replicaId < numReplicasConfigured; replicaId++) {
       // return all replica locations for the meta
-      servers.add(getMetaRegionLocation(zkw, replicaId));
+      servers.add(getRootRegionLocation(zkw, replicaId));
     }
     return servers;
   }
@@ -369,7 +369,7 @@ public final class MetaTableLocator {
     long startTime = System.currentTimeMillis();
     ServerName sn = null;
     while (true) {
-      sn = getMetaRegionLocation(zkw, replicaId);
+      sn = getRootRegionLocation(zkw, replicaId);
       if (sn != null ||
         (System.currentTimeMillis() - startTime) > timeout - HConstants.SOCKET_RETRY_WAIT_MS) {
         break;

@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.security.access.SnapshotScannerHDFSAclHelper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -293,11 +294,14 @@ public class MasterFileSystem {
       bootstrap(rd, c);
     }
 
-    // Create tableinfo-s for hbase:meta if not already there.
+    // Create tableinfo-s for hbase:root if not already there.
     // assume, created table descriptor is for enabling table
     // meta table is a system table, so descriptors are predefined,
     // we should get them from registry.
     FSTableDescriptors fsd = new FSTableDescriptors(fs, rd);
+    fsd.createTableDescriptor(fsd.get(TableName.ROOT_TABLE_NAME));
+
+    fsd = new FSTableDescriptors(fs, rd);
     fsd.createTableDescriptor(fsd.get(TableName.META_TABLE_NAME));
 
     return rd;
@@ -397,17 +401,33 @@ public class MasterFileSystem {
 
   private static void bootstrap(final Path rd, final Configuration c)
   throws IOException {
-    LOG.info("BOOTSTRAP: creating hbase:meta region");
     try {
+      LOG.info("BOOTSTRAP: creating hbase:root region");
+      WALFactory walFactory = new WALFactory(c,"rootmetaboostrapfactoryid", false);
       // Bootstrapping, make sure blockcache is off.  Else, one will be
       // created here in bootstrap and it'll need to be cleaned up.  Better to
       // not make it in first place.  Turn off block caching for bootstrap.
       // Enable after.
-      FSTableDescriptors.tryUpdateMetaTableDescriptor(c);
+      TableDescriptor rootDescriptor = new FSTableDescriptors(c).get(TableName.ROOT_TABLE_NAME);
+      HRegion root = HRegion.createHRegion(RegionInfoBuilder.ROOT_REGIONINFO,
+        rd,
+        c,
+        setInfoFamilyCachingForMeta(rootDescriptor, false),
+        walFactory.getWAL(RegionInfoBuilder.ROOT_REGIONINFO));
+      root.close();
+
+      LOG.info("BOOTSTRAP: creating hbase:meta region");
+      // Bootstrapping, make sure blockcache is off.  Else, one will be
+      // created here in bootstrap and it'll need to be cleaned up.  Better to
+      // not make it in first place.  Turn off block caching for bootstrap.
+      // Enable after.
+      FSTableDescriptors.tryUpdateCatalogTableDescriptor(c);
       TableDescriptor metaDescriptor = new FSTableDescriptors(c).get(TableName.META_TABLE_NAME);
       HRegion meta = HRegion.createHRegion(RegionInfoBuilder.FIRST_META_REGIONINFO, rd,
           c, setInfoFamilyCachingForMeta(metaDescriptor, false), null);
       meta.close();
+
+      //We add the first region meta entry into root during InitMetaProcedure
     } catch (IOException e) {
         e = e instanceof RemoteException ?
                 ((RemoteException)e).unwrapRemoteException() : e;

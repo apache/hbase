@@ -121,7 +121,7 @@ import org.apache.hadoop.hbase.master.procedure.DeleteNamespaceProcedure;
 import org.apache.hadoop.hbase.master.procedure.DeleteTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.DisableTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.EnableTableProcedure;
-import org.apache.hadoop.hbase.master.procedure.InitMetaProcedure;
+import org.apache.hadoop.hbase.master.procedure.InitRootProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler;
@@ -359,7 +359,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   private volatile ServerManager serverManager;
 
   // manager of assignment nodes in zookeeper
-  private AssignmentManager assignmentManager;
+  public AssignmentManager assignmentManager;
 
 
   /**
@@ -1031,22 +1031,22 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
 
     // Checking if meta needs initializing.
-    status.setStatus("Initializing meta table if this is a new deploy");
-    InitMetaProcedure initMetaProc = null;
-    // Print out state of hbase:meta on startup; helps debugging.
-    RegionState rs = this.assignmentManager.getRegionStates().
-        getRegionState(RegionInfoBuilder.FIRST_META_REGIONINFO);
-    LOG.info("hbase:meta {}", rs);
-    if (rs != null && rs.isOffline()) {
-      Optional<InitMetaProcedure> optProc = procedureExecutor.getProcedures().stream()
-        .filter(p -> p instanceof InitMetaProcedure).map(o -> (InitMetaProcedure) o).findAny();
-      initMetaProc = optProc.orElseGet(() -> {
-        // schedule an init meta procedure if meta has not been deployed yet
-        InitMetaProcedure temp = new InitMetaProcedure();
-        procedureExecutor.submitProcedure(temp);
-        return temp;
+    status.setStatus("Initializing Catalog tables if this is a new deploy");
+    // Print out state of hbase:root on startup; helps debugging.
+    RegionState rootRS = this.assignmentManager.getRegionStates().
+      getRegionState(RegionInfoBuilder.ROOT_REGIONINFO);
+    LOG.info("hbase:root {}", rootRS);
+    InitRootProcedure initRootProc = procedureExecutor.getProcedures().stream()
+      .filter(p -> p instanceof InitRootProcedure && !p.isFinished())
+      .map(o -> (InitRootProcedure) o).findAny()
+      .orElseGet(() -> {
+        if (rootRS != null && rootRS.isOffline()) {
+          InitRootProcedure temp = new InitRootProcedure();
+          procedureExecutor.submitProcedure(temp);
+          return temp;
+        }
+        return null;
       });
-    }
 
     // initialize load balancer
     this.balancer.setMasterServices(this);
@@ -1056,9 +1056,9 @@ public class HMaster extends HRegionServer implements MasterServices {
     // start up all service threads.
     status.setStatus("Initializing master service threads");
     startServiceThreads();
-    // wait meta to be initialized after we start procedure executor
-    if (initMetaProc != null) {
-      initMetaProc.await();
+    // wait catalog tables to be initialized after we start procedure executor
+    if (initRootProc != null) {
+      initRootProc.await();
     }
     // Wake up this server to check in
     sleeper.skipSleepCycle();
@@ -1077,15 +1077,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
 
     status.setStatus("Starting assignment manager");
-    // FIRST HBASE:META READ!!!!
-    // The below cannot make progress w/o hbase:meta being online.
-    // This is the FIRST attempt at going to hbase:meta. Meta on-lining is going on in background
-    // as procedures run -- in particular SCPs for crashed servers... One should put up hbase:meta
-    // if it is down. It may take a while to come online. So, wait here until meta if for sure
-    // available. That's what waitForMetaOnline does.
-    if (!waitForMetaOnline()) {
-      return;
-    }
     this.assignmentManager.joinCluster();
     // The below depends on hbase:meta being online.
     this.tableStateManager.start();
@@ -1153,9 +1144,9 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
 
     assignmentManager.checkIfShouldMoveSystemRegionAsync();
-    status.setStatus("Assign meta replicas");
-    MasterMetaBootstrap metaBootstrap = createMetaBootstrap();
-    metaBootstrap.assignMetaReplicas();
+    status.setStatus("Assign catalog replicas");
+    MasterCatalogBootstrap catalogBootstrap = createCatalogBootstrap();
+    catalogBootstrap.assignCatalogReplicas();
     status.setStatus("Starting quota manager");
     initQuotaManager();
     if (QuotaUtil.isQuotaEnabled(conf)) {
@@ -1208,47 +1199,6 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   /**
-   * Check hbase:meta is up and ready for reading. For use during Master startup only.
-   * @return True if meta is UP and online and startup can progress. Otherwise, meta is not online
-   *   and we will hold here until operator intervention.
-   */
-  @VisibleForTesting
-  public boolean waitForMetaOnline() throws InterruptedException {
-    return isRegionOnline(RegionInfoBuilder.FIRST_META_REGIONINFO);
-  }
-
-  /**
-   * @return True if region is online and scannable else false if an error or shutdown (Otherwise
-   *   we just block in here holding up all forward-progess).
-   */
-  private boolean isRegionOnline(RegionInfo ri) throws InterruptedException {
-    RetryCounter rc = null;
-    while (!isStopped()) {
-      RegionState rs = this.assignmentManager.getRegionStates().getRegionState(ri);
-      if (rs.isOpened()) {
-        if (this.getServerManager().isServerOnline(rs.getServerName())) {
-          return true;
-        }
-      }
-      // Region is not OPEN.
-      Optional<Procedure<MasterProcedureEnv>> optProc = this.procedureExecutor.getProcedures().
-          stream().filter(p -> p instanceof ServerCrashProcedure).findAny();
-      // TODO: Add a page to refguide on how to do repair. Have this log message point to it.
-      // Page will talk about loss of edits, how to schedule at least the meta WAL recovery, and
-      // then how to assign including how to break region lock if one held.
-      LOG.warn("{} is NOT online; state={}; ServerCrashProcedures={}. Master startup cannot " +
-          "progress, in holding-pattern until region onlined.",
-          ri.getRegionNameAsString(), rs, optProc.isPresent());
-      // Check once-a-minute.
-      if (rc == null) {
-        rc = new RetryCounterFactory(1000).create();
-      }
-      Threads.sleep(rc.getBackoffTimeAndIncrementAttempts());
-    }
-    return false;
-  }
-
-  /**
    * Check hbase:namespace table is assigned. If not, startup will hang looking for the ns table
    * <p/>
    * This is for rolling upgrading, later we will migrate the data in ns table to the ns family of
@@ -1272,7 +1222,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
     // Else there are namespace regions up in meta. Ensure they are assigned before we go on.
     for (RegionInfo ri : ris) {
-      isRegionOnline(ri);
+      assignmentManager.isRegionOnline(ri);
     }
     return true;
   }
@@ -1315,10 +1265,10 @@ public class HMaster extends HRegionServer implements MasterServices {
    * </p>
    */
   @VisibleForTesting
-  protected MasterMetaBootstrap createMetaBootstrap() {
+  protected MasterCatalogBootstrap createCatalogBootstrap() {
     // We put this out here in a method so can do a Mockito.spy and stub it out
     // w/ a mocked up MasterMetaBootstrap.
-    return new MasterMetaBootstrap(this);
+    return new MasterCatalogBootstrap(this);
   }
 
   /**
@@ -2237,7 +2187,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       if (t instanceof NoClassDefFoundError && t.getMessage().
           contains("org/apache/hadoop/hdfs/protocol/HdfsConstants$SafeModeAction")) {
         // improved error message for this special case
-        abort("HBase is having a problem with its Hadoop jars.  You may need to recompile " +
+        abort("HBase is having a problem with its HadoopActive jars.  You may need to recompile " +
           "HBase against Hadoop version " + org.apache.hadoop.util.VersionInfo.getVersion() +
           " or change your hadoop jars to start properly", t);
       } else {

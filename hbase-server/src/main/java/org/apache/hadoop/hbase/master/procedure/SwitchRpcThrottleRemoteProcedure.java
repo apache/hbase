@@ -89,6 +89,10 @@ public class SwitchRpcThrottleRemoteProcedure extends ServerRemoteProcedure
     return targetServer;
   }
 
+  @Override public boolean hasRootTableRegion() {
+    return false;
+  }
+
   @Override
   public boolean hasMetaTableRegion() {
     return false;

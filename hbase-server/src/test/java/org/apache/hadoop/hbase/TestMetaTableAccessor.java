@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.ipc.CallRunner;
 import org.apache.hadoop.hbase.ipc.DelegatingRpcScheduler;
@@ -62,6 +63,7 @@ import org.apache.hadoop.hbase.regionserver.SimpleRpcSchedulerFactory;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Pair;
@@ -106,6 +108,8 @@ public class TestMetaTableAccessor {
     c.setLong("hbase.client.pause", 1000);
     c.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 10);
     connection = ConnectionFactory.createConnection(c);
+    LOG.info("-->FS dump");
+    CommonFSUtils.logFileSystemState(UTIL.getTestFileSystem(), UTIL.getDefaultRootDirPath(), LOG);
   }
 
   @AfterClass public static void afterClass() throws Exception {
@@ -182,7 +186,7 @@ public class TestMetaTableAccessor {
   @Test
   public void testIsMetaWhenAllHealthy() throws InterruptedException {
     HMaster m = UTIL.getMiniHBaseCluster().getMaster();
-    assertTrue(m.waitForMetaOnline());
+    assertTrue(m.assignmentManager.waitForMetaOnline());
   }
 
   @Test
@@ -191,7 +195,7 @@ public class TestMetaTableAccessor {
     int index = UTIL.getMiniHBaseCluster().getServerWithMeta();
     HRegionServer rsWithMeta = UTIL.getMiniHBaseCluster().getRegionServer(index);
     rsWithMeta.abort("TESTING");
-    assertTrue(m.waitForMetaOnline());
+    assertTrue(m.assignmentManager.waitForMetaOnline());
   }
 
   /**
@@ -251,6 +255,13 @@ public class TestMetaTableAccessor {
           startTime + timeOut < System.currentTimeMillis());
 
         if (index != -1){
+          ServerName rootServerName = UTIL.getMiniHBaseCluster().getRegionServer(index).getServerName();
+          UTIL.getAdmin().move(HRegionInfo.ROOT_REGIONINFO.getEncodedNameAsBytes(),
+            rootServerName.toString().getBytes());
+          while (!UTIL.getConnection().getRegionLocator(TableName.ROOT_TABLE_NAME)
+            .getAllRegionLocations().get(0).getServerName().equals(rootServerName)) {
+            Thread.sleep(100);
+          }
           UTIL.getMiniHBaseCluster().abortRegionServer(index);
           UTIL.getMiniHBaseCluster().waitOnRegionServer(index);
         }
@@ -999,6 +1010,21 @@ public class TestMetaTableAccessor {
     final Result result = MetaTableAccessor.scanByRegionEncodedName(UTIL.getConnection(),
       encodedName);
     assertNull(result);
+  }
+
+  @Test
+  public void scanUserTable() throws IOException {
+    Connection conn = UTIL.getConnection();
+    TableName tableName = TableName.valueOf("foo");
+    byte[] familyName = Bytes.toBytes("f");
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(new HColumnDescriptor(familyName));
+    conn.getAdmin().createTable(desc);
+    Table table = conn.getTable(tableName);
+    table.put(new Put(new byte[]{'r'}).addColumn(familyName, new byte[]{'q'}, new byte[]{'v'}));
+    for (Result res : table.getScanner(new Scan())) {
+      System.out.println("-->"+res);
+    }
   }
 }
 

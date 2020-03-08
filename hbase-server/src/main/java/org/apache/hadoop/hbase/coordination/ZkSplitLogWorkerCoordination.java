@@ -401,11 +401,21 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements
       Collections.shuffle(paths);
       // pick meta wal firstly
       int offset = 0;
+      int metaOffset = -1;
+      int rootOffset = -1;
       for (int i = 0; i < paths.size(); i++) {
-        if (AbstractFSWALProvider.isMetaFile(paths.get(i))) {
-          offset = i;
-          break;
+        if (AbstractFSWALProvider.isRootFile(paths.get(i))) {
+          offset = rootOffset;
         }
+        if (AbstractFSWALProvider.isMetaFile(paths.get(i))) {
+          offset = metaOffset;
+        }
+      }
+      if (rootOffset != -1) {
+        offset = rootOffset;
+      }
+      if (metaOffset != -1) {
+        offset = metaOffset;
       }
       int numTasks = paths.size();
       boolean taskGrabbed = false;

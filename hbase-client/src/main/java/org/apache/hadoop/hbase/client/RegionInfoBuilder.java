@@ -40,6 +40,28 @@ public class RegionInfoBuilder {
   public static final String NO_HASH = null;
 
   /**
+   * RegionInfo for first root region
+   * You cannot use this builder to make an instance of the {@link #ROOT_REGIONINFO}.
+   * Just refer to this instance. Also, while the instance is actually a MutableRI, its type is
+   * just RI so the mutable methods are not available (unless you go casting); it appears
+   * as immutable (I tried adding Immutable type but it just makes a mess).
+   *
+   * We are using the non-legacy encoding format to reduce the boilerplace code
+   */
+  // TODO: How come Root regions still do not have encoded region names? Fix.
+  public static final RegionInfo ROOT_REGIONINFO =
+    new MutableRegionInfo(TableName.ROOT_TABLE_NAME,
+      HConstants.EMPTY_START_ROW,
+      HConstants.EMPTY_END_ROW,
+      false,
+      0,
+      RegionInfo.DEFAULT_REPLICA_ID,
+      false,
+      RegionInfo.createRegionName(TableName.ROOT_TABLE_NAME, null, 0,
+        RegionInfo.DEFAULT_REPLICA_ID, true));
+
+
+  /**
    * RegionInfo for first meta region
    * You cannot use this builder to make an instance of the {@link #FIRST_META_REGIONINFO}.
    * Just refer to this instance. Also, while the instance is actually a MutableRI, its type is
@@ -349,14 +371,25 @@ public class RegionInfoBuilder {
       return firstKeyInRange && lastKeyInRange;
     }
 
+    @Override
+    public boolean containsRow(byte[] row) {
+      return containsRow(row, 0, (short)row.length);
+    }
+
     /**
      * Return true if the given row falls in this region.
      */
     @Override
-    public boolean containsRow(byte[] row) {
-      return Bytes.compareTo(row, startKey) >= 0 &&
-        (Bytes.compareTo(row, endKey) < 0 ||
+    public boolean containsRow(byte[] row, int offset, short length) {
+      return Bytes.compareTo(row, 0, row.length, startKey, 0, startKey.length) >= 0 &&
+        (Bytes.compareTo(row, 0, row.length, endKey, 0, endKey.length) < 0 ||
          Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY));
+    }
+
+    /** @return true if this region is a meta region */
+    @Override
+    public boolean isRootRegion() {
+      return tableName.equals(ROOT_REGIONINFO.getTable());
     }
 
     /** @return true if this region is a meta region */

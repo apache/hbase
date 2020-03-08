@@ -77,7 +77,7 @@ public class TestRegionStateStore {
     final RegionStateStore regionStateStore = UTIL.getHBaseCluster().getMaster().
       getAssignmentManager().getRegionStateStore();
     final AtomicBoolean visitorCalled = new AtomicBoolean(false);
-    regionStateStore.visitMetaForRegion(encodedName, new RegionStateStore.RegionStateVisitor() {
+    regionStateStore.visitCatalogForRegion(encodedName, new RegionStateStore.RegionStateVisitor() {
       @Override
       public void visitRegionState(Result result, RegionInfo regionInfo, RegionState.State state,
         ServerName regionLocation, ServerName lastHost, long openSeqNum) {
@@ -108,7 +108,7 @@ public class TestRegionStateStore {
     }
 
     final AtomicBoolean visitorCalled = new AtomicBoolean(false);
-    regionStateStore.visitMetaForRegion(encodedName, new RegionStateStore.RegionStateVisitor() {
+    regionStateStore.visitCatalogForRegion(encodedName, new RegionStateStore.RegionStateVisitor() {
       @Override
       public void visitRegionState(Result result, RegionInfo regionInfo,
                                    RegionState.State state, ServerName regionLocation,
@@ -127,7 +127,7 @@ public class TestRegionStateStore {
     final RegionStateStore regionStateStore = UTIL.getHBaseCluster().getMaster().
       getAssignmentManager().getRegionStateStore();
     final AtomicBoolean visitorCalled = new AtomicBoolean(false);
-    regionStateStore.visitMetaForRegion(encodedName, new RegionStateStore.RegionStateVisitor() {
+    regionStateStore.visitCatalogForRegion(encodedName, new RegionStateStore.RegionStateVisitor() {
       @Override
       public void visitRegionState(Result result, RegionInfo regionInfo, RegionState.State state,
         ServerName regionLocation, ServerName lastHost, long openSeqNum) {

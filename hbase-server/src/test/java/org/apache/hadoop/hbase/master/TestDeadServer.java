@@ -108,7 +108,7 @@ public class TestDeadServer {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     final ProcedureExecutor<MasterProcedureEnv> pExecutor = master.getMasterProcedureExecutor();
     ServerCrashProcedure proc = new ServerCrashProcedure(
-      pExecutor.getEnvironment(), hostname123, false, false);
+      pExecutor.getEnvironment(), hostname123, false, false, false);
 
     ProcedureTestingUtility.submitAndWait(pExecutor, proc);
 

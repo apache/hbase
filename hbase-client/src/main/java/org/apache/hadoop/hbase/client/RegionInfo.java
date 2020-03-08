@@ -224,6 +224,11 @@ public interface RegionInfo extends Comparable<RegionInfo> {
   /**
    * @return true if this region is a meta region.
    */
+  boolean isRootRegion();
+
+  /**
+   * @return true if this region is a meta region.
+   */
   boolean isMetaRegion();
 
   /**
@@ -239,6 +244,11 @@ public interface RegionInfo extends Comparable<RegionInfo> {
    * @return true if the given row falls in this region.
    */
   boolean containsRow(byte[] row);
+
+  /**
+   * @return true if the given row falls in this region.
+   */
+  boolean containsRow(byte[] row, int offset, short length);
 
   /**
    * Does region name contain its encoded name?

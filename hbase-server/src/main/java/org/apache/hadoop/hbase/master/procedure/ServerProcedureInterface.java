@@ -49,6 +49,11 @@ public interface ServerProcedureInterface {
   /**
    * @return True if this server has an hbase:meta table region.
    */
+  boolean hasRootTableRegion();
+
+  /**
+   * @return True if this server has an hbase:meta table region.
+   */
   boolean hasMetaTableRegion();
 
   /**

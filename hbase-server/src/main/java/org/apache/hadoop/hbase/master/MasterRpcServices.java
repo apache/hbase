@@ -1702,7 +1702,7 @@ public class MasterRpcServices extends RSRpcServices implements
         MetaTableAccessor.getRegion(master.getConnection(), regionName);
       if (Bytes.equals(RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName(), regionName)) {
         pair = new Pair<>(RegionInfoBuilder.FIRST_META_REGIONINFO,
-          MetaTableLocator.getMetaRegionLocation(master.getZooKeeper()));
+          MetaTableLocator.getRootRegionLocation(master.getZooKeeper()));
       }
       if (pair == null) {
         throw new UnknownRegionException(Bytes.toString(regionName));
@@ -2504,7 +2504,7 @@ public class MasterRpcServices extends RSRpcServices implements
     for(ClusterStatusProtos.RegionState s : request.getStatesList()) {
       try {
         RegionInfo info = this.master.getAssignmentManager().
-          loadRegionFromMeta(s.getRegionInfo().getRegionEncodedName());
+          loadRegionFromCatalog(s.getRegionInfo().getRegionEncodedName());
         LOG.trace("region info loaded from meta table: {}", info);
         RegionState prevState = this.master.getAssignmentManager().getRegionStates().
           getRegionState(info);
@@ -2518,7 +2518,7 @@ public class MasterRpcServices extends RSRpcServices implements
         putList.add(metaPut);
         MetaTableAccessor.putsToMetaTable(this.master.getConnection(), putList);
         //Loads from meta again to refresh AM cache with the new region state
-        this.master.getAssignmentManager().loadRegionFromMeta(info.getEncodedName());
+        this.master.getAssignmentManager().loadRegionFromCatalog(info.getEncodedName());
         builder.addStates(prevState.convert());
       } catch (Exception e) {
         throw new ServiceException(e);
@@ -2543,7 +2543,7 @@ public class MasterRpcServices extends RSRpcServices implements
         RegionState regionState = this.master.getAssignmentManager().getRegionStates().
             getRegionState(encodedRegionName);
         ri = regionState == null ?
-          this.master.getAssignmentManager().loadRegionFromMeta(encodedRegionName) :
+          this.master.getAssignmentManager().loadRegionFromCatalog(encodedRegionName) :
             regionState.getRegion();
         break;
       default:

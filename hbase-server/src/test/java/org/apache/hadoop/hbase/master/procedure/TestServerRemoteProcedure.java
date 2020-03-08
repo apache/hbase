@@ -218,6 +218,10 @@ public class TestServerRemoteProcedure {
       return targetServer;
     }
 
+    @Override public boolean hasRootTableRegion() {
+      return false;
+    }
+
     @Override
     public boolean hasMetaTableRegion() {
       return false;

@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.wal;
 
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
-
+import static org.apache.hadoop.hbase.TableName.ROOT_TABLE_NAME;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.HashMap;
@@ -80,6 +80,7 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
     Map<String, CellSet> familyCells = new HashMap<>();
     Map<String, Long> familySeqIds = new HashMap<>();
     boolean isMetaTable = buffer.tableName.equals(META_TABLE_NAME);
+    boolean isRootTable = buffer.tableName.equals(ROOT_TABLE_NAME);
     for (WAL.Entry entry : buffer.entryBuffer) {
       long seqId = entry.getKey().getSequenceId();
       List<Cell> cells = entry.getEdit().getCells();
@@ -93,7 +94,9 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
         familyCells
             .computeIfAbsent(familyName,
               key -> new CellSet(
-                  isMetaTable ? CellComparatorImpl.META_COMPARATOR : CellComparatorImpl.COMPARATOR))
+                isRootTable ? CellComparatorImpl.ROOT_COMPARATOR :
+                  (isMetaTable ? CellComparatorImpl.META_COMPARATOR :
+                    CellComparatorImpl.COMPARATOR)))
             .add(cell);
         familySeqIds.compute(familyName, (k, v) -> v == null ? seqId : Math.max(v, seqId));
       }
@@ -104,7 +107,7 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
     for (Map.Entry<String, CellSet> cellsEntry : familyCells.entrySet()) {
       String familyName = cellsEntry.getKey();
       StoreFileWriter writer = createRecoveredHFileWriter(buffer.tableName, regionName,
-        familySeqIds.get(familyName), familyName, isMetaTable);
+        familySeqIds.get(familyName), familyName, isRootTable, isMetaTable);
       openingWritersNum.incrementAndGet();
       try {
         for (Cell cell : cellsEntry.getValue()) {
@@ -187,7 +190,7 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
   }
 
   private StoreFileWriter createRecoveredHFileWriter(TableName tableName, String regionName,
-      long seqId, String familyName, boolean isMetaTable) throws IOException {
+      long seqId, String familyName, boolean isRootTable, boolean isMetaTable) throws IOException {
     Path outputDir = WALSplitUtil.tryCreateRecoveredHFilesDir(walSplitter.rootFS, walSplitter.conf,
       tableName, regionName, familyName);
     StoreFileWriter.Builder writerBuilder =
@@ -200,19 +203,20 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
       throw new IOException("Failed to get table descriptor for table " + tableName);
     }
     ColumnFamilyDescriptor cfd = tableDesc.getColumnFamily(Bytes.toBytesBinary(familyName));
-    HFileContext hFileContext = createFileContext(cfd, isMetaTable);
+    HFileContext hFileContext = createFileContext(cfd, isRootTable, isMetaTable);
     return writerBuilder.withFileContext(hFileContext).withBloomType(cfd.getBloomFilterType())
         .build();
   }
 
-  private HFileContext createFileContext(ColumnFamilyDescriptor cfd, boolean isMetaTable)
+  private HFileContext createFileContext(ColumnFamilyDescriptor cfd, boolean isRootTable, boolean isMetaTable)
       throws IOException {
     return new HFileContextBuilder().withCompression(cfd.getCompressionType())
         .withChecksumType(HStore.getChecksumType(walSplitter.conf))
         .withBytesPerCheckSum(HStore.getBytesPerChecksum(walSplitter.conf))
         .withBlockSize(cfd.getBlocksize()).withCompressTags(cfd.isCompressTags())
         .withDataBlockEncoding(cfd.getDataBlockEncoding()).withCellComparator(
-          isMetaTable ? CellComparatorImpl.META_COMPARATOR : CellComparatorImpl.COMPARATOR)
+          isRootTable ? CellComparatorImpl.ROOT_COMPARATOR :
+              (isMetaTable ? CellComparatorImpl.META_COMPARATOR : CellComparatorImpl.COMPARATOR))
         .build();
   }
 

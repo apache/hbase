@@ -109,6 +109,14 @@ public class KeyValue implements ExtendedCell, Cloneable {
   @Deprecated
   public static final KVComparator META_COMPARATOR = new MetaComparator();
 
+  /**
+   * A {@link KVComparator} for <code>hbase:root</code> catalog table
+   * {@link KeyValue}s.
+   * @deprecated Use {@link CellComparatorImpl#ROOT_COMPARATOR} instead. Deprecated for hbase 2.0, remove for hbase 3.0.
+   */
+  @Deprecated
+  public static final KVComparator ROOT_COMPARATOR = new RootComparator();
+
   /** Size of the key length field in bytes*/
   public static final int KEY_LENGTH_SIZE = Bytes.SIZEOF_INT;
 
@@ -1602,6 +1610,78 @@ public class KeyValue implements ExtendedCell, Cloneable {
     }
     return result;
   }
+
+  /**
+   * A {@link KVComparator} for <code>-ROOT-</code> catalog table
+   * {@link KeyValue}s.
+   * @deprecated : {@link CellComparatorImpl#ROOT_COMPARATOR} to be used. Deprecated for hbase 2.0, remove for hbase 3.0.
+   */
+  @Deprecated
+  public static class RootComparator extends MetaComparator {
+    public int compareRows(byte [] left, int loffset, int llength,
+      byte [] right, int roffset, int rlength) {
+      // Rows look like this: .META.,ROW_FROM_META,RID
+      //        LOG.info("ROOT " + Bytes.toString(left, loffset, llength) +
+      //          "---" + Bytes.toString(right, roffset, rlength));
+      final int metalength = TableName.META_TABLE_NAME.getName().length+1; // '.META.' length
+      int lmetaOffsetPlusDelimiter = loffset + metalength;
+      int leftFarDelimiter = getDelimiterInReverse(left,
+        lmetaOffsetPlusDelimiter,
+        llength - metalength, HConstants.DELIMITER);
+      int rmetaOffsetPlusDelimiter = roffset + metalength;
+      int rightFarDelimiter = getDelimiterInReverse(right,
+        rmetaOffsetPlusDelimiter, rlength - metalength,
+        HConstants.DELIMITER);
+      if (leftFarDelimiter < 0 && rightFarDelimiter >= 0) {
+        // Nothing between .META. and regionid.  Its first key.
+        return -1;
+      } else if (rightFarDelimiter < 0 && leftFarDelimiter >= 0) {
+        return 1;
+      } else if (leftFarDelimiter < 0 && rightFarDelimiter < 0) {
+        return 0;
+      }
+      int result = super.compareRows(left, lmetaOffsetPlusDelimiter,
+        leftFarDelimiter - lmetaOffsetPlusDelimiter,
+        right, rmetaOffsetPlusDelimiter,
+        rightFarDelimiter - rmetaOffsetPlusDelimiter);
+      if (result != 0) {
+        return result;
+      }
+      // Compare last part of row, the rowid.
+      leftFarDelimiter++;
+      rightFarDelimiter++;
+      result =  Bytes.compareTo(left, leftFarDelimiter,
+        llength - (leftFarDelimiter - loffset),
+        right, rightFarDelimiter, rlength - (rightFarDelimiter - roffset));
+      return result;
+    }
+
+    /**
+     * The HFileV2 file format's trailer contains this class name.  We reinterpret this and
+     * instantiate the appropriate comparator.
+     * TODO: With V3 consider removing this.
+     * @return legacy class name for FileFileTrailer#comparatorClassName
+     */
+    @Override
+    public String getLegacyKeyComparatorName() {
+      return "org.apache.hadoop.hbase.KeyValue$RootKeyComparator";
+    }
+
+    /**
+     * Compare key portion of a {@link KeyValue} for keys in <code>hbase:meta</code>
+     * table.
+     */
+    @Override
+    public int compare(final Cell left, final Cell right) {
+      return PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.ROOT_COMPARATOR, left, right);
+    }
+
+    @Override
+    protected Object clone() throws CloneNotSupportedException {
+      return new RootComparator();
+    }
+  }
+
 
   /**
    * A {@link KVComparator} for <code>hbase:meta</code> catalog table

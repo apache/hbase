@@ -3188,7 +3188,7 @@ public final class ProtobufUtil {
    * @return RegionState instance corresponding to the serialized data.
    * @throws DeserializationException if the data is invalid.
    */
-  public static RegionState parseMetaRegionStateFrom(final byte[] data, int replicaId)
+  public static RegionState parseRootRegionStateFrom(final byte[] data, int replicaId)
       throws DeserializationException {
     RegionState.State state = RegionState.State.OPEN;
     ServerName serverName;
@@ -3215,7 +3215,7 @@ public final class ProtobufUtil {
       state = RegionState.State.OFFLINE;
     }
     return new RegionState(RegionReplicaUtil.getRegionInfoForReplica(
-        RegionInfoBuilder.FIRST_META_REGIONINFO, replicaId), state, serverName);
+        RegionInfoBuilder.ROOT_REGIONINFO, replicaId), state, serverName);
   }
 
   /**

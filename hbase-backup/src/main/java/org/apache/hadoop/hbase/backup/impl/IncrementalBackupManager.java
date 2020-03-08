@@ -288,9 +288,9 @@ public class IncrementalBackupManager extends BackupManager {
       }
       for (FileStatus log : logs) {
         LOG.debug("currentLogFile: " + log.getPath().toString());
-        if (AbstractFSWALProvider.isMetaFile(log.getPath())) {
+        if (AbstractFSWALProvider.isCatalogFile(log.getPath())) {
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Skip hbase:meta log file: " + log.getPath().getName());
+            LOG.debug("Skip hbase:root/hbase:meta log file: " + log.getPath().getName());
           }
           continue;
         }
@@ -321,7 +321,7 @@ public class IncrementalBackupManager extends BackupManager {
     for (FileStatus oldlog : oldlogs) {
       p = oldlog.getPath();
       currentLogFile = p.toString();
-      if (AbstractFSWALProvider.isMetaFile(p)) {
+      if (AbstractFSWALProvider.isCatalogFile(p)) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Skip .meta log file: " + currentLogFile);
         }
@@ -377,9 +377,9 @@ public class IncrementalBackupManager extends BackupManager {
     @Override
     public boolean accept(Path path) {
       // skip meta table log -- ts.meta file
-      if (AbstractFSWALProvider.isMetaFile(path)) {
+      if (AbstractFSWALProvider.isCatalogFile(path)) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Skip .meta log file: " + path.getName());
+          LOG.debug("Skip .root/.meta log file: " + path.getName());
         }
         return false;
       }

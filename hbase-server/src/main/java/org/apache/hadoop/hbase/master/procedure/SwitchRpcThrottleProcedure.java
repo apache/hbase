@@ -142,6 +142,10 @@ public class SwitchRpcThrottleProcedure
     return serverName;
   }
 
+  @Override public boolean hasRootTableRegion() {
+    return false;
+  }
+
   @Override
   public boolean hasMetaTableRegion() {
     return false;

@@ -157,7 +157,7 @@ public class TestBackupLogCleaner extends TestBackupBase {
     List<FileStatus> logFiles = new ArrayList<FileStatus>();
     while (it.hasNext()) {
       LocatedFileStatus lfs = it.next();
-      if (lfs.isFile() && !AbstractFSWALProvider.isMetaFile(lfs.getPath())) {
+      if (lfs.isFile() && !AbstractFSWALProvider.isCatalogFile(lfs.getPath())) {
         logFiles.add(lfs);
         LOG.info(Objects.toString(lfs));
       }

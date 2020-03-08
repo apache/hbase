@@ -184,6 +184,12 @@ public class HRegionInfo implements RegionInfo {
   public final static byte[] HIDDEN_END_KEY = RegionInfoDisplay.HIDDEN_END_KEY;
   public final static byte[] HIDDEN_START_KEY = RegionInfoDisplay.HIDDEN_START_KEY;
 
+  /** HRegionInfo for root region, we're using the new encoded format
+   *  to try and reduce the amount of boilerplate code need to support the legacy format */
+  public static final HRegionInfo ROOT_REGIONINFO =
+    new HRegionInfo(TableName.ROOT_TABLE_NAME, HConstants.EMPTY_START_ROW,
+      HConstants.EMPTY_END_ROW, false, 0);
+
   /** HRegionInfo for first meta region */
   // TODO: How come Meta regions still do not have encoded region names? Fix.
   public static final HRegionInfo FIRST_META_REGIONINFO =
@@ -581,8 +587,16 @@ public class HRegionInfo implements RegionInfo {
    */
   @Override
   public boolean containsRow(byte[] row) {
-    return Bytes.compareTo(row, startKey) >= 0 &&
-      (Bytes.compareTo(row, endKey) < 0 ||
+    return containsRow(row, 0, (short)row.length);
+  }
+
+  /**
+   * @return true if the given row falls in this region.
+   */
+  @Override
+  public boolean containsRow(byte[] row, int offset, short length) {
+    return Bytes.compareTo(row, offset, length, startKey, 0, startKey.length) >= 0 &&
+      (Bytes.compareTo(row, offset, length, endKey, 0, endKey.length) < 0 ||
        Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY));
   }
 
@@ -591,6 +605,14 @@ public class HRegionInfo implements RegionInfo {
    */
   public boolean isMetaTable() {
     return isMetaRegion();
+  }
+
+  /**
+   * @return true if this region is a meta region
+   */
+  @Override
+  public boolean isRootRegion() {
+    return tableName.equals(HRegionInfo.ROOT_REGIONINFO.getTable());
   }
 
   /**
@@ -707,8 +729,13 @@ public class HRegionInfo implements RegionInfo {
    */
   @Deprecated
   public KVComparator getComparator() {
-    return isMetaRegion()?
-        KeyValue.META_COMPARATOR: KeyValue.COMPARATOR;
+    if (isRootRegion()) {
+      return KeyValue.ROOT_COMPARATOR;
+    }
+    if (isMetaRegion()) {
+      return KeyValue.META_COMPARATOR;
+    }
+    return KeyValue.COMPARATOR;
   }
 
   /**

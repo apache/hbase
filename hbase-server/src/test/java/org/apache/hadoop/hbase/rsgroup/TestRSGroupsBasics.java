@@ -87,8 +87,8 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
     int count = MASTER.getAssignmentManager().getRegionStates().getRegionAssignments().size();
     LOG.info("regions assignments are" +
       MASTER.getAssignmentManager().getRegionStates().getRegionAssignments().toString());
-    // 2 (meta and rsgroup)
-    assertEquals(2, count);
+    // 3 (root, meta and rsgroup)
+    assertEquals(3, count);
   }
 
   @Test

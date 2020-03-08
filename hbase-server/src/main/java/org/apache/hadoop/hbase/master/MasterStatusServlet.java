@@ -80,7 +80,7 @@ public class MasterStatusServlet extends HttpServlet {
   }
 
   private ServerName getMetaLocationOrNull(HMaster master) {
-    return MetaTableLocator.getMetaRegionLocation(master.getZooKeeper());
+    return MetaTableLocator.getRootRegionLocation(master.getZooKeeper());
   }
 
   private Map<String, Integer> getFragmentationInfo(

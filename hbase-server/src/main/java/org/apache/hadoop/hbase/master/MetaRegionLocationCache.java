@@ -149,7 +149,7 @@ public class MetaRegionLocationCache extends ZKListener {
     try {
       byte[] data = ZKUtil.getDataAndWatch(watcher,
           watcher.getZNodePaths().getZNodeForReplica(replicaId));
-      metaRegionState = ProtobufUtil.parseMetaRegionStateFrom(data, replicaId);
+      metaRegionState = ProtobufUtil.parseRootRegionStateFrom(data, replicaId);
     } catch (DeserializationException e) {
       throw ZKUtil.convert(e);
     }

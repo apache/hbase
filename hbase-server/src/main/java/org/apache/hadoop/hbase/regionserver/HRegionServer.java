@@ -726,7 +726,7 @@ public class HRegionServer extends HasThread implements
     this.tableDescriptors =
         new FSTableDescriptors(this.dataFs, this.dataRootDir, !canUpdateTableDescriptor(), false);
     if (this instanceof HMaster) {
-      FSTableDescriptors.tryUpdateMetaTableDescriptor(this.conf, this.dataFs, this.dataRootDir,
+      FSTableDescriptors.tryUpdateCatalogTableDescriptor(this.conf, this.dataFs, this.dataRootDir,
         builder -> builder.setRegionReplication(
           conf.getInt(HConstants.META_REPLICAS_NUM, HConstants.DEFAULT_META_REPLICA_NUM)));
     }
