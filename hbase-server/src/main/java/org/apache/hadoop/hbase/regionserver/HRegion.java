@@ -5431,7 +5431,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   private long loadRecoveredHFilesIfAny(Collection<HStore> stores) throws IOException {
-    Path regionDir = getWALRegionDir();
+    Path regionDir = fs.getRegionDir();
     long maxSeqId = -1;
     for (HStore store : stores) {
       String familyName = store.getColumnFamilyName();
@@ -5444,17 +5444,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           if (isZeroLengthThenDelete(fs.getFileSystem(), file, filePath)) {
             continue;
           }
-
           try {
-            store.assertBulkLoadHFileOk(filePath);
+            HStoreFile storefile = store.tryCommitRecoveredHFile(file.getPath());
+            maxSeqId = Math.max(maxSeqId, storefile.getReader().getSequenceID());
           } catch (IOException e) {
             handleException(fs.getFileSystem(), filePath, e);
             continue;
           }
-          Pair<Path, Path> pair = store.preBulkLoadHFile(filePath.toString(), -1);
-          store.bulkLoadHFile(Bytes.toBytes(familyName), pair.getFirst().toString(),
-            pair.getSecond());
-          maxSeqId = Math.max(maxSeqId, WALSplitUtil.getSeqIdForRecoveredHFile(filePath.getName()));
         }
         if (this.rsServices != null && store.needsCompaction()) {
           this.rsServices.getCompactionRequestor()

@@ -30,7 +30,9 @@ import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -249,6 +251,92 @@ public class TestWALSplitToHFile {
       assertNotNull(files);
       assertEquals(1, files.length);
       assertTrue(files[0].getPath().getName().contains("corrupt"));
+    }
+  }
+
+  @Test
+  public void testPutWithSameTimestamp() throws Exception {
+    Pair<TableDescriptor, RegionInfo> pair = setupTableAndRegion();
+    TableDescriptor td = pair.getFirst();
+    RegionInfo ri = pair.getSecond();
+
+    WAL wal = createWAL(this.conf, rootDir, logName);
+    HRegion region = HRegion.openHRegion(this.conf, this.fs, rootDir, ri, td, wal);
+    final long timestamp = this.ee.currentTime();
+    // Write data and flush
+    for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
+      region.put(new Put(ROW).addColumn(cfd.getName(), Bytes.toBytes("x"), timestamp, VALUE1));
+    }
+    region.flush(true);
+
+    // Now assert edits made it in.
+    Result result1 = region.get(new Get(ROW));
+    assertEquals(td.getColumnFamilies().length, result1.size());
+    for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
+      assertTrue(Bytes.equals(VALUE1, result1.getValue(cfd.getName(), Bytes.toBytes("x"))));
+    }
+
+    // Write data with same timestamp and do not flush
+    for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
+      region.put(new Put(ROW).addColumn(cfd.getName(), Bytes.toBytes("x"), timestamp, VALUE2));
+    }
+    // Now close the region (without flush)
+    region.close(true);
+    wal.shutdown();
+    // split the log
+    WALSplitter.split(rootDir, logDir, oldLogDir, FileSystem.get(this.conf), this.conf, wals);
+
+    // reopen the region
+    WAL wal2 = createWAL(this.conf, rootDir, logName);
+    HRegion region2 = HRegion.openHRegion(conf, this.fs, rootDir, ri, td, wal2);
+    Result result2 = region2.get(new Get(ROW));
+    assertEquals(td.getColumnFamilies().length, result2.size());
+    for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
+      assertTrue(Bytes.equals(VALUE2, result2.getValue(cfd.getName(), Bytes.toBytes("x"))));
+    }
+  }
+
+  @Test
+  public void testRecoverSequenceId() throws Exception {
+    Pair<TableDescriptor, RegionInfo> pair = setupTableAndRegion();
+    TableDescriptor td = pair.getFirst();
+    RegionInfo ri = pair.getSecond();
+
+    WAL wal = createWAL(this.conf, rootDir, logName);
+    HRegion region = HRegion.openHRegion(this.conf, this.fs, rootDir, ri, td, wal);
+    Map<Integer, Map<String, Long>> seqIdMap = new HashMap<>();
+    // Write data and do not flush
+    for (int i = 0; i < countPerFamily; i++) {
+      for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
+        region.put(new Put(Bytes.toBytes(i)).addColumn(cfd.getName(), Bytes.toBytes("x"), VALUE1));
+        Result result = region.get(new Get(Bytes.toBytes(i)).addFamily(cfd.getName()));
+        assertTrue(Bytes.equals(VALUE1, result.getValue(cfd.getName(), Bytes.toBytes("x"))));
+        List<Cell> cells = result.listCells();
+        assertEquals(1, cells.size());
+        seqIdMap.computeIfAbsent(i, r -> new HashMap<>()).put(cfd.getNameAsString(),
+          cells.get(0).getSequenceId());
+      }
+    }
+
+    // Now close the region (without flush)
+    region.close(true);
+    wal.shutdown();
+    // split the log
+    WALSplitter.split(rootDir, logDir, oldLogDir, FileSystem.get(this.conf), this.conf, wals);
+
+    // reopen the region
+    WAL wal2 = createWAL(this.conf, rootDir, logName);
+    HRegion region2 = HRegion.openHRegion(conf, this.fs, rootDir, ri, td, wal2);
+    // assert the seqid was recovered
+    for (int i = 0; i < countPerFamily; i++) {
+      for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
+        Result result = region2.get(new Get(Bytes.toBytes(i)).addFamily(cfd.getName()));
+        assertTrue(Bytes.equals(VALUE1, result.getValue(cfd.getName(), Bytes.toBytes("x"))));
+        List<Cell> cells = result.listCells();
+        assertEquals(1, cells.size());
+        assertEquals((long) seqIdMap.get(i).get(cfd.getNameAsString()),
+          cells.get(0).getSequenceId());
+      }
     }
   }
 
