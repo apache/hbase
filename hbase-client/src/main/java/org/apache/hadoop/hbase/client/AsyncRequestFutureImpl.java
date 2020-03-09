@@ -53,7 +53,6 @@ import org.apache.htrace.core.Tracer;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -99,7 +98,9 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
           return;
         }
       }
-      if (done) return; // Done within primary timeout
+      if (done) {
+        return; // Done within primary timeout
+      }
       Map<ServerName, MultiAction> actionsByServer = new HashMap<>();
       List<Action> unknownLocActions = new ArrayList<>();
       if (replicaGetIndices == null) {
@@ -133,10 +134,14 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
      */
     private void addReplicaActions(int index, Map<ServerName, MultiAction> actionsByServer,
                                    List<Action> unknownReplicaActions) {
-      if (results[index] != null) return; // opportunistic. Never goes from non-null to null.
+      if (results[index] != null) {
+        return; // opportunistic. Never goes from non-null to null.
+      }
       Action action = initialActions.get(index);
       RegionLocations loc = findAllLocationsOrFail(action, true);
-      if (loc == null) return;
+      if (loc == null) {
+        return;
+      }
       HRegionLocation[] locs = loc.getRegionLocations();
       if (locs.length == 1) {
         LOG.warn("No replicas found for {}", action.getAction());
@@ -146,7 +151,9 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
         // Don't run replica calls if the original has finished. We could do it e.g. if
         // original has already failed before first replica call (unlikely given retries),
         // but that would require additional synchronization w.r.t. returning to caller.
-        if (results[index] != null) return;
+        if (results[index] != null) {
+          return;
+        }
         // We set the number of calls here. After that any path must call setResult/setError.
         // True even for replicas that are not found - if we refuse to send we MUST set error.
         updateResult(index, new ReplicaResultState(locs.length));
@@ -168,7 +175,9 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
         throw new AssertionError("Cannot have default replica here");
       }
       HRegionLocation loc = getReplicaLocationOrFail(action);
-      if (loc == null) return;
+      if (loc == null) {
+        return;
+      }
       asyncProcess.addAction(loc.getServerName(), loc.getRegionInfo().getRegionName(),
           action, actionsByServer, nonceGroup);
     }
@@ -400,7 +409,8 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
   }
 
   @VisibleForTesting
-  SingleServerRequestRunnable createSingleServerRequest(MultiAction multiAction, int numAttempt, ServerName server,
+  SingleServerRequestRunnable createSingleServerRequest(
+    MultiAction multiAction, int numAttempt, ServerName server,
         Set<CancellableRegionServerCallable> callsInProgress) {
     return new SingleServerRequestRunnable(multiAction, numAttempt, server, callsInProgress);
   }
@@ -418,7 +428,9 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     List<Action> unknownReplicaActions = null;
     for (Action action : currentActions) {
       RegionLocations locs = findAllLocationsOrFail(action, true);
-      if (locs == null) continue;
+      if (locs == null) {
+        continue;
+      }
       boolean isReplicaAction = !RegionReplicaUtil.isDefaultReplica(action.getReplicaId());
       if (isReplica && !isReplicaAction) {
         // This is the property of the current implementation, not a requirement.
@@ -438,7 +450,8 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
         }
       } else {
         byte[] regionName = loc.getRegionInfo().getRegionName();
-        AsyncProcess.addAction(loc.getServerName(), regionName, action, actionsByServer, nonceGroup);
+        AsyncProcess.addAction(
+          loc.getServerName(), regionName, action, actionsByServer, nonceGroup);
       }
     }
     boolean doStartReplica = (numAttempt == 1 && !isReplica && hasAnyReplicaGets);
@@ -454,9 +467,12 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
       actionsByServer = new HashMap<>();
       for (Action action : unknownReplicaActions) {
         HRegionLocation loc = getReplicaLocationOrFail(action);
-        if (loc == null) continue;
+        if (loc == null) {
+          continue;
+        }
         byte[] regionName = loc.getRegionInfo().getRegionName();
-        AsyncProcess.addAction(loc.getServerName(), regionName, action, actionsByServer, nonceGroup);
+        AsyncProcess.addAction(
+          loc.getServerName(), regionName, action, actionsByServer, nonceGroup);
       }
       if (!actionsByServer.isEmpty()) {
         sendMultiAction(
@@ -470,11 +486,15 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     // from cache, because the previous calls in the loop might populate it.
     int replicaId = action.getReplicaId();
     RegionLocations locs = findAllLocationsOrFail(action, true);
-    if (locs == null) return null; // manageError already called
+    if (locs == null) {
+      return null; // manageError already called
+    }
     HRegionLocation loc = locs.getRegionLocation(replicaId);
     if (loc == null || loc.getServerName() == null) {
       locs = findAllLocationsOrFail(action, false);
-      if (locs == null) return null; // manageError already called
+      if (locs == null) {
+        return null; // manageError already called
+      }
       loc = locs.getRegionLocation(replicaId);
     }
     if (loc == null || loc.getServerName() == null) {
@@ -496,8 +516,10 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
   }
 
   private RegionLocations findAllLocationsOrFail(Action action, boolean useCache) {
-    if (action.getAction() == null) throw new IllegalArgumentException("#" + asyncProcess.id +
+    if (action.getAction() == null) {
+      throw new IllegalArgumentException("#" + asyncProcess.id +
         ", row cannot be null");
+    }
     RegionLocations loc = null;
     try {
       loc = asyncProcess.connection.locateRegion(
@@ -517,7 +539,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
    * @param actionsForReplicaThread original actions for replica thread; null on non-first call.
    */
   void sendMultiAction(Map<ServerName, MultiAction> actionsByServer,
-                               int numAttempt, List<Action> actionsForReplicaThread, boolean reuseThread) {
+    int numAttempt, List<Action> actionsForReplicaThread, boolean reuseThread) {
     // Run the last item on the same thread if we are already on a send thread.
     // We hope most of the time it will be the only item, so we can cut down on threads.
     int actionsRemaining = actionsByServer.size();
@@ -534,8 +556,9 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
       }
 
       // run all the runnables
-      // HBASE-17475: Do not reuse the thread after stack reach a certain depth to prevent stack overflow
-      // for now, we use HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER to control the depth
+      // HBASE-17475: Do not reuse the thread after stack reach a certain depth to prevent
+      // stack overflow for now, we use HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER to
+      // control the depth
       for (Runnable runnable : runnables) {
         if ((--actionsRemaining == 0) && reuseThread
             && numAttempt % HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER != 0) {
@@ -605,7 +628,8 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     for (DelayingRunner runner : actions.values()) {
       asyncProcess.incTaskCounters(runner.getActions().getRegions(), server);
       String traceText = "AsyncProcess.sendMultiAction";
-      Runnable runnable = createSingleServerRequest(runner.getActions(), numAttempt, server, callsInProgress);
+      Runnable runnable = createSingleServerRequest(
+        runner.getActions(), numAttempt, server, callsInProgress);
       // use a delay runner only if we need to sleep for some time
       if (runner.getSleepTime() > 0) {
         runner.setRunner(runnable);
@@ -631,7 +655,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
    * @param server server location where the target region is hosted
    * @param regionName name of the region which we are going to write some data
    * @return the amount of time the client should wait until it submit a request to the
-   * specified server and region
+   *   specified server and region
    */
   private Long getBackoff(ServerName server, byte[] regionName) {
     ServerStatisticTracker tracker = asyncProcess.connection.getStatisticsTracker();
@@ -747,9 +771,9 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     // It should be possible to have some heuristics to take the right decision. Short term,
     //  we go for one.
     boolean retryImmediately = throwable instanceof RetryImmediatelyException;
-    int nextAttemptNumber = retryImmediately ? numAttempt : numAttempt + 1;
+    int nextAttemptNumber = numAttempt + 1;
     long backOffTime;
-    if (retryImmediately) {
+    if (retryImmediately && nextAttemptNumber <= 3) {
       backOffTime = 0;
     } else if (throwable instanceof CallQueueTooBigException) {
       // Give a special check on CQTBE, see #HBASE-17114
@@ -769,7 +793,8 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
         Thread.sleep(backOffTime);
       }
     } catch (InterruptedException e) {
-      LOG.warn("#" + asyncProcess.id + ", not sent: " + toReplay.size() + " operations, " + oldServer, e);
+      LOG.warn("#" + asyncProcess.id + ", not sent: " + toReplay.size()
+        + " operations, " + oldServer, e);
       Thread.currentThread().interrupt();
       return;
     }
@@ -1067,7 +1092,9 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
    * @param row Original request.
    */
   private boolean isActionComplete(int index, Row row) {
-    if (!AsyncProcess.isReplicaGet(row)) return false;
+    if (!AsyncProcess.isReplicaGet(row)) {
+      return false;
+    }
     Object resObj = results[index];
     return (resObj != null) && (!(resObj instanceof ReplicaResultState)
         || ((ReplicaResultState)resObj).callCount == 0);
@@ -1077,8 +1104,8 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
    * Tries to set the result or error for a particular action as if there were no replica calls.
    * @return null if successful; replica state if there were in fact replica calls.
    */
-  private ReplicaResultState trySetResultSimple(int index, Row row, boolean isError,
-                                                Object result, ServerName server, boolean isFromReplica) {
+  private ReplicaResultState trySetResultSimple(
+    int index, Row row, boolean isError, Object result, ServerName server, boolean isFromReplica) {
     Object resObj = null;
     if (!AsyncProcess.isReplicaGet(row)) {
       if (isFromReplica) {
@@ -1177,7 +1204,9 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
         }
       }
       synchronized (actionsInProgress) {
-        if (actionsInProgress.get() == 0) break;
+        if (actionsInProgress.get() == 0) {
+          break;
+        }
         if (!hasWait) {
           actionsInProgress.wait(10);
         } else {
