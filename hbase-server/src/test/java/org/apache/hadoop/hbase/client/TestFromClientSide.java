@@ -5316,8 +5316,9 @@ public class TestFromClientSide {
     // flush, one new block
     System.out.println("Flushing cache");
     region.flush(true);
-    // + 1 for Index Block
-    assertEquals(++expectedBlockCount + 1, cache.getBlockCount());
+    // + 1 for Index Block, +1 for data block
+    expectedBlockCount += 2;
+    assertEquals(expectedBlockCount, cache.getBlockCount());
     assertEquals(expectedBlockHits, cache.getStats().getHitCount());
     assertEquals(expectedBlockMiss, cache.getStats().getMissCount());
     // compact, net minus two blocks, two hits, no misses
@@ -5327,7 +5328,8 @@ public class TestFromClientSide {
     region.compact(true);
     waitForStoreFileCount(store, 1, 10000); // wait 10 seconds max
     assertEquals(1, store.getStorefilesCount());
-    expectedBlockCount -= 2; // evicted two blocks, cached none
+    // evicted two data blocks and two index blocks and compaction does not cache new blocks
+    expectedBlockCount = 0;
     assertEquals(expectedBlockCount, cache.getBlockCount());
     expectedBlockHits += 2;
     assertEquals(expectedBlockMiss, cache.getStats().getMissCount());
