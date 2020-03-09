@@ -24,8 +24,11 @@ import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Immutable POJO class for representing a table name.
@@ -146,9 +149,7 @@ public final class TableName implements Comparable<TableName> {
       throw new IllegalArgumentException("Name is null or empty");
     }
 
-    int namespaceDelimIndex =
-      org.apache.hbase.thirdparty.com.google.common.primitives.Bytes.lastIndexOf(tableName,
-        (byte) NAMESPACE_DELIM);
+    int namespaceDelimIndex = ArrayUtils.lastIndexOf(tableName, (byte) NAMESPACE_DELIM);
     if (namespaceDelimIndex < 0){
       isLegalTableQualifierName(tableName);
     } else {
@@ -433,33 +434,73 @@ public final class TableName implements Comparable<TableName> {
 
 
   /**
+   * @param fullName will use the entire byte array
    * @throws IllegalArgumentException if fullName equals old root or old meta. Some code
    *  depends on this. The test is buried in the table creation to save on array comparison
    *  when we're creating a standard table object that will be in the cache.
    */
   public static TableName valueOf(byte[] fullName) throws IllegalArgumentException{
+    return valueOf(fullName, 0, fullName.length);
+  }
+
+  /**
+   * @param fullName byte array to look into
+   * @param offset within said array
+   * @param length within said array
+   * @throws IllegalArgumentException if fullName equals old root or old meta.
+   */
+  public static TableName valueOf(byte[] fullName, int offset, int length)
+      throws IllegalArgumentException {
+    Preconditions.checkArgument(offset >= 0, "offset must be non-negative but was %s", offset);
+    Preconditions.checkArgument(offset < fullName.length, "offset (%s) must be < array length (%s)",
+        offset, fullName.length);
+    Preconditions.checkArgument(length <= fullName.length,
+        "length (%s) must be <= array length (%s)", length, fullName.length);
     for (TableName tn : tableCache) {
-      if (Arrays.equals(tn.getName(), fullName)) {
+      final byte[] tnName = tn.getName();
+      if (Bytes.equals(tnName, 0, tnName.length, fullName, offset, length)) {
         return tn;
       }
     }
 
-    int namespaceDelimIndex =
-      org.apache.hbase.thirdparty.com.google.common.primitives.Bytes.lastIndexOf(fullName,
-        (byte) NAMESPACE_DELIM);
+    int namespaceDelimIndex = ArrayUtils.lastIndexOf(fullName, (byte) NAMESPACE_DELIM,
+        offset + length - 1);
 
-    if (namespaceDelimIndex < 0) {
+    if (namespaceDelimIndex < offset) {
       return createTableNameIfNecessary(
           ByteBuffer.wrap(NamespaceDescriptor.DEFAULT_NAMESPACE_NAME),
-          ByteBuffer.wrap(fullName));
+          ByteBuffer.wrap(fullName, offset, length));
     } else {
       return createTableNameIfNecessary(
-          ByteBuffer.wrap(fullName, 0, namespaceDelimIndex),
-          ByteBuffer.wrap(fullName, namespaceDelimIndex + 1,
-              fullName.length - (namespaceDelimIndex + 1)));
+          ByteBuffer.wrap(fullName, offset, namespaceDelimIndex),
+          ByteBuffer.wrap(fullName, namespaceDelimIndex + 1, length - (namespaceDelimIndex + 1)));
     }
   }
 
+  /**
+   * @param fullname of a table, possibly with a leading namespace and ':' as delimiter.
+   * @throws IllegalArgumentException if fullName equals old root or old meta.
+   */
+  public static TableName valueOf(ByteBuffer fullname) {
+    fullname = fullname.duplicate();
+    fullname.mark();
+    boolean miss = true;
+    while (fullname.hasRemaining() && miss) {
+      miss = ((byte) NAMESPACE_DELIM) != fullname.get();
+    }
+    if (miss) {
+      fullname.reset();
+      return valueOf(null, fullname);
+    } else {
+      ByteBuffer qualifier = fullname.slice();
+      int delimiterIndex = fullname.position() - 1;
+      fullname.reset();
+      // changing variable name for clarity
+      ByteBuffer namespace = fullname.duplicate();
+      namespace.limit(delimiterIndex);
+      return valueOf(namespace, qualifier);
+    }
+  }
 
   /**
    * @throws IllegalArgumentException if fullName equals old root or old meta. Some code
