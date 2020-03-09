@@ -261,6 +261,8 @@ pipeline {
                         SET_JAVA_HOME = '/usr/lib/jvm/java-11'
                         HADOOP_PROFILE = '3.0'
                         WORKDIR_REL = "${WORKDIR_REL_JDK11_HADOOP3_CHECK}"
+                        // vote -0 on JDK11 unit failures until HBASE-22972
+                        TESTS_FILTER = "${TESTS_FILTER},unit"
                         // identical for all parallel stages
                         WORKDIR = "${WORKSPACE}/${WORKDIR_REL}"
                         YETUSDIR = "${WORKDIR}/${YETUS_REL}"

@@ -21,28 +21,22 @@
 # * Java 8
 FROM ubuntu:18.04
 
+# These arguments are just for reuse and not really meant to be customized.
+ARG APT_INSTALL="apt-get install --no-install-recommends -y"
+
 # Install extra needed repos and refresh.
 #
 # This is all in a single "RUN" command so that if anything changes, "apt update" is run to fetch
 # the most current package versions (instead of potentially using old versions cached by docker).
-RUN DEBIAN_FRONTEND=noninteractive apt-get -qq -y update \
-  && DEBIAN_FRONTEND=noninteractive apt-get -qq -y install --no-install-recommends \
-    curl=7.58.0-2ubuntu3.8 \
-    git=1:2.17.1-1ubuntu0.5 \
-    gnupg=2.2.4-1ubuntu1.2 \
-    libcurl4-openssl-dev=7.58.0-2ubuntu3.8 \
-    libxml2-dev=2.9.4+dfsg1-6.1ubuntu1.3 \
-    lsof=4.89+dfsg-0.1 \
-    maven=3.6.0-1~18.04.1 \
-    openjdk-8-jdk=8u242-b08-0ubuntu3~18.04 \
-    python-pip=9.0.1-2.3~ubuntu1.18.04.1 \
-    subversion=1.9.7-4ubuntu1 \
-    wget=1.19.4-1ubuntu2.2 \
-  && apt-get clean \
-  && rm -rf /var/lib/apt/lists/* \
-  && update-alternatives --set java /usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java \
-  && pip install \
-    python-dateutil==2.8.1
+RUN apt-get clean && \
+  apt-get update && \
+  # Install openjdk 8.
+  $APT_INSTALL openjdk-8-jdk && \
+  update-alternatives --set java /usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java && \
+  # Install build / source control tools
+  $APT_INSTALL curl gnupg python-pip wget git maven subversion lsof \
+    libcurl4-openssl-dev libxml2-dev && \
+  pip install python-dateutil
 
 WORKDIR /opt/hbase-rm/output
 

@@ -519,6 +519,8 @@ pipeline {
             HADOOP_PROFILE = '3.0'
             // ErrorProne is broken on JDK11, see HBASE-23894
             SKIP_ERROR_PRONE = 'true'
+            // vote -0 on JDK11 unit failures until HBASE-22972
+            TESTS_FILTER = "${TESTS_FILTER},unit"
           }
           steps {
             // Must do prior to anything else, since if one of them timesout we'll stash the commentfile
