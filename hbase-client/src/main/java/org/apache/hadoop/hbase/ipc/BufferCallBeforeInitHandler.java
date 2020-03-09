@@ -17,15 +17,13 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelDuplexHandler;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelPromise;
-
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-
-import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * We will expose the connection to upper layer before initialized, so we need to buffer the calls
@@ -40,9 +38,9 @@ class BufferCallBeforeInitHandler extends ChannelDuplexHandler {
 
   public static final class BufferCallEvent {
 
-    public final BufferCallAction action;
+    final BufferCallAction action;
 
-    public final IOException error;
+    final IOException error;
 
     private BufferCallEvent(BufferCallBeforeInitHandler.BufferCallAction action,
         IOException error) {
@@ -62,7 +60,8 @@ class BufferCallBeforeInitHandler extends ChannelDuplexHandler {
   private static final BufferCallEvent SUCCESS_EVENT = new BufferCallEvent(BufferCallAction.FLUSH,
       null);
 
-  private final Map<Integer, Call> id2Call = new HashMap<>();
+  // TODO: consider concurrecny, size, load configuration
+  private final Map<Integer, Call> id2Call = new ConcurrentHashMap<>();
 
   @Override
   public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
