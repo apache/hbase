@@ -36,7 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.util.GsonUtil;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature;
+import org.apache.hbase.thirdparty.org.glassfish.jersery.client.authentication.HttpAuthenticationFeature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -123,7 +123,8 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
     clusterName = conf.get(REST_API_CLUSTER_MANAGER_CLUSTER_NAME, DEFAULT_CLUSTER_NAME);
 
     // Add filter to Client instance to enable server authentication.
-    client.register(HttpAuthenticationFeature.basic(serverUsername, serverPassword));
+    client.register(
+      HttpAuthenticationFeature.basic(serverUsername, serverPassword));
   }
 
   @Override

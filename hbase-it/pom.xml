@@ -231,10 +231,6 @@
       <groupId>org.apache.htrace</groupId>
       <artifactId>htrace-core4</artifactId>
     </dependency>
-    <dependency>
-      <groupId>org.glassfish.jersey.core</groupId>
-      <artifactId>jersey-client</artifactId>
-    </dependency>
     <!-- Hadoop needs Netty 3.x at test scope for the minicluster -->
     <dependency>
       <groupId>io.netty</groupId>

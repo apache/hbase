@@ -29,10 +29,6 @@ import java.util.regex.Pattern;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.logging.impl.Jdk14Logger;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -45,6 +41,12 @@ import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.util.ServletUtil;
 import org.apache.hadoop.util.Tool;
+import org.apache.hbase.thirdparty.javax.servlet.ServletException;
+import org.apache.hbase.thirdparty.javax.servlet.ServletRequest;
+import org.apache.hbase.thirdparty.javax.servlet.ServletResponse;
+import org.apache.hbase.thirdparty.javax.servlet.http.HttpServlet;
+import org.apache.hbase.thirdparty.javax.servlet.http.HttpServletRequest;
+import org.apache.hbase.thirdparty.javax.servlet.http.HttpServletResponse;
 import org.apache.log4j.LogManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -340,12 +342,12 @@ public final class LogLevel {
         out = response.getWriter();
       } catch (FileNotFoundException e) {
         // in case file is not found fall back to old design
-        out = ServletUtil.initHTML(response, "Log Level");
+        out = initHTML(response, "Log Level");
       }
       out.println(FORMS);
 
-      String logName = ServletUtil.getParameter(request, "log");
-      String level = ServletUtil.getParameter(request, "level");
+      String logName = getParameter(request, "log");
+      String level = getParameter(request, "level");
 
       if (logName != null) {
         out.println("<p>Results:</p>");
@@ -378,6 +380,23 @@ public final class LogLevel {
         out.println(ServletUtil.HTML_TAIL);
       }
       out.close();
+    }
+
+    public static PrintWriter initHTML(ServletResponse response, String title) throws IOException {
+      response.setContentType("text/html");
+      PrintWriter out = response.getWriter();
+      out.println("<html>\n<link rel='stylesheet' type='text/css' href='/static/hadoop.css'>\n<title>" + title + "</title>\n" + "<body>\n" + "<h1>" + title + "</h1>\n");
+      return out;
+    }
+
+    public static String getParameter(ServletRequest request, String name) {
+      String s = request.getParameter(name);
+      if (s == null) {
+        return null;
+      } else {
+        s = s.trim();
+        return s.length() == 0 ? null : s;
+      }
     }
 
     static final String FORMS = "<div class='container-fluid content'>\n"

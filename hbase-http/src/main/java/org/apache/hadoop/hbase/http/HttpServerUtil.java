@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.http;
 
+import org.apache.hbase.thirdparty.org.eclipse.jetty.security.ConstraintMapping;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.security.ConstraintSecurityHandler;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletContextHandler;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.util.security.Constraint;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.eclipse.jetty.security.ConstraintMapping;
-import org.eclipse.jetty.security.ConstraintSecurityHandler;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.util.security.Constraint;
 
 /**
  * HttpServer utility.

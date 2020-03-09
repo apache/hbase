@@ -20,10 +20,10 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import org.apache.hbase.thirdparty.javax.servlet.ServletException;
+import org.apache.hbase.thirdparty.javax.servlet.http.HttpServlet;
+import org.apache.hbase.thirdparty.javax.servlet.http.HttpServletRequest;
+import org.apache.hbase.thirdparty.javax.servlet.http.HttpServletResponse;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.tmpl.regionserver.RSStatusTmpl;

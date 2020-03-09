@@ -19,17 +19,16 @@ package org.apache.hadoop.hbase.http;
 
 import java.io.IOException;
 
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hbase.thirdparty.javax.servlet.Filter;
+import org.apache.hbase.thirdparty.javax.servlet.FilterChain;
+import org.apache.hbase.thirdparty.javax.servlet.FilterConfig;
+import org.apache.hbase.thirdparty.javax.servlet.ServletException;
+import org.apache.hbase.thirdparty.javax.servlet.ServletRequest;
+import org.apache.hbase.thirdparty.javax.servlet.ServletResponse;
+import org.apache.hbase.thirdparty.javax.servlet.http.HttpServletRequest;
+import org.apache.hbase.thirdparty.javax.servlet.http.HttpServletResponse;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
@@ -38,7 +37,8 @@ public class AdminAuthorizedFilter implements Filter {
   private Configuration conf;
   private AccessControlList adminsAcl;
 
-  @Override public void init(FilterConfig filterConfig) throws ServletException {
+  @Override public void init(FilterConfig filterConfig) throws
+    ServletException {
     adminsAcl = (AccessControlList) filterConfig.getServletContext().getAttribute(
         HttpServer.ADMINS_ACL);
     conf = (Configuration) filterConfig.getServletContext().getAttribute(

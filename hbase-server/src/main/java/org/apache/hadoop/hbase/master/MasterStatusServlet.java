@@ -22,14 +22,14 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.tmpl.master.MasterStatusTmpl;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
+import org.apache.hbase.thirdparty.javax.servlet.http.HttpServlet;
+import org.apache.hbase.thirdparty.javax.servlet.http.HttpServletRequest;
+import org.apache.hbase.thirdparty.javax.servlet.http.HttpServletResponse;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**

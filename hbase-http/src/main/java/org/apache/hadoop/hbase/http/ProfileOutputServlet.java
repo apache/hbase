@@ -21,12 +21,11 @@ import java.io.File;
 import java.io.IOException;
 import java.util.regex.Pattern;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
+import org.apache.hbase.thirdparty.javax.servlet.ServletException;
+import org.apache.hbase.thirdparty.javax.servlet.http.HttpServletRequest;
+import org.apache.hbase.thirdparty.javax.servlet.http.HttpServletResponse;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.DefaultServlet;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.eclipse.jetty.servlet.DefaultServlet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

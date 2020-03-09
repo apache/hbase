@@ -24,8 +24,6 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.util.Date;
 import java.util.Map;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
@@ -36,6 +34,8 @@ import org.apache.hadoop.hbase.monitoring.StateDumpServlet;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.RSDumpServlet;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hbase.thirdparty.javax.servlet.http.HttpServletRequest;
+import org.apache.hbase.thirdparty.javax.servlet.http.HttpServletResponse;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private

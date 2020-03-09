@@ -26,12 +26,12 @@ import javax.servlet.ServletContext;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import org.apache.hbase.thirdparty.org.glassfish.jersery.servlet.ServletContainer;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.RESTServlet;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.protobuf.generated.VersionMessage.Version;
-import org.glassfish.jersey.servlet.ServletContainer;
 
 
 /**

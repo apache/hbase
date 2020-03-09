@@ -20,17 +20,16 @@ package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ProxyUsers;
+import org.apache.hbase.thirdparty.javax.servlet.ServletException;
+import org.apache.hbase.thirdparty.javax.servlet.http.HttpServletRequest;
+import org.apache.hbase.thirdparty.javax.servlet.http.HttpServletResponse;
+import org.apache.hbase.thirdparty.org.glassfish.jersery.server.ResourceConfig;
+import org.apache.hbase.thirdparty.org.glassfish.jersery.servlet.ServletContainer;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.glassfish.jersey.server.ResourceConfig;
-import org.glassfish.jersey.servlet.ServletContainer;
 
 /**
  * REST servlet container. It is used to get the remote request user

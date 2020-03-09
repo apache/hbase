@@ -478,14 +478,6 @@
                                         </excludes>
                                     </filter>
                                   <filter>
-                                    <!-- this is a signed osgi bundle -->
-                                    <artifact>org.eclipse.jetty.orbit:javax.servlet.jsp.jstl</artifact>
-                                    <excludes>
-                                      <exclude>META-INF/ECLIPSEF.SF</exclude>
-                                      <exclude>META-INF/ECLIPSEF.RSA</exclude>
-                                    </excludes>
-                                  </filter>
-                                  <filter>
                                     <!-- Duplication of classes that ship in commons-collections 2.x and 3.x
                                          If we stop bundling a relevant commons-collections artifact we'll
                                          need to revisit. See: https://s.apache.org/e09o
@@ -529,13 +521,6 @@
                                     </excludes>
                                   </filter>
                                   <!-- unnecessary files that mess up our invariants check -->
-                                  <filter>
-                                    <artifact>org.eclipse.jetty:*</artifact>
-                                    <excludes>
-                                      <exclude>about.html</exclude>
-                                      <exclude>jetty-dir.css</exclude>
-                                    </excludes>
-                                  </filter>
                                   <filter>
                                     <artifact>org.apache.kerby:*</artifact>
                                     <excludes>

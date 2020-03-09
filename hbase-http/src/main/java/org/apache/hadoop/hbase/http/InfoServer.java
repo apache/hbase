@@ -20,14 +20,13 @@ package org.apache.hadoop.hbase.http;
 import java.io.IOException;
 import java.net.URI;
 
-import javax.servlet.ServletContext;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hbase.thirdparty.javax.servlet.ServletContext;
+import org.apache.hbase.thirdparty.javax.servlet.http.HttpServlet;
+import org.apache.hbase.thirdparty.javax.servlet.http.HttpServletRequest;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**

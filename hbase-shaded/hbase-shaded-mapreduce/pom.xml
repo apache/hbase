@@ -110,36 +110,8 @@
                 <artifactId>javax.servlet-api</artifactId>
               </exclusion>
               <exclusion>
-                <groupId>org.eclipse.jetty</groupId>
-                <artifactId>jetty-http</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>org.eclipse.jetty</groupId>
-                <artifactId>jetty-security</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>org.eclipse.jetty</groupId>
-                <artifactId>jetty-server</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>org.eclipse.jetty</groupId>
-                <artifactId>jetty-servlet</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>org.eclipse.jetty</groupId>
-                <artifactId>jetty-util</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>org.eclipse.jetty</groupId>
-                <artifactId>jetty-util-ajax</artifactId>
-              </exclusion>
-              <exclusion>
                 <groupId>org.glassfish</groupId>
                 <artifactId>javax.el</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>org.eclipse.jetty</groupId>
-                <artifactId>jetty-webapp</artifactId>
               </exclusion>
               <exclusion>
                 <groupId>org.glassfish.jersey.core</groupId>
