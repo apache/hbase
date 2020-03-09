@@ -102,6 +102,7 @@ public class TestTablePermissions {
 
     // Wait for the ACL table to become available
     UTIL.waitTableEnabled(PermissionStorage.ACL_TABLE_NAME);
+    UTIL.waitTableAvailable(TableName.valueOf("hbase:acl"));
 
     ZKW = new ZKWatcher(UTIL.getConfiguration(),
       "TestTablePermissions", ABORTABLE);

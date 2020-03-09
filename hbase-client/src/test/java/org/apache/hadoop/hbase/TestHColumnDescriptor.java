@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
@@ -55,11 +56,10 @@ public class TestHColumnDescriptor {
   @Test
   public void testPb() throws DeserializationException {
     HColumnDescriptor hcd = new HColumnDescriptor(
-        new HColumnDescriptor(HConstants.CATALOG_FAMILY)
-            .setInMemory(true)
-            .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-            .setBloomFilterType(BloomType.NONE)
-            .setCacheDataInL1(true));
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(HConstants.CATALOG_FAMILY)
+        .setInMemory(true)
+        .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+        .setBloomFilterType(BloomType.NONE));
     final int v = 123;
     hcd.setBlocksize(v);
     hcd.setTimeToLive(v);
@@ -107,7 +107,7 @@ public class TestHColumnDescriptor {
   public void testHColumnDescriptorShouldThrowIAEWhenFamilyNameEmpty() throws Exception {
     expectedEx.expect(IllegalArgumentException.class);
     expectedEx.expectMessage("Column Family name can not be empty");
-    new HColumnDescriptor(Bytes.toBytes(""));
+    new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(Bytes.toBytes(""));
   }
 
   @Test

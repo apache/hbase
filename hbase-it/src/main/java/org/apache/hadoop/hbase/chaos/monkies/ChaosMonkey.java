@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.hbase.chaos.monkies;
 
-import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.apache.hadoop.hbase.Stoppable;
 
 /**
  * A utility to injects faults in a running cluster.
@@ -38,7 +38,7 @@ import org.apache.yetus.audience.InterfaceStability;
  * policy can be active at any time.
  * <p>
  * Chaos monkey can be run from the command line, or can be invoked from integration tests.
- * See {@link org.apache.hadoop.hbase.IntegrationTestIngest} or other integration tests that use
+ * See {org.apache.hadoop.hbase.IntegrationTestIngest in hbase-it /test} or other integration tests that use
  * chaos monkey for code examples.
  * <p>
  * ChaosMonkey class is indeed inspired by the Netflix's same-named tool:

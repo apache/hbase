@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -28,16 +28,16 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.slf4j.Logger;
@@ -71,8 +71,8 @@ public class MobStressToolRunner {
       .toBytes("01234567890123456789012345678901234567890123456789012345678901234567890123456789");
 
   private Configuration conf;
-  private HTableDescriptor hdt;
-  private HColumnDescriptor hcd;
+  private TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor;
+  private ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor;
   private Admin admin;
   private long count = 500000;
   private double failureProb = 0.1;
@@ -90,20 +90,21 @@ public class MobStressToolRunner {
     this.count = numRows;
     initConf();
     printConf();
-    hdt = new HTableDescriptor(TableName.valueOf("testMobCompactTable"));
+    tableDescriptor = new TableDescriptorBuilder.ModifyableTableDescriptor(
+      TableName.valueOf("testMobCompactTable"));
     Connection conn = ConnectionFactory.createConnection(this.conf);
     this.admin = conn.getAdmin();
-    this.hcd = new HColumnDescriptor(fam);
-    this.hcd.setMobEnabled(true);
-    this.hcd.setMobThreshold(mobLen);
-    this.hcd.setMaxVersions(1);
-    this.hdt.addFamily(hcd);
-    if (admin.tableExists(hdt.getTableName())) {
-      admin.disableTable(hdt.getTableName());
-      admin.deleteTable(hdt.getTableName());
+    this.familyDescriptor = new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam);
+    this.familyDescriptor.setMobEnabled(true);
+    this.familyDescriptor.setMobThreshold(mobLen);
+    this.familyDescriptor.setMaxVersions(1);
+    this.tableDescriptor.setColumnFamily(familyDescriptor);
+    if (admin.tableExists(tableDescriptor.getTableName())) {
+      admin.disableTable(tableDescriptor.getTableName());
+      admin.deleteTable(tableDescriptor.getTableName());
     }
-    admin.createTable(hdt);
-    table = conn.getTable(hdt.getTableName());
+    admin.createTable(tableDescriptor);
+    table = conn.getTable(tableDescriptor.getTableName());
   }
 
   private void printConf() {
@@ -150,7 +151,7 @@ public class MobStressToolRunner {
     public void run() {
       while (run) {
         try {
-          admin.majorCompact(hdt.getTableName(), fam);
+          admin.majorCompact(tableDescriptor.getTableName(), fam);
           Thread.sleep(120000);
         } catch (Exception e) {
           LOG.error("MOB Stress Test FAILED", e);
@@ -251,8 +252,8 @@ public class MobStressToolRunner {
 
     } finally {
 
-      admin.disableTable(hdt.getTableName());
-      admin.deleteTable(hdt.getTableName());
+      admin.disableTable(tableDescriptor.getTableName());
+      admin.deleteTable(tableDescriptor.getTableName());
     }
     LOG.info("MOB Stress Test finished OK");
     printStats(count);

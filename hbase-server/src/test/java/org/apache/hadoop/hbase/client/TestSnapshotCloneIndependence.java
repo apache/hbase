@@ -24,7 +24,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -322,10 +321,11 @@ public class TestSnapshotCloneIndependence {
   private void runTestSnapshotMetadataChangesIndependent() throws Exception {
     // Add a new column family to the original table
     byte[] TEST_FAM_2 = Bytes.toBytes("fam2");
-    HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAM_2);
+    ColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAM_2);
 
     admin.disableTable(originalTableName);
-    admin.addColumnFamily(originalTableName, hcd);
+    admin.addColumnFamily(originalTableName, familyDescriptor);
 
     // Verify that it is not in the snapshot
     admin.enableTable(originalTableName);

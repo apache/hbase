@@ -30,10 +30,10 @@ import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.rest.Constants;
 import org.apache.hadoop.hbase.rest.model.StorageClusterStatusModel;
 import org.apache.hadoop.hbase.rest.model.StorageClusterVersionModel;
@@ -277,7 +277,7 @@ public class RemoteAdmin {
    * @param desc table descriptor for table
    * @throws IOException if a remote or network exception occurs
    */
-  public void createTable(HTableDescriptor desc)
+  public void createTable(TableDescriptor desc)
       throws IOException {
     TableSchemaModel model = new TableSchemaModel(desc);
     StringBuilder path = new StringBuilder();

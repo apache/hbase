@@ -91,9 +91,9 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
   }
 
   @Override
-  public int encode(Cell cell, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
+  public void encode(Cell cell, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
       throws IOException {
-    return this.encoding.getEncoder().encode(cell, encodingCtx, out);
+    this.encoding.getEncoder().encode(cell, encodingCtx, out);
   }
 
   @Override

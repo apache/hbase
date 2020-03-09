@@ -28,15 +28,15 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -59,7 +59,6 @@ public class TestRegionOpen {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestRegionOpen.class);
 
-  @SuppressWarnings("unused")
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionOpen.class);
   private static final int NB_SERVERS = 1;
 
@@ -89,12 +88,15 @@ public class TestRegionOpen {
         .getExecutorThreadPool(ExecutorType.RS_OPEN_PRIORITY_REGION);
     long completed = exec.getCompletedTaskCount();
 
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    htd.setPriority(HConstants.HIGH_QOS);
-    htd.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    tableDescriptor.setPriority(HConstants.HIGH_QOS);
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(
+        HConstants.CATALOG_FAMILY));
     try (Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
         Admin admin = connection.getAdmin()) {
-      admin.createTable(htd);
+      admin.createTable(tableDescriptor);
     }
 
     assertEquals(completed + 1, exec.getCompletedTaskCount());
@@ -109,8 +111,10 @@ public class TestRegionOpen {
     Configuration conf = HTU.getConfiguration();
     Path rootDir = HTU.getDataTestDirOnTestFS();
 
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    htd.addFamily(new HColumnDescriptor(FAMILYNAME));
+    TableDescriptorBuilder.ModifyableTableDescriptor htd =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    htd.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILYNAME));
     admin.createTable(htd);
     HTU.waitUntilNoRegionsInTransition(60000);
 

@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
+@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.CHAOS, HBaseInterfaceAudience.TOOLS})
 @InterfaceStability.Evolving
 public class ChaosMonkeyRunner extends AbstractHBaseTool {
   private static final Logger LOG = LoggerFactory.getLogger(ChaosMonkeyRunner.class);

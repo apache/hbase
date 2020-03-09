@@ -245,7 +245,11 @@ public class HRegionFileSystem {
     ArrayList<StoreFileInfo> storeFiles = new ArrayList<>(files.length);
     for (FileStatus status: files) {
       if (validate && !StoreFileInfo.isValid(status)) {
-        LOG.warn("Invalid StoreFile: " + status.getPath());
+        // recovered.hfiles directory is expected inside CF path when hbase.wal.split.to.hfile to
+        // true, refer HBASE-23740
+        if (!HConstants.RECOVERED_HFILES_DIR.equals(status.getPath().getName())) {
+          LOG.warn("Invalid StoreFile: {}", status.getPath());
+        }
         continue;
       }
       StoreFileInfo info = ServerRegionReplicaUtil.getStoreFileInfo(conf, fs, regionInfo,
@@ -278,7 +282,11 @@ public class HRegionFileSystem {
     List<LocatedFileStatus> validStoreFiles = Lists.newArrayList();
     for (LocatedFileStatus status : locatedFileStatuses) {
       if (validate && !StoreFileInfo.isValid(status)) {
-        LOG.warn("Invalid StoreFile: " + status.getPath());
+        // recovered.hfiles directory is expected inside CF path when hbase.wal.split.to.hfile to
+        // true, refer HBASE-23740
+        if (!HConstants.RECOVERED_HFILES_DIR.equals(status.getPath().getName())) {
+          LOG.warn("Invalid StoreFile: {}", status.getPath());
+        }
       } else {
         validStoreFiles.add(status);
       }

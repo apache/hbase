@@ -85,7 +85,7 @@ public abstract class MonkeyFactory {
   public static final String DISTRIBUTED_ISSUES = "distributedIssues";
   public static final String DATA_ISSUES = "dataIssues";
 
-  public static Map<String, MonkeyFactory> FACTORIES = ImmutableMap.<String,MonkeyFactory>builder()
+  private static Map<String, MonkeyFactory> factories = ImmutableMap.<String,MonkeyFactory>builder()
     .put(CALM, new CalmMonkeyFactory())
     .put(SLOW_DETERMINISTIC, new SlowDeterministicMonkeyFactory())
     .put(UNBALANCE, new UnbalanceMonkeyFactory())
@@ -100,8 +100,12 @@ public abstract class MonkeyFactory {
     .put(DATA_ISSUES, new DataIssuesMonkeyFactory())
     .build();
 
+  private static Map<String, MonkeyFactory> getMonkeyFactoryMap() {
+    return factories;
+  }
+
   public static MonkeyFactory getFactory(String factoryName) {
-    MonkeyFactory fact = FACTORIES.get(factoryName);
+    MonkeyFactory fact = getMonkeyFactoryMap().get(factoryName);
     if (fact == null && factoryName != null && !factoryName.isEmpty()) {
       Class klass = null;
       try {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -51,10 +51,9 @@ import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -64,6 +63,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
@@ -147,10 +147,13 @@ public class TestThriftHBaseServiceHandler {
   private static byte[] qualifierBname = Bytes.toBytes("qualifierB");
   private static byte[] valueAname = Bytes.toBytes("valueA");
   private static byte[] valueBname = Bytes.toBytes("valueB");
-  private static HColumnDescriptor[] families = new HColumnDescriptor[] {
-      new HColumnDescriptor(familyAname).setMaxVersions(3),
-      new HColumnDescriptor(familyBname).setMaxVersions(2)
-  };
+  private static ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor[] families =
+    new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor[]{
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(familyAname)
+        .setMaxVersions(3),
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(familyBname)
+        .setMaxVersions(2)
+    };
 
 
   private static final MetricsAssertHelper metricsHelper =
@@ -190,13 +193,14 @@ public class TestThriftHBaseServiceHandler {
   public static void beforeClass() throws Exception {
     UTIL.getConfiguration().set("hbase.client.retries.number", "3");
     UTIL.startMiniCluster();
-    Admin admin = UTIL.getAdmin();
-    HTableDescriptor tableDescriptor = new HTableDescriptor(TableName.valueOf(tableAname));
-    for (HColumnDescriptor family : families) {
-      tableDescriptor.addFamily(family);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(tableAname));
+    for (ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor family : families) {
+      tableDescriptor.setColumnFamily(family);
     }
-    admin.createTable(tableDescriptor);
-    admin.close();
+    try (Admin admin = UTIL.getAdmin()) {
+      admin.createTable(tableDescriptor);
+    }
   }
 
   @AfterClass
@@ -1250,9 +1254,11 @@ public class TestThriftHBaseServiceHandler {
     byte[] col = Bytes.toBytes("c");
     // create a table which will throw exceptions for requests
     TableName tableName = TableName.valueOf(name.getMethodName());
-    HTableDescriptor tableDesc = new HTableDescriptor(tableName);
-    tableDesc.addCoprocessor(ErrorThrowingGetObserver.class.getName());
-    tableDesc.addFamily(new HColumnDescriptor(family));
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDesc =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    tableDesc.setCoprocessor(ErrorThrowingGetObserver.class.getName());
+    tableDesc.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
 
     Table table = UTIL.createTable(tableDesc, null);
     table.put(new Put(rowkey).addColumn(family, col, Bytes.toBytes("val1")));
@@ -1321,13 +1327,15 @@ public class TestThriftHBaseServiceHandler {
     byte[] col = Bytes.toBytes("c");
     // create a table which will throw exceptions for requests
     TableName tableName = TableName.valueOf("testMetricsPrecision");
-    HTableDescriptor tableDesc = new HTableDescriptor(tableName);
-    tableDesc.addCoprocessor(DelayingRegionObserver.class.getName());
-    tableDesc.addFamily(new HColumnDescriptor(family));
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    tableDescriptor.setCoprocessor(DelayingRegionObserver.class.getName());
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
 
     Table table = null;
     try {
-      table = UTIL.createTable(tableDesc, null);
+      table = UTIL.createTable(tableDescriptor, null);
 
       table.put(new Put(rowkey).addColumn(family, col, Bytes.toBytes("val1")));
 

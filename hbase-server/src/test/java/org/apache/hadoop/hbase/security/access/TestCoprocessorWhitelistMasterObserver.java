@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
@@ -28,15 +29,17 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.CoprocessorDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
@@ -265,17 +268,22 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
     // set retries low to raise exception quickly
     conf.setInt("hbase.client.retries.number", 5);
     UTIL.startMiniCluster();
-    HTableDescriptor htd = new HTableDescriptor(TEST_TABLE);
-    HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY);
-    htd.addFamily(hcd);
-    htd.addCoprocessor("net.clayb.hbase.coprocessor.NotWhitelisted",
-      new Path("file:///notpermitted/couldnotpossiblyexist.jar"),
-      Coprocessor.PRIORITY_USER, null);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TEST_TABLE);
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY);
+    tableDescriptor.setColumnFamily(familyDescriptor);
+    tableDescriptor.setCoprocessor(
+      CoprocessorDescriptorBuilder.newBuilder("net.clayb.hbase.coprocessor.NotWhitelisted")
+        .setJarPath("file:///notpermitted/couldnotpossiblyexist.jar")
+        .setPriority(Coprocessor.PRIORITY_USER)
+        .setProperties(Collections.emptyMap())
+        .build());
     Connection connection = ConnectionFactory.createConnection(conf);
     Admin admin = connection.getAdmin();
     LOG.info("Creating Table");
     try {
-      admin.createTable(htd);
+      admin.createTable(tableDescriptor);
       fail("Expected coprocessor to raise IOException");
     } catch (IOException e) {
       // swallow exception from coprocessor
@@ -310,14 +318,16 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
     // set retries low to raise exception quickly
     conf.setInt("hbase.client.retries.number", 5);
     UTIL.startMiniCluster();
-    HTableDescriptor htd = new HTableDescriptor(TEST_TABLE);
-    HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY);
-    htd.addFamily(hcd);
-    htd.addCoprocessor(TestRegionObserver.class.getName());
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TEST_TABLE);
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY);
+    tableDescriptor.setColumnFamily(familyDescriptor);
+    tableDescriptor.setCoprocessor(TestRegionObserver.class.getName());
     Connection connection = ConnectionFactory.createConnection(conf);
     Admin admin = connection.getAdmin();
     LOG.info("Creating Table");
-    admin.createTable(htd);
+    admin.createTable(tableDescriptor);
     // ensure table was created and coprocessor is added to table
     LOG.info("Done Creating Table");
     Table t = connection.getTable(TEST_TABLE);

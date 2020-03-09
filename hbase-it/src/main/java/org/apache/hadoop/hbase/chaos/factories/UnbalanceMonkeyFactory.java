@@ -42,7 +42,7 @@ public class UnbalanceMonkeyFactory extends MonkeyFactory {
         new UnbalanceKillAndRebalanceAction(waitForUnbalanceMilliSec, waitForKillMilliSec,
             waitAfterBalanceMilliSec, killMetaRs));
 
-    return new PolicyBasedChaosMonkey(util, chaosPolicy);
+    return new PolicyBasedChaosMonkey(properties, util, chaosPolicy);
   }
 
   private void loadProperties() {

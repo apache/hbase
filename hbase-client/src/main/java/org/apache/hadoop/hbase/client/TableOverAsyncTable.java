@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException.ThrowableWithExtraContext;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Call;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -220,58 +221,80 @@ class TableOverAsyncTable implements Table {
     FutureUtils.get(table.deleteAll(deletes));
   }
 
-  private static final class CheckAndMutateBuilderImpl implements CheckAndMutateBuilder {
+  @Override
+  public CheckAndMutateBuilder checkAndMutate(byte[] row, byte[] family) {
+    return new CheckAndMutateBuilder() {
 
-    private final AsyncTable.CheckAndMutateBuilder builder;
+      private final AsyncTable.CheckAndMutateBuilder builder = table.checkAndMutate(row, family);
 
-    public CheckAndMutateBuilderImpl(
-        org.apache.hadoop.hbase.client.AsyncTable.CheckAndMutateBuilder builder) {
-      this.builder = builder;
-    }
+      @Override
+      public CheckAndMutateBuilder qualifier(byte[] qualifier) {
+        builder.qualifier(qualifier);
+        return this;
+      }
 
-    @Override
-    public CheckAndMutateBuilder qualifier(byte[] qualifier) {
-      builder.qualifier(qualifier);
-      return this;
-    }
+      @Override
+      public CheckAndMutateBuilder timeRange(TimeRange timeRange) {
+        builder.timeRange(timeRange);
+        return this;
+      }
 
-    @Override
-    public CheckAndMutateBuilder timeRange(TimeRange timeRange) {
-      builder.timeRange(timeRange);
-      return this;
-    }
+      @Override
+      public CheckAndMutateBuilder ifNotExists() {
+        builder.ifNotExists();
+        return this;
+      }
 
-    @Override
-    public CheckAndMutateBuilder ifNotExists() {
-      builder.ifNotExists();
-      return this;
-    }
+      @Override
+      public CheckAndMutateBuilder ifMatches(CompareOperator compareOp, byte[] value) {
+        builder.ifMatches(compareOp, value);
+        return this;
+      }
 
-    @Override
-    public CheckAndMutateBuilder ifMatches(CompareOperator compareOp, byte[] value) {
-      builder.ifMatches(compareOp, value);
-      return this;
-    }
+      @Override
+      public boolean thenPut(Put put) throws IOException {
+        return FutureUtils.get(builder.thenPut(put));
+      }
 
-    @Override
-    public boolean thenPut(Put put) throws IOException {
-      return FutureUtils.get(builder.thenPut(put));
-    }
+      @Override
+      public boolean thenDelete(Delete delete) throws IOException {
+        return FutureUtils.get(builder.thenDelete(delete));
+      }
 
-    @Override
-    public boolean thenDelete(Delete delete) throws IOException {
-      return FutureUtils.get(builder.thenDelete(delete));
-    }
-
-    @Override
-    public boolean thenMutate(RowMutations mutation) throws IOException {
-      return FutureUtils.get(builder.thenMutate(mutation));
-    }
+      @Override
+      public boolean thenMutate(RowMutations mutation) throws IOException {
+        return FutureUtils.get(builder.thenMutate(mutation));
+      }
+    };
   }
 
   @Override
-  public CheckAndMutateBuilder checkAndMutate(byte[] row, byte[] family) {
-    return new CheckAndMutateBuilderImpl(table.checkAndMutate(row, family));
+  public CheckAndMutateWithFilterBuilder checkAndMutate(byte[] row, Filter filter) {
+    return new CheckAndMutateWithFilterBuilder() {
+      private final AsyncTable.CheckAndMutateWithFilterBuilder builder =
+        table.checkAndMutate(row, filter);
+
+      @Override
+      public CheckAndMutateWithFilterBuilder timeRange(TimeRange timeRange) {
+        builder.timeRange(timeRange);
+        return this;
+      }
+
+      @Override
+      public boolean thenPut(Put put) throws IOException {
+        return FutureUtils.get(builder.thenPut(put));
+      }
+
+      @Override
+      public boolean thenDelete(Delete delete) throws IOException {
+        return FutureUtils.get(builder.thenDelete(delete));
+      }
+
+      @Override
+      public boolean thenMutate(RowMutations mutation) throws IOException {
+        return FutureUtils.get(builder.thenMutate(mutation));
+      }
+    };
   }
 
   @Override

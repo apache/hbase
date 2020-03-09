@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,11 +17,10 @@
  */
 package org.apache.hadoop.hbase.snapshot;
 
-import java.io.File;
-import java.nio.file.Paths;
+import java.io.IOException;
 import java.util.UUID;
-import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -37,9 +36,6 @@ public class TestExportSnapshotWithTemporaryDirectory extends TestExportSnapshot
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestExportSnapshotWithTemporaryDirectory.class);
 
-  protected static String TEMP_DIR = Paths.get("").toAbsolutePath().toString() + Path.SEPARATOR
-      + UUID.randomUUID().toString();
-
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     setUpBaseConf(TEST_UTIL.getConfiguration());
@@ -50,11 +46,18 @@ public class TestExportSnapshotWithTemporaryDirectory extends TestExportSnapshot
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TestExportSnapshot.tearDownAfterClass();
-    FileUtils.deleteDirectory(new File(TEMP_DIR));
   }
 
   public static void setUpBaseConf(Configuration conf) {
+    Path tmpDir = null;
+    try {
+      FileSystem localFs = FileSystem.getLocal(conf);
+      tmpDir = TEST_UTIL.getDataTestDir(UUID.randomUUID().toString()).
+        makeQualified(localFs.getUri(), localFs.getWorkingDirectory());
+    } catch (IOException ioe) {
+      throw new RuntimeException(ioe);
+    }
     TestExportSnapshot.setUpBaseConf(conf);
-    conf.set(SnapshotDescriptionUtils.SNAPSHOT_WORKING_DIR, "file://" + new Path(TEMP_DIR, ".tmpdir").toUri());
+    conf.set(SnapshotDescriptionUtils.SNAPSHOT_WORKING_DIR, tmpDir.toUri().toString());
   }
 }

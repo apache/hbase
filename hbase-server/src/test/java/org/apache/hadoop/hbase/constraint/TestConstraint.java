@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,11 +23,11 @@ import static org.junit.Assert.fail;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -76,14 +76,17 @@ public class TestConstraint {
   public void testConstraintPasses() throws Exception {
     // create the table
     // it would be nice if this was also a method on the util
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    for (byte[] family : new byte[][] { dummy, test }) {
-      desc.addFamily(new HColumnDescriptor(family));
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+
+    for (byte[] family : new byte[][]{dummy, test}) {
+      tableDescriptor.setColumnFamily(
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
     }
     // add a constraint
-    Constraints.add(desc, CheckWasRunConstraint.class);
+    Constraints.add(tableDescriptor, CheckWasRunConstraint.class);
 
-    util.getAdmin().createTable(desc);
+    util.getAdmin().createTable(tableDescriptor);
     Table table = util.getConnection().getTable(tableName);
     try {
       // test that we don't fail on a valid put
@@ -108,15 +111,17 @@ public class TestConstraint {
 
     // create the table
     // it would be nice if this was also a method on the util
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    for (byte[] family : new byte[][] { dummy, test }) {
-      desc.addFamily(new HColumnDescriptor(family));
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    for (byte[] family : new byte[][]{dummy, test}) {
+      tableDescriptor.setColumnFamily(
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
     }
 
     // add a constraint that is sure to fail
-    Constraints.add(desc, AllFailConstraint.class);
+    Constraints.add(tableDescriptor, AllFailConstraint.class);
 
-    util.getAdmin().createTable(desc);
+    util.getAdmin().createTable(tableDescriptor);
     Table table = util.getConnection().getTable(tableName);
 
     // test that we do fail on violation
@@ -141,21 +146,23 @@ public class TestConstraint {
   @Test
   public void testDisableConstraint() throws Throwable {
     // create the table
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
     // add a family to the table
-    for (byte[] family : new byte[][] { dummy, test }) {
-      desc.addFamily(new HColumnDescriptor(family));
+    for (byte[] family : new byte[][]{dummy, test}) {
+      tableDescriptor.setColumnFamily(
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
     }
     // add a constraint to make sure it others get run
-    Constraints.add(desc, CheckWasRunConstraint.class);
+    Constraints.add(tableDescriptor, CheckWasRunConstraint.class);
 
     // Add Constraint to check
-    Constraints.add(desc, AllFailConstraint.class);
+    Constraints.add(tableDescriptor, AllFailConstraint.class);
 
     // and then disable the failing constraint
-    Constraints.disableConstraint(desc, AllFailConstraint.class);
+    Constraints.disableConstraint(tableDescriptor, AllFailConstraint.class);
 
-    util.getAdmin().createTable(desc);
+    util.getAdmin().createTable(tableDescriptor);
     Table table = util.getConnection().getTable(tableName);
     try {
       // test that we don't fail because its disabled
@@ -177,18 +184,21 @@ public class TestConstraint {
   @Test
   public void testDisableConstraints() throws Throwable {
     // create the table
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+
     // add a family to the table
-    for (byte[] family : new byte[][] { dummy, test }) {
-      desc.addFamily(new HColumnDescriptor(family));
+    for (byte[] family : new byte[][]{dummy, test}) {
+      tableDescriptor.setColumnFamily(
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
     }
     // add a constraint to check to see if is run
-    Constraints.add(desc, CheckWasRunConstraint.class);
+    Constraints.add(tableDescriptor, CheckWasRunConstraint.class);
 
     // then disable all the constraints
-    Constraints.disable(desc);
+    Constraints.disable(tableDescriptor);
 
-    util.getAdmin().createTable(desc);
+    util.getAdmin().createTable(tableDescriptor);
     Table table = util.getConnection().getTable(tableName);
     try {
       // test that we do fail on violation
@@ -210,18 +220,21 @@ public class TestConstraint {
   @Test
   public void testIsUnloaded() throws Exception {
     // create the table
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+
     // add a family to the table
-    for (byte[] family : new byte[][] { dummy, test }) {
-      desc.addFamily(new HColumnDescriptor(family));
+    for (byte[] family : new byte[][]{dummy, test}) {
+      tableDescriptor.setColumnFamily(
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
     }
     // make sure that constraints are unloaded
-    Constraints.add(desc, RuntimeFailConstraint.class);
+    Constraints.add(tableDescriptor, RuntimeFailConstraint.class);
     // add a constraint to check to see if is run
-    Constraints.add(desc, CheckWasRunConstraint.class);
+    Constraints.add(tableDescriptor, CheckWasRunConstraint.class);
     CheckWasRunConstraint.wasRun = false;
 
-    util.getAdmin().createTable(desc);
+    util.getAdmin().createTable(tableDescriptor);
     Table table = util.getConnection().getTable(tableName);
 
     // test that we do fail on violation
