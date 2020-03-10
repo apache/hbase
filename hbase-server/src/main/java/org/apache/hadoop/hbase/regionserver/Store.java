@@ -209,24 +209,7 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
    * @param isCompaction whether we are creating a new file in a compaction
    * @param includeMVCCReadpoint whether we should out the MVCC readpoint
    * @param shouldDropBehind should the writer drop caches behind writes
-   * @return Writer for a new StoreFile in the tmp dir.
-   */
-  StoreFile.Writer createWriterInTmp(
-    long maxKeyCount,
-    Compression.Algorithm compression,
-    boolean isCompaction,
-    boolean includeMVCCReadpoint,
-    boolean includesTags,
-    boolean shouldDropBehind
-  ) throws IOException;
-
-  /**
-   * @param maxKeyCount
-   * @param compression Compression algorithm to use
-   * @param isCompaction whether we are creating a new file in a compaction
-   * @param includeMVCCReadpoint whether we should out the MVCC readpoint
-   * @param shouldDropBehind should the writer drop caches behind writes
-   * @param trt Ready-made timetracker to use.
+   * @param totalCompactedFilesSize total compacted file size
    * @return Writer for a new StoreFile in the tmp dir.
    */
   StoreFile.Writer createWriterInTmp(
@@ -236,7 +219,28 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
     boolean includeMVCCReadpoint,
     boolean includesTags,
     boolean shouldDropBehind,
-    final TimeRangeTracker trt
+    long totalCompactedFilesSize
+  ) throws IOException;
+
+  /**
+   * @param maxKeyCount
+   * @param compression Compression algorithm to use
+   * @param isCompaction whether we are creating a new file in a compaction
+   * @param includeMVCCReadpoint whether we should out the MVCC readpoint
+   * @param shouldDropBehind should the writer drop caches behind writes
+   * @param trt Ready-made timetracker to use.
+   * @param totalCompactedFilesSize total compacted file size
+   * @return Writer for a new StoreFile in the tmp dir.
+   */
+  StoreFile.Writer createWriterInTmp(
+    long maxKeyCount,
+    Compression.Algorithm compression,
+    boolean isCompaction,
+    boolean includeMVCCReadpoint,
+    boolean includesTags,
+    boolean shouldDropBehind,
+    final TimeRangeTracker trt,
+    long totalCompactedFilesSize
   ) throws IOException;
 
   // Compaction oriented methods

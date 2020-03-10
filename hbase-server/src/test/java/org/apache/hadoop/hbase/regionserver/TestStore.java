@@ -1455,7 +1455,7 @@ public class TestStore {
   public void testHFileContextSetWithCFAndTable() throws Exception {
     init(this.name.getMethodName());
     StoreFile.Writer writer = store.createWriterInTmp(10000L,
-        Compression.Algorithm.NONE, false, true, false, true);
+        Compression.Algorithm.NONE, false, true, false, true, -1);
     HFileContext hFileContext = writer.getHFileWriter().getFileContext();
     assertArrayEquals(family, hFileContext.getColumnFamily());
     assertArrayEquals(table, hFileContext.getTableName());

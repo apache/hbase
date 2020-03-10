@@ -133,6 +133,13 @@ public class CacheConfig {
     "hbase.rs.cachecompactedblocksonwrite";
 
   /**
+   * Configuration key to determine total size in bytes of compacted files beyond which we do not
+   * cache blocks on compaction
+   */
+  public static final String CACHE_COMPACTED_BLOCKS_ON_WRITE_THRESHOLD_KEY =
+    "hbase.rs.cachecompactedblocksonwrite.threshold";
+
+  /**
    * The target block size used by blockcache instances. Defaults to
    * {@link HConstants#DEFAULT_BLOCKSIZE}.
    */
@@ -144,6 +151,8 @@ public class CacheConfig {
   private static final String EXTERNAL_BLOCKCACHE_CLASS_KEY="hbase.blockcache.external.class";
   private static final String DROP_BEHIND_CACHE_COMPACTION_KEY="hbase.hfile.drop.behind.compaction";
   private static final boolean DROP_BEHIND_CACHE_COMPACTION_DEFAULT = true;
+  public static final long DEFAULT_CACHE_COMPACTED_BLOCKS_ON_WRITE_THRESHOLD = Long.MAX_VALUE;
+
 
   /**
    * @deprecated use {@link CacheConfig#BLOCKCACHE_BLOCKSIZE_KEY} instead.
@@ -235,6 +244,11 @@ public class CacheConfig {
    */
   private boolean cacheDataInL1;
 
+  /**
+   * Determine threshold beyond which we do not cache blocks on compaction
+   */
+  private long cacheCompactedDataOnWriteThreshold;
+
   private final boolean dropBehindCompaction;
 
   /**
@@ -266,6 +280,7 @@ public class CacheConfig {
         conf.getBoolean(CACHE_COMPACTED_BLOCKS_ON_WRITE_KEY,
           DEFAULT_CACHE_COMPACTED_BLOCKS_ON_WRITE)
     );
+    this.cacheCompactedDataOnWriteThreshold = getCacheCompactedBlocksOnWriteThreshold(conf);
     LOG.info("Created cacheConfig for " + family.getNameAsString() + ": " + this);
   }
 
@@ -293,6 +308,7 @@ public class CacheConfig {
         conf.getBoolean(CACHE_COMPACTED_BLOCKS_ON_WRITE_KEY,
           DEFAULT_CACHE_COMPACTED_BLOCKS_ON_WRITE)
      );
+    this.cacheCompactedDataOnWriteThreshold = getCacheCompactedBlocksOnWriteThreshold(conf);
     LOG.info("Created cacheConfig: " + this);
   }
 
@@ -344,6 +360,7 @@ public class CacheConfig {
         cacheConf.cacheDataCompressed, cacheConf.prefetchOnOpen,
         cacheConf.cacheDataInL1, cacheConf.dropBehindCompaction,
         cacheConf.cacheCompactedDataOnWrite);
+    this.cacheCompactedDataOnWriteThreshold = cacheConf.cacheCompactedDataOnWriteThreshold;
   }
 
   /**
@@ -438,7 +455,6 @@ public class CacheConfig {
     this.cacheDataInL1 = cacheDataInL1;
   }
 
-
   /**
    * Enable cache on write including:
    * cacheDataOnWrite
@@ -450,7 +466,6 @@ public class CacheConfig {
     this.cacheIndexesOnWrite = true;
     this.cacheBloomsOnWrite = true;
   }
-
 
   /**
    * @return true if index blocks should be written to the cache when an HFile
@@ -513,6 +528,12 @@ public class CacheConfig {
   }
 
   /**
+   * @return total file size in bytes threshold for caching while writing during compaction
+   */
+  public long getCacheCompactedBlocksOnWriteThreshold() {
+    return this.cacheCompactedDataOnWriteThreshold;
+  }
+  /**
    * Return true if we may find this type of block in block cache.
    * <p/>
    * TODO: today {@code family.isBlockCacheEnabled()} only means {@code cacheDataOnRead}, so here we
@@ -552,6 +573,21 @@ public class CacheConfig {
       return true;
     }
     return shouldCacheBlockOnRead(blockType.getCategory());
+  }
+
+  private long getCacheCompactedBlocksOnWriteThreshold(Configuration conf) {
+    long cacheCompactedBlocksOnWriteThreshold = conf
+      .getLong(CACHE_COMPACTED_BLOCKS_ON_WRITE_THRESHOLD_KEY,
+        DEFAULT_CACHE_COMPACTED_BLOCKS_ON_WRITE_THRESHOLD);
+
+    if (cacheCompactedBlocksOnWriteThreshold < 0) {
+      LOG.warn("cacheCompactedBlocksOnWriteThreshold value : "
+        + cacheCompactedBlocksOnWriteThreshold + " is less than 0, resetting it to: "
+        + DEFAULT_CACHE_COMPACTED_BLOCKS_ON_WRITE_THRESHOLD);
+      cacheCompactedBlocksOnWriteThreshold = DEFAULT_CACHE_COMPACTED_BLOCKS_ON_WRITE_THRESHOLD;
+    }
+
+    return cacheCompactedBlocksOnWriteThreshold;
   }
 
   @Override
