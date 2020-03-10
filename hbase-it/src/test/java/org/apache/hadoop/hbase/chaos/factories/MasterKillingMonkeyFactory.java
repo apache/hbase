@@ -50,7 +50,7 @@ public class MasterKillingMonkeyFactory extends MonkeyFactory {
         new DumpClusterStatusAction()
     };
 
-    return new PolicyBasedChaosMonkey(properties, util,
+    return new PolicyBasedChaosMonkey(util,
         new PeriodicRandomActionPolicy(action1Period, actions1),
         new PeriodicRandomActionPolicy(action2Period, actions2));
   }
