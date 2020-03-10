@@ -155,7 +155,7 @@ public class HBaseCommonTestingUtility {
     return new Path(getBaseTestDir(), getRandomUUID().toString());
   }
 
-  public UUID getRandomUUID() {
+  public static UUID getRandomUUID() {
     return new UUID(ThreadLocalRandom.current().nextLong(),
                     ThreadLocalRandom.current().nextLong());
   }

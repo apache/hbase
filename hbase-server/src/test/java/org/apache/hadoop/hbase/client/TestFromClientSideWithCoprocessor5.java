@@ -30,17 +30,12 @@ import org.junit.experimental.categories.Category;
 /**
  * Test all client operations with a coprocessor that just implements the default flush/compact/scan
  * policy.
- *
- * <p>Base class was split into three so this class got split into three. See below for other parts.
- * @see TestFromClientSide4
- * @see TestFromClientSide5
  */
 @Category({ LargeTests.class, ClientTests.class })
-public class TestFromClientSideWithCoprocessor extends TestFromClientSide {
-
+public class TestFromClientSideWithCoprocessor5 extends TestFromClientSide5 {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFromClientSideWithCoprocessor.class);
+    HBaseClassTestRule.forClass(TestFromClientSideWithCoprocessor5.class);
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
