@@ -37,10 +37,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.io.netty.bootstrap.Bootstrap;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBufInputStream;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
@@ -51,8 +47,10 @@ import org.apache.hbase.thirdparty.io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.socket.DatagramChannel;
 import org.apache.hbase.thirdparty.io.netty.channel.socket.DatagramPacket;
 import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioDatagramChannel;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A class that receives the cluster status, and provide it as a set of service to the client.
@@ -208,10 +206,9 @@ class ClusterStatusListener implements Closeable {
       try {
         Bootstrap b = new Bootstrap();
         b.group(group)
-            .channel(NioDatagramChannel.class)
-            .option(ChannelOption.SO_REUSEADDR, true)
-            .handler(new ClusterStatusHandler());
-
+          .channel(NioDatagramChannel.class)
+          .option(ChannelOption.SO_REUSEADDR, true)
+          .handler(new ClusterStatusHandler());
         channel = (DatagramChannel)b.bind(bindAddress, port).sync().channel();
       } catch (InterruptedException e) {
         close();
@@ -225,8 +222,10 @@ class ClusterStatusListener implements Closeable {
         ni = NetworkInterface.getByInetAddress(Addressing.getIpAddress());
       }
 
+      LOG.debug("Channel bindAddress={}, networkInterface={}, INA={}", bindAddress, ni, ina);
       channel.joinGroup(ina, ni, null, channel.newPromise());
     }
+
 
     @Override
     public void close() {
@@ -252,8 +251,7 @@ class ClusterStatusListener implements Closeable {
       }
 
       @Override
-      public boolean acceptInboundMessage(Object msg)
-          throws Exception {
+      public boolean acceptInboundMessage(Object msg) throws Exception {
         return super.acceptInboundMessage(msg);
       }
 
