@@ -228,7 +228,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
    */
   private transient BlockCache victimHandler = null;
 
-  /** Percent of cached Data blocks */
+  /** Percent of cached data blocks */
   private final int cacheDataBlockPercent;
 
   /**
