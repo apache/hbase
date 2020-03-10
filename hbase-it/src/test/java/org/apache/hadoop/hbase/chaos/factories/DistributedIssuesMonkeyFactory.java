@@ -73,9 +73,8 @@ public class DistributedIssuesMonkeyFactory extends MonkeyFactory {
     // Action to log more info for debugging
     Action[] actions2 = new Action[] {new DumpClusterStatusAction()};
 
-    return new PolicyBasedChaosMonkey(properties, util,
-      new PeriodicRandomActionPolicy(action1Period, actions1),
-      new PeriodicRandomActionPolicy(action2Period, actions2));
+    return new PolicyBasedChaosMonkey(util, new PeriodicRandomActionPolicy(action1Period, actions1),
+        new PeriodicRandomActionPolicy(action2Period, actions2));
   }
 
   private void loadProperties() {

@@ -49,12 +49,6 @@ public class RollingBatchRestartRsAction extends BatchRestartRsAction {
     this.maxDeadServers = maxDeadServers;
   }
 
-  public RollingBatchRestartRsAction(long sleepTime, float ratio, int maxDeadServers,
-    boolean skipMetaRS) {
-    this(sleepTime, ratio, maxDeadServers);
-    this.skipMetaRS = skipMetaRS;
-  }
-
   enum KillOrStart {
     KILL,
     START
