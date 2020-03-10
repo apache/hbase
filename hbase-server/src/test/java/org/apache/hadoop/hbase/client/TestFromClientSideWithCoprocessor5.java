@@ -27,22 +27,17 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.AfterClass;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 /**
  * Test all client operations with a coprocessor that just implements the default flush/compact/scan
  * policy.
- *
- * <p>Base class was split into three so this class got split into three. See below for other parts.
- * @see TestFromClientSide4
- * @see TestFromClientSide5
  */
 @Category({ LargeTests.class, ClientTests.class })
-public class TestFromClientSideWithCoprocessor extends TestFromClientSide {
+public class TestFromClientSideWithCoprocessor5 extends TestFromClientSide5 {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFromClientSideWithCoprocessor.class);
+    HBaseClassTestRule.forClass(TestFromClientSideWithCoprocessor5.class);
 
   // Override the parameters from the parent class. We just want to run it for the default
   // param combination.
@@ -59,7 +54,7 @@ public class TestFromClientSideWithCoprocessor extends TestFromClientSide {
     afterClass();
   }
 
-  public TestFromClientSideWithCoprocessor(Class registry, int numHedgedReqs) throws Exception {
+  public TestFromClientSideWithCoprocessor5(Class registry, int numHedgedReqs) throws Exception {
     initialize(registry, numHedgedReqs, NoOpScanPolicyObserver.class,
         MultiRowMutationEndpoint.class);
   }
