@@ -98,7 +98,7 @@ public class HBaseSaslRpcClient extends AbstractHBaseSaslRpcClient {
 
     try {
       byte[] saslToken = getInitialResponse();
-      if (saslToken != null) {
+      if (saslToken.length > 0) {
         outStream.writeInt(saslToken.length);
         outStream.write(saslToken, 0, saslToken.length);
         outStream.flush();
