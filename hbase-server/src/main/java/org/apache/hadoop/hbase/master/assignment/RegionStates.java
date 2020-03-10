@@ -550,6 +550,9 @@ public class RegionStates {
         if (isTableDisabled(tableStateManager, node.getTable())) {
           continue;
         }
+        if (node.getRegionInfo().isSplitParent()) {
+          continue;
+        }
         Map<ServerName, List<RegionInfo>> tableResult =
             result.computeIfAbsent(node.getTable(), t -> new HashMap<>());
         final ServerName serverName = node.getRegionLocation();
@@ -572,9 +575,10 @@ public class RegionStates {
       for (ServerName serverName : onlineServers) {
         ServerStateNode serverNode = serverMap.get(serverName);
         if (serverNode != null) {
-          ensemble.put(serverNode.getServerName(), serverNode.getRegionInfoList().stream()
-            .filter(region -> !isTableDisabled(tableStateManager, region.getTable()))
-            .collect(Collectors.toList()));
+          ensemble.put(serverNode.getServerName(),
+            serverNode.getRegionInfoList().stream()
+                .filter(region -> !isTableDisabled(tableStateManager, region.getTable()))
+                .filter(region -> !region.isSplitParent()).collect(Collectors.toList()));
         } else {
           ensemble.put(serverName, new ArrayList<>());
         }
