@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.regionserver.ShipperListener;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
+import org.apache.hadoop.hbase.regionserver.compactions.CloseChecker;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputControlUtil;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -93,7 +94,6 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
     if (major) {
       totalMajorCompactions.incrementAndGet();
     }
-    long bytesWrittenProgressForCloseCheck = 0;
     long bytesWrittenProgressForLog = 0;
     long bytesWrittenProgressForShippedCall = 0;
     // Clear old mob references
@@ -119,11 +119,12 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
     // we have to use a do/while loop.
     List<Cell> cells = new ArrayList<>();
     // Limit to "hbase.hstore.compaction.kv.max" (default 10) to avoid OOME
-    int closeCheckSizeLimit = HStore.getCloseCheckInterval();
+    long currentTime = EnvironmentEdgeManager.currentTime();
     long lastMillis = 0;
     if (LOG.isDebugEnabled()) {
-      lastMillis = EnvironmentEdgeManager.currentTime();
+      lastMillis = currentTime;
     }
+    CloseChecker closeChecker = new CloseChecker(conf, currentTime);
     String compactionName = ThroughputControlUtil.getNameForThrottling(store, "compaction");
     long now = 0;
     boolean hasMore;
@@ -168,8 +169,13 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
       }
       do {
         hasMore = scanner.next(cells, scannerContext);
+        currentTime = EnvironmentEdgeManager.currentTime();
         if (LOG.isDebugEnabled()) {
-          now = EnvironmentEdgeManager.currentTime();
+          now = currentTime;
+        }
+        if (closeChecker.isClosedByTimeLimit(store, currentTime)) {
+          progress.cancel();
+          return false;
         }
         for (Cell c : cells) {
           counter++;
@@ -291,16 +297,9 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
             bytesWrittenProgressForLog += len;
           }
           throughputController.control(compactionName, len);
-          // check periodically to see if a system stop is requested
-          if (closeCheckSizeLimit > 0) {
-            bytesWrittenProgressForCloseCheck += len;
-            if (bytesWrittenProgressForCloseCheck > closeCheckSizeLimit) {
-              bytesWrittenProgressForCloseCheck = 0;
-              if (!store.areWritesEnabled()) {
-                progress.cancel();
-                return false;
-              }
-            }
+          if (closeChecker.isClosedBySizeLimit(store, len)) {
+            progress.cancel();
+            return false;
           }
           if (kvs != null && bytesWrittenProgressForShippedCall > shippedCallSizeLimit) {
             ((ShipperListener) writer).beforeShipped();

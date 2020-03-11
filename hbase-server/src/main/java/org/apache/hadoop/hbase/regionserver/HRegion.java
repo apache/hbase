@@ -2210,15 +2210,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    *  }
    * Also in compactor.performCompaction():
    * check periodically to see if a system stop is requested
-   * if (closeCheckInterval > 0) {
-   *   bytesWritten += len;
-   *   if (bytesWritten > closeCheckInterval) {
-   *     bytesWritten = 0;
-   *     if (!store.areWritesEnabled()) {
-   *       progress.cancel();
-   *       return false;
-   *     }
-   *   }
+   * if (closeChecker != null && closeChecker.isClosedByTimeLimit(store, now)) {
+   *    progress.cancel();
+   *    return false;
+   * }
+   * if (closeChecker != null && closeChecker.isClosedBySizeLimit(store, len)) {
+   *   progress.cancel();
+   *   return false;
    * }
    */
   public boolean compact(CompactionContext compaction, HStore store,
