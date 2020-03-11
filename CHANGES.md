@@ -20,6 +20,87 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+## Release 2.2.4 - Unreleased (as of 2020-03-11)
+
+### NEW FEATURES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-23710](https://issues.apache.org/jira/browse/HBASE-23710) | Priority configuration for system coprocessors |  Major | Coprocessors |
+
+
+### IMPROVEMENTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-22827](https://issues.apache.org/jira/browse/HBASE-22827) | Expose multi-region merge in shell and Admin API |  Major | Admin, shell |
+| [HBASE-23864](https://issues.apache.org/jira/browse/HBASE-23864) | No need to submit SplitTableRegionProcedure/MergeTableRegionsProcedure when split/merge is disabled |  Major | . |
+| [HBASE-23859](https://issues.apache.org/jira/browse/HBASE-23859) | Modify "Block locality" of RegionServer Web UI to human readable percentage |  Trivial | . |
+| [HBASE-23802](https://issues.apache.org/jira/browse/HBASE-23802) | Remove unnecessary Configuration instantiation in LossyAccounting |  Minor | metrics |
+| [HBASE-23822](https://issues.apache.org/jira/browse/HBASE-23822) | Fix typo in procedures.jsp |  Trivial | website |
+| [HBASE-23686](https://issues.apache.org/jira/browse/HBASE-23686) | Revert binary incompatible change and remove reflection |  Major | . |
+| [HBASE-23683](https://issues.apache.org/jira/browse/HBASE-23683) | Make HBaseInterClusterReplicationEndpoint more extensible |  Major | Replication |
+| [HBASE-23646](https://issues.apache.org/jira/browse/HBASE-23646) | Fix remaining Checkstyle violations in tests of hbase-rest |  Minor | . |
+| [HBASE-23674](https://issues.apache.org/jira/browse/HBASE-23674) | Too many rit page Numbers show confusion |  Trivial | master |
+| [HBASE-23383](https://issues.apache.org/jira/browse/HBASE-23383) | [hbck2] \`fixHoles\` should queue assignment procedures for any regions its fixing |  Minor | hbck2, master, Region Assignment |
+| [HBASE-23165](https://issues.apache.org/jira/browse/HBASE-23165) | [hbtop] Some modifications from HBASE-22988 |  Minor | . |
+
+
+### BUG FIXES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-23953](https://issues.apache.org/jira/browse/HBASE-23953) | SimpleBalancer bug when second pass to fill up to min |  Major | Balancer |
+| [HBASE-23954](https://issues.apache.org/jira/browse/HBASE-23954) | SplitParent region should not be balanced |  Major | Balancer |
+| [HBASE-23944](https://issues.apache.org/jira/browse/HBASE-23944) | The method setClusterLoad of SimpleLoadBalancer is incorrect when balance by table |  Major | Balancer |
+| [HBASE-23909](https://issues.apache.org/jira/browse/HBASE-23909) | list\_regions fails if table is under split |  Minor | shell |
+| [HBASE-23892](https://issues.apache.org/jira/browse/HBASE-23892) | SecureTestCluster should allow its subclasses to pass their Class reference on HBaseKerberosUtils.setSSLConfiguration |  Major | . |
+| [HBASE-23809](https://issues.apache.org/jira/browse/HBASE-23809) | The RSGroup shell test is missing |  Major | rsgroup, test |
+| [HBASE-17115](https://issues.apache.org/jira/browse/HBASE-17115) | HMaster/HRegion Info Server does not honour admin.acl |  Major | . |
+| [HBASE-23737](https://issues.apache.org/jira/browse/HBASE-23737) | [Flakey Tests] TestFavoredNodeTableImport fails 30% of the time |  Major | . |
+| [HBASE-23733](https://issues.apache.org/jira/browse/HBASE-23733) | [Flakey Tests] TestSplitTransactionOnCluster |  Major | flakies |
+| [HBASE-23701](https://issues.apache.org/jira/browse/HBASE-23701) | Make sure HBaseClassTestRule doesn't suffer same issue as HBaseClassTestRuleChecker |  Minor | . |
+| [HBASE-23695](https://issues.apache.org/jira/browse/HBASE-23695) | Fail more gracefully when test class is missing Category |  Minor | . |
+| [HBASE-23677](https://issues.apache.org/jira/browse/HBASE-23677) | region.jsp returns 500/NPE when provided encoded region name is not online |  Minor | regionserver, UI |
+| [HBASE-23679](https://issues.apache.org/jira/browse/HBASE-23679) | FileSystem instance leaks due to bulk loads with Kerberos enabled |  Critical | . |
+| [HBASE-21345](https://issues.apache.org/jira/browse/HBASE-21345) | [hbck2] Allow version check to proceed even though master is 'initializing'. |  Major | hbck2 |
+
+
+### TESTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-23808](https://issues.apache.org/jira/browse/HBASE-23808) | [Flakey Test] TestMasterShutdown#testMasterShutdownBeforeStartingAnyRegionServer |  Major | test |
+| [HBASE-23793](https://issues.apache.org/jira/browse/HBASE-23793) | Increase maven heap allocation to 4G in Yetus personality |  Major | build, test |
+| [HBASE-23792](https://issues.apache.org/jira/browse/HBASE-23792) | [Flakey Test] TestExportSnapshotNoCluster.testSnapshotWithRefsExportFileSystemState |  Major | test |
+| [HBASE-23749](https://issues.apache.org/jira/browse/HBASE-23749) | TestHFileWriterV3 should have tests for all data block encodings |  Major | . |
+| [HBASE-23711](https://issues.apache.org/jira/browse/HBASE-23711) | Add test for MinVersions and KeepDeletedCells TTL |  Minor | . |
+| [HBASE-23569](https://issues.apache.org/jira/browse/HBASE-23569) | Validate that the log cleaner actually cleans oldWALs as expected |  Major | integration tests, master, test |
+
+
+### SUB-TASKS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-23755](https://issues.apache.org/jira/browse/HBASE-23755) | [OpenTracing] Declare HTrace is unusable in the user doc |  Major | . |
+| [HBASE-23748](https://issues.apache.org/jira/browse/HBASE-23748) | Include HBASE-21284 to branch-2.2 |  Major | . |
+| [HBASE-23773](https://issues.apache.org/jira/browse/HBASE-23773) | Backport "HBASE-23601 OutputSink.WriterThread exception gets stuck and repeated indefinietly" to branch-2.2 |  Major | . |
+| [HBASE-23728](https://issues.apache.org/jira/browse/HBASE-23728) | Include HBASE-21018 in 2.2 & 2.3 |  Major | . |
+| [HBASE-23727](https://issues.apache.org/jira/browse/HBASE-23727) | Port HBASE-20981 in 2.2 & 2.3 |  Major | . |
+| [HBASE-23692](https://issues.apache.org/jira/browse/HBASE-23692) | Set version as 2.2.4-SNAPSHOT in branch-2.2 |  Major | . |
+
+
+### OTHER:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-23874](https://issues.apache.org/jira/browse/HBASE-23874) | Move Jira-attached file precommit definition from script in Jenkins config to dev-support |  Minor | build |
+| [HBASE-23854](https://issues.apache.org/jira/browse/HBASE-23854) | Documentation update of external\_apis.adoc#example-scala-code |  Trivial | documentation |
+| [HBASE-23774](https://issues.apache.org/jira/browse/HBASE-23774) | Announce user-zh list |  Trivial | website |
+| [HBASE-23734](https://issues.apache.org/jira/browse/HBASE-23734) | Backport [HBASE-21874 Bucket cache on Persistent memory] to branch-2.2 |  Major | . |
+
+
+
 ## Release 2.2.3 - Unreleased (as of 2020-01-10)
 
 ### NEW FEATURES:
