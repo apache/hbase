@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,12 +49,15 @@ public class NettyRpcClient extends AbstractRpcClient<NettyRpcConnection> {
   public NettyRpcClient(Configuration configuration, String clusterId, SocketAddress localAddress,
       MetricsConnection metrics) {
     super(configuration, clusterId, localAddress, metrics);
-    Pair<EventLoopGroup, Class<? extends Channel>> groupAndChannelClass = NettyRpcClientConfigHelper
-        .getEventLoopConfig(conf);
+    Pair<EventLoopGroup, Class<? extends Channel>> groupAndChannelClass =
+      NettyRpcClientConfigHelper.getEventLoopConfig(conf);
     if (groupAndChannelClass == null) {
       // Use our own EventLoopGroup.
-      this.group = new NioEventLoopGroup(0,
-          new DefaultThreadFactory("IPC-NioEventLoopGroup", true, Thread.MAX_PRIORITY));
+      int threadCount = conf.getInt(
+        NettyRpcClientConfigHelper.HBASE_NETTY_EVENTLOOP_RPCCLIENT_THREADCOUNT_KEY, 0);
+      this.group = new NioEventLoopGroup(threadCount,
+          new DefaultThreadFactory("RPCClient(own)-NioEventLoopGroup", true,
+            Thread.NORM_PRIORITY));
       this.channelClass = NioSocketChannel.class;
       this.shutdownGroupWhenClose = true;
     } else {

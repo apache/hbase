@@ -229,6 +229,7 @@ public class HttpProxyExample {
     channelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
     serverChannel = new ServerBootstrap().group(bossGroup, workerGroup)
         .channel(NioServerSocketChannel.class).childOption(ChannelOption.TCP_NODELAY, true)
+        .childOption(ChannelOption.SO_REUSEADDR, true)
         .childHandler(new ChannelInitializer<Channel>() {
 
           @Override
