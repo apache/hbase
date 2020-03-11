@@ -746,17 +746,8 @@
             <testFailureIgnore>${surefire.testFailureIgnore}</testFailureIgnore>
             <forkedProcessTimeoutInSeconds>${surefire.timeout}</forkedProcessTimeoutInSeconds>
             <redirectTestOutputToFile>${test.output.tofile}</redirectTestOutputToFile>
-            <!-- These are incontext system properties set on mvn. For forked
-              jvms, see hbase-surefire.argLine... So, we might be dup'ing
-              configs here and over on what we pass to the forked jvm.
-            -->
             <systemPropertyVariables>
               <test.build.classes>${test.build.classes}</test.build.classes>
-              <!--And for eventloops that have no explicit configuration, netty sets
-                nioeventloopgroup thread count to CPU count * 2. Thats too much
-                for mini clusters/tests.
-              -->
-              <io.netty.eventLoopThreads>3</io.netty.eventLoopThreads>
             </systemPropertyVariables>
             <excludes>
               <!-- users can add -D option to skip particular test classes
