@@ -738,7 +738,8 @@ EOF
     # Intercept cells whose format we know such as the info:regioninfo in hbase:meta
     def to_string(column, kv, maxlength = -1, converter_class = nil, converter = nil)
       if is_meta_table?
-        if column == 'info:regioninfo' || column == 'info:splitA' || column == 'info:splitB'
+        if column == 'info:regioninfo' || column == 'info:splitA' || column == 'info:splitB' || \
+            column.start_with?('info:merge')
           hri = org.apache.hadoop.hbase.HRegionInfo.parseFromOrNull(kv.getValueArray,
                                                                     kv.getValueOffset, kv.getValueLength)
           return format('timestamp=%d, value=%s', kv.getTimestamp, hri.nil? ? '' : hri.toString)
