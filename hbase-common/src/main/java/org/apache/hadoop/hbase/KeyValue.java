@@ -26,6 +26,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -1217,7 +1218,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
     if (timestamp == HConstants.OLDEST_TIMESTAMP) {
       return "OLDEST_TIMESTAMP";
     }
-    return String.valueOf(timestamp);
+    return Instant.ofEpochMilli(timestamp).toString();
   }
 
   //---------------------------------------------------------------------------
