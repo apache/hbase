@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
@@ -209,4 +210,30 @@ public class TestDefaultLoadBalancer extends BalancerTestBase {
     List<ServerAndLoad> balancedCluster1 = reconcile(clusterList, clusterplans1, clusterServers);
     assertTrue(assertClusterOverallAsBalanced(balancedCluster1, clusterLoadPerTable.keySet().size()));
   }
+
+  @Test
+  public void
+  testBalanceClusterOverallStrictly() throws Exception {
+    int[] regionNumOfTable1PerServer = {3, 3, 4, 4, 4, 4, 5, 5, 5};
+    int[] regionNumOfTable2PerServer = {2, 2, 2, 2, 2, 2, 2, 2, 1};
+    TreeMap<ServerName, List<RegionInfo>> serverRegionInfo = new TreeMap<>();
+    List<ServerAndLoad> serverAndLoads = new ArrayList<>();
+    for (int i = 0; i < regionNumOfTable1PerServer.length; i++) {
+      ServerName serverName = ServerName.valueOf("server" + i, 1000, -1);
+      List<RegionInfo> regions1 = createRegions(regionNumOfTable1PerServer[i], TableName.valueOf("table1"));
+      List<RegionInfo> regions2 = createRegions(regionNumOfTable2PerServer[i], TableName.valueOf("table2"));
+      regions1.addAll(regions2);
+      serverRegionInfo.put(serverName, regions1);
+      ServerAndLoad serverAndLoad = new ServerAndLoad(serverName, regionNumOfTable1PerServer[i] + regionNumOfTable2PerServer[i]);
+      serverAndLoads.add(serverAndLoad);
+    }
+    HashMap<TableName, TreeMap<ServerName, List<RegionInfo>>> clusterLoadPerTable = mockClusterServersWithTables(serverRegionInfo);
+    loadBalancer.setClusterLoad((Map) clusterLoadPerTable);
+    List<RegionPlan> partialplans = loadBalancer.balanceCluster(clusterLoadPerTable.get(TableName.valueOf("table1")));
+    List<ServerAndLoad> balancedServerLoads = reconcile(serverAndLoads, partialplans, serverRegionInfo);
+    for (ServerAndLoad serverAndLoad : balancedServerLoads) {
+      assertEquals(6, serverAndLoad.getLoad());
+    }
+  }
+
 }

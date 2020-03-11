@@ -431,6 +431,26 @@ public class BalancerTestBase {
     return randomRegions(numRegions, -1);
   }
 
+  protected List<RegionInfo> createRegions(int numRegions, TableName tableName) {
+    List<RegionInfo> regions = new ArrayList<>(numRegions);
+    byte[] start = new byte[16];
+    byte[] end = new byte[16];
+    Random rand = ThreadLocalRandom.current();
+    rand.nextBytes(start);
+    rand.nextBytes(end);
+    for (int i = 0; i < numRegions; i++) {
+      Bytes.putInt(start, 0, numRegions << 1);
+      Bytes.putInt(end, 0, (numRegions << 1) + 1);
+      RegionInfo hri = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(start)
+        .setEndKey(end)
+        .setSplit(false)
+        .build();
+      regions.add(hri);
+    }
+    return regions;
+  }
+
   protected List<RegionInfo> randomRegions(int numRegions, int numTables) {
     List<RegionInfo> regions = new ArrayList<>(numRegions);
     byte[] start = new byte[16];
