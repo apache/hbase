@@ -57,7 +57,6 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
@@ -151,7 +150,7 @@ public class ReplicationSink {
     if (this.conf.get(HConstants.CLIENT_ZOOKEEPER_QUORUM) != null) {
       this.conf.unset(HConstants.CLIENT_ZOOKEEPER_QUORUM);
     }
-   }
+  }
 
   /**
    * Replicate this array of entries directly into the local cluster using the native client. Only
@@ -166,7 +165,9 @@ public class ReplicationSink {
   public void replicateEntries(List<WALEntry> entries, final CellScanner cells,
       String replicationClusterId, String sourceBaseNamespaceDirPath,
       String sourceHFileArchiveDirPath) throws IOException {
-    if (entries.isEmpty()) return;
+    if (entries.isEmpty()) {
+      return;
+    }
     // Very simple optimization where we batch sequences of rows going
     // to the same table.
     try {
@@ -259,18 +260,13 @@ public class ReplicationSink {
             bulkLoadsPerClusters.entrySet()) {
           Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap = entry.getValue();
           if (bulkLoadHFileMap != null && !bulkLoadHFileMap.isEmpty()) {
-            if(LOG.isDebugEnabled()) {
-              LOG.debug("Started replicating bulk loaded data from cluster ids: {}.",
-                entry.getKey().toString());
-            }
-            HFileReplicator hFileReplicator =
-              new HFileReplicator(this.provider.getConf(this.conf, replicationClusterId),
+            LOG.debug("Replicating {} bulk loaded data", entry.getKey().toString());
+            Configuration providerConf = this.provider.getConf(this.conf, replicationClusterId);
+            try (HFileReplicator hFileReplicator = new HFileReplicator(providerConf,
                 sourceBaseNamespaceDirPath, sourceHFileArchiveDirPath, bulkLoadHFileMap, conf,
-                getConnection(), entry.getKey());
-            hFileReplicator.replicate();
-            if(LOG.isDebugEnabled()) {
-              LOG.debug("Finished replicating bulk loaded data from cluster id: {}",
-                entry.getKey().toString());
+                getConnection(), entry.getKey())) {
+              hFileReplicator.replicate();
+              LOG.debug("Finished replicating {} bulk loaded data", entry.getKey().toString());
             }
           }
         }
@@ -352,8 +348,6 @@ public class ReplicationSink {
   }
 
   /**
-   * @param previousCell
-   * @param cell
    * @return True if we have crossed over onto a new row or type
    */
   private boolean isNewRowOrType(final Cell previousCell, final Cell cell) {
@@ -368,13 +362,10 @@ public class ReplicationSink {
   /**
    * Simple helper to a map from key to (a list of) values
    * TODO: Make a general utility method
-   * @param map
-   * @param key1
-   * @param key2
-   * @param value
    * @return the list of values corresponding to key1 and key2
    */
-  private <K1, K2, V> List<V> addToHashMultiMap(Map<K1, Map<K2,List<V>>> map, K1 key1, K2 key2, V value) {
+  private <K1, K2, V> List<V> addToHashMultiMap(Map<K1, Map<K2,List<V>>> map, K1 key1,
+      K2 key2, V value) {
     Map<K2,List<V>> innerMap = map.get(key1);
     if (innerMap == null) {
       innerMap = new HashMap<>();
@@ -450,7 +441,7 @@ public class ReplicationSink {
   /**
    * Get a string representation of this sink's metrics
    * @return string with the total replicated edits count and the date
-   * of the last edit that was applied
+   *   of the last edit that was applied
    */
   public String getStats() {
     long total = this.totalReplicatedEdits.get();

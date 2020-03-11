@@ -746,8 +746,17 @@
             <testFailureIgnore>${surefire.testFailureIgnore}</testFailureIgnore>
             <forkedProcessTimeoutInSeconds>${surefire.timeout}</forkedProcessTimeoutInSeconds>
             <redirectTestOutputToFile>${test.output.tofile}</redirectTestOutputToFile>
+            <!-- These are incontext system properties set on mvn. For forked
+              jvms, see hbase-surefire.argLine... So, we might be dup'ing
+              configs here and over on what we pass to the forked jvm.
+            -->
             <systemPropertyVariables>
               <test.build.classes>${test.build.classes}</test.build.classes>
+              <!--And for eventloops that have no explicit configuration, netty sets
+                nioeventloopgroup thread count to CPU count * 2. Thats too much
+                for mini clusters/tests.
+              -->
+              <io.netty.eventLoopThreads>3</io.netty.eventLoopThreads>
             </systemPropertyVariables>
             <excludes>
               <!-- users can add -D option to skip particular test classes
@@ -1596,11 +1605,16 @@
     <surefire.Xmx>2800m</surefire.Xmx>
     <surefire.cygwinXmx>2800m</surefire.cygwinXmx>
     <!--Mark our test runs with '-Dhbase.build.id' so we can identify a surefire test as ours in a process listing
+
+      And for netty eventloops that have no explicit configuration, netty sets
+      nioeventloopgroup thread count to CPU count * 2. Thats too much for mini
+      clusters/tests.
      -->
     <hbase-surefire.argLine>-enableassertions -Dhbase.build.id=${build.id} -Xmx${surefire.Xmx}
       -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
       -Djava.awt.headless=true -Djdk.net.URLClassPath.disableClassPathURLCheck=true
       -Dorg.apache.hbase.thirdparty.io.netty.leakDetection.level=advanced
+      -Dio.netty.eventLoopThreads=3
     </hbase-surefire.argLine>
     <hbase-surefire.cygwin-argLine>-enableassertions -Xmx${surefire.cygwinXmx}
       -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
