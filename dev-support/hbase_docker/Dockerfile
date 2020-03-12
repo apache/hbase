@@ -17,12 +17,15 @@
 FROM ubuntu:18.04 AS BASE_IMAGE
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-# hadolint ignore=DL3009
 RUN DEBIAN_FRONTEND=noninteractive apt-get -qq update && \
   DEBIAN_FRONTEND=noninteractive apt-get -qq install --no-install-recommends -y \
     ca-certificates=20180409 \
     curl=7.58.0-2ubuntu3.8 \
-    locales=2.27-3ubuntu1
+    git=1:2.17.1-1ubuntu0.5 \
+    locales=2.27-3ubuntu1 \
+    && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 RUN locale-gen en_US.UTF-8
 ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
@@ -44,12 +47,6 @@ RUN curl --location --fail --silent --show-error --output /tmp/adoptopenjdk8.tar
 
 FROM BASE_IMAGE
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-
-RUN DEBIAN_FRONTEND=noninteractive apt-get -qq install --no-install-recommends -y \
-  git=1:2.17.1-1ubuntu0.5 \
-  && \
-  apt-get clean && \
-  rm -rf /var/lib/apt/lists/*
 
 #
 # when updating java or maven versions here, consider also updating
