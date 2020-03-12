@@ -24,12 +24,46 @@
 FROM ubuntu:18.04 AS BASE_IMAGE
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-# hadolint ignore=DL3009
 RUN DEBIAN_FRONTEND=noninteractive apt-get -qq update && \
   DEBIAN_FRONTEND=noninteractive apt-get -qq install --no-install-recommends -y \
     ca-certificates=20180409 \
     curl=7.58.0-2ubuntu3.8 \
-    locales=2.27-3ubuntu1
+    locales=2.27-3ubuntu1 \
+##
+# install dependencies from system packages.
+# be careful not to install any system packages (i.e., findbugs) that will
+# pull in the default-jre.
+#
+# bring the base image into conformance with the expectations imposed by
+# Yetus and our personality file of what a build environment looks like.
+    bash=4.4.18-2ubuntu1.2 \
+    build-essential=12.4ubuntu1 \
+    diffutils=1:3.6-1 \
+    git=1:2.17.1-1ubuntu0.5 \
+    rsync=3.1.2-2.1ubuntu1 \
+    tar=1.29b-2ubuntu0.1 \
+    wget=1.19.4-1ubuntu2.2 \
+# install the dependencies required in order to enable the sundry precommit
+# checks/features provided by Yetus plugins.
+    bats=0.4.0-1.1 \
+    libperl-critic-perl=1.130-1 \
+    python3=3.6.7-1~18.04 \
+    python3-pip=9.0.1-2.3~ubuntu1.18.04.1 \
+    python3-setuptools=39.0.1-2 \
+    ruby=1:2.5.1 \
+    ruby-dev=1:2.5.1 \
+    shellcheck=0.4.6-1 \
+    && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN python3 -mpip install --upgrade pip && \
+  python3 -mpip install pylint==2.4.4
+
+RUN gem install --no-document \
+  rake:13.0.1 \
+  rubocop:0.80.0 \
+  ruby-lint:2.3.1
 
 RUN locale-gen en_US.UTF-8
 ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
@@ -89,47 +123,6 @@ RUN curl --location --fail --silent --show-error --output /tmp/adoptopenjdk11.ta
 
 FROM BASE_IMAGE
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-
-##
-# install dependencies from system packages.
-# be careful not to install any system packages (i.e., findbugs) that will
-# pull in the default-jre.
-#
-
-# bring the base image into conformance with the expectations imposed by
-# Yetus and our personality file of what a build environment looks like.
-RUN DEBIAN_FRONTEND=noninteractive apt-get -qq install --no-install-recommends -y \
-  bash=4.4.18-2ubuntu1.2 \
-  build-essential=12.4ubuntu1 \
-  curl=7.58.0-2ubuntu3.8 \
-  diffutils=1:3.6-1 \
-  git=1:2.17.1-1ubuntu0.5 \
-  rsync=3.1.2-2.1ubuntu1 \
-  tar=1.29b-2ubuntu0.1 \
-  wget=1.19.4-1ubuntu2.2
-
-# install the dependencies required in order to enable the sundry precommit
-# checks/features provided by Yetus plugins.
-RUN DEBIAN_FRONTEND=noninteractive apt-get -qq install --no-install-recommends -y \
-  bats=0.4.0-1.1 \
-  libperl-critic-perl=1.130-1 \
-  python3=3.6.7-1~18.04 \
-  python3-pip=9.0.1-2.3~ubuntu1.18.04.1 \
-  python3-setuptools=39.0.1-2 \
-  ruby=1:2.5.1 \
-  ruby-dev=1:2.5.1 \
-  shellcheck=0.4.6-1 \
-  && \
-  apt-get clean && \
-  rm -rf /var/lib/apt/lists/*
-
-RUN python3 -mpip install --upgrade pip && \
-  python3 -mpip install pylint==2.4.4
-
-RUN gem install --no-document \
-  rake:13.0.1 \
-  rubocop:0.80.0 \
-  ruby-lint:2.3.1
 
 # hadolint ignore=DL3010
 COPY --from=SPOTBUGS_DOWNLOAD_IMAGE /tmp/spotbugs.tgz /tmp/spotbugs.tgz
