@@ -184,7 +184,8 @@
                                     <exclude>org.apache.hbase:hbase-resource-bundle</exclude>
                                     <exclude>org.slf4j:*</exclude>
                                     <exclude>com.google.code.findbugs:*</exclude>
-                                    <exclude>com.github.stephenc.findbugs:*</exclude>
+                                    <exclude>com.github.stephenc.fingbugs:*</exclude>
+                                    <exclude>com.github.spotbugs:*</exclude>
                                     <exclude>org.apache.htrace:*</exclude>
                                     <exclude>org.apache.yetus:*</exclude>
                                     <exclude>log4j:*</exclude>

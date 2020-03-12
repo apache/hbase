@@ -200,6 +200,12 @@
     </dependency>
     <!-- General dependencies -->
     <dependency>
+      <groupId>com.github.stephenc.findbugs</groupId>
+      <artifactId>findbugs-annotations</artifactId>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
       <type>test-jar</type>
@@ -272,11 +278,6 @@
         </property>
       </activation>
       <dependencies>
-        <dependency>
-           <groupId>com.github.stephenc.findbugs</groupId>
-           <artifactId>findbugs-annotations</artifactId>
-           <optional>true</optional>
-        </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>

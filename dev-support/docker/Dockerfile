@@ -38,14 +38,13 @@ ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
 # download sundry dependencies
 #
 
-FROM BASE_IMAGE AS FINDBUGS_DOWNLOAD_IMAGE
-# TODO: replace with Spotbugs HBASE-23077, HBASE-22383
-ENV FINDBUGS_VERSION '3.0.1'
-ENV FINDBUGS_URL "https://downloads.sourceforge.net/project/findbugs/findbugs/${FINDBUGS_VERSION}/findbugs-${FINDBUGS_VERSION}.tar.gz"
-ENV FINDBUGS_SHA256 'e80e0da0c213a27504ef3188ef25f107651700ffc66433eac6a7454bbe336419'
+FROM BASE_IMAGE AS SPOTBUGS_DOWNLOAD_IMAGE
+ENV SPOTBUGS_VERSION '3.1.12'
+ENV SPOTBUGS_URL "https://repo.maven.apache.org/maven2/com/github/spotbugs/spotbugs/${SPOTBUGS_VERSION}/spotbugs-${SPOTBUGS_VERSION}.tgz"
+ENV SPOTBUGS_SHA256 '9c475d6c7096ed7af783e04dc2db40462145291de75a80029391600b6eb2d401'
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-RUN curl --location --fail --silent --show-error --output /tmp/findbugs.tar.gz "${FINDBUGS_URL}" && \
-  echo "${FINDBUGS_SHA256} */tmp/findbugs.tar.gz" | sha256sum -c -
+RUN curl --location --fail --silent --show-error --output /tmp/spotbugs.tgz "${SPOTBUGS_URL}" && \
+  echo "${SPOTBUGS_SHA256} */tmp/spotbugs.tgz" | sha256sum -c -
 
 FROM BASE_IMAGE AS HADOLINT_DOWNLOAD_IMAGE
 ENV HADOLINT_VERSION '1.17.5'
@@ -133,10 +132,10 @@ RUN gem install --no-document \
   ruby-lint:2.3.1
 
 # hadolint ignore=DL3010
-COPY --from=FINDBUGS_DOWNLOAD_IMAGE /tmp/findbugs.tar.gz /tmp/findbugs.tar.gz
-RUN tar xzf /tmp/findbugs.tar.gz -C /opt && \
-  ln -s "/opt/$(dirname "$(tar -tf /tmp/findbugs.tar.gz | head -n1)")" /opt/findbugs && \
-  rm /tmp/findbugs.tar.gz
+COPY --from=SPOTBUGS_DOWNLOAD_IMAGE /tmp/spotbugs.tgz /tmp/spotbugs.tgz
+RUN tar xzf /tmp/spotbugs.tgz -C /opt && \
+  ln -s "/opt/$(tar -tf /tmp/spotbugs.tgz | head -n1 | cut -d/ -f1)" /opt/spotbugs && \
+  rm /tmp/spotbugs.tgz
 
 COPY --from=HADOLINT_DOWNLOAD_IMAGE /tmp/hadolint /tmp/hadolint
 RUN mv /tmp/hadolint /usr/local/bin && \
@@ -184,9 +183,9 @@ RUN mkdir -p /usr/lib/jvm && \
 # these values to be specified here; the various --foo-path flags do not
 # propigate as expected, while these are honored.
 # TODO (nd): is this really true? investigate and file a ticket.
-ENV FINDBUGS_HOME '/opt/findbugs'
+ENV SPOTBUGS_HOME '/opt/spotbugs'
 ENV MAVEN_HOME '/opt/maven'
-ENV MAVEN_OPTS '-Xms6G -Xmx6G'
+ENV MAVEN_OPTS '-Xms4G -Xmx4G'
 
 CMD ["/bin/bash"]
 
