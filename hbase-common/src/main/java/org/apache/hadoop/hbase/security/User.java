@@ -41,8 +41,6 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Wrapper to abstract out usage of user and group information in HBase.
@@ -57,7 +55,6 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Public
 public abstract class User {
-  private static final Logger LOG = LoggerFactory.getLogger(User.class);
   public static final String HBASE_SECURITY_CONF_KEY =
       "hbase.security.authentication";
   public static final String HBASE_SECURITY_AUTHORIZATION_CONF_KEY =
@@ -249,8 +246,8 @@ public abstract class User {
    * @param pricipalName login principal
    * @throws IOException underlying exception from UserGroupInformation.loginUserFromKeytab
    */
-  public static void login(Configuration conf, String keytabLocation, String pricipalName) throws IOException {
-    SecureHadoopUser.login(conf, keytabLocation, pricipalName);
+  public static void login(String keytabLocation, String pricipalName) throws IOException {
+    SecureHadoopUser.login(keytabLocation, pricipalName);
   }
 
   /**
@@ -298,7 +295,6 @@ public abstract class User {
    public static final class SecureHadoopUser extends User {
     private String shortName;
     private LoadingCache<String, String[]> cache;
-    private static volatile boolean isStartAutoReLogin = false;
 
     public SecureHadoopUser() throws IOException {
       ugi = UserGroupInformation.getCurrentUser();
@@ -381,9 +377,6 @@ public abstract class User {
         String principalConfKey, String localhost) throws IOException {
       if (isSecurityEnabled()) {
         SecurityUtil.login(conf, fileConfKey, principalConfKey, localhost);
-        if(conf.getBoolean("hbase.kerberos.auto.relogin", false) && !isStartAutoReLogin) {
-          autoReLogin(conf.getLong("hbase.kerberos.auto.relogin.period", 300000L));
-        }
       }
     }
 
@@ -393,39 +386,11 @@ public abstract class User {
      * @param principalName principal in keytab
      * @throws IOException exception from UserGroupInformation.loginUserFromKeytab
      */
-    public static void login(Configuration conf, String keytabLocation, String principalName)
+    public static void login(String keytabLocation, String principalName)
         throws IOException {
       if (isSecurityEnabled()) {
         UserGroupInformation.loginUserFromKeytab(principalName, keytabLocation);
-        if(conf.getBoolean("hbase.kerberos.auto.relogin", false) && !isStartAutoReLogin) {
-          autoReLogin(conf.getLong("hbase.kerberos.auto.relogin.period", 300000L));
-        }
       }
-    }
-
-    private synchronized static void autoReLogin(final long sleepTime) {
-      if(isStartAutoReLogin) {
-        return;
-      }
-      Thread thread = new Thread("AutoReLogin") {
-        @Override public void run() {
-          while (true) {
-            try {
-              Thread.sleep(sleepTime);
-              if (UserGroupInformation.isLoginKeytabBased()) {
-                UserGroupInformation.getLoginUser().checkTGTAndReloginFromKeytab();
-              } else {
-                UserGroupInformation.getLoginUser().reloginFromTicketCache();
-              }
-            } catch (Exception e) {
-              LOG.error("auto renew login exception!", e);
-            }
-          }
-        }
-      };
-      thread.setDaemon(true);
-      thread.start();
-      isStartAutoReLogin = true;
     }
 
     /**
