@@ -72,6 +72,13 @@
       </testResource>
     </testResources>
     <plugins>
+      <plugin>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
+        <configuration>
+          <maxHeap>2048</maxHeap>
+        </configuration>
+      </plugin>
       <!-- licensing info from our bundled works -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -209,11 +216,6 @@
             </configuration>
           </execution>
         </executions>
-      </plugin>
-      <!-- Run findbugs -->
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
       </plugin>
       <!-- Testing plugins -->
       <plugin>
@@ -375,9 +377,10 @@
     </dependency>
     <!-- General dependencies -->
     <dependency>
-       <groupId>com.github.stephenc.findbugs</groupId>
-       <artifactId>findbugs-annotations</artifactId>
-       <optional>true</optional>
+      <groupId>com.github.stephenc.findbugs</groupId>
+      <artifactId>findbugs-annotations</artifactId>
+      <scope>compile</scope>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>com.github.ben-manes.caffeine</groupId>

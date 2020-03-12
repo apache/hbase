@@ -184,17 +184,29 @@ function personality_modules
     done
   fi
 
-  if [[ ${testtype} == findbugs ]]; then
-    # Run findbugs on each module individually to diff pre-patch and post-patch results and
+  if [[ ${testtype} == spotbugs ]]; then
+    # Run spotbugs on each module individually to diff pre-patch and post-patch results and
     # report new warnings for changed modules only.
-    # For some reason, findbugs on root is not working, but running on individual modules is
+    # For some reason, spotbugs on root is not working, but running on individual modules is
     # working. For time being, let it run on original list of CHANGED_MODULES. HBASE-19491
     for module in "${CHANGED_MODULES[@]}"; do
-      # skip findbugs on hbase-shell and hbase-it. hbase-it has nothing
-      # in src/main/java where findbugs goes to look
+      # skip spotbugs on hbase-shell and hbase-it. hbase-it has nothing
+      # in src/main/java where spotbugs goes to look
+      # skip hbase-shaded* as there is no java code in them
+      # skip all modules with no java code or at least, non test java code
       if [[ ${module} == hbase-shell ]]; then
         continue
       elif [[ ${module} == hbase-it ]]; then
+        continue
+      elif [[ ${module} == hbase-shaded* ]]; then
+        continue
+      elif [[ ${module} == hbase-build-configuration ]]; then
+        continue
+      elif [[ ${module} == hbase-checkstyle ]]; then
+        continue
+      elif [[ ${module} == hbase-resource-bundle ]]; then
+        continue
+      elif [[ ${module} == hbase-testing-util ]]; then
         continue
       else
         # shellcheck disable=SC2086
@@ -375,7 +387,7 @@ function refguide_rebuild
     $(maven_executor) clean site --batch-mode \
       -pl . \
       -Dtest=NoUnitTests -DHBasePatchProcess -Prelease \
-      -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dfindbugs.skip=true
+      -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dspotbugs.skip=true
 
   count=$(${GREP} -c '\[ERROR\]' "${logfile}")
   if [[ ${count} -gt 0 ]]; then
@@ -458,7 +470,7 @@ function shadedjars_rebuild
     $(maven_executor) clean verify -fae --batch-mode \
       -pl hbase-shaded/hbase-shaded-check-invariants -am \
       -Dtest=NoUnitTests -DHBasePatchProcess -Prelease \
-      -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dfindbugs.skip=true
+      -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dspotbugs.skip=true
 
   count=$(${GREP} -c '\[ERROR\]' "${logfile}")
   if [[ ${count} -gt 0 ]]; then

@@ -104,14 +104,14 @@ YETUS_ARGS+=("--reapermode=kill")
 # with other jobs on systemd-enabled machines
 YETUS_ARGS+=("--proclimit=10000")
 YETUS_ARGS+=("--dockermemlimit=20g")
-# -1 findbugs issues that show up prior to the patch being applied
-YETUS_ARGS+=("--findbugs-strict-precheck")
+# -1 spotbugs issues that show up prior to the patch being applied
+YETUS_ARGS+=("--spotbugs-strict-precheck")
 # rsync these files back into the archive dir
 YETUS_ARGS+=("--archive-list=${ARCHIVE_PATTERN_LIST}")
 # URL for user-side presentation in reports and such to our artifacts
 YETUS_ARGS+=("--build-url-artifacts=${BUILD_URL_ARTIFACTS}")
 # plugins to enable
-YETUS_ARGS+=("--plugins=${PLUGINS}")
+YETUS_ARGS+=("--plugins=${PLUGINS},-findbugs")
 # run in docker mode and specifically point to our
 # Dockerfile since we don't want to use the auto-pulled version.
 YETUS_ARGS+=("--docker")
