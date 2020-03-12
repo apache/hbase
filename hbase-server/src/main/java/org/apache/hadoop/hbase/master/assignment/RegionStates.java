@@ -71,15 +71,24 @@ public class RegionStates {
   public final static RegionStateStampComparator REGION_STATE_STAMP_COMPARATOR =
       new RegionStateStampComparator();
 
+  private final Object regionsMapLock = new Object();
+
   // TODO: Replace the ConcurrentSkipListMaps
   /**
    * RegionName -- i.e. RegionInfo.getRegionName() -- as bytes to {@link RegionStateNode}
    */
   private final ConcurrentSkipListMap<byte[], RegionStateNode> regionsMap =
-      new ConcurrentSkipListMap<byte[], RegionStateNode>(Bytes.BYTES_COMPARATOR);
+      new ConcurrentSkipListMap<>(Bytes.BYTES_COMPARATOR);
+
+  /**
+   * this map is a hack to lookup of region in master by encoded region name is O(n).
+   * must put and remove with regionsMap.
+   */
+  private final ConcurrentSkipListMap<String, RegionStateNode> encodedRegionsMap =
+    new ConcurrentSkipListMap<>();
 
   private final ConcurrentSkipListMap<RegionInfo, RegionStateNode> regionInTransition =
-    new ConcurrentSkipListMap<RegionInfo, RegionStateNode>(RegionInfo.COMPARATOR);
+    new ConcurrentSkipListMap<>(RegionInfo.COMPARATOR);
 
   /**
    * Regions marked as offline on a read of hbase:meta. Unused or at least, once
@@ -101,6 +110,7 @@ public class RegionStates {
    */
   public void clear() {
     regionsMap.clear();
+    encodedRegionsMap.clear();
     regionInTransition.clear();
     regionOffline.clear();
     serverMap.clear();
@@ -117,9 +127,16 @@ public class RegionStates {
   // ==========================================================================
   @VisibleForTesting
   RegionStateNode createRegionStateNode(RegionInfo regionInfo) {
-    RegionStateNode newNode = new RegionStateNode(regionInfo, regionInTransition);
-    RegionStateNode oldNode = regionsMap.putIfAbsent(regionInfo.getRegionName(), newNode);
-    return oldNode != null ? oldNode : newNode;
+    synchronized (regionsMapLock) {
+      RegionStateNode node = regionsMap.computeIfAbsent(regionInfo.getRegionName(),
+        key -> new RegionStateNode(regionInfo, regionInTransition));
+
+      if (encodedRegionsMap.get(regionInfo.getEncodedName()) != node) {
+        encodedRegionsMap.put(regionInfo.getEncodedName(), node);
+      }
+
+      return node;
+    }
   }
 
   public RegionStateNode getOrCreateRegionStateNode(RegionInfo regionInfo) {
@@ -136,7 +153,10 @@ public class RegionStates {
   }
 
   public void deleteRegion(final RegionInfo regionInfo) {
-    regionsMap.remove(regionInfo.getRegionName());
+    synchronized (regionsMapLock) {
+      regionsMap.remove(regionInfo.getRegionName());
+      encodedRegionsMap.remove(regionInfo.getEncodedName());
+    }
     // See HBASE-20860
     // After master restarts, merged regions' RIT state may not be cleaned,
     // making sure they are cleaned here
@@ -204,13 +224,11 @@ public class RegionStates {
   }
 
   public RegionState getRegionState(final String encodedRegionName) {
-    // TODO: Need a map <encodedName, ...> but it is just dispatch merge...
-    for (RegionStateNode node: regionsMap.values()) {
-      if (node.getRegionInfo().getEncodedName().equals(encodedRegionName)) {
-        return node.toRegionState();
-      }
+    final RegionStateNode node = encodedRegionsMap.get(encodedRegionName);
+    if (node == null) {
+      return null;
     }
-    return null;
+    return node.toRegionState();
   }
 
   // ============================================================================================
