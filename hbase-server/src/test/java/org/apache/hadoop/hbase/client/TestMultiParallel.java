@@ -181,6 +181,9 @@ public class TestMultiParallel {
   @Test
   public void testActiveThreadsCount() throws Exception {
     UTIL.getConfiguration().setLong("hbase.htable.threads.coresize", slaves + 1);
+    // Make sure max is at least as big as coresize; can be smaller in test context where
+    // we tune down thread sizes -- max could be < slaves + 1.
+    UTIL.getConfiguration().setLong("hbase.htable.threads.max", slaves + 1);
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration())) {
       ThreadPoolExecutor executor = HTable.getDefaultExecutor(UTIL.getConfiguration());
       try {
