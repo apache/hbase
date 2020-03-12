@@ -226,6 +226,6 @@ public class UserProvider extends BaseConfigurable {
    * @throws IOException underlying exception from UserGroupInformation.loginUserFromKeytab
    */
   public void login(String fileConfKey, String principalConfKey) throws IOException {
-    User.login(getConf().get(fileConfKey), getConf().get(principalConfKey));
+    User.login(getConf(), getConf().get(fileConfKey), getConf().get(principalConfKey));
   }
 }
