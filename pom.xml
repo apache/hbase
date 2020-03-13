@@ -2759,6 +2759,18 @@
            <artifactId>hadoop-annotations</artifactId>
            <version>${hadoop-two.version}</version>
          </dependency>
+
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-distcp</artifactId>
+            <version>${hadoop-two.version}</version>
+          </dependency>
+
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-hdfs-client</artifactId>
+            <version>${hadoop-two.version}</version>
+          </dependency>
         </dependencies>
       </dependencyManagement>
     </profile>
@@ -3106,6 +3118,18 @@
             <version>${hadoop-three.version}</version>
             <scope>test</scope>
           </dependency>
+
+         <dependency>
+           <groupId>org.apache.hadoop</groupId>
+           <artifactId>hadoop-distcp</artifactId>
+           <version>${hadoop-three.version}</version>
+         </dependency>
+
+         <dependency>
+           <groupId>org.apache.hadoop</groupId>
+           <artifactId>hadoop-hdfs-client</artifactId>
+           <version>${hadoop-three.version}</version>
+         </dependency>
        </dependencies>
      </dependencyManagement>
 
