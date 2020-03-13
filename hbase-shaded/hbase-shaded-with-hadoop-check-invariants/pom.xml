@@ -108,7 +108,7 @@
                     <exclude>commons-logging:*</exclude>
                     <!-- annotations that never change -->
                     <exclude>com.google.code.findbugs:*</exclude>
-                    <exclude>com.github.stephenc.fingbugs:*</exclude>
+                    <exclude>com.github.stephenc.findbugs:*</exclude>
                     <exclude>com.github.spotbugs:*</exclude>
                     <!-- We leave HTrace as an unshaded dependnecy on purpose so that tracing within a JVM will work -->
                     <exclude>org.apache.htrace:*</exclude>
