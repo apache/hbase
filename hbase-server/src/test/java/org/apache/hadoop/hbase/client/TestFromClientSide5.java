@@ -1317,7 +1317,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       TEST_UTIL.flush();
 
       Scan scan = new Scan();
-      scan.setStartRow(Bytes.toBytes(1));
+      scan.withStartRow(Bytes.toBytes(1));
       scan.setStopRow(Bytes.toBytes(3));
       scan.addColumn(FAMILY, FAMILY);
       scan.setFilter(new RowFilter(CompareOperator.NOT_EQUAL,
@@ -2114,7 +2114,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
     scan = new Scan();
     scan.setSmall(small);
     scan.setReversed(true);
-    scan.setStartRow(Bytes.toBytes("002"));
+    scan.withStartRow(Bytes.toBytes("002"));
     try (ResultScanner scanner = table.getScanner(scan)) {
       int count = 0;
       byte[] lastRow = null;
@@ -2135,7 +2135,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
     scan = new Scan();
     scan.setSmall(small);
     scan.setReversed(true);
-    scan.setStartRow(Bytes.toBytes("002"));
+    scan.withStartRow(Bytes.toBytes("002"));
     scan.setStopRow(Bytes.toBytes("000"));
     try (ResultScanner scanner = table.getScanner(scan)) {
       int count = 0;
@@ -2157,7 +2157,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
     scan = new Scan();
     scan.setSmall(small);
     scan.setReversed(true);
-    scan.setStartRow(Bytes.toBytes("001"));
+    scan.withStartRow(Bytes.toBytes("001"));
     try (ResultScanner scanner = table.getScanner(scan)) {
       int count = 0;
       byte[] lastRow = null;
@@ -2178,7 +2178,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
     scan = new Scan();
     scan.setSmall(small);
     scan.setReversed(true);
-    scan.setStartRow(Bytes.toBytes("000"));
+    scan.withStartRow(Bytes.toBytes("000"));
     try (ResultScanner scanner = table.getScanner(scan)) {
       int count = 0;
       byte[] lastRow = null;
@@ -2199,7 +2199,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
     scan = new Scan();
     scan.setSmall(small);
     scan.setReversed(true);
-    scan.setStartRow(Bytes.toBytes("006"));
+    scan.withStartRow(Bytes.toBytes("006"));
     scan.setStopRow(Bytes.toBytes("002"));
     try (ResultScanner scanner = table.getScanner(scan)) {
       int count = 0;

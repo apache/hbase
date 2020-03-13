@@ -1653,7 +1653,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       scan.setBatch(10000);
 
       if (cmd.hasOption("s"))
-        scan.setStartRow(Bytes.toBytesBinary(cmd.getOptionValue("s")));
+        scan.withStartRow(Bytes.toBytesBinary(cmd.getOptionValue("s")));
 
       if (cmd.hasOption("e"))
         scan.setStopRow(Bytes.toBytesBinary(cmd.getOptionValue("e")));
@@ -1711,7 +1711,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
   abstract static class WalkerBase extends Configured{
     protected static CINode findStartNode(Table table, byte[] startKey) throws IOException {
       Scan scan = new Scan();
-      scan.setStartRow(startKey);
+      scan.withStartRow(startKey);
       scan.setBatch(1);
       scan.addColumn(FAMILY_NAME, COLUMN_PREV);
 
