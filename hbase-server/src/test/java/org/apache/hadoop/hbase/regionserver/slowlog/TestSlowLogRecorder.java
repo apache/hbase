@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.Assert;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
@@ -62,7 +61,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog.SlowLogPaylo
  * Tests for Online SlowLog Provider Service
  */
 @Category({MasterTests.class, MediumTests.class})
-@Ignore // Disabled until HBASE-23977 is addressed.
 public class TestSlowLogRecorder {
 
   @ClassRule
@@ -93,12 +91,14 @@ public class TestSlowLogRecorder {
    * @param i index of ringbuffer logs
    * @param j data value that was put on index i
    * @param slowLogPayloads list of payload retrieved from {@link SlowLogRecorder}
+   * @return if actual values are as per expectations
    */
-  private void confirmPayloadParams(int i, int j, List<SlowLogPayload> slowLogPayloads) {
+  private boolean confirmPayloadParams(int i, int j, List<SlowLogPayload> slowLogPayloads) {
 
-    Assert.assertEquals(slowLogPayloads.get(i).getClientAddress(), "client_" + j);
-    Assert.assertEquals(slowLogPayloads.get(i).getUserName(), "userName_" + j);
-    Assert.assertEquals(slowLogPayloads.get(i).getServerClass(), "class_" + j);
+    boolean isClientExpected = slowLogPayloads.get(i).getClientAddress().equals("client_" + j);
+    boolean isUserExpected = slowLogPayloads.get(i).getUserName().equals("userName_" + j);
+    boolean isClassExpected = slowLogPayloads.get(i).getServerClass().equals("class_" + j);
+    return isClassExpected && isClientExpected && isUserExpected;
   }
 
   @Test
@@ -109,6 +109,7 @@ public class TestSlowLogRecorder {
     AdminProtos.SlowLogResponseRequest request =
       AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(15).build();
 
+    slowLogRecorder.clearSlowLogPayloads();
     Assert.assertEquals(slowLogRecorder.getSlowLogPayloads(request).size(), 0);
     LOG.debug("Initially ringbuffer of Slow Log records is empty");
 
@@ -124,11 +125,11 @@ public class TestSlowLogRecorder {
     Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
       () -> slowLogRecorder.getSlowLogPayloads(request).size() == 5));
     List<SlowLogPayload> slowLogPayloads = slowLogRecorder.getSlowLogPayloads(request);
-    confirmPayloadParams(0, 5, slowLogPayloads);
-    confirmPayloadParams(1, 4, slowLogPayloads);
-    confirmPayloadParams(2, 3, slowLogPayloads);
-    confirmPayloadParams(3, 2, slowLogPayloads);
-    confirmPayloadParams(4, 1, slowLogPayloads);
+    Assert.assertTrue(confirmPayloadParams(0, 5, slowLogPayloads));
+    Assert.assertTrue(confirmPayloadParams(1, 4, slowLogPayloads));
+    Assert.assertTrue(confirmPayloadParams(2, 3, slowLogPayloads));
+    Assert.assertTrue(confirmPayloadParams(3, 2, slowLogPayloads));
+    Assert.assertTrue(confirmPayloadParams(4, 1, slowLogPayloads));
 
     // add 2 more records
     for (; i < 7; i++) {
@@ -140,12 +141,16 @@ public class TestSlowLogRecorder {
     Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
       () -> slowLogRecorder.getSlowLogPayloads(request).size() == 7));
 
-    slowLogPayloads = slowLogRecorder.getSlowLogPayloads(request);
-
-    Assert.assertEquals(slowLogPayloads.size(), 7);
-    confirmPayloadParams(0, 7, slowLogPayloads);
-    confirmPayloadParams(5, 2, slowLogPayloads);
-    confirmPayloadParams(6, 1, slowLogPayloads);
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
+      () -> {
+        List<SlowLogPayload> slowLogPayloadsList = slowLogRecorder.getSlowLogPayloads(request);
+        Assert.assertEquals(slowLogPayloadsList.size(), 7);
+        boolean b1 = confirmPayloadParams(0, 7, slowLogPayloadsList);
+        boolean b2 = confirmPayloadParams(5, 2, slowLogPayloadsList);
+        boolean b3 = confirmPayloadParams(6, 1, slowLogPayloadsList);
+        return b1 && b2 && b3;
+      })
+    );
 
     // add 3 more records
     for (; i < 10; i++) {
@@ -157,12 +162,17 @@ public class TestSlowLogRecorder {
     Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
       () -> slowLogRecorder.getSlowLogPayloads(request).size() == 8));
 
-    slowLogPayloads = slowLogRecorder.getSlowLogPayloads(request);
-    // confirm ringbuffer is full
-    Assert.assertEquals(slowLogPayloads.size(), 8);
-    confirmPayloadParams(7, 3, slowLogPayloads);
-    confirmPayloadParams(0, 10, slowLogPayloads);
-    confirmPayloadParams(1, 9, slowLogPayloads);
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
+      () -> {
+        List<SlowLogPayload> slowLogPayloadsList = slowLogRecorder.getSlowLogPayloads(request);
+        // confirm ringbuffer is full
+        Assert.assertEquals(slowLogPayloadsList.size(), 8);
+        boolean b1 = confirmPayloadParams(7, 3, slowLogPayloadsList);
+        boolean b2 = confirmPayloadParams(0, 10, slowLogPayloadsList);
+        boolean b3 = confirmPayloadParams(1, 9, slowLogPayloadsList);
+        return b1 && b2 && b3;
+      })
+    );
 
     // add 4 more records
     for (; i < 14; i++) {
@@ -174,22 +184,32 @@ public class TestSlowLogRecorder {
     Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
       () -> slowLogRecorder.getSlowLogPayloads(request).size() == 8));
 
-    slowLogPayloads = slowLogRecorder.getSlowLogPayloads(request);
-    // confirm ringbuffer is full
-    Assert.assertEquals(slowLogPayloads.size(), 8);
-    confirmPayloadParams(0, 14, slowLogPayloads);
-    confirmPayloadParams(1, 13, slowLogPayloads);
-    confirmPayloadParams(2, 12, slowLogPayloads);
-    confirmPayloadParams(3, 11, slowLogPayloads);
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
+      () -> {
+        List<SlowLogPayload> slowLogPayloadsList = slowLogRecorder.getSlowLogPayloads(request);
+        // confirm ringbuffer is full
+        // confirm ringbuffer is full
+        Assert.assertEquals(slowLogPayloadsList.size(), 8);
+        boolean b1 = confirmPayloadParams(0, 14, slowLogPayloadsList);
+        boolean b2 = confirmPayloadParams(1, 13, slowLogPayloadsList);
+        boolean b3 = confirmPayloadParams(2, 12, slowLogPayloadsList);
+        boolean b4 = confirmPayloadParams(3, 11, slowLogPayloadsList);
+        return b1 && b2 && b3 && b4;
+      })
+    );
 
-    boolean isRingBufferCleaned = slowLogRecorder.clearSlowLogPayloads();
-    Assert.assertTrue(isRingBufferCleaned);
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
+      () -> {
+        boolean isRingBufferCleaned = slowLogRecorder.clearSlowLogPayloads();
+        Assert.assertTrue(isRingBufferCleaned);
 
-    LOG.debug("cleared the ringbuffer of Online Slow Log records");
+        LOG.debug("cleared the ringbuffer of Online Slow Log records");
 
-    slowLogPayloads = slowLogRecorder.getSlowLogPayloads(request);
-    // confirm ringbuffer is empty
-    Assert.assertEquals(slowLogPayloads.size(), 0);
+        List<SlowLogPayload> slowLogPayloadsList = slowLogRecorder.getSlowLogPayloads(request);
+        // confirm ringbuffer is empty
+        return slowLogPayloadsList.size() == 0;
+      })
+    );
 
   }
 
@@ -214,29 +234,35 @@ public class TestSlowLogRecorder {
     Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
       () -> slowLogRecorder.getSlowLogPayloads(request).size() == 14));
 
-    List<SlowLogPayload> slowLogPayloads = slowLogRecorder.getSlowLogPayloads(request);
-    Assert.assertEquals(slowLogPayloads.size(), 14);
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
+      () -> {
+        List<SlowLogPayload> slowLogPayloads = slowLogRecorder.getSlowLogPayloads(request);
+        boolean b1 = slowLogPayloads.size() == 14;
 
-    // confirm strict order of slow log payloads
-    confirmPayloadParams(0, 154, slowLogPayloads);
-    confirmPayloadParams(1, 153, slowLogPayloads);
-    confirmPayloadParams(2, 152, slowLogPayloads);
-    confirmPayloadParams(3, 151, slowLogPayloads);
-    confirmPayloadParams(4, 150, slowLogPayloads);
-    confirmPayloadParams(5, 149, slowLogPayloads);
-    confirmPayloadParams(6, 148, slowLogPayloads);
-    confirmPayloadParams(7, 147, slowLogPayloads);
-    confirmPayloadParams(8, 146, slowLogPayloads);
-    confirmPayloadParams(9, 145, slowLogPayloads);
-    confirmPayloadParams(10, 144, slowLogPayloads);
-    confirmPayloadParams(11, 143, slowLogPayloads);
-    confirmPayloadParams(12, 142, slowLogPayloads);
-    confirmPayloadParams(13, 141, slowLogPayloads);
+        // confirm strict order of slow log payloads
+        boolean b2 = confirmPayloadParams(0, 154, slowLogPayloads);
+        boolean b3 = confirmPayloadParams(1, 153, slowLogPayloads);
+        boolean b4 = confirmPayloadParams(2, 152, slowLogPayloads);
+        boolean b5 = confirmPayloadParams(3, 151, slowLogPayloads);
+        boolean b6 = confirmPayloadParams(4, 150, slowLogPayloads);
+        boolean b7 = confirmPayloadParams(5, 149, slowLogPayloads);
+        boolean b8 = confirmPayloadParams(6, 148, slowLogPayloads);
+        boolean b9 = confirmPayloadParams(7, 147, slowLogPayloads);
+        boolean b10 = confirmPayloadParams(8, 146, slowLogPayloads);
+        boolean b11 = confirmPayloadParams(9, 145, slowLogPayloads);
+        boolean b12 = confirmPayloadParams(10, 144, slowLogPayloads);
+        boolean b13 = confirmPayloadParams(11, 143, slowLogPayloads);
+        boolean b14 = confirmPayloadParams(12, 142, slowLogPayloads);
+        boolean b15 = confirmPayloadParams(13, 141, slowLogPayloads);
+        return b1 && b2 && b3 && b4 && b5 && b6 && b7 && b8 && b9 && b10 && b11
+          && b12 && b13 && b14 && b15;
+      })
+    );
 
     boolean isRingBufferCleaned = slowLogRecorder.clearSlowLogPayloads();
     Assert.assertTrue(isRingBufferCleaned);
     LOG.debug("cleared the ringbuffer of Online Slow Log records");
-    slowLogPayloads = slowLogRecorder.getSlowLogPayloads(request);
+    List<SlowLogPayload> slowLogPayloads = slowLogRecorder.getSlowLogPayloads(request);
 
     // confirm ringbuffer is empty
     Assert.assertEquals(slowLogPayloads.size(), 0);
@@ -261,10 +287,12 @@ public class TestSlowLogRecorder {
       slowLogRecorder.addSlowLogPayload(rpcLogDetails);
     }
 
-    Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
-
-    List<SlowLogPayload> slowLogPayloads = slowLogRecorder.getSlowLogPayloads(request);
-    Assert.assertEquals(slowLogPayloads.size(), 0);
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
+      () -> {
+        List<SlowLogPayload> slowLogPayloads = slowLogRecorder.getSlowLogPayloads(request);
+        return slowLogPayloads.size() == 0;
+      })
+    );
 
   }
 
@@ -286,10 +314,12 @@ public class TestSlowLogRecorder {
       slowLogRecorder.addSlowLogPayload(rpcLogDetails);
     }
 
-    Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
-
-    List<SlowLogPayload> slowLogPayloads = slowLogRecorder.getSlowLogPayloads(request);
-    Assert.assertEquals(slowLogPayloads.size(), 0);
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
+      () -> {
+        List<SlowLogPayload> slowLogPayloads = slowLogRecorder.getSlowLogPayloads(request);
+        return slowLogPayloads.size() == 0;
+      })
+    );
     conf.setBoolean(HConstants.SLOW_LOG_BUFFER_ENABLED_KEY, true);
 
   }
