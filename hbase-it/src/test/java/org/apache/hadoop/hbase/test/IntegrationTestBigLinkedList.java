@@ -43,10 +43,8 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.IntegrationTestBase;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.MasterNotRunningException;
@@ -54,6 +52,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.BufferedMutatorParams;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionConfiguration;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -65,6 +64,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
@@ -756,18 +756,24 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       try (Connection conn = ConnectionFactory.createConnection(conf);
           Admin admin = conn.getAdmin()) {
         if (!admin.tableExists(tableName)) {
-          HTableDescriptor htd = new HTableDescriptor(getTableName(getConf()));
-          htd.addFamily(new HColumnDescriptor(FAMILY_NAME));
-          // Always add these families. Just skip writing to them when we do not test per CF flush.
-          htd.addFamily(new HColumnDescriptor(BIG_FAMILY_NAME));
-          htd.addFamily(new HColumnDescriptor(TINY_FAMILY_NAME));
+          TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+            new TableDescriptorBuilder.ModifyableTableDescriptor(getTableName(getConf()));
+
+          ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+            new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY_NAME);
           // if -DuseMob=true force all data through mob path.
-          if (conf.getBoolean("useMob", false)) {
-            for (HColumnDescriptor hcd : htd.getColumnFamilies() ) {
-              hcd.setMobEnabled(true);
-              hcd.setMobThreshold(4);
-            }
-          }
+          setMobProperties(conf, familyDescriptor);
+          tableDescriptor.setColumnFamily(familyDescriptor);
+          // Always add these families. Just skip writing to them when we do not test per CF flush.
+          familyDescriptor =
+            new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(BIG_FAMILY_NAME);
+          setMobProperties(conf, familyDescriptor);
+          tableDescriptor.setColumnFamily(familyDescriptor);
+
+          familyDescriptor =
+            new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TINY_FAMILY_NAME);
+          setMobProperties(conf, familyDescriptor);
+          tableDescriptor.setColumnFamily(familyDescriptor);
 
           // If we want to pre-split compute how many splits.
           if (conf.getBoolean(HBaseTestingUtility.PRESPLIT_TEST_TABLE_KEY,
@@ -786,12 +792,12 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
 
             byte[][] splits = new RegionSplitter.UniformSplit().split(totalNumberOfRegions);
 
-            admin.createTable(htd, splits);
+            admin.createTable(tableDescriptor, splits);
           } else {
             // Looks like we're just letting things play out.
             // Create a table with on region by default.
             // This will make the splitting work hard.
-            admin.createTable(htd);
+            admin.createTable(tableDescriptor);
           }
         }
       } catch (MasterNotRunningException e) {
@@ -905,6 +911,14 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         return false;
       }
       return true;
+    }
+  }
+
+  private static void setMobProperties(final Configuration conf,
+      final ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor) {
+    if (conf.getBoolean("useMob", false)) {
+      familyDescriptor.setMobEnabled(true);
+      familyDescriptor.setMobThreshold(4);
     }
   }
 
@@ -1639,7 +1653,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       scan.setBatch(10000);
 
       if (cmd.hasOption("s"))
-        scan.setStartRow(Bytes.toBytesBinary(cmd.getOptionValue("s")));
+        scan.withStartRow(Bytes.toBytesBinary(cmd.getOptionValue("s")));
 
       if (cmd.hasOption("e"))
         scan.setStopRow(Bytes.toBytesBinary(cmd.getOptionValue("e")));
@@ -1697,7 +1711,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
   abstract static class WalkerBase extends Configured{
     protected static CINode findStartNode(Table table, byte[] startKey) throws IOException {
       Scan scan = new Scan();
-      scan.setStartRow(startKey);
+      scan.withStartRow(startKey);
       scan.setBatch(1);
       scan.addColumn(FAMILY_NAME, COLUMN_PREV);
 

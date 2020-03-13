@@ -186,7 +186,7 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
     regionFinder.setServices(TEST_UTIL.getMiniHBaseCluster().getMaster());
     Cluster cluster = new Cluster(serverAssignments, null, regionFinder, new RackManager(conf));
     LoadOnlyFavoredStochasticBalancer balancer = (LoadOnlyFavoredStochasticBalancer) TEST_UTIL
-        .getMiniHBaseCluster().getMaster().getLoadBalancer();
+        .getMiniHBaseCluster().getMaster().getLoadBalancer().getInternalBalancer();
 
     cluster.sortServersByRegionCount();
     Integer[] servers = cluster.serverIndicesSortedByRegionCount;

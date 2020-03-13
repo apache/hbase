@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -55,6 +54,7 @@ import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
@@ -64,6 +64,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -210,18 +211,21 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
   public void postStartMaster(ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
     // Need to create the new system table for labels here
     if (!MetaTableAccessor.tableExists(ctx.getEnvironment().getConnection(), LABELS_TABLE_NAME)) {
-      HTableDescriptor labelsTable = new HTableDescriptor(LABELS_TABLE_NAME);
-      HColumnDescriptor labelsColumn = new HColumnDescriptor(LABELS_TABLE_FAMILY);
-      labelsColumn.setBloomFilterType(BloomType.NONE);
-      labelsColumn.setBlockCacheEnabled(false); // We will cache all the labels. No need of normal
-                                                 // table block cache.
-      labelsTable.addFamily(labelsColumn);
+      TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+        new TableDescriptorBuilder.ModifyableTableDescriptor(LABELS_TABLE_NAME);
+      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(LABELS_TABLE_FAMILY);
+      familyDescriptor.setBloomFilterType(BloomType.NONE);
+      // We will cache all the labels. No need of normal
+      // table block cache.
+      familyDescriptor.setBlockCacheEnabled(false);
+      tableDescriptor.setColumnFamily(familyDescriptor);
       // Let the "labels" table having only one region always. We are not expecting too many labels in
       // the system.
-      labelsTable.setValue(HTableDescriptor.SPLIT_POLICY,
+      tableDescriptor.setValue(HTableDescriptor.SPLIT_POLICY,
           DisabledRegionSplitPolicy.class.getName());
       try (Admin admin = ctx.getEnvironment().getConnection().getAdmin()) {
-        admin.createTable(labelsTable);
+        admin.createTable(tableDescriptor);
       }
     }
   }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,9 +34,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -401,10 +399,10 @@ public class TestCoprocessorMetrics {
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
          Admin admin = connection.getAdmin()) {
       admin.createTable(
-          new HTableDescriptor(tableName)
-              .addFamily(new HColumnDescriptor(foo))
-              // add the coprocessor for the region
-              .addCoprocessor(CustomRegionObserver.class.getName()));
+        new TableDescriptorBuilder.ModifyableTableDescriptor(tableName)
+          .setColumnFamily(new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(foo))
+          // add the coprocessor for the region
+          .setCoprocessor(CustomRegionObserver.class.getName()));
       try (Table table = connection.getTable(tableName)) {
         table.get(new Get(foo));
         table.get(new Get(foo)); // 2 gets
@@ -420,11 +418,12 @@ public class TestCoprocessorMetrics {
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
          Admin admin = connection.getAdmin()) {
       admin.createTable(
-          new HTableDescriptor(tableName)
-              .addFamily(new HColumnDescriptor(foo))
-              // add the coprocessor for the region
-              .addCoprocessor(CustomRegionObserver.class.getName())
-          , new byte[][]{foo}); // create with 2 regions
+        new TableDescriptorBuilder.ModifyableTableDescriptor(tableName)
+          .setColumnFamily(
+            new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(foo))
+          // add the coprocessor for the region
+          .setCoprocessor(CustomRegionObserver.class.getName()), new byte[][]{foo});
+      // create with 2 regions
       try (Table table = connection.getTable(tableName);
            RegionLocator locator = connection.getRegionLocator(tableName)) {
         table.get(new Get(bar));
@@ -445,15 +444,17 @@ public class TestCoprocessorMetrics {
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
          Admin admin = connection.getAdmin()) {
       admin.createTable(
-          new HTableDescriptor(tableName1)
-              .addFamily(new HColumnDescriptor(foo))
-              // add the coprocessor for the region
-              .addCoprocessor(CustomRegionObserver.class.getName()));
+        new TableDescriptorBuilder.ModifyableTableDescriptor(tableName1)
+          .setColumnFamily(
+            new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(foo))
+          // add the coprocessor for the region
+          .setCoprocessor(CustomRegionObserver.class.getName()));
       admin.createTable(
-          new HTableDescriptor(tableName2)
-              .addFamily(new HColumnDescriptor(foo))
-              // add the coprocessor for the region
-              .addCoprocessor(CustomRegionObserver.class.getName()));
+        new TableDescriptorBuilder.ModifyableTableDescriptor(tableName2)
+          .setColumnFamily(
+            new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(foo))
+          // add the coprocessor for the region
+          .setCoprocessor(CustomRegionObserver.class.getName()));
       try (Table table1 = connection.getTable(tableName1);
            Table table2 = connection.getTable(tableName2)) {
         table1.get(new Get(bar));
@@ -469,11 +470,12 @@ public class TestCoprocessorMetrics {
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
          Admin admin = connection.getAdmin()) {
       admin.createTable(
-          new HTableDescriptor(tableName)
-              .addFamily(new HColumnDescriptor(foo))
-              // add the coprocessor for the region. We add two different coprocessors
-              .addCoprocessor(CustomRegionObserver.class.getName())
-              .addCoprocessor(CustomRegionObserver2.class.getName()));
+        new TableDescriptorBuilder.ModifyableTableDescriptor(tableName)
+          .setColumnFamily(
+            new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(foo))
+          // add the coprocessor for the region. We add two different coprocessors
+          .setCoprocessor(CustomRegionObserver.class.getName())
+          .setCoprocessor(CustomRegionObserver2.class.getName()));
       try (Table table = connection.getTable(tableName)) {
         table.get(new Get(foo));
         table.get(new Get(foo)); // 2 gets
@@ -491,11 +493,12 @@ public class TestCoprocessorMetrics {
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
          Admin admin = connection.getAdmin()) {
       admin.createTable(
-          new HTableDescriptor(tableName)
-              .addFamily(new HColumnDescriptor(foo))
-              // add the coprocessor for the region
-              .addCoprocessor(CustomRegionObserver.class.getName())
-          , new byte[][]{foo}); // create with 2 regions
+        new TableDescriptorBuilder.ModifyableTableDescriptor(tableName)
+          .setColumnFamily(
+            new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(foo))
+          // add the coprocessor for the region
+          .setCoprocessor(CustomRegionObserver.class.getName()), new byte[][]{foo});
+      // create with 2 regions
       try (Table table = connection.getTable(tableName)) {
         table.get(new Get(foo));
         table.get(new Get(foo)); // 2 gets
@@ -535,10 +538,11 @@ public class TestCoprocessorMetrics {
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
          Admin admin = connection.getAdmin()) {
       admin.createTable(
-          new HTableDescriptor(tableName)
-              .addFamily(new HColumnDescriptor(foo))
-              // add the coprocessor for the region
-              .addCoprocessor(CustomRegionEndpoint.class.getName()));
+        new TableDescriptorBuilder.ModifyableTableDescriptor(tableName)
+          .setColumnFamily(
+            new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(foo))
+          // add the coprocessor for the region
+          .setCoprocessor(CustomRegionEndpoint.class.getName()));
 
       try (Table table = connection.getTable(tableName)) {
         List<Mutation> mutations = Lists.newArrayList(new Put(foo), new Put(bar));

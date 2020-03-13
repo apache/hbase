@@ -373,7 +373,7 @@ public abstract class ScheduledChore implements Runnable {
   @InterfaceAudience.Private
   @Override
   public String toString() {
-    return "[ScheduledChore: Name: " + getName() + " Period: " + getPeriod() + " Unit: "
-        + getTimeUnit() + "]";
+    return "ScheduledChore name=" + getName() + ", period=" + getPeriod() +
+      ", unit=" + getTimeUnit();
   }
 }

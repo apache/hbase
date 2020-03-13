@@ -26,16 +26,17 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.mapreduce.TableMapper;
@@ -237,7 +238,7 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
   }
 
   @Override
-  protected Job doLoad(Configuration conf, HTableDescriptor htd) throws Exception {
+  protected Job doLoad(Configuration conf, TableDescriptor htd) throws Exception {
     Job job = super.doLoad(conf, htd);
     this.numRowsLoadedWithExp1 = job.getCounters().findCounter(Counters.ROWS_VIS_EXP_1).getValue();
     this.numRowsLoadedWithExp2 = job.getCounters().findCounter(Counters.ROWS_VIS_EXP_2).getValue();
@@ -260,13 +261,14 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
   }
 
   @Override
-  protected void doVerify(final Configuration conf, final HTableDescriptor htd) throws Exception {
+  protected void doVerify(final Configuration conf, final TableDescriptor tableDescriptor)
+      throws Exception {
     System.out.println(String.format("Verifying for auths %s, %s, %s, %s", CONFIDENTIAL, TOPSECRET,
         SECRET, PRIVATE));
     PrivilegedExceptionAction<Job> scanAction = new PrivilegedExceptionAction<Job>() {
       @Override
       public Job run() throws Exception {
-        return doVerify(conf, htd, CONFIDENTIAL, TOPSECRET, SECRET, PRIVATE);
+        return doVerify(conf, tableDescriptor, CONFIDENTIAL, TOPSECRET, SECRET, PRIVATE);
       }
     };
     Job job = USER1.runAs(scanAction);
@@ -284,7 +286,7 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
     scanAction = new PrivilegedExceptionAction<Job>() {
       @Override
       public Job run() throws Exception {
-        return doVerify(conf, htd, PRIVATE, PUBLIC);
+        return doVerify(conf, tableDescriptor, PRIVATE, PUBLIC);
       }
     };
     job = USER1.runAs(scanAction);
@@ -302,7 +304,7 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
     scanAction = new PrivilegedExceptionAction<Job>() {
       @Override
       public Job run() throws Exception {
-        return doVerify(conf, htd, PRIVATE, PUBLIC);
+        return doVerify(conf, tableDescriptor, PRIVATE, PUBLIC);
       }
     };
     job = USER2.runAs(scanAction);
@@ -316,16 +318,16 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
     assertEquals(0, this.numRowsReadWithExp4);
   }
 
-  private Job doVerify(Configuration conf, HTableDescriptor htd, String... auths)
+  private Job doVerify(Configuration conf, TableDescriptor tableDescriptor, String... auths)
       throws IOException, InterruptedException, ClassNotFoundException {
     Path outputDir = getTestDir(TEST_NAME, "verify-output");
     Job job = new Job(conf);
     job.setJarByClass(this.getClass());
-    job.setJobName(TEST_NAME + " Verification for " + htd.getTableName());
+    job.setJobName(TEST_NAME + " Verification for " + tableDescriptor.getTableName());
     setJobScannerConf(job);
     Scan scan = new Scan();
     scan.setAuthorizations(new Authorizations(auths));
-    TableMapReduceUtil.initTableMapperJob(htd.getTableName().getNameAsString(), scan,
+    TableMapReduceUtil.initTableMapperJob(tableDescriptor.getTableName().getNameAsString(), scan,
         VerifyMapper.class, NullWritable.class, NullWritable.class, job);
     TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(), AbstractHBaseTool.class);
     int scannerCaching = conf.getInt("verify.scannercaching", SCANNER_CACHING);
@@ -363,15 +365,17 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
     IntegrationTestingUtility.setUseDistributedCluster(getConf());
     int numPresplits = getConf().getInt("loadmapper.numPresplits", 5);
     // create HTableDescriptor for specified table
-    HTableDescriptor htd = new HTableDescriptor(getTablename());
-    htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(getTablename());
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY));
 
     try (Connection conn = ConnectionFactory.createConnection(getConf());
         Admin admin = conn.getAdmin()) {
-      admin.createTable(htd, Bytes.toBytes(0L), Bytes.toBytes(-1L), numPresplits);
+      admin.createTable(tableDescriptor, Bytes.toBytes(0L), Bytes.toBytes(-1L), numPresplits);
     }
-    doLoad(getConf(), htd);
-    doVerify(getConf(), htd);
+    doLoad(getConf(), tableDescriptor);
+    doVerify(getConf(), tableDescriptor);
     getTestingUtil(getConf()).deleteTable(getTablename());
     return 0;
   }

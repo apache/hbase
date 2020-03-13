@@ -23,6 +23,7 @@ import javax.crypto.SecretKey;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.time.Instant;
 import java.util.Arrays;
 
 import org.apache.yetus.audience.InterfaceAudience;
@@ -36,9 +37,9 @@ import org.apache.hadoop.io.WritableUtils;
  */
 @InterfaceAudience.Private
 public class AuthenticationKey implements Writable {
-  private int id;
-  private long expirationDate;
-  private SecretKey secret;
+  private volatile int id;
+  private volatile long expirationDate;
+  private volatile SecretKey secret;
 
   public AuthenticationKey() {
     // for Writable
@@ -90,10 +91,11 @@ public class AuthenticationKey implements Writable {
   @Override
   public String toString() {
     StringBuilder buf = new StringBuilder();
-    buf.append("AuthenticationKey[ ")
+    buf.append("AuthenticationKey[")
        .append("id=").append(id)
-       .append(", expiration=").append(expirationDate)
-       .append(" ]");
+       .append(", expiration=").append(Instant.ofEpochMilli(this.expirationDate))
+      .append(", obj=").append(super.toString())
+      .append("]");
     return buf.toString();
   }
 

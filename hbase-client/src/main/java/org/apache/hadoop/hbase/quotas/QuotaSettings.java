@@ -173,12 +173,22 @@ public abstract class QuotaSettings {
   }
 
   protected static String sizeToString(final long size) {
-    if (size >= (1L << 50)) return String.format("%dP", size / (1L << 50));
-    if (size >= (1L << 40)) return String.format("%dT", size / (1L << 40));
-    if (size >= (1L << 30)) return String.format("%dG", size / (1L << 30));
-    if (size >= (1L << 20)) return String.format("%dM", size / (1L << 20));
-    if (size >= (1L << 10)) return String.format("%dK", size / (1L << 10));
-    return String.format("%dB", size);
+    if (size >= (1L << 50)) {
+      return String.format("%.2fP", (double)size / (1L << 50));
+    }
+    if (size >= (1L << 40)) {
+      return String.format("%.2fT", (double)size / (1L << 40));
+    }
+    if (size >= (1L << 30)) {
+      return String.format("%.2fG", (double)size / (1L << 30));
+    }
+    if (size >= (1L << 20)) {
+      return String.format("%.2fM", (double)size / (1L << 20));
+    }
+    if (size >= (1L << 10)) {
+      return String.format("%.2fK", (double)size / (1L << 10));
+    }
+    return String.format("%.2fB", (double)size);
   }
 
   protected static String timeToString(final TimeUnit timeUnit) {

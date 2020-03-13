@@ -361,13 +361,13 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
     byte[] originStartKey = scan.getStartRow();
     if (originStartKey == null
             || Bytes.compareTo(originStartKey, regionStartKey) < 0) {
-      scan.setStartRow(regionStartKey);
+      scan.withStartRow(regionStartKey);
     }
     byte[] regionEndKey = region.getEndKey();
     byte[] originEndKey = scan.getStopRow();
     if (originEndKey == null
             || Bytes.compareTo(originEndKey, regionEndKey) > 0) {
-      scan.setStartRow(regionEndKey);
+      scan.withStartRow(regionEndKey);
     }
     return scan;
   }

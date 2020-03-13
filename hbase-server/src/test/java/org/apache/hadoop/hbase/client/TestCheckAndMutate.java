@@ -18,14 +18,25 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.Collections;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.filter.BinaryComparator;
+import org.apache.hadoop.hbase.filter.FamilyFilter;
+import org.apache.hadoop.hbase.filter.FilterList;
+import org.apache.hadoop.hbase.filter.QualifierFilter;
+import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
+import org.apache.hadoop.hbase.filter.TimestampsFilter;
+import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -182,4 +193,183 @@ public class TestCheckAndMutate {
     }
   }
 
+  @Test
+  public void testCheckAndMutateWithSingleFilter() throws Throwable {
+    try (Table table = createTable()) {
+      // put one row
+      putOneRow(table);
+      // get row back and assert the values
+      getOneRowAndAssertAllExist(table);
+
+      // Put with success
+      boolean ok = table.checkAndMutate(ROWKEY, new SingleColumnValueFilter(FAMILY,
+          Bytes.toBytes("A"), CompareOperator.EQUAL, Bytes.toBytes("a")))
+        .thenPut(new Put(ROWKEY).addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")));
+      assertTrue(ok);
+
+      Result result = table.get(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("D")));
+      assertEquals("d", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("D"))));
+
+      // Put with failure
+      ok = table.checkAndMutate(ROWKEY, new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"),
+          CompareOperator.EQUAL, Bytes.toBytes("b")))
+        .thenPut(new Put(ROWKEY).addColumn(FAMILY, Bytes.toBytes("E"), Bytes.toBytes("e")));
+      assertFalse(ok);
+
+      assertFalse(table.exists(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("E"))));
+
+      // Delete with success
+      ok = table.checkAndMutate(ROWKEY, new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"),
+          CompareOperator.EQUAL, Bytes.toBytes("a")))
+        .thenDelete(new Delete(ROWKEY).addColumns(FAMILY, Bytes.toBytes("D")));
+      assertTrue(ok);
+
+      assertFalse(table.exists(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("D"))));
+
+      // Mutate with success
+      ok = table.checkAndMutate(ROWKEY, new SingleColumnValueFilter(FAMILY, Bytes.toBytes("B"),
+          CompareOperator.EQUAL, Bytes.toBytes("b")))
+        .thenMutate(new RowMutations(ROWKEY)
+          .add((Mutation) new Put(ROWKEY)
+            .addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")))
+          .add((Mutation) new Delete(ROWKEY).addColumns(FAMILY, Bytes.toBytes("A"))));
+      assertTrue(ok);
+
+      result = table.get(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("D")));
+      assertEquals("d", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("D"))));
+
+      assertFalse(table.exists(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("A"))));
+    }
+  }
+
+  @Test
+  public void testCheckAndMutateWithMultipleFilters() throws Throwable {
+    try (Table table = createTable()) {
+      // put one row
+      putOneRow(table);
+      // get row back and assert the values
+      getOneRowAndAssertAllExist(table);
+
+      // Put with success
+      boolean ok = table.checkAndMutate(ROWKEY, new FilterList(
+          new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"), CompareOperator.EQUAL,
+            Bytes.toBytes("a")),
+          new SingleColumnValueFilter(FAMILY, Bytes.toBytes("B"), CompareOperator.EQUAL,
+            Bytes.toBytes("b"))
+        ))
+        .thenPut(new Put(ROWKEY).addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")));
+      assertTrue(ok);
+
+      Result result = table.get(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("D")));
+      assertEquals("d", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("D"))));
+
+      // Put with failure
+      ok = table.checkAndMutate(ROWKEY, new FilterList(
+          new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"), CompareOperator.EQUAL,
+            Bytes.toBytes("a")),
+          new SingleColumnValueFilter(FAMILY, Bytes.toBytes("B"), CompareOperator.EQUAL,
+            Bytes.toBytes("c"))
+        ))
+        .thenPut(new Put(ROWKEY).addColumn(FAMILY, Bytes.toBytes("E"), Bytes.toBytes("e")));
+      assertFalse(ok);
+
+      assertFalse(table.exists(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("E"))));
+
+      // Delete with success
+      ok = table.checkAndMutate(ROWKEY, new FilterList(
+          new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"), CompareOperator.EQUAL,
+            Bytes.toBytes("a")),
+          new SingleColumnValueFilter(FAMILY, Bytes.toBytes("B"), CompareOperator.EQUAL,
+            Bytes.toBytes("b"))
+        ))
+        .thenDelete(new Delete(ROWKEY).addColumns(FAMILY, Bytes.toBytes("D")));
+      assertTrue(ok);
+
+      assertFalse(table.exists(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("D"))));
+
+      // Mutate with success
+      ok = table.checkAndMutate(ROWKEY, new FilterList(
+          new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"), CompareOperator.EQUAL,
+            Bytes.toBytes("a")),
+          new SingleColumnValueFilter(FAMILY, Bytes.toBytes("B"), CompareOperator.EQUAL,
+            Bytes.toBytes("b"))
+        ))
+        .thenMutate(new RowMutations(ROWKEY)
+          .add((Mutation) new Put(ROWKEY)
+            .addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")))
+          .add((Mutation) new Delete(ROWKEY).addColumns(FAMILY, Bytes.toBytes("A"))));
+      assertTrue(ok);
+
+      result = table.get(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("D")));
+      assertEquals("d", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("D"))));
+
+      assertFalse(table.exists(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("A"))));
+    }
+  }
+
+  @Test
+  public void testCheckAndMutateWithTimestampFilter() throws Throwable {
+    try (Table table = createTable()) {
+      // Put with specifying the timestamp
+      table.put(new Put(ROWKEY).addColumn(FAMILY, Bytes.toBytes("A"), 100, Bytes.toBytes("a")));
+
+      // Put with success
+      boolean ok = table.checkAndMutate(ROWKEY, new FilterList(
+          new FamilyFilter(CompareOperator.EQUAL, new BinaryComparator(FAMILY)),
+          new QualifierFilter(CompareOperator.EQUAL, new BinaryComparator(Bytes.toBytes("A"))),
+          new TimestampsFilter(Collections.singletonList(100L))
+        ))
+        .thenPut(new Put(ROWKEY).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b")));
+      assertTrue(ok);
+
+      Result result = table.get(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("B")));
+      assertEquals("b", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("B"))));
+
+      // Put with failure
+      ok = table.checkAndMutate(ROWKEY, new FilterList(
+          new FamilyFilter(CompareOperator.EQUAL, new BinaryComparator(FAMILY)),
+          new QualifierFilter(CompareOperator.EQUAL, new BinaryComparator(Bytes.toBytes("A"))),
+          new TimestampsFilter(Collections.singletonList(101L))
+        ))
+        .thenPut(new Put(ROWKEY).addColumn(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("c")));
+      assertFalse(ok);
+
+      assertFalse(table.exists(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("C"))));
+    }
+  }
+
+  @Test
+  public void testCheckAndMutateWithFilterAndTimeRange() throws Throwable {
+    try (Table table = createTable()) {
+      // Put with specifying the timestamp
+      table.put(new Put(ROWKEY).addColumn(FAMILY, Bytes.toBytes("A"), 100, Bytes.toBytes("a")));
+
+      // Put with success
+      boolean ok = table.checkAndMutate(ROWKEY, new SingleColumnValueFilter(FAMILY,
+          Bytes.toBytes("A"), CompareOperator.EQUAL, Bytes.toBytes("a")))
+        .timeRange(TimeRange.between(0, 101))
+        .thenPut(new Put(ROWKEY).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b")));
+      assertTrue(ok);
+
+      Result result = table.get(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("B")));
+      assertEquals("b", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("B"))));
+
+      // Put with failure
+      ok = table.checkAndMutate(ROWKEY, new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"),
+          CompareOperator.EQUAL, Bytes.toBytes("a")))
+        .timeRange(TimeRange.between(0, 100))
+        .thenPut(new Put(ROWKEY).addColumn(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("c")));
+      assertFalse(ok);
+
+      assertFalse(table.exists(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("C"))));
+    }
+  }
+
+  @Test(expected = NullPointerException.class)
+  public void testCheckAndMutateWithNotSpecifyingCondition() throws Throwable {
+    try (Table table = createTable()) {
+      table.checkAndMutate(ROWKEY, FAMILY)
+        .thenPut(new Put(ROWKEY).addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")));
+    }
+  }
 }

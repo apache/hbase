@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.client.AsyncTable;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.BufferedMutatorParams;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Consistency;
@@ -66,6 +67,8 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -339,8 +342,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
       throw new IllegalStateException(
         "Must specify an existing table for read commands. Run a write command first.");
     }
-    HTableDescriptor desc =
-      exists ? new HTableDescriptor(admin.getDescriptor(TableName.valueOf(opts.tableName))) : null;
+    TableDescriptor desc =
+      exists ? admin.getDescriptor(TableName.valueOf(opts.tableName)) : null;
     byte[][] splits = getSplits(opts);
 
     // recreate the table when user has requested presplit or when existing
@@ -396,11 +399,14 @@ public class PerformanceEvaluation extends Configured implements Tool {
   /**
    * Create an HTableDescriptor from provided TestOptions.
    */
-  protected static HTableDescriptor getTableDescriptor(TestOptions opts) {
-    HTableDescriptor tableDesc = new HTableDescriptor(TableName.valueOf(opts.tableName));
+  protected static TableDescriptor getTableDescriptor(TestOptions opts) {
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(opts.tableName));
+
     for (int family = 0; family < opts.families; family++) {
       byte[] familyName = Bytes.toBytes(FAMILY_NAME_BASE + family);
-      HColumnDescriptor familyDesc = new HColumnDescriptor(familyName);
+      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDesc =
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(familyName);
       familyDesc.setDataBlockEncoding(opts.blockEncoding);
       familyDesc.setCompressionType(opts.compression);
       familyDesc.setBloomFilterType(opts.bloomType);
@@ -409,15 +415,15 @@ public class PerformanceEvaluation extends Configured implements Tool {
         familyDesc.setInMemory(true);
       }
       familyDesc.setInMemoryCompaction(opts.inMemoryCompaction);
-      tableDesc.addFamily(familyDesc);
+      tableDescriptor.setColumnFamily(familyDesc);
     }
     if (opts.replicas != DEFAULT_OPTS.replicas) {
-      tableDesc.setRegionReplication(opts.replicas);
+      tableDescriptor.setRegionReplication(opts.replicas);
     }
     if (opts.splitPolicy != null && !opts.splitPolicy.equals(DEFAULT_OPTS.splitPolicy)) {
-      tableDesc.setRegionSplitPolicyClassName(opts.splitPolicy);
+      tableDescriptor.setRegionSplitPolicyClassName(opts.splitPolicy);
     }
-    return tableDesc;
+    return tableDescriptor;
   }
 
   /**

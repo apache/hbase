@@ -127,6 +127,7 @@ import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterWrapper;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
 import org.apache.hadoop.hbase.io.HFileLink;
@@ -162,8 +163,6 @@ import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.ClassSize;
-import org.apache.hadoop.hbase.util.CompressionTest;
-import org.apache.hadoop.hbase.util.EncryptionTest;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HashedBytes;
@@ -1692,7 +1691,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       if (!stores.isEmpty()) {
         // initialize the thread pool for closing stores in parallel.
         ThreadPoolExecutor storeCloserThreadPool =
-          getStoreOpenAndCloseThreadPool("StoreCloserThread-" +
+          getStoreOpenAndCloseThreadPool("StoreCloser-" +
             getRegionInfo().getRegionNameAsString());
         CompletionService<Pair<byte[], Collection<HStoreFile>>> completionService =
           new ExecutorCompletionService<>(storeCloserThreadPool);
@@ -4205,13 +4204,26 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier, CompareOperator op,
     ByteArrayComparable comparator, TimeRange timeRange, Mutation mutation) throws IOException {
     checkMutationType(mutation, row);
-    return doCheckAndRowMutate(row, family, qualifier, op, comparator, timeRange, null, mutation);
+    return doCheckAndRowMutate(row, family, qualifier, op, comparator, null, timeRange, null,
+      mutation);
+  }
+
+  @Override
+  public boolean checkAndMutate(byte[] row, Filter filter, TimeRange timeRange, Mutation mutation)
+    throws IOException {
+    return doCheckAndRowMutate(row, null, null, null, null, filter, timeRange, null, mutation);
   }
 
   @Override
   public boolean checkAndRowMutate(byte[] row, byte[] family, byte[] qualifier, CompareOperator op,
     ByteArrayComparable comparator, TimeRange timeRange, RowMutations rm) throws IOException {
-    return doCheckAndRowMutate(row, family, qualifier, op, comparator, timeRange, rm, null);
+    return doCheckAndRowMutate(row, family, qualifier, op, comparator, null, timeRange, rm, null);
+  }
+
+  @Override
+  public boolean checkAndRowMutate(byte[] row, Filter filter, TimeRange timeRange, RowMutations rm)
+    throws IOException {
+    return doCheckAndRowMutate(row, null, null, null, null, filter, timeRange, rm, null);
   }
 
   /**
@@ -4219,7 +4231,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * switches in the few places where there is deviation.
    */
   private boolean doCheckAndRowMutate(byte[] row, byte[] family, byte[] qualifier,
-    CompareOperator op, ByteArrayComparable comparator, TimeRange timeRange,
+    CompareOperator op, ByteArrayComparable comparator, Filter filter, TimeRange timeRange,
     RowMutations rowMutations, Mutation mutation)
   throws IOException {
     // Could do the below checks but seems wacky with two callers only. Just comment out for now.
@@ -4233,8 +4245,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     startRegionOperation();
     try {
       Get get = new Get(row);
-      checkFamily(family);
-      get.addColumn(family, qualifier);
+      if (family != null) {
+        checkFamily(family);
+        get.addColumn(family, qualifier);
+      }
+      if (filter != null) {
+        get.setFilter(filter);
+      }
       if (timeRange != null) {
         get.setTimeRange(timeRange.getMin(), timeRange.getMax());
       }
@@ -4246,11 +4263,23 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           // Call coprocessor.
           Boolean processed = null;
           if (mutation instanceof Put) {
-            processed = this.getCoprocessorHost().preCheckAndPutAfterRowLock(row, family,
-                qualifier, op, comparator, (Put)mutation);
+            if (filter != null) {
+              processed = this.getCoprocessorHost()
+                .preCheckAndPutAfterRowLock(row, filter, (Put) mutation);
+            } else {
+              processed = this.getCoprocessorHost()
+                .preCheckAndPutAfterRowLock(row, family, qualifier, op, comparator,
+                  (Put) mutation);
+            }
           } else if (mutation instanceof Delete) {
-            processed = this.getCoprocessorHost().preCheckAndDeleteAfterRowLock(row, family,
-                qualifier, op, comparator, (Delete)mutation);
+            if (filter != null) {
+              processed = this.getCoprocessorHost()
+                .preCheckAndDeleteAfterRowLock(row, filter, (Delete) mutation);
+            } else {
+              processed = this.getCoprocessorHost()
+                .preCheckAndDeleteAfterRowLock(row, family, qualifier, op, comparator,
+                  (Delete) mutation);
+            }
           }
           if (processed != null) {
             return processed;
@@ -4260,20 +4289,28 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // Supposition is that now all changes are done under row locks, then when we go to read,
         // we'll get the latest on this row.
         List<Cell> result = get(get, false);
-        boolean valueIsNull = comparator.getValue() == null || comparator.getValue().length == 0;
         boolean matches = false;
         long cellTs = 0;
-        if (result.isEmpty() && valueIsNull) {
-          matches = true;
-        } else if (result.size() > 0 && result.get(0).getValueLength() == 0 && valueIsNull) {
-          matches = true;
-          cellTs = result.get(0).getTimestamp();
-        } else if (result.size() == 1 && !valueIsNull) {
-          Cell kv = result.get(0);
-          cellTs = kv.getTimestamp();
-          int compareResult = PrivateCellUtil.compareValue(kv, comparator);
-          matches = matches(op, compareResult);
+        if (filter != null) {
+          if (!result.isEmpty()) {
+            matches = true;
+            cellTs = result.get(0).getTimestamp();
+          }
+        } else {
+          boolean valueIsNull = comparator.getValue() == null || comparator.getValue().length == 0;
+          if (result.isEmpty() && valueIsNull) {
+            matches = true;
+          } else if (result.size() > 0 && result.get(0).getValueLength() == 0 && valueIsNull) {
+            matches = true;
+            cellTs = result.get(0).getTimestamp();
+          } else if (result.size() == 1 && !valueIsNull) {
+            Cell kv = result.get(0);
+            cellTs = kv.getTimestamp();
+            int compareResult = PrivateCellUtil.compareValue(kv, comparator);
+            matches = matches(op, compareResult);
+          }
         }
+
         // If matches put the new put or delete the new delete
         if (matches) {
           // We have acquired the row lock already. If the system clock is NOT monotonically

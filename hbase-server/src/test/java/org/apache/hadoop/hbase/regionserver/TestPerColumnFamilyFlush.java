@@ -31,7 +31,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -40,12 +39,14 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -89,13 +90,15 @@ public class TestPerColumnFamilyFlush {
   public static final byte[] FAMILY3 = FAMILIES[2];
 
   private HRegion initHRegion(String callingMethod, Configuration conf) throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(TABLENAME);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLENAME);
     for (byte[] family : FAMILIES) {
-      htd.addFamily(new HColumnDescriptor(family));
+      tableDescriptor.setColumnFamily(
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
     }
     HRegionInfo info = new HRegionInfo(TABLENAME, null, null, false);
     Path path = new Path(DIR, callingMethod);
-    return HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);
+    return HBaseTestingUtility.createRegionAndWAL(info, path, conf, tableDescriptor);
   }
 
   // A helper function to create puts.
@@ -558,11 +561,15 @@ public class TestPerColumnFamilyFlush {
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
       ConstantSizeRegionSplitPolicy.class.getName());
 
-    HTableDescriptor htd = new HTableDescriptor(TABLENAME);
-    htd.setCompactionEnabled(false);
-    htd.addFamily(new HColumnDescriptor(FAMILY1));
-    htd.addFamily(new HColumnDescriptor(FAMILY2));
-    htd.addFamily(new HColumnDescriptor(FAMILY3));
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLENAME);
+    tableDescriptor.setCompactionEnabled(false);
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY1));
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY2));
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY3));
 
     LOG.info("==============Test with selective flush disabled===============");
     int cf1StoreFileCount = -1;
@@ -575,7 +582,7 @@ public class TestPerColumnFamilyFlush {
       TEST_UTIL.startMiniCluster(1);
       TEST_UTIL.getAdmin().createNamespace(
         NamespaceDescriptor.create(TABLENAME.getNamespaceAsString()).build());
-      TEST_UTIL.getAdmin().createTable(htd);
+      TEST_UTIL.getAdmin().createTable(tableDescriptor);
       TEST_UTIL.waitTableAvailable(TABLENAME);
       Connection conn = ConnectionFactory.createConnection(conf);
       Table table = conn.getTable(TABLENAME);
@@ -599,7 +606,7 @@ public class TestPerColumnFamilyFlush {
       TEST_UTIL.startMiniCluster(1);
       TEST_UTIL.getAdmin().createNamespace(
         NamespaceDescriptor.create(TABLENAME.getNamespaceAsString()).build());
-      TEST_UTIL.getAdmin().createTable(htd);
+      TEST_UTIL.getAdmin().createTable(tableDescriptor);
       Connection conn = ConnectionFactory.createConnection(conf);
       Table table = conn.getTable(TABLENAME);
       doPut(table, memstoreFlushSize);
@@ -629,12 +636,17 @@ public class TestPerColumnFamilyFlush {
     int numRegions = Integer.parseInt(args[0]);
     long numRows = Long.parseLong(args[1]);
 
-    HTableDescriptor htd = new HTableDescriptor(TABLENAME);
-    htd.setMaxFileSize(10L * 1024 * 1024 * 1024);
-    htd.setValue(HTableDescriptor.SPLIT_POLICY, ConstantSizeRegionSplitPolicy.class.getName());
-    htd.addFamily(new HColumnDescriptor(FAMILY1));
-    htd.addFamily(new HColumnDescriptor(FAMILY2));
-    htd.addFamily(new HColumnDescriptor(FAMILY3));
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLENAME);
+    tableDescriptor.setMaxFileSize(10L * 1024 * 1024 * 1024);
+    tableDescriptor.setValue(HTableDescriptor.SPLIT_POLICY,
+      ConstantSizeRegionSplitPolicy.class.getName());
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY1));
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY2));
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY3));
 
     Configuration conf = HBaseConfiguration.create();
     Connection conn = ConnectionFactory.createConnection(conf);
@@ -647,9 +659,9 @@ public class TestPerColumnFamilyFlush {
       byte[] startKey = new byte[16];
       byte[] endKey = new byte[16];
       Arrays.fill(endKey, (byte) 0xFF);
-      admin.createTable(htd, startKey, endKey, numRegions);
+      admin.createTable(tableDescriptor, startKey, endKey, numRegions);
     } else {
-      admin.createTable(htd);
+      admin.createTable(tableDescriptor);
     }
     admin.close();
 

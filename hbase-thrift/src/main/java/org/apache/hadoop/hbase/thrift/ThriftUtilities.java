@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -55,11 +56,11 @@ public final class ThriftUtilities {
    * Thrift ColumnDescriptor "struct".
    *
    * @param in Thrift ColumnDescriptor object
-   * @return HColumnDescriptor
+   * @return ModifyableColumnFamilyDescriptor
    * @throws IllegalArgument if the column name is empty
    */
-  static public HColumnDescriptor colDescFromThrift(ColumnDescriptor in)
-      throws IllegalArgument {
+  static public ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor colDescFromThrift(
+      ColumnDescriptor in) throws IllegalArgument {
     Compression.Algorithm comp =
       Compression.getCompressionAlgorithmByName(in.compression.toLowerCase(Locale.ROOT));
     BloomType bt =
@@ -69,14 +70,15 @@ public final class ThriftUtilities {
       throw new IllegalArgument("column name is empty");
     }
     byte [] parsedName = CellUtil.parseColumn(Bytes.getBytes(in.name))[0];
-    HColumnDescriptor col = new HColumnDescriptor(parsedName)
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(parsedName)
         .setMaxVersions(in.maxVersions)
         .setCompressionType(comp)
         .setInMemory(in.inMemory)
         .setBlockCacheEnabled(in.blockCacheEnabled)
         .setTimeToLive(in.timeToLive > 0 ? in.timeToLive : Integer.MAX_VALUE)
         .setBloomFilterType(bt);
-    return col;
+    return familyDescriptor;
   }
 
   /**

@@ -29,6 +29,7 @@ import java.util.function.Function;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -169,6 +170,36 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
       public CheckAndMutateBuilder ifMatches(CompareOperator compareOp, byte[] value) {
         builder.ifMatches(compareOp, value);
         return this;
+      }
+    };
+  }
+
+  @Override
+  public CheckAndMutateWithFilterBuilder checkAndMutate(byte[] row, Filter filter) {
+    return new CheckAndMutateWithFilterBuilder() {
+
+      private final CheckAndMutateWithFilterBuilder builder =
+        rawTable.checkAndMutate(row, filter);
+
+      @Override
+      public CheckAndMutateWithFilterBuilder timeRange(TimeRange timeRange) {
+        builder.timeRange(timeRange);
+        return this;
+      }
+
+      @Override
+      public CompletableFuture<Boolean> thenPut(Put put) {
+        return wrap(builder.thenPut(put));
+      }
+
+      @Override
+      public CompletableFuture<Boolean> thenDelete(Delete delete) {
+        return wrap(builder.thenDelete(delete));
+      }
+
+      @Override
+      public CompletableFuture<Boolean> thenMutate(RowMutations mutation) {
+        return wrap(builder.thenMutate(mutation));
       }
     };
   }

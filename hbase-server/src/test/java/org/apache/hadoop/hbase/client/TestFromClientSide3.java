@@ -678,10 +678,14 @@ public class TestFromClientSide3 {
   }
 
   private void testPreBatchMutate(TableName tableName, Runnable rn)throws Exception {
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addCoprocessor(WaitingForScanObserver.class.getName());
-    desc.addFamily(new HColumnDescriptor(FAMILY));
-    TEST_UTIL.getAdmin().createTable(desc);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    ColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY);
+
+    tableDescriptor.setCoprocessor(WaitingForScanObserver.class.getName());
+    tableDescriptor.setColumnFamily(familyDescriptor);
+    TEST_UTIL.getAdmin().createTable(tableDescriptor);
     // Don't use waitTableAvailable(), because the scanner will mess up the co-processor
 
     ExecutorService service = Executors.newFixedThreadPool(2);
@@ -712,11 +716,15 @@ public class TestFromClientSide3 {
 
   @Test
   public void testLockLeakWithDelta() throws Exception, Throwable {
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addCoprocessor(WaitingForMultiMutationsObserver.class.getName());
-    desc.setConfiguration("hbase.rowlock.wait.duration", String.valueOf(5000));
-    desc.addFamily(new HColumnDescriptor(FAMILY));
-    TEST_UTIL.getAdmin().createTable(desc);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    ColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY);
+
+    tableDescriptor.setCoprocessor(WaitingForMultiMutationsObserver.class.getName());
+    tableDescriptor.setValue("hbase.rowlock.wait.duration", String.valueOf(5000));
+    tableDescriptor.setColumnFamily(familyDescriptor);
+    TEST_UTIL.getAdmin().createTable(tableDescriptor);
     TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
 
     // new a connection for lower retry number.
@@ -767,12 +775,16 @@ public class TestFromClientSide3 {
 
   @Test
   public void testMultiRowMutations() throws Exception, Throwable {
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addCoprocessor(MultiRowMutationEndpoint.class.getName());
-    desc.addCoprocessor(WaitingForMultiMutationsObserver.class.getName());
-    desc.setConfiguration("hbase.rowlock.wait.duration", String.valueOf(5000));
-    desc.addFamily(new HColumnDescriptor(FAMILY));
-    TEST_UTIL.getAdmin().createTable(desc);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    ColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY);
+
+    tableDescriptor.setCoprocessor(MultiRowMutationEndpoint.class.getName());
+    tableDescriptor.setCoprocessor(WaitingForMultiMutationsObserver.class.getName());
+    tableDescriptor.setValue("hbase.rowlock.wait.duration", String.valueOf(5000));
+    tableDescriptor.setColumnFamily(familyDescriptor);
+    TEST_UTIL.getAdmin().createTable(tableDescriptor);
     TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
 
     // new a connection for lower retry number.

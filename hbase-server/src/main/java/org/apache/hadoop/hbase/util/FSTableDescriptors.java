@@ -100,56 +100,49 @@ public class FSTableDescriptors implements TableDescriptors {
   private final Map<TableName, TableDescriptor> cache = new ConcurrentHashMap<>();
 
   /**
-   * Construct a FSTableDescriptors instance using the hbase root dir of the given
-   * conf and the filesystem where that root dir lives.
-   * This instance can do write operations (is not read only).
+   * Construct a FSTableDescriptors instance using the hbase root dir of the given conf and the
+   * filesystem where that root dir lives. This instance can do write operations (is not read only).
    */
   public FSTableDescriptors(final Configuration conf) throws IOException {
-    this(conf, FSUtils.getCurrentFileSystem(conf), FSUtils.getRootDir(conf));
+    this(FSUtils.getCurrentFileSystem(conf), FSUtils.getRootDir(conf));
   }
 
-  public FSTableDescriptors(final Configuration conf, final FileSystem fs, final Path rootdir)
-          throws IOException {
-    this(conf, fs, rootdir, false, true);
+  public FSTableDescriptors(final FileSystem fs, final Path rootdir) {
+    this(fs, rootdir, false, true);
   }
 
-  /**
-   * @param fsreadonly True if we are read-only when it comes to filesystem
-   *                   operations; i.e. on remove, we do not do delete in fs.
-   */
-  @VisibleForTesting
-  public FSTableDescriptors(final Configuration conf, final FileSystem fs,
-      final Path rootdir, final boolean fsreadonly, final boolean usecache) throws IOException {
-    this(conf, fs, rootdir, fsreadonly, usecache, null);
-  }
-
-  /**
-   * @param fsreadonly True if we are read-only when it comes to filesystem
-   *                   operations; i.e. on remove, we do not do delete in fs.
-   * @param metaObserver Used by HMaster. It need to modify the META_REPLICAS_NUM for meta table descriptor.
-   *                     see HMaster#finishActiveMasterInitialization
-   *                     TODO: This is a workaround. Should remove this ugly code...
-   */
-  public FSTableDescriptors(final Configuration conf, final FileSystem fs, final Path rootdir,
-    final boolean fsreadonly, final boolean usecache,
-    Function<TableDescriptorBuilder, TableDescriptorBuilder> metaObserver) throws IOException {
+  public FSTableDescriptors(final FileSystem fs, final Path rootdir, final boolean fsreadonly,
+      final boolean usecache) {
     this.fs = fs;
     this.rootdir = rootdir;
     this.fsreadonly = fsreadonly;
     this.usecache = usecache;
-    if (!fsreadonly) {
-      // see if we already have meta descriptor on fs. Write one if not.
-      try {
-        getTableDescriptorFromFs(fs, rootdir, TableName.META_TABLE_NAME);
-      } catch (TableInfoMissingException e) {
-        TableDescriptorBuilder builder = createMetaTableDescriptorBuilder(conf);
-        if (metaObserver != null) {
-          builder = metaObserver.apply(builder);
-        }
-        TableDescriptor td = builder.build();
-        LOG.info("Creating new hbase:meta table default descriptor/schema {}", td);
-        updateTableDescriptor(td);
+  }
+
+  public static void tryUpdateMetaTableDescriptor(Configuration conf) throws IOException {
+    tryUpdateMetaTableDescriptor(conf, FSUtils.getCurrentFileSystem(conf), FSUtils.getRootDir(conf),
+      null);
+  }
+
+  public static void tryUpdateMetaTableDescriptor(Configuration conf, FileSystem fs, Path rootdir,
+      Function<TableDescriptorBuilder, TableDescriptorBuilder> metaObserver) throws IOException {
+    // see if we already have meta descriptor on fs. Write one if not.
+    try {
+      getTableDescriptorFromFs(fs, rootdir, TableName.META_TABLE_NAME);
+    } catch (TableInfoMissingException e) {
+      TableDescriptorBuilder builder = createMetaTableDescriptorBuilder(conf);
+      if (metaObserver != null) {
+        builder = metaObserver.apply(builder);
       }
+      TableDescriptor td = builder.build();
+      LOG.info("Creating new hbase:meta table descriptor {}", td);
+      TableName tableName = td.getTableName();
+      Path tableDir = FSUtils.getTableDir(rootdir, tableName);
+      Path p = writeTableDescriptor(fs, td, tableDir, getTableInfoPath(fs, tableDir, true));
+      if (p == null) {
+        throw new IOException("Failed update hbase:meta table descriptor");
+      }
+      LOG.info("Updated hbase:meta table descriptor to {}", p);
     }
   }
 
@@ -333,8 +326,7 @@ public class FSTableDescriptors implements TableDescriptors {
    * from the FileSystem.
    */
   @Override
-  public TableDescriptor remove(final TableName tablename)
-  throws IOException {
+  public TableDescriptor remove(final TableName tablename) throws IOException {
     if (fsreadonly) {
       throw new NotImplementedException("Cannot remove a table descriptor - in read only mode");
     }
@@ -348,8 +340,7 @@ public class FSTableDescriptors implements TableDescriptors {
     return descriptor;
   }
 
-  private FileStatus getTableInfoPath(Path tableDir)
-  throws IOException {
+  private FileStatus getTableInfoPath(Path tableDir) throws IOException {
     return getTableInfoPath(fs, tableDir, !fsreadonly);
   }
 
@@ -381,7 +372,7 @@ public class FSTableDescriptors implements TableDescriptors {
    * @return The file status of the current table info file or null if none exist
    */
   private static FileStatus getTableInfoPath(FileSystem fs, Path tableDir, boolean removeOldFiles)
-  throws IOException {
+      throws IOException {
     Path tableInfoDir = new Path(tableDir, TABLEINFO_DIR);
     return getCurrentTableInfoStatus(fs, tableInfoDir, removeOldFiles);
   }
@@ -720,8 +711,8 @@ public class FSTableDescriptors implements TableDescriptors {
    *         already exists and we weren't forcing the descriptor creation.
    * @throws IOException if a filesystem error occurs
    */
-  public static boolean createTableDescriptorForTableDirectory(FileSystem fs,
-      Path tableDir, TableDescriptor htd, boolean forceCreation) throws IOException {
+  public static boolean createTableDescriptorForTableDirectory(FileSystem fs, Path tableDir,
+      TableDescriptor htd, boolean forceCreation) throws IOException {
     FileStatus status = getTableInfoPath(fs, tableDir);
     if (status != null) {
       LOG.debug("Current path=" + status.getPath());
