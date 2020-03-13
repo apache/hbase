@@ -21,13 +21,22 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
+import java.net.InetAddress;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
+
+import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.ipc.RpcCall;
+import org.apache.hadoop.hbase.ipc.RpcCallback;
+import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.LoadCounter;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -36,6 +45,13 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 
 @Category({ MasterTests.class, SmallTests.class })
 public class TestRegionProcedureStore extends RegionProcedureStoreTestBase {
@@ -129,5 +145,164 @@ public class TestRegionProcedureStore extends RegionProcedureStoreTestBase {
     // proc3 should also be deleted as now proc4 holds the max proc id
     assertFalse(store.region
       .get(new Get(Bytes.toBytes(proc3.getProcId())).setCheckExistenceOnly(true)).getExists());
+  }
+
+  /**
+   * Test for HBASE-23895
+   */
+  @Test
+  public void testInsertWithRpcCall() throws Exception {
+    RpcServer.setCurrentCall(newRpcCallWithDeadline());
+    RegionProcedureStoreTestProcedure proc1 = new RegionProcedureStoreTestProcedure();
+    store.insert(proc1, null);
+    RpcServer.setCurrentCall(null);
+  }
+
+  private RpcCall newRpcCallWithDeadline() {
+    return new RpcCall() {
+      @Override
+      public long getDeadline() {
+        return System.currentTimeMillis();
+      }
+
+      @Override
+      public BlockingService getService() {
+        return null;
+      }
+
+      @Override
+      public Descriptors.MethodDescriptor getMethod() {
+        return null;
+      }
+
+      @Override
+      public Message getParam() {
+        return null;
+      }
+
+      @Override
+      public CellScanner getCellScanner() {
+        return null;
+      }
+
+      @Override
+      public long getReceiveTime() {
+        return 0;
+      }
+
+      @Override
+      public long getStartTime() {
+        return 0;
+      }
+
+      @Override
+      public void setStartTime(long startTime) {
+
+      }
+
+      @Override
+      public int getTimeout() {
+        return 0;
+      }
+
+      @Override
+      public int getPriority() {
+        return 0;
+      }
+
+      @Override
+      public long getSize() {
+        return 0;
+      }
+
+      @Override
+      public RPCProtos.RequestHeader getHeader() {
+        return null;
+      }
+
+      @Override
+      public int getRemotePort() {
+        return 0;
+      }
+
+      @Override
+      public void setResponse(Message param, CellScanner cells, Throwable errorThrowable,
+          String error) {
+      }
+
+      @Override
+      public void sendResponseIfReady() throws IOException {
+      }
+
+      @Override
+      public void cleanup() {
+      }
+
+      @Override
+      public String toShortString() {
+        return null;
+      }
+
+      @Override
+      public long disconnectSince() {
+        return 0;
+      }
+
+      @Override
+      public boolean isClientCellBlockSupported() {
+        return false;
+      }
+
+      @Override
+      public Optional<User> getRequestUser() {
+        return Optional.empty();
+      }
+
+      @Override
+      public InetAddress getRemoteAddress() {
+        return null;
+      }
+
+      @Override
+      public HBaseProtos.VersionInfo getClientVersionInfo() {
+        return null;
+      }
+
+      @Override
+      public void setCallBack(RpcCallback callback) {
+      }
+
+      @Override
+      public boolean isRetryImmediatelySupported() {
+        return false;
+      }
+
+      @Override
+      public long getResponseCellSize() {
+        return 0;
+      }
+
+      @Override
+      public void incrementResponseCellSize(long cellSize) {
+      }
+
+      @Override
+      public long getResponseBlockSize() {
+        return 0;
+      }
+
+      @Override
+      public void incrementResponseBlockSize(long blockSize) {
+      }
+
+      @Override
+      public long getResponseExceptionSize() {
+        return 0;
+      }
+
+      @Override
+      public void incrementResponseExceptionSize(long exceptionSize) {
+      }
+    };
   }
 }

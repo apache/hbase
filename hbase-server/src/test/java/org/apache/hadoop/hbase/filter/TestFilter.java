@@ -289,7 +289,7 @@ public class TestFilter {
 
     Scan s = new Scan();
     // set a start row
-    s.setStartRow(ROWS_FOUR[1]);
+    s.withStartRow(ROWS_FOUR[1]);
     RegionScanner scanner = region.getScanner(s);
 
     // reseek to row three.

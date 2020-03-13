@@ -680,6 +680,27 @@ public abstract class RpcServer implements RpcServerInterface,
   }
 
   /**
+   * Used by {@link org.apache.hadoop.hbase.procedure2.store.region.RegionProcedureStore}. For
+   * master's rpc call, it may generate new procedure and mutate the region which store procedure.
+   * There are some check about rpc when mutate region, such as rpc timeout check. So unset the rpc
+   * call to avoid the rpc check.
+   * @return the currently ongoing rpc call
+   */
+  public static Optional<RpcCall> unsetCurrentCall() {
+    Optional<RpcCall> rpcCall = getCurrentCall();
+    CurCall.set(null);
+    return rpcCall;
+  }
+
+  /**
+   * Used by {@link org.apache.hadoop.hbase.procedure2.store.region.RegionProcedureStore}. Set the
+   * rpc call back after mutate region.
+   */
+  public static void setCurrentCall(RpcCall rpcCall) {
+    CurCall.set(rpcCall);
+  }
+
+  /**
    * Returns the user credentials associated with the current RPC request or not present if no
    * credentials were provided.
    * @return A User

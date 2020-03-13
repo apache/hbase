@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -172,8 +173,9 @@ public class TestWALSplitToHFile {
     final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
     final TableDescriptor td = createBasic3FamilyTD(tableName);
     final RegionInfo ri = RegionInfoBuilder.newBuilder(tableName).build();
-    final Path basedir = FSUtils.getTableDir(this.rootDir, tableName);
-    deleteDir(basedir);
+    final Path tableDir = FSUtils.getTableDir(this.rootDir, tableName);
+    deleteDir(tableDir);
+    FSTableDescriptors.createTableDescriptorForTableDirectory(fs, tableDir, td, false);
     final byte[] rowName = tableName.getName();
     final int countPerFamily = 10;
 
@@ -203,7 +205,12 @@ public class TestWALSplitToHFile {
     // all edits in logs are seen as 'stale'/old.
     region.close(true);
     wal.shutdown();
-    WALSplitter.split(rootDir, logDir, oldLogDir, FileSystem.get(this.conf), this.conf, wals);
+    try {
+      WALSplitter.split(rootDir, logDir, oldLogDir, FileSystem.get(this.conf), this.conf, wals);
+    } catch (Exception e) {
+      LOG.debug("Got exception", e);
+    }
+
     WAL wal2 = createWAL(this.conf, rootDir, logName);
     HRegion region2 = HRegion.openHRegion(conf, this.fs, rootDir, ri, td, wal2);
     long seqid2 = region2.getOpenSeqNum();
@@ -230,7 +237,7 @@ public class TestWALSplitToHFile {
         FileSystem newFS = FileSystem.get(newConf);
         // Make a new wal for new region open.
         WAL wal3 = createWAL(newConf, rootDir, logName);
-        HRegion region3 = new HRegion(basedir, wal3, newFS, newConf, ri, td, null);
+        HRegion region3 = new HRegion(tableDir, wal3, newFS, newConf, ri, td, null);
         long seqid3 = region3.initialize();
         Result result3 = region3.get(g);
         // Assert that count of cells is same as before crash.
@@ -259,11 +266,12 @@ public class TestWALSplitToHFile {
       throws IOException, SecurityException, IllegalArgumentException {
     final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
     final RegionInfo ri = RegionInfoBuilder.newBuilder(tableName).build();
-    final Path basedir = FSUtils.getTableDir(this.rootDir, tableName);
-    deleteDir(basedir);
+    final Path tableDir = FSUtils.getTableDir(this.rootDir, tableName);
+    deleteDir(tableDir);
     final byte[] rowName = tableName.getName();
     final int countPerFamily = 10;
     final TableDescriptor td = createBasic3FamilyTD(tableName);
+    FSTableDescriptors.createTableDescriptorForTableDirectory(fs, tableDir, td, false);
     HRegion region3 = HBaseTestingUtility.createRegionAndWAL(ri, rootDir, this.conf, td);
     HBaseTestingUtility.closeRegionAndWAL(region3);
     // Write countPerFamily edits into the three families.  Do a flush on one
@@ -318,9 +326,10 @@ public class TestWALSplitToHFile {
   public void testReplayEditsAfterAbortingFlush() throws IOException {
     final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
     final RegionInfo ri = RegionInfoBuilder.newBuilder(tableName).build();
-    final Path basedir = FSUtils.getTableDir(this.rootDir, tableName);
-    deleteDir(basedir);
+    final Path tableDir = FSUtils.getTableDir(this.rootDir, tableName);
+    deleteDir(tableDir);
     final TableDescriptor td = createBasic3FamilyTD(tableName);
+    FSTableDescriptors.createTableDescriptorForTableDirectory(fs, tableDir, td, false);
     HRegion region3 = HBaseTestingUtility.createRegionAndWAL(ri, rootDir, this.conf, td);
     HBaseTestingUtility.closeRegionAndWAL(region3);
     // Write countPerFamily edits into the three families. Do a flush on one

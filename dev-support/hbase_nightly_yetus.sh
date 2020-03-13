@@ -35,10 +35,6 @@ if [ ${missing_env} -gt 0 ]; then
 fi
 
 YETUS_ARGS=()
-if [[ -n "${MULTIJDK}" ]]; then
-  YETUS_ARGS=("--multijdktests=compile,javadoc" "${YETUS_ARGS[@]}")
-  YETUS_ARGS=("--multijdkdirs=${MULTIJDK}" "${YETUS_ARGS[@]}")
-fi
 
 # If we're doing docker, make sure we don't accidentally pollute the image with a host java path
 if [ -n "${JAVA_HOME}" ]; then
@@ -83,6 +79,10 @@ fi
 # For testing with specific hadoop version. Activates corresponding profile in maven runs.
 if [[ -n "${HADOOP_PROFILE}" ]]; then
   YETUS_ARGS=("--hadoop-profile=${HADOOP_PROFILE}" "${YETUS_ARGS[@]}")
+fi
+
+if [[ -n "${SKIP_ERROR_PRONE}" ]]; then
+  YETUS_ARGS=("--skip-errorprone" "${YETUS_ARGS[@]}")
 fi
 
 if [[ true == "${DEBUG}" ]]; then

@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.Assert;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
@@ -61,6 +62,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog.SlowLogPaylo
  * Tests for Online SlowLog Provider Service
  */
 @Category({MasterTests.class, MediumTests.class})
+@Ignore // Disabled until HBASE-23977 is addressed.
 public class TestSlowLogRecorder {
 
   @ClassRule

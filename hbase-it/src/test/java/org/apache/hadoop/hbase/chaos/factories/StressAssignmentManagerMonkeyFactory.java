@@ -91,7 +91,7 @@ public class StressAssignmentManagerMonkeyFactory extends MonkeyFactory {
         new DumpClusterStatusAction()
     };
 
-    return new PolicyBasedChaosMonkey(util,
+    return new PolicyBasedChaosMonkey(properties, util,
         new PeriodicRandomActionPolicy(90 * 1000, actions1),
         new CompositeSequentialPolicy(
             new DoActionsOncePolicy(90 * 1000, actions2),

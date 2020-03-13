@@ -215,7 +215,7 @@ public class TestSeekOptimizations {
       qualSet.add(qualStr);
     }
     scan.setMaxVersions(maxVersions);
-    scan.setStartRow(rowBytes(startRow));
+    scan.withStartRow(rowBytes(startRow));
 
     // Adjust for the fact that for multi-row queries the end row is exclusive.
     {
