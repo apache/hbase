@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -59,6 +60,13 @@ public class TestReplicationStatus extends TestReplicationBase {
    */
   @Test
   public void testReplicationStatus() throws Exception {
+    // This test wants two RS's up. We only run one generally so add one.
+    UTIL1.getMiniHBaseCluster().startRegionServer();
+    Waiter.waitFor(UTIL1.getConfiguration(), 30000, new Waiter.Predicate<Exception>() {
+      @Override public boolean evaluate() throws Exception {
+        return UTIL1.getMiniHBaseCluster().getLiveRegionServerThreads().size() > 1;
+      }
+    });
     Admin hbaseAdmin = UTIL1.getAdmin();
     // disable peer <= WHY? I DON'T GET THIS DISABLE BUT TEST FAILS W/O IT.
     hbaseAdmin.disableReplicationPeer(PEER_ID2);

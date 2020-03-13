@@ -198,7 +198,7 @@ public class VerifyReplication extends Configured implements Tool {
         TableName peerTableName = TableName.valueOf(peerName);
         replicatedConnection = ConnectionFactory.createConnection(peerConf);
         replicatedTable = replicatedConnection.getTable(peerTableName);
-        scan.setStartRow(value.getRow());
+        scan.withStartRow(value.getRow());
 
         byte[] endRow = null;
         if (tableSplit instanceof TableSnapshotInputFormat.TableSnapshotRegionSplit) {
@@ -511,7 +511,7 @@ public class VerifyReplication extends Configured implements Tool {
   }
 
   private static void setStartAndStopRows(Scan scan, byte[] startPrefixRow, byte[] lastPrefixRow) {
-    scan.setStartRow(startPrefixRow);
+    scan.withStartRow(startPrefixRow);
     byte[] stopRow = Bytes.add(Bytes.head(lastPrefixRow, lastPrefixRow.length - 1),
         new byte[]{(byte) (lastPrefixRow[lastPrefixRow.length - 1] + 1)});
     scan.setStopRow(stopRow);

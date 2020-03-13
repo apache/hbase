@@ -194,11 +194,11 @@ public class TestScan {
   @Test
   public void testSetStartRowAndSetStopRow() {
     Scan scan = new Scan();
-    scan.setStartRow(null);
-    scan.setStartRow(new byte[1]);
-    scan.setStartRow(new byte[HConstants.MAX_ROW_LENGTH]);
+    scan.withStartRow(null);
+    scan.withStartRow(new byte[1]);
+    scan.withStartRow(new byte[HConstants.MAX_ROW_LENGTH]);
     try {
-      scan.setStartRow(new byte[HConstants.MAX_ROW_LENGTH+1]);
+      scan.withStartRow(new byte[HConstants.MAX_ROW_LENGTH+1]);
       fail("should've thrown exception");
     } catch (IllegalArgumentException iae) {
     } catch (Exception e) {

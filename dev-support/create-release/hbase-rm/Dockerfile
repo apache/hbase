@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-# Image for building HBase releases. Based on Ubuntu 16.04.
+# Image for building HBase releases. Based on Ubuntu 18.04.
 #
 # Includes:
 # * Java 8

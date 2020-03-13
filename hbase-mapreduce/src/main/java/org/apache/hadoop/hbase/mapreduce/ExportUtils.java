@@ -121,7 +121,7 @@ public final class ExportUtils {
     s.setCacheBlocks(false);
     // set Start and Stop row
     if (conf.get(TableInputFormat.SCAN_ROW_START) != null) {
-      s.setStartRow(Bytes.toBytesBinary(conf.get(TableInputFormat.SCAN_ROW_START)));
+      s.withStartRow(Bytes.toBytesBinary(conf.get(TableInputFormat.SCAN_ROW_START)));
     }
     if (conf.get(TableInputFormat.SCAN_ROW_STOP) != null) {
       s.setStopRow(Bytes.toBytesBinary(conf.get(TableInputFormat.SCAN_ROW_STOP)));

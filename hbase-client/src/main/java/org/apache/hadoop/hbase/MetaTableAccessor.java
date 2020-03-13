@@ -575,7 +575,7 @@ public class MetaTableAccessor {
     byte[] stopKey = getTableStopRowForMeta(tableName, QueryType.REGION);
 
     Scan scan = getMetaScan(connection, -1);
-    scan.setStartRow(startKey);
+    scan.withStartRow(startKey);
     scan.setStopRow(stopKey);
     return scan;
   }
