@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import com.google.protobuf.Service;
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.hbase.Server;
@@ -56,6 +55,7 @@ import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 
 /**
  * A curated subset of services provided by {@link HMaster}.

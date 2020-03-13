@@ -191,6 +191,11 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.ServiceDescriptor;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
@@ -298,7 +303,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       new ConcurrentSkipListMap<>(Bytes.BYTES_RAWCOMPARATOR);
 
   // TODO: account for each registered handler in HeapSize computation
-  private Map<String, com.google.protobuf.Service> coprocessorServiceHandlers = Maps.newHashMap();
+  private Map<String, Service> coprocessorServiceHandlers = Maps.newHashMap();
 
   // Track data size in all memstores
   private final MemStoreSizing memStoreSizing = new ThreadSafeMemStoreSizing();
@@ -8369,23 +8374,20 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @return {@code true} if the registration was successful, {@code false}
    * otherwise
    */
-  public boolean registerService(com.google.protobuf.Service instance) {
-    /*
-     * No stacking of instances is allowed for a single service name
-     */
-    com.google.protobuf.Descriptors.ServiceDescriptor serviceDesc = instance.getDescriptorForType();
+  public boolean registerService(Service instance) {
+    // No stacking of instances is allowed for a single service name
+    ServiceDescriptor serviceDesc = instance.getDescriptorForType();
     String serviceName = CoprocessorRpcUtils.getServiceName(serviceDesc);
     if (coprocessorServiceHandlers.containsKey(serviceName)) {
       LOG.error("Coprocessor service " + serviceName +
-          " already registered, rejecting request from " + instance);
+        " already registered, rejecting request from " + instance);
       return false;
     }
 
     coprocessorServiceHandlers.put(serviceName, instance);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Registered coprocessor service: region=" +
-          Bytes.toStringBinary(getRegionInfo().getRegionName()) +
-          " service=" + serviceName);
+        Bytes.toStringBinary(getRegionInfo().getRegionName()) + " service=" + serviceName);
     }
     return true;
   }
@@ -8393,7 +8395,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * Executes a single protocol buffer coprocessor endpoint {@link Service} method using
    * the registered protocol handlers.  {@link Service} implementations must be registered via the
-   * {@link #registerService(com.google.protobuf.Service)}
+   * {@link #registerService(Service)}
    * method before they are available.
    *
    * @param controller an {@code RpcContoller} implementation to pass to the invoked service
@@ -8402,41 +8404,40 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @return a protocol buffer {@code Message} instance containing the method's result
    * @throws IOException if no registered service handler is found or an error
    *     occurs during the invocation
-   * @see #registerService(com.google.protobuf.Service)
+   * @see #registerService(Service)
    */
-  public com.google.protobuf.Message execService(com.google.protobuf.RpcController controller,
-      CoprocessorServiceCall call) throws IOException {
+  public Message execService(RpcController controller, CoprocessorServiceCall call)
+    throws IOException {
     String serviceName = call.getServiceName();
-    com.google.protobuf.Service service = coprocessorServiceHandlers.get(serviceName);
+    Service service = coprocessorServiceHandlers.get(serviceName);
     if (service == null) {
       throw new UnknownProtocolException(null, "No registered coprocessor service found for " +
           serviceName + " in region " + Bytes.toStringBinary(getRegionInfo().getRegionName()));
     }
-    com.google.protobuf.Descriptors.ServiceDescriptor serviceDesc = service.getDescriptorForType();
+    ServiceDescriptor serviceDesc = service.getDescriptorForType();
 
     cpRequestsCount.increment();
     String methodName = call.getMethodName();
-    com.google.protobuf.Descriptors.MethodDescriptor methodDesc =
+    MethodDescriptor methodDesc =
         CoprocessorRpcUtils.getMethodDescriptor(methodName, serviceDesc);
 
-    com.google.protobuf.Message.Builder builder =
+    Message.Builder builder =
         service.getRequestPrototype(methodDesc).newBuilderForType();
 
-    org.apache.hadoop.hbase.protobuf.ProtobufUtil.mergeFrom(builder,
+    ProtobufUtil.mergeFrom(builder,
         call.getRequest().toByteArray());
-    com.google.protobuf.Message request =
+    Message request =
         CoprocessorRpcUtils.getRequest(service, methodDesc, call.getRequest());
 
     if (coprocessorHost != null) {
       request = coprocessorHost.preEndpointInvocation(service, methodName, request);
     }
 
-    final com.google.protobuf.Message.Builder responseBuilder =
+    final Message.Builder responseBuilder =
         service.getResponsePrototype(methodDesc).newBuilderForType();
-    service.callMethod(methodDesc, controller, request,
-        new com.google.protobuf.RpcCallback<com.google.protobuf.Message>() {
+    service.callMethod(methodDesc, controller, request, new RpcCallback<Message>() {
       @Override
-      public void run(com.google.protobuf.Message message) {
+      public void run(Message message) {
         if (message != null) {
           responseBuilder.mergeFrom(message);
         }

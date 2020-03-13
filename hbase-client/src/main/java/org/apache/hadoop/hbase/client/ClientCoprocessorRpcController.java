@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
 
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 
 /**
  * Client side rpc controller for coprocessor implementation. It is only used to pass error.

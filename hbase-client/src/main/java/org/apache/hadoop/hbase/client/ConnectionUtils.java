@@ -59,6 +59,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hbase.thirdparty.io.netty.util.Timer;
 
@@ -653,7 +654,7 @@ public final class ConnectionUtils {
     }
   }
 
-  static void setCoprocessorError(com.google.protobuf.RpcController controller, Throwable error) {
+  static void setCoprocessorError(RpcController controller, Throwable error) {
     if (controller == null) {
       return;
     }

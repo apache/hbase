@@ -15,26 +15,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/**
+ * Defines a protocol to perform multi row transactions.
+ * See BaseRowProcessorEndpoint for the implementation.
+ * See HRegion#processRowsWithLocks() for details.
+ */
 syntax = "proto2";
+package hbase.pb;
 
-// Coprocessor test
-option java_package = "org.apache.hadoop.hbase.coprocessor.protobuf.generated";
-option java_outer_classname = "ColumnAggregationWithNullResponseProtos";
+option java_package = "org.apache.hadoop.hbase.shaded.protobuf.generated";
+option java_outer_classname = "RowProcessorProtos";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
+option optimize_for = SPEED;
 
-// use unique names for messages in ColumnAggregationXXX.protos due to a bug in
-// protoc or hadoop's protoc compiler.
-message ColumnAggregationNullResponseSumRequest {
-  required bytes family = 1;
-  optional bytes qualifier = 2;
+message ProcessRequest {
+  required string row_processor_class_name = 1;
+  optional string row_processor_initializer_message_name = 2;
+  optional bytes  row_processor_initializer_message = 3;
+  optional uint64 nonce_group = 4;
+  optional uint64 nonce = 5;
 }
 
-message ColumnAggregationNullResponseSumResponse {
-  optional int64 sum = 1;
+message ProcessResponse {
+  required bytes row_processor_result = 1;
 }
 
-service ColumnAggregationServiceNullResponse {
-  rpc sum(ColumnAggregationNullResponseSumRequest)
-    returns(ColumnAggregationNullResponseSumResponse);
+service RowProcessorService {
+  rpc Process(ProcessRequest) returns (ProcessResponse);
 }
