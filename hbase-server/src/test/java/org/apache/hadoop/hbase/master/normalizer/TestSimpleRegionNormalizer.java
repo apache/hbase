@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,15 +17,17 @@
  */
 package org.apache.hadoop.hbase.master.normalizer;
 
+import static java.lang.String.format;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.when;
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -38,11 +40,10 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -51,9 +52,7 @@ import org.junit.rules.TestName;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledResponse;
 
 /**
@@ -68,19 +67,11 @@ public class TestSimpleRegionNormalizer {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSimpleRegionNormalizer.class);
 
-  private static RegionNormalizer normalizer;
-
-  // mocks
-  private static MasterServices masterServices;
-  private static MasterRpcServices masterRpcServices;
+  private RegionNormalizer normalizer;
+  private MasterServices masterServices;
 
   @Rule
   public TestName name = new TestName();
-
-  @BeforeClass
-  public static void beforeAllTests() throws Exception {
-    normalizer = new SimpleRegionNormalizer();
-  }
 
   @Test
   public void testPlanComparator() {
@@ -90,10 +81,10 @@ public class TestSimpleRegionNormalizer {
     NormalizationPlan mergePlan1 = new MergeNormalizationPlan(null, null);
     NormalizationPlan mergePlan2 = new MergeNormalizationPlan(null, null);
 
-    assertTrue(comparator.compare(splitPlan1, splitPlan2) == 0);
-    assertTrue(comparator.compare(splitPlan2, splitPlan1) == 0);
-    assertTrue(comparator.compare(mergePlan1, mergePlan2) == 0);
-    assertTrue(comparator.compare(mergePlan2, mergePlan1) == 0);
+    assertEquals(0, comparator.compare(splitPlan1, splitPlan2));
+    assertEquals(0, comparator.compare(splitPlan2, splitPlan1));
+    assertEquals(0, comparator.compare(mergePlan1, mergePlan2));
+    assertEquals(0, comparator.compare(mergePlan2, mergePlan1));
     assertTrue(comparator.compare(splitPlan1, mergePlan1) < 0);
     assertTrue(comparator.compare(mergePlan1, splitPlan1) > 0);
   }
@@ -106,7 +97,7 @@ public class TestSimpleRegionNormalizer {
 
     setupMocksForNormalizer(regionSizes, RegionInfo);
     List<NormalizationPlan> plans = normalizer.computePlanForTable(testTable);
-    assertTrue(plans == null);
+    assertNull(plans);
   }
 
   @Test
@@ -130,7 +121,7 @@ public class TestSimpleRegionNormalizer {
 
     setupMocksForNormalizer(regionSizes, RegionInfo);
     List<NormalizationPlan> plans = normalizer.computePlanForTable(tableName);
-    assertTrue(plans == null);
+    assertNull(plans);
   }
 
   @Test
@@ -168,7 +159,66 @@ public class TestSimpleRegionNormalizer {
 
     setupMocksForNormalizer(regionSizes, RegionInfo);
     List<NormalizationPlan> plans = normalizer.computePlanForTable(tableName);
-    assertTrue(plans == null);
+    assertNull(plans);
+  }
+
+  private void noNormalizationOnTransitioningRegions(final RegionState.State state)
+    throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final List<RegionInfo> regionInfos = new LinkedList<>();
+    final Map<byte[], Integer> regionSizes = new HashMap<>();
+
+    final RegionInfo ri1 = RegionInfoBuilder.newBuilder(tableName)
+      .setStartKey(Bytes.toBytes("aaa"))
+      .setEndKey(Bytes.toBytes("bbb"))
+      .build();
+    regionInfos.add(ri1);
+    regionSizes.put(ri1.getRegionName(), 10);
+
+    final RegionInfo ri2 = RegionInfoBuilder.newBuilder(tableName)
+      .setStartKey(Bytes.toBytes("bbb"))
+      .setEndKey(Bytes.toBytes("ccc"))
+      .build();
+    regionInfos.add(ri2);
+    regionSizes.put(ri2.getRegionName(), 1);
+
+    setupMocksForNormalizer(regionSizes, regionInfos);
+    when(masterServices.getAssignmentManager().getRegionStates()
+      .getRegionState(any(RegionInfo.class))).thenReturn(
+      RegionState.createForTesting(null, state));
+    assertNull(
+      format("Unexpected plans for RegionState %s", state),
+      normalizer.computePlanForTable(tableName));
+  }
+
+  @Test
+  public void testNoNormalizationOnMergingNewRegions() throws Exception {
+    noNormalizationOnTransitioningRegions(RegionState.State.MERGING_NEW);
+  }
+
+  @Test
+  public void testNoNormalizationOnMergingRegions() throws Exception {
+    noNormalizationOnTransitioningRegions(RegionState.State.MERGING);
+  }
+
+  @Test
+  public void testNoNormalizationOnMergedRegions() throws Exception {
+    noNormalizationOnTransitioningRegions(RegionState.State.MERGED);
+  }
+
+  @Test
+  public void testNoNormalizationOnSplittingNewRegions() throws Exception {
+    noNormalizationOnTransitioningRegions(RegionState.State.SPLITTING_NEW);
+  }
+
+  @Test
+  public void testNoNormalizationOnSplittingRegions() throws Exception {
+    noNormalizationOnTransitioningRegions(RegionState.State.SPLITTING);
+  }
+
+  @Test
+  public void testNoNormalizationOnSplitRegions() throws Exception {
+    noNormalizationOnTransitioningRegions(RegionState.State.SPLIT);
   }
 
   @Test
@@ -323,7 +373,7 @@ public class TestSimpleRegionNormalizer {
     setupMocksForNormalizer(regionSizes, RegionInfo);
     List<NormalizationPlan> plans = normalizer.computePlanForTable(tableName);
 
-    assertTrue(plans == null);
+    assertNull(plans);
   }
 
   @Test
@@ -410,7 +460,7 @@ public class TestSimpleRegionNormalizer {
     when(masterServices.getTableDescriptors().get(any()).getNormalizerTargetRegionSize())
         .thenReturn(20L);
     List<NormalizationPlan> plans = normalizer.computePlanForTable(tableName);
-    Assert.assertEquals(4, plans.size());
+    assertEquals(4, plans.size());
 
     for (NormalizationPlan plan : plans) {
       assertTrue(plan instanceof SplitNormalizationPlan);
@@ -420,7 +470,7 @@ public class TestSimpleRegionNormalizer {
     when(masterServices.getTableDescriptors().get(any()).getNormalizerTargetRegionSize())
         .thenReturn(200L);
     plans = normalizer.computePlanForTable(tableName);
-    Assert.assertEquals(2, plans.size());
+    assertEquals(2, plans.size());
     NormalizationPlan plan = plans.get(0);
     assertTrue(plan instanceof MergeNormalizationPlan);
     assertEquals(hri1, ((MergeNormalizationPlan) plan).getFirstRegion());
@@ -459,7 +509,7 @@ public class TestSimpleRegionNormalizer {
     when(masterServices.getTableDescriptors().get(any()).getNormalizerTargetRegionCount())
         .thenReturn(8);
     List<NormalizationPlan> plans = normalizer.computePlanForTable(tableName);
-    Assert.assertEquals(2, plans.size());
+    assertEquals(2, plans.size());
 
     for (NormalizationPlan plan : plans) {
       assertTrue(plan instanceof SplitNormalizationPlan);
@@ -469,7 +519,7 @@ public class TestSimpleRegionNormalizer {
     when(masterServices.getTableDescriptors().get(any()).getNormalizerTargetRegionCount())
         .thenReturn(3);
     plans = normalizer.computePlanForTable(tableName);
-    Assert.assertEquals(1, plans.size());
+    assertEquals(1, plans.size());
     NormalizationPlan plan = plans.get(0);
     assertTrue(plan instanceof MergeNormalizationPlan);
     assertEquals(hri1, ((MergeNormalizationPlan) plan).getFirstRegion());
@@ -477,17 +527,21 @@ public class TestSimpleRegionNormalizer {
   }
 
   @SuppressWarnings("MockitoCast")
-  protected void setupMocksForNormalizer(Map<byte[], Integer> regionSizes,
-                                         List<RegionInfo> RegionInfo) {
+  private void setupMocksForNormalizer(Map<byte[], Integer> regionSizes,
+    List<RegionInfo> RegionInfo) {
     masterServices = Mockito.mock(MasterServices.class, RETURNS_DEEP_STUBS);
-    masterRpcServices = Mockito.mock(MasterRpcServices.class, RETURNS_DEEP_STUBS);
+    final MasterRpcServices masterRpcServices =
+      Mockito.mock(MasterRpcServices.class, RETURNS_DEEP_STUBS);
 
     // for simplicity all regions are assumed to be on one server; doesn't matter to us
     ServerName sn = ServerName.valueOf("localhost", 0, 1L);
-    when(masterServices.getAssignmentManager().getRegionStates().
-      getRegionsOfTable(any())).thenReturn(RegionInfo);
-    when(masterServices.getAssignmentManager().getRegionStates().
-      getRegionServerOfRegion(any())).thenReturn(sn);
+    when(masterServices.getAssignmentManager().getRegionStates()
+      .getRegionsOfTable(any())).thenReturn(RegionInfo);
+    when(masterServices.getAssignmentManager().getRegionStates()
+      .getRegionServerOfRegion(any())).thenReturn(sn);
+    when(masterServices.getAssignmentManager().getRegionStates()
+      .getRegionState(any(RegionInfo.class))).thenReturn(
+        RegionState.createForTesting(null, RegionState.State.OPEN));
 
     for (Map.Entry<byte[], Integer> region : regionSizes.entrySet()) {
       RegionMetrics regionLoad = Mockito.mock(RegionMetrics.class);
@@ -498,8 +552,8 @@ public class TestSimpleRegionNormalizer {
       // this is possibly broken with jdk9, unclear if false positive or not
       // suppress it for now, fix it when we get to running tests on 9
       // see: http://errorprone.info/bugpattern/MockitoCast
-      when((Object) masterServices.getServerManager().getLoad(sn).
-        getRegionMetrics().get(region.getKey())).thenReturn(regionLoad);
+      when((Object) masterServices.getServerManager().getLoad(sn)
+        .getRegionMetrics().get(region.getKey())).thenReturn(regionLoad);
     }
     try {
       when(masterRpcServices.isSplitOrMergeEnabled(any(),
@@ -509,6 +563,7 @@ public class TestSimpleRegionNormalizer {
       LOG.debug("error setting isSplitOrMergeEnabled switch", se);
     }
 
+    normalizer = new SimpleRegionNormalizer();
     normalizer.setMasterServices(masterServices);
     normalizer.setMasterRpcServices(masterRpcServices);
   }

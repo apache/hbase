@@ -24,12 +24,14 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -187,16 +189,18 @@ public class IntegrationTestLazyCfLoading {
     Configuration conf = util.getConfiguration();
     String encodingKey = String.format(ENCODING_KEY, this.getClass().getSimpleName());
     DataBlockEncoding blockEncoding = DataBlockEncoding.valueOf(conf.get(encodingKey, "FAST_DIFF"));
-    HTableDescriptor htd = new HTableDescriptor(TABLE_NAME);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLE_NAME);
     for (byte[] cf : dataGen.getColumnFamilies()) {
-      HColumnDescriptor hcd = new HColumnDescriptor(cf);
-      hcd.setDataBlockEncoding(blockEncoding);
-      htd.addFamily(hcd);
+      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(cf);
+      familyDescriptor.setDataBlockEncoding(blockEncoding);
+      tableDescriptor.setColumnFamily(familyDescriptor);
     }
     int serverCount = util.getHBaseClusterInterface().getClusterMetrics()
       .getLiveServerMetrics().size();
     byte[][] splits = new RegionSplitter.HexStringSplit().split(serverCount * REGIONS_PER_SERVER);
-    util.getAdmin().createTable(htd, splits);
+    util.getAdmin().createTable(tableDescriptor, splits);
     LOG.info("Created table");
   }
 

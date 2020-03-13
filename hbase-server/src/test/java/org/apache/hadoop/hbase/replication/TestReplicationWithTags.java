@@ -31,15 +31,14 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Durability;
@@ -47,6 +46,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -144,18 +144,20 @@ public class TestReplicationWithTags {
     rpc.setClusterKey(utility2.getClusterKey());
     replicationAdmin.addReplicationPeer("2", rpc);
 
-    HTableDescriptor table = new HTableDescriptor(TABLE_NAME);
-    HColumnDescriptor fam = new HColumnDescriptor(FAMILY);
-    fam.setMaxVersions(3);
-    fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    table.addFamily(fam);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLE_NAME);
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY);
+    familyDescriptor.setMaxVersions(3);
+    familyDescriptor.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
+    tableDescriptor.setColumnFamily(familyDescriptor);
     try (Connection conn = ConnectionFactory.createConnection(conf1);
         Admin admin = conn.getAdmin()) {
-      admin.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+      admin.createTable(tableDescriptor, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
     }
     try (Connection conn = ConnectionFactory.createConnection(conf2);
         Admin admin = conn.getAdmin()) {
-      admin.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+      admin.createTable(tableDescriptor, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
     }
     htable1 = utility1.getConnection().getTable(TABLE_NAME);
     htable2 = utility2.getConnection().getTable(TABLE_NAME);

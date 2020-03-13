@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase.mob;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -57,19 +57,19 @@ public class TestMobCompactionRegularMode extends TestMobCompactionBase{
   public TestMobCompactionRegularMode() {
   }
 
+  @Override
+  protected void mobCompact(Admin admin, TableDescriptor tableDescriptor,
+      ColumnFamilyDescriptor familyDescriptor) throws IOException, InterruptedException {
+    // Major compact MOB table
+    admin.majorCompact(tableDescriptor.getTableName(), familyDescriptor.getName());
+  }
+
   @Test
   public void testMobFileCompactionBatchMode() throws InterruptedException, IOException {
     LOG.info("MOB compaction regular mode started");
     baseTestMobFileCompaction();
     LOG.info("MOB compaction regular mode finished OK");
 
-  }
-
-  @Override
-  protected void mobCompact(Admin admin, HTableDescriptor hdt, HColumnDescriptor hcd)
-      throws IOException, InterruptedException {
-    // Major compact MOB table
-    admin.majorCompact(hdt.getTableName(), hcd.getName());
   }
 
 }

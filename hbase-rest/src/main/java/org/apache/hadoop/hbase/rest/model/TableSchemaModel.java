@@ -36,6 +36,7 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.namespace.QName;
 
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -87,15 +88,15 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
 
   /**
    * Constructor
-   * @param htd the table descriptor
+   * @param tableDescriptor the table descriptor
    */
-  public TableSchemaModel(HTableDescriptor htd) {
-    setName(htd.getTableName().getNameAsString());
-    for (Map.Entry<Bytes, Bytes> e : htd.getValues().entrySet()) {
+  public TableSchemaModel(TableDescriptor tableDescriptor) {
+    setName(tableDescriptor.getTableName().getNameAsString());
+    for (Map.Entry<Bytes, Bytes> e : tableDescriptor.getValues().entrySet()) {
       addAttribute(Bytes.toString(e.getKey().get()),
         Bytes.toString(e.getValue().get()));
     }
-    for (HColumnDescriptor hcd : htd.getFamilies()) {
+    for (ColumnFamilyDescriptor hcd : tableDescriptor.getColumnFamilies()) {
       ColumnSchemaModel columnModel = new ColumnSchemaModel();
       columnModel.setName(hcd.getNameAsString());
       for (Map.Entry<Bytes, Bytes> e:

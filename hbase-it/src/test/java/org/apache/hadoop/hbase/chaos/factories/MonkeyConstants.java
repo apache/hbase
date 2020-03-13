@@ -48,6 +48,7 @@ public interface MonkeyConstants {
   String GRACEFUL_RESTART_RS_SLEEP_TIME = "graceful.restart.rs.sleep.time";
   String ROLLING_BATCH_SUSPEND_RS_SLEEP_TIME = "rolling.batch.suspend.rs.sleep.time";
   String ROLLING_BATCH_SUSPEND_RS_RATIO = "rolling.batch.suspend.rs.ratio";
+  String SKIP_META_RS = "skip.meta.rs";
   String CPU_LOAD_DURATION = "cpu.load.duration";
   String CPU_LOAD_PROCESSES = "cpu.load.processes";
   String NETWORK_ISSUE_COMMAND_TIMEOUT = "network.issue.command.timeout";
@@ -67,7 +68,7 @@ public interface MonkeyConstants {
    */
   Set<String> MONKEY_CONFIGURATION_KEY_PREFIXES = new HashSet<>(
       Arrays.asList("sdm.", "move.", "restart.", "batch.", "rolling.", "compact.", "unbalance.",
-          "decrease.", "decrease.", "graceful.", "cpu.", "network.", "fill.", "data."));
+          "decrease.", "decrease.", "graceful.", "cpu.", "network.", "fill.", "data.", "skip"));
 
   long DEFAULT_PERIODIC_ACTION1_PERIOD = 60 * 1000;
   long DEFAULT_PERIODIC_ACTION2_PERIOD = 90 * 1000;
@@ -94,6 +95,7 @@ public interface MonkeyConstants {
   long DEFAULT_GRACEFUL_RESTART_RS_SLEEP_TIME = 5000;
   long DEFAULT_ROLLING_BATCH_SUSPEND_RS_SLEEP_TIME = 30 * 1000;
   float DEFAULT_ROLLING_BATCH_SUSPEND_RS_RATIO = 1.0f;
+  boolean DEFAULT_SKIP_META_RS = false;
   long DEFAULT_CPU_LOAD_DURATION = 5 * 60 * 1000;
   long DEFAULT_CPU_LOAD_PROCESSES = 2;
   long DEFAULT_NETWORK_ISSUE_COMMAND_TIMEOUT = 30 * 1000;

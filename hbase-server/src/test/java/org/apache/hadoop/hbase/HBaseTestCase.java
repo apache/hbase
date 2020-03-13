@@ -25,11 +25,14 @@ import java.util.NavigableMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Region;
@@ -151,23 +154,24 @@ public abstract class HBaseTestCase extends TestCase {
   /**
    * You must call close on the returned region and then close on the log file it created. Do
    * {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} to close both the region and the WAL.
-   * @param desc
-   * @param startKey
-   * @param endKey
+   * @param tableDescriptor TableDescriptor
+   * @param startKey Start Key
+   * @param endKey End Key
    * @return An {@link HRegion}
-   * @throws IOException
+   * @throws IOException If thrown by
+   *   {@link #createNewHRegion(TableDescriptor, byte[], byte[], Configuration)}
    */
-  public HRegion createNewHRegion(HTableDescriptor desc, byte [] startKey,
+  public HRegion createNewHRegion(TableDescriptor tableDescriptor, byte [] startKey,
       byte [] endKey)
   throws IOException {
-    return createNewHRegion(desc, startKey, endKey, this.conf);
+    return createNewHRegion(tableDescriptor, startKey, endKey, this.conf);
   }
 
-  public HRegion createNewHRegion(HTableDescriptor desc, byte [] startKey,
+  public HRegion createNewHRegion(TableDescriptor tableDescriptor, byte [] startKey,
       byte [] endKey, Configuration conf)
   throws IOException {
-    HRegionInfo hri = new HRegionInfo(desc.getTableName(), startKey, endKey);
-    return HBaseTestingUtility.createRegionAndWAL(hri, testDir, conf, desc);
+    HRegionInfo hri = new HRegionInfo(tableDescriptor.getTableName(), startKey, endKey);
+    return HBaseTestingUtility.createRegionAndWAL(hri, testDir, conf, tableDescriptor);
   }
 
   protected HRegion openClosedRegion(final HRegion closedRegion)
@@ -181,7 +185,7 @@ public abstract class HBaseTestCase extends TestCase {
    * @param name Name to give table.
    * @return Column descriptor.
    */
-  protected HTableDescriptor createTableDescriptor(final String name) {
+  protected TableDescriptor createTableDescriptor(final String name) {
     return createTableDescriptor(name, MAXVERSIONS);
   }
 
@@ -192,7 +196,7 @@ public abstract class HBaseTestCase extends TestCase {
    * @param versions How many versions to allow per column.
    * @return Column descriptor.
    */
-  protected HTableDescriptor createTableDescriptor(final String name,
+  protected TableDescriptor createTableDescriptor(final String name,
       final int versions) {
     return createTableDescriptor(name, HColumnDescriptor.DEFAULT_MIN_VERSIONS,
         versions, HConstants.FOREVER, HColumnDescriptor.DEFAULT_KEEP_DELETED);
@@ -205,11 +209,13 @@ public abstract class HBaseTestCase extends TestCase {
    * @param versions How many versions to allow per column.
    * @return Column descriptor.
    */
-  protected HTableDescriptor createTableDescriptor(final String name,
+  protected TableDescriptor createTableDescriptor(final String name,
       final int minVersions, final int versions, final int ttl, KeepDeletedCells keepDeleted) {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(name));
     for (byte[] cfName : new byte[][]{ fam1, fam2, fam3 }) {
-      htd.addFamily(new HColumnDescriptor(cfName)
+      tableDescriptor.setColumnFamily(
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(cfName)
           .setMinVersions(minVersions)
           .setMaxVersions(versions)
           .setKeepDeletedCells(keepDeleted)
@@ -217,7 +223,7 @@ public abstract class HBaseTestCase extends TestCase {
           .setTimeToLive(ttl)
       );
     }
-    return htd;
+    return tableDescriptor;
   }
 
   /**

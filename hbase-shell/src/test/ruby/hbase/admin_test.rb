@@ -223,6 +223,20 @@ module Hbase
 
     #-------------------------------------------------------------------------------
 
+    define_test 'get slowlog responses should work' do
+      output = capture_stdout { command(:get_slowlog_responses, '*', {}) }
+      assert(output.include?('Retrieved SlowLog Responses from RegionServers'))
+    end
+
+    #-------------------------------------------------------------------------------
+
+    define_test 'clear slowlog responses should work' do
+      output = capture_stdout { command(:clear_slowlog_responses, nil) }
+      assert(output.include?('Cleared Slowlog responses from 1/1 RegionServers'))
+    end
+
+    #-------------------------------------------------------------------------------
+
     define_test "create should fail with non-string/non-hash column args" do
       assert_raise(ArgumentError) do
         command(:create, @create_test_name, 123)

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,14 +22,14 @@ import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
@@ -67,9 +67,11 @@ public class TestInvocationRecordFilter {
 
   @Before
   public void setUp() throws Exception {
-    HTableDescriptor htd = new HTableDescriptor(
-        TableName.valueOf(TABLE_NAME_BYTES));
-    htd.addFamily(new HColumnDescriptor(FAMILY_NAME_BYTES));
+    TableDescriptorBuilder.ModifyableTableDescriptor htd =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(TABLE_NAME_BYTES));
+
+    htd.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY_NAME_BYTES));
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     this.region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
         TEST_UTIL.getConfiguration(), htd);

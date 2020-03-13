@@ -29,4 +29,28 @@
     <name>dfs.namenode.fs-limits.min-block-size</name>
     <value>0</value>
   </property>
+  <property>
+    <name>dfs.datanode.handler.count</name>
+    <value>5</value>
+    <description>Default is 10</description>
+  </property>
+  <property>
+    <name>dfs.namenode.handler.count</name>
+    <value>5</value>
+    <description>Default is 10</description>
+  </property>
+  <property>
+    <name>dfs.namenode.service.handler.count</name>
+    <value>5</value>
+    <description>Default is 10</description>
+  </property>
+  <!--
+   Constraining this config makes tests fail.
+  <property>
+    <name>dfs.datanode.max.transfer.threads</name>
+    <value>16</value>
+    <description>Default is 4096. If constrain this
+    too much, tests do not complete.</description>
+  </property>
+  -->
 </configuration>

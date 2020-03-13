@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,10 +41,8 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
@@ -301,15 +299,18 @@ public class TestAtomicOperation {
   private void initHRegion (byte [] tableName, String callingMethod, int [] maxVersions,
     byte[] ... families)
   throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(tableName));
+
     int i=0;
     for(byte [] family : families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family);
-      hcd.setMaxVersions(maxVersions != null ? maxVersions[i++] : 1);
-      htd.addFamily(hcd);
+      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family);
+      familyDescriptor.setMaxVersions(maxVersions != null ? maxVersions[i++] : 1);
+      tableDescriptor.setColumnFamily(familyDescriptor);
     }
-    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    region = TEST_UTIL.createLocalHRegion(info, htd);
+    HRegionInfo info = new HRegionInfo(tableDescriptor.getTableName(), null, null, false);
+    region = TEST_UTIL.createLocalHRegion(info, tableDescriptor);
   }
 
   /**

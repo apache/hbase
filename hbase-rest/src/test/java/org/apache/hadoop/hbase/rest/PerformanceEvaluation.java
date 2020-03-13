@@ -43,13 +43,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.client.BufferedMutator;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Durability;
@@ -59,6 +58,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.PageFilter;
@@ -127,7 +128,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   public static final byte[] QUALIFIER_NAME = Bytes.toBytes("data");
   private TableName tableName = TABLE_NAME;
 
-  protected HTableDescriptor TABLE_DESCRIPTOR;
+  protected TableDescriptorBuilder.ModifyableTableDescriptor TABLE_DESCRIPTOR;
   protected Map<String, CmdDescriptor> commands = new TreeMap<>();
   protected static Cluster cluster = new Cluster();
 
@@ -512,7 +513,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
    * @throws IOException if an operation on the table fails
    */
   private boolean checkTable(RemoteAdmin admin) throws IOException {
-    HTableDescriptor tableDescriptor = getDescriptor();
+    TableDescriptor tableDescriptor = getDescriptor();
     if (this.presplitRegions > 0) {
       // presplit requested
       if (admin.isTableAvailable(tableDescriptor.getTableName().getName())) {
@@ -536,16 +537,17 @@ public class PerformanceEvaluation extends Configured implements Tool {
     return admin.isTableAvailable(tableDescriptor.getTableName().getName());
   }
 
-  protected HTableDescriptor getDescriptor() {
+  protected TableDescriptor getDescriptor() {
     if (TABLE_DESCRIPTOR == null) {
-      TABLE_DESCRIPTOR = new HTableDescriptor(tableName);
-      HColumnDescriptor family = new HColumnDescriptor(FAMILY_NAME);
-      family.setDataBlockEncoding(blockEncoding);
-      family.setCompressionType(compression);
+      TABLE_DESCRIPTOR = new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY_NAME);
+      familyDescriptor.setDataBlockEncoding(blockEncoding);
+      familyDescriptor.setCompressionType(compression);
       if (inMemoryCF) {
-        family.setInMemory(true);
+        familyDescriptor.setInMemory(true);
       }
-      TABLE_DESCRIPTOR.addFamily(family);
+      TABLE_DESCRIPTOR.setColumnFamily(familyDescriptor);
     }
     return TABLE_DESCRIPTOR;
   }

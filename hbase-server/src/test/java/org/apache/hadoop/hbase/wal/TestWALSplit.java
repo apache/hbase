@@ -812,15 +812,16 @@ public class TestWALSplit {
     }
     assertTrue("There should be some log greater than size 0.", 0 < largestSize);
     // Set up a splitter that will throw an IOE on the output side
-    WALSplitter logSplitter = new WALSplitter(wals, conf, HBASEDIR, fs, null, null) {
-      @Override
-      protected Writer createWriter(Path logfile) throws IOException {
-        Writer mockWriter = Mockito.mock(Writer.class);
-        Mockito.doThrow(new IOException("Injected")).when(
-            mockWriter).append(Mockito.<Entry>any());
-        return mockWriter;
-      }
-    };
+    WALSplitter logSplitter =
+      new WALSplitter(wals, conf, HBASEDIR, fs, HBASEDIR, fs, null, null, null) {
+        @Override
+        protected Writer createWriter(Path logfile) throws IOException {
+          Writer mockWriter = Mockito.mock(Writer.class);
+          Mockito.doThrow(new IOException("Injected")).when(mockWriter)
+              .append(Mockito.<Entry> any());
+          return mockWriter;
+        }
+      };
     // Set up a background thread dumper.  Needs a thread to depend on and then we need to run
     // the thread dumping in a background thread so it does not hold up the test.
     final AtomicBoolean stop = new AtomicBoolean(false);
@@ -941,8 +942,8 @@ public class TestWALSplit {
 
     try {
       conf.setInt("hbase.splitlog.report.period", 1000);
-      boolean ret = WALSplitter.splitLogFile(
-          HBASEDIR, logfile, spiedFs, conf, localReporter, null, null, wals);
+      boolean ret = WALSplitter.splitLogFile(HBASEDIR, logfile, spiedFs, conf, localReporter, null,
+        null, wals, null);
       assertFalse("Log splitting should failed", ret);
       assertTrue(count.get() > 0);
     } catch (IOException e) {
@@ -1000,7 +1001,8 @@ public class TestWALSplit {
     makeRegionDirs(regions);
 
     // Create a splitter that reads and writes the data without touching disk
-    WALSplitter logSplitter = new WALSplitter(wals, localConf, HBASEDIR, fs, null, null) {
+    WALSplitter logSplitter =
+        new WALSplitter(wals, localConf, HBASEDIR, fs, HBASEDIR, fs, null, null, null) {
 
       /* Produce a mock writer that doesn't write anywhere */
       @Override
@@ -1148,7 +1150,8 @@ public class TestWALSplit {
     assertTrue("There should be some log file",
         logfiles != null && logfiles.length > 0);
 
-    WALSplitter logSplitter = new WALSplitter(wals, conf, HBASEDIR, fs, null, null) {
+    WALSplitter logSplitter =
+        new WALSplitter(wals, conf, HBASEDIR, fs, HBASEDIR, fs, null, null, null) {
       @Override
       protected Writer createWriter(Path logfile)
           throws IOException {

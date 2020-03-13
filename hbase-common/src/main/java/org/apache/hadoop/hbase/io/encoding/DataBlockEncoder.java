@@ -50,9 +50,10 @@ public interface DataBlockEncoder {
 
   /**
    * Encodes a KeyValue.
-   * @return unencoded kv size written
+   * After the encode, {@link EncodingState#postCellEncode(int, int)} needs to be called to keep
+   * track of the encoded and unencoded data size
    */
-  int encode(Cell cell, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
+  void encode(Cell cell, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
       throws IOException;
 
   /**

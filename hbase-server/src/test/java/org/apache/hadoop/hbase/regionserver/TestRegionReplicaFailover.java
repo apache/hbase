@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -93,7 +94,9 @@ public class TestRegionReplicaFailover {
 
     HTU.startMiniCluster(NB_SERVERS);
     htd = HTU.createTableDescriptor(
-      name.getMethodName().substring(0, name.getMethodName().length()-3));
+      TableName.valueOf(name.getMethodName().substring(0, name.getMethodName().length()-3)),
+      HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+      HColumnDescriptor.DEFAULT_KEEP_DELETED);
     htd.setRegionReplication(3);
     HTU.getAdmin().createTable(htd);
   }
@@ -327,7 +330,9 @@ public class TestRegionReplicaFailover {
     int numRegions = NB_SERVERS * 20;
     int regionReplication = 10;
     String tableName = htd.getTableName().getNameAsString() + "2";
-    htd = HTU.createTableDescriptor(tableName);
+    htd = HTU.createTableDescriptor(TableName.valueOf(tableName),
+      HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+      HColumnDescriptor.DEFAULT_KEEP_DELETED);
     htd.setRegionReplication(regionReplication);
 
     // dont care about splits themselves too much

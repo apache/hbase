@@ -27,8 +27,7 @@ module Hbase
 
     def initialize(connection)
       @connection = connection
-      @admin = org.apache.hadoop.hbase.rsgroup.RSGroupAdminClient.new(connection)
-      @hb_admin = @connection.getAdmin
+      @admin = @connection.getAdmin
     end
 
     def close
@@ -44,7 +43,7 @@ module Hbase
     #--------------------------------------------------------------------------
     # get a group's information
     def get_rsgroup(group_name)
-      group = @admin.getRSGroupInfo(group_name)
+      group = @admin.getRSGroup(group_name)
       raise(ArgumentError, 'Group does not exist: ' + group_name) if group.nil?
       group
     end
@@ -74,7 +73,7 @@ module Hbase
       args[0].each do |s|
         servers.add(org.apache.hadoop.hbase.net.Address.fromString(s))
       end
-      @admin.moveServers(servers, dest)
+      @admin.moveServersToRSGroup(servers, dest)
     end
 
     #--------------------------------------------------------------------------
@@ -84,20 +83,20 @@ module Hbase
       args[0].each do |s|
         tables.add(org.apache.hadoop.hbase.TableName.valueOf(s))
       end
-      @admin.moveTables(tables, dest)
+      @admin.setRSGroup(tables, dest)
     end
 
     #--------------------------------------------------------------------------
     # move namespaces to a group
     def move_namespaces(dest, *args)
       tables = get_tables(args[0])
-      @admin.moveTables(tables, dest)
+      @admin.setRSGroup(tables, dest)
     end
 
     #--------------------------------------------------------------------------
     # get group of server
     def get_rsgroup_of_server(server)
-      res = @admin.getRSGroupOfServer(
+      res = @admin.getRSGroup(
         org.apache.hadoop.hbase.net.Address.fromString(server)
       )
       raise(ArgumentError, 'Server has no group: ' + server) if res.nil?
@@ -107,7 +106,7 @@ module Hbase
     #--------------------------------------------------------------------------
     # get group of table
     def get_rsgroup_of_table(table)
-      res = @admin.getRSGroupInfoOfTable(
+      res = @admin.getRSGroup(
         org.apache.hadoop.hbase.TableName.valueOf(table)
       )
       raise(ArgumentError, 'Table has no group: ' + table) if res.nil?
@@ -122,7 +121,8 @@ module Hbase
       args[1].each do |t|
         tables.add(org.apache.hadoop.hbase.TableName.valueOf(t))
       end
-      @admin.moveServersAndTables(servers, tables, dest)
+      @admin.moveServersToRSGroup(servers, dest)
+      @admin.setRSGroup(tables, dest)
     end
 
     #--------------------------------------------------------------------------
@@ -130,7 +130,8 @@ module Hbase
     def move_servers_namespaces(dest, *args)
       servers = get_servers(args[0])
       tables = get_tables(args[1])
-      @admin.moveServersAndTables(servers, tables, dest)
+      @admin.moveServersToRSGroup(servers, dest)
+      @admin.setRSGroup(tables, dest)
     end
 
     def get_servers(servers)
@@ -154,7 +155,7 @@ module Hbase
     # Get tables by namespace
     def get_tables_by_namespace(ns)
       tables = java.util.HashSet.new
-      tablelist = @hb_admin.listTableNamesByNamespace(ns).map(&:getNameAsString)
+      tablelist = @admin.listTableNamesByNamespace(ns).map(&:getNameAsString)
       tablelist.each do |table|
         tables.add(org.apache.hadoop.hbase.TableName.valueOf(table))
       end
@@ -163,7 +164,7 @@ module Hbase
 
     # Does Namespace exist
     def namespace_exists?(ns)
-      return !@hb_admin.getNamespaceDescriptor(ns).nil?
+      return !@admin.getNamespaceDescriptor(ns).nil?
     rescue org.apache.hadoop.hbase.NamespaceNotFoundException
       return false
     end
@@ -177,7 +178,12 @@ module Hbase
       args.each do |s|
         servers.add(org.apache.hadoop.hbase.net.Address.fromString(s))
       end
-      @admin.removeServers(servers)
+      @admin.removeServersFromRSGroup(servers)
+    end
+
+    # get tables in rs group
+    def list_tables_in_rs_group(group_name)
+      @admin.listTablesInRSGroup(group_name)
     end
   end
 end

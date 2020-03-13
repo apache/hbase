@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -334,6 +335,31 @@ public interface Region extends ConfigurationObserver {
       ByteArrayComparable comparator, TimeRange timeRange, Mutation mutation) throws IOException;
 
   /**
+   * Atomically checks if a row matches the filter and if it does, it performs the mutation. See
+   * checkAndRowMutate to do many checkAndPuts at a time on a single row.
+   * @param row to check
+   * @param filter the filter
+   * @param mutation data to put if check succeeds
+   * @return true if mutation was applied, false otherwise
+   */
+  default boolean checkAndMutate(byte [] row, Filter filter, Mutation mutation)
+    throws IOException {
+    return checkAndMutate(row, filter, TimeRange.allTime(), mutation);
+  }
+
+  /**
+   * Atomically checks if a row value matches the filter and if it does, it performs the mutation.
+   * See checkAndRowMutate to do many checkAndPuts at a time on a single row.
+   * @param row to check
+   * @param filter the filter
+   * @param mutation data to put if check succeeds
+   * @param timeRange time range to check
+   * @return true if mutation was applied, false otherwise
+   */
+  boolean checkAndMutate(byte [] row, Filter filter, TimeRange timeRange, Mutation mutation)
+    throws IOException;
+
+  /**
    * Atomically checks if a row/family/qualifier value matches the expected values and if it does,
    * it performs the row mutations. If the passed value is null, the lack of column value
    * (ie: non-existence) is used. Use to do many mutations on a single row. Use checkAndMutate
@@ -369,6 +395,33 @@ public interface Region extends ConfigurationObserver {
   boolean checkAndRowMutate(byte [] row, byte [] family, byte [] qualifier, CompareOperator op,
       ByteArrayComparable comparator, TimeRange timeRange, RowMutations mutations)
       throws IOException;
+
+  /**
+   * Atomically checks if a row matches the filter and if it does, it performs the row mutations.
+   * Use to do many mutations on a single row. Use checkAndMutate to do one checkAndMutate at a
+   * time.
+   * @param row to check
+   * @param filter the filter
+   * @param mutations data to put if check succeeds
+   * @return true if mutations were applied, false otherwise
+   */
+  default boolean checkAndRowMutate(byte[] row, Filter filter, RowMutations mutations)
+    throws IOException {
+    return checkAndRowMutate(row, filter, TimeRange.allTime(), mutations);
+  }
+
+  /**
+   * Atomically checks if a row matches the filter and if it does, it performs the row mutations.
+   * Use to do many mutations on a single row. Use checkAndMutate to do one checkAndMutate at a
+   * time.
+   * @param row to check
+   * @param filter the filter
+   * @param mutations data to put if check succeeds
+   * @param timeRange time range to check
+   * @return true if mutations were applied, false otherwise
+   */
+  boolean checkAndRowMutate(byte [] row, Filter filter, TimeRange timeRange,
+    RowMutations mutations) throws IOException;
 
   /**
    * Deletes the specified cells/row.

@@ -314,6 +314,10 @@ Quitting...
 . Verify HBase contents–use the HBase shell to list tables and scan some known values.
 
 == Upgrade Paths
+[[upgrade3.0]]
+=== Upgrade from 2.x to 3.x
+The RegionServer Grouping feature has been reimplemented. See section
+<<migrating.rsgroup>> in <<ops_mgt>> for more details.
 
 [[upgrade2.2]]
 === Upgrade from 2.0 or 2.1 to 2.2+
@@ -606,6 +610,8 @@ The backing implementation of HBase's tracing features was updated from Apache H
 The internal changes to HBase during this upgrade were sufficient for compilation, but it has not been confirmed that there are no regressions in tracing functionality. Please consider this feature expiremental for the immediate future.
 
 If you previously relied on client side tracing integrated with HBase operations, it is recommended that you upgrade your usage to HTrace 4 as well.
+
+After the Apache HTrace project moved to the Attic/retired, the traces in HBase are left broken and unmaintained since HBase 2.0. A new project link:https://issues.apache.org/jira/browse/HBASE-22120[HBASE-22120] will replace HTrace with OpenTracing.
 
 [[upgrade2.0.hfile.compatability]]
 .HFile lose forward compatability
