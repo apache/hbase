@@ -1529,6 +1529,48 @@ public class MasterCoprocessorHost
     });
   }
 
+  public void preListTablesInRSGroup(final String groupName) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+
+      @Override
+      protected void call(MasterObserver observer) throws IOException {
+        observer.preListTablesInRSGroup(this, groupName);
+      }
+    });
+  }
+
+  public void postListTablesInRSGroup(final String groupName) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+
+      @Override
+      protected void call(MasterObserver observer) throws IOException {
+        observer.postListTablesInRSGroup(this, groupName);
+      }
+    });
+  }
+
+  public void preGetConfiguredNamespacesAndTablesInRSGroup(final String groupName)
+    throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+
+      @Override
+      protected void call(MasterObserver observer) throws IOException {
+        observer.preGetConfiguredNamespacesAndTablesInRSGroup(this, groupName);
+      }
+    });
+  }
+
+  public void postGetConfiguredNamespacesAndTablesInRSGroup(final String groupName)
+    throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+
+      @Override
+      protected void call(MasterObserver observer) throws IOException {
+        observer.postGetConfiguredNamespacesAndTablesInRSGroup(this, groupName);
+      }
+    });
+  }
+
   public void preGetRSGroupInfoOfServer(final Address server) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
@@ -1772,7 +1814,8 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void preDecommissionRegionServers(List<ServerName> servers, boolean offload) throws IOException {
+  public void preDecommissionRegionServers(List<ServerName> servers, boolean offload)
+      throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
@@ -1781,7 +1824,8 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void postDecommissionRegionServers(List<ServerName> servers, boolean offload) throws IOException {
+  public void postDecommissionRegionServers(List<ServerName> servers, boolean offload)
+      throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {

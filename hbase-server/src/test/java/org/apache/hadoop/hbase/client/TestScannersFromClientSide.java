@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTestConst;
@@ -772,7 +771,8 @@ public class TestScannersFromClientSide {
       table.put(new Put(ROW).addColumn(FAMILY, QUALIFIER, ts, value));
       assertArrayEquals(value, table.get(new Get(ROW)).getValue(FAMILY, QUALIFIER));
       TEST_UTIL.getAdmin().modifyColumnFamily(tableName,
-        new HColumnDescriptor(FAMILY).setTimeToLive(5));
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY)
+          .setTimeToLive(5));
       try (ResultScanner scanner = table.getScanner(FAMILY)) {
         assertNull(scanner.next());
       }

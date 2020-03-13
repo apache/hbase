@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
@@ -85,7 +86,9 @@ public class TestWALProcedureStore {
   public void setUp() throws IOException {
     htu = new HBaseCommonTestingUtility();
     testDir = htu.getDataTestDir();
+    htu.getConfiguration().set(HConstants.HBASE_DIR, testDir.toString());
     fs = testDir.getFileSystem(htu.getConfiguration());
+    htu.getConfiguration().set(HConstants.HBASE_DIR, testDir.toString());
     assertTrue(testDir.depth() > 1);
 
     setupConfig(htu.getConfiguration());

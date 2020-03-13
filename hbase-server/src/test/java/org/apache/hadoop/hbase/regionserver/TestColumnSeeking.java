@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,9 +30,7 @@ import java.util.Set;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -72,14 +70,17 @@ public class TestColumnSeeking {
     byte[] familyBytes = Bytes.toBytes("Family");
     TableName table = TableName.valueOf(name.getMethodName());
 
-    HColumnDescriptor hcd =
-        new HColumnDescriptor(familyBytes).setMaxVersions(1000);
-    hcd.setMaxVersions(3);
-    HTableDescriptor htd = new HTableDescriptor(table);
-    htd.addFamily(hcd);
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(familyBytes)
+        .setMaxVersions(1000);
+    familyDescriptor.setMaxVersions(3);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(table);
+
+    tableDescriptor.setColumnFamily(familyDescriptor);
     HRegionInfo info = new HRegionInfo(table, null, null, false);
     // Set this so that the archiver writes to the temp dir as well.
-    HRegion region = TEST_UTIL.createLocalHRegion(info, htd);
+    HRegion region = TEST_UTIL.createLocalHRegion(info, tableDescriptor);
     try {
       List<String> rows = generateRandomWords(10, "row");
       List<String> allColumns = generateRandomWords(10, "column");

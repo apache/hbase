@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.chaos.policies;
 
+import java.util.Properties;
+
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.chaos.actions.Action;
 import org.apache.hadoop.hbase.util.StoppableImplementation;
@@ -47,8 +49,8 @@ public abstract class Policy extends StoppableImplementation implements Runnable
 
     Policy policy = null;
 
-    public PolicyContext(IntegrationTestingUtility util) {
-      super(util);
+    public PolicyContext(Properties monkeyProps, IntegrationTestingUtility util) {
+      super(monkeyProps, util);
     }
 
     @Override

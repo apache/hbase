@@ -216,6 +216,7 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
     this.scheduleThreadPool.scheduleAtFixedRate(
       new ReplicationStatisticsTask(this.replicationSink, this.replicationManager),
       statsThreadPeriod, statsThreadPeriod, TimeUnit.SECONDS);
+    LOG.info("{} started", this.server.toString());
   }
 
   /**

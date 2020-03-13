@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.TestBulkLoadReplication;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
@@ -59,7 +59,8 @@ import org.slf4j.LoggerFactory;
 /**
  * Testcase for HBASE-23098
  */
-@Category({ ReplicationTests.class, MediumTests.class })
+// LargeTest because spins up four clusters.
+@Category({ ReplicationTests.class, LargeTests.class })
 public final class TestNamespaceReplicationWithBulkLoadedData extends TestBulkLoadReplication {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =

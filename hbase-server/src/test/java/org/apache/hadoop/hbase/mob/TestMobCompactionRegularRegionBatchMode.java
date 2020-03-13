@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase.mob;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -73,19 +73,19 @@ public class TestMobCompactionRegularRegionBatchMode extends TestMobCompactionBa
     conf.setInt(MobConstants.MOB_MAJOR_COMPACTION_REGION_BATCH_SIZE, batchSize);
   }
 
+  @Override
+  protected void mobCompact(Admin admin, TableDescriptor tableDescriptor,
+      ColumnFamilyDescriptor familyDescriptor) throws IOException, InterruptedException {
+    // Major compact with batch mode enabled
+    compactionChore.performMajorCompactionInBatches(admin, tableDescriptor, familyDescriptor);
+  }
+
   @Test
   public void testMobFileCompactionBatchMode() throws InterruptedException, IOException {
     LOG.info("MOB compaction chore regular batch mode started");
     baseTestMobFileCompaction();
     LOG.info("MOB compaction chore regular batch mode finished OK");
 
-  }
-
-  @Override
-  protected void mobCompact(Admin admin, HTableDescriptor hdt, HColumnDescriptor hcd)
-      throws IOException, InterruptedException {
-    // Major compact with batch mode enabled
-    compactionChore.performMajorCompactionInBatches(admin, hdt, hcd);
   }
 
 }

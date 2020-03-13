@@ -513,7 +513,7 @@ public final class ThriftUtilities {
     Scan out = new Scan();
 
     if (in.isSetStartRow()) {
-      out.setStartRow(in.getStartRow());
+      out.withStartRow(in.getStartRow());
     }
     if (in.isSetStopRow()) {
       out.setStopRow(in.getStopRow());

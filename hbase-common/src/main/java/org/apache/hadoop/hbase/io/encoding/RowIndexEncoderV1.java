@@ -15,6 +15,7 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,16 +39,21 @@ public class RowIndexEncoderV1 {
     this.context = encodingCtx;
   }
 
-  public int write(Cell cell) throws IOException {
+  public void write(Cell cell) throws IOException {
     // checkRow uses comparator to check we are writing in order.
+    int extraBytesForRowIndex = 0;
+
     if (!checkRow(cell)) {
       if (startOffset < 0) {
         startOffset = out.size();
       }
       rowsOffsetBAOS.writeInt(out.size() - startOffset);
+      // added for the int written in the previous line
+      extraBytesForRowIndex = Bytes.SIZEOF_INT;
     }
     lastCell = cell;
-    return encoder.write(cell);
+    int size = encoder.write(cell);
+    context.getEncodingState().postCellEncode(size, size + extraBytesForRowIndex);
   }
 
   protected boolean checkRow(final Cell cell) throws IOException {

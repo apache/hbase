@@ -1501,7 +1501,7 @@ public final class BackupSystemTable implements Closeable {
     byte[] startRow = Bytes.toBytes(BACKUP_INFO_PREFIX);
     byte[] stopRow = Arrays.copyOf(startRow, startRow.length);
     stopRow[stopRow.length - 1] = (byte) (stopRow[stopRow.length - 1] + 1);
-    scan.setStartRow(startRow);
+    scan.withStartRow(startRow);
     scan.setStopRow(stopRow);
     scan.addFamily(BackupSystemTable.SESSIONS_FAMILY);
     scan.setMaxVersions(1);
@@ -1541,7 +1541,7 @@ public final class BackupSystemTable implements Closeable {
     byte[] startRow = rowkey(TABLE_RS_LOG_MAP_PREFIX, backupRoot);
     byte[] stopRow = Arrays.copyOf(startRow, startRow.length);
     stopRow[stopRow.length - 1] = (byte) (stopRow[stopRow.length - 1] + 1);
-    scan.setStartRow(startRow);
+    scan.withStartRow(startRow);
     scan.setStopRow(stopRow);
     scan.addFamily(BackupSystemTable.META_FAMILY);
 
@@ -1582,7 +1582,7 @@ public final class BackupSystemTable implements Closeable {
     byte[] startRow = rowkey(RS_LOG_TS_PREFIX, backupRoot);
     byte[] stopRow = Arrays.copyOf(startRow, startRow.length);
     stopRow[stopRow.length - 1] = (byte) (stopRow[stopRow.length - 1] + 1);
-    scan.setStartRow(startRow);
+    scan.withStartRow(startRow);
     scan.setStopRow(stopRow);
     scan.addFamily(BackupSystemTable.META_FAMILY);
     scan.setMaxVersions(1);
@@ -1891,7 +1891,7 @@ public final class BackupSystemTable implements Closeable {
         : rowkey(BULK_LOAD_PREFIX, backupId + BLK_LD_DELIM);
     byte[] stopRow = Arrays.copyOf(startRow, startRow.length);
     stopRow[stopRow.length - 1] = (byte) (stopRow[stopRow.length - 1] + 1);
-    scan.setStartRow(startRow);
+    scan.withStartRow(startRow);
     scan.setStopRow(stopRow);
     scan.addFamily(BackupSystemTable.META_FAMILY);
     scan.setMaxVersions(1);
@@ -1939,7 +1939,7 @@ public final class BackupSystemTable implements Closeable {
     byte[] startRow = Bytes.toBytes(WALS_PREFIX);
     byte[] stopRow = Arrays.copyOf(startRow, startRow.length);
     stopRow[stopRow.length - 1] = (byte) (stopRow[stopRow.length - 1] + 1);
-    scan.setStartRow(startRow);
+    scan.withStartRow(startRow);
     scan.setStopRow(stopRow);
     scan.addFamily(BackupSystemTable.META_FAMILY);
     return scan;
@@ -1966,7 +1966,7 @@ public final class BackupSystemTable implements Closeable {
     byte[] startRow = Bytes.toBytes(SET_KEY_PREFIX);
     byte[] stopRow = Arrays.copyOf(startRow, startRow.length);
     stopRow[stopRow.length - 1] = (byte) (stopRow[stopRow.length - 1] + 1);
-    scan.setStartRow(startRow);
+    scan.withStartRow(startRow);
     scan.setStopRow(stopRow);
     scan.addFamily(BackupSystemTable.META_FAMILY);
     return scan;

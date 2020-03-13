@@ -98,7 +98,7 @@ public abstract class MultiTableInputFormatBase extends
 
     try {
       Scan sc = tSplit.getScan();
-      sc.setStartRow(tSplit.getStartRow());
+      sc.withStartRow(tSplit.getStartRow());
       sc.setStopRow(tSplit.getEndRow());
       trr.setScan(sc);
       trr.setTable(table);

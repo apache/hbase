@@ -28,11 +28,10 @@ import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
@@ -40,6 +39,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.security.User;
@@ -132,19 +132,22 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
 
   @Before
   public void setUp() throws Exception {
-    HTableDescriptor htd = new HTableDescriptor(testTable.getTableName());
-    HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY1);
-    hcd.setMaxVersions(4);
-    htd.setOwner(USER_OWNER);
-    htd.addFamily(hcd);
-    hcd = new HColumnDescriptor(TEST_FAMILY2);
-    hcd.setMaxVersions(4);
-    htd.setOwner(USER_OWNER);
-    htd.addFamily(hcd);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(testTable.getTableName());
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY1);
+    familyDescriptor.setMaxVersions(4);
+    tableDescriptor.setOwner(USER_OWNER);
+    tableDescriptor.setColumnFamily(familyDescriptor);
+    familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY2);
+    familyDescriptor.setMaxVersions(4);
+    tableDescriptor.setOwner(USER_OWNER);
+    tableDescriptor.setColumnFamily(familyDescriptor);
     // Create the test table (owner added to the _acl_ table)
     try (Connection connection = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
       try (Admin admin = connection.getAdmin()) {
-        admin.createTable(htd, new byte[][] { Bytes.toBytes("s") });
+        admin.createTable(tableDescriptor, new byte[][] { Bytes.toBytes("s") });
       }
     }
     TEST_UTIL.waitTableEnabled(testTable.getTableName());

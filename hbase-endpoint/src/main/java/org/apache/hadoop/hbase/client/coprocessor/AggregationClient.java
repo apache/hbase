@@ -799,7 +799,7 @@ public class AggregationClient implements Closeable {
     Scan scan2 = new Scan(scan);
     // inherit stop row from method parameter
     if (startRow != null) {
-      scan2.setStartRow(startRow);
+      scan2.withStartRow(startRow);
     }
     ResultScanner scanner = null;
     try {

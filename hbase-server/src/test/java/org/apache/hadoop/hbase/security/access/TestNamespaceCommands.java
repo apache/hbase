@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.security.access;
 import static org.apache.hadoop.hbase.AuthUtil.toGroupEntry;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-
 import com.google.protobuf.BlockingRpcChannel;
 import java.util.Arrays;
 import java.util.List;
@@ -29,19 +28,20 @@ import java.util.Objects;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContextImpl;
+import org.apache.hadoop.hbase.ipc.NettyRpcClientConfigHelper;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
@@ -56,7 +56,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 
 @Category({SecurityTests.class, MediumTests.class})
@@ -164,9 +163,13 @@ public class TestNamespaceCommands extends SecureTestUtil {
         UTIL.getMiniHBaseCluster().getLiveRegionServerThreads()) {
       ACCESS_CONTROLLER = rst.getRegionServer().getRegionServerCoprocessorHost().
         findCoprocessor(AccessController.class);
-      if (ACCESS_CONTROLLER != null) break;
+      if (ACCESS_CONTROLLER != null) {
+        break;
+      }
     }
-    if (ACCESS_CONTROLLER == null) throw new NullPointerException();
+    if (ACCESS_CONTROLLER == null) {
+      throw new NullPointerException();
+    }
 
     UTIL.getAdmin().createNamespace(NamespaceDescriptor.create(TEST_NAMESPACE).build());
     UTIL.getAdmin().createNamespace(NamespaceDescriptor.create(TEST_NAMESPACE2).build());
@@ -355,9 +358,12 @@ public class TestNamespaceCommands extends SecureTestUtil {
     assertEquals(0, ((List)USER_GROUP_WRITE.runAs(listAction)).size());
   }
 
-  @Test
+  @SuppressWarnings("checkstyle:MethodLength") @Test
   public void testGrantRevoke() throws Exception {
     final String testUser = "testUser";
+    // Set this else in test context, with limit on the number of threads for
+    // netty eventloopgroup, we can run out of threads if one group used throughout.
+    NettyRpcClientConfigHelper.createEventLoopPerClient(conf);
     // Test if client API actions are authorized
     AccessTestAction grantAction = new AccessTestAction() {
       @Override
@@ -511,9 +517,12 @@ public class TestNamespaceCommands extends SecureTestUtil {
     AccessTestAction createTable = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TEST_TABLE));
-        htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
-        ACCESS_CONTROLLER.preCreateTable(ObserverContextImpl.createAndPrepare(CP_ENV), htd, null);
+        TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+          new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(TEST_TABLE));
+        tableDescriptor.setColumnFamily(
+          new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY));
+        ACCESS_CONTROLLER.preCreateTable(ObserverContextImpl.createAndPrepare(CP_ENV),
+          tableDescriptor, null);
         return null;
       }
     };

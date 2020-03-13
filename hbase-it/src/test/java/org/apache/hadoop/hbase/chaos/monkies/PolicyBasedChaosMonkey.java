@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Properties;
 
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
@@ -43,6 +44,7 @@ public class PolicyBasedChaosMonkey extends ChaosMonkey {
   public static final long TIMEOUT = ONE_MIN;
 
   final IntegrationTestingUtility util;
+  final Properties monkeyProps;
 
   /**
    * Construct a new ChaosMonkey
@@ -50,11 +52,23 @@ public class PolicyBasedChaosMonkey extends ChaosMonkey {
    * @param policies custom policies to use
    */
   public PolicyBasedChaosMonkey(IntegrationTestingUtility util, Policy... policies) {
+    this(null, util, policies);
+  }
+
+  public PolicyBasedChaosMonkey(IntegrationTestingUtility util, Collection<Policy> policies) {
+    this(null, util, policies);
+  }
+
+  public PolicyBasedChaosMonkey(Properties monkeyProps, IntegrationTestingUtility util,
+    Policy... policies) {
+    this.monkeyProps = monkeyProps;
     this.util = util;
     this.policies = policies;
   }
 
-  public PolicyBasedChaosMonkey(IntegrationTestingUtility util, Collection<Policy> policies) {
+  public PolicyBasedChaosMonkey(Properties monkeyProps, IntegrationTestingUtility util,
+    Collection<Policy> policies) {
+    this.monkeyProps = monkeyProps;
     this.util = util;
     this.policies = policies.toArray(new Policy[policies.size()]);
   }
@@ -106,9 +120,9 @@ public class PolicyBasedChaosMonkey extends ChaosMonkey {
   @Override
   public void start() throws Exception {
     monkeyThreads = new Thread[policies.length];
-
+    Policy.PolicyContext context = new Policy.PolicyContext(monkeyProps, this.util);
     for (int i=0; i<policies.length; i++) {
-      policies[i].init(new Policy.PolicyContext(this.util));
+      policies[i].init(context);
       Thread monkeyThread = new Thread(policies[i], "ChaosMonkey");
       monkeyThread.start();
       monkeyThreads[i] = monkeyThread;

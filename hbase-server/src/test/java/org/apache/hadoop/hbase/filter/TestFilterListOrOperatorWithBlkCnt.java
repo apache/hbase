@@ -156,7 +156,7 @@ public class TestFilterListOrOperatorWithBlkCnt {
     Scan scan = new Scan();
     scan.readAllVersions();
     if(!Bytes.toString(startRow).isEmpty()) {
-      scan.setStartRow(startRow);
+      scan.withStartRow(startRow);
     }
     if(!Bytes.toString(stopRow).isEmpty()) {
       scan.setStopRow(stopRow);

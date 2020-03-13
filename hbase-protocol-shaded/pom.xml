@@ -178,7 +178,7 @@
                   <exclude>org.slf4j:slf4j-api</exclude>
                   <exclude>org.apache.yetus:audience-annotations</exclude>
                   <exclude>com.github.stephenc.fingbugs:*</exclude>
-                  <exclude></exclude>
+                  <exclude>com.github.spotbugs:*</exclude>
                 </excludes>
               </artifactSet>
             </configuration>

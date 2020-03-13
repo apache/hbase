@@ -24,7 +24,7 @@ import org.apache.hadoop.hbase.chaos.actions.ForceBalancerAction;
 import org.apache.hadoop.hbase.chaos.actions.GracefulRollingRestartRsAction;
 import org.apache.hadoop.hbase.chaos.actions.RestartActiveMasterAction;
 import org.apache.hadoop.hbase.chaos.actions.RestartRandomRsExceptMetaAction;
-import org.apache.hadoop.hbase.chaos.actions.RollingBatchRestartRsExceptMetaAction;
+import org.apache.hadoop.hbase.chaos.actions.RollingBatchRestartRsAction;
 import org.apache.hadoop.hbase.chaos.actions.RollingBatchSuspendResumeRsAction;
 import org.apache.hadoop.hbase.chaos.monkies.ChaosMonkey;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
@@ -50,7 +50,8 @@ public class ServerKillingMonkeyFactory extends MonkeyFactory {
     Action[] actions1 = new Action[] {
         new RestartRandomRsExceptMetaAction(60000),
         new RestartActiveMasterAction(5000),
-        new RollingBatchRestartRsExceptMetaAction(5000, 1.0f, 2), //only allow 2 servers to be dead
+      new RollingBatchRestartRsAction(5000, 1.0f, 2,
+          true), //only allow 2 servers to be dead
       new ForceBalancerAction(),
       new GracefulRollingRestartRsAction(gracefulRollingRestartTSSLeepTime),
       new RollingBatchSuspendResumeRsAction(rollingBatchSuspendRSSleepTime,
@@ -62,7 +63,7 @@ public class ServerKillingMonkeyFactory extends MonkeyFactory {
         new DumpClusterStatusAction()
     };
 
-    return new PolicyBasedChaosMonkey(util,
+    return new PolicyBasedChaosMonkey(properties, util,
       new CompositeSequentialPolicy(
           new DoActionsOncePolicy(60 * 1000, actions1),
           new PeriodicRandomActionPolicy(60 * 1000, actions1)),
