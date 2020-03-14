@@ -339,7 +339,7 @@ module Hbase
       assert(output.include?('2 row(s)'))
 
       assert(output.include?('QUOTAS'))
-      assert(output.include?('LIMIT => 1G'))
+      assert(output.include?('LIMIT => 1.00G'))
       assert(output.include?('VIOLATION_POLICY => NO_INSERTS'))
       assert(output.include?('TYPE => SPACE'))
       assert(output.include?('1 row(s)'))
@@ -361,12 +361,13 @@ module Hbase
               POLICY => NO_INSERTS,
               NAMESPACE => ns)
       output = capture_stdout { command(:describe_namespace, ns) }
+      puts output
 
       assert(output.include?('DESCRIPTION'))
       assert(output.include?("NAME => '#{ns}'"))
 
       assert(output.include?('QUOTAS'))
-      assert(output.include?('LIMIT => 1G'))
+      assert(output.include?('LIMIT => 1.00G'))
       assert(output.include?('VIOLATION_POLICY => NO_INSERTS'))
       assert(output.include?('TYPE => SPACE'))
       assert(output.include?('1 row(s)'))
