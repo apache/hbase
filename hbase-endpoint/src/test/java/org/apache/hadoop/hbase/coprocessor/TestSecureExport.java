@@ -331,6 +331,7 @@ public class TestSecureExport {
   }
 
   @Test
+  @org.junit.Ignore // See HBASE-23990
   public void testVisibilityLabels() throws IOException, Throwable {
     final String exportTable = name.getMethodName() + "_export";
     final String importTable = name.getMethodName() + "_import";
