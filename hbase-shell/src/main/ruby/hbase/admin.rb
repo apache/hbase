@@ -33,6 +33,7 @@ module Hbase
   class Admin
     include HBaseConstants
 
+    # This is a temporary comment to kick off the build and run Rubocop
     def initialize(connection)
       @connection = connection
       # Java Admin instance
