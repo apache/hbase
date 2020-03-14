@@ -23,6 +23,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
@@ -106,10 +107,7 @@ public final class NettyRpcClientConfigHelper {
   static Pair<EventLoopGroup, Class<? extends Channel>> getEventLoopConfig(Configuration conf) {
     String name = conf.get(EVENT_LOOP_CONFIG);
     if (name == null) {
-      int threadCount = conf.getInt(HBASE_NETTY_EVENTLOOP_RPCCLIENT_THREADCOUNT_KEY, 0);
-      return new Pair<>(new NioEventLoopGroup(threadCount,
-        new DefaultThreadFactory("RPCClient-NioEventLoopGroup", true,
-          Thread.NORM_PRIORITY)), NioSocketChannel.class);
+      return getDefaultEventLoopConfig(conf);
     }
     if (StringUtils.isBlank(name)) {
       return null;
