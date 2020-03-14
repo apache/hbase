@@ -23,6 +23,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
@@ -73,20 +74,40 @@ public final class NettyRpcClientConfigHelper {
   }
 
   /**
-   * The {@code AsyncRpcClient} will create its own {@code NioEventLoopGroup}.
+   * The {@link NettyRpcClient} will create its own {@code NioEventLoopGroup}.
    */
   public static void createEventLoopPerClient(Configuration conf) {
     conf.set(EVENT_LOOP_CONFIG, "");
     EVENT_LOOP_CONFIG_MAP.clear();
   }
 
+  private static volatile Pair<EventLoopGroup, Class<? extends Channel>> DEFAULT_EVENT_LOOP;
+
+  private static Pair<EventLoopGroup, Class<? extends Channel>>
+    getDefaultEventLoopConfig(Configuration conf) {
+    Pair<EventLoopGroup, Class<? extends Channel>> eventLoop = DEFAULT_EVENT_LOOP;
+    if (eventLoop != null) {
+      return eventLoop;
+    }
+    synchronized (NettyRpcClientConfigHelper.class) {
+      eventLoop = DEFAULT_EVENT_LOOP;
+      if (eventLoop != null) {
+        return eventLoop;
+      }
+      int threadCount = conf.getInt(HBASE_NETTY_EVENTLOOP_RPCCLIENT_THREADCOUNT_KEY, 0);
+      eventLoop = new Pair<>(
+        new NioEventLoopGroup(threadCount,
+          new DefaultThreadFactory("RPCClient-NioEventLoopGroup", true, Thread.NORM_PRIORITY)),
+        NioSocketChannel.class);
+      DEFAULT_EVENT_LOOP = eventLoop;
+    }
+    return eventLoop;
+  }
+
   static Pair<EventLoopGroup, Class<? extends Channel>> getEventLoopConfig(Configuration conf) {
     String name = conf.get(EVENT_LOOP_CONFIG);
     if (name == null) {
-      int threadCount = conf.getInt(HBASE_NETTY_EVENTLOOP_RPCCLIENT_THREADCOUNT_KEY, 0);
-      return new Pair<>(new NioEventLoopGroup(threadCount,
-        new DefaultThreadFactory("RPCClient-NioEventLoopGroup", true,
-          Thread.NORM_PRIORITY)), NioSocketChannel.class);
+      return getDefaultEventLoopConfig(conf);
     }
     if (StringUtils.isBlank(name)) {
       return null;
