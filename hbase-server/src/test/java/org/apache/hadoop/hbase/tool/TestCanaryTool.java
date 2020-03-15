@@ -31,7 +31,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -62,7 +61,6 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -309,8 +307,8 @@ public class TestCanaryTool {
   private void testZookeeperCanaryWithArgs(String[] args) throws Exception {
     Integer port =
       Iterables.getOnlyElement(testingUtility.getZkCluster().getClientPortList(), null);
-    testingUtility.getConfiguration().set(HConstants.ZOOKEEPER_QUORUM,
-      "localhost:" + port + "/hbase");
+    String hostPort = testingUtility.getZkCluster().getAddress().toString();
+    testingUtility.getConfiguration().set(HConstants.ZOOKEEPER_QUORUM, hostPort + "/hbase");
     ExecutorService executor = new ScheduledThreadPoolExecutor(2);
     CanaryTool.ZookeeperStdOutSink sink = spy(new CanaryTool.ZookeeperStdOutSink());
     CanaryTool canary = new CanaryTool(executor, sink);
@@ -318,7 +316,6 @@ public class TestCanaryTool {
 
     String baseZnode = testingUtility.getConfiguration()
       .get(HConstants.ZOOKEEPER_ZNODE_PARENT, HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
-    verify(sink, atLeastOnce())
-      .publishReadTiming(eq(baseZnode), eq("localhost:" + port), anyLong());
+    verify(sink, atLeastOnce()).publishReadTiming(eq(baseZnode), eq(hostPort), anyLong());
   }
 }
