@@ -119,7 +119,8 @@ public class TestHBaseFsckCleanReplicationBarriers {
           MetaTableAccessor.getTableStopRowForMeta(tableName, MetaTableAccessor.QueryType.REGION));
     Result result;
     try (ResultScanner scanner =
-        MetaTableAccessor.getMetaHTable(UTIL.getConnection()).getScanner(barrierScan)) {
+        MetaTableAccessor.getCatalogHTable(UTIL.getConnection(), TableName.META_TABLE_NAME)
+            .getScanner(barrierScan)) {
       while ((result = scanner.next()) != null) {
         assertTrue(MetaTableAccessor.getReplicationBarriers(result).length > 0);
       }

@@ -74,9 +74,9 @@ public class RegionStateStore {
       ServerName regionLocation, ServerName lastHost, long openSeqNum);
   }
 
-  public void visitCatalogTable(boolean useRoot, final RegionStateVisitor visitor)
+  public void visitCatalogTable(TableName catalogTable, final RegionStateVisitor visitor)
     throws IOException {
-    MetaTableAccessor.fullScanRegions(master.getConnection(), useRoot,
+    MetaTableAccessor.fullScanRegions(master.getConnection(), catalogTable,
         new MetaTableAccessor.Visitor() {
       final boolean isDebugEnabled = LOG.isDebugEnabled();
 

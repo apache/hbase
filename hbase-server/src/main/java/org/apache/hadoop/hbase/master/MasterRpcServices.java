@@ -2516,7 +2516,8 @@ public class MasterRpcServices extends RSRpcServices implements
           Bytes.toBytes(newState.getState().name()));
         List<Put> putList = new ArrayList<>();
         putList.add(metaPut);
-        MetaTableAccessor.putsToMetaTable(this.master.getConnection(), putList);
+        MetaTableAccessor.putsToCatalogTable(this.master.getConnection(),
+            TableName.META_TABLE_NAME, putList);
         //Loads from meta again to refresh AM cache with the new region state
         this.master.getAssignmentManager().loadRegionFromCatalog(info.getEncodedName());
         builder.addStates(prevState.convert());

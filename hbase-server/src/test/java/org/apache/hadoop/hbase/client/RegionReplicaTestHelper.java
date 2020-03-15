@@ -103,7 +103,7 @@ public final class RegionReplicaTestHelper {
       .map(t -> t.getRegionServer().getServerName()).filter(sn -> !sn.equals(serverName)).findAny()
       .get();
     util.getAdmin().move(regionInfo.getEncodedNameAsBytes(), newServerName);
-    util.waitFor(30000, new ExplainingPredicate<Exception>() { 
+    util.waitFor(30000, new ExplainingPredicate<Exception>() {
 
       @Override
       public boolean evaluate() throws Exception {

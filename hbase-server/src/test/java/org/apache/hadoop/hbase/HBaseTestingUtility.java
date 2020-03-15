@@ -3260,8 +3260,8 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
         return true;
       }
     };
-    MetaTableAccessor.scanMeta(asyncConnection.toConnection(), null, null,
-      MetaTableAccessor.QueryType.TABLE, Integer.MAX_VALUE, visitor);
+    MetaTableAccessor.scanCatalog(asyncConnection.toConnection(), TableName.META_TABLE_NAME,
+      null, null, MetaTableAccessor.QueryType.TABLE, Integer.MAX_VALUE, visitor);
     return lastTableState.get();
   }
 

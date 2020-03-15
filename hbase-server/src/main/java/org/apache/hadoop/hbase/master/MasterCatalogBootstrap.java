@@ -21,9 +21,11 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -32,6 +34,7 @@ import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -135,11 +138,30 @@ class MasterCatalogBootstrap {
         int replicaId = zooKeeper.getZNodePaths().getMetaReplicaIdFromZnode(metaReplicaZnode);
         if (replicaId >= numMetaReplicasConfigured) {
           RegionState r = MetaTableLocator.getRootRegionState(zooKeeper, replicaId);
-          LOG.info("Closing excess replica of meta region " + r.getRegion());
+          LOG.info("Closing excess replica of root region " + r.getRegion());
           // send a close and wait for a max of 30 seconds
           ServerManager.closeRegionSilentlyAndWait(master.getAsyncClusterConnection(),
               r.getServerName(), r.getRegion(), 30000);
           ZKUtil.deleteNode(zooKeeper, zooKeeper.getZNodePaths().getZNodeForReplica(replicaId));
+        }
+      }
+
+      Result metaRegionResult = MetaTableAccessor.getRegionResult(
+        master.getConnection(), RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName());
+      RegionLocations regionLocations = MetaTableAccessor.getRegionLocations(metaRegionResult);
+      if (regionLocations.size() > numMetaReplicasConfigured) {
+        for (int i = regionLocations.size() - 1; i >= numMetaReplicasConfigured ; i--) {
+          HRegionLocation loc = regionLocations.getRegionLocation(i);
+          LOG.info("Closing excess replica of meta region " + loc.getRegion());
+          // send a close and wait for a max of 30 seconds
+          ServerManager.closeRegionSilentlyAndWait(master.getAsyncClusterConnection(),
+              loc.getServerName(), loc.getRegion(), 30000);
+          MetaTableAccessor.removeRegionReplicasFromCatalog(
+              Sets.newHashSet(RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName()),
+              i,
+              1,
+              master.getConnection(),
+              TableName.ROOT_TABLE_NAME);
         }
       }
     } catch (Exception ex) {

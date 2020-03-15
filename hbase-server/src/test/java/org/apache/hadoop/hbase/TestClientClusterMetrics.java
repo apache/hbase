@@ -203,7 +203,18 @@ public class TestClientClusterMetrics {
       .addColumn(CF, Bytes.toBytes("q3"), Bytes.toBytes("v3")));
 
     ClusterMetrics metrics = ADMIN.getClusterMetrics();
-    Assert.assertEquals(metrics.getTableRegionStatesCount().size(), 2);
+    Assert.assertEquals(metrics.getTableRegionStatesCount().size(), 3);
+    Assert.assertEquals(metrics.getTableRegionStatesCount().get(TableName.ROOT_TABLE_NAME)
+      .getRegionsInTransition(), 0);
+    Assert.assertEquals(metrics.getTableRegionStatesCount().get(TableName.ROOT_TABLE_NAME)
+      .getOpenRegions(), 1);
+    Assert.assertEquals(metrics.getTableRegionStatesCount().get(TableName.ROOT_TABLE_NAME)
+      .getTotalRegions(), 1);
+    Assert.assertEquals(metrics.getTableRegionStatesCount().get(TableName.ROOT_TABLE_NAME)
+      .getClosedRegions(), 0);
+    Assert.assertEquals(metrics.getTableRegionStatesCount().get(TableName.ROOT_TABLE_NAME)
+      .getSplitRegions(), 0);
+
     Assert.assertEquals(metrics.getTableRegionStatesCount().get(TableName.META_TABLE_NAME)
       .getRegionsInTransition(), 0);
     Assert.assertEquals(metrics.getTableRegionStatesCount().get(TableName.META_TABLE_NAME)
@@ -214,6 +225,7 @@ public class TestClientClusterMetrics {
       .getClosedRegions(), 0);
     Assert.assertEquals(metrics.getTableRegionStatesCount().get(TableName.META_TABLE_NAME)
       .getSplitRegions(), 0);
+
     Assert.assertEquals(metrics.getTableRegionStatesCount().get(TABLE_NAME)
       .getRegionsInTransition(), 0);
     Assert.assertEquals(metrics.getTableRegionStatesCount().get(TABLE_NAME)
@@ -237,7 +249,7 @@ public class TestClientClusterMetrics {
     insertData(TABLE_NAME, startRowNum, rowCount);
 
     ClusterMetrics metrics = ADMIN.getClusterMetrics();
-    Assert.assertEquals(metrics.getTableRegionStatesCount().size(), 2);
+    Assert.assertEquals(metrics.getTableRegionStatesCount().size(), 3);
     Assert.assertEquals(metrics.getTableRegionStatesCount().get(TableName.META_TABLE_NAME)
       .getRegionsInTransition(), 0);
     Assert.assertEquals(metrics.getTableRegionStatesCount().get(TableName.META_TABLE_NAME)
@@ -258,13 +270,21 @@ public class TestClientClusterMetrics {
     ADMIN.split(TABLE_NAME, splitKey);
 
     metrics = ADMIN.getClusterMetrics();
-    Assert.assertEquals(metrics.getTableRegionStatesCount().size(), 2);
+    Assert.assertEquals(metrics.getTableRegionStatesCount().size(), 3);
+    Assert.assertEquals(metrics.getTableRegionStatesCount().get(TableName.ROOT_TABLE_NAME)
+      .getRegionsInTransition(), 0);
+    Assert.assertEquals(metrics.getTableRegionStatesCount().get(TableName.ROOT_TABLE_NAME)
+      .getOpenRegions(), 1);
+    Assert.assertEquals(metrics.getTableRegionStatesCount().get(TableName.ROOT_TABLE_NAME)
+      .getTotalRegions(), 1);
+
     Assert.assertEquals(metrics.getTableRegionStatesCount().get(TableName.META_TABLE_NAME)
       .getRegionsInTransition(), 0);
     Assert.assertEquals(metrics.getTableRegionStatesCount().get(TableName.META_TABLE_NAME)
       .getOpenRegions(), 1);
     Assert.assertEquals(metrics.getTableRegionStatesCount().get(TableName.META_TABLE_NAME)
       .getTotalRegions(), 1);
+
     Assert.assertEquals(metrics.getTableRegionStatesCount().get(TABLE_NAME)
       .getRegionsInTransition(), 0);
     Assert.assertEquals(metrics.getTableRegionStatesCount().get(TABLE_NAME)
