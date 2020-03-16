@@ -19,11 +19,14 @@
 
 package org.apache.hadoop.hbase.tool;
 
+import static org.apache.hadoop.hbase.HConstants.DEFAULT_CANARY_INFOPORT;
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT;
+import static org.apache.hadoop.hbase.HConstants.HBASE_CANARY_INFO_BINDADDRESS;
 import static org.apache.hadoop.hbase.HConstants.ZOOKEEPER_ZNODE_PARENT;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -81,6 +84,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
+import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.tool.CanaryTool.RegionTask.TaskType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -122,6 +126,31 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class CanaryTool implements Tool, Canary {
+
+
+  private void putUpWebUI() throws IOException {
+    if (zookeeperMode) {
+      LOG.info("WebUI is not supported in Zookeeper mode");
+    } else if (regionServerMode) {
+      LOG.info("WebUI is not supported in RegionServer mode");
+    } else {
+      Configuration conf = new Configuration();
+      int port = conf.getInt(HConstants.HBASE_CANARY_INFO_PORT, DEFAULT_CANARY_INFOPORT);
+      // -1 is for disabling info server
+      if (port < 0) return;
+      String addr = conf.get(HBASE_CANARY_INFO_BINDADDRESS, "0.0.0.0");
+      try {
+        InfoServer infoServer = new InfoServer("canary", addr, port, false, conf);
+        infoServer.addUnprivilegedServlet("canary", "/canary-status", CanaryStatusServlet.class);
+        infoServer.setAttribute("sink", this.sink);
+        infoServer.start();
+        LOG.info("Bind Canary http info server to port: " + port);
+      } catch (BindException e) {
+        e.printStackTrace();
+        LOG.info("Failed binding Canary http info server to port: " + port);
+      }
+    }
+  }
 
   @Override
   public int checkRegions(String[] targets) throws Exception {
@@ -274,9 +303,42 @@ public class CanaryTool implements Tool, Canary {
     private Map<String, LongAdder> perTableReadLatency = new HashMap<>();
     private LongAdder writeLatency = new LongAdder();
     private final Map<String, List<RegionTaskResult>> regionMap = new ConcurrentHashMap<>();
+    private Map<ServerName, LongAdder> perServerFailuresCount = new ConcurrentHashMap<>();
+    private Map<String, LongAdder> perTableFailuresCount = new ConcurrentHashMap<>();
+
+    public Map<ServerName, LongAdder> getPerServerFailuresCount() {
+      return perServerFailuresCount;
+    }
+
+    public Map<String, LongAdder> getPerTableFailuresCount() {
+      return perTableFailuresCount;
+    }
+
+    public void resetFailuresCountDetails() {
+      perServerFailuresCount.clear();
+      perTableFailuresCount.clear();
+    }
+
+    private void incFailuresCountDetails(ServerName serverName, RegionInfo region) {
+      perServerFailuresCount.compute(serverName, (server, count) -> {
+        if (count == null) {
+          count = new LongAdder();
+        }
+        count.increment();
+        return count;
+      });
+      perTableFailuresCount.compute(region.getTable().getNameAsString(), (tableName, count) -> {
+        if (count == null) {
+          count = new LongAdder();
+        }
+        count.increment();
+        return count;
+      });
+    }
 
     public void publishReadFailure(ServerName serverName, RegionInfo region, Exception e) {
       incReadFailureCount();
+      incFailuresCountDetails(serverName, region);
       LOG.error("Read from {} on serverName={} failed",
           region.getRegionNameAsString(), serverName, e);
     }
@@ -284,6 +346,7 @@ public class CanaryTool implements Tool, Canary {
     public void publishReadFailure(ServerName serverName, RegionInfo region,
         ColumnFamilyDescriptor column, Exception e) {
       incReadFailureCount();
+      incFailuresCountDetails(serverName, region);
       LOG.error("Read from {} on serverName={}, columnFamily={} failed",
           region.getRegionNameAsString(), serverName,
           column.getNameAsString(), e);
@@ -304,12 +367,14 @@ public class CanaryTool implements Tool, Canary {
 
     public void publishWriteFailure(ServerName serverName, RegionInfo region, Exception e) {
       incWriteFailureCount();
+      incFailuresCountDetails(serverName, region);
       LOG.error("Write to {} on {} failed", region.getRegionNameAsString(), serverName, e);
     }
 
     public void publishWriteFailure(ServerName serverName, RegionInfo region,
         ColumnFamilyDescriptor column, Exception e) {
       incWriteFailureCount();
+      incFailuresCountDetails(serverName, region);
       LOG.error("Write to {} on {} {} failed", region.getRegionNameAsString(), serverName,
           column.getNameAsString(), e);
     }
@@ -908,6 +973,7 @@ public class CanaryTool implements Tool, Canary {
       System.arraycopy(args, index, monitorTargets, 0, length);
     }
 
+    putUpWebUI();
     if (zookeeperMode) {
       return checkZooKeeper();
     } else if (regionServerMode) {
@@ -1352,6 +1418,7 @@ public class CanaryTool implements Tool, Canary {
         try {
           List<Future<Void>> taskFutures = new LinkedList<>();
           RegionStdOutSink regionSink = this.getSink();
+          regionSink.resetFailuresCountDetails();
           if (this.targets != null && this.targets.length > 0) {
             String[] tables = generateMonitorTables(this.targets);
             // Check to see that each table name passed in the -readTableTimeouts argument is also

@@ -1464,6 +1464,12 @@ public final class HConstants {
 
   public static final String HBASE_CANARY_READ_RAW_SCAN_KEY = "hbase.canary.read.raw.enabled";
 
+  public static final String HBASE_CANARY_INFO_PORT = "hbase.canary.info.port";
+
+  public static final int DEFAULT_CANARY_INFOPORT = 16050;
+
+  public static final String HBASE_CANARY_INFO_BINDADDRESS = "hbase.canary.info.bindAddress";
+
   /**
    * Configuration keys for programmatic JAAS configuration for secured ZK interaction
    */
