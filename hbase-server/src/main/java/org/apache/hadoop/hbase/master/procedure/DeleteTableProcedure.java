@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -360,7 +360,7 @@ public class DeleteTableProcedure
   private static void cleanRegionsInMeta(final MasterProcedureEnv env, final TableName tableName)
       throws IOException {
     Connection connection = env.getMasterServices().getConnection();
-    Scan tableScan = MetaTableAccessor.getScanForTableName(connection, tableName);
+    Scan tableScan = CatalogAccessor.getScanForTableName(connection, tableName);
     try (Table metaTable = connection.getTable(TableName.META_TABLE_NAME)) {
       List<Delete> deletes = new ArrayList<>();
       try (ResultScanner resScanner = metaTable.getScanner(tableScan)) {

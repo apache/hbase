@@ -37,9 +37,9 @@ import java.util.zip.ZipFile;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -731,7 +731,7 @@ public class TableMapReduceUtil {
     job.setOutputValueClass(Writable.class);
     if (partitioner == HRegionPartitioner.class) {
       job.setPartitionerClass(HRegionPartitioner.class);
-      int regions = MetaTableAccessor.getRegionCount(conf, TableName.valueOf(table));
+      int regions = CatalogAccessor.getRegionCount(conf, TableName.valueOf(table));
       if (job.getNumReduceTasks() > regions) {
         job.setNumReduceTasks(regions);
       }
@@ -757,7 +757,7 @@ public class TableMapReduceUtil {
   public static void limitNumReduceTasks(String table, Job job)
   throws IOException {
     int regions =
-      MetaTableAccessor.getRegionCount(job.getConfiguration(), TableName.valueOf(table));
+      CatalogAccessor.getRegionCount(job.getConfiguration(), TableName.valueOf(table));
     if (job.getNumReduceTasks() > regions)
       job.setNumReduceTasks(regions);
   }
@@ -772,7 +772,7 @@ public class TableMapReduceUtil {
    */
   public static void setNumReduceTasks(String table, Job job)
   throws IOException {
-    job.setNumReduceTasks(MetaTableAccessor.getRegionCount(job.getConfiguration(),
+    job.setNumReduceTasks(CatalogAccessor.getRegionCount(job.getConfiguration(),
        TableName.valueOf(table)));
   }
 

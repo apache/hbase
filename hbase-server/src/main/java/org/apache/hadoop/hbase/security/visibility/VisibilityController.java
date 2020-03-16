@@ -41,7 +41,7 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
@@ -210,7 +210,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
   @Override
   public void postStartMaster(ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
     // Need to create the new system table for labels here
-    if (!MetaTableAccessor.tableExists(ctx.getEnvironment().getConnection(), LABELS_TABLE_NAME)) {
+    if (!CatalogAccessor.tableExists(ctx.getEnvironment().getConnection(), LABELS_TABLE_NAME)) {
       TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
         new TableDescriptorBuilder.ModifyableTableDescriptor(LABELS_TABLE_NAME);
       ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =

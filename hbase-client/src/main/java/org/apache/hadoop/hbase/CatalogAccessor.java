@@ -147,10 +147,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MultiRowMutationProtos.
  * </p>
  */
 @InterfaceAudience.Private
-public class MetaTableAccessor {
+public class CatalogAccessor {
 
-  private static final Logger LOG = LoggerFactory.getLogger(MetaTableAccessor.class);
-  private static final Logger METALOG = LoggerFactory.getLogger("org.apache.hadoop.hbase.META");
+  private static final Logger LOG = LoggerFactory.getLogger(CatalogAccessor.class);
+  private static final Logger CATALOGLOG =
+    LoggerFactory.getLogger("org.apache.hadoop.hbase.CATALOG");
 
   @VisibleForTesting
   public static final byte[] REPLICATION_PARENT_QUALIFIER = Bytes.toBytes("parent");
@@ -1466,7 +1467,7 @@ public class MetaTableAccessor {
   public static void updateRegionState(Connection connection, RegionInfo ri,
       RegionState.State state) throws IOException {
     Put put = new Put(RegionReplicaUtil.getRegionInfoForDefaultReplica(ri).getRegionName());
-    MetaTableAccessor.putsToCatalogTable(connection, getCatalogTableForTable(ri.getTable()),
+    CatalogAccessor.putsToCatalogTable(connection, getCatalogTableForTable(ri.getTable()),
         Collections.singletonList(addRegionStateToPut(put, state)));
   }
 
@@ -2094,7 +2095,7 @@ public class MetaTableAccessor {
 
   public static long[] getReplicationBarriers(Result result) {
     return result.getColumnCells(HConstants.REPLICATION_BARRIER_FAMILY, HConstants.SEQNUM_QUALIFIER)
-      .stream().mapToLong(MetaTableAccessor::getReplicationBarrier).sorted().distinct().toArray();
+      .stream().mapToLong(CatalogAccessor::getReplicationBarrier).sorted().distinct().toArray();
   }
 
   private static ReplicationBarrierResult getReplicationBarrierResult(Result result) {
@@ -2181,7 +2182,7 @@ public class MetaTableAccessor {
 
   private static void debugLogMutations(TableName tableName, List<? extends Mutation> mutations)
     throws IOException {
-    if (!METALOG.isDebugEnabled()) {
+    if (!CATALOGLOG.isDebugEnabled()) {
       return;
     }
     // Logging each mutation in separate line makes it easier to see diff between them visually
@@ -2192,7 +2193,7 @@ public class MetaTableAccessor {
   }
 
   private static void debugLogMutation(TableName t, Mutation p) throws IOException {
-    METALOG.debug("{} {} {}", t, p.getClass().getSimpleName(), p.toJSON());
+    CATALOGLOG.debug("{} {} {}", t, p.getClass().getSimpleName(), p.toJSON());
   }
 
   private static Put addSequenceNum(Put p, long openSeqNum, int replicaId) throws IOException {

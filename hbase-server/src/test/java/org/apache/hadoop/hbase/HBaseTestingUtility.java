@@ -2511,7 +2511,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     Table meta = getConnection().getTable(TableName.META_TABLE_NAME);
     Arrays.sort(startKeys, Bytes.BYTES_COMPARATOR);
     List<RegionInfo> newRegions = new ArrayList<>(startKeys.length);
-    MetaTableAccessor
+    CatalogAccessor
         .updateTableState(getConnection(), htd.getTableName(), TableState.State.ENABLED);
     // add custom ones
     for (int i = 0; i < startKeys.length; i++) {
@@ -2520,7 +2520,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
           .setStartKey(startKeys[i])
           .setEndKey(startKeys[j])
           .build();
-      MetaTableAccessor.addRegionToMeta(getConnection(), hri);
+      CatalogAccessor.addRegionToMeta(getConnection(), hri);
       newRegions.add(hri);
     }
 
@@ -2618,7 +2618,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     List<byte[]> rows = new ArrayList<>();
     ResultScanner s = t.getScanner(new Scan());
     for (Result result : s) {
-      RegionInfo info = MetaTableAccessor.getRegionInfo(result);
+      RegionInfo info = CatalogAccessor.getRegionInfo(result);
       if (info == null) {
         LOG.error("No region info for row " + Bytes.toString(result.getRow()));
         // TODO figure out what to do for this new hosed case.
@@ -3213,7 +3213,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       Map<RegionInfo, ServerName> assignments = getHBaseCluster().getMaster().getAssignmentManager()
         .getRegionStates().getRegionAssignments();
       final List<Pair<RegionInfo, ServerName>> metaLocations =
-        MetaTableAccessor.getTableRegionsAndLocations(asyncConnection.toConnection(), tableName);
+        CatalogAccessor.getTableRegionsAndLocations(asyncConnection.toConnection(), tableName);
       for (Pair<RegionInfo, ServerName> metaLocation : metaLocations) {
         RegionInfo hri = metaLocation.getFirst();
         ServerName sn = metaLocation.getSecond();
@@ -3233,7 +3233,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   public String explainTableState(final TableName table, TableState.State state)
       throws IOException {
-    TableState tableState = MetaTableAccessor.getTableState(asyncConnection.toConnection(), table);
+    TableState tableState = CatalogAccessor.getTableState(asyncConnection.toConnection(), table);
     if (tableState == null) {
       return "TableState in META: No table state in META for table " + table +
         " last state in meta (including deleted is " + findLastTableState(table) + ")";
@@ -3247,21 +3247,21 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   @Nullable
   public TableState findLastTableState(final TableName table) throws IOException {
     final AtomicReference<TableState> lastTableState = new AtomicReference<>(null);
-    MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
+    CatalogAccessor.Visitor visitor = new CatalogAccessor.Visitor() {
       @Override
       public boolean visit(Result r) throws IOException {
         if (!Arrays.equals(r.getRow(), table.getName())) {
           return false;
         }
-        TableState state = MetaTableAccessor.getTableState(r);
+        TableState state = CatalogAccessor.getTableState(r);
         if (state != null) {
           lastTableState.set(state);
         }
         return true;
       }
     };
-    MetaTableAccessor.scanCatalog(asyncConnection.toConnection(), TableName.META_TABLE_NAME,
-      null, null, MetaTableAccessor.QueryType.TABLE, Integer.MAX_VALUE, visitor);
+    CatalogAccessor.scanCatalog(asyncConnection.toConnection(), TableName.META_TABLE_NAME,
+      null, null, CatalogAccessor.QueryType.TABLE, Integer.MAX_VALUE, visitor);
     return lastTableState.get();
   }
 

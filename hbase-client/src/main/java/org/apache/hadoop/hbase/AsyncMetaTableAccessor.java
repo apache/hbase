@@ -32,9 +32,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import org.apache.hadoop.hbase.MetaTableAccessor.CollectingVisitor;
-import org.apache.hadoop.hbase.MetaTableAccessor.QueryType;
-import org.apache.hadoop.hbase.MetaTableAccessor.Visitor;
+import org.apache.hadoop.hbase.CatalogAccessor.CollectingVisitor;
+import org.apache.hadoop.hbase.CatalogAccessor.QueryType;
+import org.apache.hadoop.hbase.CatalogAccessor.Visitor;
 import org.apache.hadoop.hbase.client.AdvancedScanResultConsumer;
 import org.apache.hadoop.hbase.client.AsyncTable;
 import org.apache.hadoop.hbase.client.Consistency;
@@ -103,8 +103,8 @@ public class AsyncMetaTableAccessor {
       AsyncTable<?> metaTable, byte[] regionName) {
     CompletableFuture<Optional<HRegionLocation>> future = new CompletableFuture<>();
     try {
-      RegionInfo parsedRegionInfo = MetaTableAccessor.parseRegionInfoFromRegionName(regionName);
-      addListener(metaTable.get(new Get(MetaTableAccessor.getCatalogKeyForRegion(parsedRegionInfo))
+      RegionInfo parsedRegionInfo = CatalogAccessor.parseRegionInfoFromRegionName(regionName);
+      addListener(metaTable.get(new Get(CatalogAccessor.getCatalogKeyForRegion(parsedRegionInfo))
         .addFamily(HConstants.CATALOG_FAMILY)), (r, err) -> {
           if (err != null) {
             future.completeExceptionally(err);
@@ -139,7 +139,7 @@ public class AsyncMetaTableAccessor {
         }
         String encodedRegionNameStr = Bytes.toString(encodedRegionName);
         results.stream().filter(result -> !result.isEmpty())
-          .filter(result -> MetaTableAccessor.getRegionInfo(result) != null).forEach(result -> {
+          .filter(result -> CatalogAccessor.getRegionInfo(result) != null).forEach(result -> {
             getRegionLocations(result).ifPresent(locations -> {
               for (HRegionLocation location : locations.getRegionLocations()) {
                 if (location != null &&

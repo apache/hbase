@@ -102,7 +102,7 @@ public class MetaRegionLocationCache extends ZKListener {
     List<String> znodes = null;
     while (retryCounter.shouldRetry()) {
       try {
-        znodes = watcher.getMetaReplicaNodesAndWatchChildren();
+        znodes = watcher.getRootReplicaNodesAndWatchChildren();
         break;
       } catch (KeeperException ke) {
         LOG.debug("Error populating initial meta locations", ke);

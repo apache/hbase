@@ -25,11 +25,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -90,8 +87,8 @@ public class TestCatalogJanitorCluster {
     // Assert no problems.
     assertTrue(report.isEmpty());
     // Now remove first region in table t2 to see if catalogjanitor scan notices.
-    List<RegionInfo> t2Ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), T2);
-    MetaTableAccessor.deleteRegionInfo(TEST_UTIL.getConnection(), t2Ris.get(0));
+    List<RegionInfo> t2Ris = CatalogAccessor.getTableRegions(TEST_UTIL.getConnection(), T2);
+    CatalogAccessor.deleteRegionInfo(TEST_UTIL.getConnection(), t2Ris.get(0));
     gc = janitor.scan();
     report = janitor.getLastReport();
     assertFalse(report.isEmpty());
@@ -101,17 +98,17 @@ public class TestCatalogJanitorCluster {
     assertTrue(report.getHoles().get(0).getSecond().getTable().equals(T2));
     assertEquals(0, report.getOverlaps().size());
     // Next, add overlaps to first row in t3
-    List<RegionInfo> t3Ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), T3);
+    List<RegionInfo> t3Ris = CatalogAccessor.getTableRegions(TEST_UTIL.getConnection(), T3);
     RegionInfo ri = t3Ris.get(0);
     RegionInfo newRi1 = RegionInfoBuilder.newBuilder(ri.getTable()).
         setStartKey(incrementRow(ri.getStartKey())).
         setEndKey(incrementRow(ri.getEndKey())).build();
-    Put p1 = MetaTableAccessor.makePutFromRegionInfo(newRi1, System.currentTimeMillis());
+    Put p1 = CatalogAccessor.makePutFromRegionInfo(newRi1, System.currentTimeMillis());
     RegionInfo newRi2 = RegionInfoBuilder.newBuilder(newRi1.getTable()).
         setStartKey(incrementRow(newRi1.getStartKey())).
         setEndKey(incrementRow(newRi1.getEndKey())).build();
-    Put p2 = MetaTableAccessor.makePutFromRegionInfo(newRi2, System.currentTimeMillis());
-    MetaTableAccessor.putsToCatalogTable(TEST_UTIL.getConnection(), TableName.META_TABLE_NAME,
+    Put p2 = CatalogAccessor.makePutFromRegionInfo(newRi2, System.currentTimeMillis());
+    CatalogAccessor.putsToCatalogTable(TEST_UTIL.getConnection(), TableName.META_TABLE_NAME,
         Arrays.asList(p1, p2));
     gc = janitor.scan();
     report = janitor.getLastReport();
@@ -124,12 +121,12 @@ public class TestCatalogJanitorCluster {
     assertTrue(report.getEmptyRegionInfo().isEmpty());
     assertTrue(report.getUnknownServers().isEmpty());
     // Now make bad server in t1.
-    List<RegionInfo> t1Ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), T1);
+    List<RegionInfo> t1Ris = CatalogAccessor.getTableRegions(TEST_UTIL.getConnection(), T1);
     RegionInfo t1Ri1 = t1Ris.get(1);
     Put pServer = new Put(t1Ri1.getRegionName());
-    pServer.addColumn(MetaTableAccessor.getCatalogFamily(),
-        MetaTableAccessor.getServerColumn(0), Bytes.toBytes("bad.server.example.org:1234"));
-    MetaTableAccessor.putsToCatalogTable(TEST_UTIL.getConnection(), TableName.META_TABLE_NAME,
+    pServer.addColumn(CatalogAccessor.getCatalogFamily(),
+        CatalogAccessor.getServerColumn(0), Bytes.toBytes("bad.server.example.org:1234"));
+    CatalogAccessor.putsToCatalogTable(TEST_UTIL.getConnection(), TableName.META_TABLE_NAME,
         Arrays.asList(pServer));
     gc = janitor.scan();
     report = janitor.getLastReport();
@@ -140,9 +137,9 @@ public class TestCatalogJanitorCluster {
     // break if this happens.
     LOG.info("Make null info:server");
     Put emptyInfoServerPut = new Put(t1Ri1.getRegionName());
-    emptyInfoServerPut.addColumn(MetaTableAccessor.getCatalogFamily(),
-        MetaTableAccessor.getServerColumn(0), Bytes.toBytes(""));
-    MetaTableAccessor.putsToCatalogTable(TEST_UTIL.getConnection(), TableName.META_TABLE_NAME,
+    emptyInfoServerPut.addColumn(CatalogAccessor.getCatalogFamily(),
+        CatalogAccessor.getServerColumn(0), Bytes.toBytes(""));
+    CatalogAccessor.putsToCatalogTable(TEST_UTIL.getConnection(), TableName.META_TABLE_NAME,
         Arrays.asList(emptyInfoServerPut));
     gc = janitor.scan();
     report = janitor.getLastReport();
@@ -150,9 +147,9 @@ public class TestCatalogJanitorCluster {
     // Mke an empty regioninfo in t1.
     RegionInfo t1Ri2 = t1Ris.get(2);
     Put pEmptyRI = new Put(t1Ri2.getRegionName());
-    pEmptyRI.addColumn(MetaTableAccessor.getCatalogFamily(),
-        MetaTableAccessor.getRegionInfoColumn(), HConstants.EMPTY_BYTE_ARRAY);
-    MetaTableAccessor.putsToCatalogTable(TEST_UTIL.getConnection(), TableName.META_TABLE_NAME,
+    pEmptyRI.addColumn(CatalogAccessor.getCatalogFamily(),
+        CatalogAccessor.getRegionInfoColumn(), HConstants.EMPTY_BYTE_ARRAY);
+    CatalogAccessor.putsToCatalogTable(TEST_UTIL.getConnection(), TableName.META_TABLE_NAME,
         Arrays.asList(pEmptyRI));
     gc = janitor.scan();
     report = janitor.getLastReport();

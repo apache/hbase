@@ -27,7 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
@@ -246,7 +246,7 @@ public class TestSpaceQuotaBasicFunctioning {
       public boolean evaluate() throws Exception {
         Map<RegionInfo, Long> regionSizes = quotaManager.snapshotRegionSizes();
         List<RegionInfo> tableRegions =
-            MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), tableName);
+            CatalogAccessor.getTableRegions(TEST_UTIL.getConnection(), tableName);
         return regionSizes.containsKey(tableRegions.get(0));
       }
     });

@@ -19,8 +19,8 @@
 package org.apache.hadoop.hbase.mapred;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
@@ -284,7 +284,7 @@ public class TableMapReduceUtil {
     if (partitioner == HRegionPartitioner.class) {
       job.setPartitionerClass(HRegionPartitioner.class);
       int regions =
-        MetaTableAccessor.getRegionCount(HBaseConfiguration.create(job), TableName.valueOf(table));
+        CatalogAccessor.getRegionCount(HBaseConfiguration.create(job), TableName.valueOf(table));
       if (job.getNumReduceTasks() > regions) {
         job.setNumReduceTasks(regions);
       }
@@ -333,7 +333,7 @@ public class TableMapReduceUtil {
   public static void limitNumReduceTasks(String table, JobConf job)
   throws IOException {
     int regions =
-      MetaTableAccessor.getRegionCount(HBaseConfiguration.create(job), TableName.valueOf(table));
+      CatalogAccessor.getRegionCount(HBaseConfiguration.create(job), TableName.valueOf(table));
     if (job.getNumReduceTasks() > regions)
       job.setNumReduceTasks(regions);
   }
@@ -350,7 +350,7 @@ public class TableMapReduceUtil {
   public static void limitNumMapTasks(String table, JobConf job)
   throws IOException {
     int regions =
-      MetaTableAccessor.getRegionCount(HBaseConfiguration.create(job), TableName.valueOf(table));
+      CatalogAccessor.getRegionCount(HBaseConfiguration.create(job), TableName.valueOf(table));
     if (job.getNumMapTasks() > regions)
       job.setNumMapTasks(regions);
   }
@@ -365,7 +365,7 @@ public class TableMapReduceUtil {
    */
   public static void setNumReduceTasks(String table, JobConf job)
   throws IOException {
-    job.setNumReduceTasks(MetaTableAccessor.getRegionCount(HBaseConfiguration.create(job),
+    job.setNumReduceTasks(CatalogAccessor.getRegionCount(HBaseConfiguration.create(job),
       TableName.valueOf(table)));
   }
 
@@ -379,7 +379,7 @@ public class TableMapReduceUtil {
    */
   public static void setNumMapTasks(String table, JobConf job)
   throws IOException {
-    job.setNumMapTasks(MetaTableAccessor.getRegionCount(HBaseConfiguration.create(job),
+    job.setNumMapTasks(CatalogAccessor.getRegionCount(HBaseConfiguration.create(job),
       TableName.valueOf(table)));
   }
 

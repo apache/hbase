@@ -34,15 +34,8 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
@@ -473,12 +466,12 @@ public class TestRegionPlacement {
     final AtomicInteger regionOnPrimaryNum = new AtomicInteger(0);
     final AtomicInteger totalRegionNum = new AtomicInteger(0);
     LOG.info("The start of region placement verification");
-    MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
+    CatalogAccessor.Visitor visitor = new CatalogAccessor.Visitor() {
       @Override
       public boolean visit(Result result) throws IOException {
         try {
           @SuppressWarnings("deprecation")
-          RegionInfo info = MetaTableAccessor.getRegionInfo(result);
+          RegionInfo info = CatalogAccessor.getRegionInfo(result);
           if(info.getTable().getNamespaceAsString()
               .equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)) {
             return true;
@@ -527,7 +520,7 @@ public class TestRegionPlacement {
         }
       }
     };
-    MetaTableAccessor.fullScanRegions(CONNECTION, visitor);
+    CatalogAccessor.fullScanRegions(CONNECTION, visitor);
     LOG.info("There are " + regionOnPrimaryNum.intValue() + " out of " +
         totalRegionNum.intValue() + " regions running on the primary" +
         " region servers" );

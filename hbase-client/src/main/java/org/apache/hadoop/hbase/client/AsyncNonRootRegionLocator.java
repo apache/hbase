@@ -31,7 +31,6 @@ import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.removeRegi
 import static org.apache.hadoop.hbase.client.ConnectionUtils.createClosestRowAfter;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.isEmptyStopRow;
 import static org.apache.hadoop.hbase.client.RegionInfo.createRegionName;
-import static org.apache.hadoop.hbase.util.Bytes.BYTES_COMPARATOR;
 import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
 
 import java.io.IOException;
@@ -49,13 +48,11 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import org.apache.commons.lang3.ObjectUtils;
-import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -331,7 +328,7 @@ class AsyncNonRootRegionLocator {
 
   // return whether we should stop the scan
   private boolean onScanNext(TableName tableName, LocateRequest req, Result result) {
-    RegionLocations locs = MetaTableAccessor.getRegionLocations(result);
+    RegionLocations locs = CatalogAccessor.getRegionLocations(result);
     if (LOG.isDebugEnabled()) {
       LOG.debug("The fetched location of '{}', row='{}', locateType={} is {}", tableName,
         Bytes.toStringBinary(req.row), req.locateType, locs);
@@ -500,7 +497,7 @@ class AsyncNonRootRegionLocator {
         if (i < results.length) {
           TableCache tableCache = getTableCache(tableName);
           for (; i < results.length; i++) {
-            RegionLocations locs = MetaTableAccessor.getRegionLocations(results[i]);
+            RegionLocations locs = CatalogAccessor.getRegionLocations(results[i]);
             if (locs == null) {
               continue;
             }

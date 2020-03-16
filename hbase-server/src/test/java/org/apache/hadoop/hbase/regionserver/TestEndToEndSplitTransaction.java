@@ -36,12 +36,12 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
@@ -223,7 +223,7 @@ public class TestEndToEndSplitTransaction {
       try {
         Random random = new Random();
         for (int i = 0; i < 5; i++) {
-          List<RegionInfo> regions = MetaTableAccessor.getTableRegions(connection, tableName, true);
+          List<RegionInfo> regions = CatalogAccessor.getTableRegions(connection, tableName, true);
           if (regions.isEmpty()) {
             continue;
           }
@@ -294,10 +294,10 @@ public class TestEndToEndSplitTransaction {
 
     /** verify region boundaries obtained from MetaScanner */
     void verifyRegionsUsingMetaTableAccessor() throws Exception {
-      List<RegionInfo> regionList = MetaTableAccessor.getTableRegions(connection, tableName, true);
+      List<RegionInfo> regionList = CatalogAccessor.getTableRegions(connection, tableName, true);
       verifyTableRegions(regionList.stream()
         .collect(Collectors.toCollection(() -> new TreeSet<>(RegionInfo.COMPARATOR))));
-      regionList = MetaTableAccessor.getAllRegions(connection, true);
+      regionList = CatalogAccessor.getAllRegions(connection, true);
       verifyTableRegions(regionList.stream()
         .collect(Collectors.toCollection(() -> new TreeSet<>(RegionInfo.COMPARATOR))));
     }
@@ -404,7 +404,7 @@ public class TestEndToEndSplitTransaction {
     try {
       TEST_UTIL.waitFor(10000, new Waiter.Predicate<Exception>() {
         @Override public boolean evaluate() throws Exception {
-          return rs.getServerName().equals(MetaTableAccessor.
+          return rs.getServerName().equals(CatalogAccessor.
             getRegionLocation(admin.getConnection(), regionName).getServerName());
         }
       });
@@ -443,10 +443,10 @@ public class TestEndToEndSplitTransaction {
           break;
         }
 
-        region = MetaTableAccessor.getRegionInfo(result);
+        region = CatalogAccessor.getRegionInfo(result);
         if (region.isSplitParent()) {
           log("found parent region: " + region.toString());
-          PairOfSameType<RegionInfo> pair = MetaTableAccessor.getDaughterRegions(result);
+          PairOfSameType<RegionInfo> pair = CatalogAccessor.getDaughterRegions(result);
           daughterA = pair.getFirst();
           daughterB = pair.getSecond();
           break;
@@ -503,7 +503,7 @@ public class TestEndToEndSplitTransaction {
     log("blocking until region is in META: " + hri.getRegionNameAsString());
     long start = System.currentTimeMillis();
     while (System.currentTimeMillis() - start < timeout) {
-      HRegionLocation loc = MetaTableAccessor.getRegionLocation(conn, hri);
+      HRegionLocation loc = CatalogAccessor.getRegionLocation(conn, hri);
       if (loc != null && !loc.getRegion().isOffline()) {
         log("found region in META: " + hri.getRegionNameAsString());
         break;

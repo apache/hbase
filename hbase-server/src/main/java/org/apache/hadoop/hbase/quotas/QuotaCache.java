@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.quotas;
 
 import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
 
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
@@ -390,7 +390,7 @@ public class QuotaCache implements Stoppable {
         double factor = 1;
         try {
           long regionSize =
-              MetaTableAccessor.getTableRegions(rsServices.getConnection(), tableName, true)
+              CatalogAccessor.getTableRegions(rsServices.getConnection(), tableName, true)
                   .stream().filter(regionInfo -> !regionInfo.isOffline()).count();
           if (regionSize == 0) {
             factor = 0;

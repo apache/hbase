@@ -22,7 +22,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -131,7 +132,7 @@ public class UpdatePeerConfigProcedure extends ModifyPeerProcedure {
       if (oldPeerConfig.needToReplicate(tn)) {
         if (!peerConfig.needToReplicate(tn)) {
           // removed from peer config
-          for (String encodedRegionName : MetaTableAccessor
+          for (String encodedRegionName : CatalogAccessor
             .getTableEncodedRegionNamesForSerialReplication(conn, tn)) {
             addToList(encodedRegionNames, encodedRegionName, queueStorage);
           }

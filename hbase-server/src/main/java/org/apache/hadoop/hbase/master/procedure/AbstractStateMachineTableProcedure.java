@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseIOException;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotEnabledException;
@@ -124,7 +124,7 @@ public abstract class AbstractStateMachineTableProcedure<TState>
    */
   protected void checkTableModifiable(final MasterProcedureEnv env) throws IOException {
     // Checks whether the table exists
-    if (!MetaTableAccessor.tableExists(env.getMasterServices().getConnection(), getTableName())) {
+    if (!CatalogAccessor.tableExists(env.getMasterServices().getConnection(), getTableName())) {
       throw new TableNotFoundException(getTableName());
     }
   }

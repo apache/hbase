@@ -67,23 +67,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.ClusterMetrics;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MasterNotRunningException;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.RegionLocations;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -886,7 +872,7 @@ public class HBaseFsck extends Configured implements Closeable {
   public void checkRegionBoundaries() {
     try {
       ByteArrayComparator comparator = new ByteArrayComparator();
-      List<RegionInfo> regions = MetaTableAccessor.getAllRegions(connection, true);
+      List<RegionInfo> regions = CatalogAccessor.getAllRegions(connection, true);
       final RegionBoundariesInformation currentRegionBoundariesInformation =
           new RegionBoundariesInformation();
       Path hbaseRoot = FSUtils.getRootDir(getConf());
@@ -1609,7 +1595,7 @@ public class HBaseFsck extends Configured implements Closeable {
    */
   private void loadTableStates()
   throws IOException {
-    tableStates = MetaTableAccessor.getTableStates(connection);
+    tableStates = CatalogAccessor.getTableStates(connection);
     // Add hbase:meta so this tool keeps working. In hbase2, meta is always enabled though it
     // has no entry in the table states. HBCK doesn't work right w/ hbase2 but just do this in
     // meantime.
@@ -1897,8 +1883,8 @@ public class HBaseFsck extends Configured implements Closeable {
           && !tableName.isSystemTable()
           && tableInfo == null) {
         if (fixMeta) {
-          MetaTableAccessor.deleteTableState(connection, tableName);
-          TableState state = MetaTableAccessor.getTableState(connection, tableName);
+          CatalogAccessor.deleteTableState(connection, tableName);
+          TableState state = CatalogAccessor.getTableState(connection, tableName);
           if (state != null) {
             errors.reportError(ERROR_CODE.ORPHAN_TABLE_STATE,
                 tableName + " unable to delete dangling table state " + tableState);
@@ -1915,8 +1901,8 @@ public class HBaseFsck extends Configured implements Closeable {
     for (TableName tableName : tablesInfo.keySet()) {
       if (isTableIncluded(tableName) && !tableStates.containsKey(tableName)) {
         if (fixMeta) {
-          MetaTableAccessor.updateTableState(connection, tableName, TableState.State.ENABLED);
-          TableState newState = MetaTableAccessor.getTableState(connection, tableName);
+          CatalogAccessor.updateTableState(connection, tableName, TableState.State.ENABLED);
+          TableState newState = CatalogAccessor.getTableState(connection, tableName);
           if (newState == null) {
             errors.reportError(ERROR_CODE.NO_TABLE_STATE,
                 "Unable to change state for table " + tableName + " in meta ");
@@ -1982,7 +1968,7 @@ public class HBaseFsck extends Configured implements Closeable {
         .setOffline(false)
         .setSplit(false)
         .build();
-    Put p = MetaTableAccessor.makePutFromRegionInfo(hri, EnvironmentEdgeManager.currentTime());
+    Put p = CatalogAccessor.makePutFromRegionInfo(hri, EnvironmentEdgeManager.currentTime());
     mutations.add(p);
 
     meta.mutateRow(mutations);
@@ -2053,12 +2039,12 @@ public class HBaseFsck extends Configured implements Closeable {
     if (hi.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID) {
       int numReplicas = admin.getDescriptor(hi.getTableName()).getRegionReplication();
       for (int i = 0; i < numReplicas; i++) {
-        get.addColumn(HConstants.CATALOG_FAMILY, MetaTableAccessor.getServerColumn(i));
-        get.addColumn(HConstants.CATALOG_FAMILY, MetaTableAccessor.getStartCodeColumn(i));
+        get.addColumn(HConstants.CATALOG_FAMILY, CatalogAccessor.getServerColumn(i));
+        get.addColumn(HConstants.CATALOG_FAMILY, CatalogAccessor.getStartCodeColumn(i));
       }
     }
     Result r = meta.get(get);
-    RegionLocations rl = MetaTableAccessor.getRegionLocations(r);
+    RegionLocations rl = CatalogAccessor.getRegionLocations(r);
     if (rl == null) {
       LOG.warn("Unable to close region " + hi.getRegionNameAsString() +
           " since meta does not have handle to reach it");
@@ -2731,7 +2717,7 @@ public class HBaseFsck extends Configured implements Closeable {
    * @throws IOException if an error is encountered
    */
   boolean loadMetaEntries() throws IOException {
-    MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
+    CatalogAccessor.Visitor visitor = new CatalogAccessor.Visitor() {
       int countRecord = 1;
 
       // comparator to sort KeyValues with latest modtime
@@ -2748,7 +2734,7 @@ public class HBaseFsck extends Configured implements Closeable {
 
           // record the latest modification of this META record
           long ts =  Collections.max(result.listCells(), comp).getTimestamp();
-          RegionLocations rl = MetaTableAccessor.getRegionLocations(result);
+          RegionLocations rl = CatalogAccessor.getRegionLocations(result);
           if (rl == null) {
             emptyRegionInfoQualifiers.add(result);
             errors.reportError(ERROR_CODE.EMPTY_META_CELL,
@@ -2768,7 +2754,7 @@ public class HBaseFsck extends Configured implements Closeable {
               || hri.isMetaRegion())) {
             return true;
           }
-          PairOfSameType<RegionInfo> daughters = MetaTableAccessor.getDaughterRegions(result);
+          PairOfSameType<RegionInfo> daughters = CatalogAccessor.getDaughterRegions(result);
           for (HRegionLocation h : rl.getRegionLocations()) {
             if (h == null || h.getRegion() == null) {
               continue;
@@ -2792,7 +2778,7 @@ public class HBaseFsck extends Configured implements Closeable {
               throw new IOException("Two entries in hbase:meta are same " + previous);
             }
           }
-          List<RegionInfo> mergeParents = MetaTableAccessor.getMergeRegions(result.rawCells());
+          List<RegionInfo> mergeParents = CatalogAccessor.getMergeRegions(result.rawCells());
           if (mergeParents != null) {
             for (RegionInfo mergeRegion : mergeParents) {
               if (mergeRegion != null) {
@@ -2817,7 +2803,7 @@ public class HBaseFsck extends Configured implements Closeable {
     };
     if (!checkMetaOnly) {
       // Scan hbase:meta to pick up user regions
-      MetaTableAccessor.fullScanRegions(connection, visitor);
+      CatalogAccessor.fullScanRegions(connection, visitor);
     }
 
     errors.print("");
@@ -3895,10 +3881,10 @@ public class HBaseFsck extends Configured implements Closeable {
     barrierScan.setCaching(100);
     barrierScan.addFamily(HConstants.REPLICATION_BARRIER_FAMILY);
     barrierScan
-        .withStartRow(MetaTableAccessor.getTableStartRowForMeta(cleanReplicationBarrierTable,
-          MetaTableAccessor.QueryType.REGION))
-        .withStopRow(MetaTableAccessor.getTableStopRowForMeta(cleanReplicationBarrierTable,
-          MetaTableAccessor.QueryType.REGION));
+        .withStartRow(CatalogAccessor.getTableStartRowForMeta(cleanReplicationBarrierTable,
+          CatalogAccessor.QueryType.REGION))
+        .withStopRow(CatalogAccessor.getTableStopRowForMeta(cleanReplicationBarrierTable,
+          CatalogAccessor.QueryType.REGION));
     Result result;
     try (ResultScanner scanner = meta.getScanner(barrierScan)) {
       while ((result = scanner.next()) != null) {

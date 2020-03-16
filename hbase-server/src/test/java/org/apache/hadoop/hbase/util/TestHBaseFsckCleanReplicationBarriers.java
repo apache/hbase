@@ -18,11 +18,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -114,15 +111,15 @@ public class TestHBaseFsckCleanReplicationBarriers {
     barrierScan.addFamily(HConstants.REPLICATION_BARRIER_FAMILY);
     barrierScan
         .withStartRow(
-          MetaTableAccessor.getTableStartRowForMeta(tableName, MetaTableAccessor.QueryType.REGION))
+          CatalogAccessor.getTableStartRowForMeta(tableName, CatalogAccessor.QueryType.REGION))
         .withStopRow(
-          MetaTableAccessor.getTableStopRowForMeta(tableName, MetaTableAccessor.QueryType.REGION));
+          CatalogAccessor.getTableStopRowForMeta(tableName, CatalogAccessor.QueryType.REGION));
     Result result;
     try (ResultScanner scanner =
-        MetaTableAccessor.getCatalogHTable(UTIL.getConnection(), TableName.META_TABLE_NAME)
+        CatalogAccessor.getCatalogHTable(UTIL.getConnection(), TableName.META_TABLE_NAME)
             .getScanner(barrierScan)) {
       while ((result = scanner.next()) != null) {
-        assertTrue(MetaTableAccessor.getReplicationBarriers(result).length > 0);
+        assertTrue(CatalogAccessor.getReplicationBarriers(result).length > 0);
       }
     }
     boolean cleaned = HbckTestingUtil.cleanReplicationBarrier(UTIL.getConfiguration(), tableName);
@@ -136,7 +133,7 @@ public class TestHBaseFsckCleanReplicationBarriers {
     cleaned = HbckTestingUtil.cleanReplicationBarrier(UTIL.getConfiguration(), tableName);
     assertFalse(cleaned);
     for (RegionInfo region : regionInfos) {
-      assertEquals(0, MetaTableAccessor.getReplicationBarrier(UTIL.getConnection(),
+      assertEquals(0, CatalogAccessor.getReplicationBarrier(UTIL.getConnection(),
         region.getRegionName()).length);
     }
   }
@@ -169,7 +166,7 @@ public class TestHBaseFsckCleanReplicationBarriers {
     cleaned = HbckTestingUtil.cleanReplicationBarrier(UTIL.getConfiguration(), tableName);
     assertFalse(cleaned);
     for (RegionInfo region : UTIL.getAdmin().getRegions(tableName)) {
-      assertEquals(0, MetaTableAccessor.getReplicationBarrier(UTIL.getConnection(),
+      assertEquals(0, CatalogAccessor.getReplicationBarrier(UTIL.getConnection(),
         region.getRegionName()).length);
     }
   }

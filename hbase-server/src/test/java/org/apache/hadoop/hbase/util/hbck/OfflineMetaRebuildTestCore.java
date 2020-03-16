@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -224,7 +224,7 @@ public class OfflineMetaRebuildTestCore {
     out.close();
 
     // add to meta.
-    MetaTableAccessor.addRegionToMeta(TEST_UTIL.getConnection(), hri);
+    CatalogAccessor.addRegionToMeta(TEST_UTIL.getConnection(), hri);
     meta.close();
     return hri;
   }
@@ -238,7 +238,7 @@ public class OfflineMetaRebuildTestCore {
     List<Delete> dels = new ArrayList<>();
     for (Result r : scanner) {
       RegionInfo info =
-          MetaTableAccessor.getRegionInfo(r);
+          CatalogAccessor.getRegionInfo(r);
       if(info != null && !info.getTable().getNamespaceAsString()
           .equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)) {
         Delete d = new Delete(r.getRow());
@@ -279,8 +279,8 @@ public class OfflineMetaRebuildTestCore {
    */
   protected int scanMeta() throws IOException {
     LOG.info("Scanning META");
-    MetaTableAccessor.fullScanMetaAndPrint(TEST_UTIL.getConnection());
-    return MetaTableAccessor.fullScanRegions(TEST_UTIL.getConnection()).size();
+    CatalogAccessor.fullScanMetaAndPrint(TEST_UTIL.getConnection());
+    return CatalogAccessor.fullScanRegions(TEST_UTIL.getConnection()).size();
   }
 
   protected List<TableDescriptor> getTables(final Configuration configuration) throws IOException {

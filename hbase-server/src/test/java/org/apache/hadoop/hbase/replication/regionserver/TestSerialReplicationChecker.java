@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -181,7 +181,7 @@ public class TestSerialReplicationChecker {
   private void addParents(RegionInfo region, List<RegionInfo> parents) throws IOException {
     Put put = new Put(region.getRegionName(), EnvironmentEdgeManager.currentTime());
     put.addColumn(HConstants.REPLICATION_BARRIER_FAMILY,
-      MetaTableAccessor.REPLICATION_PARENT_QUALIFIER, MetaTableAccessor.getParentsBytes(parents));
+      CatalogAccessor.REPLICATION_PARENT_QUALIFIER, CatalogAccessor.getParentsBytes(parents));
     try (Table table = UTIL.getConnection().getTable(TableName.META_TABLE_NAME)) {
       table.put(put);
     }

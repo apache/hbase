@@ -25,7 +25,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -299,7 +299,7 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
       RegionInfo hri = createRegionInfo(tableName, 1);
       assertNull("RegionInfo was just instantiated by the test, but "
         + "shouldn't be in AM regionStates yet.", am.getRegionStates().getRegionState(hri));
-      MetaTableAccessor.addRegionToMeta(this.util.getConnection(), hri);
+      CatalogAccessor.addRegionToMeta(this.util.getConnection(), hri);
       assertNull("RegionInfo was manually added in META, but "
         + "shouldn't be in AM regionStates yet.", am.getRegionStates().getRegionState(hri));
       hri = am.loadRegionFromCatalog(hri.getEncodedName());

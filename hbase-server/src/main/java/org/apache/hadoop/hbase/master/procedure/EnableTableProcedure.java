@@ -20,12 +20,9 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNotDisabledException;
-import org.apache.hadoop.hbase.TableNotFoundException;
+
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -179,12 +176,12 @@ public class EnableTableProcedure
    */
   private int getReplicaCountInMeta(Connection connection, int regionReplicaCount,
       List<RegionInfo> regionsOfTable) throws IOException {
-    Result r = MetaTableAccessor.getCatalogFamilyRow(connection, regionsOfTable.get(0));
+    Result r = CatalogAccessor.getCatalogFamilyRow(connection, regionsOfTable.get(0));
     int replicasFound = 0;
     for (int i = 1; i < regionReplicaCount; i++) {
       // Since we have already added the entries to the META we will be getting only that here
       List<Cell> columnCells =
-          r.getColumnCells(HConstants.CATALOG_FAMILY, MetaTableAccessor.getServerColumn(i));
+          r.getColumnCells(HConstants.CATALOG_FAMILY, CatalogAccessor.getServerColumn(i));
       if (!columnCells.isEmpty()) {
         replicasFound++;
       }
@@ -283,7 +280,7 @@ public class EnableTableProcedure
     boolean canTableBeEnabled = true;
 
     // Check whether table exists
-    if (!MetaTableAccessor.tableExists(env.getMasterServices().getConnection(), tableName)) {
+    if (!CatalogAccessor.tableExists(env.getMasterServices().getConnection(), tableName)) {
       setFailure("master-enable-table", new TableNotFoundException(tableName));
       canTableBeEnabled = false;
     } else {

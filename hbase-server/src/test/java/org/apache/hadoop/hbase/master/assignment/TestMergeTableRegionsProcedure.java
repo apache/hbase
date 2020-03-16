@@ -23,11 +23,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
@@ -163,7 +160,7 @@ public class TestMergeTableRegionsProcedure {
   }
 
   private void testMerge(TableName tableName, int mergeCount) throws IOException {
-    List<RegionInfo> ris = MetaTableAccessor.getTableRegions(UTIL.getConnection(), tableName);
+    List<RegionInfo> ris = CatalogAccessor.getTableRegions(UTIL.getConnection(), tableName);
     int originalRegionCount = ris.size();
     assertTrue(originalRegionCount > mergeCount);
     RegionInfo[] regionsToMerge = ris.subList(0, mergeCount).toArray(new RegionInfo [] {});
@@ -181,9 +178,9 @@ public class TestMergeTableRegionsProcedure {
     long procId = procExec.submitProcedure(proc);
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
-    MetaTableAccessor.fullScanMetaAndPrint(UTIL.getConnection());
+    CatalogAccessor.fullScanMetaAndPrint(UTIL.getConnection());
     assertEquals(originalRegionCount - mergeCount + 1,
-        MetaTableAccessor.getTableRegions(UTIL.getConnection(), tableName).size());
+        CatalogAccessor.getTableRegions(UTIL.getConnection(), tableName).size());
 
     assertEquals(mergeSubmittedCount + 1, mergeProcMetrics.getSubmittedCounter().getCount());
     assertEquals(mergeFailedCount, mergeProcMetrics.getFailedCounter().getCount());
@@ -207,7 +204,7 @@ public class TestMergeTableRegionsProcedure {
     UTIL.getHBaseCluster().getMaster().getCatalogJanitor().triggerNow();
     byte [] mergedRegion = proc.getMergedRegion().getRegionName();
     while (ris != null && ris.get(0) != null && ris.get(1) != null) {
-      ris = MetaTableAccessor.getMergeRegions(UTIL.getConnection(), mergedRegion);
+      ris = CatalogAccessor.getMergeRegions(UTIL.getConnection(), mergedRegion);
       LOG.info("{} {}", Bytes.toStringBinary(mergedRegion), ris);
       Threads.sleep(1000);
     }

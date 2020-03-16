@@ -24,11 +24,8 @@ import java.util.List;
 import java.util.function.Supplier;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.TableExistsException;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -249,7 +246,7 @@ public class CreateTableProcedure
 
   private boolean prepareCreate(final MasterProcedureEnv env) throws IOException {
     final TableName tableName = getTableName();
-    if (MetaTableAccessor.tableExists(env.getMasterServices().getConnection(), tableName)) {
+    if (CatalogAccessor.tableExists(env.getMasterServices().getConnection(), tableName)) {
       setFailure("master-create-table", new TableExistsException(getTableName()));
       return false;
     }
@@ -409,7 +406,7 @@ public class CreateTableProcedure
   private static void addRegionsToMeta(final MasterProcedureEnv env,
       final TableDescriptor tableDescriptor,
       final List<RegionInfo> regionInfos) throws IOException {
-    MetaTableAccessor.addRegionsToMeta(env.getMasterServices().getConnection(),
+    CatalogAccessor.addRegionsToMeta(env.getMasterServices().getConnection(),
       regionInfos, tableDescriptor.getRegionReplication());
   }
 

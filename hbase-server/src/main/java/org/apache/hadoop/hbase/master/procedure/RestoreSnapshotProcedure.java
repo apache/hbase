@@ -27,11 +27,8 @@ import java.util.Map;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseIOException;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -330,7 +327,7 @@ public class RestoreSnapshotProcedure
   private void prepareRestore(final MasterProcedureEnv env) throws IOException {
     final TableName tableName = getTableName();
     // Checks whether the table exists
-    if (!MetaTableAccessor.tableExists(env.getMasterServices().getConnection(), tableName)) {
+    if (!CatalogAccessor.tableExists(env.getMasterServices().getConnection(), tableName)) {
       throw new TableNotFoundException(tableName);
     }
 
@@ -433,7 +430,7 @@ public class RestoreSnapshotProcedure
       // not overwritten/removed, so you end up with old informations
       // that are not correct after the restore.
       if (regionsToRemove != null) {
-        MetaTableAccessor.deleteRegionInfos(conn, regionsToRemove);
+        CatalogAccessor.deleteRegionInfos(conn, regionsToRemove);
         deleteRegionsFromInMemoryStates(regionsToRemove, env, regionReplication);
       }
 
@@ -444,12 +441,12 @@ public class RestoreSnapshotProcedure
       // All the information in hbase:meta are coming from the .regioninfo of each region present
       // in the snapshot folder.
       if (regionsToAdd != null) {
-        MetaTableAccessor.addRegionsToMeta(conn, regionsToAdd, regionReplication);
+        CatalogAccessor.addRegionsToMeta(conn, regionsToAdd, regionReplication);
         addRegionsToInMemoryStates(regionsToAdd, env, regionReplication);
       }
 
       if (regionsToRestore != null) {
-        MetaTableAccessor.overwriteRegions(conn, regionsToRestore, regionReplication);
+        CatalogAccessor.overwriteRegions(conn, regionsToRestore, regionReplication);
 
         deleteRegionsFromInMemoryStates(regionsToRestore, env, regionReplication);
         addRegionsToInMemoryStates(regionsToRestore, env, regionReplication);

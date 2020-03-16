@@ -135,13 +135,13 @@ public class TestSplitMerge {
     UTIL.getAdmin().mergeRegionsAsync(regionNames, false).get(60, TimeUnit.SECONDS);
 
     List<RegionInfo> mergedRegions =
-        MetaTableAccessor.getTableRegions(UTIL.getConnection(), tableName);
+        CatalogAccessor.getTableRegions(UTIL.getConnection(), tableName);
 
     assertEquals(1, mergedRegions.size());
 
     RegionInfo mergedRegion = mergedRegions.get(0);
 
-    List<RegionInfo> mergeParentRegions = MetaTableAccessor.getMergeRegions(UTIL.getConnection(),
+    List<RegionInfo> mergeParentRegions = CatalogAccessor.getMergeRegions(UTIL.getConnection(),
       mergedRegion.getRegionName());
 
     assertEquals(mergeParentRegions.size(), regionCount);

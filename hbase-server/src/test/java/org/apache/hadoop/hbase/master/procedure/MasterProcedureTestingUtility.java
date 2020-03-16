@@ -30,13 +30,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.RegionLocations;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -209,7 +204,7 @@ public class MasterProcedureTestingUtility {
     LOG.debug("Table directory layout is as expected.");
 
     // check meta
-    assertTrue(MetaTableAccessor.tableExists(master.getConnection(), tableName));
+    assertTrue(CatalogAccessor.tableExists(master.getConnection(), tableName));
     assertEquals(regions.length, countMetaRegions(master, tableName));
 
     // check htd
@@ -229,7 +224,7 @@ public class MasterProcedureTestingUtility {
     assertFalse(fs.exists(tableDir));
 
     // check meta
-    assertFalse(MetaTableAccessor.tableExists(master.getConnection(), tableName));
+    assertFalse(CatalogAccessor.tableExists(master.getConnection(), tableName));
     assertEquals(0, countMetaRegions(master, tableName));
 
     // check htd
@@ -240,10 +235,10 @@ public class MasterProcedureTestingUtility {
   private static int countMetaRegions(final HMaster master, final TableName tableName)
       throws IOException {
     final AtomicInteger actualRegCount = new AtomicInteger(0);
-    final MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
+    final CatalogAccessor.Visitor visitor = new CatalogAccessor.Visitor() {
       @Override
       public boolean visit(Result rowResult) throws IOException {
-        RegionLocations list = MetaTableAccessor.getRegionLocations(rowResult);
+        RegionLocations list = CatalogAccessor.getRegionLocations(rowResult);
         if (list == null) {
           LOG.warn("No serialized RegionInfo in " + rowResult);
           return true;
@@ -271,7 +266,7 @@ public class MasterProcedureTestingUtility {
         return true;
       }
     };
-    MetaTableAccessor.scanMetaForTableRegions(master.getConnection(), visitor, tableName);
+    CatalogAccessor.scanMetaForTableRegions(master.getConnection(), visitor, tableName);
     return actualRegCount.get();
   }
 

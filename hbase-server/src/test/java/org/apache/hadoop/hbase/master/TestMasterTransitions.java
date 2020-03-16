@@ -18,11 +18,9 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.TableName;
+
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -498,7 +496,7 @@ public class TestMasterTransitions {
     scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
     ResultScanner s = meta.getScanner(scan);
     for (Result r = null; (r = s.next()) != null;) {
-      RegionInfo hri = MetaTableAccessor.getRegionInfo(r);
+      RegionInfo hri = CatalogAccessor.getRegionInfo(r);
       if (hri == null) break;
       if (!hri.getTable().equals(TABLENAME)) {
         continue;

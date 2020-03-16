@@ -19,12 +19,9 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.HBaseIOException;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNotEnabledException;
-import org.apache.hadoop.hbase.TableNotFoundException;
+
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableState;
@@ -119,7 +116,7 @@ public class DisableTableProcedure
                 long maxSequenceId = WALSplitUtil.getMaxRegionSequenceId(
                   env.getMasterConfiguration(), region, fs::getFileSystem, fs::getWALFileSystem);
                 long openSeqNum = maxSequenceId > 0 ? maxSequenceId + 1 : HConstants.NO_SEQNUM;
-                mutator.mutate(MetaTableAccessor.makePutForReplicationBarrier(region, openSeqNum,
+                mutator.mutate(CatalogAccessor.makePutForReplicationBarrier(region, openSeqNum,
                   EnvironmentEdgeManager.currentTime()));
               }
             }
@@ -246,7 +243,7 @@ public class DisableTableProcedure
       setFailure("master-disable-table",
         new ConstraintException("Cannot disable " + this.tableName));
       canTableBeDisabled = false;
-    } else if (!MetaTableAccessor.tableExists(env.getMasterServices().getConnection(), tableName)) {
+    } else if (!CatalogAccessor.tableExists(env.getMasterServices().getConnection(), tableName)) {
       setFailure("master-disable-table", new TableNotFoundException(tableName));
       canTableBeDisabled = false;
     } else if (!skipTableStateCheck) {

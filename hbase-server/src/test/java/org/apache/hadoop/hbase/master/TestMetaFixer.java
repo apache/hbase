@@ -24,11 +24,9 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.BooleanSupplier;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.TableName;
+
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -63,7 +61,7 @@ public class TestMetaFixer {
   }
 
   private void deleteRegion(MasterServices services, RegionInfo ri) throws IOException {
-    MetaTableAccessor.deleteRegionInfo(TEST_UTIL.getConnection(), ri);
+    CatalogAccessor.deleteRegionInfo(TEST_UTIL.getConnection(), ri);
     // Delete it from Master context too else it sticks around.
     services.getAssignmentManager().getRegionStates().deleteRegion(ri);
   }
@@ -72,7 +70,7 @@ public class TestMetaFixer {
   public void testPlugsHoles() throws Exception {
     TableName tn = TableName.valueOf(this.name.getMethodName());
     TEST_UTIL.createMultiRegionTable(tn, HConstants.CATALOG_FAMILY);
-    List<RegionInfo> ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), tn);
+    List<RegionInfo> ris = CatalogAccessor.getTableRegions(TEST_UTIL.getConnection(), tn);
     MasterServices services = TEST_UTIL.getHBaseCluster().getMaster();
     int initialSize = services.getAssignmentManager().getRegionStates().getRegionStates().size();
     services.getCatalogJanitor().scan();
@@ -100,7 +98,7 @@ public class TestMetaFixer {
     // watchdog TestRule terminates the test.
     await(50, () -> isNotEmpty(services.getAssignmentManager().getRegionsInTransition()));
 
-    ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), tn);
+    ris = CatalogAccessor.getTableRegions(TEST_UTIL.getConnection(), tn);
     assertEquals(originalCount, ris.size());
   }
 
@@ -114,19 +112,19 @@ public class TestMetaFixer {
   public void testOneRegionTable() throws IOException {
     TableName tn = TableName.valueOf(this.name.getMethodName());
     TEST_UTIL.createTable(tn, HConstants.CATALOG_FAMILY);
-    List<RegionInfo> ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), tn);
+    List<RegionInfo> ris = CatalogAccessor.getTableRegions(TEST_UTIL.getConnection(), tn);
     MasterServices services = TEST_UTIL.getHBaseCluster().getMaster();
     services.getCatalogJanitor().scan();
     deleteRegion(services, ris.get(0));
     services.getCatalogJanitor().scan();
     CatalogJanitor.Report report = services.getCatalogJanitor().getLastReport();
-    ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), tn);
+    ris = CatalogAccessor.getTableRegions(TEST_UTIL.getConnection(), tn);
     assertTrue(ris.isEmpty());
     MetaFixer fixer = new MetaFixer(services);
     fixer.fixHoles(report);
     report = services.getCatalogJanitor().getLastReport();
     assertTrue(report.isEmpty());
-    ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), tn);
+    ris = CatalogAccessor.getTableRegions(TEST_UTIL.getConnection(), tn);
     assertEquals(0, ris.size());
   }
 
@@ -136,9 +134,9 @@ public class TestMetaFixer {
         setStartKey(a.getStartKey()).
         setEndKey(b.getEndKey()).
         build();
-    MetaTableAccessor.putsToCatalogTable(services.getConnection(),
+    CatalogAccessor.putsToCatalogTable(services.getConnection(),
         TableName.META_TABLE_NAME,
-        Collections.singletonList(MetaTableAccessor.makePutFromRegionInfo(overlapRegion,
+        Collections.singletonList(CatalogAccessor.makePutFromRegionInfo(overlapRegion,
             System.currentTimeMillis())));
     // TODO: Add checks at assign time to PREVENT being able to assign over existing assign.
     services.getAssignmentManager().assign(overlapRegion);
@@ -148,7 +146,7 @@ public class TestMetaFixer {
   public void testOverlap() throws Exception {
     TableName tn = TableName.valueOf(this.name.getMethodName());
     TEST_UTIL.createMultiRegionTable(tn, HConstants.CATALOG_FAMILY);
-    List<RegionInfo> ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), tn);
+    List<RegionInfo> ris = CatalogAccessor.getTableRegions(TEST_UTIL.getConnection(), tn);
     assertTrue(ris.size() > 5);
     MasterServices services = TEST_UTIL.getHBaseCluster().getMaster();
     services.getCatalogJanitor().scan();

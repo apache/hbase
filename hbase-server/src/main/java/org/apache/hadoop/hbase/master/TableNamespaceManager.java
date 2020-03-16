@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.BufferedMutator;
@@ -117,7 +117,7 @@ public class TableNamespaceManager {
   }
 
   public void start() throws IOException {
-    TableState nsTableState = MetaTableAccessor.getTableState(masterServices.getConnection(),
+    TableState nsTableState = CatalogAccessor.getTableState(masterServices.getConnection(),
       TableName.NAMESPACE_TABLE_NAME);
     if (nsTableState != null && nsTableState.isEnabled()) {
       migrateNamespaceTable();

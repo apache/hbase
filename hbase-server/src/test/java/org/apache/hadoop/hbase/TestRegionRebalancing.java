@@ -117,7 +117,7 @@ public class TestRegionRebalancing {
           1, HBaseTestingUtility.KEYS.length));
       this.regionLocator = connection.getRegionLocator(this.tableDescriptor.getTableName());
 
-      MetaTableAccessor.fullScanMetaAndPrint(admin.getConnection());
+      CatalogAccessor.fullScanMetaAndPrint(admin.getConnection());
 
       assertEquals("Test table should have right number of regions",
         HBaseTestingUtility.KEYS.length,

@@ -20,11 +20,8 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -109,7 +106,7 @@ public class TestSpaceQuotaDropTable {
       public boolean evaluate() throws Exception {
         Map<RegionInfo, Long> regionSizes = quotaManager.snapshotRegionSizes();
         List<RegionInfo> tableRegions =
-            MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), tn);
+            CatalogAccessor.getTableRegions(TEST_UTIL.getConnection(), tn);
         return regionSizes.containsKey(tableRegions.get(0));
       }
     });

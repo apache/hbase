@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.master;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -71,10 +71,10 @@ public class TestTableStateManager {
     // Table is disabled. Now remove the DISABLED column from the hbase:meta for this table's
     // region. We want to see if Master will read the DISABLED from zk and make use of it as
     // though it were reading the zk table state written by a hbase-1.x cluster.
-    TableState state = MetaTableAccessor.getTableState(TEST_UTIL.getConnection(), tableName);
+    TableState state = CatalogAccessor.getTableState(TEST_UTIL.getConnection(), tableName);
     assertTrue("State=" + state, state.getState().equals(TableState.State.DISABLED));
-    MetaTableAccessor.deleteTableState(TEST_UTIL.getConnection(), tableName);
-    assertTrue(MetaTableAccessor.getTableState(TEST_UTIL.getConnection(), tableName) == null);
+    CatalogAccessor.deleteTableState(TEST_UTIL.getConnection(), tableName);
+    assertTrue(CatalogAccessor.getTableState(TEST_UTIL.getConnection(), tableName) == null);
     // Now kill Master so a new one can come up and run through the zk migration.
     HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
     master.stop("Restarting");
@@ -87,7 +87,7 @@ public class TestTableStateManager {
     while (!master.isInitialized()) {
       Threads.sleep(1);
     }
-    assertTrue(MetaTableAccessor.getTableState(TEST_UTIL.getConnection(),
+    assertTrue(CatalogAccessor.getTableState(TEST_UTIL.getConnection(),
         tableName).getState().equals(TableState.State.DISABLED));
   }
 }

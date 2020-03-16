@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotEnabledException;
@@ -236,7 +236,7 @@ public class TestAdmin3 extends TestAdminBase {
     Table table = TEST_UTIL.getConnection().getTable(htd.getTableName());
     TableDescriptor confirmedHtd = table.getDescriptor();
     assertEquals(0, TableDescriptor.COMPARATOR.compare(htd, confirmedHtd));
-    MetaTableAccessor.fullScanMetaAndPrint(TEST_UTIL.getConnection());
+    CatalogAccessor.fullScanMetaAndPrint(TEST_UTIL.getConnection());
     table.close();
   }
 

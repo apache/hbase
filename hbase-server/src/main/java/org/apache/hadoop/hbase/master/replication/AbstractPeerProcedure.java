@@ -21,7 +21,8 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Connection;
@@ -160,7 +161,7 @@ public abstract class AbstractPeerProcedure<TState> extends AbstractPeerNoLockPr
       LOG.debug("Skip settting last pushed sequence id for {}", tableName);
       return;
     }
-    for (Pair<String, Long> name2Barrier : MetaTableAccessor
+    for (Pair<String, Long> name2Barrier : CatalogAccessor
       .getTableEncodedRegionNameAndLastBarrier(conn, tableName)) {
       LOG.trace("Update last pushed sequence id for {}, {}", tableName, name2Barrier);
       addToMap(lastSeqIds, name2Barrier.getFirst(), name2Barrier.getSecond().longValue() - 1,

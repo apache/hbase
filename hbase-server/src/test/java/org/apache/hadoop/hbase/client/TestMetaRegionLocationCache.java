@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
+import org.apache.hadoop.hbase.zookeeper.RootTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
@@ -72,10 +72,10 @@ public class TestMetaRegionLocationCache {
 
   private List<HRegionLocation> getCurrentMetaLocations(ZKWatcher zk) throws Exception {
     List<HRegionLocation> result = new ArrayList<>();
-    for (String znode: zk.getMetaReplicaNodes()) {
+    for (String znode: zk.getRootReplicaNodes()) {
       String path = ZNodePaths.joinZNode(zk.getZNodePaths().baseZNode, znode);
       int replicaId = zk.getZNodePaths().getMetaReplicaIdFromPath(path);
-      RegionState state = MetaTableLocator.getRootRegionState(zk, replicaId);
+      RegionState state = RootTableLocator.getRootRegionState(zk, replicaId);
       result.add(new HRegionLocation(state.getRegion(), state.getServerName()));
     }
     return result;
@@ -95,7 +95,7 @@ public class TestMetaRegionLocationCache {
         master.getMetaRegionLocationCache().getMetaRegionLocations().get();
     assertFalse(metaHRLs.isEmpty());
     ZKWatcher zk = master.getZooKeeper();
-    List<String> metaZnodes = zk.getMetaReplicaNodes();
+    List<String> metaZnodes = zk.getRootReplicaNodes();
     assertEquals(metaZnodes.size(), metaHRLs.size());
     List<HRegionLocation> actualHRLs = getCurrentMetaLocations(zk);
     Collections.sort(metaHRLs);
@@ -158,7 +158,7 @@ public class TestMetaRegionLocationCache {
         // assignment.
         for (int i = 0; i < 3; i++) {
           // Updates the meta znodes.
-          MetaTableLocator.setMetaLocation(zkWatcher, sn, i, RegionState.State.OPEN);
+          RootTableLocator.setRootLocation(zkWatcher, sn, i, RegionState.State.OPEN);
         }
         // Wait until the meta cache is populated.
         int iters = 0;

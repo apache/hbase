@@ -22,8 +22,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -97,7 +97,7 @@ public class HBCKServerCrashProcedure extends ServerCrashProcedure {
     UnknownServerVisitor visitor =
         new UnknownServerVisitor(env.getMasterServices().getConnection(), getServerName());
     try {
-      MetaTableAccessor.scanMetaForTableRegions(env.getMasterServices().getConnection(),
+      CatalogAccessor.scanMetaForTableRegions(env.getMasterServices().getConnection(),
           visitor, null);
     } catch (IOException ioe) {
       LOG.warn("Failed scan of hbase:meta for 'Unknown Servers'", ioe);
@@ -114,7 +114,7 @@ public class HBCKServerCrashProcedure extends ServerCrashProcedure {
    * Visitor for hbase:meta that 'fixes' Unknown Server issues. Collects
    * a List of Regions to reassign as 'result'.
    */
-  private static class UnknownServerVisitor implements MetaTableAccessor.Visitor {
+  private static class UnknownServerVisitor implements CatalogAccessor.Visitor {
     private final List<RegionInfo> reassigns = new ArrayList<>();
     private final ServerName unknownServerName;
     private final Connection connection;
@@ -126,7 +126,7 @@ public class HBCKServerCrashProcedure extends ServerCrashProcedure {
 
     @Override
     public boolean visit(Result result) throws IOException {
-      RegionLocations rls = MetaTableAccessor.getRegionLocations(result);
+      RegionLocations rls = CatalogAccessor.getRegionLocations(result);
       if (rls == null) {
         return true;
       }
@@ -150,7 +150,7 @@ public class HBCKServerCrashProcedure extends ServerCrashProcedure {
           LOG.info("Moving {} from CLOSING to CLOSED in hbase:meta",
               hrl.getRegion().getRegionNameAsString());
           try {
-            MetaTableAccessor.updateRegionState(this.connection, hrl.getRegion(),
+            CatalogAccessor.updateRegionState(this.connection, hrl.getRegion(),
                 RegionState.State.CLOSED);
           } catch (IOException ioe) {
             LOG.warn("Failed moving {} from CLOSING to CLOSED", ioe);

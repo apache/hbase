@@ -40,7 +40,7 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo;
@@ -129,7 +129,7 @@ public final class BackupUtils {
     // for each table in the table set, copy out the table info and region
     // info files in the correct directory structure
     for (TableName table : backupInfo.getTables()) {
-      if (!MetaTableAccessor.tableExists(conn, table)) {
+      if (!CatalogAccessor.tableExists(conn, table)) {
         LOG.warn("Table " + table + " does not exists, skipping it.");
         continue;
       }
@@ -143,7 +143,7 @@ public final class BackupUtils {
       LOG.debug("Attempting to copy table info for:" + table + " target: " + target
           + " descriptor: " + orig);
       LOG.debug("Finished copying tableinfo.");
-      List<RegionInfo> regions = MetaTableAccessor.getTableRegions(conn, table);
+      List<RegionInfo> regions = CatalogAccessor.getTableRegions(conn, table);
       // For each region, write the region info to disk
       LOG.debug("Starting to write region info for table " + table);
       for (RegionInfo regionInfo : regions) {

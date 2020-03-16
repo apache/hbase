@@ -32,14 +32,8 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.RegionLocations;
-import org.apache.hadoop.hbase.ScheduledChore;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -185,7 +179,7 @@ public class CatalogJanitor extends ScheduledChore {
           break;
         }
 
-        List<RegionInfo> parents = MetaTableAccessor.getMergeRegions(e.getValue().rawCells());
+        List<RegionInfo> parents = CatalogAccessor.getMergeRegions(e.getValue().rawCells());
         if (parents != null && cleanMergeRegion(e.getKey(), parents)) {
           gcs++;
         }
@@ -208,7 +202,7 @@ public class CatalogJanitor extends ScheduledChore {
           // We could not clean the parent, so it's daughters should not be
           // cleaned either (HBASE-6160)
           PairOfSameType<RegionInfo> daughters =
-              MetaTableAccessor.getDaughterRegions(e.getValue());
+              CatalogAccessor.getDaughterRegions(e.getValue());
           parentNotCleaned.add(daughters.getFirst().getEncodedName());
           parentNotCleaned.add(daughters.getSecond().getEncodedName());
         }
@@ -226,7 +220,7 @@ public class CatalogJanitor extends ScheduledChore {
   Report scanForReport() throws IOException {
     ReportMakingVisitor visitor = new ReportMakingVisitor(this.services);
     // Null tablename means scan all of meta.
-    MetaTableAccessor.scanMetaForTableRegions(this.services.getConnection(), visitor, null);
+    CatalogAccessor.scanMetaForTableRegions(this.services.getConnection(), visitor, null);
     return visitor.getReport();
   }
 
@@ -319,12 +313,12 @@ public class CatalogJanitor extends ScheduledChore {
   boolean cleanParent(final RegionInfo parent, Result rowContent)
   throws IOException {
     // Check whether it is a merged region and if it is clean of references.
-    if (MetaTableAccessor.hasMergeRegions(rowContent.rawCells())) {
+    if (CatalogAccessor.hasMergeRegions(rowContent.rawCells())) {
       // Wait until clean of merge parent regions first
       return false;
     }
     // Run checks on each daughter split.
-    PairOfSameType<RegionInfo> daughters = MetaTableAccessor.getDaughterRegions(rowContent);
+    PairOfSameType<RegionInfo> daughters = CatalogAccessor.getDaughterRegions(rowContent);
     Pair<Boolean, Boolean> a = checkDaughterInFs(parent, daughters.getFirst());
     Pair<Boolean, Boolean> b = checkDaughterInFs(parent, daughters.getSecond());
     if (hasNoReferences(a) && hasNoReferences(b)) {
@@ -419,7 +413,7 @@ public class CatalogJanitor extends ScheduledChore {
    */
   public boolean cleanMergeQualifier(final RegionInfo region) throws IOException {
     // Get merge regions if it is a merged region and already has merge qualifier
-    List<RegionInfo> parents = MetaTableAccessor.getMergeRegions(this.services.getConnection(),
+    List<RegionInfo> parents = CatalogAccessor.getMergeRegions(this.services.getConnection(),
         region.getRegionName());
     if (parents == null || parents.isEmpty()) {
       // It doesn't have merge qualifier, no need to clean
@@ -530,7 +524,7 @@ public class CatalogJanitor extends ScheduledChore {
    * generate more report. Report is NOT ready until after this visitor has been
    * {@link #close()}'d.
    */
-  static class ReportMakingVisitor implements MetaTableAccessor.CloseableVisitor {
+  static class ReportMakingVisitor implements CatalogAccessor.CloseableVisitor {
     private final MasterServices services;
     private volatile boolean closed;
 
@@ -588,7 +582,7 @@ public class CatalogJanitor extends ScheduledChore {
         if (regionInfo.isSplitParent()) { // splitParent means split and offline.
           this.report.splitParents.put(regionInfo, r);
         }
-        if (MetaTableAccessor.hasMergeRegions(r.rawCells())) {
+        if (CatalogAccessor.hasMergeRegions(r.rawCells())) {
           this.report.mergedRegions.put(regionInfo, r);
         }
       }
@@ -608,10 +602,10 @@ public class CatalogJanitor extends ScheduledChore {
       // If locations is null, ensure the regioninfo is for sure empty before progressing.
       // If really empty, report as missing regioninfo!  Otherwise, can run server check
       // and get RegionInfo from locations.
-      RegionLocations locations = MetaTableAccessor.getRegionLocations(metaTableRow);
+      RegionLocations locations = CatalogAccessor.getRegionLocations(metaTableRow);
       if (locations == null) {
-        ri = MetaTableAccessor.getRegionInfo(metaTableRow,
-            MetaTableAccessor.getRegionInfoColumn());
+        ri = CatalogAccessor.getRegionInfo(metaTableRow,
+            CatalogAccessor.getRegionInfoColumn());
       } else {
         ri = locations.getDefaultRegionLocation().getRegion();
         checkServer(locations);
@@ -809,7 +803,7 @@ public class CatalogJanitor extends ScheduledChore {
             r.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER));
         t.put(p);
       }
-      MetaTableAccessor.scanMetaForTableRegions(connection, visitor, null);
+      CatalogAccessor.scanMetaForTableRegions(connection, visitor, null);
       Report report = visitor.getReport();
       LOG.info(report != null? report.toString(): "empty");
     }

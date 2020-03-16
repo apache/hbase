@@ -43,7 +43,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -840,7 +840,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
 
     // Execute the restore/clone operation
     long procId;
-    if (MetaTableAccessor.tableExists(master.getConnection(), tableName)) {
+    if (CatalogAccessor.tableExists(master.getConnection(), tableName)) {
       procId = restoreSnapshot(reqSnapshot, tableName, snapshot, snapshotTableDesc, nonceKey,
         restoreAcl);
     } else {

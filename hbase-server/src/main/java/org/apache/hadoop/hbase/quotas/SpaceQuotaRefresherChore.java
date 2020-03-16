@@ -23,7 +23,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -160,7 +160,7 @@ public class SpaceQuotaRefresherChore extends ScheduledChore {
    * @throws IOException throws IOException
    */
   boolean checkQuotaTableExists() throws IOException {
-    return MetaTableAccessor.tableExists(getConnection(), QuotaUtil.QUOTA_TABLE_NAME);
+    return CatalogAccessor.tableExists(getConnection(), QuotaUtil.QUOTA_TABLE_NAME);
   }
 
   /**

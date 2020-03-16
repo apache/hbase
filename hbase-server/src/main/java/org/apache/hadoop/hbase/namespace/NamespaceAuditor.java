@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.namespace;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.HBaseIOException;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
@@ -66,7 +66,7 @@ public class NamespaceAuditor {
   public void checkQuotaToCreateTable(TableName tName, int regions) throws IOException {
     if (stateManager.isInitialized()) {
       // We do this check to fail fast.
-      if (MetaTableAccessor.tableExists(this.masterServices.getConnection(), tName)) {
+      if (CatalogAccessor.tableExists(this.masterServices.getConnection(), tName)) {
         throw new TableExistsException(tName);
       }
       stateManager.checkAndUpdateNamespaceTableCount(tName, regions);

@@ -23,15 +23,8 @@ import java.util.List;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellBuilderFactory;
-import org.apache.hadoop.hbase.CellBuilderType;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.RegionLocations;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
@@ -45,7 +38,7 @@ import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
+import org.apache.hadoop.hbase.zookeeper.RootTableLocator;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -76,8 +69,8 @@ public class RegionStateStore {
 
   public void visitCatalogTable(TableName catalogTable, final RegionStateVisitor visitor)
     throws IOException {
-    MetaTableAccessor.fullScanRegions(master.getConnection(), catalogTable,
-        new MetaTableAccessor.Visitor() {
+    CatalogAccessor.fullScanRegions(master.getConnection(), catalogTable,
+        new CatalogAccessor.Visitor() {
       final boolean isDebugEnabled = LOG.isDebugEnabled();
 
       @Override
@@ -110,7 +103,7 @@ public class RegionStateStore {
    */
   public void visitCatalogForRegion(final String regionEncodedName, final RegionStateVisitor visitor)
       throws IOException {
-    Result result = MetaTableAccessor.
+    Result result = CatalogAccessor.
       scanByRegionEncodedName(master.getConnection(), regionEncodedName);
     if (result != null) {
       visitCatalogEntry(visitor, result);
@@ -119,7 +112,7 @@ public class RegionStateStore {
 
   private void visitCatalogEntry(final RegionStateVisitor visitor, final Result result)
       throws IOException {
-    final RegionLocations rl = MetaTableAccessor.getRegionLocations(result);
+    final RegionLocations rl = CatalogAccessor.getRegionLocations(result);
     if (rl == null) return;
 
     final HRegionLocation[] locations = rl.getRegionLocations();
@@ -166,7 +159,7 @@ public class RegionStateStore {
   private void updateRootLocation(RegionInfo regionInfo, ServerName serverName, State state)
       throws IOException {
     try {
-      MetaTableLocator.setMetaLocation(master.getZooKeeper(), serverName, regionInfo.getReplicaId(),
+      RootTableLocator.setRootLocation(master.getZooKeeper(), serverName, regionInfo.getReplicaId(),
         state);
     } catch (KeeperException e) {
       throw new IOException(e);
@@ -180,19 +173,19 @@ public class RegionStateStore {
       TableName.ROOT_TABLE_NAME : TableName.META_TABLE_NAME;
     long time = EnvironmentEdgeManager.currentTime();
     final int replicaId = regionInfo.getReplicaId();
-    final Put put = new Put(MetaTableAccessor.getCatalogKeyForRegion(regionInfo), time);
-    MetaTableAccessor.addRegionInfo(put, regionInfo);
+    final Put put = new Put(CatalogAccessor.getCatalogKeyForRegion(regionInfo), time);
+    CatalogAccessor.addRegionInfo(put, regionInfo);
     final StringBuilder info =
       new StringBuilder("pid=").append(pid).append(" updating "+catalogTableName+" row=")
         .append(regionInfo.getEncodedName()).append(", regionState=").append(state);
     if (openSeqNum >= 0) {
       Preconditions.checkArgument(state == State.OPEN && regionLocation != null,
           "Open region should be on a server");
-      MetaTableAccessor.addLocation(put, regionLocation, openSeqNum, replicaId);
+      CatalogAccessor.addLocation(put, regionLocation, openSeqNum, replicaId);
       // only update replication barrier for default replica
       if (regionInfo.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID &&
         hasGlobalReplicationScope(regionInfo.getTable())) {
-        MetaTableAccessor.addReplicationBarrier(put, openSeqNum);
+        CatalogAccessor.addReplicationBarrier(put, openSeqNum);
         info.append(", repBarrier=").append(openSeqNum);
       }
       info.append(", openSeqNum=").append(openSeqNum);
@@ -255,7 +248,7 @@ public class RegionStateStore {
     if (htd.hasGlobalReplicationScope()) {
       parentOpenSeqNum = getOpenSeqNumForParentRegion(parent);
     }
-    MetaTableAccessor.splitRegion(master.getConnection(), parent, parentOpenSeqNum, hriA, hriB,
+    CatalogAccessor.splitRegion(master.getConnection(), parent, parentOpenSeqNum, hriA, hriB,
       serverName, getRegionReplication(htd));
   }
 
@@ -270,7 +263,7 @@ public class RegionStateStore {
     for (RegionInfo ri: parents) {
       parentSeqNums.put(ri, globalScope? getOpenSeqNumForParentRegion(ri): -1);
     }
-    MetaTableAccessor.mergeRegions(master.getConnection(), child, parentSeqNums,
+    CatalogAccessor.mergeRegions(master.getConnection(), child, parentSeqNums,
         serverName, getRegionReplication(htd));
   }
 
@@ -282,7 +275,7 @@ public class RegionStateStore {
   }
 
   public void deleteRegions(final List<RegionInfo> regions) throws IOException {
-    MetaTableAccessor.deleteRegionInfos(master.getConnection(), regions);
+    CatalogAccessor.deleteRegionInfos(master.getConnection(), regions);
   }
 
   // ==========================================================================
@@ -311,16 +304,16 @@ public class RegionStateStore {
   /**
    * Returns the {@link ServerName} from catalog table {@link Result}
    * where the region is transitioning. It should be the same as
-   * {@link MetaTableAccessor#getServerName(Result,int)} if the server is at OPEN state.
+   * {@link CatalogAccessor#getServerName(Result,int)} if the server is at OPEN state.
    * @param r Result to pull the transitioning server name from
-   * @return A ServerName instance or {@link MetaTableAccessor#getServerName(Result,int)}
+   * @return A ServerName instance or {@link CatalogAccessor#getServerName(Result,int)}
    * if necessary fields not found or empty.
    */
   static ServerName getRegionServer(final Result r, int replicaId) {
     final Cell cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY,
         getServerNameColumn(replicaId));
     if (cell == null || cell.getValueLength() == 0) {
-      RegionLocations locations = MetaTableAccessor.getRegionLocations(r);
+      RegionLocations locations = CatalogAccessor.getRegionLocations(r);
       if (locations != null) {
         HRegionLocation location = locations.getRegionLocation(replicaId);
         if (location != null) {

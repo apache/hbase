@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase.mapreduce;
 import static org.junit.Assert.assertEquals;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
@@ -88,7 +88,7 @@ public class TestHRegionPartitioner {
     UTIL.createTable(tableName, families, 1, Bytes.toBytes("aa"), Bytes.toBytes("cc"), 5);
 
     Configuration configuration = UTIL.getConfiguration();
-    int numberOfRegions = MetaTableAccessor.getRegionCount(configuration, tableName);
+    int numberOfRegions = CatalogAccessor.getRegionCount(configuration, tableName);
     assertEquals(5, numberOfRegions);
 
     HRegionPartitioner<Long, Long> partitioner = new HRegionPartitioner<>();

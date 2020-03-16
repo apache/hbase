@@ -22,7 +22,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -62,7 +62,7 @@ public class TestClusterRestart extends AbstractTestRestartCluster {
       UTIL.waitTableEnabled(TABLE);
     }
 
-    List<RegionInfo> allRegions = MetaTableAccessor.getAllRegions(UTIL.getConnection(), false);
+    List<RegionInfo> allRegions = CatalogAccessor.getAllRegions(UTIL.getConnection(), false);
     assertEquals(NUM_REGIONS, allRegions.size());
 
     LOG.info("\n\nShutting down cluster");
@@ -77,7 +77,7 @@ public class TestClusterRestart extends AbstractTestRestartCluster {
     // Need to use a new 'Configuration' so we make a new Connection.
     // Otherwise we're reusing an Connection that has gone stale because
     // the shutdown of the cluster also called shut of the connection.
-    allRegions = MetaTableAccessor.getAllRegions(UTIL.getConnection(), false);
+    allRegions = CatalogAccessor.getAllRegions(UTIL.getConnection(), false);
     assertEquals(NUM_REGIONS, allRegions.size());
     LOG.info("\n\nWaiting for tables to be available");
     for (TableName TABLE : TABLES) {

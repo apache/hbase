@@ -50,14 +50,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.CacheEvictionStatsAggregator;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.MetaTableAccessor.QueryType;
+import org.apache.hadoop.hbase.CatalogAccessor.QueryType;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.RegionMetrics;
@@ -1340,8 +1340,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       addListener(
         metaTable
           .scanAll(new Scan().setReadType(ReadType.PREAD).addFamily(HConstants.CATALOG_FAMILY)
-            .withStartRow(MetaTableAccessor.getTableStartRowForMeta(tableName, QueryType.REGION))
-            .withStopRow(MetaTableAccessor.getTableStopRowForMeta(tableName, QueryType.REGION))),
+            .withStartRow(CatalogAccessor.getTableStartRowForMeta(tableName, QueryType.REGION))
+            .withStopRow(CatalogAccessor.getTableStopRowForMeta(tableName, QueryType.REGION))),
         (results, err2) -> {
           if (err2 != null) {
             future.completeExceptionally(err2);
@@ -1350,10 +1350,10 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           if (results != null && !results.isEmpty()) {
             List<CompletableFuture<Void>> splitFutures = new ArrayList<>();
             for (Result r : results) {
-              if (r.isEmpty() || MetaTableAccessor.getRegionInfo(r) == null) {
+              if (r.isEmpty() || CatalogAccessor.getRegionInfo(r) == null) {
                 continue;
               }
-              RegionLocations rl = MetaTableAccessor.getRegionLocations(r);
+              RegionLocations rl = CatalogAccessor.getRegionLocations(r);
               if (rl != null) {
                 for (HRegionLocation h : rl.getRegionLocations()) {
                   if (h != null && h.getServerName() != null) {
@@ -2402,7 +2402,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         }
       } else {
         RegionInfo regionInfo =
-          MetaTableAccessor.parseRegionInfoFromRegionName(regionNameOrEncodedRegionName);
+          CatalogAccessor.parseRegionInfoFromRegionName(regionNameOrEncodedRegionName);
         if (regionInfo.isRootRegion()) {
           future = connection.registry.getMetaRegionLocations()
             .thenApply(locs -> Stream.of(locs.getRegionLocations())

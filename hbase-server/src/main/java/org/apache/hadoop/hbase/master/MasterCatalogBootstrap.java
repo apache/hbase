@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.util.List;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
+import org.apache.hadoop.hbase.zookeeper.RootTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
@@ -71,10 +71,10 @@ class MasterCatalogBootstrap {
       throw new IllegalStateException("hbase:meta must be initialized first before we can " +
           "assign out its replicas");
     }
-    ServerName rootServername = MetaTableLocator.getRootRegionLocation(this.master.getZooKeeper());
+    ServerName rootServername = RootTableLocator.getRootRegionLocation(this.master.getZooKeeper());
     for (int i = 1; i < numReplicas; i++) {
       // Get current hbase:root state for replica from zk.
-      RegionState rootState = MetaTableLocator.getRootRegionState(master.getZooKeeper(), i);
+      RegionState rootState = RootTableLocator.getRootRegionState(master.getZooKeeper(), i);
       RegionInfo hri = RegionReplicaUtil.getRegionInfoForReplica(
           RegionInfoBuilder.ROOT_REGIONINFO, i);
       LOG.debug(hri.getRegionNameAsString() + " replica region state from zookeeper=" + rootState);
@@ -93,9 +93,9 @@ class MasterCatalogBootstrap {
       }
     }
 
-    Result metaRegionResult = MetaTableAccessor.getRegionResult(
+    Result metaRegionResult = CatalogAccessor.getRegionResult(
       master.getConnection(), RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName());
-    RegionLocations regionLocations = MetaTableAccessor.getRegionLocations(metaRegionResult);
+    RegionLocations regionLocations = CatalogAccessor.getRegionLocations(metaRegionResult);
     ServerName metaRegionServerName =
         regionLocations.getRegionLocation(0) == null ?
             null :
@@ -133,11 +133,11 @@ class MasterCatalogBootstrap {
     // unassign the unneeded replicas (for e.g., if the previous master was configured
     // with a replication of 3 and now it is 2, we need to unassign the 1 unneeded replica)
     try {
-      List<String> metaReplicaZnodes = zooKeeper.getMetaReplicaNodes();
+      List<String> metaReplicaZnodes = zooKeeper.getRootReplicaNodes();
       for (String metaReplicaZnode : metaReplicaZnodes) {
         int replicaId = zooKeeper.getZNodePaths().getMetaReplicaIdFromZnode(metaReplicaZnode);
         if (replicaId >= numMetaReplicasConfigured) {
-          RegionState r = MetaTableLocator.getRootRegionState(zooKeeper, replicaId);
+          RegionState r = RootTableLocator.getRootRegionState(zooKeeper, replicaId);
           LOG.info("Closing excess replica of root region " + r.getRegion());
           // send a close and wait for a max of 30 seconds
           ServerManager.closeRegionSilentlyAndWait(master.getAsyncClusterConnection(),
@@ -146,9 +146,9 @@ class MasterCatalogBootstrap {
         }
       }
 
-      Result metaRegionResult = MetaTableAccessor.getRegionResult(
+      Result metaRegionResult = CatalogAccessor.getRegionResult(
         master.getConnection(), RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName());
-      RegionLocations regionLocations = MetaTableAccessor.getRegionLocations(metaRegionResult);
+      RegionLocations regionLocations = CatalogAccessor.getRegionLocations(metaRegionResult);
       if (regionLocations.size() > numMetaReplicasConfigured) {
         for (int i = regionLocations.size() - 1; i >= numMetaReplicasConfigured ; i--) {
           HRegionLocation loc = regionLocations.getRegionLocation(i);
@@ -156,7 +156,7 @@ class MasterCatalogBootstrap {
           // send a close and wait for a max of 30 seconds
           ServerManager.closeRegionSilentlyAndWait(master.getAsyncClusterConnection(),
               loc.getServerName(), loc.getRegion(), 30000);
-          MetaTableAccessor.removeRegionReplicasFromCatalog(
+          CatalogAccessor.removeRegionReplicasFromCatalog(
               Sets.newHashSet(RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName()),
               i,
               1,

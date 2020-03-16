@@ -37,7 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -414,7 +414,7 @@ public class RegionSplitter {
         // NOTE: createTable is synchronous on the table, but not on the regions
         int onlineRegions = 0;
         while (onlineRegions < splitCount) {
-          onlineRegions = MetaTableAccessor.getRegionCount(connection, tableName);
+          onlineRegions = CatalogAccessor.getRegionCount(connection, tableName);
           LOG.debug(onlineRegions + " of " + splitCount + " regions online...");
           if (onlineRegions < splitCount) {
             Thread.sleep(10 * 1000); // sleep

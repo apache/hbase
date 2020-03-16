@@ -29,7 +29,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -99,11 +99,11 @@ public class TestHBCKSCP extends TestSCPBase {
     HMaster master = cluster.getMaster();
     // Get a Region that is on the server.
     RegionInfo rsRI = master.getAssignmentManager().getRegionsOnServer(rsServerName).get(0);
-    Result r = MetaTableAccessor.getRegionResult(master.getConnection(), rsRI.getRegionName());
+    Result r = CatalogAccessor.getRegionResult(master.getConnection(), rsRI.getRegionName());
     // Assert region is OPEN.
     assertEquals(RegionState.State.OPEN.toString(),
         Bytes.toString(r.getValue(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER)));
-    ServerName serverName = MetaTableAccessor.getServerName(r, 0);
+    ServerName serverName = CatalogAccessor.getServerName(r, 0);
     assertEquals(rsServerName, serverName);
     // moveFrom adds to dead servers and adds it to processing list only we will
     // not be processing this server 'normally'. Remove it from processing by
@@ -126,10 +126,10 @@ public class TestHBCKSCP extends TestSCPBase {
     // cleaned up by an SCP or by anything else.
     assertTrue(searchMeta(master, rsServerName));
     // Assert region is OPEN on dead server still.
-    r = MetaTableAccessor.getRegionResult(master.getConnection(), rsRI.getRegionName());
+    r = CatalogAccessor.getRegionResult(master.getConnection(), rsRI.getRegionName());
     assertEquals(RegionState.State.OPEN.toString(),
         Bytes.toString(r.getValue(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER)));
-    serverName = MetaTableAccessor.getServerName(r, 0);
+    serverName = CatalogAccessor.getServerName(r, 0);
     assertNotNull(cluster.getRegionServer(serverName));
     assertEquals(rsServerName, serverName);
 
@@ -146,10 +146,10 @@ public class TestHBCKSCP extends TestSCPBase {
       Threads.sleep(10);
     }
     // After SCP, assert region is OPEN on new server.
-    r = MetaTableAccessor.getRegionResult(master.getConnection(), rsRI.getRegionName());
+    r = CatalogAccessor.getRegionResult(master.getConnection(), rsRI.getRegionName());
     assertEquals(RegionState.State.OPEN.toString(),
         Bytes.toString(r.getValue(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER)));
-    serverName = MetaTableAccessor.getServerName(r, 0);
+    serverName = CatalogAccessor.getServerName(r, 0);
     assertNotNull(cluster.getRegionServer(serverName));
     assertNotEquals(rsServerName, serverName);
     // Make sure no mention of old server post SCP.
@@ -161,7 +161,7 @@ public class TestHBCKSCP extends TestSCPBase {
    */
   private boolean searchMeta(HMaster master, ServerName sn) throws IOException {
     List<Pair<RegionInfo, ServerName>> ps =
-      MetaTableAccessor.getTableRegionsAndLocations(master.getConnection(), null);
+      CatalogAccessor.getTableRegionsAndLocations(master.getConnection(), null);
     for (Pair<RegionInfo, ServerName> p: ps) {
       if (p.getSecond().equals(sn)) {
         return true;

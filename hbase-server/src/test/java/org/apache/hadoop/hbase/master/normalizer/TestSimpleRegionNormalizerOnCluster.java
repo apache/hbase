@@ -23,14 +23,9 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.TableName;
+
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -147,7 +142,7 @@ public class TestSimpleRegionNormalizerOnCluster {
 
     admin.flush(TABLENAME);
 
-    assertEquals(5, MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), TABLENAME));
+    assertEquals(5, CatalogAccessor.getRegionCount(TEST_UTIL.getConnection(), TABLENAME));
 
     // Now trigger a split and stop when the split is in progress
     Thread.sleep(5000); // to let region load to update
@@ -219,18 +214,18 @@ public class TestSimpleRegionNormalizerOnCluster {
 
     admin.flush(tableName);
 
-    assertEquals(5, MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), tableName));
+    assertEquals(5, CatalogAccessor.getRegionCount(TEST_UTIL.getConnection(), tableName));
 
     // Now trigger a merge and stop when the merge is in progress
     Thread.sleep(5000); // to let region load to update
     m.normalizeRegions();
 
-    while (MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), tableName) > 4) {
+    while (CatalogAccessor.getRegionCount(TEST_UTIL.getConnection(), tableName) > 4) {
       LOG.info("Waiting for normalization merge to complete");
       Thread.sleep(100);
     }
 
-    assertEquals(4, MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), tableName));
+    assertEquals(4, CatalogAccessor.getRegionCount(TEST_UTIL.getConnection(), tableName));
 
     admin.disableTable(tableName);
     admin.deleteTable(tableName);

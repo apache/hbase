@@ -26,7 +26,7 @@ import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
@@ -99,7 +99,7 @@ public class TestEnableTable {
     // content from a few of the rows.
     try (Table metaTable = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME)) {
       try (ResultScanner scanner = metaTable.getScanner(
-        MetaTableAccessor.getScanForTableName(TEST_UTIL.getConnection(), tableName))) {
+        CatalogAccessor.getScanForTableName(TEST_UTIL.getConnection(), tableName))) {
         for (Result result : scanner) {
           // Just delete one row.
           Delete d = new Delete(result.getRow());
@@ -120,7 +120,7 @@ public class TestEnableTable {
       }
       int rowCount = 0;
       try (ResultScanner scanner = metaTable
-        .getScanner(MetaTableAccessor.getScanForTableName(TEST_UTIL.getConnection(), tableName))) {
+        .getScanner(CatalogAccessor.getScanForTableName(TEST_UTIL.getConnection(), tableName))) {
         for (Result result : scanner) {
           LOG.info("Found when none expected: " + result);
           rowCount++;

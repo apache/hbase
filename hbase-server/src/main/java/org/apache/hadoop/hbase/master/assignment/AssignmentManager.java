@@ -38,7 +38,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -82,7 +82,7 @@ import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.RetryCounterFactory;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
+import org.apache.hadoop.hbase.zookeeper.RootTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
@@ -235,7 +235,7 @@ public class AssignmentManager {
     ZKWatcher zkw = master.getZooKeeper();
     // it could be null in some tests
     if (zkw != null) {
-      RegionState rootRegionState = MetaTableLocator.getRootRegionState(zkw);
+      RegionState rootRegionState = RootTableLocator.getRootRegionState(zkw);
       RegionStateNode rootRegionNode =
         regionStates.getOrCreateRegionStateNode(RegionInfoBuilder.ROOT_REGIONINFO);
       rootRegionNode.lock();
@@ -1305,7 +1305,7 @@ public class AssignmentManager {
    */
   private void closeRegionSilently(ServerName sn, byte [] regionName) {
     try {
-      RegionInfo ri = MetaTableAccessor.parseRegionInfoFromRegionName(regionName);
+      RegionInfo ri = CatalogAccessor.parseRegionInfoFromRegionName(regionName);
       // Pass -1 for timeout. Means do not wait.
       ServerManager.closeRegionSilentlyAndWait(this.master.getAsyncClusterConnection(), sn, ri, -1);
     } catch (Exception e) {

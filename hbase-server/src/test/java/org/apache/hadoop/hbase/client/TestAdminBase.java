@@ -20,9 +20,10 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
+
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -64,7 +65,7 @@ public class TestAdminBase {
   }
 
   protected TableState.State getStateFromMeta(TableName table) throws IOException {
-    TableState state = MetaTableAccessor.getTableState(TEST_UTIL.getConnection(), table);
+    TableState state = CatalogAccessor.getTableState(TEST_UTIL.getConnection(), table);
     assertNotNull(state);
     return state.getState();
   }

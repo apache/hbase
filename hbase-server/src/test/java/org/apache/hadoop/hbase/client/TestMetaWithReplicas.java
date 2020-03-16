@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
@@ -47,11 +47,8 @@ import org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.hadoop.hbase.zookeeper.*;
+import org.apache.hadoop.hbase.zookeeper.RootTableLocator;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -93,7 +90,7 @@ public class TestMetaWithReplicas {
     AssignmentManager am = TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager();
     Set<ServerName> sns = new HashSet<ServerName>();
     ServerName hbaseMetaServerName =
-      MetaTableLocator.getRootRegionLocation(TEST_UTIL.getZooKeeperWatcher());
+      RootTableLocator.getRootRegionLocation(TEST_UTIL.getZooKeeperWatcher());
     LOG.info("HBASE:META DEPLOY: on " + hbaseMetaServerName);
     sns.add(hbaseMetaServerName);
     for (int replicaId = 1; replicaId < 3; replicaId++) {
@@ -215,8 +212,8 @@ public class TestMetaWithReplicas {
         util.getAdmin().flush(TableName.META_TABLE_NAME);
         Thread.sleep(
           conf.getInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, 30000) * 6);
-        List<RegionInfo> regions = MetaTableAccessor.getTableRegions(c, TABLE);
-        HRegionLocation hrl = MetaTableAccessor.getRegionLocation(c, regions.get(0));
+        List<RegionInfo> regions = CatalogAccessor.getTableRegions(c, TABLE);
+        HRegionLocation hrl = CatalogAccessor.getRegionLocation(c, regions.get(0));
         // Ensure that the primary server for test table is not the same one as the primary
         // of the meta region since we will be killing the srv holding the meta's primary...
         // We want to be able to write to the test table even when the meta is not present ..
@@ -227,7 +224,7 @@ public class TestMetaWithReplicas {
           // wait for the move to complete
           do {
             Thread.sleep(10);
-            hrl = MetaTableAccessor.getRegionLocation(c, regions.get(0));
+            hrl = CatalogAccessor.getRegionLocation(c, regions.get(0));
           } while (primary.equals(hrl.getServerName()));
           util.getAdmin().flush(TableName.META_TABLE_NAME);
           Thread.sleep(conf.getInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD,

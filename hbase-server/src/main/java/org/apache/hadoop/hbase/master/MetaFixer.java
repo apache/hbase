@@ -26,8 +26,9 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
+
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -43,7 +44,7 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 
 /**
  * Server-side fixing of bad or inconsistent state in hbase:meta.
- * Distinct from MetaTableAccessor because {@link MetaTableAccessor} is about low-level
+ * Distinct from MetaTableAccessor because {@link CatalogAccessor} is about low-level
  * manipulations driven by the Master. This class MetaFixer is
  * employed by the Master and it 'knows' about holes and orphans
  * and encapsulates their fixing on behalf of the Master.
@@ -176,7 +177,7 @@ class MetaFixer {
     final List<Either<RegionInfo, IOException>> addMetaEntriesResults = newRegionInfos.stream()
       .map(regionInfo -> {
         try {
-          MetaTableAccessor.addRegionToMeta(masterServices.getConnection(), regionInfo);
+          CatalogAccessor.addRegionToMeta(masterServices.getConnection(), regionInfo);
           masterServices.getAssignmentManager()
             .getRegionStates()
             .updateRegionState(regionInfo, RegionState.State.CLOSED);

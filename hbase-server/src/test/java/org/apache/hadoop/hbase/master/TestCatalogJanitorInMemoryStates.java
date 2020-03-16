@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaMockingUtil;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -174,10 +174,10 @@ public class TestCatalogJanitorInMemoryStates {
         if (result == null) {
           break;
         }
-        region = MetaTableAccessor.getRegionInfo(result);
+        region = CatalogAccessor.getRegionInfo(result);
         if (region.isSplitParent()) {
           LOG.debug(region.toString() + " IS a parent!");
-          pair = MetaTableAccessor.getDaughterRegions(result);
+          pair = CatalogAccessor.getDaughterRegions(result);
           break;
         }
         Threads.sleep(100);

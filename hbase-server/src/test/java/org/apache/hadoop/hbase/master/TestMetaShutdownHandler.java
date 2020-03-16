@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
+import org.apache.hadoop.hbase.zookeeper.RootTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.zookeeper.KeeperException;
@@ -98,7 +98,7 @@ public class TestMetaShutdownHandler {
       TEST_UTIL.waitUntilNoRegionsInTransition(60000);
       metaServerName = regionStates.getRegionServerOfRegion(HRegionInfo.FIRST_META_REGIONINFO);
     }
-    RegionState metaState = MetaTableLocator.getRootRegionState(master.getZooKeeper());
+    RegionState metaState = RootTableLocator.getRootRegionState(master.getZooKeeper());
     assertEquals("Wrong state for meta!", RegionState.State.OPEN, metaState.getState());
     assertNotEquals("Meta is on master!", metaServerName, master.getServerName());
 
@@ -125,7 +125,7 @@ public class TestMetaShutdownHandler {
     assertTrue("Meta should be assigned",
       regionStates.isRegionOnline(HRegionInfo.FIRST_META_REGIONINFO));
     // Now, make sure meta is registered in zk
-    metaState = MetaTableLocator.getRootRegionState(master.getZooKeeper());
+    metaState = RootTableLocator.getRootRegionState(master.getZooKeeper());
     assertEquals("Meta should not be in transition", RegionState.State.OPEN,
         metaState.getState());
     assertEquals("Meta should be assigned", metaState.getServerName(),

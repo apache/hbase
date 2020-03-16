@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.master.assignment;
 import java.io.IOException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
@@ -115,7 +115,7 @@ public class GCRegionProcedure extends AbstractStateMachineRegionProcedure<GCReg
               am.getRegionStates().deleteRegion(getRegion());
             }
           }
-          MetaTableAccessor.deleteRegionInfo(masterServices.getConnection(), getRegion());
+          CatalogAccessor.deleteRegionInfo(masterServices.getConnection(), getRegion());
           masterServices.getServerManager().removeRegion(getRegion());
           FavoredNodesManager fnm = masterServices.getFavoredNodesManager();
           if (fnm != null) {

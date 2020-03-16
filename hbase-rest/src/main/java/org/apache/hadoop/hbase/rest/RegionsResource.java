@@ -29,7 +29,7 @@ import javax.ws.rs.core.UriInfo;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -79,7 +79,7 @@ public class RegionsResource extends ResourceBase {
       TableInfoModel model = new TableInfoModel(tableName.getNameAsString());
 
       Connection connection = ConnectionFactory.createConnection(servlet.getConfiguration());
-      List<Pair<RegionInfo, ServerName>> regions = MetaTableAccessor
+      List<Pair<RegionInfo, ServerName>> regions = CatalogAccessor
           .getTableRegionsAndLocations(connection, tableName);
       connection.close();
       for (Pair<RegionInfo,ServerName> e: regions) {

@@ -30,15 +30,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.PleaseHoldException;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.UnknownRegionException;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -106,14 +99,14 @@ public class TestMaster {
       byte[] rowKey) throws IOException {
     final AtomicReference<Pair<RegionInfo, ServerName>> result = new AtomicReference<>(null);
 
-    MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
+    CatalogAccessor.Visitor visitor = new CatalogAccessor.Visitor() {
       @Override
       public boolean visit(Result data) throws IOException {
         if (data == null || data.size() <= 0) {
           return true;
         }
-        Pair<RegionInfo, ServerName> pair = new Pair<>(MetaTableAccessor.getRegionInfo(data),
-          MetaTableAccessor.getServerName(data, 0));
+        Pair<RegionInfo, ServerName> pair = new Pair<>(CatalogAccessor.getRegionInfo(data),
+          CatalogAccessor.getServerName(data, 0));
         if (!pair.getFirst().getTable().equals(tableName)) {
           return false;
         }
@@ -122,7 +115,7 @@ public class TestMaster {
       }
     };
 
-    MetaTableAccessor.scanMeta(master.getConnection(), visitor, tableName, rowKey, 1);
+    CatalogAccessor.scanMeta(master.getConnection(), visitor, tableName, rowKey, 1);
     return result.get();
   }
 
@@ -137,7 +130,7 @@ public class TestMaster {
       TEST_UTIL.loadTable(ht, FAMILYNAME, false);
     }
 
-    List<Pair<RegionInfo, ServerName>> tableRegions = MetaTableAccessor.getTableRegionsAndLocations(
+    List<Pair<RegionInfo, ServerName>> tableRegions = CatalogAccessor.getTableRegionsAndLocations(
         m.getConnection(), TABLENAME);
     LOG.info("Regions after load: " + Joiner.on(',').join(tableRegions));
     assertEquals(1, tableRegions.size());
@@ -152,7 +145,7 @@ public class TestMaster {
 
     LOG.info("Making sure we can call getTableRegions while opening");
     while (tableRegions.size() < 3) {
-      tableRegions = MetaTableAccessor.getTableRegionsAndLocations(m.getConnection(),
+      tableRegions = CatalogAccessor.getTableRegionsAndLocations(m.getConnection(),
           TABLENAME, false);
       Thread.sleep(100);
     }
@@ -163,7 +156,7 @@ public class TestMaster {
     Pair<RegionInfo, ServerName> pair = getTableRegionForRow(m, TABLENAME, Bytes.toBytes("cde"));
     LOG.info("Result is: " + pair);
     Pair<RegionInfo, ServerName> tableRegionFromName =
-        MetaTableAccessor.getRegion(m.getConnection(),
+        CatalogAccessor.getRegion(m.getConnection(),
           pair.getFirst().getRegionName());
     assertTrue(RegionInfo.COMPARATOR.compare(tableRegionFromName.getFirst(), pair.getFirst()) == 0);
   }

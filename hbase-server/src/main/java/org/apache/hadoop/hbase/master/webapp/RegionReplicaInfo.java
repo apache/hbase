@@ -25,8 +25,8 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -60,7 +60,7 @@ public final class RegionReplicaInfo {
       return Collections.singletonList(null);
     }
 
-    final RegionLocations locations = MetaTableAccessor.getRegionLocations(result);
+    final RegionLocations locations = CatalogAccessor.getRegionLocations(result);
     if (locations == null) {
       return Collections.singletonList(null);
     }

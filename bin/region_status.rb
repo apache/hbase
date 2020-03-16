@@ -53,7 +53,7 @@ java_import org.apache.hadoop.hbase.client.Scan
 java_import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter
 java_import org.apache.hadoop.hbase.util.Bytes
 java_import org.apache.hadoop.hbase.HRegionInfo
-java_import org.apache.hadoop.hbase.MetaTableAccessor
+java_import org.apache.hadoop.hbase.CatalogAccessor
 java_import org.apache.hadoop.hbase.HTableDescriptor
 java_import org.apache.hadoop.hbase.client.ConnectionFactory
 

@@ -21,12 +21,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.ScheduledChore;
-import org.apache.hadoop.hbase.Stoppable;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -89,7 +85,7 @@ public class ReplicationBarrierCleaner extends ScheduledChore {
           break;
         }
         totalRows++;
-        long[] barriers = MetaTableAccessor.getReplicationBarriers(result);
+        long[] barriers = CatalogAccessor.getReplicationBarriers(result);
         if (barriers.length == 0) {
           continue;
         }

@@ -23,9 +23,9 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
@@ -122,6 +122,6 @@ public class SnapshotScannerHDFSAclCleaner extends BaseHFileCleanerDelegate {
   }
 
   private boolean tableExists(TableName tableName) throws IOException {
-    return master != null && MetaTableAccessor.tableExists(master.getConnection(), tableName);
+    return master != null && CatalogAccessor.tableExists(master.getConnection(), tableName);
   }
 }

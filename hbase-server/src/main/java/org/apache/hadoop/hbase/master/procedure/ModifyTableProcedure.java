@@ -25,14 +25,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
-import org.apache.hadoop.hbase.ConcurrentTableModificationException;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseIOException;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNotDisabledException;
-import org.apache.hadoop.hbase.TableNotFoundException;
+
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
@@ -274,7 +269,7 @@ public class ModifyTableProcedure
    */
   private void prepareModify(final MasterProcedureEnv env) throws IOException {
     // Checks whether the table exists
-    if (!MetaTableAccessor.tableExists(env.getMasterServices().getConnection(), getTableName())) {
+    if (!CatalogAccessor.tableExists(env.getMasterServices().getConnection(), getTableName())) {
       throw new TableNotFoundException(getTableName());
     }
 
@@ -399,7 +394,7 @@ public class ModifyTableProcedure
     if (newReplicaCount < oldReplicaCount) {
       Set<byte[]> tableRows = new HashSet<>();
       Connection connection = env.getMasterServices().getConnection();
-      Scan scan = MetaTableAccessor.getScanForTableName(connection, getTableName());
+      Scan scan = CatalogAccessor.getScanForTableName(connection, getTableName());
       scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
 
       try (Table metaTable = connection.getTable(TableName.META_TABLE_NAME)) {
@@ -407,7 +402,7 @@ public class ModifyTableProcedure
         for (Result result : resScanner) {
           tableRows.add(result.getRow());
         }
-        MetaTableAccessor.removeRegionReplicasFromCatalog(
+        CatalogAccessor.removeRegionReplicasFromCatalog(
           tableRows,
           newReplicaCount,
           oldReplicaCount - newReplicaCount,
@@ -419,7 +414,7 @@ public class ModifyTableProcedure
       Connection connection = env.getMasterServices().getConnection();
       // Get the existing table regions
       List<RegionInfo> existingTableRegions =
-          MetaTableAccessor.getTableRegions(connection, getTableName());
+          CatalogAccessor.getTableRegions(connection, getTableName());
       // add all the new entries to the meta table
       addRegionsToMeta(env, newTableDescriptor, existingTableRegions);
       if (oldReplicaCount <= 1) {
@@ -433,7 +428,7 @@ public class ModifyTableProcedure
   private static void addRegionsToMeta(final MasterProcedureEnv env,
       final TableDescriptor tableDescriptor, final List<RegionInfo> regionInfos)
       throws IOException {
-    MetaTableAccessor.addRegionsToMeta(env.getMasterServices().getConnection(), regionInfos,
+    CatalogAccessor.addRegionsToMeta(env.getMasterServices().getConnection(), regionInfos,
       tableDescriptor.getRegionReplication());
   }
   /**

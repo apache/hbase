@@ -26,7 +26,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReadWriteLock;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -107,7 +108,7 @@ public class TableStateManager {
     ReadWriteLock lock = tnLock.getLock(tableName);
     lock.writeLock().lock();
     try {
-      MetaTableAccessor.deleteTableState(master.getConnection(), tableName);
+      CatalogAccessor.deleteTableState(master.getConnection(), tableName);
       metaStateDeleted(tableName);
     } finally {
       tableName2State.remove(tableName);
@@ -133,10 +134,10 @@ public class TableStateManager {
   Set<TableName> getTablesInStates(TableState.State... states) throws IOException {
     // Only be called in region normalizer, will not use cache.
     final Set<TableName> rv = Sets.newHashSet();
-    MetaTableAccessor.fullScanTables(master.getConnection(), new MetaTableAccessor.Visitor() {
+    CatalogAccessor.fullScanTables(master.getConnection(), new CatalogAccessor.Visitor() {
       @Override
       public boolean visit(Result r) throws IOException {
-        TableState tableState = MetaTableAccessor.getTableState(r);
+        TableState tableState = CatalogAccessor.getTableState(r);
         if (tableState != null && tableState.inStates(states)) {
           rv.add(tableState.getTableName());
         }
@@ -172,7 +173,7 @@ public class TableStateManager {
     }
     boolean succ = false;
     try {
-      MetaTableAccessor.updateTableState(master.getConnection(), tableName, newState);
+      CatalogAccessor.updateTableState(master.getConnection(), tableName, newState);
       tableName2State.put(tableName, newState);
       succ = true;
     } finally {
@@ -196,7 +197,7 @@ public class TableStateManager {
     if (state != null) {
       return new TableState(tableName, state);
     }
-    TableState tableState = MetaTableAccessor.getTableState(master.getConnection(), tableName);
+    TableState tableState = CatalogAccessor.getTableState(master.getConnection(), tableName);
     if (tableState != null) {
       tableName2State.putIfAbsent(tableName, tableState.getState());
     }
@@ -212,10 +213,10 @@ public class TableStateManager {
       throws IOException {
     Map<String, TableState> states = new HashMap<>();
     // NOTE: Full hbase:meta table scan!
-    MetaTableAccessor.fullScanTables(connection, new MetaTableAccessor.Visitor() {
+    CatalogAccessor.fullScanTables(connection, new CatalogAccessor.Visitor() {
       @Override
       public boolean visit(Result r) throws IOException {
-        TableState state = MetaTableAccessor.getTableState(r);
+        TableState state = CatalogAccessor.getTableState(r);
         states.put(state.getTableName().getNameAsString(), state);
         return true;
       }
@@ -231,7 +232,7 @@ public class TableStateManager {
       TableState tableState = states.get(tableName.getNameAsString());
       if (tableState == null) {
         LOG.warn(tableName + " has no table state in hbase:meta, assuming ENABLED");
-        MetaTableAccessor.updateTableState(connection, tableName, TableState.State.ENABLED);
+        CatalogAccessor.updateTableState(connection, tableName, TableState.State.ENABLED);
         fixTableState(new TableState(tableName, TableState.State.ENABLED));
         tableName2State.put(tableName, TableState.State.ENABLED);
       } else {

@@ -28,13 +28,9 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNotFoundException;
+
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -390,7 +386,7 @@ public class TestAdmin1 extends TestAdminBase {
     ht.put(puts);
     ht.close();
     List<Pair<RegionInfo, ServerName>> regions =
-      MetaTableAccessor.getTableRegionsAndLocations(TEST_UTIL.getConnection(), tableName);
+      CatalogAccessor.getTableRegionsAndLocations(TEST_UTIL.getConnection(), tableName);
     boolean gotException = false;
     // the element at index 1 would be a replica (since the metareader gives us ordered
     // regions). Try splitting that region via the split API . Should fail
@@ -616,7 +612,7 @@ public class TestAdmin1 extends TestAdminBase {
     }
     // Split should not happen.
     List<RegionInfo> allRegions =
-      MetaTableAccessor.getTableRegions(ADMIN.getConnection(), tableName, true);
+      CatalogAccessor.getTableRegions(ADMIN.getConnection(), tableName, true);
     assertEquals(1, allRegions.size());
   }
 }

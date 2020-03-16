@@ -50,22 +50,9 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.time.StopWatch;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.AuthUtil;
-import org.apache.hadoop.hbase.ChoreService;
-import org.apache.hadoop.hbase.ClusterMetrics;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.ScheduledChore;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNotEnabledException;
-import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -1518,7 +1505,7 @@ public class CanaryTool implements Tool, Canary {
       }
 
       List<Pair<RegionInfo, ServerName>> pairs =
-          MetaTableAccessor.getTableRegionsAndLocations(connection, writeTableName);
+          CatalogAccessor.getTableRegionsAndLocations(connection, writeTableName);
       int numberOfRegions = pairs.size();
       if (numberOfRegions < numberOfServers * regionsLowerLimit
           || numberOfRegions > numberOfServers * regionsUpperLimit) {

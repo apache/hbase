@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -222,7 +222,7 @@ class NamespaceStateManager {
           continue;
         }
         List<RegionInfo> regions =
-            MetaTableAccessor.getTableRegions(this.master.getConnection(), table, true);
+            CatalogAccessor.getTableRegions(this.master.getConnection(), table, true);
         addTable(table, regions.size());
       }
     }

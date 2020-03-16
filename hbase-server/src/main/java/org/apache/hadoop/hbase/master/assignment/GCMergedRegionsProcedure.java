@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.procedure.AbstractStateMachineTableProcedure;
@@ -88,7 +88,7 @@ extends AbstractStateMachineTableProcedure<GCMergedRegionsState> {
         setNextState(GCMergedRegionsState.GC_REGION_EDIT_METADATA);
         break;
       case GC_REGION_EDIT_METADATA:
-        MetaTableAccessor.deleteMergeQualifiers(env.getMasterServices().getConnection(), mergedChild);
+        CatalogAccessor.deleteMergeQualifiers(env.getMasterServices().getConnection(), mergedChild);
         return Flow.NO_MORE_STATE;
       default:
         throw new UnsupportedOperationException(this + " unhandled state=" + state);

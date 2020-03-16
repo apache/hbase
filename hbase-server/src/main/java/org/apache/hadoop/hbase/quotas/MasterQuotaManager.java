@@ -32,11 +32,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.RegionStateListener;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -105,7 +102,7 @@ public class MasterQuotaManager implements RegionStateListener {
     }
 
     // Create the quota table if missing
-    if (!MetaTableAccessor.tableExists(masterServices.getConnection(),
+    if (!CatalogAccessor.tableExists(masterServices.getConnection(),
           QuotaUtil.QUOTA_TABLE_NAME)) {
       LOG.info("Quota table not found. Creating...");
       createQuotaTable();
