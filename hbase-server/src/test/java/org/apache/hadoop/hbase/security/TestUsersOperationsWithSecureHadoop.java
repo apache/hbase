@@ -30,7 +30,9 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
+import org.apache.commons.configuration.ConfigurationException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -65,11 +67,19 @@ public class TestUsersOperationsWithSecureHadoop {
   private static String CLIENT_NAME;
 
   @BeforeClass
-  public static void destroyAndSetup() throws Exception {
-    //destroy localhost kerberos users
-    Process process = Runtime.getRuntime().exec(new String[]{"bash", "-c", "kdestroy"});
-    process.waitFor(2, TimeUnit.SECONDS);
-    // setup mini kdc
+  public static void checkAndSetup() throws Exception {
+    // check localhost kerberos users
+    Process process = Runtime.getRuntime().exec(new String[]{"bash", "-c", "klist"});
+    boolean wait = process.waitFor(2, TimeUnit.SECONDS);
+    if (wait) {
+      int ret = process.exitValue();
+      if (ret == 0) {
+        throw new ConfigurationException("localhost holds kerberos tickets currently, need to destroy first!");
+      }
+    } else {
+      throw new TimeoutException("check localhost kerberos users timeout(exec cmd 'klist')!");
+    }
+    // setup MiniKdc
     KDC = TEST_UTIL.setupMiniKdc(KEYTAB_FILE);
     PRINCIPAL = "hbase/" + HOST;
     CLIENT_NAME = "foo";
