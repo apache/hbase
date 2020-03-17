@@ -111,7 +111,7 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
    * Loads entries from the provided {@code conf} into {@code props} when the configuration key
    * is one that may be configuring ChaosMonkey actions.
    */
-  void loadMonkeyProperties(Properties props, Configuration conf) {
+  public static void loadMonkeyProperties(Properties props, Configuration conf) {
     for (Entry<String,String> entry : conf) {
       for (String prefix : MonkeyConstants.MONKEY_CONFIGURATION_KEY_PREFIXES) {
         if (entry.getKey().startsWith(prefix)) {
