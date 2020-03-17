@@ -582,7 +582,7 @@ pipeline {
                 // Has to be relative to WORKSPACE.
                 reportDir            : "${env.OUTPUT_DIR_RELATIVE}",
                 reportFiles          : 'console-report.html',
-                reportName           : 'JDK11 Nightly Build Report'
+                reportName           : 'JDK11 Nightly Build Report (Hadoop3)'
               ]
             }
           }
