@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.io.asyncfs;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY;
 import static org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleState.READER_IDLE;
 
-import com.google.protobuf.ByteString;
 import com.google.protobuf.CodedOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -93,7 +92,6 @@ import org.apache.hbase.thirdparty.io.netty.channel.ChannelPromise;
 import org.apache.hbase.thirdparty.io.netty.channel.SimpleChannelInboundHandler;
 import org.apache.hbase.thirdparty.io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import org.apache.hbase.thirdparty.io.netty.handler.codec.MessageToByteEncoder;
-import org.apache.hbase.thirdparty.io.netty.handler.codec.protobuf.ProtobufDecoder;
 import org.apache.hbase.thirdparty.io.netty.handler.codec.protobuf.ProtobufVarint32FrameDecoder;
 import org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleStateEvent;
 import org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleStateHandler;
@@ -355,6 +353,55 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
       return Collections.singletonList(new CipherOption(CipherSuite.AES_CTR_NOPADDING));
     }
 
+    private static class BuilderPayloadSetter {
+      private static Class<?> byteStringClass;
+      private static Class<?> builderClass;
+      private static Method copyFromMethod;
+      private static Method setPayloadMethod = null;
+
+      static void setter(DataTransferEncryptorMessageProto.Builder builder, byte[] payload) {
+        Object byteStringObject = null;
+        try {
+          byteStringObject = copyFromMethod.invoke(null, payload);
+        } catch (IllegalAccessException e) {
+          e.printStackTrace();
+        } catch (InvocationTargetException e) {
+          e.printStackTrace();
+        }
+
+        if (setPayloadMethod == null) {
+          try {
+            setPayloadMethod = builderClass.getMethod("setPayload", byteStringClass);
+          } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+          }
+        }
+
+        try {
+          setPayloadMethod.invoke(builder, byteStringObject);
+        } catch (IllegalAccessException e) {
+          e.printStackTrace();
+        } catch (InvocationTargetException e) {
+          e.printStackTrace();
+        }
+      }
+
+      static {
+        builderClass = DataTransferEncryptorMessageProto.Builder.class;
+        byteStringClass = com.google.protobuf.ByteString.class;
+        try {
+          byteStringClass = Class.forName("org.apache.hadoop.thirdparty.protobuf.ByteString");
+        } catch (ClassNotFoundException e) {
+          e.printStackTrace();
+        }
+        try {
+          copyFromMethod = byteStringClass.getMethod("copyFrom", byte[].class);
+        } catch (NoSuchMethodException e) {
+          e.printStackTrace();
+        }
+      }
+    }
+
     private void sendSaslMessage(ChannelHandlerContext ctx, byte[] payload,
         List<CipherOption> options) throws IOException {
       DataTransferEncryptorMessageProto.Builder builder =
@@ -363,7 +410,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
       if (payload != null) {
         // Was ByteStringer; fix w/o using ByteStringer. Its in hbase-protocol
         // and we want to keep that out of hbase-server.
-        builder.setPayload(ByteString.copyFrom(payload));
+        BuilderPayloadSetter.setter(builder, payload);
       }
       if (options != null) {
         builder.addAllCipherOption(PBHelperClient.convertCipherOptions(options));
