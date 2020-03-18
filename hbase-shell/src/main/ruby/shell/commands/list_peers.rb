@@ -73,7 +73,7 @@ EOF
         end
 
         formatter.footer
-        peers
+        peers.map(&:getPeerId)
       end
     end
   end
