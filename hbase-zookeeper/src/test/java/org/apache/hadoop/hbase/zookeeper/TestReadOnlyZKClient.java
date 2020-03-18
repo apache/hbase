@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,7 +36,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -83,8 +82,9 @@ public class TestReadOnlyZKClient {
   @BeforeClass
   public static void setUp() throws Exception {
     final int port = UTIL.startMiniZKCluster().getClientPort();
+    String hostPort = UTIL.getZkCluster().getAddress().toString();
 
-    ZooKeeper zk = ZooKeeperHelper.getConnectedZooKeeper("localhost:" + port, 10000);
+    ZooKeeper zk = ZooKeeperHelper.getConnectedZooKeeper(hostPort, 10000);
     DATA = new byte[10];
     ThreadLocalRandom.current().nextBytes(DATA);
     zk.create(PATH, DATA, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
@@ -93,7 +93,7 @@ public class TestReadOnlyZKClient {
     }
     zk.close();
     Configuration conf = UTIL.getConfiguration();
-    conf.set(HConstants.ZOOKEEPER_QUORUM, "localhost:" + port);
+    conf.set(HConstants.ZOOKEEPER_QUORUM, hostPort);
     conf.setInt(ReadOnlyZKClient.RECOVERY_RETRY, 3);
     conf.setInt(ReadOnlyZKClient.RECOVERY_RETRY_INTERVAL_MILLIS, 100);
     conf.setInt(ReadOnlyZKClient.KEEPALIVE_MILLIS, 3000);
