@@ -21,7 +21,7 @@ pipeline {
     }
   }
   triggers {
-    cron('@daily')
+    pollSCM('@daily')
   }
   options {
     buildDiscarder(logRotator(numToKeepStr: '15'))
