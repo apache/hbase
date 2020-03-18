@@ -30,7 +30,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
-import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
+import org.apache.hadoop.hbase.AsyncCatalogTableAccessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -82,7 +82,7 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
 
     AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(META_TABLE_NAME);
     List<HRegionLocation> regionLocations =
-        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, tableName).get();
+        AsyncCatalogTableAccessor.getTableHRegionLocations(metaTable, tableName).get();
     int originalCount = regionLocations.size();
 
     initSplitMergeSwitch();
@@ -113,7 +113,7 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
 
     AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(META_TABLE_NAME);
     List<HRegionLocation> regionLocations =
-        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, tableName).get();
+        AsyncCatalogTableAccessor.getTableHRegionLocations(metaTable, tableName).get();
     int originalCount = regionLocations.size();
 
     initSplitMergeSwitch();
@@ -157,7 +157,7 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
     createTableWithDefaultConf(tableName, splitRows);
 
     AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(META_TABLE_NAME);
-    List<HRegionLocation> regionLocations = AsyncMetaTableAccessor
+    List<HRegionLocation> regionLocations = AsyncCatalogTableAccessor
       .getTableHRegionLocations(metaTable, tableName).get();
     RegionInfo regionA;
     RegionInfo regionB;
@@ -168,7 +168,7 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
     regionB = regionLocations.get(1).getRegion();
     admin.mergeRegions(regionA.getRegionName(), regionB.getRegionName(), false).get();
 
-    regionLocations = AsyncMetaTableAccessor
+    regionLocations = AsyncCatalogTableAccessor
       .getTableHRegionLocations(metaTable, tableName).get();
     assertEquals(2, regionLocations.size());
     // merge with encoded name
@@ -176,7 +176,7 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
     regionB = regionLocations.get(1).getRegion();
     admin.mergeRegions(regionA.getRegionName(), regionB.getRegionName(), false).get();
 
-    regionLocations = AsyncMetaTableAccessor
+    regionLocations = AsyncCatalogTableAccessor
       .getTableHRegionLocations(metaTable, tableName).get();
     assertEquals(1, regionLocations.size());
   }
@@ -221,7 +221,7 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
     createTableWithDefaultConf(tableName);
 
     AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(META_TABLE_NAME);
-    List<HRegionLocation> regionLocations = AsyncMetaTableAccessor
+    List<HRegionLocation> regionLocations = AsyncCatalogTableAccessor
       .getTableHRegionLocations(metaTable, tableName).get();
     assertEquals(1, regionLocations.size());
 
@@ -251,7 +251,7 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
     int count = 0;
     for (int i = 0; i < 45; i++) {
       try {
-        regionLocations = AsyncMetaTableAccessor
+        regionLocations = AsyncCatalogTableAccessor
           .getTableHRegionLocations(metaTable, tableName).get();
         count = regionLocations.size();
         if (count >= 2) {

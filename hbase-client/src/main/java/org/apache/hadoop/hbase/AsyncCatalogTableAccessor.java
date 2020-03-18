@@ -58,9 +58,9 @@ import org.slf4j.LoggerFactory;
  * @since 2.0.0
  */
 @InterfaceAudience.Private
-public class AsyncMetaTableAccessor {
+public class AsyncCatalogTableAccessor {
 
-  private static final Logger LOG = LoggerFactory.getLogger(AsyncMetaTableAccessor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AsyncCatalogTableAccessor.class);
 
 
   /** The delimiter for meta columns for replicaIds &gt; 0 */

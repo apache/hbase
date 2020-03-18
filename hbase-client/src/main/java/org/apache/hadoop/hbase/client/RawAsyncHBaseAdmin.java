@@ -47,7 +47,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
+import org.apache.hadoop.hbase.AsyncCatalogTableAccessor;
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.CacheEvictionStatsAggregator;
 import org.apache.hadoop.hbase.CatalogAccessor;
@@ -511,7 +511,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     if (TableName.isMetaTableName(tableName)) {
       return CompletableFuture.completedFuture(true);
     }
-    return AsyncMetaTableAccessor.tableExists(metaTable, tableName);
+    return AsyncCatalogTableAccessor.tableExists(metaTable, tableName);
   }
 
   @Override
@@ -726,7 +726,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       return CompletableFuture.completedFuture(true);
     }
     CompletableFuture<Boolean> future = new CompletableFuture<>();
-    addListener(AsyncMetaTableAccessor.getTableState(metaTable, tableName), (tableState, error) -> {
+    addListener(AsyncCatalogTableAccessor.getTableState(metaTable, tableName), (tableState, error) -> {
       completeCheckTableState(future, tableState.isPresent()? tableState.get(): null, error,
         TableState.State.ENABLED, tableName);
     });
@@ -739,7 +739,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       return CompletableFuture.completedFuture(false);
     }
     CompletableFuture<Boolean> future = new CompletableFuture<>();
-    addListener(AsyncMetaTableAccessor.getTableState(metaTable, tableName), (tableState, error) -> {
+    addListener(AsyncCatalogTableAccessor.getTableState(metaTable, tableName), (tableState, error) -> {
       completeCheckTableState(future, tableState.isPresent()? tableState.get(): null, error,
         TableState.State.DISABLED, tableName);
     });
@@ -766,7 +766,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         future.complete(false);
       } else {
         addListener(
-          AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, tableName),
+          AsyncCatalogTableAccessor.getTableHRegionLocations(metaTable, tableName),
           (locations, error1) -> {
             if (error1 != null) {
               future.completeExceptionally(error1);
@@ -891,7 +891,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         .thenApply(locs -> Stream.of(locs.getRegionLocations()).map(HRegionLocation::getRegion)
           .collect(Collectors.toList()));
     } else {
-      return AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, tableName)
+      return AsyncCatalogTableAccessor.getTableHRegionLocations(metaTable, tableName)
         .thenApply(
           locs -> locs.stream().map(HRegionLocation::getRegion).collect(Collectors.toList()));
     }
@@ -1127,7 +1127,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       return future;
     } else {
       // For non-meta table, we fetch all locations by scanning hbase:meta table
-      return AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, tableName);
+      return AsyncCatalogTableAccessor.getTableHRegionLocations(metaTable, tableName);
     }
   }
 
@@ -2394,10 +2394,10 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
             .thenApply(locs -> Stream.of(locs.getRegionLocations())
               .filter(loc -> loc.getRegion().getEncodedName().equals(encodedName)).findFirst());
         } else if (encodedName.length() < RegionInfo.MD5_HEX_LENGTH) {
-          future = AsyncMetaTableAccessor.getRegionLocationWithEncodedName(rootTable,
+          future = AsyncCatalogTableAccessor.getRegionLocationWithEncodedName(rootTable,
             regionNameOrEncodedRegionName);
         } else {
-          future = AsyncMetaTableAccessor.getRegionLocationWithEncodedName(metaTable,
+          future = AsyncCatalogTableAccessor.getRegionLocationWithEncodedName(metaTable,
             regionNameOrEncodedRegionName);
         }
       } else {
@@ -2411,10 +2411,10 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           //TODO francis it won't reach here once meta is split
         } else if (regionInfo.isMetaRegion())   {
           future =
-            AsyncMetaTableAccessor.getRegionLocation(rootTable, regionNameOrEncodedRegionName);
+            AsyncCatalogTableAccessor.getRegionLocation(rootTable, regionNameOrEncodedRegionName);
         } else {
           future =
-            AsyncMetaTableAccessor.getRegionLocation(metaTable, regionNameOrEncodedRegionName);
+            AsyncCatalogTableAccessor.getRegionLocation(metaTable, regionNameOrEncodedRegionName);
         }
       }
 
