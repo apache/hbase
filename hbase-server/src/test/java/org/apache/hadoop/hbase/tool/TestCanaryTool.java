@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,7 +31,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -62,7 +61,6 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -104,7 +102,8 @@ public class TestCanaryTool {
 
   @Test
   public void testZookeeperCanaryPermittedFailuresArgumentWorks() throws Exception {
-    final String[] args = { "-t", "10000", "-zookeeper", "-treatFailureAsError", "-permittedZookeeperFailures", "1" };
+    final String[] args = { "-t", "10000", "-zookeeper", "-treatFailureAsError",
+      "-permittedZookeeperFailures", "1" };
     testZookeeperCanaryWithArgs(args);
   }
 
@@ -211,8 +210,10 @@ public class TestCanaryTool {
     assertEquals(0, ToolRunner.run(testingUtility.getConfiguration(), canary, args));
     verify(sink, times(tableNames.length)).initializeAndGetReadLatencyForTable(isA(String.class));
     for (int i=0; i<2; i++) {
-      assertNotEquals("verify non-null read latency", null, sink.getReadLatencyMap().get(tableNames[i].getNameAsString()));
-      assertNotEquals("verify non-zero read latency", 0L, sink.getReadLatencyMap().get(tableNames[i].getNameAsString()));
+      assertNotEquals("verify non-null read latency", null,
+        sink.getReadLatencyMap().get(tableNames[i].getNameAsString()));
+      assertNotEquals("verify non-zero read latency", 0L,
+        sink.getReadLatencyMap().get(tableNames[i].getNameAsString()));
     }
     // One table's timeout is set for 0 ms and thus, should lead to an error.
     verify(mockAppender, times(1)).doAppend(argThat(new ArgumentMatcher<LoggingEvent>() {
@@ -309,7 +310,8 @@ public class TestCanaryTool {
   private void testZookeeperCanaryWithArgs(String[] args) throws Exception {
     Integer port =
       Iterables.getOnlyElement(testingUtility.getZkCluster().getClientPortList(), null);
-    testingUtility.getConfiguration().set(HConstants.ZOOKEEPER_QUORUM, "localhost:" + port);
+    String hostPort = testingUtility.getZkCluster().getAddress().toString();
+    testingUtility.getConfiguration().set(HConstants.ZOOKEEPER_QUORUM, hostPort);
     ExecutorService executor = new ScheduledThreadPoolExecutor(2);
     CanaryTool.ZookeeperStdOutSink sink = spy(new CanaryTool.ZookeeperStdOutSink());
     CanaryTool canary = new CanaryTool(executor, sink);
@@ -317,7 +319,6 @@ public class TestCanaryTool {
 
     String baseZnode = testingUtility.getConfiguration()
       .get(HConstants.ZOOKEEPER_ZNODE_PARENT, HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
-    verify(sink, atLeastOnce())
-      .publishReadTiming(eq(baseZnode), eq("localhost:" + port), anyLong());
+    verify(sink, atLeastOnce()).publishReadTiming(eq(baseZnode), eq(hostPort), anyLong());
   }
 }
