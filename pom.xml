@@ -858,6 +858,14 @@
         <!-- version set by parent -->
         <executions>
           <execution>
+            <id>display-info</id>
+            <phase>initialize</phase>
+            <goals>
+              <goal>display-info</goal>
+            </goals>
+            <inherited>false</inherited>
+          </execution>
+          <execution>
             <id>hadoop-profile-min-maven-min-java-banned-xerces</id>
             <goals>
               <goal>enforce</goal>
