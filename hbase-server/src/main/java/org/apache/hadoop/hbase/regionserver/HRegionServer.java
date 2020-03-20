@@ -53,6 +53,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
 import javax.management.MalformedObjectNameException;
 import javax.servlet.http.HttpServlet;
 import org.apache.commons.lang3.RandomUtils;
@@ -1457,6 +1458,9 @@ public class HRegionServer extends HasThread implements
                 " because some regions failed closing");
           }
           break;
+        } else {
+          LOG.debug("Waiting on {}", this.regionsInTransitionInRS.keySet().stream().
+            map(e -> Bytes.toString(e)).collect(Collectors.joining(", ")));
         }
         if (sleep(200)) {
           interrupted = true;
@@ -3187,10 +3191,12 @@ public class HRegionServer extends HasThread implements
    *
    * @param encodedName Region to close
    * @param abort True if we are aborting
+   * @param destination Where the Region is being moved too... maybe null if unknown.
    * @return True if closed a region.
    * @throws NotServingRegionException if the region is not online
    */
-  protected boolean closeRegion(String encodedName, final boolean abort, final ServerName sn)
+  protected boolean closeRegion(String encodedName, final boolean abort,
+        final ServerName destination)
       throws NotServingRegionException {
     //Check for permissions to close.
     HRegion actualRegion = this.getRegion(encodedName);
@@ -3216,7 +3222,7 @@ public class HRegionServer extends HasThread implements
         // We're going to try to do a standard close then.
         LOG.warn("The opening for region " + encodedName + " was done before we could cancel it." +
             " Doing a standard close now");
-        return closeRegion(encodedName, abort, sn);
+        return closeRegion(encodedName, abort, destination);
       }
       // Let's get the region from the online region list again
       actualRegion = this.getRegion(encodedName);
@@ -3247,7 +3253,7 @@ public class HRegionServer extends HasThread implements
     if (hri.isMetaRegion()) {
       crh = new CloseMetaHandler(this, this, hri, abort);
     } else {
-      crh = new CloseRegionHandler(this, this, hri, abort, sn);
+      crh = new CloseRegionHandler(this, this, hri, abort, destination);
     }
     this.executorService.submit(crh);
     return true;
