@@ -378,9 +378,10 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
           // byteStringObject = new LiteralByteString(payload);
           byteStringObject = constructor.newInstance(payload);
           // builder.setPayload(byteStringObject);
-          setPayloadMethod.invoke(builder, byteStringObject);
+          setPayloadMethod.invoke(builder, constructor.getDeclaringClass().cast(byteStringObject));
         } catch (IllegalAccessException | InstantiationException e) {
           throw new RuntimeException(e);
+
         } catch (InvocationTargetException e) {
           Throwables.propagateIfPossible(e.getTargetException(), IOException.class);
           throw new RuntimeException(e.getTargetException());
@@ -406,7 +407,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
         Class<?> literalByteStringClass;
         try {
           literalByteStringClass = Class.forName(
-            "org.apache.hadoop.thirdparty.protobuf.LiteralByteString");
+            "org.apache.hadoop.thirdparty.protobuf.ByteString$LiteralByteString");
           LOG.debug("Shaded LiteralByteString from hadoop-thirdparty is found.");
         } catch (ClassNotFoundException e) {
           try {
