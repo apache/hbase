@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.regionserver.handler;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
@@ -38,9 +37,13 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 /**
  * Handles closing of a region on a region server.
  * <p/>
- * Now for regular close region request, we will use {@link UnassignRegionHandler} instead. But when
- * shutting down the region server, will also close regions and the related methods still use this
- * class so we keep it here.
+ * In normal operation, we use {@link UnassignRegionHandler} closing Regions but when shutting down
+ * the region server and closing out Regions, we use this handler instead; it does not expect to
+ * be able to communicate the close back to the Master.
+ * <p>Expects that the close *has* been registered in the hosting RegionServer before
+ * submitting this Handler; i.e. <code>rss.getRegionsInTransitionInRS().putIfAbsent(
+ * this.regionInfo.getEncodedNameAsBytes(), Boolean.FALSE);</code> has been called first.
+ * In here when done, we do the deregister.</p>
  * @see UnassignRegionHandler
  */
 @InterfaceAudience.Private
@@ -62,11 +65,7 @@ public class CloseRegionHandler extends EventHandler {
 
   /**
    * This method used internally by the RegionServer to close out regions.
-   * @param server
-   * @param rsServices
-   * @param regionInfo
    * @param abort If the regionserver is aborting.
-   * @param destination
    */
   public CloseRegionHandler(final Server server,
       final RegionServerServices rsServices,
@@ -92,13 +91,13 @@ public class CloseRegionHandler extends EventHandler {
   }
 
   @Override
-  public void process() {
+  public void process() throws IOException {
+    String name = regionInfo.getEncodedName();
+    LOG.trace("Processing close of {}", name);
+    String encodedRegionName = regionInfo.getEncodedName();
+    // Check that this region is being served here
+    HRegion region = (HRegion)rsServices.getRegion(encodedRegionName);
     try {
-      String name = regionInfo.getEncodedName();
-      LOG.trace("Processing close of {}", name);
-      String encodedRegionName = regionInfo.getEncodedName();
-      // Check that this region is being served here
-      HRegion region = (HRegion)rsServices.getRegion(encodedRegionName);
       if (region == null) {
         LOG.warn("Received CLOSE for region {} but currently not serving - ignoring", name);
         // TODO: do better than a simple warning
@@ -106,20 +105,11 @@ public class CloseRegionHandler extends EventHandler {
       }
 
       // Close the region
-      try {
-        if (region.close(abort) == null) {
-          // This region got closed.  Most likely due to a split.
-          // The split message will clean up the master state.
-          LOG.warn("Can't close region {}, was already closed during close()", name);
-          return;
-        }
-      } catch (IOException ioe) {
-        // An IOException here indicates that we couldn't successfully flush the
-        // memstore before closing. So, we need to abort the server and allow
-        // the master to split our logs in order to recover the data.
-        server.abort("Unrecoverable exception while closing region " +
-          regionInfo.getRegionNameAsString() + ", still finishing close", ioe);
-        throw new RuntimeException(ioe);
+      if (region.close(abort) == null) {
+        // This region has already been closed. Should not happen (A unit test makes this
+        // happen as a side effect, TestRegionObserverInterface.testPreWALAppendNotCalledOnMetaEdit)
+        LOG.warn("Can't close {}; already closed", name);
+        return;
       }
 
       this.rsServices.removeRegion(region, destination);
@@ -127,10 +117,19 @@ public class CloseRegionHandler extends EventHandler {
         HConstants.NO_SEQNUM, Procedure.NO_PROC_ID, -1, regionInfo));
 
       // Done!  Region is closed on this RS
-      LOG.debug("Closed " + region.getRegionInfo().getRegionNameAsString());
-    } finally {
       this.rsServices.getRegionsInTransitionInRS().
         remove(this.regionInfo.getEncodedNameAsBytes(), Boolean.FALSE);
+      LOG.debug("Closed {}" + region.getRegionInfo().getRegionNameAsString());
+    } finally {
+      // Clear any reference in getServer().getRegionsInTransitionInRS() on success or failure,
+      // since a reference was added before this CRH was invoked. If we don't clear it, it can
+      // hold up regionserver abort on cluster shutdown. HBASE-23984.
+      this.rsServices.getRegionsInTransitionInRS().remove(regionInfo.getEncodedNameAsBytes());
     }
+  }
+
+  @Override protected void handleException(Throwable t) {
+    server.abort("Unrecoverable exception while closing " +
+      this.regionInfo.getRegionNameAsString(), t);
   }
 }
