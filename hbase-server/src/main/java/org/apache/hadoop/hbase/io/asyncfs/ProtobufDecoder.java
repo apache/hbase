@@ -1,3 +1,20 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.hadoop.hbase.io.asyncfs;
 
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
@@ -13,21 +30,32 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
 
-/** Modified based on io.netty.handler.codec.protobuf.ProtobufDecoder */
+/**
+ * Modified based on io.netty.handler.codec.protobuf.ProtobufDecoder.
+ * The Netty's ProtobufDecode supports unshaded protobuf messages (com.google.protobuf).
+ *
+ * Hadoop 3.3.0 and above relocates protobuf classes to a shaded jar (hadoop-thirdparty), and
+ * so we must use reflection to detect which one (relocated or not) to use.
+ *
+ * Do not use this to process HBase's shaded protobuf messages. This is meant to process the
+ * protobuf messages in HDFS for the asyncfs use case.
+ * */
 @InterfaceAudience.Private
 public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf> {
   private static final Logger LOG =
     LoggerFactory.getLogger(ProtobufDecoder.class);
 
-  private static Class<?> shadedHadoopProtobufMessageLite = null;
+  private static Class<?> protobufMessageLiteClass = null;
+  private static Class<?> protobufMessageLiteBuilderClass = null;
+
   private static final boolean HAS_PARSER;
-  private Object prototype;
 
   private static Method getParserForTypeMethod;
   private static Method newBuilderForTypeMethod;
 
   private Method parseFromMethod;
   private Method mergeFromMethod;
+  private Method buildMethod;
 
   private Object parser;
   private Object builder;
@@ -35,23 +63,29 @@ public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf> {
 
   public ProtobufDecoder(Object prototype) {
     try {
-      Method getDefaultInstanceForTypeMethod = shadedHadoopProtobufMessageLite.getMethod("getDefaultInstanceForType");
-      this.prototype = getDefaultInstanceForTypeMethod.invoke(ObjectUtil.checkNotNull(prototype, "prototype"));
+      Method getDefaultInstanceForTypeMethod = protobufMessageLiteClass.getMethod(
+        "getDefaultInstanceForType");
+      Object prototype1 = getDefaultInstanceForTypeMethod
+        .invoke(ObjectUtil.checkNotNull(prototype, "prototype"));
 
-      parser = getParserForTypeMethod.invoke(this.prototype);
-      parseFromMethod = parser.getClass().getMethod("parseFrom", byte[].class, int.class, int.class);
+      // parser = prototype.getParserForType()
+      parser = getParserForTypeMethod.invoke(prototype1);
+      parseFromMethod = parser.getClass().getMethod(
+        "parseFrom", byte[].class, int.class, int.class);
 
-      builder = newBuilderForTypeMethod.invoke(this.prototype);
-      mergeFromMethod = builder.getClass().getMethod("mergeFrom", byte[].class, int.class, int.class);
+      // builder = prototype.newBuilderForType();
+      builder = newBuilderForTypeMethod.invoke(prototype1);
+      mergeFromMethod = builder.getClass().getMethod(
+        "mergeFrom", byte[].class, int.class, int.class);
 
-    } catch (IllegalAccessException e) {
-      e.printStackTrace();
+      // All protobuf message builders inherits from MessageLite.Builder
+      buildMethod = protobufMessageLiteBuilderClass.getDeclaredMethod("build");
+
+    } catch (IllegalAccessException | NoSuchMethodException e) {
+      throw new RuntimeException(e);
     } catch (InvocationTargetException e) {
-      e.printStackTrace();
-    } catch (NoSuchMethodException e) {
-      e.printStackTrace();
+      throw new RuntimeException(e.getTargetException());
     }
-
   }
 
   protected void decode(
@@ -69,10 +103,11 @@ public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf> {
 
     Object addObj;
     if (HAS_PARSER) {
+      // addObj = parser.parseFrom(array, offset, length);
       addObj = parseFromMethod.invoke(parser, array, offset, length);
     } else {
+      // addObj = builder.mergeFrom(array, offset, length).build();
       Object builderObj = mergeFromMethod.invoke(builder, array, offset, length);
-      Method buildMethod = builderObj.getClass().getDeclaredMethod("build");
       addObj = buildMethod.invoke(builderObj);
     }
     out.add(addObj);
@@ -81,32 +116,29 @@ public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf> {
   static {
     boolean hasParser = false;
 
+    // These are the protobuf classes coming from Hadoop. Not the one from hbase-shaded-protobuf
+    protobufMessageLiteClass = com.google.protobuf.MessageLite.class;
+    protobufMessageLiteBuilderClass = com.google.protobuf.MessageLite.Builder.class;
+
     try {
-      shadedHadoopProtobufMessageLite = Class.forName("org.apache.hadoop.thirdparty.protobuf.MessageLite");
+      protobufMessageLiteClass = Class.forName("org.apache.hadoop.thirdparty.protobuf.MessageLite");
+      protobufMessageLiteBuilderClass = Class.forName(
+        "org.apache.hadoop.thirdparty.protobuf.MessageLite.Builder");
       LOG.debug("Hadoop 3.3 and above shades protobuf.");
     } catch (ClassNotFoundException e) {
-      e.printStackTrace();
-    }
-
-    if (shadedHadoopProtobufMessageLite == null) {
-      shadedHadoopProtobufMessageLite = com.google.protobuf.MessageLite.class;
-      LOG.debug("Hadoop 3.2 and below use unshaded protobuf.");
+      LOG.debug("Hadoop 3.2 and below use unshaded protobuf.", e);
     }
 
     try {
-      getParserForTypeMethod = shadedHadoopProtobufMessageLite.getDeclaredMethod("getParserForType");
+      getParserForTypeMethod = protobufMessageLiteClass.getDeclaredMethod("getParserForType");
+      newBuilderForTypeMethod = protobufMessageLiteClass.getDeclaredMethod("newBuilderForType");
     } catch (NoSuchMethodException e) {
-      e.printStackTrace();
+      // If the method is not found, we are in trouble. Abort.
+      throw new RuntimeException(e);
     }
 
     try {
-      newBuilderForTypeMethod = shadedHadoopProtobufMessageLite.getDeclaredMethod("newBuilderForType");
-    } catch (NoSuchMethodException e) {
-      e.printStackTrace();
-    }
-
-    try {
-      shadedHadoopProtobufMessageLite.getDeclaredMethod("getParserForType");
+      protobufMessageLiteClass.getDeclaredMethod("getParserForType");
       hasParser = true;
     } catch (Throwable var2) {
     }

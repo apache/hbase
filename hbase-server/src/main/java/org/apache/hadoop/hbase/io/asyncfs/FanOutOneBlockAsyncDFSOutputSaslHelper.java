@@ -22,6 +22,7 @@ import static org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleState.REA
 
 import com.google.protobuf.CodedOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -353,51 +354,81 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
       return Collections.singletonList(new CipherOption(CipherSuite.AES_CTR_NOPADDING));
     }
 
+    /**
+     * The asyncfs subsystem emulates a HDFS client by sending protobuf messages via netty.
+     * After Hadoop 3.3.0, the protobuf classes are relocated to org.apache.hadoop.thirdparty.protobuf.*.
+     * Use Reflection to check which ones to use.
+     */
     private static class BuilderPayloadSetter {
-      private static Class<?> byteStringClass;
-      private static Class<?> builderClass;
-      private static Method copyFromMethod;
-      private static Method setPayloadMethod = null;
+      private static Method setPayloadMethod;
+      private static Constructor<?> constructor;
 
-      static void setter(DataTransferEncryptorMessageProto.Builder builder, byte[] payload) {
-        Object byteStringObject = null;
+      /**
+       * Create a ByteString from byte array without copying (wrap), and then set it as the payload
+       * for the builder.
+       *
+       * @param builder builder for HDFS DataTransferEncryptorMessage.
+       * @param payload byte array of payload.
+       * @throws IOException
+       */
+      static void wrapAndSetPayload(DataTransferEncryptorMessageProto.Builder builder, byte[] payload)
+        throws IOException {
+        Object byteStringObject;
         try {
-          byteStringObject = copyFromMethod.invoke(null, payload);
-        } catch (IllegalAccessException e) {
-          e.printStackTrace();
-        } catch (InvocationTargetException e) {
-          e.printStackTrace();
-        }
-
-        if (setPayloadMethod == null) {
-          try {
-            setPayloadMethod = builderClass.getMethod("setPayload", byteStringClass);
-          } catch (NoSuchMethodException e) {
-            e.printStackTrace();
-          }
-        }
-
-        try {
+          // byteStringObject = new LiteralByteString(payload);
+          byteStringObject = constructor.newInstance(payload);
+          // builder.setPayload(byteStringObject);
           setPayloadMethod.invoke(builder, byteStringObject);
-        } catch (IllegalAccessException e) {
-          e.printStackTrace();
+        } catch (IllegalAccessException | InstantiationException e) {
+          throw new RuntimeException(e);
         } catch (InvocationTargetException e) {
-          e.printStackTrace();
+          Throwables.propagateIfPossible(e.getTargetException(), IOException.class);
+          throw new RuntimeException(e.getTargetException());
         }
       }
 
       static {
-        builderClass = DataTransferEncryptorMessageProto.Builder.class;
-        byteStringClass = com.google.protobuf.ByteString.class;
+        Class<?> builderClass = DataTransferEncryptorMessageProto.Builder.class;
+
+        // Try the unrelocated ByteString
+        Class<?> byteStringClass = com.google.protobuf.ByteString.class;
         try {
+          // See if it can load the relocated ByteString, which comes from hadoop-thirdparty.
           byteStringClass = Class.forName("org.apache.hadoop.thirdparty.protobuf.ByteString");
+          LOG.debug("Found relocated ByteString class from hadoop-thirdparty." +
+            " Assuming this is Hadoop 3.3.0+.");
         } catch (ClassNotFoundException e) {
-          e.printStackTrace();
+          LOG.debug("Did not find relocated ByteString class from hadoop-thirdparty." +
+            " Assuming this is below Hadoop 3.3.0", e);
         }
+
+        // LiteralByteString is a package private class in protobuf. Make it accessible.
+        Class<?> literalByteStringClass;
         try {
-          copyFromMethod = byteStringClass.getMethod("copyFrom", byte[].class);
+          literalByteStringClass = Class.forName(
+            "org.apache.hadoop.thirdparty.protobuf.LiteralByteString");
+          LOG.debug("Shaded LiteralByteString from hadoop-thirdparty is found.");
+        } catch (ClassNotFoundException e) {
+          try {
+            literalByteStringClass = Class.forName("com.google.protobuf.LiteralByteString");
+            LOG.debug("com.google.protobuf.LiteralByteString found.");
+          } catch (ClassNotFoundException ex) {
+            throw new RuntimeException(ex);
+          }
+        }
+
+        try {
+          constructor = literalByteStringClass.getDeclaredConstructor(byte[].class);
+          constructor.setAccessible(true);
         } catch (NoSuchMethodException e) {
-          e.printStackTrace();
+          throw new RuntimeException(e);
+        }
+
+        try {
+          setPayloadMethod = builderClass.getMethod("setPayload", byteStringClass);
+        } catch (NoSuchMethodException e) {
+          // if either method is not found, we are in big trouble. Abort.
+          throw new RuntimeException(e);
         }
       }
     }
@@ -408,9 +439,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
           DataTransferEncryptorMessageProto.newBuilder();
       builder.setStatus(DataTransferEncryptorStatus.SUCCESS);
       if (payload != null) {
-        // Was ByteStringer; fix w/o using ByteStringer. Its in hbase-protocol
-        // and we want to keep that out of hbase-server.
-        BuilderPayloadSetter.setter(builder, payload);
+        BuilderPayloadSetter.wrapAndSetPayload(builder, payload);
       }
       if (options != null) {
         builder.addAllCipherOption(PBHelperClient.convertCipherOptions(options));
