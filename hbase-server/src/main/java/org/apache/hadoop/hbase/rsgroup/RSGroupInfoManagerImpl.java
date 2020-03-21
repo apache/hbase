@@ -36,6 +36,7 @@ import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
@@ -86,6 +87,7 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.hadoop.util.Shell;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -199,11 +201,51 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   // contains list of groups that were last flushed to persistent store
   private Set<String> prevRSGroups = new HashSet<>();
 
+  // Package visibility for testing
+  static class RSGroupMappingScript {
+    static final String RS_GROUP_MAPPING_SCRIPT = "hbase.rsgroup.table.mapping.script";
+    static final String RS_GROUP_MAPPING_SCRIPT_TIMEOUT = "hbase.rsgroup.table.mapping.script.timeout";
+    private Shell.ShellCommandExecutor rsgroupMappingScript;
+
+    RSGroupMappingScript(Configuration conf) {
+      String script = conf.get(RS_GROUP_MAPPING_SCRIPT);
+      if (script == null || script.isEmpty()) {
+        return;
+      }
+
+      rsgroupMappingScript = new Shell.ShellCommandExecutor(
+        new String[] { script, "", "" }, null, null,
+        conf.getLong(RS_GROUP_MAPPING_SCRIPT_TIMEOUT, 5000) // 5 seconds
+      );
+    }
+
+    String getRSGroup(String namespace, String tablename) {
+      if (rsgroupMappingScript == null) {
+        return RSGroupInfo.DEFAULT_GROUP;
+      }
+      String[] exec = rsgroupMappingScript.getExecString();
+      exec[1] = namespace;
+      exec[2] = tablename;
+      try {
+        rsgroupMappingScript.execute();
+      } catch (IOException e) {
+        // This exception may happen, like process doesn't have permission to run this script.
+        LOG.error("{}, placing {} back to default rsgroup",
+          e.getMessage(),
+          TableName.valueOf(namespace, tablename));
+        return RSGroupInfo.DEFAULT_GROUP;
+      }
+      return rsgroupMappingScript.getOutput().trim();
+    }
+  }
+  private RSGroupMappingScript script;
+
   private RSGroupInfoManagerImpl(MasterServices masterServices) {
     this.masterServices = masterServices;
     this.watcher = masterServices.getZooKeeper();
     this.conn = masterServices.getAsyncClusterConnection();
     this.rsGroupStartupWorker = new RSGroupStartupWorker();
+    this.script = new RSGroupMappingScript(masterServices.getConfiguration());
   }
 
   private synchronized void updateDefaultServers() {
@@ -1179,6 +1221,11 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       moveServerRegionsFromGroup(movedServers, targetGroupName);
       LOG.info("Move servers done: {} => {}", srcGrp.getName(), targetGroupName);
     }
+  }
+
+  @Override
+  public String determineRSGroupInfoForTable(TableName tableName) {
+    return script.getRSGroup(tableName.getNamespaceAsString(), tableName.getQualifierAsString());
   }
 
 }
