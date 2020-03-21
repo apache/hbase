@@ -116,7 +116,8 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
   static class RSGroupMappingScript {
 
     static final String RS_GROUP_MAPPING_SCRIPT = "hbase.rsgroup.table.mapping.script";
-    static final String RS_GROUP_MAPPING_SCRIPT_TIMEOUT = "hbase.rsgroup.table.mapping.script.timeout";
+    static final String RS_GROUP_MAPPING_SCRIPT_TIMEOUT =
+      "hbase.rsgroup.table.mapping.script.timeout";
 
     private Shell.ShellCommandExecutor rsgroupMappingScript;
 

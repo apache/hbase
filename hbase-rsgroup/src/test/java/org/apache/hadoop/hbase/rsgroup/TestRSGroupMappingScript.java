@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.PrintWriter;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -29,10 +32,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.PrintWriter;
 
 @Category({ SmallTests.class })
 public class TestRSGroupMappingScript {
@@ -78,16 +77,23 @@ public class TestRSGroupMappingScript {
   @Test
   public void testScript() throws Exception {
     RSGroupMappingScript script = new RSGroupMappingScript(UTIL.getConfiguration());
-    TableName testNamespace = TableName.valueOf("test", "should_be_in_test");
-    String rsgroup = script.getRSGroup(testNamespace.getNamespaceAsString(), testNamespace.getQualifierAsString());
+    TableName testNamespace =
+      TableName.valueOf("test", "should_be_in_test");
+    String rsgroup = script.getRSGroup(
+      testNamespace.getNamespaceAsString(), testNamespace.getQualifierAsString()
+    );
     Assert.assertEquals("test", rsgroup);
 
-    TableName otherName = TableName.valueOf("whatever", "oh_foo_should_be_in_other");
+    TableName otherName =
+      TableName.valueOf("whatever", "oh_foo_should_be_in_other");
     rsgroup = script.getRSGroup(otherName.getNamespaceAsString(), otherName.getQualifierAsString());
     Assert.assertEquals("other", rsgroup);
 
-    TableName defaultName = TableName.valueOf("nono", "should_be_in_default");
-    rsgroup = script.getRSGroup(defaultName.getNamespaceAsString(), defaultName.getQualifierAsString());
+    TableName defaultName =
+      TableName.valueOf("nono", "should_be_in_default");
+    rsgroup = script.getRSGroup(
+      defaultName.getNamespaceAsString(), defaultName.getQualifierAsString()
+    );
     Assert.assertEquals("default", rsgroup);
   }
 
