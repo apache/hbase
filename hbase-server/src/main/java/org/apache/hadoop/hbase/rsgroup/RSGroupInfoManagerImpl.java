@@ -204,7 +204,8 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   // Package visibility for testing
   static class RSGroupMappingScript {
     static final String RS_GROUP_MAPPING_SCRIPT = "hbase.rsgroup.table.mapping.script";
-    static final String RS_GROUP_MAPPING_SCRIPT_TIMEOUT = "hbase.rsgroup.table.mapping.script.timeout";
+    static final String RS_GROUP_MAPPING_SCRIPT_TIMEOUT =
+      "hbase.rsgroup.table.mapping.script.timeout";
     private Shell.ShellCommandExecutor rsgroupMappingScript;
 
     RSGroupMappingScript(Configuration conf) {

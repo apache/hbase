@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.PrintWriter;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
@@ -32,10 +36,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.PrintWriter;
 
 @Category({ RSGroupTests.class, SmallTests.class })
 public class TestRSGroupMappingScript {
