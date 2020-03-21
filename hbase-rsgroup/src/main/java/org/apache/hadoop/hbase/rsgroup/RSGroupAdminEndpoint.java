@@ -488,7 +488,7 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
                                  NamespaceDescriptor ns) throws IOException {
     String group = ns.getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP);
     if(group != null && groupAdminServer.getRSGroupInfo(group) == null) {
-      throw new ConstraintException("Region server group "+group+" does not exit");
+      throw new ConstraintException("Region server group " + group + " does not exist.");
     }
   }
 
