@@ -945,7 +945,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           " initialization.");
       }
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Region open journal:\n" + status.prettyPrintJournal());
+        LOG.debug("Region open journal for {}:\n{}", this.getRegionInfo().getEncodedName(),
+          status.prettyPrintJournal());
       }
       status.cleanup();
     }
@@ -1564,7 +1565,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
     } finally {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Region close journal:\n" + status.prettyPrintJournal());
+        LOG.debug("Region close journal for {}:\n{}", this.getRegionInfo().getEncodedName(),
+          status.prettyPrintJournal());
       }
       status.cleanup();
     }
@@ -1766,7 +1768,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         Closeables.close(this.metricsRegionWrapper, true);
       }
       status.markComplete("Closed");
-      LOG.info("Closed " + this);
+      LOG.info("Closed {}", this);
       return result;
     } finally {
       lock.writeLock().unlock();
@@ -2294,7 +2296,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     } finally {
       if (requestNeedsCancellation) store.cancelRequestedCompaction(compaction);
       if (status != null) {
-        LOG.debug("Compaction status journal:\n\t" + status.prettyPrintJournal());
+        LOG.debug("Compaction status journal for {}:\n\t{}", this.getRegionInfo().getEncodedName(),
+          status.prettyPrintJournal());
         status.cleanup();
       }
     }
@@ -2441,7 +2444,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
     } finally {
       lock.readLock().unlock();
-      LOG.debug("Flush status journal:\n\t" + status.prettyPrintJournal());
+      LOG.debug("Flush status journal for {}:\n\t{}", this.getRegionInfo().getEncodedName(),
+        status.prettyPrintJournal());
       status.cleanup();
     }
   }
