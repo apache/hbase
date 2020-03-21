@@ -372,7 +372,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
   @Override
   public void moveTables(Set<TableName> tables, String targetGroup) throws IOException {
     if (tables == null) {
-      throw new ConstraintException("The list of servers cannot be null.");
+      throw new ConstraintException("The list of tables cannot be null.");
     }
     if (tables.size() < 1) {
       LOG.debug("moveTables() passed an empty set. Ignoring.");
