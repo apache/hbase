@@ -1071,7 +1071,7 @@ class FromClientSideBase {
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
 
-    scan = new Scan().withStartRow(HConstants.EMPTY_START_ROW).withStopRow(ROWS[ROWIDX], true);
+    scan = new Scan().withStartRow(HConstants.EMPTY_START_ROW).withStopRow(ROWS[ROWIDX]);
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
 
