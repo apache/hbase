@@ -116,6 +116,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -4180,7 +4181,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   @Override
   public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier, CompareOperator op,
     ByteArrayComparable comparator, TimeRange timeRange, Mutation mutation) throws IOException {
-    checkMutationType(mutation, row);
     return doCheckAndRowMutate(row, family, qualifier, op, comparator, null, timeRange, null,
       mutation);
   }
@@ -4216,6 +4216,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // need these commented out checks.
     // if (rowMutations == null && mutation == null) throw new DoNotRetryIOException("Both null");
     // if (rowMutations != null && mutation != null) throw new DoNotRetryIOException("Both set");
+    if (mutation != null) {
+      checkMutationType(mutation);
+      checkRow(mutation, row);
+    } else {
+      checkRow(rowMutations, row);
+    }
     checkReadOnly();
     // TODO, add check for value length also move this check to the client
     checkResources();
@@ -4331,13 +4337,17 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
-  private void checkMutationType(final Mutation mutation, final byte [] row)
+  private void checkMutationType(final Mutation mutation)
   throws DoNotRetryIOException {
     boolean isPut = mutation instanceof Put;
     if (!isPut && !(mutation instanceof Delete)) {
       throw new org.apache.hadoop.hbase.DoNotRetryIOException("Action must be Put or Delete");
     }
-    if (!Bytes.equals(row, mutation.getRow())) {
+  }
+
+  private void checkRow(final Row action, final byte[] row)
+    throws DoNotRetryIOException {
+    if (!Bytes.equals(row, action.getRow())) {
       throw new org.apache.hadoop.hbase.DoNotRetryIOException("Action's getRow must match");
     }
   }
