@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 
 /**
@@ -136,6 +135,8 @@ public class AssignRegionHandler extends EventHandler {
       cleanUpAndReportFailure(e);
       return;
     }
+    // From here on out, this is PONR. We can not revert back. The only way to address an
+    // exception from here on out is to abort the region server.
     rs.postOpenDeployTasks(new PostOpenDeployContext(region, openProcId, masterSystemTime));
     rs.addRegion(region);
     LOG.info("Opened {}", regionName);
@@ -156,6 +157,9 @@ public class AssignRegionHandler extends EventHandler {
   protected void handleException(Throwable t) {
     LOG.warn("Fatal error occurred while opening region {}, aborting...",
       regionInfo.getRegionNameAsString(), t);
+    // Clear any reference in getServer().getRegionsInTransitionInRS() otherwise can hold up
+    // regionserver abort on cluster shutdown. HBASE-23984.
+    getServer().getRegionsInTransitionInRS().remove(regionInfo.getEncodedNameAsBytes());
     getServer().abort(
       "Failed to open region " + regionInfo.getRegionNameAsString() + " and can not recover", t);
   }
