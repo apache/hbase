@@ -344,16 +344,16 @@ public final class WALSplitUtil {
 
   /**
    * Move aside a bad edits file.
-   * @param walFS WAL FileSystem used to rename bad edits file.
+   * @param fs the file system used to rename bad edits file.
    * @param edits Edits file to move aside.
    * @return The name of the moved aside file.
    * @throws IOException
    */
-  public static Path moveAsideBadEditsFile(final FileSystem walFS, final Path edits)
+  public static Path moveAsideBadEditsFile(final FileSystem fs, final Path edits)
       throws IOException {
     Path moveAsideName =
         new Path(edits.getParent(), edits.getName() + "." + System.currentTimeMillis());
-    if (!walFS.rename(edits, moveAsideName)) {
+    if (!fs.rename(edits, moveAsideName)) {
       LOG.warn("Rename failed from {} to {}", edits, moveAsideName);
     }
     return moveAsideName;
