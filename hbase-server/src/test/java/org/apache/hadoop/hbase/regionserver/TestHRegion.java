@@ -2210,12 +2210,12 @@ public class TestHRegion {
       ),
       new RowMutations(row)
         .add((Mutation) new Put(row)
-          .addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")))
+          .addColumn(FAMILY, Bytes.toBytes("E"), Bytes.toBytes("e")))
         .add((Mutation) new Delete(row).addColumns(FAMILY, Bytes.toBytes("A"))));
     assertTrue(ok);
 
-    result = region.get(new Get(row).addColumn(FAMILY, Bytes.toBytes("D")));
-    assertEquals("d", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("D"))));
+    result = region.get(new Get(row).addColumn(FAMILY, Bytes.toBytes("E")));
+    assertEquals("e", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("E"))));
 
     assertTrue(region.get(new Get(row).addColumn(FAMILY, Bytes.toBytes("A"))).isEmpty());
   }

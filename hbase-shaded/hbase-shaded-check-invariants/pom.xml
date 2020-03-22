@@ -88,13 +88,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <dependencies>
-          <dependency>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>extra-enforcer-rules</artifactId>
-            <version>${extra.enforcer.version}</version>
-          </dependency>
-        </dependencies>
         <executions>
           <execution>
             <id>enforce-banned-dependencies</id>

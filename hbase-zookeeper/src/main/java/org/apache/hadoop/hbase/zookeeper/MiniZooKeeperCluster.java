@@ -25,12 +25,14 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.BindException;
 import java.net.ConnectException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -49,12 +51,13 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 @InterfaceAudience.Public
 public class MiniZooKeeperCluster {
   private static final Logger LOG = LoggerFactory.getLogger(MiniZooKeeperCluster.class);
-
   private static final int TICK_TIME = 2000;
   private static final int TIMEOUT = 1000;
   private static final int DEFAULT_CONNECTION_TIMEOUT = 30000;
   private static final byte[] STATIC_BYTES = Bytes.toBytes("stat");
   private final int connectionTimeout;
+  public static final String LOOPBACK_HOST = InetAddress.getLoopbackAddress().getHostName();
+  public static final String HOST = LOOPBACK_HOST;
 
   private boolean started;
 
@@ -236,7 +239,7 @@ public class MiniZooKeeperCluster {
       while (true) {
         try {
           standaloneServerFactory = new NIOServerCnxnFactory();
-          standaloneServerFactory.configure(new InetSocketAddress(currentClientPort),
+          standaloneServerFactory.configure(new InetSocketAddress(LOOPBACK_HOST, currentClientPort),
             configuration.getInt(HConstants.ZOOKEEPER_MAX_CLIENT_CNXNS,
               HConstants.DEFAULT_ZOOKEEPER_MAX_CLIENT_CNXNS));
         } catch (BindException e) {
@@ -418,7 +421,7 @@ public class MiniZooKeeperCluster {
     long start = System.currentTimeMillis();
     while (true) {
       try {
-        send4LetterWord("localhost", port, "stat", (int)timeout);
+        send4LetterWord(HOST, port, "stat", (int)timeout);
       } catch (IOException e) {
         return true;
       }
@@ -441,7 +444,7 @@ public class MiniZooKeeperCluster {
     long start = System.currentTimeMillis();
     while (true) {
       try {
-        String result = send4LetterWord("localhost", port, "stat", (int)timeout);
+        String result = send4LetterWord(HOST, port, "stat", (int)timeout);
         if (result.startsWith("Zookeeper version:") && !result.contains("READ-ONLY")) {
           return true;
         } else {
@@ -449,10 +452,10 @@ public class MiniZooKeeperCluster {
         }
       } catch (ConnectException e) {
         // ignore as this is expected, do not log stacktrace
-        LOG.info("localhost:{} not up: {}", port, e.toString());
+        LOG.info("{}:{} not up: {}", HOST, port, e.toString());
       } catch (IOException e) {
         // ignore as this is expected
-        LOG.info("localhost:{} not up", port, e);
+        LOG.info("{}:{} not up", HOST, port, e);
       }
 
       if (System.currentTimeMillis() > start + timeout) {
@@ -470,6 +473,13 @@ public class MiniZooKeeperCluster {
   public int getClientPort() {
     return activeZKServerIndex < 0 || activeZKServerIndex >= clientPortList.size() ? -1
         : clientPortList.get(activeZKServerIndex);
+  }
+
+  /**
+   * @return Address for this  cluster instance.
+   */
+  public Address getAddress() {
+    return Address.fromParts(HOST, getClientPort());
   }
 
   List<ZooKeeperServer> getZooKeeperServers() {
