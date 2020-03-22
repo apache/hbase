@@ -63,11 +63,12 @@ public class TestRSGroupMappingScript {
     script.createNewFile();
     PrintWriter pw = new PrintWriter(new FileOutputStream(script));
     try {
+      pw.println("#!/bin/bash");
       pw.println("namespace=$1");
       pw.println("tablename=$2");
-      pw.println("if [[ $namespace == \"test\" ]]; then");
+      pw.println("if [[ $namespace == test ]]; then");
       pw.println("  echo test");
-      pw.println("elif [[ $tablename == *\"foo\"* ]]; then");
+      pw.println("elif [[ $tablename == *foo* ]]; then");
       pw.println("  echo other");
       pw.println("else");
       pw.println("  echo default");
