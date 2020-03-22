@@ -18,8 +18,11 @@
 package org.apache.hadoop.hbase.rsgroup;
 
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.IOException;
 import java.io.PrintWriter;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -60,7 +63,10 @@ public class TestRSGroupMappingScript {
   @Before
   public void setup() throws Exception {
     script = new File(UTIL.getConfiguration().get(RSGroupMappingScript.RS_GROUP_MAPPING_SCRIPT));
-    script.createNewFile();
+    if (!script.createNewFile()) {
+      throw new IOException("Can't create script");
+    }
+
     PrintWriter pw = new PrintWriter(new FileOutputStream(script));
     try {
       pw.println("#!/bin/bash");
@@ -77,8 +83,17 @@ public class TestRSGroupMappingScript {
     } finally {
       pw.close();
     }
-    script.setExecutable(true);
-    LOG.info("Created " + script);
+    boolean executable = script.setExecutable(true);
+    LOG.info("Created " + script  + ", executable=" + executable);
+    verifyScriptContent(script);
+  }
+
+  private void verifyScriptContent(File file) throws Exception {
+    BufferedReader reader = new BufferedReader(new FileReader(file));
+    String line;
+    while ((line = reader.readLine()) != null) {
+      LOG.info(line);
+    }
   }
 
   @Test
