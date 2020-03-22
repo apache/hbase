@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Size;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.rsgroup.RSGroupBasedLoadBalancer;
@@ -134,7 +135,9 @@ public class TestRSGroupBasedLoadBalancerWithStochasticLoadBalancerAsInternal
     when(clusterStatus.getLiveServerMetrics()).thenReturn(serverMetricsMap);
     loadBalancer.setClusterMetrics(clusterStatus);
 
-    List<RegionPlan> plans = loadBalancer.balanceCluster(clusterState);
+    Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
+        (Map) mockClusterServersWithTables(clusterState);
+    List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
     Set<RegionInfo> regionsMoveFromServerA = new HashSet<>();
     Set<ServerName> targetServers = new HashSet<>();
     for(RegionPlan plan : plans) {

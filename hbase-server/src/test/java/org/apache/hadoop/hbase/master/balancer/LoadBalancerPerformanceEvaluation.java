@@ -173,7 +173,8 @@ public class LoadBalancerPerformanceEvaluation extends AbstractHBaseTool {
     methodName = "balanceCluster";
     LOG.info("Calling " + methodName);
     watch.reset().start();
-    loadBalancer.balanceCluster(serverRegionMap);
+
+    loadBalancer.balanceTable(HConstants.ENSEMBLE_TABLE_NAME, serverRegionMap);
     System.out.print(formatResults(methodName, watch.elapsed(TimeUnit.MILLISECONDS)));
 
     return EXIT_SUCCESS;
