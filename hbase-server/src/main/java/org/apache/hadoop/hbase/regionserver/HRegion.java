@@ -5449,6 +5449,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             store.assertBulkLoadHFileOk(filePath);
           } catch (IOException e) {
             handleException(fs.getFileSystem(), filePath, e);
+            continue;
           }
           Pair<Path, Path> pair = store.preBulkLoadHFile(filePath.toString(), -1);
           store.bulkLoadHFile(Bytes.toBytes(familyName), pair.getFirst().toString(),
