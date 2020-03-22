@@ -130,7 +130,12 @@ public class RegionStates {
     synchronized (regionsMapLock) {
       RegionStateNode node = regionsMap.computeIfAbsent(regionInfo.getRegionName(),
         key -> new RegionStateNode(regionInfo, regionInTransition));
-      return encodedRegionsMap.putIfAbsent(regionInfo.getEncodedName(), node);
+
+      if (encodedRegionsMap.get(regionInfo.getEncodedName()) != node) {
+        encodedRegionsMap.put(regionInfo.getEncodedName(), node);
+      }
+
+      return node;
     }
   }
 
