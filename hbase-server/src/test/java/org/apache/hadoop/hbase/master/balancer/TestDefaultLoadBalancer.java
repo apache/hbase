@@ -129,17 +129,16 @@ public class TestDefaultLoadBalancer extends BalancerTestBase {
    *
    * Invariant is that all servers should be hosting either floor(average) or
    * ceiling(average) at both table level and cluster level
-   *
-   * @throws Exception
    */
   @Test
   public void testBalanceClusterOverall() throws Exception {
     Map<TableName, Map<ServerName, List<RegionInfo>>> clusterLoad = new TreeMap<>();
     for (int[] mockCluster : clusterStateMocks) {
-      Map<ServerName, List<RegionInfo>> clusterServers = mockClusterServers(mockCluster, 50);
+      Map<ServerName, List<RegionInfo>> clusterServers = mockClusterServers(mockCluster, 30);
       List<ServerAndLoad> clusterList = convertToList(clusterServers);
       clusterLoad.put(TableName.valueOf(name.getMethodName()), clusterServers);
-      HashMap<TableName, TreeMap<ServerName, List<RegionInfo>>> result = mockClusterServersWithTables(clusterServers);
+      HashMap<TableName, TreeMap<ServerName, List<RegionInfo>>> result =
+        mockClusterServersWithTables(clusterServers);
       loadBalancer.setClusterLoad(clusterLoad);
       List<RegionPlan> clusterplans = new ArrayList<>();
       List<Pair<TableName, Integer>> regionAmountList = new ArrayList<>();

@@ -85,8 +85,8 @@ public class TestMasterShutdown {
       htu = new HBaseTestingUtility(conf);
       StartMiniClusterOption option = StartMiniClusterOption.builder()
         .numMasters(3)
-        .numRegionServers(3)
-        .numDataNodes(3)
+        .numRegionServers(1)
+        .numDataNodes(1)
         .build();
       final MiniHBaseCluster cluster = htu.startMiniCluster(option);
 
