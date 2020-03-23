@@ -453,6 +453,26 @@ public interface MetricsRegionServerWrapper {
   long getHedgedReadWins();
 
   /**
+   * @return Number of total bytes read from HDFS.
+   */
+  long getTotalBytesRead();
+
+  /**
+   * @return Number of bytes read from the local HDFS DataNode.
+   */
+  long getLocalBytesRead();
+
+  /**
+   * @return Number of bytes read locally through HDFS short circuit.
+   */
+  long getShortCircuitBytesRead();
+
+  /**
+   * @return Number of bytes read locally through HDFS zero copy.
+   */
+  long getZeroCopyBytesRead();
+
+  /**
    * @return Count of requests blocked because the memstore size is larger than blockingMemStoreSize
    */
   long getBlockedRequestsCount();
