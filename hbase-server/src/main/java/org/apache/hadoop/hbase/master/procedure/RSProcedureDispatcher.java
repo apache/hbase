@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.ServerListener;
+import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher;
 import org.apache.hadoop.hbase.regionserver.RegionServerAbortedException;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
@@ -93,11 +94,16 @@ public class RSProcedureDispatcher
     if (!super.start()) {
       return false;
     }
-
-    master.getServerManager().registerListener(this);
-    procedureEnv = master.getMasterProcedureExecutor().getEnvironment();
-    for (ServerName serverName: master.getServerManager().getOnlineServersList()) {
-      addNode(serverName);
+    // Around startup, if failed, some of the below may be set back to null so NPE is possible.
+    try {
+      master.getServerManager().registerListener(this);
+      procedureEnv = master.getMasterProcedureExecutor().getEnvironment();
+      for (ServerName serverName : master.getServerManager().getOnlineServersList()) {
+        addNode(serverName);
+      }
+    } catch (Exception e) {
+      LOG.info("Failed start", e);
+      return false;
     }
     return true;
   }

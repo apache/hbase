@@ -101,7 +101,7 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate>
   private long cleanerThreadTimeoutMsec;
   private long cleanerThreadCheckIntervalMsec;
   private List<Thread> threads = new ArrayList<Thread>();
-  private boolean running;
+  private volatile boolean running;
 
   private AtomicLong deletedLargeFiles = new AtomicLong();
   private AtomicLong deletedSmallFiles = new AtomicLong();

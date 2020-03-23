@@ -552,12 +552,20 @@ public class FSHLog extends AbstractFSWAL<Writer> {
         int syncCount = 0;
 
         try {
+          // Make a local copy of takeSyncFuture after we get it.  We've been running into NPEs
+          // 2020-03-22 16:54:32,180 WARN  [sync.1] wal.FSHLog$SyncRunner(589): UNEXPECTED
+          // java.lang.NullPointerException
+          // at org.apache.hadoop.hbase.regionserver.wal.FSHLog$SyncRunner.run(FSHLog.java:582)
+          // at java.lang.Thread.run(Thread.java:748)
+          SyncFuture sf;
           while (true) {
             takeSyncFuture = null;
             // We have to process what we 'take' from the queue
             takeSyncFuture = this.syncFutures.take();
+            // Make local copy.
+            sf = takeSyncFuture;
             currentSequence = this.sequence;
-            long syncFutureSequence = takeSyncFuture.getTxid();
+            long syncFutureSequence = sf.getTxid();
             if (syncFutureSequence > currentSequence) {
               throw new IllegalStateException("currentSequence=" + currentSequence
                   + ", syncFutureSequence=" + syncFutureSequence);
@@ -565,7 +573,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
             // See if we can process any syncfutures BEFORE we go sync.
             long currentHighestSyncedSequence = highestSyncedTxid.get();
             if (currentSequence < currentHighestSyncedSequence) {
-              syncCount += releaseSyncFuture(takeSyncFuture, currentHighestSyncedSequence, null);
+              syncCount += releaseSyncFuture(sf, currentHighestSyncedSequence, null);
               // Done with the 'take'. Go around again and do a new 'take'.
               continue;
             }
@@ -579,7 +587,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
           Throwable lastException = null;
           try {
             TraceUtil.addTimelineAnnotation("syncing writer");
-            writer.sync(takeSyncFuture.isForceSync());
+            writer.sync(sf.isForceSync());
             TraceUtil.addTimelineAnnotation("writer synced");
             currentSequence = updateHighestSyncedSequence(currentSequence);
           } catch (IOException e) {

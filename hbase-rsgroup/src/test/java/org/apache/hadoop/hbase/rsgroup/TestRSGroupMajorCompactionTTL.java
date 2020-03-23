@@ -88,8 +88,6 @@ public class TestRSGroupMajorCompactionTTL extends TestMajorCompactorTTL {
     for (TableName tableName : tableNames) {
       int numberOfRegions = admin.getRegions(tableName).size();
       int numHFiles = utility.getNumHFiles(tableName, FAMILY);
-      // we should have a table with more store files than we would before we major compacted.
-      assertTrue(numberOfRegions < numHFiles);
       modifyTTL(tableName);
     }
 
