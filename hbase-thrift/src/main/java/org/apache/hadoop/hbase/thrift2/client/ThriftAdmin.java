@@ -68,6 +68,9 @@ import org.apache.hadoop.hbase.thrift2.ThriftUtilities;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
 import org.apache.hadoop.hbase.thrift2.generated.TNamespaceDescriptor;
+import org.apache.hadoop.hbase.thrift2.generated.TServerName;
+import org.apache.hadoop.hbase.thrift2.generated.TSlowLogQueryFilter;
+import org.apache.hadoop.hbase.thrift2.generated.TSlowLogRecord;
 import org.apache.hadoop.hbase.thrift2.generated.TTableDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TTableName;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -1396,13 +1399,28 @@ public class ThriftAdmin implements Admin {
 
   @Override
   public List<SlowLogRecord> getSlowLogResponses(final Set<ServerName> serverNames,
-      final SlowLogQueryFilter slowLogQueryFilter) {
-    throw new NotImplementedException("getSlowLogResponses not supported in ThriftAdmin");
+      final SlowLogQueryFilter slowLogQueryFilter) throws IOException {
+    Set<TServerName> tServerNames = ThriftUtilities.getServerNamesFromHBase(serverNames);
+    TSlowLogQueryFilter tSlowLogQueryFilter =
+      ThriftUtilities.getSlowLogQueryFromHBase(slowLogQueryFilter);
+    try {
+      List<TSlowLogRecord> tSlowLogRecords =
+        client.getSlowLogResponses(tServerNames, tSlowLogQueryFilter);
+      return ThriftUtilities.getSlowLogRecordsFromThrift(tSlowLogRecords);
+    } catch (TException e) {
+      throw new IOException(e);
+    }
   }
 
   @Override
-  public List<Boolean> clearSlowLogResponses(final Set<ServerName> serverNames) {
-    throw new NotImplementedException("clearSlowLogsResponses not supported in ThriftAdmin");
+  public List<Boolean> clearSlowLogResponses(final Set<ServerName> serverNames)
+      throws IOException {
+    Set<TServerName> tServerNames = ThriftUtilities.getServerNamesFromHBase(serverNames);
+    try {
+      return client.clearSlowLogResponses(tServerNames);
+    } catch (TException e) {
+      throw new IOException(e);
+    }
   }
 
   @Override
