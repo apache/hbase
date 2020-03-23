@@ -166,16 +166,19 @@ public class StoreFileInfo {
     } else if (isHFile(p)) {
       // HFile
       if (fileStatus != null) {
-        this.createdTimestamp = fileStatus.getModificationTime();
-        this.size = fileStatus.getLen();
-      } else {
-        this.createdTimestamp = getFileStatus().getModificationTime();
-        this.size = getFileStatus().getLen();
+        this.localStatus = fileStatus;
+      }else{
+        this.localStatus = loadAndCacheFileStatus(fs);
       }
+      this.createdTimestamp = localStatus.getModificationTime();
+      this.size = localStatus.getLen();
       this.reference = null;
       this.link = null;
     } else {
       throw new IOException("path=" + p + " doesn't look like a valid StoreFile");
+    }
+    if(this.localStatus == null ){
+      this.localStatus = loadAndCacheFileStatus(fs);
     }
   }
 
@@ -312,7 +315,7 @@ public class StoreFileInfo {
     } else {
       in = new FSDataInputStreamWrapper(fs, this.getPath(), doDropBehind, readahead);
     }
-    status = this.getFileStatus();
+    status = getFileStatus();
     long length = status.getLen();
     ReaderContextBuilder contextBuilder = new ReaderContextBuilder()
         .withInputStreamWrapper(in)
@@ -360,15 +363,7 @@ public class StoreFileInfo {
       return FSUtils.computeHDFSBlocksDistribution(fs, status, 0, status.getLen());
     }
   }
-
-  /**
-   * Get the {@link FileStatus} of the file referenced by this StoreFileInfo
-   * @param fs The current file system to use.
-   * @return The {@link FileStatus} of the file referenced by this StoreFileInfo
-   */
-  public FileStatus getReferencedFileStatus(final FileSystem fs) throws IOException {
-    FileStatus status;
-    if(this.localStatus != null) {return this.localStatus;}
+  private FileStatus loadAndCacheFileStatus(final FileSystem fs) throws IOException {
     if (this.reference != null) {
       if (this.link != null) {
         FileNotFoundException exToThrow = null;
@@ -409,6 +404,17 @@ public class StoreFileInfo {
       }
     }
     return status;
+  }
+  /**
+   * Get the {@link FileStatus} of the file referenced by this StoreFileInfo
+   * @param fs The current file system to use.
+   * @return The {@link FileStatus} of the file referenced by this StoreFileInfo
+   */
+  public FileStatus getReferencedFileStatus(final FileSystem fs) throws IOException {
+    if(null == this.localStatus){
+      throw new IOException("localStatus is not initialize on construct");
+    }
+    return this.localStatus;
   }
 
   /** @return The {@link Path} of the file */
