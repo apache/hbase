@@ -1086,6 +1086,42 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     throw lastException;
   }
 
+  public HStoreFile tryCommitRecoveredHFile(Path path) throws IOException {
+    LOG.info("Validating recovered hfile at {} for inclusion in store {} region {}", path, this,
+      getRegionInfo().getRegionNameAsString());
+    FileSystem srcFs = path.getFileSystem(conf);
+    srcFs.access(path, FsAction.READ_WRITE);
+    try (HFile.Reader reader =
+        HFile.createReader(srcFs, path, cacheConf, isPrimaryReplicaStore(), conf)) {
+      Optional<byte[]> firstKey = reader.getFirstRowKey();
+      Preconditions.checkState(firstKey.isPresent(), "First key can not be null");
+      Optional<Cell> lk = reader.getLastKey();
+      Preconditions.checkState(lk.isPresent(), "Last key can not be null");
+      byte[] lastKey = CellUtil.cloneRow(lk.get());
+      if (!this.getRegionInfo().containsRange(firstKey.get(), lastKey)) {
+        throw new WrongRegionException("Recovered hfile " + path.toString() +
+            " does not fit inside region " + this.getRegionInfo().getRegionNameAsString());
+      }
+    }
+
+    Path dstPath = fs.commitStoreFile(getColumnFamilyName(), path);
+    HStoreFile sf = createStoreFileAndReader(dstPath);
+    StoreFileReader r = sf.getReader();
+    this.storeSize.addAndGet(r.length());
+    this.totalUncompressedBytes.addAndGet(r.getTotalUncompressedBytes());
+
+    this.lock.writeLock().lock();
+    try {
+      this.storeEngine.getStoreFileManager().insertNewFiles(Lists.newArrayList(sf));
+    } finally {
+      this.lock.writeLock().unlock();
+    }
+
+    LOG.info("Loaded recovered hfile to {}, entries={}, sequenceid={}, filesize={}", sf,
+      r.getEntries(), r.getSequenceID(), TraditionalBinaryPrefix.long2String(r.length(), "B", 1));
+    return sf;
+  }
+
   /**
    * @param path The pathname of the tmp file into which the store was flushed
    * @return store file created.

@@ -565,42 +565,29 @@ public final class WALSplitUtil {
   }
 
   /**
-   * Path to a file under recovered.hfiles directory of the region's column family: e.g.
-   * /hbase/some_table/2323432434/cf/recovered.hfiles/2332-wal. This method also ensures existence
-   * of recovered.hfiles directory under the region's column family, creating it if necessary.
-   *
-   * @param tableName          the table name
-   * @param encodedRegionName  the encoded region name
-   * @param familyName         the column family name
-   * @param seqId              the sequence id which used to generate file name
+   * Return path to recovered.hfiles directory of the region's column family: e.g.
+   * /hbase/some_table/2323432434/cf/recovered.hfiles/. This method also ensures existence of
+   * recovered.hfiles directory under the region's column family, creating it if necessary.
+   * @param rootFS the root file system
+   * @param conf configuration
+   * @param tableName the table name
+   * @param encodedRegionName the encoded region name
+   * @param familyName the column family name
+   * @param seqId the sequence id which used to generate file name
    * @param fileNameBeingSplit the file being split currently. Used to generate tmp file name
-   * @param conf               configuration
-   * @param rootFS             the root file system
-   * @return Path to file into which to dump split log edits.
+   * @return Path to recovered.hfiles directory of the region's column family.
    */
-  static Path getRegionRecoveredHFilePath(TableName tableName, String encodedRegionName,
-    String familyName, long seqId, String fileNameBeingSplit, Configuration conf, FileSystem rootFS)
-    throws IOException {
+  static Path tryCreateRecoveredHFilesDir(FileSystem rootFS, Configuration conf,
+      TableName tableName, String encodedRegionName, String familyName) throws IOException {
     Path rootDir = FSUtils.getRootDir(conf);
-    Path regionDir =
-      FSUtils.getRegionDirFromTableDir(FSUtils.getTableDir(rootDir, tableName), encodedRegionName);
-    Path dir = getStoreDirRecoveredHFilesDir(regionDir, familyName);
-
+    Path regionDir = FSUtils.getRegionDirFromTableDir(FSUtils.getTableDir(rootDir, tableName),
+      encodedRegionName);
+    Path dir = getRecoveredHFilesDir(regionDir, familyName);
     if (!rootFS.exists(dir) && !rootFS.mkdirs(dir)) {
       LOG.warn("mkdir failed on {}, region {}, column family {}", dir, encodedRegionName,
         familyName);
     }
-
-    String fileName = formatRecoveredHFileName(seqId, fileNameBeingSplit);
-    return new Path(dir, fileName);
-  }
-
-  private static String formatRecoveredHFileName(long seqId, String fileNameBeingSplit) {
-    return String.format("%019d", seqId) + "-" + fileNameBeingSplit;
-  }
-
-  public static long getSeqIdForRecoveredHFile(String fileName) {
-    return Long.parseLong(fileName.split("-")[0]);
+    return dir;
   }
 
   /**
@@ -608,13 +595,13 @@ public final class WALSplitUtil {
    * @param familyName The column family name
    * @return The directory that holds recovered hfiles for the region's column family
    */
-  private static Path getStoreDirRecoveredHFilesDir(final Path regionDir, String familyName) {
+  private static Path getRecoveredHFilesDir(final Path regionDir, String familyName) {
     return new Path(new Path(regionDir, familyName), HConstants.RECOVERED_HFILES_DIR);
   }
 
   public static FileStatus[] getRecoveredHFiles(final FileSystem rootFS,
       final Path regionDir, String familyName) throws IOException {
-    Path dir = getStoreDirRecoveredHFilesDir(regionDir, familyName);
+    Path dir = getRecoveredHFilesDir(regionDir, familyName);
     return FSUtils.listStatus(rootFS, dir);
   }
 }
