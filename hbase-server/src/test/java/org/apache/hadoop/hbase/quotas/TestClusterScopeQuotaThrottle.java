@@ -181,7 +181,7 @@ public class TestClusterScopeQuotaThrottle {
     triggerUserCacheRefresh(TEST_UTIL, true, TABLE_NAMES);
   }
 
-  @Test
+  @org.junit.Ignore @Test // Spews the log w/ triggering of scheduler?
   public void testUserNamespaceClusterScopeQuota() throws Exception {
     final Admin admin = TEST_UTIL.getAdmin();
     final String userName = User.getCurrent().getShortName();
