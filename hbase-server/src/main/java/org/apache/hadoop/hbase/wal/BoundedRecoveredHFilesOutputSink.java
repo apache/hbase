@@ -32,15 +32,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.regionserver.CellSet;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.EntryBuffers.RegionEntryBuffer;
@@ -85,11 +87,14 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
         if (CellUtil.matchingFamily(cell, WALEdit.METAFAMILY)) {
           continue;
         }
+        PrivateCellUtil.setSequenceId(cell, seqId);
         String familyName = Bytes.toString(CellUtil.cloneFamily(cell));
         // comparator need to be specified for meta
-        familyCells.computeIfAbsent(familyName, key -> new CellSet(
-          isMetaTable ? CellComparatorImpl.META_COMPARATOR : CellComparator.getInstance()))
-          .add(cell);
+        familyCells
+            .computeIfAbsent(familyName,
+              key -> new CellSet(
+                  isMetaTable ? CellComparatorImpl.META_COMPARATOR : CellComparatorImpl.COMPARATOR))
+            .add(cell);
         familySeqIds.compute(familyName, (k, v) -> v == null ? seqId : Math.max(v, seqId));
       }
     }
@@ -105,6 +110,8 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
         for (Cell cell : cellsEntry.getValue()) {
           writer.append(cell);
         }
+        // Append the max seqid to hfile, used when recovery.
+        writer.appendMetadata(familySeqIds.get(familyName), false);
         regionEditsWrittenMap.compute(Bytes.toString(buffer.encodedRegionName),
           (k, v) -> v == null ? buffer.entries.size() : v + buffer.entries.size());
         splits.add(writer.getPath());
@@ -181,44 +188,32 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
 
   private StoreFileWriter createRecoveredHFileWriter(TableName tableName, String regionName,
       long seqId, String familyName, boolean isMetaTable) throws IOException {
-    Path outputFile = WALSplitUtil
-      .getRegionRecoveredHFilePath(tableName, regionName, familyName, seqId,
-        walSplitter.getFileBeingSplit().getPath().getName(), walSplitter.conf, walSplitter.rootFS);
-    checkPathValid(outputFile);
+    Path outputDir = WALSplitUtil.tryCreateRecoveredHFilesDir(walSplitter.rootFS, walSplitter.conf,
+      tableName, regionName, familyName);
     StoreFileWriter.Builder writerBuilder =
         new StoreFileWriter.Builder(walSplitter.conf, CacheConfig.DISABLED, walSplitter.rootFS)
-            .withFilePath(outputFile);
-    HFileContextBuilder hFileContextBuilder = new HFileContextBuilder();
-    if (isMetaTable) {
-      hFileContextBuilder.withCellComparator(CellComparatorImpl.META_COMPARATOR);
-    } else {
-      configContextForNonMetaWriter(tableName, familyName, hFileContextBuilder, writerBuilder);
-    }
-    return writerBuilder.withFileContext(hFileContextBuilder.build()).build();
-  }
+            .withOutputDir(outputDir);
 
-  private void configContextForNonMetaWriter(TableName tableName, String familyName,
-      HFileContextBuilder hFileContextBuilder, StoreFileWriter.Builder writerBuilder)
-      throws IOException {
     TableDescriptor tableDesc =
         tableDescCache.computeIfAbsent(tableName, t -> getTableDescriptor(t));
     if (tableDesc == null) {
       throw new IOException("Failed to get table descriptor for table " + tableName);
     }
     ColumnFamilyDescriptor cfd = tableDesc.getColumnFamily(Bytes.toBytesBinary(familyName));
-    hFileContextBuilder.withCompression(cfd.getCompressionType()).withBlockSize(cfd.getBlocksize())
-        .withCompressTags(cfd.isCompressTags()).withDataBlockEncoding(cfd.getDataBlockEncoding())
-        .withCellComparator(CellComparatorImpl.COMPARATOR);
-    writerBuilder.withBloomType(cfd.getBloomFilterType());
+    HFileContext hFileContext = createFileContext(cfd, isMetaTable);
+    return writerBuilder.withFileContext(hFileContext).withBloomType(cfd.getBloomFilterType())
+        .build();
   }
 
-  private void checkPathValid(Path outputFile) throws IOException {
-    if (walSplitter.rootFS.exists(outputFile)) {
-      LOG.warn("this file {} may be left after last failed split ", outputFile);
-      if (!walSplitter.rootFS.delete(outputFile, false)) {
-        LOG.warn("delete old generated HFile {} failed", outputFile);
-      }
-    }
+  private HFileContext createFileContext(ColumnFamilyDescriptor cfd, boolean isMetaTable)
+      throws IOException {
+    return new HFileContextBuilder().withCompression(cfd.getCompressionType())
+        .withChecksumType(HStore.getChecksumType(walSplitter.conf))
+        .withBytesPerCheckSum(HStore.getBytesPerChecksum(walSplitter.conf))
+        .withBlockSize(cfd.getBlocksize()).withCompressTags(cfd.isCompressTags())
+        .withDataBlockEncoding(cfd.getDataBlockEncoding()).withCellComparator(
+          isMetaTable ? CellComparatorImpl.META_COMPARATOR : CellComparatorImpl.COMPARATOR)
+        .build();
   }
 
   private TableDescriptor getTableDescriptor(TableName tableName) {
