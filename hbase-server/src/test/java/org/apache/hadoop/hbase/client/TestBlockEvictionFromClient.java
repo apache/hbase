@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -601,11 +602,18 @@ public class TestBlockEvictionFromClient {
       region.flush(true);
       ServerName rs = Iterables.getOnlyElement(TEST_UTIL.getAdmin().getRegionServers());
       int regionCount = TEST_UTIL.getAdmin().getRegions(rs).size();
-      LOG.info("About to SPLIT on " + Bytes.toString(ROW1));
+      LOG.info("About to SPLIT on {} {}, count={}", Bytes.toString(ROW1), region.getRegionInfo(),
+        regionCount);
       TEST_UTIL.getAdmin().split(tableName, ROW1);
       // Wait for splits
       TEST_UTIL.waitFor(60000, () -> TEST_UTIL.getAdmin().getRegions(rs).size() > regionCount);
       region.compact(true);
+      List<HRegion> regions = TEST_UTIL.getMiniHBaseCluster().getRegionServer(rs).getRegions();
+      for (HRegion r: regions) {
+        LOG.info("" + r.getCompactionState());
+        TEST_UTIL.waitFor(30000, () -> r.getCompactionState().equals(CompactionState.NONE));
+      }
+      LOG.info("Split finished, is region closed {} {}", region.isClosed(), cache);
       Iterator<CachedBlock> iterator = cache.iterator();
       // Though the split had created the HalfStorefileReader - the firstkey and lastkey scanners
       // should be closed inorder to return those blocks
@@ -1212,8 +1220,10 @@ public class TestBlockEvictionFromClient {
       BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
       if (cache instanceof BucketCache) {
         refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
+        LOG.info("BucketCache {} {}", cacheKey, refCount);
       } else if (cache instanceof CombinedBlockCache) {
         refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
+        LOG.info("CombinedBlockCache {} {}", cacheKey, refCount);
       } else {
         continue;
       }

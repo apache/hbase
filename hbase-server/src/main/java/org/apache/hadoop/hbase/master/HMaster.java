@@ -1573,7 +1573,9 @@ public class HMaster extends HRegionServer implements MasterServices {
     // startProcedureExecutor. See the javadoc for finishActiveMasterInitialization for more
     // details.
     procedureExecutor.init(numThreads, abortOnCorruption);
-    procEnv.getRemoteDispatcher().start();
+    if (!procEnv.getRemoteDispatcher().start()) {
+      throw new HBaseIOException("Failed start of remote dispatcher");
+    }
   }
 
   private void startProcedureExecutor() throws IOException {

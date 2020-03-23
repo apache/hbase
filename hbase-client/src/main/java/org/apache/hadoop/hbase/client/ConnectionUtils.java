@@ -551,7 +551,7 @@ public final class ConnectionUtils {
       }
       LOG.trace("{} cache is null, try fetching from registry", type);
       if (futureRef.compareAndSet(null, new CompletableFuture<>())) {
-        LOG.debug("Start fetching{} from registry", type);
+        LOG.debug("Start fetching {} from registry", type);
         CompletableFuture<T> future = futureRef.get();
         addListener(fetch.get(), (value, error) -> {
           if (error != null) {
