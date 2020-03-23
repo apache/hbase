@@ -16,36 +16,25 @@
  * limitations under the License.
  */
 syntax = "proto2";
-package hbase.pb;
 
-option java_package = "org.apache.hadoop.hbase.coprocessor.example.generated";
-option java_outer_classname = "BulkDeleteProtos";
+// Coprocessor test
+option java_package = "org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated";
+option java_outer_classname = "ColumnAggregationWithNullResponseProtos";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
-option optimize_for = SPEED;
 
-import "Client.proto";
-
-message BulkDeleteRequest {
-  required Scan scan = 1;
-  required DeleteType deleteType = 2;
-  optional uint64 timestamp = 3;
-  required uint32 rowBatchSize = 4;
-  
-  enum DeleteType {
-    ROW = 0;
-    FAMILY = 1;
-    COLUMN = 2;
-    VERSION = 3;
-  }
+// use unique names for messages in ColumnAggregationXXX.protos due to a bug in
+// protoc or hadoop's protoc compiler.
+message ColumnAggregationNullResponseSumRequest {
+  required bytes family = 1;
+  optional bytes qualifier = 2;
 }
 
-message BulkDeleteResponse {
-  required uint64 rowsDeleted = 1; 
-  optional uint64 versionsDeleted = 2;
+message ColumnAggregationNullResponseSumResponse {
+  optional int64 sum = 1;
 }
 
-service BulkDeleteService {
-  rpc delete(BulkDeleteRequest)
-    returns (BulkDeleteResponse);
+service ColumnAggregationServiceNullResponse {
+  rpc sum(ColumnAggregationNullResponseSumRequest)
+    returns(ColumnAggregationNullResponseSumResponse);
 }

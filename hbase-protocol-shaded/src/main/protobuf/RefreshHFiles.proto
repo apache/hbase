@@ -16,25 +16,21 @@
  * limitations under the License.
  */
 syntax = "proto2";
+package hbase.pb;
 
-// Coprocessor test
-option java_package = "org.apache.hadoop.hbase.coprocessor.protobuf.generated";
-option java_outer_classname = "ColumnAggregationWithErrorsProtos";
+option java_package = "org.apache.hadoop.hbase.shaded.protobuf.generated";
+option java_outer_classname = "RefreshHFilesProtos";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
+option optimize_for = SPEED;
 
-// use unique names for messages in ColumnAggregationXXX.protos due to a bug in
-// protoc or hadoop's protoc compiler.
-message ColumnAggregationWithErrorsSumRequest {
-  required bytes family = 1;
-  optional bytes qualifier = 2;
+message RefreshHFilesRequest {
 }
 
-message ColumnAggregationWithErrorsSumResponse {
-  required int64 sum = 1;
+message RefreshHFilesResponse {
 }
 
-service ColumnAggregationServiceWithErrors {
-  rpc sum(ColumnAggregationWithErrorsSumRequest)
-    returns(ColumnAggregationWithErrorsSumResponse);
+service RefreshHFilesService {
+    rpc refreshHFiles(RefreshHFilesRequest)
+      returns (RefreshHFilesResponse);
 }

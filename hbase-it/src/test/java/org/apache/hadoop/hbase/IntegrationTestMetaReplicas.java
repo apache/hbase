@@ -18,10 +18,8 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.TestMetaWithReplicas;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -31,8 +29,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
  * An integration test that starts the cluster with three replicas for the meta
@@ -43,7 +41,7 @@ import org.slf4j.LoggerFactory;
  */
 @Category(IntegrationTests.class)
 public class IntegrationTestMetaReplicas {
-  private static final Logger LOG = LoggerFactory.getLogger(IntegrationTestMetaReplicas.class);
+
   /**
    * Util to get at the cluster.
    */
