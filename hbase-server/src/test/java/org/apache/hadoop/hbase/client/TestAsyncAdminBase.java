@@ -46,7 +46,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Class to test AsyncAdmin.
  */
-public abstract class TestAsyncAdminBase {
+public abstract class TestAsyncAdminBase extends AbstractTestUpdateConfiguration {
 
   protected static final Logger LOG = LoggerFactory.getLogger(TestAsyncAdminBase.class);
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
