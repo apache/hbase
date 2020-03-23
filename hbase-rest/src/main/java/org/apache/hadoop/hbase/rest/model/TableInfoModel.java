@@ -28,11 +28,13 @@ import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
-import org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.rest.protobuf.generated.TableInfoMessage.TableInfo;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
 /**
  * Representation of a list of table regions.
@@ -135,8 +137,8 @@ public class TableInfoModel implements Serializable, ProtobufMessageHandler {
       TableInfo.Region.Builder regionBuilder = TableInfo.Region.newBuilder();
       regionBuilder.setName(aRegion.getName());
       regionBuilder.setId(aRegion.getId());
-      regionBuilder.setStartKey(ByteStringer.wrap(aRegion.getStartKey()));
-      regionBuilder.setEndKey(ByteStringer.wrap(aRegion.getEndKey()));
+      regionBuilder.setStartKey(UnsafeByteOperations.unsafeWrap(aRegion.getStartKey()));
+      regionBuilder.setEndKey(UnsafeByteOperations.unsafeWrap(aRegion.getEndKey()));
       regionBuilder.setLocation(aRegion.getLocation());
       builder.addRegions(regionBuilder);
     }
