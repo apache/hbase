@@ -29,6 +29,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
@@ -64,7 +65,15 @@ public class TestUsersOperationsWithSecureHadoop {
   private static String CLIENT_NAME;
 
   @BeforeClass
-  public static void setUp() throws Exception {
+  public static void checkAndSetUp() throws Exception {
+    // check localhost kerberos users
+    Process process = Runtime.getRuntime().exec(new String[]{"bash", "-c", "klist"});
+    boolean wait = process.waitFor(2, TimeUnit.SECONDS);
+    assertTrue("localhost exec klist timeout!", wait);
+    int ret = process.exitValue();
+    assertTrue("localhost have an existing ticket!",ret != 0);
+
+    // setup MiniKdc
     KDC = TEST_UTIL.setupMiniKdc(KEYTAB_FILE);
     PRINCIPAL = "hbase/" + HOST;
     CLIENT_NAME = "foo";
