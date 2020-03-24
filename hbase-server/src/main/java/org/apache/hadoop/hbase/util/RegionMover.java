@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Iterator;
@@ -60,6 +61,8 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
+import org.apache.hadoop.hbase.net.Address;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -416,7 +419,9 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
       try {
         // Get Online RegionServers
         List<ServerName> regionServers = new ArrayList<>();
-        regionServers.addAll(admin.getRegionServers());
+        RSGroupInfo rsgroup = admin.getRSGroup(Address.fromParts(hostname, port));
+        LOG.info("{} belongs to {}", hostname, rsgroup.getName());
+        regionServers.addAll(filterRSGroupServers(rsgroup, admin.getRegionServers()));
         // Remove the host Region server from target Region Servers list
         ServerName server = stripServer(regionServers, hostname, port);
         if (server == null) {
@@ -431,6 +436,8 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         if (regionServers.isEmpty()) {
           LOG.warn("No Regions were moved - no servers available");
           return false;
+        } else {
+          LOG.info("Available servers {}", regionServers);
         }
         unloadRegions(server, regionServers, movedRegions);
       } catch (Exception e) {
@@ -444,6 +451,22 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
       return true;
     });
     return waitTaskToFinish(unloadPool, unloadTask, "unloading");
+  }
+
+  @VisibleForTesting
+   Collection<ServerName> filterRSGroupServers(RSGroupInfo rsgroup,
+      Collection<ServerName> onlineServers) {
+    if (rsgroup.getName().equals(RSGroupInfo.DEFAULT_GROUP)) {
+      return onlineServers;
+    }
+    List<ServerName> serverLists = new ArrayList<>(rsgroup.getServers().size());
+    for (ServerName server : onlineServers) {
+      Address address = Address.fromParts(server.getHostname(), server.getPort());
+      if (rsgroup.containsServer(address)) {
+        serverLists.add(server);
+      }
+    }
+    return serverLists;
   }
 
   private void unloadRegions(ServerName server, List<ServerName> regionServers,
