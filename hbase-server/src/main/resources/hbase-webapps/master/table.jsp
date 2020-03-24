@@ -229,6 +229,9 @@
           <a href="#metaTab_baseStats" data-toggle="tab">Base Stats</a>
         </li>
         <li class="">
+          <a href="#metaTab_localityStats" data-toggle="tab">Localities</a>
+        </li>
+        <li class="">
           <a href="#metaTab_compactStats" data-toggle="tab">Compactions</a>
         </li>
       </ul>
@@ -244,7 +247,6 @@
               <th>StorefileSize</th>
               <th>Num.Storefiles</th>
               <th>MemSize</th>
-              <th>Locality</th>
               <th>Start Key</th>
               <th>End Key</th>
               <%
@@ -270,7 +272,6 @@
                   String fileSize = ZEROMB;
                   String fileCount = "N/A";
                   String memSize = ZEROMB;
-                  float locality = 0.0f;
                   if (metaLocation != null) {
                     ServerMetrics sl = master.getServerManager().getLoad(metaLocation);
                     // The host name portion should be safe, but I don't know how we handle IDNs so err on the side of failing safely.
@@ -290,7 +291,6 @@
                         if (mSize > 0) {
                           memSize = StringUtils.byteDesc((long)mSize);
                         }
-                        locality = load.getDataLocality();
                       }
                     }
                   }
@@ -303,7 +303,6 @@
               <td><%= fileSize%></td>
               <td><%= fileCount%></td>
               <td><%= memSize%></td>
-              <td><%= locality%></td>
               <td><%= escapeXml(Bytes.toString(meta.getStartKey())) %></td>
               <td><%= escapeXml(Bytes.toString(meta.getEndKey())) %></td>
               <%
@@ -319,6 +318,51 @@
             </tbody>
           </table>
         </div>
+        <div class="tab-pane" id="metaTab_localityStats">
+           <table id="tableRegionTable" class="tablesorter table table-striped">
+             <thead>
+               <tr>
+                 <th>Name</th>
+                 <th>Region Server</th>
+                 <th>Locality</th>
+                 <th>LocalityForSsd</th>
+               </tr>
+             </thead>
+             <tbody>
+             <%
+               // NOTE: Presumes meta with one or more replicas
+               for (int j = 0; j < numMetaReplicas; j++) {
+                 RegionInfo meta = RegionReplicaUtil.getRegionInfoForReplica(
+                                         RegionInfoBuilder.FIRST_META_REGIONINFO, j);
+                 ServerName metaLocation = MetaTableLocator.waitMetaRegionLocation(master.getZooKeeper(), j, 1);
+                 for (int i = 0; i < 1; i++) {
+                   String hostAndPort = "";
+                   float locality = 0.0f;
+                   float localityForSsd = 0.0f;
+                   if (metaLocation != null) {
+                     ServerMetrics sl = master.getServerManager().getLoad(metaLocation);
+                     hostAndPort = URLEncoder.encode(metaLocation.getHostname()) + ":" + master.getRegionServerInfoPort(metaLocation);
+                     if (sl != null) {
+                       Map<byte[], RegionMetrics> map = sl.getRegionMetrics();
+                       if (map.containsKey(meta.getRegionName())) {
+                         RegionMetrics load = map.get(meta.getRegionName());
+                         locality = load.getDataLocality();
+                         localityForSsd = load.getDataLocalityForSsd();
+                       }
+                     }
+                   }
+                 %>
+               <tr>
+                 <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
+                 <td><a href="http://<%= hostAndPort %>/rs-status"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
+                 <td><%= locality%></td>
+                 <td><%= localityForSsd%></td>
+               </tr>
+             <%  } %>
+             <%} %>
+             </tbody>
+           </table>
+         </div>
         <div class="tab-pane" id="metaTab_compactStats">
           <table id="metaTableCompactStatsTable" class="tablesorter table table-striped">
             <thead>
@@ -778,6 +822,9 @@
           <a href="#tab_baseStats" data-toggle="tab">Base Stats</a>
         </li>
         <li class="">
+          <a href="#tab_localityStats" data-toggle="tab">Localities</a>
+        </li>
+        <li class="">
           <a href="#tab_compactStats" data-toggle="tab">Compactions</a>
         </li>
       </ul>
@@ -793,7 +840,6 @@
               <th>StorefileSize<br>(<%= totalSizeStr %>)</th>
               <th>Num.Storefiles<br>(<%= String.format("%,1d", totalStoreFileCount)%>)</th>
               <th>MemSize<br>(<%= totalMemSizeStr %>)</th>
-              <th>Locality</th>
               <th>Start Key</th>
               <th>End Key</th>
               <th>Region State</th>
@@ -824,7 +870,6 @@
                 String regionSize = ZEROMB;
                 String fileCount = "N/A";
                 String memSize = ZEROMB;
-                float locality = 0.0f;
                 String state = "N/A";
                 if (load != null) {
                   readReq = String.format("%,1d", load.getReadRequestCount());
@@ -838,7 +883,6 @@
                   if (mSize > 0) {
                     memSize = StringUtils.byteDesc((long)mSize);
                   }
-                  locality = load.getDataLocality();
                 }
                 if (stateMap.containsKey(regionInfo.getEncodedName())) {
                   state = stateMap.get(regionInfo.getEncodedName()).toString();
@@ -882,7 +926,6 @@
               <td><%= regionSize%></td>
               <td><%= fileCount%></td>
               <td><%= memSize%></td>
-              <td><%= locality%></td>
               <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getStartKey()))%></td>
               <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getEndKey()))%></td>
               <td><%= state%></td>
@@ -905,6 +948,61 @@
             only <b><%= numRegionsRendered %></b> regions are displayed here, <a href="<%= allRegionsUrl %>">click
               here</a> to see all regions.</p>
           <% } %>
+        </div>
+        <div class="tab-pane" id="tab_localityStats">
+          <table id="regionServerDetailsTable" class="tablesorter table table-striped">
+            <thead>
+              <tr>
+                <th>Name(<%= String.format("%,1d", regions.size())%>)</th>
+                <th>Region Server</th>
+                <th>Locality</th>
+                <th>LocalityForSsd</th>
+              </tr>
+            </thead>
+            <tbody>
+            <%
+              numRegionsRendered = 0;
+              for (Map.Entry<RegionInfo, RegionMetrics> hriEntry : entryList) {
+                RegionInfo regionInfo = hriEntry.getKey();
+                ServerName addr = regionsToServer.get(regionInfo);
+                RegionMetrics load = hriEntry.getValue();
+                float locality = 0.0f;
+                float localityForSsd = 0.0f;
+                String state = "N/A";
+                if (load != null) {
+                  locality = load.getDataLocality();
+                  localityForSsd = load.getDataLocalityForSsd();
+                }
+                if (addr != null) {
+                  // This port might be wrong if RS actually ended up using something else.
+                  urlRegionServer =
+                    "//" + URLEncoder.encode(addr.getHostname()) + ":" + master.getRegionServerInfoPort(addr) + "/rs-status";
+                }
+                if (numRegionsRendered < numRegionsToRender) {
+                  numRegionsRendered++;
+            %>
+            <tr>
+              <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getRegionName())) %></td>
+              <%
+              if (urlRegionServer != null) {
+              %>
+              <td>
+                 <a href="<%= urlRegionServer %>"><%= addr == null? "-": StringEscapeUtils.escapeHtml4(addr.getHostname().toString()) + ":" + master.getRegionServerInfoPort(addr) %></a>
+              </td>
+              <%
+              } else {
+              %>
+              <td class="undeployed-region">not deployed</td>
+              <%
+              }
+              %>
+              <td><%= locality%></td>
+              <td><%= localityForSsd%></td>
+            </tr>
+            <% } %>
+            <% } %>
+            </tbody>
+          </table>
         </div>
         <div class="tab-pane" id="tab_compactStats">
           <table id="tableCompactStatsTable" class="tablesorter table table-striped">

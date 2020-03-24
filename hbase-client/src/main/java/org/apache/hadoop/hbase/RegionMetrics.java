@@ -154,4 +154,10 @@ public interface RegionMetrics {
    *   of this region
    */
   int getMaxCompactedStoreFileRefCount();
+
+  /**
+   * Different from dataLocality,this metric's numerator only include the data stored on ssd
+   * @return the data locality for ssd of region in the regionserver
+   */
+  float getDataLocalityForSsd();
 }

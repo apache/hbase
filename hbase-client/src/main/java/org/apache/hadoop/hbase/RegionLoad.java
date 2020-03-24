@@ -370,6 +370,11 @@ public class RegionLoad implements RegionMetrics {
     return metrics.getMaxCompactedStoreFileRefCount();
   }
 
+  @Override
+  public float getDataLocalityForSsd() {
+    return metrics.getDataLocalityForSsd();
+  }
+
   /**
    * @see java.lang.Object#toString()
    */
