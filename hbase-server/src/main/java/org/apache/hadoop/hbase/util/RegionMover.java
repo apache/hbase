@@ -456,7 +456,9 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
       try {
         // Get Online RegionServers
         List<ServerName> regionServers = new ArrayList<>();
-        regionServers.addAll(admin.getRegionServers());
+        RSGroupInfo rsgroup = admin.getRSGroup(Address.fromParts(hostname, port));
+        LOG.info("{} belongs to {}", hostname, rsgroup.getName());
+        regionServers.addAll(filterRSGroupServers(rsgroup, admin.getRegionServers()));
         // Remove the host Region server from target Region Servers list
         ServerName server = stripServer(regionServers, hostname, port);
         if (server == null) {
@@ -500,6 +502,8 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         if (regionServers.isEmpty()) {
           LOG.warn("No Regions were moved - no servers available");
           return false;
+        } else {
+          LOG.info("Available servers {}", regionServers);
         }
         unloadRegions(server, regionServers, movedRegions, isolateRegionIdArray);
       } catch (Exception e) {
