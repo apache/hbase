@@ -61,6 +61,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.HConstants;
@@ -729,12 +730,7 @@ public final class FSUtils {
     HDFSBlocksDistribution blocksDistribution = new HDFSBlocksDistribution();
     BlockLocation [] blockLocations =
       fs.getFileBlockLocations(status, start, length);
-    for(BlockLocation bl : blockLocations) {
-      String [] hosts = bl.getHosts();
-      long len = bl.getLength();
-      blocksDistribution.addHostsAndBlockWeight(hosts, len);
-    }
-
+    addToHDFSBlocksDistribution(blocksDistribution, blockLocations);
     return blocksDistribution;
   }
 
@@ -749,7 +745,8 @@ public final class FSUtils {
     for (BlockLocation bl : blockLocations) {
       String[] hosts = bl.getHosts();
       long len = bl.getLength();
-      blocksDistribution.addHostsAndBlockWeight(hosts, len);
+      StorageType[] storageTypes = bl.getStorageTypes();
+      blocksDistribution.addHostsAndBlockWeight(hosts, len ,storageTypes);
     }
   }
 

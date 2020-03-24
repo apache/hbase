@@ -51,6 +51,7 @@ public final class RegionMetricsBuilder {
         .setCompactingCellCount(regionLoadPB.getTotalCompactingKVs())
         .setCompletedSequenceId(regionLoadPB.getCompleteSequenceId())
         .setDataLocality(regionLoadPB.hasDataLocality() ? regionLoadPB.getDataLocality() : 0.0f)
+        .setDataLocalityForSsd(regionLoadPB.hasDataLocalityForSsd() ? regionLoadPB.getDataLocalityForSsd() : 0.0f)
         .setFilteredReadRequestCount(regionLoadPB.getFilteredReadRequestsCount())
         .setStoreFileUncompressedDataIndexSize(new Size(regionLoadPB.getTotalStaticIndexSizeKB(),
           Size.Unit.KILOBYTE))
@@ -148,6 +149,7 @@ public final class RegionMetricsBuilder {
   private Map<byte[], Long> storeSequenceIds = Collections.emptyMap();
   private float dataLocality;
   private long lastMajorCompactionTimestamp;
+  private float dataLocalityForSsd;
   private RegionMetricsBuilder(byte[] name) {
     this.name = name;
   }
@@ -236,6 +238,10 @@ public final class RegionMetricsBuilder {
     this.lastMajorCompactionTimestamp = value;
     return this;
   }
+  public RegionMetricsBuilder setDataLocalityForSsd(float value) {
+    this.dataLocalityForSsd = value;
+    return this;
+  }
 
   public RegionMetrics build() {
     return new RegionMetricsImpl(name,
@@ -259,7 +265,8 @@ public final class RegionMetricsBuilder {
         completedSequenceId,
         storeSequenceIds,
         dataLocality,
-        lastMajorCompactionTimestamp);
+        lastMajorCompactionTimestamp,
+        dataLocalityForSsd);
   }
 
   private static class RegionMetricsImpl implements RegionMetrics {
@@ -285,6 +292,7 @@ public final class RegionMetricsBuilder {
     private final Map<byte[], Long> storeSequenceIds;
     private final float dataLocality;
     private final long lastMajorCompactionTimestamp;
+    private final float dataLocalityForSsd;
     RegionMetricsImpl(byte[] name,
         int storeCount,
         int storeFileCount,
@@ -306,7 +314,8 @@ public final class RegionMetricsBuilder {
         long completedSequenceId,
         Map<byte[], Long> storeSequenceIds,
         float dataLocality,
-        long lastMajorCompactionTimestamp) {
+        long lastMajorCompactionTimestamp,
+        float dataLocalityForSsd) {
       this.name = Preconditions.checkNotNull(name);
       this.storeCount = storeCount;
       this.storeFileCount = storeFileCount;
@@ -329,6 +338,7 @@ public final class RegionMetricsBuilder {
       this.storeSequenceIds = Preconditions.checkNotNull(storeSequenceIds);
       this.dataLocality = dataLocality;
       this.lastMajorCompactionTimestamp = lastMajorCompactionTimestamp;
+      this.dataLocalityForSsd = dataLocalityForSsd;
     }
 
     @Override
@@ -442,6 +452,11 @@ public final class RegionMetricsBuilder {
     }
 
     @Override
+    public float getDataLocalityForSsd() {
+      return dataLocalityForSsd;
+    }
+
+    @Override
     public String toString() {
       StringBuilder sb = Strings.appendKeyValue(new StringBuilder(), "storeCount",
           this.getStoreCount());
@@ -492,6 +507,8 @@ public final class RegionMetricsBuilder {
           this.getCompletedSequenceId());
       Strings.appendKeyValue(sb, "dataLocality",
           this.getDataLocality());
+      Strings.appendKeyValue(sb, "dataLocalityForSsd",
+          this.getDataLocalityForSsd());
       return sb.toString();
     }
   }

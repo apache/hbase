@@ -73,6 +73,7 @@ import org.apache.hadoop.hbase.ExecutorStatusChore;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HealthCheckChore;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NotServingRegionException;
@@ -1692,8 +1693,9 @@ public class HRegionServer extends Thread implements
       totalStaticBloomSizeKB += (int) (store.getTotalStaticBloomSize() / 1024);
     }
 
-    float dataLocality =
-        r.getHDFSBlocksDistribution().getBlockLocalityIndex(serverName.getHostname());
+    HDFSBlocksDistribution hdfsBd = r.getHDFSBlocksDistribution();
+    float dataLocality = hdfsBd.getBlockLocalityIndex(serverName.getHostname());
+    float dataLocalityForSsd = hdfsBd.getBlockLocalityIndex(serverName.getHostname(), true);
     if (regionLoadBldr == null) {
       regionLoadBldr = RegionLoad.newBuilder();
     }
@@ -1721,6 +1723,7 @@ public class HRegionServer extends Thread implements
       .setTotalCompactingKVs(totalCompactingKVs)
       .setCurrentCompactedKVs(currentCompactedKVs)
       .setDataLocality(dataLocality)
+      .setDataLocalityForSsd(dataLocalityForSsd)
       .setLastMajorCompactionTs(r.getOldestHfileTs(true));
     r.setCompleteSequenceId(regionLoadBldr);
 
