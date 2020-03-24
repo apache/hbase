@@ -250,7 +250,7 @@ public class TestFromClientSide3 {
       table.put(put);
 
       Result r = table.get(new Get(row));
-      assertEquals(3, r.size());
+      assertEquals(r.toString(), 3, r.size());
       assertEquals("testValue", Bytes.toString(CellUtil.cloneValue(r.rawCells()[0])));
       assertEquals("qual0", Bytes.toString(CellUtil.cloneValue(r.rawCells()[1])));
       assertEquals("qual1", Bytes.toString(CellUtil.cloneValue(r.rawCells()[2])));

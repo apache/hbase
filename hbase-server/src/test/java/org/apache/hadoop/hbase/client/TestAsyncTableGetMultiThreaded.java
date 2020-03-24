@@ -134,7 +134,7 @@ public class TestAsyncTableGetMultiThreaded {
   @Test
   public void test() throws Exception {
     LOG.info("====== Test started ======");
-    int numThreads = 20;
+    int numThreads = 10;
     AtomicBoolean stop = new AtomicBoolean(false);
     ExecutorService executor =
       Executors.newFixedThreadPool(numThreads, Threads.newDaemonThreadFactory("TestAsyncGet-"));

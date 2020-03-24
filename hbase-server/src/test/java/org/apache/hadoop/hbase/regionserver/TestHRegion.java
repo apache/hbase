@@ -2109,6 +2109,8 @@ public class TestHRegion {
     put.addColumn(fam1, qf3, val1);
     region.put(put);
 
+    LOG.info("get={}", region.get(new Get(row1).addColumn(fam1, qf1)).toString());
+
     // Multi-column delete
     Delete delete = new Delete(row1);
     delete.addColumn(fam1, qf1);

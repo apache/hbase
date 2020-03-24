@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TestMetaTableAccessor;
 import org.apache.hadoop.hbase.client.Consistency;
@@ -427,7 +428,11 @@ public class TestRegionReplicas {
       }
     } finally {
       HTU.deleteNumericRows(table, HConstants.CATALOG_FAMILY, startKey, endKey);
-      closeRegion(HTU, getRS(), hriSecondary);
+      try {
+        closeRegion(HTU, getRS(), hriSecondary);
+      } catch (NotServingRegionException e) {
+        LOG.info("Closing wrong region {}", hriSecondary, e);
+      }
     }
   }
 
