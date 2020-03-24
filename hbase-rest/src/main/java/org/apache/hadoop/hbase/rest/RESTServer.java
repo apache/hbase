@@ -290,6 +290,9 @@ public class RESTServer implements Constants {
     HttpConfiguration httpConfig = new HttpConfiguration();
     httpConfig.setSecureScheme("https");
     httpConfig.setSecurePort(servicePort);
+    httpConfig.setHeaderCacheSize(DEFAULT_HTTP_MAX_HEADER_SIZE);
+    httpConfig.setRequestHeaderSize(DEFAULT_HTTP_MAX_HEADER_SIZE);
+    httpConfig.setResponseHeaderSize(DEFAULT_HTTP_MAX_HEADER_SIZE);
     httpConfig.setSendServerVersion(false);
     httpConfig.setSendDateHeader(false);
 

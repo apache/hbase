@@ -27,6 +27,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface Constants {
   // All constants in a public interface are 'public static final'
 
+  int DEFAULT_HTTP_MAX_HEADER_SIZE = 64 * 1024; // 64k
+
   String VERSION_STRING = "0.0.3";
 
   int DEFAULT_MAX_AGE = 60 * 60 * 4;  // 4 hours
