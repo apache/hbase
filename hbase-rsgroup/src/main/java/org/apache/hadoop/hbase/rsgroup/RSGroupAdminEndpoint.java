@@ -473,7 +473,7 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
       groupName = RSGroupInfo.DEFAULT_GROUP;
     }
 
-    if (groupName == RSGroupInfo.DEFAULT_GROUP) {
+    if (groupName.equals(RSGroupInfo.DEFAULT_GROUP)) {
       TableName tableName = desc.getTableName();
       groupName = script.getRSGroup(
           tableName.getNamespaceAsString(),
