@@ -87,10 +87,11 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
   }
 
   @Override
-  public List<RegionPlan> balanceCluster(Map<ServerName, List<RegionInfo>> clusterState)  {
-    //TODO. Look at is whether Stochastic loadbalancer can be integrated with this
+  public List<RegionPlan> balanceTable(TableName tableName,
+      Map<ServerName, List<RegionInfo>> loadOfOneTable) {
+    // TODO. Look at is whether Stochastic loadbalancer can be integrated with this
     List<RegionPlan> plans = new ArrayList<>();
-    //perform a scan of the meta to get the latest updates (if any)
+    // perform a scan of the meta to get the latest updates (if any)
     SnapshotOfRegionAssignmentFromMeta snaphotOfRegionAssignment =
         new SnapshotOfRegionAssignmentFromMeta(super.services.getConnection());
     try {
@@ -99,43 +100,44 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
       LOG.warn("Not running balancer since exception was thrown " + ie);
       return plans;
     }
-    // This is not used? Findbugs says so: Map<ServerName, ServerName> serverNameToServerNameWithoutCode = new HashMap<>();
+    // This is not used? Findbugs says so: Map<ServerName, ServerName>
+    // serverNameToServerNameWithoutCode = new HashMap<>();
     Map<ServerName, ServerName> serverNameWithoutCodeToServerName = new HashMap<>();
     ServerManager serverMgr = super.services.getServerManager();
-    for (ServerName sn: serverMgr.getOnlineServersList()) {
+    for (ServerName sn : serverMgr.getOnlineServersList()) {
       ServerName s = ServerName.valueOf(sn.getHostname(), sn.getPort(), ServerName.NON_STARTCODE);
       // FindBugs complains about useless store! serverNameToServerNameWithoutCode.put(sn, s);
       serverNameWithoutCodeToServerName.put(s, sn);
     }
-    for (Map.Entry<ServerName, List<RegionInfo>> entry : clusterState.entrySet()) {
+    for (Map.Entry<ServerName, List<RegionInfo>> entry : loadOfOneTable.entrySet()) {
       ServerName currentServer = entry.getKey();
-      //get a server without the startcode for the currentServer
+      // get a server without the startcode for the currentServer
       ServerName currentServerWithoutStartCode = ServerName.valueOf(currentServer.getHostname(),
-          currentServer.getPort(), ServerName.NON_STARTCODE);
+        currentServer.getPort(), ServerName.NON_STARTCODE);
       List<RegionInfo> list = entry.getValue();
       for (RegionInfo region : list) {
-        if(!FavoredNodesManager.isFavoredNodeApplicable(region)) {
+        if (!FavoredNodesManager.isFavoredNodeApplicable(region)) {
           continue;
         }
         List<ServerName> favoredNodes = fnm.getFavoredNodes(region);
         if (favoredNodes == null || favoredNodes.get(0).equals(currentServerWithoutStartCode)) {
-          continue; //either favorednodes does not exist or we are already on the primary node
+          continue; // either favorednodes does not exist or we are already on the primary node
         }
         ServerName destination = null;
-        //check whether the primary is available
+        // check whether the primary is available
         destination = serverNameWithoutCodeToServerName.get(favoredNodes.get(0));
         if (destination == null) {
-          //check whether the region is on secondary/tertiary
-          if (currentServerWithoutStartCode.equals(favoredNodes.get(1)) ||
-              currentServerWithoutStartCode.equals(favoredNodes.get(2))) {
+          // check whether the region is on secondary/tertiary
+          if (currentServerWithoutStartCode.equals(favoredNodes.get(1))
+              || currentServerWithoutStartCode.equals(favoredNodes.get(2))) {
             continue;
           }
-          //the region is currently on none of the favored nodes
-          //get it on one of them if possible
-          ServerMetrics l1 = super.services.getServerManager().getLoad(
-              serverNameWithoutCodeToServerName.get(favoredNodes.get(1)));
-          ServerMetrics l2 = super.services.getServerManager().getLoad(
-              serverNameWithoutCodeToServerName.get(favoredNodes.get(2)));
+          // the region is currently on none of the favored nodes
+          // get it on one of them if possible
+          ServerMetrics l1 = super.services.getServerManager()
+              .getLoad(serverNameWithoutCodeToServerName.get(favoredNodes.get(1)));
+          ServerMetrics l2 = super.services.getServerManager()
+              .getLoad(serverNameWithoutCodeToServerName.get(favoredNodes.get(2)));
           if (l1 != null && l2 != null) {
             if (l1.getRegionMetrics().size() > l2.getRegionMetrics().size()) {
               destination = serverNameWithoutCodeToServerName.get(favoredNodes.get(2));
@@ -435,9 +437,4 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
     fnm.updateFavoredNodes(regionFNMap);
   }
 
-  @Override
-  public List<RegionPlan> balanceCluster(TableName tableName,
-      Map<ServerName, List<RegionInfo>> clusterState) throws HBaseIOException {
-    return balanceCluster(clusterState);
-  }
 }

@@ -32,7 +32,6 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -538,61 +537,42 @@ public class RegionStates {
    * wants to iterate this exported list.  We need to synchronize on regions
    * since all access to this.servers is under a lock on this.regions.
    *
-   * @param isByTable If <code>true</code>, return the assignments by table. If <code>false</code>,
-   *                  return the assignments which aggregate the server-load to the cluster level.
    * @return A clone of current assignments.
    */
   public Map<TableName, Map<ServerName, List<RegionInfo>>> getAssignmentsForBalancer(
-    TableStateManager tableStateManager, List<ServerName> onlineServers, boolean isByTable) {
+      TableStateManager tableStateManager, List<ServerName> onlineServers) {
     final Map<TableName, Map<ServerName, List<RegionInfo>>> result = new HashMap<>();
-    if (isByTable) {
-      for (RegionStateNode node : regionsMap.values()) {
-        if (isTableDisabled(tableStateManager, node.getTable())) {
-          continue;
-        }
-        if (node.getRegionInfo().isSplitParent()) {
-          continue;
-        }
-        Map<ServerName, List<RegionInfo>> tableResult =
-            result.computeIfAbsent(node.getTable(), t -> new HashMap<>());
-        final ServerName serverName = node.getRegionLocation();
-        if (serverName == null) {
-          LOG.info("Skipping, no server for " + node);
-          continue;
-        }
-        List<RegionInfo> serverResult =
-            tableResult.computeIfAbsent(serverName, s -> new ArrayList<>());
-        serverResult.add(node.getRegionInfo());
+    for (RegionStateNode node : regionsMap.values()) {
+      if (isTableDisabled(tableStateManager, node.getTable())) {
+        continue;
       }
-      // Add online servers with no assignment for the table.
-      for (Map<ServerName, List<RegionInfo>> table : result.values()) {
-        for (ServerName serverName : onlineServers) {
-          table.putIfAbsent(serverName, new ArrayList<>());
-        }
+      if (node.getRegionInfo().isSplitParent()) {
+        continue;
       }
-    } else {
-      final HashMap<ServerName, List<RegionInfo>> ensemble = new HashMap<>(serverMap.size());
+      Map<ServerName, List<RegionInfo>> tableResult =
+          result.computeIfAbsent(node.getTable(), t -> new HashMap<>());
+      final ServerName serverName = node.getRegionLocation();
+      if (serverName == null) {
+        LOG.info("Skipping, no server for " + node);
+        continue;
+      }
+      List<RegionInfo> serverResult =
+          tableResult.computeIfAbsent(serverName, s -> new ArrayList<>());
+      serverResult.add(node.getRegionInfo());
+    }
+    // Add online servers with no assignment for the table.
+    for (Map<ServerName, List<RegionInfo>> table : result.values()) {
       for (ServerName serverName : onlineServers) {
-        ServerStateNode serverNode = serverMap.get(serverName);
-        if (serverNode != null) {
-          ensemble.put(serverNode.getServerName(),
-            serverNode.getRegionInfoList().stream()
-                .filter(region -> !isTableDisabled(tableStateManager, region.getTable()))
-                .filter(region -> !region.isSplitParent()).collect(Collectors.toList()));
-        } else {
-          ensemble.put(serverName, new ArrayList<>());
-        }
+        table.computeIfAbsent(serverName, key -> new ArrayList<>());
       }
-      // Use a fake table name to represent the whole cluster's assignments
-      result.put(HConstants.ENSEMBLE_TABLE_NAME, ensemble);
     }
     return result;
   }
 
   private boolean isTableDisabled(final TableStateManager tableStateManager,
-    final TableName tableName) {
-    return tableStateManager
-      .isTableState(tableName, TableState.State.DISABLED, TableState.State.DISABLING);
+      final TableName tableName) {
+    return tableStateManager.isTableState(tableName, TableState.State.DISABLED,
+      TableState.State.DISABLING);
   }
 
   // ==========================================================================

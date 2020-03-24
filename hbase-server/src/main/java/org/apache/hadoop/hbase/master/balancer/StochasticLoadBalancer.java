@@ -34,7 +34,6 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
@@ -159,8 +158,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private RackLocalityCostFunction rackLocalityCost;
   private RegionReplicaHostCostFunction regionReplicaHostCostFunction;
   private RegionReplicaRackCostFunction regionReplicaRackCostFunction;
-  private boolean isByTable = false;
-  private TableName tableName = null;
 
   /**
    * The constructor that pass a MetricsStochasticBalancer to BaseLoadBalancer to replace its
@@ -184,7 +181,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     runMaxSteps = conf.getBoolean(RUN_MAX_STEPS_KEY, runMaxSteps);
 
     numRegionLoadsToRemember = conf.getInt(KEEP_REGION_LOADS, numRegionLoadsToRemember);
-    isByTable = conf.getBoolean(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, isByTable);
     minCostNeedBalance = conf.getFloat(MIN_COST_NEED_BALANCE_KEY, minCostNeedBalance);
     if (localityCandidateGenerator == null) {
       localityCandidateGenerator = new LocalityBasedCandidateGenerator(services);
@@ -316,7 +312,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   }
 
   @Override
-  protected boolean needsBalance(Cluster cluster) {
+  protected boolean needsBalance(TableName tableName, Cluster cluster) {
     ClusterLoadState cs = new ClusterLoadState(cluster.clusterState);
     if (cs.getNumServers() < MIN_SERVER_BALANCE) {
       if (LOG.isDebugEnabled()) {
@@ -358,13 +354,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     return true;
   }
 
-  @Override
-  public synchronized List<RegionPlan> balanceCluster(TableName tableName, Map<ServerName,
-    List<RegionInfo>> clusterState) {
-    this.tableName = tableName;
-    return balanceCluster(clusterState);
-  }
-
   @VisibleForTesting
   Cluster.Action nextAction(Cluster cluster) {
     return candidateGenerators.get(RANDOM.nextInt(candidateGenerators.size()))
@@ -376,19 +365,19 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * should always approach the optimal state given enough steps.
    */
   @Override
-  public synchronized List<RegionPlan> balanceCluster(Map<ServerName,
-    List<RegionInfo>> clusterState) {
-    List<RegionPlan> plans = balanceMasterRegions(clusterState);
-    if (plans != null || clusterState == null || clusterState.size() <= 1) {
+  public synchronized List<RegionPlan> balanceTable(TableName tableName, Map<ServerName,
+    List<RegionInfo>> loadOfOneTable) {
+    List<RegionPlan> plans = balanceMasterRegions(loadOfOneTable);
+    if (plans != null || loadOfOneTable == null || loadOfOneTable.size() <= 1) {
       return plans;
     }
 
-    if (masterServerName != null && clusterState.containsKey(masterServerName)) {
-      if (clusterState.size() <= 2) {
+    if (masterServerName != null && loadOfOneTable.containsKey(masterServerName)) {
+      if (loadOfOneTable.size() <= 2) {
         return null;
       }
-      clusterState = new HashMap<>(clusterState);
-      clusterState.remove(masterServerName);
+      loadOfOneTable = new HashMap<>(loadOfOneTable);
+      loadOfOneTable.remove(masterServerName);
     }
 
     // On clusters with lots of HFileLinks or lots of reference files,
@@ -404,13 +393,13 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     //The clusterState that is given to this method contains the state
     //of all the regions in the table(s) (that's true today)
     // Keep track of servers to iterate through them.
-    Cluster cluster = new Cluster(clusterState, loads, finder, rackManager);
+    Cluster cluster = new Cluster(loadOfOneTable, loads, finder, rackManager);
 
     long startTime = EnvironmentEdgeManager.currentTime();
 
     initCosts(cluster);
 
-    if (!needsBalance(cluster)) {
+    if (!needsBalance(tableName, cluster)) {
       return null;
     }
 
