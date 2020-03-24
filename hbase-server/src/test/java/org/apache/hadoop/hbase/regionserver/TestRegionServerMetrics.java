@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -621,5 +622,23 @@ public class TestRegionServerMetrics {
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     assertTrue(metricsHelper.getGaugeDouble("averageRegionSize", serverSource) > 0.0);
+  }
+
+  @Test
+  public void testReadBytes() throws Exception {
+    // Do a first put to be sure that the connection is established, meta is there and so on.
+    doNPuts(1, false);
+    doNGets(10, false);
+    TEST_UTIL.getAdmin().flush(tableName);
+    metricsRegionServer.getRegionServerWrapper().forceRecompute();
+
+    assertTrue("Total read bytes should be larger than 0",
+        metricsRegionServer.getRegionServerWrapper().getTotalBytesRead() > 0);
+    assertTrue("Total local read bytes should be larger than 0",
+        metricsRegionServer.getRegionServerWrapper().getLocalBytesRead() > 0);
+    assertEquals("Total short circuit read bytes should be equal to 0", 0,
+        metricsRegionServer.getRegionServerWrapper().getShortCircuitBytesRead());
+    assertEquals("Total zero-byte read bytes should be equal to 0", 0,
+        metricsRegionServer.getRegionServerWrapper().getZeroCopyBytesRead());
   }
 }
