@@ -77,13 +77,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <dependencies>
-          <dependency>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>extra-enforcer-rules</artifactId>
-            <version>${extra.enforcer.version}</version>
-          </dependency>
-        </dependencies>
         <executions>
           <execution>
             <id>enforce-banned-dependencies</id>
@@ -109,6 +102,7 @@
                     <!-- annotations that never change -->
                     <exclude>com.google.code.findbugs:*</exclude>
                     <exclude>com.github.stephenc.findbugs:*</exclude>
+                    <exclude>com.github.spotbugs:*</exclude>
                     <!-- We leave HTrace as an unshaded dependnecy on purpose so that tracing within a JVM will work -->
                     <exclude>org.apache.htrace:*</exclude>
                     <!-- NB we don't exclude Hadoop from this check here, because the assumption is any needed classes

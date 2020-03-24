@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import com.google.protobuf.RpcCallback;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 
 /**
  * For implementation coprocessor related methods in {@link Table} and {@link Admin} interface.

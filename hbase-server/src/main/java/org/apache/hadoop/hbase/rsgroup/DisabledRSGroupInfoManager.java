@@ -115,4 +115,10 @@ class DisabledRSGroupInfoManager implements RSGroupInfoManager {
   public void setRSGroup(Set<TableName> tables, String groupName) throws IOException {
     throw new DoNotRetryIOException("RSGroup is disabled");
   }
+
+  @Override
+  public String determineRSGroupInfoForTable(TableName tableName) {
+    return RSGroupInfo.DEFAULT_GROUP;
+  }
+
 }

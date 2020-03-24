@@ -37,7 +37,6 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -118,13 +117,14 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
 
   public static class MockBalancer extends BaseLoadBalancer {
     @Override
-    public List<RegionPlan> balanceCluster(Map<ServerName, List<RegionInfo>> clusterState) {
+    public List<RegionPlan>
+        balanceCluster(Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable) {
       return null;
     }
 
     @Override
-    public List<RegionPlan> balanceCluster(TableName tableName,
-        Map<ServerName, List<RegionInfo>> clusterState) throws HBaseIOException {
+    public List<RegionPlan> balanceTable(TableName tableName,
+        Map<ServerName, List<RegionInfo>> loadOfOneTable) {
       return null;
     }
   }

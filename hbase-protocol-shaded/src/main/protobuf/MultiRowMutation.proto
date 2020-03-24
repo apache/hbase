@@ -15,24 +15,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// Coprocessor test
-option java_package = "org.apache.hadoop.hbase.coprocessor.protobuf.generated";
-option java_outer_classname = "ColumnAggregationWithErrorsProtos";
-option java_generic_services = true;
+syntax = "proto2";
+package hbase.pb;
+
+import "Client.proto";
+import "HBase.proto";
+option java_package = "org.apache.hadoop.hbase.shaded.protobuf.generated";
+option java_outer_classname = "MultiRowMutationProtos";
 option java_generate_equals_and_hash = true;
+option java_generic_services = true;
+option optimize_for = SPEED;
 
-// use unique names for messages in ColumnAggregationXXX.protos due to a bug in
-// protoc or hadoop's protoc compiler.
-message ColumnAggregationWithErrorsSumRequest {
-  required bytes family = 1;
-  optional bytes qualifier = 2;
+message MultiRowMutationProcessorRequest{
 }
 
-message ColumnAggregationWithErrorsSumResponse {
-  required int64 sum = 1;
+message MultiRowMutationProcessorResponse{
 }
 
-service ColumnAggregationServiceWithErrors {
-  rpc sum(ColumnAggregationWithErrorsSumRequest)
-    returns(ColumnAggregationWithErrorsSumResponse);
+message MutateRowsRequest {
+  repeated MutationProto mutation_request = 1;
+  optional uint64 nonce_group = 2;
+  optional uint64 nonce = 3;
+  optional RegionSpecifier region = 4;
+}
+
+message MutateRowsResponse {
+}
+
+service MultiRowMutationService {
+  rpc MutateRows(MutateRowsRequest)
+      returns(MutateRowsResponse);
 }

@@ -15,24 +15,53 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package hbase.pb;
-
-option java_package = "org.apache.hadoop.hbase.coprocessor.example.generated";
-option java_outer_classname = "ExampleProtos";
+// Coprocessor test
+syntax = "proto2";
+option java_package = "org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated";
+option java_outer_classname = "PingProtos";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
-option optimize_for = SPEED;
+
+message PingRequest {
+}
+
+message PingResponse {
+  required string pong = 1;
+}
 
 message CountRequest {
 }
 
 message CountResponse {
-  required int64 count = 1 [default = 0];
+  required int32 count = 1;
 }
 
-service RowCountService {
-  rpc getRowCount(CountRequest)
-    returns (CountResponse);
-  rpc getKeyValueCount(CountRequest)
-    returns (CountResponse);
+message IncrementCountRequest {
+  required int32 diff = 1;
+}
+
+message IncrementCountResponse {
+  required int32 count = 1;
+}
+
+message HelloRequest {
+  optional string name = 1;
+}
+
+message HelloResponse {
+  optional string response = 1;
+}
+
+message NoopRequest {
+}
+
+message NoopResponse {
+}
+
+service PingService {
+  rpc ping(PingRequest) returns(PingResponse);
+  rpc count(CountRequest) returns(CountResponse);
+  rpc increment(IncrementCountRequest) returns(IncrementCountResponse);
+  rpc hello(HelloRequest) returns(HelloResponse);
+  rpc noop(NoopRequest) returns(NoopResponse);
 }

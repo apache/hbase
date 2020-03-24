@@ -15,41 +15,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+syntax = "proto2";
+package hbase.test.pb;
 
-option java_package = "org.apache.hadoop.hbase.coprocessor.protobuf.generated";
-option java_outer_classname = "IncrementCounterProcessorTestProtos";
+// Coprocessor test
+option java_package = "org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated";
+option java_outer_classname = "DummyRegionServerEndpointProtos";
+option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 
-message IncCounterProcessorRequest {
-  required bytes row = 1;
-  required int32 counter = 2;
+message DummyRequest {
+  optional uint64 value = 1;
 }
 
-message IncCounterProcessorResponse {
-  required int32 response = 1;
+message DummyResponse {
+  required string value = 1;
 }
 
-message FriendsOfFriendsProcessorRequest {
-  required bytes person = 1;
-  required bytes row = 2;
-  repeated string result = 3;
-}
-
-message FriendsOfFriendsProcessorResponse {
-  repeated string result = 1;
-}
-
-message RowSwapProcessorRequest {
-  required bytes row1 = 1;
-  required bytes row2 = 2;
-}
-
-message RowSwapProcessorResponse {
-}
-
-message TimeoutProcessorRequest {
-  required bytes row = 1;
-}
-
-message TimeoutProcessorResponse {
+service DummyService {
+  rpc dummyCall(DummyRequest) returns(DummyResponse);
+  rpc dummyThrow(DummyRequest) returns(DummyResponse);
 }

@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -21,10 +21,9 @@ package org.apache.hadoop.hbase.master.normalizer;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.when;
-
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -41,19 +40,17 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 
 @Category({ MasterTests.class, SmallTests.class })
@@ -64,16 +61,7 @@ public class TestMergeNormalizer {
 
   private static final Logger LOG = LoggerFactory.getLogger(MergeNormalizer.class);
 
-  private static RegionNormalizer normalizer;
-
-  // mocks
-  private static MasterServices masterServices;
-  private static MasterRpcServices masterRpcServices;
-
-  @BeforeClass
-  public static void beforeAllTests() throws Exception {
-    normalizer = new MergeNormalizer();
-  }
+  private RegionNormalizer normalizer;
 
   @Test
   public void testNoNormalizationForMetaTable() throws HBaseIOException {
@@ -144,25 +132,25 @@ public class TestMergeNormalizer {
     Map<byte[], Integer> regionSizes = new HashMap<>();
 
     Timestamp currentTime = new Timestamp(System.currentTimeMillis());
-    Timestamp threedaysBefore = new Timestamp(currentTime.getTime() - TimeUnit.DAYS.toMillis(3));
+    Timestamp threeDaysBefore = new Timestamp(currentTime.getTime() - TimeUnit.DAYS.toMillis(3));
 
     RegionInfo hri1 = RegionInfoBuilder.newBuilder(testTable).setStartKey(Bytes.toBytes("aaa"))
-        .setEndKey(Bytes.toBytes("bbb")).setRegionId(threedaysBefore.getTime()).build();
+        .setEndKey(Bytes.toBytes("bbb")).setRegionId(threeDaysBefore.getTime()).build();
     hris.add(hri1);
     regionSizes.put(hri1.getRegionName(), 15);
 
     RegionInfo hri2 = RegionInfoBuilder.newBuilder(testTable).setStartKey(Bytes.toBytes("bbb"))
-        .setEndKey(Bytes.toBytes("ccc")).setRegionId(threedaysBefore.getTime()).build();
+        .setEndKey(Bytes.toBytes("ccc")).setRegionId(threeDaysBefore.getTime()).build();
     hris.add(hri2);
     regionSizes.put(hri2.getRegionName(), 5);
 
     RegionInfo hri3 = RegionInfoBuilder.newBuilder(testTable).setStartKey(Bytes.toBytes("ccc"))
-        .setEndKey(Bytes.toBytes("ddd")).setRegionId(threedaysBefore.getTime()).build();
+        .setEndKey(Bytes.toBytes("ddd")).setRegionId(threeDaysBefore.getTime()).build();
     hris.add(hri3);
     regionSizes.put(hri3.getRegionName(), 5);
 
     RegionInfo hri4 = RegionInfoBuilder.newBuilder(testTable).setStartKey(Bytes.toBytes("ddd"))
-        .setEndKey(Bytes.toBytes("eee")).setRegionId(threedaysBefore.getTime()).build();
+        .setEndKey(Bytes.toBytes("eee")).setRegionId(threeDaysBefore.getTime()).build();
     hris.add(hri4);
     regionSizes.put(hri4.getRegionName(), 15);
 
@@ -172,7 +160,7 @@ public class TestMergeNormalizer {
     regionSizes.put(hri5.getRegionName(), 16);
 
     RegionInfo hri6 = RegionInfoBuilder.newBuilder(testTable).setStartKey(Bytes.toBytes("fff"))
-        .setEndKey(Bytes.toBytes("ggg")).setRegionId(threedaysBefore.getTime()).build();
+        .setEndKey(Bytes.toBytes("ggg")).setRegionId(threeDaysBefore.getTime()).build();
     hris.add(hri6);
     regionSizes.put(hri6.getRegionName(), 0);
 
@@ -234,16 +222,19 @@ public class TestMergeNormalizer {
 
   @SuppressWarnings("MockitoCast")
   protected void setupMocksForNormalizer(Map<byte[], Integer> regionSizes,
-      List<RegionInfo> RegionInfo) {
-    masterServices = Mockito.mock(MasterServices.class, RETURNS_DEEP_STUBS);
-    masterRpcServices = Mockito.mock(MasterRpcServices.class, RETURNS_DEEP_STUBS);
+    List<RegionInfo> RegionInfo) {
+    MasterServices masterServices = Mockito.mock(MasterServices.class, RETURNS_DEEP_STUBS);
+    MasterRpcServices masterRpcServices = Mockito.mock(MasterRpcServices.class, RETURNS_DEEP_STUBS);
 
     // for simplicity all regions are assumed to be on one server; doesn't matter to us
     ServerName sn = ServerName.valueOf("localhost", 0, 1L);
-    when(masterServices.getAssignmentManager().getRegionStates().getRegionsOfTable(any()))
-        .thenReturn(RegionInfo);
-    when(masterServices.getAssignmentManager().getRegionStates().getRegionServerOfRegion(any()))
-        .thenReturn(sn);
+    when(masterServices.getAssignmentManager().getRegionStates()
+      .getRegionsOfTable(any())).thenReturn(RegionInfo);
+    when(masterServices.getAssignmentManager().getRegionStates()
+      .getRegionServerOfRegion(any())).thenReturn(sn);
+    when(masterServices.getAssignmentManager().getRegionStates()
+      .getRegionState(any(RegionInfo.class))).thenReturn(
+        RegionState.createForTesting(null, RegionState.State.OPEN));
 
     for (Map.Entry<byte[], Integer> region : regionSizes.entrySet()) {
       RegionMetrics regionLoad = Mockito.mock(RegionMetrics.class);
@@ -264,6 +255,7 @@ public class TestMergeNormalizer {
       LOG.debug("error setting isSplitOrMergeEnabled switch", se);
     }
 
+    normalizer = new SimpleRegionNormalizer();
     normalizer.setMasterServices(masterServices);
     normalizer.setMasterRpcServices(masterRpcServices);
   }

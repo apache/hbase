@@ -598,7 +598,7 @@ module Hbase
     end
 
     define_test "set_peer_bandwidth: works with peer bandwidth upper limit" do
-      cluster_key = "localhost:2181:/hbase-test"
+      cluster_key = org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster::HOST + ":2181:/hbase-test"
       args = { CLUSTER_KEY => cluster_key }
       command(:add_peer, @peer_id, args)
 
@@ -644,7 +644,7 @@ module Hbase
     end
 
     define_test "get_peer_config: works with simple clusterKey peer" do
-      cluster_key = "localhost:2181:/hbase-test"
+      cluster_key = org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster::HOST + ":2181:/hbase-test"
       args = { CLUSTER_KEY => cluster_key }
       command(:add_peer, @peer_id, args)
       peer_config = command(:get_peer_config, @peer_id)
@@ -654,7 +654,7 @@ module Hbase
     end
 
     define_test "get_peer_config: works with replicationendpointimpl peer and config params" do
-      cluster_key = 'localhost:2181:/hbase-test'
+      cluster_key = org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster::HOST + ":2181:/hbase-test"
       repl_impl = 'org.apache.hadoop.hbase.replication.DummyReplicationEndpoint'
       config_params = { "config1" => "value1", "config2" => "value2" }
       args = { CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => repl_impl,
@@ -670,7 +670,7 @@ module Hbase
     end
 
     define_test "list_peer_configs: returns all peers' ReplicationPeerConfig objects" do
-      cluster_key = "localhost:2181:/hbase-test"
+      cluster_key = org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster::HOST + ":2181:/hbase-test"
       args = { CLUSTER_KEY => cluster_key }
       peer_id_second = '2'
       command(:add_peer, @peer_id, args)

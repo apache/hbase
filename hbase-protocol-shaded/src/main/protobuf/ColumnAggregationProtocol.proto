@@ -15,8 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+syntax = "proto2";
+
 // Coprocessor test
-option java_package = "org.apache.hadoop.hbase.coprocessor.protobuf.generated";
+option java_package = "org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated";
 option java_outer_classname = "ColumnAggregationProtos";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;

@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import static org.junit.Assert.assertEquals;
 
-import com.google.protobuf.ServiceException;
 import java.io.File;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
@@ -80,6 +79,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 @Category({MediumTests.class})
 public class TestSecureExport {
@@ -331,6 +332,7 @@ public class TestSecureExport {
   }
 
   @Test
+  @org.junit.Ignore // See HBASE-23990
   public void testVisibilityLabels() throws IOException, Throwable {
     final String exportTable = name.getMethodName() + "_export";
     final String importTable = name.getMethodName() + "_import";

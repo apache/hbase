@@ -98,4 +98,12 @@ public interface RSGroupInfoManager {
    * Set group for tables.
    */
   void setRSGroup(Set<TableName> tables, String groupName) throws IOException;
+
+  /**
+   * Determine {@code RSGroupInfo} for the given table.
+   * @param tableName table name
+   * @return rsgroup name
+   */
+  String determineRSGroupInfoForTable(TableName tableName);
+
 }

@@ -435,6 +435,26 @@ public class BalancerTestBase {
     return randomRegions(numRegions, -1);
   }
 
+  protected List<RegionInfo> createRegions(int numRegions, TableName tableName) {
+    List<RegionInfo> regions = new ArrayList<>(numRegions);
+    byte[] start = new byte[16];
+    byte[] end = new byte[16];
+    Random rand = ThreadLocalRandom.current();
+    rand.nextBytes(start);
+    rand.nextBytes(end);
+    for (int i = 0; i < numRegions; i++) {
+      Bytes.putInt(start, 0, numRegions << 1);
+      Bytes.putInt(end, 0, (numRegions << 1) + 1);
+      RegionInfo hri = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(start)
+        .setEndKey(end)
+        .setSplit(false)
+        .build();
+      regions.add(hri);
+    }
+    return regions;
+  }
+
   protected List<RegionInfo> randomRegions(int numRegions, int numTables) {
     List<RegionInfo> regions = new ArrayList<>(numRegions);
     byte[] start = new byte[16];
@@ -537,7 +557,9 @@ public class BalancerTestBase {
 
     loadBalancer.setRackManager(rackManager);
     // Run the balancer.
-    List<RegionPlan> plans = loadBalancer.balanceCluster(serverMap);
+    Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
+        (Map) mockClusterServersWithTables(serverMap);
+    List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
     assertNotNull(plans);
 
     // Check to see that this actually got to a stable place.
@@ -550,7 +572,8 @@ public class BalancerTestBase {
 
       if (assertFullyBalanced) {
         assertClusterAsBalanced(balancedCluster);
-        List<RegionPlan> secondPlans =  loadBalancer.balanceCluster(serverMap);
+        LoadOfAllTable = (Map) mockClusterServersWithTables(serverMap);
+        List<RegionPlan> secondPlans = loadBalancer.balanceCluster(LoadOfAllTable);
         assertNull(secondPlans);
       }
 

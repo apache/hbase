@@ -340,7 +340,7 @@ public class SyncTable extends Configured implements Tool {
     private void syncRange(Context context, ImmutableBytesWritable startRow,
         ImmutableBytesWritable stopRow) throws IOException, InterruptedException {
       Scan scan = sourceTableHash.initScan();
-      scan.setStartRow(startRow.copyBytes());
+      scan.withStartRow(startRow.copyBytes());
       scan.setStopRow(stopRow.copyBytes());
 
       ResultScanner sourceScanner = sourceTable.getScanner(scan);
@@ -681,7 +681,7 @@ public class SyncTable extends Configured implements Tool {
           // the open hash range continues past the end of this region
           // add a scan to complete the current hash range
           Scan scan = sourceTableHash.initScan();
-          scan.setStartRow(splitEndRow);
+          scan.withStartRow(splitEndRow);
           if (nextSourceKey == null) {
             scan.setStopRow(sourceTableHash.stopRow);
           } else {

@@ -973,7 +973,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       @Override
       public List<Cell> run() throws Exception {
         Scan scan = new Scan();
-        scan.setStartRow(TEST_ROW);
+        scan.withStartRow(TEST_ROW);
         scan.setStopRow(Bytes.add(TEST_ROW, new byte[]{ 0 } ));
         scan.addFamily(TEST_FAMILY);
         Connection connection = ConnectionFactory.createConnection(conf);

@@ -38,12 +38,15 @@ import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
@@ -51,6 +54,7 @@ import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -101,6 +105,9 @@ import org.apache.hadoop.hbase.thrift2.generated.TReadType;
 import org.apache.hadoop.hbase.thrift2.generated.TResult;
 import org.apache.hadoop.hbase.thrift2.generated.TRowMutations;
 import org.apache.hadoop.hbase.thrift2.generated.TScan;
+import org.apache.hadoop.hbase.thrift2.generated.TServerName;
+import org.apache.hadoop.hbase.thrift2.generated.TSlowLogQueryFilter;
+import org.apache.hadoop.hbase.thrift2.generated.TSlowLogRecord;
 import org.apache.hadoop.hbase.thrift2.generated.TTableDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TTableName;
 import org.apache.hadoop.hbase.thrift2.generated.TThriftServerType;
@@ -112,6 +119,7 @@ import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -1735,6 +1743,31 @@ public class TestThriftHBaseServiceHandler {
     } finally {
       THRIFT_TEST_UTIL.stopThriftServer();
     }
+  }
+
+  @Test
+  public void testSlowLogResponses() throws Exception {
+
+    // start a thrift server
+    HBaseThriftTestingUtility THRIFT_TEST_UTIL = new HBaseThriftTestingUtility();
+    Configuration configuration = UTIL.getConfiguration();
+    configuration.setBoolean("hbase.regionserver.slowlog.buffer.enabled", true);
+
+    THRIFT_TEST_UTIL.startThriftServer(configuration, ThriftServerType.ONE);
+    ThriftHBaseServiceHandler thriftHBaseServiceHandler =
+      new ThriftHBaseServiceHandler(configuration,
+        UserProvider.instantiate(configuration));
+    Collection<ServerName> serverNames = UTIL.getAdmin().getRegionServers();
+    Set<TServerName> tServerNames =
+      ThriftUtilities.getServerNamesFromHBase(new HashSet<>(serverNames));
+    List<Boolean> clearedResponses =
+      thriftHBaseServiceHandler.clearSlowLogResponses(tServerNames);
+    clearedResponses.forEach(Assert::assertTrue);
+    TSlowLogQueryFilter tSlowLogQueryFilter = new TSlowLogQueryFilter();
+    tSlowLogQueryFilter.setLimit(15);
+    List<TSlowLogRecord> tSlowLogRecords =
+      thriftHBaseServiceHandler.getSlowLogResponses(tServerNames, tSlowLogQueryFilter);
+    assertEquals(tSlowLogRecords.size(), 0);
   }
 
   public static class DelayingRegionObserver implements RegionCoprocessor, RegionObserver {
