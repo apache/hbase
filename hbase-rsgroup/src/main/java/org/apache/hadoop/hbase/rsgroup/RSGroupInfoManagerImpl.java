@@ -861,7 +861,7 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
     Map<String,RSGroupInfo> newGroupMap = Maps.newHashMap(rsGroupMap);
     newGroupMap.put(srcGroupInfo.getName(), srcGroupInfo);
     newGroupMap.put(dstGroupInfo.getName(), dstGroupInfo);
-    flushConfig(newGroupMap);    
+    flushConfig(newGroupMap);
   }
 
   @Override

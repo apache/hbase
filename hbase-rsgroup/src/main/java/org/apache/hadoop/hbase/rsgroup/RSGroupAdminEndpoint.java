@@ -33,6 +33,7 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -94,6 +95,7 @@ import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.TableAuthManager;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.util.Shell;
 
 public class RSGroupAdminEndpoint extends RSGroupAdminService
     implements CoprocessorService, Coprocessor, MasterObserver {
@@ -108,6 +110,47 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
 
   /** Provider for mapping principal names to Users */
   private UserProvider userProvider;
+  /** Get rsgroup table mapping script */
+  private RSGroupMappingScript script;
+
+  // Package visibility for testing
+  static class RSGroupMappingScript {
+
+    static final String RS_GROUP_MAPPING_SCRIPT = "hbase.rsgroup.table.mapping.script";
+    static final String RS_GROUP_MAPPING_SCRIPT_TIMEOUT =
+      "hbase.rsgroup.table.mapping.script.timeout";
+
+    private Shell.ShellCommandExecutor rsgroupMappingScript;
+
+    RSGroupMappingScript(Configuration conf) {
+      String script = conf.get(RS_GROUP_MAPPING_SCRIPT);
+      if (script == null || script.isEmpty()) {
+        return;
+      }
+
+      rsgroupMappingScript = new Shell.ShellCommandExecutor(
+          new String[] { script, "", "" }, null, null,
+          conf.getLong(RS_GROUP_MAPPING_SCRIPT_TIMEOUT, 5000) // 5 seconds
+      );
+    }
+
+    String getRSGroup(String namespace, String tablename) {
+      if (rsgroupMappingScript == null) {
+        return RSGroupInfo.DEFAULT_GROUP;
+      }
+      String[] exec = rsgroupMappingScript.getExecString();
+      exec[1] = namespace;
+      exec[2] = tablename;
+      try {
+        rsgroupMappingScript.execute();
+      } catch (IOException e) {
+        LOG.error(e.getMessage() + " placing back to default rsgroup");
+        return RSGroupInfo.DEFAULT_GROUP;
+      }
+      return rsgroupMappingScript.getOutput().trim();
+    }
+
+  }
 
   @Override
   public void start(CoprocessorEnvironment env) throws IOException {
@@ -125,6 +168,7 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
 
     // set the user-provider.
     this.userProvider = UserProvider.instantiate(env.getConfiguration());
+    this.script = new RSGroupMappingScript(env.getConfiguration());
   }
 
   @Override
@@ -428,6 +472,16 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
         RSGroupInfo.DEFAULT_GROUP + "' for deploy of system table");
       groupName = RSGroupInfo.DEFAULT_GROUP;
     }
+
+    if (groupName == RSGroupInfo.DEFAULT_GROUP) {
+      TableName tableName = desc.getTableName();
+      groupName = script.getRSGroup(
+          tableName.getNamespaceAsString(),
+          tableName.getQualifierAsString()
+      );
+      LOG.info("rsgroup for " + tableName + " is " + groupName);
+    }
+
     RSGroupInfo rsGroupInfo = groupAdminServer.getRSGroupInfo(groupName);
     if (rsGroupInfo == null) {
       throw new ConstraintException("Default RSGroup (" + groupName + ") for this table's "
