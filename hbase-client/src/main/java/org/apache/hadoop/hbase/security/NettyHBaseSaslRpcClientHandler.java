@@ -119,10 +119,10 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
           return saslRpcClient.getInitialResponse();
         }
       });
-      if (initialResponse.length > 0) {
+      if (initialResponse != null) {
         writeResponse(ctx, initialResponse);
       } else {
-        LOG.trace("SASL initialResponse was empty, not sending response to server.");
+        LOG.trace("SASL initialResponse was null, not sending response to server.");
       }
       // HBASE-23881 We do not want to check if the SaslClient thinks the handshake is
       // complete as, at this point, we've not heard a back from the server with it's reply
