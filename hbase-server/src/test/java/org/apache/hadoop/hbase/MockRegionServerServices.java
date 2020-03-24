@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import com.google.protobuf.Service;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Collection;
@@ -63,6 +62,8 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 

@@ -60,7 +60,6 @@ import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
-import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
@@ -80,6 +79,10 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MultiRowMutationProtos;
 
 @Category({LargeTests.class, ClientTests.class})
 public class TestFromClientSide3 {
@@ -816,14 +819,12 @@ public class TestFromClientSide3 {
         put1.addColumn(FAMILY, QUALIFIER, value1);
         put2.addColumn(FAMILY, QUALIFIER, value2);
         try (Table table = con.getTable(tableName)) {
-          MultiRowMutationProtos.MutateRowsRequest request
-            = MultiRowMutationProtos.MutateRowsRequest.newBuilder()
-              .addMutationRequest(org.apache.hadoop.hbase.protobuf.ProtobufUtil.toMutation(
-                      org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto
-                              .MutationType.PUT, put1))
-              .addMutationRequest(org.apache.hadoop.hbase.protobuf.ProtobufUtil.toMutation(
-                      org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto
-                              .MutationType.PUT, put2))
+          MultiRowMutationProtos.MutateRowsRequest request =
+            MultiRowMutationProtos.MutateRowsRequest.newBuilder()
+              .addMutationRequest(
+                ProtobufUtil.toMutation(ClientProtos.MutationProto.MutationType.PUT, put1))
+              .addMutationRequest(
+                ProtobufUtil.toMutation(ClientProtos.MutationProto.MutationType.PUT, put2))
               .build();
           table.coprocessorService(MultiRowMutationProtos.MultiRowMutationService.class,
               ROW, ROW,

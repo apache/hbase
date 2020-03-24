@@ -16,22 +16,24 @@
  * limitations under the License.
  */
 syntax = "proto2";
+package hbase.pb;
 
-// Coprocessor test
-option java_package = "org.apache.hadoop.hbase.coprocessor.protobuf.generated";
-option java_outer_classname = "ColumnAggregationProtos";
+option java_package = "org.apache.hadoop.hbase.shaded.coprocessor.example.generated";
+option java_outer_classname = "ExampleProtos";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
+option optimize_for = SPEED;
 
-message SumRequest {
-  required bytes family = 1;
-  optional bytes qualifier = 2;
+message CountRequest {
 }
 
-message SumResponse {
-  required int64 sum = 1;
+message CountResponse {
+  required int64 count = 1 [default = 0];
 }
 
-service ColumnAggregationService {
-  rpc sum(SumRequest) returns(SumResponse);
+service RowCountService {
+  rpc getRowCount(CountRequest)
+    returns (CountResponse);
+  rpc getKeyValueCount(CountRequest)
+    returns (CountResponse);
 }

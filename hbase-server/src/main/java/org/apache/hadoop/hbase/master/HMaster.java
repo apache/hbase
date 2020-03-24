@@ -21,8 +21,7 @@ import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_COORDINATED
 import static org.apache.hadoop.hbase.HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.util.DNS.MASTER_HOSTNAME_KEY;
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.Service;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.Constructor;
@@ -40,7 +39,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -224,10 +222,14 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.webapp.WebAppContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors;
+import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
@@ -1571,7 +1573,9 @@ public class HMaster extends HRegionServer implements MasterServices {
     // startProcedureExecutor. See the javadoc for finishActiveMasterInitialization for more
     // details.
     procedureExecutor.init(numThreads, abortOnCorruption);
-    procEnv.getRemoteDispatcher().start();
+    if (!procEnv.getRemoteDispatcher().start()) {
+      throw new HBaseIOException("Failed start of remote dispatcher");
+    }
   }
 
   private void startProcedureExecutor() throws IOException {
@@ -1791,26 +1795,17 @@ public class HMaster extends HRegionServer implements MasterServices {
         }
       }
 
-      boolean isByTable = getConfiguration().getBoolean("hbase.master.loadbalance.bytable", false);
       Map<TableName, Map<ServerName, List<RegionInfo>>> assignments =
         this.assignmentManager.getRegionStates()
-          .getAssignmentsForBalancer(tableStateManager, this.serverManager.getOnlineServersList(),
-            isByTable);
+          .getAssignmentsForBalancer(tableStateManager, this.serverManager.getOnlineServersList());
       for (Map<ServerName, List<RegionInfo>> serverMap : assignments.values()) {
         serverMap.keySet().removeAll(this.serverManager.getDrainingServersList());
       }
 
       //Give the balancer the current cluster state.
       this.balancer.setClusterMetrics(getClusterMetricsWithoutCoprocessor());
-      this.balancer.setClusterLoad(assignments);
 
-      List<RegionPlan> plans = new ArrayList<>();
-      for (Entry<TableName, Map<ServerName, List<RegionInfo>>> e : assignments.entrySet()) {
-        List<RegionPlan> partialPlans = this.balancer.balanceCluster(e.getKey(), e.getValue());
-        if (partialPlans != null) {
-          plans.addAll(partialPlans);
-        }
-      }
+      List<RegionPlan> plans = this.balancer.balanceCluster(assignments);
 
       if (skipRegionManagementAction("balancer")) {
         // make one last check that the cluster isn't shutting down before proceeding.
