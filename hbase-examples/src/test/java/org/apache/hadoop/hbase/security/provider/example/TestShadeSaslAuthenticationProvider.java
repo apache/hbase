@@ -236,7 +236,7 @@ public class TestShadeSaslAuthenticationProvider {
   }
 
   @Test
-  public void testNegativeMasterAuthentication() throws Exception {
+  public void testNegativeAuthentication() throws Exception {
     List<Pair<String, Class<? extends Exception>>> params = new ArrayList<>();
     // Master-based connection will fail to ask the master its cluster ID
     // as a part of creating the Connection.
@@ -245,10 +245,10 @@ public class TestShadeSaslAuthenticationProvider {
     // ZK based connection will fail on the master RPC
     params.add(new Pair<String, Class<? extends Exception>>(
         // ZKConnectionRegistry is package-private
-        "org.apache.hadoop.hbase.client.ZKConnectionRegistry", RetriesExhaustedException.class));
+        HConstants.ZK_CONNECTION_REGISTRY_CLASS, RetriesExhaustedException.class));
 
     params.forEach((pair) -> {
-      LOG.info("Running negative master authentication test for client registry {}, expecting {}",
+      LOG.info("Running negative authentication test for client registry {}, expecting {}",
           pair.getFirst(), pair.getSecond().getName());
       // Validate that we can read that record back out as the user with our custom auth'n
       final Configuration clientConf = new Configuration(CONF);
@@ -259,6 +259,8 @@ public class TestShadeSaslAuthenticationProvider {
             "user1", new String[0]);
         user1.addToken(
             ShadeClientTokenUtil.obtainToken(conn, "user1", "not a real password".toCharArray()));
+
+        LOG.info("Executing request to HBase Master which should fail");
         user1.doAs(new PrivilegedExceptionAction<Void>() {
           @Override public Void run() throws Exception {
             try (Connection conn = ConnectionFactory.createConnection(clientConf);) {
@@ -272,40 +274,8 @@ public class TestShadeSaslAuthenticationProvider {
             return null;
           }
         });
-      } catch (InterruptedException e) {
-        LOG.error("Caught interrupted exception", e);
-        Thread.currentThread().interrupt();
-        return;
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-    });
-  }
 
-  @Test
-  public void testNegativeRegionServerAuthentication() throws Exception {
-    List<Pair<String, Class<? extends Exception>>> params = new ArrayList<>();
-    // Master-based connection will fail to ask the master its cluster ID
-    // as a part of creating the Connection.
-    params.add(new Pair<String, Class<? extends Exception>>(
-        MasterRegistry.class.getName(), MasterRegistryFetchException.class));
-    // ZK based connection will fail on the master RPC
-    params.add(new Pair<String, Class<? extends Exception>>(
-        // ZKConnectionRegistry is package-private
-        "org.apache.hadoop.hbase.client.ZKConnectionRegistry", RetriesExhaustedException.class));
-
-    params.forEach((pair) -> {
-      LOG.info("Running negative master authentication test for client registry {}, expecting {}",
-          pair.getFirst(), pair.getSecond().getName());
-      // Validate that we can read that record back out as the user with our custom auth'n
-      final Configuration clientConf = new Configuration(CONF);
-      clientConf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
-      clientConf.set(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY, pair.getFirst());
-      try (Connection conn = ConnectionFactory.createConnection(clientConf)) {
-        UserGroupInformation user1 = UserGroupInformation.createUserForTesting(
-            "user1", new String[0]);
-        user1.addToken(
-            ShadeClientTokenUtil.obtainToken(conn, "user1", "not a real password".toCharArray()));
+        LOG.info("Executing request to HBase RegionServer which should fail");
         user1.doAs(new PrivilegedExceptionAction<Void>() {
           @Override public Void run() throws Exception {
             // A little contrived because, with MasterRegistry, we'll still fail on talking
