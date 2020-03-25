@@ -21,11 +21,12 @@ function usage {
   echo "Usage: ${0} [options] TestSomeTestName [TestOtherTest...]"
   echo ""
   echo "    --repeat times                        number of times to repeat if successful"
-  echo "    --force-timeout seconds               Seconds to wait before killing a given test run."
+  echo "    --force-timeout seconds               Seconds to wait before killing a given test run"
   echo "    --maven-local-repo /path/to/use       Path for maven artifacts while building"
   echo "    --surefire-fork-count                 set the fork-count. only useful if multiple " \
       "tests running (default 0.5C)"
   echo "    --log-output /path/to/use             path to directory to hold attempt log"
+  echo "    --hadoop-profile profile              specify a value passed via -Dhadoop.profile"
   exit 1
 }
 # Get arguments
@@ -34,6 +35,7 @@ declare fork_count="0.5C"
 declare -i attempts=1
 declare maven_repo="${HOME}/.m2/repository"
 declare output="."
+declare hadoop_profile='2.0'
 while [ $# -gt 0 ]
 do
   case "$1" in
@@ -42,6 +44,7 @@ do
     --repeat) shift; attempts=$1; shift;;
     --log-output) shift; output=$1; shift;;
     --surefire-fork-count) shift; fork_count=$1; shift;;
+    --hadoop-profile) shift; hadoop_profile=$1; shift;;
     --) shift; break;;
     -*) usage ;;
     *)  break;;  # terminate while loop
@@ -94,9 +97,12 @@ done
 declare tests="${*}"
 for attempt in $(seq "${attempts}"); do
   echo "Attempt ${attempt}" >&2
-  echo_run_redirect "${output}/mvn_test.log" mvn --batch-mode -Dmaven.repo.local="${maven_repo}" \
+  echo_run_redirect "${output}/mvn_test.log" mvn --batch-mode \
+      -Dhadoop.profile="${hadoop_profile}" \
+      -Dmaven.repo.local="${maven_repo}" \
       -Dtest="${tests// /,}" \
       -Dsurefire.rerunFailingTestsCount=0 -Dsurefire.parallel.forcedTimeout="${force_timeout}" \
       -Dsurefire.shutdown=kill -DtrimStackTrace=false -am "${mvn_module_arg[@]}" \
-      -DforkCount="${fork_count}" package
+      -DforkCount="${fork_count}" \
+      test
 done
