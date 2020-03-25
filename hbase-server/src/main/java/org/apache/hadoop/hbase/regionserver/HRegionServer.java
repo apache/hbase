@@ -246,6 +246,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 @SuppressWarnings({ "deprecation"})
 public class HRegionServer extends HasThread implements
     RegionServerServices, LastSequenceId, ConfigurationObserver {
+  // tickle build
   private static final Logger LOG = LoggerFactory.getLogger(HRegionServer.class);
 
   /**
