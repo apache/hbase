@@ -190,23 +190,9 @@ function personality_modules
     # For some reason, spotbugs on root is not working, but running on individual modules is
     # working. For time being, let it run on original list of CHANGED_MODULES. HBASE-19491
     for module in "${CHANGED_MODULES[@]}"; do
-      # skip spotbugs on hbase-shell and hbase-it. hbase-it has nothing
-      # in src/main/java where spotbugs goes to look
-      # skip hbase-shaded* as there is no java code in them
-      # skip all modules with no java code or at least, non test java code
-      if [[ ${module} == hbase-shell ]]; then
-        continue
-      elif [[ ${module} == hbase-it ]]; then
-        continue
-      elif [[ ${module} == hbase-shaded* ]]; then
-        continue
-      elif [[ ${module} == hbase-build-configuration ]]; then
-        continue
-      elif [[ ${module} == hbase-checkstyle ]]; then
-        continue
-      elif [[ ${module} == hbase-resource-bundle ]]; then
-        continue
-      elif [[ ${module} == hbase-testing-util ]]; then
+      # skip spotbugs on any module that lacks content in `src/main/java`
+      if [[ "$(find "${module}" -iname '*.java' -and -ipath '*/src/main/java/*' \
+          -type f | wc -l | tr -d '[:space:]')" -gt 0 ]]; then
         continue
       else
         # shellcheck disable=SC2086
