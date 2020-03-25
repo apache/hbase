@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -50,15 +49,15 @@ import org.slf4j.LoggerFactory;
  * Test the load balancer that is created by default.
  */
 @Category({MasterTests.class, MediumTests.class})
-public class TestDefaultLoadBalancer extends BalancerTestBase {
+public class TestSimpleLoadBalancer extends BalancerTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestDefaultLoadBalancer.class);
+      HBaseClassTestRule.forClass(TestSimpleLoadBalancer.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestDefaultLoadBalancer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSimpleLoadBalancer.class);
 
-  private static LoadBalancer loadBalancer;
+  private static SimpleLoadBalancer loadBalancer;
 
   @BeforeClass
   public static void beforeAllTests() throws Exception {
@@ -129,8 +128,6 @@ public class TestDefaultLoadBalancer extends BalancerTestBase {
    *
    * Invariant is that all servers should be hosting either floor(average) or
    * ceiling(average) at both table level and cluster level
-   *
-   * @throws Exception
    */
   @Test
   public void testBalanceClusterOverall() throws Exception {
@@ -139,14 +136,18 @@ public class TestDefaultLoadBalancer extends BalancerTestBase {
       Map<ServerName, List<RegionInfo>> clusterServers = mockClusterServers(mockCluster, 50);
       List<ServerAndLoad> clusterList = convertToList(clusterServers);
       clusterLoad.put(TableName.valueOf(name.getMethodName()), clusterServers);
-      HashMap<TableName, TreeMap<ServerName, List<RegionInfo>>> result = mockClusterServersWithTables(clusterServers);
+      HashMap<TableName, TreeMap<ServerName, List<RegionInfo>>> result =
+          mockClusterServersWithTables(clusterServers);
       loadBalancer.setClusterLoad(clusterLoad);
       List<RegionPlan> clusterplans = new ArrayList<>();
       List<Pair<TableName, Integer>> regionAmountList = new ArrayList<>();
-      for(TreeMap<ServerName, List<RegionInfo>> servers : result.values()){
+      for (Map.Entry<TableName, TreeMap<ServerName, List<RegionInfo>>> mapEntry : result
+          .entrySet()) {
+        TableName tableName = mapEntry.getKey();
+        TreeMap<ServerName, List<RegionInfo>> servers = mapEntry.getValue();
         List<ServerAndLoad> list = convertToList(servers);
         LOG.info("Mock Cluster : " + printMock(list) + " " + printStats(list));
-        List<RegionPlan> partialplans = loadBalancer.balanceCluster(servers);
+        List<RegionPlan> partialplans = loadBalancer.balanceTable(tableName, servers);
         if(partialplans != null) clusterplans.addAll(partialplans);
         List<ServerAndLoad> balancedClusterPerTable = reconcile(list, partialplans, servers);
         LOG.info("Mock Balance : " + printMock(balancedClusterPerTable));
@@ -176,28 +177,33 @@ public class TestDefaultLoadBalancer extends BalancerTestBase {
   }
 
   @Test
-  public void testImpactOfBalanceClusterOverallWithClusterLoadPerTable() throws Exception {
+  public void testImpactOfBalanceClusterOverallWithLoadOfAllTable() throws Exception {
     testImpactOfBalanceClusterOverall(true);
   }
 
-  private void testImpactOfBalanceClusterOverall(boolean useClusterLoadPerTable) throws Exception {
+  private void testImpactOfBalanceClusterOverall(boolean useLoadOfAllTable) throws Exception {
     Map<TableName, Map<ServerName, List<RegionInfo>>> clusterLoad = new TreeMap<>();
-    Map<ServerName, List<RegionInfo>> clusterServers = mockUniformClusterServers(mockUniformCluster);
+    Map<ServerName, List<RegionInfo>> clusterServers =
+        mockUniformClusterServers(mockUniformCluster);
     List<ServerAndLoad> clusterList = convertToList(clusterServers);
     clusterLoad.put(TableName.valueOf(name.getMethodName()), clusterServers);
     // use overall can achieve both table and cluster level balance
-    HashMap<TableName, TreeMap<ServerName, List<RegionInfo>>> clusterLoadPerTable = mockClusterServersWithTables(clusterServers);
-    if (useClusterLoadPerTable) {
-      loadBalancer.setClusterLoad((Map)clusterLoadPerTable);
+    HashMap<TableName, TreeMap<ServerName, List<RegionInfo>>> LoadOfAllTable =
+        mockClusterServersWithTables(clusterServers);
+    if (useLoadOfAllTable) {
+      loadBalancer.setClusterLoad((Map) LoadOfAllTable);
     } else {
       loadBalancer.setClusterLoad(clusterLoad);
     }
     List<RegionPlan> clusterplans1 = new ArrayList<RegionPlan>();
     List<Pair<TableName, Integer>> regionAmountList = new ArrayList<Pair<TableName, Integer>>();
-    for (TreeMap<ServerName, List<RegionInfo>> servers : clusterLoadPerTable.values()) {
+    for (Map.Entry<TableName, TreeMap<ServerName, List<RegionInfo>>> mapEntry : LoadOfAllTable
+        .entrySet()) {
+      TableName tableName = mapEntry.getKey();
+      TreeMap<ServerName, List<RegionInfo>> servers = mapEntry.getValue();
       List<ServerAndLoad> list = convertToList(servers);
       LOG.info("Mock Cluster : " + printMock(list) + " " + printStats(list));
-      List<RegionPlan> partialplans = loadBalancer.balanceCluster(servers);
+      List<RegionPlan> partialplans = loadBalancer.balanceTable(tableName, servers);
       if (partialplans != null) clusterplans1.addAll(partialplans);
       List<ServerAndLoad> balancedClusterPerTable = reconcile(list, partialplans, servers);
       LOG.info("Mock Balance : " + printMock(balancedClusterPerTable));
@@ -208,29 +214,34 @@ public class TestDefaultLoadBalancer extends BalancerTestBase {
       }
     }
     List<ServerAndLoad> balancedCluster1 = reconcile(clusterList, clusterplans1, clusterServers);
-    assertTrue(assertClusterOverallAsBalanced(balancedCluster1, clusterLoadPerTable.keySet().size()));
+    assertTrue(assertClusterOverallAsBalanced(balancedCluster1, LoadOfAllTable.keySet().size()));
   }
 
   @Test
-  public void
-  testBalanceClusterOverallStrictly() throws Exception {
-    int[] regionNumOfTable1PerServer = {3, 3, 4, 4, 4, 4, 5, 5, 5};
-    int[] regionNumOfTable2PerServer = {2, 2, 2, 2, 2, 2, 2, 2, 1};
+  public void testBalanceClusterOverallStrictly() throws Exception {
+    int[] regionNumOfTable1PerServer = { 3, 3, 4, 4, 4, 4, 5, 5, 5 };
+    int[] regionNumOfTable2PerServer = { 2, 2, 2, 2, 2, 2, 2, 2, 1 };
     TreeMap<ServerName, List<RegionInfo>> serverRegionInfo = new TreeMap<>();
     List<ServerAndLoad> serverAndLoads = new ArrayList<>();
     for (int i = 0; i < regionNumOfTable1PerServer.length; i++) {
       ServerName serverName = ServerName.valueOf("server" + i, 1000, -1);
-      List<RegionInfo> regions1 = createRegions(regionNumOfTable1PerServer[i], TableName.valueOf("table1"));
-      List<RegionInfo> regions2 = createRegions(regionNumOfTable2PerServer[i], TableName.valueOf("table2"));
+      List<RegionInfo> regions1 =
+          createRegions(regionNumOfTable1PerServer[i], TableName.valueOf("table1"));
+      List<RegionInfo> regions2 =
+          createRegions(regionNumOfTable2PerServer[i], TableName.valueOf("table2"));
       regions1.addAll(regions2);
       serverRegionInfo.put(serverName, regions1);
-      ServerAndLoad serverAndLoad = new ServerAndLoad(serverName, regionNumOfTable1PerServer[i] + regionNumOfTable2PerServer[i]);
+      ServerAndLoad serverAndLoad = new ServerAndLoad(serverName,
+          regionNumOfTable1PerServer[i] + regionNumOfTable2PerServer[i]);
       serverAndLoads.add(serverAndLoad);
     }
-    HashMap<TableName, TreeMap<ServerName, List<RegionInfo>>> clusterLoadPerTable = mockClusterServersWithTables(serverRegionInfo);
-    loadBalancer.setClusterLoad((Map) clusterLoadPerTable);
-    List<RegionPlan> partialplans = loadBalancer.balanceCluster(clusterLoadPerTable.get(TableName.valueOf("table1")));
-    List<ServerAndLoad> balancedServerLoads = reconcile(serverAndLoads, partialplans, serverRegionInfo);
+    HashMap<TableName, TreeMap<ServerName, List<RegionInfo>>> LoadOfAllTable =
+        mockClusterServersWithTables(serverRegionInfo);
+    loadBalancer.setClusterLoad((Map) LoadOfAllTable);
+    List<RegionPlan> partialplans = loadBalancer.balanceTable(TableName.valueOf("table1"),
+      LoadOfAllTable.get(TableName.valueOf("table1")));
+    List<ServerAndLoad> balancedServerLoads =
+        reconcile(serverAndLoads, partialplans, serverRegionInfo);
     for (ServerAndLoad serverAndLoad : balancedServerLoads) {
       assertEquals(6, serverAndLoad.getLoad());
     }

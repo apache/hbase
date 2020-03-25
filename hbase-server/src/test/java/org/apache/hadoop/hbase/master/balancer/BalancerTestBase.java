@@ -553,7 +553,9 @@ public class BalancerTestBase {
 
     loadBalancer.setRackManager(rackManager);
     // Run the balancer.
-    List<RegionPlan> plans = loadBalancer.balanceCluster(serverMap);
+    Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
+        (Map) mockClusterServersWithTables(serverMap);
+    List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
     assertNotNull(plans);
 
     // Check to see that this actually got to a stable place.
@@ -566,7 +568,8 @@ public class BalancerTestBase {
 
       if (assertFullyBalanced) {
         assertClusterAsBalanced(balancedCluster);
-        List<RegionPlan> secondPlans =  loadBalancer.balanceCluster(serverMap);
+        LoadOfAllTable = (Map) mockClusterServersWithTables(serverMap);
+        List<RegionPlan> secondPlans = loadBalancer.balanceCluster(LoadOfAllTable);
         assertNull(secondPlans);
       }
 

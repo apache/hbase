@@ -435,16 +435,9 @@ public class RSGroupAdminServer implements RSGroupAdmin {
       }
 
       //We balance per group instead of per table
-      List<RegionPlan> plans = new ArrayList<>();
-      for(Map.Entry<TableName, Map<ServerName, List<RegionInfo>>> tableMap:
-          getRSGroupAssignmentsByTable(groupName).entrySet()) {
-        LOG.info("Creating partial plan for table {} : {}", tableMap.getKey(), tableMap.getValue());
-        List<RegionPlan> partialPlans = balancer.balanceCluster(tableMap.getValue());
-        LOG.info("Partial plan for table {} : {}", tableMap.getKey(), partialPlans);
-        if (partialPlans != null) {
-          plans.addAll(partialPlans);
-        }
-      }
+      Map<TableName, Map<ServerName, List<RegionInfo>>> assignmentsByTable =
+        getRSGroupAssignmentsByTable(groupName);
+      List<RegionPlan> plans = balancer.balanceCluster(assignmentsByTable);
       boolean balancerRan = !plans.isEmpty();
       if (balancerRan) {
         LOG.info("RSGroup balance {} starting with plan count: {}", groupName, plans.size());

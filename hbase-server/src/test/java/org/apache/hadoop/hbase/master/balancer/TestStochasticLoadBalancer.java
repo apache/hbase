@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Size;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.MockNoopMasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
@@ -169,8 +170,10 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
         loadBalancer.setConf(conf);
         for (int[] mockCluster : clusterStateMocks) {
           Map<ServerName, List<RegionInfo>> servers = mockClusterServers(mockCluster);
-          List<RegionPlan> plans = loadBalancer.balanceCluster(servers);
-          assertNull(plans);
+          Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
+              (Map) mockClusterServersWithTables(servers);
+          List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
+          assertTrue(plans == null || plans.isEmpty());
         }
       }
     } finally {
@@ -362,7 +365,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     List<ServerAndLoad> list = convertToList(serverMap);
 
 
-    List<RegionPlan> plans = loadBalancer.balanceCluster(serverMap);
+    List<RegionPlan> plans = loadBalancer.balanceTable(HConstants.ENSEMBLE_TABLE_NAME, serverMap);
     assertNotNull(plans);
 
     // Apply the plan to the mock cluster.
@@ -376,7 +379,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
 
     serverMap.put(deadSn, new ArrayList<>(0));
 
-    plans = loadBalancer.balanceCluster(serverMap);
+    plans = loadBalancer.balanceTable(HConstants.ENSEMBLE_TABLE_NAME, serverMap);
     assertNull(plans);
   }
 

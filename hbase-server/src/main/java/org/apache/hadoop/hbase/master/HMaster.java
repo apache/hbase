@@ -40,7 +40,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -1693,26 +1692,17 @@ public class HMaster extends HRegionServer implements MasterServices {
         }
       }
 
-      boolean isByTable = getConfiguration().getBoolean("hbase.master.loadbalance.bytable", false);
       Map<TableName, Map<ServerName, List<RegionInfo>>> assignments =
         this.assignmentManager.getRegionStates()
-          .getAssignmentsForBalancer(tableStateManager, this.serverManager.getOnlineServersList(),
-            isByTable);
+          .getAssignmentsForBalancer(tableStateManager, this.serverManager.getOnlineServersList());
       for (Map<ServerName, List<RegionInfo>> serverMap : assignments.values()) {
         serverMap.keySet().removeAll(this.serverManager.getDrainingServersList());
       }
 
       //Give the balancer the current cluster state.
       this.balancer.setClusterMetrics(getClusterMetricsWithoutCoprocessor());
-      this.balancer.setClusterLoad(assignments);
 
-      List<RegionPlan> plans = new ArrayList<>();
-      for (Entry<TableName, Map<ServerName, List<RegionInfo>>> e : assignments.entrySet()) {
-        List<RegionPlan> partialPlans = this.balancer.balanceCluster(e.getKey(), e.getValue());
-        if (partialPlans != null) {
-          plans.addAll(partialPlans);
-        }
-      }
+      List<RegionPlan> plans = this.balancer.balanceCluster(assignments);
 
       List<RegionPlan> sucRPs = executeRegionPlansWithThrottling(plans);
 

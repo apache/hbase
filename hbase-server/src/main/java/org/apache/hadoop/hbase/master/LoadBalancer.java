@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.master;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.conf.Configurable;
@@ -71,34 +72,31 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
   void setClusterMetrics(ClusterMetrics st);
 
   /**
-   * Pass RegionStates and allow balancer to set the current cluster load.
-   * @param ClusterLoad
-   */
-  void setClusterLoad(Map<TableName, Map<ServerName, List<RegionInfo>>> ClusterLoad);
-
-  /**
    * Set the master service.
    * @param masterServices
    */
   void setMasterServices(MasterServices masterServices);
 
   /**
-   * Perform the major balance operation
-   * @param tableName
-   * @param clusterState
-   * @return List of plans
+   * Perform the major balance operation for cluster, will invoke {@link #balanceTable} to do
+   * actual balance. Normally not need override this method, except SimpleLoadBalancer and
+   * RSGroupBasedLoadBalancer.
+   * @param loadOfAllTable region load of servers for all table
+   * @return a list of regions to be moved, including source and destination, or null if cluster is
+   *         already balanced
    */
-  List<RegionPlan> balanceCluster(TableName tableName, Map<ServerName,
-      List<RegionInfo>> clusterState) throws HBaseIOException;
+  List<RegionPlan> balanceCluster(Map<TableName,
+      Map<ServerName, List<RegionInfo>>> loadOfAllTable) throws IOException;
 
   /**
-   * Perform the major balance operation
-   * @param clusterState
+   * Perform the major balance operation for table, all class implement of {@link LoadBalancer}
+   * should override this method
+   * @param tableName the table to be balanced
+   * @param loadOfOneTable region load of servers for the specific one table
    * @return List of plans
    */
-  List<RegionPlan> balanceCluster(Map<ServerName,
-      List<RegionInfo>> clusterState) throws HBaseIOException;
-
+  List<RegionPlan> balanceTable(TableName tableName,
+      Map<ServerName, List<RegionInfo>> loadOfOneTable);
   /**
    * Perform a Round Robin assignment of regions.
    * @param regions

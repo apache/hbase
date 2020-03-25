@@ -30,6 +30,7 @@ import java.util.TreeMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -150,7 +151,8 @@ public class TestStochasticLoadBalancerRegionReplica extends BalancerTestBase {
     // until the step above s1 holds two replicas of a region
     regions = randomRegions(1);
     map.put(s2, regions);
-    assertTrue(loadBalancer.needsBalance(new Cluster(map, null, null, null)));
+    assertTrue(loadBalancer.needsBalance(HConstants.ENSEMBLE_TABLE_NAME,
+      new Cluster(map, null, null, null)));
     // check for the case where there are two hosts on the same rack and there are two racks
     // and both the replicas are on the same rack
     map.clear();
@@ -162,7 +164,8 @@ public class TestStochasticLoadBalancerRegionReplica extends BalancerTestBase {
     // add another server so that the cluster has some host on another rack
     map.put(ServerName.valueOf("host2", 1000, 11111), randomRegions(1));
     assertTrue(
-      loadBalancer.needsBalance(new Cluster(map, null, null, new ForTestRackManagerOne())));
+      loadBalancer.needsBalance(HConstants.ENSEMBLE_TABLE_NAME,
+        new Cluster(map, null, null, new ForTestRackManagerOne())));
   }
 
   @Test
