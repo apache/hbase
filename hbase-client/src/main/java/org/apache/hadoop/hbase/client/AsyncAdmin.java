@@ -1522,6 +1522,17 @@ public interface AsyncAdmin {
       final SlowLogQueryFilter slowLogQueryFilter);
 
   /**
+   * Retrieves online large RPC logs from the provided list of
+   * RegionServers
+   *
+   * @param serverNames Server names to get largelog responses from
+   * @param largeLogQueryFilter filter to be used if provided
+   * @return Online slowlog response list. The return value wrapped by a {@link CompletableFuture}
+   */
+  CompletableFuture<List<SlowLogRecord>> getLargeLogResponses(final Set<ServerName> serverNames,
+    final SlowLogQueryFilter largeLogQueryFilter);
+
+  /**
    * Clears online slow RPC logs from the provided list of
    * RegionServers
    *

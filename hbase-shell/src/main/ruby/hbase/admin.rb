@@ -1518,6 +1518,30 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Retrieve LargeLog Responses from RegionServers
+    def get_largelog_responses(server_names, args)
+      unless server_names.is_a?(Array) || server_names.is_a?(String)
+        raise(ArgumentError,
+              "#{server_names.class} of #{server_names.inspect} is not of Array/String type")
+      end
+      if server_names == '*'
+        server_names = getServerNames([], true)
+      else
+        server_names_list = to_server_names(server_names)
+        server_names = getServerNames(server_names_list, false)
+      end
+      filter_params = get_filter_params(args)
+      large_log_responses = @admin.getLargeLogResponses(java.util.HashSet.new(server_names),
+                                                        filter_params)
+      large_log_responses_arr = []
+      for large_log_response in large_log_responses
+        large_log_responses_arr << large_log_response.toJsonPrettyPrint
+      end
+      puts 'Retrieved LargeLog Responses from RegionServers'
+      puts large_log_responses_arr
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Clears SlowLog Responses from RegionServers
     def clear_slowlog_responses(server_names)
       unless server_names.nil? || server_names.is_a?(Array) || server_names.is_a?(String)

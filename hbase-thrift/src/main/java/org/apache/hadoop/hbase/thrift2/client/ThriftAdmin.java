@@ -1256,4 +1256,11 @@ public class ThriftAdmin implements Admin {
     getConfiguredNamespacesAndTablesInRSGroup(String groupName) throws IOException {
     throw new NotImplementedException("setRSGroup not supported in ThriftAdmin");
   }
+
+  @Override
+  public List<SlowLogRecord> getLargeLogResponses(Set<ServerName> serverNames,
+    SlowLogQueryFilter largeLogQueryFilter) throws IOException {
+    throw new NotImplementedException("getLargeLogResponses not supported in ThriftAdmin");
+  }
+
 }

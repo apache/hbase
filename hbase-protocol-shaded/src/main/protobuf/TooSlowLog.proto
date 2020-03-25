@@ -42,4 +42,6 @@ message SlowLogPayload {
   optional int32 multi_gets = 12 [default = 0];
   optional int32 multi_mutations = 13 [default = 0];
   optional int32 multi_service_calls = 14 [default = 0];
+  optional bool is_slow_log = 15 [default = false];
+  optional bool is_large_log = 16 [default = false];
 }

@@ -25,7 +25,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * SlowLog Query Filter with all filter and limit parameters
+ * Slow/Large Log Query Filter with all filter and limit parameters
  */
 @InterfaceAudience.Private
 public class SlowLogQueryFilter {

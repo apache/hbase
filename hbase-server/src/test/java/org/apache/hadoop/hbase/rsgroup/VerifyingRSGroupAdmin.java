@@ -892,6 +892,12 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   @Override
+  public List<SlowLogRecord> getLargeLogResponses(Set<ServerName> serverNames,
+      SlowLogQueryFilter largeLogQueryFilter) throws IOException {
+    return null;
+  }
+
+  @Override
   public List<Boolean> clearSlowLogResponses(Set<ServerName> serverNames) throws IOException {
     return null;
   }

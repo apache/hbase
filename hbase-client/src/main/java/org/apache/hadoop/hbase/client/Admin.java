@@ -2277,6 +2277,18 @@ public interface Admin extends Abortable, Closeable {
       final SlowLogQueryFilter slowLogQueryFilter) throws IOException;
 
   /**
+   * Retrieves online large RPC logs from the provided list of
+   * RegionServers
+   *
+   * @param serverNames Server names to get slowlog responses from
+   * @param largeLogQueryFilter filter to be used if provided
+   * @return online slowlog response list
+   * @throws IOException if a remote or network exception occurs
+   */
+  List<SlowLogRecord> getLargeLogResponses(final Set<ServerName> serverNames,
+    final SlowLogQueryFilter largeLogQueryFilter) throws IOException;
+
+  /**
    * Clears online slow RPC logs from the provided list of
    * RegionServers
    *

@@ -30,7 +30,8 @@ import org.apache.hbase.thirdparty.com.google.gson.JsonObject;
 import org.apache.hbase.thirdparty.com.google.gson.JsonSerializer;
 
 /**
- * SlowLog payload for hbase-client, to be used by Admin API get_slow_responses
+ * Slow/Large Log payload for hbase-client, to be used by Admin API get_slow_responses and
+ * get_large_responses
  */
 @InterfaceAudience.Private
 final public class SlowLogRecord {

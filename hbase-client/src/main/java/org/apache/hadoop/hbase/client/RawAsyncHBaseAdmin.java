@@ -3965,6 +3965,21 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       .collect(Collectors.toList()));
   }
 
+  @Override
+  public CompletableFuture<List<SlowLogRecord>> getLargeLogResponses(
+      @Nullable final Set<ServerName> serverNames,
+      final SlowLogQueryFilter largeLogQueryFilter) {
+    if (CollectionUtils.isEmpty(serverNames)) {
+      return CompletableFuture.completedFuture(Collections.emptyList());
+    }
+    return CompletableFuture.supplyAsync(() -> serverNames.stream()
+      .map((ServerName serverName) ->
+        getLargeLogResponseFromServer(serverName, largeLogQueryFilter))
+      .map(CompletableFuture::join)
+      .flatMap(List::stream)
+      .collect(Collectors.toList()));
+  }
+
   private CompletableFuture<List<SlowLogRecord>> getSlowLogResponseFromServer(
     final ServerName serverName, final SlowLogQueryFilter slowLogQueryFilter) {
     return this.<List<SlowLogRecord>>newAdminCaller()
@@ -3972,6 +3987,17 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         .adminCall(
           controller, stub, RequestConverter.buildSlowLogResponseRequest(slowLogQueryFilter),
           AdminService.Interface::getSlowLogResponses,
+          ProtobufUtil::toSlowLogPayloads))
+      .serverName(serverName).call();
+  }
+
+  private CompletableFuture<List<SlowLogRecord>> getLargeLogResponseFromServer(
+    final ServerName serverName, final SlowLogQueryFilter slowLogQueryFilter) {
+    return this.<List<SlowLogRecord>>newAdminCaller()
+      .action((controller, stub) -> this
+        .adminCall(
+          controller, stub, RequestConverter.buildSlowLogResponseRequest(slowLogQueryFilter),
+          AdminService.Interface::getLargeLogResponses,
           ProtobufUtil::toSlowLogPayloads))
       .serverName(serverName).call();
   }

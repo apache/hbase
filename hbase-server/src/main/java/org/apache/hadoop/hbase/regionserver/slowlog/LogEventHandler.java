@@ -50,13 +50,13 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog.SlowLogPaylo
  * Event Handler run by disruptor ringbuffer consumer
  */
 @InterfaceAudience.Private
-class SlowLogEventHandler implements EventHandler<RingBufferEnvelope> {
+class LogEventHandler implements EventHandler<RingBufferEnvelope> {
 
-  private static final Logger LOG = LoggerFactory.getLogger(SlowLogEventHandler.class);
+  private static final Logger LOG = LoggerFactory.getLogger(LogEventHandler.class);
 
   private final Queue<SlowLogPayload> queue;
 
-  SlowLogEventHandler(int eventCount) {
+  LogEventHandler(int eventCount) {
     EvictingQueue<SlowLogPayload> evictingQueue = EvictingQueue.create(eventCount);
     queue = Queues.synchronizedQueue(evictingQueue);
   }
@@ -78,6 +78,8 @@ class SlowLogEventHandler implements EventHandler<RingBufferEnvelope> {
     final String clientAddress = rpcCallDetails.getClientAddress();
     final long responseSize = rpcCallDetails.getResponseSize();
     final String className = rpcCallDetails.getClassName();
+    final boolean isSlowLog = rpcCallDetails.isSlowLog();
+    final boolean isLargeLog = rpcCallDetails.isLargeLog();
     Descriptors.MethodDescriptor methodDescriptor = rpcCall.getMethod();
     Message param = rpcCall.getParam();
     long receiveTime = rpcCall.getReceiveTime();
@@ -111,6 +113,8 @@ class SlowLogEventHandler implements EventHandler<RingBufferEnvelope> {
     SlowLogPayload slowLogPayload = SlowLogPayload.newBuilder()
       .setCallDetails(methodDescriptorName + "(" + param.getClass().getName() + ")")
       .setClientAddress(clientAddress)
+      .setIsLargeLog(isLargeLog)
+      .setIsSlowLog(isSlowLog)
       .setMethodName(methodDescriptorName)
       .setMultiGets(numGets)
       .setMultiMutations(numMutations)
@@ -148,17 +152,42 @@ class SlowLogEventHandler implements EventHandler<RingBufferEnvelope> {
    */
   List<SlowLogPayload> getSlowLogPayloads(final AdminProtos.SlowLogResponseRequest request) {
     List<SlowLogPayload> slowLogPayloadList =
-      Arrays.stream(queue.toArray(new SlowLogPayload[0])).collect(Collectors.toList());
+      Arrays.stream(queue.toArray(new SlowLogPayload[0]))
+        .filter(SlowLogPayload::getIsSlowLog)
+        .collect(Collectors.toList());
 
     // latest slow logs first, operator is interested in latest records from in-memory buffer
     Collections.reverse(slowLogPayloadList);
 
+    return getFilteredLogs(request, slowLogPayloadList);
+  }
+
+  /**
+   * Retrieve list of large log payloads
+   *
+   * @param request large log request parameters
+   * @return list of large log payloads
+   */
+  List<SlowLogPayload> getLargeLogPayloads(final AdminProtos.SlowLogResponseRequest request) {
+    List<SlowLogPayload> slowLogPayloadList =
+      Arrays.stream(queue.toArray(new SlowLogPayload[0]))
+        .filter(SlowLogPayload::getIsLargeLog)
+        .collect(Collectors.toList());
+
+    // latest large logs first, operator is interested in latest records from in-memory buffer
+    Collections.reverse(slowLogPayloadList);
+
+    return getFilteredLogs(request, slowLogPayloadList);
+  }
+
+  private List<SlowLogPayload> getFilteredLogs(AdminProtos.SlowLogResponseRequest request,
+      List<SlowLogPayload> logPayloadList) {
     if (isFilterProvided(request)) {
-      slowLogPayloadList = filterSlowLogs(request, slowLogPayloadList);
+      logPayloadList = filterLogs(request, logPayloadList);
     }
-    int limit = request.getLimit() >= slowLogPayloadList.size() ? slowLogPayloadList.size()
+    int limit = request.getLimit() >= logPayloadList.size() ? logPayloadList.size()
       : request.getLimit();
-    return slowLogPayloadList.subList(0, limit);
+    return logPayloadList.subList(0, limit);
   }
 
   private boolean isFilterProvided(AdminProtos.SlowLogResponseRequest request) {
@@ -174,7 +203,7 @@ class SlowLogEventHandler implements EventHandler<RingBufferEnvelope> {
     return StringUtils.isNotEmpty(request.getRegionName());
   }
 
-  private List<SlowLogPayload> filterSlowLogs(AdminProtos.SlowLogResponseRequest request,
+  private List<SlowLogPayload> filterLogs(AdminProtos.SlowLogResponseRequest request,
       List<SlowLogPayload> slowLogPayloadList) {
     List<SlowLogPayload> filteredSlowLogPayloads = new ArrayList<>();
     for (SlowLogPayload slowLogPayload : slowLogPayloadList) {
