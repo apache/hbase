@@ -817,6 +817,7 @@ public class TableMapReduceUtil {
       org.apache.hadoop.hbase.replication.ReplicationUtils.class,    // hbase-replication
       org.apache.hadoop.hbase.http.HttpServer.class,                 // hbase-http
       org.apache.hadoop.hbase.procedure2.Procedure.class,            // hbase-procedure
+      org.apache.hadoop.hbase.zookeeper.ZKWatcher.class,             // hbase-zookeeper
       org.apache.hbase.thirdparty.com.google.common.collect.Lists.class, // hb-shaded-miscellaneous
       org.apache.hbase.thirdparty.com.google.gson.GsonBuilder.class, // hbase-shaded-gson
       org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations.class, // hb-sh-protobuf
