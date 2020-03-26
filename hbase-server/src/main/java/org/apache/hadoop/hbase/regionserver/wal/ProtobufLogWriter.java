@@ -22,6 +22,7 @@ import java.io.OutputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.CommonFSUtils.StreamLacksCapabilityException;
@@ -90,18 +91,17 @@ public class ProtobufLogWriter extends AbstractProtobufLogWriter
     return this.output;
   }
 
-  @SuppressWarnings("deprecation")
   @Override
   protected void initOutput(FileSystem fs, Path path, boolean overwritable, int bufferSize,
       short replication, long blockSize) throws IOException, StreamLacksCapabilityException {
     this.output = CommonFSUtils.createForWal(fs, path, overwritable, bufferSize, replication,
         blockSize, false);
     if (fs.getConf().getBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, true)) {
-      if (!CommonFSUtils.hasCapability(output, "hflush")) {
-        throw new StreamLacksCapabilityException("hflush");
+      if (!output.hasCapability(StreamCapabilities.HFLUSH)) {
+        throw new StreamLacksCapabilityException(StreamCapabilities.HFLUSH);
       }
-      if (!CommonFSUtils.hasCapability(output, "hsync")) {
-        throw new StreamLacksCapabilityException("hsync");
+      if (!output.hasCapability(StreamCapabilities.HSYNC)) {
+        throw new StreamLacksCapabilityException(StreamCapabilities.HSYNC);
       }
     }
   }
