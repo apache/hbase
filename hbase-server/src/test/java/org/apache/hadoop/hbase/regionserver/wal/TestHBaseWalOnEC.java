@@ -24,9 +24,9 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
-
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
@@ -55,8 +55,6 @@ public class TestHBaseWalOnEC {
 
   private static final HBaseTestingUtility util = new HBaseTestingUtility();
 
-  private static final String HFLUSH = "hflush";
-
   @BeforeClass
   public static void setup() throws Exception {
     try {
@@ -75,7 +73,7 @@ public class TestHBaseWalOnEC {
       try (FSDataOutputStream out = fs.create(new Path("/canary"))) {
         // If this comes back as having hflush then some test setup assumption is wrong.
         // Fail the test so that a developer has to look and triage
-        assertFalse("Did not enable EC!", CommonFSUtils.hasCapability(out, HFLUSH));
+        assertFalse("Did not enable EC!", out.hasCapability(StreamCapabilities.HFLUSH));
       }
     } catch (NoSuchMethodException e) {
       // We're not testing anything interesting if EC is not available, so skip the rest of the test
@@ -95,7 +93,7 @@ public class TestHBaseWalOnEC {
   public void testStreamCreate() throws IOException {
     try (FSDataOutputStream out = CommonFSUtils.createForWal(util.getDFSCluster().getFileSystem(),
         new Path("/testStreamCreate"), true)) {
-      assertTrue(CommonFSUtils.hasCapability(out, HFLUSH));
+      assertTrue(out.hasCapability(StreamCapabilities.HFLUSH));
     }
   }
 
