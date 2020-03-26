@@ -168,7 +168,8 @@ public class TestMasterShutdown {
         final long timeout = TimeUnit.MINUTES.toMillis(10);
         assertNotEquals("timeout waiting for server manager to become available.",
           -1, Waiter.waitFor(htu.getConfiguration(), timeout,
-            () -> masterThread.getMaster().getServerManager() != null));
+            () -> masterThread.getMaster().getServerManager() != null &&
+              !masterThread.getMaster().isStopping()));
 
         // Master has come up far enough that we can terminate it without creating a zombie.
         final long result = Waiter.waitFor(htu.getConfiguration(), timeout, 500, () -> {
