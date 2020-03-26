@@ -142,6 +142,7 @@
               <includes>**\/NOTICE,**\/NOTICE.txt</includes>
             </configuration>
           </execution>
+          <!-- Create a mini Maven repository so that the Master UI can serve these jars like a Maven repo -->
           <execution>
             <id>prepare-shaded-client-repo</id>
             <phase>package</phase>
