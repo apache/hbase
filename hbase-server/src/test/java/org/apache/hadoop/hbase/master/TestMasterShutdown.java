@@ -168,8 +168,7 @@ public class TestMasterShutdown {
         final long timeout = TimeUnit.MINUTES.toMillis(10);
         assertNotEquals("timeout waiting for server manager to become available.",
           -1, Waiter.waitFor(htu.getConfiguration(), timeout,
-            () -> masterThread.getMaster().getServerManager() != null &&
-              !masterThread.getMaster().isStopping()));
+            () -> masterThread.getMaster().getServerManager() != null));
 
         // Master has come up far enough that we can terminate it without creating a zombie.
         final long result = Waiter.waitFor(htu.getConfiguration(), timeout, 500, () -> {
@@ -184,10 +183,10 @@ public class TestMasterShutdown {
               LOG.debug("Shutdown RPC sent.");
               return true;
             } catch (CompletionException e) {
-              LOG.debug("Failure sending shutdown RPC.");
+              LOG.debug("Failure sending shutdown RPC.", e);
             }
           } catch (IOException|CompletionException e) {
-            LOG.debug("Failed to establish connection.");
+            LOG.debug("Failed to establish connection.", e);
           } catch (Throwable e) {
             LOG.info("Something unexpected happened.", e);
           }
