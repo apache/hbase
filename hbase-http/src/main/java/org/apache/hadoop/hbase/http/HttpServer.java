@@ -728,6 +728,7 @@ public class HttpServer implements FilterContainer {
       LOG.info("ASYNC_PROFILER_HOME environment variable and async.profiler.home system property " +
         "not specified. Disabling /prof endpoint.");
     }
+    addUnprivilegedServlet("versoin", "/version", VersionServlet.class);
   }
 
   /**

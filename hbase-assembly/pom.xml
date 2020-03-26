@@ -142,6 +142,19 @@
               <includes>**\/NOTICE,**\/NOTICE.txt</includes>
             </configuration>
           </execution>
+          <execution>
+            <id>prepare-shaded-client-repo</id>
+            <phase>package</phase>
+            <goals>
+              <goal>copy-dependencies</goal>
+            </goals>
+            <configuration>
+              <includeArtifactIds>hbase-shaded-client,hbase-shaded-client-byo-hadoop,hbase-shaded-mapreduce,hbase-shaded-testing-util</includeArtifactIds>
+              <outputDirectory>${project.build.directory}/maven-repo</outputDirectory>
+              <overWriteIfNewer>true</overWriteIfNewer>
+              <useRepositoryLayout>true</useRepositoryLayout>
+            </configuration>
+           </execution>
         </executions>
       </plugin>
       <plugin>

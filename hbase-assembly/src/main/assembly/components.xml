@@ -168,5 +168,11 @@
       </includes>
       <fileMode>0644</fileMode>
     </fileSet>
+    <fileSet>
+      <directory>${project.build.directory}/maven-repo</directory>
+      <outputDirectory>hbase-webapps/maven-repo</outputDirectory>
+      <fileMode>0644</fileMode>
+      <directoryMode>0755</directoryMode>
+    </fileSet>
   </fileSets>
 </component>
