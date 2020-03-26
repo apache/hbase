@@ -28,7 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * A base-class for {@link DataType} implementations backed by protobuf. See
  * {@code PBKeyValue} in {@code hbase-examples} module.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 public abstract class PBType<T extends Message> implements DataType<T> {
   @Override
   public boolean isOrderPreserving() {
