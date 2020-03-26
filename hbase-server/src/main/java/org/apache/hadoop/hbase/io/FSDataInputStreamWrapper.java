@@ -331,22 +331,35 @@ public class FSDataInputStreamWrapper implements Closeable {
       if (this.instanceOfCanUnbuffer == null) {
         // To ensure we compute whether the stream is instance of CanUnbuffer only once.
         this.instanceOfCanUnbuffer = false;
-        Class<?>[] streamInterfaces = streamClass.getInterfaces();
-        for (Class c : streamInterfaces) {
-          if (c.getCanonicalName().toString().equals("org.apache.hadoop.fs.CanUnbuffer")) {
-            try {
-              this.unbuffer = streamClass.getDeclaredMethod("unbuffer");
-            } catch (NoSuchMethodException | SecurityException e) {
-              if (isLogTraceEnabled) {
-                LOG.trace("Failed to find 'unbuffer' method in class " + streamClass
-                    + " . So there may be a TCP socket connection "
-                    + "left open in CLOSE_WAIT state.", e);
-              }
-              return;
+//         Class<?>[] streamInterfaces = streamClass.getInterfaces();
+//         for (Class c : streamInterfaces) {
+//           if (c.getCanonicalName().toString().equals("org.apache.hadoop.fs.CanUnbuffer")) {
+//             try {
+//               this.unbuffer = streamClass.getDeclaredMethod("unbuffer");
+//             } catch (NoSuchMethodException | SecurityException e) {
+//               if (isLogTraceEnabled) {
+//                 LOG.trace("Failed to find 'unbuffer' method in class " + streamClass
+//                     + " . So there may be a TCP socket connection "
+//                     + "left open in CLOSE_WAIT state.", e);
+//               }
+//               return;
+//             }
+//             this.instanceOfCanUnbuffer = true;
+//             break;
+//           }
+//         }
+        if(wrappedStream instanceof CanUnbuffer){
+          try {
+            this.unbuffer = streamClass.getDeclaredMethod("unbuffer");
+          } catch (NoSuchMethodException | SecurityException e) {
+            if (isLogTraceEnabled) {
+              LOG.trace("Failed to find 'unbuffer' method in class " + streamClass
+                      + " . So there may be a TCP socket connection "
+                      + "left open in CLOSE_WAIT state.", e);
             }
-            this.instanceOfCanUnbuffer = true;
-            break;
+            return;
           }
+          this.instanceOfCanUnbuffer = true;
         }
       }
       if (this.instanceOfCanUnbuffer) {
