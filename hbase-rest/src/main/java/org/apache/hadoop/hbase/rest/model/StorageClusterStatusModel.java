@@ -30,11 +30,13 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlRootElement;
 
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
-import org.apache.hadoop.hbase.rest.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus;
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.rest.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -743,7 +745,7 @@ public class StorageClusterStatusModel implements Serializable, ProtobufMessageH
       for (Node.Region region : node.regions) {
         StorageClusterStatus.Region.Builder regionBuilder =
           StorageClusterStatus.Region.newBuilder();
-        regionBuilder.setName(ByteStringer.wrap(region.name));
+        regionBuilder.setName(UnsafeByteOperations.unsafeWrap(region.name));
         regionBuilder.setStores(region.stores);
         regionBuilder.setStorefiles(region.storefiles);
         regionBuilder.setStorefileSizeMB(region.storefileSizeMB);
