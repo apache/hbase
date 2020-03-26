@@ -46,6 +46,7 @@ pipeline {
         TESTS_FILTER = 'cc,checkstyle,javac,javadoc,pylint,shellcheck,whitespace,perlcritic,ruby-lint,rubocop,mvnsite'
         EXCLUDE_TESTS_URL = "${JENKINS_URL}/job/HBase-Find-Flaky-Tests/job/${CHANGE_TARGET}/lastSuccessfulBuild/artifact/excludes"
 
+        ////
         // a global view of paths. parallel stages can land on the same host concurrently, so each
         // stage works in its own subdirectory. there is an "output" under each of these
         // directories, which we retrieve after the build is complete.
@@ -70,11 +71,15 @@ pipeline {
                         }
                     }
                     environment {
+                        ////
                         // customized per parallel stage
+                        //
                         PLUGINS = "${GENERAL_CHECK_PLUGINS}"
                         SET_JAVA_HOME = '/usr/lib/jvm/java-8'
                         WORKDIR_REL = "${WORKDIR_REL_GENERAL_CHECK}"
+                        ////
                         // identical for all parallel stages
+                        //
                         WORKDIR = "${WORKSPACE}/${WORKDIR_REL}"
                         YETUSDIR = "${WORKDIR}/${YETUS_REL}"
                         SOURCEDIR = "${WORKDIR}/${SRC_REL}"
@@ -156,11 +161,16 @@ pipeline {
                         }
                     }
                     environment {
+                        ////
                         // customized per parallel stage
-                        PLUGINS = "${JDK_SPECIFIC_PLUGINS}"
+                        //
+                        // run SpotBugs only once, and run it on JDK8.
+                        PLUGINS = "${JDK_SPECIFIC_PLUGINS},spotbugs"
                         SET_JAVA_HOME = '/usr/lib/jvm/java-8'
                         WORKDIR_REL = "${WORKDIR_REL_JDK8_HADOOP2_CHECK}"
+                        ////
                         // identical for all parallel stages
+                        //
                         WORKDIR = "${WORKSPACE}/${WORKDIR_REL}"
                         YETUSDIR = "${WORKDIR}/${YETUS_REL}"
                         SOURCEDIR = "${WORKDIR}/${SRC_REL}"
@@ -256,14 +266,18 @@ pipeline {
                         }
                     }
                     environment {
+                        ////
                         // customized per parallel stage
+                        //
                         PLUGINS = "${JDK_SPECIFIC_PLUGINS}"
                         SET_JAVA_HOME = '/usr/lib/jvm/java-11'
                         HADOOP_PROFILE = '3.0'
                         WORKDIR_REL = "${WORKDIR_REL_JDK11_HADOOP3_CHECK}"
                         // vote -0 on JDK11 unit failures until HBASE-22972
                         TESTS_FILTER = "${TESTS_FILTER},unit"
+                        ////
                         // identical for all parallel stages
+                        //
                         WORKDIR = "${WORKSPACE}/${WORKDIR_REL}"
                         YETUSDIR = "${WORKDIR}/${YETUS_REL}"
                         SOURCEDIR = "${WORKDIR}/${SRC_REL}"
