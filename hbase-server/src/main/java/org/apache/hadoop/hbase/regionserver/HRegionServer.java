@@ -764,7 +764,7 @@ public class HRegionServer extends HasThread implements
   }
 
   protected void configureInfoServer() {
-    infoServer.addServlet("rs-status", "/rs-status", RSStatusServlet.class);
+    infoServer.addUnprivilegedServlet("rs-status", "/rs-status", RSStatusServlet.class);
     infoServer.setAttribute(REGIONSERVER, this);
   }
 
@@ -2102,7 +2102,7 @@ public class HRegionServer extends HasThread implements
     while (true) {
       try {
         this.infoServer = new InfoServer(getProcessName(), addr, port, false, this.conf);
-        infoServer.addServlet("dump", "/dump", getDumpServlet());
+        infoServer.addPrivilegedServlet("dump", "/dump", getDumpServlet());
         configureInfoServer();
         this.infoServer.start();
         break;
@@ -3844,5 +3844,10 @@ public class HRegionServer extends HasThread implements
       Threads.printThreadInfo(System.out, "Zombie HRegionServer");
       Runtime.getRuntime().halt(1);
     }
+  }
+
+  @VisibleForTesting
+  public CompactedHFilesDischarger getCompactedHFilesDischarger() {
+    return compactedFileDischarger;
   }
 }

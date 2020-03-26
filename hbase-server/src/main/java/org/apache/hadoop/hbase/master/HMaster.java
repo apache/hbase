@@ -729,7 +729,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   @Override
   protected void configureInfoServer() {
-    infoServer.addServlet("master-status", "/master-status", MasterStatusServlet.class);
+    infoServer.addUnprivilegedServlet("master-status", "/master-status", MasterStatusServlet.class);
     infoServer.setAttribute(MASTER, this);
     if (LoadBalancer.isTablesOnMaster(conf)) {
       super.configureInfoServer();
@@ -1819,6 +1819,13 @@ public class HMaster extends HRegionServer implements MasterServices {
       final long nonce) throws IOException {
     checkInitialized();
 
+    if (!isSplitOrMergeEnabled(MasterSwitchType.MERGE)) {
+      String regionsStr = Arrays.deepToString(regionsToMerge);
+      LOG.warn("Merge switch is off! skip merge of " + regionsStr);
+      throw new DoNotRetryIOException("Merge of " + regionsStr +
+          " failed because merge switch is off");
+    }
+
     final String mergeRegionsStr = Arrays.stream(regionsToMerge).
       map(r -> RegionInfo.getShortNameToLog(r)).collect(Collectors.joining(", "));
     return MasterProcedureUtil.submitProcedure(new NonceProcedureRunnable(this, ng, nonce) {
@@ -1844,6 +1851,13 @@ public class HMaster extends HRegionServer implements MasterServices {
       final long nonceGroup, final long nonce)
   throws IOException {
     checkInitialized();
+
+    if (!isSplitOrMergeEnabled(MasterSwitchType.SPLIT)) {
+      LOG.warn("Split switch is off! skip split of " + regionInfo);
+      throw new DoNotRetryIOException("Split region " + regionInfo.getRegionNameAsString() +
+          " failed due to split switch off");
+    }
+
     return MasterProcedureUtil.submitProcedure(
         new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
       @Override

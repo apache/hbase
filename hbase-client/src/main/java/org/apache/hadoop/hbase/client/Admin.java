@@ -1282,29 +1282,27 @@ public interface Admin extends Abortable, Closeable {
 
   /**
    * Merge two regions. Asynchronous operation.
-   *
    * @param nameOfRegionA encoded or full name of region a
    * @param nameOfRegionB encoded or full name of region b
-   * @param forcible <code>true</code> if do a compulsory merge, otherwise we will only merge
-   *          two adjacent regions
-   * @throws IOException
+   * @param forcible <code>true</code> if do a compulsory merge, otherwise we will only merge two
+   *          adjacent regions
    */
-  Future<Void> mergeRegionsAsync(
-      byte[] nameOfRegionA,
-      byte[] nameOfRegionB,
-      boolean forcible) throws IOException;
+  default Future<Void> mergeRegionsAsync(byte[] nameOfRegionA, byte[] nameOfRegionB,
+      boolean forcible) throws IOException {
+    byte[][] nameofRegionsToMerge = new byte[2][];
+    nameofRegionsToMerge[0] = nameOfRegionA;
+    nameofRegionsToMerge[1] = nameOfRegionB;
+    return mergeRegionsAsync(nameofRegionsToMerge, forcible);
+  }
 
   /**
-   * Merge regions. Asynchronous operation.
-   *
+   * Merge multiple regions (>=2). Asynchronous operation.
    * @param nameofRegionsToMerge encoded or full name of daughter regions
    * @param forcible <code>true</code> if do a compulsory merge, otherwise we will only merge
    *          adjacent regions
-   * @throws IOException
    */
-  Future<Void> mergeRegionsAsync(
-      byte[][] nameofRegionsToMerge,
-      boolean forcible) throws IOException;
+  Future<Void> mergeRegionsAsync(byte[][] nameofRegionsToMerge, boolean forcible)
+      throws IOException;
 
   /**
    + Split a table. The method will execute split action for each region in table.

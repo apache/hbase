@@ -148,69 +148,22 @@ public abstract class CommonFSUtils {
    * Return the number of bytes that large input files should be optimally
    * be split into to minimize i/o time.
    *
-   * use reflection to search for getDefaultBlockSize(Path f)
-   * if the method doesn't exist, fall back to using getDefaultBlockSize()
-   *
    * @param fs filesystem object
    * @return the default block size for the path's filesystem
-   * @throws IOException e
    */
-  public static long getDefaultBlockSize(final FileSystem fs, final Path path) throws IOException {
-    Method m = null;
-    Class<? extends FileSystem> cls = fs.getClass();
-    try {
-      m = cls.getMethod("getDefaultBlockSize", Path.class);
-    } catch (NoSuchMethodException e) {
-      LOG.info("FileSystem doesn't support getDefaultBlockSize");
-    } catch (SecurityException e) {
-      LOG.info("Doesn't have access to getDefaultBlockSize on FileSystems", e);
-      m = null; // could happen on setAccessible()
-    }
-    if (m == null) {
-      return fs.getDefaultBlockSize(path);
-    } else {
-      try {
-        Object ret = m.invoke(fs, path);
-        return ((Long)ret).longValue();
-      } catch (Exception e) {
-        throw new IOException(e);
-      }
-    }
+  public static long getDefaultBlockSize(final FileSystem fs, final Path path) {
+    return fs.getDefaultBlockSize(path);
   }
 
   /*
    * Get the default replication.
    *
-   * use reflection to search for getDefaultReplication(Path f)
-   * if the method doesn't exist, fall back to using getDefaultReplication()
-   *
    * @param fs filesystem object
    * @param f path of file
    * @return default replication for the path's filesystem
-   * @throws IOException e
    */
-  public static short getDefaultReplication(final FileSystem fs, final Path path)
-      throws IOException {
-    Method m = null;
-    Class<? extends FileSystem> cls = fs.getClass();
-    try {
-      m = cls.getMethod("getDefaultReplication", Path.class);
-    } catch (NoSuchMethodException e) {
-      LOG.info("FileSystem doesn't support getDefaultReplication");
-    } catch (SecurityException e) {
-      LOG.info("Doesn't have access to getDefaultReplication on FileSystems", e);
-      m = null; // could happen on setAccessible()
-    }
-    if (m == null) {
-      return fs.getDefaultReplication(path);
-    } else {
-      try {
-        Object ret = m.invoke(fs, path);
-        return ((Number)ret).shortValue();
-      } catch (Exception e) {
-        throw new IOException(e);
-      }
-    }
+  public static short getDefaultReplication(final FileSystem fs, final Path path) {
+    return fs.getDefaultReplication(path);
   }
 
   /**
@@ -623,15 +576,15 @@ public abstract class CommonFSUtils {
           final Throwable exception = e.getCause();
           if (exception instanceof RemoteException &&
               HadoopIllegalArgumentException.class.getName().equals(
-                ((RemoteException)exception).getClassName())) {
+                  ((RemoteException)exception).getClassName())) {
             if (LOG.isDebugEnabled()) {
               LOG.debug("Given storage policy, '" +storagePolicy +"', was rejected and probably " +
-                "isn't a valid policy for the version of Hadoop you're running. I.e. if you're " +
-                "trying to use SSD related policies then you're likely missing HDFS-7228. For " +
-                "more information see the 'ArchivalStorage' docs for your Hadoop release.");
+                  "isn't a valid policy for the version of Hadoop you're running. I.e. if you're " +
+                  "trying to use SSD related policies then you're likely missing HDFS-7228. For " +
+                  "more information see the 'ArchivalStorage' docs for your Hadoop release.");
             }
-          // Hadoop 2.8+, 3.0-a1+ added FileSystem.setStoragePolicy with a default implementation
-          // that throws UnsupportedOperationException
+            // Hadoop 2.8+, 3.0-a1+ added FileSystem.setStoragePolicy with a default implementation
+            // that throws UnsupportedOperationException
           } else if (exception instanceof UnsupportedOperationException) {
             if (LOG.isDebugEnabled()) {
               LOG.debug("The underlying FileSystem implementation doesn't support " +
