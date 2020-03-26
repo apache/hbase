@@ -111,7 +111,7 @@ YETUS_ARGS+=("--archive-list=${ARCHIVE_PATTERN_LIST}")
 # URL for user-side presentation in reports and such to our artifacts
 YETUS_ARGS+=("--build-url-artifacts=${BUILD_URL_ARTIFACTS}")
 # plugins to enable
-YETUS_ARGS+=("--plugins=${PLUGINS},-findbugs")
+YETUS_ARGS+=("--plugins=${PLUGINS}")
 # run in docker mode and specifically point to our
 # Dockerfile since we don't want to use the auto-pulled version.
 YETUS_ARGS+=("--docker")
