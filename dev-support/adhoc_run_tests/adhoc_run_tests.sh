@@ -35,7 +35,7 @@ declare fork_count="0.5C"
 declare -i attempts=1
 declare maven_repo="${HOME}/.m2/repository"
 declare output="."
-declare hadoop_profile='2.0'
+declare hadoop_profile
 while [ $# -gt 0 ]
 do
   case "$1" in
@@ -84,25 +84,30 @@ for test in "${@}"; do
   for module in $(find_modules "${test}"); do
     if [[ ! "${modules[*]}" =~ ${module} ]]; then
       echo "adding module '${module}' to set."
-      modules+=(${module})
+      modules+=("${module}")
     fi
   done
 done
 
 declare -a mvn_module_arg
-
 for module in "${modules[@]}"; do
   mvn_module_arg+=(-pl "${module}")
 done
+
 declare tests="${*}"
+declare -a maven_args=('--batch-mode' "-Dmaven.repo.local=${maven_repo}" "-Dtest=${tests// /,}"
+  '-Dsurefire.rerunFailingTestsCount=0' "-Dsurefire.parallel.forcedTimeout=${force_timeout}"
+  '-Dsurefire.shutdown=kill' '-DtrimStackTrace=false' '-am' "${mvn_module_arg[@]}"
+  "-DforkCount=${fork_count}" test)
+if [[ -n "${hadoop_profile}" ]] ; then
+  maven_args+=("-Dhadoop.profile=${hadoop_profile}")
+fi
+
+if [[ ! -d "${output}" ]] ; then
+  mkdir -p "${output}"
+fi
+
 for attempt in $(seq "${attempts}"); do
   echo "Attempt ${attempt}" >&2
-  echo_run_redirect "${output}/mvn_test.log" mvn --batch-mode \
-      -Dhadoop.profile="${hadoop_profile}" \
-      -Dmaven.repo.local="${maven_repo}" \
-      -Dtest="${tests// /,}" \
-      -Dsurefire.rerunFailingTestsCount=0 -Dsurefire.parallel.forcedTimeout="${force_timeout}" \
-      -Dsurefire.shutdown=kill -DtrimStackTrace=false -am "${mvn_module_arg[@]}" \
-      -DforkCount="${fork_count}" \
-      test
+  echo_run_redirect "${output}/mvn_test.log" mvn "${maven_args[@]}"
 done
