@@ -322,7 +322,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
         if (LOG.isDebugEnabled()) {
           now = currentTime;
         }
-        if (closeChecker.isClosedByTimeLimit(store, currentTime)) {
+        if (closeChecker.isTimeLimit(store, currentTime)) {
           progress.cancel();
           return false;
         }
@@ -489,7 +489,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
             bytesWrittenProgressForLog += len;
           }
           throughputController.control(compactionName, len);
-          if (closeChecker.isClosedBySizeLimit(store, len)) {
+          if (closeChecker.isSizeLimit(store, len)) {
             progress.cancel();
             return false;
           }

@@ -40,7 +40,12 @@ public class CloseChecker {
     this.lastCloseCheckMillis = currentTime;
   }
 
-  public boolean isClosedBySizeLimit(Store store, long bytesWritten) {
+  /**
+   * Check periodically to see if a system stop is requested every written bytes reach size limit.
+   *
+   * @return if true, system stop.
+   */
+  public boolean isSizeLimit(Store store, long bytesWritten) {
     if (closeCheckSizeLimit <= 0) {
       return false;
     }
@@ -54,7 +59,12 @@ public class CloseChecker {
     return !store.areWritesEnabled();
   }
 
-  public boolean isClosedByTimeLimit(Store store, long now) {
+  /**
+   * Check periodically to see if a system stop is requested every time.
+   *
+   * @return if true, system stop.
+   */
+  public boolean isTimeLimit(Store store, long now) {
     if (closeCheckTimeLimit <= 0) {
       return false;
     }

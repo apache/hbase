@@ -54,27 +54,27 @@ public class TestCloseChecker {
     conf.setLong(TIME_LIMIT_KEY, 10);
 
     CloseChecker closeChecker = new CloseChecker(conf, currentTime);
-    assertFalse(closeChecker.isClosedByTimeLimit(enableWrite, currentTime));
-    assertFalse(closeChecker.isClosedBySizeLimit(enableWrite, 10L));
+    assertFalse(closeChecker.isTimeLimit(enableWrite, currentTime));
+    assertFalse(closeChecker.isSizeLimit(enableWrite, 10L));
 
     closeChecker = new CloseChecker(conf, currentTime);
-    assertFalse(closeChecker.isClosedByTimeLimit(enableWrite, currentTime + 11));
-    assertFalse(closeChecker.isClosedBySizeLimit(enableWrite, 11L));
+    assertFalse(closeChecker.isTimeLimit(enableWrite, currentTime + 11));
+    assertFalse(closeChecker.isSizeLimit(enableWrite, 11L));
 
     closeChecker = new CloseChecker(conf, currentTime);
-    assertTrue(closeChecker.isClosedByTimeLimit(disableWrite, currentTime + 11));
-    assertTrue(closeChecker.isClosedBySizeLimit(disableWrite, 11L));
+    assertTrue(closeChecker.isTimeLimit(disableWrite, currentTime + 11));
+    assertTrue(closeChecker.isSizeLimit(disableWrite, 11L));
 
     for (int i = 0; i < 10; i++) {
       int plusTime = 5 * i;
-      assertFalse(closeChecker.isClosedByTimeLimit(enableWrite, currentTime + plusTime));
-      assertFalse(closeChecker.isClosedBySizeLimit(enableWrite, 5L));
+      assertFalse(closeChecker.isTimeLimit(enableWrite, currentTime + plusTime));
+      assertFalse(closeChecker.isSizeLimit(enableWrite, 5L));
     }
 
     closeChecker = new CloseChecker(conf, currentTime);
-    assertFalse(closeChecker.isClosedByTimeLimit(disableWrite, currentTime + 6));
-    assertFalse(closeChecker.isClosedBySizeLimit(disableWrite, 6));
-    assertTrue(closeChecker.isClosedByTimeLimit(disableWrite, currentTime + 12));
-    assertTrue(closeChecker.isClosedBySizeLimit(disableWrite, 6));
+    assertFalse(closeChecker.isTimeLimit(disableWrite, currentTime + 6));
+    assertFalse(closeChecker.isSizeLimit(disableWrite, 6));
+    assertTrue(closeChecker.isTimeLimit(disableWrite, currentTime + 12));
+    assertTrue(closeChecker.isSizeLimit(disableWrite, 6));
   }
 }

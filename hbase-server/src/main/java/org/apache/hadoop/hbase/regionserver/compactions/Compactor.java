@@ -396,7 +396,7 @@ public abstract class Compactor<T extends CellSink> {
         if (LOG.isDebugEnabled()) {
           now = currentTime;
         }
-        if (closeChecker.isClosedByTimeLimit(store, currentTime)) {
+        if (closeChecker.isTimeLimit(store, currentTime)) {
           progress.cancel();
           return false;
         }
@@ -421,7 +421,7 @@ public abstract class Compactor<T extends CellSink> {
             bytesWrittenProgressForLog += len;
           }
           throughputController.control(compactionName, len);
-          if (closeChecker.isClosedBySizeLimit(store, len)) {
+          if (closeChecker.isSizeLimit(store, len)) {
             progress.cancel();
             return false;
           }
