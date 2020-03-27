@@ -1422,9 +1422,9 @@
     <test.output.tofile>true</test.output.tofile>
     <surefire.timeout>900</surefire.timeout>
     <test.exclude.pattern></test.exclude.pattern>
-    <!-- default Xmx value is 2800m. Use -Dsurefire.Xmx=xxg to run tests with different JVM Xmx value -->
-    <surefire.Xmx>2800m</surefire.Xmx>
-    <surefire.cygwinXmx>2800m</surefire.cygwinXmx>
+    <!-- default Xmx value is 2400m. Use -Dsurefire.Xmx=xxg to run tests with different JVM Xmx value -->
+    <surefire.Xmx>2400m</surefire.Xmx>
+    <surefire.cygwinXmx>2400m</surefire.cygwinXmx>
     <!--Mark our test runs with '-Dhbase.build.id' so we can identify a surefire test as ours in a process listing
 
       And for netty eventloops that have no explicit configuration, netty sets
