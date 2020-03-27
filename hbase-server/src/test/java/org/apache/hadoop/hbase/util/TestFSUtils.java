@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -661,15 +662,11 @@ public class TestFSUtils {
     MiniDFSCluster cluster = htu.startMiniDFSCluster(1);
     try (FileSystem filesystem = cluster.getFileSystem()) {
       FSDataOutputStream stream = filesystem.create(new Path("/tmp/foobar"));
-      assertTrue(FSUtils.hasCapability(stream, "hsync"));
-      assertTrue(FSUtils.hasCapability(stream, "hflush"));
-      assertNotEquals("We expect HdfsDataOutputStream to say it has a dummy capability iff the " +
-          "StreamCapabilities class is not defined.",
-          STREAM_CAPABILITIES_IS_PRESENT,
-          FSUtils.hasCapability(stream, "a capability that hopefully HDFS doesn't add."));
+      assertTrue(stream.hasCapability(StreamCapabilities.HSYNC));
+      assertTrue(stream.hasCapability(StreamCapabilities.HFLUSH));
+      assertFalse(stream.hasCapability("a capability that hopefully HDFS doesn't add."));
     } finally {
       cluster.shutdown();
     }
   }
-
 }
