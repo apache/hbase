@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -50,6 +51,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -556,8 +558,17 @@ public class TestBlockEvictionFromClient {
 
   @Test
   public void testBlockRefCountAfterSplits() throws IOException, InterruptedException {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    try (Table table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024)) {
+    Table table = null;
+    try {
+      final TableName tableName = TableName.valueOf(name.getMethodName());
+      HTableDescriptor desc = TEST_UTIL.createTableDescriptor(tableName);
+      // This test expects rpc refcount of cached data blocks to be 0 after split. After split,
+      // two daughter regions are opened and a compaction is scheduled to get rid of reference
+      // of the parent region hfiles. Compaction will increase refcount of cached data blocks by 1.
+      // It is flakey since compaction can kick in anytime. To solve this issue, table is created
+      // with compaction disabled.
+      desc.setCompactionEnabled(false);
+      table = TEST_UTIL.createTable(desc, FAMILIES_1, null, BloomType.ROW, 1024, null);
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegion().getEncodedName();
@@ -599,6 +610,10 @@ public class TestBlockEvictionFromClient {
       // Though the split had created the HalfStorefileReader - the firstkey and lastkey scanners
       // should be closed inorder to return those blocks
       iterateBlockCache(cache, iterator);
+    } finally {
+      if (table != null) {
+        table.close();
+      }
     }
   }
 
