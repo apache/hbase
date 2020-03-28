@@ -20,6 +20,52 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+# HBASE  2.1.10 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-24050](https://issues.apache.org/jira/browse/HBASE-24050) | *Major* | **Deprecated PBType on all 2.x branches**
+
+org.apache.hadoop.hbase.types.PBType is marked as deprecated without any replacement. It will be moved to hbase-example module and marked as IA.Private in 3.0.0. This is a mistake as it should not be part of our public API. Users who depend on this class should just copy the code your own code base.
+
+
+---
+
+* [HBASE-24017](https://issues.apache.org/jira/browse/HBASE-24017) | *Major* | **Turn down flakey rerun rate on all but hot branches**
+
+Changed master, branch-2, and branch-2.1 to twice a day.
+Left branch-2.3, branch-2.2, and branch-1 at every 4 hours.
+Changed branch-1.4 and branch-1.3 to @daily (1.3 was running every hour).
+
+
+---
+
+* [HBASE-22827](https://issues.apache.org/jira/browse/HBASE-22827) | *Major* | **Expose multi-region merge in shell and Admin API**
+
+merge\_region shell command can now be used to merge more than 2 regions as well. It takes a list of regions as comma separated values or as an array of regions, and not just 2 regions. The full regionnames and encoded regionnames are continued to be accepted.
+
+
+---
+
+* [HBASE-23878](https://issues.apache.org/jira/browse/HBASE-23878) | *Major* | **Backport HBASE-22040 to branch-2.1**
+
+
+Add a mergeRegionsAsync(byte[][], boolean) method in the AsyncAdmin interface.
+
+Instead of using assert, now we will throw IllegalArgumentException when you want to merge less than 2 regions at client side. And also, at master side, instead of using assert, now we will throw DoNotRetryIOException if you want merge more than 2 regions, since we only support merging two regions at once for now.
+
+
+---
+
+* [HBASE-23874](https://issues.apache.org/jira/browse/HBASE-23874) | *Minor* | **Move Jira-attached file precommit definition from script in Jenkins config to dev-support**
+
+The Jira Precommit job (https://builds.apache.org/job/PreCommit-HBASE-Build/) will now look for a file within the source tree (dev-support/jenkins\_precommit\_jira\_yetus.sh) instead of depending on a script section embedded in the job.
+
+
+
 # HBASE  2.1.9 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
