@@ -18,28 +18,22 @@
 syntax = "proto2";
 package hbase.pb;
 
-option java_package = "org.apache.hadoop.hbase.protobuf.generated";
-option java_outer_classname = "ExportProtos";
+option java_package = "org.apache.hadoop.hbase.shaded.coprocessor.example.generated";
+option java_outer_classname = "ExampleProtos";
+option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
-option java_generic_services = true;
 
-import "Client.proto";
-
-service ExportService {
-  rpc export (ExportRequest) returns (ExportResponse);
+message CountRequest {
 }
 
-message ExportRequest {
-  required Scan scan = 1;
-  required string outputPath = 2;
-  optional bool compressed = 3 [default = false];
-  optional string compressType = 4;
-  optional string compressCodec = 5;
-  optional DelegationToken fsToken = 6;
-}
-message ExportResponse {
-  required uint64 rowCount = 1;
-  required uint64 cellCount = 2;
+message CountResponse {
+  required int64 count = 1 [default = 0];
 }
 
+service RowCountService {
+  rpc getRowCount(CountRequest)
+    returns (CountResponse);
+  rpc getKeyValueCount(CountRequest)
+    returns (CountResponse);
+}

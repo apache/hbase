@@ -16,21 +16,16 @@
  * limitations under the License.
  */
 syntax = "proto2";
-package hbase.pb;
+package org.apache.hadoop.hbase.shaded.rest.protobuf.generated;
 
-option java_package = "org.apache.hadoop.hbase.protobuf.generated";
-option java_outer_classname = "RefreshHFilesProtos";
-option java_generic_services = true;
-option java_generate_equals_and_hash = true;
-option optimize_for = SPEED;
-
-message RefreshHFilesRequest {
-}
-
-message RefreshHFilesResponse {
-}
-
-service RefreshHFilesService {
-    rpc refreshHFiles(RefreshHFilesRequest)
-      returns (RefreshHFilesResponse);
+message TableInfo {
+  required string name = 1;
+  message Region {
+    required string name = 1;
+    optional bytes startKey = 2;
+    optional bytes endKey = 3;
+    optional int64 id = 4;
+    optional string location = 5;
+  }
+  repeated Region regions = 2;
 }

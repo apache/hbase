@@ -16,17 +16,23 @@
  * limitations under the License.
  */
 syntax = "proto2";
-package org.apache.hadoop.hbase.rest.protobuf.generated;
+package hbase.test.pb;
 
-message ColumnSchema {
-  optional string name = 1;
-  message Attribute {
-    required string name = 1;
-    required string value = 2;
-  }
-  repeated Attribute attrs = 2;
-  // optional helpful encodings of commonly used attributes
-  optional int32 ttl = 3;
-  optional int32 maxVersions = 4;
-  optional string compression = 5;
+// Coprocessor test
+option java_package = "org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated";
+option java_outer_classname = "DummyRegionServerEndpointProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+
+message DummyRequest {
+  optional uint64 value = 1;
+}
+
+message DummyResponse {
+  required string value = 1;
+}
+
+service DummyService {
+  rpc dummyCall(DummyRequest) returns(DummyResponse);
+  rpc dummyThrow(DummyRequest) returns(DummyResponse);
 }

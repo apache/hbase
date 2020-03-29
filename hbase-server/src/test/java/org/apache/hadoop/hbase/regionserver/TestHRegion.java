@@ -74,6 +74,7 @@ import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -2106,6 +2107,8 @@ public class TestHRegion {
     put.addColumn(fam1, qf3, val1);
     region.put(put);
 
+    LOG.info("get={}", region.get(new Get(row1).addColumn(fam1, qf1)).toString());
+
     // Multi-column delete
     Delete delete = new Delete(row1);
     delete.addColumn(fam1, qf1);
@@ -2266,6 +2269,78 @@ public class TestHRegion {
     assertEquals("d", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("D"))));
 
     assertTrue(region.get(new Get(row).addColumn(FAMILY, Bytes.toBytes("A"))).isEmpty());
+  }
+
+  @Test
+  public void testCheckAndMutate_wrongMutationType() throws Throwable {
+    // Setting up region
+    this.region = initHRegion(tableName, method, CONF, fam1);
+
+    try {
+      region.checkAndMutate(row, fam1, qual1, CompareOperator.EQUAL, new BinaryComparator(value1),
+        new Increment(row).addColumn(fam1, qual1, 1));
+      fail("should throw DoNotRetryIOException");
+    } catch (DoNotRetryIOException e) {
+      assertEquals("Action must be Put or Delete", e.getMessage());
+    }
+
+    try {
+      region.checkAndMutate(row,
+        new SingleColumnValueFilter(fam1, qual1, CompareOperator.EQUAL, value1),
+        new Increment(row).addColumn(fam1, qual1, 1));
+      fail("should throw DoNotRetryIOException");
+    } catch (DoNotRetryIOException e) {
+      assertEquals("Action must be Put or Delete", e.getMessage());
+    }
+  }
+
+  @Test
+  public void testCheckAndMutate_wrongRow() throws Throwable {
+    final byte[] wrongRow = Bytes.toBytes("wrongRow");
+
+    // Setting up region
+    this.region = initHRegion(tableName, method, CONF, fam1);
+
+    try {
+      region.checkAndMutate(row, fam1, qual1, CompareOperator.EQUAL, new BinaryComparator(value1),
+        new Put(wrongRow).addColumn(fam1, qual1, value1));
+      fail("should throw DoNotRetryIOException");
+    } catch (DoNotRetryIOException e) {
+      assertEquals("Action's getRow must match", e.getMessage());
+    }
+
+    try {
+      region.checkAndMutate(row,
+        new SingleColumnValueFilter(fam1, qual1, CompareOperator.EQUAL, value1),
+        new Put(wrongRow).addColumn(fam1, qual1, value1));
+      fail("should throw DoNotRetryIOException");
+    } catch (DoNotRetryIOException e) {
+      assertEquals("Action's getRow must match", e.getMessage());
+    }
+
+    try {
+      region.checkAndRowMutate(row, fam1, qual1, CompareOperator.EQUAL,
+        new BinaryComparator(value1),
+        new RowMutations(wrongRow)
+          .add((Mutation) new Put(wrongRow)
+            .addColumn(fam1, qual1, value1))
+          .add((Mutation) new Delete(wrongRow).addColumns(fam1, qual2)));
+      fail("should throw DoNotRetryIOException");
+    } catch (DoNotRetryIOException e) {
+      assertEquals("Action's getRow must match", e.getMessage());
+    }
+
+    try {
+      region.checkAndRowMutate(row,
+        new SingleColumnValueFilter(fam1, qual1, CompareOperator.EQUAL, value1),
+        new RowMutations(wrongRow)
+          .add((Mutation) new Put(wrongRow)
+            .addColumn(fam1, qual1, value1))
+          .add((Mutation) new Delete(wrongRow).addColumns(fam1, qual2)));
+      fail("should throw DoNotRetryIOException");
+    } catch (DoNotRetryIOException e) {
+      assertEquals("Action's getRow must match", e.getMessage());
+    }
   }
 
   // ////////////////////////////////////////////////////////////////////////////
@@ -3357,7 +3432,7 @@ public class TestHRegion {
     region.put(put);
 
     Scan scan = new Scan().withStartRow(row3).withStopRow(row4);
-    scan.setMaxVersions();
+    scan.readAllVersions();
     scan.addColumn(family, col1);
     InternalScanner s = region.getScanner(scan);
 

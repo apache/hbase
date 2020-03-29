@@ -429,16 +429,19 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     int countAfterSingleFamily = countStoreFilesInFamily(regions, family);
     assertTrue(countAfter < countBefore);
     if (!singleFamily) {
-      if (expectedState == CompactionState.MAJOR) assertTrue(families.length == countAfter);
-      else assertTrue(families.length < countAfter);
+      if (expectedState == CompactionState.MAJOR) {
+        assertEquals(families.length, countAfter);
+      } else {
+        assertTrue(families.length <= countAfter);
+      }
     } else {
       int singleFamDiff = countBeforeSingleFamily - countAfterSingleFamily;
       // assert only change was to single column family
-      assertTrue(singleFamDiff == (countBefore - countAfter));
+      assertEquals(singleFamDiff, (countBefore - countAfter));
       if (expectedState == CompactionState.MAJOR) {
-        assertTrue(1 == countAfterSingleFamily);
+        assertEquals(1, countAfterSingleFamily);
       } else {
-        assertTrue(1 < countAfterSingleFamily);
+        assertTrue("" + countAfterSingleFamily, 1 <= countAfterSingleFamily);
       }
     }
   }

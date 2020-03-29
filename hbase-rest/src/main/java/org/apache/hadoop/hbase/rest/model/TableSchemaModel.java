@@ -45,11 +45,12 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
-import org.apache.hadoop.hbase.rest.protobuf.generated.ColumnSchemaMessage.ColumnSchema;
-import org.apache.hadoop.hbase.rest.protobuf.generated.TableSchemaMessage.TableSchema;
 import org.apache.hadoop.hbase.util.Bytes;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.rest.protobuf.generated.TableSchemaMessage.TableSchema;
+import org.apache.hadoop.hbase.shaded.rest.protobuf.generated.ColumnSchemaMessage.ColumnSchema;
 
 /**
  * A representation of HBase table descriptors.

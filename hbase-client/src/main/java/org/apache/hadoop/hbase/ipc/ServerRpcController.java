@@ -18,13 +18,12 @@
 
 package org.apache.hadoop.hbase.ipc;
 
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-
 import java.io.IOException;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 
 /**
  * Used for server-side protobuf RPC service invocations.  This handler allows

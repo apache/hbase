@@ -29,6 +29,8 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hdfs.DFSInputStream;
+import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -93,6 +95,15 @@ public class FSDataInputStreamWrapper implements Closeable {
   // Using reflection to get org.apache.hadoop.fs.CanUnbuffer#unbuffer method to avoid compilation
   // errors against Hadoop pre 2.6.4 and 2.7.1 versions.
   private Method unbuffer = null;
+
+  private final static ReadStatistics readStatistics = new ReadStatistics();
+
+  private static class ReadStatistics {
+    long totalBytesRead;
+    long totalLocalBytesRead;
+    long totalShortCircuitBytesRead;
+    long totalZeroCopyBytesRead;
+  }
 
   public FSDataInputStreamWrapper(FileSystem fs, Path path) throws IOException {
     this(fs, path, false, -1L);
@@ -232,14 +243,64 @@ public class FSDataInputStreamWrapper implements Closeable {
     }
   }
 
-  /** Close stream(s) if necessary. */
+  private void updateInputStreamStatistics(FSDataInputStream stream) {
+    // If the underlying file system is HDFS, update read statistics upon close.
+    if (stream instanceof HdfsDataInputStream) {
+      /**
+       * Because HDFS ReadStatistics is calculated per input stream, it is not
+       * feasible to update the aggregated number in real time. Instead, the
+       * metrics are updated when an input stream is closed.
+       */
+      HdfsDataInputStream hdfsDataInputStream = (HdfsDataInputStream)stream;
+      synchronized (readStatistics) {
+        readStatistics.totalBytesRead += hdfsDataInputStream.getReadStatistics().
+          getTotalBytesRead();
+        readStatistics.totalLocalBytesRead += hdfsDataInputStream.getReadStatistics().
+          getTotalBytesRead();
+        readStatistics.totalShortCircuitBytesRead += hdfsDataInputStream.getReadStatistics().
+          getTotalShortCircuitBytesRead();
+        readStatistics.totalZeroCopyBytesRead += hdfsDataInputStream.getReadStatistics().
+          getTotalZeroCopyBytesRead();
+      }
+    }
+  }
+
+  public static long getTotalBytesRead() {
+    synchronized (readStatistics) {
+      return readStatistics.totalBytesRead;
+    }
+  }
+
+  public static long getLocalBytesRead() {
+    synchronized (readStatistics) {
+      return readStatistics.totalLocalBytesRead;
+    }
+  }
+
+  public static long getShortCircuitBytesRead() {
+    synchronized (readStatistics) {
+      return readStatistics.totalShortCircuitBytesRead;
+    }
+  }
+
+  public static long getZeroCopyBytesRead() {
+    synchronized (readStatistics) {
+      return readStatistics.totalZeroCopyBytesRead;
+    }
+  }
+
+  /** CloseClose stream(s) if necessary. */
   @Override
   public void close() {
     if (!doCloseStreams) {
       return;
     }
+    updateInputStreamStatistics(this.streamNoFsChecksum);
     // we do not care about the close exception as it is for reading, no data loss issue.
     IOUtils.closeQuietly(streamNoFsChecksum);
+
+
+    updateInputStreamStatistics(stream);
     IOUtils.closeQuietly(stream);
   }
 

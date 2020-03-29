@@ -128,6 +128,15 @@ message HasUserPermissionsResponse {
     repeated bool has_user_permission = 1;
 }
 
+message HasPermissionRequest {
+  required TablePermission table_permission = 1;
+  required bytes user_name = 2;
+}
+
+message HasPermissionResponse {
+  optional bool has_permission = 1;
+}
+
 service AccessControlService {
     rpc Grant(GrantRequest)
       returns (GrantResponse);
@@ -140,4 +149,7 @@ service AccessControlService {
 
     rpc CheckPermissions(CheckPermissionsRequest)
       returns (CheckPermissionsResponse);
+
+    rpc HasPermission(HasPermissionRequest)
+      returns (HasPermissionResponse);
 }

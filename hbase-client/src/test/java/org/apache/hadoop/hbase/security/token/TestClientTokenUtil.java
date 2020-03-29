@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.security.token;
 
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertSame;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -38,6 +37,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
@@ -62,30 +62,29 @@ public class TestClientTokenUtil {
     Closeables.close(cl, true);
   }
 
+  private void assertException(Throwable injected, Throwable t) {
+    while ((t = t.getCause()) != null) {
+      if (t == injected) { // reference equality
+        return;
+      }
+    }
+    fail("can not find injected exception " + injected + ", actual exception is " + t);
+  }
+
   @Test
   public void testObtainToken() throws Exception {
-    Throwable injected = new com.google.protobuf.ServiceException("injected");
+    Exception injected = new Exception("injected");
 
     Class<?> clientTokenUtil = cl.loadClass(ClientTokenUtil.class.getCanonicalName());
     Field shouldInjectFault = clientTokenUtil.getDeclaredField("injectedException");
     shouldInjectFault.setAccessible(true);
-    shouldInjectFault.set(null, injected);
+    shouldInjectFault.set(null, new ServiceException(injected));
 
     try {
       ClientTokenUtil.obtainToken((Connection)null);
       fail("Should have injected exception.");
     } catch (IOException e) {
-      Throwable t = e;
-      boolean serviceExceptionFound = false;
-      while ((t = t.getCause()) != null) {
-        if (t == injected) { // reference equality
-          serviceExceptionFound = true;
-          break;
-        }
-      }
-      if (!serviceExceptionFound) {
-        throw e; // wrong exception, fail the test
-      }
+      assertException(injected, e);
     }
 
     CompletableFuture<?> future = ClientTokenUtil.obtainToken((AsyncConnection)null);
@@ -93,7 +92,7 @@ public class TestClientTokenUtil {
       future.get();
       fail("Should have injected exception.");
     } catch (ExecutionException e) {
-      assertSame(injected, e.getCause());
+      assertException(injected, e);
     }
     Boolean loaded = (Boolean) cl.loadClass(ProtobufUtil.class.getCanonicalName())
       .getDeclaredMethod("isClassLoaderLoaded").invoke(null);
