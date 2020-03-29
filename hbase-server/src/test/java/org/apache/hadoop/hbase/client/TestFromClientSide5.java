@@ -1448,7 +1448,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       int versions = 4;
       Scan s = new Scan(row);
       // get all the possible versions
-      s.setMaxVersions();
+      s.readAllVersions();
       s.setRaw(true);
 
       try (ResultScanner scanner = table.getScanner(s)) {

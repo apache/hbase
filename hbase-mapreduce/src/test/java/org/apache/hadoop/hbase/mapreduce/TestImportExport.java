@@ -374,7 +374,7 @@ public class TestImportExport {
       assertTrue(runImport(args));
 
       Scan s = new Scan();
-      s.setMaxVersions();
+      s.readAllVersions();
       s.setRaw(true);
       ResultScanner scanner = t.getScanner(s);
       Result r = scanner.next();
@@ -448,7 +448,7 @@ public class TestImportExport {
     assertTrue(runImport(args));
 
     Scan s = new Scan();
-    s.setMaxVersions();
+    s.readAllVersions();
     s.setRaw(true);
 
     ResultScanner importedTScanner = importT.getScanner(s);

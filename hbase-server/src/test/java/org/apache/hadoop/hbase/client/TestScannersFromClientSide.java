@@ -199,7 +199,7 @@ public class TestScannersFromClientSide {
 
     // without batch
     scan = new Scan().withStartRow(ROW);
-    scan.setMaxVersions();
+    scan.readAllVersions();
     scanner = ht.getScanner(scan);
 
     // c4:4, c5:5, c6:6, c7:7
@@ -213,7 +213,7 @@ public class TestScannersFromClientSide {
 
     // with batch
     scan =  new Scan().withStartRow(ROW);
-    scan.setMaxVersions();
+    scan.readAllVersions();
     scan.setBatch(2);
     scanner = ht.getScanner(scan);
 
