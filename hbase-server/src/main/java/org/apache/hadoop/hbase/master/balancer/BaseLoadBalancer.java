@@ -83,6 +83,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
   protected RegionLocationFinder regionFinder;
   protected boolean useRegionFinder;
+  protected boolean isByTable = false;
 
   private static class DefaultRackManager extends RackManager {
     @Override
@@ -1047,6 +1048,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     if (useRegionFinder) {
       regionFinder.setConf(conf);
     }
+    this.isByTable = conf.getBoolean(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, isByTable);
     // Print out base configs. Don't print overallSlop since it for simple balancer exclusively.
     LOG.info("slop={}, systemTablesOnMaster={}",
         this.slop, this.onlySystemTablesOnMaster);
@@ -1150,10 +1152,6 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     }
   }
 
-  @Override
-  public void setClusterLoad(Map<TableName, Map<ServerName, List<RegionInfo>>> clusterLoad){
-
-  }
 
   @Override
   public void setMasterServices(MasterServices masterServices) {
@@ -1184,7 +1182,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     this.rackManager = rackManager;
   }
 
-  protected boolean needsBalance(Cluster c) {
+  protected boolean needsBalance(TableName tableName, Cluster c) {
     ClusterLoadState cs = new ClusterLoadState(c.clusterState);
     if (cs.getNumServers() < MIN_SERVER_BALANCE) {
       if (LOG.isDebugEnabled()) {
@@ -1636,6 +1634,42 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       return this.services.getAssignmentManager().getSnapShotOfAssignment(regions);
     } else {
       return new HashMap<>();
+    }
+  }
+
+  private Map<ServerName, List<RegionInfo>> toEnsumbleTableLoad(
+      Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable) {
+    Map<ServerName, List<RegionInfo>> returnMap = new TreeMap<>();
+    for (Map<ServerName, List<RegionInfo>> serverNameListMap : LoadOfAllTable.values()) {
+      serverNameListMap.forEach((serverName, regionInfoList) -> {
+        List<RegionInfo> regionInfos =
+            returnMap.computeIfAbsent(serverName, k -> new ArrayList<>());
+        regionInfos.addAll(regionInfoList);
+      });
+    }
+    return returnMap;
+  }
+
+  @Override
+  public abstract List<RegionPlan> balanceTable(TableName tableName,
+      Map<ServerName, List<RegionInfo>> loadOfOneTable);
+
+  @Override
+  public List<RegionPlan>
+      balanceCluster(Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable) {
+    if (isByTable) {
+      List<RegionPlan> result = new ArrayList<>();
+      loadOfAllTable.forEach((tableName, loadOfOneTable) -> {
+        LOG.info("Start Generate Balance plan for table: " + tableName);
+        List<RegionPlan> partialPlans = balanceTable(tableName, loadOfOneTable);
+        if (partialPlans != null) {
+          result.addAll(partialPlans);
+        }
+      });
+      return result;
+    } else {
+      LOG.info("Start Generate Balance plan for cluster.");
+      return balanceTable(HConstants.ENSEMBLE_TABLE_NAME, toEnsumbleTableLoad(loadOfAllTable));
     }
   }
 

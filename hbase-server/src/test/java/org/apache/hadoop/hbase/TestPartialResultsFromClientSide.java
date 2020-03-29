@@ -148,7 +148,7 @@ public class TestPartialResultsFromClientSide {
 
   public void testExpectedValuesOfPartialResults(boolean reversed) throws Exception {
     Scan partialScan = new Scan();
-    partialScan.setMaxVersions();
+    partialScan.readAllVersions();
     // Max result size of 1 ensures that each RPC request will return a single cell. The scanner
     // will need to reconstruct the results into a complete result before returning to the caller
     partialScan.setMaxResultSize(1);

@@ -20,31 +20,33 @@
 package org.apache.hadoop.hbase.ipc;
 
 import static org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME;
+
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
-
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors;
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.ServiceDescriptor;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.Service;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceCall;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
-import org.apache.hadoop.util.StringUtils;
-
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.Descriptors.MethodDescriptor;
-import com.google.protobuf.Descriptors.ServiceDescriptor;
-import com.google.protobuf.Message;
-import com.google.protobuf.Service;
-
-import edu.umd.cs.findbugs.annotations.Nullable;
 
 /**
  * Utilities for handling coprocessor rpc service calls.
@@ -87,53 +89,47 @@ public final class CoprocessorRpcUtils {
   }
 
   public static CoprocessorServiceRequest getCoprocessorServiceRequest(
-      final Descriptors.MethodDescriptor method, final Message request, final byte [] row,
-      final byte [] regionName) {
-    return CoprocessorServiceRequest.newBuilder().setCall(
-        getCoprocessorServiceCall(method, request, row)).
-          setRegion(RequestConverter.buildRegionSpecifier(REGION_NAME, regionName)).build();
+    final Descriptors.MethodDescriptor method, final Message request, final byte[] row,
+    final byte[] regionName) {
+    return CoprocessorServiceRequest.newBuilder()
+      .setCall(getCoprocessorServiceCall(method, request, row))
+      .setRegion(RequestConverter.buildRegionSpecifier(REGION_NAME, regionName)).build();
   }
 
-  private static CoprocessorServiceCall getCoprocessorServiceCall(
-      final Descriptors.MethodDescriptor method, final Message request, final byte [] row) {
+  private static CoprocessorServiceCall getCoprocessorServiceCall(final MethodDescriptor method,
+    final Message request, final byte[] row) {
     return CoprocessorServiceCall.newBuilder()
-    .setRow(org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations.unsafeWrap(row))
-    .setServiceName(CoprocessorRpcUtils.getServiceName(method.getService()))
-    .setMethodName(method.getName())
-    // TODO!!!!! Come back here after!!!!! This is a double copy of the request if I read
-    // it right copying from non-shaded to shaded version!!!!!! FIXXXXX!!!!!
-    .setRequest(org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations.
-        unsafeWrap(request.toByteArray())).build();
+      .setRow(org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations.unsafeWrap(row))
+      .setServiceName(CoprocessorRpcUtils.getServiceName(method.getService()))
+      .setMethodName(method.getName())
+      // TODO!!!!! Come back here after!!!!! This is a double copy of the request if I read
+      // it right copying from non-shaded to shaded version!!!!!! FIXXXXX!!!!!
+      .setRequest(org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations
+        .unsafeWrap(request.toByteArray()))
+      .build();
   }
 
   public static MethodDescriptor getMethodDescriptor(final String methodName,
-      final ServiceDescriptor serviceDesc)
-  throws UnknownProtocolException {
-    Descriptors.MethodDescriptor methodDesc = serviceDesc.findMethodByName(methodName);
+    final ServiceDescriptor serviceDesc) throws UnknownProtocolException {
+    MethodDescriptor methodDesc = serviceDesc.findMethodByName(methodName);
     if (methodDesc == null) {
-      throw new UnknownProtocolException("Unknown method " + methodName + " called on service " +
-          serviceDesc.getFullName());
+      throw new UnknownProtocolException(
+        "Unknown method " + methodName + " called on service " + serviceDesc.getFullName());
     }
     return methodDesc;
   }
 
-  public static Message getRequest(Service service,
-      Descriptors.MethodDescriptor methodDesc,
-      org.apache.hbase.thirdparty.com.google.protobuf.ByteString shadedRequest)
-  throws IOException {
-    Message.Builder builderForType =
-        service.getRequestPrototype(methodDesc).newBuilderForType();
-    org.apache.hadoop.hbase.protobuf.ProtobufUtil.mergeFrom(builderForType,
-        // TODO: COPY FROM SHADED TO NON_SHADED. DO I HAVE TOO?
-        shadedRequest.toByteArray());
+  public static Message getRequest(Service service, MethodDescriptor methodDesc,
+    ByteString shadedRequest) throws IOException {
+    Message.Builder builderForType = service.getRequestPrototype(methodDesc).newBuilderForType();
+    ProtobufUtil.mergeFrom(builderForType,
+      // TODO: COPY FROM SHADED TO NON_SHADED. DO I HAVE TOO?
+      shadedRequest.toByteArray());
     return builderForType.build();
   }
 
-  public static Message getResponse(
-      org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceResponse
-        result,
-      com.google.protobuf.Message responsePrototype)
-  throws IOException {
+  public static Message getResponse(ClientProtos.CoprocessorServiceResponse result,
+    Message responsePrototype) throws IOException {
     Message response;
     if (result.getValue().hasValue()) {
       Message.Builder builder = responsePrototype.newBuilderForType();
@@ -148,18 +144,15 @@ public final class CoprocessorRpcUtils {
     return response;
   }
 
-  public static org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.
-      CoprocessorServiceResponse getResponse(final Message result, final byte [] regionName) {
-    org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.
-      CoprocessorServiceResponse.Builder builder =
-        org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceResponse.
-        newBuilder();
-    builder.setRegion(RequestConverter.buildRegionSpecifier(RegionSpecifierType.REGION_NAME,
-      regionName));
+  public static ClientProtos.CoprocessorServiceResponse getResponse(final Message result,
+    final byte[] regionName) {
+    ClientProtos.CoprocessorServiceResponse.Builder builder =
+      ClientProtos.CoprocessorServiceResponse.newBuilder();
+    builder.setRegion(
+      RequestConverter.buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName));
     // TODO: UGLY COPY IN HERE!!!!
-    builder.setValue(builder.getValueBuilder().setName(result.getClass().getName())
-        .setValue(org.apache.hbase.thirdparty.com.google.protobuf.ByteString.
-            copyFrom(result.toByteArray())));
+    builder.setValue(builder.getValueBuilder().setName(result.getClass().getName()).setValue(
+      org.apache.hbase.thirdparty.com.google.protobuf.ByteString.copyFrom(result.toByteArray())));
     return builder.build();
   }
 

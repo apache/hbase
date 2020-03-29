@@ -217,7 +217,7 @@ public class TestKeepDeletes {
     // scan still returns delete markers and deletes rows
     Scan s = new Scan();
     s.setRaw(true);
-    s.setMaxVersions();
+    s.readAllVersions();
     InternalScanner scan = region.getScanner(s);
     List<Cell> kvs = new ArrayList<>();
     scan.next(kvs);
@@ -231,7 +231,7 @@ public class TestKeepDeletes {
     //  KEEP_DELETED_CELLS)
     s = new Scan();
     s.setRaw(true);
-    s.setMaxVersions();
+    s.readAllVersions();
     scan = region.getScanner(s);
     kvs = new ArrayList<>();
     scan.next(kvs);
@@ -275,7 +275,7 @@ public class TestKeepDeletes {
 
     // "past" scan does not see rows behind delete marker
     Scan s = new Scan();
-    s.setMaxVersions();
+    s.readAllVersions();
     s.setTimeRange(0L, ts+1);
     InternalScanner scanner = region.getScanner(s);
     List<Cell> kvs = new ArrayList<>();
@@ -306,7 +306,7 @@ public class TestKeepDeletes {
 
     Scan s = new Scan();
     s.setRaw(true);
-    s.setMaxVersions();
+    s.readAllVersions();
     s.addColumn(c0, c0);
 
     try {
@@ -352,7 +352,7 @@ public class TestKeepDeletes {
 
     Scan s = new Scan();
     s.setRaw(true);
-    s.setMaxVersions();
+    s.readAllVersions();
     InternalScanner scan = region.getScanner(s);
     List<Cell> kvs = new ArrayList<>();
     scan.next(kvs);
@@ -370,7 +370,7 @@ public class TestKeepDeletes {
     // verify that raw scans honor the passed timerange
     s = new Scan();
     s.setRaw(true);
-    s.setMaxVersions();
+    s.readAllVersions();
     s.setTimeRange(0, 1);
     scan = region.getScanner(s);
     kvs = new ArrayList<>();
@@ -381,7 +381,7 @@ public class TestKeepDeletes {
     // filter new delete markers
     s = new Scan();
     s.setRaw(true);
-    s.setMaxVersions();
+    s.readAllVersions();
     s.setTimeRange(0, ts+2);
     scan = region.getScanner(s);
     kvs = new ArrayList<>();
@@ -396,7 +396,7 @@ public class TestKeepDeletes {
     // filter old delete markers
     s = new Scan();
     s.setRaw(true);
-    s.setMaxVersions();
+    s.readAllVersions();
     s.setTimeRange(ts+3, ts+5);
     scan = region.getScanner(s);
     kvs = new ArrayList<>();

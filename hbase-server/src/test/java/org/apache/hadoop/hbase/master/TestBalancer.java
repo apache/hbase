@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.master;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -87,27 +85,9 @@ public class TestBalancer {
     ServerManager serverManager = master.getServerManager();
     Map<TableName, Map<ServerName, List<RegionInfo>>> assignments =
       assignmentManager.getRegionStates()
-        .getAssignmentsForBalancer(tableStateManager, serverManager.getOnlineServersList(), true);
+        .getAssignmentsForBalancer(tableStateManager, serverManager.getOnlineServersList());
     assertFalse(assignments.containsKey(disableTableName));
     assertTrue(assignments.containsKey(tableName));
     assertFalse(assignments.get(tableName).containsKey(sn1));
-
-    assignments = assignmentManager.getRegionStates()
-      .getAssignmentsForBalancer(tableStateManager, serverManager.getOnlineServersList(), false);
-    Map<TableName, Map<ServerName, List<RegionInfo>>> tableNameMap = new HashMap<>();
-    for (Map.Entry<ServerName, List<RegionInfo>> entry : assignments
-      .get(HConstants.ENSEMBLE_TABLE_NAME).entrySet()) {
-      final ServerName serverName = entry.getKey();
-      for (RegionInfo regionInfo : entry.getValue()) {
-        Map<ServerName, List<RegionInfo>> tableResult =
-          tableNameMap.computeIfAbsent(regionInfo.getTable(), t -> new HashMap<>());
-        List<RegionInfo> serverResult =
-          tableResult.computeIfAbsent(serverName, s -> new ArrayList<>());
-        serverResult.add(regionInfo);
-      }
-    }
-    assertFalse(tableNameMap.containsKey(disableTableName));
-    assertTrue(tableNameMap.containsKey(tableName));
-    assertFalse(tableNameMap.get(tableName).containsKey(sn1));
   }
 }
