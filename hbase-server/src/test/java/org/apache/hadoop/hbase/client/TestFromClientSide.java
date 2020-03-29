@@ -192,7 +192,7 @@ public class TestFromClientSide extends FromClientSideBase {
 
       Scan s = new Scan().withStartRow(T1);
       s.setTimeRange(0, ts + 3);
-      s.setMaxVersions();
+      s.readAllVersions();
       ResultScanner scanner = h.getScanner(s);
       Cell[] kvs = scanner.next().rawCells();
       assertArrayEquals(T2, CellUtil.cloneValue(kvs[0]));
@@ -201,7 +201,7 @@ public class TestFromClientSide extends FromClientSideBase {
 
       s = new Scan().withStartRow(T1);
       s.setRaw(true);
-      s.setMaxVersions();
+      s.readAllVersions();
       scanner = h.getScanner(s);
       kvs = scanner.next().rawCells();
       assertTrue(PrivateCellUtil.isDeleteFamily(kvs[0]));
@@ -1192,7 +1192,7 @@ public class TestFromClientSide extends FromClientSideBase {
 
       scan = new Scan().withStartRow(ROW);
       scan.addColumn(FAMILY, QUALIFIER);
-      scan.setMaxVersions();
+      scan.readAllVersions();
       result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long[] { STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7],
@@ -1210,7 +1210,7 @@ public class TestFromClientSide extends FromClientSideBase {
           VALUES[8] }, 0, 7);
 
       scan = new Scan().withStartRow(ROW);
-      scan.setMaxVersions();
+      scan.readAllVersions();
       result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long[] { STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7],

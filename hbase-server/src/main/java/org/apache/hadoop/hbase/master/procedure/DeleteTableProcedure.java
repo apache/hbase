@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -319,7 +318,9 @@ public class DeleteTableProcedure
         .collect(Collectors.toList());
       HFileArchiver.archiveRegions(env.getMasterConfiguration(), fs, mfs.getRootDir(), tempTableDir,
         regionDirList);
-      LOG.debug("Table '{}' archived!", tableName);
+      if (!regionDirList.isEmpty()) {
+        LOG.debug("Archived {} regions", tableName);
+      }
     }
 
     // Archive mob data

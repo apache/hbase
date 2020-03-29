@@ -16,25 +16,14 @@
  * limitations under the License.
  */
 syntax = "proto2";
+package org.apache.hadoop.hbase.shaded.rest.protobuf.generated;
 
-// Coprocessor test
-option java_package = "org.apache.hadoop.hbase.coprocessor.protobuf.generated";
-option java_outer_classname = "ColumnAggregationWithErrorsProtos";
-option java_generic_services = true;
-option java_generate_equals_and_hash = true;
+import "CellMessage.proto";
 
-// use unique names for messages in ColumnAggregationXXX.protos due to a bug in
-// protoc or hadoop's protoc compiler.
-message ColumnAggregationWithErrorsSumRequest {
-  required bytes family = 1;
-  optional bytes qualifier = 2;
-}
-
-message ColumnAggregationWithErrorsSumResponse {
-  required int64 sum = 1;
-}
-
-service ColumnAggregationServiceWithErrors {
-  rpc sum(ColumnAggregationWithErrorsSumRequest)
-    returns(ColumnAggregationWithErrorsSumResponse);
+message CellSet {
+  message Row {
+    required bytes key = 1;
+    repeated Cell values = 2;
+  }
+  repeated Row rows = 1;
 }

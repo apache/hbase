@@ -16,11 +16,21 @@
  * limitations under the License.
  */
 syntax = "proto2";
-package org.apache.hadoop.hbase.rest.protobuf.generated;
+package hbase.pb;
 
-message Cell {
-  optional bytes row = 1;       // unused if Cell is in a CellSet
-  optional bytes column = 2;
-  optional int64 timestamp = 3;
-  optional bytes data = 4;
+option java_package = "org.apache.hadoop.hbase.shaded.protobuf.generated";
+option java_outer_classname = "RefreshHFilesProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+option optimize_for = SPEED;
+
+message RefreshHFilesRequest {
+}
+
+message RefreshHFilesResponse {
+}
+
+service RefreshHFilesService {
+    rpc refreshHFiles(RefreshHFilesRequest)
+      returns (RefreshHFilesResponse);
 }

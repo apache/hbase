@@ -58,7 +58,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 /**
  * Base UT of RSGroupableBalancer.
  */
-public class RSGroupableBalancerTestBase {
+public class RSGroupableBalancerTestBase extends BalancerTestBase{
 
   static SecureRandom rand = new SecureRandom();
   static String[] groups = new String[] { RSGroupInfo.DEFAULT_GROUP, "dg2", "dg3", "dg4" };

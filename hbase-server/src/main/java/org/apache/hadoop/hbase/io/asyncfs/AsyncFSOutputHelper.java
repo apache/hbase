@@ -18,15 +18,17 @@
 package org.apache.hadoop.hbase.io.asyncfs;
 
 import java.io.IOException;
-
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils.StreamLacksCapabilityException;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
 
@@ -63,11 +65,15 @@ public final class AsyncFSOutputHelper {
     // After we create the stream but before we attempt to use it at all
     // ensure that we can provide the level of data safety we're configured
     // to provide.
-    if (fs.getConf().getBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, true) &&
-      !(CommonFSUtils.hasCapability(out, "hflush") &&
-        CommonFSUtils.hasCapability(out, "hsync"))) {
-      out.close();
-      throw new CommonFSUtils.StreamLacksCapabilityException("hflush and hsync");
+    if (fs.getConf().getBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, true)) {
+      if (!out.hasCapability(StreamCapabilities.HFLUSH)) {
+        Closeables.close(out, true);
+        throw new StreamLacksCapabilityException(StreamCapabilities.HFLUSH);
+      }
+      if (!out.hasCapability(StreamCapabilities.HSYNC)) {
+        Closeables.close(out, true);
+        throw new StreamLacksCapabilityException(StreamCapabilities.HSYNC);
+      }
     }
     return new WrapperAsyncFSOutput(f, out);
   }

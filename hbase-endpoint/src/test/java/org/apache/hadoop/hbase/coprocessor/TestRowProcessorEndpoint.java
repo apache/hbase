@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.coprocessor;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import com.google.protobuf.Message;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -48,26 +47,13 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.coprocessor.RowProcessorClient;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.FriendsOfFriendsProcessorRequest;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.FriendsOfFriendsProcessorResponse;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.IncCounterProcessorRequest;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.IncCounterProcessorResponse;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.RowSwapProcessorRequest;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.RowSwapProcessorResponse;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.TimeoutProcessorRequest;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.TimeoutProcessorResponse;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.RpcScheduler;
-import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest;
-import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse;
-import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorService;
 import org.apache.hadoop.hbase.regionserver.BaseRowProcessor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.junit.AfterClass;
@@ -77,6 +63,22 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.FriendsOfFriendsProcessorRequest;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.FriendsOfFriendsProcessorResponse;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.IncCounterProcessorRequest;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.IncCounterProcessorResponse;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.RowSwapProcessorRequest;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.RowSwapProcessorResponse;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.TimeoutProcessorRequest;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.TimeoutProcessorResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RowProcessorProtos.ProcessRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RowProcessorProtos.ProcessResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RowProcessorProtos.RowProcessorService;
 
 /**
  * Verifies ProcessEndpoint works.
@@ -383,7 +385,7 @@ public class TestRowProcessorEndpoint {
       public IncCounterProcessorRequest getRequestData() throws IOException {
         IncCounterProcessorRequest.Builder builder = IncCounterProcessorRequest.newBuilder();
         builder.setCounter(counter);
-        builder.setRow(ByteStringer.wrap(row));
+        builder.setRow(UnsafeByteOperations.unsafeWrap(row));
         return builder.build();
       }
 
@@ -462,8 +464,8 @@ public class TestRowProcessorEndpoint {
       public FriendsOfFriendsProcessorRequest getRequestData() throws IOException {
         FriendsOfFriendsProcessorRequest.Builder builder =
             FriendsOfFriendsProcessorRequest.newBuilder();
-        builder.setPerson(ByteStringer.wrap(person));
-        builder.setRow(ByteStringer.wrap(row));
+        builder.setPerson(UnsafeByteOperations.unsafeWrap(person));
+        builder.setRow(UnsafeByteOperations.unsafeWrap(row));
         builder.addAllResult(result);
         FriendsOfFriendsProcessorRequest f = builder.build();
         return f;
@@ -571,8 +573,8 @@ public class TestRowProcessorEndpoint {
       @Override
       public RowSwapProcessorRequest getRequestData() throws IOException {
         RowSwapProcessorRequest.Builder builder = RowSwapProcessorRequest.newBuilder();
-        builder.setRow1(ByteStringer.wrap(row1));
-        builder.setRow2(ByteStringer.wrap(row2));
+        builder.setRow1(UnsafeByteOperations.unsafeWrap(row1));
+        builder.setRow2(UnsafeByteOperations.unsafeWrap(row2));
         return builder.build();
       }
 
@@ -630,7 +632,7 @@ public class TestRowProcessorEndpoint {
       @Override
       public TimeoutProcessorRequest getRequestData() throws IOException {
         TimeoutProcessorRequest.Builder builder = TimeoutProcessorRequest.newBuilder();
-        builder.setRow(ByteStringer.wrap(row));
+        builder.setRow(UnsafeByteOperations.unsafeWrap(row));
         return builder.build();
       }
 

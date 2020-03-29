@@ -339,20 +339,20 @@ public class TestNewVersionBehaviorFromClientSide {
       t.delete(new Delete(ROW).addColumn(FAMILY, col1, 1000004));
       t.delete(new Delete(ROW).addColumn(FAMILY, col1, 1000003));
 
-      try (ResultScanner scannner = t.getScanner(new Scan().setRaw(true).setMaxVersions())) {
+      try (ResultScanner scannner = t.getScanner(new Scan().setRaw(true).readAllVersions())) {
         Result r = scannner.next();
         assertNull(scannner.next());
         assertEquals(6, r.size());
       }
       TEST_UTIL.getAdmin().flush(t.getName());
-      try (ResultScanner scannner = t.getScanner(new Scan().setRaw(true).setMaxVersions())) {
+      try (ResultScanner scannner = t.getScanner(new Scan().setRaw(true).readAllVersions())) {
         Result r = scannner.next();
         assertNull(scannner.next());
         assertEquals(6, r.size());
       }
       TEST_UTIL.getAdmin().majorCompact(t.getName());
       Threads.sleep(5000);
-      try (ResultScanner scannner = t.getScanner(new Scan().setRaw(true).setMaxVersions())) {
+      try (ResultScanner scannner = t.getScanner(new Scan().setRaw(true).readAllVersions())) {
         Result r = scannner.next();
         assertNull(scannner.next());
         assertEquals(1, r.size());

@@ -20,29 +20,26 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
-
-import com.google.protobuf.Service;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.SharedConnection;
 import org.apache.hadoop.hbase.coprocessor.BaseEnvironment;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorServiceBackwardCompatiblity;
 import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.HasRegionServerServices;
 import org.apache.hadoop.hbase.coprocessor.MetricsCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
-import org.apache.hadoop.hbase.coprocessor.SingletonCoprocessorService;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 
 @InterfaceAudience.Private
 public class RegionServerCoprocessorHost extends
@@ -87,12 +84,6 @@ public class RegionServerCoprocessorHost extends
       if (RegionServerCoprocessor.class.isAssignableFrom(implClass)) {
         return implClass.asSubclass(RegionServerCoprocessor.class).getDeclaredConstructor()
             .newInstance();
-      } else if (SingletonCoprocessorService.class.isAssignableFrom(implClass)) {
-        // For backward compatibility with old CoprocessorService impl which don't extend
-        // RegionCoprocessor.
-        SingletonCoprocessorService tmp = implClass.asSubclass(SingletonCoprocessorService.class)
-            .getDeclaredConstructor().newInstance();
-        return new CoprocessorServiceBackwardCompatiblity.RegionServerCoprocessorService(tmp);
       } else {
         LOG.error("{} is not of type RegionServerCoprocessor. Check the configuration of {}",
             implClass.getName(), CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);

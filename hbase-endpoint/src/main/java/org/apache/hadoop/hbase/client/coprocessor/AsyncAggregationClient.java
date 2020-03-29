@@ -21,7 +21,6 @@ import static org.apache.hadoop.hbase.client.coprocessor.AggregationHelper.getPa
 import static org.apache.hadoop.hbase.client.coprocessor.AggregationHelper.validateArgAndGetPB;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
-import com.google.protobuf.Message;
 import java.io.IOException;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -38,12 +37,15 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.coprocessor.ColumnInterpreter;
-import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest;
-import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse;
-import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateService;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AggregateProtos.AggregateRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AggregateProtos.AggregateResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AggregateProtos.AggregateService;
 
 /**
  * This client class is for invoking the aggregate functions deployed on the Region Server side via

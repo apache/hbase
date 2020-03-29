@@ -510,6 +510,18 @@ public class MetricsRegionServerSourceImpl
             .addGauge(Interns.info(PERCENT_FILES_LOCAL_SECONDARY_REGIONS,
                     PERCENT_FILES_LOCAL_SECONDARY_REGIONS_DESC),
                     rsWrap.getPercentFileLocalSecondaryRegions())
+            .addGauge(Interns.info(TOTAL_BYTES_READ,
+                    TOTAL_BYTES_READ_DESC),
+                    rsWrap.getTotalBytesRead())
+            .addGauge(Interns.info(LOCAL_BYTES_READ,
+                    LOCAL_BYTES_READ_DESC),
+                    rsWrap.getLocalBytesRead())
+            .addGauge(Interns.info(SHORTCIRCUIT_BYTES_READ,
+                    SHORTCIRCUIT_BYTES_READ_DESC),
+                    rsWrap.getShortCircuitBytesRead())
+            .addGauge(Interns.info(ZEROCOPY_BYTES_READ,
+                    ZEROCOPY_BYTES_READ_DESC),
+                    rsWrap.getZeroCopyBytesRead())
             .addGauge(Interns.info(SPLIT_QUEUE_LENGTH, SPLIT_QUEUE_LENGTH_DESC),
                     rsWrap.getSplitQueueSize())
             .addGauge(Interns.info(COMPACTION_QUEUE_LENGTH, COMPACTION_QUEUE_LENGTH_DESC),

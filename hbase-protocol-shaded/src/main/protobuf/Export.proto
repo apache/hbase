@@ -16,8 +16,30 @@
  * limitations under the License.
  */
 syntax = "proto2";
-package org.apache.hadoop.hbase.rest.protobuf.generated;
+package hbase.pb;
 
-message Namespaces {
-	repeated string namespace = 1;
+option java_package = "org.apache.hadoop.hbase.shaded.protobuf.generated";
+option java_outer_classname = "ExportProtos";
+option java_generate_equals_and_hash = true;
+option optimize_for = SPEED;
+option java_generic_services = true;
+
+import "Client.proto";
+
+service ExportService {
+  rpc export (ExportRequest) returns (ExportResponse);
 }
+
+message ExportRequest {
+  required Scan scan = 1;
+  required string outputPath = 2;
+  optional bool compressed = 3 [default = false];
+  optional string compressType = 4;
+  optional string compressCodec = 5;
+  optional DelegationToken fsToken = 6;
+}
+message ExportResponse {
+  required uint64 rowCount = 1;
+  required uint64 cellCount = 2;
+}
+

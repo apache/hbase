@@ -624,6 +624,7 @@ public class TestSnapshotScannerHDFSAclController {
     String snapshot = namespace + "s1";
     String snapshot2 = namespace + "s2";
     String snapshot3 = namespace + "s3";
+    TEST_UTIL.waitTableAvailable(PermissionStorage.ACL_TABLE_NAME);
 
     try (Table t = TestHDFSAclHelper.createTable(TEST_UTIL, table)) {
       TestHDFSAclHelper.put(t);
@@ -633,6 +634,7 @@ public class TestSnapshotScannerHDFSAclController {
       // delete
       admin.disableTable(table);
       admin.deleteTable(table);
+      LOG.info("Before scan of shapshot!");
       TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot, -1);
 
       // restore snapshot and restore acl

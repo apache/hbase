@@ -21,10 +21,10 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.util.Collections;
-
-import com.google.protobuf.Service;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 
 /**
  * Base interface for the 4 coprocessors - MasterCoprocessor, RegionCoprocessor,
