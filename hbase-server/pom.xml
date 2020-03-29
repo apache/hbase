@@ -267,13 +267,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <!--Needed by the visiblity tags and acl CPEP things
-           in here in hbase-server (that should be out in hbase-endpoints
-           or integrated). -->
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-protocol</artifactId>
-    </dependency>
-    <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-protocol-shaded</artifactId>
     </dependency>
