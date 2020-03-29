@@ -16,33 +16,14 @@
  * limitations under the License.
  */
 syntax = "proto2";
-package hbase.pb;
+package org.apache.hadoop.hbase.shaded.rest.protobuf.generated;
 
-import "Client.proto";
-import "HBase.proto";
-option java_package = "org.apache.hadoop.hbase.shaded.protobuf.generated";
-option java_outer_classname = "MultiRowMutationProtos";
-option java_generate_equals_and_hash = true;
-option java_generic_services = true;
-option optimize_for = SPEED;
+import "rest/CellMessage.proto";
 
-message MultiRowMutationProcessorRequest{
-}
-
-message MultiRowMutationProcessorResponse{
-}
-
-message MutateRowsRequest {
-  repeated MutationProto mutation_request = 1;
-  optional uint64 nonce_group = 2;
-  optional uint64 nonce = 3;
-  optional RegionSpecifier region = 4;
-}
-
-message MutateRowsResponse {
-}
-
-service MultiRowMutationService {
-  rpc MutateRows(MutateRowsRequest)
-      returns(MutateRowsResponse);
+message CellSet {
+  message Row {
+    required bytes key = 1;
+    repeated Cell values = 2;
+  }
+  repeated Row rows = 1;
 }

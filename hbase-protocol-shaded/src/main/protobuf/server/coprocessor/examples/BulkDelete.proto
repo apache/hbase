@@ -16,14 +16,36 @@
  * limitations under the License.
  */
 syntax = "proto2";
-package org.apache.hadoop.hbase.shaded.rest.protobuf.generated;
+package hbase.pb;
 
-import "CellMessage.proto";
+option java_package = "org.apache.hadoop.hbase.shaded.coprocessor.example.generated";
+option java_outer_classname = "BulkDeleteProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+option optimize_for = SPEED;
 
-message CellSet {
-  message Row {
-    required bytes key = 1;
-    repeated Cell values = 2;
+import "client/Client.proto";
+
+message BulkDeleteRequest {
+  required Scan scan = 1;
+  required DeleteType deleteType = 2;
+  optional uint64 timestamp = 3;
+  required uint32 rowBatchSize = 4;
+
+  enum DeleteType {
+    ROW = 0;
+    FAMILY = 1;
+    COLUMN = 2;
+    VERSION = 3;
   }
-  repeated Row rows = 1;
+}
+
+message BulkDeleteResponse {
+  required uint64 rowsDeleted = 1;
+  optional uint64 versionsDeleted = 2;
+}
+
+service BulkDeleteService {
+  rpc delete(BulkDeleteRequest)
+    returns (BulkDeleteResponse);
 }

@@ -28,16 +28,16 @@ option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
 import "HBase.proto";
-import "Client.proto";
-import "ClusterStatus.proto";
-import "ErrorHandling.proto";
-import "LockService.proto";
-import "Procedure.proto";
-import "Quota.proto";
-import "Replication.proto";
-import "Snapshot.proto";
-import "AccessControl.proto";
-import "RSGroupAdmin.proto";
+import "client/Client.proto";
+import "server/Quota.proto";
+import "server/Snapshot.proto";
+import "server/Procedure.proto";
+import "server/ClusterStatus.proto";
+import "server/ErrorHandling.proto";
+import "server/master/LockService.proto";
+import "server/master/Replication.proto";
+import "server/rsgroup/RSGroupAdmin.proto";
+import "server/coprocessor/AccessControl.proto";
 
 /* Column-level protobufs */
 

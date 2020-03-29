@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 syntax = "proto2";
-import "ColumnSchemaMessage.proto";
+import "rest/ColumnSchemaMessage.proto";
 
 package org.apache.hadoop.hbase.shaded.rest.protobuf.generated;
 

@@ -27,7 +27,7 @@ option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
 import "HBase.proto";
-import "Comparator.proto";
+import "client/Comparator.proto";
 
 message Filter {
   required string name = 1;

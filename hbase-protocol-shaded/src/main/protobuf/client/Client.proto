@@ -26,9 +26,9 @@ option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
 import "HBase.proto";
-import "Filter.proto";
+import "client/Filter.proto";
 import "Cell.proto";
-import "Comparator.proto";
+import "client/Comparator.proto";
 import "MapReduce.proto";
 
 /**

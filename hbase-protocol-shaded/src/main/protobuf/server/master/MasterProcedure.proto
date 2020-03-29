@@ -25,10 +25,10 @@ option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
 import "HBase.proto";
-import "RPC.proto";
-import "Snapshot.proto";
-import "Replication.proto";
-import "RegionServerStatus.proto";
+import "rpc/RPC.proto";
+import "server/Snapshot.proto";
+import "server/master/Replication.proto";
+import "server/master/RegionServerStatus.proto";
 
 // ============================================================================
 //  WARNING - Compatibility rules
