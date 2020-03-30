@@ -21,10 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import java.io.IOException;
-import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
@@ -35,8 +32,6 @@ import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.Waiter;
-import org.apache.hadoop.hbase.client.AsyncConnection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
@@ -156,48 +151,19 @@ public class TestMasterShutdown {
       hbaseCluster = new LocalHBaseCluster(htu.getConfiguration(), options.getNumMasters(),
         options.getNumRegionServers(), options.getMasterClass(), options.getRsClass());
       final MasterThread masterThread = hbaseCluster.getMasters().get(0);
-
-      final CompletableFuture<Void> shutdownFuture = CompletableFuture.runAsync(() -> {
-        // Switching to master registry exacerbated a race in the master bootstrap that can result
-        // in a lost shutdown command (HBASE-8422, HBASE-23836). The race is essentially because
-        // the server manager in HMaster is not initialized by the time shutdown() RPC (below) is
-        // made to the master. The suspected reason as to why it was uncommon before HBASE-18095
-        // is because the connection creation with ZK registry is so slow that by then the server
-        // manager is usually init'ed in time for the RPC to be made. For now, adding an explicit
-        // wait() in the test, waiting for the server manager to become available.
-        final long timeout = TimeUnit.MINUTES.toMillis(10);
-        assertNotEquals("timeout waiting for server manager to become available.",
-          -1, Waiter.waitFor(htu.getConfiguration(), timeout,
-            () -> masterThread.getMaster().getServerManager() != null));
-
-        // Master has come up far enough that we can terminate it without creating a zombie.
-        final long result = Waiter.waitFor(htu.getConfiguration(), timeout, 500, () -> {
-          final Configuration conf = createResponsiveZkConfig(htu.getConfiguration());
-          LOG.debug("Attempting to establish connection.");
-          final CompletableFuture<AsyncConnection> connFuture =
-            ConnectionFactory.createAsyncConnection(conf);
-          try (final AsyncConnection conn = connFuture.join()) {
-            LOG.debug("Sending shutdown RPC.");
-            try {
-              conn.getAdmin().shutdown().join();
-              LOG.debug("Shutdown RPC sent.");
-              return true;
-            } catch (CompletionException e) {
-              LOG.debug("Failure sending shutdown RPC.");
-            }
-          } catch (IOException|CompletionException e) {
-            LOG.debug("Failed to establish connection.");
-          } catch (Throwable e) {
-            LOG.info("Something unexpected happened.", e);
-          }
-          return false;
-        });
-        assertNotEquals("Failed to issue shutdown RPC after " + Duration.ofMillis(timeout),
-          -1, result);
-      });
-
       masterThread.start();
-      shutdownFuture.join();
+      // Switching to master registry exacerbated a race in the master bootstrap that can result
+      // in a lost shutdown command (HBASE-8422, HBASE-23836). The race is essentially because
+      // the server manager in HMaster is not initialized by the time shutdown() RPC (below) is
+      // made to the master. The suspected reason as to why it was uncommon before HBASE-18095
+      // is because the connection creation with ZK registry is so slow that by then the server
+      // manager is usually init'ed in time for the RPC to be made. For now, adding an explicit
+      // wait() in the test, waiting for the server manager to become available.
+      final long timeout = TimeUnit.MINUTES.toMillis(10);
+      assertNotEquals("Timeout waiting for server manager to become available.",
+        -1, Waiter.waitFor(htu.getConfiguration(), timeout,
+          () -> masterThread.getMaster().getServerManager() != null));
+      htu.getConnection().getAdmin().shutdown();
       masterThread.join();
     } finally {
       if (hbaseCluster != null) {

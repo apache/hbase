@@ -102,13 +102,13 @@ public class RSProcedureDispatcher
     // Around startup, if failed, some of the below may be set back to null so NPE is possible.
     ServerManager sm = master.getServerManager();
     if (sm == null) {
-      LOG.debug("ServerManager is null");
+      LOG.debug("ServerManager is null; stopping={}", master.isStopping());
       return false;
     }
     sm.registerListener(this);
     ProcedureExecutor<MasterProcedureEnv> pe = master.getMasterProcedureExecutor();
     if (pe == null) {
-      LOG.debug("ProcedureExecutor is null");
+      LOG.debug("ProcedureExecutor is null; stopping={}", master.isStopping());
       return false;
     }
     this.procedureEnv = pe.getEnvironment();
@@ -116,8 +116,13 @@ public class RSProcedureDispatcher
       LOG.debug("ProcedureEnv is null; stopping={}", master.isStopping());
       return false;
     }
-    for (ServerName serverName: master.getServerManager().getOnlineServersList()) {
-      addNode(serverName);
+    try {
+      for (ServerName serverName : sm.getOnlineServersList()) {
+        addNode(serverName);
+      }
+    } catch (Exception e) {
+      LOG.info("Failed start", e);
+      return false;
     }
     return true;
   }
