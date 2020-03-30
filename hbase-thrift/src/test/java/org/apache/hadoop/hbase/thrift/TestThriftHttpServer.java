@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.thrift.Constants.PORT_OPTION;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
+import java.net.BindException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
@@ -156,37 +157,46 @@ public class TestThriftHttpServer {
   }
 
   void runThriftServer(int customHeaderSize) throws Exception {
-    List<String> args = new ArrayList<>(3);
-    port = HBaseTestingUtility.randomFreePort();
-    args.add("-" + PORT_OPTION);
-    args.add(String.valueOf(port));
-    args.add("-" + INFOPORT_OPTION);
-    int infoPort = HBaseTestingUtility.randomFreePort();
-    args.add(String.valueOf(infoPort));
-    args.add("start");
+    for (int i = 0; i < 100; i++) {
+      List<String> args = new ArrayList<>(3);
+      port = HBaseTestingUtility.randomFreePort();
+      args.add("-" + PORT_OPTION);
+      args.add(String.valueOf(port));
+      args.add("-" + INFOPORT_OPTION);
+      int infoPort = HBaseTestingUtility.randomFreePort();
+      args.add(String.valueOf(infoPort));
+      args.add("start");
 
-    thriftServer = createThriftServer();
-    startHttpServerThread(args.toArray(new String[args.size()]));
+      thriftServer = createThriftServer();
+      startHttpServerThread(args.toArray(new String[args.size()]));
 
-    // wait up to 10s for the server to start
-    HBaseTestingUtility.waitForHostPort(HConstants.LOCALHOST, port);
+      // wait up to 10s for the server to start
+      HBaseTestingUtility.waitForHostPort(HConstants.LOCALHOST, port);
 
-    String url = "http://" + HConstants.LOCALHOST + ":" + port;
-    try {
-      checkHttpMethods(url);
-      talkToThriftServer(url, customHeaderSize);
-    } catch (Exception ex) {
-      clientSideException = ex;
-    } finally {
-      stopHttpServerThread();
-    }
+      String url = "http://" + HConstants.LOCALHOST + ":" + port;
+      try {
+        checkHttpMethods(url);
+        talkToThriftServer(url, customHeaderSize);
+      } catch (Exception ex) {
+        clientSideException = ex;
+      } finally {
+        stopHttpServerThread();
+      }
 
-    if (clientSideException != null) {
-      LOG.error("Thrift client threw an exception " + clientSideException);
-      if (clientSideException instanceof TTransportException) {
-        throw clientSideException;
+      if (clientSideException != null) {
+        LOG.error("Thrift client threw an exception " + clientSideException);
+        if (clientSideException instanceof TTransportException) {
+          if (clientSideException.getCause() != null &&
+            clientSideException.getCause() instanceof BindException) {
+            continue;
+          }
+          throw clientSideException;
+        } else {
+          throw new Exception(clientSideException);
+        }
       } else {
-        throw new Exception(clientSideException);
+        // Done.
+        break;
       }
     }
   }

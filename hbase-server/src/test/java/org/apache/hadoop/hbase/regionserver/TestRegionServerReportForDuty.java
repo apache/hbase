@@ -203,6 +203,7 @@ public class TestRegionServerReportForDuty {
 
     // Start a new master and use another random unique port
     // Also let it wait for exactly 2 region severs to report in.
+    // TODO: Add handling bindexception. Random port is not enough!!! Flakie test!
     cluster.getConfiguration().setInt(HConstants.MASTER_PORT, HBaseTestingUtility.randomFreePort());
     cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART,
       tablesOnMaster? 3: 2);

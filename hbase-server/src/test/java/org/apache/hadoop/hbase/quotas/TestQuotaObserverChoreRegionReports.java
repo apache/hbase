@@ -94,6 +94,13 @@ public class TestQuotaObserverChoreRegionReports {
     // Expire the reports after 5 seconds
     conf.setInt(QuotaObserverChore.REGION_REPORT_RETENTION_DURATION_KEY, 5000);
     TEST_UTIL.startMiniCluster(1);
+    // Wait till quota table onlined.
+    TEST_UTIL.waitFor(10000, new Waiter.Predicate<Exception>() {
+      @Override public boolean evaluate() throws Exception {
+        return MetaTableAccessor.tableExists(TEST_UTIL.getConnection(),
+          QuotaTableUtil.QUOTA_TABLE_NAME);
+      }
+    });
 
     final String FAM1 = "f1";
     final HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
