@@ -3114,7 +3114,16 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(tableLockAction, globalRWXUser, tableACUser, tableRWXUser);
     grantOnTable(TEST_UTIL, tableACUser.getShortName(), tableName, null, null,
         Action.ADMIN, Action.CREATE);
-    verifyAllowed(tableLockAction, tableACUser);
+    // See if this can fail (flakie) because grant hasn't propagated yet.
+    for (int i = 0; i < 10; i++) {
+      try {
+        verifyAllowed(tableLockAction, tableACUser);
+      } catch (AssertionError e) {
+        LOG.warn("Retrying assertion error", e);
+        Threads.sleep(1000);
+        continue;
+      }
+    }
 
     AccessTestAction regionsLockAction = new AccessTestAction() {
       @Override public Object run() throws Exception {

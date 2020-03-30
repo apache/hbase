@@ -78,7 +78,7 @@ public class TestCachedClusterId {
     Configuration conf = TEST_UTIL.getConfiguration();
     CachedClusterId cachedClusterId = new CachedClusterId(conf);
     TestContext context = new TestContext(conf);
-    int numThreads = 100;
+    int numThreads = 16;
     for (int i = 0; i < numThreads; i++) {
       context.addThread(new GetClusterIdThread(context, cachedClusterId));
     }

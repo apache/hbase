@@ -220,19 +220,20 @@ public class TestFromClientSide3 {
       byte[] row = Bytes.toBytes("SpecifiedRow");
       byte[] qual0 = Bytes.toBytes("qual0");
       byte[] qual1 = Bytes.toBytes("qual1");
-      Delete d = new Delete(row);
+      long now = System.currentTimeMillis();
+      Delete d = new Delete(row, now);
       table.delete(d);
 
       Put put = new Put(row);
-      put.addColumn(FAMILY, null, VALUE);
+      put.addColumn(FAMILY, null, now + 1, VALUE);
       table.put(put);
 
       put = new Put(row);
-      put.addColumn(FAMILY, qual1, qual1);
+      put.addColumn(FAMILY, qual1, now + 2, qual1);
       table.put(put);
 
       put = new Put(row);
-      put.addColumn(FAMILY, qual0, qual0);
+      put.addColumn(FAMILY, qual0, now + 3, qual0);
       table.put(put);
 
       Result r = table.get(new Get(row));
