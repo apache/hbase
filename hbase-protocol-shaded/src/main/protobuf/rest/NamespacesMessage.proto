@@ -19,5 +19,5 @@ syntax = "proto2";
 package org.apache.hadoop.hbase.shaded.rest.protobuf.generated;
 
 message Namespaces {
-	repeated string namespace = 1;
+  repeated string namespace = 1;
 }

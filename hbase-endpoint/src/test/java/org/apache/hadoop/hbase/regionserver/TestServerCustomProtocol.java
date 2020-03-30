@@ -56,7 +56,6 @@ import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
-import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.PingService;
 import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.CountRequest;
 import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.CountResponse;
 import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.HelloRequest;
@@ -67,6 +66,7 @@ import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.
 import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.NoopResponse;
 import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.PingRequest;
 import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.PingResponse;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.PingService;
 
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestServerCustomProtocol {
