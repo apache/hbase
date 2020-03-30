@@ -351,14 +351,14 @@ public class StoreFileInfo {
     }
   }
   private FileStatus loadAndCacheFileStatus(final FileSystem fs) throws IOException {
+    FileStatus status = null ; 
     if (this.reference != null) {
       if (this.link != null) {
         FileNotFoundException exToThrow = null;
         for (int i = 0; i < this.link.getLocations().length; i++) {
           // HFileLink Reference
           try {
-            this.localStatus = link.getFileStatus(fs);
-            return this.localStatus;
+            status = link.getFileStatus(fs);
           } catch (FileNotFoundException ex) {
             // try the other location
             exToThrow = ex;
@@ -368,8 +368,7 @@ public class StoreFileInfo {
       } else {
         // HFile Reference
         Path referencePath = getReferredToFile(this.getPath());
-        this.localStatus = fs.getFileStatus(referencePath);
-        status = this.localStatus;
+        status = fs.getFileStatus(referencePath);
       }
     } else {
       if (this.link != null) {
@@ -377,8 +376,7 @@ public class StoreFileInfo {
         for (int i = 0; i < this.link.getLocations().length; i++) {
           // HFileLink
           try {
-            this.localStatus = link.getFileStatus(fs);
-            return this.localStatus;
+            status = link.getFileStatus(fs);
           } catch (FileNotFoundException ex) {
             // try the other location
             exToThrow = ex;
@@ -386,8 +384,7 @@ public class StoreFileInfo {
         }
         throw exToThrow;
       } else {
-        this.localStatus = fs.getFileStatus(initialPath);
-        status = this.localStatus;
+        status = fs.getFileStatus(initialPath);
       }
     }
     return status;
