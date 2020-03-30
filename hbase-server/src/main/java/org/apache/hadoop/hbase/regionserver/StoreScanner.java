@@ -636,11 +636,13 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
             if (matcher.isUserScan() && totalBytesRead > maxRowSize) {
               LOG.warn("Max row size allowed: {}, but the row is bigger than that, the row info: "
-                  + "{}, already have process row cells = {}", maxRowSize,
-                CellUtil.toString(cell, true), outResult.size());
+                  + "{}, already have process row cells = {}, it belong to region = {}",
+                maxRowSize, CellUtil.toString(cell, true), outResult.size(),
+                store.getHRegion().getRegionInfo().getRegionNameAsString());
               throw new RowTooBigException("Max row size allowed: " + maxRowSize
                 + ", but the row is bigger than that, the row info: " + CellUtil
-                .toString(cell, true));
+                .toString(cell, true) + ", it belong to region = {}" + store.getHRegion()
+                .getRegionInfo().getRegionNameAsString());
             }
           }
 
