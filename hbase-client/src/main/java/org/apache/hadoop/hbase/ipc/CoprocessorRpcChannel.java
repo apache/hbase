@@ -24,7 +24,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
 
 /**
  * Base interface which provides clients with an RPC connection to call coprocessor endpoint
- * {@link com.google.protobuf.Service}s.
+ * {@link org.apache.hbase.thirdparty.com.google.protobuf.Service}s.
  * <p/>
  * Note that clients should not use this class directly, except through
  * {@link org.apache.hadoop.hbase.client.Table#coprocessorService(byte[])}.

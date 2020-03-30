@@ -106,18 +106,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <!--Needed by ExportSnapshot. It is reading
-           Snapshot protos. TODO: Move to internal types.-->
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-protocol</artifactId>
-    </dependency>
-    <dependency>
-      <!--Needed by ExportSnapshot. It is reading
-           Snapshot protos. TODO: Move to internal types.-->
-      <groupId>com.google.protobuf</groupId>
-      <artifactId>protobuf-java</artifactId>
-    </dependency>
-    <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-protocol-shaded</artifactId>
     </dependency>
