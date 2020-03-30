@@ -273,7 +273,8 @@ public class TestCompaction {
       // only one empty dir exists in temp dir
       FileStatus[] ls = r.getFilesystem().listStatus(r.getRegionFileSystem().getTempDir());
       assertEquals(1, ls.length);
-      Path storeTempDir = new Path(r.getRegionFileSystem().getTempDir(), Bytes.toString(COLUMN_FAMILY));
+      Path storeTempDir =
+        new Path(r.getRegionFileSystem().getTempDir(), Bytes.toString(COLUMN_FAMILY));
       assertTrue(r.getFilesystem().exists(storeTempDir));
       ls = r.getFilesystem().listStatus(storeTempDir);
       assertEquals(0, ls.length);
