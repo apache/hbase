@@ -372,7 +372,18 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     byte[][] families =
         { family, Bytes.add(family, Bytes.toBytes("2")), Bytes.add(family, Bytes.toBytes("3")) };
     createTableWithDefaultConf(tableName, null, families);
-    loadData(tableName, families, 3000, flushes);
+
+    byte[][] singleFamilyArray = { family };
+
+    // When singleFamily is true, only load data for the family being tested. This is to avoid
+    // the case that while major compaction is going on for the family, minor compaction could
+    // happen for other families at the same time (Two compaction threads long/short), thus
+    // pollute the compaction and store file numbers for the region.
+    if (singleFamily) {
+      loadData(tableName, singleFamilyArray, 3000, flushes);
+    } else {
+      loadData(tableName, families, 3000, flushes);
+    }
 
     List<Region> regions = new ArrayList<>();
     TEST_UTIL
