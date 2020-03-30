@@ -24,7 +24,6 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -410,11 +409,11 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     }
 
     long curt = System.currentTimeMillis();
-    long waitTime = 5000;
+    long waitTime = 10000;
     long endt = curt + waitTime;
     CompactionState state = admin.getCompactionState(tableName).get();
     while (state == CompactionState.NONE && curt < endt) {
-      Thread.sleep(10);
+      Thread.sleep(1);
       state = admin.getCompactionState(tableName).get();
       curt = System.currentTimeMillis();
     }
