@@ -635,8 +635,12 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
             scannerContext.incrementBatchProgress(1);
 
             if (matcher.isUserScan() && totalBytesRead > maxRowSize) {
-              throw new RowTooBigException(
-                  "Max row size allowed: " + maxRowSize + ", but the row is bigger than that.");
+              LOG.info("Max row size allowed: " + maxRowSize
+                + ", but the row is bigger than that, the row info: " + CellUtil
+                .toString(cell, true) + ", already have process row cells = " + outResult.size());
+              throw new RowTooBigException("Max row size allowed: " + maxRowSize
+                + ", but the row is bigger than that, the row info: " + CellUtil
+                .toString(cell, true));
             }
           }
 
