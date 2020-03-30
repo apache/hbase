@@ -27,12 +27,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -55,12 +55,12 @@ public class TestEncryptionRandomKeying {
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Configuration conf = TEST_UTIL.getConfiguration();
-  private static HTableDescriptor htd;
+  private static TableDescriptorBuilder tdb;
 
   private static List<Path> findStorefilePaths(TableName tableName) throws Exception {
     List<Path> paths = new ArrayList<>();
     for (Region region:
-        TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegions(htd.getTableName())) {
+      TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegions(tdb.build().getTableName())) {
       for (HStore store : ((HRegion) region).getStores()) {
         for (HStoreFile storefile : store.getStorefiles()) {
           paths.add(storefile.getPath());
@@ -94,29 +94,31 @@ public class TestEncryptionRandomKeying {
 
     // Create the table schema
     // Specify an encryption algorithm without a key
-    htd = new HTableDescriptor(TableName.valueOf("default", "TestEncryptionRandomKeying"));
-    HColumnDescriptor hcd = new HColumnDescriptor("cf");
-    String algorithm =
-        conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
-    hcd.setEncryptionType(algorithm);
-    htd.addFamily(hcd);
+    tdb = TableDescriptorBuilder.newBuilder(TableName.valueOf("default",
+      "TestEncryptionRandomKeying"));
+    ColumnFamilyDescriptorBuilder columnFamilyDescriptorBuilder =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("cf"));
+    String algorithm = conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+    columnFamilyDescriptorBuilder.setEncryptionType(algorithm);
+    tdb.setColumnFamily(columnFamilyDescriptorBuilder.build());
 
     // Start the minicluster
     TEST_UTIL.startMiniCluster(1);
 
     // Create the test table
-    TEST_UTIL.getAdmin().createTable(htd);
-    TEST_UTIL.waitTableAvailable(htd.getTableName(), 5000);
+    TEST_UTIL.getAdmin().createTable(tdb.build());
+    TEST_UTIL.waitTableAvailable(tdb.build().getTableName(), 5000);
 
     // Create a store file
-    Table table = TEST_UTIL.getConnection().getTable(htd.getTableName());
+    Table table = TEST_UTIL.getConnection().getTable(tdb.build().getTableName());
     try {
       table.put(new Put(Bytes.toBytes("testrow"))
-              .addColumn(hcd.getName(), Bytes.toBytes("q"), Bytes.toBytes("value")));
+        .addColumn(columnFamilyDescriptorBuilder.build().getName(),
+          Bytes.toBytes("q"), Bytes.toBytes("value")));
     } finally {
       table.close();
     }
-    TEST_UTIL.getAdmin().flush(htd.getTableName());
+    TEST_UTIL.getAdmin().flush(tdb.build().getTableName());
   }
 
   @AfterClass
@@ -127,7 +129,7 @@ public class TestEncryptionRandomKeying {
   @Test
   public void testRandomKeying() throws Exception {
     // Verify we have store file(s) with a random key
-    final List<Path> initialPaths = findStorefilePaths(htd.getTableName());
+    final List<Path> initialPaths = findStorefilePaths(tdb.build().getTableName());
     assertTrue(initialPaths.size() > 0);
     for (Path path: initialPaths) {
       assertNotNull("Store file " + path + " is not encrypted", extractHFileKey(path));

@@ -282,7 +282,7 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
 
   public String toShortString() {
     // rit= is the current Region-In-Transition State -- see State enum.
-    return String.format("rit=%s, location=%s", getState(), getRegionLocation());
+    return String.format("state=%s, location=%s", getState(), getRegionLocation());
   }
 
   public String toDescriptiveString() {

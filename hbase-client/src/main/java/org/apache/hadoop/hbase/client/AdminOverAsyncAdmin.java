@@ -20,12 +20,6 @@ package org.apache.hadoop.hbase.client;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.setCoprocessorError;
 import static org.apache.hadoop.hbase.util.FutureUtils.get;
 
-import com.google.protobuf.Descriptors.MethodDescriptor;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcChannel;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -49,6 +43,7 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshotView;
@@ -56,6 +51,7 @@ import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.UserPermission;
@@ -64,9 +60,17 @@ import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 /**
  * The {@link Admin} implementation which is based on an {@link AsyncAdmin}.
@@ -960,4 +964,76 @@ class AdminOverAsyncAdmin implements Admin {
     return get(admin.isSnapshotCleanupEnabled());
   }
 
+  @Override
+  public List<SlowLogRecord> getSlowLogResponses(final Set<ServerName> serverNames,
+      final SlowLogQueryFilter slowLogQueryFilter) throws IOException {
+    return get(admin.getSlowLogResponses(serverNames, slowLogQueryFilter));
+  }
+
+  @Override
+  public List<Boolean> clearSlowLogResponses(final Set<ServerName> serverNames)
+      throws IOException {
+    return get(admin.clearSlowLogResponses(serverNames));
+  }
+
+  @Override
+  public RSGroupInfo getRSGroup(String groupName) throws IOException {
+    return get(admin.getRSGroup(groupName));
+  }
+
+  @Override
+  public void moveServersToRSGroup(Set<Address> servers, String groupName) throws IOException {
+    get(admin.moveServersToRSGroup(servers, groupName));
+  }
+
+  @Override
+  public void addRSGroup(String groupName) throws IOException {
+    get(admin.addRSGroup(groupName));
+  }
+
+  @Override
+  public void removeRSGroup(String groupName) throws IOException {
+    get(admin.removeRSGroup(groupName));
+  }
+
+  @Override
+  public boolean balanceRSGroup(String groupName) throws IOException {
+    return get(admin.balanceRSGroup(groupName));
+  }
+
+  @Override
+  public List<RSGroupInfo> listRSGroups() throws IOException {
+    return get(admin.listRSGroups());
+  }
+
+  @Override
+  public List<TableName> listTablesInRSGroup(String groupName) throws IOException {
+    return get(admin.listTablesInRSGroup(groupName));
+  }
+
+  @Override
+  public Pair<List<String>, List<TableName>>
+    getConfiguredNamespacesAndTablesInRSGroup(String groupName) throws IOException {
+    return get(admin.getConfiguredNamespacesAndTablesInRSGroup(groupName));
+  }
+
+  @Override
+  public RSGroupInfo getRSGroup(Address hostPort) throws IOException {
+    return get(admin.getRSGroup(hostPort));
+  }
+
+  @Override
+  public void removeServersFromRSGroup(Set<Address> servers) throws IOException {
+    get(admin.removeServersFromRSGroup(servers));
+  }
+
+  @Override
+  public RSGroupInfo getRSGroup(TableName tableName) throws IOException {
+    return get(admin.getRSGroup(tableName));
+  }
+
+  @Override
+  public void setRSGroup(Set<TableName> tables, String groupName) throws IOException {
+    get(admin.setRSGroup(tables, groupName));
+  }
 }

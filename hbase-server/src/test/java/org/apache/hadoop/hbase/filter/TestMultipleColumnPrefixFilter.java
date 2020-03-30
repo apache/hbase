@@ -29,19 +29,21 @@ import java.util.Set;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -49,7 +51,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({FilterTests.class, SmallTests.class})
+@Category({FilterTests.class, MediumTests.class})
 public class TestMultipleColumnPrefixFilter {
 
   @ClassRule
@@ -65,14 +67,19 @@ public class TestMultipleColumnPrefixFilter {
   @Test
   public void testMultipleColumnPrefixFilter() throws IOException {
     String family = "Family";
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
-    HColumnDescriptor hcd = new HColumnDescriptor(family);
-    hcd.setMaxVersions(3);
-    htd.addFamily(hcd);
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder
+        .newBuilder(Bytes.toBytes(family))
+        .setMaxVersions(3)
+        .build();
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    TableDescriptor tableDescriptor = tableDescriptorBuilder.build();
     // HRegionInfo info = new HRegionInfo(htd, null, null, false);
-    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
+    HRegionInfo info = new HRegionInfo(tableDescriptor.getTableName(), null, null, false);
     HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.
-        getDataTestDir(), TEST_UTIL.getConfiguration(), htd);
+        getDataTestDir(), TEST_UTIL.getConfiguration(), tableDescriptor);
 
     List<String> rows = generateRandomWords(100, "row");
     List<String> columns = generateRandomWords(10000, "column");
@@ -109,7 +116,7 @@ public class TestMultipleColumnPrefixFilter {
 
     MultipleColumnPrefixFilter filter;
     Scan scan = new Scan();
-    scan.setMaxVersions();
+    scan.readAllVersions();
     byte [][] filter_prefix = new byte [2][];
     filter_prefix[0] = new byte [] {'p'};
     filter_prefix[1] = new byte [] {'q'};
@@ -129,16 +136,23 @@ public class TestMultipleColumnPrefixFilter {
   public void testMultipleColumnPrefixFilterWithManyFamilies() throws IOException {
     String family1 = "Family1";
     String family2 = "Family2";
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
-    HColumnDescriptor hcd1 = new HColumnDescriptor(family1);
-    hcd1.setMaxVersions(3);
-    htd.addFamily(hcd1);
-    HColumnDescriptor hcd2 = new HColumnDescriptor(family2);
-    hcd2.setMaxVersions(3);
-    htd.addFamily(hcd2);
-    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder
+        .newBuilder(Bytes.toBytes(family1))
+        .setMaxVersions(3)
+        .build();
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    columnFamilyDescriptor = ColumnFamilyDescriptorBuilder
+      .newBuilder(Bytes.toBytes(family2))
+      .setMaxVersions(3)
+      .build();
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    TableDescriptor tableDescriptor = tableDescriptorBuilder.build();
+    HRegionInfo info = new HRegionInfo(tableDescriptor.getTableName(), null, null, false);
     HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.
-        getDataTestDir(), TEST_UTIL.getConfiguration(), htd);
+      getDataTestDir(), TEST_UTIL.getConfiguration(), tableDescriptor);
 
     List<String> rows = generateRandomWords(100, "row");
     List<String> columns = generateRandomWords(10000, "column");
@@ -180,7 +194,7 @@ public class TestMultipleColumnPrefixFilter {
 
     MultipleColumnPrefixFilter filter;
     Scan scan = new Scan();
-    scan.setMaxVersions();
+    scan.readAllVersions();
     byte [][] filter_prefix = new byte [2][];
     filter_prefix[0] = new byte [] {'p'};
     filter_prefix[1] = new byte [] {'q'};
@@ -199,11 +213,15 @@ public class TestMultipleColumnPrefixFilter {
   @Test
   public void testMultipleColumnPrefixFilterWithColumnPrefixFilter() throws IOException {
     String family = "Family";
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
-    htd.addFamily(new HColumnDescriptor(family));
-    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(family)).build();
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    TableDescriptor tableDescriptor = tableDescriptorBuilder.build();
+    HRegionInfo info = new HRegionInfo(tableDescriptor.getTableName(), null, null, false);
     HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.
-        getDataTestDir(), TEST_UTIL.getConfiguration(), htd);
+      getDataTestDir(), TEST_UTIL.getConfiguration(), tableDescriptor);
 
     List<String> rows = generateRandomWords(100, "row");
     List<String> columns = generateRandomWords(10000, "column");
@@ -226,7 +244,7 @@ public class TestMultipleColumnPrefixFilter {
 
     MultipleColumnPrefixFilter multiplePrefixFilter;
     Scan scan1 = new Scan();
-    scan1.setMaxVersions();
+    scan1.readAllVersions();
     byte [][] filter_prefix = new byte [1][];
     filter_prefix[0] = new byte [] {'p'};
 
@@ -239,7 +257,7 @@ public class TestMultipleColumnPrefixFilter {
 
     ColumnPrefixFilter singlePrefixFilter;
     Scan scan2 = new Scan();
-    scan2.setMaxVersions();
+    scan2.readAllVersions();
     singlePrefixFilter = new ColumnPrefixFilter(Bytes.toBytes("p"));
 
     scan2.setFilter(singlePrefixFilter);

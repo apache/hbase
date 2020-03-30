@@ -21,7 +21,6 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.allOf;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.toCheckExistenceOnly;
 
-import com.google.protobuf.RpcChannel;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -29,11 +28,13 @@ import java.util.function.Function;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
 
 /**
  * The interface for asynchronous version of Table. Obtain an instance from a
@@ -266,6 +267,60 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
      * @param value the expected value
      */
     CheckAndMutateBuilder ifMatches(CompareOperator compareOp, byte[] value);
+
+    /**
+     * @param put data to put if check succeeds
+     * @return {@code true} if the new put was executed, {@code false} otherwise. The return value
+     *         will be wrapped by a {@link CompletableFuture}.
+     */
+    CompletableFuture<Boolean> thenPut(Put put);
+
+    /**
+     * @param delete data to delete if check succeeds
+     * @return {@code true} if the new delete was executed, {@code false} otherwise. The return
+     *         value will be wrapped by a {@link CompletableFuture}.
+     */
+    CompletableFuture<Boolean> thenDelete(Delete delete);
+
+    /**
+     * @param mutation mutations to perform if check succeeds
+     * @return true if the new mutation was executed, false otherwise. The return value will be
+     *         wrapped by a {@link CompletableFuture}.
+     */
+    CompletableFuture<Boolean> thenMutate(RowMutations mutation);
+  }
+
+  /**
+   * Atomically checks if a row matches the specified filter. If it does, it adds the
+   * Put/Delete/RowMutations.
+   * <p>
+   * Use the returned {@link CheckAndMutateWithFilterBuilder} to construct your request and then
+   * execute it. This is a fluent style API, the code is like:
+   *
+   * <pre>
+   * <code>
+   * table.checkAndMutate(row, filter).thenPut(put)
+   *     .thenAccept(succ -> {
+   *       if (succ) {
+   *         System.out.println("Check and put succeeded");
+   *       } else {
+   *         System.out.println("Check and put failed");
+   *       }
+   *     });
+   * </code>
+   * </pre>
+   */
+  CheckAndMutateWithFilterBuilder checkAndMutate(byte[] row, Filter filter);
+
+  /**
+   * A helper class for sending checkAndMutate request with a filter.
+   */
+  interface CheckAndMutateWithFilterBuilder {
+
+    /**
+     * @param timeRange time range to check.
+     */
+    CheckAndMutateWithFilterBuilder timeRange(TimeRange timeRange);
 
     /**
      * @param put data to put if check succeeds

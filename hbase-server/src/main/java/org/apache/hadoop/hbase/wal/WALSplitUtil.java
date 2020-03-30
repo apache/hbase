@@ -28,6 +28,7 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -165,7 +166,7 @@ public final class WALSplitUtil {
    * RECOVERED_EDITS_DIR under the region creating it if necessary.
    * @param tableName the table name
    * @param encodedRegionName the encoded region name
-   * @param sedId the sequence id which used to generate file name
+   * @param seqId the sequence id which used to generate file name
    * @param fileNameBeingSplit the file being split currently. Used to generate tmp file name.
    * @param tmpDirName of the directory used to sideline old recovered edits file
    * @param conf configuration
@@ -174,7 +175,7 @@ public final class WALSplitUtil {
    */
   @SuppressWarnings("deprecation")
   @VisibleForTesting
-  static Path getRegionSplitEditsPath(TableName tableName, byte[] encodedRegionName, long sedId,
+  static Path getRegionSplitEditsPath(TableName tableName, byte[] encodedRegionName, long seqId,
       String fileNameBeingSplit, String tmpDirName, Configuration conf) throws IOException {
     FileSystem walFS = FSUtils.getWALFileSystem(conf);
     Path tableDir = FSUtils.getWALTableDir(conf, tableName);
@@ -203,7 +204,7 @@ public final class WALSplitUtil {
     // Append fileBeingSplit to prevent name conflict since we may have duplicate wal entries now.
     // Append file name ends with RECOVERED_LOG_TMPFILE_SUFFIX to ensure
     // region's replayRecoveredEdits will not delete it
-    String fileName = formatRecoveredEditsFileName(sedId);
+    String fileName = formatRecoveredEditsFileName(seqId);
     fileName = getTmpRecoveredEditsFileName(fileName + "-" + fileNameBeingSplit);
     return new Path(dir, fileName);
   }
@@ -344,16 +345,16 @@ public final class WALSplitUtil {
 
   /**
    * Move aside a bad edits file.
-   * @param walFS WAL FileSystem used to rename bad edits file.
+   * @param fs the file system used to rename bad edits file.
    * @param edits Edits file to move aside.
    * @return The name of the moved aside file.
    * @throws IOException
    */
-  public static Path moveAsideBadEditsFile(final FileSystem walFS, final Path edits)
+  public static Path moveAsideBadEditsFile(final FileSystem fs, final Path edits)
       throws IOException {
     Path moveAsideName =
         new Path(edits.getParent(), edits.getName() + "." + System.currentTimeMillis());
-    if (!walFS.rename(edits, moveAsideName)) {
+    if (!fs.rename(edits, moveAsideName)) {
       LOG.warn("Rename failed from {} to {}", edits, moveAsideName);
     }
     return moveAsideName;
@@ -562,5 +563,46 @@ public final class WALSplitUtil {
     }
 
     return mutations;
+  }
+
+  /**
+   * Return path to recovered.hfiles directory of the region's column family: e.g.
+   * /hbase/some_table/2323432434/cf/recovered.hfiles/. This method also ensures existence of
+   * recovered.hfiles directory under the region's column family, creating it if necessary.
+   * @param rootFS the root file system
+   * @param conf configuration
+   * @param tableName the table name
+   * @param encodedRegionName the encoded region name
+   * @param familyName the column family name
+   * @param seqId the sequence id which used to generate file name
+   * @param fileNameBeingSplit the file being split currently. Used to generate tmp file name
+   * @return Path to recovered.hfiles directory of the region's column family.
+   */
+  static Path tryCreateRecoveredHFilesDir(FileSystem rootFS, Configuration conf,
+      TableName tableName, String encodedRegionName, String familyName) throws IOException {
+    Path rootDir = FSUtils.getRootDir(conf);
+    Path regionDir = FSUtils.getRegionDirFromTableDir(FSUtils.getTableDir(rootDir, tableName),
+      encodedRegionName);
+    Path dir = getRecoveredHFilesDir(regionDir, familyName);
+    if (!rootFS.exists(dir) && !rootFS.mkdirs(dir)) {
+      LOG.warn("mkdir failed on {}, region {}, column family {}", dir, encodedRegionName,
+        familyName);
+    }
+    return dir;
+  }
+
+  /**
+   * @param regionDir  This regions directory in the filesystem
+   * @param familyName The column family name
+   * @return The directory that holds recovered hfiles for the region's column family
+   */
+  private static Path getRecoveredHFilesDir(final Path regionDir, String familyName) {
+    return new Path(new Path(regionDir, familyName), HConstants.RECOVERED_HFILES_DIR);
+  }
+
+  public static FileStatus[] getRecoveredHFiles(final FileSystem rootFS,
+      final Path regionDir, String familyName) throws IOException {
+    Path dir = getRecoveredHFilesDir(regionDir, familyName);
+    return FSUtils.listStatus(rootFS, dir);
   }
 }

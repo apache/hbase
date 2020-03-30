@@ -624,6 +624,7 @@ public class TestSnapshotScannerHDFSAclController {
     String snapshot = namespace + "s1";
     String snapshot2 = namespace + "s2";
     String snapshot3 = namespace + "s3";
+    TEST_UTIL.waitTableAvailable(PermissionStorage.ACL_TABLE_NAME);
 
     try (Table t = TestHDFSAclHelper.createTable(TEST_UTIL, table)) {
       TestHDFSAclHelper.put(t);
@@ -633,6 +634,7 @@ public class TestSnapshotScannerHDFSAclController {
       // delete
       admin.disableTable(table);
       admin.deleteTable(table);
+      LOG.info("Before scan of shapshot!");
       TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot, -1);
 
       // restore snapshot and restore acl
@@ -652,6 +654,7 @@ public class TestSnapshotScannerHDFSAclController {
       admin.restoreSnapshot(snapshot);
       admin.snapshot(snapshot3, table);
 
+      LOG.info("CHECK");
       TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot, -1);
       TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot2, -1);
       TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot3, -1);
@@ -909,6 +912,11 @@ public class TestSnapshotScannerHDFSAclController {
     TEST_UTIL.restartHBaseCluster(1);
     TEST_UTIL.waitUntilNoRegionsInTransition();
 
+    // reset the cached configs after restart
+    conf = TEST_UTIL.getConfiguration();
+    admin = TEST_UTIL.getAdmin();
+    helper = new SnapshotScannerHDFSAclHelper(conf, admin.getConnection());
+
     Path tmpNsDir = helper.getPathHelper().getTmpNsDir(namespace);
     assertTrue(fs.exists(tmpNsDir));
     // check all regions in tmp table2 dir are archived
@@ -916,7 +924,6 @@ public class TestSnapshotScannerHDFSAclController {
 
     // create table1 and snapshot
     TestHDFSAclHelper.createTableAndPut(TEST_UTIL, table);
-    admin = TEST_UTIL.getAdmin();
     aclTable = TEST_UTIL.getConnection().getTable(PermissionStorage.ACL_TABLE_NAME);
     admin.snapshot(snapshot, table);
     TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot, 6);

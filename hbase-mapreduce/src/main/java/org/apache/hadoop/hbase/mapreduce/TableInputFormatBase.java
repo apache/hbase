@@ -181,7 +181,7 @@ public abstract class TableInputFormatBase
     final TableRecordReader trr =
         this.tableRecordReader != null ? this.tableRecordReader : new TableRecordReader();
     Scan sc = new Scan(this.scan);
-    sc.setStartRow(tSplit.getStartRow());
+    sc.withStartRow(tSplit.getStartRow());
     sc.setStopRow(tSplit.getEndRow());
     trr.setScan(sc);
     trr.setTable(getTable());

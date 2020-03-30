@@ -27,14 +27,14 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -130,10 +131,13 @@ public class OfflineMetaRebuildTestCore {
    * @throws KeeperException
    */
   private Table setupTable(TableName tablename) throws Exception {
-    HTableDescriptor desc = new HTableDescriptor(tablename);
-    HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toString(FAM));
-    desc.addFamily(hcd); // If a table has no CF's it doesn't get checked
-    TEST_UTIL.getAdmin().createTable(desc, splits);
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(tablename);
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(FAM).build();
+    // If a table has no CF's it doesn't get checked
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+    TEST_UTIL.getAdmin().createTable(tableDescriptorBuilder.build(), splits);
     return this.connection.getTable(tablename);
   }
 

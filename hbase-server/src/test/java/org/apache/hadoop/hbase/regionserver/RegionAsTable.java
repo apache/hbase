@@ -17,10 +17,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.protobuf.Descriptors.MethodDescriptor;
-import com.google.protobuf.Message;
-import com.google.protobuf.Service;
-import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -47,7 +43,13 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Call;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.Service;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 /**
  * An implementation of {@link Table} that sits directly on a Region; it decorates the passed in
@@ -215,6 +217,11 @@ public class RegionAsTable implements Table {
 
   @Override
   public CheckAndMutateBuilder checkAndMutate(byte[] row, byte[] family) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public CheckAndMutateWithFilterBuilder checkAndMutate(byte[] row, Filter filter) {
     throw new UnsupportedOperationException();
   }
 

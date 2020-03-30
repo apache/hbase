@@ -17,21 +17,23 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
-import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
-import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-
+import java.util.Set;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos.AddrResponseProto;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos.EchoRequestProto;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos.EchoResponseProto;
@@ -41,8 +43,6 @@ import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos.PauseReq
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.Interface;
-import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.util.Threads;
 
 @InterfaceAudience.Private
 public class TestProtobufRpcServiceImpl implements BlockingInterface {
@@ -65,6 +65,17 @@ public class TestProtobufRpcServiceImpl implements BlockingInterface {
     return TestProtobufRpcProto.newStub(client.createRpcChannel(
       ServerName.valueOf(addr.getHostName(), addr.getPort(), System.currentTimeMillis()),
       User.getCurrent(), 0));
+  }
+
+  public static Interface newStub(RpcClient client, List<InetSocketAddress> addrs)
+      throws IOException {
+    Set<ServerName> serverNames = new HashSet<>();
+    for (InetSocketAddress addr: addrs) {
+      serverNames.add(ServerName.valueOf(
+          addr.getHostName(), addr.getPort(), System.currentTimeMillis()));
+    }
+    return TestProtobufRpcProto.newStub(client.createHedgedRpcChannel(
+        serverNames, User.getCurrent(), 0));
   }
 
   @Override

@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import static org.junit.Assert.assertEquals;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -29,8 +28,8 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.junit.After;
@@ -42,13 +41,12 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 /**
  * Testcase for HBASE-20792.
  */
-@Category({ LargeTests.class, MasterTests.class })
+@Category({ MediumTests.class, MasterTests.class })
 public class TestRegionMoveAndAbandon {
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionMoveAndAbandon.class);
 
@@ -116,6 +114,7 @@ public class TestRegionMoveAndAbandon {
     // Start up everything again
     LOG.info("Starting cluster");
     UTIL.getMiniHBaseCluster().startMaster();
+    UTIL.invalidateConnection();
     UTIL.ensureSomeRegionServersAvailable(2);
 
     UTIL.waitFor(30_000, new Waiter.Predicate<Exception>() {

@@ -33,10 +33,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.RegionLocations;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.ClusterConnectionFactory;
@@ -114,10 +116,14 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     }
     HTU.getConfiguration().set(CoprocessorHost.WAL_COPROCESSOR_CONF_KEY,
       walCoprocs);
-    HTU.startMiniCluster(NB_SERVERS);
+    StartMiniClusterOption option = StartMiniClusterOption.builder().numAlwaysStandByMasters(1).
+        numRegionServers(NB_SERVERS).numDataNodes(NB_SERVERS).build();
+    HTU.startMiniCluster(option);
 
     // Create table then get the single region for our new table.
-    HTableDescriptor htd = HTU.createTableDescriptor(tableName.getNameAsString());
+    HTableDescriptor htd = HTU.createTableDescriptor(TableName.valueOf(tableName.getNameAsString()),
+      HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+      HColumnDescriptor.DEFAULT_KEEP_DELETED);
     table = HTU.createTable(htd, new byte[][]{f}, null);
 
     try (RegionLocator locator = HTU.getConnection().getRegionLocator(tableName)) {

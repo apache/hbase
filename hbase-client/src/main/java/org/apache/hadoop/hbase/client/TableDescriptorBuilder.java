@@ -35,10 +35,13 @@ import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -49,6 +52,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
 /**
+ * Convenience class for composing an instance of {@link TableDescriptor}.
  * @since 2.0.0
  */
 @InterfaceAudience.Public
@@ -187,6 +191,9 @@ public class TableDescriptorBuilder {
   public static final String PRIORITY = "PRIORITY";
   private static final Bytes PRIORITY_KEY
           = new Bytes(Bytes.toBytes(PRIORITY));
+
+  private static final Bytes RSGROUP_KEY =
+      new Bytes(Bytes.toBytes(RSGroupInfo.TABLE_DESC_PROP_GROUP));
 
   /**
    * Relative priority of the table used for rpc scheduling
@@ -537,6 +544,11 @@ public class TableDescriptorBuilder {
     return this;
   }
 
+  public TableDescriptorBuilder setRegionServerGroup(String group) {
+    desc.setValue(RSGROUP_KEY, new Bytes(Bytes.toBytes(group)));
+    return this;
+  }
+
   public TableDescriptor build() {
     return new ModifyableTableDescriptor(desc);
   }
@@ -659,6 +671,19 @@ public class TableDescriptorBuilder {
     public Map<Bytes, Bytes> getValues() {
       // shallow pointer copy
       return Collections.unmodifiableMap(values);
+    }
+
+    /**
+     * Getter for fetching an unmodifiable map.
+     */
+    public Map<String, String> getConfiguration() {
+      return getValues().entrySet().stream()
+        .collect(Collectors.toMap(
+          e -> Bytes.toString(e.getKey().get(), e.getKey().getOffset(),
+            e.getKey().getLength()),
+          e -> Bytes.toString(e.getValue().get(), e.getValue().getOffset(),
+            e.getValue().getLength())
+        ));
     }
 
     /**
@@ -1578,6 +1603,16 @@ public class TableDescriptorBuilder {
     @Override
     public int getColumnFamilyCount() {
       return families.size();
+    }
+
+    @Override
+    public Optional<String> getRegionServerGroup() {
+      Bytes value = values.get(RSGROUP_KEY);
+      if (value != null) {
+        return Optional.of(Bytes.toString(value.get(), value.getOffset(), value.getLength()));
+      } else {
+        return Optional.empty();
+      }
     }
   }
 

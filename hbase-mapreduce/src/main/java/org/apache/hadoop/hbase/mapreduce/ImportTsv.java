@@ -32,12 +32,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -596,15 +596,17 @@ public class ImportTsv extends Configured implements Tool {
 
   private static void createTable(Admin admin, TableName tableName, String[] columns)
       throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(tableName);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
     Set<String> cfSet = getColumnFamilies(columns);
     for (String cf : cfSet) {
-      HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toBytes(cf));
-      htd.addFamily(hcd);
+      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(Bytes.toBytes(cf));
+      tableDescriptor.setColumnFamily(familyDescriptor);
     }
     LOG.warn(format("Creating table '%s' with '%s' columns and default descriptors.",
       tableName, cfSet));
-    admin.createTable(htd);
+    admin.createTable(tableDescriptor);
   }
 
   private static void deleteTable(Configuration conf, String[] args) {

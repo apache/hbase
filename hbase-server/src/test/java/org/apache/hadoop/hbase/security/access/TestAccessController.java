@@ -25,11 +25,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import com.google.protobuf.BlockingRpcChannel;
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
-import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
@@ -48,7 +43,6 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -61,6 +55,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
@@ -75,6 +71,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
@@ -82,17 +79,6 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContextImpl;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingService;
 import org.apache.hadoop.hbase.exceptions.HBaseException;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -108,10 +94,6 @@ import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.CheckPermissionsRequest;
 import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -142,7 +124,28 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.Service;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.CountRequest;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.CountResponse;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.HelloRequest;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.HelloResponse;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.NoopRequest;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.NoopResponse;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.PingRequest;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.PingResponse;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.PingService;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProcedureProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.AccessControlService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.CheckPermissionsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 
 /**
@@ -278,12 +281,14 @@ public class TestAccessController extends SecureTestUtil {
   }
 
   private static void setUpTableAndUserPermissions() throws Exception {
-    HTableDescriptor htd = new HTableDescriptor(TEST_TABLE);
-    HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY);
-    hcd.setMaxVersions(100);
-    htd.addFamily(hcd);
-    htd.setOwner(USER_OWNER);
-    createTable(TEST_UTIL, htd, new byte[][] { Bytes.toBytes("s") });
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TEST_TABLE);
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY);
+    familyDescriptor.setMaxVersions(100);
+    tableDescriptor.setColumnFamily(familyDescriptor);
+    tableDescriptor.setOwner(USER_OWNER);
+    createTable(TEST_UTIL, tableDescriptor, new byte[][] { Bytes.toBytes("s") });
 
     HRegion region = TEST_UTIL.getHBaseCluster().getRegions(TEST_TABLE).get(0);
     RegionCoprocessorHost rcpHost = region.getCoprocessorHost();
@@ -390,9 +395,13 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction createTable = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
-        htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
-        ACCESS_CONTROLLER.preCreateTable(ObserverContextImpl.createAndPrepare(CP_ENV), htd, null);
+        TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+          new TableDescriptorBuilder.ModifyableTableDescriptor(
+            TableName.valueOf(name.getMethodName()));
+        tableDescriptor.setColumnFamily(
+          new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY));
+        ACCESS_CONTROLLER.preCreateTable(ObserverContextImpl.createAndPrepare(CP_ENV),
+          tableDescriptor, null);
         return null;
       }
     };
@@ -410,13 +419,18 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction modifyTable = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTableDescriptor htd = new HTableDescriptor(TEST_TABLE);
-        htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
-        htd.addFamily(new HColumnDescriptor("fam_" + User.getCurrent().getShortName()));
+        TableDescriptorBuilder tableDescriptorBuilder =
+          TableDescriptorBuilder.newBuilder(TEST_TABLE);
+        ColumnFamilyDescriptor columnFamilyDescriptor =
+          ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY).build();
+        tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+        columnFamilyDescriptor = ColumnFamilyDescriptorBuilder
+          .newBuilder(Bytes.toBytes("fam_" + User.getCurrent().getShortName())).build();
+        tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
         ACCESS_CONTROLLER.preModifyTable(ObserverContextImpl.createAndPrepare(CP_ENV),
             TEST_TABLE,
             null,  // not needed by AccessController
-            htd);
+            tableDescriptorBuilder.build());
         return null;
       }
     };
@@ -1304,10 +1318,13 @@ public class TestAccessController extends SecureTestUtil {
     if (admin.tableExists(tableName)) {
       deleteTable(TEST_UTIL, tableName);
     }
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    htd.addFamily(new HColumnDescriptor(family1));
-    htd.addFamily(new HColumnDescriptor(family2));
-    createTable(TEST_UTIL, htd);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family1));
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family2));
+    createTable(TEST_UTIL, tableDescriptor);
     try {
       // create temp users
       User tblUser =
@@ -1557,10 +1574,13 @@ public class TestAccessController extends SecureTestUtil {
     if (admin.tableExists(tableName)) {
       deleteTable(TEST_UTIL, tableName);
     }
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    htd.addFamily(new HColumnDescriptor(family1));
-    htd.addFamily(new HColumnDescriptor(family2));
-    createTable(TEST_UTIL, htd);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family1));
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family2));
+    createTable(TEST_UTIL, tableDescriptor);
 
     try {
       // create temp users
@@ -1660,11 +1680,14 @@ public class TestAccessController extends SecureTestUtil {
     if (admin.tableExists(tableName)) {
       deleteTable(TEST_UTIL, tableName);
     }
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    htd.addFamily(new HColumnDescriptor(family1));
-    htd.addFamily(new HColumnDescriptor(family2));
-    htd.setOwner(USER_OWNER);
-    createTable(TEST_UTIL, htd);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family1));
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family2));
+    tableDescriptor.setOwner(USER_OWNER);
+    createTable(TEST_UTIL, tableDescriptor);
     try {
       List<UserPermission> perms =
           admin.getUserPermissions(GetUserPermissionsRequest.newBuilder(tableName).build());
@@ -1721,8 +1744,8 @@ public class TestAccessController extends SecureTestUtil {
       admin.disableTable(tableName);
 
       User newOwner = User.createUserForTesting(conf, "new_owner", new String[] {});
-      htd.setOwner(newOwner);
-      admin.modifyTable(htd);
+      tableDescriptor.setOwner(newOwner);
+      admin.modifyTable(tableDescriptor);
 
       perms = admin.getUserPermissions(GetUserPermissionsRequest.newBuilder(tableName).build());
       UserPermission newOwnerperm = new UserPermission(newOwner.getName(),
@@ -2111,9 +2134,11 @@ public class TestAccessController extends SecureTestUtil {
     MiniHBaseCluster hbaseCluster = TEST_UTIL.getHBaseCluster();
 
     final Admin admin = TEST_UTIL.getAdmin();
-    HTableDescriptor htd = new HTableDescriptor(TEST_TABLE2);
-    htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
-    createTable(TEST_UTIL, htd);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TEST_TABLE2);
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY));
+    createTable(TEST_UTIL, tableDescriptor);
 
     // Starting a new RegionServer.
     JVMClusterUtil.RegionServerThread newRsThread = hbaseCluster
@@ -2268,12 +2293,14 @@ public class TestAccessController extends SecureTestUtil {
   }
 
   private void createTestTable(TableName tname, byte[] cf) throws Exception {
-    HTableDescriptor htd = new HTableDescriptor(tname);
-    HColumnDescriptor hcd = new HColumnDescriptor(cf);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tname);
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor hcd =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(cf);
     hcd.setMaxVersions(100);
-    htd.addFamily(hcd);
-    htd.setOwner(USER_OWNER);
-    createTable(TEST_UTIL, htd, new byte[][] { Bytes.toBytes("s") });
+    tableDescriptor.setColumnFamily(hcd);
+    tableDescriptor.setOwner(USER_OWNER);
+    createTable(TEST_UTIL, tableDescriptor, new byte[][] { Bytes.toBytes("s") });
   }
 
   @Test
@@ -2838,18 +2865,21 @@ public class TestAccessController extends SecureTestUtil {
 
     // create table in default ns
     Admin admin = TEST_UTIL.getAdmin();
-    HTableDescriptor htd = new HTableDescriptor(table1);
-    htd.addFamily(new HColumnDescriptor(family));
-    createTable(TEST_UTIL, htd);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(table1);
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
+    createTable(TEST_UTIL, tableDescriptor);
 
     // creating the ns and table in it
     String ns = "testNamespace";
     NamespaceDescriptor desc = NamespaceDescriptor.create(ns).build();
     final TableName table2 = TableName.valueOf(ns, tableName);
     createNamespace(TEST_UTIL, desc);
-    htd = new HTableDescriptor(table2);
-    htd.addFamily(new HColumnDescriptor(family));
-    createTable(TEST_UTIL, htd);
+    tableDescriptor = new TableDescriptorBuilder.ModifyableTableDescriptor(table2);
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
+    createTable(TEST_UTIL, tableDescriptor);
 
     // Verify that we can read sys-tables
     String aclTableName = PermissionStorage.ACL_TABLE_NAME.getNameAsString();

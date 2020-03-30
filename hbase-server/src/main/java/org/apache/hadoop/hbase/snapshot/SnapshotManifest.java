@@ -472,11 +472,10 @@ public final class SnapshotManifest {
 
   public void consolidate() throws IOException {
     if (getSnapshotFormat(desc) == SnapshotManifestV1.DESCRIPTOR_VERSION) {
-      Path rootDir = FSUtils.getRootDir(conf);
       LOG.info("Using old Snapshot Format");
       // write a copy of descriptor to the snapshot directory
-      new FSTableDescriptors(conf, workingDirFs, rootDir)
-        .createTableDescriptorForTableDirectory(workingDir, htd, false);
+      FSTableDescriptors.createTableDescriptorForTableDirectory(workingDirFs, workingDir, htd,
+          false);
     } else {
       LOG.debug("Convert to Single Snapshot Manifest");
       convertToV2SingleManifest();

@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.master;
 
-import com.google.protobuf.Service;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
@@ -38,8 +37,6 @@ import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.coprocessor.BaseEnvironment;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorServiceBackwardCompatiblity;
 import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.HasMasterServices;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
@@ -63,6 +60,8 @@ import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 
 /**
  * Provides the coprocessor framework and environment for master oriented
@@ -177,12 +176,6 @@ public class MasterCoprocessorHost
     try {
       if (MasterCoprocessor.class.isAssignableFrom(implClass)) {
         return implClass.asSubclass(MasterCoprocessor.class).getDeclaredConstructor().newInstance();
-      } else if (CoprocessorService.class.isAssignableFrom(implClass)) {
-        // For backward compatibility with old CoprocessorService impl which don't extend
-        // MasterCoprocessor.
-        CoprocessorService cs;
-        cs = implClass.asSubclass(CoprocessorService.class).getDeclaredConstructor().newInstance();
-        return new CoprocessorServiceBackwardCompatiblity.MasterCoprocessorService(cs);
       } else {
         LOG.error("{} is not of type MasterCoprocessor. Check the configuration of {}",
             implClass.getName(), CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
@@ -1529,6 +1522,48 @@ public class MasterCoprocessorHost
     });
   }
 
+  public void preListTablesInRSGroup(final String groupName) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+
+      @Override
+      protected void call(MasterObserver observer) throws IOException {
+        observer.preListTablesInRSGroup(this, groupName);
+      }
+    });
+  }
+
+  public void postListTablesInRSGroup(final String groupName) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+
+      @Override
+      protected void call(MasterObserver observer) throws IOException {
+        observer.postListTablesInRSGroup(this, groupName);
+      }
+    });
+  }
+
+  public void preGetConfiguredNamespacesAndTablesInRSGroup(final String groupName)
+    throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+
+      @Override
+      protected void call(MasterObserver observer) throws IOException {
+        observer.preGetConfiguredNamespacesAndTablesInRSGroup(this, groupName);
+      }
+    });
+  }
+
+  public void postGetConfiguredNamespacesAndTablesInRSGroup(final String groupName)
+    throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+
+      @Override
+      protected void call(MasterObserver observer) throws IOException {
+        observer.postGetConfiguredNamespacesAndTablesInRSGroup(this, groupName);
+      }
+    });
+  }
+
   public void preGetRSGroupInfoOfServer(final Address server) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
@@ -1772,7 +1807,8 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void preDecommissionRegionServers(List<ServerName> servers, boolean offload) throws IOException {
+  public void preDecommissionRegionServers(List<ServerName> servers, boolean offload)
+      throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
@@ -1781,7 +1817,8 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void postDecommissionRegionServers(List<ServerName> servers, boolean offload) throws IOException {
+  public void postDecommissionRegionServers(List<ServerName> servers, boolean offload)
+      throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {

@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -59,6 +60,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
@@ -608,12 +610,14 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
       if (getAdmin().tableExists(tableName)) {
         throw new AlreadyExists("table name already in use");
       }
-      HTableDescriptor desc = new HTableDescriptor(tableName);
+      TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+        new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
       for (ColumnDescriptor col : columnFamilies) {
-        HColumnDescriptor colDesc = ThriftUtilities.colDescFromThrift(col);
-        desc.addFamily(colDesc);
+        ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+          ThriftUtilities.colDescFromThrift(col);
+        tableDescriptor.setColumnFamily(familyDescriptor);
       }
-      getAdmin().createTable(desc);
+      getAdmin().createTable(tableDescriptor);
     } catch (IOException e) {
       LOG.warn(e.getMessage(), e);
       throw getIOError(e);
@@ -879,7 +883,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
       Scan scan = new Scan();
       addAttributes(scan, attributes);
       if (tScan.isSetStartRow()) {
-        scan.setStartRow(tScan.getStartRow());
+        scan.withStartRow(tScan.getStartRow());
       }
       if (tScan.isSetStopRow()) {
         scan.setStopRow(tScan.getStopRow());
@@ -1157,7 +1161,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
     Scan scan = new Scan(row);
     scan.setReversed(true);
     scan.addFamily(family);
-    scan.setStartRow(row);
+    scan.withStartRow(row);
     try (Table table = getTable(tableName);
          ResultScanner scanner = table.getScanner(scan)) {
       return scanner.next();
@@ -1270,6 +1274,11 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
   @Override
   public TThriftServerType getThriftServerType() {
     return TThriftServerType.ONE;
+  }
+
+  @Override
+  public String getClusterId() throws TException {
+    return connectionCache.getClusterId();
   }
 
   private static IOError getIOError(Throwable throwable) {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,7 +26,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.regex.Pattern;
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -51,11 +50,19 @@ public final class HConstants {
 
   /** Used as a magic return value while optimized index key feature enabled(HBASE-7845) */
   public final static int INDEX_KEY_MAGIC = -2;
+
   /*
-     * Name of directory that holds recovered edits written by the wal log
-     * splitting code, one per region
-     */
+   * Name of directory that holds recovered edits written by the wal log
+   * splitting code, one per region
+   */
   public static final String RECOVERED_EDITS_DIR = "recovered.edits";
+
+  /*
+   * Name of directory that holds recovered hfiles written by the wal log
+   * splitting code, one per region
+   */
+  public static final String RECOVERED_HFILES_DIR = "recovered.hfiles";
+
   /**
    * The first four bytes of Hadoop RPC connections
    */
@@ -172,9 +179,18 @@ public final class HConstants {
   public static final String MASTER_INFO_PORT = "hbase.master.info.port";
 
   /** Configuration key for the list of master host:ports **/
-  public static final String MASTER_ADDRS_KEY = "hbase.master.addrs";
+  public static final String MASTER_ADDRS_KEY = "hbase.masters";
 
-  public static final String MASTER_ADDRS_DEFAULT =  "localhost:" + DEFAULT_MASTER_PORT;
+  /** Full class name of the Zookeeper based connection registry implementation */
+  public static final String ZK_CONNECTION_REGISTRY_CLASS =
+      "org.apache.hadoop.hbase.client.ZKConnectionRegistry";
+
+  /** Configuration to enable hedged reads on master registry **/
+  public static final String MASTER_REGISTRY_ENABLE_HEDGED_READS_KEY =
+      "hbase.client.master_registry.enable_hedged_reads";
+
+  /** Default value for enabling hedging reads on master registry **/
+  public static final boolean MASTER_REGISTRY_ENABLE_HEDGED_READS_DEFAULT = false;
 
   /** Parameter name for the master type being backup (waits for primary to go inactive). */
   public static final String MASTER_TYPE_BACKUP = "hbase.master.backup";
@@ -901,6 +917,12 @@ public final class HConstants {
    */
   public static final String HBASE_RPC_TIMEOUT_KEY = "hbase.rpc.timeout";
 
+  /** Configuration key that controls the fan out of requests in hedged channel implementation. **/
+  public static final String HBASE_RPCS_HEDGED_REQS_FANOUT_KEY = "hbase.rpc.hedged.fanout";
+
+  /** Default value for the fan out of hedged requests. **/
+  public static final int HBASE_RPCS_HEDGED_REQS_FANOUT_DEFAULT = 2;
+
   /**
    * timeout for each read RPC
    */
@@ -932,6 +954,11 @@ public final class HConstants {
    */
   public static final long NO_SEQNUM = -1;
 
+  /**
+   * Registry implementation to be used on the client side.
+   */
+  public static final String CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY =
+      "hbase.client.registry.impl";
 
   /*
    * cluster replication constants.
@@ -1180,12 +1207,6 @@ public final class HConstants {
     Collections.unmodifiableList(Arrays.asList(new String[] {
       HBCK_SIDELINEDIR_NAME, HBASE_TEMP_DIRECTORY, MIGRATION_NAME
     }));
-
-  /** Directories that are not HBase user table directories */
-  public static final List<String> HBASE_NON_USER_TABLE_DIRS =
-    Collections.unmodifiableList(Arrays.asList((String[])ArrayUtils.addAll(
-      new String[] { TableName.META_TABLE_NAME.getNameAsString() },
-      HBASE_NON_TABLE_DIRS.toArray())));
 
   /** Health script related settings. */
   public static final String HEALTH_SCRIPT_LOC = "hbase.node.health.script.location";
@@ -1517,6 +1538,12 @@ public final class HConstants {
   public static final String MASTER_LOG_REPLAY_OPS_THREADS =
       "hbase.master.executor.logreplayops.threads";
   public static final int MASTER_LOG_REPLAY_OPS_THREADS_DEFAULT = 10;
+
+  public static final int DEFAULT_SLOW_LOG_RING_BUFFER_SIZE = 256;
+
+  public static final String SLOW_LOG_BUFFER_ENABLED_KEY =
+    "hbase.regionserver.slowlog.buffer.enabled";
+  public static final boolean DEFAULT_ONLINE_LOG_PROVIDER_ENABLED = false;
 
   private HConstants() {
     // Can't be instantiated with this ctor.

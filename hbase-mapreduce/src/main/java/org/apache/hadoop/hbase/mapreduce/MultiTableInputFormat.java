@@ -38,13 +38,13 @@ import org.apache.hadoop.hbase.client.Scan;
  * List&lt;Scan&gt; scans = new ArrayList&lt;Scan&gt;();
  *
  * Scan scan1 = new Scan();
- * scan1.setStartRow(firstRow1);
+ * scan1.withStartRow(firstRow1);
  * scan1.setStopRow(lastRow1);
  * scan1.setAttribute(Scan.SCAN_ATTRIBUTES_TABLE_NAME, table1);
  * scans.add(scan1);
  *
  * Scan scan2 = new Scan();
- * scan2.setStartRow(firstRow2);
+ * scan2.withStartRow(firstRow2);
  * scan2.setStopRow(lastRow2);
  * scan1.setAttribute(Scan.SCAN_ATTRIBUTES_TABLE_NAME, table2);
  * scans.add(scan2);

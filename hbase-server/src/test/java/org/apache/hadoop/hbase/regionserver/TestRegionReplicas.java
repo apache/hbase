@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TestMetaTableAccessor;
 import org.apache.hadoop.hbase.client.Consistency;
@@ -43,7 +44,7 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
@@ -67,7 +68,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
  * Tests for region replicas. Sad that we cannot isolate these without bringing up a whole
  * cluster. See {@link TestRegionServerNoMaster}.
  */
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({RegionServerTests.class, LargeTests.class})
 public class TestRegionReplicas {
 
   @ClassRule
@@ -428,7 +429,11 @@ public class TestRegionReplicas {
       }
     } finally {
       HTU.deleteNumericRows(table, HConstants.CATALOG_FAMILY, startKey, endKey);
-      closeRegion(HTU, getRS(), hriSecondary);
+      try {
+        closeRegion(HTU, getRS(), hriSecondary);
+      } catch (NotServingRegionException e) {
+        LOG.info("Closing wrong region {}", hriSecondary, e);
+      }
     }
   }
 

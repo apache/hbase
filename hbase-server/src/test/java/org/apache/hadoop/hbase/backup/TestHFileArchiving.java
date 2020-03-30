@@ -58,7 +58,7 @@ import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -84,7 +84,7 @@ import org.slf4j.LoggerFactory;
  * Test that the {@link HFileArchiver} correctly removes all the parts of a region when cleaning up
  * a region
  */
-@Category({MediumTests.class, MiscTests.class})
+@Category({LargeTests.class, MiscTests.class})
 public class TestHFileArchiving {
 
   @ClassRule

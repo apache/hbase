@@ -25,11 +25,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.google.protobuf.BlockingService;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -42,6 +38,7 @@ import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
@@ -49,6 +46,7 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.coprocessor.HasRegionServerServices;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
 import org.apache.hadoop.hbase.ipc.FifoRpcScheduler;
 import org.apache.hadoop.hbase.ipc.NettyRpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServer;
@@ -58,7 +56,6 @@ import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.ipc.SimpleRpcServer;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
-import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.security.SecurityInfo;
 import org.apache.hadoop.hbase.security.User;
@@ -91,9 +88,14 @@ import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.ServiceDescriptor;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AuthenticationProtos;
 
 /**
  * Tests for authentication token creation and usage
@@ -155,43 +157,40 @@ public class TestTokenAuthentication {
       // worked fine before we shaded PB. Now we need these proxies.
       final BlockingService service =
         AuthenticationProtos.AuthenticationService.newReflectiveBlockingService(this);
-      final org.apache.hbase.thirdparty.com.google.protobuf.BlockingService proxy =
-        new org.apache.hbase.thirdparty.com.google.protobuf.BlockingService() {
-          @Override
-          public Message callBlockingMethod(MethodDescriptor md,
-              org.apache.hbase.thirdparty.com.google.protobuf.RpcController controller,
-              Message param)
-              throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
-            com.google.protobuf.Descriptors.MethodDescriptor methodDescriptor =
-              service.getDescriptorForType().findMethodByName(md.getName());
-            com.google.protobuf.Message request = service.getRequestPrototype(methodDescriptor);
-            // TODO: Convert rpcController
-            com.google.protobuf.Message response = null;
-            try {
-              response = service.callBlockingMethod(methodDescriptor, null, request);
-            } catch (ServiceException e) {
-              throw new org.apache.hbase.thirdparty.com.google.protobuf.ServiceException(e);
-            }
-            return null;// Convert 'response'.
+      final BlockingService proxy = new BlockingService() {
+        @Override
+        public Message callBlockingMethod(MethodDescriptor md, RpcController controller,
+          Message param) throws ServiceException {
+          MethodDescriptor methodDescriptor =
+            service.getDescriptorForType().findMethodByName(md.getName());
+          Message request = service.getRequestPrototype(methodDescriptor);
+          // TODO: Convert rpcController
+          Message response = null;
+          try {
+            response = service.callBlockingMethod(methodDescriptor, null, request);
+          } catch (ServiceException e) {
+            throw new org.apache.hbase.thirdparty.com.google.protobuf.ServiceException(e);
           }
+          return null;// Convert 'response'.
+        }
 
-          @Override
-          public ServiceDescriptor getDescriptorForType() {
-            return null;
-          }
+        @Override
+        public ServiceDescriptor getDescriptorForType() {
+          return null;
+        }
 
-          @Override
-          public Message getRequestPrototype(MethodDescriptor arg0) {
-            // TODO Auto-generated method stub
-            return null;
-          }
+        @Override
+        public Message getRequestPrototype(MethodDescriptor arg0) {
+          // TODO Auto-generated method stub
+          return null;
+        }
 
-          @Override
-          public Message getResponsePrototype(MethodDescriptor arg0) {
-            // TODO Auto-generated method stub
-            return null;
-          }
-        };
+        @Override
+        public Message getResponsePrototype(MethodDescriptor arg0) {
+          // TODO Auto-generated method stub
+          return null;
+        }
+      };
       sai.add(new BlockingServiceAndInterface(proxy,
         AuthenticationProtos.AuthenticationService.BlockingInterface.class));
       this.rpcServer = RpcServerFactory.createRpcServer(this, "tokenServer", sai, initialIsa, conf,
@@ -319,8 +318,8 @@ public class TestTokenAuthentication {
       LOG.debug("Authentication token request from " + RpcServer.getRequestUserName().orElse(null));
       // Ignore above passed in controller -- it is always null
       ServerRpcController serverController = new ServerRpcController();
-      final NonShadedBlockingRpcCallback<AuthenticationProtos.GetAuthenticationTokenResponse>
-        callback = new NonShadedBlockingRpcCallback<>();
+      final BlockingRpcCallback<AuthenticationProtos.GetAuthenticationTokenResponse>
+        callback = new BlockingRpcCallback<>();
       getAuthenticationToken(null, request, callback);
       try {
         serverController.checkFailed();
@@ -337,8 +336,8 @@ public class TestTokenAuthentication {
       LOG.debug("whoAmI() request from " + RpcServer.getRequestUserName().orElse(null));
       // Ignore above passed in controller -- it is always null
       ServerRpcController serverController = new ServerRpcController();
-      NonShadedBlockingRpcCallback<AuthenticationProtos.WhoAmIResponse> callback =
-          new NonShadedBlockingRpcCallback<>();
+      BlockingRpcCallback<AuthenticationProtos.WhoAmIResponse> callback =
+          new BlockingRpcCallback<>();
       whoAmI(null, request, callback);
       try {
         serverController.checkFailed();
@@ -382,6 +381,10 @@ public class TestTokenAuthentication {
   @Before
   public void setUp() throws Exception {
     TEST_UTIL = new HBaseTestingUtility();
+    // Override the connection registry to avoid spinning up a mini cluster for the connection below
+    // to go through.
+    TEST_UTIL.getConfiguration().set(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
+        HConstants.ZK_CONNECTION_REGISTRY_CLASS);
     TEST_UTIL.startMiniZKCluster();
     // register token type for protocol
     SecurityInfo.addInfo(AuthenticationProtos.AuthenticationService.getDescriptor().getName(),
@@ -505,50 +508,6 @@ public class TestTokenAuthentication {
       assertEquals(firstToken, secondToken);
     } finally {
       conn.close();
-    }
-  }
-
-  /**
-   * A copy of the BlockingRpcCallback class for use locally. Only difference is that it makes
-   * use of non-shaded protobufs; i.e. refers to com.google.protobuf.* rather than to
-   * org.apache.hbase.thirdparty.com.google.protobuf.*
-   */
-  private static class NonShadedBlockingRpcCallback<R> implements
-      com.google.protobuf.RpcCallback<R> {
-    private R result;
-    private boolean resultSet = false;
-
-    /**
-     * Called on completion of the RPC call with the response object, or {@code null} in the case of
-     * an error.
-     * @param parameter the response object or {@code null} if an error occurred
-     */
-    @Override
-    public void run(R parameter) {
-      synchronized (this) {
-        result = parameter;
-        resultSet = true;
-        this.notifyAll();
-      }
-    }
-
-    /**
-     * Returns the parameter passed to {@link #run(Object)} or {@code null} if a null value was
-     * passed.  When used asynchronously, this method will block until the {@link #run(Object)}
-     * method has been called.
-     * @return the response object or {@code null} if no response was passed
-     */
-    public synchronized R get() throws IOException {
-      while (!resultSet) {
-        try {
-          this.wait();
-        } catch (InterruptedException ie) {
-          InterruptedIOException exception = new InterruptedIOException(ie.getMessage());
-          exception.initCause(ie);
-          throw exception;
-        }
-      }
-      return result;
     }
   }
 }

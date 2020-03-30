@@ -171,7 +171,7 @@ public class RowCounter extends AbstractHBaseTool {
     }
     if (size == 1) {
       MultiRowRangeFilter.RowRange range = rowRangeList.get(0);
-      scan.setStartRow(range.getStartRow()); //inclusive
+      scan.withStartRow(range.getStartRow()); //inclusive
       scan.setStopRow(range.getStopRow());   //exclusive
     } else if (size > 1) {
       scan.setFilter(new MultiRowRangeFilter(rowRangeList));

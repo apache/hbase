@@ -67,20 +67,20 @@ public class TestDeadServer {
 
   @Test public void testIsDead() {
     DeadServer ds = new DeadServer();
-    ds.add(hostname123);
-    ds.notifyServer(hostname123);
+    ds.putIfAbsent(hostname123);
+    ds.processing(hostname123);
     assertTrue(ds.areDeadServersInProgress());
     ds.finish(hostname123);
     assertFalse(ds.areDeadServersInProgress());
 
-    ds.add(hostname1234);
-    ds.notifyServer(hostname1234);
+    ds.putIfAbsent(hostname1234);
+    ds.processing(hostname1234);
     assertTrue(ds.areDeadServersInProgress());
     ds.finish(hostname1234);
     assertFalse(ds.areDeadServersInProgress());
 
-    ds.add(hostname12345);
-    ds.notifyServer(hostname12345);
+    ds.putIfAbsent(hostname12345);
+    ds.processing(hostname12345);
     assertTrue(ds.areDeadServersInProgress());
     ds.finish(hostname12345);
     assertFalse(ds.areDeadServersInProgress());
@@ -90,7 +90,7 @@ public class TestDeadServer {
 
     final ServerName deadServer = ServerName.valueOf("127.0.0.1", 9090, 112321L);
     assertFalse(ds.cleanPreviousInstance(deadServer));
-    ds.add(deadServer);
+    ds.putIfAbsent(deadServer);
     assertTrue(ds.isDeadServer(deadServer));
     Set<ServerName> deadServerNames = ds.copyServerNames();
     for (ServerName eachDeadServer : deadServerNames) {
@@ -123,11 +123,11 @@ public class TestDeadServer {
 
     DeadServer d = new DeadServer();
 
-    d.add(hostname123);
+    d.putIfAbsent(hostname123);
     mee.incValue(1);
-    d.add(hostname1234);
+    d.putIfAbsent(hostname1234);
     mee.incValue(1);
-    d.add(hostname12345);
+    d.putIfAbsent(hostname12345);
 
     List<Pair<ServerName, Long>> copy = d.copyDeadServersSince(2L);
     Assert.assertEquals(2, copy.size());
@@ -144,7 +144,7 @@ public class TestDeadServer {
   @Test
   public void testClean(){
     DeadServer d = new DeadServer();
-    d.add(hostname123);
+    d.putIfAbsent(hostname123);
 
     d.cleanPreviousInstance(hostname12345);
     Assert.assertFalse(d.isEmpty());
@@ -159,8 +159,8 @@ public class TestDeadServer {
   @Test
   public void testClearDeadServer(){
     DeadServer d = new DeadServer();
-    d.add(hostname123);
-    d.add(hostname1234);
+    d.putIfAbsent(hostname123);
+    d.putIfAbsent(hostname1234);
     Assert.assertEquals(2, d.size());
 
     d.finish(hostname123);
@@ -170,7 +170,7 @@ public class TestDeadServer {
     d.removeDeadServer(hostname1234);
     Assert.assertTrue(d.isEmpty());
 
-    d.add(hostname1234);
+    d.putIfAbsent(hostname1234);
     Assert.assertFalse(d.removeDeadServer(hostname123_2));
     Assert.assertEquals(1, d.size());
     d.finish(hostname1234);

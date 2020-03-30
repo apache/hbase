@@ -72,7 +72,10 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.zookeeper.quorum</name>
-    <value>localhost</value>
+    <!--Ideally we should be using a hostname here instead of IP address. Please refer to
+    https://issues.apache.org/jira/browse/HBASE-23764 for why we switched to IP address. Should be
+    changed once we fix the underlying ZK issue.-->
+    <value>127.0.0.1</value>
     <description>Comma separated list of servers in the ZooKeeper ensemble
     (This config. should have been named hbase.zookeeper.ensemble).
     For example, "host1.mydomain.com,host2.mydomain.com,host3.mydomain.com".
@@ -151,7 +154,18 @@ possible configurations would overwhelm and obscure the important.
     so put the cleaner that prunes the most files in front. To
     implement your own BaseHFileCleanerDelegate, just put it in HBase's classpath
     and add the fully qualified class name here. Always add the above
-    default log cleaners in the list as they will be overwritten in
+    default hfile cleaners in the list as they will be overwritten in
+    hbase-site.xml.</description>
+  </property>
+  <property>
+    <name>hbase.procedure.store.region.hfilecleaner.plugins</name>
+    <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner</value>
+    <description>A comma-separated list of BaseHFileCleanerDelegate invoked by
+    the RegionProcedureStore HFileCleaner service. These HFiles cleaners are
+    called in order, so put the cleaner that prunes the most files in front. To
+    implement your own BaseHFileCleanerDelegate, just put it in HBase's classpath
+    and add the fully qualified class name here. Always add the above
+    default hfile cleaners in the list as they will be overwritten in
     hbase-site.xml.</description>
   </property>
   <property>
@@ -619,6 +633,12 @@ possible configurations would overwhelm and obscure the important.
     <name>hbase.normalizer.min.region.count</name>
     <value>3</value>
     <description>configure the minimum number of regions</description>
+  </property>
+  <property>
+    <name>hbase.normalizer.min.region.merge.age</name>
+    <value>3</value>
+    <description>configure the minimum age in days for region before it is considered for merge while
+      normalizing</description>
   </property>
   <property>
     <name>hbase.regions.slop</name>
@@ -1794,10 +1814,10 @@ possible configurations would overwhelm and obscure the important.
     </description>
   </property>
   <property>
-    <name>hbase.master.mob.ttl.cleaner.period</name>
+    <name>hbase.master.mob.cleaner.period</name>
     <value>86400</value>
     <description>
-      The period that ExpiredMobFileCleanerChore runs. The unit is second.
+      The period that MobFileCleanerChore runs. The unit is second.
       The default value is one day. The MOB file name uses only the date part of
       the file creation time in it. We use this time for deciding TTL expiry of
       the files. So the removal of TTL expired files might be delayed. The max
@@ -1805,32 +1825,13 @@ possible configurations would overwhelm and obscure the important.
     </description>
   </property>
   <property>
-    <name>hbase.mob.compaction.mergeable.threshold</name>
-    <value>1342177280</value>
+    <name>hbase.mob.major.compaction.region.batch.size</name>
+    <value>0</value>
     <description>
-      If the size of a mob file is less than this value, it's regarded as a small
-      file and needs to be merged in mob compaction. The default value is 1280MB.
-    </description>
-  </property>
-  <property>
-    <name>hbase.mob.delfile.max.count</name>
-    <value>3</value>
-    <description>
-      The max number of del files that is allowed in the mob compaction.
-      In the mob compaction, when the number of existing del files is larger than
-      this value, they are merged until number of del files is not larger this value.
-      The default value is 3.
-    </description>
-  </property>
-  <property>
-    <name>hbase.mob.compaction.batch.size</name>
-    <value>100</value>
-    <description>
-      The max number of the mob files that is allowed in a batch of the mob compaction.
-      The mob compaction merges the small mob files to bigger ones. If the number of the
-      small files is very large, it could lead to a "too many opened file handlers" in the merge.
-      And the merge has to be split into batches. This value limits the number of mob files
-      that are selected in a batch of the mob compaction. The default value is 100.
+      The max number of a MOB table regions that is allowed in a batch of the mob compaction. By
+      setting this number to a custom value, users can control the overall effect of a major
+      compaction of a large MOB-enabled table.
+      Default is 0 - means no limit - all regions of a MOB table will be compacted at once
     </description>
   </property>
   <property>
@@ -1839,20 +1840,6 @@ possible configurations would overwhelm and obscure the important.
     <description>
       The period that MobCompactionChore runs. The unit is second.
       The default value is one week.
-    </description>
-  </property>
-  <property>
-    <name>hbase.mob.compactor.class</name>
-    <value>org.apache.hadoop.hbase.mob.compactions.PartitionedMobCompactor</value>
-    <description>
-      Implementation of mob compactor, the default one is PartitionedMobCompactor.
-    </description>
-  </property>
-  <property>
-    <name>hbase.mob.compaction.threads.max</name>
-    <value>1</value>
-    <description>
-      The max number of threads used in MobCompactor.
     </description>
   </property>
   <property>
@@ -1915,19 +1902,48 @@ possible configurations would overwhelm and obscure the important.
     <name>hbase.regions.recovery.store.file.ref.count</name>
     <value>-1</value>
     <description>
-      Very large ref count on a file indicates
-      that it is a ref leak on that object. Such files
-      can not be removed even after it is invalidated
-      via compaction. Only way to recover in such
-      scenario is to reopen the region which can
-      release all resources, like the refcount, leases, etc.
-      This config represents Store files Ref Count threshold
-      value considered for reopening regions.
-      Any region with store files ref count > this value
-      would be eligible for reopening by master.
-      Default value -1 indicates this feature is turned off.
-      Only positive integer value should be provided to enable
-      this feature.
+      Very large number of ref count on a compacted
+      store file indicates that it is a ref leak
+      on that object(compacted store file).
+      Such files can not be removed after
+      it is invalidated via compaction.
+      Only way to recover in such scenario is to
+      reopen the region which can release
+      all resources, like the refcount,
+      leases, etc. This config represents Store files Ref
+      Count threshold value considered for reopening
+      regions. Any region with compacted store files
+      ref count > this value would be eligible for
+      reopening by master. Here, we get the max
+      refCount among all refCounts on all
+      compacted away store files that belong to a
+      particular region. Default value -1 indicates
+      this feature is turned off. Only positive
+      integer value should be provided to
+      enable this feature.
+    </description>
+  </property>
+  <property>
+    <name>hbase.regionserver.slowlog.ringbuffer.size</name>
+    <value>256</value>
+    <description>
+      Default size of ringbuffer to be maintained by each RegionServer in order
+      to store online slowlog responses. This is an in-memory ring buffer of
+      requests that were judged to be too slow in addition to the responseTooSlow
+      logging. The in-memory representation would be complete.
+      For more details, please look into Doc Section:
+      Get Slow Response Log from shell
+    </description>
+  </property>
+  <property>
+    <name>hbase.regionserver.slowlog.buffer.enabled</name>
+    <value>false</value>
+    <description>
+      Indicates whether RegionServers have ring buffer running for storing
+      Online Slow logs in FIFO manner with limited entries. The size of
+      the ring buffer is indicated by config: hbase.regionserver.slowlog.ringbuffer.size
+      The default value is false, turn this on and get latest slowlog
+      responses with complete data.
     </description>
   </property>
 </configuration>

@@ -37,6 +37,7 @@ import "Quota.proto";
 import "Replication.proto";
 import "Snapshot.proto";
 import "AccessControl.proto";
+import "RSGroupAdmin.proto";
 
 /* Column-level protobufs */
 
@@ -1085,6 +1086,39 @@ service MasterService {
   /** returns a list of namespace names */
   rpc ListNamespaces(ListNamespacesRequest)
     returns(ListNamespacesResponse);
+
+  rpc GetRSGroupInfo(GetRSGroupInfoRequest)
+    returns (GetRSGroupInfoResponse);
+
+  rpc GetRSGroupInfoOfTable(GetRSGroupInfoOfTableRequest)
+    returns (GetRSGroupInfoOfTableResponse);
+
+  rpc GetRSGroupInfoOfServer(GetRSGroupInfoOfServerRequest)
+    returns (GetRSGroupInfoOfServerResponse);
+
+  rpc MoveServers(MoveServersRequest)
+    returns (MoveServersResponse);
+
+  rpc AddRSGroup(AddRSGroupRequest)
+    returns (AddRSGroupResponse);
+
+  rpc RemoveRSGroup(RemoveRSGroupRequest)
+    returns (RemoveRSGroupResponse);
+
+  rpc BalanceRSGroup(BalanceRSGroupRequest)
+    returns (BalanceRSGroupResponse);
+
+  rpc ListRSGroupInfos(ListRSGroupInfosRequest)
+    returns (ListRSGroupInfosResponse);
+
+  rpc RemoveServers(RemoveServersRequest)
+    returns (RemoveServersResponse);
+
+  rpc ListTablesInRSGroup(ListTablesInRSGroupRequest)
+    returns (ListTablesInRSGroupResponse);
+
+  rpc GetConfiguredNamespacesAndTablesInRSGroup(GetConfiguredNamespacesAndTablesInRSGroupRequest)
+    returns (GetConfiguredNamespacesAndTablesInRSGroupResponse);
 }
 
 // HBCK Service definitions.
@@ -1199,4 +1233,48 @@ service HbckService {
   /** Schedule a fix meta run. */
   rpc FixMeta(FixMetaRequest)
     returns(FixMetaResponse);
+}
+
+/** Request and response to get the clusterID for this cluster */
+message GetClusterIdRequest {
+}
+message GetClusterIdResponse {
+  /** Not set if cluster ID could not be determined. */
+  optional string cluster_id = 1;
+}
+
+/** Request and response to get the currently active master name for this cluster */
+message GetActiveMasterRequest {
+}
+message GetActiveMasterResponse {
+  /** Not set if an active master could not be determined. */
+  optional ServerName server_name = 1;
+}
+
+/** Request and response to get the current list of meta region locations */
+message GetMetaRegionLocationsRequest {
+}
+message GetMetaRegionLocationsResponse {
+  /** Not set if meta region locations could not be determined. */
+  repeated RegionLocation meta_locations = 1;
+}
+
+/**
+ * Implements all the RPCs needed by clients to look up cluster meta information needed for connection establishment.
+ */
+service ClientMetaService {
+  /**
+   * Get Cluster ID for this cluster.
+   */
+  rpc GetClusterId(GetClusterIdRequest) returns(GetClusterIdResponse);
+
+  /**
+   * Get active master server name for this cluster.
+   */
+  rpc GetActiveMaster(GetActiveMasterRequest) returns(GetActiveMasterResponse);
+
+  /**
+   * Get current meta replicas' region locations.
+   */
+  rpc GetMetaRegionLocations(GetMetaRegionLocationsRequest) returns(GetMetaRegionLocationsResponse);
 }

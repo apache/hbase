@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -37,6 +38,7 @@ import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -90,6 +92,9 @@ public class TestLogRollingNoCluster {
     final Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.set(WALFactory.WAL_PROVIDER, "filesystem");
     FSUtils.setRootDir(conf, dir);
+    FSTableDescriptors fsTableDescriptors = new FSTableDescriptors(TEST_UTIL.getConfiguration());
+    FSTableDescriptors.tryUpdateMetaTableDescriptor(TEST_UTIL.getConfiguration());
+    TableDescriptor metaTableDescriptor = fsTableDescriptors.get(TableName.META_TABLE_NAME);
     conf.set("hbase.regionserver.hlog.writer.impl", HighLatencySyncWriter.class.getName());
     final WALFactory wals = new WALFactory(conf, TestLogRollingNoCluster.class.getName());
     final WAL wal = wals.getWAL(null);
@@ -101,7 +106,7 @@ public class TestLogRollingNoCluster {
     try {
       for (int i = 0; i < numThreads; i++) {
         // Have each appending thread write 'count' entries
-        appenders[i] = new Appender(wal, i, NUM_ENTRIES);
+        appenders[i] = new Appender(metaTableDescriptor, wal, i, NUM_ENTRIES);
       }
       for (int i = 0; i < numThreads; i++) {
         appenders[i].start();
@@ -114,7 +119,7 @@ public class TestLogRollingNoCluster {
       wals.close();
     }
     for (int i = 0; i < numThreads; i++) {
-      assertFalse(appenders[i].isException());
+      assertFalse("Error: " + appenders[i].getException(), appenders[i].isException());
     }
     TEST_UTIL.shutdownMiniDFSCluster();
   }
@@ -127,11 +132,13 @@ public class TestLogRollingNoCluster {
     private final WAL wal;
     private final int count;
     private Exception e = null;
+    private final TableDescriptor metaTableDescriptor;
 
-    Appender(final WAL wal, final int index, final int count) {
+    Appender(TableDescriptor metaTableDescriptor, final WAL wal, final int index, final int count) {
       super("" + index);
       this.wal = wal;
       this.count = count;
+      this.metaTableDescriptor = metaTableDescriptor;
       this.log = LoggerFactory.getLogger("Appender:" + getName());
     }
 
@@ -151,6 +158,9 @@ public class TestLogRollingNoCluster {
       this.log.info(getName() +" started");
       final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
       try {
+        TableDescriptors tds = new FSTableDescriptors(TEST_UTIL.getConfiguration());
+        FSTableDescriptors.tryUpdateMetaTableDescriptor(TEST_UTIL.getConfiguration());
+        TableDescriptor htd = tds.get(TableName.META_TABLE_NAME);
         for (int i = 0; i < this.count; i++) {
           long now = System.currentTimeMillis();
           // Roll every ten edits
@@ -161,9 +171,8 @@ public class TestLogRollingNoCluster {
           byte[] bytes = Bytes.toBytes(i);
           edit.add(new KeyValue(bytes, bytes, bytes, now, EMPTY_1K_ARRAY));
           RegionInfo hri = RegionInfoBuilder.FIRST_META_REGIONINFO;
-          TableDescriptor htd = TEST_UTIL.getMetaTableDescriptorBuilder().build();
           NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-          for(byte[] fam : htd.getColumnFamilyNames()) {
+          for(byte[] fam: this.metaTableDescriptor.getColumnFamilyNames()) {
             scopes.put(fam, 0);
           }
           final long txid = wal.appendData(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(),

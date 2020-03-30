@@ -21,7 +21,7 @@ pipeline {
     }
   }
   triggers {
-    cron('H */4 * * *') // Every four hours. See https://jenkins.io/doc/book/pipeline/syntax/#cron-syntax
+    cron('H */12 * * *') // Every four hours. See https://jenkins.io/doc/book/pipeline/syntax/#cron-syntax
   }
   options {
     // this should roughly match how long we tell the flaky dashboard to look at
@@ -61,7 +61,7 @@ pipeline {
             else
               echo "Skipped gathering machine environment because we couldn't read the script to do so."
             fi
-            mvn package "${mvn_args[@]}" -Dtest="$(cat includes.txt)" -Dmaven.test.redirectTestOutputToFile=true -Dsurefire.firstPartForkCount=3 -Dsurefire.secondPartForkCount=3
+            mvn -T0.25C package "${mvn_args[@]}" -Dtest="$(cat includes.txt)" -Dmaven.test.redirectTestOutputToFile=true -Dsurefire.firstPartForkCount=0.25C -Dsurefire.secondPartForkCount=0.25C
           else
             echo "set of flaky tests is currently empty."
           fi

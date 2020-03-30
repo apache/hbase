@@ -233,7 +233,7 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String STOREFILE_COUNT_DESC = "Number of Store Files";
   String STORE_REF_COUNT = "storeRefCount";
   String STORE_REF_COUNT_DESC = "Store reference count";
-  String MAX_STORE_FILE_REF_COUNT = "maxStoreFileRefCount";
+  String MAX_COMPACTED_STORE_FILE_REF_COUNT = "maxCompactedStoreFileRefCount";
   String MEMSTORE_SIZE = "memStoreSize";
   String MEMSTORE_SIZE_DESC = "Size of the memstore";
   String STOREFILE_SIZE = "storeFileSize";
@@ -479,6 +479,17 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String HEDGED_READ_WINS = "hedgedReadWins";
   String HEDGED_READ_WINS_DESC =
       "The number of times we started a hedged read and a hedged read won";
+
+  String TOTAL_BYTES_READ = "totalBytesRead";
+  String TOTAL_BYTES_READ_DESC = "The total number of bytes read from HDFS";
+  String LOCAL_BYTES_READ = "localBytesRead";
+  String LOCAL_BYTES_READ_DESC =
+      "The number of bytes read from the local HDFS DataNode";
+  String SHORTCIRCUIT_BYTES_READ = "shortCircuitBytesRead";
+  String SHORTCIRCUIT_BYTES_READ_DESC = "The number of bytes read through HDFS short circuit read";
+  String ZEROCOPY_BYTES_READ = "zeroCopyBytesRead";
+  String ZEROCOPY_BYTES_READ_DESC =
+      "The number of bytes read through HDFS zero copy";
 
   String BLOCKED_REQUESTS_COUNT = "blockedRequestCount";
   String BLOCKED_REQUESTS_COUNT_DESC = "The number of blocked requests because of memstore size is "

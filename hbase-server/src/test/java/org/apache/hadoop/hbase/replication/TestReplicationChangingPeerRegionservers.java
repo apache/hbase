@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,12 +20,11 @@ package org.apache.hadoop.hbase.replication;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -45,7 +44,6 @@ import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 
 /**
@@ -62,7 +60,7 @@ public class TestReplicationChangingPeerRegionservers extends TestReplicationBas
   private static final Logger LOG =
       LoggerFactory.getLogger(TestReplicationChangingPeerRegionservers.class);
 
-  @Parameter(0)
+  @SuppressWarnings("checkstyle:VisibilityModifier") @Parameter(0)
   public boolean serialPeer;
 
   @Parameter(1)
@@ -124,6 +122,13 @@ public class TestReplicationChangingPeerRegionservers extends TestReplicationBas
   public void testChangingNumberOfPeerRegionServers() throws IOException, InterruptedException {
     LOG.info("testSimplePutDelete");
     MiniHBaseCluster peerCluster = UTIL2.getMiniHBaseCluster();
+    // This test wants two RS's up. We only run one generally so add one.
+    peerCluster.startRegionServer();
+    Waiter.waitFor(peerCluster.getConfiguration(), 30000, new Waiter.Predicate<Exception>() {
+      @Override public boolean evaluate() throws Exception {
+        return peerCluster.getLiveRegionServerThreads().size() > 1;
+      }
+    });
     int numRS = peerCluster.getRegionServerThreads().size();
 
     doPutTest(Bytes.toBytes(1));

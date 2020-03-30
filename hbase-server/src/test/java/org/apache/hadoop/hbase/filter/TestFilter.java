@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,22 +32,22 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
@@ -67,7 +67,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 /**
  * Test filters at the HRegion doorstep.
  */
-@Category({FilterTests.class, SmallTests.class})
+@Category({FilterTests.class, MediumTests.class})
 public class TestFilter {
 
   @ClassRule
@@ -150,17 +150,26 @@ public class TestFilter {
 
   @Before
   public void setUp() throws Exception {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("TestFilter"));
-    HColumnDescriptor family0 = new HColumnDescriptor(FAMILIES[0]).setVersions(100, 100);
-    htd.addFamily(family0);
-    htd.addFamily(new HColumnDescriptor(FAMILIES[1]));
-    htd.addFamily(new HColumnDescriptor(FAMILIES_1[0]));
-    htd.addFamily(new HColumnDescriptor(FAMILIES_1[1]));
-    htd.addFamily(new HColumnDescriptor(NEW_FAMILIES[0]));
-    htd.addFamily(new HColumnDescriptor(NEW_FAMILIES[1]));
-    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf("TestFilter"));
+
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor family0 =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILIES[0])
+        .setVersions(100, 100);
+    tableDescriptor.setColumnFamily(family0);
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILIES[1]));
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILIES_1[0]));
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILIES_1[1]));
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(NEW_FAMILIES[0]));
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(NEW_FAMILIES[1]));
+    HRegionInfo info = new HRegionInfo(tableDescriptor.getTableName(), null, null, false);
     this.region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
-        TEST_UTIL.getConfiguration(), htd);
+        TEST_UTIL.getConfiguration(), tableDescriptor);
 
     // Insert first half
     for(byte [] ROW : ROWS_ONE) {
@@ -280,7 +289,7 @@ public class TestFilter {
 
     Scan s = new Scan();
     // set a start row
-    s.setStartRow(ROWS_FOUR[1]);
+    s.withStartRow(ROWS_FOUR[1]);
     RegionScanner scanner = region.getScanner(s);
 
     // reseek to row three.
@@ -1505,11 +1514,15 @@ public class TestFilter {
   public void testFilterListWithPrefixFilter() throws IOException {
     byte[] family = Bytes.toBytes("f1");
     byte[] qualifier = Bytes.toBytes("q1");
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
-    htd.addFamily(new HColumnDescriptor(family));
-    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(
+        TableName.valueOf(name.getMethodName()));
+
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
+    HRegionInfo info = new HRegionInfo(tableDescriptor.getTableName(), null, null, false);
     HRegion testRegion = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
-        TEST_UTIL.getConfiguration(), htd);
+      TEST_UTIL.getConfiguration(), tableDescriptor);
 
     for(int i=0; i<5; i++) {
       Put p = new Put(Bytes.toBytes((char)('a'+i) + "row"));
@@ -2275,11 +2288,15 @@ public class TestFilter {
   @Ignore("TODO: intentionally disabled?")
   public void testNestedFilterListWithSCVF() throws IOException {
     byte[] columnStatus = Bytes.toBytes("S");
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
-    htd.addFamily(new HColumnDescriptor(FAMILIES[0]));
-    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(
+        TableName.valueOf(name.getMethodName()));
+
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILIES[0]));
+    HRegionInfo info = new HRegionInfo(tableDescriptor.getTableName(), null, null, false);
     HRegion testRegion = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
-        TEST_UTIL.getConfiguration(), htd);
+        TEST_UTIL.getConfiguration(), tableDescriptor);
     for(int i=0; i<10; i++) {
       Put p = new Put(Bytes.toBytes("row" + i));
       p.setDurability(Durability.SKIP_WAL);

@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
@@ -916,7 +917,7 @@ public class TestDefaultMemStore {
     try {
       EnvironmentEdgeForMemstoreTest edge = new EnvironmentEdgeForMemstoreTest();
       EnvironmentEdgeManager.injectEdge(edge);
-      HBaseTestingUtility hbaseUtility = HBaseTestingUtility.createLocalHTU(conf);
+      HBaseTestingUtility hbaseUtility = new HBaseTestingUtility(conf);
       String cf = "foo";
       HRegion region =
           hbaseUtility.createTestRegion("foobar", ColumnFamilyDescriptorBuilder.of(cf));
@@ -942,14 +943,16 @@ public class TestDefaultMemStore {
     // the MEMSTORE_PERIODIC_FLUSH_INTERVAL is set to a higher value)
     Configuration conf = new Configuration();
     conf.setInt(HRegion.MEMSTORE_PERIODIC_FLUSH_INTERVAL, HRegion.SYSTEM_CACHE_FLUSH_INTERVAL * 10);
-    HBaseTestingUtility hbaseUtility = HBaseTestingUtility.createLocalHTU(conf);
+    HBaseTestingUtility hbaseUtility = new HBaseTestingUtility(conf);
     Path testDir = hbaseUtility.getDataTestDir();
     EnvironmentEdgeForMemstoreTest edge = new EnvironmentEdgeForMemstoreTest();
     EnvironmentEdgeManager.injectEdge(edge);
     edge.setCurrentTimeMillis(1234);
     WALFactory wFactory = new WALFactory(conf, "1234");
+    TableDescriptors tds = new FSTableDescriptors(conf);
+    FSTableDescriptors.tryUpdateMetaTableDescriptor(conf);
     HRegion meta = HRegion.createHRegion(RegionInfoBuilder.FIRST_META_REGIONINFO, testDir,
-        conf, FSTableDescriptors.createMetaTableDescriptor(conf),
+        conf, tds.get(TableName.META_TABLE_NAME),
         wFactory.getWAL(RegionInfoBuilder.FIRST_META_REGIONINFO));
     // parameterized tests add [#] suffix get rid of [ and ].
     TableDescriptor desc = TableDescriptorBuilder

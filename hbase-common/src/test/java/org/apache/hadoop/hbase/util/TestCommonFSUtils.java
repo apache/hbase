@@ -19,10 +19,8 @@ package org.apache.hadoop.hbase.util;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -30,26 +28,22 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Test {@link CommonFSUtils}.
  */
-@Category({MiscTests.class, MediumTests.class})
+@Category({MiscTests.class, SmallTests.class})
 public class TestCommonFSUtils {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestCommonFSUtils.class);
-
-  private static final Logger LOG = LoggerFactory.getLogger(TestCommonFSUtils.class);
 
   private HBaseCommonTestingUtility htu;
   private Configuration conf;
@@ -131,39 +125,5 @@ public class TestCommonFSUtils {
     assertEquals(testFile.toString(), CommonFSUtils.removeWALRootPath(testFile, conf));
     Path logFile = new Path(CommonFSUtils.getWALRootDir(conf), "test/testlog");
     assertEquals("test/testlog", CommonFSUtils.removeWALRootPath(logFile, conf));
-  }
-
-  @Test(expected=NullPointerException.class)
-  public void streamCapabilitiesDoesNotAllowNullStream() {
-    CommonFSUtils.hasCapability(null, "hopefully any string");
-  }
-
-  private static final boolean STREAM_CAPABILITIES_IS_PRESENT;
-  static {
-    boolean tmp = false;
-    try {
-      Class.forName("org.apache.hadoop.fs.StreamCapabilities");
-      tmp = true;
-      LOG.debug("Test thought StreamCapabilities class was present.");
-    } catch (ClassNotFoundException exception) {
-      LOG.debug("Test didn't think StreamCapabilities class was present.");
-    } finally {
-      STREAM_CAPABILITIES_IS_PRESENT = tmp;
-    }
-  }
-
-  @Test
-  public void checkStreamCapabilitiesOnKnownNoopStream() throws IOException {
-    FSDataOutputStream stream = new FSDataOutputStream(new ByteArrayOutputStream(), null);
-    assertNotEquals("We expect our dummy FSDOS to claim capabilities iff the StreamCapabilities " +
-        "class is not defined.", STREAM_CAPABILITIES_IS_PRESENT,
-        CommonFSUtils.hasCapability(stream, "hsync"));
-    assertNotEquals("We expect our dummy FSDOS to claim capabilities iff the StreamCapabilities " +
-        "class is not defined.", STREAM_CAPABILITIES_IS_PRESENT,
-        CommonFSUtils.hasCapability(stream, "hflush"));
-    assertNotEquals("We expect our dummy FSDOS to claim capabilities iff the StreamCapabilities " +
-        "class is not defined.", STREAM_CAPABILITIES_IS_PRESENT,
-        CommonFSUtils.hasCapability(stream, "a capability that hopefully no filesystem will " +
-            "implement."));
   }
 }

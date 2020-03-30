@@ -28,16 +28,17 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.junit.After;
@@ -55,7 +56,7 @@ import org.slf4j.LoggerFactory;
  * A write/read/verify load test on a mini HBase cluster. Tests reading
  * and then writing.
  */
-@Category({MiscTests.class, LargeTests.class})
+@Category({MiscTests.class, MediumTests.class})
 @RunWith(Parameterized.class)
 public class TestMiniClusterLoadSequential {
 
@@ -150,10 +151,10 @@ public class TestMiniClusterLoadSequential {
     assertEquals(numKeys, readerThreads.getNumKeysVerified());
   }
 
-  protected void createPreSplitLoadTestTable(HTableDescriptor htd, HColumnDescriptor hcd)
-      throws IOException {
-    HBaseTestingUtility.createPreSplitLoadTestTable(conf, htd, hcd);
-    TEST_UTIL.waitUntilAllRegionsAssigned(htd.getTableName());
+  protected void createPreSplitLoadTestTable(TableDescriptor tableDescriptor,
+      ColumnFamilyDescriptor familyDescriptor) throws IOException {
+    HBaseTestingUtility.createPreSplitLoadTestTable(conf, tableDescriptor, familyDescriptor);
+    TEST_UTIL.waitUntilAllRegionsAssigned(tableDescriptor.getTableName());
   }
 
   protected void prepareForLoadTest() throws IOException {
@@ -168,11 +169,13 @@ public class TestMiniClusterLoadSequential {
     }
     admin.close();
 
-    HTableDescriptor htd = new HTableDescriptor(TABLE);
-    HColumnDescriptor hcd = new HColumnDescriptor(CF)
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLE);
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(CF)
       .setCompressionType(compression)
       .setDataBlockEncoding(dataBlockEncoding);
-    createPreSplitLoadTestTable(htd, hcd);
+    createPreSplitLoadTestTable(tableDescriptor, familyDescriptor);
 
     LoadTestDataGenerator dataGen = new MultiThreadedAction.DefaultDataGenerator(CF);
     writerThreads = prepareWriterThreads(dataGen, conf, TABLE);

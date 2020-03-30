@@ -62,7 +62,7 @@ public class Address implements Comparable<Address> {
   /**
    * If hostname is a.b.c and the port is 123, return a:123 instead of a.b.c:123.
    * @return if host looks like it is resolved -- not an IP -- then strip the domain portion
-   * otherwise returns same as {@link #toString()}}
+   *    otherwise returns same as {@link #toString()}}
    */
   public String toStringWithoutDomain() {
     String hostname = getHostname();
@@ -100,7 +100,10 @@ public class Address implements Comparable<Address> {
   @Override
   public int compareTo(Address that) {
     int compare = this.getHostname().compareTo(that.getHostname());
-    if (compare != 0) return compare;
+    if (compare != 0) {
+      return compare;
+    }
+
     return this.getPort() - that.getPort();
   }
 }

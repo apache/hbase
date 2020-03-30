@@ -149,6 +149,10 @@ class NettyRpcConnection extends RpcConnection {
     if (error instanceof FallbackDisallowedException) {
       return;
     }
+    if (!provider.canRetry()) {
+      LOG.trace("SASL Provider does not support retries");
+      return;
+    }
     synchronized (this) {
       if (reloginInProgress) {
         return;
@@ -159,9 +163,7 @@ class NettyRpcConnection extends RpcConnection {
         @Override
         public void run() {
           try {
-            if (shouldAuthenticateOverKrb()) {
-              relogin();
-            }
+            provider.relogin();
           } catch (IOException e) {
             LOG.warn("Relogin failed", e);
           }
@@ -183,7 +185,7 @@ class NettyRpcConnection extends RpcConnection {
   }
 
   private void saslNegotiate(final Channel ch) {
-    UserGroupInformation ticket = getUGI();
+    UserGroupInformation ticket = provider.getRealUser(remoteId.getTicket());
     if (ticket == null) {
       failInit(ch, new FatalConnectionException("ticket/user is null"));
       return;
@@ -191,8 +193,8 @@ class NettyRpcConnection extends RpcConnection {
     Promise<Boolean> saslPromise = ch.eventLoop().newPromise();
     final NettyHBaseSaslRpcClientHandler saslHandler;
     try {
-      saslHandler = new NettyHBaseSaslRpcClientHandler(saslPromise, ticket, authMethod, token,
-          serverPrincipal, rpcClient.fallbackAllowed, this.rpcClient.conf);
+      saslHandler = new NettyHBaseSaslRpcClientHandler(saslPromise, ticket, provider, token,
+          serverAddress, securityInfo, rpcClient.fallbackAllowed, this.rpcClient.conf);
     } catch (IOException e) {
       failInit(ch, e);
       return;

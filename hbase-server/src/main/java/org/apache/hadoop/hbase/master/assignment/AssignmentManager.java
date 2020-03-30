@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,15 +32,18 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.DoNotRetryRegionException;
+import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionStatesCount;
@@ -69,6 +72,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureInMemoryChore;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.regionserver.SequenceId;
+import org.apache.hadoop.hbase.rsgroup.RSGroupBasedLoadBalancer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
@@ -326,6 +330,11 @@ public class AssignmentManager {
     return master.getLoadBalancer();
   }
 
+  private FavoredNodesPromoter getFavoredNodePromoter() {
+    return (FavoredNodesPromoter) ((RSGroupBasedLoadBalancer) master.getLoadBalancer())
+      .getInternalBalancer();
+  }
+
   private MasterProcedureEnv getProcedureEnvironment() {
     return master.getMasterProcedureExecutor().getEnvironment();
   }
@@ -369,7 +378,7 @@ public class AssignmentManager {
 
   public List<ServerName> getFavoredNodes(final RegionInfo regionInfo) {
     return this.shouldAssignRegionsWithFavoredNodes
-      ? ((FavoredStochasticBalancer) getBalancer()).getFavoredNodes(regionInfo)
+      ? getFavoredNodePromoter().getFavoredNodes(regionInfo)
       : ServerName.EMPTY_SERVER_LIST;
   }
 
@@ -629,7 +638,8 @@ public class AssignmentManager {
       ServerName targetServer) throws HBaseIOException {
     RegionStateNode regionNode = this.regionStates.getRegionStateNode(regionInfo);
     if (regionNode == null) {
-      throw new UnknownRegionException("No RegionState found for " + regionInfo.getEncodedName());
+      throw new UnknownRegionException("No RegionStateNode found for " +
+          regionInfo.getEncodedName() + "(Closed/Deleted?)");
     }
     TransitRegionStateProcedure proc;
     regionNode.lock();
@@ -684,7 +694,7 @@ public class AssignmentManager {
         this.master.getServerManager().createDestinationServersList(serversToExclude));
       // Return mid-method!
       return createAssignProcedures(assignments);
-    } catch (HBaseIOException hioe) {
+    } catch (IOException hioe) {
       LOG.warn("Failed roundRobinAssignment", hioe);
     }
     // If an error above, fall-through to this simpler assign. Last resort.
@@ -944,7 +954,7 @@ public class AssignmentManager {
     if (regionNode == null) {
       // the table/region is gone. maybe a delete, split, merge
       throw new UnexpectedStateException(String.format(
-        "Server %s was trying to transition region %s to %s. but the region was removed.",
+        "Server %s was trying to transition region %s to %s. but Region is not known.",
         serverName, regionInfo, state));
     }
     LOG.trace("Update region transition serverName={} region={} regionState={}", serverName,
@@ -966,7 +976,8 @@ public class AssignmentManager {
           state.equals(TransitionCode.CLOSED)) {
           LOG.info("RegionServer {} {}", state, regionNode.getRegionInfo().getEncodedName());
         } else {
-          LOG.warn("No matching procedure found for {} transition to {}", regionNode, state);
+          LOG.warn("No matching procedure found for {} transition on {} to {}",
+              serverName, regionNode, state);
         }
       }
     } finally {
@@ -1004,6 +1015,12 @@ public class AssignmentManager {
         " hriA=" + hriA + " hriB=" + hriB);
     }
 
+    if (!master.isSplitOrMergeEnabled(MasterSwitchType.SPLIT)) {
+      LOG.warn("Split switch is off! skip split of " + parent);
+      throw new DoNotRetryIOException("Split region " + parent.getRegionNameAsString() +
+          " failed due to split switch off");
+    }
+
     // Submit the Split procedure
     final byte[] splitKey = hriB.getStartKey();
     if (LOG.isDebugEnabled()) {
@@ -1027,6 +1044,12 @@ public class AssignmentManager {
       throw new UnexpectedStateException("Unsupported merge regionState=" + state +
         " for regionA=" + hriA + " regionB=" + hriB + " merged=" + merged +
         " maybe an old RS (< 2.0) had the operation in progress");
+    }
+
+    if (!master.isSplitOrMergeEnabled(MasterSwitchType.MERGE)) {
+      LOG.warn("Merge switch is off! skip merge of regionA=" + hriA + " regionB=" + hriB);
+      throw new DoNotRetryIOException("Merge of regionA=" + hriA + " regionB=" + hriB +
+        " failed because merge switch is off");
     }
 
     // Submit the Merge procedure
@@ -1092,7 +1115,27 @@ public class AssignmentManager {
     checkOnlineRegionsReport(serverNode, regionNames);
   }
 
-  // just check and output possible inconsistency, without actually doing anything
+  /**
+   * Close <code>regionName</code> on <code>sn</code> silently and immediately without
+   * using a Procedure or going via hbase:meta. For case where a RegionServer's hosting
+   * of a Region is not aligned w/ the Master's accounting of Region state. This is for
+   * cleaning up an error in accounting.
+   */
+  private void closeRegionSilently(ServerName sn, byte [] regionName) {
+    try {
+      RegionInfo ri = MetaTableAccessor.parseRegionInfoFromRegionName(regionName);
+      // Pass -1 for timeout. Means do not wait.
+      ServerManager.closeRegionSilentlyAndWait(this.master.getAsyncClusterConnection(), sn, ri, -1);
+    } catch (Exception e) {
+      LOG.error("Failed trying to close {} on {}", Bytes.toStringBinary(regionName), sn, e);
+    }
+  }
+
+  /**
+   * Check that what the RegionServer reports aligns with the Master's image.
+   * If disagreement, we will tell the RegionServer to expediently close
+   * a Region we do not think it should have.
+   */
   private void checkOnlineRegionsReport(ServerStateNode serverNode, Set<byte[]> regionNames) {
     ServerName serverName = serverNode.getServerName();
     for (byte[] regionName : regionNames) {
@@ -1101,10 +1144,13 @@ public class AssignmentManager {
       }
       RegionStateNode regionNode = regionStates.getRegionStateNodeFromName(regionName);
       if (regionNode == null) {
-        LOG.warn("No region state node for {}, it should already be on {}",
-          Bytes.toStringBinary(regionName), serverName);
+        String regionNameAsStr = Bytes.toStringBinary(regionName);
+        LOG.warn("No RegionStateNode for {} but reported as up on {}; closing...",
+            regionNameAsStr, serverName);
+        closeRegionSilently(serverNode.getServerName(), regionName);
         continue;
       }
+      final long lag = 1000;
       regionNode.lock();
       try {
         long diff = EnvironmentEdgeManager.currentTime() - regionNode.getLastUpdate();
@@ -1112,17 +1158,19 @@ public class AssignmentManager {
           // This is possible as a region server has just closed a region but the region server
           // report is generated before the closing, but arrive after the closing. Make sure there
           // is some elapsed time so less false alarms.
-          if (!regionNode.getRegionLocation().equals(serverName) && diff > 1000) {
-            LOG.warn("{} reported OPEN on server={} but state has otherwise", regionNode,
-              serverName);
+          if (!regionNode.getRegionLocation().equals(serverName) && diff > lag) {
+            LOG.warn("Reporting {} server does not match {} (time since last " +
+                    "update={}ms); closing...",
+              serverName, regionNode, diff);
+            closeRegionSilently(serverNode.getServerName(), regionName);
           }
         } else if (!regionNode.isInState(State.CLOSING, State.SPLITTING)) {
           // So, we can get report that a region is CLOSED or SPLIT because a heartbeat
           // came in at about same time as a region transition. Make sure there is some
           // elapsed time so less false alarms.
-          if (diff > 1000) {
-            LOG.warn("{} reported an unexpected OPEN on {}; time since last update={}ms",
-              regionNode, serverName, diff);
+          if (diff > lag) {
+            LOG.warn("Reporting {} state does not match {} (time since last update={}ms)",
+              serverName, regionNode, diff);
           }
         }
       } finally {
@@ -1176,15 +1224,9 @@ public class AssignmentManager {
         if (rsn.getState() != State.OPEN) {
           continue; // Opportunistic check, should quickly skip RITs, offline tables, etc.
         }
-        ServerName sn;
-        State state;
-        rsn.lock();
-        try {
-          sn = rsn.getRegionLocation();
-          state = rsn.getState();
-        } finally {
-          rsn.unlock();
-        }
+        // Do not need to acquire region state lock as this is only for showing metrics.
+        ServerName sn = rsn.getRegionLocation();
+        State state = rsn.getState();
         if (state != State.OPEN) {
           continue; // Mostly skipping RITs that are already being take care of.
         }
@@ -1742,7 +1784,7 @@ public class AssignmentManager {
 
   // should be called under the RegionStateNode lock
   // for SCP
-  void regionClosedAbnormally(RegionStateNode regionNode) throws IOException {
+  public void regionClosedAbnormally(RegionStateNode regionNode) throws IOException {
     RegionState.State state = regionNode.getState();
     ServerName regionLocation = regionNode.getRegionLocation();
     regionNode.transitionState(State.ABNORMALLY_CLOSED);
@@ -1797,8 +1839,8 @@ public class AssignmentManager {
     regionStateStore.splitRegion(parent, daughterA, daughterB, serverName);
     if (shouldAssignFavoredNodes(parent)) {
       List<ServerName> onlineServers = this.master.getServerManager().getOnlineServersList();
-      ((FavoredNodesPromoter)getBalancer()).
-          generateFavoredNodesForDaughter(onlineServers, parent, daughterA, daughterB);
+      getFavoredNodePromoter().generateFavoredNodesForDaughter(onlineServers, parent, daughterA,
+        daughterB);
     }
   }
 
@@ -1823,8 +1865,7 @@ public class AssignmentManager {
     }
     regionStateStore.mergeRegions(child, mergeParents, serverName);
     if (shouldAssignFavoredNodes(child)) {
-      ((FavoredNodesPromoter)getBalancer()).
-        generateFavoredNodesForMergedRegion(child, mergeParents);
+      getFavoredNodePromoter().generateFavoredNodesForMergedRegion(child, mergeParents);
     }
   }
 
@@ -2022,7 +2063,7 @@ public class AssignmentManager {
       }
       try {
         acceptPlan(regions, balancer.retainAssignment(retainMap, servers));
-      } catch (HBaseIOException e) {
+      } catch (IOException e) {
         LOG.warn("unable to retain assignment", e);
         addToPendingAssignment(regions, retainMap.keySet());
       }
@@ -2037,7 +2078,7 @@ public class AssignmentManager {
       }
       try {
         acceptPlan(regions, balancer.roundRobinAssignment(hris, servers));
-      } catch (HBaseIOException e) {
+      } catch (IOException e) {
         LOG.warn("unable to round-robin assignment", e);
         addToPendingAssignment(regions, hris);
       }

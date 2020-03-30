@@ -32,6 +32,9 @@ import java.util.TreeMap;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilder;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
@@ -44,8 +47,6 @@ import org.apache.hadoop.hbase.RawCell;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.security.access.AccessControlConstants;
 import org.apache.hadoop.hbase.security.access.AccessControlUtil;
 import org.apache.hadoop.hbase.security.access.Permission;
@@ -61,6 +62,9 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.io.ByteArrayDataInput;
 import org.apache.hbase.thirdparty.com.google.common.io.ByteArrayDataOutput;
 import org.apache.hbase.thirdparty.com.google.common.io.ByteStreams;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
 @InterfaceAudience.Public
 public abstract class Mutation extends OperationWithAttributes implements Row, CellScannable,
@@ -782,6 +786,104 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
       getCellList(family).add(new CellWrapper(cell));
     }
     return this;
+  }
+
+  /**
+   * get a CellBuilder instance that already has relevant Type and Row set.
+   * @param cellBuilderType e.g CellBuilderType.SHALLOW_COPY
+   * @return CellBuilder which already has relevant Type and Row set.
+   */
+  public abstract CellBuilder getCellBuilder(CellBuilderType cellBuilderType);
+
+  /**
+   * get a CellBuilder instance that already has relevant Type and Row set.
+   * the default CellBuilderType is CellBuilderType.SHALLOW_COPY
+   * @return CellBuilder which already has relevant Type and Row set.
+   */
+  public CellBuilder getCellBuilder() {
+    return getCellBuilder(CellBuilderType.SHALLOW_COPY);
+  }
+
+  /**
+   * get a CellBuilder instance that already has relevant Type and Row set.
+   * @param cellBuilderType e.g CellBuilderType.SHALLOW_COPY
+   * @param cellType e.g Cell.Type.Put
+   * @return CellBuilder which already has relevant Type and Row set.
+     */
+  protected CellBuilder getCellBuilder(CellBuilderType cellBuilderType, Cell.Type cellType) {
+    CellBuilder builder = CellBuilderFactory.create(cellBuilderType).setRow(row).setType(cellType);
+    return new CellBuilder() {
+      @Override
+      public CellBuilder setRow(byte[] row) {
+        return this;
+      }
+
+      @Override
+      public CellBuilder setType(Cell.Type type) {
+        return this;
+      }
+
+      @Override
+      public CellBuilder setRow(byte[] row, int rOffset, int rLength) {
+        return this;
+      }
+
+      @Override
+      public CellBuilder setFamily(byte[] family) {
+        builder.setFamily(family);
+        return this;
+      }
+
+      @Override
+      public CellBuilder setFamily(byte[] family, int fOffset, int fLength) {
+        builder.setFamily(family, fOffset, fLength);
+        return this;
+      }
+
+      @Override
+      public CellBuilder setQualifier(byte[] qualifier) {
+        builder.setQualifier(qualifier);
+        return this;
+      }
+
+      @Override
+      public CellBuilder setQualifier(byte[] qualifier, int qOffset, int qLength) {
+        builder.setQualifier(qualifier, qOffset, qLength);
+        return this;
+      }
+
+      @Override
+      public CellBuilder setTimestamp(long timestamp) {
+        builder.setTimestamp(timestamp);
+        return this;
+      }
+
+      @Override
+      public CellBuilder setValue(byte[] value) {
+        builder.setValue(value);
+        return this;
+      }
+
+      @Override
+      public CellBuilder setValue(byte[] value, int vOffset, int vLength) {
+        builder.setValue(value, vOffset, vLength);
+        return this;
+      }
+
+      @Override
+      public Cell build() {
+        return builder.build();
+      }
+
+      @Override
+      public CellBuilder clear() {
+        builder.clear();
+        // reset the row and type
+        builder.setRow(row);
+        builder.setType(cellType);
+        return this;
+      }
+    };
   }
 
   private static final class CellWrapper implements ExtendedCell {

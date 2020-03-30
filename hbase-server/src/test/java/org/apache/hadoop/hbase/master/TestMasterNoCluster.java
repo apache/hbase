@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.apache.hadoop.hbase.HConstants.ZOOKEEPER_QUORUM;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
@@ -113,7 +114,7 @@ public class TestMasterNoCluster {
   @Test
   public void testMasterInitWithSameClientServerZKQuorum() throws Exception {
     Configuration conf = new Configuration(TESTUTIL.getConfiguration());
-    conf.set(HConstants.CLIENT_ZOOKEEPER_QUORUM, HConstants.LOCALHOST);
+    conf.set(HConstants.CLIENT_ZOOKEEPER_QUORUM, conf.get(ZOOKEEPER_QUORUM));
     conf.setInt(HConstants.CLIENT_ZOOKEEPER_CLIENT_PORT, TESTUTIL.getZkCluster().getClientPort());
     HMaster master = new HMaster(conf);
     master.start();

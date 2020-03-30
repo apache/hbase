@@ -19,10 +19,12 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
+import java.util.function.Supplier;
 import org.apache.hadoop.hbase.ConcurrentTableModificationException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -41,6 +43,8 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -59,10 +63,19 @@ public class ModifyTableProcedure
   private TableDescriptor modifiedTableDescriptor;
   private boolean deleteColumnFamilyInModify;
   private boolean shouldCheckDescriptor;
+  /**
+   * List of column families that cannot be deleted from the hbase:meta table.
+   * They are critical to cluster operation. This is a bit of an odd place to
+   * keep this list but then this is the tooling that does add/remove. Keeping
+   * it local!
+   */
+  private static final List<byte []> UNDELETABLE_META_COLUMNFAMILIES =
+    Collections.unmodifiableList(Arrays.asList(
+      HConstants.CATALOG_FAMILY, HConstants.TABLE_FAMILY, HConstants.REPLICATION_BARRIER_FAMILY));
 
   public ModifyTableProcedure() {
     super();
-    initilize(null, false);
+    initialize(null, false);
   }
 
   public ModifyTableProcedure(final MasterProcedureEnv env, final TableDescriptor htd)
@@ -81,12 +94,28 @@ public class ModifyTableProcedure
       final TableDescriptor oldTableDescriptor, final boolean shouldCheckDescriptor)
           throws HBaseIOException {
     super(env, latch);
-    initilize(oldTableDescriptor, shouldCheckDescriptor);
+    initialize(oldTableDescriptor, shouldCheckDescriptor);
     this.modifiedTableDescriptor = newTableDescriptor;
     preflightChecks(env, null/*No table checks; if changing peers, table can be online*/);
   }
 
-  private void initilize(final TableDescriptor unmodifiedTableDescriptor,
+  @Override
+  protected void preflightChecks(MasterProcedureEnv env, Boolean enabled) throws HBaseIOException {
+    super.preflightChecks(env, enabled);
+    if (this.modifiedTableDescriptor.isMetaTable()) {
+      // If we are modifying the hbase:meta table, make sure we are not deleting critical
+      // column families else we'll damage the cluster.
+      Set<byte []> cfs = this.modifiedTableDescriptor.getColumnFamilyNames();
+      for (byte[] family : UNDELETABLE_META_COLUMNFAMILIES) {
+        if (!cfs.contains(family)) {
+          throw new HBaseIOException("Delete of hbase:meta column family " +
+            Bytes.toString(family));
+        }
+      }
+    }
+  }
+
+  private void initialize(final TableDescriptor unmodifiedTableDescriptor,
       final boolean shouldCheckDescriptor) {
     this.unmodifiedTableDescriptor = unmodifiedTableDescriptor;
     this.shouldCheckDescriptor = shouldCheckDescriptor;
@@ -242,8 +271,6 @@ public class ModifyTableProcedure
 
   /**
    * Check conditions before any real action of modifying a table.
-   * @param env MasterProcedureEnv
-   * @throws IOException
    */
   private void prepareModify(final MasterProcedureEnv env) throws IOException {
     // Checks whether the table exists
@@ -284,17 +311,35 @@ public class ModifyTableProcedure
             "REGION_REPLICATION change is not supported for enabled tables");
       }
     }
+    this.deleteColumnFamilyInModify = isDeleteColumnFamily(unmodifiedTableDescriptor,
+      modifiedTableDescriptor);
+    if (!unmodifiedTableDescriptor.getRegionServerGroup()
+      .equals(modifiedTableDescriptor.getRegionServerGroup())) {
+      Supplier<String> forWhom = () -> "table " + getTableName();
+      RSGroupInfo rsGroupInfo = MasterProcedureUtil.checkGroupExists(
+        env.getMasterServices().getRSGroupInfoManager()::getRSGroup,
+        modifiedTableDescriptor.getRegionServerGroup(), forWhom);
+      MasterProcedureUtil.checkGroupNotEmpty(rsGroupInfo, forWhom);
+    }
+  }
 
-    // Find out whether all column families in unmodifiedTableDescriptor also exists in
-    // the modifiedTableDescriptor. This is to determine whether we are safe to rollback.
-    final Set<byte[]> oldFamilies = unmodifiedTableDescriptor.getColumnFamilyNames();
-    final Set<byte[]> newFamilies = modifiedTableDescriptor.getColumnFamilyNames();
-    for (byte[] familyName : oldFamilies) {
+  /**
+   * Find out whether all column families in unmodifiedTableDescriptor also exists in
+   * the modifiedTableDescriptor.
+   * @return True if we are deleting a column family.
+   */
+  private static boolean isDeleteColumnFamily(TableDescriptor originalDescriptor,
+      TableDescriptor newDescriptor) {
+    boolean result = false;
+    final Set<byte[]> originalFamilies = originalDescriptor.getColumnFamilyNames();
+    final Set<byte[]> newFamilies = newDescriptor.getColumnFamilyNames();
+    for (byte[] familyName : originalFamilies) {
       if (!newFamilies.contains(familyName)) {
-        this.deleteColumnFamilyInModify = true;
+        result = true;
         break;
       }
     }
+    return result;
   }
 
   /**
@@ -315,7 +360,7 @@ public class ModifyTableProcedure
    * @throws IOException
    **/
   private void updateTableDescriptor(final MasterProcedureEnv env) throws IOException {
-    env.getMasterServices().getTableDescriptors().add(modifiedTableDescriptor);
+    env.getMasterServices().getTableDescriptors().update(modifiedTableDescriptor);
   }
 
   /**

@@ -29,6 +29,7 @@ import java.util.regex.Pattern;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
@@ -45,7 +46,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Class to test AsyncAdmin.
  */
-public abstract class TestAsyncAdminBase {
+public abstract class TestAsyncAdminBase extends AbstractTestUpdateConfiguration {
 
   protected static final Logger LOG = LoggerFactory.getLogger(TestAsyncAdminBase.class);
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -83,7 +84,9 @@ public abstract class TestAsyncAdminBase {
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 120000);
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
     TEST_UTIL.getConfiguration().setInt(START_LOG_ERRORS_AFTER_COUNT_KEY, 0);
-    TEST_UTIL.startMiniCluster(2);
+    StartMiniClusterOption option = StartMiniClusterOption.builder().numRegionServers(2).
+        numMasters(2).build();
+    TEST_UTIL.startMiniCluster(option);
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
   }
 

@@ -47,6 +47,12 @@
           <include>hbase-webapps/**</include>
         </includes>
       </resource>
+      <resource>
+        <directory>src/main/resources</directory>
+        <includes>
+          <include>**/**</include>
+        </includes>
+      </resource>
     </resources>
     <testResources>
       <!-- Our test artifact has different license info than our source/bin ones -->
@@ -66,6 +72,13 @@
       </testResource>
     </testResources>
     <plugins>
+      <plugin>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
+        <configuration>
+          <maxHeap>2048</maxHeap>
+        </configuration>
+      </plugin>
       <!-- licensing info from our bundled works -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -204,11 +217,6 @@
           </execution>
         </executions>
       </plugin>
-      <!-- Run findbugs -->
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
-      </plugin>
       <!-- Testing plugins -->
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
@@ -257,13 +265,6 @@
       <artifactId>hbase-http</artifactId>
       <type>test-jar</type>
       <scope>test</scope>
-    </dependency>
-    <dependency>
-      <!--Needed by the visiblity tags and acl CPEP things
-           in here in hbase-server (that should be out in hbase-endpoints
-           or integrated). -->
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-protocol</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
@@ -369,9 +370,10 @@
     </dependency>
     <!-- General dependencies -->
     <dependency>
-       <groupId>com.github.stephenc.findbugs</groupId>
-       <artifactId>findbugs-annotations</artifactId>
-       <optional>true</optional>
+      <groupId>com.github.stephenc.findbugs</groupId>
+      <artifactId>findbugs-annotations</artifactId>
+      <scope>compile</scope>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>com.github.ben-manes.caffeine</groupId>
@@ -434,6 +436,11 @@
     <dependency>
       <groupId>org.hamcrest</groupId>
       <artifactId>hamcrest-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest-library</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -601,9 +608,6 @@
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-distcp</artifactId>
-          <!--This dependency is not in top-level pom so needs
-               version specified-->
-          <version>${hadoop-two.version}</version>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
@@ -712,9 +716,6 @@
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-distcp</artifactId>
-          <!--This dependency is not in top-level pom so needs
-               version specified-->
-          <version>${hadoop-three.version}</version>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
@@ -727,7 +728,6 @@
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-hdfs-client</artifactId>
-          <version>${hadoop.version}</version>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>

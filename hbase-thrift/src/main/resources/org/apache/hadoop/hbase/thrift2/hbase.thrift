@@ -455,6 +455,39 @@ struct TNamespaceDescriptor {
 }
 
 
+/**
+ * Thrift wrapper around
+ * org.apache.hadoop.hbase.client.SlowLogQueryFilter
+ */
+struct TSlowLogQueryFilter {
+  1: optional string regionName
+  2: optional string clientAddress
+  3: optional string tableName
+  4: optional string userName
+  5: optional i32 limit = 10
+}
+
+/**
+ * Thrift wrapper around
+ * org.apache.hadoop.hbase.client.SlowLogRecord
+ */
+struct TSlowLogRecord {
+  1: required i64 startTime
+  2: required i32 processingTime
+  3: required i32 queueTime
+  4: required i64 responseSize
+  5: required string clientAddress
+  6: required string serverClass
+  7: required string methodName
+  8: required string callDetails
+  9: required string param
+  10: required string userName
+  11: required i32 multiGetsCount
+  12: required i32 multiMutationsCount
+  13: required i32 multiServiceCalls
+  14: optional string regionName
+}
+
 //
 // Exceptions
 //
@@ -1053,4 +1086,37 @@ service THBaseService {
    * @return the type of this thrift server
    */
   TThriftServerType getThriftServerType()
+
+  /**
+   * Returns the cluster ID for this cluster.
+   */
+  string getClusterId()
+
+  /**
+   * Retrieves online slow RPC logs from the provided list of
+   * RegionServers
+   *
+   * @return online slowlog response list
+   * @throws TIOError if a remote or network exception occurs
+   */
+  list<TSlowLogRecord> getSlowLogResponses(
+   /** @param serverNames Server names to get slowlog responses from */
+    1: set<TServerName> serverNames
+   /** @param slowLogQueryFilter filter to be used if provided */
+    2: TSlowLogQueryFilter slowLogQueryFilter
+  ) throws (1: TIOError io)
+
+  /**
+   * Clears online slow RPC logs from the provided list of
+   * RegionServers
+   *
+   * @return List of booleans representing if online slowlog response buffer is cleaned
+   *   from each RegionServer
+   * @throws TIOError if a remote or network exception occurs
+   */
+  list<bool> clearSlowLogResponses(
+    /** @param serverNames Set of Server names to clean slowlog responses from */
+    1: set<TServerName> serverNames
+  ) throws (1: TIOError io)
+
 }

@@ -40,6 +40,8 @@ public class HBasePolicyProvider extends PolicyProvider {
     new Service("security.client.protocol.acl", AdminService.BlockingInterface.class),
     new Service("security.client.protocol.acl",
       MasterProtos.HbckService.BlockingInterface.class),
+    new Service("security.client.protocol.acl",
+      MasterProtos.ClientMetaService.BlockingInterface.class),
     new Service("security.admin.protocol.acl", MasterService.BlockingInterface.class),
     new Service("security.masterregion.protocol.acl",
       RegionServerStatusService.BlockingInterface.class)

@@ -31,6 +31,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -47,7 +48,6 @@ import javax.security.sasl.RealmChoiceCallback;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CipherOption;
@@ -77,7 +77,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.base.Charsets;
 import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
@@ -671,20 +670,19 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
 
   private static String getUserNameFromEncryptionKey(DataEncryptionKey encryptionKey) {
     return encryptionKey.keyId + NAME_DELIMITER + encryptionKey.blockPoolId + NAME_DELIMITER
-        + new String(Base64.encodeBase64(encryptionKey.nonce, false), Charsets.UTF_8);
+        + Base64.getEncoder().encodeToString(encryptionKey.nonce);
   }
 
   private static char[] encryptionKeyToPassword(byte[] encryptionKey) {
-    return new String(Base64.encodeBase64(encryptionKey, false), Charsets.UTF_8).toCharArray();
+    return Base64.getEncoder().encodeToString(encryptionKey).toCharArray();
   }
 
   private static String buildUsername(Token<BlockTokenIdentifier> blockToken) {
-    return new String(Base64.encodeBase64(blockToken.getIdentifier(), false), Charsets.UTF_8);
+    return Base64.getEncoder().encodeToString(blockToken.getIdentifier());
   }
 
   private static char[] buildClientPassword(Token<BlockTokenIdentifier> blockToken) {
-    return new String(Base64.encodeBase64(blockToken.getPassword(), false), Charsets.UTF_8)
-        .toCharArray();
+    return Base64.getEncoder().encodeToString(blockToken.getPassword()).toCharArray();
   }
 
   private static Map<String, String> createSaslPropertiesForEncryption(String encryptionAlgorithm) {

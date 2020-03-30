@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.util;
 
 import static org.junit.Assert.assertEquals;
-
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
@@ -26,8 +25,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -39,7 +38,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Test {@link FSUtils}.
  */
-@Category({MiscTests.class, MediumTests.class})
+@Category({MiscTests.class, SmallTests.class})
 public class TestFSVisitor {
 
   @ClassRule

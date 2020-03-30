@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
  * agreements. See the NOTICE file distributed with this work for additional information regarding
  * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
@@ -17,7 +17,6 @@ package org.apache.hadoop.hbase.master.balancer;
 import static junit.framework.TestCase.assertNotNull;
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertNull;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -29,8 +28,10 @@ import java.util.Random;
 import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -47,29 +48,32 @@ import org.slf4j.LoggerFactory;
 
 @Category({ MasterTests.class, MediumTests.class })
 public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBase {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestStochasticLoadBalancerHeterogeneousCost.class);
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestStochasticLoadBalancerHeterogeneousCost.class);
-  private static final double allowedWindow = 1.20;
+  private static final double ALLOWED_WINDOW = 1.20;
+  private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
+  private static String RULES_FILE;
 
   @BeforeClass
-  public static void beforeAllTests() {
-    BalancerTestBase.conf = HBaseConfiguration.create();
+  public static void beforeAllTests() throws IOException {
+    BalancerTestBase.conf = HTU.getConfiguration();
     BalancerTestBase.conf.setFloat("hbase.master.balancer.stochastic.regionCountCost", 0);
     BalancerTestBase.conf.setFloat("hbase.master.balancer.stochastic.primaryRegionCountCost", 0);
     BalancerTestBase.conf.setFloat("hbase.master.balancer.stochastic.tableSkewCost", 0);
     BalancerTestBase.conf.setBoolean("hbase.master.balancer.stochastic.runMaxSteps", true);
     BalancerTestBase.conf.set(StochasticLoadBalancer.COST_FUNCTIONS_COST_FUNCTIONS_KEY,
       HeterogeneousRegionCountCostFunction.class.getName());
-
+    // Need to ensure test dir has been created.
+    assertTrue(FileSystem.get(HTU.getConfiguration()).mkdirs(HTU.getDataTestDir()));
+    RULES_FILE = HTU.getDataTestDir(
+      TestStochasticLoadBalancerHeterogeneousCostRules.DEFAULT_RULES_FILE_NAME).toString();
     BalancerTestBase.conf.set(
       HeterogeneousRegionCountCostFunction.HBASE_MASTER_BALANCER_HETEROGENEOUS_RULES_FILE,
-      TestStochasticLoadBalancerHeterogeneousCostRules.DEFAULT_RULES_TMP_LOCATION);
-
+      RULES_FILE);
     BalancerTestBase.loadBalancer = new StochasticLoadBalancer();
     BalancerTestBase.loadBalancer.setConf(BalancerTestBase.conf);
   }
@@ -142,10 +146,11 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBas
     final int numRegions = 120;
     final int numRegionsPerServer = 60;
 
-    TestStochasticLoadBalancerHeterogeneousCostRules.createSimpleRulesFile(rules);
+    TestStochasticLoadBalancerHeterogeneousCostRules.createRulesFile(RULES_FILE);
     final Map<ServerName, List<RegionInfo>> serverMap =
         this.createServerMap(numNodes, numRegions, numRegionsPerServer, 1, 1);
-    final List<RegionPlan> plans = BalancerTestBase.loadBalancer.balanceCluster(serverMap);
+    final List<RegionPlan> plans =
+        BalancerTestBase.loadBalancer.balanceTable(HConstants.ENSEMBLE_TABLE_NAME, serverMap);
     // As we disabled all the other cost functions, balancing only according to
     // the heterogeneous cost function should return nothing.
     assertNull(plans);
@@ -154,7 +159,7 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBas
   private void testHeterogeneousWithCluster(final int numNodes, final int numRegions,
       final int numRegionsPerServer, final List<String> rules) throws IOException {
 
-    TestStochasticLoadBalancerHeterogeneousCostRules.createSimpleRulesFile(rules);
+    TestStochasticLoadBalancerHeterogeneousCostRules.createRulesFile(RULES_FILE, rules);
     final Map<ServerName, List<RegionInfo>> serverMap =
         this.createServerMap(numNodes, numRegions, numRegionsPerServer, 1, 1);
     this.testWithCluster(serverMap, null, true, false);
@@ -169,7 +174,8 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBas
     BalancerTestBase.loadBalancer.setRackManager(rackManager);
 
     // Run the balancer.
-    final List<RegionPlan> plans = BalancerTestBase.loadBalancer.balanceCluster(serverMap);
+    final List<RegionPlan> plans =
+        BalancerTestBase.loadBalancer.balanceTable(HConstants.ENSEMBLE_TABLE_NAME, serverMap);
     assertNotNull(plans);
 
     // Check to see that this actually got to a stable place.
@@ -182,7 +188,7 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBas
 
       if (assertFullyBalanced) {
         final List<RegionPlan> secondPlans =
-            BalancerTestBase.loadBalancer.balanceCluster(serverMap);
+            BalancerTestBase.loadBalancer.balanceTable(HConstants.ENSEMBLE_TABLE_NAME, serverMap);
         assertNull(secondPlans);
 
         // create external cost function to retrieve limit
@@ -207,8 +213,9 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBas
           // as the balancer is stochastic, we cannot check exactly the result of the balancing,
           // hence the allowedWindow parameter
           assertTrue("Host " + sn.getHostname() + " should be below "
-              + cf.overallUsage * allowedWindow * 100 + "%",
-            usage <= cf.overallUsage * allowedWindow);
+              + cf.overallUsage * ALLOWED_WINDOW * 100 + "%; " + cf.overallUsage +
+              ", " + usage + ", " + numberRegions + ", " + limit,
+            usage <= cf.overallUsage * ALLOWED_WINDOW);
         }
       }
 

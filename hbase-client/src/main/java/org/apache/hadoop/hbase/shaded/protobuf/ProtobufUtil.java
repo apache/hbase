@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -80,9 +80,12 @@ import org.apache.hadoop.hbase.client.PackagePrivateFieldAccessor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionLoadStats;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.SlowLogParams;
+import org.apache.hadoop.hbase.client.SlowLogRecord;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -93,6 +96,8 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
 import org.apache.hadoop.hbase.protobuf.ProtobufMessageConverter;
 import org.apache.hadoop.hbase.quotas.QuotaScope;
@@ -101,6 +106,7 @@ import org.apache.hadoop.hbase.quotas.SpaceViolationPolicy;
 import org.apache.hadoop.hbase.quotas.ThrottleType;
 import org.apache.hadoop.hbase.replication.ReplicationLoadSink;
 import org.apache.hadoop.hbase.replication.ReplicationLoadSource;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.util.Addressing;
@@ -127,7 +133,9 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearSlowLogResponses;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
@@ -143,12 +151,16 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WarmupRegio
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CellProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.Column;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.GetRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.ColumnValue;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.DeleteType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.MutationType;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionLoad;
@@ -177,9 +189,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableD
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
@@ -374,7 +388,9 @@ public final class ProtobufUtil {
    * @see #toServerName(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName)
    */
   public static HBaseProtos.ServerName toServerName(final ServerName serverName) {
-    if (serverName == null) return null;
+    if (serverName == null) {
+      return null;
+    }
     HBaseProtos.ServerName.Builder builder =
       HBaseProtos.ServerName.newBuilder();
     builder.setHostName(serverName.getHostname());
@@ -405,6 +421,50 @@ public final class ProtobufUtil {
       startCode = proto.getStartCode();
     }
     return ServerName.valueOf(hostName, port, startCode);
+  }
+
+  /**
+   * Get a ServerName from the passed in data bytes.
+   * @param data Data with a serialize server name in it; can handle the old style servername where
+   *          servername was host and port. Works too with data that begins w/ the pb 'PBUF' magic
+   *          and that is then followed by a protobuf that has a serialized {@link ServerName} in
+   *          it.
+   * @return Returns null if <code>data</code> is null else converts passed data to a ServerName
+   *         instance.
+   */
+  public static ServerName toServerName(final byte[] data) throws DeserializationException {
+    if (data == null || data.length <= 0) {
+      return null;
+    }
+    if (ProtobufMagic.isPBMagicPrefix(data)) {
+      int prefixLen = ProtobufMagic.lengthOfPBMagic();
+      try {
+        ZooKeeperProtos.Master rss =
+          ZooKeeperProtos.Master.parser().parseFrom(data, prefixLen, data.length - prefixLen);
+        HBaseProtos.ServerName sn = rss.getMaster();
+        return ServerName.valueOf(sn.getHostName(), sn.getPort(), sn.getStartCode());
+      } catch (/* InvalidProtocolBufferException */IOException e) {
+        // A failed parse of the znode is pretty catastrophic. Rather than loop
+        // retrying hoping the bad bytes will changes, and rather than change
+        // the signature on this method to add an IOE which will send ripples all
+        // over the code base, throw a RuntimeException. This should "never" happen.
+        // Fail fast if it does.
+        throw new DeserializationException(e);
+      }
+    }
+    // The str returned could be old style -- pre hbase-1502 -- which was
+    // hostname and port seperated by a colon rather than hostname, port and
+    // startcode delimited by a ','.
+    String str = Bytes.toString(data);
+    int index = str.indexOf(ServerName.SERVERNAME_SEPARATOR);
+    if (index != -1) {
+      // Presume its ServerName serialized with versioned bytes.
+      return ServerName.parseVersionedServerName(data);
+    }
+    // Presume it a hostname:port format.
+    String hostname = Addressing.parseHostname(str);
+    int port = Addressing.parsePort(str);
+    return ServerName.valueOf(hostname, port, -1L);
   }
 
   /**
@@ -2214,6 +2274,57 @@ public final class ProtobufUtil {
   }
 
   /**
+   * Return SlowLogParams to maintain recent online slowlog responses
+   *
+   * @param message Message object {@link Message}
+   * @return SlowLogParams with regionName(for filter queries) and params
+   */
+  public static SlowLogParams getSlowLogParams(Message message) {
+    if (message == null) {
+      return null;
+    }
+    if (message instanceof ScanRequest) {
+      ScanRequest scanRequest = (ScanRequest) message;
+      String regionName = getStringForByteString(scanRequest.getRegion().getValue());
+      String params = TextFormat.shortDebugString(message);
+      return new SlowLogParams(regionName, params);
+    } else if (message instanceof MutationProto) {
+      MutationProto mutationProto = (MutationProto) message;
+      String params = "type= " + mutationProto.getMutateType().toString();
+      return new SlowLogParams(params);
+    } else if (message instanceof GetRequest) {
+      GetRequest getRequest = (GetRequest) message;
+      String regionName = getStringForByteString(getRequest.getRegion().getValue());
+      String params = "region= " + regionName + ", row= "
+        + getStringForByteString(getRequest.getGet().getRow());
+      return new SlowLogParams(regionName, params);
+    } else if (message instanceof MultiRequest) {
+      MultiRequest multiRequest = (MultiRequest) message;
+      int actionsCount = multiRequest.getRegionActionList()
+        .stream()
+        .mapToInt(ClientProtos.RegionAction::getActionCount)
+        .sum();
+      RegionAction actions = multiRequest.getRegionActionList().get(0);
+      String regionName = getStringForByteString(actions.getRegion().getValue());
+      String params = "region= " + regionName + ", for " + actionsCount + " action(s)";
+      return new SlowLogParams(regionName, params);
+    } else if (message instanceof MutateRequest) {
+      MutateRequest mutateRequest = (MutateRequest) message;
+      String regionName = getStringForByteString(mutateRequest.getRegion().getValue());
+      String params = "region= " + regionName;
+      return new SlowLogParams(regionName, params);
+    } else if (message instanceof CoprocessorServiceRequest) {
+      CoprocessorServiceRequest coprocessorServiceRequest = (CoprocessorServiceRequest) message;
+      String params = "coprocessorService= "
+        + coprocessorServiceRequest.getCall().getServiceName()
+        + ":" + coprocessorServiceRequest.getCall().getMethodName();
+      return new SlowLogParams(params);
+    }
+    String params = message.getClass().toString();
+    return new SlowLogParams(params);
+  }
+
+  /**
    * Print out some subset of a MutationProto rather than all of it and its data
    * @param proto Protobuf to print out
    * @return Short String of mutation proto
@@ -2881,7 +2992,7 @@ public final class ProtobufUtil {
 
   /**
    * Creates {@link CompactionState} from
-   * {@link org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState}
+   * {@link org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState}
    * state
    * @param state the protobuf CompactionState
    * @return CompactionState
@@ -2900,7 +3011,8 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Creates {@link org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type}
+   * Creates
+   * {@link org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Type}
    * from {@link SnapshotType}
    * @param type the SnapshotDescription type
    * @return the protobuf SnapshotDescription type
@@ -2911,7 +3023,8 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Creates {@link org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type}
+   * Creates
+   * {@link org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Type}
    * from the type of SnapshotDescription string
    * @param snapshotDesc string representing the snapshot description type
    * @return the protobuf SnapshotDescription type
@@ -2922,8 +3035,8 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Creates {@link SnapshotType} from the type of
-   * {@link org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription}
+   * Creates {@link SnapshotType} from the
+   * {@link org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Type}
    * @param type the snapshot description type
    * @return the protobuf SnapshotDescription type
    */
@@ -2933,7 +3046,7 @@ public final class ProtobufUtil {
 
   /**
    * Convert from {@link SnapshotDescription} to
-   * {@link org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription}
+   * {@link org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription}
    * @param snapshotDesc the POJO SnapshotDescription
    * @return the protobuf SnapshotDescription
    */
@@ -2965,7 +3078,7 @@ public final class ProtobufUtil {
 
   /**
    * Convert from
-   * {@link org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription} to
+   * {@link org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription} to
    * {@link SnapshotDescription}
    * @param snapshotDesc the protobuf SnapshotDescription
    * @return the POJO SnapshotDescription
@@ -3065,6 +3178,44 @@ public final class ProtobufUtil {
         NameStringPair.newBuilder().setName(entry.getKey()).setValue(entry.getValue()).build()));
     }
     return builder.build();
+  }
+
+  /**
+   * Get the Meta region state from the passed data bytes. Can handle both old and new style
+   * server names.
+   * @param data protobuf serialized data with meta server name.
+   * @param replicaId replica ID for this region
+   * @return RegionState instance corresponding to the serialized data.
+   * @throws DeserializationException if the data is invalid.
+   */
+  public static RegionState parseMetaRegionStateFrom(final byte[] data, int replicaId)
+      throws DeserializationException {
+    RegionState.State state = RegionState.State.OPEN;
+    ServerName serverName;
+    if (data != null && data.length > 0 && ProtobufUtil.isPBMagicPrefix(data)) {
+      try {
+        int prefixLen = ProtobufUtil.lengthOfPBMagic();
+        ZooKeeperProtos.MetaRegionServer rl =
+            ZooKeeperProtos.MetaRegionServer.parser().parseFrom(data, prefixLen,
+                data.length - prefixLen);
+        if (rl.hasState()) {
+          state = RegionState.State.convert(rl.getState());
+        }
+        HBaseProtos.ServerName sn = rl.getServer();
+        serverName = ServerName.valueOf(
+            sn.getHostName(), sn.getPort(), sn.getStartCode());
+      } catch (InvalidProtocolBufferException e) {
+        throw new DeserializationException("Unable to parse meta region location");
+      }
+    } else {
+      // old style of meta region location?
+      serverName = parseServerNameFrom(data);
+    }
+    if (serverName == null) {
+      state = RegionState.State.OFFLINE;
+    }
+    return new RegionState(RegionReplicaUtil.getRegionInfoForReplica(
+        RegionInfoBuilder.FIRST_META_REGIONINFO, replicaId), state, serverName);
   }
 
   /**
@@ -3368,4 +3519,80 @@ public final class ProtobufUtil {
       .build();
   }
 
+  /**
+   * Convert Protobuf class
+   * {@link org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog.SlowLogPayload}
+   * To client SlowLog Payload class {@link SlowLogRecord}
+   *
+   * @param slowLogPayload SlowLog Payload protobuf instance
+   * @return SlowLog Payload for client usecase
+   */
+  private static SlowLogRecord getSlowLogRecord(
+      final TooSlowLog.SlowLogPayload slowLogPayload) {
+    SlowLogRecord clientSlowLogRecord = new SlowLogRecord.SlowLogRecordBuilder()
+      .setCallDetails(slowLogPayload.getCallDetails())
+      .setClientAddress(slowLogPayload.getClientAddress())
+      .setMethodName(slowLogPayload.getMethodName())
+      .setMultiGetsCount(slowLogPayload.getMultiGets())
+      .setMultiMutationsCount(slowLogPayload.getMultiMutations())
+      .setMultiServiceCalls(slowLogPayload.getMultiServiceCalls())
+      .setParam(slowLogPayload.getParam())
+      .setProcessingTime(slowLogPayload.getProcessingTime())
+      .setQueueTime(slowLogPayload.getQueueTime())
+      .setRegionName(slowLogPayload.getRegionName())
+      .setResponseSize(slowLogPayload.getResponseSize())
+      .setServerClass(slowLogPayload.getServerClass())
+      .setStartTime(slowLogPayload.getStartTime())
+      .setUserName(slowLogPayload.getUserName())
+      .build();
+    return clientSlowLogRecord;
+  }
+
+  /**
+   * Convert  AdminProtos#SlowLogResponses to list of {@link SlowLogRecord}
+   *
+   * @param slowLogResponses slowlog response protobuf instance
+   * @return list of SlowLog payloads for client usecase
+   */
+  public static List<SlowLogRecord> toSlowLogPayloads(
+      final AdminProtos.SlowLogResponses slowLogResponses) {
+    List<SlowLogRecord> slowLogRecords = slowLogResponses.getSlowLogPayloadsList()
+      .stream().map(ProtobufUtil::getSlowLogRecord).collect(Collectors.toList());
+    return slowLogRecords;
+  }
+
+  /**
+   * Convert {@link ClearSlowLogResponses} to boolean
+   *
+   * @param clearSlowLogResponses Clear slowlog response protobuf instance
+   * @return boolean representing clear slowlog response
+   */
+  public static boolean toClearSlowLogPayload(final ClearSlowLogResponses clearSlowLogResponses) {
+    return clearSlowLogResponses.getIsCleaned();
+  }
+
+  public static RSGroupInfo toGroupInfo(RSGroupProtos.RSGroupInfo proto) {
+    RSGroupInfo RSGroupInfo = new RSGroupInfo(proto.getName());
+    for (HBaseProtos.ServerName el : proto.getServersList()) {
+      RSGroupInfo.addServer(Address.fromParts(el.getHostName(), el.getPort()));
+    }
+    for (HBaseProtos.TableName pTableName : proto.getTablesList()) {
+      RSGroupInfo.addTable(ProtobufUtil.toTableName(pTableName));
+    }
+    return RSGroupInfo;
+  }
+
+  public static RSGroupProtos.RSGroupInfo toProtoGroupInfo(RSGroupInfo pojo) {
+    List<HBaseProtos.TableName> tables = new ArrayList<>(pojo.getTables().size());
+    for (TableName arg : pojo.getTables()) {
+      tables.add(ProtobufUtil.toProtoTableName(arg));
+    }
+    List<HBaseProtos.ServerName> hostports = new ArrayList<>(pojo.getServers().size());
+    for (Address el : pojo.getServers()) {
+      hostports.add(HBaseProtos.ServerName.newBuilder().setHostName(el.getHostname())
+          .setPort(el.getPort()).build());
+    }
+    return RSGroupProtos.RSGroupInfo.newBuilder().setName(pojo.getName()).addAllServers(hostports)
+        .addAllTables(tables).build();
+  }
 }

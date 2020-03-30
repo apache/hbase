@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,6 +35,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -43,6 +44,7 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
@@ -84,6 +86,7 @@ import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -141,7 +144,8 @@ public class TestSplitTransactionOnCluster {
   @BeforeClass public static void before() throws Exception {
     TESTING_UTIL.getConfiguration().setInt(HConstants.HBASE_BALANCER_PERIOD, 60000);
     StartMiniClusterOption option = StartMiniClusterOption.builder()
-        .masterClass(MyMaster.class).numRegionServers(NB_SERVERS).numDataNodes(NB_SERVERS).build();
+        .masterClass(MyMaster.class).numRegionServers(NB_SERVERS).
+            numDataNodes(NB_SERVERS).build();
     TESTING_UTIL.startMiniCluster(option);
   }
 
@@ -361,10 +365,8 @@ public class TestSplitTransactionOnCluster {
     final TableName tableName = TableName.valueOf(name.getMethodName());
 
     // Create table then get the single region for our new table.
-    Table t = createTableAndWait(tableName, HConstants.CATALOG_FAMILY);
-    List<HRegion> regions = cluster.getRegions(tableName);
-    RegionInfo hri = getAndCheckSingleTableRegion(regions);
-
+    Table t = createTableAndWait(tableName, HConstants.CATALOG_FAMILY); List<HRegion> regions =
+      cluster.getRegions(tableName); RegionInfo hri = getAndCheckSingleTableRegion(regions);
     int tableRegionIndex = ensureTableRegionNotOnSameServerAsMeta(admin, hri);
 
     // Turn off balancer so it doesn't cut in and mess up our placements.
@@ -381,22 +383,12 @@ public class TestSplitTransactionOnCluster {
       admin.splitRegionAsync(hri.getRegionName()).get(2, TimeUnit.MINUTES);
       // Get daughters
       List<HRegion> daughters = checkAndGetDaughters(tableName);
-      HRegion daughterRegion = daughters.get(0);
       // Now split one of the daughters.
+      HRegion daughterRegion = daughters.get(0);
       RegionInfo daughter = daughterRegion.getRegionInfo();
       LOG.info("Daughter we are going to split: " + daughter);
-      // Compact first to ensure we have cleaned up references -- else the split
-      // will fail.
-      daughterRegion.compact(true);
-      daughterRegion.getStores().get(0).closeAndArchiveCompactedFiles();
-      for (int i = 0; i < 100; i++) {
-        if (!daughterRegion.hasReferences()) {
-          break;
-        }
-        Threads.sleep(100);
-      }
-      assertFalse("Waiting for reference to be compacted", daughterRegion.hasReferences());
-      LOG.info("Daughter hri before split (has been compacted): " + daughter);
+      clearReferences(daughterRegion);
+      LOG.info("Finished {} references={}", daughterRegion, daughterRegion.hasReferences());
       admin.splitRegionAsync(daughter.getRegionName()).get(2, TimeUnit.MINUTES);
       // Get list of daughters
       daughters = cluster.getRegions(tableName);
@@ -426,6 +418,26 @@ public class TestSplitTransactionOnCluster {
       admin.balancerSwitch(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
       t.close();
+    }
+  }
+
+  private void clearReferences(HRegion region) throws IOException {
+    // Presumption.
+    assertEquals(1, region.getStores().size());
+    HStore store = region.getStores().get(0);
+    while (store.hasReferences()) {
+      // Wait on any current compaction to complete first.
+      CompactionProgress progress = store.getCompactionProgress();
+      if (progress != null && progress.getProgressPct() < 1.0f) {
+        while (progress.getProgressPct() < 1.0f) {
+          LOG.info("Waiting, progress={}", progress.getProgressPct());
+          Threads.sleep(1000);
+        }
+      } else {
+        // Run new compaction. Shoudn't be any others running.
+        region.compact(true);
+      }
+      store.closeAndArchiveCompactedFiles();
     }
   }
 
@@ -526,8 +538,7 @@ public class TestSplitTransactionOnCluster {
       HMaster master = abortAndWaitForMaster();
       // Now call compact on the daughters and clean up any references.
       for (HRegion daughter : daughters) {
-        daughter.compact(true);
-        daughter.getStores().get(0).closeAndArchiveCompactedFiles();
+        clearReferences(daughter);
         assertFalse(daughter.hasReferences());
       }
       // BUT calling compact on the daughters is not enough. The CatalogJanitor looks
@@ -557,7 +568,9 @@ public class TestSplitTransactionOnCluster {
   @Test
   public void testSplitWithRegionReplicas() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    HTableDescriptor htd = TESTING_UTIL.createTableDescriptor(name.getMethodName());
+    HTableDescriptor htd = TESTING_UTIL.createTableDescriptor(
+      TableName.valueOf(name.getMethodName()), HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3,
+      HConstants.FOREVER, HColumnDescriptor.DEFAULT_KEEP_DELETED);
     htd.setRegionReplication(2);
     htd.addCoprocessor(SlowMeCopro.class.getName());
     // Create table then get the single region for our new table.
@@ -804,14 +817,16 @@ public class TestSplitTransactionOnCluster {
     cluster.waitOnMaster(0);
     HMaster master = cluster.startMaster().getMaster();
     cluster.waitForActiveAndReadyMaster();
+    // reset the connections
+    IOUtils.closeQuietly(admin);
+    TESTING_UTIL.invalidateConnection();
+    admin = TESTING_UTIL.getAdmin();
     return master;
   }
 
   /**
    * Ensure single table region is not on same server as the single hbase:meta table
    * region.
-   * @param admin
-   * @param hri
    * @return Index of the server hosting the single table region
    * @throws UnknownRegionException
    * @throws MasterNotRunningException

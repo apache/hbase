@@ -136,6 +136,13 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   protected static final String WAL_SYNC_TIMEOUT_MS = "hbase.regionserver.wal.sync.timeout";
   protected static final int DEFAULT_WAL_SYNC_TIMEOUT_MS = 5 * 60 * 1000; // in ms, 5min
 
+  public static final String WAL_ROLL_MULTIPLIER = "hbase.regionserver.logroll.multiplier";
+
+  public static final String MAX_LOGS = "hbase.regionserver.maxlogs";
+
+  public static final String RING_BUFFER_SLOT_COUNT =
+    "hbase.regionserver.wal.disruptor.event.count";
+
   /**
    * file system instance
    */
@@ -356,9 +363,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     // sync. If no sync, then the handlers will be outstanding just waiting on sync completion
     // before they return.
     int preallocatedEventCount =
-      this.conf.getInt("hbase.regionserver.wal.disruptor.event.count", 1024 * 16);
-    checkArgument(preallocatedEventCount >= 0,
-      "hbase.regionserver.wal.disruptor.event.count must > 0");
+      this.conf.getInt(RING_BUFFER_SLOT_COUNT, 1024 * 16);
+    checkArgument(preallocatedEventCount >= 0, RING_BUFFER_SLOT_COUNT + " must > 0");
     int floor = Integer.highestOneBit(preallocatedEventCount);
     if (floor == preallocatedEventCount) {
       return floor;
@@ -448,10 +454,9 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     // 2 times the DFS default: i.e. 2 * DFS default block size rolling at 50% full will generally
     // make similar size logs to 1 * DFS default block size rolling at 95% full. See HBASE-19148.
     this.blocksize = WALUtil.getWALBlockSize(this.conf, this.fs, this.walDir);
-    float multiplier = conf.getFloat("hbase.regionserver.logroll.multiplier", 0.5f);
-    this.logrollsize = (long)(this.blocksize * multiplier);
-    this.maxLogs = conf.getInt("hbase.regionserver.maxlogs",
-      Math.max(32, calculateMaxLogFiles(conf, logrollsize)));
+    float multiplier = conf.getFloat(WAL_ROLL_MULTIPLIER, 0.5f);
+    this.logrollsize = (long) (this.blocksize * multiplier);
+    this.maxLogs = conf.getInt(MAX_LOGS, Math.max(32, calculateMaxLogFiles(conf, logrollsize)));
 
     LOG.info("WAL configuration: blocksize=" + StringUtils.byteDesc(blocksize) + ", rollsize=" +
       StringUtils.byteDesc(this.logrollsize) + ", prefix=" + this.walFilePrefix + ", suffix=" +

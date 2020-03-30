@@ -606,7 +606,6 @@ public final class ReplicationPeerConfigUtil {
       compound.addStringMap(peerConfig.getConfiguration());
       return compound;
     }
-
     return otherConf;
   }
 }

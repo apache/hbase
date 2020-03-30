@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
@@ -42,8 +41,6 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.ipc.RpcClient;
-import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MultiRowMutationService;
-import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsResponse;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -60,8 +57,12 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hbase.thirdparty.io.netty.util.ResourceLeakDetector;
 import org.apache.hbase.thirdparty.io.netty.util.ResourceLeakDetector.Level;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MultiRowMutationProtos.MultiRowMutationService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MultiRowMutationProtos.MutateRowsResponse;
 
 /**
  * This class is for testing {@link Connection}.
@@ -315,6 +316,8 @@ public class TestConnection {
     assertTrue(c1.getConfiguration() == c2.getConfiguration());
   }
 
+  /*
+  ====> With MasterRegistry, connections cannot outlast the masters' lifetime.
   @Test
   public void testConnectionRideOverClusterRestart() throws IOException, InterruptedException {
     Configuration config = new Configuration(TEST_UTIL.getConfiguration());
@@ -337,6 +340,7 @@ public class TestConnection {
     table.close();
     connection.close();
   }
+   */
 
   @Test
   public void testLocateRegionsWithRegionReplicas() throws IOException {

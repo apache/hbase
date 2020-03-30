@@ -79,9 +79,6 @@ function personality_globals
 
   # TODO use PATCH_BRANCH to select jdk versions to use.
 
-  # Override the maven options
-  MAVEN_OPTS="${MAVEN_OPTS:-"-Xmx3100M"}"
-
   # Yetus 0.7.0 enforces limits. Default proclimit is 1000.
   # Up it. See HBASE-19902 for how we arrived at this number.
   #shellcheck disable=SC2034
@@ -187,17 +184,29 @@ function personality_modules
     done
   fi
 
-  if [[ ${testtype} == findbugs ]]; then
-    # Run findbugs on each module individually to diff pre-patch and post-patch results and
+  if [[ ${testtype} == spotbugs ]]; then
+    # Run spotbugs on each module individually to diff pre-patch and post-patch results and
     # report new warnings for changed modules only.
-    # For some reason, findbugs on root is not working, but running on individual modules is
+    # For some reason, spotbugs on root is not working, but running on individual modules is
     # working. For time being, let it run on original list of CHANGED_MODULES. HBASE-19491
     for module in "${CHANGED_MODULES[@]}"; do
-      # skip findbugs on hbase-shell and hbase-it. hbase-it has nothing
-      # in src/main/java where findbugs goes to look
+      # skip spotbugs on hbase-shell and hbase-it. hbase-it has nothing
+      # in src/main/java where spotbugs goes to look
+      # skip hbase-shaded* as there is no java code in them
+      # skip all modules with no java code or at least, non test java code
       if [[ ${module} == hbase-shell ]]; then
         continue
       elif [[ ${module} == hbase-it ]]; then
+        continue
+      elif [[ ${module} == hbase-shaded* ]]; then
+        continue
+      elif [[ ${module} == hbase-build-configuration ]]; then
+        continue
+      elif [[ ${module} == hbase-checkstyle ]]; then
+        continue
+      elif [[ ${module} == hbase-resource-bundle ]]; then
+        continue
+      elif [[ ${module} == hbase-testing-util ]]; then
         continue
       else
         # shellcheck disable=SC2086
@@ -378,7 +387,7 @@ function refguide_rebuild
     $(maven_executor) clean site --batch-mode \
       -pl . \
       -Dtest=NoUnitTests -DHBasePatchProcess -Prelease \
-      -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dfindbugs.skip=true
+      -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dspotbugs.skip=true
 
   count=$(${GREP} -c '\[ERROR\]' "${logfile}")
   if [[ ${count} -gt 0 ]]; then
@@ -455,13 +464,17 @@ function shadedjars_rebuild
 
   start_clock
 
+  local -a maven_args=('clean' 'verify' '-fae' '--batch-mode'
+    '-pl' 'hbase-shaded/hbase-shaded-check-invariants' '-am'
+    '-Dtest=NoUnitTests' '-DHBasePatchProcess' '-Prelease'
+    '-Dmaven.javadoc.skip=true' '-Dcheckstyle.skip=true' '-Dspotbugs.skip=true')
+  if [[ -n "${HADOOP_PROFILE}" ]]; then
+    maven_args+=("-Dhadoop.profile=${HADOOP_PROFILE}")
+  fi
+
   # disabled because "maven_executor" needs to return both command and args
   # shellcheck disable=2046
-  echo_and_redirect "${logfile}" \
-    $(maven_executor) clean verify -fae --batch-mode \
-      -pl hbase-shaded/hbase-shaded-check-invariants -am \
-      -Dtest=NoUnitTests -DHBasePatchProcess -Prelease \
-      -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dfindbugs.skip=true
+  echo_and_redirect "${logfile}" $(maven_executor) "${maven_args[@]}"
 
   count=$(${GREP} -c '\[ERROR\]' "${logfile}")
   if [[ ${count} -gt 0 ]]; then
@@ -544,8 +557,8 @@ function hadoopcheck_rebuild
 
   # All supported Hadoop versions that we want to test the compilation with
   # See the Hadoop section on prereqs in the HBase Reference Guide
-  if [[ "${PATCH_BRANCH}" = branch-1.* ]] && [[ "${PATCH_BRANCH#branch-1.}" -lt "4" ]]; then
-    yetus_info "Setting Hadoop 2 versions to test based on before-branch-1.4 rules."
+  if [[ "${PATCH_BRANCH}" = branch-1.3 ]]; then
+    yetus_info "Setting Hadoop 2 versions to test based on branch-1.3 rules."
     if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
       hbase_hadoop2_versions="2.4.1 2.5.2 2.6.5 2.7.7"
     else
@@ -557,6 +570,13 @@ function hadoopcheck_rebuild
       hbase_hadoop2_versions="2.7.7"
     else
       hbase_hadoop2_versions="2.7.1 2.7.2 2.7.3 2.7.4 2.7.5 2.7.6 2.7.7"
+    fi
+  elif [[ "${PATCH_BRANCH}" = branch-1 ]]; then
+    yetus_info "Setting Hadoop 2 versions to test based on branch-1 rules."
+    if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
+      hbase_hadoop2_versions="2.8.5 2.9.2"
+    else
+      hbase_hadoop2_versions="2.8.5 2.9.2"
     fi
   elif [[ "${PATCH_BRANCH}" = branch-2.0 ]]; then
     yetus_info "Setting Hadoop 2 versions to test based on branch-2.0 rules."
@@ -572,12 +592,19 @@ function hadoopcheck_rebuild
     else
       hbase_hadoop2_versions="2.7.1 2.7.2 2.7.3 2.7.4 2.7.5 2.7.6 2.7.7 2.8.2 2.8.3 2.8.4 2.8.5"
     fi
-  else
-    yetus_info "Setting Hadoop 2 versions to test based on branch-1.5+/branch-2.2+/master/feature branch rules."
+  elif [[ "${PATCH_BRANCH}" = branch-2.2 ]]; then
+    yetus_info "Setting Hadoop 2 versions to test based on branch-2.2 rules."
     if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-      hbase_hadoop2_versions="2.8.5 2.9.2"
+      hbase_hadoop2_versions="2.8.5 2.9.2 2.10.0"
     else
-      hbase_hadoop2_versions="2.8.5 2.9.2"
+      hbase_hadoop2_versions="2.8.5 2.9.2 2.10.0"
+    fi
+  else
+    yetus_info "Setting Hadoop 2 versions to test based on branch-2.3+/master/feature branch rules."
+    if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
+      hbase_hadoop2_versions="2.10.0"
+    else
+      hbase_hadoop2_versions="2.10.0"
     fi
   fi
   if [[ "${PATCH_BRANCH}" = branch-1* ]]; then

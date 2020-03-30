@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,7 +29,8 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -45,7 +46,7 @@ import org.slf4j.LoggerFactory;
  * Test the synchronization of token authentication master keys through
  * ZKSecretWatcher
  */
-@Category({SecurityTests.class, LargeTests.class})
+@Category({SecurityTests.class, MediumTests.class})
 public class TestZKSecretWatcher {
 
   @ClassRule
@@ -145,30 +146,31 @@ public class TestZKSecretWatcher {
     KEY_MASTER.rollCurrentKey();
     AuthenticationKey key1 = KEY_MASTER.getCurrentKey();
     assertNotNull(key1);
-    LOG.debug("Master current key: "+key1.getKeyId());
+    LOG.debug("Master current key (key1) {}", key1);
 
     // wait for slave to update
     Thread.sleep(1000);
     AuthenticationKey slaveCurrent = KEY_SLAVE.getCurrentKey();
     assertNotNull(slaveCurrent);
     assertEquals(key1, slaveCurrent);
-    LOG.debug("Slave current key: "+slaveCurrent.getKeyId());
+    LOG.debug("Slave current key (key1) {}", slaveCurrent);
 
     // generate two more keys then expire the original
     KEY_MASTER.rollCurrentKey();
     AuthenticationKey key2 = KEY_MASTER.getCurrentKey();
-    LOG.debug("Master new current key: "+key2.getKeyId());
+    LOG.debug("Master new current key (key2) {}", key2);
     KEY_MASTER.rollCurrentKey();
     AuthenticationKey key3 = KEY_MASTER.getCurrentKey();
-    LOG.debug("Master new current key: "+key3.getKeyId());
+    LOG.debug("Master new current key (key3) {}", key3);
 
     // force expire the original key
-    key1.setExpiration(EnvironmentEdgeManager.currentTime() - 1000);
+    key1.setExpiration(EnvironmentEdgeManager.currentTime() - 100000);
     KEY_MASTER.removeExpiredKeys();
     // verify removed from master
     assertNull(KEY_MASTER.getKey(key1.getKeyId()));
 
-    // wait for slave to catch up
+    // Wait for slave to catch up. When remove hits KEY_SLAVE, we'll clear
+    // the latch and will progress beyond the await.
     KEY_SLAVE.getLatch().await();
     // make sure the slave has both new keys
     AuthenticationKey slave2 = KEY_SLAVE.getKey(key2.getKeyId());
@@ -179,10 +181,13 @@ public class TestZKSecretWatcher {
     assertEquals(key3, slave3);
     slaveCurrent = KEY_SLAVE.getCurrentKey();
     assertEquals(key3, slaveCurrent);
-    LOG.debug("Slave current key: "+slaveCurrent.getKeyId());
+    LOG.debug("Slave current key (key3) {}", slaveCurrent);
 
     // verify that the expired key has been removed
-    assertNull(KEY_SLAVE.getKey(key1.getKeyId()));
+    Waiter.waitFor(TEST_UTIL.getConfiguration(), 30000,
+      () -> KEY_SLAVE.getKey(key1.getKeyId()) == null);
+    assertNull("key1=" + KEY_SLAVE.getKey(key1.getKeyId()),
+      KEY_SLAVE.getKey(key1.getKeyId()));
 
     // bring up a new slave
     Configuration conf = TEST_UTIL.getConfiguration();

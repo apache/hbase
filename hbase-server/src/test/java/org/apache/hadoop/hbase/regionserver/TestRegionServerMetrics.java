@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -25,6 +26,8 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -53,6 +56,10 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.LoadBalancer;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
+import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -494,7 +501,20 @@ public class TestRegionServerMetrics {
       setMobThreshold(region, cf, 100);
       // metrics are reset by the region initialization
       region.initialize();
-      region.compact(true);
+      // This is how we MOB compact region
+      List<HStore> stores = region.getStores();
+      for (HStore store: stores) {
+        // Force major compaction
+        store.triggerMajorCompaction();
+        Optional<CompactionContext> context =
+            store.requestCompaction(HStore.PRIORITY_USER, CompactionLifeCycleTracker.DUMMY,
+              User.getCurrent());
+        if (!context.isPresent()) {
+          continue;
+        }
+        region.compact(context.get(), store,
+          NoLimitThroughputController.INSTANCE, User.getCurrent());
+      }
       metricsRegionServer.getRegionServerWrapper().forceRecompute();
       assertCounter("cellsCountCompactedFromMob", numHfiles);
       assertCounter("cellsCountCompactedToMob", 0);
@@ -604,5 +624,23 @@ public class TestRegionServerMetrics {
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     assertTrue(metricsHelper.getGaugeDouble("averageRegionSize", serverSource) > 0.0);
+  }
+
+  @Test
+  public void testReadBytes() throws Exception {
+    // Do a first put to be sure that the connection is established, meta is there and so on.
+    doNPuts(1, false);
+    doNGets(10, false);
+    TEST_UTIL.getAdmin().flush(tableName);
+    metricsRegionServer.getRegionServerWrapper().forceRecompute();
+
+    assertTrue("Total read bytes should be larger than 0",
+        metricsRegionServer.getRegionServerWrapper().getTotalBytesRead() > 0);
+    assertTrue("Total local read bytes should be larger than 0",
+        metricsRegionServer.getRegionServerWrapper().getLocalBytesRead() > 0);
+    assertEquals("Total short circuit read bytes should be equal to 0", 0,
+        metricsRegionServer.getRegionServerWrapper().getShortCircuitBytesRead());
+    assertEquals("Total zero-byte read bytes should be equal to 0", 0,
+        metricsRegionServer.getRegionServerWrapper().getZeroCopyBytesRead());
   }
 }

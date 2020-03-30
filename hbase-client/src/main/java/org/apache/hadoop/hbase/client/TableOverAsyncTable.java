@@ -19,12 +19,6 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.setCoprocessorError;
 
-import com.google.protobuf.Descriptors.MethodDescriptor;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
-import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
@@ -52,6 +46,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException.ThrowableWithExtraContext;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Call;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -64,6 +59,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.primitives.Booleans;
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.Service;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
  * The table implementation based on {@link AsyncTable}.
@@ -220,58 +223,80 @@ class TableOverAsyncTable implements Table {
     FutureUtils.get(table.deleteAll(deletes));
   }
 
-  private static final class CheckAndMutateBuilderImpl implements CheckAndMutateBuilder {
+  @Override
+  public CheckAndMutateBuilder checkAndMutate(byte[] row, byte[] family) {
+    return new CheckAndMutateBuilder() {
 
-    private final AsyncTable.CheckAndMutateBuilder builder;
+      private final AsyncTable.CheckAndMutateBuilder builder = table.checkAndMutate(row, family);
 
-    public CheckAndMutateBuilderImpl(
-        org.apache.hadoop.hbase.client.AsyncTable.CheckAndMutateBuilder builder) {
-      this.builder = builder;
-    }
+      @Override
+      public CheckAndMutateBuilder qualifier(byte[] qualifier) {
+        builder.qualifier(qualifier);
+        return this;
+      }
 
-    @Override
-    public CheckAndMutateBuilder qualifier(byte[] qualifier) {
-      builder.qualifier(qualifier);
-      return this;
-    }
+      @Override
+      public CheckAndMutateBuilder timeRange(TimeRange timeRange) {
+        builder.timeRange(timeRange);
+        return this;
+      }
 
-    @Override
-    public CheckAndMutateBuilder timeRange(TimeRange timeRange) {
-      builder.timeRange(timeRange);
-      return this;
-    }
+      @Override
+      public CheckAndMutateBuilder ifNotExists() {
+        builder.ifNotExists();
+        return this;
+      }
 
-    @Override
-    public CheckAndMutateBuilder ifNotExists() {
-      builder.ifNotExists();
-      return this;
-    }
+      @Override
+      public CheckAndMutateBuilder ifMatches(CompareOperator compareOp, byte[] value) {
+        builder.ifMatches(compareOp, value);
+        return this;
+      }
 
-    @Override
-    public CheckAndMutateBuilder ifMatches(CompareOperator compareOp, byte[] value) {
-      builder.ifMatches(compareOp, value);
-      return this;
-    }
+      @Override
+      public boolean thenPut(Put put) throws IOException {
+        return FutureUtils.get(builder.thenPut(put));
+      }
 
-    @Override
-    public boolean thenPut(Put put) throws IOException {
-      return FutureUtils.get(builder.thenPut(put));
-    }
+      @Override
+      public boolean thenDelete(Delete delete) throws IOException {
+        return FutureUtils.get(builder.thenDelete(delete));
+      }
 
-    @Override
-    public boolean thenDelete(Delete delete) throws IOException {
-      return FutureUtils.get(builder.thenDelete(delete));
-    }
-
-    @Override
-    public boolean thenMutate(RowMutations mutation) throws IOException {
-      return FutureUtils.get(builder.thenMutate(mutation));
-    }
+      @Override
+      public boolean thenMutate(RowMutations mutation) throws IOException {
+        return FutureUtils.get(builder.thenMutate(mutation));
+      }
+    };
   }
 
   @Override
-  public CheckAndMutateBuilder checkAndMutate(byte[] row, byte[] family) {
-    return new CheckAndMutateBuilderImpl(table.checkAndMutate(row, family));
+  public CheckAndMutateWithFilterBuilder checkAndMutate(byte[] row, Filter filter) {
+    return new CheckAndMutateWithFilterBuilder() {
+      private final AsyncTable.CheckAndMutateWithFilterBuilder builder =
+        table.checkAndMutate(row, filter);
+
+      @Override
+      public CheckAndMutateWithFilterBuilder timeRange(TimeRange timeRange) {
+        builder.timeRange(timeRange);
+        return this;
+      }
+
+      @Override
+      public boolean thenPut(Put put) throws IOException {
+        return FutureUtils.get(builder.thenPut(put));
+      }
+
+      @Override
+      public boolean thenDelete(Delete delete) throws IOException {
+        return FutureUtils.get(builder.thenDelete(delete));
+      }
+
+      @Override
+      public boolean thenMutate(RowMutations mutation) throws IOException {
+        return FutureUtils.get(builder.thenMutate(mutation));
+      }
+    };
   }
 
   @Override
@@ -470,7 +495,7 @@ class TableOverAsyncTable implements Table {
   public <T extends Service, R> void coprocessorService(Class<T> service, byte[] startKey,
       byte[] endKey, Call<T, R> callable, Callback<R> callback) throws ServiceException, Throwable {
     coprocssorService(service.getName(), startKey, endKey, callback, channel -> {
-      T instance = org.apache.hadoop.hbase.protobuf.ProtobufUtil.newServiceStub(service, channel);
+      T instance = ProtobufUtil.newServiceStub(service, channel);
       return callable.call(instance);
     });
   }

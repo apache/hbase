@@ -22,21 +22,19 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-
 import java.util.Arrays;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.TestTableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
@@ -44,13 +42,14 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -66,7 +65,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({SecurityTests.class, LargeTests.class})
+@Category({SecurityTests.class, MediumTests.class})
 public class TestAccessController2 extends SecureTestUtil {
 
   @ClassRule
@@ -105,7 +104,7 @@ public class TestAccessController2 extends SecureTestUtil {
   private static User TESTGROUP2_USER1;
 
   @Rule
-  public TestTableName TEST_TABLE = new TestTableName();
+  public TableNameTestRule testTable = new TableNameTestRule();
   private String namespace = "testNamespace";
   private String tname = namespace + ":testtable1";
   private TableName tableName = TableName.valueOf(tname);
@@ -187,22 +186,24 @@ public class TestAccessController2 extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTableDescriptor desc = new HTableDescriptor(TEST_TABLE.getTableName());
-        desc.addFamily(new HColumnDescriptor(TEST_FAMILY));
+        TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+          new TableDescriptorBuilder.ModifyableTableDescriptor(testTable.getTableName());
+        tableDescriptor.setColumnFamily(
+          new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY));
         try (Connection connection =
             ConnectionFactory.createConnection(TEST_UTIL.getConfiguration(), testUser)) {
           try (Admin admin = connection.getAdmin()) {
-            createTable(TEST_UTIL, admin, desc);
+            createTable(TEST_UTIL, admin, tableDescriptor);
           }
         }
         return null;
       }
     }, testUser);
-    TEST_UTIL.waitTableAvailable(TEST_TABLE.getTableName());
+    TEST_UTIL.waitTableAvailable(testTable.getTableName());
     // Verify that owner permissions have been granted to the test user on the
     // table just created
     List<UserPermission> perms = PermissionStorage
-        .getTablePermissions(conf, TEST_TABLE.getTableName()).get(testUser.getShortName());
+        .getTablePermissions(conf, testTable.getTableName()).get(testUser.getShortName());
     assertNotNull(perms);
     assertFalse(perms.isEmpty());
     // Should be RWXCA
@@ -220,12 +221,14 @@ public class TestAccessController2 extends SecureTestUtil {
       AccessTestAction createAction = new AccessTestAction() {
         @Override
         public Object run() throws Exception {
-          HTableDescriptor desc = new HTableDescriptor(TEST_TABLE.getTableName());
-          desc.addFamily(new HColumnDescriptor(TEST_FAMILY));
+          TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+            new TableDescriptorBuilder.ModifyableTableDescriptor(testTable.getTableName());
+          tableDescriptor.setColumnFamily(
+            new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY));
           try (Connection connection =
               ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
             try (Admin admin = connection.getAdmin()) {
-              admin.createTable(desc);
+              admin.createTable(tableDescriptor);
             }
           }
           return null;
@@ -261,13 +264,13 @@ public class TestAccessController2 extends SecureTestUtil {
     User nsCreate = User.createUserForTesting(conf, "nsCreate", new String[0]);
     User nsAdmin = User.createUserForTesting(conf, "nsAdmin", new String[0]);
     SecureTestUtil.grantOnNamespace(TEST_UTIL, nsRead.getShortName(),
-      TEST_TABLE.getTableName().getNamespaceAsString(), Action.READ);
+      testTable.getTableName().getNamespaceAsString(), Action.READ);
     SecureTestUtil.grantOnNamespace(TEST_UTIL, nsWrite.getShortName(),
-      TEST_TABLE.getTableName().getNamespaceAsString(), Action.WRITE);
+      testTable.getTableName().getNamespaceAsString(), Action.WRITE);
     SecureTestUtil.grantOnNamespace(TEST_UTIL, nsCreate.getShortName(),
-      TEST_TABLE.getTableName().getNamespaceAsString(), Action.CREATE);
+      testTable.getTableName().getNamespaceAsString(), Action.CREATE);
     SecureTestUtil.grantOnNamespace(TEST_UTIL, nsAdmin.getShortName(),
-      TEST_TABLE.getTableName().getNamespaceAsString(), Action.ADMIN);
+      testTable.getTableName().getNamespaceAsString(), Action.ADMIN);
 
     // Table users
     User tableRead = User.createUserForTesting(conf, "tableRead", new String[0]);
@@ -275,13 +278,13 @@ public class TestAccessController2 extends SecureTestUtil {
     User tableCreate = User.createUserForTesting(conf, "tableCreate", new String[0]);
     User tableAdmin = User.createUserForTesting(conf, "tableAdmin", new String[0]);
     SecureTestUtil.grantOnTable(TEST_UTIL, tableRead.getShortName(),
-      TEST_TABLE.getTableName(), null, null, Action.READ);
+      testTable.getTableName(), null, null, Action.READ);
     SecureTestUtil.grantOnTable(TEST_UTIL, tableWrite.getShortName(),
-      TEST_TABLE.getTableName(), null, null, Action.WRITE);
+      testTable.getTableName(), null, null, Action.WRITE);
     SecureTestUtil.grantOnTable(TEST_UTIL, tableCreate.getShortName(),
-      TEST_TABLE.getTableName(), null, null, Action.CREATE);
+      testTable.getTableName(), null, null, Action.CREATE);
     SecureTestUtil.grantOnTable(TEST_UTIL, tableAdmin.getShortName(),
-      TEST_TABLE.getTableName(), null, null, Action.ADMIN);
+      testTable.getTableName(), null, null, Action.ADMIN);
 
     grantGlobal(TEST_UTIL, TESTGROUP_1_NAME, Action.WRITE);
     try {
@@ -508,9 +511,11 @@ public class TestAccessController2 extends SecureTestUtil {
 
     final TableName table = TableName.valueOf(ns, "testACLZNodeDeletionTable");
     final byte[] family = Bytes.toBytes("f1");
-    HTableDescriptor htd = new HTableDescriptor(table);
-    htd.addFamily(new HColumnDescriptor(family));
-    createTable(TEST_UTIL, htd);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(table);
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
+    createTable(TEST_UTIL, tableDescriptor);
 
     // Namespace needs this, as they follow the lazy creation of ACL znode.
     grantOnNamespace(TEST_UTIL, TESTGROUP1_USER1.getShortName(), ns, Action.ADMIN);

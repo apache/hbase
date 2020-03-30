@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Optional;
-
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -49,12 +48,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IdLock;
 import org.apache.hadoop.hbase.util.ObjectIntPair;
 import org.apache.hadoop.io.WritableUtils;
-
 import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -84,9 +81,6 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
    * and handling cache.
    */
   protected HFileDataBlockEncoder dataBlockEncoder = NoOpDataBlockEncoder.INSTANCE;
-
-  /** Key comparator */
-  protected CellComparator comparator = CellComparator.getInstance();
 
   /** Block cache configuration. */
   protected final CacheConfig cacheConf;
@@ -145,8 +139,6 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     this.primaryReplicaReader = context.isPrimaryReplicaReader();
     this.fileInfo = fileInfo;
     this.trailer = fileInfo.getTrailer();
-    // Comparator class name is stored in the trailer in version 2.
-    this.comparator = trailer.createComparator();
     this.hfileContext = fileInfo.getHFileContext();
     this.fsBlockReader = new HFileBlock.FSReaderImpl(context, hfileContext,
         cacheConf.getByteBuffAllocator());
@@ -238,7 +230,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
   /** @return comparator */
   @Override
   public CellComparator getComparator() {
-    return comparator;
+    return this.hfileContext.getCellComparator();
   }
 
   @VisibleForTesting
@@ -398,8 +390,9 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     }
 
     protected void assertSeeked() {
-      if (!isSeeked())
+      if (!isSeeked()) {
         throw new NotSeekedException(reader.getPath());
+      }
     }
 
     @Override
@@ -476,7 +469,6 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
 
     /**
      * Read mvcc. Does checks to see if we even need to read the mvcc at all.
-     * @param offsetFromPos
      */
     protected void readMvccVersion(final int offsetFromPos) {
       // See if we even need to decode mvcc.
@@ -493,7 +485,6 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
 
     /**
      * Actually do the mvcc read. Does no checks.
-     * @param offsetFromPos
      */
     private void _readMvccVersion(int offsetFromPos) {
       // This is Bytes#bytesToVint inlined so can save a few instructions in this hot method; i.e.
@@ -681,7 +672,6 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
      *         0 if we are at the given key, 1 if we are past the given key
      *         -2 if the key is earlier than the first key of the file while
      *         using a faked index key
-     * @throws IOException
      */
     public int seekTo(Cell key, boolean rewind) throws IOException {
       HFileBlockIndex.BlockIndexReader indexReader = reader.getDataBlockIndexReader();
@@ -747,7 +737,6 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
      * data block is found.
      *
      * @return the next block, or null if there are no more data blocks
-     * @throws IOException
      */
     @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH",
         justification="Yeah, unnecessary null check; could do w/ clean up")
@@ -764,7 +753,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         }
         if (block.getOffset() < 0) {
           releaseIfNotCurBlock(block);
-          throw new IOException("Invalid block file offset: " + block + ", path=" + reader.getPath());
+          throw new IOException("Invalid block offset: " + block + ", path=" + reader.getPath());
         }
         // We are reading the next block without block type validation, because
         // it might turn out to be a non-data block.
@@ -786,8 +775,9 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
 
     @Override
     public Cell getCell() {
-      if (!isSeeked())
+      if (!isSeeked()) {
         return null;
+      }
 
       Cell ret;
       int cellBufSize = getKVBufSize();
@@ -886,7 +876,6 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     /**
      * Set our selves up for the next 'next' invocation, set up next block.
      * @return True is more to read else false if at the end.
-     * @throws IOException
      */
     private boolean positionForNextBlock() throws IOException {
       // Methods are small so they get inlined because they are 'hot'.
@@ -942,7 +931,6 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
      *
      * @return false if empty file; i.e. a call to next would return false and
      *         the current key and value are undefined.
-     * @throws IOException
      */
     @Override
     public boolean seekTo() throws IOException {
@@ -975,7 +963,8 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         isCompaction, true, BlockType.DATA, getEffectiveDataBlockEncoding());
       if (newBlock.getOffset() < 0) {
         releaseIfNotCurBlock(newBlock);
-        throw new IOException("Invalid block offset: " + newBlock.getOffset() + ", path=" + reader.getPath());
+        throw new IOException("Invalid offset=" + newBlock.getOffset() +
+          ", path=" + reader.getPath());
       }
       updateCurrentBlock(newBlock);
     }
@@ -993,7 +982,6 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     }
 
     /**
-     * @param v
      * @return True if v &lt;= 0 or v &gt; current block buffer limit.
      */
     protected final boolean checkKeyLen(final int v) {
@@ -1001,7 +989,6 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     }
 
     /**
-     * @param v
      * @return True if v &lt; 0 or v &gt; current block buffer limit.
      */
     protected final boolean checkLen(final int v) {
@@ -1172,9 +1159,9 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
             // so blocks with the old encoding still linger in cache for some
             // period of time. This event should be rare as it only happens on
             // schema definition change.
-            LOG.info("Evicting cached block with key " + cacheKey
-                + " because of a data block encoding mismatch" + "; expected: "
-                + expectedDataBlockEncoding + ", actual: " + actualDataBlockEncoding + ", path=" + path);
+            LOG.info("Evicting cached block with key {} because data block encoding mismatch; " +
+                "expected {}, actual {}, path={}", cacheKey, actualDataBlockEncoding,
+              expectedDataBlockEncoding, path);
             // This is an error scenario. so here we need to release the block.
             returnAndEvictBlock(cache, cacheKey, cachedBlock);
           }
@@ -1192,10 +1179,8 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
   }
 
   /**
-   * @param metaBlockName
    * @param cacheBlock Add block to cache, if found
    * @return block wrapped in a ByteBuffer, with header skipped
-   * @throws IOException
    */
   @Override
   public HFileBlock getMetaBlock(String metaBlockName, boolean cacheBlock)
@@ -1210,8 +1195,9 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     byte[] mbname = Bytes.toBytes(metaBlockName);
     int block = metaBlockIndexReader.rootBlockContainingKey(mbname,
         0, mbname.length);
-    if (block == -1)
+    if (block == -1) {
       return null;
+    }
     long blockSize = metaBlockIndexReader.getRootBlockDataSize(block);
 
     // Per meta key from any given file, synchronize reads for said block. This
@@ -1418,7 +1404,6 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
   /**
    * @return Midkey for this file. We work with block boundaries only so
    *         returned midkey is an approximation only.
-   * @throws IOException
    */
   @Override
   public Optional<Cell> midKey() throws IOException {
@@ -1455,8 +1440,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
       DataBlockEncoding encoding = reader.getDataBlockEncoding();
       dataBlockEncoder = encoding.getEncoder();
       decodingCtx = dataBlockEncoder.newDataBlockDecodingContext(meta);
-      seeker = dataBlockEncoder.createSeeker(
-        reader.getComparator(), decodingCtx);
+      seeker = dataBlockEncoder.createSeeker(decodingCtx);
     }
 
     @Override
@@ -1475,7 +1459,6 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
      * @param newBlock the block to make current, and read by {@link HFileReaderImpl#readBlock},
      *          it's a totally new block with new allocated {@link ByteBuff}, so if no further
      *          reference to this block, we should release it carefully.
-     * @throws CorruptHFileException
      */
     @Override
     protected void updateCurrentBlock(HFileBlock newBlock) throws CorruptHFileException {
@@ -1487,9 +1470,9 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         short dataBlockEncoderId = newBlock.getDataBlockEncodingId();
         if (!DataBlockEncoding.isCorrectEncoder(dataBlockEncoder, dataBlockEncoderId)) {
           String encoderCls = dataBlockEncoder.getClass().getName();
-          throw new CorruptHFileException(
-              "Encoder " + encoderCls + " doesn't support data block encoding "
-                  + DataBlockEncoding.getNameFromId(dataBlockEncoderId) + ",path=" + reader.getPath());
+          throw new CorruptHFileException("Encoder " + encoderCls +
+            " doesn't support data block encoding " +
+            DataBlockEncoding.getNameFromId(dataBlockEncoderId) + ",path=" + reader.getPath());
         }
         updateCurrBlockRef(newBlock);
         ByteBuff encodedBuffer = getEncodedBuffer(newBlock);
@@ -1606,7 +1589,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
   }
 
   private DataInput getBloomFilterMetadata(BlockType blockType)
-  throws IOException {
+      throws IOException {
     if (blockType != BlockType.GENERAL_BLOOM_META &&
         blockType != BlockType.DELETE_FAMILY_BLOOM_META) {
       throw new RuntimeException("Block Type: " + blockType.toString() +

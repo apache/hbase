@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,13 +28,13 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
@@ -196,13 +196,16 @@ public class TestMasterCoprocessorExceptionWithRemove {
         BuggyMasterObserver.class.getName();
     assertTrue(HMaster.getLoadedCoprocessors().contains(coprocessorName));
 
-    HTableDescriptor htd1 = new HTableDescriptor(TableName.valueOf(TEST_TABLE1));
-    htd1.addFamily(new HColumnDescriptor(TEST_FAMILY1));
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor1 =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(TEST_TABLE1));
+
+    tableDescriptor1.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY1));
 
     boolean threwDNRE = false;
     try {
       Admin admin = UTIL.getAdmin();
-      admin.createTable(htd1);
+      admin.createTable(tableDescriptor1);
     } catch (IOException e) {
       if (e.getClass().getName().equals("org.apache.hadoop.hbase.DoNotRetryIOException")) {
         threwDNRE = true;
@@ -226,11 +229,13 @@ public class TestMasterCoprocessorExceptionWithRemove {
 
     // Verify that BuggyMasterObserver has been removed due to its misbehavior
     // by creating another table: should not have a problem this time.
-    HTableDescriptor htd2 = new HTableDescriptor(TableName.valueOf(TEST_TABLE2));
-    htd2.addFamily(new HColumnDescriptor(TEST_FAMILY2));
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor2 =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(TEST_TABLE2));
+    tableDescriptor2.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY2));
     Admin admin = UTIL.getAdmin();
     try {
-      admin.createTable(htd2);
+      admin.createTable(tableDescriptor2);
     } catch (IOException e) {
       fail("Failed to create table after buggy coprocessor removal: " + e);
     }

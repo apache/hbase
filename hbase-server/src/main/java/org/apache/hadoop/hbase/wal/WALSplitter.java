@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.wal;
 
+import static org.apache.hadoop.hbase.wal.BoundedRecoveredHFilesOutputSink.DEFAULT_WAL_SPLIT_TO_HFILE;
+import static org.apache.hadoop.hbase.wal.BoundedRecoveredHFilesOutputSink.WAL_SPLIT_TO_HFILE;
 import static org.apache.hadoop.hbase.wal.WALSplitUtil.finishSplitLogFile;
 
 import java.io.EOFException;
@@ -38,16 +40,19 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.coordination.SplitLogWorkerCoordination;
 import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.regionserver.LastSequenceId;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WAL.Reader;
@@ -80,6 +85,10 @@ public class WALSplitter {
   protected final Path walDir;
   protected final FileSystem walFS;
   protected final Configuration conf;
+  final Path rootDir;
+  final FileSystem rootFS;
+  final RegionServerServices rsServices;
+  final TableDescriptors tableDescriptors;
 
   // Major subcomponents of the split process.
   // These are separated into inner classes to make testing easier.
@@ -112,33 +121,48 @@ public class WALSplitter {
 
   @VisibleForTesting
   WALSplitter(final WALFactory factory, Configuration conf, Path walDir, FileSystem walFS,
-      LastSequenceId idChecker, SplitLogWorkerCoordination splitLogWorkerCoordination) {
+      Path rootDir, FileSystem rootFS, LastSequenceId idChecker,
+      SplitLogWorkerCoordination splitLogWorkerCoordination, RegionServerServices rsServices) {
     this.conf = HBaseConfiguration.create(conf);
     String codecClassName =
         conf.get(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, WALCellCodec.class.getName());
     this.conf.set(HConstants.RPC_CODEC_CONF_KEY, codecClassName);
     this.walDir = walDir;
     this.walFS = walFS;
+    this.rootDir = rootDir;
+    this.rootFS = rootFS;
     this.sequenceIdChecker = idChecker;
     this.splitLogWorkerCoordination = splitLogWorkerCoordination;
+    this.rsServices = rsServices;
+    if (rsServices != null) {
+      this.tableDescriptors = rsServices.getTableDescriptors();
+    } else {
+      this.tableDescriptors = new FSTableDescriptors(rootFS, rootDir, true, true);
+    }
 
     this.walFactory = factory;
     PipelineController controller = new PipelineController();
     this.tmpDirName =
       conf.get(HConstants.TEMPORARY_FS_DIRECTORY_KEY, HConstants.DEFAULT_TEMPORARY_HDFS_DIRECTORY);
 
+
     // if we limit the number of writers opened for sinking recovered edits
     boolean splitWriterCreationBounded = conf.getBoolean(SPLIT_WRITER_CREATION_BOUNDED, false);
+    boolean splitToHFile = conf.getBoolean(WAL_SPLIT_TO_HFILE, DEFAULT_WAL_SPLIT_TO_HFILE);
     long bufferSize = this.conf.getLong(SPLIT_WAL_BUFFER_SIZE, 128 * 1024 * 1024);
     int numWriterThreads = this.conf.getInt(SPLIT_WAL_WRITER_THREADS, 3);
-    if (splitWriterCreationBounded) {
+
+    if (splitToHFile) {
+      entryBuffers = new BoundedEntryBuffers(controller, bufferSize);
+      outputSink =
+          new BoundedRecoveredHFilesOutputSink(this, controller, entryBuffers, numWriterThreads);
+    } else if (splitWriterCreationBounded) {
       entryBuffers = new BoundedEntryBuffers(controller, bufferSize);
       outputSink =
           new BoundedRecoveredEditsOutputSink(this, controller, entryBuffers, numWriterThreads);
     } else {
       entryBuffers = new EntryBuffers(controller, bufferSize);
-      outputSink =
-          new RecoveredEditsOutputSink(this, controller, entryBuffers, numWriterThreads);
+      outputSink = new RecoveredEditsOutputSink(this, controller, entryBuffers, numWriterThreads);
     }
   }
 
@@ -168,10 +192,12 @@ public class WALSplitter {
    */
   public static boolean splitLogFile(Path walDir, FileStatus logfile, FileSystem walFS,
       Configuration conf, CancelableProgressable reporter, LastSequenceId idChecker,
-      SplitLogWorkerCoordination splitLogWorkerCoordination, final WALFactory factory)
-      throws IOException {
-    WALSplitter s = new WALSplitter(factory, conf, walDir, walFS, idChecker,
-        splitLogWorkerCoordination);
+      SplitLogWorkerCoordination splitLogWorkerCoordination, WALFactory factory,
+      RegionServerServices rsServices) throws IOException {
+    Path rootDir = FSUtils.getRootDir(conf);
+    FileSystem rootFS = rootDir.getFileSystem(conf);
+    WALSplitter s = new WALSplitter(factory, conf, walDir, walFS, rootDir, rootFS, idChecker,
+        splitLogWorkerCoordination, rsServices);
     return s.splitLogFile(logfile, reporter);
   }
 
@@ -180,16 +206,19 @@ public class WALSplitter {
   // It is public only because TestWALObserver is in a different package,
   // which uses this method to do log splitting.
   @VisibleForTesting
-  public static List<Path> split(Path rootDir, Path logDir, Path oldLogDir,
-      FileSystem walFS, Configuration conf, final WALFactory factory) throws IOException {
-    final FileStatus[] logfiles = SplitLogManager.getFileList(conf,
-        Collections.singletonList(logDir), null);
+  public static List<Path> split(Path walDir, Path logDir, Path oldLogDir, FileSystem walFS,
+      Configuration conf, final WALFactory factory) throws IOException {
+    Path rootDir = FSUtils.getRootDir(conf);
+    FileSystem rootFS = rootDir.getFileSystem(conf);
+    final FileStatus[] logfiles =
+        SplitLogManager.getFileList(conf, Collections.singletonList(logDir), null);
     List<Path> splits = new ArrayList<>();
     if (ArrayUtils.isNotEmpty(logfiles)) {
-      for (FileStatus logfile: logfiles) {
-        WALSplitter s = new WALSplitter(factory, conf, rootDir, walFS, null, null);
+      for (FileStatus logfile : logfiles) {
+        WALSplitter s =
+            new WALSplitter(factory, conf, walDir, walFS, rootDir, rootFS, null, null, null);
         if (s.splitLogFile(logfile, null)) {
-          finishSplitLogFile(rootDir, oldLogDir, logfile.getPath(), conf);
+          finishSplitLogFile(walDir, oldLogDir, logfile.getPath(), conf);
           if (s.outputSink.splits != null) {
             splits.addAll(s.outputSink.splits);
           }

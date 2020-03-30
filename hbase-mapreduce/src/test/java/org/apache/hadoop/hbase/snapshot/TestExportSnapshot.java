@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,9 +21,7 @@ import static org.apache.hadoop.util.ToolRunner.run;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -55,7 +53,6 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 
@@ -87,10 +84,6 @@ public class TestExportSnapshot {
   public static void setUpBaseConf(Configuration conf) {
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
     conf.setInt("hbase.regionserver.msginterval", 100);
-    conf.setInt("hbase.client.pause", 250);
-    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 6);
-    conf.setBoolean("hbase.master.enabletable.roundrobin", true);
-    conf.setInt("mapreduce.map.maxattempts", 10);
     // If a single node has enough failures (default 3), resource manager will blacklist it.
     // With only 2 nodes and tests injecting faults, we don't want that.
     conf.setInt("mapreduce.job.maxtaskfailures.per.tracker", 100);
@@ -209,49 +202,53 @@ public class TestExportSnapshot {
    */
   protected static void testExportFileSystemState(final Configuration conf, final TableName tableName,
       final String snapshotName, final String targetName, final int filesExpected,
-      final Path sourceDir, Path copyDir, final boolean overwrite,
+      final Path srcDir, Path rawTgtDir, final boolean overwrite,
       final RegionPredicate bypassregionPredicate, boolean success) throws Exception {
-    URI hdfsUri = FileSystem.get(conf).getUri();
-    FileSystem fs = FileSystem.get(copyDir.toUri(), new Configuration());
-    copyDir = copyDir.makeQualified(fs);
-
+    FileSystem tgtFs = rawTgtDir.getFileSystem(conf);
+    FileSystem srcFs = srcDir.getFileSystem(conf);
+    Path tgtDir = rawTgtDir.makeQualified(tgtFs.getUri(), tgtFs.getWorkingDirectory());
+    LOG.info("tgtFsUri={}, tgtDir={}, rawTgtDir={}, srcFsUri={}, srcDir={}",
+      tgtFs.getUri(), tgtDir, rawTgtDir, srcFs.getUri(), srcDir);
     List<String> opts = new ArrayList<>();
     opts.add("--snapshot");
     opts.add(snapshotName);
     opts.add("--copy-to");
-    opts.add(copyDir.toString());
+    opts.add(tgtDir.toString());
     if (!targetName.equals(snapshotName)) {
       opts.add("--target");
       opts.add(targetName);
     }
-    if (overwrite) opts.add("--overwrite");
+    if (overwrite) {
+      opts.add("--overwrite");
+    }
 
     // Export Snapshot
     int res = run(conf, new ExportSnapshot(), opts.toArray(new String[opts.size()]));
-    assertEquals(success ? 0 : 1, res);
+    assertEquals("success " + success + ", res=" + res, success ? 0 : 1, res);
     if (!success) {
       final Path targetDir = new Path(HConstants.SNAPSHOT_DIR_NAME, targetName);
-      assertFalse(fs.exists(new Path(copyDir, targetDir)));
+      assertFalse(tgtDir.toString() + " " + targetDir.toString(),
+        tgtFs.exists(new Path(tgtDir, targetDir)));
       return;
     }
+    LOG.info("Exported snapshot");
 
     // Verify File-System state
-    FileStatus[] rootFiles = fs.listStatus(copyDir);
+    FileStatus[] rootFiles = tgtFs.listStatus(tgtDir);
     assertEquals(filesExpected > 0 ? 2 : 1, rootFiles.length);
     for (FileStatus fileStatus: rootFiles) {
       String name = fileStatus.getPath().getName();
-      assertTrue(fileStatus.isDirectory());
-      assertTrue(name.equals(HConstants.SNAPSHOT_DIR_NAME) ||
-                 name.equals(HConstants.HFILE_ARCHIVE_DIRECTORY));
+      assertTrue(fileStatus.toString(), fileStatus.isDirectory());
+      assertTrue(name.toString(), name.equals(HConstants.SNAPSHOT_DIR_NAME) ||
+        name.equals(HConstants.HFILE_ARCHIVE_DIRECTORY));
     }
+    LOG.info("Verified filesystem state");
 
-    // compare the snapshot metadata and verify the hfiles
-    final FileSystem hdfs = FileSystem.get(hdfsUri, conf);
+    // Compare the snapshot metadata and verify the hfiles
     final Path snapshotDir = new Path(HConstants.SNAPSHOT_DIR_NAME, snapshotName);
     final Path targetDir = new Path(HConstants.SNAPSHOT_DIR_NAME, targetName);
-    verifySnapshotDir(hdfs, new Path(sourceDir, snapshotDir),
-        fs, new Path(copyDir, targetDir));
-    Set<String> snapshotFiles = verifySnapshot(conf, fs, copyDir, tableName,
+    verifySnapshotDir(srcFs, new Path(srcDir, snapshotDir), tgtFs, new Path(tgtDir, targetDir));
+    Set<String> snapshotFiles = verifySnapshot(conf, tgtFs, tgtDir, tableName,
       targetName, bypassregionPredicate);
     assertEquals(filesExpected, snapshotFiles.size());
   }
@@ -262,8 +259,6 @@ public class TestExportSnapshot {
   @Test
   public void testExportRetry() throws Exception {
     Path copyDir = getLocalDestinationDir();
-    FileSystem fs = FileSystem.get(copyDir.toUri(), new Configuration());
-    copyDir = copyDir.makeQualified(fs);
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.setBoolean(ExportSnapshot.Testing.CONF_TEST_FAILURE, true);
     conf.setInt(ExportSnapshot.Testing.CONF_TEST_FAILURE_COUNT, 2);
@@ -317,14 +312,13 @@ public class TestExportSnapshot {
         @Override
         public void storeFile(final RegionInfo regionInfo, final String family,
             final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
-          if (bypassregionPredicate != null && bypassregionPredicate.evaluate(regionInfo))
+          if (bypassregionPredicate != null && bypassregionPredicate.evaluate(regionInfo)) {
             return;
+          }
 
           String hfile = storeFile.getName();
           snapshotFiles.add(hfile);
-          if (storeFile.hasReference()) {
-            // Nothing to do here, we have already the reference embedded
-          } else {
+          if (!storeFile.hasReference()) {
             verifyNonEmptyFile(new Path(exportedArchive,
               new Path(FSUtils.getTableDir(new Path("./"), tableName),
                   new Path(regionInfo.getEncodedName(), new Path(family, hfile)))));
@@ -335,7 +329,7 @@ public class TestExportSnapshot {
           assertTrue(path + " should exists", fs.exists(path));
           assertTrue(path + " should not be empty", fs.getFileStatus(path).getLen() > 0);
         }
-    });
+      });
 
     // Verify Snapshot description
     SnapshotDescription desc = SnapshotDescriptionUtils.readSnapshotInfo(fs, exportedSnapshot);
@@ -347,7 +341,8 @@ public class TestExportSnapshot {
   private static Set<String> listFiles(final FileSystem fs, final Path root, final Path dir)
       throws IOException {
     Set<String> files = new HashSet<>();
-    int rootPrefix = root.makeQualified(fs).toString().length();
+    LOG.debug("List files in {} in root {} at {}", fs, root, dir);
+    int rootPrefix = root.makeQualified(fs.getUri(), fs.getWorkingDirectory()).toString().length();
     FileStatus[] list = FSUtils.listStatus(fs, dir);
     if (list != null) {
       for (FileStatus fstat: list) {
@@ -371,8 +366,13 @@ public class TestExportSnapshot {
 
   private Path getLocalDestinationDir() {
     Path path = TEST_UTIL.getDataTestDir("local-export-" + System.currentTimeMillis());
-    LOG.info("Local export destination path: " + path);
-    return path;
+    try {
+      FileSystem fs = FileSystem.getLocal(TEST_UTIL.getConfiguration());
+      LOG.info("Local export destination path: " + path);
+      return path.makeQualified(fs.getUri(), fs.getWorkingDirectory());
+    } catch (IOException ioe) {
+      throw new RuntimeException(ioe);
+    }
   }
 
   private static void removeExportDir(final Path path) throws IOException {

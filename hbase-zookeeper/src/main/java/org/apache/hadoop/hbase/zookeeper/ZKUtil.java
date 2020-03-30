@@ -130,7 +130,7 @@ public final class ZKUtil {
     int timeout = conf.getInt(HConstants.ZK_SESSION_TIMEOUT,
         HConstants.DEFAULT_ZK_SESSION_TIMEOUT);
     if (LOG.isTraceEnabled()) {
-      LOG.trace(identifier + " opening connection to ZooKeeper ensemble=" + ensemble);
+      LOG.trace("{} opening connection to ZooKeeper ensemble={}", identifier, ensemble);
     }
     int retry = conf.getInt("zookeeper.recovery.retry", 3);
     int retryIntervalMillis =
@@ -218,7 +218,7 @@ public final class ZKUtil {
     // No keytab specified, no auth
     String keytabFilename = conf.get(keytabFileKey);
     if (keytabFilename == null) {
-      LOG.warn("no keytab specified for: " + keytabFileKey);
+      LOG.warn("no keytab specified for: {}", keytabFileKey);
       return;
     }
 
@@ -288,9 +288,8 @@ public final class ZKUtil {
       this.useTicketCache = useTicketCache;
       this.keytabFile = keytabFile;
       this.principal = principal;
-      LOG.info("JaasConfiguration loginContextName=" + loginContextName +
-               " principal=" + principal + " useTicketCache=" + useTicketCache +
-               " keytabFile=" + keytabFile);
+      LOG.info("JaasConfiguration loginContextName={} principal={} useTicketCache={} keytabFile={}",
+        loginContextName, principal, useTicketCache, keytabFile);
     }
 
     @Override
@@ -919,8 +918,8 @@ public final class ZKUtil {
           }
         }
         if (!groups.isEmpty()) {
-          LOG.warn("Znode ACL setting for group " + groups
-              + " is skipped, ZooKeeper doesn't support this feature presently.");
+          LOG.warn("Znode ACL setting for group {} is skipped, ZooKeeper doesn't support this " +
+            "feature presently.", groups);
         }
       }
       // Certain znodes are accessed directly by the client,
@@ -2057,7 +2056,7 @@ public final class ZKUtil {
       " byte(s) of data from znode " + znode +
       (watcherSet? " and set watcher; ": "; data=") +
       (data == null? "null": data.length == 0? "empty": (
-          znode.startsWith(zkw.getZNodePaths().metaZNodePrefix)?
+          zkw.getZNodePaths().isMetaZNodePrefix(znode)?
             getServerNameOrEmptyString(data):
           znode.startsWith(zkw.getZNodePaths().backupMasterAddressesZNode)?
             getServerNameOrEmptyString(data):
@@ -2093,7 +2092,7 @@ public final class ZKUtil {
         for (int attempt = 0; attempt < maxNumAttempts; ++attempt) {
           try {
             if (zk.exists(parentZNode, false) != null) {
-              LOG.info("Parent znode exists: " + parentZNode);
+              LOG.info("Parent znode exists: {}", parentZNode);
               keeperEx = null;
               break;
             }

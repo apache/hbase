@@ -22,7 +22,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
 import java.io.File;
 import java.net.BindException;
 import java.net.SocketException;
@@ -30,7 +29,6 @@ import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import java.util.Properties;
 import javax.net.ssl.SSLException;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
@@ -56,7 +54,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -72,7 +69,6 @@ public class TestLogLevel {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestLogLevel.class);
 
-  private static File BASEDIR;
   private static String keystoresDir;
   private static String sslConfDir;
   private static Configuration serverConf;
@@ -84,31 +80,29 @@ public class TestLogLevel {
   private final static String KEYTAB  = "loglevel.keytab";
 
   private static MiniKdc kdc;
-  private static HBaseCommonTestingUtility htu = new HBaseCommonTestingUtility();
 
   private static final String LOCALHOST = "localhost";
   private static final String clientPrincipal = "client/" + LOCALHOST;
   private static String HTTP_PRINCIPAL = "HTTP/" + LOCALHOST;
-
-  private static final File KEYTAB_FILE = new File(
-      htu.getDataTestDir("keytab").toUri().getPath());
+  private static HBaseCommonTestingUtility HTU;
+  private static File keyTabFile;
 
   @BeforeClass
   public static void setUp() throws Exception {
-    BASEDIR = new File(htu.getDataTestDir().toUri().getPath());
-
-    FileUtil.fullyDelete(BASEDIR);
-    if (!BASEDIR.mkdirs()) {
-      throw new Exception("unable to create the base directory for testing");
-    }
     serverConf = new Configuration();
+    HTU = new HBaseCommonTestingUtility(serverConf);
+
+    File keystoreDir = new File(HTU.getDataTestDir("keystore").toString());
+    keystoreDir.mkdirs();
+    keyTabFile = new File(HTU.getDataTestDir("keytab").toString(), "keytabfile");
+    keyTabFile.getParentFile().mkdirs();
     clientConf = new Configuration();
 
-    setupSSL(BASEDIR);
+    setupSSL(keystoreDir);
 
     kdc = setupMiniKdc();
     // Create two principles: a client and an HTTP principal
-    kdc.createPrincipal(KEYTAB_FILE, clientPrincipal, HTTP_PRINCIPAL);
+    kdc.createPrincipal(keyTabFile, clientPrincipal, HTTP_PRINCIPAL);
   }
 
   /**
@@ -127,7 +121,7 @@ public class TestLogLevel {
     do {
       try {
         bindException = false;
-        dir = new File(htu.getDataTestDir("kdc").toUri().getPath());
+        dir = new File(HTU.getDataTestDir("kdc").toUri().getPath());
         kdc = new MiniKdc(conf, dir);
         kdc.start();
       } catch (BindException e) {
@@ -145,27 +139,27 @@ public class TestLogLevel {
   }
 
   static private void setupSSL(File base) throws Exception {
-    Configuration conf = new Configuration();
-    conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, HttpConfig.Policy.HTTPS_ONLY.name());
-    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY, "localhost:0");
-    conf.set(DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY, "localhost:0");
+    clientConf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, HttpConfig.Policy.HTTPS_ONLY.name());
+    clientConf.set(DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY, "localhost:0");
+    clientConf.set(DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY, "localhost:0");
 
     keystoresDir = base.getAbsolutePath();
     sslConfDir = KeyStoreTestUtil.getClasspathDir(TestLogLevel.class);
-    KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfDir, conf, false);
+    KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfDir, serverConf, false);
 
-    sslConf = getSslConfig();
+    sslConf = getSslConfig(serverConf);
   }
 
   /**
    * Get the SSL configuration.
    * This method is copied from KeyStoreTestUtil#getSslConfig() in Hadoop.
    * @return {@link Configuration} instance with ssl configs loaded.
+   * @param conf to pull client/server SSL settings filename from
    */
-  private static Configuration getSslConfig(){
+  private static Configuration getSslConfig(Configuration conf){
     Configuration sslConf = new Configuration(false);
-    String sslServerConfFile = "ssl-server.xml";
-    String sslClientConfFile = "ssl-client.xml";
+    String sslServerConfFile = conf.get(SSLFactory.SSL_SERVER_CONF_KEY);
+    String sslClientConfFile =  conf.get(SSLFactory.SSL_CLIENT_CONF_KEY);
     sslConf.addResource(sslServerConfFile);
     sslConf.addResource(sslClientConfFile);
     sslConf.set(SSLFactory.SSL_SERVER_CONF_KEY, sslServerConfFile);
@@ -179,7 +173,7 @@ public class TestLogLevel {
       kdc.stop();
     }
 
-    FileUtil.fullyDelete(BASEDIR);
+    FileUtil.fullyDelete(new File(HTU.getDataTestDir().toString()));
   }
 
   /**
@@ -309,7 +303,7 @@ public class TestLogLevel {
     // configs needed for SPNEGO at server side
     if (isSpnego) {
       serverConf.set(PRINCIPAL, HTTP_PRINCIPAL);
-      serverConf.set(KEYTAB, KEYTAB_FILE.getAbsolutePath());
+      serverConf.set(KEYTAB, keyTabFile.getAbsolutePath());
       serverConf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
       serverConf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, true);
       UserGroupInformation.setConfiguration(serverConf);
@@ -323,7 +317,7 @@ public class TestLogLevel {
     // get server port
     final String authority = NetUtils.getHostPortString(server.getConnectorAddress(0));
 
-    String keytabFilePath = KEYTAB_FILE.getAbsolutePath();
+    String keytabFilePath = keyTabFile.getAbsolutePath();
 
     UserGroupInformation clientUGI = UserGroupInformation.
         loginUserFromKeytabAndReturnUGI(clientPrincipal, keytabFilePath);
@@ -353,7 +347,7 @@ public class TestLogLevel {
    */
   private void getLevel(String protocol, String authority) throws Exception {
     String[] getLevelArgs = {"-getlevel", authority, logName, "-protocol", protocol};
-    CLI cli = new CLI(clientConf);
+    CLI cli = new CLI(protocol.equalsIgnoreCase("https") ? sslConf : clientConf);
     cli.run(getLevelArgs);
   }
 
@@ -368,7 +362,7 @@ public class TestLogLevel {
   private void setLevel(String protocol, String authority, String newLevel)
       throws Exception {
     String[] setLevelArgs = {"-setlevel", authority, logName, newLevel, "-protocol", protocol};
-    CLI cli = new CLI(clientConf);
+    CLI cli = new CLI(protocol.equalsIgnoreCase("https") ? sslConf : clientConf);
     cli.run(setLevelArgs);
 
     assertEquals("new level not equal to expected: ", newLevel.toUpperCase(),
@@ -486,7 +480,7 @@ public class TestLogLevel {
     Throwable t = throwable;
     while (t != null) {
       String msg = t.toString();
-      if (msg != null && msg.contains(substr)) {
+      if (msg != null && msg.toLowerCase().contains(substr.toLowerCase())) {
         return;
       }
       t = t.getCause();

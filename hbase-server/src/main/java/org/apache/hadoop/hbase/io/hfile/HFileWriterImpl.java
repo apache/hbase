@@ -25,7 +25,6 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -65,7 +64,8 @@ public class HFileWriterImpl implements HFile.Writer {
   private static final long UNSET = -1;
 
   /** if this feature is enabled, preCalculate encoded data size before real encoding happens*/
-  public static final String UNIFIED_ENCODED_BLOCKSIZE_RATIO = "hbase.writer.unified.encoded.blocksize.ratio";
+  public static final String UNIFIED_ENCODED_BLOCKSIZE_RATIO =
+    "hbase.writer.unified.encoded.blocksize.ratio";
 
   /** Block size limit after encoding, used to unify encoded block Cache entry size*/
   private final int encodedBlockSizeLimit;
@@ -93,9 +93,6 @@ public class HFileWriterImpl implements HFile.Writer {
 
   /** Total uncompressed bytes, maybe calculate a compression ratio later. */
   protected long totalUncompressedBytes = 0;
-
-  /** Key comparator. Used to ensure we write in order. */
-  protected final CellComparator comparator;
 
   /** Meta block names. */
   protected List<byte[]> metaNames = new ArrayList<>();
@@ -165,8 +162,7 @@ public class HFileWriterImpl implements HFile.Writer {
   protected long maxMemstoreTS = 0;
 
   public HFileWriterImpl(final Configuration conf, CacheConfig cacheConf, Path path,
-      FSDataOutputStream outputStream,
-      CellComparator comparator, HFileContext fileContext) {
+      FSDataOutputStream outputStream, HFileContext fileContext) {
     this.outputStream = outputStream;
     this.path = path;
     this.name = path != null ? path.getName() : outputStream.toString();
@@ -177,8 +173,6 @@ public class HFileWriterImpl implements HFile.Writer {
     } else {
       this.blockEncoder = NoOpDataBlockEncoder.INSTANCE;
     }
-    this.comparator = comparator != null ? comparator : CellComparator.getInstance();
-
     closeOutputStream = path != null;
     this.cacheConf = cacheConf;
     float encodeBlockSizeRatio = conf.getFloat(UNIFIED_ENCODED_BLOCKSIZE_RATIO, 1f);
@@ -187,7 +181,6 @@ public class HFileWriterImpl implements HFile.Writer {
     if (LOG.isTraceEnabled()) {
       LOG.trace("Writer" + (path != null ? " for " + path : "") +
         " initialized with cacheConf: " + cacheConf +
-        " comparator: " + comparator.getClass().getSimpleName() +
         " fileContext: " + fileContext);
     }
   }
@@ -214,10 +207,9 @@ public class HFileWriterImpl implements HFile.Writer {
    *
    * @param trailer fixed file trailer
    * @param out the data output to write the file info to
-   * @throws IOException
    */
   protected final void writeFileInfo(FixedFileTrailer trailer, DataOutputStream out)
-  throws IOException {
+      throws IOException {
     trailer.setFileInfoOffset(outputStream.getPos());
     finishFileInfo();
     long startTime = System.currentTimeMillis();
@@ -225,6 +217,10 @@ public class HFileWriterImpl implements HFile.Writer {
     HFile.updateWriteLatency(System.currentTimeMillis() - startTime);
   }
 
+  public long getPos() throws IOException {
+    return outputStream.getPos();
+
+  }
   /**
    * Checks that the given Cell's key does not violate the key order.
    *
@@ -239,7 +235,8 @@ public class HFileWriterImpl implements HFile.Writer {
       throw new IOException("Key cannot be null or empty");
     }
     if (lastCell != null) {
-      int keyComp = PrivateCellUtil.compareKeyIgnoresMvcc(comparator, lastCell, cell);
+      int keyComp = PrivateCellUtil.compareKeyIgnoresMvcc(this.hFileContext.getCellComparator(),
+        lastCell, cell);
       if (keyComp > 0) {
         String message = getLexicalErrorMessage(cell);
         throw new IOException(message);
@@ -285,8 +282,9 @@ public class HFileWriterImpl implements HFile.Writer {
   }
 
   public static Compression.Algorithm compressionByName(String algoName) {
-    if (algoName == null)
+    if (algoName == null) {
       return HFile.DEFAULT_COMPRESSION_ALGORITHM;
+    }
     return Compression.getCompressionAlgorithmByName(algoName);
   }
 
@@ -318,17 +316,15 @@ public class HFileWriterImpl implements HFile.Writer {
 
     // Meta data block index writer
     metaBlockIndexWriter = new HFileBlockIndex.BlockIndexWriter();
-    if (LOG.isTraceEnabled()) LOG.trace("Initialized with " + cacheConf);
+    LOG.trace("Initialized with {}", cacheConf);
   }
 
   /**
    * At a block boundary, write all the inline blocks and opens new block.
-   *
-   * @throws IOException
    */
   protected void checkBlockBoundary() throws IOException {
-    //for encoder like prefixTree, encoded size is not available, so we have to compare both encoded size
-    //and unencoded size to blocksize limit.
+    // For encoder like prefixTree, encoded size is not available, so we have to compare both
+    // encoded size and unencoded size to blocksize limit.
     if (blockWriter.encodedBlockSizeWritten() >= encodedBlockSizeLimit
         || blockWriter.blockSizeWritten() >= hFileContext.getBlocksize()) {
       finishBlock();
@@ -339,7 +335,9 @@ public class HFileWriterImpl implements HFile.Writer {
 
   /** Clean up the data block that is currently being written.*/
   private void finishBlock() throws IOException {
-    if (!blockWriter.isWriting() || blockWriter.blockSizeWritten() == 0) return;
+    if (!blockWriter.isWriting() || blockWriter.blockSizeWritten() == 0) {
+      return;
+    }
 
     // Update the first data block offset if UNSET; used scanning.
     if (firstDataBlockOffset == UNSET) {
@@ -350,7 +348,7 @@ public class HFileWriterImpl implements HFile.Writer {
     blockWriter.writeHeaderAndData(outputStream);
     int onDiskSize = blockWriter.getOnDiskSizeWithHeader();
     Cell indexEntry =
-      getMidpoint(this.comparator, lastCellOfPreviousBlock, firstCellInBlock);
+      getMidpoint(this.hFileContext.getCellComparator(), lastCellOfPreviousBlock, firstCellInBlock);
     dataBlockIndexWriter.addEntry(PrivateCellUtil.getCellKeySerializedAsKeyValueKey(indexEntry),
       lastDataBlockOffset, onDiskSize);
     totalUncompressedBytes += blockWriter.getUncompressedSizeWithHeader();
@@ -364,11 +362,6 @@ public class HFileWriterImpl implements HFile.Writer {
    * <code>right</code> but that is shorter; i.e. takes up less space. This
    * trick is used building HFile block index. Its an optimization. It does not
    * always work. In this case we'll just return the <code>right</code> cell.
-   *
-   * @param comparator
-   *          Comparator to use.
-   * @param left
-   * @param right
    * @return A cell that sorts between <code>left</code> and <code>right</code>.
    */
   public static Cell getMidpoint(final CellComparator comparator, final Cell left,
@@ -407,7 +400,9 @@ public class HFileWriterImpl implements HFile.Writer {
             left.getRowLength(), right.getRowArray(), right.getRowOffset(), right.getRowLength());
       }
       // If midRow is null, just return 'right'. Can't do optimization.
-      if (midRow == null) return right;
+      if (midRow == null) {
+        return right;
+      }
       return PrivateCellUtil.createFirstOnRow(midRow);
     }
     // Rows are same. Compare on families.
@@ -428,7 +423,9 @@ public class HFileWriterImpl implements HFile.Writer {
             right.getFamilyLength());
       }
       // If midRow is null, just return 'right'. Can't do optimization.
-      if (midRow == null) return right;
+      if (midRow == null) {
+        return right;
+      }
       // Return new Cell where we use right row and then a mid sort family.
       return PrivateCellUtil.createFirstOnRowFamily(right, midRow, 0, midRow.length);
     }
@@ -450,7 +447,9 @@ public class HFileWriterImpl implements HFile.Writer {
             right.getQualifierLength());
       }
       // If midRow is null, just return 'right'. Can't do optimization.
-      if (midRow == null) return right;
+      if (midRow == null) {
+        return right;
+      }
       // Return new Cell where we use right row and family and then a mid sort qualifier.
       return PrivateCellUtil.createFirstOnRowCol(right, midRow, 0, midRow.length);
     }
@@ -459,12 +458,6 @@ public class HFileWriterImpl implements HFile.Writer {
   }
 
   /**
-   * @param leftArray
-   * @param leftOffset
-   * @param leftLength
-   * @param rightArray
-   * @param rightOffset
-   * @param rightLength
    * @return Return a new array that is between left and right and minimally
    *         sized else just return null as indicator that we could not create a
    *         mid point.
@@ -566,8 +559,6 @@ public class HFileWriterImpl implements HFile.Writer {
 
   /**
    * Ready a new block for writing.
-   *
-   * @throws IOException
    */
   protected void newBlock() throws IOException {
     // This is where the next block begins.
@@ -678,7 +669,7 @@ public class HFileWriterImpl implements HFile.Writer {
         dataBlockIndexWriter.getTotalUncompressedSize());
     trailer.setFirstDataBlockOffset(firstDataBlockOffset);
     trailer.setLastDataBlockOffset(lastDataBlockOffset);
-    trailer.setComparatorClass(comparator.getClass());
+    trailer.setComparatorClass(this.hFileContext.getCellComparator().getClass());
     trailer.setDataIndexCount(dataBlockIndexWriter.getNumRootEntries());
 
 
@@ -704,8 +695,9 @@ public class HFileWriterImpl implements HFile.Writer {
 
   private void addBloomFilter(final BloomFilterWriter bfw,
       final BlockType blockType) {
-    if (bfw.getKeyCount() <= 0)
+    if (bfw.getKeyCount() <= 0) {
       return;
+    }
 
     if (blockType != BlockType.GENERAL_BLOOM_META &&
         blockType != BlockType.DELETE_FAMILY_BLOOM_META) {
@@ -722,8 +714,9 @@ public class HFileWriterImpl implements HFile.Writer {
       public void writeToBlock(DataOutput out) throws IOException {
         bfw.getMetaWriter().write(out);
         Writable dataWriter = bfw.getDataWriter();
-        if (dataWriter != null)
+        if (dataWriter != null) {
           dataWriter.write(out);
+        }
       }
     });
   }
@@ -739,7 +732,6 @@ public class HFileWriterImpl implements HFile.Writer {
    *
    * @param cell
    *          Cell to add. Cannot be empty nor null.
-   * @throws IOException
    */
   @Override
   public void append(final Cell cell) throws IOException {

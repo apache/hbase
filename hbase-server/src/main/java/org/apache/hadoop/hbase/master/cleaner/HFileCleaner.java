@@ -101,7 +101,7 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate>
   private long cleanerThreadTimeoutMsec;
   private long cleanerThreadCheckIntervalMsec;
   private List<Thread> threads = new ArrayList<Thread>();
-  private boolean running;
+  private volatile boolean running;
 
   private AtomicLong deletedLargeFiles = new AtomicLong();
   private AtomicLong deletedSmallFiles = new AtomicLong();
@@ -117,25 +117,42 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate>
    */
   public HFileCleaner(final int period, final Stoppable stopper, Configuration conf, FileSystem fs,
     Path directory, DirScanPool pool, Map<String, Object> params) {
-    super("HFileCleaner", period, stopper, conf, fs, directory, MASTER_HFILE_CLEANER_PLUGINS, pool,
+    this("HFileCleaner", period, stopper, conf, fs, directory, MASTER_HFILE_CLEANER_PLUGINS, pool,
       params);
+
+  }
+
+  /**
+   * For creating customized HFileCleaner.
+   * @param name name of the chore being run
+   * @param period the period of time to sleep between each run
+   * @param stopper the stopper
+   * @param conf configuration to use
+   * @param fs handle to the FS
+   * @param directory directory to be cleaned
+   * @param confKey configuration key for the classes to instantiate
+   * @param pool the thread pool used to scan directories
+   * @param params params could be used in subclass of BaseHFileCleanerDelegate
+   */
+  public HFileCleaner(String name, int period, Stoppable stopper, Configuration conf, FileSystem fs,
+    Path directory, String confKey, DirScanPool pool, Map<String, Object> params) {
+    super(name, period, stopper, conf, fs, directory, confKey, pool, params);
     throttlePoint =
-        conf.getInt(HFILE_DELETE_THROTTLE_THRESHOLD, DEFAULT_HFILE_DELETE_THROTTLE_THRESHOLD);
+      conf.getInt(HFILE_DELETE_THROTTLE_THRESHOLD, DEFAULT_HFILE_DELETE_THROTTLE_THRESHOLD);
     largeQueueInitSize =
-        conf.getInt(LARGE_HFILE_QUEUE_INIT_SIZE, DEFAULT_LARGE_HFILE_QUEUE_INIT_SIZE);
+      conf.getInt(LARGE_HFILE_QUEUE_INIT_SIZE, DEFAULT_LARGE_HFILE_QUEUE_INIT_SIZE);
     smallQueueInitSize =
-        conf.getInt(SMALL_HFILE_QUEUE_INIT_SIZE, DEFAULT_SMALL_HFILE_QUEUE_INIT_SIZE);
+      conf.getInt(SMALL_HFILE_QUEUE_INIT_SIZE, DEFAULT_SMALL_HFILE_QUEUE_INIT_SIZE);
     largeFileQueue = new StealJobQueue<>(largeQueueInitSize, smallQueueInitSize, COMPARATOR);
     smallFileQueue = largeFileQueue.getStealFromQueue();
     largeFileDeleteThreadNumber =
-        conf.getInt(LARGE_HFILE_DELETE_THREAD_NUMBER, DEFAULT_LARGE_HFILE_DELETE_THREAD_NUMBER);
+      conf.getInt(LARGE_HFILE_DELETE_THREAD_NUMBER, DEFAULT_LARGE_HFILE_DELETE_THREAD_NUMBER);
     smallFileDeleteThreadNumber =
-        conf.getInt(SMALL_HFILE_DELETE_THREAD_NUMBER, DEFAULT_SMALL_HFILE_DELETE_THREAD_NUMBER);
+      conf.getInt(SMALL_HFILE_DELETE_THREAD_NUMBER, DEFAULT_SMALL_HFILE_DELETE_THREAD_NUMBER);
     cleanerThreadTimeoutMsec =
-        conf.getLong(HFILE_DELETE_THREAD_TIMEOUT_MSEC, DEFAULT_HFILE_DELETE_THREAD_TIMEOUT_MSEC);
-    cleanerThreadCheckIntervalMsec =
-        conf.getLong(HFILE_DELETE_THREAD_CHECK_INTERVAL_MSEC,
-            DEFAULT_HFILE_DELETE_THREAD_CHECK_INTERVAL_MSEC);
+      conf.getLong(HFILE_DELETE_THREAD_TIMEOUT_MSEC, DEFAULT_HFILE_DELETE_THREAD_TIMEOUT_MSEC);
+    cleanerThreadCheckIntervalMsec = conf.getLong(HFILE_DELETE_THREAD_CHECK_INTERVAL_MSEC,
+      DEFAULT_HFILE_DELETE_THREAD_CHECK_INTERVAL_MSEC);
     startHFileDeleteThreads();
   }
 

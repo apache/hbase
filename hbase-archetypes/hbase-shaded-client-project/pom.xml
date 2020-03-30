@@ -37,8 +37,6 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>${compileSource}</maven.compiler.source>
     <maven.compiler.target>${compileSource}</maven.compiler.target>
-    <surefire.version>2.19</surefire.version>
-    <junit.version>4.12</junit.version>
   </properties>
   <dependencies>
     <!-- Dependency for hbase-testing-util must precede compile-scoped dependencies. -->

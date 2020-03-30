@@ -24,19 +24,16 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.security.token.Token;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AuthenticationProtos;
 
 /**
  * Utility methods for obtaining authentication tokens.
@@ -219,7 +216,7 @@ public class TokenUtil {
   public static void addTokenForJob(final Connection conn, final JobConf job, User user)
       throws IOException, InterruptedException {
 
-    Token<AuthenticationTokenIdentifier> token = getAuthToken(conn.getConfiguration(), user);
+    Token<AuthenticationTokenIdentifier> token = getAuthToken(conn, user);
     if (token == null) {
       token = ClientTokenUtil.obtainToken(conn, user);
     }
@@ -238,7 +235,7 @@ public class TokenUtil {
    */
   public static void addTokenForJob(final Connection conn, User user, Job job)
       throws IOException, InterruptedException {
-    Token<AuthenticationTokenIdentifier> token = getAuthToken(conn.getConfiguration(), user);
+    Token<AuthenticationTokenIdentifier> token = getAuthToken(conn, user);
     if (token == null) {
       token = ClientTokenUtil.obtainToken(conn, user);
     }
@@ -257,7 +254,7 @@ public class TokenUtil {
    */
   public static boolean addTokenIfMissing(Connection conn, User user)
       throws IOException, InterruptedException {
-    Token<AuthenticationTokenIdentifier> token = getAuthToken(conn.getConfiguration(), user);
+    Token<AuthenticationTokenIdentifier> token = getAuthToken(conn, user);
     if (token == null) {
       token = ClientTokenUtil.obtainToken(conn, user);
       user.getUGI().addToken(token.getService(), token);
@@ -270,19 +267,12 @@ public class TokenUtil {
    * Get the authentication token of the user for the cluster specified in the configuration
    * @return null if the user does not have the token, otherwise the auth token for the cluster.
    */
-  private static Token<AuthenticationTokenIdentifier> getAuthToken(Configuration conf, User user)
-      throws IOException, InterruptedException {
-    ZKWatcher zkw = new ZKWatcher(conf, "TokenUtil-getAuthToken", null);
-    try {
-      String clusterId = ZKClusterId.readClusterIdZNode(zkw);
-      if (clusterId == null) {
-        throw new IOException("Failed to get cluster ID");
-      }
-      return new AuthenticationTokenSelector().selectToken(new Text(clusterId), user.getTokens());
-    } catch (KeeperException e) {
-      throw new IOException(e);
-    } finally {
-      zkw.close();
+  private static Token<AuthenticationTokenIdentifier> getAuthToken(Connection conn, User user)
+      throws IOException {
+    final String clusterId = conn.getClusterId();
+    if (clusterId == null) {
+      throw new IOException("Failed to get cluster ID");
     }
+    return new AuthenticationTokenSelector().selectToken(new Text(clusterId), user.getTokens());
   }
 }

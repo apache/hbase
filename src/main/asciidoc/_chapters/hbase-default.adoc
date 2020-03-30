@@ -2183,21 +2183,65 @@ The percent of region server RPC threads failed to abort RS.
 +
 .Description
 
-      Very large ref count on a file indicates
-      that it is a ref leak on that object. Such files
-      can not be removed even after it is invalidated
-      via compaction. Only way to recover in such
-      scenario is to reopen the region which can
-      release all resources, like the refcount, leases, etc.
-      This config represents Store files Ref Count threshold
-      value considered for reopening regions.
-      Any region with store files ref count > this value
-      would be eligible for reopening by master.
-      Default value -1 indicates this feature is turned off.
-      Only positive integer value should be provided to enable
-      this feature.
+      Very large number of ref count on a compacted
+      store file indicates that it is a ref leak
+      on that object(compacted store file).
+      Such files can not be removed after
+      it is invalidated via compaction.
+      Only way to recover in such scenario is to
+      reopen the region which can release
+      all resources, like the refcount,
+      leases, etc. This config represents Store files Ref
+      Count threshold value considered for reopening
+      regions. Any region with compacted store files
+      ref count > this value would be eligible for
+      reopening by master. Here, we get the max
+      refCount among all refCounts on all
+      compacted away store files that belong to a
+      particular region. Default value -1 indicates
+      this feature is turned off. Only positive
+      integer value should be provided to
+      enable this feature.
 
 +
 .Default
 `-1`
+
+
+[[hbase.regionserver.slowlog.ringbuffer.size]]
+*`hbase.regionserver.slowlog.ringbuffer.size`*::
++
+.Description
+
+      Default size of ringbuffer to be maintained by each RegionServer in order
+      to store online slowlog responses. This is an in-memory ring buffer of
+      requests that were judged to be too slow in addition to the responseTooSlow
+      logging. The in-memory representation would be complete.
+      For more details, please look into Doc Section:
+      <<slow_log_responses, slow_log_responses>>
+
+
++
+.Default
+`256`
+
+
+
+[[hbase.regionserver.slowlog.buffer.enabled]]
+*`hbase.regionserver.slowlog.buffer.enabled`*::
++
+.Description
+
+      Indicates whether RegionServers have ring buffer running for storing
+      Online Slow logs in FIFO manner with limited entries. The size of
+      the ring buffer is indicated by config: hbase.regionserver.slowlog.ringbuffer.size
+      The default value is false, turn this on and get latest slowlog
+      responses with complete data.
+      For more details, please look into Doc Section:
+      <<slow_log_responses, slow_log_responses>>
+
+
++
+.Default
+`false`
 

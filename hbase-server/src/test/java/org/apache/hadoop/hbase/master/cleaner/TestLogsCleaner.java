@@ -276,9 +276,12 @@ public class TestLogsCleaner {
   public void testZooKeeperNormal() throws Exception {
     ReplicationLogCleaner cleaner = new ReplicationLogCleaner();
 
+    // Subtract 1000 from current time so modtime is for sure older
+    // than 'now'.
+    long modTime = System.currentTimeMillis() - 1000;
     List<FileStatus> dummyFiles = Arrays.asList(
-        new FileStatus(100, false, 3, 100, System.currentTimeMillis(), new Path("log1")),
-        new FileStatus(100, false, 3, 100, System.currentTimeMillis(), new Path("log2"))
+        new FileStatus(100, false, 3, 100, modTime, new Path("log1")),
+        new FileStatus(100, false, 3, 100, modTime, new Path("log2"))
     );
 
     ZKWatcher zkw = new ZKWatcher(conf, "testZooKeeperAbort-normal", null);
@@ -304,7 +307,7 @@ public class TestLogsCleaner {
 
     FileSystem fs = TEST_UTIL.getDFSCluster().getFileSystem();
     LogCleaner cleaner = new LogCleaner(3000, server, conf, fs, OLD_WALS_DIR, POOL);
-    assertEquals(LogCleaner.DEFAULT_OLD_WALS_CLEANER_THREAD_SIZE, cleaner.getSizeOfCleaners());
+    int size = cleaner.getSizeOfCleaners();
     assertEquals(LogCleaner.DEFAULT_OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC,
         cleaner.getCleanerThreadTimeoutMsec());
     // Create dir and files for test
@@ -319,10 +322,10 @@ public class TestLogsCleaner {
     // change size of cleaners dynamically
     int sizeToChange = 4;
     long threadTimeoutToChange = 30 * 1000L;
-    conf.setInt(LogCleaner.OLD_WALS_CLEANER_THREAD_SIZE, sizeToChange);
+    conf.setInt(LogCleaner.OLD_WALS_CLEANER_THREAD_SIZE, size + sizeToChange);
     conf.setLong(LogCleaner.OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC, threadTimeoutToChange);
     cleaner.onConfigurationChange(conf);
-    assertEquals(sizeToChange, cleaner.getSizeOfCleaners());
+    assertEquals(sizeToChange + size, cleaner.getSizeOfCleaners());
     assertEquals(threadTimeoutToChange, cleaner.getCleanerThreadTimeoutMsec());
     // Stop chore
     thread.join();

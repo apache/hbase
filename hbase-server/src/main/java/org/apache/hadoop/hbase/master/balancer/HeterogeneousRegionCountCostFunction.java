@@ -249,7 +249,7 @@ public class HeterogeneousRegionCountCostFunction extends StochasticLoadBalancer
     LOG.info("Cluster can hold " + this.cluster.numRegions + "/" + this.totalCapacity + " regions ("
         + Math.round(overallUsage * 100) + "%)");
     if (overallUsage >= 1) {
-      LOG.warn("Cluster is overused");
+      LOG.warn("Cluster is overused, {}", overallUsage);
     }
   }
 

@@ -270,10 +270,6 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-protocol</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-protocol-shaded</artifactId>
     </dependency>
     <dependency>
@@ -323,21 +319,4 @@
       <type>pom</type>
     </dependency>
   </dependencies>
-  <profiles>
-    <profile>
-      <id>rsgroup</id>
-      <activation>
-        <property>
-            <name>!skip-rsgroup</name>
-        </property>
-      </activation>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.hbase</groupId>
-          <artifactId>hbase-rsgroup</artifactId>
-          <version>${project.version}</version>
-        </dependency>
-      </dependencies>
-    </profile>
-  </profiles>
 </project>

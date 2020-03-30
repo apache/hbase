@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,7 +36,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -47,6 +46,7 @@ import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -125,15 +125,15 @@ public class TestHFileWriterV3 {
   private void writeDataAndReadFromHFile(Path hfilePath,
       Algorithm compressAlgo, int entryCount, boolean findMidKey, boolean useTags) throws IOException {
     HFileContext context = new HFileContextBuilder()
-                           .withBlockSize(4096)
-                           .withIncludesTags(useTags)
-                           .withCompression(compressAlgo).build();
+      .withBlockSize(4096)
+      .withIncludesTags(useTags)
+      .withDataBlockEncoding(DataBlockEncoding.NONE)
+      .withCompression(compressAlgo).build();
     CacheConfig cacheConfig = new CacheConfig(conf);
     HFile.Writer writer = new HFile.WriterFactory(conf, cacheConfig)
-            .withPath(fs, hfilePath)
-            .withFileContext(context)
-            .withComparator(CellComparatorImpl.COMPARATOR)
-            .create();
+      .withPath(fs, hfilePath)
+      .withFileContext(context)
+      .create();
 
     Random rand = new Random(9713312); // Just a fixed seed.
     List<KeyValue> keyValues = new ArrayList<>(entryCount);
@@ -179,15 +179,16 @@ public class TestHFileWriterV3 {
     assertEquals(3, trailer.getMajorVersion());
     assertEquals(entryCount, trailer.getEntryCount());
     HFileContext meta = new HFileContextBuilder()
-                        .withCompression(compressAlgo)
-                        .withIncludesMvcc(false)
-                        .withIncludesTags(useTags)
-                        .withHBaseCheckSum(true).build();
+      .withCompression(compressAlgo)
+      .withIncludesMvcc(false)
+      .withIncludesTags(useTags)
+      .withDataBlockEncoding(DataBlockEncoding.NONE)
+      .withHBaseCheckSum(true).build();
     ReaderContext readerContext = new ReaderContextBuilder()
-        .withInputStreamWrapper(new FSDataInputStreamWrapper(fsdis))
-        .withFilePath(hfilePath)
-        .withFileSystem(fs)
-        .withFileSize(fileSize).build();
+      .withInputStreamWrapper(new FSDataInputStreamWrapper(fsdis))
+      .withFilePath(hfilePath)
+      .withFileSystem(fs)
+      .withFileSize(fileSize).build();
     HFileBlock.FSReader blockReader =
         new HFileBlock.FSReaderImpl(readerContext, meta, ByteBuffAllocator.HEAP);
     // Comparator class name is stored in the trailer in version 3.

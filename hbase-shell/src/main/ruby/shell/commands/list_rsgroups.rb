@@ -54,8 +54,8 @@ EOF
 
             formatter.row([group_name, 'server ' + server.toString])
           end
-
-          group.getTables.each do |table|
+          tables = rsgroup_admin.list_tables_in_rs_group(group.getName)
+          tables.each do |table|
             if group_name_printed
               group_name = ''
             else

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,11 +33,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
@@ -60,6 +59,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.filter.FilterAllFilter;
+import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -76,7 +76,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTrack
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -99,7 +99,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
-@Category({ CoprocessorTests.class, MediumTests.class })
+@Category({ CoprocessorTests.class, LargeTests.class })
 public class TestRegionObserverInterface {
 
   @ClassRule
@@ -263,12 +263,26 @@ public class TestRegionObserverInterface {
       p = new Put(Bytes.toBytes(0));
       p.addColumn(A, A, A);
       verifyMethodResult(SimpleRegionObserver.class,
-        new String[] { "hadPreCheckAndPut", "hadPreCheckAndPutAfterRowLock", "hadPostCheckAndPut" },
-        tableName, new Boolean[] { false, false, false });
+        new String[] { "getPreCheckAndPut", "getPreCheckAndPutAfterRowLock", "getPostCheckAndPut",
+          "getPreCheckAndPutWithFilter", "getPreCheckAndPutWithFilterAfterRowLock",
+          "getPostCheckAndPutWithFilter" },
+        tableName, new Integer[] { 0, 0, 0, 0, 0, 0 });
+
       table.checkAndMutate(Bytes.toBytes(0), A).qualifier(A).ifEquals(A).thenPut(p);
       verifyMethodResult(SimpleRegionObserver.class,
-        new String[] { "hadPreCheckAndPut", "hadPreCheckAndPutAfterRowLock", "hadPostCheckAndPut" },
-        tableName, new Boolean[] { true, true, true });
+        new String[] { "getPreCheckAndPut", "getPreCheckAndPutAfterRowLock", "getPostCheckAndPut",
+          "getPreCheckAndPutWithFilter", "getPreCheckAndPutWithFilterAfterRowLock",
+          "getPostCheckAndPutWithFilter" },
+        tableName, new Integer[] { 1, 1, 1, 0, 0, 0 });
+
+      table.checkAndMutate(Bytes.toBytes(0),
+          new SingleColumnValueFilter(A, A, CompareOperator.EQUAL, A))
+        .thenPut(p);
+      verifyMethodResult(SimpleRegionObserver.class,
+        new String[] { "getPreCheckAndPut", "getPreCheckAndPutAfterRowLock", "getPostCheckAndPut",
+          "getPreCheckAndPutWithFilter", "getPreCheckAndPutWithFilterAfterRowLock",
+          "getPostCheckAndPutWithFilter" },
+        tableName, new Integer[] { 1, 1, 1, 1, 1, 1 });
     } finally {
       util.deleteTable(tableName);
     }
@@ -285,14 +299,29 @@ public class TestRegionObserverInterface {
       Delete d = new Delete(Bytes.toBytes(0));
       table.delete(d);
       verifyMethodResult(
-        SimpleRegionObserver.class, new String[] { "hadPreCheckAndDelete",
-            "hadPreCheckAndDeleteAfterRowLock", "hadPostCheckAndDelete" },
-        tableName, new Boolean[] { false, false, false });
+        SimpleRegionObserver.class, new String[] { "getPreCheckAndDelete",
+          "getPreCheckAndDeleteAfterRowLock", "getPostCheckAndDelete",
+          "getPreCheckAndDeleteWithFilter", "getPreCheckAndDeleteWithFilterAfterRowLock",
+          "getPostCheckAndDeleteWithFilter" },
+        tableName, new Integer[] { 0, 0, 0, 0, 0, 0 });
+
       table.checkAndMutate(Bytes.toBytes(0), A).qualifier(A).ifEquals(A).thenDelete(d);
       verifyMethodResult(
-        SimpleRegionObserver.class, new String[] { "hadPreCheckAndDelete",
-            "hadPreCheckAndDeleteAfterRowLock", "hadPostCheckAndDelete" },
-        tableName, new Boolean[] { true, true, true });
+        SimpleRegionObserver.class, new String[] { "getPreCheckAndDelete",
+          "getPreCheckAndDeleteAfterRowLock", "getPostCheckAndDelete",
+          "getPreCheckAndDeleteWithFilter", "getPreCheckAndDeleteWithFilterAfterRowLock",
+          "getPostCheckAndDeleteWithFilter" },
+        tableName, new Integer[] { 1, 1, 1, 0, 0, 0 });
+
+      table.checkAndMutate(Bytes.toBytes(0),
+          new SingleColumnValueFilter(A, A, CompareOperator.EQUAL, A))
+        .thenDelete(d);
+      verifyMethodResult(
+        SimpleRegionObserver.class, new String[] { "getPreCheckAndDelete",
+          "getPreCheckAndDeleteAfterRowLock", "getPostCheckAndDelete",
+          "getPreCheckAndDeleteWithFilter", "getPreCheckAndDeleteWithFilterAfterRowLock",
+          "getPostCheckAndDeleteWithFilter" },
+        tableName, new Integer[] { 1, 1, 1, 1, 1, 1 });
     } finally {
       util.deleteTable(tableName);
       table.close();
@@ -499,10 +528,13 @@ public class TestRegionObserverInterface {
       admin.deleteTable(compactTable);
     }
 
-    HTableDescriptor htd = new HTableDescriptor(compactTable);
-    htd.addFamily(new HColumnDescriptor(A));
-    htd.addCoprocessor(EvenOnlyCompactor.class.getName());
-    admin.createTable(htd);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(compactTable);
+
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(A));
+    tableDescriptor.setCoprocessor(EvenOnlyCompactor.class.getName());
+    admin.createTable(tableDescriptor);
 
     Table table = util.getConnection().getTable(compactTable);
     for (long i = 1; i <= 10; i++) {

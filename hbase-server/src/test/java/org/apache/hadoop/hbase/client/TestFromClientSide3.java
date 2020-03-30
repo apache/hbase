@@ -60,7 +60,6 @@ import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
-import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
@@ -80,6 +79,10 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MultiRowMutationProtos;
 
 @Category({LargeTests.class, ClientTests.class})
 public class TestFromClientSide3 {
@@ -233,7 +236,7 @@ public class TestFromClientSide3 {
       table.put(put);
 
       Result r = table.get(new Get(row));
-      assertEquals(3, r.size());
+      assertEquals(r.toString(), 3, r.size());
       assertEquals("testValue", Bytes.toString(CellUtil.cloneValue(r.rawCells()[0])));
       assertEquals("qual0", Bytes.toString(CellUtil.cloneValue(r.rawCells()[1])));
       assertEquals("qual1", Bytes.toString(CellUtil.cloneValue(r.rawCells()[2])));
@@ -678,10 +681,14 @@ public class TestFromClientSide3 {
   }
 
   private void testPreBatchMutate(TableName tableName, Runnable rn)throws Exception {
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addCoprocessor(WaitingForScanObserver.class.getName());
-    desc.addFamily(new HColumnDescriptor(FAMILY));
-    TEST_UTIL.getAdmin().createTable(desc);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    ColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY);
+
+    tableDescriptor.setCoprocessor(WaitingForScanObserver.class.getName());
+    tableDescriptor.setColumnFamily(familyDescriptor);
+    TEST_UTIL.getAdmin().createTable(tableDescriptor);
     // Don't use waitTableAvailable(), because the scanner will mess up the co-processor
 
     ExecutorService service = Executors.newFixedThreadPool(2);
@@ -712,11 +719,15 @@ public class TestFromClientSide3 {
 
   @Test
   public void testLockLeakWithDelta() throws Exception, Throwable {
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addCoprocessor(WaitingForMultiMutationsObserver.class.getName());
-    desc.setConfiguration("hbase.rowlock.wait.duration", String.valueOf(5000));
-    desc.addFamily(new HColumnDescriptor(FAMILY));
-    TEST_UTIL.getAdmin().createTable(desc);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    ColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY);
+
+    tableDescriptor.setCoprocessor(WaitingForMultiMutationsObserver.class.getName());
+    tableDescriptor.setValue("hbase.rowlock.wait.duration", String.valueOf(5000));
+    tableDescriptor.setColumnFamily(familyDescriptor);
+    TEST_UTIL.getAdmin().createTable(tableDescriptor);
     TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
 
     // new a connection for lower retry number.
@@ -767,12 +778,16 @@ public class TestFromClientSide3 {
 
   @Test
   public void testMultiRowMutations() throws Exception, Throwable {
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addCoprocessor(MultiRowMutationEndpoint.class.getName());
-    desc.addCoprocessor(WaitingForMultiMutationsObserver.class.getName());
-    desc.setConfiguration("hbase.rowlock.wait.duration", String.valueOf(5000));
-    desc.addFamily(new HColumnDescriptor(FAMILY));
-    TEST_UTIL.getAdmin().createTable(desc);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    ColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY);
+
+    tableDescriptor.setCoprocessor(MultiRowMutationEndpoint.class.getName());
+    tableDescriptor.setCoprocessor(WaitingForMultiMutationsObserver.class.getName());
+    tableDescriptor.setValue("hbase.rowlock.wait.duration", String.valueOf(5000));
+    tableDescriptor.setColumnFamily(familyDescriptor);
+    TEST_UTIL.getAdmin().createTable(tableDescriptor);
     TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
 
     // new a connection for lower retry number.
@@ -804,14 +819,12 @@ public class TestFromClientSide3 {
         put1.addColumn(FAMILY, QUALIFIER, value1);
         put2.addColumn(FAMILY, QUALIFIER, value2);
         try (Table table = con.getTable(tableName)) {
-          MultiRowMutationProtos.MutateRowsRequest request
-            = MultiRowMutationProtos.MutateRowsRequest.newBuilder()
-              .addMutationRequest(org.apache.hadoop.hbase.protobuf.ProtobufUtil.toMutation(
-                      org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto
-                              .MutationType.PUT, put1))
-              .addMutationRequest(org.apache.hadoop.hbase.protobuf.ProtobufUtil.toMutation(
-                      org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto
-                              .MutationType.PUT, put2))
+          MultiRowMutationProtos.MutateRowsRequest request =
+            MultiRowMutationProtos.MutateRowsRequest.newBuilder()
+              .addMutationRequest(
+                ProtobufUtil.toMutation(ClientProtos.MutationProto.MutationType.PUT, put1))
+              .addMutationRequest(
+                ProtobufUtil.toMutation(ClientProtos.MutationProto.MutationType.PUT, put2))
               .build();
           table.coprocessorService(MultiRowMutationProtos.MultiRowMutationService.class,
               ROW, ROW,

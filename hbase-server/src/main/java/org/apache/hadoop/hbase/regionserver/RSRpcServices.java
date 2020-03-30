@@ -24,7 +24,6 @@ import java.io.UncheckedIOException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.BindException;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -35,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
@@ -89,6 +89,7 @@ import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -106,6 +107,7 @@ import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure2.RSProcedureCallable;
@@ -127,6 +129,7 @@ import org.apache.hadoop.hbase.regionserver.handler.OpenMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenPriorityRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.UnassignRegionHandler;
+import org.apache.hadoop.hbase.regionserver.slowlog.SlowLogRecorder;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.regionserver.RejectReplicationRequestStateChecker;
 import org.apache.hadoop.hbase.replication.regionserver.RejectRequestsFromClientStateChecker;
@@ -141,7 +144,6 @@ import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
-import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
@@ -173,6 +175,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompac
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearRegionBlockCacheRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearRegionBlockCacheResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearSlowLogResponses;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
@@ -202,6 +206,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWA
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SlowLogResponseRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SlowLogResponses;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationRequest;
@@ -249,6 +255,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuo
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshot;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog.SlowLogPayload;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.FlushDescriptor;
@@ -611,9 +618,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * @param cellScanner if non-null, the mutation data -- the Cell content.
    */
   private boolean checkAndRowMutate(final HRegion region, final List<ClientProtos.Action> actions,
-    final CellScanner cellScanner, byte[] row, byte[] family, byte[] qualifier, CompareOperator op,
-    ByteArrayComparable comparator, TimeRange timeRange, RegionActionResult.Builder builder,
-    ActivePolicyEnforcement spaceQuotaEnforcement) throws IOException {
+    final CellScanner cellScanner, byte[] row, byte[] family, byte[] qualifier,
+    CompareOperator op, ByteArrayComparable comparator, Filter filter, TimeRange timeRange,
+    RegionActionResult.Builder builder, ActivePolicyEnforcement spaceQuotaEnforcement)
+    throws IOException {
     int countOfCompleteMutation = 0;
     try {
       if (!region.getRegionInfo().isMetaRegion()) {
@@ -656,7 +664,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         builder.addResultOrException(
           resultOrExceptionOrBuilder.build());
       }
-      return region.checkAndRowMutate(row, family, qualifier, op, comparator, timeRange, rm);
+
+      if (filter != null) {
+        return region.checkAndRowMutate(row, filter, timeRange, rm);
+      } else {
+        return region.checkAndRowMutate(row, family, qualifier, op, comparator, timeRange, rm);
+      }
     } finally {
       // Currently, the checkAndMutate isn't supported by batch so it won't mess up the cell scanner
       // even if the malformed cells are not skipped.
@@ -858,7 +871,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           }
         } else if (action.hasServiceCall()) {
           hasResultOrException = true;
-          com.google.protobuf.Message result =
+          Message result =
             execServiceOnRegion(region, action.getServiceCall());
           ClientProtos.CoprocessorServiceResult.Builder serviceResultBuilder =
             ClientProtos.CoprocessorServiceResult.newBuilder();
@@ -1225,13 +1238,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     final InetSocketAddress initialIsa;
     final InetSocketAddress bindAddress;
     if(this instanceof MasterRpcServices) {
-      String hostname = getHostname(conf, true);
+      String hostname = DNS.getHostname(conf, DNS.ServerType.MASTER);
       int port = conf.getInt(HConstants.MASTER_PORT, HConstants.DEFAULT_MASTER_PORT);
       // Creation of a HSA will force a resolve.
       initialIsa = new InetSocketAddress(hostname, port);
       bindAddress = new InetSocketAddress(conf.get("hbase.master.ipc.address", hostname), port);
     } else {
-      String hostname = getHostname(conf, false);
+      String hostname = DNS.getHostname(conf, DNS.ServerType.REGIONSERVER);
       int port = conf.getInt(HConstants.REGIONSERVER_PORT,
         HConstants.DEFAULT_REGIONSERVER_PORT);
       // Creation of a HSA will force a resolve.
@@ -1251,6 +1264,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     ConnectionUtils.setServerSideHConnectionRetriesConfig(conf, name, LOG);
     rpcServer = createRpcServer(rs, rpcSchedulerFactory, bindAddress, name);
     rpcServer.setRsRpcServices(this);
+    if (!(rs instanceof HMaster)) {
+      rpcServer.setSlowLogRecorder(rs.getSlowLogRecorder());
+    }
     scannerLeaseTimeoutPeriod = conf.getInt(
       HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,
       HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD);
@@ -1316,22 +1332,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   protected void requirePermission(String request, Permission.Action perm) throws IOException {
     if (accessChecker != null) {
       accessChecker.requirePermission(RpcServer.getRequestUser().orElse(null), request, null, perm);
-    }
-  }
-
-
-  public static String getHostname(Configuration conf, boolean isMaster)
-      throws UnknownHostException {
-    String hostname = conf.get(isMaster? HRegionServer.MASTER_HOSTNAME_KEY :
-      HRegionServer.RS_HOSTNAME_KEY);
-    if (hostname == null || hostname.isEmpty()) {
-      String masterOrRS = isMaster ? "master" : "regionserver";
-      return Strings.domainNamePointerToHostName(DNS.getDefaultHost(
-        conf.get("hbase." + masterOrRS + ".dns.interface", "default"),
-        conf.get("hbase." + masterOrRS + ".dns.nameserver", "default")));
-    } else {
-      LOG.info("hostname is configured to be " + hostname);
-      return hostname;
     }
   }
 
@@ -2493,7 +2493,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       checkOpen();
       requestCount.increment();
       HRegion region = getRegion(request.getRegion());
-      com.google.protobuf.Message result = execServiceOnRegion(region, request.getCall());
+      Message result = execServiceOnRegion(region, request.getCall());
       CoprocessorServiceResponse.Builder builder = CoprocessorServiceResponse.newBuilder();
       builder.setRegion(RequestConverter.buildRegionSpecifier(
         RegionSpecifierType.REGION_NAME, region.getRegionInfo().getRegionName()));
@@ -2516,7 +2516,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     return new Path(filePaths.get(0)).getFileSystem(regionServer.getConfiguration());
   }
 
-  private com.google.protobuf.Message execServiceOnRegion(HRegion region,
+  private Message execServiceOnRegion(HRegion region,
       final ClientProtos.CoprocessorServiceCall serviceCall) throws IOException {
     // ignore the passed in controller (from the serialized call)
     ServerRpcController execController = new ServerRpcController();
@@ -2793,18 +2793,21 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           if (request.hasCondition()) {
             Condition condition = request.getCondition();
             byte[] row = condition.getRow().toByteArray();
-            byte[] family = condition.getFamily().toByteArray();
-            byte[] qualifier = condition.getQualifier().toByteArray();
-            CompareOperator op =
-              CompareOperator.valueOf(condition.getCompareType().name());
-            ByteArrayComparable comparator =
-                ProtobufUtil.toComparator(condition.getComparator());
+            byte[] family = condition.hasFamily() ? condition.getFamily().toByteArray() : null;
+            byte[] qualifier = condition.hasQualifier() ?
+              condition.getQualifier().toByteArray() : null;
+            CompareOperator op = condition.hasCompareType() ?
+              CompareOperator.valueOf(condition.getCompareType().name()) : null;
+            ByteArrayComparable comparator = condition.hasComparator() ?
+              ProtobufUtil.toComparator(condition.getComparator()) : null;
+            Filter filter = condition.hasFilter() ?
+              ProtobufUtil.toFilter(condition.getFilter()) : null;
             TimeRange timeRange = condition.hasTimeRange() ?
               ProtobufUtil.toTimeRange(condition.getTimeRange()) :
               TimeRange.allTime();
             processed =
               checkAndRowMutate(region, regionAction.getActionList(), cellScanner, row, family,
-                qualifier, op, comparator, timeRange, regionActionResultBuilder,
+                qualifier, op, comparator, filter, timeRange, regionActionResultBuilder,
                 spaceQuotaEnforcement);
           } else {
             doAtomicBatchOp(regionActionResultBuilder, region, quota, regionAction.getActionList(),
@@ -2953,24 +2956,41 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           if (request.hasCondition()) {
             Condition condition = request.getCondition();
             byte[] row = condition.getRow().toByteArray();
-            byte[] family = condition.getFamily().toByteArray();
-            byte[] qualifier = condition.getQualifier().toByteArray();
-            CompareOperator compareOp =
-              CompareOperator.valueOf(condition.getCompareType().name());
-            ByteArrayComparable comparator = ProtobufUtil.toComparator(condition.getComparator());
+            byte[] family = condition.hasFamily() ? condition.getFamily().toByteArray() : null;
+            byte[] qualifier = condition.hasQualifier() ?
+              condition.getQualifier().toByteArray() : null;
+            CompareOperator op = condition.hasCompareType() ?
+              CompareOperator.valueOf(condition.getCompareType().name()) : null;
+            ByteArrayComparable comparator = condition.hasComparator() ?
+              ProtobufUtil.toComparator(condition.getComparator()) : null;
+            Filter filter = condition.hasFilter() ?
+              ProtobufUtil.toFilter(condition.getFilter()) : null;
             TimeRange timeRange = condition.hasTimeRange() ?
               ProtobufUtil.toTimeRange(condition.getTimeRange()) :
               TimeRange.allTime();
             if (region.getCoprocessorHost() != null) {
-              processed = region.getCoprocessorHost().preCheckAndPut(row, family, qualifier,
-                  compareOp, comparator, put);
+              if (filter != null) {
+                processed = region.getCoprocessorHost().preCheckAndPut(row, filter, put);
+              } else {
+                processed = region.getCoprocessorHost()
+                  .preCheckAndPut(row, family, qualifier, op, comparator, put);
+              }
             }
             if (processed == null) {
-              boolean result = region.checkAndMutate(row, family,
-                qualifier, compareOp, comparator, timeRange, put);
+              boolean result;
+              if (filter != null) {
+                result = region.checkAndMutate(row, filter, timeRange, put);
+              } else {
+                result = region.checkAndMutate(row, family, qualifier, op, comparator, timeRange,
+                  put);
+              }
               if (region.getCoprocessorHost() != null) {
-                result = region.getCoprocessorHost().postCheckAndPut(row, family,
-                  qualifier, compareOp, comparator, put, result);
+                if (filter != null) {
+                  result = region.getCoprocessorHost().postCheckAndPut(row, filter, put, result);
+                } else {
+                  result = region.getCoprocessorHost()
+                    .postCheckAndPut(row, family, qualifier, op, comparator, put, result);
+                }
               }
               processed = result;
             }
@@ -2987,23 +3007,42 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           if (request.hasCondition()) {
             Condition condition = request.getCondition();
             byte[] row = condition.getRow().toByteArray();
-            byte[] family = condition.getFamily().toByteArray();
-            byte[] qualifier = condition.getQualifier().toByteArray();
-            CompareOperator op = CompareOperator.valueOf(condition.getCompareType().name());
-            ByteArrayComparable comparator = ProtobufUtil.toComparator(condition.getComparator());
+            byte[] family = condition.hasFamily() ? condition.getFamily().toByteArray() : null;
+            byte[] qualifier = condition.hasQualifier() ?
+              condition.getQualifier().toByteArray() : null;
+            CompareOperator op = condition.hasCompareType() ?
+              CompareOperator.valueOf(condition.getCompareType().name()) : null;
+            ByteArrayComparable comparator = condition.hasComparator() ?
+              ProtobufUtil.toComparator(condition.getComparator()) : null;
+            Filter filter = condition.hasFilter() ?
+              ProtobufUtil.toFilter(condition.getFilter()) : null;
             TimeRange timeRange = condition.hasTimeRange() ?
               ProtobufUtil.toTimeRange(condition.getTimeRange()) :
               TimeRange.allTime();
             if (region.getCoprocessorHost() != null) {
-              processed = region.getCoprocessorHost().preCheckAndDelete(row, family, qualifier, op,
-                  comparator, delete);
+              if (filter != null) {
+                processed = region.getCoprocessorHost().preCheckAndDelete(row, filter, delete);
+              } else {
+                processed = region.getCoprocessorHost()
+                  .preCheckAndDelete(row, family, qualifier, op, comparator, delete);
+              }
             }
             if (processed == null) {
-              boolean result = region.checkAndMutate(row, family,
-                qualifier, op, comparator, timeRange, delete);
+              boolean result;
+              if (filter != null) {
+                result = region.checkAndMutate(row, filter, timeRange, delete);
+              } else {
+                result = region.checkAndMutate(row, family, qualifier, op, comparator, timeRange,
+                  delete);
+              }
               if (region.getCoprocessorHost() != null) {
-                result = region.getCoprocessorHost().postCheckAndDelete(row, family,
-                  qualifier, op, comparator, delete, result);
+                if (filter != null) {
+                  result = region.getCoprocessorHost().postCheckAndDelete(row, filter, delete,
+                    result);
+                } else {
+                  result = region.getCoprocessorHost()
+                    .postCheckAndDelete(row, family, qualifier, op, comparator, delete, result);
+                }
               }
               processed = result;
             }
@@ -3054,7 +3093,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           break;
         default:
           break;
-
         }
       }
     }
@@ -3816,6 +3854,36 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     } catch (IOException e) {
       throw new ServiceException(e);
     }
+  }
+
+  @Override
+  @QosPriority(priority = HConstants.ADMIN_QOS)
+  public SlowLogResponses getSlowLogResponses(final RpcController controller,
+    final SlowLogResponseRequest request) {
+    final SlowLogRecorder slowLogRecorder =
+      this.regionServer.getSlowLogRecorder();
+    final List<SlowLogPayload> slowLogPayloads;
+    slowLogPayloads = slowLogRecorder != null
+      ? slowLogRecorder.getSlowLogPayloads(request)
+      : Collections.emptyList();
+    SlowLogResponses slowLogResponses = SlowLogResponses.newBuilder()
+      .addAllSlowLogPayloads(slowLogPayloads)
+      .build();
+    return slowLogResponses;
+  }
+
+  @Override
+  @QosPriority(priority = HConstants.ADMIN_QOS)
+  public ClearSlowLogResponses clearSlowLogsResponses(final RpcController controller,
+    final ClearSlowLogResponseRequest request) {
+    final SlowLogRecorder slowLogRecorder =
+      this.regionServer.getSlowLogRecorder();
+    boolean slowLogsCleaned = Optional.ofNullable(slowLogRecorder)
+      .map(SlowLogRecorder::clearSlowLogPayloads).orElse(false);
+    ClearSlowLogResponses clearSlowLogResponses = ClearSlowLogResponses.newBuilder()
+      .setIsCleaned(slowLogsCleaned)
+      .build();
+    return clearSlowLogResponses;
   }
 
   @VisibleForTesting

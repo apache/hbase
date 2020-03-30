@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.security.access;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
@@ -29,11 +28,10 @@ import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.TestTableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
@@ -41,6 +39,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.security.User;
@@ -71,7 +70,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
   private static final Logger LOG = LoggerFactory.getLogger(TestCellACLWithMultipleVersions.class);
 
   @Rule
-  public TestTableName TEST_TABLE = new TestTableName();
+  public TableNameTestRule testTable = new TableNameTestRule();
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] TEST_FAMILY1 = Bytes.toBytes("f1");
   private static final byte[] TEST_FAMILY2 = Bytes.toBytes("f2");
@@ -133,22 +132,25 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
 
   @Before
   public void setUp() throws Exception {
-    HTableDescriptor htd = new HTableDescriptor(TEST_TABLE.getTableName());
-    HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY1);
-    hcd.setMaxVersions(4);
-    htd.setOwner(USER_OWNER);
-    htd.addFamily(hcd);
-    hcd = new HColumnDescriptor(TEST_FAMILY2);
-    hcd.setMaxVersions(4);
-    htd.setOwner(USER_OWNER);
-    htd.addFamily(hcd);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(testTable.getTableName());
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY1);
+    familyDescriptor.setMaxVersions(4);
+    tableDescriptor.setOwner(USER_OWNER);
+    tableDescriptor.setColumnFamily(familyDescriptor);
+    familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY2);
+    familyDescriptor.setMaxVersions(4);
+    tableDescriptor.setOwner(USER_OWNER);
+    tableDescriptor.setColumnFamily(familyDescriptor);
     // Create the test table (owner added to the _acl_ table)
     try (Connection connection = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
       try (Admin admin = connection.getAdmin()) {
-        admin.createTable(htd, new byte[][] { Bytes.toBytes("s") });
+        admin.createTable(tableDescriptor, new byte[][] { Bytes.toBytes("s") });
       }
     }
-    TEST_UTIL.waitTableEnabled(TEST_TABLE.getTableName());
+    TEST_UTIL.waitTableEnabled(testTable.getTableName());
     LOG.info("Sleeping a second because of HBASE-12581");
     Threads.sleep(1000);
   }
@@ -163,7 +165,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         try(Connection connection = ConnectionFactory.createConnection(conf);
-            Table t = connection.getTable(TEST_TABLE.getTableName())) {
+            Table t = connection.getTable(testTable.getTableName())) {
           Put p;
           // with ro ACL
           p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, ZERO);
@@ -195,7 +197,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
         Get get = new Get(TEST_ROW);
         get.readVersions(10);
         try(Connection connection = ConnectionFactory.createConnection(conf);
-            Table t = connection.getTable(TEST_TABLE.getTableName())) {
+            Table t = connection.getTable(testTable.getTableName())) {
           return t.get(get).listCells();
         }
       }
@@ -207,7 +209,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
         Get get = new Get(TEST_ROW);
         get.readVersions(10);
         try(Connection connection = ConnectionFactory.createConnection(conf);
-            Table t = connection.getTable(TEST_TABLE.getTableName())) {
+            Table t = connection.getTable(testTable.getTableName())) {
           return t.get(get).listCells();
         }
       }
@@ -223,7 +225,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         try(Connection connection = ConnectionFactory.createConnection(conf);
-            Table t = connection.getTable(TEST_TABLE.getTableName())) {
+            Table t = connection.getTable(testTable.getTableName())) {
           Put p;
           p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, ZERO);
           p.setACL(writePerms);
@@ -269,7 +271,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
-          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+          try (Table t = connection.getTable(testTable.getTableName())) {
             // with rw ACL for "user1"
             Put p = new Put(TEST_ROW1);
             p.addColumn(TEST_FAMILY1, TEST_Q1, ZERO);
@@ -294,7 +296,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
-          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+          try (Table t = connection.getTable(testTable.getTableName())) {
             // with rw ACL for "user1", "user2" and "@group"
             Put p = new Put(TEST_ROW1);
             p.addColumn(TEST_FAMILY1, TEST_Q1, ZERO);
@@ -322,7 +324,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
-          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+          try (Table t = connection.getTable(testTable.getTableName())) {
             Delete d = new Delete(TEST_ROW1);
             d.addColumns(TEST_FAMILY1, TEST_Q1);
             d.addColumns(TEST_FAMILY1, TEST_Q2);
@@ -345,7 +347,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
-          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+          try (Table t = connection.getTable(testTable.getTableName())) {
             Delete d = new Delete(TEST_ROW2);
             d.addFamily(TEST_FAMILY1);
             t.delete(d);
@@ -362,7 +364,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
-          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+          try (Table t = connection.getTable(testTable.getTableName())) {
             Delete d = new Delete(row);
             d.addColumns(TEST_FAMILY1, q1);
             d.addColumns(TEST_FAMILY1, q2);
@@ -386,7 +388,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
-          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+          try (Table t = connection.getTable(testTable.getTableName())) {
             // Store a read write ACL without a timestamp, server will use current time
             Put p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q2, ONE);
             Map<String, Permission> readAndWritePerms =
@@ -416,7 +418,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       public Object run() throws Exception {
         Get get = new Get(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1);
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
-          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+          try (Table t = connection.getTable(testTable.getTableName())) {
             return t.get(get).listCells();
           }
         }
@@ -428,7 +430,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       public Object run() throws Exception {
         Get get = new Get(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q2);
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
-          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+          try (Table t = connection.getTable(testTable.getTableName())) {
             return t.get(get).listCells();
           }
         }
@@ -462,7 +464,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       public Object run() throws Exception {
         Delete delete = new Delete(TEST_ROW).addFamily(fam);
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
-          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+          try (Table t = connection.getTable(testTable.getTableName())) {
             t.delete(delete);
           }
         }
@@ -478,7 +480,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
-          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+          try (Table t = connection.getTable(testTable.getTableName())) {
             // This version (TS = 123) with rw ACL for USER_OTHER and USER_OTHER2
             Put p = new Put(TEST_ROW);
             p.addColumn(TEST_FAMILY1, TEST_Q1, 123L, ZERO);
@@ -517,7 +519,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
-          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+          try (Table t = connection.getTable(testTable.getTableName())) {
             Delete d = new Delete(TEST_ROW, 124L);
             d.addColumns(TEST_FAMILY1, TEST_Q1);
             t.delete(d);
@@ -532,7 +534,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
-          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+          try (Table t = connection.getTable(testTable.getTableName())) {
             Delete d = new Delete(TEST_ROW);
             d.addColumns(TEST_FAMILY1, TEST_Q2, 124L);
             t.delete(d);
@@ -557,7 +559,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
-          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+          try (Table t = connection.getTable(testTable.getTableName())) {
             Map<String, Permission> permsU1andOwner =
                 prepareCellPermissions(
                   new String[] { user1.getShortName(), USER_OWNER.getShortName() }, Action.READ,
@@ -611,7 +613,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
-          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+          try (Table t = connection.getTable(testTable.getTableName())) {
             Delete d = new Delete(TEST_ROW1);
             d.addColumn(TEST_FAMILY1, TEST_Q1, 123);
             d.addColumn(TEST_FAMILY1, TEST_Q2);
@@ -633,7 +635,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
-          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+          try (Table t = connection.getTable(testTable.getTableName())) {
             Delete d = new Delete(row, 127);
             d.addColumns(TEST_FAMILY1, q1);
             d.addColumns(TEST_FAMILY1, q2);
@@ -663,7 +665,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
-          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+          try (Table t = connection.getTable(testTable.getTableName())) {
             Map<String, Permission> permsU1andOwner =
                 prepareCellPermissions(
                   new String[] { user1.getShortName(), USER_OWNER.getShortName() }, Action.READ,
@@ -700,7 +702,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
-          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+          try (Table t = connection.getTable(testTable.getTableName())) {
             Increment inc = new Increment(TEST_ROW1);
             inc.setTimeRange(0, 123);
             inc.addColumn(TEST_FAMILY1, TEST_Q1, 2L);
@@ -722,7 +724,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
-          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+          try (Table t = connection.getTable(testTable.getTableName())) {
             Increment inc = new Increment(row);
             inc.setTimeRange(0, 127);
             inc.addColumn(TEST_FAMILY1, q1, 2L);
@@ -751,7 +753,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
-          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+          try (Table t = connection.getTable(testTable.getTableName())) {
             Map<String, Permission> permsU1andOwner =
                 prepareCellPermissions(
                   new String[] { user1.getShortName(), USER_OWNER.getShortName() }, Action.READ,
@@ -794,7 +796,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
-          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+          try (Table t = connection.getTable(testTable.getTableName())) {
             Put p = new Put(TEST_ROW1);
             p.addColumn(TEST_FAMILY1, TEST_Q1, 125, ZERO);
             p.addColumn(TEST_FAMILY1, TEST_Q2, ZERO);
@@ -818,7 +820,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
-          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+          try (Table t = connection.getTable(testTable.getTableName())) {
             Put p = new Put(row);
             // column Q1 covers version at 123 fr which user2 do not have permission
             p.addColumn(TEST_FAMILY1, q1, 124, value);
@@ -847,7 +849,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
-          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+          try (Table t = connection.getTable(testTable.getTableName())) {
             Map<String, Permission> permsU1andOwner =
                 prepareCellPermissions(
                   new String[] { user1.getShortName(), USER_OWNER.getShortName() }, Action.READ,
@@ -900,7 +902,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
-          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+          try (Table t = connection.getTable(testTable.getTableName())) {
             Delete d = new Delete(TEST_ROW1);
             d.addColumns(TEST_FAMILY1, TEST_Q1, 120);
             t.checkAndMutate(TEST_ROW1, TEST_FAMILY1).qualifier(TEST_Q1)
@@ -937,7 +939,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
-          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+          try (Table t = connection.getTable(testTable.getTableName())) {
             Delete d = new Delete(row);
             d.addColumn(TEST_FAMILY1, q1, 120);
             t.checkAndMutate(row, TEST_FAMILY1).qualifier(q1).ifEquals(value).thenDelete(d);
@@ -954,7 +956,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
-          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+          try (Table t = connection.getTable(testTable.getTableName())) {
             Delete d = new Delete(row);
             d.addColumns(TEST_FAMILY1, TEST_Q1);
             t.checkAndMutate(row, TEST_FAMILY1).qualifier(TEST_Q1).ifEquals(value).thenDelete(d);
@@ -971,11 +973,11 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
   public void tearDown() throws Exception {
     // Clean the _acl_ table
     try {
-      TEST_UTIL.deleteTable(TEST_TABLE.getTableName());
+      TEST_UTIL.deleteTable(testTable.getTableName());
     } catch (TableNotFoundException ex) {
       // Test deleted the table, no problem
-      LOG.info("Test deleted table " + TEST_TABLE.getTableName());
+      LOG.info("Test deleted table " + testTable.getTableName());
     }
-    assertEquals(0, PermissionStorage.getTablePermissions(conf, TEST_TABLE.getTableName()).size());
+    assertEquals(0, PermissionStorage.getTablePermissions(conf, testTable.getTableName()).size());
   }
 }

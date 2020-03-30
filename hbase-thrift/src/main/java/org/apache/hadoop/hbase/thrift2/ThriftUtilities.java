@@ -23,9 +23,12 @@ import static org.apache.hadoop.hbase.util.Bytes.getBytes;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
@@ -58,6 +61,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Scan.ReadType;
+import org.apache.hadoop.hbase.client.SlowLogQueryFilter;
+import org.apache.hadoop.hbase.client.SlowLogRecord;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -97,10 +102,13 @@ import org.apache.hadoop.hbase.thrift2.generated.TResult;
 import org.apache.hadoop.hbase.thrift2.generated.TRowMutations;
 import org.apache.hadoop.hbase.thrift2.generated.TScan;
 import org.apache.hadoop.hbase.thrift2.generated.TServerName;
+import org.apache.hadoop.hbase.thrift2.generated.TSlowLogQueryFilter;
+import org.apache.hadoop.hbase.thrift2.generated.TSlowLogRecord;
 import org.apache.hadoop.hbase.thrift2.generated.TTableDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TTableName;
 import org.apache.hadoop.hbase.thrift2.generated.TTimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.MapUtils;
@@ -513,7 +521,7 @@ public final class ThriftUtilities {
     Scan out = new Scan();
 
     if (in.isSetStartRow()) {
-      out.setStartRow(in.getStartRow());
+      out.withStartRow(in.getStartRow());
     }
     if (in.isSetStopRow()) {
       out.setStopRow(in.getStopRow());
@@ -1470,6 +1478,103 @@ public final class ThriftUtilities {
       out.add(getFromHBase(get));
     }
     return out;
+  }
+
+  public static Set<TServerName> getServerNamesFromHBase(Set<ServerName> serverNames) {
+    if (CollectionUtils.isEmpty(serverNames)) {
+      return Collections.emptySet();
+    }
+    return serverNames.stream().map(serverName -> {
+      TServerName tServerName = new TServerName();
+      tServerName.setHostName(serverName.getHostname());
+      tServerName.setPort(serverName.getPort());
+      tServerName.setStartCode(serverName.getStartcode());
+      return tServerName;
+    }).collect(Collectors.toSet());
+  }
+
+  public static Set<ServerName> getServerNamesFromThrift(Set<TServerName> tServerNames) {
+    if (CollectionUtils.isEmpty(tServerNames)) {
+      return Collections.emptySet();
+    }
+    return tServerNames.stream().map(tServerName ->
+      ServerName.valueOf(tServerName.getHostName(),
+        tServerName.getPort(),
+        tServerName.getStartCode()))
+      .collect(Collectors.toSet());
+  }
+
+  public static TSlowLogQueryFilter getSlowLogQueryFromHBase(
+      SlowLogQueryFilter slowLogQueryFilter) {
+    TSlowLogQueryFilter tSlowLogQueryFilter = new TSlowLogQueryFilter();
+    tSlowLogQueryFilter.setRegionName(slowLogQueryFilter.getRegionName());
+    tSlowLogQueryFilter.setClientAddress(slowLogQueryFilter.getClientAddress());
+    tSlowLogQueryFilter.setTableName(slowLogQueryFilter.getTableName());
+    tSlowLogQueryFilter.setUserName(slowLogQueryFilter.getUserName());
+    tSlowLogQueryFilter.setLimit(slowLogQueryFilter.getLimit());
+    return tSlowLogQueryFilter;
+  }
+
+  public static SlowLogQueryFilter getSlowLogQueryFromThrift(
+      TSlowLogQueryFilter tSlowLogQueryFilter) {
+    SlowLogQueryFilter slowLogQueryFilter = new SlowLogQueryFilter();
+    slowLogQueryFilter.setRegionName(tSlowLogQueryFilter.getRegionName());
+    slowLogQueryFilter.setClientAddress(tSlowLogQueryFilter.getClientAddress());
+    slowLogQueryFilter.setTableName(tSlowLogQueryFilter.getTableName());
+    slowLogQueryFilter.setUserName(tSlowLogQueryFilter.getUserName());
+    slowLogQueryFilter.setLimit(tSlowLogQueryFilter.getLimit());
+    return slowLogQueryFilter;
+  }
+
+  public static List<TSlowLogRecord> getSlowLogRecordsFromHBase(
+      List<SlowLogRecord> slowLogRecords) {
+    if (CollectionUtils.isEmpty(slowLogRecords)) {
+      return Collections.emptyList();
+    }
+    return slowLogRecords.stream()
+      .map(slowLogRecord -> {
+        TSlowLogRecord tSlowLogRecord = new TSlowLogRecord();
+        tSlowLogRecord.setCallDetails(slowLogRecord.getCallDetails());
+        tSlowLogRecord.setClientAddress(slowLogRecord.getClientAddress());
+        tSlowLogRecord.setMethodName(slowLogRecord.getMethodName());
+        tSlowLogRecord.setMultiGetsCount(slowLogRecord.getMultiGetsCount());
+        tSlowLogRecord.setMultiMutationsCount(slowLogRecord.getMultiMutationsCount());
+        tSlowLogRecord.setMultiServiceCalls(slowLogRecord.getMultiServiceCalls());
+        tSlowLogRecord.setParam(slowLogRecord.getParam());
+        tSlowLogRecord.setProcessingTime(slowLogRecord.getProcessingTime());
+        tSlowLogRecord.setQueueTime(slowLogRecord.getQueueTime());
+        tSlowLogRecord.setRegionName(slowLogRecord.getRegionName());
+        tSlowLogRecord.setResponseSize(slowLogRecord.getResponseSize());
+        tSlowLogRecord.setServerClass(slowLogRecord.getServerClass());
+        tSlowLogRecord.setStartTime(slowLogRecord.getStartTime());
+        tSlowLogRecord.setUserName(slowLogRecord.getUserName());
+        return tSlowLogRecord;
+      }).collect(Collectors.toList());
+  }
+
+  public static List<SlowLogRecord> getSlowLogRecordsFromThrift(
+      List<TSlowLogRecord> tSlowLogRecords) {
+    if (CollectionUtils.isEmpty(tSlowLogRecords)) {
+      return Collections.emptyList();
+    }
+    return tSlowLogRecords.stream()
+      .map(tSlowLogRecord -> new SlowLogRecord.SlowLogRecordBuilder()
+        .setCallDetails(tSlowLogRecord.getCallDetails())
+        .setClientAddress(tSlowLogRecord.getClientAddress())
+        .setMethodName(tSlowLogRecord.getMethodName())
+        .setMultiGetsCount(tSlowLogRecord.getMultiGetsCount())
+        .setMultiMutationsCount(tSlowLogRecord.getMultiMutationsCount())
+        .setMultiServiceCalls(tSlowLogRecord.getMultiServiceCalls())
+        .setParam(tSlowLogRecord.getParam())
+        .setProcessingTime(tSlowLogRecord.getProcessingTime())
+        .setQueueTime(tSlowLogRecord.getQueueTime())
+        .setRegionName(tSlowLogRecord.getRegionName())
+        .setResponseSize(tSlowLogRecord.getResponseSize())
+        .setServerClass(tSlowLogRecord.getServerClass())
+        .setStartTime(tSlowLogRecord.getStartTime())
+        .setUserName(tSlowLogRecord.getUserName())
+        .build())
+      .collect(Collectors.toList());
   }
 
 }

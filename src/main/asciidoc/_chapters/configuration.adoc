@@ -222,24 +222,25 @@ Use the following legend to interpret this table:
 * icon:times-circle[role="red"] = Known to not be fully-functional, or there are link:https://hadoop.apache.org/cve_list.html[CVEs] so we drop the support in newer minor releases
 * icon:exclamation-circle[role="yellow"] = Not tested, may/may-not function
 
-[cols="1,5*^.^", options="header"]
+[cols="1,6*^.^", options="header"]
 |===
-| | HBase-1.3.x | HBase-1.4.x | HBase-1.5.x | HBase-2.1.x | HBase-2.2.x
-|Hadoop-2.4.x | icon:check-circle[role="green"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
-|Hadoop-2.5.x | icon:check-circle[role="green"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
-|Hadoop-2.6.0 | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
-|Hadoop-2.6.1+ | icon:check-circle[role="green"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
-|Hadoop-2.7.0 | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
-|Hadoop-2.7.1+ | icon:check-circle[role="green"] | icon:check-circle[role="green"] | icon:times-circle[role="red"] | icon:check-circle[role="green"] | icon:times-circle[role="red"]
-|Hadoop-2.8.[0-2] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
-|Hadoop-2.8.[3-4] | icon:exclamation-circle[role="yellow"] | icon:exclamation-circle[role="yellow"] | icon:times-circle[role="red"] | icon:check-circle[role="green"] | icon:times-circle[role="red"]
-|Hadoop-2.8.5+ | icon:exclamation-circle[role="yellow"] | icon:exclamation-circle[role="yellow"] | icon:check-circle[role="green"] | icon:check-circle[role="green"] | icon:check-circle[role="green"]
-|Hadoop-2.9.[0-1] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
-|Hadoop-2.9.2+ | icon:exclamation-circle[role="yellow"] | icon:exclamation-circle[role="yellow"] | icon:check-circle[role="green"] | icon:exclamation-circle[role="yellow"] | icon:check-circle[role="green"]
-|Hadoop-3.0.[0-2] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
-|Hadoop-3.0.3+ | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:check-circle[role="green"] | icon:times-circle[role="red"]
-|Hadoop-3.1.0 | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
-|Hadoop-3.1.1+ | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:check-circle[role="green"] | icon:check-circle[role="green"]
+| | HBase-1.3.x | HBase-1.4.x | HBase-1.5.x | HBase-2.1.x | HBase-2.2.x | HBase-2.3.x
+|Hadoop-2.4.x | icon:check-circle[role="green"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+|Hadoop-2.5.x | icon:check-circle[role="green"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+|Hadoop-2.6.0 | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+|Hadoop-2.6.1+ | icon:check-circle[role="green"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+|Hadoop-2.7.0 | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+|Hadoop-2.7.1+ | icon:check-circle[role="green"] | icon:check-circle[role="green"] | icon:times-circle[role="red"] | icon:check-circle[role="green"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+|Hadoop-2.8.[0-2] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+|Hadoop-2.8.[3-4] | icon:exclamation-circle[role="yellow"] | icon:exclamation-circle[role="yellow"] | icon:times-circle[role="red"] | icon:check-circle[role="green"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+|Hadoop-2.8.5+ | icon:exclamation-circle[role="yellow"] | icon:exclamation-circle[role="yellow"] | icon:check-circle[role="green"] | icon:check-circle[role="green"] | icon:check-circle[role="green"] | icon:times-circle[role="red"]
+|Hadoop-2.9.[0-1] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+|Hadoop-2.9.2+ | icon:exclamation-circle[role="yellow"] | icon:exclamation-circle[role="yellow"] | icon:check-circle[role="green"] | icon:exclamation-circle[role="yellow"] | icon:check-circle[role="green"] | icon:times-circle[role="red"]
+|Hadoop-2.10.0 | icon:exclamation-circle[role="yellow"] | icon:exclamation-circle[role="yellow"] | icon:check-circle[role="green"] | icon:exclamation-circle[role="yellow"] | icon:exclamation-circle[role="yellow"] | icon:check-circle[role="green"]
+|Hadoop-3.0.[0-2] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+|Hadoop-3.0.3+ | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:check-circle[role="green"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+|Hadoop-3.1.0 | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+|Hadoop-3.1.1+ | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:check-circle[role="green"] | icon:check-circle[role="green"] | icon:check-circle[role="green"]
 |===
 
 .Hadoop Pre-2.6.1 and JDK 1.8 Kerberos
@@ -563,10 +564,50 @@ Changes here will require a cluster restart for HBase to notice the change thoug
 
 If you are running HBase in standalone mode, you don't need to configure anything for your client to work provided that they are all on the same machine.
 
-Since the HBase Master may move around, clients bootstrap by looking to ZooKeeper for current critical locations.
-ZooKeeper is where all these values are kept.
-Thus clients require the location of the ZooKeeper ensemble before they can do anything else.
-Usually this ensemble location is kept out in the _hbase-site.xml_ and is picked up by the client from the `CLASSPATH`.
+Starting release 3.0.0, the default connection registry has been switched to a master based implementation. Refer to <<client.masterregistry>> for more details about
+what a connection registry is and implications of this change. Depending on your HBase version, following is the expected minimal client configuration.
+
+==== Up until 2.x.y releases
+In 2.x.y releases, the default connection registry was based on ZooKeeper as the source of truth. This means that the clients always looked up ZooKeeper znodes to fetch
+the required metadata. For example, if an active master crashed and the a new master is elected, clients looked up the master znode to fetch
+the active master address (similarly for meta locations). This meant that the clients needed to have access to ZooKeeper and need to know
+the ZooKeeper ensemble information before they can do anything. This can be configured in the client configuration xml as follows:
+
+[source,xml]
+----
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+  <property>
+    <name>hbase.zookeeper.quorum</name>
+    <value>example1,example2,example3</value>
+    <description> Zookeeper ensemble information</description>
+  </property>
+</configuration>
+----
+
+==== Starting 3.0.0 release
+
+The default implementation was switched to a master based connection registry. With this implementation, clients always contact the active or
+stand-by master RPC end points to fetch the the connection registry information. This means that the clients should have access to the list of active and master
+end points before they can do anything. This can be configured in the client configuration xml as follows:
+
+[source,xml]
+----
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+  <property>
+    <name>hbase.masters</name>
+    <value>example1,example2,example3</value>
+    <description>List of master rpc end points for the hbase cluster.</description>
+  </property>
+</configuration>
+----
+
+The configuration value for _hbase.masters_ is a comma separated list of _host:port_ values. If no port value is specified, the default of _16000_ is assumed.
+
+Usually this configuration is kept out in the _hbase-site.xml_ and is picked up by the client from the `CLASSPATH`.
 
 If you are configuring an IDE to run an HBase client, you should include the _conf/_ directory on your classpath so _hbase-site.xml_ settings can be found (or add _src/test/resources_ to pick up the hbase-site.xml used by tests).
 
@@ -580,21 +621,6 @@ For Java applications using Maven, including the hbase-shaded-client module is t
 </dependency>
 ----
 
-A basic example _hbase-site.xml_ for client only may look as follows:
-[source,xml]
-----
-<?xml version="1.0"?>
-<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
-<configuration>
-  <property>
-    <name>hbase.zookeeper.quorum</name>
-    <value>example1,example2,example3</value>
-    <description>The directory shared by region servers.
-    </description>
-  </property>
-</configuration>
-----
-
 [[java.client.config]]
 ==== Java client configuration
 
@@ -606,10 +632,10 @@ For example, to set the ZooKeeper ensemble for the cluster programmatically do a
 [source,java]
 ----
 Configuration config = HBaseConfiguration.create();
-config.set("hbase.zookeeper.quorum", "localhost");  // Here we are running zookeeper locally
+config.set("hbase.zookeeper.quorum", "localhost");  // Until 2.x.y versions
+// ---- or ----
+config.set("hbase.masters", "localhost:1234"); // Starting 3.0.0 version
 ----
-
-If multiple ZooKeeper instances make up your ZooKeeper ensemble, they may be specified in a comma-separated list (just as in the _hbase-site.xml_ file). This populated `Configuration` instance can then be passed to an link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html[Table], and so on.
 
 [[config_timeouts]]
 === Timeout settings

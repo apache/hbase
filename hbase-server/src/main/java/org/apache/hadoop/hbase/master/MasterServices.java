@@ -17,11 +17,8 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import com.google.protobuf.Service;
-
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
@@ -51,11 +48,14 @@ import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfoManager;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
+import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 
 /**
  * A curated subset of services provided by {@link HMaster}.
@@ -541,4 +541,17 @@ public interface MasterServices extends Server {
    * Run the ReplicationBarrierChore.
    */
   void runReplicationBarrierCleaner();
+
+  /**
+   * @return the {@link RSGroupInfoManager}
+   */
+  RSGroupInfoManager getRSGroupInfoManager();
+
+  /**
+   * Queries the state of the {@link LoadBalancerTracker}. If the balancer is not initialized,
+   * false is returned.
+   *
+   * @return The state of the load balancer, or false if the load balancer isn't defined.
+   */
+  boolean isBalancerOn();
 }

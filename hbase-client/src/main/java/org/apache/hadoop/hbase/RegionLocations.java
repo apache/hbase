@@ -18,7 +18,10 @@
 
 package org.apache.hadoop.hbase;
 
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Iterator;
+
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -31,7 +34,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * (assuming small number of locations)
  */
 @InterfaceAudience.Private
-public class RegionLocations {
+public class RegionLocations implements Iterable<HRegionLocation> {
 
   private final int numNonNullElements;
 
@@ -359,6 +362,11 @@ public class RegionLocations {
       }
     }
     return null;
+  }
+
+  @Override
+  public Iterator<HRegionLocation> iterator() {
+    return Arrays.asList(locations).iterator();
   }
 
   @Override

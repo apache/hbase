@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,13 +48,13 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
@@ -92,11 +92,11 @@ public class TestCompaction {
       HBaseClassTestRule.forClass(TestCompaction.class);
 
   @Rule public TestName name = new TestName();
-  private static final HBaseTestingUtility UTIL = HBaseTestingUtility.createLocalHTU();
+  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   protected Configuration conf = UTIL.getConfiguration();
 
   private HRegion r = null;
-  private HTableDescriptor htd = null;
+  private TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor = null;
   private static final byte [] COLUMN_FAMILY = fam1;
   private final byte [] STARTROW = Bytes.toBytes(START_KEY);
   private static final byte [] COLUMN_FAMILY_TEXT = COLUMN_FAMILY;
@@ -126,17 +126,18 @@ public class TestCompaction {
 
   @Before
   public void setUp() throws Exception {
-    this.htd = UTIL.createTableDescriptor(name.getMethodName());
+    this.tableDescriptor = UTIL.createModifyableTableDescriptor(name.getMethodName());
     if (name.getMethodName().equals("testCompactionSeqId")) {
       UTIL.getConfiguration().set("hbase.hstore.compaction.kv.max", "10");
       UTIL.getConfiguration().set(
           DefaultStoreEngine.DEFAULT_COMPACTOR_CLASS_KEY,
           DummyCompactor.class.getName());
-      HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
-      hcd.setMaxVersions(65536);
-      this.htd.addFamily(hcd);
+      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY);
+      familyDescriptor.setMaxVersions(65536);
+      this.tableDescriptor.setColumnFamily(familyDescriptor);
     }
-    this.r = UTIL.createLocalHRegion(htd, null, null);
+    this.r = UTIL.createLocalHRegion(tableDescriptor, null, null);
   }
 
   @After
@@ -363,7 +364,8 @@ public class TestCompaction {
   /**
    * Test no new Compaction requests are generated after calling stop compactions
    */
-  @Test public void testStopStartCompaction() throws IOException {
+  @Test
+  public void testStopStartCompaction() throws IOException {
     // setup a compact/split thread on a mock server
     HRegionServer mockServer = Mockito.mock(HRegionServer.class);
     Mockito.when(mockServer.getConfiguration()).thenReturn(r.getBaseConf());
@@ -376,19 +378,21 @@ public class TestCompaction {
       createStoreFile(r);
     }
     thread.switchCompaction(false);
-    thread
-        .requestCompaction(r, store, "test", Store.PRIORITY_USER, CompactionLifeCycleTracker.DUMMY,
-            null);
+    thread.requestCompaction(r, store, "test", Store.PRIORITY_USER,
+      CompactionLifeCycleTracker.DUMMY, null);
     assertEquals(false, thread.isCompactionsEnabled());
-    assertEquals(0, thread.getLongCompactions().getActiveCount() + thread.getShortCompactions()
-        .getActiveCount());
+    int longCompactions = thread.getLongCompactions().getActiveCount();
+    int shortCompactions = thread.getShortCompactions().getActiveCount();
+    assertEquals("longCompactions=" + longCompactions + "," +
+        "shortCompactions=" + shortCompactions, 0, longCompactions + shortCompactions);
     thread.switchCompaction(true);
     assertEquals(true, thread.isCompactionsEnabled());
-    thread
-        .requestCompaction(r, store, "test", Store.PRIORITY_USER, CompactionLifeCycleTracker.DUMMY,
-            null);
-    assertEquals(1, thread.getLongCompactions().getActiveCount() + thread.getShortCompactions()
-        .getActiveCount());
+    thread.requestCompaction(r, store, "test", Store.PRIORITY_USER,
+      CompactionLifeCycleTracker.DUMMY, null);
+    longCompactions = thread.getLongCompactions().getActiveCount();
+    shortCompactions = thread.getShortCompactions().getActiveCount();
+    assertEquals("longCompactions=" + longCompactions + "," +
+        "shortCompactions=" + shortCompactions, 1, longCompactions + shortCompactions);
   }
 
   @Test public void testInterruptingRunningCompactions() throws Exception {

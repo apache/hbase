@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,7 +49,7 @@ import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.regionserver.TestHRegionServerBulkLoad;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
@@ -62,7 +62,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MediumTests.class, ClientTests.class})
+@Category({LargeTests.class, ClientTests.class})
 public class TestReplicaWithCluster {
 
   @ClassRule
@@ -278,7 +278,9 @@ public class TestReplicaWithCluster {
   @Test
   public void testCreateDeleteTable() throws IOException {
     // Create table then get the single region for our new table.
-    HTableDescriptor hdt = HTU.createTableDescriptor("testCreateDeleteTable");
+    HTableDescriptor hdt = HTU.createTableDescriptor(TableName.valueOf("testCreateDeleteTable"),
+      HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+      HColumnDescriptor.DEFAULT_KEEP_DELETED);
     hdt.setRegionReplication(NB_SERVERS);
     hdt.addCoprocessor(SlowMeCopro.class.getName());
     Table table = HTU.createTable(hdt, new byte[][]{f}, null);
@@ -370,15 +372,18 @@ public class TestReplicaWithCluster {
   @SuppressWarnings("deprecation")
   @Test
   public void testReplicaAndReplication() throws Exception {
-    HTableDescriptor hdt = HTU.createTableDescriptor("testReplicaAndReplication");
-    hdt.setRegionReplication(NB_SERVERS);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      HTU.createModifyableTableDescriptor("testReplicaAndReplication");
+    tableDescriptor.setRegionReplication(NB_SERVERS);
 
-    HColumnDescriptor fam = new HColumnDescriptor(row);
-    fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    hdt.addFamily(fam);
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(row);
 
-    hdt.addCoprocessor(SlowMeCopro.class.getName());
-    HTU.getAdmin().createTable(hdt, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+    familyDescriptor.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
+    tableDescriptor.setColumnFamily(familyDescriptor);
+
+    tableDescriptor.setCoprocessor(SlowMeCopro.class.getName());
+    HTU.getAdmin().createTable(tableDescriptor, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
 
     Configuration conf2 = HBaseConfiguration.create(HTU.getConfiguration());
     conf2.set(HConstants.HBASE_CLIENT_INSTANCE_ID, String.valueOf(-1));
@@ -389,7 +394,7 @@ public class TestReplicaWithCluster {
     HTU2.setZkCluster(miniZK);
     HTU2.startMiniCluster(NB_SERVERS);
     LOG.info("Setup second Zk");
-    HTU2.getAdmin().createTable(hdt, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+    HTU2.getAdmin().createTable(tableDescriptor, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
 
     Admin admin = ConnectionFactory.createConnection(HTU.getConfiguration()).getAdmin();
 
@@ -400,7 +405,7 @@ public class TestReplicaWithCluster {
 
     Put p = new Put(row);
     p.addColumn(row, row, row);
-    final Table table = HTU.getConnection().getTable(hdt.getTableName());
+    final Table table = HTU.getConnection().getTable(tableDescriptor.getTableName());
     table.put(p);
 
     HTU.getAdmin().flush(table.getName());
@@ -424,7 +429,7 @@ public class TestReplicaWithCluster {
     table.close();
     LOG.info("stale get on the first cluster done. Now for the second.");
 
-    final Table table2 = HTU.getConnection().getTable(hdt.getTableName());
+    final Table table2 = HTU.getConnection().getTable(tableDescriptor.getTableName());
     Waiter.waitFor(HTU.getConfiguration(), 1000, new Waiter.Predicate<Exception>() {
       @Override public boolean evaluate() throws Exception {
         try {
@@ -442,11 +447,11 @@ public class TestReplicaWithCluster {
     });
     table2.close();
 
-    HTU.getAdmin().disableTable(hdt.getTableName());
-    HTU.deleteTable(hdt.getTableName());
+    HTU.getAdmin().disableTable(tableDescriptor.getTableName());
+    HTU.deleteTable(tableDescriptor.getTableName());
 
-    HTU2.getAdmin().disableTable(hdt.getTableName());
-    HTU2.deleteTable(hdt.getTableName());
+    HTU2.getAdmin().disableTable(tableDescriptor.getTableName());
+    HTU2.deleteTable(tableDescriptor.getTableName());
 
     // We shutdown HTU2 minicluster later, in afterClass(), as shutting down
     // the minicluster has negative impact of deleting all HConnections in JVM.
@@ -456,7 +461,9 @@ public class TestReplicaWithCluster {
   public void testBulkLoad() throws IOException {
     // Create table then get the single region for our new table.
     LOG.debug("Creating test table");
-    HTableDescriptor hdt = HTU.createTableDescriptor("testBulkLoad");
+    HTableDescriptor hdt = HTU.createTableDescriptor(TableName.valueOf("testBulkLoad"),
+      HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+      HColumnDescriptor.DEFAULT_KEEP_DELETED);
     hdt.setRegionReplication(NB_SERVERS);
     hdt.addCoprocessor(SlowMeCopro.class.getName());
     Table table = HTU.createTable(hdt, new byte[][]{f}, null);
@@ -512,7 +519,9 @@ public class TestReplicaWithCluster {
   @Test
   public void testReplicaGetWithPrimaryDown() throws IOException {
     // Create table then get the single region for our new table.
-    HTableDescriptor hdt = HTU.createTableDescriptor("testCreateDeleteTable");
+    HTableDescriptor hdt = HTU.createTableDescriptor(TableName.valueOf("testCreateDeleteTable"),
+      HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+      HColumnDescriptor.DEFAULT_KEEP_DELETED);
     hdt.setRegionReplication(NB_SERVERS);
     hdt.addCoprocessor(RegionServerStoppedCopro.class.getName());
     try {
@@ -546,7 +555,9 @@ public class TestReplicaWithCluster {
   @Test
   public void testReplicaScanWithPrimaryDown() throws IOException {
     // Create table then get the single region for our new table.
-    HTableDescriptor hdt = HTU.createTableDescriptor("testCreateDeleteTable");
+    HTableDescriptor hdt = HTU.createTableDescriptor(TableName.valueOf("testCreateDeleteTable"),
+      HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+      HColumnDescriptor.DEFAULT_KEEP_DELETED);
     hdt.setRegionReplication(NB_SERVERS);
     hdt.addCoprocessor(RegionServerStoppedCopro.class.getName());
 
@@ -588,11 +599,15 @@ public class TestReplicaWithCluster {
   }
 
   @Test
-  public void testReplicaGetWithRpcClientImpl() throws IOException {
+  public void testReplicaGetWithAsyncRpcClientImpl() throws IOException {
     HTU.getConfiguration().setBoolean("hbase.ipc.client.specificThreadForWriting", true);
-    HTU.getConfiguration().set("hbase.rpc.client.impl", "org.apache.hadoop.hbase.ipc.RpcClientImpl");
+    HTU.getConfiguration().set(
+        "hbase.rpc.client.impl", "org.apache.hadoop.hbase.ipc.AsyncRpcClient");
     // Create table then get the single region for our new table.
-    HTableDescriptor hdt = HTU.createTableDescriptor("testReplicaGetWithRpcClientImpl");
+    HTableDescriptor hdt = HTU.createTableDescriptor(
+      TableName.valueOf("testReplicaGetWithAsyncRpcClientImpl"),
+      HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+      HColumnDescriptor.DEFAULT_KEEP_DELETED);
     hdt.setRegionReplication(NB_SERVERS);
     hdt.addCoprocessor(SlowMeCopro.class.getName());
 

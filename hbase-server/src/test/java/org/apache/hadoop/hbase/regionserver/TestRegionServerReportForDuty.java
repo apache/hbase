@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.ServerManager;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.log4j.Appender;
@@ -51,7 +51,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(MediumTests.class)
+@Category(LargeTests.class)
 public class TestRegionServerReportForDuty {
 
   @ClassRule
@@ -122,7 +122,7 @@ public class TestRegionServerReportForDuty {
    * This test HMaster class will always throw ServerNotRunningYetException if checked.
    */
   public static class NeverInitializedMaster extends HMaster {
-    public NeverInitializedMaster(Configuration conf) throws IOException, KeeperException {
+    public NeverInitializedMaster(Configuration conf) throws IOException {
       super(conf);
     }
 

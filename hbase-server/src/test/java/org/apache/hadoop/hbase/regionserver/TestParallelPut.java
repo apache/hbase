@@ -20,22 +20,21 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.util.Random;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -97,7 +96,9 @@ public class TestParallelPut {
   @After
   public void tearDown() throws Exception {
     EnvironmentEdgeManagerTestHelper.reset();
-    if (region != null) region.close(true);
+    if (region != null) {
+      region.close(true);
+    }
   }
 
   public String getName() {
@@ -177,15 +178,16 @@ public class TestParallelPut {
     assertTrue(Bytes.compareTo(r, value) == 0);
   }
 
-  private HRegion initHRegion(byte [] tableName, String callingMethod,
-    byte[] ... families)
-  throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
+  private HRegion initHRegion(byte [] tableName, String callingMethod, byte[] ... families)
+      throws IOException {
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(tableName));
     for(byte [] family : families) {
-      htd.addFamily(new HColumnDescriptor(family));
+      tableDescriptor.setColumnFamily(
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
     }
-    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    return HBTU.createLocalHRegion(info, htd);
+    HRegionInfo info = new HRegionInfo(tableDescriptor.getTableName(), null, null, false);
+    return HBTU.createLocalHRegion(info, tableDescriptor);
   }
 
   /**

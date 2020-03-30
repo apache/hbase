@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
-import com.google.protobuf.RpcChannel;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -40,16 +39,21 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshotView;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.UserPermission;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
 
 /**
  * The asynchronous administrative API for HBase.
@@ -513,18 +517,17 @@ public interface AsyncAdmin {
    * @param nameOfRegionB encoded or full name of region b
    * @param forcible true if do a compulsory merge, otherwise we will only merge two adjacent
    *          regions
+   * @deprecated since 2.3.0 and will be removed in 4.0.0.Use {@link #mergeRegions(List, boolean)}
+   *             instead.
    */
+  @Deprecated
   default CompletableFuture<Void> mergeRegions(byte[] nameOfRegionA, byte[] nameOfRegionB,
       boolean forcible) {
     return mergeRegions(Arrays.asList(nameOfRegionA, nameOfRegionB), forcible);
   }
 
   /**
-   * Merge regions.
-   * <p/>
-   * You may get a {@code DoNotRetryIOException} if you pass more than two regions in but the master
-   * does not support merging more than two regions. At least till 2.2.0, we still only support
-   * merging two regions.
+   * Merge multiple regions (>=2).
    * @param nameOfRegionsToMerge encoded or full name of daughter regions
    * @param forcible true if do a compulsory merge, otherwise we will only merge two adjacent
    *          regions
@@ -1381,7 +1384,7 @@ public interface AsyncAdmin {
    * @param newTableName name of the new table where the table will be created
    * @param preserveSplits True if the splits should be preserved
    */
-  CompletableFuture<Void>  cloneTableSchema(final TableName tableName,
+  CompletableFuture<Void> cloneTableSchema(final TableName tableName,
       final TableName newTableName, final boolean preserveSplits);
 
   /**
@@ -1507,4 +1510,125 @@ public interface AsyncAdmin {
    */
   CompletableFuture<Boolean> isSnapshotCleanupEnabled();
 
+  /**
+   * Retrieves online slow RPC logs from the provided list of
+   * RegionServers
+   *
+   * @param serverNames Server names to get slowlog responses from
+   * @param slowLogQueryFilter filter to be used if provided
+   * @return Online slowlog response list. The return value wrapped by a {@link CompletableFuture}
+   */
+  CompletableFuture<List<SlowLogRecord>> getSlowLogResponses(final Set<ServerName> serverNames,
+      final SlowLogQueryFilter slowLogQueryFilter);
+
+  /**
+   * Clears online slow RPC logs from the provided list of
+   * RegionServers
+   *
+   * @param serverNames Set of Server names to clean slowlog responses from
+   * @return List of booleans representing if online slowlog response buffer is cleaned
+   *   from each RegionServer. The return value wrapped by a {@link CompletableFuture}
+   */
+  CompletableFuture<List<Boolean>> clearSlowLogResponses(final Set<ServerName> serverNames);
+
+  /**
+   * Creates a new RegionServer group with the given name
+   * @param groupName the name of the group
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<Void> addRSGroup(String groupName);
+
+  /**
+   * Get group info for the given group name
+   * @param groupName the group name
+   * @return group info
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<RSGroupInfo> getRSGroup(String groupName);
+
+  /**
+   * Get group info for the given hostPort
+   * @param hostPort HostPort to get RSGroupInfo for
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<RSGroupInfo> getRSGroup(Address hostPort);
+
+  /**
+   * Get group info for the given table
+   * @param tableName table name to get RSGroupInfo for
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<RSGroupInfo> getRSGroup(TableName tableName);
+
+  /**
+   * Lists current set of RegionServer groups
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<List<RSGroupInfo>> listRSGroups();
+
+  /**
+   * Get all tables in this RegionServer group.
+   * @param groupName the group name
+   * @throws IOException if a remote or network exception occurs
+   * @see #getConfiguredNamespacesAndTablesInRSGroup(String)
+   */
+  CompletableFuture<List<TableName>> listTablesInRSGroup(String groupName);
+
+  /**
+   * Get the namespaces and tables which have this RegionServer group in descriptor.
+   * <p/>
+   * The difference between this method and {@link #listTablesInRSGroup(String)} is that, this
+   * method will not include the table which is actually in this RegionServr group but without the
+   * RegionServer group configuration in its {@link TableDescriptor}. For example, we have a group
+   * 'A', and we make namespace 'nsA' in this group, then all the tables under this namespace will
+   * in the group 'A', but this method will not return these tables but only the namespace 'nsA',
+   * while the {@link #listTablesInRSGroup(String)} will return all these tables.
+   * @param groupName the group name
+   * @throws IOException if a remote or network exception occurs
+   * @see #listTablesInRSGroup(String)
+   */
+  CompletableFuture<Pair<List<String>, List<TableName>>>
+    getConfiguredNamespacesAndTablesInRSGroup(String groupName);
+
+  /**
+   * Remove RegionServer group associated with the given name
+   * @param groupName the group name
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<Void> removeRSGroup(String groupName);
+
+  /**
+   * Remove decommissioned servers from group
+   *  1. Sometimes we may find the server aborted due to some hardware failure and we must offline
+   *     the server for repairing. Or we need to move some servers to join other clusters.
+   *     So we need to remove these servers from the group.
+   *  2. Dead/recovering/live servers will be disallowed.
+   * @param servers set of servers to remove
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<Void> removeServersFromRSGroup(Set<Address> servers);
+
+  /**
+   * Move given set of servers to the specified target RegionServer group
+   * @param servers set of servers to move
+   * @param groupName the group to move servers to
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<Void> moveServersToRSGroup(Set<Address> servers, String groupName);
+
+  /**
+   * Set the RegionServer group for tables
+   * @param tables tables to set group for
+   * @param groupName group name for tables
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<Void> setRSGroup(Set<TableName> tables, String groupName);
+
+  /**
+   * Balance regions in the given RegionServer group
+   * @param groupName the group name
+   * @return boolean Whether balance ran or not
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<Boolean> balanceRSGroup(String groupName);
 }

@@ -222,9 +222,9 @@ public class SnapshotScannerHDFSAclController implements MasterCoprocessor, Mast
   }
 
   @Override
-  public void postDeleteTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
+  public void postCompletedDeleteTableAction(ObserverContext<MasterCoprocessorEnvironment> ctx,
       TableName tableName) throws IOException {
-    if (needHandleTableHdfsAcl(tableName, "deleteTable " + tableName)) {
+    if (!tableName.isSystemTable() && checkInitialized("deleteTable " + tableName)) {
       /*
        * Remove table user access HDFS acl from namespace directory if the user has no permissions
        * of global, ns of the table or other tables of the ns, eg: Bob has 'ns1:t1' read permission,
@@ -235,14 +235,16 @@ public class SnapshotScannerHDFSAclController implements MasterCoprocessor, Mast
       try (Table aclTable =
           ctx.getEnvironment().getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
         Set<String> users = SnapshotScannerHDFSAclStorage.getTableUsers(aclTable, tableName);
-        // 1. Remove table archive directory default ACLs
-        hdfsAclHelper.removeTableDefaultAcl(tableName, users);
-        // 2. Delete table owner permission is synced to HDFS in acl table
-        SnapshotScannerHDFSAclStorage.deleteTableHdfsAcl(aclTable, tableName);
-        // 3. Remove namespace access acls
-        Set<String> removeUsers = filterUsersToRemoveNsAccessAcl(aclTable, tableName, users);
-        if (removeUsers.size() > 0) {
-          hdfsAclHelper.removeNamespaceAccessAcl(tableName, removeUsers, "delete");
+        if (users.size() > 0) {
+          // 1. Remove table archive directory default ACLs
+          hdfsAclHelper.removeTableDefaultAcl(tableName, users);
+          // 2. Delete table owner permission is synced to HDFS in acl table
+          SnapshotScannerHDFSAclStorage.deleteTableHdfsAcl(aclTable, tableName);
+          // 3. Remove namespace access acls
+          Set<String> removeUsers = filterUsersToRemoveNsAccessAcl(aclTable, tableName, users);
+          if (removeUsers.size() > 0) {
+            hdfsAclHelper.removeNamespaceAccessAcl(tableName, removeUsers, "delete");
+          }
         }
       }
     }

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,30 +17,30 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
-import java.io.BufferedReader;
+import static org.apache.zookeeper.client.FourLetterWordMain.send4LetterWord;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.InterruptedIOException;
-import java.io.OutputStream;
-import java.io.Reader;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.net.BindException;
+import java.net.ConnectException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.server.NIOServerCnxnFactory;
 import org.apache.zookeeper.server.ZooKeeperServer;
 import org.apache.zookeeper.server.persistence.FileTxnLog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -52,15 +51,19 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 @InterfaceAudience.Public
 public class MiniZooKeeperCluster {
   private static final Logger LOG = LoggerFactory.getLogger(MiniZooKeeperCluster.class);
-
   private static final int TICK_TIME = 2000;
+  private static final int TIMEOUT = 1000;
   private static final int DEFAULT_CONNECTION_TIMEOUT = 30000;
   private static final byte[] STATIC_BYTES = Bytes.toBytes("stat");
   private final int connectionTimeout;
+  public static final String LOOPBACK_HOST = InetAddress.getLoopbackAddress().getHostName();
+  public static final String HOST = LOOPBACK_HOST;
 
   private boolean started;
 
-  /** The default port. If zero, we use a random port. */
+  /**
+   * The default port. If zero, we use a random port.
+   */
   private int defaultClientPort = 0;
 
   private final List<NIOServerCnxnFactory> standaloneServerFactoryList;
@@ -83,8 +86,8 @@ public class MiniZooKeeperCluster {
     zooKeeperServers = new ArrayList<>();
     clientPortList = new ArrayList<>();
     standaloneServerFactoryList = new ArrayList<>();
-    connectionTimeout = configuration.getInt(HConstants.ZK_SESSION_TIMEOUT + ".localHBaseCluster",
-      DEFAULT_CONNECTION_TIMEOUT);
+    connectionTimeout = configuration
+      .getInt(HConstants.ZK_SESSION_TIMEOUT + ".localHBaseCluster", DEFAULT_CONNECTION_TIMEOUT);
   }
 
   /**
@@ -101,8 +104,7 @@ public class MiniZooKeeperCluster {
    *
    * @return clientPortList the client port list
    */
-  @VisibleForTesting
-  public List<Integer> getClientPortList() {
+  @VisibleForTesting public List<Integer> getClientPortList() {
     return clientPortList;
   }
 
@@ -117,8 +119,7 @@ public class MiniZooKeeperCluster {
 
   public void setDefaultClientPort(int clientPort) {
     if (clientPort <= 0) {
-      throw new IllegalArgumentException("Invalid default ZK client port: "
-          + clientPort);
+      throw new IllegalArgumentException("Invalid default ZK client port: " + clientPort);
     }
     this.defaultClientPort = clientPort;
   }
@@ -190,15 +191,15 @@ public class MiniZooKeeperCluster {
   }
 
   /**
-   * @param baseDir the base directory to use
+   * @param baseDir             the base directory to use
    * @param numZooKeeperServers the number of ZooKeeper servers
    * @return ClientPort server bound to, -1 if there was a binding problem and we couldn't pick
-   *         another port.
-   * @throws IOException if an operation fails during the startup
+   *   another port.
+   * @throws IOException          if an operation fails during the startup
    * @throws InterruptedException if the startup fails
    */
-  public int startup(File baseDir, int numZooKeeperServers) throws IOException,
-          InterruptedException {
+  public int startup(File baseDir, int numZooKeeperServers)
+      throws IOException, InterruptedException {
     if (numZooKeeperServers <= 0) {
       return -1;
     }
@@ -230,21 +231,19 @@ public class MiniZooKeeperCluster {
 
       ZooKeeperServer server = new ZooKeeperServer(dir, dir, tickTimeToUse);
       // Setting {min,max}SessionTimeout defaults to be the same as in Zookeeper
-      server.setMinSessionTimeout(configuration.getInt(
-              "hbase.zookeeper.property.minSessionTimeout", -1));
-      server.setMaxSessionTimeout(configuration.getInt(
-              "hbase.zookeeper.property.maxSessionTimeout", -1));
+      server.setMinSessionTimeout(configuration.getInt("hbase.zookeeper.property.minSessionTimeout",
+        -1));
+      server.setMaxSessionTimeout(configuration.getInt("hbase.zookeeper.property.maxSessionTimeout",
+        -1));
       NIOServerCnxnFactory standaloneServerFactory;
       while (true) {
         try {
           standaloneServerFactory = new NIOServerCnxnFactory();
-          standaloneServerFactory.configure(
-            new InetSocketAddress(currentClientPort),
+          standaloneServerFactory.configure(new InetSocketAddress(LOOPBACK_HOST, currentClientPort),
             configuration.getInt(HConstants.ZOOKEEPER_MAX_CLIENT_CNXNS,
-                    HConstants.DEFAULT_ZOOKEEPER_MAX_CLIENT_CNXNS));
+              HConstants.DEFAULT_ZOOKEEPER_MAX_CLIENT_CNXNS));
         } catch (BindException e) {
-          LOG.debug("Failed binding ZK Server to client port: " +
-              currentClientPort, e);
+          LOG.debug("Failed binding ZK Server to client port: " + currentClientPort, e);
           // We're told to use some port but it's occupied, fail
           if (hasValidClientPortInList(i)) {
             return -1;
@@ -257,11 +256,16 @@ public class MiniZooKeeperCluster {
         break;
       }
 
-      // Start up this ZK server
+      // Start up this ZK server. Dump its stats.
       standaloneServerFactory.startup(server);
+      LOG.info("Started connectionTimeout={}, dir={}, {}", connectionTimeout, dir,
+        getServerConfigurationOnOneLine(server));
       // Runs a 'stat' against the servers.
       if (!waitForServerUp(currentClientPort, connectionTimeout)) {
-        throw new IOException("Waiting for startup of standalone server");
+        Threads.printThreadInfo(System.out,
+          "Why is zk standalone server not coming up?");
+        throw new IOException("Waiting for startup of standalone server; " +
+          "server isRunning=" + server.isRunning());
       }
 
       // We have selected a port as a client port.  Update clientPortList if necessary.
@@ -280,9 +284,26 @@ public class MiniZooKeeperCluster {
     activeZKServerIndex = 0;
     started = true;
     int clientPort = clientPortList.get(activeZKServerIndex);
-    LOG.info("Started MiniZooKeeperCluster and ran successful 'stat' " +
-        "on client port=" + clientPort);
+    LOG.info("Started MiniZooKeeperCluster and ran 'stat' on client port={}", clientPort);
     return clientPort;
+  }
+
+  private String getServerConfigurationOnOneLine(ZooKeeperServer server) {
+    StringWriter sw = new StringWriter();
+    try (PrintWriter pw = new PrintWriter(sw) {
+      @Override public void println(int x) {
+        super.print(x);
+        super.print(", ");
+      }
+
+      @Override public void println(String x) {
+        super.print(x);
+        super.print(", ");
+      }
+    }) {
+      server.dumpConf(pw);
+    }
+    return sw.toString();
   }
 
   private void createDir(File dir) throws IOException {
@@ -353,16 +374,14 @@ public class MiniZooKeeperCluster {
     standaloneServerFactoryList.remove(activeZKServerIndex);
     clientPortList.remove(activeZKServerIndex);
     zooKeeperServers.remove(activeZKServerIndex);
-    LOG.info("Kill the current active ZK servers in the cluster " +
-        "on client port: " + clientPort);
+    LOG.info("Kill the current active ZK servers in the cluster on client port: {}", clientPort);
 
     if (standaloneServerFactoryList.isEmpty()) {
       // there is no backup servers;
       return -1;
     }
     clientPort = clientPortList.get(activeZKServerIndex);
-    LOG.info("Activate a backup zk server in the cluster " +
-        "on client port: " + clientPort);
+    LOG.info("Activate a backup zk server in the cluster on client port: {}", clientPort);
     // return the next back zk server's port
     return clientPort;
   }
@@ -394,20 +413,15 @@ public class MiniZooKeeperCluster {
     standaloneServerFactoryList.remove(backupZKServerIndex);
     clientPortList.remove(backupZKServerIndex);
     zooKeeperServers.remove(backupZKServerIndex);
-    LOG.info("Kill one backup ZK servers in the cluster " +
-        "on client port: " + clientPort);
+    LOG.info("Kill one backup ZK servers in the cluster on client port: {}", clientPort);
   }
 
-  // XXX: From o.a.zk.t.ClientBase
+  // XXX: From o.a.zk.t.ClientBase. We just dropped the check for ssl/secure.
   private static boolean waitForServerDown(int port, long timeout) throws IOException {
     long start = System.currentTimeMillis();
     while (true) {
       try {
-        try (Socket sock = new Socket("localhost", port)) {
-          OutputStream outstream = sock.getOutputStream();
-          outstream.write(STATIC_BYTES);
-          outstream.flush();
-        }
+        send4LetterWord(HOST, port, "stat", (int)timeout);
       } catch (IOException e) {
         return true;
       }
@@ -416,7 +430,7 @@ public class MiniZooKeeperCluster {
         break;
       }
       try {
-        Thread.sleep(250);
+        Thread.sleep(TIMEOUT);
       } catch (InterruptedException e) {
         throw (InterruptedIOException)new InterruptedIOException().initCause(e);
       }
@@ -424,40 +438,31 @@ public class MiniZooKeeperCluster {
     return false;
   }
 
-  // XXX: From o.a.zk.t.ClientBase
+  // XXX: From o.a.zk.t.ClientBase. Its in the test jar but we don't depend on zk test jar.
+  // We remove the SSL/secure bit. Not used in here.
   private static boolean waitForServerUp(int port, long timeout) throws IOException {
     long start = System.currentTimeMillis();
     while (true) {
       try {
-        Socket sock = new Socket("localhost", port);
-        BufferedReader reader = null;
-        try {
-          OutputStream outstream = sock.getOutputStream();
-          outstream.write(STATIC_BYTES);
-          outstream.flush();
-
-          Reader isr = new InputStreamReader(sock.getInputStream());
-          reader = new BufferedReader(isr);
-          String line = reader.readLine();
-          if (line != null && line.startsWith("Zookeeper version:")) {
-            return true;
-          }
-        } finally {
-          sock.close();
-          if (reader != null) {
-            reader.close();
-          }
+        String result = send4LetterWord(HOST, port, "stat", (int)timeout);
+        if (result.startsWith("Zookeeper version:") && !result.contains("READ-ONLY")) {
+          return true;
+        } else {
+          LOG.debug("Read {}", result);
         }
+      } catch (ConnectException e) {
+        // ignore as this is expected, do not log stacktrace
+        LOG.info("{}:{} not up: {}", HOST, port, e.toString());
       } catch (IOException e) {
         // ignore as this is expected
-        LOG.info("server localhost:" + port + " not up " + e);
+        LOG.info("{}:{} not up", HOST, port, e);
       }
 
       if (System.currentTimeMillis() > start + timeout) {
         break;
       }
       try {
-        Thread.sleep(250);
+        Thread.sleep(TIMEOUT);
       } catch (InterruptedException e) {
         throw (InterruptedIOException)new InterruptedIOException().initCause(e);
       }
@@ -468,6 +473,13 @@ public class MiniZooKeeperCluster {
   public int getClientPort() {
     return activeZKServerIndex < 0 || activeZKServerIndex >= clientPortList.size() ? -1
         : clientPortList.get(activeZKServerIndex);
+  }
+
+  /**
+   * @return Address for this  cluster instance.
+   */
+  public Address getAddress() {
+    return Address.fromParts(HOST, getClientPort());
   }
 
   List<ZooKeeperServer> getZooKeeperServers() {

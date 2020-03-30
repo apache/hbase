@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.coordination.ZkSplitLogWorkerCoordination;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.balancer.SimpleLoadBalancer;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -56,7 +56,7 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MiscTests.class, LargeTests.class})
+@Category({MiscTests.class, MediumTests.class})
 public class TestZooKeeper {
 
   @ClassRule
@@ -79,6 +79,7 @@ public class TestZooKeeper {
     conf.setInt(HConstants.ZK_SESSION_TIMEOUT, 1000);
     conf.setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, MockLoadBalancer.class,
         LoadBalancer.class);
+    TEST_UTIL.startMiniDFSCluster(2);
   }
 
   @AfterClass

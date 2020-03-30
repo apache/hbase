@@ -19,12 +19,12 @@
 package org.apache.hadoop.hbase.master;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
-import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
@@ -65,95 +65,85 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
   ServerName BOGUS_SERVER_NAME = ServerName.valueOf("localhost,1,1");
 
   /**
-   * Set the current cluster status.  This allows a LoadBalancer to map host name to a server
-   * @param st
+   * Config for pluggable load balancers.
+   * @deprecated since 3.0.0, will be removed in 4.0.0. In the new implementation, as the base load
+   *             balancer will always be the rs group based one, you should just use
+   *             {@link org.apache.hadoop.hbase.HConstants#HBASE_MASTER_LOADBALANCER_CLASS} to
+   *             config the per group load balancer.
+   */
+  @Deprecated
+  String HBASE_RSGROUP_LOADBALANCER_CLASS = "hbase.rsgroup.grouploadbalancer.class";
+  /**
+   * Set the current cluster status. This allows a LoadBalancer to map host name to a server
    */
   void setClusterMetrics(ClusterMetrics st);
 
-  /**
-   * Pass RegionStates and allow balancer to set the current cluster load.
-   * @param ClusterLoad
-   */
-  void setClusterLoad(Map<TableName, Map<ServerName, List<RegionInfo>>> ClusterLoad);
 
   /**
    * Set the master service.
-   * @param masterServices
    */
   void setMasterServices(MasterServices masterServices);
 
   /**
-   * Perform the major balance operation
-   * @param tableName
-   * @param clusterState
-   * @return List of plans
+   * Perform the major balance operation for cluster, will invoke {@link #balanceTable} to do actual
+   * balance. Normally not need override this method, except
+   * {@link org.apache.hadoop.hbase.master.balancer.SimpleLoadBalancer} and
+   * {@link org.apache.hadoop.hbase.rsgroup.RSGroupBasedLoadBalancer}
+   * @param loadOfAllTable region load of servers for all table
+   * @return a list of regions to be moved, including source and destination, or null if cluster is
+   *         already balanced
    */
-  List<RegionPlan> balanceCluster(TableName tableName, Map<ServerName,
-      List<RegionInfo>> clusterState) throws HBaseIOException;
+  List<RegionPlan> balanceCluster(Map<TableName,
+      Map<ServerName, List<RegionInfo>>> loadOfAllTable) throws IOException;
 
   /**
-   * Perform the major balance operation
-   * @param clusterState
+   * Perform the major balance operation for table, all class implement of {@link LoadBalancer}
+   * should override this method
+   * @param tableName the table to be balanced
+   * @param loadOfOneTable region load of servers for the specific one table
    * @return List of plans
    */
-  List<RegionPlan> balanceCluster(Map<ServerName,
-      List<RegionInfo>> clusterState) throws HBaseIOException;
+  List<RegionPlan> balanceTable(TableName tableName,
+      Map<ServerName, List<RegionInfo>> loadOfOneTable);
 
   /**
    * Perform a Round Robin assignment of regions.
-   * @param regions
-   * @param servers
    * @return Map of servername to regioninfos
    */
-  Map<ServerName, List<RegionInfo>> roundRobinAssignment(
-    List<RegionInfo> regions,
-    List<ServerName> servers
-  ) throws HBaseIOException;
+  Map<ServerName, List<RegionInfo>> roundRobinAssignment(List<RegionInfo> regions,
+      List<ServerName> servers) throws IOException;
 
   /**
    * Assign regions to the previously hosting region server
-   * @param regions
-   * @param servers
    * @return List of plans
    */
   @Nullable
-  Map<ServerName, List<RegionInfo>> retainAssignment(
-    Map<RegionInfo, ServerName> regions,
-    List<ServerName> servers
-  ) throws HBaseIOException;
+  Map<ServerName, List<RegionInfo>> retainAssignment(Map<RegionInfo, ServerName> regions,
+      List<ServerName> servers) throws IOException;
 
   /**
    * Get a random region server from the list
    * @param regionInfo Region for which this selection is being done.
-   * @param servers
-   * @return Servername
    */
-  ServerName randomAssignment(
-    RegionInfo regionInfo, List<ServerName> servers
-  ) throws HBaseIOException;
+  ServerName randomAssignment(RegionInfo regionInfo, List<ServerName> servers) throws IOException;
 
   /**
    * Initialize the load balancer. Must be called after setters.
-   * @throws HBaseIOException
    */
-  void initialize() throws HBaseIOException;
+  void initialize() throws IOException;
 
   /**
    * Marks the region as online at balancer.
-   * @param regionInfo
-   * @param sn
    */
   void regionOnline(RegionInfo regionInfo, ServerName sn);
 
   /**
    * Marks the region as offline at balancer.
-   * @param regionInfo
    */
   void regionOffline(RegionInfo regionInfo);
 
-  /*
+  /**
    * Notification that config has changed
-   * @param conf
    */
   @Override
   void onConfigurationChange(Configuration conf);

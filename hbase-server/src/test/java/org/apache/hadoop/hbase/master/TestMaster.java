@@ -32,9 +32,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.PleaseHoldException;
@@ -42,10 +40,13 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -186,11 +187,13 @@ public class TestMaster {
   @Test
   public void testMoveThrowsUnknownRegionException() throws IOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    HColumnDescriptor hcd = new HColumnDescriptor("value");
-    htd.addFamily(hcd);
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(tableName);
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("value")).build();
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
 
-    admin.createTable(htd);
+    admin.createTable(tableDescriptorBuilder.build());
     try {
       RegionInfo hri = RegionInfoBuilder.newBuilder(tableName)
           .setStartKey(Bytes.toBytes("A"))
@@ -209,11 +212,13 @@ public class TestMaster {
   public void testMoveThrowsPleaseHoldException() throws IOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    HColumnDescriptor hcd = new HColumnDescriptor("value");
-    htd.addFamily(hcd);
+    TableDescriptorBuilder tableDescriptorBuilder =
+      TableDescriptorBuilder.newBuilder(tableName);
+    ColumnFamilyDescriptor columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("value")).build();
+    tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
 
-    admin.createTable(htd);
+    admin.createTable(tableDescriptorBuilder.build());
     try {
       List<RegionInfo> tableRegions = admin.getRegions(tableName);
 
@@ -234,9 +239,12 @@ public class TestMaster {
     int msgInterval = conf.getInt("hbase.regionserver.msginterval", 100);
     // insert some data into META
     TableName tableName = TableName.valueOf("testFlushSeqId");
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(new HColumnDescriptor(Bytes.toBytes("cf")));
-    Table table = TEST_UTIL.createTable(desc, null);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+
+    tableDescriptor.setColumnFamily(
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(Bytes.toBytes("cf")));
+    Table table = TEST_UTIL.createTable(tableDescriptor, null);
     // flush META region
     TEST_UTIL.flush(TableName.META_TABLE_NAME);
     // wait for regionserver report

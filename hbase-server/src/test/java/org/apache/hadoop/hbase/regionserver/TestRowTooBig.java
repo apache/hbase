@@ -21,14 +21,14 @@ import java.io.IOException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RowTooBigException;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -49,10 +49,11 @@ public class TestRowTooBig {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestRowTooBig.class);
 
-  private final static HBaseTestingUtility HTU = HBaseTestingUtility.createLocalHTU();
+  private final static HBaseTestingUtility HTU = new HBaseTestingUtility();
   private static Path rootRegionDir;
-  private static final HTableDescriptor TEST_HTD =
-    new HTableDescriptor(TableName.valueOf(TestRowTooBig.class.getSimpleName()));
+  private static final TableDescriptorBuilder.ModifyableTableDescriptor TEST_TD =
+    new TableDescriptorBuilder.ModifyableTableDescriptor(
+      TableName.valueOf(TestRowTooBig.class.getSimpleName()));
 
   @BeforeClass
   public static void before() throws Exception {
@@ -83,19 +84,20 @@ public class TestRowTooBig {
     byte[] row1 = Bytes.toBytes("row1");
     byte[] fam1 = Bytes.toBytes("fam1");
 
-    HTableDescriptor htd = TEST_HTD;
-    HColumnDescriptor hcd = new HColumnDescriptor(fam1);
-    if (htd.hasFamily(hcd.getName())) {
-      htd.modifyFamily(hcd);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor = TEST_TD;
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam1);
+    if (tableDescriptor.hasColumnFamily(familyDescriptor.getName())) {
+      tableDescriptor.modifyColumnFamily(familyDescriptor);
     } else {
-      htd.addFamily(hcd);
+      tableDescriptor.setColumnFamily(familyDescriptor);
     }
 
     final HRegionInfo hri =
-      new HRegionInfo(htd.getTableName(), HConstants.EMPTY_END_ROW,
+      new HRegionInfo(tableDescriptor.getTableName(), HConstants.EMPTY_END_ROW,
         HConstants.EMPTY_END_ROW);
-    HRegion region =
-        HBaseTestingUtility.createRegionAndWAL(hri, rootRegionDir, HTU.getConfiguration(), htd);
+    HRegion region = HBaseTestingUtility.createRegionAndWAL(hri,
+      rootRegionDir, HTU.getConfiguration(), tableDescriptor);
     try {
       // Add 5 cells to memstore
       for (int i = 0; i < 5 ; i++) {
@@ -130,19 +132,20 @@ public class TestRowTooBig {
     byte[] row1 = Bytes.toBytes("row1");
     byte[] fam1 = Bytes.toBytes("fam1");
 
-    HTableDescriptor htd = TEST_HTD;
-    HColumnDescriptor hcd = new HColumnDescriptor(fam1);
-    if (htd.hasFamily(hcd.getName())) {
-      htd.modifyFamily(hcd);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor = TEST_TD;
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor hcd =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam1);
+    if (tableDescriptor.hasColumnFamily(hcd.getName())) {
+      tableDescriptor.modifyColumnFamily(hcd);
     } else {
-      htd.addFamily(hcd);
+      tableDescriptor.setColumnFamily(hcd);
     }
 
     final HRegionInfo hri =
-      new HRegionInfo(htd.getTableName(), HConstants.EMPTY_END_ROW,
+      new HRegionInfo(tableDescriptor.getTableName(), HConstants.EMPTY_END_ROW,
         HConstants.EMPTY_END_ROW);
-    HRegion region =
-        HBaseTestingUtility.createRegionAndWAL(hri, rootRegionDir, HTU.getConfiguration(), htd);
+    HRegion region = HBaseTestingUtility.createRegionAndWAL(hri,
+      rootRegionDir, HTU.getConfiguration(), tableDescriptor);
     try {
       // Add to memstore
       for (int i = 0; i < 10; i++) {

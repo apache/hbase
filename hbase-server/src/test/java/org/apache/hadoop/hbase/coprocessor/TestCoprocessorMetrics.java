@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,9 +23,6 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -34,11 +31,11 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
@@ -48,6 +45,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.metrics.Counter;
 import org.apache.hadoop.hbase.metrics.Metric;
@@ -55,11 +53,6 @@ import org.apache.hadoop.hbase.metrics.MetricRegistries;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.metrics.MetricRegistryInfo;
 import org.apache.hadoop.hbase.metrics.Timer;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MultiRowMutationService;
-import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsResponse;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -78,6 +71,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MultiRowMutationProtos.MultiRowMutationService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MultiRowMutationProtos.MutateRowsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MultiRowMutationProtos.MutateRowsResponse;
 
 /**
  * Testing of coprocessor metrics end-to-end.
@@ -309,10 +311,12 @@ public class TestCoprocessorMetrics {
       Timer createTableTimer = (Timer)metric.get();
       long prevCount = createTableTimer.getHistogram().getCount();
       LOG.info("Creating table");
-      admin.createTable(
-          new HTableDescriptor(TableName.valueOf(name.getMethodName()))
-              .addFamily(new HColumnDescriptor("foo")));
-
+      TableDescriptorBuilder tableDescriptorBuilder =
+        TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+      ColumnFamilyDescriptor columnFamilyDescriptor =
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("foo")).build();
+      tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+      admin.createTable(tableDescriptorBuilder.build());
       assertEquals(1, createTableTimer.getHistogram().getCount() - prevCount);
     }
   }
@@ -353,9 +357,12 @@ public class TestCoprocessorMetrics {
 
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
          Admin admin = connection.getAdmin()) {
-      admin.createTable(
-          new HTableDescriptor(TableName.valueOf(name.getMethodName()))
-              .addFamily(new HColumnDescriptor("foo")));
+      TableDescriptorBuilder tableDescriptorBuilder =
+        TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+      ColumnFamilyDescriptor columnFamilyDescriptor =
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("foo")).build();
+      tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+      admin.createTable(tableDescriptorBuilder.build());
 
       Counter rollWalRequests = (Counter)metric.get();
       long prevCount = rollWalRequests.getCount();
@@ -393,10 +400,10 @@ public class TestCoprocessorMetrics {
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
          Admin admin = connection.getAdmin()) {
       admin.createTable(
-          new HTableDescriptor(tableName)
-              .addFamily(new HColumnDescriptor(foo))
-              // add the coprocessor for the region
-              .addCoprocessor(CustomRegionObserver.class.getName()));
+        new TableDescriptorBuilder.ModifyableTableDescriptor(tableName)
+          .setColumnFamily(new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(foo))
+          // add the coprocessor for the region
+          .setCoprocessor(CustomRegionObserver.class.getName()));
       try (Table table = connection.getTable(tableName)) {
         table.get(new Get(foo));
         table.get(new Get(foo)); // 2 gets
@@ -412,11 +419,12 @@ public class TestCoprocessorMetrics {
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
          Admin admin = connection.getAdmin()) {
       admin.createTable(
-          new HTableDescriptor(tableName)
-              .addFamily(new HColumnDescriptor(foo))
-              // add the coprocessor for the region
-              .addCoprocessor(CustomRegionObserver.class.getName())
-          , new byte[][]{foo}); // create with 2 regions
+        new TableDescriptorBuilder.ModifyableTableDescriptor(tableName)
+          .setColumnFamily(
+            new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(foo))
+          // add the coprocessor for the region
+          .setCoprocessor(CustomRegionObserver.class.getName()), new byte[][]{foo});
+      // create with 2 regions
       try (Table table = connection.getTable(tableName);
            RegionLocator locator = connection.getRegionLocator(tableName)) {
         table.get(new Get(bar));
@@ -437,15 +445,17 @@ public class TestCoprocessorMetrics {
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
          Admin admin = connection.getAdmin()) {
       admin.createTable(
-          new HTableDescriptor(tableName1)
-              .addFamily(new HColumnDescriptor(foo))
-              // add the coprocessor for the region
-              .addCoprocessor(CustomRegionObserver.class.getName()));
+        new TableDescriptorBuilder.ModifyableTableDescriptor(tableName1)
+          .setColumnFamily(
+            new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(foo))
+          // add the coprocessor for the region
+          .setCoprocessor(CustomRegionObserver.class.getName()));
       admin.createTable(
-          new HTableDescriptor(tableName2)
-              .addFamily(new HColumnDescriptor(foo))
-              // add the coprocessor for the region
-              .addCoprocessor(CustomRegionObserver.class.getName()));
+        new TableDescriptorBuilder.ModifyableTableDescriptor(tableName2)
+          .setColumnFamily(
+            new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(foo))
+          // add the coprocessor for the region
+          .setCoprocessor(CustomRegionObserver.class.getName()));
       try (Table table1 = connection.getTable(tableName1);
            Table table2 = connection.getTable(tableName2)) {
         table1.get(new Get(bar));
@@ -461,11 +471,12 @@ public class TestCoprocessorMetrics {
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
          Admin admin = connection.getAdmin()) {
       admin.createTable(
-          new HTableDescriptor(tableName)
-              .addFamily(new HColumnDescriptor(foo))
-              // add the coprocessor for the region. We add two different coprocessors
-              .addCoprocessor(CustomRegionObserver.class.getName())
-              .addCoprocessor(CustomRegionObserver2.class.getName()));
+        new TableDescriptorBuilder.ModifyableTableDescriptor(tableName)
+          .setColumnFamily(
+            new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(foo))
+          // add the coprocessor for the region. We add two different coprocessors
+          .setCoprocessor(CustomRegionObserver.class.getName())
+          .setCoprocessor(CustomRegionObserver2.class.getName()));
       try (Table table = connection.getTable(tableName)) {
         table.get(new Get(foo));
         table.get(new Get(foo)); // 2 gets
@@ -483,11 +494,12 @@ public class TestCoprocessorMetrics {
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
          Admin admin = connection.getAdmin()) {
       admin.createTable(
-          new HTableDescriptor(tableName)
-              .addFamily(new HColumnDescriptor(foo))
-              // add the coprocessor for the region
-              .addCoprocessor(CustomRegionObserver.class.getName())
-          , new byte[][]{foo}); // create with 2 regions
+        new TableDescriptorBuilder.ModifyableTableDescriptor(tableName)
+          .setColumnFamily(
+            new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(foo))
+          // add the coprocessor for the region
+          .setCoprocessor(CustomRegionObserver.class.getName()), new byte[][]{foo});
+      // create with 2 regions
       try (Table table = connection.getTable(tableName)) {
         table.get(new Get(foo));
         table.get(new Get(foo)); // 2 gets
@@ -527,10 +539,11 @@ public class TestCoprocessorMetrics {
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
          Admin admin = connection.getAdmin()) {
       admin.createTable(
-          new HTableDescriptor(tableName)
-              .addFamily(new HColumnDescriptor(foo))
-              // add the coprocessor for the region
-              .addCoprocessor(CustomRegionEndpoint.class.getName()));
+        new TableDescriptorBuilder.ModifyableTableDescriptor(tableName)
+          .setColumnFamily(
+            new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(foo))
+          // add the coprocessor for the region
+          .setCoprocessor(CustomRegionEndpoint.class.getName()));
 
       try (Table table = connection.getTable(tableName)) {
         List<Mutation> mutations = Lists.newArrayList(new Put(foo), new Put(bar));

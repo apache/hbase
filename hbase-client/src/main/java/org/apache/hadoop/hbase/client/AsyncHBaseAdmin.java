@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import com.google.protobuf.RpcChannel;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -36,17 +35,22 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.util.FutureUtils;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
 
 /**
  * Just a wrapper of {@link RawAsyncHBaseAdmin}. The difference is that users need to provide a
@@ -838,4 +842,75 @@ class AsyncHBaseAdmin implements AsyncAdmin {
     return wrap(rawAdmin.isSnapshotCleanupEnabled());
   }
 
+  @Override
+  public CompletableFuture<List<SlowLogRecord>> getSlowLogResponses(
+      final Set<ServerName> serverNames, final SlowLogQueryFilter slowLogQueryFilter) {
+    return wrap(rawAdmin.getSlowLogResponses(serverNames, slowLogQueryFilter));
+  }
+
+  @Override
+  public CompletableFuture<List<Boolean>> clearSlowLogResponses(Set<ServerName> serverNames) {
+    return wrap(rawAdmin.clearSlowLogResponses(serverNames));
+  }
+
+  @Override
+  public CompletableFuture<RSGroupInfo> getRSGroup(String groupName) {
+    return wrap(rawAdmin.getRSGroup(groupName));
+  }
+
+  @Override
+  public CompletableFuture<Void> moveServersToRSGroup(Set<Address> servers, String groupName) {
+    return wrap(rawAdmin.moveServersToRSGroup(servers, groupName));
+  }
+
+  @Override
+  public CompletableFuture<Void> addRSGroup(String groupName) {
+    return wrap(rawAdmin.addRSGroup(groupName));
+  }
+
+  @Override
+  public CompletableFuture<Void> removeRSGroup(String groupName) {
+    return wrap(rawAdmin.removeRSGroup(groupName));
+  }
+
+  @Override
+  public CompletableFuture<Boolean> balanceRSGroup(String groupName) {
+    return wrap(rawAdmin.balanceRSGroup(groupName));
+  }
+
+  @Override
+  public CompletableFuture<List<RSGroupInfo>> listRSGroups() {
+    return wrap(rawAdmin.listRSGroups());
+  }
+
+  @Override
+  public CompletableFuture<List<TableName>> listTablesInRSGroup(String groupName) {
+    return wrap(rawAdmin.listTablesInRSGroup(groupName));
+  }
+
+  @Override
+  public CompletableFuture<Pair<List<String>, List<TableName>>>
+    getConfiguredNamespacesAndTablesInRSGroup(String groupName) {
+    return wrap(rawAdmin.getConfiguredNamespacesAndTablesInRSGroup(groupName));
+  }
+
+  @Override
+  public CompletableFuture<RSGroupInfo> getRSGroup(Address hostPort) {
+    return wrap(rawAdmin.getRSGroup(hostPort));
+  }
+
+  @Override
+  public CompletableFuture<Void> removeServersFromRSGroup(Set<Address> servers) {
+    return wrap(rawAdmin.removeServersFromRSGroup(servers));
+  }
+
+  @Override
+  public CompletableFuture<RSGroupInfo> getRSGroup(TableName tableName) {
+    return wrap(rawAdmin.getRSGroup(tableName));
+  }
+
+  @Override
+  public CompletableFuture<Void> setRSGroup(Set<TableName> tables, String groupName) {
+    return wrap(rawAdmin.setRSGroup(tables, groupName));
+  }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -72,6 +72,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Hbck;
+import org.apache.hadoop.hbase.client.MasterRegistry;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -119,7 +120,6 @@ import org.apache.hadoop.hbase.security.visibility.VisibilityLabelsCache;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
@@ -303,11 +303,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * <p>Initially, all tmp files are written to a local test data directory.
    * Once {@link #startMiniDFSCluster} is called, either directly or via
    * {@link #startMiniCluster()}, tmp data will be written to the DFS directory instead.
-   *
-   * <p>Previously, there was a distinction between the type of utility returned by
-   * {@link #createLocalHTU()} and this constructor; this is no longer the case. All
-   * HBaseTestingUtility objects will behave as local until a DFS cluster is started,
-   * at which point they will switch to using mini DFS for storage.
    */
   public HBaseTestingUtility() {
     this(HBaseConfiguration.create());
@@ -319,11 +314,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * <p>Initially, all tmp files are written to a local test data directory.
    * Once {@link #startMiniDFSCluster} is called, either directly or via
    * {@link #startMiniCluster()}, tmp data will be written to the DFS directory instead.
-   *
-   * <p>Previously, there was a distinction between the type of utility returned by
-   * {@link #createLocalHTU()} and this constructor; this is no longer the case. All
-   * HBaseTestingUtility objects will behave as local until a DFS cluster is started,
-   * at which point they will switch to using mini DFS for storage.
    *
    * @param conf The configuration to use for further operations
    */
@@ -351,30 +341,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     // tests opt-out for random port assignment
     this.conf.setBoolean(LocalHBaseCluster.ASSIGN_RANDOM_PORTS,
         this.conf.getBoolean(LocalHBaseCluster.ASSIGN_RANDOM_PORTS, true));
-  }
-
-  /**
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use {@link #HBaseTestingUtility()}
-   *   instead.
-   * @return a normal HBaseTestingUtility
-   * @see #HBaseTestingUtility()
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-19841">HBASE-19841</a>
-   */
-  @Deprecated
-  public static HBaseTestingUtility createLocalHTU() {
-    return new HBaseTestingUtility();
-  }
-
-  /**
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
-   *   {@link #HBaseTestingUtility(Configuration)} instead.
-   * @return a normal HBaseTestingUtility
-   * @see #HBaseTestingUtility(Configuration)
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-19841">HBASE-19841</a>
-   */
-  @Deprecated
-  public static HBaseTestingUtility createLocalHTU(Configuration c) {
-    return new HBaseTestingUtility(c);
   }
 
   /**
@@ -424,9 +390,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * value unintentionally -- but not anything can do about it at moment;
    * single instance only is how the minidfscluster works.
    *
-   * We also create the underlying directory for
+   * We also create the underlying directory names for
    *  hadoop.log.dir, mapreduce.cluster.local.dir and hadoop.tmp.dir, and set the values
-   *  in the conf, and as a system property for hadoop.tmp.dir
+   *  in the conf, and as a system property for hadoop.tmp.dir (We do not create them!).
    *
    * @return The calculated data test build directory, if newly-created.
    */
@@ -490,17 +456,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   private Path getBaseTestDirOnTestFS() throws IOException {
     FileSystem fs = getTestFileSystem();
     return new Path(fs.getWorkingDirectory(), "test-data");
-  }
-
-  /**
-   * @return META table descriptor
-   */
-  public TableDescriptorBuilder getMetaTableDescriptorBuilder() {
-    try {
-      return FSTableDescriptors.createMetaTableDescriptorBuilder(conf);
-    } catch (IOException e) {
-      throw new RuntimeException("Unable to create META table descriptor", e);
-    }
   }
 
   /**
@@ -1126,8 +1081,11 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     Configuration c = new Configuration(this.conf);
     TraceUtil.initTracer(c);
     this.hbaseCluster =
-        new MiniHBaseCluster(c, option.getNumMasters(), option.getNumRegionServers(),
-            option.getRsPorts(), option.getMasterClass(), option.getRsClass());
+        new MiniHBaseCluster(c, option.getNumMasters(), option.getNumAlwaysStandByMasters(),
+            option.getNumRegionServers(), option.getRsPorts(), option.getMasterClass(),
+            option.getRsClass());
+    // Populate the master address configuration from mini cluster configuration.
+    conf.set(HConstants.MASTER_ADDRS_KEY, MasterRegistry.getMasterAddr(c));
     // Don't leave here till we've done a successful scan of the hbase:meta
     Table t = getConnection().getTable(TableName.META_TABLE_NAME);
     ResultScanner s = t.getScanner(new Scan());
@@ -1240,6 +1198,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     StartMiniClusterOption option =
         StartMiniClusterOption.builder().numRegionServers(servers).rsPorts(ports).build();
     restartHBaseCluster(option);
+    invalidateConnection();
   }
 
   public void restartHBaseCluster(StartMiniClusterOption option)
@@ -1253,8 +1212,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       this.asyncConnection = null;
     }
     this.hbaseCluster =
-        new MiniHBaseCluster(this.conf, option.getNumMasters(), option.getNumRegionServers(),
-            option.getRsPorts(), option.getMasterClass(), option.getRsClass());
+        new MiniHBaseCluster(this.conf, option.getNumMasters(), option.getNumAlwaysStandByMasters(),
+            option.getNumRegionServers(), option.getRsPorts(), option.getMasterClass(),
+            option.getRsClass());
     // Don't leave here till we've done a successful scan of the hbase:meta
     Connection conn = ConnectionFactory.createConnection(this.conf);
     Table t = conn.getTable(TableName.META_TABLE_NAME);
@@ -1283,10 +1243,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   /**
    * Stops mini hbase, zk, and hdfs clusters.
-   * @throws IOException
    * @see #startMiniCluster(int)
    */
-  public void shutdownMiniCluster() throws Exception {
+  public void shutdownMiniCluster() throws IOException {
     LOG.info("Shutting down minicluster");
     shutdownMiniHBaseCluster();
     shutdownMiniDFSCluster();
@@ -1724,18 +1683,21 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    */
   public Table createTable(TableName tableName, byte[][] families, int numVersions,
       byte[][] splitKeys) throws IOException {
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
     for (byte[] family : families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family).setMaxVersions(numVersions);
+      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family)
+          .setMaxVersions(numVersions);
       if (isNewVersionBehaviorEnabled()) {
-        hcd.setNewVersionBehavior(true);
+        familyDescriptor.setNewVersionBehavior(true);
       }
-      desc.addFamily(hcd);
+      tableDescriptor.setColumnFamily(familyDescriptor);
     }
     if (splitKeys != null) {
-      getAdmin().createTable(desc, splitKeys);
+      getAdmin().createTable(tableDescriptor, splitKeys);
     } else {
-      getAdmin().createTable(desc);
+      getAdmin().createTable(tableDescriptor);
     }
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are
     // assigned
@@ -1767,17 +1729,19 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    */
   public Table createTable(TableName tableName, byte[][] families,
     int numVersions, int blockSize) throws IOException {
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
     for (byte[] family : families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family)
+      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family)
           .setMaxVersions(numVersions)
           .setBlocksize(blockSize);
       if (isNewVersionBehaviorEnabled()) {
-        hcd.setNewVersionBehavior(true);
+        familyDescriptor.setNewVersionBehavior(true);
       }
-      desc.addFamily(hcd);
+      tableDescriptor.setColumnFamily(familyDescriptor);
     }
-    getAdmin().createTable(desc);
+    getAdmin().createTable(tableDescriptor);
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are
     // assigned
     waitUntilAllRegionsAssigned(tableName);
@@ -1786,25 +1750,27 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   public Table createTable(TableName tableName, byte[][] families,
       int numVersions, int blockSize, String cpName) throws IOException {
-      HTableDescriptor desc = new HTableDescriptor(tableName);
-      for (byte[] family : families) {
-        HColumnDescriptor hcd = new HColumnDescriptor(family)
-            .setMaxVersions(numVersions)
-            .setBlocksize(blockSize);
-        if (isNewVersionBehaviorEnabled()) {
-          hcd.setNewVersionBehavior(true);
-        }
-        desc.addFamily(hcd);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    for (byte[] family : families) {
+      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family)
+          .setMaxVersions(numVersions)
+          .setBlocksize(blockSize);
+      if (isNewVersionBehaviorEnabled()) {
+        familyDescriptor.setNewVersionBehavior(true);
       }
-      if(cpName != null) {
-        desc.addCoprocessor(cpName);
-      }
-      getAdmin().createTable(desc);
-      // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are
-      // assigned
-      waitUntilAllRegionsAssigned(tableName);
-      return getConnection().getTable(tableName);
+      tableDescriptor.setColumnFamily(familyDescriptor);
     }
+    if (cpName != null) {
+      tableDescriptor.setCoprocessor(cpName);
+    }
+    getAdmin().createTable(tableDescriptor);
+    // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are
+    // assigned
+    waitUntilAllRegionsAssigned(tableName);
+    return getConnection().getTable(tableName);
+  }
 
   /**
    * Create a table.
@@ -1815,20 +1781,21 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @throws IOException
    */
   public Table createTable(TableName tableName, byte[][] families,
-      int[] numVersions)
-  throws IOException {
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+      int[] numVersions) throws IOException {
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
     int i = 0;
     for (byte[] family : families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family)
+      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family)
           .setMaxVersions(numVersions[i]);
       if (isNewVersionBehaviorEnabled()) {
-        hcd.setNewVersionBehavior(true);
+        familyDescriptor.setNewVersionBehavior(true);
       }
-      desc.addFamily(hcd);
+      tableDescriptor.setColumnFamily(familyDescriptor);
       i++;
     }
-    getAdmin().createTable(desc);
+    getAdmin().createTable(tableDescriptor);
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are
     // assigned
     waitUntilAllRegionsAssigned(tableName);
@@ -1845,13 +1812,15 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    */
   public Table createTable(TableName tableName, byte[] family, byte[][] splitRows)
       throws IOException {
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    HColumnDescriptor hcd = new HColumnDescriptor(family);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family);
     if (isNewVersionBehaviorEnabled()) {
-      hcd.setNewVersionBehavior(true);
+      familyDescriptor.setNewVersionBehavior(true);
     }
-    desc.addFamily(hcd);
-    getAdmin().createTable(desc, splitRows);
+    tableDescriptor.setColumnFamily(familyDescriptor);
+    getAdmin().createTable(tableDescriptor, splitRows);
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are
     // assigned
     waitUntilAllRegionsAssigned(tableName);
@@ -1934,50 +1903,52 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   public static final byte [] START_KEY_BYTES = {FIRST_CHAR, FIRST_CHAR, FIRST_CHAR};
   public static final String START_KEY = new String(START_KEY_BYTES, HConstants.UTF8_CHARSET);
 
-  /**
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
-   *   {@link #createTableDescriptor(TableName, int, int, int, KeepDeletedCells)} instead.
-   * @see #createTableDescriptor(TableName, int, int, int, KeepDeletedCells)
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-13893">HBASE-13893</a>
-   */
-  @Deprecated
-  public HTableDescriptor createTableDescriptor(final String name,
-      final int minVersions, final int versions, final int ttl, KeepDeletedCells keepDeleted) {
-    return this.createTableDescriptor(TableName.valueOf(name), minVersions, versions, ttl,
-        keepDeleted);
-  }
-
-  /**
-   * Create a table of name <code>name</code>.
-   * @param name Name to give table.
-   * @return Column descriptor.
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
-   *   {@link #createTableDescriptor(TableName, int, int, int, KeepDeletedCells)} instead.
-   * @see #createTableDescriptor(TableName, int, int, int, KeepDeletedCells)
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-13893">HBASE-13893</a>
-   */
-  @Deprecated
-  public HTableDescriptor createTableDescriptor(final String name) {
-    return createTableDescriptor(TableName.valueOf(name),  HColumnDescriptor.DEFAULT_MIN_VERSIONS,
-        MAXVERSIONS, HConstants.FOREVER, HColumnDescriptor.DEFAULT_KEEP_DELETED);
+  public TableDescriptorBuilder.ModifyableTableDescriptor createModifyableTableDescriptor(
+      final String name) {
+    return createModifyableTableDescriptor(TableName.valueOf(name),
+      HColumnDescriptor.DEFAULT_MIN_VERSIONS,
+      MAXVERSIONS, HConstants.FOREVER, HColumnDescriptor.DEFAULT_KEEP_DELETED);
   }
 
   public HTableDescriptor createTableDescriptor(final TableName name,
       final int minVersions, final int versions, final int ttl, KeepDeletedCells keepDeleted) {
-    HTableDescriptor htd = new HTableDescriptor(name);
-    for (byte[] cfName : new byte[][]{ fam1, fam2, fam3 }) {
-      HColumnDescriptor hcd = new HColumnDescriptor(cfName)
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(name);
+    for (byte[] cfName : new byte[][]{fam1, fam2, fam3}) {
+      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(cfName)
           .setMinVersions(minVersions)
           .setMaxVersions(versions)
           .setKeepDeletedCells(keepDeleted)
           .setBlockCacheEnabled(false)
           .setTimeToLive(ttl);
       if (isNewVersionBehaviorEnabled()) {
-          hcd.setNewVersionBehavior(true);
+        familyDescriptor.setNewVersionBehavior(true);
       }
-      htd.addFamily(hcd);
+      tableDescriptor.setColumnFamily(familyDescriptor);
     }
-    return htd;
+    return new HTableDescriptor(tableDescriptor);
+  }
+
+  public TableDescriptorBuilder.ModifyableTableDescriptor createModifyableTableDescriptor(
+      final TableName name, final int minVersions, final int versions, final int ttl,
+      KeepDeletedCells keepDeleted) {
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(name);
+    for (byte[] cfName : new byte[][]{fam1, fam2, fam3}) {
+      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(cfName)
+          .setMinVersions(minVersions)
+          .setMaxVersions(versions)
+          .setKeepDeletedCells(keepDeleted)
+          .setBlockCacheEnabled(false)
+          .setTimeToLive(ttl);
+      if (isNewVersionBehaviorEnabled()) {
+        familyDescriptor.setNewVersionBehavior(true);
+      }
+      tableDescriptor.setColumnFamily(familyDescriptor);
+    }
+    return tableDescriptor;
   }
 
   /**
@@ -1997,16 +1968,19 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   public HTableDescriptor createTableDescriptor(final TableName tableName,
       byte[][] families, int maxVersions) {
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+
     for (byte[] family : families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family)
+      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family)
           .setMaxVersions(maxVersions);
       if (isNewVersionBehaviorEnabled()) {
-          hcd.setNewVersionBehavior(true);
+        familyDescriptor.setNewVersionBehavior(true);
       }
-      desc.addFamily(hcd);
+      tableDescriptor.setColumnFamily(familyDescriptor);
     }
-    return desc;
+    return new HTableDescriptor(tableDescriptor);
   }
 
   /**
@@ -2046,32 +2020,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   /**
-   * @param tableName the name of the table
-   * @param startKey the start key of the region
-   * @param stopKey the stop key of the region
-   * @param callingMethod the name of the calling method probably a test method
-   * @param conf the configuration to use
-   * @param isReadOnly {@code true} if the table is read only, {@code false} otherwise
-   * @param families the column families to use
-   * @throws IOException if an IO problem is encountered
-   * @return A region on which you must call {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)}
-   *         when done.
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
-   *   {@link #createLocalHRegion(TableName, byte[], byte[], boolean, Durability, WAL, byte[]...)}
-   *   instead.
-   * @see #createLocalHRegion(TableName, byte[], byte[], boolean, Durability, WAL, byte[]...)
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-13893">HBASE-13893</a>
-   */
-  @Deprecated
-  public HRegion createLocalHRegion(byte[] tableName, byte[] startKey, byte[] stopKey,
-      String callingMethod, Configuration conf, boolean isReadOnly, Durability durability,
-      WAL wal, byte[]... families) throws IOException {
-    return this
-        .createLocalHRegion(TableName.valueOf(tableName), startKey, stopKey, isReadOnly, durability,
-            wal, families);
-  }
-
-  /**
    * @param tableName
    * @param startKey
    * @param stopKey
@@ -2092,25 +2040,27 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       boolean isReadOnly, Durability durability, WAL wal, boolean[] compactedMemStore,
       byte[]... families)
       throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    htd.setReadOnly(isReadOnly);
-    int i=0;
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    tableDescriptor.setReadOnly(isReadOnly);
+    int i = 0;
     for (byte[] family : families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family);
-      if(compactedMemStore != null && i < compactedMemStore.length) {
-        hcd.setInMemoryCompaction(MemoryCompactionPolicy.BASIC);
+      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family);
+      if (compactedMemStore != null && i < compactedMemStore.length) {
+        familyDescriptor.setInMemoryCompaction(MemoryCompactionPolicy.BASIC);
       } else {
-        hcd.setInMemoryCompaction(MemoryCompactionPolicy.NONE);
+        familyDescriptor.setInMemoryCompaction(MemoryCompactionPolicy.NONE);
 
       }
       i++;
       // Set default to be three versions.
-      hcd.setMaxVersions(Integer.MAX_VALUE);
-      htd.addFamily(hcd);
+      familyDescriptor.setMaxVersions(Integer.MAX_VALUE);
+      tableDescriptor.setColumnFamily(familyDescriptor);
     }
-    htd.setDurability(durability);
-    HRegionInfo info = new HRegionInfo(htd.getTableName(), startKey, stopKey, false);
-    return createLocalHRegion(info, htd, wal);
+    tableDescriptor.setDurability(durability);
+    HRegionInfo info = new HRegionInfo(tableDescriptor.getTableName(), startKey, stopKey, false);
+    return createLocalHRegion(info, tableDescriptor, wal);
   }
 
   //
@@ -3056,6 +3006,26 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   /**
+   * Resets the connections so that the next time getConnection() is called, a new connection is
+   * created. This is needed in cases where the entire cluster / all the masters are shutdown and
+   * the connection is not valid anymore.
+   * TODO: There should be a more coherent way of doing this. Unfortunately the way tests are
+   *   written, not all start() stop() calls go through this class. Most tests directly operate on
+   *   the underlying mini/local hbase cluster. That makes it difficult for this wrapper class to
+   *   maintain the connection state automatically. Cleaning this is a much bigger refactor.
+   */
+  public void invalidateConnection() throws IOException {
+    closeConnection();
+    // Update the master addresses if they changed.
+    final String masterConfigBefore = conf.get(HConstants.MASTER_ADDRS_KEY);
+    final String masterConfAfter = getMiniHBaseCluster().conf.get(HConstants.MASTER_ADDRS_KEY);
+    LOG.info("Invalidated connection. Updating master addresses before: {} after: {}",
+        masterConfigBefore, masterConfAfter);
+    conf.set(HConstants.MASTER_ADDRS_KEY,
+        getMiniHBaseCluster().conf.get(HConstants.MASTER_ADDRS_KEY));
+  }
+
+  /**
    * Get a Connection to the cluster. Not thread-safe (This class needs a lot of work to make it
    * thread-safe).
    * @return A Connection that can be shared. Don't close. Will be closed on shutdown of cluster.
@@ -3605,8 +3575,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
                       return false;
                     }
                   }
-                  if (RegionStateStore.getRegionState(r,
-                    info.getReplicaId(), info) != RegionState.State.OPEN) {
+                  if (RegionStateStore.getRegionState(r, info) != RegionState.State.OPEN) {
                     return false;
                   }
                 }
@@ -3954,13 +3923,16 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       DataBlockEncoding dataBlockEncoding, int numRegionsPerServer, int regionReplication,
       Durability durability)
           throws IOException {
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.setDurability(durability);
-    desc.setRegionReplication(regionReplication);
-    HColumnDescriptor hcd = new HColumnDescriptor(columnFamily);
-    hcd.setDataBlockEncoding(dataBlockEncoding);
-    hcd.setCompressionType(compression);
-    return createPreSplitLoadTestTable(conf, desc, hcd, numRegionsPerServer);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    tableDescriptor.setDurability(durability);
+    tableDescriptor.setRegionReplication(regionReplication);
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(columnFamily);
+    familyDescriptor.setDataBlockEncoding(dataBlockEncoding);
+    familyDescriptor.setCompressionType(compression);
+    return createPreSplitLoadTestTable(conf, tableDescriptor, familyDescriptor,
+      numRegionsPerServer);
   }
 
   /**
@@ -3973,17 +3945,19 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       DataBlockEncoding dataBlockEncoding, int numRegionsPerServer, int regionReplication,
       Durability durability)
           throws IOException {
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.setDurability(durability);
-    desc.setRegionReplication(regionReplication);
-    HColumnDescriptor[] hcds = new HColumnDescriptor[columnFamilies.length];
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    tableDescriptor.setDurability(durability);
+    tableDescriptor.setRegionReplication(regionReplication);
+    ColumnFamilyDescriptor[] hcds = new ColumnFamilyDescriptor[columnFamilies.length];
     for (int i = 0; i < columnFamilies.length; i++) {
-      HColumnDescriptor hcd = new HColumnDescriptor(columnFamilies[i]);
-      hcd.setDataBlockEncoding(dataBlockEncoding);
-      hcd.setCompressionType(compression);
-      hcds[i] = hcd;
+      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(columnFamilies[i]);
+      familyDescriptor.setDataBlockEncoding(dataBlockEncoding);
+      familyDescriptor.setCompressionType(compression);
+      hcds[i] = familyDescriptor;
     }
-    return createPreSplitLoadTestTable(conf, desc, hcds, numRegionsPerServer);
+    return createPreSplitLoadTestTable(conf, tableDescriptor, hcds, numRegionsPerServer);
   }
 
   /**
@@ -4294,7 +4268,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * encoding, bloom codecs available.
    * @return the list of column descriptors
    */
-  public static List<HColumnDescriptor> generateColumnDescriptors() {
+  public static List<ColumnFamilyDescriptor> generateColumnDescriptors() {
     return generateColumnDescriptors("");
   }
 
@@ -4304,23 +4278,24 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @param prefix family names prefix
    * @return the list of column descriptors
    */
-  public static List<HColumnDescriptor> generateColumnDescriptors(final String prefix) {
-    List<HColumnDescriptor> htds = new ArrayList<>();
+  public static List<ColumnFamilyDescriptor> generateColumnDescriptors(final String prefix) {
+    List<ColumnFamilyDescriptor> columnFamilyDescriptors = new ArrayList<>();
     long familyId = 0;
     for (Compression.Algorithm compressionType: getSupportedCompressionAlgorithms()) {
       for (DataBlockEncoding encodingType: DataBlockEncoding.values()) {
         for (BloomType bloomType: BloomType.values()) {
           String name = String.format("%s-cf-!@#&-%d!@#", prefix, familyId);
-          HColumnDescriptor htd = new HColumnDescriptor(name);
-          htd.setCompressionType(compressionType);
-          htd.setDataBlockEncoding(encodingType);
-          htd.setBloomFilterType(bloomType);
-          htds.add(htd);
+          ColumnFamilyDescriptorBuilder columnFamilyDescriptorBuilder =
+            ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(name));
+          columnFamilyDescriptorBuilder.setCompressionType(compressionType);
+          columnFamilyDescriptorBuilder.setDataBlockEncoding(encodingType);
+          columnFamilyDescriptorBuilder.setBloomFilterType(bloomType);
+          columnFamilyDescriptors.add(columnFamilyDescriptorBuilder.build());
           familyId++;
         }
       }
     }
-    return htds;
+    return columnFamilyDescriptors;
   }
 
   /**

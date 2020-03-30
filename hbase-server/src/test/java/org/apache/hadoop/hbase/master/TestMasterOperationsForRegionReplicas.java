@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -64,7 +65,6 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -86,6 +86,8 @@ public class TestMasterOperationsForRegionReplicas {
   private static Connection CONNECTION = null;
   private static Admin ADMIN;
   private static int numSlaves = 2;
+  private final static StartMiniClusterOption option = StartMiniClusterOption.builder().
+      numRegionServers(numSlaves).numMasters(1).numAlwaysStandByMasters(1).build();
   private static Configuration conf;
 
   @Rule
@@ -95,14 +97,19 @@ public class TestMasterOperationsForRegionReplicas {
   public static void setupBeforeClass() throws Exception {
     conf = TEST_UTIL.getConfiguration();
     conf.setBoolean("hbase.tests.use.shortcircuit.reads", false);
-    TEST_UTIL.startMiniCluster(numSlaves);
+    TEST_UTIL.startMiniCluster(option);
     TEST_UTIL.getAdmin().balancerSwitch(false, true);
-    CONNECTION = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
-    ADMIN = CONNECTION.getAdmin();
+    resetConnections();
     while (ADMIN.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics()
       .size() < numSlaves) {
       Thread.sleep(100);
     }
+  }
+
+  private static void resetConnections() throws IOException {
+    IOUtils.closeQuietly(ADMIN, CONNECTION);
+    CONNECTION = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
+    ADMIN = CONNECTION.getAdmin();
   }
 
   @AfterClass
@@ -199,6 +206,7 @@ public class TestMasterOperationsForRegionReplicas {
       TEST_UTIL.startMiniHBaseCluster(option);
       TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
       TEST_UTIL.waitUntilNoRegionsInTransition();
+      resetConnections();
       validateFromSnapshotFromMeta(TEST_UTIL, tableName, numRegions, numReplica,
         ADMIN.getConnection());
 
@@ -208,6 +216,7 @@ public class TestMasterOperationsForRegionReplicas {
       TEST_UTIL.startMiniHBaseCluster();
       TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
       TEST_UTIL.waitUntilNoRegionsInTransition();
+      resetConnections();
       validateSingleRegionServerAssignment(ADMIN.getConnection(), numRegions, numReplica);
       for (int i = 1; i < numSlaves; i++) { // restore the cluster
         TEST_UTIL.getMiniHBaseCluster().startRegionServer();
@@ -276,7 +285,6 @@ public class TestMasterOperationsForRegionReplicas {
   }
 
   @Test
-  @Ignore("Enable when we have support for alter_table- HBASE-10361")
   public void testIncompleteMetaTableReplicaInformation() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final int numRegions = 3;

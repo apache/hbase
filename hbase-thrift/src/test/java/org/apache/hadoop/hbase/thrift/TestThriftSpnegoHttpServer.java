@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
-import org.apache.hadoop.hbase.util.TableDescriptorChecker;
 import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.http.HttpHeaders;
 import org.apache.http.auth.AuthSchemeProvider;
@@ -211,29 +210,26 @@ public class TestThriftSpnegoHttpServer extends TestThriftHttpServer {
     // The name of the principal
     final String clientPrincipalName = clientPrincipals.iterator().next().getName();
 
-    return Subject.doAs(clientSubject, new PrivilegedExceptionAction<CloseableHttpClient>() {
-      @Override
-      public CloseableHttpClient run() throws Exception {
-        // Logs in with Kerberos via GSS
-        GSSManager gssManager = GSSManager.getInstance();
-        // jGSS Kerberos login constant
-        Oid oid = new Oid("1.2.840.113554.1.2.2");
-        GSSName gssClient = gssManager.createName(clientPrincipalName, GSSName.NT_USER_NAME);
-        GSSCredential credential = gssManager.createCredential(gssClient,
-            GSSCredential.DEFAULT_LIFETIME, oid, GSSCredential.INITIATE_ONLY);
+    return Subject.doAs(clientSubject, (PrivilegedExceptionAction<CloseableHttpClient>) () -> {
+      // Logs in with Kerberos via GSS
+      GSSManager gssManager = GSSManager.getInstance();
+      // jGSS Kerberos login constant
+      Oid oid = new Oid("1.2.840.113554.1.2.2");
+      GSSName gssClient = gssManager.createName(clientPrincipalName, GSSName.NT_USER_NAME);
+      GSSCredential credential = gssManager.createCredential(gssClient,
+          GSSCredential.DEFAULT_LIFETIME, oid, GSSCredential.INITIATE_ONLY);
 
-        Lookup<AuthSchemeProvider> authRegistry = RegistryBuilder.<AuthSchemeProvider>create()
-            .register(AuthSchemes.SPNEGO, new SPNegoSchemeFactory(true, true))
-            .build();
+      Lookup<AuthSchemeProvider> authRegistry = RegistryBuilder.<AuthSchemeProvider>create()
+          .register(AuthSchemes.SPNEGO, new SPNegoSchemeFactory(true, true))
+          .build();
 
-        BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
-        credentialsProvider.setCredentials(AuthScope.ANY, new KerberosCredentials(credential));
+      BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+      credentialsProvider.setCredentials(AuthScope.ANY, new KerberosCredentials(credential));
 
-        return HttpClients.custom()
-            .setDefaultAuthSchemeRegistry(authRegistry)
-            .setDefaultCredentialsProvider(credentialsProvider)
-            .build();
-      }
+      return HttpClients.custom()
+          .setDefaultAuthSchemeRegistry(authRegistry)
+          .setDefaultCredentialsProvider(credentialsProvider)
+          .build();
     });
   }
 }

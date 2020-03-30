@@ -68,7 +68,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
  *
  */
 @InterfaceAudience.Public
-public interface RegionInfo {
+public interface RegionInfo extends Comparable<RegionInfo> {
   RegionInfo UNDEFINED = RegionInfoBuilder.newBuilder(TableName.valueOf("__UNDEFINED__")).build();
   /**
    * Separator used to demarcate the encodedName in a region name
@@ -351,7 +351,7 @@ public interface RegionInfo {
    * @return True if <code>regionName</code> represents an encoded name.
    */
   @InterfaceAudience.Private // For use by internals only.
-  public static boolean isEncodedRegionName(byte[] regionName) throws IOException {
+  public static boolean isEncodedRegionName(byte[] regionName) {
     // If not parseable as region name, presume encoded. TODO: add stringency; e.g. if hex.
     return parseRegionNameOrReturnNull(regionName) == null && regionName.length <= MD5_HEX_LENGTH;
   }
@@ -821,5 +821,9 @@ public interface RegionInfo {
       return true;
     }
     return Bytes.compareTo(getStartKey(), other.getEndKey()) < 0;
+  }
+
+  default int compareTo(RegionInfo other) {
+    return RegionInfo.COMPARATOR.compare(this, other);
   }
 }

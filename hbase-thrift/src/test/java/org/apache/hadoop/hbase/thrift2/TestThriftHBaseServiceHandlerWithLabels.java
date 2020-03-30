@@ -33,13 +33,12 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.visibility.ScanLabelGenerator;
@@ -73,6 +72,8 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
+
 @Category({ClientTests.class, MediumTests.class})
 public class TestThriftHBaseServiceHandlerWithLabels {
 
@@ -92,9 +93,12 @@ public class TestThriftHBaseServiceHandlerWithLabels {
   private static byte[] qualifierBname = Bytes.toBytes("qualifierB");
   private static byte[] valueAname = Bytes.toBytes("valueA");
   private static byte[] valueBname = Bytes.toBytes("valueB");
-  private static HColumnDescriptor[] families = new HColumnDescriptor[] {
-      new HColumnDescriptor(familyAname).setMaxVersions(3),
-      new HColumnDescriptor(familyBname).setMaxVersions(2) };
+  private static ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor[] families =
+    new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor[]{
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(familyAname)
+        .setMaxVersions(3),
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(familyBname)
+        .setMaxVersions(2)};
 
   private final static String TOPSECRET = "topsecret";
   private final static String PUBLIC = "public";
@@ -141,10 +145,10 @@ public class TestThriftHBaseServiceHandlerWithLabels {
     UTIL.waitTableEnabled(VisibilityConstants.LABELS_TABLE_NAME.getName(), 50000);
     createLabels();
     Admin admin = UTIL.getAdmin();
-    HTableDescriptor tableDescriptor = new HTableDescriptor(
-        TableName.valueOf(tableAname));
-    for (HColumnDescriptor family : families) {
-      tableDescriptor.addFamily(family);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(tableAname));
+    for (ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor family : families) {
+      tableDescriptor.setColumnFamily(family);
     }
     admin.createTable(tableDescriptor);
     admin.close();

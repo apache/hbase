@@ -27,24 +27,21 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import com.google.protobuf.ByteString;
-
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
@@ -55,10 +52,8 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult;
-import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse;
-import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -72,6 +67,12 @@ import org.junit.AfterClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionActionResult;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 
 /**
  * Base test class for visibility labels basic features
@@ -662,8 +663,9 @@ public abstract class TestVisibilityLabels {
     } catch (Exception e) {
     }
     try {
-      HColumnDescriptor hcd = new HColumnDescriptor("testFamily");
-      admin.addColumnFamily(LABELS_TABLE_NAME, hcd);
+      ColumnFamilyDescriptor columnFamilyDescriptor =
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("testFamily")).build();
+      admin.addColumnFamily(LABELS_TABLE_NAME, columnFamilyDescriptor);
       fail("Lables table should not get altered by user.");
     } catch (Exception e) {
     }
@@ -673,17 +675,24 @@ public abstract class TestVisibilityLabels {
     } catch (Exception e) {
     }
     try {
-      HColumnDescriptor hcd = new HColumnDescriptor(VisibilityConstants.LABELS_TABLE_FAMILY);
-      hcd.setBloomFilterType(BloomType.ROWCOL);
-      admin.modifyColumnFamily(LABELS_TABLE_NAME, hcd);
+      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(
+          VisibilityConstants.LABELS_TABLE_FAMILY);
+      familyDescriptor.setBloomFilterType(BloomType.ROWCOL);
+      admin.modifyColumnFamily(LABELS_TABLE_NAME, familyDescriptor);
       fail("Lables table should not get altered by user.");
     } catch (Exception e) {
     }
     try {
-      HTableDescriptor htd = new HTableDescriptor(LABELS_TABLE_NAME);
-      htd.addFamily(new HColumnDescriptor("f1"));
-      htd.addFamily(new HColumnDescriptor("f2"));
-      admin.modifyTable(htd);
+      TableDescriptorBuilder tableDescriptorBuilder =
+        TableDescriptorBuilder.newBuilder(LABELS_TABLE_NAME);
+      ColumnFamilyDescriptor columnFamilyDescriptor =
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f1")).build();
+      tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+      columnFamilyDescriptor = ColumnFamilyDescriptorBuilder
+        .newBuilder(Bytes.toBytes("f2")).build();
+      tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
+      admin.modifyTable(tableDescriptorBuilder.build());
       fail("Lables table should not get altered by user.");
     } catch (Exception e) {
     }
@@ -698,13 +707,17 @@ public abstract class TestVisibilityLabels {
     final byte[] fam2 = Bytes.toBytes("info2");
     final byte[] qual2 = Bytes.toBytes("qual2");
     TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    HColumnDescriptor col = new HColumnDescriptor(fam);// Default max versions is 1.
-    desc.addFamily(col);
-    col = new HColumnDescriptor(fam2);
-    col.setMaxVersions(5);
-    desc.addFamily(col);
-    TEST_UTIL.getAdmin().createTable(desc);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam);
+    // Default max versions is 1.
+
+    tableDescriptor.setColumnFamily(familyDescriptor);
+    familyDescriptor = new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam2);
+    familyDescriptor.setMaxVersions(5);
+    tableDescriptor.setColumnFamily(familyDescriptor);
+    TEST_UTIL.getAdmin().createTable(tableDescriptor);
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       Put put = new Put(r1);
       put.addColumn(fam, qual, 3L, v1);
@@ -785,10 +798,12 @@ public abstract class TestVisibilityLabels {
   public void testMutateRow() throws Exception {
     final byte[] qual2 = Bytes.toBytes("qual2");
     TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    HColumnDescriptor col = new HColumnDescriptor(fam);
-    desc.addFamily(col);
-    TEST_UTIL.getAdmin().createTable(desc);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam);
+    tableDescriptor.setColumnFamily(familyDescriptor);
+    TEST_UTIL.getAdmin().createTable(tableDescriptor);
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)){
       Put p1 = new Put(row1);
       p1.addColumn(fam, qual, value);
@@ -821,10 +836,12 @@ public abstract class TestVisibilityLabels {
   public void testFlushedFileWithVisibilityTags() throws Exception {
     final byte[] qual2 = Bytes.toBytes("qual2");
     TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    HColumnDescriptor col = new HColumnDescriptor(fam);
-    desc.addFamily(col);
-    TEST_UTIL.getAdmin().createTable(desc);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam);
+    tableDescriptor.setColumnFamily(familyDescriptor);
+    TEST_UTIL.getAdmin().createTable(tableDescriptor);
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       Put p1 = new Put(row1);
       p1.addColumn(fam, qual, value);

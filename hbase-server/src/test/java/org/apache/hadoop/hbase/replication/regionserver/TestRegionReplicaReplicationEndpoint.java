@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -140,7 +141,9 @@ public class TestRegionReplicaReplicationEndpoint {
     }
 
     HTableDescriptor htd = HTU.createTableDescriptor(
-      "testReplicationPeerIsCreated_no_region_replicas");
+      TableName.valueOf("testReplicationPeerIsCreated_no_region_replicas"),
+      HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+      HColumnDescriptor.DEFAULT_KEEP_DELETED);
     HTU.getAdmin().createTable(htd);
     try {
       peerConfig = admin.getReplicationPeerConfig(peerId);
@@ -150,7 +153,9 @@ public class TestRegionReplicaReplicationEndpoint {
     }
     assertNull(peerConfig);
 
-    htd = HTU.createTableDescriptor("testReplicationPeerIsCreated");
+    htd = HTU.createTableDescriptor(TableName.valueOf("testReplicationPeerIsCreated"),
+      HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+      HColumnDescriptor.DEFAULT_KEEP_DELETED);
     htd.setRegionReplication(2);
     HTU.getAdmin().createTable(htd);
 
@@ -183,8 +188,10 @@ public class TestRegionReplicaReplicationEndpoint {
       peerConfig = null;
     }
 
-    HTableDescriptor htd
-      = HTU.createTableDescriptor("testRegionReplicaReplicationPeerIsCreatedForModifyTable");
+    HTableDescriptor htd = HTU.createTableDescriptor(
+      TableName.valueOf("testRegionReplicaReplicationPeerIsCreatedForModifyTable"),
+      HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+      HColumnDescriptor.DEFAULT_KEEP_DELETED);
     HTU.getAdmin().createTable(htd);
 
     // assert that replication peer is not created yet
@@ -216,7 +223,9 @@ public class TestRegionReplicaReplicationEndpoint {
     // ensure that data is replicated to the secondary region
     TableName tableName = TableName.valueOf("testRegionReplicaReplicationWithReplicas_"
         + regionReplication);
-    HTableDescriptor htd = HTU.createTableDescriptor(tableName.toString());
+    HTableDescriptor htd = HTU.createTableDescriptor(TableName.valueOf(tableName.toString()),
+      HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+      HColumnDescriptor.DEFAULT_KEEP_DELETED);
     htd.setRegionReplication(regionReplication);
     HTU.getAdmin().createTable(htd);
     TableName tableNameNoReplicas =
@@ -399,7 +408,9 @@ public class TestRegionReplicaReplicationEndpoint {
     TableName toBeDisabledTable = TableName.valueOf(
       dropTable ? "droppedTable" : (disableReplication ? "disableReplication" : "disabledTable"));
     HTU.deleteTableIfAny(toBeDisabledTable);
-    htd = HTU.createTableDescriptor(toBeDisabledTable.toString());
+    htd = HTU.createTableDescriptor(TableName.valueOf(toBeDisabledTable.toString()),
+      HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+      HColumnDescriptor.DEFAULT_KEEP_DELETED);
     htd.setRegionReplication(regionReplication);
     HTU.getAdmin().createTable(htd);
 

@@ -967,20 +967,19 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     Configuration srcConf = HBaseConfiguration.createClusterConf(conf, null, CONF_SOURCE_PREFIX);
     srcConf.setBoolean("fs." + inputRoot.toUri().getScheme() + ".impl.disable.cache", true);
     FileSystem inputFs = FileSystem.get(inputRoot.toUri(), srcConf);
-    LOG.debug("inputFs=" + inputFs.getUri().toString() + " inputRoot=" + inputRoot);
     Configuration destConf = HBaseConfiguration.createClusterConf(conf, null, CONF_DEST_PREFIX);
     destConf.setBoolean("fs." + outputRoot.toUri().getScheme() + ".impl.disable.cache", true);
     FileSystem outputFs = FileSystem.get(outputRoot.toUri(), destConf);
-    LOG.debug("outputFs=" + outputFs.getUri().toString() + " outputRoot=" + outputRoot.toString());
-
     boolean skipTmp = conf.getBoolean(CONF_SKIP_TMP, false) ||
         conf.get(SnapshotDescriptionUtils.SNAPSHOT_WORKING_DIR) != null;
-
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, inputRoot);
     Path snapshotTmpDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(targetName, outputRoot,
         destConf);
     Path outputSnapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(targetName, outputRoot);
     Path initialOutputSnapshotDir = skipTmp ? outputSnapshotDir : snapshotTmpDir;
+    LOG.debug("inputFs={}, inputRoot={}", inputFs.getUri().toString(), inputRoot);
+    LOG.debug("outputFs={}, outputRoot={}, skipTmp={}, initialOutputSnapshotDir={}",
+      outputFs, outputRoot.toString(), skipTmp, initialOutputSnapshotDir);
 
     // Find the necessary directory which need to change owner and group
     Path needSetOwnerDir = SnapshotDescriptionUtils.getSnapshotRootDir(outputRoot);

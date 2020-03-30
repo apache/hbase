@@ -23,9 +23,8 @@ import static org.junit.Assert.assertNull;
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -33,6 +32,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -77,12 +77,14 @@ public class TestNewVersionBehaviorFromClientSide {
 
   private Table createTable() throws IOException {
     TableName tableName = TableName.valueOf(name.getMethodName());
-    HTableDescriptor table = new HTableDescriptor(tableName);
-    HColumnDescriptor fam = new HColumnDescriptor(FAMILY);
-    fam.setNewVersionBehavior(true);
-    fam.setMaxVersions(3);
-    table.addFamily(fam);
-    TEST_UTIL.getAdmin().createTable(table);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY);
+    familyDescriptor.setNewVersionBehavior(true);
+    familyDescriptor.setMaxVersions(3);
+    tableDescriptor.setColumnFamily(familyDescriptor);
+    TEST_UTIL.getAdmin().createTable(tableDescriptor);
     return TEST_UTIL.getConnection().getTable(tableName);
   }
 
@@ -337,20 +339,20 @@ public class TestNewVersionBehaviorFromClientSide {
       t.delete(new Delete(ROW).addColumn(FAMILY, col1, 1000004));
       t.delete(new Delete(ROW).addColumn(FAMILY, col1, 1000003));
 
-      try (ResultScanner scannner = t.getScanner(new Scan().setRaw(true).setMaxVersions())) {
+      try (ResultScanner scannner = t.getScanner(new Scan().setRaw(true).readAllVersions())) {
         Result r = scannner.next();
         assertNull(scannner.next());
         assertEquals(6, r.size());
       }
       TEST_UTIL.getAdmin().flush(t.getName());
-      try (ResultScanner scannner = t.getScanner(new Scan().setRaw(true).setMaxVersions())) {
+      try (ResultScanner scannner = t.getScanner(new Scan().setRaw(true).readAllVersions())) {
         Result r = scannner.next();
         assertNull(scannner.next());
         assertEquals(6, r.size());
       }
       TEST_UTIL.getAdmin().majorCompact(t.getName());
       Threads.sleep(5000);
-      try (ResultScanner scannner = t.getScanner(new Scan().setRaw(true).setMaxVersions())) {
+      try (ResultScanner scannner = t.getScanner(new Scan().setRaw(true).readAllVersions())) {
         Result r = scannner.next();
         assertNull(scannner.next());
         assertEquals(1, r.size());

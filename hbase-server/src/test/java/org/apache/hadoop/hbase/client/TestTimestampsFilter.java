@@ -356,7 +356,7 @@ public class TestTimestampsFilter {
     Filter filter = new TimestampsFilter(versions);
     Scan scan = new Scan(startRow, endRow);
     scan.setFilter(filter);
-    scan.setMaxVersions();
+    scan.readAllVersions();
     ResultScanner scanner = ht.getScanner(scan);
     return scanner.next(endRowIdx - startRowIdx + 1);
   }

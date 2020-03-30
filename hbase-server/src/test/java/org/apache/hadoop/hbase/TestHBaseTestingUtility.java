@@ -24,7 +24,6 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
 import java.io.File;
 import java.util.List;
 import java.util.Random;
@@ -42,6 +41,7 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.security.ssl.SSLFactory;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -75,7 +75,7 @@ public class TestHBaseTestingUtility {
    * Basic sanity test that spins up multiple HDFS and HBase clusters that share
    * the same ZK ensemble. We then create the same table in both and make sure
    * that what we insert in one place doesn't end up in the other.
-   * @throws Exception
+   * @throws Exception on error
    */
   @Test
   public void testMultiClusters() throws Exception {
@@ -177,8 +177,8 @@ public class TestHBaseTestingUtility {
     KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfDir, hbt.getConfiguration(), false);
 
     hbt.getConfiguration().set("hbase.ssl.enabled", "true");
-    hbt.getConfiguration().addResource("ssl-server.xml");
-    hbt.getConfiguration().addResource("ssl-client.xml");
+    hbt.getConfiguration().addResource(hbt.getConfiguration().get(SSLFactory.SSL_CLIENT_CONF_KEY));
+    hbt.getConfiguration().addResource(hbt.getConfiguration().get(SSLFactory.SSL_SERVER_CONF_KEY));
 
     MiniHBaseCluster cluster = hbt.startMiniCluster();
     try {
@@ -198,13 +198,13 @@ public class TestHBaseTestingUtility {
 
     htu1.startMiniCluster();
     htu1.getDFSCluster().getFileSystem().create(foo);
-    assertTrue( htu1.getDFSCluster().getFileSystem().exists(foo));
+    assertTrue(htu1.getDFSCluster().getFileSystem().exists(foo));
     htu1.shutdownMiniCluster();
 
     htu1.startMiniCluster();
-    assertFalse( htu1.getDFSCluster().getFileSystem().exists(foo));
+    assertFalse(htu1.getDFSCluster().getFileSystem().exists(foo));
     htu1.getDFSCluster().getFileSystem().create(foo);
-    assertTrue( htu1.getDFSCluster().getFileSystem().exists(foo));
+    assertTrue(htu1.getDFSCluster().getFileSystem().exists(foo));
     htu1.shutdownMiniCluster();
   }
 

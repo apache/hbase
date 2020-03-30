@@ -81,7 +81,9 @@ public class TestRawAsyncTableLimitedScanWithFilter {
 
   @AfterClass
   public static void tearDown() throws Exception {
-    CONN.close();
+    if (CONN != null) {
+      CONN.close();
+    }
     UTIL.shutdownMiniCluster();
   }
 

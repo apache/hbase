@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,7 +49,8 @@ import org.slf4j.LoggerFactory;
 public class TestSeparateClientZKCluster {
   private static final Logger LOG = LoggerFactory.getLogger(TestSeparateClientZKCluster.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final File clientZkDir = new File("/tmp/TestSeparateClientZKCluster");
+  private static final File clientZkDir =
+    new File(TEST_UTIL.getDataTestDir("TestSeparateClientZKCluster").toString());
   private static final int ZK_SESSION_TIMEOUT = 5000;
   private static MiniZooKeeperCluster clientZkCluster;
 
@@ -126,12 +127,17 @@ public class TestSeparateClientZKCluster {
       // switch active master
       HMaster master = cluster.getMaster();
       master.stopMaster();
+      LOG.info("Stopped master {}", master.getServerName());
       while (!master.isShutDown()) {
         Thread.sleep(200);
       }
+      LOG.info("Shutdown master {}", master.getServerName());
       while (cluster.getMaster() == null || !cluster.getMaster().isInitialized()) {
+        LOG.info("Get master {}", cluster.getMaster() == null? "null":
+          cluster.getMaster().getServerName());
         Thread.sleep(200);
       }
+      LOG.info("Got master {}", cluster.getMaster().getServerName());
       // confirm client access still works
       Assert.assertTrue(admin.balance(false));
     }

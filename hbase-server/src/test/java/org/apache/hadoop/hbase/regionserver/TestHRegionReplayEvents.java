@@ -63,7 +63,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegion.FlushResultImpl;
 import org.apache.hadoop.hbase.regionserver.HRegion.PrepareFlushResult;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
@@ -1122,7 +1122,7 @@ public class TestHRegionReplayEvents {
     byte[] tableName = Bytes.toBytes(method);
     byte[] family = Bytes.toBytes("family");
 
-    HRegion region = initHRegion(tableName, method, family);
+    HRegion region = initHRegion(tableName, family);
     try {
       // replay an entry that is bigger than current read point
       long readPoint = region.getMVCC().getReadPoint();
@@ -1657,7 +1657,7 @@ public class TestHRegionReplayEvents {
     FSDataOutputStream out = TEST_UTIL.getTestFileSystem().create(testFile);
     try {
       hFileFactory.withOutputStream(out);
-      hFileFactory.withFileContext(new HFileContext());
+      hFileFactory.withFileContext(new HFileContextBuilder().build());
       HFile.Writer writer = hFileFactory.create();
       try {
         writer.append(new KeyValue(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
@@ -1706,16 +1706,8 @@ public class TestHRegionReplayEvents {
     }
   }
 
-  private static HRegion initHRegion(byte[] tableName,
-      String callingMethod, byte[]... families) throws IOException {
-    return initHRegion(tableName, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW,
-      callingMethod, TEST_UTIL.getConfiguration(), false, Durability.SYNC_WAL, null, families);
-  }
-
-  private static HRegion initHRegion(byte[] tableName, byte[] startKey, byte[] stopKey,
-      String callingMethod, Configuration conf, boolean isReadOnly, Durability durability,
-      WAL wal, byte[]... families) throws IOException {
-    return TEST_UTIL.createLocalHRegion(tableName, startKey, stopKey, callingMethod, conf,
-      isReadOnly, durability, wal, families);
+  private static HRegion initHRegion(byte[] tableName, byte[]... families) throws IOException {
+    return TEST_UTIL.createLocalHRegion(TableName.valueOf(tableName), HConstants.EMPTY_START_ROW,
+      HConstants.EMPTY_END_ROW, false, Durability.SYNC_WAL, null, families);
   }
 }

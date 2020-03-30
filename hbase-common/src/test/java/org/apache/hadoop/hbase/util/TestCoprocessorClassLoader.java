@@ -42,7 +42,6 @@ import org.junit.experimental.categories.Category;
  */
 @Category({MiscTests.class, SmallTests.class})
 public class TestCoprocessorClassLoader {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestCoprocessorClassLoader.class);
@@ -60,7 +59,11 @@ public class TestCoprocessorClassLoader {
     File jarFile = ClassLoaderTestHelper.buildJar(
       folder, className, null, ClassLoaderTestHelper.localDirPath(conf));
     File tmpJarFile = new File(jarFile.getParent(), "/tmp/" + className + ".test.jar");
-    if (tmpJarFile.exists()) tmpJarFile.delete();
+
+    if (tmpJarFile.exists()) {
+      tmpJarFile.delete();
+    }
+
     assertFalse("tmp jar file should not exist", tmpJarFile.exists());
     ClassLoader parent = TestCoprocessorClassLoader.class.getClassLoader();
     CoprocessorClassLoader.getClassLoader(new Path(jarFile.getParent()), parent, "112", conf);
@@ -133,12 +136,10 @@ public class TestCoprocessorClassLoader {
     ClassLoader parent = TestCoprocessorClassLoader.class.getClassLoader();
     CoprocessorClassLoader.parentDirLockSet.clear(); // So that clean up can be triggered
 
-    CoprocessorClassLoader coprocessorClassLoader = null;
-    Path testPath = null;
-
     // Directory
-    testPath = new Path(localDirContainingJar);
-    coprocessorClassLoader = CoprocessorClassLoader.getClassLoader(testPath, parent, "113_1", conf);
+    Path testPath = new Path(localDirContainingJar);
+    CoprocessorClassLoader coprocessorClassLoader = CoprocessorClassLoader.getClassLoader(testPath,
+      parent, "113_1", conf);
     verifyCoprocessorClassLoader(coprocessorClassLoader, testClassName);
 
     // Wildcard - *.jar
@@ -156,10 +157,11 @@ public class TestCoprocessorClassLoader {
    * Verify the coprocessorClassLoader is not null and the expected class can be loaded successfully
    * @param coprocessorClassLoader the CoprocessorClassLoader to verify
    * @param className the expected class to be loaded by the coprocessorClassLoader
-   * @throws ClassNotFoundException
+   * @throws ClassNotFoundException if the class, which should be loaded via the
+   *    coprocessorClassLoader, does not exist
    */
-  private void verifyCoprocessorClassLoader(CoprocessorClassLoader coprocessorClassLoader, String className)
-    throws ClassNotFoundException{
+  private void verifyCoprocessorClassLoader(CoprocessorClassLoader coprocessorClassLoader,
+      String className) throws ClassNotFoundException {
     assertNotNull("Classloader should be created and not null", coprocessorClassLoader);
     assertEquals(className, coprocessorClassLoader.loadClass(className).getName());
   }

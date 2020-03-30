@@ -20,23 +20,22 @@ package org.apache.hadoop.hbase.security.access;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.TestTableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.security.User;
@@ -65,7 +64,7 @@ public class TestScanEarlyTermination extends SecureTestUtil {
   private static final Logger LOG = LoggerFactory.getLogger(TestScanEarlyTermination.class);
 
   @Rule
-  public TestTableName TEST_TABLE = new TestTableName();
+  public TableNameTestRule testTable = new TableNameTestRule();
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] TEST_FAMILY1 = Bytes.toBytes("f1");
   private static final byte[] TEST_FAMILY2 = Bytes.toBytes("f2");
@@ -116,39 +115,42 @@ public class TestScanEarlyTermination extends SecureTestUtil {
   @Before
   public void setUp() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
-    HTableDescriptor htd = new HTableDescriptor(TEST_TABLE.getTableName());
-    htd.setOwner(USER_OWNER);
-    HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY1);
-    hcd.setMaxVersions(10);
-    htd.addFamily(hcd);
-    hcd = new HColumnDescriptor(TEST_FAMILY2);
-    hcd.setMaxVersions(10);
-    htd.addFamily(hcd);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(testTable.getTableName());
+    tableDescriptor.setOwner(USER_OWNER);
+    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY1);
+    familyDescriptor.setMaxVersions(10);
+    tableDescriptor.setColumnFamily(familyDescriptor);
+    familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY2);
+    familyDescriptor.setMaxVersions(10);
+    tableDescriptor.setColumnFamily(familyDescriptor);
 
     // Enable backwards compatible early termination behavior in the HTD. We
     // want to confirm that the per-table configuration is properly picked up.
-    htd.setConfiguration(AccessControlConstants.CF_ATTRIBUTE_EARLY_OUT, "true");
+    tableDescriptor.setValue(AccessControlConstants.CF_ATTRIBUTE_EARLY_OUT, "true");
 
-    admin.createTable(htd);
-    TEST_UTIL.waitUntilAllRegionsAssigned(TEST_TABLE.getTableName());
+    admin.createTable(tableDescriptor);
+    TEST_UTIL.waitUntilAllRegionsAssigned(testTable.getTableName());
   }
 
   @After
   public void tearDown() throws Exception {
     // Clean the _acl_ table
     try {
-      TEST_UTIL.deleteTable(TEST_TABLE.getTableName());
+      TEST_UTIL.deleteTable(testTable.getTableName());
     } catch (TableNotFoundException ex) {
       // Test deleted the table, no problem
-      LOG.info("Test deleted table " + TEST_TABLE.getTableName());
+      LOG.info("Test deleted table " + testTable.getTableName());
     }
-    assertEquals(0, PermissionStorage.getTablePermissions(conf, TEST_TABLE.getTableName()).size());
+    assertEquals(0, PermissionStorage.getTablePermissions(conf, testTable.getTableName()).size());
   }
 
   @Test
   public void testEarlyScanTermination() throws Exception {
     // Grant USER_OTHER access to TEST_FAMILY1 only
-    grantOnTable(TEST_UTIL, USER_OTHER.getShortName(), TEST_TABLE.getTableName(), TEST_FAMILY1,
+    grantOnTable(TEST_UTIL, USER_OTHER.getShortName(), testTable.getTableName(), TEST_FAMILY1,
       null, Action.READ);
 
     // Set up test data
@@ -158,7 +160,7 @@ public class TestScanEarlyTermination extends SecureTestUtil {
         // force a new RS connection
         conf.set("testkey", TEST_UTIL.getRandomUUID().toString());
         Connection connection = ConnectionFactory.createConnection(conf);
-        Table t = connection.getTable(TEST_TABLE.getTableName());
+        Table t = connection.getTable(testTable.getTableName());
         try {
           Put put = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, ZERO);
           t.put(put);
@@ -185,7 +187,7 @@ public class TestScanEarlyTermination extends SecureTestUtil {
         // force a new RS connection
         conf.set("testkey", TEST_UTIL.getRandomUUID().toString());
         Connection connection = ConnectionFactory.createConnection(conf);
-        Table t = connection.getTable(TEST_TABLE.getTableName());
+        Table t = connection.getTable(testTable.getTableName());
         try {
           Scan scan = new Scan().addFamily(TEST_FAMILY1);
           Result result = t.getScanner(scan).next();
@@ -211,7 +213,7 @@ public class TestScanEarlyTermination extends SecureTestUtil {
         // force a new RS connection
         conf.set("testkey", TEST_UTIL.getRandomUUID().toString());
         Connection connection = ConnectionFactory.createConnection(conf);
-        Table t = connection.getTable(TEST_TABLE.getTableName());
+        Table t = connection.getTable(testTable.getTableName());
         try {
           Scan scan = new Scan();
           Result result = t.getScanner(scan).next();
@@ -235,7 +237,7 @@ public class TestScanEarlyTermination extends SecureTestUtil {
         // force a new RS connection
         conf.set("testkey", TEST_UTIL.getRandomUUID().toString());
         Connection connection = ConnectionFactory.createConnection(conf);
-        Table t = connection.getTable(TEST_TABLE.getTableName());
+        Table t = connection.getTable(testTable.getTableName());
         try {
           Scan scan = new Scan().addFamily(TEST_FAMILY2);
           Result result = t.getScanner(scan).next();
@@ -251,7 +253,7 @@ public class TestScanEarlyTermination extends SecureTestUtil {
     }, USER_OTHER);
 
     // Now grant USER_OTHER access to TEST_FAMILY2:TEST_Q2
-    grantOnTable(TEST_UTIL, USER_OTHER.getShortName(), TEST_TABLE.getTableName(), TEST_FAMILY2,
+    grantOnTable(TEST_UTIL, USER_OTHER.getShortName(), testTable.getTableName(), TEST_FAMILY2,
       TEST_Q2, Action.READ);
 
     // A scan of FAMILY1 and FAMILY2 will produce combined results. In FAMILY2
@@ -263,7 +265,7 @@ public class TestScanEarlyTermination extends SecureTestUtil {
         // force a new RS connection
         conf.set("testkey", TEST_UTIL.getRandomUUID().toString());
         Connection connection = ConnectionFactory.createConnection(conf);
-        Table t = connection.getTable(TEST_TABLE.getTableName());
+        Table t = connection.getTable(testTable.getTableName());
         try {
           Scan scan = new Scan();
           Result result = t.getScanner(scan).next();

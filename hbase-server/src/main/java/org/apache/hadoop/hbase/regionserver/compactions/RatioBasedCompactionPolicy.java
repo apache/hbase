@@ -28,9 +28,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
-import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
+import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -85,7 +85,7 @@ public class RatioBasedCompactionPolicy extends SortedCompactionPolicy {
         if (sf.isMajorCompactionResult() && (cfTTL == Long.MAX_VALUE || oldest < cfTTL)) {
           float blockLocalityIndex =
             sf.getHDFSBlockDistribution().getBlockLocalityIndex(
-            RSRpcServices.getHostname(comConf.conf, false));
+            DNS.getHostname(comConf.conf, DNS.ServerType.REGIONSERVER));
           if (blockLocalityIndex < comConf.getMinLocalityToForceCompact()) {
             LOG.debug("Major compaction triggered on only store " + regionInfo
               + "; to make hdfs blocks local, current blockLocalityIndex is "

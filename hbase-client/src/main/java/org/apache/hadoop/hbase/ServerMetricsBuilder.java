@@ -360,7 +360,7 @@ public final class ServerMetricsBuilder {
       int storeCount = 0;
       int storeFileCount = 0;
       int storeRefCount = 0;
-      int maxStoreFileRefCount = 0;
+      int maxCompactedStoreFileRefCount = 0;
       long uncompressedStoreFileSizeMB = 0;
       long storeFileSizeMB = 0;
       long memStoreSizeMB = 0;
@@ -377,8 +377,9 @@ public final class ServerMetricsBuilder {
         storeCount += r.getStoreCount();
         storeFileCount += r.getStoreFileCount();
         storeRefCount += r.getStoreRefCount();
-        int currentMaxStoreFileRefCount = r.getMaxStoreFileRefCount();
-        maxStoreFileRefCount = Math.max(maxStoreFileRefCount, currentMaxStoreFileRefCount);
+        int currentMaxCompactedStoreFileRefCount = r.getMaxCompactedStoreFileRefCount();
+        maxCompactedStoreFileRefCount = Math.max(maxCompactedStoreFileRefCount,
+          currentMaxCompactedStoreFileRefCount);
         uncompressedStoreFileSizeMB += r.getUncompressedStoreFileSize().get(Size.Unit.MEGABYTE);
         storeFileSizeMB += r.getStoreFileSize().get(Size.Unit.MEGABYTE);
         memStoreSizeMB += r.getMemStoreSize().get(Size.Unit.MEGABYTE);
@@ -401,7 +402,8 @@ public final class ServerMetricsBuilder {
       Strings.appendKeyValue(sb, "numberOfStores", storeCount);
       Strings.appendKeyValue(sb, "numberOfStorefiles", storeFileCount);
       Strings.appendKeyValue(sb, "storeRefCount", storeRefCount);
-      Strings.appendKeyValue(sb, "maxStoreFileRefCount", maxStoreFileRefCount);
+      Strings.appendKeyValue(sb, "maxCompactedStoreFileRefCount",
+        maxCompactedStoreFileRefCount);
       Strings.appendKeyValue(sb, "storefileUncompressedSizeMB", uncompressedStoreFileSizeMB);
       Strings.appendKeyValue(sb, "storefileSizeMB", storeFileSizeMB);
       if (uncompressedStoreFileSizeMB != 0) {
