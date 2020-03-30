@@ -52,6 +52,8 @@ import org.slf4j.LoggerFactory;
 public class StoreFileInfo {
   private static final Logger LOG = LoggerFactory.getLogger(StoreFileInfo.class);
 
+  private FileStatus localStatus = null;
+
   /**
    * A non-capture group, for hfiles, so that this can be embedded. HFiles are uuid ([0-9a-z]+).
    * Bulk loaded hfiles has (_SeqId_[0-9]+_) has suffix. The mob del file has (_del) as suffix.
@@ -155,18 +157,59 @@ public class StoreFileInfo {
     } else if (isHFile(p) || isMobFile(p) || isMobRefFile(p)) {
       // HFile
       if (fileStatus != null) {
-        this.createdTimestamp = fileStatus.getModificationTime();
-        this.size = fileStatus.getLen();
+        this.localStatus = fileStatus;
       } else {
-        FileStatus fStatus = fs.getFileStatus(initialPath);
-        this.createdTimestamp = fStatus.getModificationTime();
-        this.size = fStatus.getLen();
+        this.localStatus = loadAndCacheFileStatus(fs);
       }
+      this.createdTimestamp = localStatus.getModificationTime();
+      this.size = localStatus.getLen();
       this.reference = null;
       this.link = null;
     } else {
       throw new IOException("path=" + p + " doesn't look like a valid StoreFile");
     }
+  }
+
+  private FileStatus loadAndCacheFileStatus(final FileSystem fs) throws IOException {
+    FileStatus status = null;
+    if (this.reference != null) {
+      if (this.link != null) {
+        for (int i = 0; i < this.link.getLocations().length; i++) {
+          // HFileLink Reference
+          try {
+            status = link.getFileStatus(fs);
+          } catch (FileNotFoundException ex) {
+            // try the other location
+            throw ex;
+          }
+        }
+      } else {
+        try{
+          // HFile Reference
+          Path referencePath = getReferredToFile(this.getPath());
+          status = fs.getFileStatus(referencePath);
+        } catch (FileNotFoundException ex) {
+          FileNotFoundException newFnfe = new FileNotFoundException(toString());
+          newFnfe.initCause(ex);
+          throw newFnfe;
+        }
+      }
+    } else {
+      if (this.link != null) {
+        for (int i = 0; i < this.link.getLocations().length; i++) {
+          // HFileLink
+          try {
+            status = link.getFileStatus(fs);
+          } catch (FileNotFoundException ex) {
+            // try the other location
+            throw ex;
+          }
+        }
+      } else {
+        status = fs.getFileStatus(initialPath);
+      }
+    }
+    return status;
   }
 
   /**
@@ -187,7 +230,7 @@ public class StoreFileInfo {
    * @param fileStatus The {@link FileStatus} of the file
    */
   public StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus,
-      final HFileLink link) {
+      final HFileLink link) throws IOException {
     this(conf, fs, fileStatus, null, link);
   }
 
@@ -199,7 +242,7 @@ public class StoreFileInfo {
    * @param reference The reference instance
    */
   public StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus,
-      final Reference reference) {
+      final Reference reference) throws IOException {
     this(conf, fs, fileStatus, reference, null);
   }
 
@@ -212,14 +255,15 @@ public class StoreFileInfo {
    * @param link The link instance
    */
   public StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus,
-      final Reference reference, final HFileLink link) {
+      final Reference reference, final HFileLink link) throws IOException {
     this.fs = fs;
     this.conf = conf;
     this.primaryReplica = false;
-    this.initialPath = (fileStatus == null) ? null : fileStatus.getPath();
-    this.createdTimestamp = (fileStatus == null) ? 0 : fileStatus.getModificationTime();
     this.reference = reference;
     this.link = link;
+    this.initialPath = (fileStatus == null) ? null : fileStatus.getPath();
+    this.createdTimestamp = (fileStatus == null) ? 0 : fileStatus.getModificationTime();
+    this.localStatus = (fileStatus == null) ? loadAndCacheFileStatus(fs) : fileStatus;
     this.noReadahead = this.conf.getBoolean(STORE_FILE_READER_NO_READAHEAD,
       DEFAULT_STORE_FILE_READER_NO_READAHEAD);
   }
@@ -286,7 +330,6 @@ public class StoreFileInfo {
     if (this.link != null) {
       // HFileLink
       in = new FSDataInputStreamWrapper(fs, this.link, doDropBehind, readahead);
-      status = this.link.getFileStatus(fs);
     } else if (this.reference != null) {
       // HFile Reference
       Path referencePath = getReferredToFile(this.getPath());
@@ -300,11 +343,10 @@ public class StoreFileInfo {
         newFnfe.initCause(fnfe);
         throw newFnfe;
       }
-      status = fs.getFileStatus(referencePath);
     } else {
       in = new FSDataInputStreamWrapper(fs, this.getPath(), doDropBehind, readahead);
-      status = fs.getFileStatus(initialPath);
     }
+    status = getFileStatus();
     long length = status.getLen();
     ReaderContextBuilder contextBuilder =
         new ReaderContextBuilder().withInputStreamWrapper(in).withFileSize(length)
@@ -356,43 +398,10 @@ public class StoreFileInfo {
    * @return The {@link FileStatus} of the file referenced by this StoreFileInfo
    */
   public FileStatus getReferencedFileStatus(final FileSystem fs) throws IOException {
-    FileStatus status;
-    if (this.reference != null) {
-      if (this.link != null) {
-        FileNotFoundException exToThrow = null;
-        for (int i = 0; i < this.link.getLocations().length; i++) {
-          // HFileLink Reference
-          try {
-            return link.getFileStatus(fs);
-          } catch (FileNotFoundException ex) {
-            // try the other location
-            exToThrow = ex;
-          }
-        }
-        throw exToThrow;
-      } else {
-        // HFile Reference
-        Path referencePath = getReferredToFile(this.getPath());
-        status = fs.getFileStatus(referencePath);
-      }
-    } else {
-      if (this.link != null) {
-        FileNotFoundException exToThrow = null;
-        for (int i = 0; i < this.link.getLocations().length; i++) {
-          // HFileLink
-          try {
-            return link.getFileStatus(fs);
-          } catch (FileNotFoundException ex) {
-            // try the other location
-            exToThrow = ex;
-          }
-        }
-        throw exToThrow;
-      } else {
-        status = fs.getFileStatus(initialPath);
-      }
+    if(null == this.localStatus) {
+      return loadAndCacheFileStatus(fs);
     }
-    return status;
+    return this.localStatus;
   }
 
   /** @return The {@link Path} of the file */

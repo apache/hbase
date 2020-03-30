@@ -25,6 +25,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -90,9 +91,9 @@ public class TestStoreFileInfo {
       new Path(mob, "f1"), new Path(archive, "f1"));
 
     StoreFileInfo info1 = new StoreFileInfo(TEST_UTIL.getConfiguration(),
-      TEST_UTIL.getTestFileSystem(), null, link1);
+      TEST_UTIL.getTestFileSystem(), new FileStatus(), link1);
     StoreFileInfo info2 = new StoreFileInfo(TEST_UTIL.getConfiguration(),
-      TEST_UTIL.getTestFileSystem(), null, link2);
+      TEST_UTIL.getTestFileSystem(), new FileStatus(), link2);
 
     assertEquals(info1, info2);
     assertEquals(info1.hashCode(), info2.hashCode());
@@ -104,8 +105,8 @@ public class TestStoreFileInfo {
     // Try to open nonsense hfilelink. Make sure exception is from HFileLink.
     Path p = new Path("/hbase/test/0123/cf/testtb=4567-abcd");
     try (FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration())) {
-      StoreFileInfo sfi = new StoreFileInfo(TEST_UTIL.getConfiguration(), fs, p, true);
       try {
+        StoreFileInfo sfi = new StoreFileInfo(TEST_UTIL.getConfiguration(), fs, p, true);
         ReaderContext context = sfi.createReaderContext(false, 1000, ReaderType.PREAD);
         sfi.createReader(context, null);
         throw new IllegalStateException();
@@ -124,8 +125,8 @@ public class TestStoreFileInfo {
     fs.mkdirs(p.getParent());
     Reference r = Reference.createBottomReference(HConstants.EMPTY_START_ROW);
     r.write(fs, p);
-    StoreFileInfo sfi = new StoreFileInfo(TEST_UTIL.getConfiguration(), fs, p, true);
     try {
+      StoreFileInfo sfi = new StoreFileInfo(TEST_UTIL.getConfiguration(), fs, p, true);
       ReaderContext context = sfi.createReaderContext(false, 1000, ReaderType.PREAD);
       sfi.createReader(context, null);
       throw new IllegalStateException();
