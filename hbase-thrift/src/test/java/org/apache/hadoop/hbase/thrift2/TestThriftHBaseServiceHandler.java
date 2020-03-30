@@ -31,7 +31,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.InetAddress;
@@ -129,7 +128,6 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
@@ -268,7 +266,7 @@ public class TestThriftHBaseServiceHandler {
     puts.add(new TPut(wrap(rowName2), columnValues));
 
     handler.putMultiple(table, puts);
-    List<Boolean> existsResult2 = handler.existsAll(table,gets );
+    List<Boolean> existsResult2 = handler.existsAll(table,gets);
 
     assertTrue(existsResult2.get(0));
     assertTrue(existsResult2.get(1));
@@ -761,7 +759,13 @@ public class TestThriftHBaseServiceHandler {
    * Tests keeping a HBase scanner alive for long periods of time. Each call to getScannerRow()
    * should reset the ConnectionCache timeout for the scanner's connection
    */
-  @Test
+  @org.junit.Ignore @Test // Flakey. Diasabled by HBASE-24079. Renable with Fails with HBASE-24083.
+  //  Caused by: java.util.concurrent.RejectedExecutionException:
+  //  Task org.apache.hadoop.hbase.client.ResultBoundedCompletionService$QueueingFuture@e385431
+  //  rejected from java.util.concurrent.ThreadPoolExecutor@   52b027d[Terminated, pool size = 0,
+  //  active threads = 0, queued tasks = 0, completed tasks = 1]
+  //  at org.apache.hadoop.hbase.thrift2.TestThriftHBaseServiceHandler.
+  //  testLongLivedScan(TestThriftHBaseServiceHandler.java:804)
   public void testLongLivedScan() throws Exception {
     int numTrials = 6;
     int trialPause = 1000;
@@ -1072,7 +1076,9 @@ public class TestThriftHBaseServiceHandler {
    */
   private String pad(int n, byte pad) {
     String res = Integer.toString(n);
-    while (res.length() < pad) res = "0" + res;
+    while (res.length() < pad) {
+      res = "0" + res;
+    }
     return res;
   }
 
@@ -1204,7 +1210,7 @@ public class TestThriftHBaseServiceHandler {
       assertArrayEquals(Bytes.toBytes("testGetScannerResults" + pad(19 - i, (byte) 2)),
           results.get(i).getRow());
     }
- }
+  }
 
   @Test
   public void testFilterRegistration() throws Exception {
@@ -1238,7 +1244,7 @@ public class TestThriftHBaseServiceHandler {
 
     assertTrue(handler.exists(table, get));
     metricsHelper.assertCounter("put_num_ops", 1, metrics.getSource());
-    metricsHelper.assertCounter( "exists_num_ops", 2, metrics.getSource());
+    metricsHelper.assertCounter("exists_num_ops", 2, metrics.getSource());
   }
 
   private static ThriftMetrics getMetrics(Configuration conf) throws Exception {
@@ -1290,7 +1296,7 @@ public class TestThriftHBaseServiceHandler {
   }
 
   private void testExceptionType(THBaseService.Iface handler, ThriftMetrics metrics,
-                                 ByteBuffer tTableName, byte[] rowkey, ErrorThrowingGetObserver.ErrorType errorType) {
+      ByteBuffer tTableName, byte[] rowkey, ErrorThrowingGetObserver.ErrorType errorType) {
     long preGetCounter = metricsHelper.getCounter("get_num_ops", metrics.getSource());
     String exceptionKey = errorType.getMetricName();
     long preExceptionCounter = metricsHelper.checkCounterExists(exceptionKey, metrics.getSource()) ?
