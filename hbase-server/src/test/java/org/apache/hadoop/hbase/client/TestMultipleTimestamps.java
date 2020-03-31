@@ -195,7 +195,7 @@ public class TestMultipleTimestamps {
 
     TEST_UTIL.flush(tableName);
     Scan scan = new Scan();
-    scan.setMaxVersions(10);
+    scan.readVersions(10);
     ResultScanner scanner = ht.getScanner(scan);
     while (true) {
       Result r = scanner.next();
@@ -460,7 +460,7 @@ public class TestMultipleTimestamps {
       byte column[] = Bytes.toBytes("column:" + colIdx);
       scan.addColumn(cf, column);
     }
-    scan.setMaxVersions(maxVersions);
+    scan.readVersions(maxVersions);
     scan.setTimeRange(Collections.min(Arrays.asList(versions)),
         Collections.max(Arrays.asList(versions))+1);
     ResultScanner scanner = ht.getScanner(scan);

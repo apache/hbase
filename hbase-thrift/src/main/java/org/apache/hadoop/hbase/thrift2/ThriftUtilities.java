@@ -530,7 +530,7 @@ public final class ThriftUtilities {
       out.setCaching(in.getCaching());
     }
     if (in.isSetMaxVersions()) {
-      out.setMaxVersions(in.getMaxVersions());
+      out.readVersions(in.getMaxVersions());
     }
 
     if (in.isSetColumns()) {

@@ -311,7 +311,7 @@ public class TestScannerWithBulkload {
 
   private Scan createScan() {
     Scan scan = new Scan();
-    scan.setMaxVersions(3);
+    scan.readVersions(3);
     return scan;
   }
 

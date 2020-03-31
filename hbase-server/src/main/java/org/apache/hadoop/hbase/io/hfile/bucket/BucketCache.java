@@ -180,9 +180,13 @@ public class BucketCache implements BlockCache, HeapSize {
   private final AtomicLong accessCount = new AtomicLong();
 
   private static final int DEFAULT_CACHE_WAIT_TIME = 50;
-  // Used in test now. If the flag is false and the cache speed is very fast,
-  // bucket cache will skip some blocks when caching. If the flag is true, we
-  // will wait blocks flushed to IOEngine for some time when caching
+
+  /**
+   * Used in tests. If this flag is false and the cache speed is very fast,
+   * bucket cache will skip some blocks when caching. If the flag is true, we
+   * will wait until blocks are flushed to IOEngine.
+   */
+  @VisibleForTesting
   boolean wait_when_cache = false;
 
   private final BucketCacheStats cacheStats = new BucketCacheStats();

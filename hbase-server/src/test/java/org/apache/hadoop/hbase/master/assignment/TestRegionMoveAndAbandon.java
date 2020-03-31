@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -111,6 +111,8 @@ public class TestRegionMoveAndAbandon {
     // Stop RS2
     LOG.info("Killing RS {}", rs2.getServerName());
     cluster.killRegionServer(rs2.getServerName());
+    UTIL.waitFor(30_000, () -> rs2.isStopped() && !rs2.isAlive());
+    UTIL.waitFor(30_000, () -> rs1.isStopped() && !rs1.isAlive());
     // Start up everything again
     LOG.info("Starting cluster");
     UTIL.getMiniHBaseCluster().startMaster();

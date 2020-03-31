@@ -29,44 +29,37 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public abstract class Batch {
+
   /**
    * Defines a unit of work to be executed.
-   *
-   * <p>
+   * <p/>
    * When used with
-   * {@link org.apache.hadoop.hbase.client.Table#coprocessorService(Class, byte[], byte[],
-   * org.apache.hadoop.hbase.client.coprocessor.Batch.Call)}
-   * the implementations {@link Batch.Call#call(Object)} method will be invoked
-   * with a proxy to each region's coprocessor {@link com.google.protobuf.Service} implementation.
-   * </p>
+   * {@link org.apache.hadoop.hbase.client.Table#coprocessorService(Class, byte[], byte[], Batch.Call)}
+   * the implementations {@link Batch.Call#call(Object)} method will be invoked with a proxy to each
+   * region's coprocessor {@link org.apache.hbase.thirdparty.com.google.protobuf.Service}
+   * implementation.
    * @see org.apache.hadoop.hbase.client.coprocessor.Batch
    * @see org.apache.hadoop.hbase.client.Table#coprocessorService(byte[])
-   * @see org.apache.hadoop.hbase.client.Table#coprocessorService(Class, byte[], byte[],
-   * org.apache.hadoop.hbase.client.coprocessor.Batch.Call)
-   * @param <T> the instance type to be passed to
-   * {@link Batch.Call#call(Object)}
+   * @see org.apache.hadoop.hbase.client.Table#coprocessorService(Class, byte[], byte[], Batch.Call)
+   * @param <T> the instance type to be passed to {@link Batch.Call#call(Object)}
    * @param <R> the return type from {@link Batch.Call#call(Object)}
    */
   @InterfaceAudience.Public
-  public interface Call<T,R> {
+  public interface Call<T, R> {
     R call(T instance) throws IOException;
   }
 
   /**
-   * Defines a generic callback to be triggered for each {@link Batch.Call#call(Object)}
-   * result.
-   *
-   * <p>
+   * Defines a generic callback to be triggered for each {@link Batch.Call#call(Object)} result.
+   * <p/>
    * When used with
-   * {@link org.apache.hadoop.hbase.client.Table#coprocessorService(Class, byte[], byte[],
-   * org.apache.hadoop.hbase.client.coprocessor.Batch.Call)}
-   * the implementation's {@link Batch.Callback#update(byte[], byte[], Object)}
-   * method will be called with the {@link Batch.Call#call(Object)} return value
-   * from each region in the selected range.
-   * </p>
+   * {@link org.apache.hadoop.hbase.client.Table#coprocessorService(Class, byte[], byte[], Batch.Call)}
+   * the implementation's {@link Batch.Callback#update(byte[], byte[], Object)} method will be
+   * called with the {@link Batch.Call#call(Object)} return value from each region in the selected
+   * range.
    * @param <R> the return type from the associated {@link Batch.Call#call(Object)}
    * @see org.apache.hadoop.hbase.client.Table#coprocessorService(Class, byte[], byte[],
-   * org.apache.hadoop.hbase.client.coprocessor.Batch.Call)
+   *      org.apache.hadoop.hbase.client.coprocessor.Batch.Call)
    */
   @InterfaceAudience.Public
   public interface Callback<R> {

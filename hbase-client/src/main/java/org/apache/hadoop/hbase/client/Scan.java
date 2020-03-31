@@ -59,7 +59,7 @@ import org.slf4j.LoggerFactory;
  * To only retrieve columns with a specific timestamp, call {@link #setTimestamp(long) setTimestamp}
  * .
  * <p>
- * To limit the number of versions of each column to be returned, call {@link #setMaxVersions(int)}.
+ * To limit the number of versions of each column to be returned, call {@link #readVersions(int)}.
  * <p>
  * To limit the maximum number of values returned for each call to next(), call
  * {@link #setBatch(int) setBatch}.
@@ -326,7 +326,7 @@ public class Scan extends Query {
    * @param minStamp minimum timestamp value, inclusive
    * @param maxStamp maximum timestamp value, exclusive
    * @see #readAllVersions()
-   * @see #setMaxVersions(int)
+   * @see #readVersions(int)
    * @return this
    */
   public Scan setTimeRange(long minStamp, long maxStamp) throws IOException {
@@ -341,7 +341,7 @@ public class Scan extends Query {
    * defaut.
    * @param timestamp version timestamp
    * @see #readAllVersions()
-   * @see #setMaxVersions(int)
+   * @see #readVersions(int)
    * @return this
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
    *             Use {@link #setTimestamp(long)} instead
@@ -359,7 +359,7 @@ public class Scan extends Query {
    * defaut.
    * @param timestamp version timestamp
    * @see #readAllVersions()
-   * @see #setMaxVersions(int)
+   * @see #readVersions(int)
    * @return this
    */
   public Scan setTimestamp(long timestamp) {
@@ -499,20 +499,6 @@ public class Scan extends Query {
       this.setStopRow(ClientUtil.calculateTheClosestNextRowKeyForPrefix(rowPrefix));
     }
     return this;
-  }
-
-  /**
-   * Get up to the specified number of versions of each column.
-   * @param maxVersions maximum versions for each column
-   * @return this
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. It is easy to misunderstand with column
-   *   family's max versions, so use {@link #readVersions(int)} instead.
-   * @see #readVersions(int)
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17125">HBASE-17125</a>
-   */
-  @Deprecated
-  public Scan setMaxVersions(int maxVersions) {
-    return readVersions(maxVersions);
   }
 
   /**

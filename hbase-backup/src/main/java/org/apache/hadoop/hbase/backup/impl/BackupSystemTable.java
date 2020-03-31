@@ -1189,7 +1189,7 @@ public final class BackupSystemTable implements Closeable {
     List<String> list = new ArrayList<>();
     try (Table table = connection.getTable(tableName)) {
       Scan scan = createScanForBackupSetList();
-      scan.setMaxVersions(1);
+      scan.readVersions(1);
       try (ResultScanner scanner = table.getScanner(scan)) {
         Result res;
         while ((res = scanner.next()) != null) {
@@ -1504,7 +1504,7 @@ public final class BackupSystemTable implements Closeable {
     scan.withStartRow(startRow);
     scan.setStopRow(stopRow);
     scan.addFamily(BackupSystemTable.SESSIONS_FAMILY);
-    scan.setMaxVersions(1);
+    scan.readVersions(1);
     return scan;
   }
 
@@ -1585,7 +1585,7 @@ public final class BackupSystemTable implements Closeable {
     scan.withStartRow(startRow);
     scan.setStopRow(stopRow);
     scan.addFamily(BackupSystemTable.META_FAMILY);
-    scan.setMaxVersions(1);
+    scan.readVersions(1);
 
     return scan;
   }
@@ -1859,7 +1859,7 @@ public final class BackupSystemTable implements Closeable {
     scan.withStartRow(startRow);
     scan.withStopRow(stopRow);
     scan.addFamily(BackupSystemTable.META_FAMILY);
-    scan.setMaxVersions(1);
+    scan.readVersions(1);
     return scan;
   }
 
@@ -1894,7 +1894,7 @@ public final class BackupSystemTable implements Closeable {
     scan.withStartRow(startRow);
     scan.setStopRow(stopRow);
     scan.addFamily(BackupSystemTable.META_FAMILY);
-    scan.setMaxVersions(1);
+    scan.readVersions(1);
     return scan;
   }
 
