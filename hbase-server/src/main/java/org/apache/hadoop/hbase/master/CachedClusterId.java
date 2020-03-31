@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ClusterId;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -46,8 +47,8 @@ public class CachedClusterId {
   public static final Logger LOG = LoggerFactory.getLogger(CachedClusterId.class);
   private static final int MAX_FETCH_TIMEOUT_MS = 10000;
 
-  private Path rootDir;
-  private FileSystem fs;
+  private final Path rootDir;
+  private final FileSystem fs;
 
   // When true, indicates that a FileSystem fetch of ClusterID is in progress. This is used to
   // avoid multiple fetches from FS and let only one thread fetch the information.
@@ -58,12 +59,15 @@ public class CachedClusterId {
   // Immutable once set and read multiple times.
   private ClusterId clusterId;
 
+  private final Server server;
+
   // cache stats for testing.
   private AtomicInteger cacheMisses = new AtomicInteger(0);
 
-  public CachedClusterId(Configuration conf) throws IOException {
-    rootDir = FSUtils.getRootDir(conf);
-    fs = rootDir.getFileSystem(conf);
+  public CachedClusterId(Server server, Configuration conf) throws IOException {
+    this.rootDir = FSUtils.getRootDir(conf);
+    this.fs = rootDir.getFileSystem(conf);
+    this.server = server;
   }
 
   /**
@@ -130,9 +134,12 @@ public class CachedClusterId {
    * trying get from a clean cache.
    *
    * @return ClusterId by reading from FileSystem or null in any error case or cluster ID does
-   *     not exist on the file system.
+   *     not exist on the file system or if the server initiated a tear down.
    */
   public String getFromCacheOrFetch() {
+    if (server.isStopping() || server.isStopped()) {
+      return null;
+    }
     String id = getClusterId();
     if (id != null) {
       return id;
