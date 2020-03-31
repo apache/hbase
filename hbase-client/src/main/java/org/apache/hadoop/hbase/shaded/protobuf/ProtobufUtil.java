@@ -1190,7 +1190,7 @@ public final class ProtobufUtil {
       scan.setCacheBlocks(proto.getCacheBlocks());
     }
     if (proto.hasMaxVersions()) {
-      scan.setMaxVersions(proto.getMaxVersions());
+      scan.readVersions(proto.getMaxVersions());
     }
     if (proto.hasStoreLimit()) {
       scan.setMaxResultsPerColumnFamily(proto.getStoreLimit());

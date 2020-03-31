@@ -612,7 +612,7 @@ public class TestHRegion {
     region.flush(true);
 
     Scan scan = new Scan();
-    scan.setMaxVersions(3);
+    scan.readVersions(3);
     // open the first scanner
     RegionScanner scanner1 = region.getScanner(scan);
 
@@ -663,7 +663,7 @@ public class TestHRegion {
     region.flush(true);
 
     Scan scan = new Scan();
-    scan.setMaxVersions(3);
+    scan.readVersions(3);
     // open the first scanner
     RegionScanner scanner1 = region.getScanner(scan);
 
@@ -3142,7 +3142,7 @@ public class TestHRegion {
 
     Scan scan = new Scan(row1);
     scan.addColumn(fam1, qf1);
-    scan.setMaxVersions(MAX_VERSIONS);
+    scan.readVersions(MAX_VERSIONS);
     List<Cell> actual = new ArrayList<>();
     InternalScanner scanner = region.getScanner(scan);
 
@@ -3199,7 +3199,7 @@ public class TestHRegion {
     Scan scan = new Scan(row1);
     scan.addColumn(fam1, qf1);
     scan.addColumn(fam1, qf2);
-    scan.setMaxVersions(MAX_VERSIONS);
+    scan.readVersions(MAX_VERSIONS);
     List<Cell> actual = new ArrayList<>();
     InternalScanner scanner = region.getScanner(scan);
 
@@ -3276,7 +3276,7 @@ public class TestHRegion {
     scan.addColumn(fam1, qf1);
     scan.addColumn(fam1, qf2);
     int versions = 3;
-    scan.setMaxVersions(versions);
+    scan.readVersions(versions);
     List<Cell> actual = new ArrayList<>();
     InternalScanner scanner = region.getScanner(scan);
 
@@ -3331,7 +3331,7 @@ public class TestHRegion {
 
     Scan scan = new Scan(row1);
     scan.addFamily(fam1);
-    scan.setMaxVersions(MAX_VERSIONS);
+    scan.readVersions(MAX_VERSIONS);
     List<Cell> actual = new ArrayList<>();
     InternalScanner scanner = region.getScanner(scan);
 
@@ -3386,7 +3386,7 @@ public class TestHRegion {
 
     Scan scan = new Scan(row1);
     scan.addFamily(fam1);
-    scan.setMaxVersions(MAX_VERSIONS);
+    scan.readVersions(MAX_VERSIONS);
     List<Cell> actual = new ArrayList<>();
     InternalScanner scanner = region.getScanner(scan);
 
@@ -3502,7 +3502,7 @@ public class TestHRegion {
 
     Scan scan = new Scan(row1);
     int versions = 3;
-    scan.setMaxVersions(versions);
+    scan.readVersions(versions);
     List<Cell> actual = new ArrayList<>();
     InternalScanner scanner = region.getScanner(scan);
 
@@ -5218,7 +5218,7 @@ public class TestHRegion {
     region.put(put);
 
     Scan scan = new Scan(rowC);
-    scan.setMaxVersions(5);
+    scan.readVersions(5);
     scan.setReversed(true);
     InternalScanner scanner = region.getScanner(scan);
     List<Cell> currRow = new ArrayList<>();
@@ -5274,7 +5274,7 @@ public class TestHRegion {
     Scan scan = new Scan(rowD);
     List<Cell> currRow = new ArrayList<>();
     scan.setReversed(true);
-    scan.setMaxVersions(5);
+    scan.readVersions(5);
     InternalScanner scanner = region.getScanner(scan);
     boolean hasNext = scanner.next(currRow);
     assertEquals(2, currRow.size());
@@ -5604,7 +5604,7 @@ public class TestHRegion {
     region.put(put);
     // scan range = ["row4", min), skip the max "row5"
     Scan scan = new Scan(row4);
-    scan.setMaxVersions(5);
+    scan.readVersions(5);
     scan.setBatch(3);
     scan.setReversed(true);
     InternalScanner scanner = region.getScanner(scan);

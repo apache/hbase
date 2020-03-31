@@ -174,7 +174,7 @@ implements Configurable {
     }
 
     if (conf.get(SCAN_MAXVERSIONS) != null) {
-      scan.setMaxVersions(Integer.parseInt(conf.get(SCAN_MAXVERSIONS)));
+      scan.readVersions(Integer.parseInt(conf.get(SCAN_MAXVERSIONS)));
     }
 
     if (conf.get(SCAN_CACHEDROWS) != null) {
