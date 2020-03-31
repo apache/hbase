@@ -41,6 +41,7 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-24076](https://issues.apache.org/jira/browse/HBASE-24076) | TestQuotasShell is broken |  Blocker | shell |
 | [HBASE-24057](https://issues.apache.org/jira/browse/HBASE-24057) | Add modules to mapreduce job classpaths |  Major | mapreduce |
 | [HBASE-24040](https://issues.apache.org/jira/browse/HBASE-24040) | WALFactory.Providers.multiwal causes StackOverflowError |  Minor | wal |
 | [HBASE-24019](https://issues.apache.org/jira/browse/HBASE-24019) | Correct exception messages for table null and namespace unavailable. |  Minor | . |
