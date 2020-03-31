@@ -83,7 +83,9 @@ public class MetricsMasterSourceImpl
     MetricsRecordBuilder metricsRecordBuilder = metricsCollector.addRecord(metricsName);
 
     // masterWrapper can be null because this function is called inside of init.
-    if (masterWrapper != null) {
+    // If the master is already stopped or has initiated a shutdown, no point in registering the
+    // metrics again.
+    if (masterWrapper != null && masterWrapper.isRunning()) {
 
       // Pair<online region number, offline region number>
       PairOfSameType<Integer> regionNumberPair = masterWrapper.getRegionCounts();
