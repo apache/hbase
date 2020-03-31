@@ -91,7 +91,7 @@ public class ScannerResultGenerator extends ResultGenerator {
         }
       }
       scan.setTimeRange(rowspec.getStartTime(), rowspec.getEndTime());          
-      scan.setMaxVersions(rowspec.getMaxVersions());
+      scan.readVersions(rowspec.getMaxVersions());
       if (filter != null) {
         scan.setFilter(filter);
       }

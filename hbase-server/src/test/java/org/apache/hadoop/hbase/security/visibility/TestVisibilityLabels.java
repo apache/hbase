@@ -750,7 +750,7 @@ public abstract class TestVisibilityLabels {
       table.put(put);
 
       Scan s = new Scan();
-      s.setMaxVersions(1);
+      s.readVersions(1);
       s.setAuthorizations(new Authorizations(SECRET));
       ResultScanner scanner = table.getScanner(s);
       Result result = scanner.next();

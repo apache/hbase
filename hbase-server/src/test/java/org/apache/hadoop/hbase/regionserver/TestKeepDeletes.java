@@ -956,7 +956,7 @@ public class TestKeepDeletes {
     Scan s = new Scan();
     s.setRaw(true);
     // use max versions from the store(s)
-    s.setMaxVersions(region.getStores().iterator().next().getScanInfo().getMaxVersions());
+    s.readVersions(region.getStores().iterator().next().getScanInfo().getMaxVersions());
     InternalScanner scan = region.getScanner(s);
     List<Cell> kvs = new ArrayList<>();
     int res = 0;
