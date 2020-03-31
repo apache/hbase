@@ -19,9 +19,7 @@
 
 package org.apache.hadoop.hbase.tool;
 
-import static org.apache.hadoop.hbase.HConstants.DEFAULT_CANARY_INFOPORT;
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT;
-import static org.apache.hadoop.hbase.HConstants.HBASE_CANARY_INFO_BINDADDRESS;
 import static org.apache.hadoop.hbase.HConstants.ZOOKEEPER_ZNODE_PARENT;
 
 import java.io.Closeable;
@@ -126,6 +124,11 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class CanaryTool implements Tool, Canary {
+  public static final String HBASE_CANARY_INFO_PORT = "hbase.canary.info.port";
+
+  public static final int DEFAULT_CANARY_INFOPORT = 16050;
+
+  public static final String HBASE_CANARY_INFO_BINDADDRESS = "hbase.canary.info.bindAddress";
 
 
   private void putUpWebUI() throws IOException {
@@ -135,7 +138,7 @@ public class CanaryTool implements Tool, Canary {
       LOG.info("WebUI is not supported in RegionServer mode");
     } else {
       Configuration conf = new Configuration();
-      int port = conf.getInt(HConstants.HBASE_CANARY_INFO_PORT, DEFAULT_CANARY_INFOPORT);
+      int port = conf.getInt(HBASE_CANARY_INFO_PORT, DEFAULT_CANARY_INFOPORT);
       // -1 is for disabling info server
       if (port < 0) return;
       String addr = conf.get(HBASE_CANARY_INFO_BINDADDRESS, "0.0.0.0");
@@ -146,8 +149,7 @@ public class CanaryTool implements Tool, Canary {
         infoServer.start();
         LOG.info("Bind Canary http info server to port: " + port);
       } catch (BindException e) {
-        e.printStackTrace();
-        LOG.info("Failed binding Canary http info server to port: " + port);
+        LOG.warn("Failed binding Canary http info server to port: " + port, e);
       }
     }
   }
