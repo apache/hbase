@@ -1465,7 +1465,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       // then if we decrease the number of versions, but keep the scan raw, we should see exactly
       // that number of versions
       versions = 2;
-      s.setMaxVersions(versions);
+      s.readVersions(versions);
       try (ResultScanner scanner = table.getScanner(s)) {
         int count = 0;
         for (Result r : scanner) {
@@ -1480,7 +1480,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       // finally, if we turn off raw scanning, but max out the number of versions, we should go back
       // to seeing just three
       versions = 3;
-      s.setMaxVersions(versions);
+      s.readVersions(versions);
       try (ResultScanner scanner = table.getScanner(s)) {
         int count = 0;
         for (Result r : scanner) {
@@ -1831,7 +1831,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       Scan scan = new Scan(ROW);
       scan.setReversed(true);
       scan.addFamily(FAMILIES[0]);
-      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.readVersions(Integer.MAX_VALUE);
       Result result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILIES[0], QUALIFIER, new long[]{ts[1]},
               new byte[][]{VALUES[1]}, 0, 0);
@@ -1853,7 +1853,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       scan = new Scan(ROW);
       scan.setReversed(true);
       scan.addColumn(FAMILIES[0], QUALIFIER);
-      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.readVersions(Integer.MAX_VALUE);
       result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILIES[0], QUALIFIER, new long[]{ts[1],
               ts[2], ts[3]}, new byte[][]{VALUES[1], VALUES[2], VALUES[3]}, 0, 2);
@@ -1882,7 +1882,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       scan = new Scan(ROW);
       scan.setReversed(true);
       scan.addFamily(FAMILIES[0]);
-      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.readVersions(Integer.MAX_VALUE);
       result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILIES[0], QUALIFIER, new long[]{ts[1],
               ts[2], ts[3]}, new byte[][]{VALUES[1], VALUES[2], VALUES[3]}, 0, 2);
@@ -1929,7 +1929,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       scan.setReversed(true);
       scan.addFamily(FAMILIES[1]);
       scan.addFamily(FAMILIES[2]);
-      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.readVersions(Integer.MAX_VALUE);
       result = getSingleScanResult(ht, scan);
       assertEquals("Expected 2 keys but received " + result.size(), 2, result.size());
       assertNResult(result, ROWS[0], FAMILIES[1], QUALIFIER, new long[]{ts[0],
@@ -1939,7 +1939,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       scan.setReversed(true);
       scan.addFamily(FAMILIES[1]);
       scan.addFamily(FAMILIES[2]);
-      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.readVersions(Integer.MAX_VALUE);
       result = getSingleScanResult(ht, scan);
       assertEquals("Expected 2 keys but received " + result.size(), 2, result.size());
 
@@ -1947,7 +1947,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       scan.setReversed(true);
       scan.addFamily(FAMILIES[1]);
       scan.addFamily(FAMILIES[2]);
-      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.readVersions(Integer.MAX_VALUE);
       result = getSingleScanResult(ht, scan);
       assertEquals(1, result.size());
       assertNResult(result, ROWS[2], FAMILIES[2], QUALIFIER,
@@ -1972,7 +1972,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       scan.setReversed(true);
       scan.addFamily(FAMILIES[1]);
       scan.addFamily(FAMILIES[2]);
-      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.readVersions(Integer.MAX_VALUE);
       ResultScanner scanner = ht.getScanner(scan);
       result = scanner.next();
       assertEquals("Expected 2 keys but received " + result.size(), 2, result.size());
@@ -2400,7 +2400,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       Scan scan =
               new Scan().setFilter(new ValueFilter(CompareOperator.EQUAL,
                       new SubstringComparator("value-a")))
-                      .setMaxVersions(3);
+                      .readVersions(3);
       ResultScanner scanner = table.getScanner(scan);
       Result result = scanner.next();
       // ts[0] has gone from user view. Only read ts[2] which value is less or equal to 3
@@ -2421,7 +2421,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       scan =
               new Scan().setFilter(new ValueFilter(CompareOperator.EQUAL,
                       new SubstringComparator("value-a")))
-                      .setMaxVersions(1);
+                      .readVersions(1);
       scanner = table.getScanner(scan);
       result = scanner.next();
       // ts[0] has gone from user view. Only read ts[2] which value is less or equal to 3
@@ -2443,7 +2443,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       scan =
               new Scan().setFilter(new ValueFilter(CompareOperator.EQUAL,
                       new SubstringComparator("value-a")))
-                      .setMaxVersions(5);
+                      .readVersions(5);
       scanner = table.getScanner(scan);
       result = scanner.next();
       // ts[0] has gone from user view. Only read ts[2] which value is less or equal to 3

@@ -349,7 +349,7 @@ public class TestSerialization {
     Scan scan = new Scan().withStartRow(startRow).withStopRow(stopRow);
     scan.addColumn(fam, qf1);
     scan.setTimeRange(ts, ts+1);
-    scan.setMaxVersions(maxVersions);
+    scan.readVersions(maxVersions);
 
     ClientProtos.Scan scanProto = ProtobufUtil.toScan(scan);
     Scan desScan = ProtobufUtil.toScan(scanProto);

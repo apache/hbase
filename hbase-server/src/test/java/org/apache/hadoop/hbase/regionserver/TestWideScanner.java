@@ -105,7 +105,7 @@ public class TestWideScanner extends HBaseTestCase {
       scan.addFamily(A);
       scan.addFamily(B);
       scan.addFamily(C);
-      scan.setMaxVersions(100);
+      scan.readVersions(100);
       scan.setBatch(batch);
       InternalScanner s = r.getScanner(scan);
       int total = 0;

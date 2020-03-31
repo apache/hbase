@@ -1190,7 +1190,7 @@ public final class ProtobufUtil {
       scan.setCacheBlocks(proto.getCacheBlocks());
     }
     if (proto.hasMaxVersions()) {
-      scan.setMaxVersions(proto.getMaxVersions());
+      scan.readVersions(proto.getMaxVersions());
     }
     if (proto.hasStoreLimit()) {
       scan.setMaxResultsPerColumnFamily(proto.getStoreLimit());
@@ -2992,7 +2992,7 @@ public final class ProtobufUtil {
 
   /**
    * Creates {@link CompactionState} from
-   * {@link org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState}
+   * {@link org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState}
    * state
    * @param state the protobuf CompactionState
    * @return CompactionState
@@ -3011,7 +3011,8 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Creates {@link org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type}
+   * Creates
+   * {@link org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Type}
    * from {@link SnapshotType}
    * @param type the SnapshotDescription type
    * @return the protobuf SnapshotDescription type
@@ -3022,7 +3023,8 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Creates {@link org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type}
+   * Creates
+   * {@link org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Type}
    * from the type of SnapshotDescription string
    * @param snapshotDesc string representing the snapshot description type
    * @return the protobuf SnapshotDescription type
@@ -3033,8 +3035,8 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Creates {@link SnapshotType} from the type of
-   * {@link org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription}
+   * Creates {@link SnapshotType} from the
+   * {@link org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Type}
    * @param type the snapshot description type
    * @return the protobuf SnapshotDescription type
    */
@@ -3044,7 +3046,7 @@ public final class ProtobufUtil {
 
   /**
    * Convert from {@link SnapshotDescription} to
-   * {@link org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription}
+   * {@link org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription}
    * @param snapshotDesc the POJO SnapshotDescription
    * @return the protobuf SnapshotDescription
    */
@@ -3076,7 +3078,7 @@ public final class ProtobufUtil {
 
   /**
    * Convert from
-   * {@link org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription} to
+   * {@link org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription} to
    * {@link SnapshotDescription}
    * @param snapshotDesc the protobuf SnapshotDescription
    * @return the POJO SnapshotDescription

@@ -234,7 +234,7 @@ public class CellCounter extends Configured implements Tool {
     // Set Scan Versions
     if (conf.get(TableInputFormat.SCAN_MAXVERSIONS) == null) {
       // default to all versions unless explicitly set
-      s.setMaxVersions(Integer.MAX_VALUE);
+      s.readVersions(Integer.MAX_VALUE);
     }
     s.setCacheBlocks(false);
     // Set RowFilter or Prefix Filter if applicable.

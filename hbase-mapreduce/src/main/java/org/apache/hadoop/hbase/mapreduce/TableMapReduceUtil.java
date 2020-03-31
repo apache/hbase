@@ -805,7 +805,6 @@ public class TableMapReduceUtil {
     addDependencyJarsForClasses(conf,
       // explicitly pull a class from each module
       org.apache.hadoop.hbase.HConstants.class,                      // hbase-common
-      org.apache.hadoop.hbase.protobuf.generated.ClientProtos.class, // hbase-protocol
       org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.class, // hbase-protocol-shaded
       org.apache.hadoop.hbase.client.Put.class,                      // hbase-client
       org.apache.hadoop.hbase.ipc.RpcServer.class,                   // hbase-server
