@@ -21,6 +21,7 @@ import java.util.Arrays;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -267,7 +268,7 @@ public class RegionInfoBuilder {
       this.offLine = offLine;
       if (ArrayUtils.isEmpty(regionName)) {
         this.regionName = RegionInfo.createRegionName(this.tableName, this.startKey, this.regionId, this.replicaId,
-            !this.tableName.equals(TableName.META_TABLE_NAME));
+            !(this.tableName.equals(TableName.META_TABLE_NAME) && regionId == 1));
         this.encodedName = RegionInfo.encodeRegionName(this.regionName);
       } else {
         this.regionName = regionName;
@@ -381,9 +382,11 @@ public class RegionInfoBuilder {
      */
     @Override
     public boolean containsRow(byte[] row, int offset, short length) {
-      return Bytes.compareTo(row, 0, row.length, startKey, 0, startKey.length) >= 0 &&
-        (Bytes.compareTo(row, 0, row.length, endKey, 0, endKey.length) < 0 ||
-         Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY));
+      KeyValue.KVComparator c = getComparator();
+      return c.compareRows(row, 0, row.length, startKey, 0, startKey.length) >= 0 &&
+        (c.compareRows(row, 0, row.length, endKey, 0, endKey.length) < 0 ||
+         c.compareRows(endKey, 0, endKey.length,
+           HConstants.EMPTY_BYTE_ARRAY, 0, HConstants.EMPTY_BYTE_ARRAY.length) == 0);
     }
 
     /** @return true if this region is a meta region */
@@ -494,6 +497,21 @@ public class RegionInfoBuilder {
     @Override
     public int hashCode() {
       return this.hashCode;
+    }
+
+    /**
+     * @return Comparator to use comparing {@link KeyValue}s.
+     * @deprecated Use Region#getCellComparator().  deprecated for hbase 2.0, remove for hbase 3.0
+     */
+    @Deprecated
+    public KeyValue.KVComparator getComparator() {
+      if (isRootRegion()) {
+        return KeyValue.ROOT_COMPARATOR;
+      }
+      if (isMetaRegion()) {
+        return KeyValue.META_COMPARATOR;
+      }
+      return KeyValue.COMPARATOR;
     }
   }
 }

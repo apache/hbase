@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.util.ByteArrayHashKey;
@@ -99,6 +100,7 @@ public interface RegionInfo extends Comparable<RegionInfo> {
   @InterfaceAudience.Private
   Comparator<RegionInfo> COMPARATOR
     = (RegionInfo lhs, RegionInfo rhs) -> {
+      KeyValue.KVComparator comparator = getComparator(rhs.getTable());
       if (rhs == null) {
         return 1;
       }
@@ -110,13 +112,17 @@ public interface RegionInfo extends Comparable<RegionInfo> {
       }
 
       // Compare start keys.
-      result = Bytes.compareTo(lhs.getStartKey(), rhs.getStartKey());
+      result = comparator.compareRows(
+        lhs.getStartKey(), 0, lhs.getStartKey().length,
+        rhs.getStartKey(), 0, rhs.getStartKey().length);
       if (result != 0) {
         return result;
       }
 
       // Compare end keys.
-      result = Bytes.compareTo(lhs.getEndKey(), rhs.getEndKey());
+      result = comparator.compareRows(
+        lhs.getEndKey(), 0, lhs.getEndKey().length,
+        rhs.getEndKey(), 0, rhs.getEndKey().length);
 
       if (result != 0) {
         if (lhs.getStartKey().length != 0
@@ -430,6 +436,7 @@ public interface RegionInfo extends Comparable<RegionInfo> {
    * @return true if two regions are adjacent
    */
   static boolean areAdjacent(RegionInfo regionA, RegionInfo regionB) {
+    KeyValue.KVComparator comparator = getComparator(regionA.getTable());
     if (regionA == null || regionB == null) {
       throw new IllegalArgumentException(
       "Can't check whether adjacent for null region");
@@ -439,11 +446,13 @@ public interface RegionInfo extends Comparable<RegionInfo> {
     }
     RegionInfo a = regionA;
     RegionInfo b = regionB;
-    if (Bytes.compareTo(a.getStartKey(), b.getStartKey()) > 0) {
+    if (comparator.compareRows(a.getStartKey(), 0, a.getStartKey().length,
+      b.getStartKey(), 0, b.getStartKey().length) > 0) {
       a = regionB;
       b = regionA;
     }
-    return Bytes.equals(a.getEndKey(), b.getStartKey());
+    return comparator.compareRows(a.getEndKey(), 0, a.getEndKey().length,
+      b.getStartKey(), 0, b.getStartKey().length) == 0;
   }
 
   /**
@@ -811,13 +820,15 @@ public interface RegionInfo extends Comparable<RegionInfo> {
    * @see #isDegenerate()
    */
   default boolean isOverlap(RegionInfo other) {
+    KeyValue.KVComparator comparator = getComparator(other.getTable());
     if (other == null) {
       return false;
     }
     if (!getTable().equals(other.getTable())) {
       return false;
     }
-    int startKeyCompare = Bytes.compareTo(getStartKey(), other.getStartKey());
+    int startKeyCompare = comparator.compareRows(getStartKey(), 0, getStartKey().length,
+      other.getStartKey(), 0, other.getStartKey().length);
     if (startKeyCompare == 0) {
       return true;
     }
@@ -825,15 +836,27 @@ public interface RegionInfo extends Comparable<RegionInfo> {
       if (isLast()) {
         return true;
       }
-      return Bytes.compareTo(getEndKey(), other.getStartKey()) > 0;
+      return comparator.compareRows(getEndKey(), 0, getEndKey().length,
+        other.getStartKey(), 0, other.getStartKey().length) > 0;
     }
     if (other.isLast()) {
       return true;
     }
-    return Bytes.compareTo(getStartKey(), other.getEndKey()) < 0;
+    return comparator.compareRows(getStartKey(), 0, getStartKey().length,
+      other.getEndKey(), 0, other.getEndKey().length) < 0;
   }
 
   default int compareTo(RegionInfo other) {
     return RegionInfo.COMPARATOR.compare(this, other);
+  }
+
+  static KeyValue.KVComparator getComparator(TableName tableName) {
+    if (tableName.equals(TableName.ROOT_TABLE_NAME)) {
+      return KeyValue.ROOT_COMPARATOR;
+    }
+    if (tableName.equals(TableName.META_TABLE_NAME)) {
+      return KeyValue.META_COMPARATOR;
+    }
+    return KeyValue.COMPARATOR;
   }
 }

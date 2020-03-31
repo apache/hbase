@@ -302,6 +302,17 @@ public class CellComparatorImpl implements CellComparator {
    * {@link KeyValue}s.
    */
   public static class RootCellComparator extends MetaCellComparator {
+    @Override
+    public int compareRows(final Cell left, final Cell right) {
+      return compareRows(left.getRowArray(), left.getRowOffset(), left.getRowLength(),
+        right.getRowArray(), right.getRowOffset(), right.getRowLength());
+    }
+
+    @Override
+    public int compareRows(Cell left, byte[] right, int roffset, int rlength) {
+      return compareRows(left.getRowArray(), left.getRowOffset(), left.getRowLength(), right,
+        roffset, rlength);
+    }
 
     private static int compareRows(byte[] left, int loffset, int llength, byte[] right, int roffset,
       int rlength) {

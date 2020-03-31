@@ -565,7 +565,7 @@ public class AssignmentManager {
 
   private RegionInfo getMetaForRegion(final RegionInfo regionInfo) {
     //if (regionInfo.isMetaRegion()) return regionInfo;
-    // TODO: handle multiple meta. if the region provided is not meta lookup
+    // TODO francis handle multiple meta. if the region provided is not meta lookup
     // which meta the region belongs to.
     return RegionInfoBuilder.FIRST_META_REGIONINFO;
   }
@@ -1710,7 +1710,6 @@ public class AssignmentManager {
   }
 
   public void loadRoot() throws IOException {
-    //TODO francis is the the right monitor lock to synchronize on?
     synchronized (rootLoadEvent) {
       if (!isRootLoaded()) {
         // TODO: use a thread pool

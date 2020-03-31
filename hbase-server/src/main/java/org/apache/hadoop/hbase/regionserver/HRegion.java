@@ -8496,7 +8496,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   public byte[] checkSplit() {
     // Can't split META
-    if (this.getRegionInfo().isMetaRegion()) {
+    if (this.getRegionInfo().isRootRegion()) {
       if (shouldForceSplit()) {
         LOG.warn("Cannot split meta region in HBase 0.20 and above");
       }

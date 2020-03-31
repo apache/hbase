@@ -167,6 +167,7 @@ public class AssignRegionHandler extends EventHandler {
   public static AssignRegionHandler create(HRegionServer server, RegionInfo regionInfo,
       long openProcId, TableDescriptor tableDesc, long masterSystemTime) {
     EventType eventType;
+    //TODO francis add type for ROOT
     if (regionInfo.isMetaRegion()) {
       eventType = EventType.M_RS_CLOSE_META;
     } else if (regionInfo.getTable().isSystemTable() ||

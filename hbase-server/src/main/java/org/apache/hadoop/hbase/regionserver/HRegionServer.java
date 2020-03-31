@@ -1175,6 +1175,7 @@ public class HRegionServer extends HasThread implements
     LOG.info("Exiting; stopping=" + this.serverName + "; zookeeper connection closed.");
   }
 
+  //TODO francis update this
   private boolean containsMetaTableRegions() {
     return onlineRegions.containsKey(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName());
   }

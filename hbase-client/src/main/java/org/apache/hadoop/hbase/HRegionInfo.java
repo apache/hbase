@@ -569,16 +569,20 @@ public class HRegionInfo implements RegionInfo {
    */
   @Override
   public boolean containsRange(byte[] rangeStartKey, byte[] rangeEndKey) {
-    if (Bytes.compareTo(rangeStartKey, rangeEndKey) > 0) {
+    KVComparator c = getComparator();
+    if (c.compareRows(rangeStartKey, 0, rangeStartKey.length,
+      rangeEndKey, 0, rangeEndKey.length) > 0) {
       throw new IllegalArgumentException(
       "Invalid range: " + Bytes.toStringBinary(rangeStartKey) +
       " > " + Bytes.toStringBinary(rangeEndKey));
     }
 
-    boolean firstKeyInRange = Bytes.compareTo(rangeStartKey, startKey) >= 0;
+    boolean firstKeyInRange = c.compareRows(rangeStartKey, 0, rangeStartKey.length,
+      startKey, 0, startKey.length) >= 0;
     boolean lastKeyInRange =
-      Bytes.compareTo(rangeEndKey, endKey) < 0 ||
-      Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY);
+      c.compareRows(rangeEndKey, 0, rangeEndKey.length, endKey, 0, endKey.length) < 0 ||
+      c.compareRows(endKey, 0, endKey.length,
+        HConstants.EMPTY_BYTE_ARRAY, 0, HConstants.EMPTY_BYTE_ARRAY.length) == 0;
     return firstKeyInRange && lastKeyInRange;
   }
 
@@ -595,12 +599,14 @@ public class HRegionInfo implements RegionInfo {
    */
   @Override
   public boolean containsRow(byte[] row, int offset, short length) {
-    return Bytes.compareTo(row, offset, length, startKey, 0, startKey.length) >= 0 &&
-      (Bytes.compareTo(row, offset, length, endKey, 0, endKey.length) < 0 ||
-       Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY));
+    KVComparator c = getComparator();
+    return c.compareRows(row, offset, length, startKey, 0, startKey.length) >= 0 &&
+      (c.compareRows(row, offset, length, endKey, 0, endKey.length) < 0 ||
+       c.compareRows(endKey, 0, endKey.length,
+         HConstants.EMPTY_BYTE_ARRAY, 0, HConstants.EMPTY_BYTE_ARRAY.length) == 0);
   }
 
-  /**
+  /**boolean
    * @return true if this region is from hbase:meta
    */
   public boolean isMetaTable() {
@@ -779,9 +785,17 @@ public class HRegionInfo implements RegionInfo {
     // RegionInfo into HRegionInfo which is what is wanted here.
     HRegionInfo hri;
     if (ri.isMetaRegion()) {
-      hri = ri.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID ?
+      //TODO francis room for streamlining this logic
+      hri = ri.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID && ri.getRegionId() == 1
+        && !ri.isSplit() && !ri.isOffline()?
       HRegionInfo.FIRST_META_REGIONINFO :
       new HRegionInfo(ri.getRegionId(), ri.getTable(), ri.getReplicaId());
+      if (ri.isSplit()) {
+        hri.setSplit(ri.isSplit());
+      }
+      if (ri.isOffline()) {
+        hri.setOffline(ri.isOffline());
+      }
     } else {
       hri = new HRegionInfo(
         ri.getTable(),

@@ -1795,7 +1795,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         region.startRegionOperation(Operation.SPLIT_REGION);
         r.forceSplit(null);
         // Even after setting force split if split policy says no to split then we should not split.
-        shouldSplit = region.getSplitPolicy().shouldSplit() && !info.isMetaRegion();
+        shouldSplit = region.getSplitPolicy().shouldSplit() && !info.isRootRegion();
         bestSplitRow = r.checkSplit();
         // when all table data are in memstore, bestSplitRow = null
         // try to flush region first

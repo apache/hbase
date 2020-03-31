@@ -666,9 +666,9 @@ public class CatalogAccessor {
   public static List<Pair<RegionInfo, ServerName>> getTableRegionsAndLocations(
       Connection connection, @Nullable final TableName tableName,
       final boolean excludeOfflinedSplitParents) throws IOException {
-    if (tableName != null && tableName.equals(TableName.META_TABLE_NAME)) {
+    if (tableName != null && tableName.equals(TableName.ROOT_TABLE_NAME)) {
       throw new IOException("This method can't be used to locate meta regions;"
-        + " use MetaTableLocator instead");
+        + " use RootTableLocator instead");
     }
     // Make a version of CollectingVisitor that collects RegionInfo and ServerAddress
     CollectingVisitor<Pair<RegionInfo, ServerName>> visitor =
@@ -700,10 +700,22 @@ public class CatalogAccessor {
           }
         }
       };
-    scanMeta(connection,
-        getTableStartRowForMeta(tableName, QueryType.REGION),
-        getTableStopRowForMeta(tableName, QueryType.REGION),
-        QueryType.REGION, visitor);
+    TableName parentTable = TableName.META_TABLE_NAME;
+    byte[] startRow = getTableStartRowForMeta(tableName, QueryType.REGION);
+    byte[] stopRow = getTableStopRowForMeta(tableName, QueryType.REGION);
+    if (tableName.equals(TableName.META_TABLE_NAME)) {
+      parentTable = TableName.ROOT_TABLE_NAME;
+      startRow = null;
+      stopRow = null;
+    }
+
+    scanCatalog(connection,
+      parentTable,
+      startRow,
+      stopRow,
+      QueryType.REGION,
+      Integer.MAX_VALUE,
+      visitor);
     return visitor.getResults();
   }
 
@@ -1629,7 +1641,10 @@ public class CatalogAccessor {
       if (!replicationParents.isEmpty()) {
         addReplicationParent(putOfMerged, replicationParents);
       }
-      byte[] tableRow = Bytes.toBytes(mergedRegion.getRegionNameAsString() + HConstants.DELIMITER);
+      //TODO francis do we really need a copy?
+      byte[] tableRow = new byte[mergedRegion.getRegionName().length];
+      System.arraycopy(mergedRegion.getRegionName(), 0,
+        tableRow, 0, mergedRegion.getRegionName().length);
       multiMutate(meta, tableRow, mutations);
     }
   }
@@ -1683,7 +1698,8 @@ public class CatalogAccessor {
         addEmptyLocation(putB, i);
       }
 
-      byte[] tableRow = Bytes.toBytes(parent.getRegionNameAsString() + HConstants.DELIMITER);
+      byte[] tableRow = new byte[parent.getRegionName().length];
+      System.arraycopy(parent.getRegionName(), 0, tableRow, 0, parent.getRegionName().length);
       multiMutate(meta, tableRow, putParent, putA, putB);
     }
   }

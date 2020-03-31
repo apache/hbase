@@ -108,7 +108,6 @@ public class TestCatalogAccessor {
     c.setLong("hbase.client.pause", 1000);
     c.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 10);
     connection = ConnectionFactory.createConnection(c);
-    LOG.info("-->FS dump");
     CommonFSUtils.logFileSystemState(UTIL.getTestFileSystem(), UTIL.getDefaultRootDirPath(), LOG);
   }
 
@@ -1022,9 +1021,6 @@ public class TestCatalogAccessor {
     conn.getAdmin().createTable(desc);
     Table table = conn.getTable(tableName);
     table.put(new Put(new byte[]{'r'}).addColumn(familyName, new byte[]{'q'}, new byte[]{'v'}));
-    for (Result res : table.getScanner(new Scan())) {
-      System.out.println("-->"+res);
-    }
   }
 }
 

@@ -1700,8 +1700,8 @@ public class MasterRpcServices extends RSRpcServices implements
       }
       Pair<RegionInfo, ServerName> pair =
         CatalogAccessor.getRegion(master.getConnection(), regionName);
-      if (Bytes.equals(RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName(), regionName)) {
-        pair = new Pair<>(RegionInfoBuilder.FIRST_META_REGIONINFO,
+      if (Bytes.equals(RegionInfoBuilder.ROOT_REGIONINFO.getRegionName(), regionName)) {
+        pair = new Pair<>(RegionInfoBuilder.ROOT_REGIONINFO,
           RootTableLocator.getRootRegionLocation(master.getZooKeeper()));
       }
       if (pair == null) {

@@ -1690,14 +1690,6 @@ public class KeyValue implements ExtendedCell, Cloneable {
    */
   @Deprecated
   public static class MetaComparator extends KVComparator {
-    /**
-     * Compare key portion of a {@link KeyValue} for keys in <code>hbase:meta</code>
-     * table.
-     */
-    @Override
-    public int compare(final Cell left, final Cell right) {
-      return PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.META_COMPARATOR, left, right);
-    }
 
     @Override
     public int compareOnlyKeyPortion(Cell left, Cell right) {
