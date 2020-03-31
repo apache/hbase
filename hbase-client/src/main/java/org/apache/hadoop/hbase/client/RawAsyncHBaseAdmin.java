@@ -3952,32 +3952,27 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<List<SlowLogRecord>> getSlowLogResponses(
-    @Nullable final Set<ServerName> serverNames,
+      @Nullable final Set<ServerName> serverNames,
     final SlowLogQueryFilter slowLogQueryFilter) {
     if (CollectionUtils.isEmpty(serverNames)) {
       return CompletableFuture.completedFuture(Collections.emptyList());
     }
-    return CompletableFuture.supplyAsync(() -> serverNames.stream()
-      .map((ServerName serverName) ->
-        getSlowLogResponseFromServer(serverName, slowLogQueryFilter))
-      .map(CompletableFuture::join)
-      .flatMap(List::stream)
-      .collect(Collectors.toList()));
-  }
-
-  @Override
-  public CompletableFuture<List<SlowLogRecord>> getLargeLogResponses(
-      @Nullable final Set<ServerName> serverNames,
-      final SlowLogQueryFilter largeLogQueryFilter) {
-    if (CollectionUtils.isEmpty(serverNames)) {
-      return CompletableFuture.completedFuture(Collections.emptyList());
+    if (slowLogQueryFilter.getType() == null
+        || slowLogQueryFilter.getType() == SlowLogQueryFilter.Type.SLOW_LOG) {
+      return CompletableFuture.supplyAsync(() -> serverNames.stream()
+        .map((ServerName serverName) ->
+          getSlowLogResponseFromServer(serverName, slowLogQueryFilter))
+        .map(CompletableFuture::join)
+        .flatMap(List::stream)
+        .collect(Collectors.toList()));
+    } else {
+      return CompletableFuture.supplyAsync(() -> serverNames.stream()
+        .map((ServerName serverName) ->
+          getLargeLogResponseFromServer(serverName, slowLogQueryFilter))
+        .map(CompletableFuture::join)
+        .flatMap(List::stream)
+        .collect(Collectors.toList()));
     }
-    return CompletableFuture.supplyAsync(() -> serverNames.stream()
-      .map((ServerName serverName) ->
-        getLargeLogResponseFromServer(serverName, largeLogQueryFilter))
-      .map(CompletableFuture::join)
-      .flatMap(List::stream)
-      .collect(Collectors.toList()));
   }
 
   private CompletableFuture<List<SlowLogRecord>> getSlowLogResponseFromServer(

@@ -1482,6 +1482,7 @@ module Hbase
         server_names = getServerNames(server_names_list, false)
       end
       filter_params = get_filter_params(args)
+      filter_params.setType(org.apache.hadoop.hbase.client.SlowLogQueryFilter::Type::SLOW_LOG)
       slow_log_responses = @admin.getSlowLogResponses(java.util.HashSet.new(server_names),
                                                       filter_params)
       slow_log_responses_arr = []
@@ -1531,7 +1532,8 @@ module Hbase
         server_names = getServerNames(server_names_list, false)
       end
       filter_params = get_filter_params(args)
-      large_log_responses = @admin.getLargeLogResponses(java.util.HashSet.new(server_names),
+      filter_params.setType(org.apache.hadoop.hbase.client.SlowLogQueryFilter::Type::LARGE_LOG)
+      large_log_responses = @admin.getSlowLogResponses(java.util.HashSet.new(server_names),
                                                         filter_params)
       large_log_responses_arr = []
       for large_log_response in large_log_responses

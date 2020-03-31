@@ -35,6 +35,12 @@ public class SlowLogQueryFilter {
   private String tableName;
   private String userName;
   private int limit = 10;
+  private Type type = Type.SLOW_LOG;
+
+  public enum Type {
+    SLOW_LOG,
+    LARGE_LOG
+  }
 
   public String getRegionName() {
     return regionName;
@@ -76,6 +82,14 @@ public class SlowLogQueryFilter {
     this.limit = limit;
   }
 
+  public Type getType() {
+    return type;
+  }
+
+  public void setType(Type type) {
+    this.type = type;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -94,6 +108,7 @@ public class SlowLogQueryFilter {
       .append(clientAddress, that.clientAddress)
       .append(tableName, that.tableName)
       .append(userName, that.userName)
+      .append(type, that.type)
       .isEquals();
   }
 
@@ -105,6 +120,7 @@ public class SlowLogQueryFilter {
       .append(tableName)
       .append(userName)
       .append(limit)
+      .append(type)
       .toHashCode();
   }
 
@@ -116,7 +132,7 @@ public class SlowLogQueryFilter {
       .append("tableName", tableName)
       .append("userName", userName)
       .append("limit", limit)
+      .append("type", type)
       .toString();
   }
-
 }

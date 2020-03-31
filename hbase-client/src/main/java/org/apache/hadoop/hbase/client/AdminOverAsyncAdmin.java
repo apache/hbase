@@ -971,12 +971,6 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
-  public List<SlowLogRecord> getLargeLogResponses(Set<ServerName> serverNames,
-      SlowLogQueryFilter largeLogQueryFilter) throws IOException {
-    return get(admin.getLargeLogResponses(serverNames, largeLogQueryFilter));
-  }
-
-  @Override
   public List<Boolean> clearSlowLogResponses(final Set<ServerName> serverNames)
       throws IOException {
     return get(admin.clearSlowLogResponses(serverNames));
