@@ -287,8 +287,6 @@ message SlowLogResponseRequest {
   optional string client_address = 3;
   optional string user_name = 4;
   optional uint32 limit = 5 [default = 10];
-  optional bool is_slow_log = 6 [default = false];
-  optional bool is_large_log = 7 [default = false];
 }
 
 message SlowLogResponses {
