@@ -16,31 +16,8 @@
  * limitations under the License.
  */
 syntax = "proto2";
+package org.apache.hadoop.hbase.example.protobuf.generated;
 
-// This file contains protocol buffers that are written into the filesystem
-package hbase.pb;
-
-option java_package = "org.apache.hadoop.hbase.protobuf.generated";
-option java_outer_classname = "FSProtos";
-option java_generate_equals_and_hash = true;
-option optimize_for = SPEED;
-
-/**
- * The ${HBASE_ROOTDIR}/hbase.version file content
- */
-message HBaseVersionFileContent {
-  required string version = 1;
+message Cell {
+  optional bytes row = 1;
 }
-
-/**
- * Reference file content used when we split an hfile under a region.
- */
-message Reference {
-  required bytes splitkey = 1;
-  enum Range {
-    TOP = 0;
-    BOTTOM = 1;
-  }
-  required Range range = 2;
-}
-

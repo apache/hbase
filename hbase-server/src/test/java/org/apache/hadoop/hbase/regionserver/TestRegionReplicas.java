@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,10 +16,8 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.regionserver;
-
 import static org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster.closeRegion;
 import static org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster.openRegion;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.Random;
@@ -33,7 +31,6 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TestMetaTableAccessor;
 import org.apache.hadoop.hbase.client.Consistency;
@@ -59,7 +56,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
@@ -149,7 +146,9 @@ public class TestRegionReplicas {
       TestMetaTableAccessor.assertMetaLocation(meta, hriPrimary.getRegionName()
         , getRS().getServerName(), -1, 1, false);
     } finally {
-      if (meta != null ) meta.close();
+      if (meta != null) {
+        meta.close();
+      }
       closeRegion(HTU, getRS(), hriSecondary);
     }
   }
@@ -319,7 +318,8 @@ public class TestRegionReplicas {
     // enable store file refreshing
     final int refreshPeriod = 100; // 100ms refresh is a lot
     HTU.getConfiguration().setInt("hbase.hstore.compactionThreshold", 3);
-    HTU.getConfiguration().setInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, refreshPeriod);
+    HTU.getConfiguration().setInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD,
+      refreshPeriod);
     // restart the region server so that it starts the refresher chore
     restartRegionServer();
     final int startKey = 0, endKey = 1000;
@@ -351,7 +351,9 @@ public class TestRegionReplicas {
               put.addColumn(f, null, data);
               table.put(put);
               key++;
-              if (key == endKey) key = startKey;
+              if (key == endKey) {
+                key = startKey;
+              }
             }
           } catch (Exception ex) {
             LOG.warn(ex.toString(), ex);
@@ -391,13 +393,15 @@ public class TestRegionReplicas {
                 try {
                   closeRegion(HTU, getRS(), hriSecondary);
                 } catch (Exception ex) {
-                  LOG.warn("Failed closing the region " + hriSecondary + " "  + StringUtils.stringifyException(ex));
+                  LOG.warn("Failed closing the region " + hriSecondary + " "  +
+                    StringUtils.stringifyException(ex));
                   exceptions[2].compareAndSet(null, ex);
                 }
                 try {
                   openRegion(HTU, getRS(), hriSecondary);
                 } catch (Exception ex) {
-                  LOG.warn("Failed opening the region " + hriSecondary + " "  + StringUtils.stringifyException(ex));
+                  LOG.warn("Failed opening the region " + hriSecondary + " "  +
+                    StringUtils.stringifyException(ex));
                   exceptions[2].compareAndSet(null, ex);
                 }
               }
@@ -406,13 +410,14 @@ public class TestRegionReplicas {
               assertGetRpc(hriSecondary, key, true);
             }
           } catch (Exception ex) {
-            LOG.warn("Failed getting the value in the region " + hriSecondary + " "  + StringUtils.stringifyException(ex));
+            LOG.warn("Failed getting the value in the region " + hriSecondary + " "  +
+              StringUtils.stringifyException(ex));
             exceptions[2].compareAndSet(null, ex);
           }
         }
       };
 
-      LOG.info("Starting writer and reader");
+      LOG.info("Starting writer and reader, secondary={}", hriSecondary.getEncodedName());
       ExecutorService executor = Executors.newFixedThreadPool(3);
       executor.submit(writer);
       executor.submit(flusherCompactor);
@@ -431,7 +436,7 @@ public class TestRegionReplicas {
       HTU.deleteNumericRows(table, HConstants.CATALOG_FAMILY, startKey, endKey);
       try {
         closeRegion(HTU, getRS(), hriSecondary);
-      } catch (NotServingRegionException e) {
+      } catch (ServiceException e) {
         LOG.info("Closing wrong region {}", hriSecondary, e);
       }
     }

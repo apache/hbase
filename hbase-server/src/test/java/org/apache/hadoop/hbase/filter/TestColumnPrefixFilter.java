@@ -114,7 +114,7 @@ public class TestColumnPrefixFilter {
 
       ColumnPrefixFilter filter;
       Scan scan = new Scan();
-      scan.setMaxVersions();
+      scan.readAllVersions();
       for (String s: prefixMap.keySet()) {
         filter = new ColumnPrefixFilter(Bytes.toBytes(s));
 
@@ -183,7 +183,7 @@ public class TestColumnPrefixFilter {
 
       ColumnPrefixFilter filter;
       Scan scan = new Scan();
-      scan.setMaxVersions();
+      scan.readAllVersions();
       for (String s: prefixMap.keySet()) {
         filter = new ColumnPrefixFilter(Bytes.toBytes(s));
 

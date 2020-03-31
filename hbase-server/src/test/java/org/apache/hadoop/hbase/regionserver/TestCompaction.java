@@ -335,7 +335,8 @@ public class TestCompaction {
     }
 
     HRegion mockRegion = Mockito.spy(r);
-    Mockito.when(mockRegion.checkSplit()).thenThrow(new IndexOutOfBoundsException());
+    Mockito.when(mockRegion.checkSplit()).
+      thenThrow(new RuntimeException("Thrown intentionally by test!"));
 
     MetricsRegionWrapper metricsWrapper = new MetricsRegionWrapperImpl(r);
 

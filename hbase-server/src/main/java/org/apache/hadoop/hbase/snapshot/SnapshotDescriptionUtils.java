@@ -358,12 +358,11 @@ public final class SnapshotDescriptionUtils {
   }
 
   /**
-   * Read in the {@link org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription} stored for the snapshot in the passed directory
+   * Read in the {@link SnapshotDescription} stored for the snapshot in the passed directory
    * @param fs filesystem where the snapshot was taken
    * @param snapshotDir directory where the snapshot was stored
    * @return the stored snapshot description
-   * @throws CorruptedSnapshotException if the
-   * snapshot cannot be read
+   * @throws CorruptedSnapshotException if the snapshot cannot be read
    */
   public static SnapshotDescription readSnapshotInfo(FileSystem fs, Path snapshotDir)
       throws CorruptedSnapshotException {
