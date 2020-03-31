@@ -465,6 +465,12 @@ struct TSlowLogQueryFilter {
   3: optional string tableName
   4: optional string userName
   5: optional i32 limit = 10
+  6: optional TLogType logType
+}
+
+enum TLogType {
+  SLOW_LOG = 1,
+  LARGE_LOG = 2
 }
 
 /**

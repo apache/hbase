@@ -94,6 +94,7 @@ import org.apache.hadoop.hbase.thrift2.generated.THRegionInfo;
 import org.apache.hadoop.hbase.thrift2.generated.THRegionLocation;
 import org.apache.hadoop.hbase.thrift2.generated.TIncrement;
 import org.apache.hadoop.hbase.thrift2.generated.TKeepDeletedCells;
+import org.apache.hadoop.hbase.thrift2.generated.TLogType;
 import org.apache.hadoop.hbase.thrift2.generated.TMutation;
 import org.apache.hadoop.hbase.thrift2.generated.TNamespaceDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TPut;
@@ -1512,7 +1513,27 @@ public final class ThriftUtilities {
     tSlowLogQueryFilter.setTableName(slowLogQueryFilter.getTableName());
     tSlowLogQueryFilter.setUserName(slowLogQueryFilter.getUserName());
     tSlowLogQueryFilter.setLimit(slowLogQueryFilter.getLimit());
+    TLogType tLogType = gettLogTypeFromHBase(slowLogQueryFilter);
+    tSlowLogQueryFilter.setLogType(tLogType);
     return tSlowLogQueryFilter;
+  }
+
+  private static TLogType gettLogTypeFromHBase(final SlowLogQueryFilter slowLogQueryFilter) {
+    TLogType tLogType;
+    switch (slowLogQueryFilter.getType()) {
+      case SLOW_LOG: {
+        tLogType = TLogType.SLOW_LOG;
+        break;
+      }
+      case LARGE_LOG: {
+        tLogType = TLogType.LARGE_LOG;
+        break;
+      }
+      default: {
+        tLogType = TLogType.SLOW_LOG;
+      }
+    }
+    return tLogType;
   }
 
   public static SlowLogQueryFilter getSlowLogQueryFromThrift(
@@ -1523,7 +1544,28 @@ public final class ThriftUtilities {
     slowLogQueryFilter.setTableName(tSlowLogQueryFilter.getTableName());
     slowLogQueryFilter.setUserName(tSlowLogQueryFilter.getUserName());
     slowLogQueryFilter.setLimit(tSlowLogQueryFilter.getLimit());
+    SlowLogQueryFilter.Type type = getLogTypeFromThrift(tSlowLogQueryFilter);
+    slowLogQueryFilter.setType(type);
     return slowLogQueryFilter;
+  }
+
+  private static SlowLogQueryFilter.Type getLogTypeFromThrift(
+      final TSlowLogQueryFilter tSlowLogQueryFilter) {
+    SlowLogQueryFilter.Type type;
+    switch (tSlowLogQueryFilter.getLogType()) {
+      case SLOW_LOG: {
+        type = SlowLogQueryFilter.Type.SLOW_LOG;
+        break;
+      }
+      case LARGE_LOG: {
+        type = SlowLogQueryFilter.Type.LARGE_LOG;
+        break;
+      }
+      default: {
+        type = SlowLogQueryFilter.Type.SLOW_LOG;
+      }
+    }
+    return type;
   }
 
   public static List<TSlowLogRecord> getSlowLogRecordsFromHBase(
