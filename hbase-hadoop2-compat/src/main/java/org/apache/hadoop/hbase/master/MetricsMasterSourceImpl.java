@@ -82,7 +82,9 @@ public class MetricsMasterSourceImpl
     MetricsRecordBuilder metricsRecordBuilder = metricsCollector.addRecord(metricsName);
 
     // masterWrapper can be null because this function is called inside of init.
-    if (masterWrapper != null) {
+    // If the master is already stopped or has initiated a shutdown, no point in registering the
+    // metrics again.
+    if (masterWrapper != null && masterWrapper.isRunning()) {
       metricsRecordBuilder
           .addGauge(Interns.info(MERGE_PLAN_COUNT_NAME, MERGE_PLAN_COUNT_DESC),
               masterWrapper.getMergePlanCount())
