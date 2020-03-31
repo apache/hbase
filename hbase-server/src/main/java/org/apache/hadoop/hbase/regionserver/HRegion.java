@@ -179,7 +179,6 @@ import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.hadoop.hbase.wal.WALSplitUtil.MutationReplay;
-import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -6319,8 +6318,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @throws IOException if failed unrecoverably.
    */
   public Map<byte[], List<Path>> bulkLoadHFiles(Collection<Pair<byte[], String>> familyPaths,
-      boolean assignSeqId, BulkLoadListener bulkLoadListener,
-        boolean copyFile, List<String> clusterIds, boolean replicate) throws IOException {
+      boolean assignSeqId, BulkLoadListener bulkLoadListener, boolean copyFile,
+      List<String> clusterIds, boolean replicate) throws IOException {
     long seqId = -1;
     Map<byte[], List<Path>> storeFiles = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     Map<String, Long> storeFilesSizes = new HashMap<>();
@@ -6332,9 +6331,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       this.writeRequestsCount.increment();
 
       // There possibly was a split that happened between when the split keys
-      // were gathered and before the HRegion's write lock was taken.  We need
+      // were gathered and before the HRegion's write lock was taken. We need
       // to validate the HFile region before attempting to bulk load all of them
-      List<IOException> ioes = new ArrayList<>();
+      IOException ioException = null;
       List<Pair<byte[], String>> failures = new ArrayList<>();
       for (Pair<byte[], String> p : familyPaths) {
         byte[] familyName = p.getFirst();
@@ -6342,9 +6341,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
         HStore store = getStore(familyName);
         if (store == null) {
-          IOException ioe = new org.apache.hadoop.hbase.DoNotRetryIOException(
+          ioException = new org.apache.hadoop.hbase.DoNotRetryIOException(
               "No such column family " + Bytes.toStringBinary(familyName));
-          ioes.add(ioe);
         } else {
           try {
             store.assertBulkLoadHFileOk(new Path(path));
@@ -6353,18 +6351,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             failures.add(p);
           } catch (IOException ioe) {
             // unrecoverable (hdfs problem)
-            ioes.add(ioe);
+            ioException = ioe;
           }
         }
-      }
 
-      // validation failed because of some sort of IO problem.
-      if (ioes.size() != 0) {
-        IOException e = MultipleIOException.createIOException(ioes);
-        LOG.error("There were one or more IO errors when checking if the bulk load is ok.", e);
-        throw e;
+        // validation failed because of some sort of IO problem.
+        if (ioException != null) {
+          LOG.error("There was IO error when checking if the bulk load is ok.", ioException);
+          throw ioException;
+        }
       }
-
       // validation failed, bail out before doing anything permanent.
       if (failures.size() != 0) {
         StringBuilder list = new StringBuilder();
