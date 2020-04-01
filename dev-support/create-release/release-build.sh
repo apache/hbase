@@ -169,35 +169,39 @@ if [[ "$1" == "build" ]]; then
   make_binary_release "${PROJECT}" "${VERSION}"
   echo "`date -u +'%Y-%m-%dT%H:%M:%SZ'` Done building binary distribution"
 
+  if [[ "$PROJECT" =~ ^hbase- ]]; then
+    DEST_DIR_NAME="${PROJECT}-${PACKAGE_VERSION}"
+  else
+    DEST_DIR_NAME="$PACKAGE_VERSION"
+  fi
+  svn_target="svn-${PROJECT}"
+  svn co --depth=empty "$RELEASE_STAGING_LOCATION" "$svn_target"
+  rm -rf "$svn_target/${DEST_DIR_NAME}"
+  mkdir -p "$svn_target/${DEST_DIR_NAME}"
+
+  echo "Copying release tarballs"
+  cp ${PROJECT}-*.tar.* "$svn_target/${DEST_DIR_NAME}/"
+  cp ${PROJECT}/CHANGES.md "$svn_target/${DEST_DIR_NAME}/"
+  cp ${PROJECT}/RELEASENOTES.md "$svn_target/${DEST_DIR_NAME}/"
+  shopt -s nocasematch
+  # Generate api report only if project is hbase for now.
+  if [ "${PROJECT}" == "hbase" ]; then
+    # This script usually reports an errcode along w/ the report.
+    generate_api_report ./${PROJECT} "${API_DIFF_TAG}" "${PACKAGE_VERSION}" || true
+    cp api*.html "$svn_target/${DEST_DIR_NAME}/"
+  fi
+  shopt -u nocasematch
+
+  svn add "$svn_target/${DEST_DIR_NAME}"
+
   if ! is_dry_run; then
-    if [[ "$PROJECT" =~ ^hbase- ]]; then
-      DEST_DIR_NAME="${PROJECT}-${PACKAGE_VERSION}"
-    else
-      DEST_DIR_NAME="$PACKAGE_VERSION"
-    fi
-    svn_target="svn-${PROJECT}"
-    svn co --depth=empty "$RELEASE_STAGING_LOCATION" "$svn_target"
-    rm -rf "$svn_target/${DEST_DIR_NAME}"
-    mkdir -p "$svn_target/${DEST_DIR_NAME}"
-
-    echo "Copying release tarballs"
-    cp ${PROJECT}-*.tar.* "$svn_target/${DEST_DIR_NAME}/"
-    cp ${PROJECT}/CHANGES.md "$svn_target/${DEST_DIR_NAME}/"
-    cp ${PROJECT}/RELEASENOTES.md "$svn_target/${DEST_DIR_NAME}/"
-    shopt -s nocasematch
-    # Generate api report only if project is hbase for now.
-    if [ "${PROJECT}" == "hbase" ]; then
-      # This script usually reports an errcode along w/ the report.
-      generate_api_report ./${PROJECT} "${API_DIFF_TAG}" "${PACKAGE_VERSION}" || true
-      cp api*.html "$svn_target/${DEST_DIR_NAME}/"
-    fi
-    shopt -u nocasematch
-
-    svn add "$svn_target/${DEST_DIR_NAME}"
-
     cd "$svn_target"
     svn ci --username $ASF_USERNAME --password "$ASF_PASSWORD" -m"Apache ${PROJECT} $PACKAGE_VERSION" --no-auth-cache
     cd ..
+    rm -rf "$svn_target"
+  else
+    mv "$svn_target/${DEST_DIR_NAME}" "${svn_target}_${DEST_DIR_NAME}.dist"
+    echo "svn-managed 'dist' directory with release tarballs, CHANGES.md and RELEASENOTES.md available as $(pwd)/${svn_target}_${DEST_DIR_NAME}.dist"
     rm -rf "$svn_target"
   fi
 
