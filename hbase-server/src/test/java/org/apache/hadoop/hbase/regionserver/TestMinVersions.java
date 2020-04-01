@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.COLUMNS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
@@ -528,80 +530,145 @@ public class TestMinVersions {
     int ttl = 4;
     ColumnFamilyDescriptor cfd =
       ColumnFamilyDescriptorBuilder.newBuilder(c0)
-        .setMinVersions(2).setMaxVersions(Integer.MAX_VALUE).setTimeToLive(ttl).
-        setKeepDeletedCells(KeepDeletedCells.TTL).build();
+        .setVersionsWithTimeToLive(ttl, 2).build();
+    verifyVersionedCellKeyValues(ttl, cfd);
 
+    cfd = ColumnFamilyDescriptorBuilder.newBuilder(c0)
+      .setMinVersions(2)
+      .setMaxVersions(Integer.MAX_VALUE)
+      .setTimeToLive(ttl)
+      .setKeepDeletedCells(KeepDeletedCells.TTL)
+      .build();
+    verifyVersionedCellKeyValues(ttl, cfd);
+  }
+
+  private void verifyVersionedCellKeyValues(int ttl, ColumnFamilyDescriptor cfd)
+      throws IOException {
     TableDescriptor htd = TableDescriptorBuilder.
       newBuilder(TableName.valueOf(name.getMethodName())).setColumnFamily(cfd).build();
 
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
-    long startTS = EnvironmentEdgeManager.currentTime();
-    ManualEnvironmentEdge injectEdge = new ManualEnvironmentEdge();
-    injectEdge.setValue(startTS);
-    EnvironmentEdgeManager.injectEdge(injectEdge);
+    try {
+      long startTS = EnvironmentEdgeManager.currentTime();
+      ManualEnvironmentEdge injectEdge = new ManualEnvironmentEdge();
+      injectEdge.setValue(startTS);
+      EnvironmentEdgeManager.injectEdge(injectEdge);
 
-    long ts = startTS - 2000;
+      long ts = startTS - 2000;
+      putFourVersions(region, ts);
+
+      Get get;
+      Result result;
+
+      //check we can still see all versions before compaction
+      get = new Get(T1);
+      get.readAllVersions();
+      get.setTimeRange(0, ts);
+      result = region.get(get);
+      checkResult(result, c0, T4, T3, T2, T1);
+
+      region.flush(true);
+      region.compact(true);
+      Assert.assertEquals(startTS, EnvironmentEdgeManager.currentTime());
+      long expiredTime = EnvironmentEdgeManager.currentTime() - ts - 4;
+      Assert.assertTrue("TTL for T1 has expired", expiredTime < (ttl * 1000));
+      //check that nothing was purged yet
+      verifyBeforeCompaction(region, ts);
+
+      injectEdge.incValue(ttl * 1000);
+
+      region.flush(true);
+      region.compact(true);
+      verifyAfterTtl(region, ts);
+    } finally {
+      HBaseTestingUtility.closeRegionAndWAL(region);
+    }
+  }
+
+  private void verifyAfterTtl(HRegion region, long ts) throws IOException {
+    Get get;
+    Result result;
+    //check that after compaction (which is after TTL) that only T1 && T2 were purged
+    get = new Get(T1);
+    get.readAllVersions();
+    get.setTimeRange(0, ts);
+    result = region.get(get);
+    checkResult(result, c0, T4, T3);
+
+    get = new Get(T1);
+    get.readAllVersions();
+    get.setTimeRange(0, ts - 1);
+    result = region.get(get);
+    checkResult(result, c0, T3);
+
+    get = new Get(T1);
+    get.readAllVersions();
+    get.setTimestamp(ts - 2);
+    result = region.get(get);
+    checkResult(result, c0, T3);
+
+    get = new Get(T1);
+    get.readAllVersions();
+    get.setTimestamp(ts - 3);
+    result = region.get(get);
+    Assert.assertEquals(result.getColumnCells(c0, c0).size(), 0);
+
+    get = new Get(T1);
+    get.readAllVersions();
+    get.setTimeRange(0, ts - 2);
+    result = region.get(get);
+    Assert.assertEquals(result.getColumnCells(c0, c0).size(), 0);
+  }
+
+  private void verifyBeforeCompaction(HRegion region, long ts) throws IOException {
+    Get get;
+    Result result;
+    get = new Get(T1);
+    get.readAllVersions();
+    get.setTimeRange(0, ts);
+    result = region.get(get);
+    checkResult(result, c0, T4, T3, T2, T1);
+
+    get = new Get(T1);
+    get.readAllVersions();
+    get.setTimeRange(0, ts - 1);
+    result = region.get(get);
+    checkResult(result, c0, T3, T2, T1);
+
+    get = new Get(T1);
+    get.readAllVersions();
+    get.setTimeRange(0, ts - 2);
+    result = region.get(get);
+    checkResult(result, c0, T2, T1);
+
+    get = new Get(T1);
+    get.readAllVersions();
+    get.setTimeRange(0, ts - 3);
+    result = region.get(get);
+    checkResult(result, c0, T1);
+  }
+
+  private void putFourVersions(HRegion region, long ts) throws IOException {
     // 1st version
-    Put p = new Put(T1, ts-3);
-    p.addColumn(c0, c0, T1);
-    region.put(p);
+    Put put = new Put(T1, ts - 4);
+    put.addColumn(c0, c0, T1);
+    region.put(put);
 
     // 2nd version
-    p = new Put(T1, ts-2);
-    p.addColumn(c0, c0, T2);
-    region.put(p);
+    put = new Put(T1, ts - 3);
+    put.addColumn(c0, c0, T2);
+    region.put(put);
 
     // 3rd version
-    p = new Put(T1, ts-1);
-    p.addColumn(c0, c0, T3);
-    region.put(p);
+    put = new Put(T1, ts - 2);
+    put.addColumn(c0, c0, T3);
+    region.put(put);
 
-    Get g;
-    Result r;
-
-    //check we can still see all versions before compaction
-    g = new Get(T1);
-    g.readAllVersions();
-    g.setTimeRange(0, ts);
-    r = region.get(g);
-    checkResult(r, c0, T3, T2, T1);
-
-    region.flush(true);
-    region.compact(true);
-    Assert.assertEquals(startTS, EnvironmentEdgeManager.currentTime());
-    long expiredTime = EnvironmentEdgeManager.currentTime() - ts - 3;
-    Assert.assertTrue("TTL for T1 has expired", expiredTime < (ttl * 1000));
-    //check that nothing was purged yet
-    g = new Get(T1);
-    g.readAllVersions();
-    g.setTimeRange(0, ts);
-    r = region.get(g);
-    checkResult(r, c0, T3, T2, T1);
-
-    g = new Get(T1);
-    g.readAllVersions();
-    g.setTimeRange(0, ts -1);
-    r = region.get(g);
-    checkResult(r, c0, T2, T1);
-
-    injectEdge.incValue(ttl * 1000);
-
-    region.flush(true);
-    region.compact(true);
-
-    //check that after compaction (which is after TTL) that only T1 was purged
-    g = new Get(T1);
-    g.readAllVersions();
-    g.setTimeRange(0, ts);
-    r = region.get(g);
-    checkResult(r, c0, T3, T2);
-
-    g = new Get(T1);
-    g.readAllVersions();
-    g.setTimestamp(ts -2);
-    r = region.get(g);
-    checkResult(r, c0, T2);
+    // 4th version
+    put = new Put(T1, ts - 1);
+    put.addColumn(c0, c0, T4);
+    region.put(put);
   }
 
   private void checkResult(Result r, byte[] col, byte[] ... vals) {
