@@ -178,7 +178,7 @@ RUN mkdir -p /usr/lib/jvm && \
 # TODO (nd): is this really true? investigate and file a ticket.
 ENV SPOTBUGS_HOME '/opt/spotbugs'
 ENV MAVEN_HOME '/opt/maven'
-ENV MAVEN_OPTS '-Xms4G -Xmx4G'
+ENV MAVEN_OPTS '-Xmx4G'
 
 CMD ["/bin/bash"]
 
