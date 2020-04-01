@@ -19,6 +19,9 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.HBaseTestingUtility.COLUMNS;
+import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
+import static org.apache.hadoop.hbase.HBaseTestingUtility.fam2;
+import static org.apache.hadoop.hbase.HBaseTestingUtility.fam3;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -28,8 +31,10 @@ import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeepDeletedCells;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -470,8 +475,11 @@ public class TestMinVersions {
   @Test
   public void testMinVersionsWithKeepDeletedCellsTTL() throws Exception {
     int ttl = 4;
-    HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(),
-      2, Integer.MAX_VALUE, ttl, KeepDeletedCells.TTL);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
+    for (byte[] cfName : new byte[][]{fam1, fam2, fam3}) {
+      htd.addFamily(new HColumnDescriptor(cfName)
+        .setVersionsWithTimeToLive(ttl, 2));
+    }
 
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 

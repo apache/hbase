@@ -922,6 +922,23 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   }
 
   /**
+   * Retain all versions for a given TTL(retentionInterval), and then only a specific number
+   * of versions(versionAfterInterval) after that interval elapses.
+   *
+   * @param retentionInterval Retain all versions for this interval
+   * @param versionAfterInterval Retain no of versions to retain after retentionInterval
+   * @return this (for chained invocation)
+   */
+  public HColumnDescriptor setVersionsWithTimeToLive(final int retentionInterval,
+      final int versionAfterInterval) {
+    HColumnDescriptor hColumnDescriptor =
+      setVersions(versionAfterInterval, Integer.MAX_VALUE);
+    hColumnDescriptor.setTimeToLive(retentionInterval);
+    hColumnDescriptor.setKeepDeletedCells(KeepDeletedCells.TTL);
+    return hColumnDescriptor;
+  }
+
+  /**
    * @return True if hfile DATA type blocks should be cached (You cannot disable caching of INDEX
    * and BLOOM type blocks).
    */
