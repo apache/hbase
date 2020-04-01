@@ -339,6 +339,7 @@ Shell.load_command_group(
     compaction_switch
     flush
     get_slowlog_responses
+    get_largelog_responses
     major_compact
     move
     split

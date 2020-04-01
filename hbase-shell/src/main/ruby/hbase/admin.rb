@@ -1447,6 +1447,7 @@ module Hbase
         server_names = getServerNames(server_names_list, false)
       end
       filter_params = get_filter_params(args)
+      filter_params.setType(org.apache.hadoop.hbase.client.LogQueryFilter::Type::SLOW_LOG)
       slow_log_responses = @admin.getSlowLogResponses(java.util.HashSet.new(server_names),
                                                       filter_params)
       slow_log_responses_arr = []
@@ -1458,7 +1459,7 @@ module Hbase
     end
 
     def get_filter_params(args)
-      filter_params = org.apache.hadoop.hbase.client.SlowLogQueryFilter.new
+      filter_params = org.apache.hadoop.hbase.client.LogQueryFilter.new
       if args.key? 'REGION_NAME'
         region_name = args['REGION_NAME']
         filter_params.setRegionName(region_name)
@@ -1480,6 +1481,31 @@ module Hbase
         filter_params.setLimit(limit)
       end
       filter_params
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Retrieve LargeLog Responses from RegionServers
+    def get_largelog_responses(server_names, args)
+      unless server_names.is_a?(Array) || server_names.is_a?(String)
+        raise(ArgumentError,
+              "#{server_names.class} of #{server_names.inspect} is not of Array/String type")
+      end
+      if server_names == '*'
+        server_names = getServerNames([], true)
+      else
+        server_names_list = to_server_names(server_names)
+        server_names = getServerNames(server_names_list, false)
+      end
+      filter_params = get_filter_params(args)
+      filter_params.setType(org.apache.hadoop.hbase.client.LogQueryFilter::Type::LARGE_LOG)
+      large_log_responses = @admin.getSlowLogResponses(java.util.HashSet.new(server_names),
+                                                       filter_params)
+      large_log_responses_arr = []
+      for large_log_response in large_log_responses
+        large_log_responses_arr << large_log_response.toJsonPrettyPrint
+      end
+      puts 'Retrieved LargeLog Responses from RegionServers'
+      puts large_log_responses_arr
     end
 
     #----------------------------------------------------------------------------------------------
