@@ -1591,10 +1591,10 @@
     <!-- Fork count varies w/ CPU count. Setting is conservative. Up this
       value is you want to burn through tests faster (could make for more failures
       if more contention around resources). There is a matching MAVEN_ARG
-      in our yetus personality where we set the maven -T command to 0.5C too.
+      in our yetus personality where we set the maven -T command to 0.25C too.
     -->
-    <surefire.firstPartForkCount>0.5C</surefire.firstPartForkCount>
-    <surefire.secondPartForkCount>0.5C</surefire.secondPartForkCount>
+    <surefire.firstPartForkCount>0.25C</surefire.firstPartForkCount>
+    <surefire.secondPartForkCount>0.25C</surefire.secondPartForkCount>
     <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.SmallTests</surefire.firstPartGroups>
     <surefire.secondPartGroups>org.apache.hadoop.hbase.testclassification.MediumTests</surefire.secondPartGroups>
     <surefire.testFailureIgnore>false</surefire.testFailureIgnore>
