@@ -94,5 +94,4 @@ public class TestThrift2ServerCmdLine extends TestThriftServerCmdLine {
       sock.close();
     }
   }
-
 }
