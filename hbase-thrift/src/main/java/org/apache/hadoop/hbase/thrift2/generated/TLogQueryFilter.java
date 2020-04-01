@@ -30,6 +30,10 @@ public class TLogQueryFilter implements org.apache.thrift.TBase<TLogQueryFilter,
   public @org.apache.thrift.annotation.Nullable java.lang.String tableName; // optional
   public @org.apache.thrift.annotation.Nullable java.lang.String userName; // optional
   public int limit; // optional
+  /**
+   * 
+   * @see TLogType
+   */
   public @org.apache.thrift.annotation.Nullable TLogType logType; // optional
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
@@ -39,6 +43,10 @@ public class TLogQueryFilter implements org.apache.thrift.TBase<TLogQueryFilter,
     TABLE_NAME((short)3, "tableName"),
     USER_NAME((short)4, "userName"),
     LIMIT((short)5, "limit"),
+    /**
+     * 
+     * @see TLogType
+     */
     LOG_TYPE((short)6, "logType");
 
     private static final java.util.Map<java.lang.String, _Fields> byName = new java.util.HashMap<java.lang.String, _Fields>();
@@ -125,13 +133,15 @@ public class TLogQueryFilter implements org.apache.thrift.TBase<TLogQueryFilter,
     tmpMap.put(_Fields.LIMIT, new org.apache.thrift.meta_data.FieldMetaData("limit", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I32)));
     tmpMap.put(_Fields.LOG_TYPE, new org.apache.thrift.meta_data.FieldMetaData("logType", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
-        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.ENUM        , "TLogType")));
+        new org.apache.thrift.meta_data.EnumMetaData(org.apache.thrift.protocol.TType.ENUM, TLogType.class)));
     metaDataMap = java.util.Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(TLogQueryFilter.class, metaDataMap);
   }
 
   public TLogQueryFilter() {
     this.limit = 10;
+
+    this.logType = org.apache.hadoop.hbase.thrift2.generated.TLogType.SLOW_LOG;
 
   }
 
@@ -170,7 +180,8 @@ public class TLogQueryFilter implements org.apache.thrift.TBase<TLogQueryFilter,
     this.userName = null;
     this.limit = 10;
 
-    this.logType = null;
+    this.logType = org.apache.hadoop.hbase.thrift2.generated.TLogType.SLOW_LOG;
+
   }
 
   @org.apache.thrift.annotation.Nullable
@@ -296,11 +307,19 @@ public class TLogQueryFilter implements org.apache.thrift.TBase<TLogQueryFilter,
     __isset_bitfield = org.apache.thrift.EncodingUtils.setBit(__isset_bitfield, __LIMIT_ISSET_ID, value);
   }
 
+  /**
+   * 
+   * @see TLogType
+   */
   @org.apache.thrift.annotation.Nullable
   public TLogType getLogType() {
     return this.logType;
   }
 
+  /**
+   * 
+   * @see TLogType
+   */
   public TLogQueryFilter setLogType(@org.apache.thrift.annotation.Nullable TLogType logType) {
     this.logType = logType;
     return this;

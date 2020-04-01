@@ -526,7 +526,7 @@ public class THBaseService {
     public java.util.List<TOnlineLogRecord> getSlowLogResponses(java.util.Set<TServerName> serverNames, TLogQueryFilter logQueryFilter) throws TIOError, org.apache.thrift.TException;
 
     /**
-     * Clears online slow RPC logs from the provided list of
+     * Clears online slow/large RPC logs from the provided list of
      * RegionServers
      * 
      * @return List of booleans representing if online slowlog response buffer is cleaned

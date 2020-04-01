@@ -454,6 +454,10 @@ struct TNamespaceDescriptor {
 2: optional map<string, string> configuration
 }
 
+enum TLogType {
+  SLOW_LOG = 1,
+  LARGE_LOG = 2
+}
 
 /**
  * Thrift wrapper around
@@ -465,13 +469,9 @@ struct TLogQueryFilter {
   3: optional string tableName
   4: optional string userName
   5: optional i32 limit = 10
-  6: optional TLogType logType
+  6: optional TLogType logType = 1
 }
 
-enum TLogType {
-  SLOW_LOG = 1,
-  LARGE_LOG = 2
-}
 
 /**
  * Thrift wrapper around
