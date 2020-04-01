@@ -76,6 +76,7 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.client.OnlineLogRecord;
 import org.apache.hadoop.hbase.client.PackagePrivateFieldAccessor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -85,7 +86,6 @@ import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.SlowLogParams;
-import org.apache.hadoop.hbase.client.SlowLogRecord;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -3520,14 +3520,14 @@ public final class ProtobufUtil {
   /**
    * Convert Protobuf class
    * {@link org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog.SlowLogPayload}
-   * To client SlowLog Payload class {@link SlowLogRecord}
+   * To client SlowLog Payload class {@link OnlineLogRecord}
    *
    * @param slowLogPayload SlowLog Payload protobuf instance
    * @return SlowLog Payload for client usecase
    */
-  private static SlowLogRecord getSlowLogRecord(
+  private static OnlineLogRecord getSlowLogRecord(
       final TooSlowLog.SlowLogPayload slowLogPayload) {
-    SlowLogRecord clientSlowLogRecord = new SlowLogRecord.SlowLogRecordBuilder()
+    OnlineLogRecord onlineLogRecord = new OnlineLogRecord.OnlineLogRecordBuilder()
       .setCallDetails(slowLogPayload.getCallDetails())
       .setClientAddress(slowLogPayload.getClientAddress())
       .setMethodName(slowLogPayload.getMethodName())
@@ -3543,20 +3543,20 @@ public final class ProtobufUtil {
       .setStartTime(slowLogPayload.getStartTime())
       .setUserName(slowLogPayload.getUserName())
       .build();
-    return clientSlowLogRecord;
+    return onlineLogRecord;
   }
 
   /**
-   * Convert  AdminProtos#SlowLogResponses to list of {@link SlowLogRecord}
+   * Convert  AdminProtos#SlowLogResponses to list of {@link OnlineLogRecord}
    *
    * @param slowLogResponses slowlog response protobuf instance
    * @return list of SlowLog payloads for client usecase
    */
-  public static List<SlowLogRecord> toSlowLogPayloads(
+  public static List<OnlineLogRecord> toSlowLogPayloads(
       final AdminProtos.SlowLogResponses slowLogResponses) {
-    List<SlowLogRecord> slowLogRecords = slowLogResponses.getSlowLogPayloadsList()
+    List<OnlineLogRecord> onlineLogRecords = slowLogResponses.getSlowLogPayloadsList()
       .stream().map(ProtobufUtil::getSlowLogRecord).collect(Collectors.toList());
-    return slowLogRecords;
+    return onlineLogRecords;
   }
 
   /**

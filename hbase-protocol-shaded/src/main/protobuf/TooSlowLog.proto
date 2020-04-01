@@ -44,6 +44,9 @@ message SlowLogPayload {
   optional int32 multi_service_calls = 14 [default = 0];
   required Type type = 15;
 
+  // SLOW_LOG is RPC call slow in nature whereas LARGE_LOG is RPC call quite large.
+  // Majority of times, slow logs are also large logs and hence, ALL is combination of
+  // both
   enum Type {
     SLOW_LOG = 0;
     LARGE_LOG = 1;

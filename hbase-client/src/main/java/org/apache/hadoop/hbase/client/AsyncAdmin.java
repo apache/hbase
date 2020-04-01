@@ -1515,11 +1515,11 @@ public interface AsyncAdmin {
    * RegionServers
    *
    * @param serverNames Server names to get slowlog responses from
-   * @param slowLogQueryFilter filter to be used if provided
+   * @param logQueryFilter filter to be used if provided
    * @return Online slowlog response list. The return value wrapped by a {@link CompletableFuture}
    */
-  CompletableFuture<List<SlowLogRecord>> getSlowLogResponses(final Set<ServerName> serverNames,
-      final SlowLogQueryFilter slowLogQueryFilter);
+  CompletableFuture<List<OnlineLogRecord>> getSlowLogResponses(final Set<ServerName> serverNames,
+      final LogQueryFilter logQueryFilter);
 
   /**
    * Clears online slow RPC logs from the provided list of

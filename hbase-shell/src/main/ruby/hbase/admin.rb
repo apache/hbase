@@ -1482,7 +1482,7 @@ module Hbase
         server_names = getServerNames(server_names_list, false)
       end
       filter_params = get_filter_params(args)
-      filter_params.setType(org.apache.hadoop.hbase.client.SlowLogQueryFilter::Type::SLOW_LOG)
+      filter_params.setType(org.apache.hadoop.hbase.client.LogQueryFilter::Type::SLOW_LOG)
       slow_log_responses = @admin.getSlowLogResponses(java.util.HashSet.new(server_names),
                                                       filter_params)
       slow_log_responses_arr = []
@@ -1494,7 +1494,7 @@ module Hbase
     end
 
     def get_filter_params(args)
-      filter_params = org.apache.hadoop.hbase.client.SlowLogQueryFilter.new
+      filter_params = org.apache.hadoop.hbase.client.LogQueryFilter.new
       if args.key? 'REGION_NAME'
         region_name = args['REGION_NAME']
         filter_params.setRegionName(region_name)
@@ -1532,9 +1532,9 @@ module Hbase
         server_names = getServerNames(server_names_list, false)
       end
       filter_params = get_filter_params(args)
-      filter_params.setType(org.apache.hadoop.hbase.client.SlowLogQueryFilter::Type::LARGE_LOG)
+      filter_params.setType(org.apache.hadoop.hbase.client.LogQueryFilter::Type::LARGE_LOG)
       large_log_responses = @admin.getSlowLogResponses(java.util.HashSet.new(server_names),
-                                                        filter_params)
+                                                       filter_params)
       large_log_responses_arr = []
       for large_log_response in large_log_responses
         large_log_responses_arr << large_log_response.toJsonPrettyPrint

@@ -98,16 +98,16 @@ import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
 import org.apache.hadoop.hbase.thrift2.generated.TIOError;
 import org.apache.hadoop.hbase.thrift2.generated.TIllegalArgument;
 import org.apache.hadoop.hbase.thrift2.generated.TIncrement;
+import org.apache.hadoop.hbase.thrift2.generated.TLogQueryFilter;
 import org.apache.hadoop.hbase.thrift2.generated.TMutation;
 import org.apache.hadoop.hbase.thrift2.generated.TNamespaceDescriptor;
+import org.apache.hadoop.hbase.thrift2.generated.TOnlineLogRecord;
 import org.apache.hadoop.hbase.thrift2.generated.TPut;
 import org.apache.hadoop.hbase.thrift2.generated.TReadType;
 import org.apache.hadoop.hbase.thrift2.generated.TResult;
 import org.apache.hadoop.hbase.thrift2.generated.TRowMutations;
 import org.apache.hadoop.hbase.thrift2.generated.TScan;
 import org.apache.hadoop.hbase.thrift2.generated.TServerName;
-import org.apache.hadoop.hbase.thrift2.generated.TSlowLogQueryFilter;
-import org.apache.hadoop.hbase.thrift2.generated.TSlowLogRecord;
 import org.apache.hadoop.hbase.thrift2.generated.TTableDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TTableName;
 import org.apache.hadoop.hbase.thrift2.generated.TThriftServerType;
@@ -1763,11 +1763,11 @@ public class TestThriftHBaseServiceHandler {
     List<Boolean> clearedResponses =
       thriftHBaseServiceHandler.clearSlowLogResponses(tServerNames);
     clearedResponses.forEach(Assert::assertTrue);
-    TSlowLogQueryFilter tSlowLogQueryFilter = new TSlowLogQueryFilter();
-    tSlowLogQueryFilter.setLimit(15);
-    List<TSlowLogRecord> tSlowLogRecords =
-      thriftHBaseServiceHandler.getSlowLogResponses(tServerNames, tSlowLogQueryFilter);
-    assertEquals(tSlowLogRecords.size(), 0);
+    TLogQueryFilter tLogQueryFilter = new TLogQueryFilter();
+    tLogQueryFilter.setLimit(15);
+    List<TOnlineLogRecord> tLogRecords =
+      thriftHBaseServiceHandler.getSlowLogResponses(tServerNames, tLogQueryFilter);
+    assertEquals(tLogRecords.size(), 0);
   }
 
   public static class DelayingRegionObserver implements RegionCoprocessor, RegionObserver {

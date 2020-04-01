@@ -26,9 +26,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Slow/Large Log Query Filter with all filter and limit parameters
+ * Used by Admin API: getSlowLogResponses
  */
 @InterfaceAudience.Private
-public class SlowLogQueryFilter {
+public class LogQueryFilter {
 
   private String regionName;
   private String clientAddress;
@@ -100,7 +101,7 @@ public class SlowLogQueryFilter {
       return false;
     }
 
-    SlowLogQueryFilter that = (SlowLogQueryFilter) o;
+    LogQueryFilter that = (LogQueryFilter) o;
 
     return new EqualsBuilder()
       .append(limit, that.limit)

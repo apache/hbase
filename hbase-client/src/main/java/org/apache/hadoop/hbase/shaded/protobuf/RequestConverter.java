@@ -50,7 +50,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.SlowLogQueryFilter;
+import org.apache.hadoop.hbase.client.LogQueryFilter;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
@@ -1754,32 +1754,32 @@ public final class RequestConverter {
   /**
    * Create a protocol buffer {@link SlowLogResponseRequest}
    *
-   * @param slowLogQueryFilter filter to use if provided
+   * @param logQueryFilter filter to use if provided
    * @return a protocol buffer SlowLogResponseRequest
    */
   public static SlowLogResponseRequest buildSlowLogResponseRequest(
-      final SlowLogQueryFilter slowLogQueryFilter) {
+      final LogQueryFilter logQueryFilter) {
     SlowLogResponseRequest.Builder builder = SlowLogResponseRequest.newBuilder();
-    if (slowLogQueryFilter == null) {
+    if (logQueryFilter == null) {
       return builder.build();
     }
-    final String clientAddress = slowLogQueryFilter.getClientAddress();
+    final String clientAddress = logQueryFilter.getClientAddress();
     if (StringUtils.isNotEmpty(clientAddress)) {
       builder.setClientAddress(clientAddress);
     }
-    final String regionName = slowLogQueryFilter.getRegionName();
+    final String regionName = logQueryFilter.getRegionName();
     if (StringUtils.isNotEmpty(regionName)) {
       builder.setRegionName(regionName);
     }
-    final String tableName = slowLogQueryFilter.getTableName();
+    final String tableName = logQueryFilter.getTableName();
     if (StringUtils.isNotEmpty(tableName)) {
       builder.setTableName(tableName);
     }
-    final String userName = slowLogQueryFilter.getUserName();
+    final String userName = logQueryFilter.getUserName();
     if (StringUtils.isNotEmpty(userName)) {
       builder.setUserName(userName);
     }
-    return builder.setLimit(slowLogQueryFilter.getLimit()).build();
+    return builder.setLimit(logQueryFilter.getLimit()).build();
   }
 
   /**
