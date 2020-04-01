@@ -48,12 +48,12 @@ import org.apache.hadoop.hbase.client.CompactType;
 import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.OnlineLogRecord;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.SlowLogQueryFilter;
-import org.apache.hadoop.hbase.client.SlowLogRecord;
+import org.apache.hadoop.hbase.client.LogQueryFilter;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -886,8 +886,8 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   @Override
-  public List<SlowLogRecord> getSlowLogResponses(Set<ServerName> serverNames,
-    SlowLogQueryFilter slowLogQueryFilter) throws IOException {
+  public List<OnlineLogRecord> getSlowLogResponses(Set<ServerName> serverNames,
+      LogQueryFilter logQueryFilter) throws IOException {
     return null;
   }
 

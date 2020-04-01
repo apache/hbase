@@ -65,8 +65,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.SlowLogQueryFilter;
-import org.apache.hadoop.hbase.client.SlowLogRecord;
+import org.apache.hadoop.hbase.client.LogQueryFilter;
+import org.apache.hadoop.hbase.client.OnlineLogRecord;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -81,14 +81,14 @@ import org.apache.hadoop.hbase.thrift2.generated.THRegionLocation;
 import org.apache.hadoop.hbase.thrift2.generated.TIOError;
 import org.apache.hadoop.hbase.thrift2.generated.TIllegalArgument;
 import org.apache.hadoop.hbase.thrift2.generated.TIncrement;
+import org.apache.hadoop.hbase.thrift2.generated.TLogQueryFilter;
 import org.apache.hadoop.hbase.thrift2.generated.TNamespaceDescriptor;
+import org.apache.hadoop.hbase.thrift2.generated.TOnlineLogRecord;
 import org.apache.hadoop.hbase.thrift2.generated.TPut;
 import org.apache.hadoop.hbase.thrift2.generated.TResult;
 import org.apache.hadoop.hbase.thrift2.generated.TRowMutations;
 import org.apache.hadoop.hbase.thrift2.generated.TScan;
 import org.apache.hadoop.hbase.thrift2.generated.TServerName;
-import org.apache.hadoop.hbase.thrift2.generated.TSlowLogQueryFilter;
-import org.apache.hadoop.hbase.thrift2.generated.TSlowLogRecord;
 import org.apache.hadoop.hbase.thrift2.generated.TTableDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TTableName;
 import org.apache.hadoop.hbase.thrift2.generated.TThriftServerType;
@@ -830,15 +830,15 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
   }
 
   @Override
-  public List<TSlowLogRecord> getSlowLogResponses(Set<TServerName> tServerNames,
-      TSlowLogQueryFilter tSlowLogQueryFilter) throws TIOError, TException {
+  public List<TOnlineLogRecord> getSlowLogResponses(Set<TServerName> tServerNames,
+      TLogQueryFilter tLogQueryFilter) throws TIOError, TException {
     try {
       Set<ServerName> serverNames = ThriftUtilities.getServerNamesFromThrift(tServerNames);
-      SlowLogQueryFilter slowLogQueryFilter =
-        ThriftUtilities.getSlowLogQueryFromThrift(tSlowLogQueryFilter);
-      List<SlowLogRecord> slowLogRecords =
-        connectionCache.getAdmin().getSlowLogResponses(serverNames, slowLogQueryFilter);
-      return ThriftUtilities.getSlowLogRecordsFromHBase(slowLogRecords);
+      LogQueryFilter logQueryFilter =
+        ThriftUtilities.getSlowLogQueryFromThrift(tLogQueryFilter);
+      List<OnlineLogRecord> onlineLogRecords =
+        connectionCache.getAdmin().getSlowLogResponses(serverNames, logQueryFilter);
+      return ThriftUtilities.getSlowLogRecordsFromHBase(onlineLogRecords);
     } catch (IOException e) {
       throw getTIOError(e);
     }

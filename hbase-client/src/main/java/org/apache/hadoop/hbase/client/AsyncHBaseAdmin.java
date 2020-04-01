@@ -843,9 +843,9 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<List<SlowLogRecord>> getSlowLogResponses(
-      final Set<ServerName> serverNames, final SlowLogQueryFilter slowLogQueryFilter) {
-    return wrap(rawAdmin.getSlowLogResponses(serverNames, slowLogQueryFilter));
+  public CompletableFuture<List<OnlineLogRecord>> getSlowLogResponses(
+      final Set<ServerName> serverNames, final LogQueryFilter logQueryFilter) {
+    return wrap(rawAdmin.getSlowLogResponses(serverNames, logQueryFilter));
   }
 
   @Override

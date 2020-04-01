@@ -50,13 +50,13 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog.SlowLogPaylo
  * Event Handler run by disruptor ringbuffer consumer
  */
 @InterfaceAudience.Private
-class SlowLogEventHandler implements EventHandler<RingBufferEnvelope> {
+class LogEventHandler implements EventHandler<RingBufferEnvelope> {
 
-  private static final Logger LOG = LoggerFactory.getLogger(SlowLogEventHandler.class);
+  private static final Logger LOG = LoggerFactory.getLogger(LogEventHandler.class);
 
   private final Queue<SlowLogPayload> queue;
 
-  SlowLogEventHandler(int eventCount) {
+  LogEventHandler(int eventCount) {
     EvictingQueue<SlowLogPayload> evictingQueue = EvictingQueue.create(eventCount);
     queue = Queues.synchronizedQueue(evictingQueue);
   }
@@ -78,6 +78,10 @@ class SlowLogEventHandler implements EventHandler<RingBufferEnvelope> {
     final String clientAddress = rpcCallDetails.getClientAddress();
     final long responseSize = rpcCallDetails.getResponseSize();
     final String className = rpcCallDetails.getClassName();
+    final SlowLogPayload.Type type = getLogType(rpcCallDetails);
+    if (type == null) {
+      return;
+    }
     Descriptors.MethodDescriptor methodDescriptor = rpcCall.getMethod();
     Message param = rpcCall.getParam();
     long receiveTime = rpcCall.getReceiveTime();
@@ -122,9 +126,29 @@ class SlowLogEventHandler implements EventHandler<RingBufferEnvelope> {
       .setResponseSize(responseSize)
       .setServerClass(className)
       .setStartTime(startTime)
+      .setType(type)
       .setUserName(userName)
       .build();
     queue.add(slowLogPayload);
+  }
+
+  private SlowLogPayload.Type getLogType(RpcLogDetails rpcCallDetails) {
+    final boolean isSlowLog = rpcCallDetails.isSlowLog();
+    final boolean isLargeLog = rpcCallDetails.isLargeLog();
+    final SlowLogPayload.Type type;
+    if (!isSlowLog && !isLargeLog) {
+      LOG.error("slowLog and largeLog both are false. Ignoring the event. rpcCallDetails: {}",
+        rpcCallDetails);
+      return null;
+    }
+    if (isSlowLog && isLargeLog) {
+      type = SlowLogPayload.Type.ALL;
+    } else if (isSlowLog) {
+      type = SlowLogPayload.Type.SLOW_LOG;
+    } else {
+      type = SlowLogPayload.Type.LARGE_LOG;
+    }
+    return type;
   }
 
   /**
@@ -148,17 +172,44 @@ class SlowLogEventHandler implements EventHandler<RingBufferEnvelope> {
    */
   List<SlowLogPayload> getSlowLogPayloads(final AdminProtos.SlowLogResponseRequest request) {
     List<SlowLogPayload> slowLogPayloadList =
-      Arrays.stream(queue.toArray(new SlowLogPayload[0])).collect(Collectors.toList());
+      Arrays.stream(queue.toArray(new SlowLogPayload[0]))
+        .filter(e -> e.getType() == SlowLogPayload.Type.ALL
+          || e.getType() == SlowLogPayload.Type.SLOW_LOG)
+        .collect(Collectors.toList());
 
     // latest slow logs first, operator is interested in latest records from in-memory buffer
     Collections.reverse(slowLogPayloadList);
 
+    return getFilteredLogs(request, slowLogPayloadList);
+  }
+
+  /**
+   * Retrieve list of large log payloads
+   *
+   * @param request large log request parameters
+   * @return list of large log payloads
+   */
+  List<SlowLogPayload> getLargeLogPayloads(final AdminProtos.SlowLogResponseRequest request) {
+    List<SlowLogPayload> slowLogPayloadList =
+      Arrays.stream(queue.toArray(new SlowLogPayload[0]))
+        .filter(e -> e.getType() == SlowLogPayload.Type.ALL
+          || e.getType() == SlowLogPayload.Type.LARGE_LOG)
+        .collect(Collectors.toList());
+
+    // latest large logs first, operator is interested in latest records from in-memory buffer
+    Collections.reverse(slowLogPayloadList);
+
+    return getFilteredLogs(request, slowLogPayloadList);
+  }
+
+  private List<SlowLogPayload> getFilteredLogs(AdminProtos.SlowLogResponseRequest request,
+      List<SlowLogPayload> logPayloadList) {
     if (isFilterProvided(request)) {
-      slowLogPayloadList = filterSlowLogs(request, slowLogPayloadList);
+      logPayloadList = filterLogs(request, logPayloadList);
     }
-    int limit = request.getLimit() >= slowLogPayloadList.size() ? slowLogPayloadList.size()
+    int limit = request.getLimit() >= logPayloadList.size() ? logPayloadList.size()
       : request.getLimit();
-    return slowLogPayloadList.subList(0, limit);
+    return logPayloadList.subList(0, limit);
   }
 
   private boolean isFilterProvided(AdminProtos.SlowLogResponseRequest request) {
@@ -174,7 +225,7 @@ class SlowLogEventHandler implements EventHandler<RingBufferEnvelope> {
     return StringUtils.isNotEmpty(request.getRegionName());
   }
 
-  private List<SlowLogPayload> filterSlowLogs(AdminProtos.SlowLogResponseRequest request,
+  private List<SlowLogPayload> filterLogs(AdminProtos.SlowLogResponseRequest request,
       List<SlowLogPayload> slowLogPayloadList) {
     List<SlowLogPayload> filteredSlowLogPayloads = new ArrayList<>();
     for (SlowLogPayload slowLogPayload : slowLogPayloadList) {
