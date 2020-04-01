@@ -572,6 +572,12 @@ public class ColumnFamilyDescriptorBuilder {
     return this;
   }
 
+  public ColumnFamilyDescriptorBuilder setVersionsWithTimeToLive(final int retentionInterval,
+      final int versionAfterInterval) {
+    desc.setVersionsWithTimeToLive(retentionInterval, versionAfterInterval);
+    return this;
+  }
+
   /**
    * An ModifyableFamilyDescriptor contains information about a column family such as the
    * number of versions, compression settings, etc.
@@ -942,6 +948,23 @@ public class ColumnFamilyDescriptorBuilder {
      */
     public ModifyableColumnFamilyDescriptor setMinVersions(int minVersions) {
       return setValue(MIN_VERSIONS_BYTES, Integer.toString(minVersions));
+    }
+
+    /**
+     * Retain all versions for a given TTL(retentionInterval), and then only a specific number
+     * of versions(versionAfterInterval) after that interval elapses.
+     *
+     * @param retentionInterval Retain all versions for this interval
+     * @param versionAfterInterval Retain no of versions to retain after retentionInterval
+     * @return this (for chained invocation)
+     */
+    public ModifyableColumnFamilyDescriptor setVersionsWithTimeToLive(
+        final int retentionInterval, final int versionAfterInterval) {
+      ModifyableColumnFamilyDescriptor modifyableColumnFamilyDescriptor =
+        setVersions(versionAfterInterval, Integer.MAX_VALUE);
+      modifyableColumnFamilyDescriptor.setTimeToLive(retentionInterval);
+      modifyableColumnFamilyDescriptor.setKeepDeletedCells(KeepDeletedCells.TTL);
+      return modifyableColumnFamilyDescriptor;
     }
 
     @Override
