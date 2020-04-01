@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -39,6 +39,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
@@ -346,10 +347,19 @@ public abstract class CommonFSUtils {
   public static FileSystem getWALFileSystem(final Configuration c) throws IOException {
     Path p = getWALRootDir(c);
     FileSystem fs = p.getFileSystem(c);
-    // hadoop-core does fs caching, so need to propogate this if set
+    // hadoop-core does fs caching, so need to propagate this if set
     String enforceStreamCapability = c.get(UNSAFE_STREAM_CAPABILITY_ENFORCE);
     if (enforceStreamCapability != null) {
       fs.getConf().set(UNSAFE_STREAM_CAPABILITY_ENFORCE, enforceStreamCapability);
+    }
+    if (fs instanceof LocalFileSystem) {
+      // running on LocalFileSystem, which does not support the required capabilities `HSYNC`
+      // and `HFLUSH`. disable enforcement.
+      final boolean value = false;
+      LOG.warn("Cannot enforce durability guarantees while running on " + fs.getUri()
+        + ". Setting " + UNSAFE_STREAM_CAPABILITY_ENFORCE + "=" + value
+        + " for this FileSystem.");
+      fs.getConf().setBoolean(UNSAFE_STREAM_CAPABILITY_ENFORCE, value);
     }
     return fs;
   }
