@@ -991,12 +991,12 @@ class FromClientSideBase {
     assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
       QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
 
-    scan = new Scan(ROWS[ROWIDX], ROWS[ROWIDX+1]);
+    scan = new Scan().withStartRow(ROWS[ROWIDX]).withStopRow(ROWS[ROWIDX+1], true);
     result = getSingleScanResult(ht, scan);
     assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
       QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
 
-    scan = new Scan(HConstants.EMPTY_START_ROW, ROWS[ROWIDX+1]);
+    scan = new Scan().withStartRow(HConstants.EMPTY_START_ROW).withStopRow(ROWS[ROWIDX+1], true);
     result = getSingleScanResult(ht, scan);
     assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
       QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
@@ -1067,11 +1067,11 @@ class FromClientSideBase {
     Result result = getSingleScanResult(ht, scan);
     assertNullResult(result);
 
-    scan = new Scan(ROWS[ROWIDX+1],ROWS[ROWIDX+2]);
+    scan = new Scan().withStartRow(ROWS[ROWIDX+1]).withStopRow(ROWS[ROWIDX+2], true);
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
 
-    scan = new Scan(HConstants.EMPTY_START_ROW, ROWS[ROWIDX]);
+    scan = new Scan().withStartRow(HConstants.EMPTY_START_ROW).withStopRow(ROWS[ROWIDX]);
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
 

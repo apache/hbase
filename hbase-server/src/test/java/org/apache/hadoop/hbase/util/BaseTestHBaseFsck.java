@@ -295,7 +295,7 @@ public class BaseTestHBaseFsck {
    * Counts the number of rows to verify data loss or non-dataloss.
    */
   int countRows(byte[] start, byte[] end) throws IOException {
-    return TEST_UTIL.countRows(tbl, new Scan(start, end));
+    return TEST_UTIL.countRows(tbl, new Scan().withStartRow(start).withStopRow(end));
   }
 
   /**

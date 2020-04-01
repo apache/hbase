@@ -352,7 +352,7 @@ public class TestRowProcessorEndpoint {
           List<Mutation> mutations, WALEdit walEdit) throws IOException {
         // Scan current counter
         List<Cell> kvs = new ArrayList<>();
-        Scan scan = new Scan(row, row);
+        Scan scan = new Scan().withStartRow(row).withStopRow(row, true);
         scan.addColumn(FAM, COUNTER);
         doScan(region, scan, kvs);
         counter = kvs.isEmpty() ? 0 :
@@ -436,13 +436,13 @@ public class TestRowProcessorEndpoint {
           List<Mutation> mutations, WALEdit walEdit) throws IOException {
         List<Cell> kvs = new ArrayList<>();
         { // First scan to get friends of the person
-          Scan scan = new Scan(row, row);
+          Scan scan = new Scan().withStartRow(row).withStopRow(row, true);
           scan.addColumn(FAM, person);
           doScan(region, scan, kvs);
         }
 
         // Second scan to get friends of friends
-        Scan scan = new Scan(row, row);
+        Scan scan = new Scan().withStartRow(row).withStopRow(row, true);
         for (Cell kv : kvs) {
           byte[] friends = CellUtil.cloneValue(kv);
           for (byte f : friends) {
@@ -526,8 +526,8 @@ public class TestRowProcessorEndpoint {
         // Scan both rows
         List<Cell> kvs1 = new ArrayList<>();
         List<Cell> kvs2 = new ArrayList<>();
-        doScan(region, new Scan(row1, row1), kvs1);
-        doScan(region, new Scan(row2, row2), kvs2);
+        doScan(region, new Scan().withStartRow(row1).withStopRow(row1), kvs1);
+        doScan(region, new Scan().withStartRow(row2).withStopRow(row2), kvs2);
 
         // Assert swapped
         if (swapped) {

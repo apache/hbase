@@ -212,7 +212,7 @@ public class TestTableSnapshotScanner {
     try {
       createTableAndSnapshot(UTIL, tableName, snapshotName, 50);
       Path restoreDir = UTIL.getDataTestDirOnTestFS(snapshotName);
-      Scan scan = new Scan(bbb, yyy); // limit the scan
+      Scan scan = new Scan().withStartRow(bbb).withStopRow(yyy); // limit the scan
 
       Configuration conf = UTIL.getConfiguration();
       Path rootDir = FSUtils.getRootDir(conf);
@@ -262,7 +262,7 @@ public class TestTableSnapshotScanner {
       }
 
       Path restoreDir = util.getDataTestDirOnTestFS(snapshotName);
-      Scan scan = new Scan(bbb, yyy); // limit the scan
+      Scan scan = new Scan().withStartRow(bbb).withStopRow(yyy); // limit the scan
 
       TableSnapshotScanner scanner = new TableSnapshotScanner(UTIL.getConfiguration(), restoreDir,
         snapshotName, scan);
@@ -415,7 +415,8 @@ public class TestTableSnapshotScanner {
       UTIL.getMiniHBaseCluster().getMaster().getHFileCleaner().runCleaner();
       // scan snapshot
       try (TableSnapshotScanner scanner = new TableSnapshotScanner(conf,
-          UTIL.getDataTestDirOnTestFS(snapshotName), snapshotName, new Scan(bbb, yyy))) {
+        UTIL.getDataTestDirOnTestFS(snapshotName), snapshotName,
+        new Scan().withStartRow(bbb).withStopRow(yyy))) {
         verifyScanner(scanner, bbb, yyy);
       }
     } catch (Exception e) {
