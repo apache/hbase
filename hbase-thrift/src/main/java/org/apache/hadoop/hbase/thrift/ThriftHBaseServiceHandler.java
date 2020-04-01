@@ -965,7 +965,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
     Table table = null;
     try {
       table = getTable(tableName);
-      Scan scan = new Scan(getBytes(startRow), getBytes(stopRow));
+      Scan scan = new Scan().withStartRow(getBytes(startRow)).withStopRow(getBytes(stopRow));
       addAttributes(scan, attributes);
       if(columns != null && !columns.isEmpty()) {
         for(ByteBuffer column : columns) {
@@ -1059,7 +1059,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
     Table table = null;
     try {
       table = getTable(tableName);
-      Scan scan = new Scan(getBytes(startRow), getBytes(stopRow));
+      Scan scan = new Scan().withStartRow(getBytes(startRow)).withStopRow(getBytes(stopRow));
       addAttributes(scan, attributes);
       scan.setTimeRange(0, timestamp);
       if (columns != null && !columns.isEmpty()) {

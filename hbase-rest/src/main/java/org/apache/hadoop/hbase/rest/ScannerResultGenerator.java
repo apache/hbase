@@ -73,7 +73,7 @@ public class ScannerResultGenerator extends ResultGenerator {
     try {
       Scan scan;
       if (rowspec.hasEndRow()) {
-        scan = new Scan(rowspec.getStartRow(), rowspec.getEndRow());
+        scan = new Scan().withStartRow(rowspec.getStartRow()).withStopRow(rowspec.getEndRow());
       } else {
         scan = new Scan().withStartRow(rowspec.getStartRow());
       }

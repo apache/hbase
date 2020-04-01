@@ -354,7 +354,7 @@ public class TestTimestampsFilter {
     byte startRow[] = Bytes.toBytes("row:" + startRowIdx);
     byte endRow[] = Bytes.toBytes("row:" + endRowIdx + 1); // exclusive
     Filter filter = new TimestampsFilter(versions);
-    Scan scan = new Scan(startRow, endRow);
+    Scan scan = new Scan().withStartRow(startRow).withStopRow(endRow);
     scan.setFilter(filter);
     scan.readAllVersions();
     ResultScanner scanner = ht.getScanner(scan);

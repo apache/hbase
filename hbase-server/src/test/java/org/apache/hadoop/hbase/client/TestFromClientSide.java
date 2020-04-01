@@ -552,7 +552,7 @@ public class TestFromClientSide extends FromClientSideBase {
       result = getSingleScanResult(ht, scan);
       assertNullResult(result);
 
-      scan = new Scan(ROWS[0], ROWS[1]);
+      scan = new Scan().withStartRow(ROWS[0]).withStopRow(ROWS[1]);
       result = getSingleScanResult(ht, scan);
       assertNullResult(result);
 
@@ -594,7 +594,7 @@ public class TestFromClientSide extends FromClientSideBase {
       result = getSingleScanResult(ht, scan);
       assertNullResult(result);
 
-      scan = new Scan(ROWS[0], ROWS[2]);
+      scan = new Scan().withStartRow(ROWS[0]).withStopRow(ROWS[2]);
       result = getSingleScanResult(ht, scan);
       assertNullResult(result);
 
@@ -620,11 +620,11 @@ public class TestFromClientSide extends FromClientSideBase {
       result = getSingleScanResult(ht, scan);
       assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
 
-      scan = new Scan(ROWS[0], ROWS[3]);
+      scan = new Scan().withStartRow(ROWS[0]).withStopRow(ROWS[3]);
       result = getSingleScanResult(ht, scan);
       assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
 
-      scan = new Scan(ROWS[2], ROWS[3]);
+      scan = new Scan().withStartRow(ROWS[2]).withStopRow(ROWS[3]);
       result = getSingleScanResult(ht, scan);
       assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
     }
