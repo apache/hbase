@@ -581,8 +581,6 @@ public class TestMinVersions {
       region.flush(true);
       region.compact(true);
       verifyAfterTtl(region, ts);
-
-
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(region);
     }
