@@ -149,7 +149,7 @@ public class TestColumnSeeking {
       for (int i = 0; i < numberOfTests + 1; i++) {
         Collection<KeyValue> kvSet;
         Scan scan = new Scan();
-        scan.setMaxVersions();
+        scan.readAllVersions();
         if (i < numberOfTests) {
           if (columnLists[i].isEmpty()) continue; // HBASE-7700
           kvSet = kvMaps[i].values();
@@ -264,7 +264,7 @@ public class TestColumnSeeking {
     for (int i = 0; i < numberOfTests + 1; i++) {
       Collection<KeyValue> kvSet;
       Scan scan = new Scan();
-      scan.setMaxVersions();
+      scan.readAllVersions();
       if (i < numberOfTests) {
         if (columnLists[i].isEmpty()) continue; // HBASE-7700
         kvSet = kvMaps[i].values();

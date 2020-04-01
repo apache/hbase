@@ -192,7 +192,7 @@ public class TestFromClientSide extends FromClientSideBase {
 
       Scan s = new Scan(T1);
       s.setTimeRange(0, ts + 3);
-      s.setMaxVersions();
+      s.readAllVersions();
       ResultScanner scanner = h.getScanner(s);
       Cell[] kvs = scanner.next().rawCells();
       assertArrayEquals(T2, CellUtil.cloneValue(kvs[0]));
@@ -201,7 +201,7 @@ public class TestFromClientSide extends FromClientSideBase {
 
       s = new Scan(T1);
       s.setRaw(true);
-      s.setMaxVersions();
+      s.readAllVersions();
       scanner = h.getScanner(s);
       kvs = scanner.next().rawCells();
       assertTrue(PrivateCellUtil.isDeleteFamily(kvs[0]));
@@ -552,7 +552,7 @@ public class TestFromClientSide extends FromClientSideBase {
       result = getSingleScanResult(ht, scan);
       assertNullResult(result);
 
-      scan = new Scan(ROWS[0], ROWS[1]);
+      scan = new Scan().withStartRow(ROWS[0]).withStopRow(ROWS[1]);
       result = getSingleScanResult(ht, scan);
       assertNullResult(result);
 
@@ -594,7 +594,7 @@ public class TestFromClientSide extends FromClientSideBase {
       result = getSingleScanResult(ht, scan);
       assertNullResult(result);
 
-      scan = new Scan(ROWS[0], ROWS[2]);
+      scan = new Scan().withStartRow(ROWS[0]).withStopRow(ROWS[2]);
       result = getSingleScanResult(ht, scan);
       assertNullResult(result);
 
@@ -620,11 +620,11 @@ public class TestFromClientSide extends FromClientSideBase {
       result = getSingleScanResult(ht, scan);
       assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
 
-      scan = new Scan(ROWS[0], ROWS[3]);
+      scan = new Scan().withStartRow(ROWS[0]).withStopRow(ROWS[3]);
       result = getSingleScanResult(ht, scan);
       assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
 
-      scan = new Scan(ROWS[2], ROWS[3]);
+      scan = new Scan().withStartRow(ROWS[2]).withStopRow(ROWS[3]);
       result = getSingleScanResult(ht, scan);
       assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
     }
@@ -1127,7 +1127,7 @@ public class TestFromClientSide extends FromClientSideBase {
 
       Scan scan = new Scan(ROW);
       scan.addColumn(FAMILY, QUALIFIER);
-      scan.setMaxVersions(2);
+      scan.readVersions(2);
       result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILY, QUALIFIER, new long[] { STAMPS[4], STAMPS[5] },
         new byte[][] { VALUES[4], VALUES[5] }, 0, 1);
@@ -1164,7 +1164,7 @@ public class TestFromClientSide extends FromClientSideBase {
 
       scan = new Scan(ROW);
       scan.addColumn(FAMILY, QUALIFIER);
-      scan.setMaxVersions(2);
+      scan.readVersions(2);
       result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILY, QUALIFIER, new long[] { STAMPS[4], STAMPS[5] },
         new byte[][] { VALUES[4], VALUES[5] }, 0, 1);
@@ -1192,7 +1192,7 @@ public class TestFromClientSide extends FromClientSideBase {
 
       scan = new Scan(ROW);
       scan.addColumn(FAMILY, QUALIFIER);
-      scan.setMaxVersions();
+      scan.readAllVersions();
       result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long[] { STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7],
@@ -1210,7 +1210,7 @@ public class TestFromClientSide extends FromClientSideBase {
           VALUES[8] }, 0, 7);
 
       scan = new Scan(ROW);
-      scan.setMaxVersions();
+      scan.readAllVersions();
       result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long[] { STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7],
@@ -1258,7 +1258,7 @@ public class TestFromClientSide extends FromClientSideBase {
 
       scan = new Scan(ROW);
       scan.addColumn(FAMILY, QUALIFIER);
-      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.readVersions(Integer.MAX_VALUE);
       result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long[] { STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8], STAMPS[9],
@@ -1285,7 +1285,7 @@ public class TestFromClientSide extends FromClientSideBase {
 
       scan = new Scan(ROW);
       scan.addColumn(FAMILY, QUALIFIER);
-      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.readVersions(Integer.MAX_VALUE);
       result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long[] { STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[8],
@@ -1341,14 +1341,14 @@ public class TestFromClientSide extends FromClientSideBase {
 
       Scan scan = new Scan(ROW);
       scan.addColumn(FAMILIES[0], QUALIFIER);
-      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.readVersions(Integer.MAX_VALUE);
       result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILIES[0], QUALIFIER, new long[] { STAMPS[1] },
         new byte[][] { VALUES[1] }, 0, 0);
 
       scan = new Scan(ROW);
       scan.addFamily(FAMILIES[0]);
-      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.readVersions(Integer.MAX_VALUE);
       result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILIES[0], QUALIFIER, new long[] { STAMPS[1] },
         new byte[][] { VALUES[1] }, 0, 0);
@@ -1373,7 +1373,7 @@ public class TestFromClientSide extends FromClientSideBase {
 
       scan = new Scan(ROW);
       scan.addColumn(FAMILIES[1], QUALIFIER);
-      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.readVersions(Integer.MAX_VALUE);
       result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILIES[1], QUALIFIER,
         new long[] { STAMPS[1], STAMPS[2], STAMPS[3] },
@@ -1381,7 +1381,7 @@ public class TestFromClientSide extends FromClientSideBase {
 
       scan = new Scan(ROW);
       scan.addFamily(FAMILIES[1]);
-      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.readVersions(Integer.MAX_VALUE);
       result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILIES[1], QUALIFIER,
         new long[] { STAMPS[1], STAMPS[2], STAMPS[3] },
@@ -1407,7 +1407,7 @@ public class TestFromClientSide extends FromClientSideBase {
 
       scan = new Scan(ROW);
       scan.addColumn(FAMILIES[2], QUALIFIER);
-      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.readVersions(Integer.MAX_VALUE);
       result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILIES[2], QUALIFIER,
         new long[] { STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6] },
@@ -1415,7 +1415,7 @@ public class TestFromClientSide extends FromClientSideBase {
 
       scan = new Scan(ROW);
       scan.addFamily(FAMILIES[2]);
-      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.readVersions(Integer.MAX_VALUE);
       result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILIES[2], QUALIFIER,
         new long[] { STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6] },
@@ -1445,12 +1445,12 @@ public class TestFromClientSide extends FromClientSideBase {
       assertEquals("Expected 9 keys but received " + result.size(), 9, result.size());
 
       scan = new Scan(ROW);
-      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.readVersions(Integer.MAX_VALUE);
       result = getSingleScanResult(ht, scan);
       assertEquals("Expected 9 keys but received " + result.size(), 9, result.size());
 
       scan = new Scan(ROW);
-      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.readVersions(Integer.MAX_VALUE);
       scan.addFamily(FAMILIES[0]);
       scan.addFamily(FAMILIES[1]);
       scan.addFamily(FAMILIES[2]);
@@ -1458,7 +1458,7 @@ public class TestFromClientSide extends FromClientSideBase {
       assertEquals("Expected 9 keys but received " + result.size(), 9, result.size());
 
       scan = new Scan(ROW);
-      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.readVersions(Integer.MAX_VALUE);
       scan.addColumn(FAMILIES[0], QUALIFIER);
       scan.addColumn(FAMILIES[1], QUALIFIER);
       scan.addColumn(FAMILIES[2], QUALIFIER);
@@ -1667,7 +1667,7 @@ public class TestFromClientSide extends FromClientSideBase {
 
       Scan scan = new Scan(ROW);
       scan.addFamily(FAMILIES[0]);
-      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.readVersions(Integer.MAX_VALUE);
       result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILIES[0], QUALIFIER, new long[] { ts[1] },
         new byte[][] { VALUES[1] }, 0, 0);
@@ -1695,7 +1695,7 @@ public class TestFromClientSide extends FromClientSideBase {
 
       scan = new Scan(ROW);
       scan.addColumn(FAMILIES[0], QUALIFIER);
-      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.readVersions(Integer.MAX_VALUE);
       result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILIES[0], QUALIFIER, new long[] { ts[1], ts[2], ts[3] },
         new byte[][] { VALUES[1], VALUES[2], VALUES[3] }, 0, 2);
@@ -1732,7 +1732,7 @@ public class TestFromClientSide extends FromClientSideBase {
 
       scan = new Scan(ROW);
       scan.addFamily(FAMILIES[0]);
-      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.readVersions(Integer.MAX_VALUE);
       result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILIES[0], QUALIFIER, new long[] { ts[1], ts[2], ts[3] },
         new byte[][] { VALUES[1], VALUES[2], VALUES[3] }, 0, 2);
@@ -1795,7 +1795,7 @@ public class TestFromClientSide extends FromClientSideBase {
       scan = new Scan(ROWS[0]);
       scan.addFamily(FAMILIES[1]);
       scan.addFamily(FAMILIES[2]);
-      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.readVersions(Integer.MAX_VALUE);
       result = getSingleScanResult(ht, scan);
       assertEquals("Expected 2 keys but received " + result.size(), 2, result.size());
       assertNResult(result, ROWS[0], FAMILIES[1], QUALIFIER, new long[] { ts[0], ts[1] },
@@ -1811,7 +1811,7 @@ public class TestFromClientSide extends FromClientSideBase {
       scan = new Scan(ROWS[1]);
       scan.addFamily(FAMILIES[1]);
       scan.addFamily(FAMILIES[2]);
-      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.readVersions(Integer.MAX_VALUE);
       result = getSingleScanResult(ht, scan);
       assertEquals("Expected 2 keys but received " + result.size(), 2, result.size());
 
@@ -1827,7 +1827,7 @@ public class TestFromClientSide extends FromClientSideBase {
       scan = new Scan(ROWS[2]);
       scan.addFamily(FAMILIES[1]);
       scan.addFamily(FAMILIES[2]);
-      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.readVersions(Integer.MAX_VALUE);
       result = getSingleScanResult(ht, scan);
       assertEquals(1, result.size());
       assertNResult(result, ROWS[2], FAMILIES[2], QUALIFIER, new long[] { ts[2] },
@@ -1865,7 +1865,7 @@ public class TestFromClientSide extends FromClientSideBase {
       scan = new Scan(ROWS[3]);
       scan.addFamily(FAMILIES[1]);
       scan.addFamily(FAMILIES[2]);
-      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.readVersions(Integer.MAX_VALUE);
       ResultScanner scanner = ht.getScanner(scan);
       result = scanner.next();
       assertEquals("Expected 1 key but received " + result.size(), 1, result.size());

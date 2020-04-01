@@ -223,7 +223,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
 
     String getRSGroup(String namespace, String tablename) {
       if (rsgroupMappingScript == null) {
-        return RSGroupInfo.DEFAULT_GROUP;
+        return null;
       }
       String[] exec = rsgroupMappingScript.getExecString();
       exec[1] = namespace;

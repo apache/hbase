@@ -128,7 +128,7 @@ public class TestScanWithBloomError {
   private void scanColSet(int[] colSet, int[] expectedResultCols)
       throws IOException {
     LOG.info("Scanning column set: " + Arrays.toString(colSet));
-    Scan scan = new Scan(ROW_BYTES, ROW_BYTES);
+    Scan scan = new Scan().withStartRow(ROW_BYTES).withStopRow(ROW_BYTES, true);
     addColumnSetToScan(scan, colSet);
     RegionScannerImpl scanner = region.getScanner(scan);
     KeyValueHeap storeHeap = scanner.getStoreHeapForTesting();

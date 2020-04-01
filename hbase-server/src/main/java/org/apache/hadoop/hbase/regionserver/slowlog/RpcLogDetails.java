@@ -29,17 +29,21 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class RpcLogDetails {
 
-  private RpcCall rpcCall;
-  private String clientAddress;
-  private long responseSize;
-  private String className;
+  private final RpcCall rpcCall;
+  private final String clientAddress;
+  private final long responseSize;
+  private final String className;
+  private final boolean isSlowLog;
+  private final boolean isLargeLog;
 
   public RpcLogDetails(RpcCall rpcCall, String clientAddress, long responseSize,
-      String className) {
+      String className, boolean isSlowLog, boolean isLargeLog) {
     this.rpcCall = rpcCall;
     this.clientAddress = clientAddress;
     this.responseSize = responseSize;
     this.className = className;
+    this.isSlowLog = isSlowLog;
+    this.isLargeLog = isLargeLog;
   }
 
   public RpcCall getRpcCall() {
@@ -58,6 +62,14 @@ public class RpcLogDetails {
     return className;
   }
 
+  public boolean isSlowLog() {
+    return isSlowLog;
+  }
+
+  public boolean isLargeLog() {
+    return isLargeLog;
+  }
+
   @Override
   public String toString() {
     return new ToStringBuilder(this)
@@ -65,6 +77,8 @@ public class RpcLogDetails {
       .append("clientAddress", clientAddress)
       .append("responseSize", responseSize)
       .append("className", className)
+      .append("isSlowLog", isSlowLog)
+      .append("isLargeLog", isLargeLog)
       .toString();
   }
 

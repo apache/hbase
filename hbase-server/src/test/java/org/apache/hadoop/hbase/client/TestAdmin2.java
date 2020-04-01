@@ -856,12 +856,12 @@ public class TestAdmin2 extends TestAdminBase {
     }
     Assert.assertEquals(countFailedClearSlowResponse, 0);
 
-    SlowLogQueryFilter slowLogQueryFilter = new SlowLogQueryFilter();
-    List<SlowLogRecord> slowLogRecords = ADMIN.getSlowLogResponses(new HashSet<>(serverNames),
-      slowLogQueryFilter);
+    LogQueryFilter logQueryFilter = new LogQueryFilter();
+    List<OnlineLogRecord> onlineLogRecords = ADMIN.getSlowLogResponses(new HashSet<>(serverNames),
+      logQueryFilter);
 
     // after cleanup of slowlog responses, total count of slowlog payloads should be 0
-    Assert.assertEquals(slowLogRecords.size(), 0);
+    Assert.assertEquals(onlineLogRecords.size(), 0);
   }
 
 }

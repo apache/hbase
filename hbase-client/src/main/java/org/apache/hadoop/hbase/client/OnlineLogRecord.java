@@ -30,16 +30,17 @@ import org.apache.hbase.thirdparty.com.google.gson.JsonObject;
 import org.apache.hbase.thirdparty.com.google.gson.JsonSerializer;
 
 /**
- * SlowLog payload for hbase-client, to be used by Admin API get_slow_responses
+ * Slow/Large Log payload for hbase-client, to be used by Admin API get_slow_responses and
+ * get_large_responses
  */
 @InterfaceAudience.Private
-final public class SlowLogRecord {
+final public class OnlineLogRecord {
 
   // used to convert object to pretty printed format
   // used by toJsonPrettyPrint()
   private static final Gson GSON = GsonUtil.createGson()
     .setPrettyPrinting()
-    .registerTypeAdapter(SlowLogRecord.class, (JsonSerializer<SlowLogRecord>)
+    .registerTypeAdapter(OnlineLogRecord.class, (JsonSerializer<OnlineLogRecord>)
       (slowLogPayload, type, jsonSerializationContext) -> {
         Gson gson = new Gson();
         JsonObject jsonObj = (JsonObject) gson.toJsonTree(slowLogPayload);
@@ -128,7 +129,7 @@ final public class SlowLogRecord {
     return multiServiceCalls;
   }
 
-  private SlowLogRecord(final long startTime, final int processingTime, final int queueTime,
+  private OnlineLogRecord(final long startTime, final int processingTime, final int queueTime,
       final long responseSize, final String clientAddress, final String serverClass,
       final String methodName, final String callDetails, final String param,
       final String regionName, final String userName, final int multiGetsCount,
@@ -149,7 +150,7 @@ final public class SlowLogRecord {
     this.multiServiceCalls = multiServiceCalls;
   }
 
-  public static class SlowLogRecordBuilder {
+  public static class OnlineLogRecordBuilder {
     private long startTime;
     private int processingTime;
     private int queueTime;
@@ -165,78 +166,78 @@ final public class SlowLogRecord {
     private int multiMutationsCount;
     private int multiServiceCalls;
 
-    public SlowLogRecordBuilder setStartTime(long startTime) {
+    public OnlineLogRecordBuilder setStartTime(long startTime) {
       this.startTime = startTime;
       return this;
     }
 
-    public SlowLogRecordBuilder setProcessingTime(int processingTime) {
+    public OnlineLogRecordBuilder setProcessingTime(int processingTime) {
       this.processingTime = processingTime;
       return this;
     }
 
-    public SlowLogRecordBuilder setQueueTime(int queueTime) {
+    public OnlineLogRecordBuilder setQueueTime(int queueTime) {
       this.queueTime = queueTime;
       return this;
     }
 
-    public SlowLogRecordBuilder setResponseSize(long responseSize) {
+    public OnlineLogRecordBuilder setResponseSize(long responseSize) {
       this.responseSize = responseSize;
       return this;
     }
 
-    public SlowLogRecordBuilder setClientAddress(String clientAddress) {
+    public OnlineLogRecordBuilder setClientAddress(String clientAddress) {
       this.clientAddress = clientAddress;
       return this;
     }
 
-    public SlowLogRecordBuilder setServerClass(String serverClass) {
+    public OnlineLogRecordBuilder setServerClass(String serverClass) {
       this.serverClass = serverClass;
       return this;
     }
 
-    public SlowLogRecordBuilder setMethodName(String methodName) {
+    public OnlineLogRecordBuilder setMethodName(String methodName) {
       this.methodName = methodName;
       return this;
     }
 
-    public SlowLogRecordBuilder setCallDetails(String callDetails) {
+    public OnlineLogRecordBuilder setCallDetails(String callDetails) {
       this.callDetails = callDetails;
       return this;
     }
 
-    public SlowLogRecordBuilder setParam(String param) {
+    public OnlineLogRecordBuilder setParam(String param) {
       this.param = param;
       return this;
     }
 
-    public SlowLogRecordBuilder setRegionName(String regionName) {
+    public OnlineLogRecordBuilder setRegionName(String regionName) {
       this.regionName = regionName;
       return this;
     }
 
-    public SlowLogRecordBuilder setUserName(String userName) {
+    public OnlineLogRecordBuilder setUserName(String userName) {
       this.userName = userName;
       return this;
     }
 
-    public SlowLogRecordBuilder setMultiGetsCount(int multiGetsCount) {
+    public OnlineLogRecordBuilder setMultiGetsCount(int multiGetsCount) {
       this.multiGetsCount = multiGetsCount;
       return this;
     }
 
-    public SlowLogRecordBuilder setMultiMutationsCount(int multiMutationsCount) {
+    public OnlineLogRecordBuilder setMultiMutationsCount(int multiMutationsCount) {
       this.multiMutationsCount = multiMutationsCount;
       return this;
     }
 
-    public SlowLogRecordBuilder setMultiServiceCalls(int multiServiceCalls) {
+    public OnlineLogRecordBuilder setMultiServiceCalls(int multiServiceCalls) {
       this.multiServiceCalls = multiServiceCalls;
       return this;
     }
 
-    public SlowLogRecord build() {
-      return new SlowLogRecord(startTime, processingTime, queueTime, responseSize,
+    public OnlineLogRecord build() {
+      return new OnlineLogRecord(startTime, processingTime, queueTime, responseSize,
         clientAddress, serverClass, methodName, callDetails, param, regionName,
         userName, multiGetsCount, multiMutationsCount, multiServiceCalls);
     }
@@ -252,7 +253,7 @@ final public class SlowLogRecord {
       return false;
     }
 
-    SlowLogRecord that = (SlowLogRecord) o;
+    OnlineLogRecord that = (OnlineLogRecord) o;
 
     return new EqualsBuilder()
       .append(startTime, that.startTime)

@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.regionserver.Store.NO_PRIORITY;
 import static org.apache.hadoop.hbase.regionserver.Store.PRIORITY_USER;
-
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -35,7 +34,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntSupplier;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
@@ -55,7 +53,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -103,7 +100,6 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
    */
   private int regionSplitLimit;
 
-  /** @param server */
   CompactSplit(HRegionServer server) {
     this.server = server;
     this.conf = server.getConfiguration();
@@ -192,12 +188,19 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
 
   public synchronized boolean requestSplit(final Region r) {
     // don't split regions that are blocking
-    if (shouldSplitRegion() && ((HRegion)r).getCompactPriority() >= PRIORITY_USER) {
-      byte[] midKey = ((HRegion)r).checkSplit();
-      if (midKey != null) {
-        requestSplit(r, midKey);
-        return true;
+    HRegion hr = (HRegion)r;
+    try {
+      if (shouldSplitRegion() && hr.getCompactPriority() >= PRIORITY_USER) {
+        byte[] midKey = hr.checkSplit();
+        if (midKey != null) {
+          requestSplit(r, midKey);
+          return true;
+        }
       }
+    } catch (IndexOutOfBoundsException e) {
+      // We get this sometimes. Not sure why. Catch and return false; no split request.
+      LOG.warn("Catching out-of-bounds; region={}, policy={}", hr == null? null: hr.getRegionInfo(),
+        hr == null? "null": hr.getCompactPriority(), e);
     }
     return false;
   }
@@ -244,8 +247,7 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
   }
 
   private static final CompactionCompleteTracker DUMMY_COMPLETE_TRACKER =
-      new CompactionCompleteTracker() {
-      };
+    new CompactionCompleteTracker() {};
 
   private static final class AggregatingCompleteTracker implements CompactionCompleteTracker {
 
@@ -340,7 +342,8 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
 
     CompactionContext compaction;
     if (selectNow) {
-      Optional<CompactionContext> c = selectCompaction(region, store, priority, tracker, completeTracker, user);
+      Optional<CompactionContext> c =
+        selectCompaction(region, store, priority, tracker, completeTracker, user);
       if (!c.isPresent()) {
         // message logged inside
         return;

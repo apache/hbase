@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,32 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-syntax = "proto2";
+package org.apache.hadoop.hbase.thrift;
 
-// This file contains protocol buffers that are written into the filesystem
-package hbase.pb;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import static org.junit.Assert.assertNotNull;
 
-option java_package = "org.apache.hadoop.hbase.protobuf.generated";
-option java_outer_classname = "FSProtos";
-option java_generate_equals_and_hash = true;
-option optimize_for = SPEED;
-
-/**
- * The ${HBASE_ROOTDIR}/hbase.version file content
- */
-message HBaseVersionFileContent {
-  required string version = 1;
-}
-
-/**
- * Reference file content used when we split an hfile under a region.
- */
-message Reference {
-  required bytes splitkey = 1;
-  enum Range {
-    TOP = 0;
-    BOTTOM = 1;
+@Category({ ClientTests.class, MediumTests.class})
+public class TestBindExceptionHandling {
+  /**
+   * See if random port choosing works around port clashes
+   */
+  @Test
+  public void testPortClash() {
+    ThriftServer thriftServer = null;
+    try {
+      thriftServer = new TestThriftServerCmdLine(null, false, false, false).
+        createBoundServer(true);
+      assertNotNull(thriftServer.tserver);
+    } finally {
+      thriftServer.stop();
+    }
   }
-  required Range range = 2;
 }
-

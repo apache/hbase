@@ -586,7 +586,7 @@ class FromClientSideBase {
     int start, int end) throws IOException {
     Scan scan = new Scan(row);
     scan.addColumn(family, qualifier);
-    scan.setMaxVersions(Integer.MAX_VALUE);
+    scan.readVersions(Integer.MAX_VALUE);
     scan.setTimeRange(stamps[start+1], Long.MAX_VALUE);
     Result result = getSingleScanResult(ht, scan);
     assertNResult(result, row, family, qualifier, stamps, values, start+1, end);
@@ -596,7 +596,7 @@ class FromClientSideBase {
     byte [] qualifier, long [] stamps, byte [][] values, int start, int end) throws IOException {
     Scan scan = new Scan(row);
     scan.addColumn(family, qualifier);
-    scan.setMaxVersions(Integer.MAX_VALUE);
+    scan.readVersions(Integer.MAX_VALUE);
     scan.setTimeRange(stamps[start], stamps[end]+1);
     Result result = getSingleScanResult(ht, scan);
     assertNResult(result, row, family, qualifier, stamps, values, start, end);
@@ -606,7 +606,7 @@ class FromClientSideBase {
     byte [] qualifier, long [] stamps, byte [][] values, int start, int end) throws IOException {
     Scan scan = new Scan(row);
     scan.addColumn(family, qualifier);
-    scan.setMaxVersions(Integer.MAX_VALUE);
+    scan.readVersions(Integer.MAX_VALUE);
     Result result = getSingleScanResult(ht, scan);
     assertNResult(result, row, family, qualifier, stamps, values, start, end);
   }
@@ -636,7 +636,7 @@ class FromClientSideBase {
     Scan scan = new Scan(row);
     scan.addColumn(family, qualifier);
     scan.setTimestamp(stamp);
-    scan.setMaxVersions(Integer.MAX_VALUE);
+    scan.readVersions(Integer.MAX_VALUE);
     Result result = getSingleScanResult(ht, scan);
     assertSingleResult(result, row, family, qualifier, stamp, value);
   }
@@ -646,7 +646,7 @@ class FromClientSideBase {
     Scan scan = new Scan(row);
     scan.addColumn(family, qualifier);
     scan.setTimestamp(stamp);
-    scan.setMaxVersions(Integer.MAX_VALUE);
+    scan.readVersions(Integer.MAX_VALUE);
     Result result = getSingleScanResult(ht, scan);
     assertNullResult(result);
   }
@@ -991,12 +991,12 @@ class FromClientSideBase {
     assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
       QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
 
-    scan = new Scan(ROWS[ROWIDX], ROWS[ROWIDX+1]);
+    scan = new Scan().withStartRow(ROWS[ROWIDX]).withStopRow(ROWS[ROWIDX+1], true);
     result = getSingleScanResult(ht, scan);
     assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
       QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
 
-    scan = new Scan(HConstants.EMPTY_START_ROW, ROWS[ROWIDX+1]);
+    scan = new Scan().withStartRow(HConstants.EMPTY_START_ROW).withStopRow(ROWS[ROWIDX+1], true);
     result = getSingleScanResult(ht, scan);
     assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
       QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
@@ -1067,11 +1067,11 @@ class FromClientSideBase {
     Result result = getSingleScanResult(ht, scan);
     assertNullResult(result);
 
-    scan = new Scan(ROWS[ROWIDX+1],ROWS[ROWIDX+2]);
+    scan = new Scan().withStartRow(ROWS[ROWIDX+1]).withStopRow(ROWS[ROWIDX+2], true);
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
 
-    scan = new Scan(HConstants.EMPTY_START_ROW, ROWS[ROWIDX]);
+    scan = new Scan().withStartRow(HConstants.EMPTY_START_ROW).withStopRow(ROWS[ROWIDX]);
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
 
