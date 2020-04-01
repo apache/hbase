@@ -25,16 +25,23 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * SlowLog Query Filter with all filter and limit parameters
+ * Slow/Large Log Query Filter with all filter and limit parameters
+ * Used by Admin API: getSlowLogResponses
  */
 @InterfaceAudience.Private
-public class SlowLogQueryFilter {
+public class LogQueryFilter {
 
   private String regionName;
   private String clientAddress;
   private String tableName;
   private String userName;
   private int limit = 10;
+  private Type type = Type.SLOW_LOG;
+
+  public enum Type {
+    SLOW_LOG,
+    LARGE_LOG
+  }
 
   public String getRegionName() {
     return regionName;
@@ -76,6 +83,14 @@ public class SlowLogQueryFilter {
     this.limit = limit;
   }
 
+  public Type getType() {
+    return type;
+  }
+
+  public void setType(Type type) {
+    this.type = type;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -86,7 +101,7 @@ public class SlowLogQueryFilter {
       return false;
     }
 
-    SlowLogQueryFilter that = (SlowLogQueryFilter) o;
+    LogQueryFilter that = (LogQueryFilter) o;
 
     return new EqualsBuilder()
       .append(limit, that.limit)
@@ -94,6 +109,7 @@ public class SlowLogQueryFilter {
       .append(clientAddress, that.clientAddress)
       .append(tableName, that.tableName)
       .append(userName, that.userName)
+      .append(type, that.type)
       .isEquals();
   }
 
@@ -105,6 +121,7 @@ public class SlowLogQueryFilter {
       .append(tableName)
       .append(userName)
       .append(limit)
+      .append(type)
       .toHashCode();
   }
 
@@ -116,7 +133,7 @@ public class SlowLogQueryFilter {
       .append("tableName", tableName)
       .append("userName", userName)
       .append("limit", limit)
+      .append("type", type)
       .toString();
   }
-
 }

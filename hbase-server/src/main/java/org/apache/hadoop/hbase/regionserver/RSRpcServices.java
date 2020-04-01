@@ -3789,12 +3789,28 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   @Override
   @QosPriority(priority = HConstants.ADMIN_QOS)
   public SlowLogResponses getSlowLogResponses(final RpcController controller,
-    final SlowLogResponseRequest request) {
+      final SlowLogResponseRequest request) {
     final SlowLogRecorder slowLogRecorder =
       this.regionServer.getSlowLogRecorder();
     final List<SlowLogPayload> slowLogPayloads;
     slowLogPayloads = slowLogRecorder != null
       ? slowLogRecorder.getSlowLogPayloads(request)
+      : Collections.emptyList();
+    SlowLogResponses slowLogResponses = SlowLogResponses.newBuilder()
+      .addAllSlowLogPayloads(slowLogPayloads)
+      .build();
+    return slowLogResponses;
+  }
+
+  @Override
+  @QosPriority(priority = HConstants.ADMIN_QOS)
+  public SlowLogResponses getLargeLogResponses(final RpcController controller,
+      final SlowLogResponseRequest request) {
+    final SlowLogRecorder slowLogRecorder =
+      this.regionServer.getSlowLogRecorder();
+    final List<SlowLogPayload> slowLogPayloads;
+    slowLogPayloads = slowLogRecorder != null
+      ? slowLogRecorder.getLargeLogPayloads(request)
       : Collections.emptyList();
     SlowLogResponses slowLogResponses = SlowLogResponses.newBuilder()
       .addAllSlowLogPayloads(slowLogPayloads)

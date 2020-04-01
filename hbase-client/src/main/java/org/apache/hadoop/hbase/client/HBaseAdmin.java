@@ -4361,14 +4361,14 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public List<SlowLogRecord> getSlowLogResponses(@Nullable final Set<ServerName> serverNames,
-      final SlowLogQueryFilter slowLogQueryFilter) throws IOException {
+  public List<OnlineLogRecord> getSlowLogResponses(@Nullable final Set<ServerName> serverNames,
+      final LogQueryFilter logQueryFilter) throws IOException {
     if (CollectionUtils.isEmpty(serverNames)) {
       return Collections.emptyList();
     }
     return serverNames.stream().map(serverName -> {
         try {
-          return getSlowLogResponseFromServer(serverName, slowLogQueryFilter);
+          return getSlowLogResponseFromServer(serverName, logQueryFilter);
         } catch (IOException e) {
           throw new RuntimeException(e);
         }
@@ -4376,21 +4376,29 @@ public class HBaseAdmin implements Admin {
     ).flatMap(List::stream).collect(Collectors.toList());
   }
 
-  private List<SlowLogRecord> getSlowLogResponseFromServer(final ServerName serverName,
-      final SlowLogQueryFilter slowLogQueryFilter) throws IOException {
-    return getSlowLogResponsesFromServer(this.connection.getAdmin(serverName), slowLogQueryFilter);
+  private List<OnlineLogRecord> getSlowLogResponseFromServer(final ServerName serverName,
+      final LogQueryFilter logQueryFilter) throws IOException {
+    return getSlowLogResponsesFromServer(this.connection.getAdmin(serverName), logQueryFilter);
   }
 
-  private List<SlowLogRecord> getSlowLogResponsesFromServer(AdminService.BlockingInterface admin,
-      SlowLogQueryFilter slowLogQueryFilter) throws IOException {
-    return executeCallable(new RpcRetryingCallable<List<SlowLogRecord>>() {
+  private List<OnlineLogRecord> getSlowLogResponsesFromServer(AdminService.BlockingInterface admin,
+      LogQueryFilter logQueryFilter) throws IOException {
+    return executeCallable(new RpcRetryingCallable<List<OnlineLogRecord>>() {
       @Override
-      protected List<SlowLogRecord> rpcCall(int callTimeout) throws Exception {
+      protected List<OnlineLogRecord> rpcCall(int callTimeout) throws Exception {
         HBaseRpcController controller = rpcControllerFactory.newController();
-        AdminProtos.SlowLogResponses slowLogResponses =
-          admin.getSlowLogResponses(controller,
-            RequestConverter.buildSlowLogResponseRequest(slowLogQueryFilter));
-        return ProtobufUtil.toSlowLogPayloads(slowLogResponses);
+        if (logQueryFilter.getType() == null
+            || logQueryFilter.getType() == LogQueryFilter.Type.SLOW_LOG) {
+          AdminProtos.SlowLogResponses slowLogResponses =
+            admin.getSlowLogResponses(controller,
+              RequestConverter.buildSlowLogResponseRequest(logQueryFilter));
+          return ProtobufUtil.toSlowLogPayloads(slowLogResponses);
+        } else {
+          AdminProtos.SlowLogResponses slowLogResponses =
+            admin.getLargeLogResponses(controller,
+              RequestConverter.buildSlowLogResponseRequest(logQueryFilter));
+          return ProtobufUtil.toSlowLogPayloads(slowLogResponses);
+        }
       }
     });
   }
