@@ -195,20 +195,6 @@ public class Scan extends Query {
   }
 
   /**
-   * Create a Scan operation for the range of rows specified.
-   * @param startRow row to start scanner at or after (inclusive)
-   * @param stopRow row to stop scanner before (exclusive)
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
-   *   {@code new Scan().withStartRow(startRow).withStopRow(stopRow)} instead.
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17320">HBASE-17320</a>
-   */
-  @Deprecated
-  public Scan(byte[] startRow, byte[] stopRow) {
-    withStartRow(startRow);
-    setStopRow(stopRow);
-  }
-
-  /**
    * Creates a new instance of this class while copying all values.
    *
    * @param scan  The scan instance to copy from.

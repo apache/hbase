@@ -226,7 +226,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       conf.setBoolean(SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_KEY, setLocalityEnabledTo);
       Job job = new Job(conf);
       Path tmpTableDir = util.getDataTestDirOnTestFS(snapshotName);
-      Scan scan = new Scan(getStartRow(), getEndRow()); // limit the scan
+      Scan scan = new Scan().withStartRow(getStartRow()).withStopRow(getEndRow()); // limit the scan
 
       if (numSplitsPerRegion > 1) {
         TableMapReduceUtil.initTableSnapshotMapperJob(snapshotName,
@@ -261,7 +261,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       Job job = new Job(conf);
       Path tmpTableDir = UTIL.getDataTestDirOnTestFS(snapshotName);
       // test scan with startRow and stopRow
-      Scan scan = new Scan(bbc, yya);
+      Scan scan = new Scan().withStartRow(bbc).withStopRow(yya);
 
       TableMapReduceUtil.initTableSnapshotMapperJob(snapshotName, scan,
         TestTableSnapshotMapper.class, ImmutableBytesWritable.class, NullWritable.class, job, false,
@@ -444,7 +444,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     try {
       // create the job
       Job job = new Job(util.getConfiguration());
-      Scan scan = new Scan(startRow, endRow); // limit the scan
+      Scan scan = new Scan().withStartRow(startRow).withStopRow(endRow); // limit the scan
 
       job.setJarByClass(util.getClass());
       TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
