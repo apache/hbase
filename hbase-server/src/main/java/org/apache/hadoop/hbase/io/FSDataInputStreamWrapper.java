@@ -25,7 +25,6 @@ import java.lang.reflect.Method;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.hadoop.fs.CanUnbuffer;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -271,18 +270,22 @@ public class FSDataInputStreamWrapper implements Closeable {
       if (this.instanceOfCanUnbuffer == null) {
         // To ensure we compute whether the stream is instance of CanUnbuffer only once.
         this.instanceOfCanUnbuffer = false;
-        if(wrappedStream instanceof CanUnbuffer){
-          try {
-            this.unbuffer = streamClass.getDeclaredMethod("unbuffer");
-          } catch (NoSuchMethodException | SecurityException e) {
-            if (isLogTraceEnabled) {
-              LOG.trace("Failed to find 'unbuffer' method in class " + streamClass
-                      + " . So there may be a TCP socket connection "
-                      + "left open in CLOSE_WAIT state.", e);
+        Class<?>[] streamInterfaces = streamClass.getInterfaces();
+        for (Class c : streamInterfaces) {
+          if (c.getCanonicalName().toString().equals("org.apache.hadoop.fs.CanUnbuffer")) {
+            try {
+              this.unbuffer = streamClass.getDeclaredMethod("unbuffer");
+            } catch (NoSuchMethodException | SecurityException e) {
+              if (isLogTraceEnabled) {
+                LOG.trace("Failed to find 'unbuffer' method in class " + streamClass
+                    + " . So there may be a TCP socket connection "
+                    + "left open in CLOSE_WAIT state.", e);
+              }
+              return;
             }
-            return;
+            this.instanceOfCanUnbuffer = true;
+            break;
           }
-          this.instanceOfCanUnbuffer = true;
         }
       }
       if (this.instanceOfCanUnbuffer) {
