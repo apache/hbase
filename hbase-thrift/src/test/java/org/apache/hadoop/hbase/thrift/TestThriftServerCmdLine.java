@@ -24,8 +24,11 @@ import static org.apache.hadoop.hbase.thrift.Constants.INFOPORT_OPTION;
 import static org.apache.hadoop.hbase.thrift.Constants.PORT_OPTION;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import java.io.IOException;
 import java.net.BindException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -165,22 +168,49 @@ public class TestThriftServerCmdLine {
     return new ThriftServer(TEST_UTIL.getConfiguration());
   }
 
+  private int getRandomPort() {
+    return HBaseTestingUtility.randomFreePort();
+  }
+
   /**
    * Server can fail to bind if clashing address. Add retrying until we get a good server.
    */
   ThriftServer createBoundServer() {
+    return createBoundServer(false);
+  }
+
+  /**
+   * @param clash This param is just so we can manufacture a port clash so we can test the
+   *   code does the right thing when this happens during actual test runs. Ugly but works.
+   * @see TestBindExceptionHandling#testPortClash()
+   */
+  ThriftServer createBoundServer(boolean clash) {
+    boolean testClashOfFirstPort = clash;
     List<String> args = new ArrayList<>();
+    ServerSocket ss = null;
     for (int i = 0; i < 100; i++) {
+      args.clear();
       if (implType != null) {
         String serverTypeOption = implType.toString();
         assertTrue(serverTypeOption.startsWith("-"));
         args.add(serverTypeOption);
       }
-      port = HBaseTestingUtility.randomFreePort();
+      port = getRandomPort();
+      if (testClashOfFirstPort) {
+        // Test what happens if already something bound to the socket.
+        // Occupy the random port we just pulled.
+        try {
+          ss = new ServerSocket();
+          ss.bind(new InetSocketAddress(port));
+        } catch (IOException ioe) {
+          LOG.warn("Failed bind", ioe);
+        }
+        testClashOfFirstPort = false;
+      }
       args.add("-" + PORT_OPTION);
       args.add(String.valueOf(port));
       args.add("-" + INFOPORT_OPTION);
-      int infoPort = HBaseTestingUtility.randomFreePort();
+      int infoPort = getRandomPort();
       args.add(String.valueOf(infoPort));
 
       if (specifyFramed) {
@@ -204,10 +234,18 @@ public class TestThriftServerCmdLine {
       if (cmdLineException instanceof TTransportException &&
           cmdLineException.getCause() instanceof BindException) {
         LOG.info("Trying new port", cmdLineException);
+        cmdLineException =  null;
         thriftServer.stop();
         continue;
       }
       break;
+    }
+    if (ss != null) {
+      try {
+        ss.close();
+      } catch (IOException ioe) {
+        LOG.warn("Failed close", ioe);
+      }
     }
     Class<? extends TServer> expectedClass = implType != null ?
       implType.serverClass : TBoundedThreadPoolServer.class;
