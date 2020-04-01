@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog.SlowLogPayload;
 
 /**
- * Online SlowLog Provider Service that keeps slow RPC logs in the ring buffer.
+ * Online Slow/Large Log Provider Service that keeps slow/large RPC logs in the ring buffer.
  * The service uses LMAX Disruptor to save slow records which are then consumed by
  * a queue and based on the ring buffer size, the available records are then fetched
  * from the queue in thread-safe manner.
@@ -49,9 +49,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog.SlowLogPaylo
 public class SlowLogRecorder {
 
   private final Disruptor<RingBufferEnvelope> disruptor;
-  private final SlowLogEventHandler slowLogEventHandler;
+  private final LogEventHandler logEventHandler;
   private final int eventCount;
-  private final boolean isOnlineSlowLogProviderEnabled;
+  private final boolean isOnlineLogProviderEnabled;
 
   private static final String SLOW_LOG_RING_BUFFER_SIZE =
     "hbase.regionserver.slowlog.ringbuffer.size";
@@ -60,12 +60,12 @@ public class SlowLogRecorder {
    * Initialize disruptor with configurable ringbuffer size
    */
   public SlowLogRecorder(Configuration conf) {
-    isOnlineSlowLogProviderEnabled = conf.getBoolean(HConstants.SLOW_LOG_BUFFER_ENABLED_KEY,
+    isOnlineLogProviderEnabled = conf.getBoolean(HConstants.SLOW_LOG_BUFFER_ENABLED_KEY,
       HConstants.DEFAULT_ONLINE_LOG_PROVIDER_ENABLED);
 
-    if (!isOnlineSlowLogProviderEnabled) {
+    if (!isOnlineLogProviderEnabled) {
       this.disruptor = null;
-      this.slowLogEventHandler = null;
+      this.logEventHandler = null;
       this.eventCount = 0;
       return;
     }
@@ -86,8 +86,8 @@ public class SlowLogRecorder {
     this.disruptor.setDefaultExceptionHandler(new DisruptorExceptionHandler());
 
     // initialize ringbuffer event handler
-    this.slowLogEventHandler = new SlowLogEventHandler(this.eventCount);
-    this.disruptor.handleEventsWith(new SlowLogEventHandler[]{this.slowLogEventHandler});
+    this.logEventHandler = new LogEventHandler(this.eventCount);
+    this.disruptor.handleEventsWith(new LogEventHandler[]{this.logEventHandler});
     this.disruptor.start();
   }
 
@@ -113,7 +113,18 @@ public class SlowLogRecorder {
    * @return online slow logs from ringbuffer
    */
   public List<SlowLogPayload> getSlowLogPayloads(AdminProtos.SlowLogResponseRequest request) {
-    return isOnlineSlowLogProviderEnabled ? this.slowLogEventHandler.getSlowLogPayloads(request)
+    return isOnlineLogProviderEnabled ? this.logEventHandler.getSlowLogPayloads(request)
+      : Collections.emptyList();
+  }
+
+  /**
+   * Retrieve online large logs from ringbuffer
+   *
+   * @param request large log request parameters
+   * @return online large logs from ringbuffer
+   */
+  public List<SlowLogPayload> getLargeLogPayloads(AdminProtos.SlowLogResponseRequest request) {
+    return isOnlineLogProviderEnabled ? this.logEventHandler.getLargeLogPayloads(request)
       : Collections.emptyList();
   }
 
@@ -125,10 +136,10 @@ public class SlowLogRecorder {
    *   clean up slow logs
    */
   public boolean clearSlowLogPayloads() {
-    if (!isOnlineSlowLogProviderEnabled) {
+    if (!isOnlineLogProviderEnabled) {
       return true;
     }
-    return this.slowLogEventHandler.clearSlowLogs();
+    return this.logEventHandler.clearSlowLogs();
   }
 
   /**
@@ -138,7 +149,7 @@ public class SlowLogRecorder {
    *   consumers
    */
   public void addSlowLogPayload(RpcLogDetails rpcLogDetails) {
-    if (!isOnlineSlowLogProviderEnabled) {
+    if (!isOnlineLogProviderEnabled) {
       return;
     }
     RingBuffer<RingBufferEnvelope> ringBuffer = this.disruptor.getRingBuffer();

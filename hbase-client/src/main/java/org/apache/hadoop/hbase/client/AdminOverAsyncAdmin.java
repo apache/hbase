@@ -965,9 +965,9 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
-  public List<SlowLogRecord> getSlowLogResponses(final Set<ServerName> serverNames,
-      final SlowLogQueryFilter slowLogQueryFilter) throws IOException {
-    return get(admin.getSlowLogResponses(serverNames, slowLogQueryFilter));
+  public List<OnlineLogRecord> getSlowLogResponses(final Set<ServerName> serverNames,
+      final LogQueryFilter logQueryFilter) throws IOException {
+    return get(admin.getSlowLogResponses(serverNames, logQueryFilter));
   }
 
   @Override

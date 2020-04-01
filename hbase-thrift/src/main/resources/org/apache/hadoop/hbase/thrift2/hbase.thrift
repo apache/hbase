@@ -454,24 +454,30 @@ struct TNamespaceDescriptor {
 2: optional map<string, string> configuration
 }
 
+enum TLogType {
+  SLOW_LOG = 1,
+  LARGE_LOG = 2
+}
 
 /**
  * Thrift wrapper around
- * org.apache.hadoop.hbase.client.SlowLogQueryFilter
+ * org.apache.hadoop.hbase.client.LogQueryFilter
  */
-struct TSlowLogQueryFilter {
+struct TLogQueryFilter {
   1: optional string regionName
   2: optional string clientAddress
   3: optional string tableName
   4: optional string userName
   5: optional i32 limit = 10
+  6: optional TLogType logType = 1
 }
+
 
 /**
  * Thrift wrapper around
- * org.apache.hadoop.hbase.client.SlowLogRecord
+ * org.apache.hadoop.hbase.client.OnlineLogRecordrd
  */
-struct TSlowLogRecord {
+struct TOnlineLogRecord {
   1: required i64 startTime
   2: required i32 processingTime
   3: required i32 queueTime
@@ -1099,15 +1105,15 @@ service THBaseService {
    * @return online slowlog response list
    * @throws TIOError if a remote or network exception occurs
    */
-  list<TSlowLogRecord> getSlowLogResponses(
+  list<TOnlineLogRecord> getSlowLogResponses(
    /** @param serverNames Server names to get slowlog responses from */
     1: set<TServerName> serverNames
-   /** @param slowLogQueryFilter filter to be used if provided */
-    2: TSlowLogQueryFilter slowLogQueryFilter
+   /** @param logQueryFilter filter to be used if provided */
+    2: TLogQueryFilter logQueryFilter
   ) throws (1: TIOError io)
 
   /**
-   * Clears online slow RPC logs from the provided list of
+   * Clears online slow/large RPC logs from the provided list of
    * RegionServers
    *
    * @return List of booleans representing if online slowlog response buffer is cleaned

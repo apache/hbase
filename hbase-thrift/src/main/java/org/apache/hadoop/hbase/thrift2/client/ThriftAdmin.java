@@ -43,9 +43,9 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.CompactType;
 import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.LogQueryFilter;
+import org.apache.hadoop.hbase.client.OnlineLogRecord;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.SlowLogQueryFilter;
-import org.apache.hadoop.hbase.client.SlowLogRecord;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -67,10 +67,10 @@ import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.thrift2.ThriftUtilities;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
+import org.apache.hadoop.hbase.thrift2.generated.TLogQueryFilter;
 import org.apache.hadoop.hbase.thrift2.generated.TNamespaceDescriptor;
+import org.apache.hadoop.hbase.thrift2.generated.TOnlineLogRecord;
 import org.apache.hadoop.hbase.thrift2.generated.TServerName;
-import org.apache.hadoop.hbase.thrift2.generated.TSlowLogQueryFilter;
-import org.apache.hadoop.hbase.thrift2.generated.TSlowLogRecord;
 import org.apache.hadoop.hbase.thrift2.generated.TTableDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TTableName;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -1166,15 +1166,15 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public List<SlowLogRecord> getSlowLogResponses(final Set<ServerName> serverNames,
-      final SlowLogQueryFilter slowLogQueryFilter) throws IOException {
+  public List<OnlineLogRecord> getSlowLogResponses(final Set<ServerName> serverNames,
+      final LogQueryFilter logQueryFilter) throws IOException {
     Set<TServerName> tServerNames = ThriftUtilities.getServerNamesFromHBase(serverNames);
-    TSlowLogQueryFilter tSlowLogQueryFilter =
-      ThriftUtilities.getSlowLogQueryFromHBase(slowLogQueryFilter);
+    TLogQueryFilter tLogQueryFilter =
+      ThriftUtilities.getSlowLogQueryFromHBase(logQueryFilter);
     try {
-      List<TSlowLogRecord> tSlowLogRecords =
-        client.getSlowLogResponses(tServerNames, tSlowLogQueryFilter);
-      return ThriftUtilities.getSlowLogRecordsFromThrift(tSlowLogRecords);
+      List<TOnlineLogRecord> tOnlineLogRecords =
+        client.getSlowLogResponses(tServerNames, tLogQueryFilter);
+      return ThriftUtilities.getSlowLogRecordsFromThrift(tOnlineLogRecords);
     } catch (TException e) {
       throw new IOException(e);
     }
@@ -1256,4 +1256,5 @@ public class ThriftAdmin implements Admin {
     getConfiguredNamespacesAndTablesInRSGroup(String groupName) throws IOException {
     throw new NotImplementedException("setRSGroup not supported in ThriftAdmin");
   }
+
 }
