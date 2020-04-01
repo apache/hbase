@@ -87,7 +87,10 @@ public final class RSGroupUtil {
     }
     // RSGroup information determined by administrator.
     String groupDeterminedByAdmin = manager.determineRSGroupInfoForTable(tableName);
-    RSGroupInfo groupInfo = manager.getRSGroup(groupDeterminedByAdmin);
+    RSGroupInfo groupInfo = null;
+    if (groupDeterminedByAdmin != null) {
+      groupInfo = manager.getRSGroup(groupDeterminedByAdmin);
+    }
     if (groupInfo != null) {
       return Optional.of(groupInfo);
     }
