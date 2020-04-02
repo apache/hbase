@@ -27,9 +27,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
@@ -97,7 +98,7 @@ public class TestQuotaObserverChoreRegionReports {
     // Wait till quota table onlined.
     TEST_UTIL.waitFor(10000, new Waiter.Predicate<Exception>() {
       @Override public boolean evaluate() throws Exception {
-        return MetaTableAccessor.tableExists(TEST_UTIL.getConnection(),
+        return CatalogAccessor.tableExists(TEST_UTIL.getConnection(),
           QuotaTableUtil.QUOTA_TABLE_NAME);
       }
     });
@@ -156,7 +157,7 @@ public class TestQuotaObserverChoreRegionReports {
     // Wait till quota table onlined.
     TEST_UTIL.waitFor(10000, new Waiter.Predicate<Exception>() {
       @Override public boolean evaluate() throws Exception {
-        return MetaTableAccessor.tableExists(TEST_UTIL.getConnection(),
+        return CatalogAccessor.tableExists(TEST_UTIL.getConnection(),
           QuotaTableUtil.QUOTA_TABLE_NAME);
       }
     });
