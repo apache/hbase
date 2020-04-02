@@ -255,15 +255,7 @@ public class TestRegionMover {
     TEST_UTIL.getAdmin().decommissionRegionServers(
       Collections.singletonList(excludeServer.getServerName()), false);
 
-    TEST_UTIL.waitFor(3000, () -> {
-      try {
-        List<ServerName> decomServers = TEST_UTIL.getAdmin().listDecommissionedRegionServers();
-        return decomServers.size() == 1
-          && decomServers.get(0).equals(excludeServer.getServerName());
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-    });
+    waitForServerDecom(excludeServer);
 
     HRegionServer regionServer = cluster.getRegionServer(0);
     String rsName = regionServer.getServerName().getHostname();
@@ -296,12 +288,8 @@ public class TestRegionMover {
       Collections.emptyList());
   }
 
-  @Test
-  public void testDecomServerExclusion() throws Exception {
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-    HRegionServer excludeServer = cluster.getRegionServer(0);
-    List<HRegion> regions = excludeServer.getRegions();
-    int regionsExcludeServer = excludeServer.getNumberOfOnlineRegions();
+  private void waitForServerDecom(HRegionServer excludeServer) throws IOException {
+
     TEST_UTIL.getAdmin().decommissionRegionServers(
       Collections.singletonList(excludeServer.getServerName()), false);
 
@@ -314,6 +302,19 @@ public class TestRegionMover {
         throw new RuntimeException(e);
       }
     });
+
+  }
+
+  @Test
+  public void testDecomServerExclusion() throws Exception {
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    HRegionServer excludeServer = cluster.getRegionServer(0);
+    List<HRegion> regions = excludeServer.getRegions();
+    int regionsExcludeServer = excludeServer.getNumberOfOnlineRegions();
+    TEST_UTIL.getAdmin().decommissionRegionServers(
+      Collections.singletonList(excludeServer.getServerName()), false);
+
+    waitForServerDecom(excludeServer);
 
     HRegionServer sourceRegionServer = cluster.getRegionServer(1);
     String rsName = sourceRegionServer.getServerName().getHostname();
@@ -362,15 +363,7 @@ public class TestRegionMover {
     TEST_UTIL.getAdmin().decommissionRegionServers(
       Collections.singletonList(decomServer.getServerName()), false);
 
-    TEST_UTIL.waitFor(3000, () -> {
-      try {
-        List<ServerName> decomServers = TEST_UTIL.getAdmin().listDecommissionedRegionServers();
-        return decomServers.size() == 1
-          && decomServers.get(0).equals(decomServer.getServerName());
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-    });
+    waitForServerDecom(decomServer);
 
     HRegionServer regionServer = cluster.getRegionServer(0);
     String rsName = regionServer.getServerName().getHostname();
