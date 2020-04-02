@@ -233,7 +233,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
   }
 
   private Result getReverseScanResult(Table table, byte[] row) throws IOException {
-    Scan scan = new Scan(row);
+    Scan scan = new Scan().withStartRow(row);
     scan.setSmall(true);
     scan.setReversed(true);
     scan.setCaching(1);
@@ -1446,7 +1446,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       table.put(p);
 
       int versions = 4;
-      Scan s = new Scan(row);
+      Scan s = new Scan().withStartRow(row);
       // get all the possible versions
       s.readAllVersions();
       s.setRaw(true);
@@ -1717,7 +1717,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       Result result = getSingleScanResult(ht, scan);
       assertNullResult(result);
 
-      scan = new Scan(ROWS[0]);
+      scan = new Scan().withStartRow(ROWS[0]);
       scan.setReversed(true);
       result = getSingleScanResult(ht, scan);
       assertNullResult(result);
@@ -1763,7 +1763,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
 
       // Try to scan empty rows around it
       // Introduced MemStore#shouldSeekForReverseScan to fix the following
-      scan = new Scan(ROWS[1]);
+      scan = new Scan().withStartRow(ROWS[1]);
       scan.setReversed(true);
       result = getSingleScanResult(ht, scan);
       assertNullResult(result);
@@ -1828,7 +1828,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       delete.addFamily(FAMILIES[0], ts[0]);
       ht.delete(delete);
 
-      Scan scan = new Scan(ROW);
+      Scan scan = new Scan().withStartRow(ROW);
       scan.setReversed(true);
       scan.addFamily(FAMILIES[0]);
       scan.readVersions(Integer.MAX_VALUE);
@@ -1850,7 +1850,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       delete.addColumn(FAMILIES[0], QUALIFIER); // ts[4]
       ht.delete(delete);
 
-      scan = new Scan(ROW);
+      scan = new Scan().withStartRow(ROW);
       scan.setReversed(true);
       scan.addColumn(FAMILIES[0], QUALIFIER);
       scan.readVersions(Integer.MAX_VALUE);
@@ -1879,7 +1879,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       // The Scanner returns the previous values, the expected-naive-unexpected
       // behavior
 
-      scan = new Scan(ROW);
+      scan = new Scan().withStartRow(ROW);
       scan.setReversed(true);
       scan.addFamily(FAMILIES[0]);
       scan.readVersions(Integer.MAX_VALUE);
@@ -1925,7 +1925,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       delete.addColumn(FAMILIES[2], QUALIFIER);
       ht.delete(delete);
 
-      scan = new Scan(ROWS[0]);
+      scan = new Scan().withStartRow(ROWS[0]);
       scan.setReversed(true);
       scan.addFamily(FAMILIES[1]);
       scan.addFamily(FAMILIES[2]);
@@ -1935,7 +1935,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       assertNResult(result, ROWS[0], FAMILIES[1], QUALIFIER, new long[]{ts[0],
               ts[1]}, new byte[][]{VALUES[0], VALUES[1]}, 0, 1);
 
-      scan = new Scan(ROWS[1]);
+      scan = new Scan().withStartRow(ROWS[1]);
       scan.setReversed(true);
       scan.addFamily(FAMILIES[1]);
       scan.addFamily(FAMILIES[2]);
@@ -1943,7 +1943,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       result = getSingleScanResult(ht, scan);
       assertEquals("Expected 2 keys but received " + result.size(), 2, result.size());
 
-      scan = new Scan(ROWS[2]);
+      scan = new Scan().withStartRow(ROWS[2]);
       scan.setReversed(true);
       scan.addFamily(FAMILIES[1]);
       scan.addFamily(FAMILIES[2]);
@@ -1968,7 +1968,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       put.addColumn(FAMILIES[2], QUALIFIER, VALUES[2]);
       ht.put(put);
 
-      scan = new Scan(ROWS[4]);
+      scan = new Scan().withStartRow(ROWS[4]);
       scan.setReversed(true);
       scan.addFamily(FAMILIES[1]);
       scan.addFamily(FAMILIES[2]);

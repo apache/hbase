@@ -180,21 +180,6 @@ public class Scan extends Query {
   public Scan() {}
 
   /**
-   * Create a Scan operation starting at the specified row.
-   * <p>
-   * If the specified row does not exist, the Scanner will start from the next closest row after the
-   * specified row.
-   * @param startRow row to start scanner at or after
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
-   *   {@code new Scan().withStartRow(startRow)} instead.
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17320">HBASE-17320</a>
-   */
-  @Deprecated
-  public Scan(byte[] startRow) {
-    withStartRow(startRow);
-  }
-
-  /**
    * Creates a new instance of this class while copying all values.
    *
    * @param scan  The scan instance to copy from.

@@ -201,7 +201,7 @@ public class TimestampTestBase {
    */
   public static int assertScanContentTimestamp(final Table in, final long ts)
   throws IOException {
-    Scan scan = new Scan(HConstants.EMPTY_START_ROW);
+    Scan scan = new Scan().withStartRow(HConstants.EMPTY_START_ROW);
     scan.addFamily(FAMILY_NAME);
     scan.setTimeRange(0, ts);
     ResultScanner scanner = in.getScanner(scan);
