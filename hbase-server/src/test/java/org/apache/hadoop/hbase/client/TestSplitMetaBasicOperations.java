@@ -265,7 +265,8 @@ public class TestSplitMetaBasicOperations {
 
     // Scan meta after split
     Table table = conn.getTable(TableName.META_TABLE_NAME);
-    Scan s = new Scan(HConstants.EMPTY_START_ROW).addFamily(HConstants.CATALOG_FAMILY);
+    Scan s = new Scan().withStartRow(HConstants.EMPTY_START_ROW)
+      .addFamily(HConstants.CATALOG_FAMILY);
     ResultScanner scanner = table.getScanner(s);
     Result r = scanner.next();
     int i = 0;
@@ -361,7 +362,8 @@ public class TestSplitMetaBasicOperations {
       metaTable = conn.getTable(TableName.META_TABLE_NAME);
     }
 
-    Scan s = new Scan(HConstants.EMPTY_START_ROW).addFamily(HConstants.CATALOG_FAMILY);
+    Scan s = new Scan().withStartRow(HConstants.EMPTY_START_ROW)
+      .addFamily(HConstants.CATALOG_FAMILY);
     ResultScanner scanner = metaTable.getScanner(s);
     Result r = scanner.next();
     List<RegionInfo> splitList = new ArrayList<RegionInfo>();
@@ -389,7 +391,7 @@ public class TestSplitMetaBasicOperations {
     });
 
 
-    s = new Scan(HConstants.EMPTY_START_ROW).addFamily(HConstants.CATALOG_FAMILY);
+    s = new Scan().withStartRow(HConstants.EMPTY_START_ROW).addFamily(HConstants.CATALOG_FAMILY);
     scanner = metaTable.getScanner(s);
     r = scanner.next();
     splitList = new ArrayList<RegionInfo>();
