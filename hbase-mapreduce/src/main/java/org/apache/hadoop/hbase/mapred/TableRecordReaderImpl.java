@@ -85,7 +85,7 @@ public class TableRecordReaderImpl {
       LOG.debug("TIFB.restart, firstRow: " +
           Bytes.toStringBinary(firstRow) + ", no endRow");
 
-      Scan scan = new Scan(firstRow);
+      Scan scan = new Scan().withStartRow(firstRow);
       TableInputFormat.addColumns(scan, trrInputColumns);
       scan.setFilter(trrRowFilter);
       this.scanner = this.htable.getScanner(scan);

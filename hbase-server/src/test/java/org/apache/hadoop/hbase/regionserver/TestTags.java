@@ -222,7 +222,7 @@ public class TestTags {
       admin.flush(tableName);
       Thread.sleep(1000);
 
-      Scan s = new Scan(row);
+      Scan s = new Scan().withStartRow(row);
       ResultScanner scanner = table.getScanner(s);
       try {
         Result[] next = scanner.next(3);
@@ -240,7 +240,7 @@ public class TestTags {
       while (admin.getCompactionState(tableName) != CompactionState.NONE) {
         Thread.sleep(10);
       }
-      s = new Scan(row);
+      s = new Scan().withStartRow(row);
       scanner = table.getScanner(s);
       try {
         Result[] next = scanner.next(3);
@@ -326,7 +326,7 @@ public class TestTags {
         Thread.sleep(1000);
 
         TestCoprocessorForTags.checkTagPresence = true;
-        Scan s = new Scan(row);
+        Scan s = new Scan().withStartRow(row);
         s.setCaching(1);
         ResultScanner scanner = table.getScanner(s);
         try {
@@ -527,7 +527,7 @@ public class TestTags {
 
   private void result(byte[] fam, byte[] row, byte[] qual, byte[] row2, Table table, byte[] value,
       byte[] value2, byte[] row1, byte[] value1) throws IOException {
-    Scan s = new Scan(row);
+    Scan s = new Scan().withStartRow(row);
     // If filters are used this attribute can be specifically check for in
     // filterKV method and
     // kvs can be filtered out if the tags of interest is not found in that kv

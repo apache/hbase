@@ -75,7 +75,7 @@ public class ScannerResultGenerator extends ResultGenerator {
       if (rowspec.hasEndRow()) {
         scan = new Scan().withStartRow(rowspec.getStartRow()).withStopRow(rowspec.getEndRow());
       } else {
-        scan = new Scan(rowspec.getStartRow());
+        scan = new Scan().withStartRow(rowspec.getStartRow());
       }
       if (rowspec.hasColumns()) {
         byte[][] columns = rowspec.getColumns();

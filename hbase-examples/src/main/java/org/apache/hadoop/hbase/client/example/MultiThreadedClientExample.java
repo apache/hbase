@@ -297,7 +297,7 @@ public class MultiThreadedClientExample extends Configured implements Tool {
       int toRead = 100;
       try (Table t = connection.getTable(tableName)) {
         byte[] rk = Bytes.toBytes(ThreadLocalRandom.current().nextLong());
-        Scan s = new Scan(rk);
+        Scan s = new Scan().withStartRow(rk);
 
         // This filter will keep the values from being sent accross the wire.
         // This is good for counting or other scans that are checking for

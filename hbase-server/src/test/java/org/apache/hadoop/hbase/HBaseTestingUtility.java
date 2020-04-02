@@ -4318,7 +4318,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   public Result getClosestRowBefore(Region r, byte[] row, byte[] family) throws IOException {
-    Scan scan = new Scan(row);
+    Scan scan = new Scan().withStartRow(row);
     scan.setSmall(true);
     scan.setCaching(1);
     scan.setReversed(true);

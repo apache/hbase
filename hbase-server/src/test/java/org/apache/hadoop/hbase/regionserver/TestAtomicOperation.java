@@ -572,7 +572,7 @@ public class TestAtomicOperation {
               region.mutateRowsWithLocks(mrm, rowsToLock, HConstants.NO_NONCE, HConstants.NO_NONCE);
               op ^= true;
               // check: should always see exactly one column
-              Scan s = new Scan(row);
+              Scan s = new Scan().withStartRow(row);
               RegionScanner rs = region.getScanner(s);
               List<Cell> r = new ArrayList<>();
               while (rs.next(r))
