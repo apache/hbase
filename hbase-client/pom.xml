@@ -95,10 +95,6 @@
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-protocol-shaded</artifactId>
     </dependency>
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-protocol</artifactId>
-    </dependency>
     <!-- General dependencies -->
     <dependency>
       <groupId>com.github.stephenc.findbugs</groupId>

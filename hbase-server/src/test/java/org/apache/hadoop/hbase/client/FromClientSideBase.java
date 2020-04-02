@@ -245,7 +245,7 @@ class FromClientSideBase {
     assertTrue(key != null && key.length > 0 &&
       Bytes.BYTES_COMPARATOR.compare(key, new byte [] {'a', 'a', 'a'}) >= 0);
     LOG.info("Key=" + Bytes.toString(key));
-    Scan s = startRow == null? new Scan(): new Scan(startRow);
+    Scan s = startRow == null? new Scan(): new Scan().withStartRow(startRow);
     Filter f = new RowFilter(op, new BinaryComparator(key));
     f = new WhileMatchFilter(f);
     s.setFilter(f);
@@ -584,9 +584,9 @@ class FromClientSideBase {
   protected void scanVersionRangeAndVerifyGreaterThan(Table ht, byte [] row,
     byte [] family, byte [] qualifier, long [] stamps, byte [][] values,
     int start, int end) throws IOException {
-    Scan scan = new Scan(row);
+    Scan scan = new Scan().withStartRow(row);
     scan.addColumn(family, qualifier);
-    scan.setMaxVersions(Integer.MAX_VALUE);
+    scan.readVersions(Integer.MAX_VALUE);
     scan.setTimeRange(stamps[start+1], Long.MAX_VALUE);
     Result result = getSingleScanResult(ht, scan);
     assertNResult(result, row, family, qualifier, stamps, values, start+1, end);
@@ -594,9 +594,9 @@ class FromClientSideBase {
 
   protected void scanVersionRangeAndVerify(Table ht, byte [] row, byte [] family,
     byte [] qualifier, long [] stamps, byte [][] values, int start, int end) throws IOException {
-    Scan scan = new Scan(row);
+    Scan scan = new Scan().withStartRow(row);
     scan.addColumn(family, qualifier);
-    scan.setMaxVersions(Integer.MAX_VALUE);
+    scan.readVersions(Integer.MAX_VALUE);
     scan.setTimeRange(stamps[start], stamps[end]+1);
     Result result = getSingleScanResult(ht, scan);
     assertNResult(result, row, family, qualifier, stamps, values, start, end);
@@ -604,9 +604,9 @@ class FromClientSideBase {
 
   protected void scanAllVersionsAndVerify(Table ht, byte [] row, byte [] family,
     byte [] qualifier, long [] stamps, byte [][] values, int start, int end) throws IOException {
-    Scan scan = new Scan(row);
+    Scan scan = new Scan().withStartRow(row);
     scan.addColumn(family, qualifier);
-    scan.setMaxVersions(Integer.MAX_VALUE);
+    scan.readVersions(Integer.MAX_VALUE);
     Result result = getSingleScanResult(ht, scan);
     assertNResult(result, row, family, qualifier, stamps, values, start, end);
   }
@@ -633,20 +633,20 @@ class FromClientSideBase {
 
   protected void scanVersionAndVerify(Table ht, byte [] row, byte [] family,
     byte [] qualifier, long stamp, byte [] value) throws Exception {
-    Scan scan = new Scan(row);
+    Scan scan = new Scan().withStartRow(row);
     scan.addColumn(family, qualifier);
     scan.setTimestamp(stamp);
-    scan.setMaxVersions(Integer.MAX_VALUE);
+    scan.readVersions(Integer.MAX_VALUE);
     Result result = getSingleScanResult(ht, scan);
     assertSingleResult(result, row, family, qualifier, stamp, value);
   }
 
   protected void scanVersionAndVerifyMissing(Table ht, byte [] row,
     byte [] family, byte [] qualifier, long stamp) throws Exception {
-    Scan scan = new Scan(row);
+    Scan scan = new Scan().withStartRow(row);
     scan.addColumn(family, qualifier);
     scan.setTimestamp(stamp);
-    scan.setMaxVersions(Integer.MAX_VALUE);
+    scan.readVersions(Integer.MAX_VALUE);
     Result result = getSingleScanResult(ht, scan);
     assertNullResult(result);
   }
@@ -908,7 +908,7 @@ class FromClientSideBase {
 
     // Scan around inserted columns
 
-    scan = new Scan(ROWS[1]);
+    scan = new Scan().withStartRow(ROWS[1]);
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
 
@@ -986,17 +986,17 @@ class FromClientSideBase {
     assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
       QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
 
-    scan = new Scan(ROWS[ROWIDX]);
+    scan = new Scan().withStartRow(ROWS[ROWIDX]);
     result = getSingleScanResult(ht, scan);
     assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
       QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
 
-    scan = new Scan(ROWS[ROWIDX], ROWS[ROWIDX+1]);
+    scan = new Scan().withStartRow(ROWS[ROWIDX]).withStopRow(ROWS[ROWIDX+1], true);
     result = getSingleScanResult(ht, scan);
     assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
       QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
 
-    scan = new Scan(HConstants.EMPTY_START_ROW, ROWS[ROWIDX+1]);
+    scan = new Scan().withStartRow(HConstants.EMPTY_START_ROW).withStopRow(ROWS[ROWIDX+1], true);
     result = getSingleScanResult(ht, scan);
     assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
       QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
@@ -1063,15 +1063,15 @@ class FromClientSideBase {
 
   protected void scanVerifySingleEmpty(Table ht, byte [][] ROWS, int ROWIDX, byte [][] FAMILIES,
     int FAMILYIDX, byte [][] QUALIFIERS, int QUALIFIERIDX) throws Exception {
-    Scan scan = new Scan(ROWS[ROWIDX+1]);
+    Scan scan = new Scan().withStartRow(ROWS[ROWIDX+1]);
     Result result = getSingleScanResult(ht, scan);
     assertNullResult(result);
 
-    scan = new Scan(ROWS[ROWIDX+1],ROWS[ROWIDX+2]);
+    scan = new Scan().withStartRow(ROWS[ROWIDX+1]).withStopRow(ROWS[ROWIDX+2], true);
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
 
-    scan = new Scan(HConstants.EMPTY_START_ROW, ROWS[ROWIDX]);
+    scan = new Scan().withStartRow(HConstants.EMPTY_START_ROW).withStopRow(ROWS[ROWIDX]);
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
 

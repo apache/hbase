@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
+import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
@@ -926,6 +927,26 @@ class MetricsRegionServerWrapperImpl
   @Override
   public long getHedgedReadWins() {
     return this.dfsHedgedReadMetrics == null? 0: this.dfsHedgedReadMetrics.getHedgedReadWins();
+  }
+
+  @Override
+  public long getTotalBytesRead() {
+    return FSDataInputStreamWrapper.getTotalBytesRead();
+  }
+
+  @Override
+  public long getLocalBytesRead() {
+    return FSDataInputStreamWrapper.getLocalBytesRead();
+  }
+
+  @Override
+  public long getShortCircuitBytesRead() {
+    return FSDataInputStreamWrapper.getShortCircuitBytesRead();
+  }
+
+  @Override
+  public long getZeroCopyBytesRead() {
+    return FSDataInputStreamWrapper.getZeroCopyBytesRead();
   }
 
   @Override

@@ -71,6 +71,7 @@ public final class RSGroupUtil {
     if (td == null) {
       return Optional.empty();
     }
+    // RSGroup information determined by client.
     Optional<String> optGroupNameOfTable = td.getRegionServerGroup();
     if (optGroupNameOfTable.isPresent()) {
       RSGroupInfo group = manager.getRSGroup(optGroupNameOfTable.get());
@@ -84,6 +85,16 @@ public final class RSGroupUtil {
     if (groupFromOldRSGroupInfo != null) {
       return Optional.of(groupFromOldRSGroupInfo);
     }
+    // RSGroup information determined by administrator.
+    String groupDeterminedByAdmin = manager.determineRSGroupInfoForTable(tableName);
+    RSGroupInfo groupInfo = null;
+    if (groupDeterminedByAdmin != null) {
+      groupInfo = manager.getRSGroup(groupDeterminedByAdmin);
+    }
+    if (groupInfo != null) {
+      return Optional.of(groupInfo);
+    }
+    // Finally, we will try to fall back to namespace as rsgroup if exists
     ClusterSchema clusterSchema = master.getClusterSchema();
     if (clusterSchema == null) {
       if (TableName.isMetaTableName(tableName)) {

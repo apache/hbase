@@ -66,7 +66,7 @@ public class TableRecordReaderImpl {
     Scan currentScan;
     if ((endRow != null) && (endRow.length > 0)) {
       if (trrRowFilter != null) {
-        Scan scan = new Scan(firstRow, endRow);
+        Scan scan = new Scan().withStartRow(firstRow).withStopRow(endRow);
         TableInputFormat.addColumns(scan, trrInputColumns);
         scan.setFilter(trrRowFilter);
         scan.setCacheBlocks(false);
@@ -76,7 +76,7 @@ public class TableRecordReaderImpl {
         LOG.debug("TIFB.restart, firstRow: " +
             Bytes.toStringBinary(firstRow) + ", endRow: " +
             Bytes.toStringBinary(endRow));
-        Scan scan = new Scan(firstRow, endRow);
+        Scan scan = new Scan().withStartRow(firstRow).withStopRow(endRow);
         TableInputFormat.addColumns(scan, trrInputColumns);
         this.scanner = this.htable.getScanner(scan);
         currentScan = scan;
@@ -85,7 +85,7 @@ public class TableRecordReaderImpl {
       LOG.debug("TIFB.restart, firstRow: " +
           Bytes.toStringBinary(firstRow) + ", no endRow");
 
-      Scan scan = new Scan(firstRow);
+      Scan scan = new Scan().withStartRow(firstRow);
       TableInputFormat.addColumns(scan, trrInputColumns);
       scan.setFilter(trrRowFilter);
       this.scanner = this.htable.getScanner(scan);

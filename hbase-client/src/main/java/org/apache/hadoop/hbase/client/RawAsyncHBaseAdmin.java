@@ -21,8 +21,7 @@ import static org.apache.hadoop.hbase.HConstants.HIGH_QOS;
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 import static org.apache.hadoop.hbase.util.FutureUtils.unwrapCompletionException;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcChannel;
+
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -46,7 +45,6 @@ import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
 import org.apache.hadoop.hbase.CacheEvictionStats;
@@ -102,9 +100,12 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
 import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
 import org.apache.hbase.thirdparty.io.netty.util.Timeout;
 import org.apache.hbase.thirdparty.io.netty.util.TimerTask;
@@ -3950,27 +3951,48 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<List<SlowLogRecord>> getSlowLogResponses(
-    @Nullable final Set<ServerName> serverNames,
-    final SlowLogQueryFilter slowLogQueryFilter) {
+  public CompletableFuture<List<OnlineLogRecord>> getSlowLogResponses(
+      @Nullable final Set<ServerName> serverNames,
+    final LogQueryFilter logQueryFilter) {
     if (CollectionUtils.isEmpty(serverNames)) {
       return CompletableFuture.completedFuture(Collections.emptyList());
     }
-    return CompletableFuture.supplyAsync(() -> serverNames.stream()
-      .map((ServerName serverName) ->
-        getSlowLogResponseFromServer(serverName, slowLogQueryFilter))
-      .map(CompletableFuture::join)
-      .flatMap(List::stream)
-      .collect(Collectors.toList()));
+    if (logQueryFilter.getType() == null
+        || logQueryFilter.getType() == LogQueryFilter.Type.SLOW_LOG) {
+      return CompletableFuture.supplyAsync(() -> serverNames.stream()
+        .map((ServerName serverName) ->
+          getSlowLogResponseFromServer(serverName, logQueryFilter))
+        .map(CompletableFuture::join)
+        .flatMap(List::stream)
+        .collect(Collectors.toList()));
+    } else {
+      return CompletableFuture.supplyAsync(() -> serverNames.stream()
+        .map((ServerName serverName) ->
+          getLargeLogResponseFromServer(serverName, logQueryFilter))
+        .map(CompletableFuture::join)
+        .flatMap(List::stream)
+        .collect(Collectors.toList()));
+    }
   }
 
-  private CompletableFuture<List<SlowLogRecord>> getSlowLogResponseFromServer(
-    final ServerName serverName, final SlowLogQueryFilter slowLogQueryFilter) {
-    return this.<List<SlowLogRecord>>newAdminCaller()
+  private CompletableFuture<List<OnlineLogRecord>> getSlowLogResponseFromServer(
+    final ServerName serverName, final LogQueryFilter logQueryFilter) {
+    return this.<List<OnlineLogRecord>>newAdminCaller()
       .action((controller, stub) -> this
         .adminCall(
-          controller, stub, RequestConverter.buildSlowLogResponseRequest(slowLogQueryFilter),
+          controller, stub, RequestConverter.buildSlowLogResponseRequest(logQueryFilter),
           AdminService.Interface::getSlowLogResponses,
+          ProtobufUtil::toSlowLogPayloads))
+      .serverName(serverName).call();
+  }
+
+  private CompletableFuture<List<OnlineLogRecord>> getLargeLogResponseFromServer(
+    final ServerName serverName, final LogQueryFilter logQueryFilter) {
+    return this.<List<OnlineLogRecord>>newAdminCaller()
+      .action((controller, stub) -> this
+        .adminCall(
+          controller, stub, RequestConverter.buildSlowLogResponseRequest(logQueryFilter),
+          AdminService.Interface::getLargeLogResponses,
           ProtobufUtil::toSlowLogPayloads))
       .serverName(serverName).call();
   }

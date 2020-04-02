@@ -18,14 +18,13 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import com.google.protobuf.Message;
-import com.google.protobuf.Service;
-
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 
 /**
  * Coprocessors implement this interface to observe and mediate endpoint invocations

@@ -76,6 +76,7 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -590,7 +591,7 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   }
 
   @Override
-  public boolean registerService(com.google.protobuf.Service service) {
+  public boolean registerService(Service service) {
     return false;
   }
 
@@ -679,6 +680,12 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
 
   @Override
   public SlowLogResponses getSlowLogResponses(RpcController controller,
+      SlowLogResponseRequest request) throws ServiceException {
+    return null;
+  }
+
+  @Override
+  public SlowLogResponses getLargeLogResponses(RpcController controller,
       SlowLogResponseRequest request) throws ServiceException {
     return null;
   }

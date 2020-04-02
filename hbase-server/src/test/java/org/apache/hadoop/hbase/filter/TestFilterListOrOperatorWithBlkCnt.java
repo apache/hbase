@@ -104,7 +104,7 @@ public class TestFilterListOrOperatorWithBlkCnt {
     generateRows(numRows, ht, family, qf, value);
 
     Scan scan = new Scan();
-    scan.setMaxVersions();
+    scan.readAllVersions();
     long blocksStart = getBlkAccessCount();
 
     List<RowRange> ranges1 = new ArrayList<>();
@@ -154,7 +154,7 @@ public class TestFilterListOrOperatorWithBlkCnt {
 
   private List<Cell> getScanResult(byte[] startRow, byte[] stopRow, Table ht) throws IOException {
     Scan scan = new Scan();
-    scan.setMaxVersions();
+    scan.readAllVersions();
     if(!Bytes.toString(startRow).isEmpty()) {
       scan.withStartRow(startRow);
     }

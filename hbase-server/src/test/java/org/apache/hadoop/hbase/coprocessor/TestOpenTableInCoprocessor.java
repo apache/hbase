@@ -203,7 +203,7 @@ public class TestOpenTableInCoprocessor {
    */
   private int getKeyValueCount(Table table) throws IOException {
     Scan scan = new Scan();
-    scan.setMaxVersions(Integer.MAX_VALUE - 1);
+    scan.readVersions(Integer.MAX_VALUE - 1);
 
     ResultScanner results = table.getScanner(scan);
     int count = 0;

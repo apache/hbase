@@ -120,7 +120,7 @@ public class TestMobDataBlockEncoding {
     admin.flush(TableName.valueOf(TN));
 
     Scan scan = new Scan();
-    scan.setMaxVersions(4);
+    scan.readVersions(4);
     MobTestUtil.assertCellsValue(table, scan, value, 3);
   }
 }

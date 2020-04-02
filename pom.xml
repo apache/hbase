@@ -70,7 +70,6 @@
     <module>hbase-thrift</module>
     <module>hbase-shell</module>
     <module>hbase-protocol-shaded</module>
-    <module>hbase-protocol</module>
     <module>hbase-client</module>
     <module>hbase-hadoop-compat</module>
     <module>hbase-common</module>
@@ -1040,6 +1039,14 @@
         <artifactId>maven-enforcer-plugin</artifactId>
         <executions>
           <execution>
+            <id>display-info</id>
+            <phase>initialize</phase>
+            <goals>
+              <goal>display-info</goal>
+            </goals>
+            <inherited>false</inherited>
+          </execution>
+          <execution>
             <id>hadoop-profile-min-maven-min-java-banned-xerces</id>
             <goals>
               <goal>enforce</goal>
@@ -1594,7 +1601,10 @@
     <test.output.tofile>true</test.output.tofile>
     <surefire.timeout>900</surefire.timeout>
     <test.exclude.pattern></test.exclude.pattern>
-    <!-- default Xmx value is 2800m. Use -Dsurefire.Xmx=xxg to run tests with different JVM Xmx value -->
+    <!--
+      default Xmx value is 2800m. Use -Dsurefire.Xmx=xxg to run tests with different JVM Xmx value.
+      this value is managed separately for jdk11.
+    -->
     <surefire.Xmx>2800m</surefire.Xmx>
     <surefire.cygwinXmx>2800m</surefire.cygwinXmx>
     <!--Mark our test runs with '-Dhbase.build.id' so we can identify a surefire test as ours in a process listing
@@ -1672,11 +1682,6 @@
       <dependency>
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-protocol-shaded</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase-protocol</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
@@ -2396,6 +2401,15 @@
       <properties>
         <!-- TODO: replicate logic for windows support -->
         <argLine>--add-opens=java.base/jdk.internal.ref=ALL-UNNAMED ${hbase-surefire.argLine}</argLine>
+        <!-- We need a minimum HDFS version of 3.2.0 for HADOOP-12760 -->
+        <hadoop-three.version>3.2.0</hadoop-three.version>
+        <!--
+          JDK11 appears to consume more heap than JDK8 does; OOME are more common in
+          -PrunLargeTests on this platform. Bump up heap allocated to tests (current default for
+          JDK8 is 2800m.
+          TODO: replicate logic for windows
+        -->
+        <surefire.Xmx>3200m</surefire.Xmx>
       </properties>
       <build>
         <plugins>

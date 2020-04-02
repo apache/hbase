@@ -192,7 +192,7 @@ public class HashTable extends Configured implements Tool {
         scan.setBatch(scanBatch);
       }
       if (versions >= 0) {
-        scan.setMaxVersions(versions);
+        scan.readVersions(versions);
       }
       if (!isTableStartRow(startRow)) {
         scan.withStartRow(startRow);

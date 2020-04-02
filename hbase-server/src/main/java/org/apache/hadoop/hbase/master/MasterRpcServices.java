@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.apache.hadoop.hbase.master.MasterWalManager.META_FILTER;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.BindException;
@@ -32,7 +33,6 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
@@ -84,8 +84,6 @@ import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureException;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
-import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsService;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.quotas.QuotaObserverChore;
 import org.apache.hadoop.hbase.quotas.QuotaUtil;
@@ -108,7 +106,6 @@ import org.apache.hadoop.hbase.security.access.PermissionStorage;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.security.visibility.VisibilityController;
-
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -117,20 +114,24 @@ import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.ServiceDescriptor;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GetUserPermissionsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GetUserPermissionsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GrantRequest;
@@ -377,8 +378,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.Trans
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
-
-
+import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsService;
 
 /**
  * Implements the master RPC services.
@@ -922,14 +922,14 @@ public class MasterRpcServices extends RSRpcServices implements
           ". Has it been enabled?");
       }
 
-      com.google.protobuf.Service service = master.coprocessorServiceHandlers.get(serviceName);
-      com.google.protobuf.Descriptors.ServiceDescriptor serviceDesc = service.getDescriptorForType();
-      com.google.protobuf.Descriptors.MethodDescriptor methodDesc =
+      Service service = master.coprocessorServiceHandlers.get(serviceName);
+      ServiceDescriptor serviceDesc = service.getDescriptorForType();
+      MethodDescriptor methodDesc =
           CoprocessorRpcUtils.getMethodDescriptor(methodName, serviceDesc);
 
-      com.google.protobuf.Message execRequest =
+      Message execRequest =
           CoprocessorRpcUtils.getRequest(service, methodDesc, call.getRequest());
-      final com.google.protobuf.Message.Builder responseBuilder =
+      final Message.Builder responseBuilder =
           service.getResponsePrototype(methodDesc).newBuilderForType();
       service.callMethod(methodDesc, execController, execRequest,
         (message) -> {
@@ -937,7 +937,7 @@ public class MasterRpcServices extends RSRpcServices implements
             responseBuilder.mergeFrom(message);
           }
         });
-      com.google.protobuf.Message execResult = responseBuilder.build();
+      Message execResult = responseBuilder.build();
       if (execController.getFailedOn() != null) {
         throw execController.getFailedOn();
       }
@@ -1985,21 +1985,20 @@ public class MasterRpcServices extends RSRpcServices implements
 
   /**
    * Determines if there is a MasterCoprocessor deployed which implements
-   * {@link org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService.Interface}.
+   * {@link AccessControlService.Interface}.
    */
   boolean hasAccessControlServiceCoprocessor(MasterCoprocessorHost cpHost) {
-    return checkCoprocessorWithService(
-        cpHost.findCoprocessors(MasterCoprocessor.class), AccessControlService.Interface.class);
+    return checkCoprocessorWithService(cpHost.findCoprocessors(MasterCoprocessor.class),
+      AccessControlService.Interface.class);
   }
 
   /**
    * Determines if there is a MasterCoprocessor deployed which implements
-   * {@link org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsService.Interface}.
+   * {@link VisibilityLabelsService.Interface}.
    */
   boolean hasVisibilityLabelsServiceCoprocessor(MasterCoprocessorHost cpHost) {
-    return checkCoprocessorWithService(
-        cpHost.findCoprocessors(MasterCoprocessor.class),
-        VisibilityLabelsService.Interface.class);
+    return checkCoprocessorWithService(cpHost.findCoprocessors(MasterCoprocessor.class),
+      VisibilityLabelsService.Interface.class);
   }
 
   /**

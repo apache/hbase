@@ -115,6 +115,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -191,6 +192,11 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.ServiceDescriptor;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
@@ -298,7 +304,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       new ConcurrentSkipListMap<>(Bytes.BYTES_RAWCOMPARATOR);
 
   // TODO: account for each registered handler in HeapSize computation
-  private Map<String, com.google.protobuf.Service> coprocessorServiceHandlers = Maps.newHashMap();
+  private Map<String, Service> coprocessorServiceHandlers = Maps.newHashMap();
 
   // Track data size in all memstores
   private final MemStoreSizing memStoreSizing = new ThreadSafeMemStoreSizing();
@@ -4207,7 +4213,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   @Override
   public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier, CompareOperator op,
     ByteArrayComparable comparator, TimeRange timeRange, Mutation mutation) throws IOException {
-    checkMutationType(mutation, row);
     return doCheckAndRowMutate(row, family, qualifier, op, comparator, null, timeRange, null,
       mutation);
   }
@@ -4243,6 +4248,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // need these commented out checks.
     // if (rowMutations == null && mutation == null) throw new DoNotRetryIOException("Both null");
     // if (rowMutations != null && mutation != null) throw new DoNotRetryIOException("Both set");
+    if (mutation != null) {
+      checkMutationType(mutation);
+      checkRow(mutation, row);
+    } else {
+      checkRow(rowMutations, row);
+    }
     checkReadOnly();
     // TODO, add check for value length also move this check to the client
     checkResources();
@@ -4358,13 +4369,17 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
-  private void checkMutationType(final Mutation mutation, final byte [] row)
+  private void checkMutationType(final Mutation mutation)
   throws DoNotRetryIOException {
     boolean isPut = mutation instanceof Put;
     if (!isPut && !(mutation instanceof Delete)) {
       throw new org.apache.hadoop.hbase.DoNotRetryIOException("Action must be Put or Delete");
     }
-    if (!Bytes.equals(row, mutation.getRow())) {
+  }
+
+  private void checkRow(final Row action, final byte[] row)
+    throws DoNotRetryIOException {
+    if (!Bytes.equals(row, action.getRow())) {
       throw new org.apache.hadoop.hbase.DoNotRetryIOException("Action's getRow must match");
     }
   }
@@ -4785,7 +4800,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         LOG.warn("Null or non-existent edits file: " + edits);
         continue;
       }
-      if (isZeroLengthThenDelete(fs, edits)) continue;
+      if (isZeroLengthThenDelete(fs, fs.getFileStatus(edits), edits)) {
+        continue;
+      }
 
       long maxSeqId;
       String fileName = edits.getName();
@@ -4805,27 +4822,27 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // if seqId is greater
         seqid = Math.max(seqid, replayRecoveredEdits(edits, maxSeqIdInStores, reporter, fs));
       } catch (IOException e) {
-        boolean skipErrors = conf.getBoolean(
-            HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS,
-            conf.getBoolean(
-                "hbase.skip.errors",
-                HConstants.DEFAULT_HREGION_EDITS_REPLAY_SKIP_ERRORS));
-        if (conf.get("hbase.skip.errors") != null) {
-          LOG.warn(
-              "The property 'hbase.skip.errors' has been deprecated. Please use " +
-                  HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS + " instead.");
-        }
-        if (skipErrors) {
-          Path p = WALSplitUtil.moveAsideBadEditsFile(fs, edits);
-          LOG.error(HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS
-              + "=true so continuing. Renamed " + edits +
-              " as " + p, e);
-        } else {
-          throw e;
-        }
+        handleException(fs, edits, e);
       }
     }
     return seqid;
+  }
+
+  private void handleException(FileSystem fs, Path edits, IOException e) throws IOException {
+    boolean skipErrors = conf.getBoolean(HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS,
+      conf.getBoolean("hbase.skip.errors", HConstants.DEFAULT_HREGION_EDITS_REPLAY_SKIP_ERRORS));
+    if (conf.get("hbase.skip.errors") != null) {
+      LOG.warn("The property 'hbase.skip.errors' has been deprecated. Please use "
+          + HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS + " instead.");
+    }
+    if (skipErrors) {
+      Path p = WALSplitUtil.moveAsideBadEditsFile(fs, edits);
+      LOG.error(HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS + "=true so continuing. Renamed "
+          + edits + " as " + p,
+        e);
+    } else {
+      throw e;
+    }
   }
 
   /**
@@ -5419,7 +5436,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   private long loadRecoveredHFilesIfAny(Collection<HStore> stores) throws IOException {
-    Path regionDir = getWALRegionDir();
+    Path regionDir = fs.getRegionDir();
     long maxSeqId = -1;
     for (HStore store : stores) {
       String familyName = store.getColumnFamilyName();
@@ -5427,12 +5444,18 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           WALSplitUtil.getRecoveredHFiles(fs.getFileSystem(), regionDir, familyName);
       if (files != null && files.length != 0) {
         for (FileStatus file : files) {
-          store.assertBulkLoadHFileOk(file.getPath());
-          Pair<Path, Path> pair = store.preBulkLoadHFile(file.getPath().toString(), -1);
-          store.bulkLoadHFile(Bytes.toBytes(familyName), pair.getFirst().toString(),
-              pair.getSecond());
-          maxSeqId =
-              Math.max(maxSeqId, WALSplitUtil.getSeqIdForRecoveredHFile(file.getPath().getName()));
+          Path filePath = file.getPath();
+          // If file length is zero then delete it
+          if (isZeroLengthThenDelete(fs.getFileSystem(), file, filePath)) {
+            continue;
+          }
+          try {
+            HStoreFile storefile = store.tryCommitRecoveredHFile(file.getPath());
+            maxSeqId = Math.max(maxSeqId, storefile.getReader().getSequenceID());
+          } catch (IOException e) {
+            handleException(fs.getFileSystem(), filePath, e);
+            continue;
+          }
         }
         if (this.rsServices != null && store.needsCompaction()) {
           this.rsServices.getCompactionRequestor()
@@ -5911,9 +5934,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @return True if file was zero-length (and if so, we'll delete it in here).
    * @throws IOException
    */
-  private static boolean isZeroLengthThenDelete(final FileSystem fs, final Path p)
-      throws IOException {
-    FileStatus stat = fs.getFileStatus(p);
+  private static boolean isZeroLengthThenDelete(final FileSystem fs, final FileStatus stat,
+      final Path p) throws IOException {
     if (stat.getLen() > 0) {
       return false;
     }
@@ -8373,23 +8395,20 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @return {@code true} if the registration was successful, {@code false}
    * otherwise
    */
-  public boolean registerService(com.google.protobuf.Service instance) {
-    /*
-     * No stacking of instances is allowed for a single service name
-     */
-    com.google.protobuf.Descriptors.ServiceDescriptor serviceDesc = instance.getDescriptorForType();
+  public boolean registerService(Service instance) {
+    // No stacking of instances is allowed for a single service name
+    ServiceDescriptor serviceDesc = instance.getDescriptorForType();
     String serviceName = CoprocessorRpcUtils.getServiceName(serviceDesc);
     if (coprocessorServiceHandlers.containsKey(serviceName)) {
       LOG.error("Coprocessor service " + serviceName +
-          " already registered, rejecting request from " + instance);
+        " already registered, rejecting request from " + instance);
       return false;
     }
 
     coprocessorServiceHandlers.put(serviceName, instance);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Registered coprocessor service: region=" +
-          Bytes.toStringBinary(getRegionInfo().getRegionName()) +
-          " service=" + serviceName);
+        Bytes.toStringBinary(getRegionInfo().getRegionName()) + " service=" + serviceName);
     }
     return true;
   }
@@ -8397,7 +8416,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * Executes a single protocol buffer coprocessor endpoint {@link Service} method using
    * the registered protocol handlers.  {@link Service} implementations must be registered via the
-   * {@link #registerService(com.google.protobuf.Service)}
+   * {@link #registerService(Service)}
    * method before they are available.
    *
    * @param controller an {@code RpcContoller} implementation to pass to the invoked service
@@ -8406,41 +8425,40 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @return a protocol buffer {@code Message} instance containing the method's result
    * @throws IOException if no registered service handler is found or an error
    *     occurs during the invocation
-   * @see #registerService(com.google.protobuf.Service)
+   * @see #registerService(Service)
    */
-  public com.google.protobuf.Message execService(com.google.protobuf.RpcController controller,
-      CoprocessorServiceCall call) throws IOException {
+  public Message execService(RpcController controller, CoprocessorServiceCall call)
+    throws IOException {
     String serviceName = call.getServiceName();
-    com.google.protobuf.Service service = coprocessorServiceHandlers.get(serviceName);
+    Service service = coprocessorServiceHandlers.get(serviceName);
     if (service == null) {
       throw new UnknownProtocolException(null, "No registered coprocessor service found for " +
           serviceName + " in region " + Bytes.toStringBinary(getRegionInfo().getRegionName()));
     }
-    com.google.protobuf.Descriptors.ServiceDescriptor serviceDesc = service.getDescriptorForType();
+    ServiceDescriptor serviceDesc = service.getDescriptorForType();
 
     cpRequestsCount.increment();
     String methodName = call.getMethodName();
-    com.google.protobuf.Descriptors.MethodDescriptor methodDesc =
+    MethodDescriptor methodDesc =
         CoprocessorRpcUtils.getMethodDescriptor(methodName, serviceDesc);
 
-    com.google.protobuf.Message.Builder builder =
+    Message.Builder builder =
         service.getRequestPrototype(methodDesc).newBuilderForType();
 
-    org.apache.hadoop.hbase.protobuf.ProtobufUtil.mergeFrom(builder,
+    ProtobufUtil.mergeFrom(builder,
         call.getRequest().toByteArray());
-    com.google.protobuf.Message request =
+    Message request =
         CoprocessorRpcUtils.getRequest(service, methodDesc, call.getRequest());
 
     if (coprocessorHost != null) {
       request = coprocessorHost.preEndpointInvocation(service, methodName, request);
     }
 
-    final com.google.protobuf.Message.Builder responseBuilder =
+    final Message.Builder responseBuilder =
         service.getResponsePrototype(methodDesc).newBuilderForType();
-    service.callMethod(methodDesc, controller, request,
-        new com.google.protobuf.RpcCallback<com.google.protobuf.Message>() {
+    service.callMethod(methodDesc, controller, request, new RpcCallback<Message>() {
       @Override
-      public void run(com.google.protobuf.Message message) {
+      public void run(Message message) {
         if (message != null) {
           responseBuilder.mergeFrom(message);
         }

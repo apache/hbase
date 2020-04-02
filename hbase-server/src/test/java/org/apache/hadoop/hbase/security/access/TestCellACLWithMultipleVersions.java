@@ -168,20 +168,21 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
             Table t = connection.getTable(testTable.getTableName())) {
           Put p;
           // with ro ACL
-          p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, ZERO);
+          long now = System.currentTimeMillis();
+          p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, now, ZERO);
           p.setACL(writePerms);
           t.put(p);
           // with ro ACL
-          p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, ZERO);
+          p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, now + 1, ZERO);
           p.setACL(readPerms);
           t.put(p);
-          p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, ZERO);
+          p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, now + 2, ZERO);
           p.setACL(writePerms);
           t.put(p);
-          p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, ZERO);
+          p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, now + 3, ZERO);
           p.setACL(readPerms);
           t.put(p);
-          p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, ZERO);
+          p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, now + 4, ZERO);
           p.setACL(writePerms);
           t.put(p);
         }

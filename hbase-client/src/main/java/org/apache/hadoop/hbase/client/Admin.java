@@ -1700,19 +1700,26 @@ public interface Admin extends Abortable, Closeable {
   List<QuotaSettings> getQuota(QuotaFilter filter) throws IOException;
 
   /**
-   * Creates and returns a {@link com.google.protobuf.RpcChannel} instance connected to the active
-   * master. <p> The obtained {@link com.google.protobuf.RpcChannel} instance can be used to access
-   * a published coprocessor {@link com.google.protobuf.Service} using standard protobuf service
-   * invocations: </p> <div style="background-color: #cccccc; padding: 2px">
-   * <blockquote><pre>
+   * Creates and returns a {@link org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel}
+   * instance connected to the active master.
+   * <p/>
+   * The obtained {@link org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel} instance can be
+   * used to access a published coprocessor
+   * {@link org.apache.hbase.thirdparty.com.google.protobuf.Service} using standard protobuf service
+   * invocations:
+   * <p/>
+   * <div style="background-color: #cccccc; padding: 2px">
+   * <blockquote>
+   * <pre>
    * CoprocessorRpcChannel channel = myAdmin.coprocessorService();
    * MyService.BlockingInterface service = MyService.newBlockingStub(channel);
    * MyCallRequest request = MyCallRequest.newBuilder()
    *     ...
    *     .build();
    * MyCallResponse response = service.myCall(null, request);
-   * </pre></blockquote></div>
-   *
+   * </pre>
+   * </blockquote>
+   * </div>
    * @return A MasterCoprocessorRpcChannel instance
    * @deprecated since 3.0.0, will removed in 4.0.0. This is too low level, please stop using it any
    *             more. Use the coprocessorService methods in {@link AsyncAdmin} instead.
@@ -1722,24 +1729,25 @@ public interface Admin extends Abortable, Closeable {
 
 
   /**
-   * Creates and returns a {@link com.google.protobuf.RpcChannel} instance
-   * connected to the passed region server.
-   *
-   * <p>
-   * The obtained {@link com.google.protobuf.RpcChannel} instance can be used to access a published
-   * coprocessor {@link com.google.protobuf.Service} using standard protobuf service invocations:
-   * </p>
-   *
-   * <div style="background-color: #cccccc; padding: 2px">
-   * <blockquote><pre>
+   * Creates and returns a {@link org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel}
+   * instance connected to the passed region server.
+   * <p/>
+   * The obtained {@link org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel} instance can be
+   * used to access a published coprocessor
+   * {@link org.apache.hbase.thirdparty.com.google.protobuf.Service} using standard protobuf service
+   * invocations:
+   * <p/>
+   * <div style="background-color: #cccccc; padding: 2px"> <blockquote>
+   * <pre>
    * CoprocessorRpcChannel channel = myAdmin.coprocessorService(serverName);
    * MyService.BlockingInterface service = MyService.newBlockingStub(channel);
    * MyCallRequest request = MyCallRequest.newBuilder()
    *     ...
    *     .build();
    * MyCallResponse response = service.myCall(null, request);
-   * </pre></blockquote></div>
-   *
+   * </pre>
+   * </blockquote>
+   * </div>
    * @param serverName the server name to which the endpoint call is made
    * @return A RegionServerCoprocessorRpcChannel instance
    * @deprecated since 3.0.0, will removed in 4.0.0. This is too low level, please stop using it any
@@ -2265,19 +2273,19 @@ public interface Admin extends Abortable, Closeable {
   boolean isSnapshotCleanupEnabled() throws IOException;
 
   /**
-   * Retrieves online slow RPC logs from the provided list of
+   * Retrieves online slow/large RPC logs from the provided list of
    * RegionServers
    *
    * @param serverNames Server names to get slowlog responses from
-   * @param slowLogQueryFilter filter to be used if provided
+   * @param logQueryFilter filter to be used if provided (determines slow / large RPC logs)
    * @return online slowlog response list
    * @throws IOException if a remote or network exception occurs
    */
-  List<SlowLogRecord> getSlowLogResponses(final Set<ServerName> serverNames,
-      final SlowLogQueryFilter slowLogQueryFilter) throws IOException;
+  List<OnlineLogRecord> getSlowLogResponses(final Set<ServerName> serverNames,
+      final LogQueryFilter logQueryFilter) throws IOException;
 
   /**
-   * Clears online slow RPC logs from the provided list of
+   * Clears online slow/large RPC logs from the provided list of
    * RegionServers
    *
    * @param serverNames Set of Server names to clean slowlog responses from

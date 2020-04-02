@@ -122,7 +122,7 @@ public class TestDefaultMobStoreFlusher {
       //Scan
       Scan scan = new Scan();
       scan.addColumn(family, qf1);
-      scan.setMaxVersions(4);
+      scan.readVersions(4);
       ResultScanner scanner = table.getScanner(scan);
 
       //Compare

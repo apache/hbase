@@ -151,7 +151,7 @@ public class TableResource extends ResourceBase {
       }
       Table hTable = RESTServlet.getInstance().getTable(this.table);
       tableScan.setBatch(batchSize);
-      tableScan.setMaxVersions(maxVersions);
+      tableScan.readVersions(maxVersions);
       tableScan.setTimeRange(startTime, endTime);
       if (!startRow.isEmpty()) {
         tableScan.withStartRow(Bytes.toBytes(startRow));

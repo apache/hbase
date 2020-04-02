@@ -43,7 +43,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ByteBufferExtendedCell;
@@ -77,6 +76,7 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.client.OnlineLogRecord;
 import org.apache.hadoop.hbase.client.PackagePrivateFieldAccessor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -86,7 +86,6 @@ import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.SlowLogParams;
-import org.apache.hadoop.hbase.client.SlowLogRecord;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -422,6 +421,50 @@ public final class ProtobufUtil {
       startCode = proto.getStartCode();
     }
     return ServerName.valueOf(hostName, port, startCode);
+  }
+
+  /**
+   * Get a ServerName from the passed in data bytes.
+   * @param data Data with a serialize server name in it; can handle the old style servername where
+   *          servername was host and port. Works too with data that begins w/ the pb 'PBUF' magic
+   *          and that is then followed by a protobuf that has a serialized {@link ServerName} in
+   *          it.
+   * @return Returns null if <code>data</code> is null else converts passed data to a ServerName
+   *         instance.
+   */
+  public static ServerName toServerName(final byte[] data) throws DeserializationException {
+    if (data == null || data.length <= 0) {
+      return null;
+    }
+    if (ProtobufMagic.isPBMagicPrefix(data)) {
+      int prefixLen = ProtobufMagic.lengthOfPBMagic();
+      try {
+        ZooKeeperProtos.Master rss =
+          ZooKeeperProtos.Master.parser().parseFrom(data, prefixLen, data.length - prefixLen);
+        HBaseProtos.ServerName sn = rss.getMaster();
+        return ServerName.valueOf(sn.getHostName(), sn.getPort(), sn.getStartCode());
+      } catch (/* InvalidProtocolBufferException */IOException e) {
+        // A failed parse of the znode is pretty catastrophic. Rather than loop
+        // retrying hoping the bad bytes will changes, and rather than change
+        // the signature on this method to add an IOE which will send ripples all
+        // over the code base, throw a RuntimeException. This should "never" happen.
+        // Fail fast if it does.
+        throw new DeserializationException(e);
+      }
+    }
+    // The str returned could be old style -- pre hbase-1502 -- which was
+    // hostname and port seperated by a colon rather than hostname, port and
+    // startcode delimited by a ','.
+    String str = Bytes.toString(data);
+    int index = str.indexOf(ServerName.SERVERNAME_SEPARATOR);
+    if (index != -1) {
+      // Presume its ServerName serialized with versioned bytes.
+      return ServerName.parseVersionedServerName(data);
+    }
+    // Presume it a hostname:port format.
+    String hostname = Addressing.parseHostname(str);
+    int port = Addressing.parsePort(str);
+    return ServerName.valueOf(hostname, port, -1L);
   }
 
   /**
@@ -1147,7 +1190,7 @@ public final class ProtobufUtil {
       scan.setCacheBlocks(proto.getCacheBlocks());
     }
     if (proto.hasMaxVersions()) {
-      scan.setMaxVersions(proto.getMaxVersions());
+      scan.readVersions(proto.getMaxVersions());
     }
     if (proto.hasStoreLimit()) {
       scan.setMaxResultsPerColumnFamily(proto.getStoreLimit());
@@ -2949,7 +2992,7 @@ public final class ProtobufUtil {
 
   /**
    * Creates {@link CompactionState} from
-   * {@link org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState}
+   * {@link org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState}
    * state
    * @param state the protobuf CompactionState
    * @return CompactionState
@@ -2968,7 +3011,8 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Creates {@link org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type}
+   * Creates
+   * {@link org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Type}
    * from {@link SnapshotType}
    * @param type the SnapshotDescription type
    * @return the protobuf SnapshotDescription type
@@ -2979,7 +3023,8 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Creates {@link org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type}
+   * Creates
+   * {@link org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Type}
    * from the type of SnapshotDescription string
    * @param snapshotDesc string representing the snapshot description type
    * @return the protobuf SnapshotDescription type
@@ -2990,8 +3035,8 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Creates {@link SnapshotType} from the type of
-   * {@link org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription}
+   * Creates {@link SnapshotType} from the
+   * {@link org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Type}
    * @param type the snapshot description type
    * @return the protobuf SnapshotDescription type
    */
@@ -3001,7 +3046,7 @@ public final class ProtobufUtil {
 
   /**
    * Convert from {@link SnapshotDescription} to
-   * {@link org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription}
+   * {@link org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription}
    * @param snapshotDesc the POJO SnapshotDescription
    * @return the protobuf SnapshotDescription
    */
@@ -3033,7 +3078,7 @@ public final class ProtobufUtil {
 
   /**
    * Convert from
-   * {@link org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription} to
+   * {@link org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription} to
    * {@link SnapshotDescription}
    * @param snapshotDesc the protobuf SnapshotDescription
    * @return the POJO SnapshotDescription
@@ -3477,14 +3522,14 @@ public final class ProtobufUtil {
   /**
    * Convert Protobuf class
    * {@link org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog.SlowLogPayload}
-   * To client SlowLog Payload class {@link SlowLogRecord}
+   * To client SlowLog Payload class {@link OnlineLogRecord}
    *
    * @param slowLogPayload SlowLog Payload protobuf instance
    * @return SlowLog Payload for client usecase
    */
-  private static SlowLogRecord getSlowLogRecord(
+  private static OnlineLogRecord getSlowLogRecord(
       final TooSlowLog.SlowLogPayload slowLogPayload) {
-    SlowLogRecord clientSlowLogRecord = new SlowLogRecord.SlowLogRecordBuilder()
+    OnlineLogRecord onlineLogRecord = new OnlineLogRecord.OnlineLogRecordBuilder()
       .setCallDetails(slowLogPayload.getCallDetails())
       .setClientAddress(slowLogPayload.getClientAddress())
       .setMethodName(slowLogPayload.getMethodName())
@@ -3500,20 +3545,20 @@ public final class ProtobufUtil {
       .setStartTime(slowLogPayload.getStartTime())
       .setUserName(slowLogPayload.getUserName())
       .build();
-    return clientSlowLogRecord;
+    return onlineLogRecord;
   }
 
   /**
-   * Convert  AdminProtos#SlowLogResponses to list of {@link SlowLogRecord}
+   * Convert  AdminProtos#SlowLogResponses to list of {@link OnlineLogRecord}
    *
    * @param slowLogResponses slowlog response protobuf instance
    * @return list of SlowLog payloads for client usecase
    */
-  public static List<SlowLogRecord> toSlowLogPayloads(
+  public static List<OnlineLogRecord> toSlowLogPayloads(
       final AdminProtos.SlowLogResponses slowLogResponses) {
-    List<SlowLogRecord> slowLogRecords = slowLogResponses.getSlowLogPayloadsList()
+    List<OnlineLogRecord> onlineLogRecords = slowLogResponses.getSlowLogPayloadsList()
       .stream().map(ProtobufUtil::getSlowLogRecord).collect(Collectors.toList());
-    return slowLogRecords;
+    return onlineLogRecords;
   }
 
   /**

@@ -103,7 +103,9 @@ public class TestMasterRegistry {
   @Test public void testRegistryRPCs() throws Exception {
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     HMaster activeMaster = TEST_UTIL.getHBaseCluster().getMaster();
-    for (int numHedgedReqs = 1; numHedgedReqs <=3; numHedgedReqs++) {
+    final int size = activeMaster.getMetaRegionLocationCache().
+      getMetaRegionLocations().get().size();
+    for (int numHedgedReqs = 1; numHedgedReqs <= 3; numHedgedReqs++) {
       if (numHedgedReqs == 1) {
         conf.setBoolean(HConstants.MASTER_REGISTRY_ENABLE_HEDGED_READS_KEY, false);
       } else {
@@ -111,6 +113,9 @@ public class TestMasterRegistry {
       }
       conf.setInt(HConstants.HBASE_RPCS_HEDGED_REQS_FANOUT_KEY, numHedgedReqs);
       try (MasterRegistry registry = new MasterRegistry(conf)) {
+        // Add wait on all replicas being assigned before proceeding w/ test. Failed on occasion
+        // because not all replicas had made it up before test started.
+        RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(TEST_UTIL, registry);
         assertEquals(registry.getClusterId().get(), activeMaster.getClusterId());
         assertEquals(registry.getActiveMaster().get(), activeMaster.getServerName());
         List<HRegionLocation> metaLocations =

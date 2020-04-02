@@ -2009,8 +2009,36 @@ Example:
 echo "get_slowlog_responses '*'" | hbase shell > xyz.out 2>&1
 ----
 
+Similar to slow RPC logs, client can also retrieve large RPC logs.
+Sometimes, slow logs important to debug perf issues turn out to be
+larger in size.
 
-shell command to clear slowlog responses from RegionServer:
+----
+
+  hbase> get_largelog_responses '*'                                 => get largelog responses from all RS
+  hbase> get_largelog_responses '*', {'LIMIT' => 50}                => get largelog responses from all RS
+                                                                       with 50 records limit (default limit: 10)
+  hbase> get_largelog_responses ['SERVER_NAME1', 'SERVER_NAME2']    => get largelog responses from SERVER_NAME1,
+                                                                       SERVER_NAME2
+  hbase> get_largelog_responses '*', {'REGION_NAME' => 'hbase:meta,,1'}
+                                                                    => get largelog responses only related to meta
+                                                                       region
+  hbase> get_largelog_responses '*', {'TABLE_NAME' => 't1'}         => get largelog responses only related to t1 table
+  hbase> get_largelog_responses '*', {'CLIENT_IP' => '192.162.1.40:60225', 'LIMIT' => 100}
+                                                                    => get largelog responses with given client
+                                                                       IP address and get 100 records limit
+                                                                       (default limit: 10)
+  hbase> get_largelog_responses '*', {'REGION_NAME' => 'hbase:meta,,1', 'TABLE_NAME' => 't1'}
+                                                                    => get largelog responses with given region name
+                                                                       or table name
+  hbase> get_largelog_responses '*', {'USER' => 'user_name', 'CLIENT_IP' => '192.162.1.40:60225'}
+                                                                    => get largelog responses that match either
+                                                                       provided client IP address or user name
+
+----
+
+
+shell command to clear slow/largelog responses from RegionServer:
 
 ----
 Clears SlowLog Responses maintained by each or specific RegionServers.

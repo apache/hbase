@@ -79,9 +79,11 @@ public class TestMultiTableSnapshotInputFormatImpl {
     this.rootDir = new Path("file:///test-root-dir");
     FSUtils.setRootDir(conf, rootDir);
     this.snapshotScans = ImmutableMap.<String, Collection<Scan>>of("snapshot1",
-        ImmutableList.of(new Scan(Bytes.toBytes("1"), Bytes.toBytes("2"))), "snapshot2",
-        ImmutableList.of(new Scan(Bytes.toBytes("3"), Bytes.toBytes("4")),
-            new Scan(Bytes.toBytes("5"), Bytes.toBytes("6"))));
+        ImmutableList.of(new Scan().withStartRow(Bytes.toBytes("1"))
+          .withStopRow(Bytes.toBytes("2"))), "snapshot2",
+        ImmutableList.of(new Scan().withStartRow(Bytes.toBytes("3"))
+            .withStopRow(Bytes.toBytes("4")),
+            new Scan().withStartRow(Bytes.toBytes("5")).withStopRow(Bytes.toBytes("6"))));
 
     this.restoreDir = new Path(FSUtils.getRootDir(conf), "restore-dir");
 

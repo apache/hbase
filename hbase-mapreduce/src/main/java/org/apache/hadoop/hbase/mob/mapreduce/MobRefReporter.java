@@ -459,7 +459,7 @@ public class MobRefReporter extends Configured implements Tool {
       // a full table scan and don't want to impact other clients badly.
       scan.setCaching(conf.getInt(HConstants.HBASE_CLIENT_SCANNER_CACHING, 10000));
       scan.setCacheBlocks(false);
-      scan.setMaxVersions(maxVersions);
+      scan.readVersions(maxVersions);
       conf.set(REPORT_JOB_ID, id);
 
       job = Job.getInstance(conf);

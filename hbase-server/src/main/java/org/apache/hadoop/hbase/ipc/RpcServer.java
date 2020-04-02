@@ -427,12 +427,13 @@ public abstract class RpcServer implements RpcServerInterface,
           tooLarge, tooSlow,
           status.getClient(), startTime, processingTime, qTime,
           responseSize, userName);
-        if (tooSlow && this.slowLogRecorder != null) {
+        if (this.slowLogRecorder != null) {
           // send logs to ring buffer owned by slowLogRecorder
           final String className = server == null ? StringUtils.EMPTY :
             server.getClass().getSimpleName();
           this.slowLogRecorder.addSlowLogPayload(
-            new RpcLogDetails(call, status.getClient(), responseSize, className));
+            new RpcLogDetails(call, status.getClient(), responseSize, className, tooSlow,
+              tooLarge));
         }
       }
       return new Pair<>(result, controller.cellScanner());

@@ -234,8 +234,9 @@ public class BalancerTestBase {
     int max = numRegions % numServers == 0 ? min : min + 1;
 
     for (ServerAndLoad server : servers) {
-      if (server.getLoad() < 0 || server.getLoad() > max + tablenum/2 + 1  ||
-          server.getLoad() < min - tablenum/2 - 1) {
+      // The '5' in below is arbitrary.
+      if (server.getLoad() < 0 || server.getLoad() > max + (tablenum/2 + 5)  ||
+          server.getLoad() < (min - tablenum/2 - 5)) {
         LOG.warn("server={}, load={}, max={}, tablenum={}, min={}",
           server.getServerName(), server.getLoad(), max, tablenum, min);
         return false;
@@ -557,7 +558,9 @@ public class BalancerTestBase {
 
     loadBalancer.setRackManager(rackManager);
     // Run the balancer.
-    List<RegionPlan> plans = loadBalancer.balanceCluster(serverMap);
+    Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
+        (Map) mockClusterServersWithTables(serverMap);
+    List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
     assertNotNull(plans);
 
     // Check to see that this actually got to a stable place.
@@ -570,7 +573,8 @@ public class BalancerTestBase {
 
       if (assertFullyBalanced) {
         assertClusterAsBalanced(balancedCluster);
-        List<RegionPlan> secondPlans =  loadBalancer.balanceCluster(serverMap);
+        LoadOfAllTable = (Map) mockClusterServersWithTables(serverMap);
+        List<RegionPlan> secondPlans = loadBalancer.balanceCluster(LoadOfAllTable);
         assertNull(secondPlans);
       }
 

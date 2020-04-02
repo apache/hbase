@@ -199,7 +199,7 @@ public class TestScannersFromClientSide {
 
     // without batch
     scan = new Scan().withStartRow(ROW);
-    scan.setMaxVersions();
+    scan.readAllVersions();
     scanner = ht.getScanner(scan);
 
     // c4:4, c5:5, c6:6, c7:7
@@ -213,7 +213,7 @@ public class TestScannersFromClientSide {
 
     // with batch
     scan =  new Scan().withStartRow(ROW);
-    scan.setMaxVersions();
+    scan.readAllVersions();
     scan.setBatch(2);
     scanner = ht.getScanner(scan);
 
@@ -648,7 +648,7 @@ public class TestScannersFromClientSide {
       Delete delete = new Delete(ROW);
       delete.addFamilyVersion(FAMILY, 0L);
       table.delete(delete);
-      Scan scan = new Scan(ROW).setRaw(true);
+      Scan scan = new Scan().withStartRow(ROW).setRaw(true);
       ResultScanner scanner = table.getScanner(scan);
       int count = 0;
       while (scanner.next() != null) {
@@ -786,10 +786,11 @@ public class TestScannersFromClientSide {
   @Test
   public void testScanWithColumnsAndFilterAndVersion() throws IOException {
     TableName tableName = name.getTableName();
+    long now = System.currentTimeMillis();
     try (Table table = TEST_UTIL.createTable(tableName, FAMILY, 4)) {
       for (int i = 0; i < 4; i++) {
         Put put = new Put(ROW);
-        put.addColumn(FAMILY, QUALIFIER, VALUE);
+        put.addColumn(FAMILY, QUALIFIER, now + i, VALUE);
         table.put(put);
       }
 

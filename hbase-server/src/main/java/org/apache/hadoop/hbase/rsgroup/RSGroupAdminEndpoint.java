@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
-import com.google.protobuf.Service;
 import java.io.IOException;
 import java.util.Collections;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -26,6 +25,8 @@ import org.apache.hadoop.hbase.coprocessor.HasMasterServices;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 
 /**
  * @deprecated Keep it here only for compatibility with old client, all the logics have been moved

@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.protobuf.Message;
-import com.google.protobuf.Service;
-
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -57,8 +54,6 @@ import org.apache.hadoop.hbase.coprocessor.BaseEnvironment;
 import org.apache.hadoop.hbase.coprocessor.BulkLoadObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorServiceBackwardCompatiblity;
 import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.EndpointObserver;
 import org.apache.hadoop.hbase.coprocessor.HasRegionServerServices;
@@ -86,6 +81,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.map.AbstractReferenceMap;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.map.ReferenceMap;
 
@@ -435,12 +432,6 @@ public class RegionCoprocessorHost
     try {
       if (RegionCoprocessor.class.isAssignableFrom(implClass)) {
         return implClass.asSubclass(RegionCoprocessor.class).getDeclaredConstructor().newInstance();
-      } else if (CoprocessorService.class.isAssignableFrom(implClass)) {
-        // For backward compatibility with old CoprocessorService impl which don't extend
-        // RegionCoprocessor.
-        CoprocessorService cs;
-        cs = implClass.asSubclass(CoprocessorService.class).getDeclaredConstructor().newInstance();
-        return new CoprocessorServiceBackwardCompatiblity.RegionCoprocessorService(cs);
       } else {
         LOG.error("{} is not of type RegionCoprocessor. Check the configuration of {}",
             implClass.getName(), CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);

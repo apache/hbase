@@ -25,11 +25,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import com.google.protobuf.BlockingRpcChannel;
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
-import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
@@ -84,17 +79,6 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContextImpl;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingService;
 import org.apache.hadoop.hbase.exceptions.HBaseException;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -110,10 +94,6 @@ import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.CheckPermissionsRequest;
 import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -144,7 +124,28 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.Service;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.CountRequest;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.CountResponse;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.HelloRequest;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.HelloResponse;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.NoopRequest;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.NoopResponse;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.PingRequest;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.PingResponse;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.PingService;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProcedureProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.AccessControlService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.CheckPermissionsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 
 /**
@@ -3113,7 +3114,16 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(tableLockAction, globalRWXUser, tableACUser, tableRWXUser);
     grantOnTable(TEST_UTIL, tableACUser.getShortName(), tableName, null, null,
         Action.ADMIN, Action.CREATE);
-    verifyAllowed(tableLockAction, tableACUser);
+    // See if this can fail (flakie) because grant hasn't propagated yet.
+    for (int i = 0; i < 10; i++) {
+      try {
+        verifyAllowed(tableLockAction, tableACUser);
+      } catch (AssertionError e) {
+        LOG.warn("Retrying assertion error", e);
+        Threads.sleep(1000);
+        continue;
+      }
+    }
 
     AccessTestAction regionsLockAction = new AccessTestAction() {
       @Override public Object run() throws Exception {

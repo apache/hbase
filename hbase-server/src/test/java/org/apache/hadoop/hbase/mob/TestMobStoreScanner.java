@@ -131,7 +131,7 @@ public class TestMobStoreScanner {
    */
   public void setScan(Scan scan, boolean reversed, boolean mobScanRaw) {
     scan.setReversed(reversed);
-    scan.setMaxVersions(4);
+    scan.readVersions(4);
     if(mobScanRaw) {
       scan.setAttribute(MobConstants.MOB_SCAN_RAW, Bytes.toBytes(Boolean.TRUE));
     }

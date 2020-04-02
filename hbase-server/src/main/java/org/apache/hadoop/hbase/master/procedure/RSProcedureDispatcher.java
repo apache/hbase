@@ -30,6 +30,8 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.ServerListener;
+import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher;
 import org.apache.hadoop.hbase.regionserver.RegionServerAbortedException;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
@@ -39,11 +41,9 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
@@ -93,11 +93,34 @@ public class RSProcedureDispatcher
     if (!super.start()) {
       return false;
     }
-
-    master.getServerManager().registerListener(this);
-    procedureEnv = master.getMasterProcedureExecutor().getEnvironment();
-    for (ServerName serverName: master.getServerManager().getOnlineServersList()) {
-      addNode(serverName);
+    if (master.isStopped()) {
+      LOG.debug("Stopped");
+      return false;
+    }
+    // Around startup, if failed, some of the below may be set back to null so NPE is possible.
+    ServerManager sm = master.getServerManager();
+    if (sm == null) {
+      LOG.debug("ServerManager is null");
+      return false;
+    }
+    sm.registerListener(this);
+    ProcedureExecutor<MasterProcedureEnv> pe = master.getMasterProcedureExecutor();
+    if (pe == null) {
+      LOG.debug("ProcedureExecutor is null");
+      return false;
+    }
+    this.procedureEnv = pe.getEnvironment();
+    if (this.procedureEnv == null) {
+      LOG.debug("ProcedureEnv is null; stopping={}", master.isStopping());
+      return false;
+    }
+    try {
+      for (ServerName serverName : sm.getOnlineServersList()) {
+        addNode(serverName);
+      }
+    } catch (Exception e) {
+      LOG.info("Failed start", e);
+      return false;
     }
     return true;
   }

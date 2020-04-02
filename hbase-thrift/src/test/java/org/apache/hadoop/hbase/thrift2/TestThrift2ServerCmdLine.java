@@ -61,8 +61,7 @@ public class TestThrift2ServerCmdLine extends TestThriftServerCmdLine {
 
   @Override
   protected void talkToThriftServer() throws Exception {
-    TSocket sock = new TSocket(InetAddress.getLocalHost().getHostName(),
-        port);
+    TSocket sock = new TSocket(InetAddress.getLoopbackAddress().getHostName(), port);
     TTransport transport = sock;
     if (specifyFramed || implType.isAlwaysFramed()) {
       transport = new TFramedTransport(transport);
@@ -95,5 +94,4 @@ public class TestThrift2ServerCmdLine extends TestThriftServerCmdLine {
       sock.close();
     }
   }
-
 }

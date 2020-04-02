@@ -24,6 +24,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -70,11 +71,6 @@ import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
-import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MultiRowMutationService;
-import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsRequest;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -94,6 +90,12 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.MutationType;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MultiRowMutationProtos.MultiRowMutationService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MultiRowMutationProtos.MutateRowsRequest;
 
 /**
  * Run tests that use the HBase clients; {@link Table}.
@@ -231,7 +233,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
   }
 
   private Result getReverseScanResult(Table table, byte[] row) throws IOException {
-    Scan scan = new Scan(row);
+    Scan scan = new Scan().withStartRow(row);
     scan.setSmall(true);
     scan.setReversed(true);
     scan.setCaching(1);
@@ -1444,9 +1446,9 @@ public class TestFromClientSide5 extends FromClientSideBase {
       table.put(p);
 
       int versions = 4;
-      Scan s = new Scan(row);
+      Scan s = new Scan().withStartRow(row);
       // get all the possible versions
-      s.setMaxVersions();
+      s.readAllVersions();
       s.setRaw(true);
 
       try (ResultScanner scanner = table.getScanner(s)) {
@@ -1463,7 +1465,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       // then if we decrease the number of versions, but keep the scan raw, we should see exactly
       // that number of versions
       versions = 2;
-      s.setMaxVersions(versions);
+      s.readVersions(versions);
       try (ResultScanner scanner = table.getScanner(s)) {
         int count = 0;
         for (Result r : scanner) {
@@ -1478,7 +1480,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       // finally, if we turn off raw scanning, but max out the number of versions, we should go back
       // to seeing just three
       versions = 3;
-      s.setMaxVersions(versions);
+      s.readVersions(versions);
       try (ResultScanner scanner = table.getScanner(s)) {
         int count = 0;
         for (Result r : scanner) {
@@ -1559,7 +1561,8 @@ public class TestFromClientSide5 extends FromClientSideBase {
       }
 
       // small scan
-      Scan scan = new Scan(HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
+      Scan scan = new Scan().withStartRow(HConstants.EMPTY_START_ROW)
+        .withStopRow(HConstants.EMPTY_END_ROW, true);
       scan.setSmall(true);
       scan.setCaching(2);
       try (ResultScanner scanner = table.getScanner(scan)) {
@@ -1607,8 +1610,8 @@ public class TestFromClientSide5 extends FromClientSideBase {
       put = new Put(Bytes.toBytes("0-b22222-0000000000000000009"));
       put.addColumn(FAMILY, QUALIFIER, VALUE);
       ht.put(put);
-      Scan scan = new Scan(Bytes.toBytes("0-b11111-9223372036854775807"),
-              Bytes.toBytes("0-b11111-0000000000000000000"));
+      Scan scan = new Scan().withStartRow(Bytes.toBytes("0-b11111-9223372036854775807"))
+        .withStopRow(Bytes.toBytes("0-b11111-0000000000000000000"), true);
       scan.setReversed(true);
       try (ResultScanner scanner = ht.getScanner(scan)) {
         Result result = scanner.next();
@@ -1714,12 +1717,12 @@ public class TestFromClientSide5 extends FromClientSideBase {
       Result result = getSingleScanResult(ht, scan);
       assertNullResult(result);
 
-      scan = new Scan(ROWS[0]);
+      scan = new Scan().withStartRow(ROWS[0]);
       scan.setReversed(true);
       result = getSingleScanResult(ht, scan);
       assertNullResult(result);
 
-      scan = new Scan(ROWS[0], ROWS[1]);
+      scan = new Scan().withStartRow(ROWS[0]).withStopRow(ROWS[1], true);
       scan.setReversed(true);
       result = getSingleScanResult(ht, scan);
       assertNullResult(result);
@@ -1748,19 +1751,19 @@ public class TestFromClientSide5 extends FromClientSideBase {
       result = getSingleScanResult(ht, scan);
       assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
 
-      scan = new Scan(ROWS[3], ROWS[0]);
+      scan = new Scan().withStartRow(ROWS[3]).withStopRow(ROWS[0], true);
       scan.setReversed(true);
       result = getSingleScanResult(ht, scan);
       assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
 
-      scan = new Scan(ROWS[2], ROWS[1]);
+      scan = new Scan().withStartRow(ROWS[2]).withStopRow(ROWS[1], true);
       scan.setReversed(true);
       result = getSingleScanResult(ht, scan);
       assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
 
       // Try to scan empty rows around it
       // Introduced MemStore#shouldSeekForReverseScan to fix the following
-      scan = new Scan(ROWS[1]);
+      scan = new Scan().withStartRow(ROWS[1]);
       scan.setReversed(true);
       result = getSingleScanResult(ht, scan);
       assertNullResult(result);
@@ -1825,10 +1828,10 @@ public class TestFromClientSide5 extends FromClientSideBase {
       delete.addFamily(FAMILIES[0], ts[0]);
       ht.delete(delete);
 
-      Scan scan = new Scan(ROW);
+      Scan scan = new Scan().withStartRow(ROW);
       scan.setReversed(true);
       scan.addFamily(FAMILIES[0]);
-      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.readVersions(Integer.MAX_VALUE);
       Result result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILIES[0], QUALIFIER, new long[]{ts[1]},
               new byte[][]{VALUES[1]}, 0, 0);
@@ -1847,10 +1850,10 @@ public class TestFromClientSide5 extends FromClientSideBase {
       delete.addColumn(FAMILIES[0], QUALIFIER); // ts[4]
       ht.delete(delete);
 
-      scan = new Scan(ROW);
+      scan = new Scan().withStartRow(ROW);
       scan.setReversed(true);
       scan.addColumn(FAMILIES[0], QUALIFIER);
-      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.readVersions(Integer.MAX_VALUE);
       result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILIES[0], QUALIFIER, new long[]{ts[1],
               ts[2], ts[3]}, new byte[][]{VALUES[1], VALUES[2], VALUES[3]}, 0, 2);
@@ -1876,10 +1879,10 @@ public class TestFromClientSide5 extends FromClientSideBase {
       // The Scanner returns the previous values, the expected-naive-unexpected
       // behavior
 
-      scan = new Scan(ROW);
+      scan = new Scan().withStartRow(ROW);
       scan.setReversed(true);
       scan.addFamily(FAMILIES[0]);
-      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.readVersions(Integer.MAX_VALUE);
       result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILIES[0], QUALIFIER, new long[]{ts[1],
               ts[2], ts[3]}, new byte[][]{VALUES[1], VALUES[2], VALUES[3]}, 0, 2);
@@ -1922,29 +1925,29 @@ public class TestFromClientSide5 extends FromClientSideBase {
       delete.addColumn(FAMILIES[2], QUALIFIER);
       ht.delete(delete);
 
-      scan = new Scan(ROWS[0]);
+      scan = new Scan().withStartRow(ROWS[0]);
       scan.setReversed(true);
       scan.addFamily(FAMILIES[1]);
       scan.addFamily(FAMILIES[2]);
-      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.readVersions(Integer.MAX_VALUE);
       result = getSingleScanResult(ht, scan);
       assertEquals("Expected 2 keys but received " + result.size(), 2, result.size());
       assertNResult(result, ROWS[0], FAMILIES[1], QUALIFIER, new long[]{ts[0],
               ts[1]}, new byte[][]{VALUES[0], VALUES[1]}, 0, 1);
 
-      scan = new Scan(ROWS[1]);
+      scan = new Scan().withStartRow(ROWS[1]);
       scan.setReversed(true);
       scan.addFamily(FAMILIES[1]);
       scan.addFamily(FAMILIES[2]);
-      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.readVersions(Integer.MAX_VALUE);
       result = getSingleScanResult(ht, scan);
       assertEquals("Expected 2 keys but received " + result.size(), 2, result.size());
 
-      scan = new Scan(ROWS[2]);
+      scan = new Scan().withStartRow(ROWS[2]);
       scan.setReversed(true);
       scan.addFamily(FAMILIES[1]);
       scan.addFamily(FAMILIES[2]);
-      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.readVersions(Integer.MAX_VALUE);
       result = getSingleScanResult(ht, scan);
       assertEquals(1, result.size());
       assertNResult(result, ROWS[2], FAMILIES[2], QUALIFIER,
@@ -1965,11 +1968,11 @@ public class TestFromClientSide5 extends FromClientSideBase {
       put.addColumn(FAMILIES[2], QUALIFIER, VALUES[2]);
       ht.put(put);
 
-      scan = new Scan(ROWS[4]);
+      scan = new Scan().withStartRow(ROWS[4]);
       scan.setReversed(true);
       scan.addFamily(FAMILIES[1]);
       scan.addFamily(FAMILIES[2]);
-      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.readVersions(Integer.MAX_VALUE);
       ResultScanner scanner = ht.getScanner(scan);
       result = scanner.next();
       assertEquals("Expected 2 keys but received " + result.size(), 2, result.size());
@@ -2397,7 +2400,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       Scan scan =
               new Scan().setFilter(new ValueFilter(CompareOperator.EQUAL,
                       new SubstringComparator("value-a")))
-                      .setMaxVersions(3);
+                      .readVersions(3);
       ResultScanner scanner = table.getScanner(scan);
       Result result = scanner.next();
       // ts[0] has gone from user view. Only read ts[2] which value is less or equal to 3
@@ -2418,7 +2421,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       scan =
               new Scan().setFilter(new ValueFilter(CompareOperator.EQUAL,
                       new SubstringComparator("value-a")))
-                      .setMaxVersions(1);
+                      .readVersions(1);
       scanner = table.getScanner(scan);
       result = scanner.next();
       // ts[0] has gone from user view. Only read ts[2] which value is less or equal to 3
@@ -2440,7 +2443,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       scan =
               new Scan().setFilter(new ValueFilter(CompareOperator.EQUAL,
                       new SubstringComparator("value-a")))
-                      .setMaxVersions(5);
+                      .readVersions(5);
       scanner = table.getScanner(scan);
       result = scanner.next();
       // ts[0] has gone from user view. Only read ts[2] which value is less or equal to 3
