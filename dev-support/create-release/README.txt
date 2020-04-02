@@ -5,7 +5,7 @@ For usage, pass '-h':
 
  $ ./do-release-docker.sh -h
 
-To run a build w/o invoking docker (not recommeneded!), use
+To run a build w/o invoking docker (not recommended!), use
 _do_release.sh_. It does not take parameters. It will ask
 you what commands to run with taking defaults from environment.
 

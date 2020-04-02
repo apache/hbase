@@ -96,7 +96,7 @@ function get_api_diff_version {
       api_diff_tag="rel/$((major - 1)).0.0"
     fi
   fi
-  api_diff_tag=$(read_config "api_diff_tag", "$api_diff_tag")
+  api_diff_tag=$(read_config "api_diff_tag" "$api_diff_tag")
   echo $api_diff_tag
 }
 
@@ -217,6 +217,7 @@ ASF_USERNAME:    $ASF_USERNAME
 GPG_KEY:         $GPG_KEY
 GIT_NAME:        $GIT_NAME
 GIT_EMAIL:       $GIT_EMAIL
+DRY_RUN:         $(is_dry_run && echo "yes" || echo "NO, THIS BUILD WILL BE PUBLISHED!")
 ================
 EOF
 

@@ -115,9 +115,14 @@ init_python
 # Print out subset of perl version.
 perl --version | grep 'This is'
 
-rm -rf ${PROJECT}
-ASF_REPO="${ASF_REPO:-https://gitbox.apache.org/repos/asf/${PROJECT}.git}"
-git clone "$ASF_REPO"
+rm -rf "${PROJECT}"
+# in case of dry run, enable build step to chain from tag step
+if is_dry_run && [[ "${TAG_SAME_DRY_RUN:-}" == "true" && -d "${PROJECT}.tag" ]]; then
+  ln -s "${PROJECT}.tag" "${PROJECT}"
+else
+  ASF_REPO="${ASF_REPO:-https://gitbox.apache.org/repos/asf/${PROJECT}.git}"
+  git clone "$ASF_REPO" "${PROJECT}"
+fi
 cd ${PROJECT}
 git checkout $GIT_REF
 git_hash=`git rev-parse --short HEAD`
