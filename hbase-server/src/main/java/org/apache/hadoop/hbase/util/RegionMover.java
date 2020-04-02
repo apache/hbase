@@ -34,9 +34,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
@@ -432,6 +434,11 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         }
         // Remove RS present in the exclude file
         stripExcludes(regionServers);
+
+        // Remove decommissioned RS
+        Set<ServerName> decommissionedRS = new HashSet<>(admin.listDecommissionedRegionServers());
+        regionServers.removeIf(decommissionedRS::contains);
+
         stripMaster(regionServers);
         if (regionServers.isEmpty()) {
           LOG.warn("No Regions were moved - no servers available");
