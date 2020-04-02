@@ -17,14 +17,20 @@
  */
 package org.apache.hadoop.hbase.thrift;
 
+import static org.junit.Assert.assertNotNull;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import static org.junit.Assert.assertNotNull;
 
 @Category({ ClientTests.class, MediumTests.class})
 public class TestBindExceptionHandling {
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestBindExceptionHandling.class);
+
   /**
    * See if random port choosing works around port clashes
    */
