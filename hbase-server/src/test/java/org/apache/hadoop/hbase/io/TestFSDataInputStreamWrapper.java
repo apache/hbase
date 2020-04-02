@@ -17,72 +17,61 @@
  */
 package org.apache.hadoop.hbase.io;
 
-import org.apache.hadoop.fs.CanUnbuffer;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.Method;
+import java.nio.ByteBuffer;
 
 @Category({IOTests.class, SmallTests.class})
 public class TestFSDataInputStreamWrapper {
-    private Method unbuffer = null;
+    private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+    private static FileSystem fs;
 
     @ClassRule
     public static final HBaseClassTestRule CLASS_RULE =
             HBaseClassTestRule.forClass(TestFSDataInputStreamWrapper.class);
 
+    @BeforeClass
+    public static void setUp() throws Exception {
+        fs = TEST_UTIL.getTestFileSystem();
+    }
 
     @Test
-    public void TestUnbuffer() {
-        InputStream wrappedStream = new SonStream();
-        final Class<? extends InputStream> streamClass = wrappedStream.getClass();
-        Class<?>[] streamInterfaces = streamClass.getInterfaces();
-        for (Class c : streamInterfaces) {
-            if (c.getCanonicalName().toString().equals("org.apache.hadoop.fs.CanUnbuffer")) {
-                try {
-                    this.unbuffer = streamClass.getDeclaredMethod("unbuffer");
-                } catch (NoSuchMethodException | SecurityException e) {
-                    return;
-                }
-                break;
-            }
-        }
-        Assert.assertEquals(false, unbuffer != null);
-        unbuffer = null;
-        if (wrappedStream instanceof CanUnbuffer) {
-            try {
-                this.unbuffer = streamClass.getDeclaredMethod("unbuffer");
-            } catch (NoSuchMethodException | SecurityException e) {
-                return;
-            }
-        }
-        Assert.assertEquals(true, unbuffer != null);
+    public void TestUnbuffer() throws IOException {
+        SonStream stream = new SonStream(fs.open(new Path("/p")));
+        FSDataInputStreamWrapper fsDISW = new FSDataInputStreamWrapper(stream);
+        fsDISW.unbuffer();
+        Assert.assertEquals(stream.buffer, null);
     }
 
-    public class SonStream extends FatherStream {
-        @Override
-        public void unbuffer() {
+    public class SonStream extends FSDataInputStream {
 
+        public ByteBuffer buffer = ByteBuffer.allocate(1024);
+
+        public SonStream(InputStream in) {
+            super(in);
         }
-    }
 
-    public class FatherStream extends InputStream implements CanUnbuffer {
+        public InputStream getWrappedStream() {
+            return this;
+        }
 
         @Override
         public void unbuffer() {
-
-        }
-
-        @Override
-        public int read() throws IOException {
-            return 0;
+            buffer = null;
         }
     }
+
 }
