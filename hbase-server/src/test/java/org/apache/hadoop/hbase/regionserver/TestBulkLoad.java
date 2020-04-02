@@ -93,6 +93,7 @@ public class TestBulkLoad {
   private final byte[] randomBytes = new byte[100];
   private final byte[] family1 = Bytes.toBytes("family1");
   private final byte[] family2 = Bytes.toBytes("family2");
+  private final byte[] family3 = Bytes.toBytes("family3");
 
   @Rule
   public TestName name = new TestName();
@@ -202,6 +203,13 @@ public class TestBulkLoad {
       null);
   }
 
+  // after HBASE-24021 will throw DoNotRetryIOException, not MultipleIOException
+  @Test(expected = DoNotRetryIOException.class)
+  public void shouldCrashIfBulkLoadMultiFamiliesNotInTable() throws IOException {
+    testRegionWithFamilies(family1).bulkLoadHFiles(withFamilyPathsFor(family1, family2, family3),
+      false, null);
+  }
+
   @Test(expected = DoNotRetryIOException.class)
   public void bulkHLogShouldThrowErrorWhenFamilySpecifiedAndHFileExistsButNotInTableDescriptor()
       throws IOException {
@@ -219,6 +227,15 @@ public class TestBulkLoad {
   public void shouldThrowErrorIfHFileDoesNotExist() throws IOException {
     List<Pair<byte[], String>> list = asList(withMissingHFileForFamily(family1));
     testRegionWithFamilies(family1).bulkLoadHFiles(list, false, null);
+  }
+
+  // after HBASE-24021 will throw FileNotFoundException, not MultipleIOException
+  @Test(expected = FileNotFoundException.class)
+  public void shouldThrowErrorIfMultiHFileDoesNotExist() throws IOException {
+    List<Pair<byte[], String>> list = new ArrayList<>();
+    list.addAll(asList(withMissingHFileForFamily(family1)));
+    list.addAll(asList(withMissingHFileForFamily(family2)));
+    testRegionWithFamilies(family1, family2).bulkLoadHFiles(list, false, null);
   }
 
   private Pair<byte[], String> withMissingHFileForFamily(byte[] family) {
