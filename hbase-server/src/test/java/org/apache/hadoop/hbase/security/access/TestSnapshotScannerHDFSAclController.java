@@ -170,6 +170,7 @@ public class TestSnapshotScannerHDFSAclController {
     admin.snapshot(snapshot2, table);
     TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot2, 6);
     assertTrue(hasUserGlobalHdfsAcl(aclTable, grantUserName));
+    deleteTable(table);
   }
 
   @Test
@@ -205,6 +206,8 @@ public class TestSnapshotScannerHDFSAclController {
     checkUserAclEntry(FS, helper.getGlobalRootPaths(), grantUserName, false, false);
     checkUserAclEntry(FS, helper.getNamespaceRootPaths(namespace1), grantUserName, true, true);
     checkUserAclEntry(FS, helper.getNamespaceRootPaths(namespace2), grantUserName, false, false);
+    deleteTable(table1);
+    deleteTable(table2);
   }
 
   @Test
@@ -236,6 +239,8 @@ public class TestSnapshotScannerHDFSAclController {
     checkUserAclEntry(FS, helper.getGlobalRootPaths(), grantUserName, false, false);
     checkUserAclEntry(FS, helper.getTableRootPaths(table2, false), grantUserName, false, false);
     checkUserAclEntry(FS, helper.getTableRootPaths(table1, false), grantUserName, true, true);
+    deleteTable(table1);
+    deleteTable(table2);
   }
 
   @Test
@@ -268,6 +273,8 @@ public class TestSnapshotScannerHDFSAclController {
     TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot1, -1);
     assertFalse(hasUserNamespaceHdfsAcl(aclTable, grantUserName, namespace));
     checkUserAclEntry(FS, helper.getNamespaceRootPaths(namespace), grantUserName, false, false);
+    deleteTable(table1);
+    deleteTable(table2);
   }
 
   @Test
@@ -294,6 +301,7 @@ public class TestSnapshotScannerHDFSAclController {
     checkUserAclEntry(FS, helper.getNamespaceRootPaths(namespace), grantUserName, true, false);
     assertTrue(hasUserTableHdfsAcl(aclTable, grantUserName, table1));
     checkUserAclEntry(FS, helper.getTableRootPaths(table1, false), grantUserName, true, true);
+    deleteTable(table1);
   }
 
   @Test
@@ -319,6 +327,7 @@ public class TestSnapshotScannerHDFSAclController {
     checkUserAclEntry(FS, helper.getNamespaceRootPaths(namespace), grantUserName, true, true);
     assertTrue(hasUserGlobalHdfsAcl(aclTable, grantUserName));
     checkUserAclEntry(FS, helper.getGlobalRootPaths(), grantUserName, true, true);
+    deleteTable(table);
   }
 
   @Test
@@ -367,6 +376,7 @@ public class TestSnapshotScannerHDFSAclController {
     TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot1, -1);
     assertFalse(hasUserTableHdfsAcl(aclTable, grantUserName, table1));
     checkUserAclEntry(FS, helper.getTableRootPaths(table1, false), grantUserName, false, false);
+    deleteTable(table1);
   }
 
   @Test
@@ -385,6 +395,7 @@ public class TestSnapshotScannerHDFSAclController {
       assertTrue(hasUserTableHdfsAcl(aclTable, grantUserName, table));
       checkUserAclEntry(FS, helper.getTableRootPaths(table, false), grantUserName, true, true);
     }
+    deleteTable(table);
   }
 
   @Test
@@ -402,6 +413,7 @@ public class TestSnapshotScannerHDFSAclController {
     TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot1, -1);
     assertFalse(hasUserGlobalHdfsAcl(aclTable, grantUserName));
     checkUserAclEntry(FS, helper.getGlobalRootPaths(), grantUserName, false, false);
+    deleteTable(table1);
   }
 
   @Test
@@ -426,6 +438,7 @@ public class TestSnapshotScannerHDFSAclController {
     checkUserAclEntry(FS, helper.getGlobalRootPaths(), grantUserName, false, false);
     assertTrue(hasUserNamespaceHdfsAcl(aclTable, grantUserName, namespace));
     checkUserAclEntry(FS, helper.getNamespaceRootPaths(namespace), grantUserName, true, true);
+    deleteTable(table1);
   }
 
   @Test
@@ -451,6 +464,7 @@ public class TestSnapshotScannerHDFSAclController {
     checkUserAclEntry(FS, helper.getNamespaceRootPaths(namespace), grantUserName, true, false);
     assertTrue(hasUserTableHdfsAcl(aclTable, grantUserName, table1));
     checkUserAclEntry(FS, helper.getTableRootPaths(table1, false), grantUserName, true, true);
+    deleteTable(table1);
   }
 
   @Test
@@ -479,6 +493,7 @@ public class TestSnapshotScannerHDFSAclController {
     TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot1, 6);
     assertFalse(hasUserNamespaceHdfsAcl(aclTable, grantUserName, namespace));
     checkUserAclEntry(FS, helper.getNamespaceRootPaths(namespace), grantUserName, true, true);
+    deleteTable(table1);
   }
 
   @Test
@@ -502,6 +517,7 @@ public class TestSnapshotScannerHDFSAclController {
     assertTrue(hasUserTableHdfsAcl(aclTable, grantUserName, table));
     checkUserAclEntry(FS, helper.getTableRootPaths(table, false),
       grantUserName, true, true);
+    deleteTable(table);
   }
 
   @Test
@@ -526,6 +542,7 @@ public class TestSnapshotScannerHDFSAclController {
     TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot, -1);
     assertFalse(hasUserTableHdfsAcl(aclTable, grantUserName, table));
     checkUserAclEntry(FS, helper.getTableRootPaths(table, false), grantUserName, false, false);
+    deleteTable(table);
   }
 
   @Test
@@ -547,6 +564,7 @@ public class TestSnapshotScannerHDFSAclController {
     checkUserAclEntry(FS, helper.getTableRootPaths(table, false), grantUserName, true, true);
     assertTrue(hasUserNamespaceHdfsAcl(aclTable, grantUserName, namespace));
     checkUserAclEntry(FS, helper.getNamespaceRootPaths(namespace), grantUserName, true, true);
+    deleteTable(table);
   }
 
   @Test
@@ -568,6 +586,7 @@ public class TestSnapshotScannerHDFSAclController {
     checkUserAclEntry(FS, helper.getTableRootPaths(table, false), grantUserName, true, true);
     assertTrue(hasUserGlobalHdfsAcl(aclTable, grantUserName));
     checkUserAclEntry(FS, helper.getGlobalRootPaths(), grantUserName, true, true);
+    deleteTable(table);
   }
 
   @Test
@@ -606,6 +625,7 @@ public class TestSnapshotScannerHDFSAclController {
       checkUserAclEntry(FS, helper.getTableRootPaths(tableName, false), grantUserName, true, true);
       checkUserAclEntry(FS, helper.getNamespaceRootPaths(namespace), grantUserName, true, false);
     }
+    deleteTable(tableName);
   }
 
   @Test
@@ -643,6 +663,7 @@ public class TestSnapshotScannerHDFSAclController {
     // check tmp table directory does not exist
     Path tmpTableDir = helper.getPathHelper().getTmpTableDir(table);
     assertFalse(FS.exists(tmpTableDir));
+    deleteTable(table);
   }
 
   @Test
@@ -671,6 +692,7 @@ public class TestSnapshotScannerHDFSAclController {
     assertFalse(FS.exists(helper.getPathHelper().getTmpNsDir(namespace)));
     assertFalse(FS.exists(helper.getPathHelper().getDataNsDir(namespace)));
     // assertFalse(fs.exists(FS, helper.getPathHelper().getMobDataNsDir(namespace)));
+    deleteTable(table);
   }
 
   @Test
@@ -700,6 +722,7 @@ public class TestSnapshotScannerHDFSAclController {
       SnapshotScannerHDFSAclCleaner.isArchiveDataDir(archiveTableDir.getParent().getParent()));
     assertFalse(SnapshotScannerHDFSAclCleaner
         .isArchiveDataDir(archiveTableDir.getParent().getParent().getParent()));
+    deleteTable(table);
   }
 
   @Test
@@ -761,6 +784,7 @@ public class TestSnapshotScannerHDFSAclController {
       assertFalse(hasUserTableHdfsAcl(aclTable, user, table));
       checkUserAclEntry(FS, helper.getTableRootPaths(table, false), user, false, false);
     }
+    deleteTable(table);
   }
 
   @Test
@@ -824,6 +848,8 @@ public class TestSnapshotScannerHDFSAclController {
     assertTrue(hasUserNamespaceHdfsAcl(aclTable, nsUserName, namespace));
     assertTrue(hasUserNamespaceHdfsAcl(aclTable, tableUserName2, namespace));
     assertFalse(hasUserTableHdfsAcl(aclTable, tableUserName, table));
+    deleteTable(table);
+    deleteTable(table2);
   }
 
   @Test
@@ -872,6 +898,8 @@ public class TestSnapshotScannerHDFSAclController {
     aclTable = TEST_UTIL.getConnection().getTable(PermissionStorage.ACL_TABLE_NAME);
     admin.snapshot(snapshot, table);
     TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot, 6);
+    deleteTable(table);
+    deleteTable(table2);
   }
 
   static void checkUserAclEntry(FileSystem fs, List<Path> paths, String user,
@@ -900,5 +928,14 @@ public class TestSnapshotScannerHDFSAclController {
     String message = "require user: " + userName + ", path: " + path.toString() + " acl";
     assertEquals(message, requireAccessAcl, accessAclEntry);
     assertEquals(message, requireDefaultAcl, defaultAclEntry);
+  }
+
+  static void deleteTable(TableName tableName) {
+    try {
+      admin.disableTable(tableName);
+      admin.deleteTable(tableName);
+    } catch (IOException e) {
+      LOG.warn("Failed to delete table: {}", tableName);
+    }
   }
 }
