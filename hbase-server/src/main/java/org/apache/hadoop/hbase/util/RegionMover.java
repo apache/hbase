@@ -34,9 +34,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
@@ -69,6 +71,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
 /**
  * Tool for loading/unloading regions to/from given regionserver This tool can be run from Command
@@ -81,13 +84,15 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
  */
 @InterfaceAudience.Public
 public class RegionMover extends AbstractHBaseTool implements Closeable {
-  public static final String MOVE_RETRIES_MAX_KEY = "hbase.move.retries.max";
-  public static final String MOVE_WAIT_MAX_KEY = "hbase.move.wait.max";
-  public static final String SERVERSTART_WAIT_MAX_KEY = "hbase.serverstart.wait.max";
-  public static final int DEFAULT_MOVE_RETRIES_MAX = 5;
-  public static final int DEFAULT_MOVE_WAIT_MAX = 60;
-  public static final int DEFAULT_SERVERSTART_WAIT_MAX = 180;
-  static final Logger LOG = LoggerFactory.getLogger(RegionMover.class);
+  private static final String MOVE_RETRIES_MAX_KEY = "hbase.move.retries.max";
+  private static final String MOVE_WAIT_MAX_KEY = "hbase.move.wait.max";
+  static final String SERVERSTART_WAIT_MAX_KEY = "hbase.serverstart.wait.max";
+  private static final int DEFAULT_MOVE_RETRIES_MAX = 5;
+  private static final int DEFAULT_MOVE_WAIT_MAX = 60;
+  private static final int DEFAULT_SERVERSTART_WAIT_MAX = 180;
+
+  private static final Logger LOG = LoggerFactory.getLogger(RegionMover.class);
+
   private RegionMoverBuilder rmbuilder;
   private boolean ack = true;
   private int maxthreads = 1;
@@ -432,6 +437,15 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         }
         // Remove RS present in the exclude file
         stripExcludes(regionServers);
+
+        // Remove decommissioned RS
+        Set<ServerName> decommissionedRS = new HashSet<>(admin.listDecommissionedRegionServers());
+        if (CollectionUtils.isNotEmpty(decommissionedRS)) {
+          regionServers.removeIf(decommissionedRS::contains);
+          LOG.debug("Excluded RegionServers from unloading regions to because they " +
+            "are marked as decommissioned. Servers: {}", decommissionedRS);
+        }
+
         stripMaster(regionServers);
         if (regionServers.isEmpty()) {
           LOG.warn("No Regions were moved - no servers available");
