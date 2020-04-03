@@ -49,7 +49,6 @@ import org.apache.thrift.server.TServer;
 import org.apache.thrift.transport.TFramedTransport;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
-import org.apache.thrift.transport.TTransportException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -175,16 +174,40 @@ public class TestThriftServerCmdLine {
    * Server can fail to bind if clashing address. Add retrying until we get a good server.
    */
   ThriftServer createBoundServer() {
-    return createBoundServer(false);
+    return createBoundServer(false, false);
+  }
+
+  private ServerSocket getBoundSocket() {
+    ServerSocket ss = null;
+    while (true) {
+      port = getRandomPort();
+      try {
+        ss = new ServerSocket();
+        ss.bind(new InetSocketAddress(port));
+        break;
+      } catch (IOException ioe) {
+        LOG.warn("Failed bind", ioe);
+        try {
+          ss.close();
+        } catch (IOException ioe2) {
+          LOG.warn("FAILED CLOSE of failed bind socket", ioe2);
+        }
+      }
+    }
+    return ss;
   }
 
   /**
-   * @param clash This param is just so we can manufacture a port clash so we can test the
-   *   code does the right thing when this happens during actual test runs. Ugly but works.
-   * @see TestBindExceptionHandling#testPortClash()
+   * @param protocolPortClash This param is just so we can manufacture a port clash so we can test
+   *   the code does the right thing when this happens during actual test runs. Ugly but works.
+   * @see TestBindExceptionHandling#testProtocolPortClash()
    */
-  ThriftServer createBoundServer(boolean clash) {
-    boolean testClashOfFirstPort = clash;
+  ThriftServer createBoundServer(boolean protocolPortClash, boolean infoPortClash) {
+    if (protocolPortClash && infoPortClash) {
+      throw new RuntimeException("Can't set both at same time");
+    }
+    boolean testClashOfFirstProtocolPort = protocolPortClash;
+    boolean testClashOfFirstInfoPort = infoPortClash;
     List<String> args = new ArrayList<>();
     ServerSocket ss = null;
     for (int i = 0; i < 100; i++) {
@@ -194,22 +217,26 @@ public class TestThriftServerCmdLine {
         assertTrue(serverTypeOption.startsWith("-"));
         args.add(serverTypeOption);
       }
-      port = getRandomPort();
-      if (testClashOfFirstPort) {
+      if (testClashOfFirstProtocolPort) {
         // Test what happens if already something bound to the socket.
         // Occupy the random port we just pulled.
-        try {
-          ss = new ServerSocket();
-          ss.bind(new InetSocketAddress(port));
-        } catch (IOException ioe) {
-          LOG.warn("Failed bind", ioe);
-        }
-        testClashOfFirstPort = false;
+        ss = getBoundSocket();
+        port = ss.getLocalPort();
+        testClashOfFirstProtocolPort = false;
+      } else {
+        port = getRandomPort();
       }
       args.add("-" + PORT_OPTION);
       args.add(String.valueOf(port));
       args.add("-" + INFOPORT_OPTION);
-      int infoPort = getRandomPort();
+      int infoPort;
+      if (testClashOfFirstInfoPort) {
+        ss = getBoundSocket();
+        infoPort = ss.getLocalPort();
+        testClashOfFirstInfoPort = false;
+      } else {
+        infoPort = getRandomPort();
+      }
       args.add(String.valueOf(infoPort));
 
       if (specifyFramed) {
@@ -230,9 +257,8 @@ public class TestThriftServerCmdLine {
       for (int ii = 0; ii < 100 && (thriftServer.tserver == null); ii++) {
         Threads.sleep(100);
       }
-      if (cmdLineException instanceof TTransportException &&
-          cmdLineException.getCause() instanceof BindException) {
-        LOG.info("Trying new port", cmdLineException);
+      if (isBindException(cmdLineException)) {
+        LOG.info("BindException; trying new port", cmdLineException);
         cmdLineException =  null;
         thriftServer.stop();
         continue;
@@ -251,6 +277,20 @@ public class TestThriftServerCmdLine {
     assertEquals(expectedClass, thriftServer.tserver.getClass());
     LOG.info("Server={}", args);
     return thriftServer;
+  }
+
+  private boolean isBindException(Exception cmdLineException) {
+    if (cmdLineException == null) {
+      return false;
+    }
+    if (cmdLineException instanceof BindException) {
+      return true;
+    }
+    if (cmdLineException.getCause() != null &&
+        cmdLineException.getCause() instanceof BindException) {
+      return true;
+    }
+    return false;
   }
 
   @Test
