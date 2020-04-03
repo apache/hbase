@@ -261,8 +261,9 @@ public class TestRegionMover {
     String rsName = regionServer.getServerName().getHostname();
     int port = regionServer.getServerName().getPort();
     String hostname = rsName + ":" + Integer.toString(port);
-    RegionMoverBuilder rmBuilder = new RegionMoverBuilder(hostname, TEST_UTIL.getConfiguration())
-      .ack(true);
+    RegionMoverBuilder rmBuilder =
+      new RegionMoverBuilder(hostname, TEST_UTIL.getConfiguration())
+        .ack(true);
 
     int targetServerRegions = cluster.getRegionServer(2).getRegions().size();
     int sourceServerRegions = regionServer.getRegions().size();
@@ -288,10 +289,7 @@ public class TestRegionMover {
       Collections.emptyList());
   }
 
-  private void waitForServerDecom(HRegionServer excludeServer) throws IOException {
-
-    TEST_UTIL.getAdmin().decommissionRegionServers(
-      Collections.singletonList(excludeServer.getServerName()), false);
+  private void waitForServerDecom(HRegionServer excludeServer) {
 
     TEST_UTIL.waitFor(3000, () -> {
       try {
@@ -319,8 +317,8 @@ public class TestRegionMover {
     String rsName = sourceRegionServer.getServerName().getHostname();
     int port = sourceRegionServer.getServerName().getPort();
     String hostname = rsName + ":" + Integer.toString(port);
-    RegionMoverBuilder rmBuilder = new RegionMoverBuilder(hostname, TEST_UTIL.getConfiguration())
-      .ack(false);
+    RegionMoverBuilder rmBuilder =
+      new RegionMoverBuilder(hostname, TEST_UTIL.getConfiguration()).ack(false);
 
     int targetServerRegions = cluster.getRegionServer(2).getRegions().size();
     int sourceServerRegions = sourceRegionServer.getRegions().size();
@@ -370,7 +368,8 @@ public class TestRegionMover {
     String sourceServer = rsName + ":" + Integer.toString(port);
     RegionMoverBuilder rmBuilder =
       new RegionMoverBuilder(sourceServer, TEST_UTIL.getConfiguration())
-        .ack(true).excludeFile(excludeFile.getCanonicalPath());
+        .ack(true)
+        .excludeFile(excludeFile.getCanonicalPath());
     try (RegionMover regionMover = rmBuilder.build()) {
       Assert.assertFalse(regionMover.unload());
     }
