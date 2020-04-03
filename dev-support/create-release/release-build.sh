@@ -25,26 +25,39 @@ SELF=$(cd $(dirname $0) && pwd)
 
 # Print usage and exit.
 function exit_with_usage {
-  cat << EOF
-Usage: release-build.sh <publish-dist|publish-snapshot|publish-release>
+  cat <<'EOF'
+Usage: release-build.sh <tag|publish-dist|publish-snapshot|publish-release>
 Creates release deliverables from a tag or commit.
 Arguments:
+ tag               Prepares for release on specified git branch: Set release version, create release tag,
+                   increment version for ongoing dev, and publish to Apache git repo
  publish-dist      Build and publish distribution packages (tarballs) to Apache dist repo
  publish-snapshot  Build and publish maven artifacts snapshot release to Apache snapshots repo
  publish-release   Build and publish maven artifacts release to Apache release repo
 
 All other inputs are environment variables:
- GIT_REF - Release tag or commit to build from
- PACKAGE_VERSION - Release identifier in top level package directory (e.g. 2.1.2RC1)
- VERSION - (optional) Version of project being built (e.g. 2.1.2)
- ASF_USERNAME - Username of ASF committer account
- ASF_PASSWORD - Password of ASF committer account
- GPG_KEY - GPG key used to sign release artifacts
- GPG_PASSPHRASE - Passphrase for GPG key
- PROJECT - The project to build. No default.
+Used for 'tag' and 'publish':
+  PROJECT - The project to build. No default.
+  ASF_USERNAME - Username of ASF committer account
+  ASF_PASSWORD - Password of ASF committer account
 
-Set REPO env variable to full path of a directory to use as local mvn repo (dependencies cache)
-to avoid re-downloading dependencies on each run.
+Used only for 'tag':
+  GIT_NAME - Name to use with git
+  GIT_EMAIL - E-mail address to use with git
+  GIT_BRANCH - Git branch on which to make release
+  RELEASE_VERSION - Version used in pom files for release
+  RELEASE_TAG - Name of release tag
+  NEXT_VERSION - Development version after release
+
+Used only for 'publish':
+  GIT_REF - Release tag or commit to build from
+  VERSION - Version of project to be built (e.g. 2.1.2).
+    Optional for 'publish', as it defaults to the version in pom at GIT_REF.
+  PACKAGE_VERSION - Release identifier in top level dist directory (e.g. 2.1.2RC1)
+  GPG_KEY - GPG key id (usually email addr) used to sign release artifacts
+  GPG_PASSPHRASE - Passphrase for GPG key
+  REPO - Set to full path of a directory to use as maven local repo (dependencies cache)
+    to avoid re-downloading dependencies for each stage.
 
 For example:
  $ PROJECT="hbase-operator-tools" ASF_USERNAME=NAME ASF_PASSWORD=PASSWORD GPG_PASSPHRASE=PASSWORD GPG_KEY=stack@apache.org ./release-build.sh publish-dist
@@ -56,7 +69,7 @@ set -e
 
 function cleanup {
   echo "Cleaning up temp settings file." >&2
-  rm "${MAVEN_SETTINGS_FILE}" &> /dev/null || true
+  rm -f "${MAVEN_SETTINGS_FILE}" &> /dev/null || true
   # If REPO was set, then leave things be. Otherwise if we defined a repo clean it out.
   if [[ -z "${REPO}" ]] && [[ -n "${MAVEN_LOCAL_REPO}" ]]; then
     echo "Cleaning up temp repo in '${MAVEN_LOCAL_REPO}'. set REPO to reuse downloads." >&2
@@ -64,7 +77,7 @@ function cleanup {
   fi
 }
 
-if [ $# -eq 0 ]; then
+if [ $# -ne 1 ]; then
   exit_with_usage
 fi
 
@@ -72,32 +85,78 @@ if [[ $@ == *"help"* ]]; then
   exit_with_usage
 fi
 
-# Read in the ASF password.
-if [[ -z "$ASF_PASSWORD" ]]; then
-  echo 'The environment variable ASF_PASSWORD is not set. Enter the password.'
-  echo
-  stty -echo && printf "ASF password: " && read ASF_PASSWORD && printf '\n' && stty echo
-fi
-
-# Read in the GPG passphrase
-if [[ -z "$GPG_PASSPHRASE" ]]; then
-  echo 'The environment variable GPG_PASSPHRASE is not set. Enter the passphrase to'
-  echo 'unlock the GPG signing key that will be used to sign the release!'
-  echo
-  stty -echo && printf "GPG passphrase: " && read GPG_PASSPHRASE && printf '\n' && stty echo
-  export GPG_PASSPHRASE
-  export GPG_TTY=$(tty)
-fi
-
-for env in ASF_USERNAME GPG_PASSPHRASE GPG_KEY; do
-  if [ -z "${!env}" ]; then
-    echo "ERROR: $env must be set to run this script"
-    exit_with_usage
-  fi
-done
-
 export LC_ALL=C.UTF-8
 export LANG=C.UTF-8
+export GPG_TTY=$(tty)
+
+init_java
+init_mvn
+init_python
+# Print out subset of perl version (used in git hooks)
+perl --version | grep 'This is'
+
+rm -rf "${PROJECT}"
+
+if [[ "$1" == "tag" ]]; then
+  # for 'tag' stage
+  set -o pipefail
+  check_get_passwords ASF_PASSWORD
+  check_needed_vars PROJECT ASF_USERNAME ASF_PASSWORD RELEASE_VERSION RELEASE_TAG NEXT_VERSION \
+      GIT_EMAIL GIT_NAME GIT_BRANCH
+  ASF_REPO="gitbox.apache.org/repos/asf/${PROJECT}.git"
+  encoded_username=$(python -c "import urllib; print urllib.quote('''$ASF_USERNAME''')")
+  encoded_password=$(python -c "import urllib; print urllib.quote('''$ASF_PASSWORD''')")
+  git clone "https://$encoded_username:$encoded_password@$ASF_REPO" -b $GIT_BRANCH
+
+  # 'update_releasenotes' searches the project's Jira for issues where 'Fix Version' matches specified
+  # $jira_fix_version. For most projects this is same as ${RELEASE_VERSION}. However, all the 'hbase-*'
+  # projects share the same HBASE jira name.  To make this work, by convention, the HBASE jira "Fix Version"
+  # field values have the sub-project name pre-pended, as in "hbase-operator-tools-1.0.0".
+  # So, here we prepend the project name to the version, but only for the hbase sub-projects.
+  jira_fix_version="${RELEASE_VERSION}"
+  shopt -s nocasematch
+  if [[ "${PROJECT}" =~ ^hbase- ]]; then
+    jira_fix_version="${PROJECT}-${RELEASE_VERSION}"
+  fi
+  shopt -u nocasematch
+  update_releasenotes `pwd`/${PROJECT} "${jira_fix_version}"
+
+  cd ${PROJECT}
+
+  git config user.name "$GIT_NAME"
+  git config user.email $GIT_EMAIL
+
+  # Create release version
+  $MVN versions:set -DnewVersion=$RELEASE_VERSION | grep -v "no value" # silence logs
+  git add RELEASENOTES.md CHANGES.md
+
+  git commit -a -m "Preparing ${PROJECT} release $RELEASE_TAG; tagging and updates to CHANGES.md and RELEASENOTES.md"
+  echo "Creating tag $RELEASE_TAG at the head of $GIT_BRANCH"
+  git tag $RELEASE_TAG
+
+  # Create next version
+  $MVN versions:set -DnewVersion=$NEXT_VERSION | grep -v "no value" # silence logs
+
+  git commit -a -m "Preparing development version $NEXT_VERSION"
+
+  if ! is_dry_run; then
+    # Push changes
+    git push origin $RELEASE_TAG
+    git push origin HEAD:$GIT_BRANCH
+    cd ..
+    rm -rf ${PROJECT}
+  else
+    cd ..
+    mv ${PROJECT} ${PROJECT}.tag
+    echo "Clone with version changes and tag available as ${PROJECT}.tag in the output directory."
+  fi
+  exit 0
+fi
+
+### Below is for 'publish-*' stages ###
+
+check_get_passwords ASF_PASSWORD GPG_PASSPHRASE
+check_needed_vars PROJECT ASF_USERNAME ASF_PASSWORD GPG_KEY GPG_PASSPHRASE
 
 # Commit ref to checkout when building
 BASE_DIR=$(pwd)
@@ -108,13 +167,6 @@ else
   RELEASE_STAGING_LOCATION="https://dist.apache.org/repos/dist/dev/${PROJECT}"
 fi
 
-init_java
-init_mvn
-init_python
-# Print out subset of perl version.
-perl --version | grep 'This is'
-
-rm -rf "${PROJECT}"
 # in case of dry run, enable publish steps to chain from tag step
 if is_dry_run && [[ "${TAG_SAME_DRY_RUN:-}" == "true" && -d "${PROJECT}.tag" ]]; then
   ln -s "${PROJECT}.tag" "${PROJECT}"
@@ -274,4 +326,5 @@ fi
 
 cd ..
 rm -rf "${PROJECT}"
-echo "ERROR: expects to be called with 'install', 'publish-release' or 'publish-snapshot'"
+echo "ERROR: expects to be called with 'tag', 'publish-dist', 'publish-release', or 'publish-snapshot'" >&2
+exit_with_usage

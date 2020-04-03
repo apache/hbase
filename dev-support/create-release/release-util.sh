@@ -248,6 +248,31 @@ function is_dry_run {
   [[ $DRY_RUN = 1 ]]
 }
 
+function check_get_passwords {
+  for env in "$@"; do
+    if [ -z "${!env}" ]; then
+      echo "The environment variable $env is not set. Please enter the password or passphrase."
+      echo
+      stty -echo && printf "$env : " && read $env && printf '\n' && stty echo
+      export $env
+    fi
+  done
+}
+
+function check_needed_vars {
+  local missing=0
+  for env in "$@"; do
+    if [ -z "${!env}" ]; then
+      echo "$env must be set to run this script"
+      (( missing++ ))
+    else
+      export $env
+    fi
+  done
+  (( missing > 0 )) && exit_with_usage
+  return 0
+}
+
 # Initializes JAVA_VERSION to the version of the JVM in use.
 function init_java {
   if [ -z "$JAVA_HOME" ]; then

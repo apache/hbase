@@ -25,7 +25,8 @@ function exit_with_usage {
   local NAME=$(basename $0)
   cat << EOF
 usage: $NAME
-Tags an $PROJECT release on a particular branch.
+Prepares for release on specified git branch: Set release version, create release tag,
+increment version for ongoing dev, and publish to Apache git repo.
 
 Inputs are specified with the following environment variables:
 ASF_USERNAME - Apache Username
@@ -54,7 +55,7 @@ if [[ -z "$ASF_PASSWORD" ]]; then
 fi
 
 for env in ASF_USERNAME ASF_PASSWORD RELEASE_VERSION RELEASE_TAG NEXT_VERSION GIT_EMAIL \
-    GIT_NAME GIT_BRANCH GPG_KEY; do
+    GIT_NAME GIT_BRANCH; do
   if [ -z "${!env}" ]; then
     echo "$env must be set to run this script"
     exit 1

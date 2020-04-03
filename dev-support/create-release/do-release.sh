@@ -68,7 +68,7 @@ function should_build {
 
 if should_build "tag" && [ $SKIP_TAG = 0 ]; then
   run_silent "Creating release tag $RELEASE_TAG..." "tag.log" \
-    "$SELF/release-tag.sh"
+    "$SELF/release-build.sh" tag
   if is_dry_run; then
     export TAG_SAME_DRY_RUN="true";
   else
@@ -81,14 +81,14 @@ else
 fi
 
 if should_build "publish-dist"; then
-  run_silent "Publishing distribution packages (tarballs)" "build.log" \
+  run_silent "Publishing distribution packages (tarballs)" "publish-dist.log" \
     "$SELF/release-build.sh" publish-dist
 else
   echo "Skipping publish-dist step."
 fi
 
 if should_build "publish-release"; then
-  run_silent "Publishing release" "publish.log" \
+  run_silent "Publishing release" "publish-release.log" \
     "$SELF/release-build.sh" publish-release
 else
   echo "Skipping publish-release step."
