@@ -302,7 +302,6 @@ public class TestRegionMover {
         throw new RuntimeException(e);
       }
     });
-
   }
 
   @Test
