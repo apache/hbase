@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
-import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -235,9 +234,10 @@ public class TestRegionReplicaFailover {
       }
       assertTrue(aborted);
 
-      Threads.sleep(5000);
-
-      HTU.verifyNumericRows(table, fam, 0, 1000, 1);
+      // It takes extra time for replica region is ready for read as during
+      // region open process, it needs to ask primary region to do a flush and replica region
+      // can open newly flushed hfiles to avoid data out-of-sync.
+      verifyNumericRowsWithTimeout(table, fam, 0, 1000, 1, 30000);
       HTU.verifyNumericRows(table, fam, 0, 1000, 2);
     }
 
