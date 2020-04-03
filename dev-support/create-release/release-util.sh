@@ -395,12 +395,10 @@ make_binary_release() {
   # a third to assemble the binary artifact. Trying to do
   # all in the one invocation fails; a problem in our
   # assembly spec to in maven. TODO. Meantime, three invocations.
-  MAVEN_OPTS="${MAVEN_OPTS}" ${MVN} --settings $tmp_settings clean install -DskipTests \
-    -Dmaven.repo.local="${tmp_repo}"
-  MAVEN_OPTS="${MAVEN_OPTS}" ${MVN} --settings $tmp_settings site -DskipTests \
-    -Dmaven.repo.local="${tmp_repo}"
-  MAVEN_OPTS="${MAVEN_OPTS}" ${MVN} --settings $tmp_settings install assembly:single -DskipTests \
-    -Dcheckstyle.skip=true -P "${PUBLISH_PROFILES}" -Dmaven.repo.local="${tmp_repo}"
+  MAVEN_OPTS="${MAVEN_OPTS}" ${MVN} --settings $MAVEN_SETTINGS_FILE clean install -DskipTests
+  MAVEN_OPTS="${MAVEN_OPTS}" ${MVN} --settings $MAVEN_SETTINGS_FILE site -DskipTests
+  MAVEN_OPTS="${MAVEN_OPTS}" ${MVN} --settings $MAVEN_SETTINGS_FILE install assembly:single -DskipTests \
+    -Dcheckstyle.skip=true -P "${PUBLISH_PROFILES}"
 
   # Check there is a bin gz output. The build may not produce one: e.g. hbase-thirdparty.
   f_bin_tgz="./${PROJECT}-assembly/target/${basename}*-bin.tar.gz"

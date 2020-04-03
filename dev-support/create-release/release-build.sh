@@ -43,7 +43,7 @@ All other inputs are environment variables:
  GPG_PASSPHRASE - Passphrase for GPG key
  PROJECT - The project to build. No default.
 
-Set REPO environment to full path to repo to use
+Set REPO env variable to full path of a directory to use as local mvn repo (dependencies cache)
 to avoid re-downloading dependencies on each run.
 
 For example:
@@ -56,11 +56,11 @@ set -e
 
 function cleanup {
   echo "Cleaning up temp settings file." >&2
-  rm "${tmp_settings}" &> /dev/null || true
+  rm "${MAVEN_SETTINGS_FILE}" &> /dev/null || true
   # If REPO was set, then leave things be. Otherwise if we defined a repo clean it out.
-  if [[ -z "${REPO}" ]] && [[ -n "${tmp_repo}" ]]; then
-    echo "Cleaning up temp repo in '${tmp_repo}'. set REPO to reuse downloads." >&2
-    rm -rf "${tmp_repo}" &> /dev/null || true
+  if [[ -z "${REPO}" ]] && [[ -n "${MAVEN_LOCAL_REPO}" ]]; then
+    echo "Cleaning up temp repo in '${MAVEN_LOCAL_REPO}'. set REPO to reuse downloads." >&2
+    rm -rf "${MAVEN_LOCAL_REPO}" &> /dev/null || true
   fi
 }
 
@@ -150,16 +150,24 @@ fi
 git clean -d -f -x
 cd ..
 
-tmp_repo="${REPO:-`pwd`/$(mktemp -d hbase-repo-XXXXX)}"
-tmp_settings="/${tmp_repo}/tmp-settings.xml"
-echo "<settings><servers>" > "$tmp_settings"
-echo "<server><id>apache.snapshots.https</id><username>$ASF_USERNAME</username>" >> "$tmp_settings"
-echo "<password>$ASF_PASSWORD</password></server>" >> "$tmp_settings"
-echo "<server><id>apache.releases.https</id><username>$ASF_USERNAME</username>" >> "$tmp_settings"
-echo "<password>$ASF_PASSWORD</password></server>" >> "$tmp_settings"
-echo "</servers>" >> "$tmp_settings"
-echo "</settings>" >> "$tmp_settings"
-export tmp_settings
+MAVEN_LOCAL_REPO="${REPO:-$(pwd)/$(mktemp -d hbase-repo-XXXXX)}"
+MAVEN_SETTINGS_FILE="/${MAVEN_LOCAL_REPO}/tmp-settings.xml"
+export MAVEN_SETTINGS_FILE MAVEN_LOCAL_REPO ASF_USERNAME ASF_PASSWORD
+# reference passwords from env rather than storing in the settings.xml file.
+cat <<'EOF' > "$MAVEN_SETTINGS_FILE"
+<?xml version="1.0" encoding="UTF-8"?>
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
+  <localRepository>/${env.MAVEN_LOCAL_REPO}</localRepository>
+  <servers>
+    <server><id>apache.snapshots.https</id><username>${env.ASF_USERNAME}</username>
+      <password>${env.ASF_PASSWORD}</password></server>
+    <server><id>apache.releases.https</id><username>${env.ASF_USERNAME}</username>
+      <password>${env.ASF_PASSWORD}</password></server>
+  </servers>
+</settings>
+EOF
 
 if [[ "$1" == "publish-dist" ]]; then
   # Source and binary tarballs
@@ -224,7 +232,7 @@ if [[ "$1" == "publish-snapshot" ]]; then
   fi
   # Coerce the requested version
   $MVN versions:set -DnewVersion=$VERSION
-  $MVN --settings $tmp_settings -DskipTests -P "${PUBLISH_PROFILES}" deploy
+  $MVN --settings $MAVEN_SETTINGS_FILE -DskipTests -P "${PUBLISH_PROFILES}" deploy
   cd ..
   exit 0
 fi
@@ -243,9 +251,8 @@ if [[ "$1" == "publish-release" ]]; then
     mvn_goals=("${mvn_goals[@]}" deploy)
   fi
   echo "Staging release in nexus"
-  if ! MAVEN_OPTS="${MAVEN_OPTS}" ${MVN} --settings "$tmp_settings" \
+  if ! MAVEN_OPTS="${MAVEN_OPTS}" ${MVN} --settings "$MAVEN_SETTINGS_FILE" \
       -DskipTests -Dcheckstyle.skip=true -P "${PUBLISH_PROFILES}" \
-      -Dmaven.repo.local="${tmp_repo}" \
       "${mvn_goals[@]}" > "${BASE_DIR}/mvn_deploy.log"; then
     echo "Staging build failed, see 'mvn_deploy.log' for details." >&2
     exit 1
