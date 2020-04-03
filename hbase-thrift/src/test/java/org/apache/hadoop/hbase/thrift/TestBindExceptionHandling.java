@@ -32,14 +32,29 @@ public class TestBindExceptionHandling {
     HBaseClassTestRule.forClass(TestBindExceptionHandling.class);
 
   /**
-   * See if random port choosing works around port clashes
+   * See if random port choosing works around protocol port clashes
    */
   @Test
-  public void testPortClash() {
+  public void testProtocolPortClash() {
     ThriftServer thriftServer = null;
     try {
       thriftServer = new TestThriftServerCmdLine(null, false, false, false).
-        createBoundServer(true);
+        createBoundServer(true, false);
+      assertNotNull(thriftServer.tserver);
+    } finally {
+      thriftServer.stop();
+    }
+  }
+
+  /**
+   * See if random port choosing works around protocol port clashes
+   */
+  @Test
+  public void testInfoPortClash() {
+    ThriftServer thriftServer = null;
+    try {
+      thriftServer = new TestThriftServerCmdLine(null, false, false, false).
+        createBoundServer(false, true);
       assertNotNull(thriftServer.tserver);
     } finally {
       thriftServer.stop();
