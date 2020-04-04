@@ -1221,4 +1221,33 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     return script.getRSGroup(tableName.getNamespaceAsString(), tableName.getQualifierAsString());
   }
 
+  @Override
+  public synchronized void renameRSGroup(String oldName, String newName) throws IOException {
+    if (oldName.equals(RSGroupInfo.DEFAULT_GROUP)) {
+      throw new ConstraintException(RSGroupInfo.DEFAULT_GROUP + " can't be rename");
+    }
+    checkGroupName(newName);
+
+    RSGroupInfo oldRSG = getRSGroupInfo(oldName);
+    Map<String, RSGroupInfo> rsGroupMap = holder.groupName2Group;
+    Map<String, RSGroupInfo> newGroupMap = Maps.newHashMap(rsGroupMap);
+    newGroupMap.remove(oldRSG.getName());
+    RSGroupInfo newRSG = new RSGroupInfo(newName, oldRSG.getServers());
+    newGroupMap.put(newRSG.getName(), newRSG);
+    flushConfig(newGroupMap);
+
+    TableDescriptors tableDescriptors = masterServices.getTableDescriptors();
+    Set<TableName> updateTables = new HashSet<>();
+    for (Map.Entry<String, TableDescriptor> table : tableDescriptors.getAll().entrySet()) {
+      Optional<String> rsgroup = table.getValue().getRegionServerGroup();
+      if (!rsgroup.isPresent()) {
+        continue;
+      }
+      if (rsgroup.get().equals(oldName)) {
+        updateTables.add(table.getValue().getTableName());
+      }
+    }
+    setRSGroup(updateTables, newName);
+  }
+
 }

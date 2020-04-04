@@ -468,4 +468,31 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     // Cleanup
     TEST_UTIL.deleteTable(tn1);
   }
+
+  @Test
+  public void testRenameRSGroup() throws Exception {
+    // Add rsgroup, and assign 2 servers and a table to it.
+    RSGroupInfo oldgroup = addGroup("oldgroup", 2);
+    TableName tb = TableName.valueOf("testRename");
+    TEST_UTIL.createTable(tb, "tr");
+    ADMIN.setRSGroup(Sets.newHashSet(tb), oldgroup.getName());
+    Thread.sleep(500);
+    oldgroup = ADMIN.getRSGroup(oldgroup.getName());
+    assertEquals(2, oldgroup.getServers().size());
+    assertEquals(oldgroup.getName(), ADMIN.getRSGroup(tb).getName());
+
+    // Rename rsgroup
+    ADMIN.renameRSGroup(oldgroup.getName(), "newgroup");
+    Set<Address> servers = oldgroup.getServers();
+    RSGroupInfo newgroup = ADMIN.getRSGroup("newgroup");
+    assertEquals(servers.size(), newgroup.getServers().size());
+    int match = 0;
+    for (Address addr : newgroup.getServers()) {
+      if (servers.contains(addr)) {
+        match++;
+      }
+    }
+    assertEquals(servers.size(), match);
+    assertEquals(newgroup.getName(), ADMIN.getRSGroup(tb).getName());
+  }
 }

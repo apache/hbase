@@ -67,6 +67,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.Remo
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RenameRSGroupRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RenameRSGroupResponse;
 
 /**
  * Implementation of RSGroupAdminService defined in RSGroupAdmin.proto. This class calls
@@ -389,6 +391,29 @@ class RSGroupAdminServiceImpl extends RSGroupAdminProtos.RSGroupAdminService {
       rsGroupInfoManager.removeServers(servers);
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().postRemoveServers(servers);
+      }
+    } catch (IOException e) {
+      CoprocessorRpcUtils.setControllerException(controller, e);
+    }
+    done.run(builder.build());
+  }
+
+  @Override
+  public void renameRSGroup(RpcController controller, RenameRSGroupRequest request,
+      RpcCallback<RenameRSGroupResponse> done) {
+    String oldRSGroup = request.getOldRsgroupName();
+    String newRSGroup = request.getNewRsgroupName();
+    LOG.info("{} rename rsgroup from {} to {}",
+      master.getClientIdAuditPrefix(), oldRSGroup, newRSGroup);
+
+    RenameRSGroupResponse.Builder builder = RenameRSGroupResponse.newBuilder();
+    try {
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preRenameRSGroup(oldRSGroup, newRSGroup);
+      }
+      rsGroupInfoManager.renameRSGroup(oldRSGroup, newRSGroup);
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postRenameRSGroup(oldRSGroup, newRSGroup);
       }
     } catch (IOException e) {
       CoprocessorRpcUtils.setControllerException(controller, e);

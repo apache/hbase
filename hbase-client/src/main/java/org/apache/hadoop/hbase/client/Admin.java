@@ -2396,4 +2396,13 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   boolean balanceRSGroup(String groupName) throws IOException;
+
+  /**
+   * Rename rsgroup
+   * @param oldName old rsgroup name
+   * @param newName new rsgroup name
+   * @throws IOException if a remote or network exception occurs
+   */
+  void renameRSGroup(String oldName, String newName) throws IOException;
+
 }

@@ -38,6 +38,9 @@ public class RSGroupInfo {
   // Keep servers in a sorted set so has an expected ordering when displayed.
   private final SortedSet<Address> servers;
   // Keep tables sorted too.
+
+  // TODO: Don't understand why all these should be deprecated. we have table -> rsgroup mapping.
+  //  Isn't it reasonable to have rsgroup -> tables mapping as well. Any contradictory?
   /**
    * @deprecated Since 3.0.0, will be removed in 4.0.0. The rsgroup information will be stored in
    *             the configuration of a table so this will be removed.
