@@ -1588,10 +1588,14 @@
     <!-- default: run small & medium, medium with 2 threads -->
     <surefire.skipFirstPart>false</surefire.skipFirstPart>
     <surefire.skipSecondPart>false</surefire.skipSecondPart>
-    <!-- Fork count varies w/ CPU count. Setting is conservative. Up this
+      <!-- Fork count varies w/ CPU count. Setting is conservative mostly determined
+        by what apache jenkins nightly builds will tolerate (See HBASE-24072). Up this
       value is you want to burn through tests faster (could make for more failures
       if more contention around resources). There is a matching MAVEN_ARG
       in our yetus personality where we set the maven -T command to 0.25C too.
+      For example, to run at a rate that is more furious than our 0.25C, do
+      something like this:
+         f="0.5C" ;  mvn -T$f -Dsurefire.firstPartForkCount=$f -Dsurefire.secondPartForkCount=$f test -PrunAllTests
     -->
     <surefire.firstPartForkCount>0.25C</surefire.firstPartForkCount>
     <surefire.secondPartForkCount>0.25C</surefire.secondPartForkCount>
