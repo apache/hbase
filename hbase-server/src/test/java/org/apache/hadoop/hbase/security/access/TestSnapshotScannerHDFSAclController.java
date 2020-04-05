@@ -144,7 +144,7 @@ public class TestSnapshotScannerHDFSAclController {
     throws Exception{
     admin.snapshot(snapShotName, tableName);
     LOG.info("Sleep for one second, waiting for HDFS Acl setup");
-    Threads.sleep(1000);
+    Threads.sleep(3000);
   }
 
   @Test
