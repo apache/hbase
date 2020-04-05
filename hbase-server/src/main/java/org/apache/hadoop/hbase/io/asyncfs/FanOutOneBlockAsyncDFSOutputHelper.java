@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.io.asyncfs;
 
-import static org.apache.hadoop.fs.CreateFlag.CREATE;
-import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
 import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputSaslHelper.createEncryptor;
 import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputSaslHelper.trySaslNegotiate;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
@@ -177,6 +175,8 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
 
   private static final FileCreator FILE_CREATOR;
 
+  private static final CreateFlag SHOULD_REPLICATE_FLAG;
+
   private static DFSClientAdaptor createDFSClientAdaptor() throws NoSuchMethodException {
     Method isClientRunningMethod = DFSClient.class.getDeclaredMethod("isClientRunning");
     isClientRunningMethod.setAccessible(true);
@@ -272,6 +272,15 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     return createFileCreator2();
   }
 
+  private static CreateFlag loadShouldReplicateFlag() {
+    try {
+      return CreateFlag.valueOf("SHOULD_REPLICATE");
+    } catch (IllegalArgumentException e) {
+      LOG.debug("can not find SHOULD_REPLICATE flag, should be hadoop 2.x", e);
+      return null;
+    }
+  }
+
   // cancel the processing if DFSClient is already closed.
   static final class CancelOnClose implements CancelableProgressable {
 
@@ -292,6 +301,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
       LEASE_MANAGER = createLeaseManager();
       DFS_CLIENT_ADAPTOR = createDFSClientAdaptor();
       FILE_CREATOR = createFileCreator();
+      SHOULD_REPLICATE_FLAG = loadShouldReplicateFlag();
     } catch (Exception e) {
       String msg = "Couldn't properly initialize access to HDFS internals. Please " +
           "update your WAL Provider to not make use of the 'asyncfs' provider. See " +
@@ -486,6 +496,18 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     }
   }
 
+  private static EnumSetWritable<CreateFlag> getCreateFlags(boolean overwrite) {
+    List<CreateFlag> flags = new ArrayList<>();
+    flags.add(CreateFlag.CREATE);
+    if (overwrite) {
+      flags.add(CreateFlag.OVERWRITE);
+    }
+    if (SHOULD_REPLICATE_FLAG != null) {
+      flags.add(SHOULD_REPLICATE_FLAG);
+    }
+    return new EnumSetWritable<>(EnumSet.copyOf(flags));
+  }
+
   private static FanOutOneBlockAsyncDFSOutput createOutput(DistributedFileSystem dfs, String src,
       boolean overwrite, boolean createParent, short replication, long blockSize,
       EventLoopGroup eventLoopGroup, Class<? extends Channel> channelClass) throws IOException {
@@ -502,8 +524,8 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
       try {
         stat = FILE_CREATOR.create(namenode, src,
           FsPermission.getFileDefault().applyUMask(FsPermission.getUMask(conf)), clientName,
-          new EnumSetWritable<>(overwrite ? EnumSet.of(CREATE, OVERWRITE) : EnumSet.of(CREATE)),
-          createParent, replication, blockSize, CryptoProtocolVersion.supported());
+          getCreateFlags(overwrite), createParent, replication, blockSize,
+          CryptoProtocolVersion.supported());
       } catch (Exception e) {
         if (e instanceof RemoteException) {
           throw (RemoteException) e;
