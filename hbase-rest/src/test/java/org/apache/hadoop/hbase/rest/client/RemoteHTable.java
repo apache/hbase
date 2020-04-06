@@ -84,7 +84,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 /**
  * HTable interface to remote tables accessed via REST gateway
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 public class RemoteHTable implements Table {
 
   private static final Logger LOG = LoggerFactory.getLogger(RemoteHTable.class);
