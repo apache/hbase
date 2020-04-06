@@ -296,14 +296,18 @@ public class TestThriftServerCmdLine {
   @Test
   public void testRunThriftServer() throws Exception {
     ThriftServer thriftServer = createBoundServer();
-    try {
-      talkToThriftServer();
-    } catch (Exception ex) {
-      clientSideException = ex;
-      LOG.info("Exception", ex);
-    } finally {
-      stopCmdLineThread();
-      thriftServer.stop();
+    // Add retries in case we see stuff like connection reset
+    for (int i = 0; i < 10; i++) {
+      try {
+        talkToThriftServer();
+        break;
+      } catch (Exception ex) {
+        clientSideException = ex;
+        LOG.info("Exception", ex);
+      } finally {
+        stopCmdLineThread();
+        thriftServer.stop();
+      }
     }
 
     if (clientSideException != null) {

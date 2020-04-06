@@ -239,9 +239,13 @@ public class TestThriftHttpServer {
   }
 
   private void stopHttpServerThread() throws Exception {
-    LOG.debug("Stopping " + " Thrift HTTP server");
-    thriftServer.stop();
-    httpServerThread.join();
+    LOG.debug("Stopping Thrift HTTP server {}", thriftServer);
+    if (thriftServer != null) {
+      thriftServer.stop();
+    }
+    if (httpServerThread != null) {
+      httpServerThread.join();
+    }
     if (httpServerException != null) {
       LOG.error("Command-line invocation of HBase Thrift server threw an " +
           "exception", httpServerException);
