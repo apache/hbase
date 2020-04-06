@@ -1233,7 +1233,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     Map<String, RSGroupInfo> newGroupMap = Maps.newHashMap(rsGroupMap);
     newGroupMap.remove(oldRSG.getName());
     RSGroupInfo newRSG = new RSGroupInfo(newName, oldRSG.getServers());
-    newGroupMap.put(newRSG.getName(), newRSG);
+    newGroupMap.put(newName, newRSG);
     flushConfig(newGroupMap);
 
     TableDescriptors tableDescriptors = masterServices.getTableDescriptors();

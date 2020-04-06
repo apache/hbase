@@ -476,7 +476,9 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     TableName tb = TableName.valueOf("testRename");
     TEST_UTIL.createTable(tb, "tr");
     ADMIN.setRSGroup(Sets.newHashSet(tb), oldgroup.getName());
-    Thread.sleep(500);
+    TEST_UTIL.waitFor(1000,
+      (Waiter.Predicate<Exception>) () ->
+        ADMIN.getRSGroup("oldgroup").getServers().size() == 2);
     oldgroup = ADMIN.getRSGroup(oldgroup.getName());
     assertEquals(2, oldgroup.getServers().size());
     assertEquals(oldgroup.getName(), ADMIN.getRSGroup(tb).getName());
