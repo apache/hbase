@@ -17,12 +17,13 @@
  */
 package org.apache.hadoop.hbase.types;
 
-import com.google.protobuf.CodedInputStream;
-import com.google.protobuf.CodedOutputStream;
 import java.io.IOException;
 import org.apache.hadoop.hbase.example.protobuf.generated.CellMessage;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
+import org.apache.hbase.thirdparty.com.google.protobuf.CodedOutputStream;
 
 /**
  * An example for using protobuf objects with {@link DataType} API.
