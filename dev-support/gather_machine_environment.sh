@@ -52,5 +52,5 @@ ps -Aww >"${output}/ps-Aww" 2>&1 || true
 ifconfig -a >"${output}/ifconfig-a" 2>&1 || true
 lsblk -ta >"${output}/lsblk-ta" 2>&1 || true
 lsblk -fa >"${output}/lsblk-fa" 2>&1 || true
-ulimit -l >"${output}/ulimit-l" 2>&1 || true
+ulimit -a >"${output}/ulimit-a" 2>&1 || true
 uptime >"${output}/uptime" 2>&1 || true
