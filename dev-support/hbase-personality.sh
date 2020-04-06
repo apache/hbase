@@ -513,7 +513,7 @@ function hadoopcheck_parse_args
 ## @stability    evolving
 function hadoopcheck_docker_support
 {
-  DOCKER_EXTRAARGS=("${DOCKER_EXTRAARGS[@]}" "--env=QUICK_HADOOPCHECK=${QUICK_HADOOPCHECK}")
+  DOCKER_EXTRAARGS=("${DOCKER_EXTRAARGS[@]}" "--env=QUICK_HADOOPCHECK=${QUICK_HADOOPCHECK}" "--ulimit nproc=12500:12500")
 }
 
 ## @description  hadoopcheck test
