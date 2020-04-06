@@ -104,8 +104,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupProtos;
  * persistence store for the group information. It also makes use of zookeeper to store group
  * information needed for bootstrapping during offline mode.
  * <h2>Concurrency</h2> RSGroup state is kept locally in Maps. There is a rsgroup name to cached
- * RSGroupInfo Map at {@link #rsGroupMap}. These Maps are persisted to the hbase:rsgroup table
- * (and cached in zk) on each modification.
+ * RSGroupInfo Map at {@link RSGroupInfoHolder#groupName2Group}.
+ * These Maps are persisted to the hbase:rsgroup table (and cached in zk) on each modification.
  * <p/>
  * Mutations on state are synchronized but reads can continue without having to wait on an instance
  * monitor, mutations do wholesale replace of the Maps on update -- Copy-On-Write; the local Maps of
@@ -1237,17 +1237,17 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     flushConfig(newGroupMap);
 
     TableDescriptors tableDescriptors = masterServices.getTableDescriptors();
-    Set<TableName> updateTables = new HashSet<>();
     for (Map.Entry<String, TableDescriptor> table : tableDescriptors.getAll().entrySet()) {
       Optional<String> rsgroup = table.getValue().getRegionServerGroup();
       if (!rsgroup.isPresent()) {
         continue;
       }
       if (rsgroup.get().equals(oldName)) {
-        updateTables.add(table.getValue().getTableName());
+        masterServices.getTableDescriptors().update(
+          TableDescriptorBuilder.newBuilder(table.getValue()).setRegionServerGroup(newName).build()
+        );
       }
     }
-    setRSGroup(updateTables, newName);
   }
 
 }
