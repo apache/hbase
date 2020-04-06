@@ -27,8 +27,8 @@ option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
 import "HBase.proto";
-import "ClusterStatus.proto";
-import "ErrorHandling.proto";
+import "server/ClusterStatus.proto";
+import "server/ErrorHandling.proto";
 
 message RegionServerStartupRequest {
   /** Port number this regionserver is up on */

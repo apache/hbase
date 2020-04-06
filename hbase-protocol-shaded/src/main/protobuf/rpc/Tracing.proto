@@ -18,34 +18,17 @@
 syntax = "proto2";
 package hbase.pb;
 
-option java_package = "org.apache.hadoop.hbase.shaded.coprocessor.example.generated";
-option java_outer_classname = "BulkDeleteProtos";
-option java_generic_services = true;
+option java_package = "org.apache.hadoop.hbase.shaded.protobuf.generated";
+option java_outer_classname = "TracingProtos";
 option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
-import "Client.proto";
-
-message BulkDeleteRequest {
-  required Scan scan = 1;
-  required DeleteType deleteType = 2;
-  optional uint64 timestamp = 3;
-  required uint32 rowBatchSize = 4;
-
-  enum DeleteType {
-    ROW = 0;
-    FAMILY = 1;
-    COLUMN = 2;
-    VERSION = 3;
-  }
-}
-
-message BulkDeleteResponse {
-  required uint64 rowsDeleted = 1;
-  optional uint64 versionsDeleted = 2;
-}
-
-service BulkDeleteService {
-  rpc delete(BulkDeleteRequest)
-    returns (BulkDeleteResponse);
+//Used to pass through the information necessary to continue
+//a trace after an RPC is made. All we need is the traceid
+//(so we know the overarching trace this message is a part of), and
+//the id of the current span when this message was sent, so we know
+//what span caused the new span we will create when this message is received.
+message RPCTInfo {
+  optional int64 trace_id = 1;
+  optional int64 parent_id = 2;
 }

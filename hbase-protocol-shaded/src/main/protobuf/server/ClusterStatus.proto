@@ -25,8 +25,8 @@ option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
 import "HBase.proto";
-import "ClusterId.proto";
-import "FS.proto";
+import "server/ClusterId.proto";
+import "server/io/FS.proto";
 
 message RegionState {
   required RegionInfo region_info = 1;
