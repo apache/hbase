@@ -63,7 +63,7 @@ public abstract class PBType<T extends Message> implements DataType<T> {
    * {@code src}'s position after consuming from the stream.
    * <p/>
    * For example:
-   * 
+   *
    * <pre>
    * Foo.Builder builder = ...
    * CodedInputStream is = inputStreamFromByteRange(src);
@@ -81,7 +81,7 @@ public abstract class PBType<T extends Message> implements DataType<T> {
    * {@code dst}'s position after writing to the stream.
    * <p/>
    * For example:
-   * 
+   *
    * <pre>
    * CodedOutputStream os = outputStreamFromByteRange(dst);
    * int before = os.spaceLeft(), after, written;
