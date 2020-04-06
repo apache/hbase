@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.rest.model.TableSchemaModel;
 import org.apache.hadoop.hbase.rest.model.VersionModel;
 import org.apache.hadoop.hbase.util.Bytes;
 
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 public class RemoteAdmin {
 
   final Client client;
