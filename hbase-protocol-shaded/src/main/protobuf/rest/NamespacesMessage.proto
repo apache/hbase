@@ -16,21 +16,8 @@
  * limitations under the License.
  */
 syntax = "proto2";
-option java_package = "org.apache.hadoop.hbase.shaded.ipc.protobuf.generated";
-option java_outer_classname = "TestRpcServiceProtos";
-option java_generic_services = true;
-option java_generate_equals_and_hash = true;
+package org.apache.hadoop.hbase.shaded.rest.protobuf.generated;
 
-import "test.proto";
-
-
-/**
- * A protobuf service for use in tests
- */
-service TestProtobufRpcProto {
-  rpc ping(EmptyRequestProto) returns (EmptyResponseProto);
-  rpc echo(EchoRequestProto) returns (EchoResponseProto);
-  rpc error(EmptyRequestProto) returns (EmptyResponseProto);
-  rpc pause(PauseRequestProto) returns (EmptyResponseProto);
-  rpc addr(EmptyRequestProto) returns (AddrResponseProto);
+message Namespaces {
+  repeated string namespace = 1;
 }

@@ -16,14 +16,21 @@
  * limitations under the License.
  */
 syntax = "proto2";
-package org.apache.hadoop.hbase.shaded.rest.protobuf.generated;
+option java_package = "org.apache.hadoop.hbase.shaded.ipc.protobuf.generated";
+option java_outer_classname = "TestRpcServiceProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
 
-import "CellMessage.proto";
+import "test/ipc/test.proto";
 
-message CellSet {
-  message Row {
-    required bytes key = 1;
-    repeated Cell values = 2;
-  }
-  repeated Row rows = 1;
+
+/**
+ * A protobuf service for use in tests
+ */
+service TestProtobufRpcProto {
+  rpc ping(EmptyRequestProto) returns (EmptyResponseProto);
+  rpc echo(EchoRequestProto) returns (EchoResponseProto);
+  rpc error(EmptyRequestProto) returns (EmptyResponseProto);
+  rpc pause(PauseRequestProto) returns (EmptyResponseProto);
+  rpc addr(EmptyRequestProto) returns (AddrResponseProto);
 }

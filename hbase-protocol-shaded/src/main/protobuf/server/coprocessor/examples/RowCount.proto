@@ -18,17 +18,22 @@
 syntax = "proto2";
 package hbase.pb;
 
-option java_package = "org.apache.hadoop.hbase.shaded.protobuf.generated";
-option java_outer_classname = "TracingProtos";
+option java_package = "org.apache.hadoop.hbase.shaded.coprocessor.example.generated";
+option java_outer_classname = "RowCountProtos";
+option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
-//Used to pass through the information necessary to continue
-//a trace after an RPC is made. All we need is the traceid 
-//(so we know the overarching trace this message is a part of), and
-//the id of the current span when this message was sent, so we know 
-//what span caused the new span we will create when this message is received.
-message RPCTInfo {
-  optional int64 trace_id = 1;
-  optional int64 parent_id = 2;
+message CountRequest {
+}
+
+message CountResponse {
+  required int64 count = 1 [default = 0];
+}
+
+service RowCountService {
+  rpc getRowCount(CountRequest)
+    returns (CountResponse);
+  rpc getKeyValueCount(CountRequest)
+    returns (CountResponse);
 }
