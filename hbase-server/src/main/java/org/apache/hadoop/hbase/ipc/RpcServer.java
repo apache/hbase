@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.regionserver.slowlog.RpcLogDetails;
 import org.apache.hadoop.hbase.regionserver.slowlog.SlowLogRecorder;
+import org.apache.hadoop.hbase.security.HBasePolicyProvider;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
 import org.apache.hadoop.hbase.security.User;
@@ -313,6 +314,7 @@ public abstract class RpcServer implements RpcServerInterface,
     if (scheduler instanceof ConfigurationObserver) {
       ((ConfigurationObserver) scheduler).onConfigurationChange(newConf);
     }
+    HBasePolicyProvider.init(newConf, authManager);
   }
 
   protected void initReconfigurable(Configuration confToLoad) {
