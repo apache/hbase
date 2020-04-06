@@ -29,7 +29,12 @@
   <artifactId>hbase-examples</artifactId>
   <name>Apache HBase - Examples</name>
   <description>Examples of HBase usage</description>
-  <!--REMOVE-->
+  <properties>
+    <!--Version of protobuf that hbase uses internally (we shade our pb)
+         Must match what is out in hbase-thirdparty include.
+    -->
+    <internal.protobuf.version>3.11.4</internal.protobuf.version>
+  </properties>
   <build>
     <plugins>
       <plugin>
@@ -62,8 +67,49 @@
             <goals>
               <goal>compile</goal>
             </goals>
+            <configuration>
+              <protocArtifact>com.google.protobuf:protoc:${internal.protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
+              <checkStaleness>true</checkStaleness>
+            </configuration>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <groupId>com.google.code.maven-replacer-plugin</groupId>
+        <artifactId>replacer</artifactId>
+        <version>1.5.3</version>
+        <executions>
+          <execution>
+            <phase>process-sources</phase>
+            <goals>
+              <goal>replace</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <basedir>${basedir}/target/generated-sources/</basedir>
+            <includes>
+              <include>**/*.java</include>
+            </includes>
+            <!-- Ignore errors when missing files, because it means this build
+                 was run with -Dprotoc.skip and there is no -Dreplacer.skip -->
+            <ignoreErrors>true</ignoreErrors>
+            <replacements>
+              <replacement>
+                <token>([^\.])com.google.protobuf</token>
+                <value>$1org.apache.hbase.thirdparty.com.google.protobuf</value>
+              </replacement>
+              <replacement>
+                <token>(public)(\W+static)?(\W+final)?(\W+class)</token>
+                <value>@javax.annotation.Generated("proto") $1$2$3$4</value>
+              </replacement>
+              <!-- replacer doesn't support anchoring or negative lookbehind -->
+              <replacement>
+                <token>(@javax.annotation.Generated\("proto"\) ){2}</token>
+                <value>$1</value>
+              </replacement>
+            </replacements>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>net.revelc.code</groupId>
@@ -86,6 +132,10 @@
     <dependency>
       <groupId>org.apache.hbase.thirdparty</groupId>
       <artifactId>hbase-shaded-netty</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-protocol-shaded</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
