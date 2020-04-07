@@ -180,6 +180,42 @@ public class TestMobCompactionWithDefaults {
     LOG.info("MOB compaction " + description() + " finished OK");
   }
 
+  @Test
+  public void testMobFileCompactionAfterSnapshotClone() throws InterruptedException, IOException {
+    final TableName clone = TableName.valueOf(test.getMethodName() + "-clone");
+    LOG.info("MOB compaction of cloned snapshot, " + description() + " started");
+    loadAndFlushThreeTimes(rows, table, famStr);
+    LOG.debug("Taking snapshot and cloning table {}", table);
+    admin.snapshot(test.getMethodName(), table);
+    admin.cloneSnapshot(test.getMethodName(), clone);
+    assertEquals("Should have 3 hlinks per region in MOB area from snapshot clone", 3 * numRegions,
+        getNumberOfMobFiles(clone, famStr));
+    mobCompact(admin.getDescriptor(clone), familyDescriptor);
+    assertEquals("Should have 3 hlinks + 1 MOB file per region due to clone + compact",
+        4 * numRegions, getNumberOfMobFiles(clone, famStr));
+    cleanupAndVerifyCounts(clone, famStr, 3*rows);
+    LOG.info("MOB compaction of cloned snapshot, " + description() + " finished OK");
+ }
+
+ @Test
+ public void testMobFileCompactionAfterSnapshotCloneAndFlush() throws InterruptedException,
+     IOException {
+    final TableName clone = TableName.valueOf(test.getMethodName() + "-clone");
+    LOG.info("MOB compaction of cloned snapshot after flush, " + description() + " started");
+    loadAndFlushThreeTimes(rows, table, famStr);
+    LOG.debug("Taking snapshot and cloning table {}", table);
+    admin.snapshot(test.getMethodName(), table);
+    admin.cloneSnapshot(test.getMethodName(), clone);
+    assertEquals("Should have 3 hlinks per region in MOB area from snapshot clone", 3 * numRegions,
+        getNumberOfMobFiles(clone, famStr));
+    loadAndFlushThreeTimes(rows, clone, famStr);
+    mobCompact(admin.getDescriptor(clone), familyDescriptor);
+    assertEquals("Should have 7 MOB file per region due to clone + 3xflush + compact",
+        7 * numRegions, getNumberOfMobFiles(clone, famStr));
+    cleanupAndVerifyCounts(clone, famStr, 6*rows);
+    LOG.info("MOB compaction of cloned snapshot w flush, " + description() + " finished OK");
+  }
+
   protected void loadAndFlushThreeTimes(int rows, TableName table, String family)
       throws IOException {
     final long start = getNumberOfMobFiles(table, family);
