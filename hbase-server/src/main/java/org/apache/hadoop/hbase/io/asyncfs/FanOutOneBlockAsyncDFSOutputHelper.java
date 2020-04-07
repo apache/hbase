@@ -175,6 +175,9 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
 
   private static final FileCreator FILE_CREATOR;
 
+  // CreateFlag.SHOULD_REPLICATE is to make OutputStream on a EC directory support hflush/hsync, but
+  // EC is introduced in hadoop 3.x so we do not have this enum on 2.x, that's why we need to
+  // indirectly reference it through reflection.
   private static final CreateFlag SHOULD_REPLICATE_FLAG;
 
   private static DFSClientAdaptor createDFSClientAdaptor() throws NoSuchMethodException {
