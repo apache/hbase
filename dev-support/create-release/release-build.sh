@@ -29,7 +29,8 @@ function exit_with_usage {
 Usage: release-build.sh <build|publish-snapshot|publish-release>
 Creates build deliverables from a tag/commit.
 Arguments:
- build             Create binary packages and commit to dist.apache.org/repos/dist/dev/hbase/
+ build             Create binary packages and commit to dist.apache.org/repos/dist/dev/${PROJECT}/
+                   (or dist.apache.org/repos/dist/dev/hbase/${PROJECT}-${VERSION}/ in case of hbase sub-projects)
  publish-snapshot  Publish snapshot release to Apache snapshots
  publish-release   Publish a release to Apache release repo
 
@@ -100,9 +101,13 @@ export LC_ALL=C.UTF-8
 export LANG=C.UTF-8
 
 # Commit ref to checkout when building
-GIT_REF=${GIT_REF:-master}
-RELEASE_STAGING_LOCATION="https://dist.apache.org/repos/dist/dev/hbase"
 BASE_DIR=$(pwd)
+GIT_REF=${GIT_REF:-master}
+if [[ "$PROJECT" =~ ^hbase ]]; then
+  RELEASE_STAGING_LOCATION="https://dist.apache.org/repos/dist/dev/hbase"
+else
+  RELEASE_STAGING_LOCATION="https://dist.apache.org/repos/dist/dev/${PROJECT}"
+fi
 
 init_java
 init_mvn
@@ -126,9 +131,6 @@ if [ -z "$VERSION" ]; then
   rm $TMP
 fi
 
-# Profiles for publishing snapshots and release to Maven Central
-PUBLISH_PROFILES="-P apache-release,release"
-
 # This is a band-aid fix to avoid the failure of Maven nightly snapshot in some Jenkins
 # machines by explicitly calling /usr/sbin/lsof. Please see SPARK-22377 and the discussion
 # in its pull request.
@@ -140,8 +142,6 @@ fi
 if [ -z "$PACKAGE_VERSION" ]; then
   PACKAGE_VERSION="${VERSION}-$(date +%Y_%m_%d_%H_%M)-${git_hash}"
 fi
-
-DEST_DIR_NAME="$PACKAGE_VERSION"
 
 git clean -d -f -x
 cd ..
@@ -170,29 +170,35 @@ if [[ "$1" == "build" ]]; then
   echo "`date -u +'%Y-%m-%dT%H:%M:%SZ'` Done building binary distribution"
 
   if ! is_dry_run; then
-    svn co --depth=empty $RELEASE_STAGING_LOCATION svn-hbase
-    rm -rf "svn-hbase/${DEST_DIR_NAME}"
-    mkdir -p "svn-hbase/${DEST_DIR_NAME}"
+    if [[ "$PROJECT" =~ ^hbase- ]]; then
+      DEST_DIR_NAME="${PROJECT}-${PACKAGE_VERSION}"
+    else
+      DEST_DIR_NAME="$PACKAGE_VERSION"
+    fi
+    svn_target="svn-${PROJECT}"
+    svn co --depth=empty "$RELEASE_STAGING_LOCATION" "$svn_target"
+    rm -rf "$svn_target/${DEST_DIR_NAME}"
+    mkdir -p "$svn_target/${DEST_DIR_NAME}"
 
     echo "Copying release tarballs"
-    cp ${PROJECT}-*.tar.* "svn-hbase/${DEST_DIR_NAME}/"
-    cp ${PROJECT}/CHANGES.md "svn-hbase/${DEST_DIR_NAME}/"
-    cp ${PROJECT}/RELEASENOTES.md "svn-hbase/${DEST_DIR_NAME}/"
+    cp ${PROJECT}-*.tar.* "$svn_target/${DEST_DIR_NAME}/"
+    cp ${PROJECT}/CHANGES.md "$svn_target/${DEST_DIR_NAME}/"
+    cp ${PROJECT}/RELEASENOTES.md "$svn_target/${DEST_DIR_NAME}/"
     shopt -s nocasematch
     # Generate api report only if project is hbase for now.
     if [ "${PROJECT}" == "hbase" ]; then
       # This script usually reports an errcode along w/ the report.
       generate_api_report ./${PROJECT} "${API_DIFF_TAG}" "${PACKAGE_VERSION}" || true
-      cp api*.html "svn-hbase/${DEST_DIR_NAME}/"
+      cp api*.html "$svn_target/${DEST_DIR_NAME}/"
     fi
     shopt -u nocasematch
 
-    svn add "svn-hbase/${DEST_DIR_NAME}"
+    svn add "$svn_target/${DEST_DIR_NAME}"
 
-    cd svn-hbase
+    cd "$svn_target"
     svn ci --username $ASF_USERNAME --password "$ASF_PASSWORD" -m"Apache ${PROJECT} $PACKAGE_VERSION" --no-auth-cache
     cd ..
-    rm -rf svn-hbase
+    rm -rf "$svn_target"
   fi
 
   exit 0
@@ -210,7 +216,7 @@ if [[ "$1" == "publish-snapshot" ]]; then
   fi
   # Coerce the requested version
   $MVN versions:set -DnewVersion=$VERSION
-  $MVN --settings $tmp_settings -DskipTests "$PUBLISH_PROFILES" deploy
+  $MVN --settings $tmp_settings -DskipTests -P "${PUBLISH_PROFILES}" deploy
   cd ..
   exit 0
 fi
@@ -230,7 +236,7 @@ if [[ "$1" == "publish-release" ]]; then
   fi
   echo "Staging release in nexus"
   if ! MAVEN_OPTS="${MAVEN_OPTS}" ${MVN} --settings "$tmp_settings" \
-      -DskipTests -Dcheckstyle.skip=true "${PUBLISH_PROFILES}" \
+      -DskipTests -Dcheckstyle.skip=true -P "${PUBLISH_PROFILES}" \
       -Dmaven.repo.local="${tmp_repo}" \
       "${mvn_goals[@]}" > "${BASE_DIR}/mvn_deploy.log"; then
     echo "Staging build failed, see 'mvn_deploy.log' for details." >&2

@@ -71,16 +71,19 @@ ASF_REPO="gitbox.apache.org/repos/asf/${PROJECT}.git"
 encoded_username=$(python -c "import urllib; print urllib.quote('''$ASF_USERNAME''')")
 encoded_password=$(python -c "import urllib; print urllib.quote('''$ASF_PASSWORD''')")
 git clone "https://$encoded_username:$encoded_password@$ASF_REPO" -b $GIT_BRANCH
-# NOTE: Here we are prepending project name on version for fetching
-# changes from the HBASE JIRA. It has issues for hbase, hbase-conectors,
-# hbase-operator-tools, etc.
+
+# 'update_releasenotes' searches the project's Jira for issues where 'Fix Version' matches specified
+# $jira_fix_version. For most projects this is same as ${RELEASE_VERSION}. However, all the 'hbase-*'
+# projects share the same HBASE jira name.  To make this work, by convention, the HBASE jira "Fix Version"
+# field values have the sub-project name pre-pended, as in "hbase-operator-tools-1.0.0".
+# So, here we prepend the project name to the version, but only for the hbase sub-projects.
+jira_fix_version="${RELEASE_VERSION}"
 shopt -s nocasematch
-if [ "${PROJECT}" != "hbase" ]; then
-  # Needs the '-' on the end.
-  prefix="${PROJECT}-"
+if [[ "${PROJECT}" =~ ^hbase- ]]; then
+  jira_fix_version="${PROJECT}-${RELEASE_VERSION}"
 fi
 shopt -u nocasematch
-update_releasenotes `pwd`/${PROJECT} "${prefix}${RELEASE_VERSION}"
+update_releasenotes `pwd`/${PROJECT} "${jira_fix_version}"
 
 cd ${PROJECT}
 

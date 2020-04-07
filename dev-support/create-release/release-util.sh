@@ -21,6 +21,10 @@ GPG="gpg --pinentry-mode loopback --no-tty --batch"
 YETUS_VERSION=${YETUS_VERSION:-0.11.1}
 set -e
 
+# Profiles for publishing snapshots and release to Maven Central and Dist
+# Use with '-P' maven option
+PUBLISH_PROFILES="apache-release,release"
+
 function error {
   echo "$*"
   exit 1
@@ -289,34 +293,54 @@ function generate_api_report {
   cp ${project}/target/compat-check/report.html "./api_compare_${previous_version}_to_${release_tag}.html"
 }
 
+# Look up the Jira name associated with project.
+# Currently all the 'hbase-*' projects share the same HBASE jira name.  This works because,
+# by convention, the HBASE jira "Fix Version" field values have the sub-project name pre-pended,
+# as in "hbase-operator-tools-1.0.0".
+# TODO: For non-hbase-related projects, enhance this to use Jira API query instead of text lookup.
+function get_jira_name {
+  local project="$1"
+  local jira_name
+  case "${project}" in
+    hbase*) jira_name="HBASE";;
+    *)      jira_name="";;
+  esac
+  if [[ -z "$jira_name" ]]; then
+    echo "Sorry, can't determine the Jira name for project $project" >&2
+    exit 1
+  fi
+  echo "$jira_name"
+}
+
 # Update the CHANGES.md
 # DOES NOT DO COMMITS! Caller should do that.
 # yetus requires python2 to be on the path.
 function update_releasenotes {
-  local project="$1"
-  local release_version="$2"
+  local project_dir="$1"
+  local jira_fix_version="$2"
   local yetus="apache-yetus-${YETUS_VERSION}"
+  local jira_project="$(get_jira_name "$(basename "$project_dir")")"
   wget -qO- "https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=/yetus/${YETUS_VERSION}/${yetus}-bin.tar.gz" | \
     tar xvz -C . || exit
-  cd ./${yetus} || exit
-  ./bin/releasedocmaker -p HBASE --fileversions -v ${release_version} -l --sortorder=newer --skip-credits
+  cd "./${yetus}" || exit
+  ./bin/releasedocmaker -p "${jira_project}" --fileversions -v "${jira_fix_version}" -l --sortorder=newer --skip-credits
   # First clear out the changes written by previous RCs.
   pwd
-  sed -i -e "/^## Release ${release_version}/,/^## Release/ {//!d; /^## Release ${release_version}/d;}" \
-    ${project}/CHANGES.md || true
-  sed -i -e "/^# HBASE  ${release_version} Release Notes/,/^# HBASE/{//!d; /^# HBASE  ${release_version} Release Notes/d;}" \
-    ${project}/RELEASENOTES.md || true
+  sed -i -e "/^## Release ${jira_fix_version}/,/^## Release/ {//!d; /^## Release ${jira_fix_version}/d;}" \
+    "${project_dir}/CHANGES.md" || true
+  sed -i -e "/^# ${jira_project}  ${jira_fix_version} Release Notes/,/^# ${jira_project}/{//!d; /^# ${jira_project}  ${jira_fix_version} Release Notes/d;}" \
+    "${project_dir}/RELEASENOTES.md" || true
 
   # The above generates RELEASENOTES.X.X.X.md and CHANGELOG.X.X.X.md.
-  # To insert into project CHANGES.me...need to cut the top off the
+  # To insert into project's CHANGES.md...need to cut the top off the
   # CHANGELOG.X.X.X.md file removing license and first line and then
   # insert it after the license comment closing where we have a
   # DO NOT REMOVE marker text!
-  sed -i -e '/## Release/,$!d' CHANGELOG.${release_version}.md
-  sed -i -e "/DO NOT REMOVE/r CHANGELOG.${release_version}.md" ${project}/CHANGES.md
+  sed -i -e '/## Release/,$!d' "CHANGELOG.${jira_fix_version}.md"
+  sed -i -e "/DO NOT REMOVE/r CHANGELOG.${jira_fix_version}.md" "${project_dir}/CHANGES.md"
   # Similar for RELEASENOTES but slightly different.
-  sed -i -e '/Release Notes/,$!d' RELEASENOTES.${release_version}.md
-  sed -i -e "/DO NOT REMOVE/r RELEASENOTES.${release_version}.md" ${project}/RELEASENOTES.md
+  sed -i -e '/Release Notes/,$!d' "RELEASENOTES.${jira_fix_version}.md"
+  sed -i -e "/DO NOT REMOVE/r RELEASENOTES.${jira_fix_version}.md" "${project_dir}/RELEASENOTES.md"
   cd .. || exit
 }
 
@@ -375,7 +399,7 @@ make_binary_release() {
   MAVEN_OPTS="${MAVEN_OPTS}" ${MVN} --settings $tmp_settings site -DskipTests \
     -Dmaven.repo.local="${tmp_repo}"
   MAVEN_OPTS="${MAVEN_OPTS}" ${MVN} --settings $tmp_settings install assembly:single -DskipTests \
-    -Dcheckstyle.skip=true "${PUBLISH_PROFILES}" -Dmaven.repo.local="${tmp_repo}"
+    -Dcheckstyle.skip=true -P "${PUBLISH_PROFILES}" -Dmaven.repo.local="${tmp_repo}"
 
   # Check there is a bin gz output. The build may not produce one: e.g. hbase-thirdparty.
   f_bin_tgz="./${PROJECT}-assembly/target/${basename}*-bin.tar.gz"

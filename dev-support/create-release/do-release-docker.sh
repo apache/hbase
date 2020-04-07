@@ -68,7 +68,7 @@ Options:
   -t [tag]     tag for the hbase-rm docker image to use for building (default: "latest").
   -j [path]    path to local JDK installation to use building. By default the script will
                use openjdk8 installed in the docker image.
-  -p [project] project to build; default 'hbase'; alternatively, 'hbase-thirdparty', etc.
+  -p [project] project to build, such as 'hbase' or 'hbase-thirdparty'; defaults to $PROJECT env var
   -s [step]    runs a single step of the process; valid steps are: tag, build, publish. if
                none specified, runs tag, then build, and then publish.
 EOF
