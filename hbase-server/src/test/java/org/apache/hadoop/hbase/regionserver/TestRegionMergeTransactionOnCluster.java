@@ -21,13 +21,14 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -66,6 +67,7 @@ import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
@@ -77,11 +79,9 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse;
@@ -130,7 +130,9 @@ public class TestRegionMergeTransactionOnCluster {
   @AfterClass
   public static void afterAllTests() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
-    if (ADMIN != null) ADMIN.close();
+    if (ADMIN != null) {
+      ADMIN.close();
+    }
   }
 
   @Test
@@ -286,8 +288,19 @@ public class TestRegionMergeTransactionOnCluster {
       // cleaned up by the time we got here making the test sometimes flakey.
       assertTrue(cleaned > 0);
 
-      mergedRegionResult = MetaTableAccessor.getRegionResult(
-        TEST_UTIL.getConnection(), mergedRegionInfo.getRegionName());
+      // Wait around a bit to give stuff a chance to complete.
+      while (true) {
+        mergedRegionResult = MetaTableAccessor
+          .getRegionResult(TEST_UTIL.getConnection(), mergedRegionInfo.getRegionName());
+        if (MetaTableAccessor.hasMergeRegions(mergedRegionResult.rawCells())) {
+          LOG.info("Waiting on cleanup of merge columns {}",
+            Arrays.asList(mergedRegionResult.rawCells()).stream().
+              map(c -> c.toString()).collect(Collectors.joining(",")));
+          Threads.sleep(50);
+        } else {
+          break;
+        }
+      }
       assertFalse(MetaTableAccessor.hasMergeRegions(mergedRegionResult.rawCells()));
     } finally {
       ADMIN.enableCatalogJanitor(true);
