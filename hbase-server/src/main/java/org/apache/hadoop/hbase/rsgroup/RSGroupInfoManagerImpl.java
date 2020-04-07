@@ -1235,7 +1235,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     RSGroupInfo newRSG = new RSGroupInfo(newName, oldRSG.getServers());
     newGroupMap.put(newName, newRSG);
     flushConfig(newGroupMap);
-
+    Set<TableName> updateTables = new HashSet<>();
     TableDescriptors tableDescriptors = masterServices.getTableDescriptors();
     for (Map.Entry<String, TableDescriptor> table : tableDescriptors.getAll().entrySet()) {
       Optional<String> rsgroup = table.getValue().getRegionServerGroup();
@@ -1243,11 +1243,10 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         continue;
       }
       if (rsgroup.get().equals(oldName)) {
-        masterServices.getTableDescriptors().update(
-          TableDescriptorBuilder.newBuilder(table.getValue()).setRegionServerGroup(newName).build()
-        );
+        updateTables.add(table.getValue().getTableName());
       }
     }
+    setRSGroup(updateTables, newName);
   }
 
 }
