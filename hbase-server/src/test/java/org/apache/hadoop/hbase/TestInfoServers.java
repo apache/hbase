@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,12 +20,12 @@ package org.apache.hadoop.hbase;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -85,8 +85,8 @@ public class TestInfoServers {
   }
 
   /**
-   * Ensure when we go to top level index pages that we get redirected to an info-server specific status
-   * page.
+   * Ensure when we go to top level index pages that we get redirected to an info-server specific
+   * status page.
    */
   @Test
   public void testInfoServersRedirect() throws Exception {
@@ -121,9 +121,10 @@ public class TestInfoServers {
     byte[] cf = Bytes.toBytes("d");
     UTIL.createTable(tableName, cf);
     UTIL.waitTableAvailable(tableName);
-    int port = UTIL.getHBaseCluster().getMaster().getInfoServer().getPort();
-    assertDoesNotContainContent(new URL("http://localhost:" + port + "/table.jsp?name=" + tableName
-        + "&action=split&key="), "Table action request accepted");
+    HMaster master = UTIL.getHBaseCluster().getMaster();
+    int port = master.getRegionServerInfoPort(master.getServerName());
+    assertDoesNotContainContent(new URL("http://localhost:" + port + "/table.jsp?name=" +
+      tableName + "&action=split&key="), "Table action request accepted");
     assertDoesNotContainContent(
       new URL("http://localhost:" + port + "/table.jsp?name=" + tableName), "Actions:");
   }
@@ -143,11 +144,11 @@ public class TestInfoServers {
 
   private String getUrlContent(URL u) throws IOException {
     java.net.URLConnection c = u.openConnection();
-    c.setConnectTimeout(2000);
-    c.setReadTimeout(2000);
+    c.setConnectTimeout(20000);
+    c.setReadTimeout(20000);
     c.connect();
     try (InputStream in = c.getInputStream()) {
-      return IOUtils.toString(in);
+      return IOUtils.toString(in, HConstants.UTF8_ENCODING);
     }
   }
 }

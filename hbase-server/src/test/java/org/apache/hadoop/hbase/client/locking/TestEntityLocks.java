@@ -173,8 +173,8 @@ public class TestEntityLocks {
     lock.requestLock();
     lock.await();
     assertTrue(lock.isLocked());
-    // Should get unlocked in next heartbeat i.e. after workerSleepTime. Wait 2x time.
-    assertTrue(waitLockTimeOut(lock, 2 * workerSleepTime));
+    // Should get unlocked in next heartbeat i.e. after workerSleepTime. Wait 10x time to be sure.
+    assertTrue(waitLockTimeOut(lock, 10 * workerSleepTime));
     assertFalse(lock.getWorker().isAlive());
     verify(abortable, times(1)).abort(any(), eq(null));
   }
