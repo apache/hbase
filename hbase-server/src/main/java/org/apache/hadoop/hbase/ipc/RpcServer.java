@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.PolicyProvider;
+import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -314,7 +315,10 @@ public abstract class RpcServer implements RpcServerInterface,
     if (scheduler instanceof ConfigurationObserver) {
       ((ConfigurationObserver) scheduler).onConfigurationChange(newConf);
     }
-    HBasePolicyProvider.init(newConf, authManager);
+    synchronized (authManager) {
+      authManager.refresh(newConf, new HBasePolicyProvider());
+    }
+    ProxyUsers.refreshSuperUserGroupsConfiguration(newConf);
   }
 
   protected void initReconfigurable(Configuration confToLoad) {
