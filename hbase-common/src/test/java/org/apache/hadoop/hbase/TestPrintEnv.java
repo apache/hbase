@@ -93,6 +93,7 @@ public class TestPrintEnv {
     }
   }
 
+  /*
   @Test
   public void testn() throws Exception {
     Process p = Runtime.getRuntime().exec(new String [] {"/bin/bash", "-c", "ulimit -n"});
@@ -109,6 +110,7 @@ public class TestPrintEnv {
       System.out.println(line);
     }
   }
+  */
 
   @Test
   public void testa() throws Exception {
@@ -127,6 +129,7 @@ public class TestPrintEnv {
     }
   }
 
+/*  
   @Test
   public void testfds() throws InterruptedException, IOException {
     final UnixOperatingSystemMXBean osMBean =
@@ -135,7 +138,6 @@ public class TestPrintEnv {
     System.out.println("maxfds:  " + osMBean.getMaxFileDescriptorCount());
   }
 
-/*  
   @org.junit.Ignore @Test
   public void testthreds() throws InterruptedException, IOException {
     try {
