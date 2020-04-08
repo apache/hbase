@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.DefaultStoreFlusher;
 import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
@@ -47,6 +48,8 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSetMultimap;
 
 /**
  * An implementation of the StoreFlusher. It extends the DefaultStoreFlusher.
@@ -280,7 +283,8 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
     // The hfile is current up to and including cacheFlushSeqNum.
     status.setStatus("Flushing " + store + ": appending metadata");
     writer.appendMetadata(cacheFlushSeqNum, false);
-    writer.appendMobMetadata(mobRefSet.get());
+    writer.appendMobMetadata(ImmutableSetMultimap.<TableName, String>builder()
+        .putAll(store.getTableName(), mobRefSet.get()).build());
     status.setStatus("Flushing " + store + ": closing flushed file");
     writer.close();
   }
