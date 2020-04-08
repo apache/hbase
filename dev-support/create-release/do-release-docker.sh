@@ -47,7 +47,7 @@
 #
 set -e
 
-# Set this building other hbase repos: e.g. PROJECT=hbase-operator-tools
+# Set this to build other hbase repos: e.g. PROJECT=hbase-operator-tools
 export PROJECT="${PROJECT:-hbase}"
 
 SELF=$(cd $(dirname "$0") && pwd)
@@ -69,8 +69,8 @@ Options:
   -j [path]    path to local JDK installation to use building. By default the script will
                use openjdk8 installed in the docker image.
   -p [project] project to build, such as 'hbase' or 'hbase-thirdparty'; defaults to $PROJECT env var
-  -s [step]    runs a single step of the process; valid steps are: tag, build, publish. if
-               none specified, runs tag, then build, and then publish.
+  -s [step]    runs a single step of the process; valid steps are: tag|publish-dist|publish-release.
+               If none specified, runs tag, then publish-dist, and then publish-release.
 EOF
 }
 

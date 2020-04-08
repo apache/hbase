@@ -26,13 +26,12 @@ SELF=$(cd $(dirname $0) && pwd)
 # Print usage and exit.
 function exit_with_usage {
   cat << EOF
-Usage: release-build.sh <build|publish-snapshot|publish-release>
-Creates build deliverables from a tag/commit.
+Usage: release-build.sh <publish-dist|publish-snapshot|publish-release>
+Creates release deliverables from a tag or commit.
 Arguments:
- build             Create binary packages and commit to dist.apache.org/repos/dist/dev/${PROJECT}/
-                   (or dist.apache.org/repos/dist/dev/hbase/${PROJECT}-${VERSION}/ in case of hbase sub-projects)
- publish-snapshot  Publish snapshot release to Apache snapshots
- publish-release   Publish a release to Apache release repo
+ publish-dist      Build and publish distribution packages (tarballs) to Apache dist repo
+ publish-snapshot  Build and publish maven artifacts snapshot release to Apache snapshots repo
+ publish-release   Build and publish maven artifacts release to Apache release repo
 
 All other inputs are environment variables:
  GIT_REF - Release tag or commit to build from
@@ -48,7 +47,7 @@ Set REPO environment to full path to repo to use
 to avoid re-downloading dependencies on each run.
 
 For example:
- $ PROJECT="hbase-operator-tools" ASF_USERNAME=NAME ASF_PASSWORD=PASSWORD GPG_PASSPHRASE=PASSWORD GPG_KEY=stack@apache.org ./release-build.sh build
+ $ PROJECT="hbase-operator-tools" ASF_USERNAME=NAME ASF_PASSWORD=PASSWORD GPG_PASSPHRASE=PASSWORD GPG_KEY=stack@apache.org ./release-build.sh publish-dist
 EOF
   exit 1
 }
@@ -116,7 +115,7 @@ init_python
 perl --version | grep 'This is'
 
 rm -rf "${PROJECT}"
-# in case of dry run, enable build step to chain from tag step
+# in case of dry run, enable publish steps to chain from tag step
 if is_dry_run && [[ "${TAG_SAME_DRY_RUN:-}" == "true" && -d "${PROJECT}.tag" ]]; then
   ln -s "${PROJECT}.tag" "${PROJECT}"
 else
@@ -162,7 +161,7 @@ echo "</servers>" >> "$tmp_settings"
 echo "</settings>" >> "$tmp_settings"
 export tmp_settings
 
-if [[ "$1" == "build" ]]; then
+if [[ "$1" == "publish-dist" ]]; then
   # Source and binary tarballs
   echo "Packaging release source tarballs"
   make_src_release "${PROJECT}" "${VERSION}"
@@ -215,7 +214,7 @@ fi
 
 if [[ "$1" == "publish-snapshot" ]]; then
   cd "${PROJECT}"
-  # Publish ${PROJECT} to Maven release repo
+  # Publish ${PROJECT} to Maven snapshot repo
   echo "Deploying ${PROJECT} SNAPSHOT at '$GIT_REF' ($git_hash)"
   echo "Publish version is $VERSION"
   if [[ ! $VERSION == *"SNAPSHOT"* ]]; then

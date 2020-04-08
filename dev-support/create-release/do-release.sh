@@ -80,16 +80,16 @@ else
   echo "Skipping tag creation for $RELEASE_TAG."
 fi
 
-if should_build "build"; then
-  run_silent "Building ${PROJECT}..." "build.log" \
-    "$SELF/release-build.sh" build
+if should_build "publish-dist"; then
+  run_silent "Publishing distribution packages (tarballs)" "build.log" \
+    "$SELF/release-build.sh" publish-dist
 else
-  echo "Skipping build step."
+  echo "Skipping publish-dist step."
 fi
 
-if should_build "publish"; then
+if should_build "publish-release"; then
   run_silent "Publishing release" "publish.log" \
     "$SELF/release-build.sh" publish-release
 else
-  echo "Skipping publish step."
+  echo "Skipping publish-release step."
 fi
