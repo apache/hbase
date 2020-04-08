@@ -1235,17 +1235,12 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     RSGroupInfo newRSG = new RSGroupInfo(newName, oldRSG.getServers());
     newGroupMap.put(newName, newRSG);
     flushConfig(newGroupMap);
-    Set<TableName> updateTables = new HashSet<>();
-    TableDescriptors tableDescriptors = masterServices.getTableDescriptors();
-    for (Map.Entry<String, TableDescriptor> table : tableDescriptors.getAll().entrySet()) {
-      Optional<String> rsgroup = table.getValue().getRegionServerGroup();
-      if (!rsgroup.isPresent()) {
-        continue;
-      }
-      if (rsgroup.get().equals(oldName)) {
-        updateTables.add(table.getValue().getTableName());
-      }
-    }
+    Set<TableName> updateTables =
+      masterServices.getTableDescriptors().getAll().values()
+                    .stream()
+                    .filter(t -> oldName.equals(t.getRegionServerGroup().orElse(null)))
+                    .map(TableDescriptor::getTableName)
+                    .collect(Collectors.toSet());
     setRSGroup(updateTables, newName);
   }
 

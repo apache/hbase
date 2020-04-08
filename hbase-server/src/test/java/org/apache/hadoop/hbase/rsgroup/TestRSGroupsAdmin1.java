@@ -473,15 +473,29 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
   public void testRenameRSGroup() throws Exception {
     // Add rsgroup, and assign 2 servers and a table to it.
     RSGroupInfo oldgroup = addGroup("oldgroup", 2);
-    TableName tb = TableName.valueOf("testRename");
-    TEST_UTIL.createTable(tb, "tr");
-    ADMIN.setRSGroup(Sets.newHashSet(tb), oldgroup.getName());
+    TableName tb1 = TableName.valueOf("testRename");
+    TEST_UTIL.createTable(tb1, "tr");
+    ADMIN.setRSGroup(Sets.newHashSet(tb1), oldgroup.getName());
     TEST_UTIL.waitFor(1000,
       (Waiter.Predicate<Exception>) () ->
-        ADMIN.getRSGroup("oldgroup").getServers().size() == 2);
+        ADMIN.getRSGroup(tb1).getServers().size() == 2);
     oldgroup = ADMIN.getRSGroup(oldgroup.getName());
     assertEquals(2, oldgroup.getServers().size());
-    assertEquals(oldgroup.getName(), ADMIN.getRSGroup(tb).getName());
+    assertEquals(oldgroup.getName(), ADMIN.getRSGroup(tb1).getName());
+
+    // Another rsgroup and table for verification
+    // that they are unchanged during we're renaming oldgroup.
+    RSGroupInfo normal = addGroup("normal", 1);
+    TableName tb2 = TableName.valueOf("unmovedTable");
+    TEST_UTIL.createTable(tb2, "ut");
+    ADMIN.setRSGroup(Sets.newHashSet(tb2), normal.getName());
+    TEST_UTIL.waitFor(1000,
+      (Waiter.Predicate<Exception>) () ->
+        ADMIN.getRSGroup(tb2).getServers().size() == 1);
+    normal = ADMIN.getRSGroup(normal.getName());
+    assertEquals(1, normal.getServers().size());
+    assertEquals(normal.getName(), ADMIN.getRSGroup(tb2).getName());
+
 
     // Rename rsgroup
     ADMIN.renameRSGroup(oldgroup.getName(), "newgroup");
@@ -495,6 +509,7 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
       }
     }
     assertEquals(servers.size(), match);
-    assertEquals(newgroup.getName(), ADMIN.getRSGroup(tb).getName());
+    assertEquals(newgroup.getName(), ADMIN.getRSGroup(tb1).getName());
+    assertEquals(normal.getName(), ADMIN.getRSGroup(tb2).getName());
   }
 }
