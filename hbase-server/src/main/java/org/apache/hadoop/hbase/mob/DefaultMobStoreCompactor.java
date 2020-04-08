@@ -26,11 +26,9 @@ import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -203,8 +201,8 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
                   try {
                     builder = MobUtils.deserializeMobFileRefs(value);
                   } catch (RuntimeException exception) {
-                     throw new RuntimeException("failure getting mob references for hfile " + file,
-                         exception);
+                    throw new RuntimeException("failure getting mob references for hfile " + file,
+                        exception);
                   }
                 }
                 return builder;

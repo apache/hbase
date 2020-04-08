@@ -27,12 +27,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 
 import org.apache.hadoop.conf.Configuration;
@@ -167,7 +164,8 @@ public final class MobUtils {
     if (maybe.isPresent()) {
       final Tag tag = maybe.get();
       if (tag.hasArray()) {
-        name = Optional.of(TableName.valueOf(tag.getValueArray(), tag.getValueOffset(), tag.getValueLength()));
+        name = Optional.of(TableName.valueOf(tag.getValueArray(), tag.getValueOffset(),
+            tag.getValueLength()));
       } else {
         // TODO ByteBuffer handling in tags looks busted. revisit.
         ByteBuffer buffer = tag.getValueByteBuffer().duplicate();
@@ -705,9 +703,9 @@ public final class MobUtils {
   }
 
   /**
-   * Serialize a set of referenced mob hfiles 
-   * @param refs to serialize, may be null
-   * @returns byte array to i.e. put into store file metadata. will not be null
+   * Serialize a set of referenced mob hfiles
+   * @param mobRefSet to serialize, may be null
+   * @return byte array to i.e. put into store file metadata. will not be null
    */
   public static byte[] serializeMobFileRefs(SetMultimap<TableName, String> mobRefSet) {
     if (mobRefSet != null && mobRefSet.size() > 0) {
@@ -747,7 +745,6 @@ public final class MobUtils {
   /**
    * Deserialize the set of referenced mob hfiles from store file metadata.
    * @param bytes compatibly serialized data. can not be null
-   * @param HStoreFile that the bytes came from, in case something goes wrong
    * @return a setmultimap of original table to list of hfile names. will be empty if no values.
    * @throws IllegalStateException if there are values but no table name
    */

@@ -283,11 +283,8 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
     // The hfile is current up to and including cacheFlushSeqNum.
     status.setStatus("Flushing " + store + ": appending metadata");
     writer.appendMetadata(cacheFlushSeqNum, false);
-    //writer.appendMobMetadata(ImmutableSetMultimap.builder<TableName, String>().putAll(store.getTableName(),
-    //    mobRefSet.get()).build());
-    ImmutableSetMultimap<TableName, String> mobs = ImmutableSetMultimap.<TableName, String>builder().putAll(store.getTableName(),
-        mobRefSet.get()).build();
-    writer.appendMobMetadata(mobs);
+    writer.appendMobMetadata(ImmutableSetMultimap.<TableName, String>builder()
+        .putAll(store.getTableName(), mobRefSet.get()).build());
     status.setStatus("Flushing " + store + ": closing flushed file");
     writer.close();
   }

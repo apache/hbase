@@ -195,11 +195,11 @@ public class TestMobCompactionWithDefaults {
         4 * numRegions, getNumberOfMobFiles(clone, famStr));
     cleanupAndVerifyCounts(clone, famStr, 3*rows);
     LOG.info("MOB compaction of cloned snapshot, " + description() + " finished OK");
- }
+  }
 
- @Test
- public void testMobFileCompactionAfterSnapshotCloneAndFlush() throws InterruptedException,
-     IOException {
+  @Test
+  public void testMobFileCompactionAfterSnapshotCloneAndFlush() throws InterruptedException,
+      IOException {
     final TableName clone = TableName.valueOf(test.getMethodName() + "-clone");
     LOG.info("MOB compaction of cloned snapshot after flush, " + description() + " started");
     loadAndFlushThreeTimes(rows, table, famStr);

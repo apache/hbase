@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.mob;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -233,8 +232,8 @@ public class MobFileCleanerChore extends ScheduledChore {
                   LOG.trace("Specific mob references found for store={} : {}", sf, mobs);
                   regionMobs.addAll(mobs.values());
                 } catch (RuntimeException exception) {
-                   throw new IOException("failure getting mob references for hfile " + sf,
-                       exception);
+                  throw new IOException("failure getting mob references for hfile " + sf,
+                      exception);
                 }
               }
             } catch (FileNotFoundException e) {
