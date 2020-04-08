@@ -68,7 +68,6 @@ import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandler.Sharable;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelId;
 import org.apache.hbase.thirdparty.io.netty.channel.SimpleChannelInboundHandler;
-import org.apache.hbase.thirdparty.io.netty.handler.codec.protobuf.ProtobufDecoder;
 import org.apache.hbase.thirdparty.io.netty.handler.codec.protobuf.ProtobufVarint32FrameDecoder;
 import org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleStateEvent;
 import org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleStateHandler;
