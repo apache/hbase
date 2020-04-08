@@ -29,11 +29,13 @@ function exit_with_usage {
 Usage: release-build.sh <tag|publish-dist|publish-snapshot|publish-release>
 Creates release deliverables from a tag or commit.
 Arguments:
- tag               Prepares for release on specified git branch: Set release version, create release tag,
-                   increment version for ongoing dev, and publish to Apache git repo
+ tag               Prepares for release on specified git branch: Set release version,
+                   update CHANGES and RELEASENOTES, create release tag,
+                   increment version for ongoing dev, and publish to Apache git repo.
  publish-dist      Build and publish distribution packages (tarballs) to Apache dist repo
  publish-snapshot  Build and publish maven artifacts snapshot release to Apache snapshots repo
- publish-release   Build and publish maven artifacts release to Apache release repo
+ publish-release   Build and publish maven artifacts release to Apache release repo, and
+                   construct vote email from template
 
 All other inputs are environment variables:
 Used for 'tag' and 'publish':
@@ -52,7 +54,8 @@ Used only for 'tag':
 Used only for 'publish':
   GIT_REF - Release tag or commit to build from
   VERSION - Version of project to be built (e.g. 2.1.2).
-    Optional for 'publish', as it defaults to the version in pom at GIT_REF.
+    Optional for 'publish', as it defaults to the version in pom at GIT_REF,
+    which typically will have been set by 'tag'.
   PACKAGE_VERSION - Release identifier in top level dist directory (e.g. 2.1.2RC1)
   GPG_KEY - GPG key id (usually email addr) used to sign release artifacts
   GPG_PASSPHRASE - Passphrase for GPG key
@@ -127,7 +130,7 @@ if [[ "$1" == "tag" ]]; then
   git config user.email $GIT_EMAIL
 
   # Create release version
-  $MVN versions:set -DnewVersion=$RELEASE_VERSION | grep -v "no value" # silence logs
+  maven_set_version $RELEASE_VERSION
   git add RELEASENOTES.md CHANGES.md
 
   git commit -a -m "Preparing ${PROJECT} release $RELEASE_TAG; tagging and updates to CHANGES.md and RELEASENOTES.md"
@@ -135,7 +138,7 @@ if [[ "$1" == "tag" ]]; then
   git tag $RELEASE_TAG
 
   # Create next version
-  $MVN versions:set -DnewVersion=$NEXT_VERSION | grep -v "no value" # silence logs
+  maven_set_version $NEXT_VERSION
 
   git commit -a -m "Preparing development version $NEXT_VERSION"
 
@@ -202,32 +205,10 @@ fi
 git clean -d -f -x
 cd ..
 
-MAVEN_LOCAL_REPO="${REPO:-$(pwd)/$(mktemp -d hbase-repo-XXXXX)}"
-MAVEN_SETTINGS_FILE="/${MAVEN_LOCAL_REPO}/tmp-settings.xml"
-export MAVEN_SETTINGS_FILE MAVEN_LOCAL_REPO ASF_USERNAME ASF_PASSWORD
-# reference passwords from env rather than storing in the settings.xml file.
-cat <<'EOF' > "$MAVEN_SETTINGS_FILE"
-<?xml version="1.0" encoding="UTF-8"?>
-<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
-          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
-  <localRepository>/${env.MAVEN_LOCAL_REPO}</localRepository>
-  <servers>
-    <server><id>apache.snapshots.https</id><username>${env.ASF_USERNAME}</username>
-      <password>${env.ASF_PASSWORD}</password></server>
-    <server><id>apache.releases.https</id><username>${env.ASF_USERNAME}</username>
-      <password>${env.ASF_PASSWORD}</password></server>
-  </servers>
-</settings>
-EOF
-
 if [[ "$1" == "publish-dist" ]]; then
   # Source and binary tarballs
   echo "Packaging release source tarballs"
   make_src_release "${PROJECT}" "${VERSION}"
-
-  # Add timestamps to mvn logs.
-  MAVEN_OPTS="-Dorg.slf4j.simpleLogger.showDateTime=true -Dorg.slf4j.simpleLogger.dateTimeFormat=HH:mm:ss ${MAVEN_OPTS}"
 
   echo "`date -u +'%Y-%m-%dT%H:%M:%SZ'` Building binary dist"
   make_binary_release "${PROJECT}" "${VERSION}"
@@ -273,53 +254,29 @@ if [[ "$1" == "publish-dist" ]]; then
 fi
 
 if [[ "$1" == "publish-snapshot" ]]; then
-  cd "${PROJECT}"
-  # Publish ${PROJECT} to Maven snapshot repo
-  echo "Deploying ${PROJECT} SNAPSHOT at '$GIT_REF' ($git_hash)"
-  echo "Publish version is $VERSION"
-  if [[ ! $VERSION == *"SNAPSHOT"* ]]; then
-    echo "ERROR: Snapshots must have a version containing SNAPSHOT"
-    echo "ERROR: You gave version '$VERSION'"
-    exit 1
-  fi
-  # Coerce the requested version
-  $MVN versions:set -DnewVersion=$VERSION
-  $MVN --settings $MAVEN_SETTINGS_FILE -DskipTests -P "${PUBLISH_PROFILES}" deploy
-  cd ..
+  pushd "${PROJECT}"
+  maven_deploy snapshot "${BASE_DIR}/mvn_deploy.log"
+  popd
   exit 0
 fi
 
 if [[ "$1" == "publish-release" ]]; then
   (
   cd "${PROJECT}"
-  # Publish ${PROJECT} to Maven release repo
-  echo "Publishing ${PROJECT} checkout at '$GIT_REF' ($git_hash)"
-  echo "Publish version is $VERSION"
-  # Coerce the requested version
-  $MVN versions:set -DnewVersion=$VERSION
-  declare -a mvn_goals=(clean install)
-  declare staged_repo_id="dryrun-no-repo"
-  if ! is_dry_run; then
-    mvn_goals=("${mvn_goals[@]}" deploy)
-  fi
   echo "Staging release in nexus"
-  if ! MAVEN_OPTS="${MAVEN_OPTS}" ${MVN} --settings "$MAVEN_SETTINGS_FILE" \
-      -DskipTests -Dcheckstyle.skip=true -P "${PUBLISH_PROFILES}" \
-      "${mvn_goals[@]}" > "${BASE_DIR}/mvn_deploy.log"; then
-    echo "Staging build failed, see 'mvn_deploy.log' for details." >&2
-    exit 1
-  fi
+  maven_deploy release "${BASE_DIR}/mvn_deploy.log"
+  declare staged_repo_id="dryrun-no-repo"
   if ! is_dry_run; then
     staged_repo_id=$(grep -o "Closing staging repository with ID .*" "${BASE_DIR}/mvn_deploy.log" \
         | sed -e 's/Closing staging repository with ID "\([^"]*\)"./\1/')
     echo "Artifacts successfully staged to repo ${staged_repo_id}"
   else
-    echo "Artifacts successfully built. not staged due to dry run."
+    echo "Artifacts successfully built. Not staged due to dry run."
   fi
   # Dump out email to send. Where we find vote.tmpl depends
   # on where this script is run from
   export PROJECT_TEXT=$(echo "${PROJECT}" | sed "s/-/ /g")
-  eval "echo \"$(< ${SELF}/vote.tmpl)\"" |tee "${BASE_DIR}/vote.txt"
+  eval "echo \"$(< "${SELF}/vote.tmpl")\"" |tee "${BASE_DIR}/vote.txt"
   )
   exit 0
 fi

@@ -64,13 +64,15 @@ This script runs the release scripts inside a docker image.
 Options:
 
   -d [path]    required. working directory. output will be written to "output" in here.
-  -n           dry run mode. Checks and local builds, but does not upload anything.
+  -f           "force" -- actually publish this release. Unless you specify '-f', it will
+               default to dry run mode, which checks and does local builds, but does not upload anything.
   -t [tag]     tag for the hbase-rm docker image to use for building (default: "latest").
   -j [path]    path to local JDK installation to use building. By default the script will
                use openjdk8 installed in the docker image.
   -p [project] project to build, such as 'hbase' or 'hbase-thirdparty'; defaults to $PROJECT env var
   -s [step]    runs a single step of the process; valid steps are: tag|publish-dist|publish-release.
                If none specified, runs tag, then publish-dist, and then publish-release.
+               'publish-snapshot' is also an allowed, less used, option.
 EOF
 }
 
@@ -78,10 +80,10 @@ WORKDIR=
 IMGTAG=latest
 JAVA=
 RELEASE_STEP=
-while getopts "d:hj:np:s:t:" opt; do
+while getopts "d:fhj:p:s:t:" opt; do
   case $opt in
     d) WORKDIR="$OPTARG" ;;
-    n) DRY_RUN=1 ;;
+    f) DRY_RUN=0 ;;
     t) IMGTAG="$OPTARG" ;;
     j) JAVA="$OPTARG" ;;
     p) PROJECT="$OPTARG" ;;

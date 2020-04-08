@@ -16,17 +16,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-DRY_RUN=${DRY_RUN:-0}
+DRY_RUN=${DRY_RUN:-1} #default to dry run
 GPG="gpg --pinentry-mode loopback --no-tty --batch"
 YETUS_VERSION=${YETUS_VERSION:-0.11.1}
+# Maven Profiles for publishing snapshots and release to Maven Central and Dist
+PUBLISH_PROFILES=("-P" "apache-release,release")
+
 set -e
 
-# Profiles for publishing snapshots and release to Maven Central and Dist
-# Use with '-P' maven option
-PUBLISH_PROFILES="apache-release,release"
-
 function error {
-  echo "$*"
+  echo "Error: $*" >&2
   exit 1
 }
 
@@ -38,7 +37,7 @@ function read_config {
   read -p "$PROMPT [$DEFAULT]: " REPLY
   local RETVAL="${REPLY:-$DEFAULT}"
   if [ -z "$RETVAL" ]; then
-    error "$PROMPT is must be provided."
+    error "$PROMPT must be provided."
   fi
   echo "$RETVAL"
 }
@@ -54,7 +53,7 @@ function run_silent {
   shift 2
 
   echo "========================"
-  echo "= $BANNER"
+  echo "=== $BANNER"
   echo "Command: $*"
   echo "Log file: $LOG_FILE"
 
@@ -66,6 +65,7 @@ function run_silent {
     tail "$LOG_FILE"
     exit $EC
   fi
+  echo "=== SUCCESS"
 }
 
 function fcreate_secure {
@@ -179,7 +179,8 @@ function get_release_info {
   if check_for_tag "$RELEASE_TAG"; then
     read -p "$RELEASE_TAG already exists. Continue anyway [y/n]? " ANSWER
     if [ "$ANSWER" != "y" ]; then
-      error "Exiting."
+      echo "Exiting."
+      exit 1
     fi
     SKIP_TAG=1
   fi
@@ -285,8 +286,7 @@ function init_java {
 
 function init_python {
   if ! [ -x "$(command -v python2)"  ]; then
-    echo 'Error: python2 needed by yetus. Install or add link? E.g: sudo ln -sf /usr/bin/python2.7 /usr/local/bin/python2' >&2
-    exit 1
+    error 'python2 needed by yetus. Install or add link? E.g: sudo ln -sf /usr/bin/python2.7 /usr/local/bin/python2'
   fi
   echo "python version: `python2 --version`"
 }
@@ -304,6 +304,32 @@ function init_mvn {
   # Add timestamped logging.
   MVN="${MVN} -B"
   export MVN
+  configure_maven
+}
+
+function configure_maven {
+  # Add timestamps to mvn logs.
+  MAVEN_OPTS="-Dorg.slf4j.simpleLogger.showDateTime=true -Dorg.slf4j.simpleLogger.dateTimeFormat=HH:mm:ss ${MAVEN_OPTS}"
+  MAVEN_LOCAL_REPO="${REPO:-$(pwd)/$(mktemp -d hbase-repo-XXXXX)}"
+  [[ -d "$MAVEN_LOCAL_REPO" ]] || mkdir -p "$MAVEN_LOCAL_REPO"
+  MAVEN_SETTINGS_FILE="${MAVEN_LOCAL_REPO}/tmp-settings.xml"
+  export MAVEN_OPTS MAVEN_SETTINGS_FILE MAVEN_LOCAL_REPO
+  export ASF_USERNAME ASF_PASSWORD
+  # reference passwords from env rather than storing in the settings.xml file.
+  cat <<'EOF' > "$MAVEN_SETTINGS_FILE"
+<?xml version="1.0" encoding="UTF-8"?>
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
+  <localRepository>/${env.MAVEN_LOCAL_REPO}</localRepository>
+  <servers>
+    <server><id>apache.snapshots.https</id><username>${env.ASF_USERNAME}</username>
+      <password>${env.ASF_PASSWORD}</password></server>
+    <server><id>apache.releases.https</id><username>${env.ASF_USERNAME}</username>
+      <password>${env.ASF_PASSWORD}</password></server>
+  </servers>
+</settings>
+EOF
 }
 
 # Writes report into cwd!
@@ -332,8 +358,7 @@ function get_jira_name {
     *)      jira_name="";;
   esac
   if [[ -z "$jira_name" ]]; then
-    echo "Sorry, can't determine the Jira name for project $project" >&2
-    exit 1
+    error "Sorry, can't determine the Jira name for project $project"
   fi
   echo "$jira_name"
 }
@@ -404,7 +429,7 @@ make_src_release() {
 # - GPG needs to be defined, with the path to GPG: defaults 'gpg'.
 # - The passphrase in the GPG_PASSPHRASE variable: no default (we don't make .asc file).
 # - GIT_REF which is the tag to create the tgz from: defaults to 'master'.
-# - MVN Default is 'mvn'.
+# - MVN Default is 'mvn -B'.
 # For example:
 # $ GPG_PASSPHRASE="XYZ" GIT_REF="master" make_src_release hbase-operator-tools 1.0.0
 make_binary_release() {
@@ -420,10 +445,10 @@ make_binary_release() {
   # a third to assemble the binary artifact. Trying to do
   # all in the one invocation fails; a problem in our
   # assembly spec to in maven. TODO. Meantime, three invocations.
-  MAVEN_OPTS="${MAVEN_OPTS}" ${MVN} --settings $MAVEN_SETTINGS_FILE clean install -DskipTests
-  MAVEN_OPTS="${MAVEN_OPTS}" ${MVN} --settings $MAVEN_SETTINGS_FILE site -DskipTests
-  MAVEN_OPTS="${MAVEN_OPTS}" ${MVN} --settings $MAVEN_SETTINGS_FILE install assembly:single -DskipTests \
-    -Dcheckstyle.skip=true -P "${PUBLISH_PROFILES}"
+  ${MVN} --settings $MAVEN_SETTINGS_FILE clean install -DskipTests
+  ${MVN} --settings $MAVEN_SETTINGS_FILE site -DskipTests
+  ${MVN} --settings $MAVEN_SETTINGS_FILE install assembly:single -DskipTests \
+    -Dcheckstyle.skip=true "${PUBLISH_PROFILES[@]}"
 
   # Check there is a bin gz output. The build may not produce one: e.g. hbase-thirdparty.
   f_bin_tgz="./${PROJECT}-assembly/target/${basename}*-bin.tar.gz"
@@ -438,4 +463,43 @@ make_binary_release() {
     cd .. || exit
     echo "No ${f_bin_tgz} product; expected?"
   fi
+}
+
+# Do maven command to set version into local pom
+function maven_set_version { #input: <version_to_set>
+  local this_version="$1"
+  $MVN versions:set -DnewVersion="$this_version" | grep -v "no value" # silence logs
+}
+
+# Do maven deploy to snapshot or release artifact repository, with checks.
+function maven_deploy { #inputs: <snapshot|release> <log_file_path>
+  # Invoke with cwd=$PROJECT
+  local deploy_type="$1"
+  local log_file="$2"
+  if [[ "$deploy_type" != "snapshot" && "$deploy_type" != "release" ]]; then
+    error "unrecognized deploy type, must be 'snapshot'|'release'"
+  fi
+  if [[ -z "$log_file" ]] || ! touch "$log_file"; then
+    error "must provide writable maven log output filepath"
+  fi
+  if [[ $deploy_type == "snapshot" ]] && ! [[ $VERSION =~ -SNAPSHOT$ ]]; then
+    error "Snapshots must have a version with suffix '-SNAPSHOT'; you gave version '$VERSION'"
+  elif [[ $deploy_type == "release" ]] && [[ $VERSION =~ SNAPSHOT ]]; then
+    error "Non-snapshot release version must not include the word 'SNAPSHOT'; you gave version '$VERSION'"
+  fi
+  # Publish ${PROJECT} to Maven release repo
+  echo "Publishing ${PROJECT} checkout at '$GIT_REF' ($git_hash)"
+  echo "Publish version is $VERSION"
+  # Coerce the requested version
+  maven_set_version "$VERSION"
+  declare -a mvn_goals=(clean install)
+  if ! is_dry_run; then
+    mvn_goals=("${mvn_goals[@]}" deploy)
+  fi
+  if ! ${MVN} --settings "$MAVEN_SETTINGS_FILE" \
+      -DskipTests -Dcheckstyle.skip=true "${PUBLISH_PROFILES[@]}" \
+      "${mvn_goals[@]}" > "$log_file"; then
+    error "Deploy build failed, for details see log at '$log_file'."
+  fi
+  return 0
 }

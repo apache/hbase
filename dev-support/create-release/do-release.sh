@@ -26,10 +26,10 @@ export PROJECT="${PROJECT:-hbase}"
 SELF=$(cd $(dirname $0) && pwd)
 . "$SELF/release-util.sh"
 
-while getopts "bn" opt; do
+while getopts "b:f" opt; do
   case $opt in
-    b) GIT_BRANCH=$OPTARG ;;
-    n) DRY_RUN=1 ;;
+    b) export GIT_BRANCH=$OPTARG ;;
+    f) export DRY_RUN=0 ;;  # "force", ie actually publish this release (otherwise defaults to dry run)
     ?) error "Invalid option: $OPTARG" ;;
   esac
 done
@@ -65,6 +65,11 @@ function should_build {
     return 1
   fi
 }
+
+# If doing all stages, use shared maven local repo
+if [[ -z "$RELEASE_STEP" ]]; then
+  export REPO="${REPO:-$(pwd)/$(mktemp -d hbase-repo-XXXXX)}"
+fi
 
 if should_build "tag" && [ $SKIP_TAG = 0 ]; then
   run_silent "Creating release tag $RELEASE_TAG..." "tag.log" \
