@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.snapshot;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
@@ -51,7 +52,7 @@ public class TestMobExportSnapshot extends TestExportSnapshot {
   }
 
   @Override
-  protected void createTable() throws Exception {
+  protected void createTable(TableName tableName) throws Exception {
     MobSnapshotTestingUtils.createPreSplitMobTable(TEST_UTIL, tableName, 2, FAMILY);
   }
 
