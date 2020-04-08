@@ -2,3 +2,4 @@
 *.log
 *.svg
 venv
+new_for_*.csv

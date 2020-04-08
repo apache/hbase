@@ -30,10 +30,14 @@ import pathlib
 import re
 import sqlite3
 import time
+import os
 
 import enlighten
 import git
 import jira
+
+
+LOG = logging.getLogger(os.path.basename(__file__))
 
 
 class _DB:
@@ -46,6 +50,9 @@ class _DB:
     Attributes:
         conn (:obj:`sqlite3.db2api.Connection`): The underlying connection object.
     """
+
+    SQL_LOG = LOG.getChild("sql")
+
     class Action(enum.Enum):
         """Describes an action to be taken against the database."""
         ADD = 'ADD'
@@ -54,6 +61,7 @@ class _DB:
 
     def __init__(self, db_path, initialize_db, **_kwargs):
         self._conn = sqlite3.connect(db_path)
+        self._conn.set_trace_callback(_DB.log_query)
 
         if initialize_db:
             for table in 'git_commits', 'jira_versions':
@@ -80,6 +88,10 @@ class _DB:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._conn.close()
+
+    @staticmethod
+    def log_query(query):
+        _DB.SQL_LOG.debug(re.sub(r'\s+', ' ', query).strip())
 
     @property
     def conn(self):
@@ -324,7 +336,7 @@ class _RepoReader:
 
     def _resolve_ambiguity(self, commit):
         if commit.hexsha not in self._fallback_actions:
-            logging.warning('Unable to resolve action for %s: %s', commit.hexsha, commit.summary)
+            LOG.warning('Unable to resolve action for %s: %s', commit.hexsha, commit.summary)
             return _DB.Action.SKIP, None
         action, jira_id = self._fallback_actions[commit.hexsha]
         if not jira_id:
@@ -354,7 +366,7 @@ class _RepoReader:
         global MANAGER
         commits = list(self._repo.iter_commits(
             "%s...%s" % (origin_commit.hexsha, release_branch), reverse=True))
-        logging.info("%s has %d commits since its origin at %s.", release_branch, len(commits),
+        LOG.info("%s has %d commits since its origin at %s.", release_branch, len(commits),
                      origin_commit)
         counter = MANAGER.counter(total=len(commits), desc=release_branch, unit='commit')
         commits_since_release = list()
@@ -404,7 +416,7 @@ class _JiraReader:
         database."""
         global MANAGER
         jira_ids = self._db.unique_jira_ids_from_git()
-        logging.info("retrieving %s jira_ids from the issue tracker", len(jira_ids))
+        LOG.info("retrieving %s jira_ids from the issue tracker", len(jira_ids))
         counter = MANAGER.counter(total=len(jira_ids), desc='fetch from Jira', unit='issue')
         chunk_size = 50
         chunks = [jira_ids[i:i + chunk_size] for i in range(0, len(jira_ids), chunk_size)]
@@ -429,7 +441,7 @@ class _JiraReader:
     def fetch_issues(self, jira_ids):
         """Retrieve the specified jira Ids."""
         global MANAGER
-        logging.info("retrieving %s jira_ids from the issue tracker", len(jira_ids))
+        LOG.info("retrieving %s jira_ids from the issue tracker", len(jira_ids))
         counter = MANAGER.counter(total=len(jira_ids), desc='fetch from Jira', unit='issue')
         chunk_size = 50
         chunks = [jira_ids[i:i + chunk_size] for i in range(0, len(jira_ids), chunk_size)]
@@ -501,17 +513,17 @@ class Auditor:
             writer.writeheader()
             for issue in issues:
                 writer.writerow(issue)
-        logging.info('generated report at %s', filename)
+        LOG.info('generated report at %s', filename)
 
     def report_new_for_release_line(self, release_line):
         """Builds a report of the Jira issues that are new on the target release line, not present
         on any of the associated release branches. (i.e., on branch-2 but not
         branch-{2.0,2.1,...})"""
         matches = [x for x in self._repo_reader.release_line_refs
-                   if x.name == release_line or x.name.endswith('/%s' % release_line)]
+                   if x.name == release_line or x.remote_head == release_line]
         release_line_ref = next(iter(matches), None)
         if not release_line_ref:
-            logging.error('release line %s not found. available options are %s.',
+            LOG.error('release line %s not found. available options are %s.',
                           release_line, [x.name for x in self._repo_reader.release_line_refs])
             return
         cursor = self._db.conn.execute("""
@@ -523,6 +535,31 @@ class Auditor:
         jira_ids = [x[0] for x in cursor.fetchall()]
         issues = self._jira_reader.fetch_issues(jira_ids)
         filename = 'new_for_%s.csv' % release_line.replace('/', '-')
+        Auditor._write_report(filename, issues)
+
+    def report_new_for_release_branch(self, release_branch):
+        """Builds a report of the Jira issues that are new on the target release branch, not present
+        on any of the previous release branches. (i.e., on branch-2.3 but not
+        branch-{2.0,2.1,...})"""
+        matches = [x for x in self._repo_reader.release_branch_refs
+                   if x.name == release_branch or x.remote_head == release_branch]
+        release_branch_ref = next(iter(matches), None)
+        if not release_branch_ref:
+            LOG.error('release branch %s not found. available options are %s.',
+                      release_branch, [x.name for x in self._repo_reader.release_branch_refs])
+            return
+        previous_branches = [x.name for x in self._repo_reader.release_branch_refs
+                             if x.remote_head != release_branch_ref.remote_head]
+        query = (
+            "SELECT distinct jira_id FROM git_commits"
+            " WHERE branch = ?"
+            " EXCEPT SELECT distinct jira_id FROM git_commits"
+            f" WHERE branch IN ({','.join('?' for _ in previous_branches)})"
+        )
+        cursor = self._db.conn.execute(query, tuple([release_branch_ref.name] + previous_branches))
+        jira_ids = [x[0] for x in cursor.fetchall()]
+        issues = self._jira_reader.fetch_issues(jira_ids)
+        filename = 'new_for_%s.csv' % release_branch.replace('/', '-')
         Auditor._write_report(filename, issues)
 
     @staticmethod
@@ -548,7 +585,7 @@ class Auditor:
         building_group.add_argument(
             '--db-path',
             help='Path to the database file, or leave unspecified for a transient db.',
-            default=':memory:')
+            default='audit.db')
         building_group.add_argument(
             '--initialize-db',
             help='When true, initialize the database tables. This is destructive to the contents'
@@ -559,6 +596,11 @@ class Auditor:
         report_group.add_argument(
             '--report-new-for-release-line',
             help=Auditor.report_new_for_release_line.__doc__,
+            type=str,
+            default=None)
+        report_group.add_argument(
+            '--report-new-for-release-branch',
+            help=Auditor.report_new_for_release_branch.__doc__,
             type=str,
             default=None)
         git_repo_group = parser.add_argument_group('Interactions with the Git repo')
@@ -580,7 +622,7 @@ class Auditor:
         git_repo_group.add_argument(
             '--development-branch-fix-version',
             help='The Jira fixVersion used to indicate an issue is committed to the development'
-            + ' branch. Default: \'3.0.0\'',
+            + ' branch.',
             default='3.0.0')
         git_repo_group.add_argument(
             '--release-line-regexp',
@@ -612,7 +654,10 @@ class Auditor:
                 help='The Jira fixVersion used to indicate an issue is committed to the specified '
                 + 'release line branch',
                 required=True)
-        return argparse.ArgumentParser(parents=[parent_parser])
+        return argparse.ArgumentParser(
+            parents=[parent_parser],
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        )
 
 
 MANAGER = None
@@ -621,11 +666,11 @@ MANAGER = None
 def main():
     global MANAGER
 
+    logging.basicConfig(level=logging.INFO)
     first_pass_parser, git_repo_group = Auditor._build_first_pass_parser()
     first_pass_args, extras = first_pass_parser.parse_known_args()
     first_pass_args_dict = vars(first_pass_args)
     with _DB(**first_pass_args_dict) as db:
-        logging.basicConfig(level=logging.INFO)
         repo_reader = _RepoReader(db, **first_pass_args_dict)
         jira_reader = _JiraReader(db, **first_pass_args_dict)
         second_pass_parser = Auditor._build_second_pass_parser(
@@ -641,6 +686,9 @@ def main():
             if second_pass_args.report_new_for_release_line:
                 release_line = second_pass_args.report_new_for_release_line
                 auditor.report_new_for_release_line(release_line)
+            if second_pass_args.report_new_for_release_branch:
+                release_branch = second_pass_args.report_new_for_release_branch
+                auditor.report_new_for_release_branch(release_branch)
 
 
 if __name__ == '__main__':
