@@ -445,7 +445,7 @@ public class ProtobufLogReader extends ReaderBase {
         && ex.getCause() != null && ex.getCause() instanceof IOException) {
       ioEx = (IOException)ex.getCause();
     }
-    if (ioEx != null) {
+    if ((ioEx != null) && (ioEx.getMessage() != null)) {
       if (ioEx.getMessage().contains("EOF")) return ioEx;
       return null;
     }
