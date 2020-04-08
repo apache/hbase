@@ -345,7 +345,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     boolean balanced = total <= 0 || sumMultiplier <= 0 ||
         (sumMultiplier > 0 && (total / sumMultiplier) < minCostNeedBalance);
     if (LOG.isDebugEnabled()) {
-      LOG.debug("{} {}; total cost={}, sum multiplier={}; min cost/multiplier which needs balance is {}",
+      LOG.debug("{} {}; total cost={}, sum multiplier={}; cost/multiplier to need a balance is {}",
           balanced ? "Skipping load balancing because balanced" : "We need to load balance",
           isByTable ? String.format("table (%s)", tableName) : "cluster",
           total, sumMultiplier, minCostNeedBalance);
