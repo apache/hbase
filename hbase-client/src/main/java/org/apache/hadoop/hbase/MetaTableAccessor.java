@@ -967,6 +967,22 @@ public class MetaTableAccessor {
   }
 
   /**
+   * Returns a host:port string of server where the region is transitioning on.
+   * It reads "sn" column from {@link Result}, a row in catalog table.
+   * @param r Result to pull from
+   * @return A host:port string or null if necessary fields not found or empty.
+   */
+  @Nullable
+  @InterfaceAudience.Private // for use by RegionReplicaInfo which is used by meta browser
+  public static String getTransitioningOnServerName(final Result r, final int replicaId) {
+      byte[] serverColumn = getServerNameColumn(replicaId);
+      Cell cell = r.getColumnLatestCell(getCatalogFamily(), serverColumn);
+      return (cell != null && cell.getValueLength() > 0)
+        ? Bytes.toString(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength())
+        : null;
+  }
+
+  /**
    * The latest seqnum that the server writing to meta observed when opening the region.
    * E.g. the seqNum when the result of {@link #getServerName(Result, int)} was written.
    * @param r Result to pull the seqNum from

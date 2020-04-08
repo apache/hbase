@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.RegionStateStore;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -45,6 +46,11 @@ public final class RegionReplicaInfo {
   private final RegionInfo regionInfo;
   private final RegionState.State regionState;
   private final ServerName serverName;
+  /** See {@link org.apache.hadoop.hbase.HConstants#SERVERNAME_QUALIFIER_STR}. */
+  private final String transitioningOnServerName;
+  private final List<RegionInfo> mergeRegionInfo;
+  private final RegionInfo splitA;
+  private final RegionInfo splitB;
 
   private RegionReplicaInfo(final Result result, final HRegionLocation location) {
     this.row = result != null ? result.getRow() : null;
@@ -53,6 +59,15 @@ public final class RegionReplicaInfo {
       ? RegionStateStore.getRegionState(result, regionInfo)
       : null;
     this.serverName = location != null ? location.getServerName() : null;
+    this.transitioningOnServerName = (result != null && regionInfo != null)
+      ? MetaTableAccessor.getTransitioningOnServerName(result, regionInfo.getReplicaId())
+      : null;
+    this.mergeRegionInfo = (result != null)
+      ? MetaTableAccessor.getMergeRegions(result.rawCells())
+      : null;
+    PairOfSameType<RegionInfo> daughterRegions = MetaTableAccessor.getDaughterRegions(result);
+    this.splitA = daughterRegions.getFirst();
+    this.splitB = daughterRegions.getSecond();
   }
 
   public static List<RegionReplicaInfo> from(final Result result) {
@@ -102,6 +117,27 @@ public final class RegionReplicaInfo {
     return serverName;
   }
 
+  public String getTransitioningOnServerName() {
+    return transitioningOnServerName;
+  }
+
+  public String getMergeRegionName() {
+    return (mergeRegionInfo != null)
+      ? mergeRegionInfo.stream()
+                       .map(RegionInfo::getRegionName)
+                       .map(Bytes::toStringBinary)
+                       .collect(Collectors.joining(", "))
+      : "";
+  }
+
+  public byte[] getSplitAName() {
+    return splitA != null ? splitA.getRegionName() : null;
+  }
+
+  public byte[] getSplitBName() {
+    return splitB != null ? splitB.getRegionName() : null;
+  }
+
   @Override
   public boolean equals(Object other) {
     if (this == other) {
@@ -119,6 +155,10 @@ public final class RegionReplicaInfo {
       .append(regionInfo, that.regionInfo)
       .append(regionState, that.regionState)
       .append(serverName, that.serverName)
+      .append(transitioningOnServerName, that.transitioningOnServerName)
+      .append(mergeRegionInfo, that.mergeRegionInfo)
+      .append(splitA, that.splitA)
+      .append(splitB, that.splitB)
       .isEquals();
   }
 
@@ -129,15 +169,24 @@ public final class RegionReplicaInfo {
       .append(regionInfo)
       .append(regionState)
       .append(serverName)
+      .append(transitioningOnServerName)
+      .append(mergeRegionInfo)
+      .append(splitA)
+      .append(splitB)
       .toHashCode();
   }
 
-  @Override public String toString() {
+  @Override
+  public String toString() {
     return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
       .append("row", Bytes.toStringBinary(row))
       .append("regionInfo", regionInfo)
       .append("regionState", regionState)
       .append("serverName", serverName)
+      .append("transitioningOnServerName", transitioningOnServerName)
+      .append("merge*",mergeRegionInfo)
+      .append("splitA", splitA)
+      .append("splitB", splitB)
       .toString();
   }
 }

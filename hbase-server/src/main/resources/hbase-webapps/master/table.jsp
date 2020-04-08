@@ -387,68 +387,87 @@ if (fqtn != null && master.isInitialized()) {
     }
   }
 %>
-<table class="table table-striped">
-  <tr>
-    <th>RegionName</th>
-    <th>Start Key</th>
-    <th>End Key</th>
-    <th>Replica ID</th>
-    <th>RegionState</th>
-    <th>ServerName</th>
-  </tr>
-<%
-  final boolean metaScanHasMore;
-  byte[] lastRow = null;
-  try (final MetaBrowser.Results results = metaBrowser.getResults()) {
-    for (final RegionReplicaInfo regionReplicaInfo : results) {
-      lastRow = Optional.ofNullable(regionReplicaInfo)
-        .map(RegionReplicaInfo::getRow)
-        .orElse(null);
-      if (regionReplicaInfo == null) {
-%>
-  <tr>
-    <td colspan="6">Null result</td>
-  </tr>
-<%
-      continue;
+<div style="overflow-x: auto">
+  <table class="table table-striped nowrap">
+    <tr>
+      <th>RegionName</th>
+      <th>Start Key</th>
+      <th>End Key</th>
+      <th>Replica ID</th>
+      <th>RegionState</th>
+      <th>ServerName</th>
+      <th>TransitioningOnServerName</th>
+      <th>MergeRegionNames</th>
+      <th>SplitA</th>
+      <th>SplitB</th>
+    </tr>
+  <%
+    final boolean metaScanHasMore;
+    byte[] lastRow = null;
+    try (final MetaBrowser.Results results = metaBrowser.getResults()) {
+      for (final RegionReplicaInfo regionReplicaInfo : results) {
+        lastRow = Optional.ofNullable(regionReplicaInfo)
+          .map(RegionReplicaInfo::getRow)
+          .orElse(null);
+        if (regionReplicaInfo == null) {
+  %>
+    <tr>
+      <td colspan="6">Null result</td>
+    </tr>
+  <%
+        continue;
+      }
+
+      final String regionNameDisplay = regionReplicaInfo.getRegionName() != null
+        ? Bytes.toStringBinary(regionReplicaInfo.getRegionName())
+        : "";
+      final String startKeyDisplay = regionReplicaInfo.getStartKey() != null
+        ? Bytes.toStringBinary(regionReplicaInfo.getStartKey())
+        : "";
+      final String endKeyDisplay = regionReplicaInfo.getEndKey() != null
+        ? Bytes.toStringBinary(regionReplicaInfo.getEndKey())
+        : "";
+      final String replicaIdDisplay = regionReplicaInfo.getReplicaId() != null
+        ? regionReplicaInfo.getReplicaId().toString()
+        : "";
+      final String regionStateDisplay = regionReplicaInfo.getRegionState() != null
+        ? regionReplicaInfo.getRegionState().toString()
+        : "";
+
+      final RegionInfo regionInfo = regionReplicaInfo.getRegionInfo();
+      final ServerName serverName = regionReplicaInfo.getServerName();
+      final RegionState.State regionState = regionReplicaInfo.getRegionState();
+      final int rsPort = master.getRegionServerInfoPort(serverName);
+
+      final String transitioningOnServerName = regionReplicaInfo.getTransitioningOnServerName();
+      final String mergeRegionNames = regionReplicaInfo.getMergeRegionName();
+      final String splitAName = regionReplicaInfo.getSplitAName() != null
+        ? Bytes.toStringBinary(regionReplicaInfo.getSplitAName())
+        : "";
+      final String splitBName = regionReplicaInfo.getSplitBName() != null
+        ? Bytes.toStringBinary(regionReplicaInfo.getSplitBName())
+        : "";
+  %>
+    <tr>
+      <td style="white-space: nowrap;"><%= regionNameDisplay %></td>
+      <td style="white-space: nowrap;"><%= startKeyDisplay %></td>
+      <td style="white-space: nowrap;"><%= endKeyDisplay %></td>
+      <td style="white-space: nowrap;"><%= replicaIdDisplay %></td>
+      <td style="white-space: nowrap;"><%= regionStateDisplay %></td>
+      <td style="white-space: nowrap;"><%= buildRegionServerLink(serverName, rsPort, regionInfo, regionState) %></td>
+      <td style="white-space: nowrap;"><%= transitioningOnServerName %></td>
+      <td style="white-space: nowrap;"><%= mergeRegionNames %></td>
+      <td style="white-space: nowrap;"><%= splitAName %></td>
+      <td style="white-space: nowrap;"><%= splitBName %></td>
+    </tr>
+  <%
+      }
+
+      metaScanHasMore = results.hasMoreResults();
     }
-
-    final String regionNameDisplay = regionReplicaInfo.getRegionName() != null
-      ? Bytes.toStringBinary(regionReplicaInfo.getRegionName())
-      : "";
-    final String startKeyDisplay = regionReplicaInfo.getStartKey() != null
-      ? Bytes.toStringBinary(regionReplicaInfo.getStartKey())
-      : "";
-    final String endKeyDisplay = regionReplicaInfo.getEndKey() != null
-      ? Bytes.toStringBinary(regionReplicaInfo.getEndKey())
-      : "";
-    final String replicaIdDisplay = regionReplicaInfo.getReplicaId() != null
-      ? regionReplicaInfo.getReplicaId().toString()
-      : "";
-    final String regionStateDisplay = regionReplicaInfo.getRegionState() != null
-      ? regionReplicaInfo.getRegionState().toString()
-      : "";
-
-    final RegionInfo regionInfo = regionReplicaInfo.getRegionInfo();
-    final ServerName serverName = regionReplicaInfo.getServerName();
-    final RegionState.State regionState = regionReplicaInfo.getRegionState();
-    final int rsPort = master.getRegionServerInfoPort(serverName);
-%>
-  <tr>
-    <td><%= regionNameDisplay %></td>
-    <td><%= startKeyDisplay %></td>
-    <td><%= endKeyDisplay %></td>
-    <td><%= replicaIdDisplay %></td>
-    <td><%= regionStateDisplay %></td>
-    <td><%= buildRegionServerLink(serverName, rsPort, regionInfo, regionState) %></td>
-  </tr>
-<%
-    }
-
-    metaScanHasMore = results.hasMoreResults();
-  }
-%>
-</table>
+  %>
+  </table>
+</div>
 <div class="row">
   <div class="col-md-4">
     <ul class="pagination" style="margin: 20px 0">
