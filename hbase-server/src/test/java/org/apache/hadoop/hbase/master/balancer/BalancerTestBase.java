@@ -202,9 +202,11 @@ public class BalancerTestBase {
     int max = numRegions % numServers == 0 ? min : min + 1;
 
     for (ServerAndLoad server : servers) {
-      assertTrue(server.getLoad() >= 0);
-      assertTrue(server.getLoad() <= max);
-      assertTrue(server.getLoad() >= min);
+      assertTrue("All servers should have a positive load. " + server, server.getLoad() >= 0);
+      assertTrue("All servers should have load no more than " + max + ". " + server,
+          server.getLoad() <= max);
+      assertTrue("All servers should have load no less than " + min + ". " + server,
+          server.getLoad() >= min);
     }
   }
 
@@ -434,7 +436,7 @@ public class BalancerTestBase {
     loadBalancer.setRackManager(rackManager);
     // Run the balancer.
     List<RegionPlan> plans = loadBalancer.balanceCluster(serverMap);
-    assertNotNull(plans);
+    assertNotNull("Initial cluster balance should produce plans.", plans);
 
     // Check to see that this actually got to a stable place.
     if (assertFullyBalanced || assertFullyBalancedForReplicas) {
@@ -447,7 +449,8 @@ public class BalancerTestBase {
       if (assertFullyBalanced) {
         assertClusterAsBalanced(balancedCluster);
         List<RegionPlan> secondPlans =  loadBalancer.balanceCluster(serverMap);
-        assertNull(secondPlans);
+        assertNull("Given a requirement to be fully balanced, second attempt at plans should " +
+            "produce none.", secondPlans);
       }
 
       if (assertFullyBalancedForReplicas) {

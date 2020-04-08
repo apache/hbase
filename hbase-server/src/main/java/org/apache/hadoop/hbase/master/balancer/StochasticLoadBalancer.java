@@ -334,26 +334,34 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     for (CostFunction c : costFunctions) {
       float multiplier = c.getMultiplier();
       if (multiplier <= 0) {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace(c.getClass().getSimpleName() + " not needed because multiplier is <= 0");
+        }
         continue;
       }
       if (!c.isNeeded()) {
-        LOG.debug(c.getClass().getName() + " indicated that its cost should not be considered");
+        if (LOG.isTraceEnabled()) {
+          LOG.trace(c.getClass().getSimpleName() + " not needed");
+        }
         continue;
       }
       sumMultiplier += multiplier;
       total += c.cost() * multiplier;
     }
 
-    if (total <= 0 || sumMultiplier <= 0
-        || (sumMultiplier > 0 && (total / sumMultiplier) < minCostNeedBalance)) {
-      final String loadBalanceTarget =
-          isByTable ? String.format("table (%s)", tableName) : "cluster";
-      LOG.info(String.format("Skipping load balancing because the %s is balanced. Total cost: %s, "
-          + "Sum multiplier: %s, Minimum cost needed for balance: %s", loadBalanceTarget, total,
-          sumMultiplier, minCostNeedBalance));
-      return false;
+    boolean balanced = total <= 0 || sumMultiplier <= 0 ||
+        (sumMultiplier > 0 && (total / sumMultiplier) < minCostNeedBalance);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(
+          (balanced ? "Skipping load balancing because balanced" : "We need to load balance") +
+          " " + (isByTable ? String.format("table (%s)", tableName) : "cluster") +
+          "; total cost=" + total + ", sum multiplier=" + sumMultiplier + "; cost/multiplier to " +
+          "need a balance is " + minCostNeedBalance);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Balance decision detailed function costs=" + functionCost());
+      }
     }
-    return true;
+    return !balanced;
   }
 
   @Override
@@ -1208,15 +1216,26 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
 
     @Override
+    void init(Cluster cluster) {
+      super.init(cluster);
+      LOG.debug(getClass().getSimpleName() + " sees a total of " + cluster.numServers +
+          " servers and " + cluster.numRegions + " regions.");
+      if (LOG.isTraceEnabled()) {
+        for (int i =0; i < cluster.numServers; i++) {
+          LOG.trace(getClass().getSimpleName() + " sees server '" + cluster.servers[i] +
+              "' has " + cluster.regionsPerServer[i].length + " regions");
+        }
+      }
+    }
+
+    @Override
     protected double cost() {
       if (stats == null || stats.length != cluster.numServers) {
         stats = new double[cluster.numServers];
       }
-
       for (int i =0; i < cluster.numServers; i++) {
         stats[i] = cluster.regionsPerServer[i].length;
       }
-
       return costFromArray(stats);
     }
   }
