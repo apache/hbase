@@ -675,7 +675,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private long flushPerChanges;
   private long blockingMemStoreSize;
   // Used to guard closes
-  final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+  final ReentrantReadWriteLock lock;
 
   // Stop updates lock
   private final ReentrantReadWriteLock updatesLock = new ReentrantReadWriteLock();
@@ -766,6 +766,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     this.conf = new CompoundConfiguration()
       .add(confParam)
       .addBytesMap(htd.getValues());
+    this.lock = new ReentrantReadWriteLock(conf.getBoolean(FAIR_REENTRANT_CLOSE_LOCK,
+        DEFAULT_FAIR_REENTRANT_CLOSE_LOCK));
     this.flushCheckInterval = conf.getInt(MEMSTORE_PERIODIC_FLUSH_INTERVAL,
         DEFAULT_CACHE_FLUSH_INTERVAL);
     this.flushPerChanges = conf.getLong(MEMSTORE_FLUSH_PER_CHANGES, DEFAULT_FLUSH_PER_CHANGES);
@@ -1505,6 +1507,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   private final Object closeLock = new Object();
 
+  /** Conf key for fair locking policy */
+  public static final String FAIR_REENTRANT_CLOSE_LOCK =
+      "hbase.regionserver.fair.region.close.lock";
+  public static final boolean DEFAULT_FAIR_REENTRANT_CLOSE_LOCK = true;
   /** Conf key for the periodic flush interval */
   public static final String MEMSTORE_PERIODIC_FLUSH_INTERVAL =
       "hbase.regionserver.optionalcacheflushinterval";
