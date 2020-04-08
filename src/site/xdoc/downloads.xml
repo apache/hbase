@@ -68,24 +68,24 @@ under the License.
     </tr>
     <tr>
       <td style="test-align: left">
-        2.1.9
+        2.1.10
       </td>
       <td style="test-align: left">
-        2020/02/17
+        2020/04/08
       </td>
       <td style="test-align: left">
-        <a href="https://apache.org/dist/hbase/2.1.9/api_compare_2.1.8_to_2.1.9RC0.html">2.1.8 vs 2.1.9</a>
+        <a href="https://apache.org/dist/hbase/2.1.10/api_compare_2.1.9_to_2.1.10RC1.html">2.1.9 vs 2.1.10</a>
       </td>
       <td style="test-align: left">
-        <a href="https://apache.org/dist/hbase/2.1.9/CHANGES.md">Changes</a>
+        <a href="https://apache.org/dist/hbase/2.1.10/CHANGES.md">Changes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://apache.org/dist/hbase/2.1.9/RELEASENOTES.md">Release Notes</a>
+        <a href="https://apache.org/dist/hbase/2.1.10/RELEASENOTES.md">Release Notes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.1.9/hbase-2.1.9-src.tar.gz">src</a> (<a href="https://apache.org/dist/hbase/2.1.9/hbase-2.1.9-src.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/2.1.9/hbase-2.1.9-src.tar.gz.asc">asc</a>) <br />
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.1.9/hbase-2.1.9-bin.tar.gz">bin</a> (<a href="https://apache.org/dist/hbase/2.1.9/hbase-2.1.9-bin.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/2.1.9/hbase-2.1.9-bin.tar.gz.asc">asc</a>) <br />
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.1.9/hbase-2.1.9-client-bin.tar.gz">client-bin</a> (<a href="https://apache.org/dist/hbase/2.1.9/hbase-2.1.9-client-bin.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/2.1.9/hbase-2.1.9-client-bin.tar.gz.asc">asc</a>)
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.1.10/hbase-2.1.10-src.tar.gz">src</a> (<a href="https://apache.org/dist/hbase/2.1.10/hbase-2.1.10-src.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/2.1.10/hbase-2.1.10-src.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.1.10/hbase-2.1.10-bin.tar.gz">bin</a> (<a href="https://apache.org/dist/hbase/2.1.10/hbase-2.1.10-bin.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/2.1.10/hbase-2.1.10-bin.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.1.10/hbase-2.1.10-client-bin.tar.gz">client-bin</a> (<a href="https://apache.org/dist/hbase/2.1.10/hbase-2.1.10-client-bin.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/2.1.10/hbase-2.1.10-client-bin.tar.gz.asc">asc</a>)
       </td>
       <td />
     </tr>
