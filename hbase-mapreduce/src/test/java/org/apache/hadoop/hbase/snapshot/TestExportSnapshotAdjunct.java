@@ -119,8 +119,7 @@ public class TestExportSnapshotAdjunct {
     conf.setBoolean(ExportSnapshot.Testing.CONF_TEST_FAILURE, true);
     conf.setInt(ExportSnapshot.Testing.CONF_TEST_FAILURE_COUNT, 2);
     conf.setInt("mapreduce.map.maxattempts", 3);
-    TestExportSnapshot.testExportFileSystemState(conf, tableName,
-      Bytes.toBytes(snapshotName), Bytes.toBytes(snapshotName),
+    TestExportSnapshot.testExportFileSystemState(conf, tableName, snapshotName, snapshotName,
       tableNumFiles, TEST_UTIL.getDefaultRootDirPath(), copyDir, true,
       null, true);
   }
@@ -137,8 +136,7 @@ public class TestExportSnapshotAdjunct {
     conf.setBoolean(ExportSnapshot.Testing.CONF_TEST_FAILURE, true);
     conf.setInt(ExportSnapshot.Testing.CONF_TEST_FAILURE_COUNT, 4);
     conf.setInt("mapreduce.map.maxattempts", 3);
-    TestExportSnapshot.testExportFileSystemState(conf, tableName,
-      Bytes.toBytes(snapshotName), Bytes.toBytes(snapshotName),
+    TestExportSnapshot.testExportFileSystemState(conf, tableName, snapshotName, snapshotName,
       tableNumFiles, TEST_UTIL.getDefaultRootDirPath(), copyDir, true, null, false);
   }
 }

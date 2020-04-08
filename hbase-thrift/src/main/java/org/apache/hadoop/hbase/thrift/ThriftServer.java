@@ -533,7 +533,7 @@ public class ThriftServer  extends Configured implements Tool {
         SaslServer saslServer = saslServerTransport.getSaslServer();
         String principal = saslServer.getAuthorizationID();
         hbaseServiceHandler.setEffectiveUser(principal);
-        return processor.process(inProt, outProt);
+        processor.process(inProt, outProt);
       };
     }
 
