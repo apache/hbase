@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.hbase.master.balancer;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
+@InterfaceAudience.Private
 class LoadCandidateGenerator extends CandidateGenerator {
 
   @Override

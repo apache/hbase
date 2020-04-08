@@ -25,9 +25,12 @@ import java.util.Map;
 
 import org.apache.hadoop.hbase.client.RegionInfo;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
 /**
  * Generates a candidate action to be applied to the cluster for cost function search
  */
+@InterfaceAudience.Private
 abstract class CandidateGenerator {
 
   abstract BaseLoadBalancer.Cluster.Action generate(BaseLoadBalancer.Cluster cluster);

@@ -18,10 +18,13 @@
 
 package org.apache.hadoop.hbase.master.balancer;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
 /**
  * Generates candidates which moves the replicas out of the region server for
  * co-hosted region replicas
  */
+@InterfaceAudience.Private
 class RegionReplicaCandidateGenerator extends CandidateGenerator {
 
   StochasticLoadBalancer.RandomCandidateGenerator randomGenerator =

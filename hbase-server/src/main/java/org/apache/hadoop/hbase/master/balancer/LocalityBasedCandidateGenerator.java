@@ -19,8 +19,12 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import org.apache.hadoop.hbase.master.MasterServices;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Optional;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
+@InterfaceAudience.Private
 class LocalityBasedCandidateGenerator extends CandidateGenerator {
 
   private MasterServices masterServices;
