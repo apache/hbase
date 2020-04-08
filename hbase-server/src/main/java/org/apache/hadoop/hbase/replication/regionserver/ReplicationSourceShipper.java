@@ -119,8 +119,9 @@ public class ReplicationSourceShipper extends Thread {
         } else {
           shipEdits(entryBatch);
         }
-      } catch (InterruptedException e) {
-        LOG.trace("Interrupted while waiting for next replication entry batch", e);
+      } catch (InterruptedException | ReplicationRuntimeException e) {
+        // It is interrupted and needs to quit.
+        LOG.warn("Interrupted while waiting for next replication entry batch", e);
         Thread.currentThread().interrupt();
       }
     }
