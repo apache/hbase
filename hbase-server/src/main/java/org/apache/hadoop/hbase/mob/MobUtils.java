@@ -20,17 +20,16 @@ package org.apache.hadoop.hbase.mob;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 
 import org.apache.hadoop.conf.Configuration;
@@ -68,6 +67,8 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSetMultimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.SetMultimap;
 
 /**
  * The mob utilities
@@ -130,14 +131,51 @@ public final class MobUtils {
    * @param cell The current cell.
    * @return The table name tag.
    */
-  public static Tag getTableNameTag(Cell cell) {
+  private static Optional<Tag> getTableNameTag(Cell cell) {
+    Optional<Tag> tag = Optional.empty();
     if (cell.getTagsLength() > 0) {
-      Optional<Tag> tag = PrivateCellUtil.getTag(cell, TagType.MOB_TABLE_NAME_TAG_TYPE);
-      if (tag.isPresent()) {
-        return tag.get();
+      tag = PrivateCellUtil.getTag(cell, TagType.MOB_TABLE_NAME_TAG_TYPE);
+    }
+    return tag;
+  }
+
+  /**
+   * Gets the table name from when this cell was written into a mob hfile as a string.
+   * @param cell to extract tag from
+   * @return table name as a string. empty if the tag is not found.
+   */
+  public static Optional<String> getTableNameString(Cell cell) {
+    Optional<Tag> tag = getTableNameTag(cell);
+    Optional<String> name = Optional.empty();
+    if (tag.isPresent()) {
+      name = Optional.of(Tag.getValueAsString(tag.get()));
+    }
+    return name;
+  }
+
+  /**
+   * Get the table name from when this cell was written into a mob hfile as a TableName.
+   * @param cell to extract tag from
+   * @return name of table as a TableName. empty if the tag is not found.
+   */
+  public static Optional<TableName> getTableName(Cell cell) {
+    Optional<Tag> maybe = getTableNameTag(cell);
+    Optional<TableName> name = Optional.empty();
+    if (maybe.isPresent()) {
+      final Tag tag = maybe.get();
+      if (tag.hasArray()) {
+        name = Optional.of(TableName.valueOf(tag.getValueArray(), tag.getValueOffset(),
+            tag.getValueLength()));
+      } else {
+        // TODO ByteBuffer handling in tags looks busted. revisit.
+        ByteBuffer buffer = tag.getValueByteBuffer().duplicate();
+        buffer.mark();
+        buffer.position(tag.getValueOffset());
+        buffer.limit(tag.getValueOffset() + tag.getValueLength());
+        name = Optional.of(TableName.valueOf(buffer));
       }
     }
-    return null;
+    return name;
   }
 
   /**
@@ -383,7 +421,7 @@ public final class MobUtils {
 
   /**
    * Gets the RegionInfo of the mob files. This is a dummy region. The mob files are not saved in a
-   * region in HBase. This is only used in mob snapshot. It's internally used only.
+   * region in HBase. It's internally used only.
    * @param tableName
    * @return A dummy mob region info.
    */
@@ -665,27 +703,78 @@ public final class MobUtils {
   }
 
   /**
-   * Get list of referenced MOB files from a given collection of store files
-   * @param storeFiles store files
-   * @param mobDir MOB file directory
-   * @return list of MOB file paths
+   * Serialize a set of referenced mob hfiles
+   * @param mobRefSet to serialize, may be null
+   * @return byte array to i.e. put into store file metadata. will not be null
    */
+  public static byte[] serializeMobFileRefs(SetMultimap<TableName, String> mobRefSet) {
+    if (mobRefSet != null && mobRefSet.size() > 0) {
+      // Here we rely on the fact that '/' and ',' are not allowed in either table names nor hfile
+      // names for serialization.
+      //
+      // exampleTable/filename1,filename2//example:table/filename5//otherTable/filename3,filename4
+      //
+      // to approximate the needed capacity we use the fact that there will usually be 1 table name
+      // and each mob filename is around 105 bytes. we pick an arbitrary number to cover "most"
+      // single table name lengths
+      StringBuilder sb = new StringBuilder(100 + mobRefSet.size() * 105);
+      boolean doubleSlash = false;
+      for (TableName tableName : mobRefSet.keySet()) {
+        sb.append(tableName).append("/");
+        boolean comma = false;
+        for (String refs : mobRefSet.get(tableName)) {
+          sb.append(refs);
+          if (comma) {
+            sb.append(",");
+          } else {
+            comma = true;
+          }
+        }
+        if (doubleSlash) {
+          sb.append("//");
+        } else {
+          doubleSlash = true;
+        }
+      }
+      return Bytes.toBytes(sb.toString());
+    } else {
+      return HStoreFile.NULL_VALUE;
+    }
+  }
 
-  public static List<Path> getReferencedMobFiles(Collection<HStoreFile> storeFiles, Path mobDir) {
-
-    Set<String> mobSet = new HashSet<String>();
-    for (HStoreFile sf : storeFiles) {
-      byte[] value = sf.getMetadataValue(HStoreFile.MOB_FILE_REFS);
-      if (value != null && value.length > 1) {
-        String s = Bytes.toString(value);
-        String[] all = s.split(",");
-        Collections.addAll(mobSet, all);
+  /**
+   * Deserialize the set of referenced mob hfiles from store file metadata.
+   * @param bytes compatibly serialized data. can not be null
+   * @return a setmultimap of original table to list of hfile names. will be empty if no values.
+   * @throws IllegalStateException if there are values but no table name
+   */
+  public static ImmutableSetMultimap.Builder<TableName, String> deserializeMobFileRefs(byte[] bytes)
+      throws IllegalStateException {
+    ImmutableSetMultimap.Builder<TableName, String> map = ImmutableSetMultimap.builder();
+    if (bytes.length > 1) {
+      // TODO avoid turning the tablename pieces in to strings.
+      String s = Bytes.toString(bytes);
+      String[] tables = s.split("//");
+      for (String tableEnc : tables) {
+        final int delim = tableEnc.indexOf('/');
+        if (delim <= 0) {
+          throw new IllegalStateException("MOB reference data does not match expected encoding: " +
+              "no table name included before list of mob refs.");
+        }
+        TableName table = TableName.valueOf(tableEnc.substring(0, delim));
+        String[] refs = tableEnc.substring(delim + 1).split(",");
+        map.putAll(table, refs);
+      }
+    } else {
+      if (LOG.isDebugEnabled()) {
+        // array length 1 should be the NULL_VALUE.
+        if (! Arrays.equals(HStoreFile.NULL_VALUE, bytes)) {
+          LOG.debug("Serialized MOB file refs array was treated as the placeholder 'no entries' but"
+              + " didn't have the expected placeholder byte. expected={} and actual={}",
+              Arrays.toString(HStoreFile.NULL_VALUE), Arrays.toString(bytes));
+        }
       }
     }
-    List<Path> retList = new ArrayList<Path>();
-    for (String name : mobSet) {
-      retList.add(new Path(mobDir, name));
-    }
-    return retList;
+    return map;
   }
 }

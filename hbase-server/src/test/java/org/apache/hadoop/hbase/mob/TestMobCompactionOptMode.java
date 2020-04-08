@@ -20,12 +20,9 @@ package org.apache.hadoop.hbase.mob;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,37 +44,25 @@ import org.slf4j.LoggerFactory;
  */
 @SuppressWarnings("deprecation")
 @Category(LargeTests.class)
-public class TestMobCompactionOptMode extends TestMobCompactionBase{
+public class TestMobCompactionOptMode extends TestMobCompactionWithDefaults {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestMobCompactionOptMode.class);
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMobCompactionOptMode.class);
 
-  public TestMobCompactionOptMode() {
-  }
-
-  @Override
-  protected void initConf() {
-    super.initConf();
+  @BeforeClass
+  public static void configureOptimizedCompaction() throws InterruptedException, IOException {
+    HTU.shutdownMiniHBaseCluster();
     conf.set(MobConstants.MOB_COMPACTION_TYPE_KEY,
       MobConstants.OPTIMIZED_MOB_COMPACTION_TYPE);
     conf.setLong(MobConstants.MOB_COMPACTION_MAX_FILE_SIZE_KEY, 1000000);
-  }
-
-  @Test
-  public void testMobFileCompactionBatchMode() throws InterruptedException, IOException {
-    LOG.info("MOB compaction generational (non-batch) mode started");
-    baseTestMobFileCompaction();
-    LOG.info("MOB compaction generational (non-batch) mode finished OK");
-
+    HTU.startMiniHBaseCluster();
   }
 
   @Override
-  protected void mobCompact(Admin admin, TableDescriptor tableDescriptor,
-      ColumnFamilyDescriptor familyDescriptor) throws IOException, InterruptedException {
-    // Major compact MOB table
-    admin.majorCompact(tableDescriptor.getTableName(), familyDescriptor.getName());
+  protected String description() {
+    return "generational (non-batch) mode";
   }
 
 }
