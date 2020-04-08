@@ -17,6 +17,15 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.*;
@@ -31,13 +40,6 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.*;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
 
 @Category(MediumTests.class)
 public class TestRegionServerMetrics {
@@ -681,5 +683,35 @@ public class TestRegionServerMetrics {
     assertTrue(metricsHelper.getGaugeDouble("averageRegionSize", serverSource) > 0.0);
 
     t.close();
+  }
+
+  @Test
+  public void testReadBytes() throws Exception {
+    TableName tableName = TableName.valueOf("testReadBytes");
+    byte[] cf = Bytes.toBytes("d");
+    byte[] row = Bytes.toBytes("rk");
+    byte[] qualifier = Bytes.toBytes("qual");
+    byte[] val = Bytes.toBytes("Value");
+
+    Table t = TEST_UTIL.createTable(tableName, cf);
+    // Do a first put to be sure that the connection is established, meta is there and so on.
+    Put p = new Put(row);
+    p.addColumn(cf, qualifier, val);
+    t.put(p);
+    // Do a few gets
+    for (int i = 0; i < 10; i++) {
+      t.get(new Get(row));
+    }
+    TEST_UTIL.getHBaseAdmin().flush(tableName);
+    metricsRegionServer.getRegionServerWrapper().forceRecompute();
+
+    assertTrue("Total read bytes should be larger than 0",
+        metricsRegionServer.getRegionServerWrapper().getTotalBytesRead() > 0);
+    assertTrue("Total local read bytes should be larger than 0",
+        metricsRegionServer.getRegionServerWrapper().getLocalBytesRead() > 0);
+    assertEquals("Total short circuit read bytes should be equal to 0", 0,
+        metricsRegionServer.getRegionServerWrapper().getShortCircuitBytesRead());
+    assertEquals("Total zero-byte read bytes should be equal to 0", 0,
+        metricsRegionServer.getRegionServerWrapper().getZeroCopyBytesRead());
   }
 }
