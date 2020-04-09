@@ -31,6 +31,7 @@ import java.util.Queue;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CheckAndMutate;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -428,6 +429,16 @@ public class ThriftTable implements Table {
 
   @Override
   public CheckAndMutateWithFilterBuilder checkAndMutate(byte[] row, Filter filter) {
+    throw new NotImplementedException("Implement later");
+  }
+
+  @Override
+  public boolean checkAndMutate(CheckAndMutate checkAndMutate) {
+    throw new NotImplementedException("Implement later");
+  }
+
+  @Override
+  public boolean[] checkAndMutate(List<CheckAndMutate> checkAndMutates) {
     throw new NotImplementedException("Implement later");
   }
 

@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CheckAndMutate;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
@@ -307,14 +308,22 @@ public interface Table extends Closeable {
    * table.checkAndMutate(row, family).qualifier(qualifier).ifNotExists().thenPut(put);
    * </code>
    * </pre>
+   *
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. For internal test use only, do not use it
+   *   any more.
    */
+  @Deprecated
   default CheckAndMutateBuilder checkAndMutate(byte[] row, byte[] family) {
     throw new NotImplementedException("Add an implementation!");
   }
 
   /**
    * A helper class for sending checkAndMutate request.
+   *
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. For internal test use only, do not use it
+   *   any more.
    */
+  @Deprecated
   interface CheckAndMutateBuilder {
 
     /**
@@ -377,14 +386,22 @@ public interface Table extends Closeable {
    * table.checkAndMutate(row, filter).thenPut(put);
    * </code>
    * </pre>
+   *
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. For internal test use only, do not use it
+   *   any more.
    */
+  @Deprecated
   default CheckAndMutateWithFilterBuilder checkAndMutate(byte[] row, Filter filter) {
     throw new NotImplementedException("Add an implementation!");
   }
 
   /**
    * A helper class for sending checkAndMutate request with a filter.
+   *
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. For internal test use only, do not use it
+   *   any more.
    */
+  @Deprecated
   interface CheckAndMutateWithFilterBuilder {
 
     /**
@@ -409,6 +426,29 @@ public interface Table extends Closeable {
      * @return true if the new mutation was executed, false otherwise.
      */
     boolean thenMutate(RowMutations mutation) throws IOException;
+  }
+
+  /**
+   * checkAndMutate that atomically checks if a row matches the specified condition. If it does,
+   * it adds the Put/Delete/RowMutations.
+   *
+   * @param checkAndMutate The CheckAndMutate object.
+   * @return boolean that represents the result for the CheckAndMutate.
+   * @throws IOException if a remote or network exception occurs.
+   */
+  default boolean checkAndMutate(CheckAndMutate checkAndMutate) throws IOException {
+    return checkAndMutate(Collections.singletonList(checkAndMutate))[0];
+  }
+
+  /**
+   * Batch version of checkAndMutate.
+   *
+   * @param checkAndMutates The list of CheckAndMutate.
+   * @return A array of boolean that represents the result for each CheckAndMutate.
+   * @throws IOException if a remote or network exception occurs.
+   */
+  default boolean[] checkAndMutate(List<CheckAndMutate> checkAndMutates) throws IOException {
+    throw new NotImplementedException("Add an implementation!");
   }
 
   /**

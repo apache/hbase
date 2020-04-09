@@ -2753,18 +2753,93 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
     long nonceGroup = request.hasNonceGroup() ? request.getNonceGroup() : HConstants.NO_NONCE;
 
-    // this will contain all the cells that we need to return. It's created later, if needed.
-    List<CellScannable> cellsToReturn = null;
     MultiResponse.Builder responseBuilder = MultiResponse.newBuilder();
     RegionActionResult.Builder regionActionResultBuilder = RegionActionResult.newBuilder();
-    Boolean processed = null;
-    RegionScannersCloseCallBack closeCallBack = null;
-    RpcCallContext context = RpcServer.getCurrentCall().orElse(null);
     this.rpcMultiRequestCount.increment();
     this.requestCount.increment();
+    ActivePolicyEnforcement spaceQuotaEnforcement = getSpaceQuotaManager().getActiveEnforcements();
+
+    // We no longer use MultiRequest#condition. Instead, we use RegionAction#condition. The
+    // following logic is for backward compatibility as old clients still use
+    // MultiRequest#condition in case of checkAndMutate with RowMutations.
+    if (request.hasCondition()) {
+      if (request.getRegionActionList().isEmpty()) {
+        // If the region action list is empty, do nothing.
+        responseBuilder.setProcessed(true);
+        return responseBuilder.build();
+      }
+
+      RegionAction regionAction = request.getRegionAction(0);
+
+      // When request.hasCondition() is true, regionAction.getAtomic() should be always true. So
+      // we can assume regionAction.getAtomic() is true here.
+      assert regionAction.getAtomic();
+
+      OperationQuota quota;
+      HRegion region;
+      RegionSpecifier regionSpecifier = regionAction.getRegion();
+
+      try {
+        region = getRegion(regionSpecifier);
+        quota = getRpcQuotaManager().checkQuota(region, regionAction.getActionList());
+      } catch (IOException e) {
+        failRegionAction(responseBuilder, regionActionResultBuilder, regionAction, cellScanner, e);
+        return responseBuilder.build();
+      }
+
+      boolean rejectIfFromClient = shouldRejectRequestsFromClient(region);
+      // We only allow replication in standby state and it will not set the atomic flag.
+      if (rejectIfFromClient) {
+        failRegionAction(responseBuilder, regionActionResultBuilder, regionAction, cellScanner,
+          new DoNotRetryIOException(
+            region.getRegionInfo().getRegionNameAsString() + " is in STANDBY state"));
+        quota.close();
+        return responseBuilder.build();
+      }
+
+      try {
+        Condition condition = request.getCondition();
+        byte[] row = condition.getRow().toByteArray();
+        byte[] family = condition.hasFamily() ? condition.getFamily().toByteArray() : null;
+        byte[] qualifier = condition.hasQualifier() ?
+          condition.getQualifier().toByteArray() : null;
+        CompareOperator op = condition.hasCompareType() ?
+          CompareOperator.valueOf(condition.getCompareType().name()) : null;
+        ByteArrayComparable comparator = condition.hasComparator() ?
+          ProtobufUtil.toComparator(condition.getComparator()) : null;
+        Filter filter = condition.hasFilter() ?
+          ProtobufUtil.toFilter(condition.getFilter()) : null;
+        TimeRange timeRange = condition.hasTimeRange() ?
+          ProtobufUtil.toTimeRange(condition.getTimeRange()) :
+          TimeRange.allTime();
+        boolean processed =
+          checkAndRowMutate(region, regionAction.getActionList(), cellScanner, row, family,
+            qualifier, op, comparator, filter, timeRange, regionActionResultBuilder,
+            spaceQuotaEnforcement);
+        responseBuilder.setProcessed(processed);
+      } catch (IOException e) {
+        rpcServer.getMetrics().exception(e);
+        // As it's an atomic operation with a condition, we may expect it's a global failure.
+        regionActionResultBuilder.setException(ResponseConverter.buildException(e));
+      }
+
+      responseBuilder.addRegionActionResult(regionActionResultBuilder.build());
+      quota.close();
+      ClientProtos.RegionLoadStats regionLoadStats = region.getLoadStatistics();
+      if (regionLoadStats != null) {
+        responseBuilder.setRegionStatistics(MultiRegionLoadStats.newBuilder()
+          .addRegion(regionSpecifier).addStat(regionLoadStats).build());
+      }
+      return responseBuilder.build();
+    }
+
+    // this will contain all the cells that we need to return. It's created later, if needed.
+    List<CellScannable> cellsToReturn = null;
+    RegionScannersCloseCallBack closeCallBack = null;
+    RpcCallContext context = RpcServer.getCurrentCall().orElse(null);
     Map<RegionSpecifier, ClientProtos.RegionLoadStats> regionStats = new HashMap<>(request
       .getRegionActionCount());
-    ActivePolicyEnforcement spaceQuotaEnforcement = getSpaceQuotaManager().getActiveEnforcements();
+
     for (RegionAction regionAction : request.getRegionActionList()) {
       OperationQuota quota;
       HRegion region;
@@ -2777,8 +2852,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         failRegionAction(responseBuilder, regionActionResultBuilder, regionAction, cellScanner, e);
         continue;  // For this region it's a failure.
       }
+
       boolean rejectIfFromClient = shouldRejectRequestsFromClient(region);
-      if (regionAction.hasAtomic() && regionAction.getAtomic()) {
+
+      if (regionAction.hasCondition()) {
         // We only allow replication in standby state and it will not set the atomic flag.
         if (rejectIfFromClient) {
           failRegionAction(responseBuilder, regionActionResultBuilder, regionAction, cellScanner,
@@ -2787,33 +2864,104 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           quota.close();
           continue;
         }
-        // How does this call happen?  It may need some work to play well w/ the surroundings.
-        // Need to return an item per Action along w/ Action index.  TODO.
+
         try {
-          if (request.hasCondition()) {
-            Condition condition = request.getCondition();
-            byte[] row = condition.getRow().toByteArray();
-            byte[] family = condition.hasFamily() ? condition.getFamily().toByteArray() : null;
-            byte[] qualifier = condition.hasQualifier() ?
-              condition.getQualifier().toByteArray() : null;
-            CompareOperator op = condition.hasCompareType() ?
-              CompareOperator.valueOf(condition.getCompareType().name()) : null;
-            ByteArrayComparable comparator = condition.hasComparator() ?
-              ProtobufUtil.toComparator(condition.getComparator()) : null;
-            Filter filter = condition.hasFilter() ?
-              ProtobufUtil.toFilter(condition.getFilter()) : null;
-            TimeRange timeRange = condition.hasTimeRange() ?
-              ProtobufUtil.toTimeRange(condition.getTimeRange()) :
-              TimeRange.allTime();
+          Condition condition = regionAction.getCondition();
+          byte[] row = condition.getRow().toByteArray();
+          byte[] family = condition.hasFamily() ? condition.getFamily().toByteArray() : null;
+          byte[] qualifier = condition.hasQualifier() ?
+            condition.getQualifier().toByteArray() : null;
+          CompareOperator op = condition.hasCompareType() ?
+            CompareOperator.valueOf(condition.getCompareType().name()) : null;
+          ByteArrayComparable comparator = condition.hasComparator() ?
+            ProtobufUtil.toComparator(condition.getComparator()) : null;
+          Filter filter = condition.hasFilter() ?
+            ProtobufUtil.toFilter(condition.getFilter()) : null;
+          TimeRange timeRange = condition.hasTimeRange() ?
+            ProtobufUtil.toTimeRange(condition.getTimeRange()) :
+            TimeRange.allTime();
+
+          boolean processed;
+          if (regionAction.hasAtomic() && regionAction.getAtomic()) {
+            // RowMutations
             processed =
               checkAndRowMutate(region, regionAction.getActionList(), cellScanner, row, family,
                 qualifier, op, comparator, filter, timeRange, regionActionResultBuilder,
                 spaceQuotaEnforcement);
           } else {
-            doAtomicBatchOp(regionActionResultBuilder, region, quota, regionAction.getActionList(),
-              cellScanner, spaceQuotaEnforcement);
-            processed = Boolean.TRUE;
+            if (regionAction.getActionList().isEmpty()) {
+              // If the region action list is empty, do nothing.
+              regionActionResultBuilder.setProcessed(true);
+              continue;
+            }
+            Action action = regionAction.getAction(0);
+            if (action.hasGet()) {
+              throw new DoNotRetryIOException("CheckAndMutate doesn't support GET="
+                + action.getGet());
+            }
+            MutationProto mutation = action.getMutation();
+            switch (mutation.getMutateType()) {
+              case PUT:
+                Put put = ProtobufUtil.toPut(mutation, cellScanner);
+                checkCellSizeLimit(region, put);
+                // Throws an exception when violated
+                spaceQuotaEnforcement.getPolicyEnforcement(region).check(put);
+                quota.addMutation(put);
+
+                if (filter != null) {
+                  processed = region.checkAndMutate(row, filter, timeRange, put);
+                } else {
+                  processed = region.checkAndMutate(row, family, qualifier, op, comparator,
+                    timeRange, put);
+                }
+                break;
+
+              case DELETE:
+                Delete delete = ProtobufUtil.toDelete(mutation, cellScanner);
+                checkCellSizeLimit(region, delete);
+                spaceQuotaEnforcement.getPolicyEnforcement(region).check(delete);
+                quota.addMutation(delete);
+
+                if (filter != null) {
+                  processed = region.checkAndMutate(row, filter, timeRange, delete);
+                } else {
+                  processed = region.checkAndMutate(row, family, qualifier, op, comparator,
+                    timeRange, delete);
+                }
+                break;
+
+              default:
+                throw new DoNotRetryIOException("CheckAndMutate doesn't support " +
+                  mutation.getMutateType());
+            }
+
+            // To unify the response format with doNonAtomicRegionMutation and read through
+            // client's AsyncProcess we have to add an empty result instance per operation
+            regionActionResultBuilder.addResultOrException(ClientProtos.ResultOrException
+              .newBuilder().setIndex(0).build());
           }
+          regionActionResultBuilder.setProcessed(processed);
+        } catch (IOException e) {
+          rpcServer.getMetrics().exception(e);
+          // As it's an atomic operation with a condition, we may expect it's a global failure.
+          regionActionResultBuilder.setException(ResponseConverter.buildException(e));
+        }
+      } else if (regionAction.hasAtomic() && regionAction.getAtomic()) {
+        // We only allow replication in standby state and it will not set the atomic flag.
+        if (rejectIfFromClient) {
+          failRegionAction(responseBuilder, regionActionResultBuilder, regionAction, cellScanner,
+            new DoNotRetryIOException(
+              region.getRegionInfo().getRegionNameAsString() + " is in STANDBY state"));
+          quota.close();
+          continue;
+        }
+        try {
+          doAtomicBatchOp(regionActionResultBuilder, region, quota, regionAction.getActionList(),
+            cellScanner, spaceQuotaEnforcement);
+          regionActionResultBuilder.setProcessed(true);
+          // We no longer use MultiResponse#processed. Instead, we use
+          // RegionActionResult#condition. This is for backward compatibility for old clients.
+          responseBuilder.setProcessed(true);
         } catch (IOException e) {
           rpcServer.getMetrics().exception(e);
           // As it's atomic, we may expect it's a global failure.
@@ -2851,10 +2999,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     // Load the controller with the Cells to return.
     if (cellsToReturn != null && !cellsToReturn.isEmpty() && controller != null) {
       controller.setCellScanner(CellUtil.createCellScanner(cellsToReturn));
-    }
-
-    if (processed != null) {
-      responseBuilder.setProcessed(processed);
     }
 
     MultiRegionLoadStats.Builder builder = MultiRegionLoadStats.newBuilder();

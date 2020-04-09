@@ -37,6 +37,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CheckAndMutate;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -297,6 +298,16 @@ class TableOverAsyncTable implements Table {
         return FutureUtils.get(builder.thenMutate(mutation));
       }
     };
+  }
+
+  @Override
+  public boolean checkAndMutate(CheckAndMutate checkAndMutate) throws IOException {
+    return FutureUtils.get(table.checkAndMutate(checkAndMutate));
+  }
+
+  @Override
+  public boolean[] checkAndMutate(List<CheckAndMutate> checkAndMutates) throws IOException {
+    return Booleans.toArray(FutureUtils.get(table.checkAndMutateAll(checkAndMutates)));
   }
 
   @Override

@@ -22,6 +22,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CheckAndMutate;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.filter.Filter;
 
@@ -109,6 +110,16 @@ public class DummyAsyncTable<C extends ScanResultConsumerBase> implements AsyncT
 
   @Override
   public CheckAndMutateWithFilterBuilder checkAndMutate(byte[] row, Filter filter) {
+    return null;
+  }
+
+  @Override
+  public CompletableFuture<Boolean> checkAndMutate(CheckAndMutate checkAndMutate) {
+    return null;
+  }
+
+  @Override
+  public List<CompletableFuture<Boolean>> checkAndMutate(List<CheckAndMutate> checkAndMutates) {
     return null;
   }
 

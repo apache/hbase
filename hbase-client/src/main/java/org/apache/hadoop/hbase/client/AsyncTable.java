@@ -26,6 +26,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CheckAndMutate;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -231,12 +232,20 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
    *     });
    * </code>
    * </pre>
+   *
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. For internal test use only, do not use it
+   *   any more.
    */
+  @Deprecated
   CheckAndMutateBuilder checkAndMutate(byte[] row, byte[] family);
 
   /**
    * A helper class for sending checkAndMutate request.
+   *
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. For internal test use only, do not use it
+   *   any more.
    */
+  @Deprecated
   interface CheckAndMutateBuilder {
 
     /**
@@ -309,12 +318,20 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
    *     });
    * </code>
    * </pre>
+   *
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. For internal test use only, do not use it
+   *   any more.
    */
+  @Deprecated
   CheckAndMutateWithFilterBuilder checkAndMutate(byte[] row, Filter filter);
 
   /**
    * A helper class for sending checkAndMutate request with a filter.
+   *
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. For internal test use only, do not use it
+   *   any more.
    */
+  @Deprecated
   interface CheckAndMutateWithFilterBuilder {
 
     /**
@@ -342,6 +359,35 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
      *         wrapped by a {@link CompletableFuture}.
      */
     CompletableFuture<Boolean> thenMutate(RowMutations mutation);
+  }
+
+  /**
+   * checkAndMutate that atomically checks if a row matches the specified condition. If it does,
+   * it adds the Put/Delete/RowMutations.
+   *
+   * @param checkAndMutate The CheckAndMutate object.
+   * @return A {@link CompletableFuture}s that represent the result for the CheckAndMutate.
+   */
+  CompletableFuture<Boolean> checkAndMutate(CheckAndMutate checkAndMutate);
+
+  /**
+   * Batch version of checkAndMutate.
+   *
+   * @param checkAndMutates The list of CheckAndMutate.
+   * @return A list of {@link CompletableFuture}s that represent the result for each
+   *   CheckAndMutate.
+   */
+  List<CompletableFuture<Boolean>> checkAndMutate(List<CheckAndMutate> checkAndMutates);
+
+  /**
+   * A simple version of batch checkAndMutate. It will fail if there are any failures.
+   *
+   * @param checkAndMutates The list of rows to apply.
+   * @return A {@link CompletableFuture} that wrapper the result boolean list.
+   */
+  default CompletableFuture<List<Boolean>> checkAndMutateAll(
+    List<CheckAndMutate> checkAndMutates) {
+    return allOf(checkAndMutate(checkAndMutates));
   }
 
   /**

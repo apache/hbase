@@ -26,6 +26,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CheckAndMutate;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -203,6 +204,17 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
         return wrap(builder.thenMutate(mutation));
       }
     };
+  }
+
+  @Override
+  public CompletableFuture<Boolean> checkAndMutate(CheckAndMutate checkAndMutate) {
+    return wrap(rawTable.checkAndMutate(checkAndMutate));
+  }
+
+  @Override
+  public List<CompletableFuture<Boolean>> checkAndMutate(List<CheckAndMutate> checkAndMutates) {
+    return rawTable.checkAndMutate(checkAndMutates).stream()
+      .map(this::wrap).collect(toList());
   }
 
   @Override

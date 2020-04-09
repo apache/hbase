@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CheckAndMutate;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -265,91 +266,49 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
   private final class CheckAndMutateBuilderImpl implements CheckAndMutateBuilder {
 
-    private final byte[] row;
-
-    private final byte[] family;
-
-    private byte[] qualifier;
-
-    private TimeRange timeRange;
-
-    private CompareOperator op;
-
-    private byte[] value;
+    private final CheckAndMutate.Builder builder;
 
     public CheckAndMutateBuilderImpl(byte[] row, byte[] family) {
-      this.row = Preconditions.checkNotNull(row, "row is null");
-      this.family = Preconditions.checkNotNull(family, "family is null");
+      builder = CheckAndMutate.builder(row, family);
     }
 
     @Override
     public CheckAndMutateBuilder qualifier(byte[] qualifier) {
-      this.qualifier = Preconditions.checkNotNull(qualifier, "qualifier is null. Consider using" +
-        " an empty byte array, or just do not call this method if you want a null qualifier");
+      builder.qualifier(qualifier);
       return this;
     }
 
     @Override
     public CheckAndMutateBuilder timeRange(TimeRange timeRange) {
-      this.timeRange = timeRange;
+      builder.timeRange(timeRange);
       return this;
     }
 
     @Override
     public CheckAndMutateBuilder ifNotExists() {
-      this.op = CompareOperator.EQUAL;
-      this.value = null;
+      builder.ifNotExists();
       return this;
     }
 
     @Override
     public CheckAndMutateBuilder ifMatches(CompareOperator compareOp, byte[] value) {
-      this.op = Preconditions.checkNotNull(compareOp, "compareOp is null");
-      this.value = Preconditions.checkNotNull(value, "value is null");
+      builder.ifMatches(compareOp, value);
       return this;
-    }
-
-    private void preCheck() {
-      Preconditions.checkNotNull(op, "condition is null. You need to specify the condition by" +
-        " calling ifNotExists/ifEquals/ifMatches before executing the request");
     }
 
     @Override
     public CompletableFuture<Boolean> thenPut(Put put) {
-      validatePut(put, conn.connConf.getMaxKeyValueSize());
-      preCheck();
-      return RawAsyncTableImpl.this.<Boolean> newCaller(row, put.getPriority(), rpcTimeoutNs)
-        .action((controller, loc, stub) -> RawAsyncTableImpl.mutate(controller, loc,
-          stub, put,
-          (rn, p) -> RequestConverter.buildMutateRequest(rn, row, family, qualifier, op, value,
-            null, timeRange, p),
-          (c, r) -> r.getProcessed()))
-        .call();
+      return checkAndMutate(builder.build(put));
     }
 
     @Override
     public CompletableFuture<Boolean> thenDelete(Delete delete) {
-      preCheck();
-      return RawAsyncTableImpl.this.<Boolean> newCaller(row, delete.getPriority(), rpcTimeoutNs)
-        .action((controller, loc, stub) -> RawAsyncTableImpl.mutate(controller,
-          loc, stub, delete,
-          (rn, d) -> RequestConverter.buildMutateRequest(rn, row, family, qualifier, op, value,
-            null, timeRange, d),
-          (c, r) -> r.getProcessed()))
-        .call();
+      return checkAndMutate(builder.build(delete));
     }
 
     @Override
     public CompletableFuture<Boolean> thenMutate(RowMutations mutation) {
-      preCheck();
-      return RawAsyncTableImpl.this.<Boolean> newCaller(row, mutation.getMaxPriority(),
-        rpcTimeoutNs)
-        .action((controller, loc, stub) -> RawAsyncTableImpl.this.mutateRow(controller,
-          loc, stub, mutation,
-          (rn, rm) -> RequestConverter.buildMutateRequest(rn, row, family, qualifier, op, value,
-            null, timeRange, rm),
-          resp -> resp.getExists()))
-        .call();
+      return checkAndMutate(builder.build(mutation));
     }
   }
 
@@ -358,66 +317,79 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     return new CheckAndMutateBuilderImpl(row, family);
   }
 
-
   private final class CheckAndMutateWithFilterBuilderImpl
     implements CheckAndMutateWithFilterBuilder {
 
-    private final byte[] row;
-
-    private final Filter filter;
-
-    private TimeRange timeRange;
+    private final CheckAndMutate.WithFilterBuilder builder;
 
     public CheckAndMutateWithFilterBuilderImpl(byte[] row, Filter filter) {
-      this.row = Preconditions.checkNotNull(row, "row is null");
-      this.filter = Preconditions.checkNotNull(filter, "filter is null");
+      builder = CheckAndMutate.builder(row, filter);
     }
 
     @Override
     public CheckAndMutateWithFilterBuilder timeRange(TimeRange timeRange) {
-      this.timeRange = timeRange;
+      builder.timeRange(timeRange);
       return this;
     }
 
     @Override
     public CompletableFuture<Boolean> thenPut(Put put) {
-      validatePut(put, conn.connConf.getMaxKeyValueSize());
-      return RawAsyncTableImpl.this.<Boolean> newCaller(row, put.getPriority(), rpcTimeoutNs)
-        .action((controller, loc, stub) -> RawAsyncTableImpl.mutate(controller, loc,
-          stub, put,
-          (rn, p) -> RequestConverter.buildMutateRequest(rn, row, null, null, null, null,
-            filter, timeRange, p),
-          (c, r) -> r.getProcessed()))
-        .call();
+      return checkAndMutate(builder.build(put));
     }
 
     @Override
     public CompletableFuture<Boolean> thenDelete(Delete delete) {
-      return RawAsyncTableImpl.this.<Boolean> newCaller(row, delete.getPriority(), rpcTimeoutNs)
-        .action((controller, loc, stub) -> RawAsyncTableImpl.mutate(controller,
-          loc, stub, delete,
-          (rn, d) -> RequestConverter.buildMutateRequest(rn, row, null, null, null, null,
-            filter, timeRange, d),
-          (c, r) -> r.getProcessed()))
-        .call();
+      return checkAndMutate(builder.build(delete));
     }
 
     @Override
     public CompletableFuture<Boolean> thenMutate(RowMutations mutation) {
-      return RawAsyncTableImpl.this.<Boolean> newCaller(row, mutation.getMaxPriority(),
-        rpcTimeoutNs)
-        .action((controller, loc, stub) -> RawAsyncTableImpl.this.mutateRow(controller,
-          loc, stub, mutation,
-          (rn, rm) -> RequestConverter.buildMutateRequest(rn, row, null, null, null, null,
-            filter, timeRange, rm),
-          resp -> resp.getExists()))
-        .call();
+      return checkAndMutate(builder.build(mutation));
     }
   }
 
   @Override
   public CheckAndMutateWithFilterBuilder checkAndMutate(byte[] row, Filter filter) {
     return new CheckAndMutateWithFilterBuilderImpl(row, filter);
+  }
+
+  @Override
+  public CompletableFuture<Boolean> checkAndMutate(CheckAndMutate checkAndMutate) {
+    if (checkAndMutate.getAction() instanceof Mutation) {
+      Mutation mutation = (Mutation) checkAndMutate.getAction();
+      if (mutation instanceof Put) {
+        validatePut((Put) mutation, conn.connConf.getMaxKeyValueSize());
+      }
+      return RawAsyncTableImpl.this.<Boolean> newCaller(checkAndMutate.getRow(),
+        mutation.getPriority(), rpcTimeoutNs)
+        .action((controller, loc, stub) -> RawAsyncTableImpl.mutate(controller,
+          loc, stub, mutation,
+          (rn, m) -> RequestConverter.buildMutateRequest(rn, checkAndMutate.getRow(),
+            checkAndMutate.getFamily(), checkAndMutate.getQualifier(),
+            checkAndMutate.getCompareOp(), checkAndMutate.getValue(), checkAndMutate.getFilter(),
+            checkAndMutate.getTimeRange(), m),
+          (c, r) -> r.getProcessed()))
+        .call();
+    } else {
+      RowMutations rowMutations = (RowMutations) checkAndMutate.getAction();
+      return RawAsyncTableImpl.this.<Boolean> newCaller(checkAndMutate.getRow(),
+        rowMutations.getMaxPriority(), rpcTimeoutNs)
+        .action((controller, loc, stub) -> RawAsyncTableImpl.this.mutateRow(controller,
+          loc, stub, rowMutations,
+          (rn, rm) -> RequestConverter.buildMutateRequest(rn, checkAndMutate.getRow(),
+            checkAndMutate.getFamily(), checkAndMutate.getQualifier(),
+            checkAndMutate.getCompareOp(), checkAndMutate.getValue(), checkAndMutate.getFilter(),
+            checkAndMutate.getTimeRange(), rm),
+          resp -> resp.getExists()))
+        .call();
+    }
+  }
+
+  @Override
+  public List<CompletableFuture<Boolean>> checkAndMutate(List<CheckAndMutate> checkAndMutates) {
+    return batch(checkAndMutates, rpcTimeoutNs).stream()
+      .map(f -> f.thenApply(r -> ((Result)r).getExists()))
+      .collect(toList());
   }
 
   // We need the MultiRequest when constructing the org.apache.hadoop.hbase.client.MultiResponse,
@@ -556,8 +528,15 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
   }
 
   private <T> List<CompletableFuture<T>> batch(List<? extends Row> actions, long rpcTimeoutNs) {
-    actions.stream().filter(action -> action instanceof Put).map(action -> (Put) action)
-      .forEach(put -> validatePut(put, conn.connConf.getMaxKeyValueSize()));
+    for (Row action : actions) {
+      if (action instanceof Put) {
+        validatePut((Put) action, conn.connConf.getMaxKeyValueSize());
+      } else if (action instanceof CheckAndMutate &&
+        ((CheckAndMutate) action).getAction() instanceof Put) {
+        validatePut((Put) ((CheckAndMutate) action).getAction(),
+          conn.connConf.getMaxKeyValueSize());
+      }
+    }
     return conn.callerFactory.batch().table(tableName).actions(actions)
       .operationTimeout(operationTimeoutNs, TimeUnit.NANOSECONDS)
       .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS).pause(pauseNs, TimeUnit.NANOSECONDS)
