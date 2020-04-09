@@ -22,6 +22,57 @@
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
 # HBASE Changelog
 
+## Release 2.1.10 - Unreleased (as of 2020-03-28)
+
+
+
+### IMPROVEMENTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-23967](https://issues.apache.org/jira/browse/HBASE-23967) | Improve the accuracy of the method sizeToString |  Minor | . |
+| [HBASE-22827](https://issues.apache.org/jira/browse/HBASE-22827) | Expose multi-region merge in shell and Admin API |  Major | Admin, shell |
+| [HBASE-23864](https://issues.apache.org/jira/browse/HBASE-23864) | No need to submit SplitTableRegionProcedure/MergeTableRegionsProcedure when split/merge is disabled |  Major | . |
+| [HBASE-23859](https://issues.apache.org/jira/browse/HBASE-23859) | Modify "Block locality" of RegionServer Web UI to human readable percentage |  Trivial | . |
+| [HBASE-23802](https://issues.apache.org/jira/browse/HBASE-23802) | Remove unnecessary Configuration instantiation in LossyAccounting |  Minor | metrics |
+
+
+### BUG FIXES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-24076](https://issues.apache.org/jira/browse/HBASE-24076) | TestQuotasShell is broken |  Blocker | shell |
+| [HBASE-24057](https://issues.apache.org/jira/browse/HBASE-24057) | Add modules to mapreduce job classpaths |  Major | mapreduce |
+| [HBASE-24040](https://issues.apache.org/jira/browse/HBASE-24040) | WALFactory.Providers.multiwal causes StackOverflowError |  Minor | wal |
+| [HBASE-24019](https://issues.apache.org/jira/browse/HBASE-24019) | Correct exception messages for table null and namespace unavailable. |  Minor | . |
+| [HBASE-24017](https://issues.apache.org/jira/browse/HBASE-24017) | Turn down flakey rerun rate on all but hot branches |  Major | . |
+| [HBASE-24016](https://issues.apache.org/jira/browse/HBASE-24016) | Change nightly poll from cron @daily to pollSCM @daily; i.e. run nightly if a change ONLY |  Major | . |
+| [HBASE-23944](https://issues.apache.org/jira/browse/HBASE-23944) | The method setClusterLoad of SimpleLoadBalancer is incorrect when balance by table |  Major | Balancer |
+| [HBASE-23909](https://issues.apache.org/jira/browse/HBASE-23909) | list\_regions fails if table is under split |  Minor | shell |
+| [HBASE-23915](https://issues.apache.org/jira/browse/HBASE-23915) | Backport HBASE-23553 to branch-2.1 |  Major | snapshots |
+
+
+### SUB-TASKS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-24060](https://issues.apache.org/jira/browse/HBASE-24060) | Generate CHANGES.md and RELEASENOTES.md for 2.1.10 |  Major | documentation |
+| [HBASE-24059](https://issues.apache.org/jira/browse/HBASE-24059) | Set version as 2.1.10 in branch-2.1 in prep for first RC of 2.1.10 |  Major | build, pom |
+| [HBASE-24050](https://issues.apache.org/jira/browse/HBASE-24050) | Deprecated PBType on all 2.x branches |  Major | Protobufs |
+| [HBASE-24009](https://issues.apache.org/jira/browse/HBASE-24009) | Backport the personality changes in HBASE-23989 to all active branches |  Major | build |
+| [HBASE-23755](https://issues.apache.org/jira/browse/HBASE-23755) | [OpenTracing] Declare HTrace is unusable in the user doc |  Major | . |
+| [HBASE-23858](https://issues.apache.org/jira/browse/HBASE-23858) | Set version as 2.1.10-SNAPSHOT in branch-2.1 |  Major | build, pom |
+
+
+### OTHER:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-23878](https://issues.apache.org/jira/browse/HBASE-23878) | Backport HBASE-22040 to branch-2.1 |  Major | . |
+| [HBASE-23874](https://issues.apache.org/jira/browse/HBASE-23874) | Move Jira-attached file precommit definition from script in Jenkins config to dev-support |  Minor | build |
+| [HBASE-23854](https://issues.apache.org/jira/browse/HBASE-23854) | Documentation update of external\_apis.adoc#example-scala-code |  Trivial | documentation |
+
+
 ## Release 2.1.9 - Unreleased (as of 2020-02-10)
 
 

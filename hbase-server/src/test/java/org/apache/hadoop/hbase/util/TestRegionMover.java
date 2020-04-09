@@ -22,23 +22,30 @@ import static org.junit.Assert.assertFalse;
 
 import java.io.File;
 import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.RegionMover.RegionMoverBuilder;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -51,7 +58,7 @@ import org.slf4j.LoggerFactory;
  * Tests for Region Mover Load/Unload functionality with and without ack mode and also to test
  * exclude functionality useful for rack decommissioning
  */
-@Category({ MiscTests.class, MediumTests.class })
+@Category({MiscTests.class, LargeTests.class})
 public class TestRegionMover {
 
   @ClassRule
@@ -238,4 +245,137 @@ public class TestRegionMover {
       assertFalse(rm.load());
     }
   }
+
+  @Test
+  public void testDecomServerExclusionWithAck() throws Exception {
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    HRegionServer excludeServer = cluster.getRegionServer(1);
+    List<HRegion> regions = excludeServer.getRegions();
+    int regionsExcludeServer = excludeServer.getNumberOfOnlineRegions();
+    TEST_UTIL.getAdmin().decommissionRegionServers(
+      Collections.singletonList(excludeServer.getServerName()), false);
+
+    waitForServerDecom(excludeServer);
+
+    HRegionServer regionServer = cluster.getRegionServer(0);
+    String rsName = regionServer.getServerName().getHostname();
+    int port = regionServer.getServerName().getPort();
+    String hostname = rsName + ":" + Integer.toString(port);
+    RegionMoverBuilder rmBuilder =
+      new RegionMoverBuilder(hostname, TEST_UTIL.getConfiguration())
+        .ack(true);
+
+    int targetServerRegions = cluster.getRegionServer(2).getRegions().size();
+    int sourceServerRegions = regionServer.getRegions().size();
+
+    try (RegionMover regionMover = rmBuilder.build()) {
+      Assert.assertTrue(regionMover.unload());
+      LOG.info("Unloading {}", hostname);
+      assertEquals(0, regionServer.getNumberOfOnlineRegions());
+      assertEquals(regionsExcludeServer, cluster.getRegionServer(1).getNumberOfOnlineRegions());
+      LOG.info("Before:" + regionsExcludeServer + " After:" +
+        cluster.getRegionServer(1).getNumberOfOnlineRegions());
+      List<HRegion> regionList = cluster.getRegionServer(1).getRegions();
+      int index = 0;
+      for (HRegion hRegion : regionList) {
+        Assert.assertEquals(hRegion, regions.get(index++));
+      }
+      Assert.assertEquals(targetServerRegions + sourceServerRegions,
+        cluster.getRegionServer(2).getNumberOfOnlineRegions());
+      Assert.assertTrue(regionMover.load());
+    }
+
+    TEST_UTIL.getAdmin().recommissionRegionServer(excludeServer.getServerName(),
+      Collections.emptyList());
+  }
+
+  private void waitForServerDecom(HRegionServer excludeServer) {
+
+    TEST_UTIL.waitFor(3000, () -> {
+      try {
+        List<ServerName> decomServers = TEST_UTIL.getAdmin().listDecommissionedRegionServers();
+        return decomServers.size() == 1
+          && decomServers.get(0).equals(excludeServer.getServerName());
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    });
+  }
+
+  @Test
+  public void testDecomServerExclusion() throws Exception {
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    HRegionServer excludeServer = cluster.getRegionServer(0);
+    List<HRegion> regions = excludeServer.getRegions();
+    int regionsExcludeServer = excludeServer.getNumberOfOnlineRegions();
+    TEST_UTIL.getAdmin().decommissionRegionServers(
+      Collections.singletonList(excludeServer.getServerName()), false);
+
+    waitForServerDecom(excludeServer);
+
+    HRegionServer sourceRegionServer = cluster.getRegionServer(1);
+    String rsName = sourceRegionServer.getServerName().getHostname();
+    int port = sourceRegionServer.getServerName().getPort();
+    String hostname = rsName + ":" + Integer.toString(port);
+    RegionMoverBuilder rmBuilder =
+      new RegionMoverBuilder(hostname, TEST_UTIL.getConfiguration()).ack(false);
+
+    int targetServerRegions = cluster.getRegionServer(2).getRegions().size();
+    int sourceServerRegions = sourceRegionServer.getRegions().size();
+
+    try (RegionMover regionMover = rmBuilder.build()) {
+      Assert.assertTrue(regionMover.unload());
+      LOG.info("Unloading {}", hostname);
+      assertEquals(0, sourceRegionServer.getNumberOfOnlineRegions());
+      assertEquals(regionsExcludeServer, cluster.getRegionServer(0).getNumberOfOnlineRegions());
+      LOG.info("Before:" + regionsExcludeServer + " After:" +
+        cluster.getRegionServer(1).getNumberOfOnlineRegions());
+      List<HRegion> regionList = cluster.getRegionServer(0).getRegions();
+      int index = 0;
+      for (HRegion hRegion : regionList) {
+        Assert.assertEquals(hRegion, regions.get(index++));
+      }
+      Assert.assertEquals(targetServerRegions + sourceServerRegions,
+        cluster.getRegionServer(2).getNumberOfOnlineRegions());
+      Assert.assertTrue(regionMover.load());
+    }
+
+    TEST_UTIL.getAdmin().recommissionRegionServer(excludeServer.getServerName(),
+      Collections.emptyList());
+  }
+
+  @Test
+  public void testExcludeAndDecomServers() throws Exception {
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    File excludeFile = new File(TEST_UTIL.getDataTestDir().toUri().getPath(), "exclude_file");
+    FileWriter fos = new FileWriter(excludeFile);
+    HRegionServer excludeServer = cluster.getRegionServer(1);
+    String excludeHostname = excludeServer.getServerName().getHostname();
+    int excludeServerPort = excludeServer.getServerName().getPort();
+    String excludeServerName = excludeHostname + ":" + Integer.toString(excludeServerPort);
+    fos.write(excludeServerName);
+    fos.close();
+
+    HRegionServer decomServer = cluster.getRegionServer(2);
+    TEST_UTIL.getAdmin().decommissionRegionServers(
+      Collections.singletonList(decomServer.getServerName()), false);
+
+    waitForServerDecom(decomServer);
+
+    HRegionServer regionServer = cluster.getRegionServer(0);
+    String rsName = regionServer.getServerName().getHostname();
+    int port = regionServer.getServerName().getPort();
+    String sourceServer = rsName + ":" + Integer.toString(port);
+    RegionMoverBuilder rmBuilder =
+      new RegionMoverBuilder(sourceServer, TEST_UTIL.getConfiguration())
+        .ack(true)
+        .excludeFile(excludeFile.getCanonicalPath());
+    try (RegionMover regionMover = rmBuilder.build()) {
+      Assert.assertFalse(regionMover.unload());
+    }
+
+    TEST_UTIL.getAdmin().recommissionRegionServer(decomServer.getServerName(),
+      Collections.emptyList());
+  }
+
 }
