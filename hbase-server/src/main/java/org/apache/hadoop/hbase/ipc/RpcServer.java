@@ -320,7 +320,7 @@ public abstract class RpcServer implements RpcServerInterface,
     synchronized (authManager) {
       authManager.refresh(newConf, new HBasePolicyProvider());
     }
-    LOG.info("Refreshed {} successfully", System.getProperties("hadoop.policy.file"));
+    LOG.info("Refreshed hbase-policy.xml successfully");
     ProxyUsers.refreshSuperUserGroupsConfiguration(newConf);
     LOG.info("Refreshed super and proxy users successfully");
   }
