@@ -99,4 +99,12 @@ public interface RSGroupAdmin extends Closeable {
    * @param servers set of servers to remove
    */
   void removeServers(Set<Address> servers) throws IOException;
+
+  /**
+   * Rename rsgroup.
+   * @param oldName old rsgroup name
+   * @param newName new rsgroup name
+   * @throws IOException
+   */
+  void renameRSGroup(String oldName, String newName) throws IOException;
 }

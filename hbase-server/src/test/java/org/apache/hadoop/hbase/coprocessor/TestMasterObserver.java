@@ -1367,6 +1367,15 @@ public class TestMasterObserver {
         String groupName, boolean balancerRan) throws IOException {
     }
 
+    @Override
+    public void preRenameRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
+                                 String oldName, String newName) throws IOException {
+    }
+
+    @Override
+    public void postRenameRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
+                                  String oldName, String newName) throws IOException {
+    }
   }
 
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();

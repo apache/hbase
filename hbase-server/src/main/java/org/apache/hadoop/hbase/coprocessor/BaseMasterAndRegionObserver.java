@@ -685,4 +685,15 @@ public class BaseMasterAndRegionObserver extends BaseRegionObserver
   public void postRemoveServers(ObserverContext<MasterCoprocessorEnvironment> ctx,
       Set<Address> servers) throws IOException {
   }
+
+
+  @Override
+  public void preRenameRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
+                               String oldName, String newName) throws IOException {
+  }
+
+  @Override
+  public void postRenameRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
+                                String oldName, String newName) throws IOException {
+  }
 }

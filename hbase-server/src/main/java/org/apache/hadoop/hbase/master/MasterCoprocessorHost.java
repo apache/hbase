@@ -1435,6 +1435,32 @@ public class MasterCoprocessorHost
     });
   }
 
+  public void preRenameRSGroup(final String oldName, final String newName)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null: new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver,
+          ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+        if(((MasterEnvironment)ctx.getEnvironment()).supportGroupCPs) {
+          oserver.preRenameRSGroup(ctx, oldName, newName);
+        }
+      }
+    });
+  }
+
+  public void postRenameRSGroup(final String oldName, final String newName)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null: new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver,
+          ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+        if(((MasterEnvironment)ctx.getEnvironment()).supportGroupCPs) {
+          oserver.postRenameRSGroup(ctx, oldName, newName);
+        }
+      }
+    });
+  }
+
   private static abstract class CoprocessorOperation
       extends ObserverContext<MasterCoprocessorEnvironment> {
     public CoprocessorOperation() {
