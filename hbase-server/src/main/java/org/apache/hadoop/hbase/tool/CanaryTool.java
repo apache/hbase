@@ -40,6 +40,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -304,15 +305,15 @@ public class CanaryTool implements Tool, Canary {
   public static class RegionStdOutSink extends StdOutSink {
     private Map<String, LongAdder> perTableReadLatency = new HashMap<>();
     private LongAdder writeLatency = new LongAdder();
-    private final Map<String, List<RegionTaskResult>> regionMap = new ConcurrentHashMap<>();
-    private Map<ServerName, LongAdder> perServerFailuresCount = new ConcurrentHashMap<>();
-    private Map<String, LongAdder> perTableFailuresCount = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, List<RegionTaskResult>> regionMap = new ConcurrentHashMap<>();
+    private ConcurrentMap<ServerName, LongAdder> perServerFailuresCount = new ConcurrentHashMap<>();
+    private ConcurrentMap<String, LongAdder> perTableFailuresCount = new ConcurrentHashMap<>();
 
-    public Map<ServerName, LongAdder> getPerServerFailuresCount() {
+    public ConcurrentMap<ServerName, LongAdder> getPerServerFailuresCount() {
       return perServerFailuresCount;
     }
 
-    public Map<String, LongAdder> getPerTableFailuresCount() {
+    public ConcurrentMap<String, LongAdder> getPerTableFailuresCount() {
       return perTableFailuresCount;
     }
 
@@ -412,7 +413,7 @@ public class CanaryTool implements Tool, Canary {
       return this.writeLatency;
     }
 
-    public Map<String, List<RegionTaskResult>> getRegionMap() {
+    public ConcurrentMap<String, List<RegionTaskResult>> getRegionMap() {
       return this.regionMap;
     }
 
