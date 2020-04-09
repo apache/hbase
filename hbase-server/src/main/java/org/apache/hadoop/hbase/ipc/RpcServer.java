@@ -2265,6 +2265,14 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     if (scheduler instanceof ConfigurationObserver) {
       ((ConfigurationObserver)scheduler).onConfigurationChange(newConf);
     }
+    // Make sure authManager will read hbase-policy file
+    System.setProperty("hadoop.policy.file", "hbase-policy.xml");
+    synchronized (authManager) {
+      authManager.refresh(newConf, new HBasePolicyProvider());
+    }
+    LOG.info("Refreshed hbase-policy.xml successfully");
+    ProxyUsers.refreshSuperUserGroupsConfiguration(newConf);
+    LOG.info("Refreshed super and proxy users successfully");
   }
 
   private void initReconfigurable(Configuration confToLoad) {
