@@ -915,7 +915,7 @@ public final class PrivateCellUtil {
    * Retrieve Cell's first tag, matching the passed in type
    * @param cell The Cell
    * @param type Type of the Tag to retrieve
-   * @return null if there is no tag of the passed in tag type
+   * @return Optional, empty if there is no tag of the passed in tag type
    */
   public static Optional<Tag> getTag(Cell cell, byte type) {
     boolean bufferBacked = cell instanceof ByteBufferExtendedCell;

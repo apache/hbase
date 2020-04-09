@@ -43,6 +43,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TimeZone;
@@ -437,17 +438,16 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       }
       // check if mob files are missing.
       if (checkMobIntegrity && MobUtils.isMobReferenceCell(cell)) {
-        Tag tnTag = MobUtils.getTableNameTag(cell);
-        if (tnTag == null) {
+        Optional<TableName> tn = MobUtils.getTableName(cell);
+        if (! tn.isPresent()) {
           System.err.println("ERROR, wrong tag format in mob reference cell "
             + CellUtil.getCellKeyAsString(cell));
         } else if (!MobUtils.hasValidMobRefCellValue(cell)) {
           System.err.println("ERROR, wrong value format in mob reference cell "
             + CellUtil.getCellKeyAsString(cell));
         } else {
-          TableName tn = TableName.valueOf(Tag.cloneValue(tnTag));
           String mobFileName = MobUtils.getMobFileName(cell);
-          boolean exist = mobFileExists(fs, tn, mobFileName,
+          boolean exist = mobFileExists(fs, tn.get(), mobFileName,
             Bytes.toString(CellUtil.cloneFamily(cell)), foundMobFiles, missingMobFiles);
           if (!exist) {
             // report error

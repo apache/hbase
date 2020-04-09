@@ -20,13 +20,12 @@ package org.apache.hadoop.hbase.mob;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,18 +48,15 @@ import org.slf4j.LoggerFactory;
  */
 @SuppressWarnings("deprecation")
 @Category(LargeTests.class)
-public class TestMobCompactionRegularRegionBatchMode extends TestMobCompactionBase{
+public class TestMobCompactionRegularRegionBatchMode extends TestMobCompactionWithDefaults {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestMobCompactionRegularRegionBatchMode.class);
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMobCompactionRegularRegionBatchMode.class);
 
-  private int batchSize = 7;
+  private static final int batchSize = 7;
   private MobFileCompactionChore compactionChore;
-
-  public TestMobCompactionRegularRegionBatchMode() {
-  }
 
   @Before
   public void setUp() throws Exception {
@@ -68,24 +64,23 @@ public class TestMobCompactionRegularRegionBatchMode extends TestMobCompactionBa
     compactionChore = new MobFileCompactionChore(conf, batchSize);
   }
 
-  protected void initConf() {
-    super.initConf();
+  @BeforeClass
+  public static void configureCompactionBatches() throws InterruptedException, IOException {
+    HTU.shutdownMiniHBaseCluster();
     conf.setInt(MobConstants.MOB_MAJOR_COMPACTION_REGION_BATCH_SIZE, batchSize);
+    HTU.startMiniHBaseCluster();
   }
 
   @Override
-  protected void mobCompact(Admin admin, TableDescriptor tableDescriptor,
+  protected void mobCompactImpl(TableDescriptor tableDescriptor,
       ColumnFamilyDescriptor familyDescriptor) throws IOException, InterruptedException {
-    // Major compact with batch mode enabled
+    LOG.debug("compacting {} in batch mode.", tableDescriptor.getTableName());
     compactionChore.performMajorCompactionInBatches(admin, tableDescriptor, familyDescriptor);
   }
 
-  @Test
-  public void testMobFileCompactionBatchMode() throws InterruptedException, IOException {
-    LOG.info("MOB compaction chore regular batch mode started");
-    baseTestMobFileCompaction();
-    LOG.info("MOB compaction chore regular batch mode finished OK");
-
+  @Override
+  protected String description() {
+    return "regular batch mode";
   }
 
 }
