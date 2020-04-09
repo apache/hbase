@@ -172,7 +172,7 @@ fi
 
 cd "${unpack_dir}"
 echo "Follow the ref guide section on making a RC: Step 8 Build the binary tarball."
-if mvn -DskipTests -Prelease --batch-mode -Dmaven.repo.local="${m2_tarbuild}" clean install \
+if mvn --threads=2 -DskipTests -Prelease --batch-mode -Dmaven.repo.local="${m2_tarbuild}" clean install \
     assembly:single >"${working_dir}/srctarball_install.log" 2>&1; then
   for artifact in "${unpack_dir}"/hbase-assembly/target/hbase-*-bin.tar.gz; do
     if [ -f "${artifact}" ]; then
