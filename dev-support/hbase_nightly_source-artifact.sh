@@ -125,7 +125,7 @@ fi
 # See http://hbase.apache.org/book.html#maven.release
 
 echo "Maven details, in case our JDK doesn't match expectations:"
-mvn --threads=2 --version --offline | tee "${working_dir}/maven_version"
+mvn --version --offline | tee "${working_dir}/maven_version"
 
 echo "Do a clean building of the source artifact using code in ${component_dir}"
 cd "${component_dir}"

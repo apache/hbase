@@ -140,7 +140,7 @@ function personality_modules
 
   clear_personality_queue
 
-  # At a few points, hbase modules can run their test suites in parallel
+  # At a few points, hbase modules can run build, test, etc. in parallel
   # Let it happen. Means we'll use more CPU but should be for short bursts.
   # https://cwiki.apache.org/confluence/display/MAVEN/Parallel+builds+in+Maven+3
   extra="--threads=2 -DHBasePatchProcess"
