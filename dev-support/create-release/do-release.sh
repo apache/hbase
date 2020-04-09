@@ -23,7 +23,8 @@
 # and passwords to use building.
 export PROJECT="${PROJECT:-hbase}"
 
-SELF=$(cd $(dirname $0) && pwd)
+SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=SCRIPTDIR/release-util.sh
 . "$SELF/release-util.sh"
 
 while getopts "b:f" opt; do
@@ -33,14 +34,19 @@ while getopts "b:f" opt; do
     ?) error "Invalid option: $OPTARG" ;;
   esac
 done
+shift $((OPTIND-1))
+if (( $# > 0 )); then
+  error "Arguments can only be provided with option flags, invalid args: $*"
+fi
 
 # If running in docker, import and then cache keys.
 if [ "$RUNNING_IN_DOCKER" = "1" ]; then
   # Run gpg agent.
-  eval $(gpg-agent --disable-scdaemon --daemon --no-grab  --allow-preset-passphrase --default-cache-ttl=86400 --max-cache-ttl=86400)
-  echo "GPG Version: `gpg --version`"
+  eval "$(gpg-agent --disable-scdaemon --daemon --no-grab  --allow-preset-passphrase \
+          --default-cache-ttl=86400 --max-cache-ttl=86400)"
+  echo "GPG Version: $(gpg --version)"
   # Inside docker, need to import the GPG key stored in the current directory.
-  echo $GPG_PASSPHRASE | $GPG --passphrase-fd 0 --import "$SELF/gpg.key"
+  echo "$GPG_PASSPHRASE" | $GPG --passphrase-fd 0 --import "$SELF/gpg.key"
 
   # We may need to adjust the path since JAVA_HOME may be overridden by the driver script.
   if [ -n "$JAVA_HOME" ]; then
@@ -53,7 +59,8 @@ else
   # Outside docker, need to ask for information about the release.
   get_release_info
 fi
-export GPG_TTY=$(tty)
+GPG_TTY="$(tty)"
+export GPG_TTY
 
 function should_build {
   local WHAT=$1
@@ -71,7 +78,7 @@ if [[ -z "$RELEASE_STEP" ]]; then
   export REPO="${REPO:-$(pwd)/$(mktemp -d hbase-repo-XXXXX)}"
 fi
 
-if should_build "tag" && [ $SKIP_TAG = 0 ]; then
+if should_build "tag" && [ "$SKIP_TAG" = 0 ]; then
   run_silent "Creating release tag $RELEASE_TAG..." "tag.log" \
     "$SELF/release-build.sh" tag
   if is_dry_run; then
@@ -79,7 +86,7 @@ if should_build "tag" && [ $SKIP_TAG = 0 ]; then
   else
     echo "It may take some time for the tag to be synchronized to github."
     echo "Press enter when you've verified that the new tag ($RELEASE_TAG) is available."
-    read
+    read -r
   fi
 else
   echo "Skipping tag creation for $RELEASE_TAG."

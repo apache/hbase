@@ -34,7 +34,7 @@ function read_config {
   local DEFAULT="$2"
   local REPLY=
 
-  read -p "$PROMPT [$DEFAULT]: " REPLY
+  read -r -p "$PROMPT [$DEFAULT]: " REPLY
   local RETVAL="${REPLY:-$DEFAULT}"
   if [ -z "$RETVAL" ]; then
     error "$PROMPT must be provided."
@@ -81,29 +81,33 @@ function check_for_tag {
 
 # API compare version.
 function get_api_diff_version {
-  local version=$1
-  local rev=$(echo "$version" | cut -d . -f 3)
+  local version="$1"
+  local rev
   local api_diff_tag
-  if [ $rev != 0 ]; then
-    local short_version=$(echo "$version" | cut -d . -f 1-2)
+  rev=$(echo "$version" | cut -d . -f 3)
+  if [ "$rev" != 0 ]; then
+    local short_version
+    short_version="$(echo "$version" | cut -d . -f 1-2)"
     api_diff_tag="rel/${short_version}.$((rev - 1))"
   else
-    local major=$(echo "$version" | cut -d . -f 1)
-    local minor=$(echo "$version" | cut -d . -f 2)
-    if [ $minor != 0 ]; then
+    local major minor
+    major="$(echo "$version" | cut -d . -f 1)"
+    minor="$(echo "$version" | cut -d . -f 2)"
+    if [ "$minor" != 0 ]; then
       api_diff_tag="rel/${major}.$((minor - 1)).0"
     else
       api_diff_tag="rel/$((major - 1)).0.0"
     fi
   fi
-  api_diff_tag=$(read_config "api_diff_tag" "$api_diff_tag")
-  echo $api_diff_tag
+  api_diff_tag="$(read_config "api_diff_tag" "$api_diff_tag")"
+  echo "$api_diff_tag"
 }
 
 # Get all branches that begin with 'branch-', the hbase convention for
 # release branches, sort them and then pop off the most recent.
 function get_release_info {
-  export PROJECT=$(read_config "PROJECT" "$PROJECT")
+  PROJECT="$(read_config "PROJECT" "$PROJECT")"
+  export PROJECT
 
   if [[ -z "${ASF_REPO}" ]]; then
     ASF_REPO="https://gitbox.apache.org/repos/asf/${PROJECT}.git"
@@ -116,31 +120,34 @@ function get_release_info {
   fi
   if [ -z "$GIT_BRANCH" ]; then
     # If no branch is specified, find out the latest branch from the repo.
-    GIT_BRANCH=$(git ls-remote --heads "$ASF_REPO" |
+    GIT_BRANCH="$(git ls-remote --heads "$ASF_REPO" |
       grep refs/heads/branch- |
       awk '{print $2}' |
       sort -r |
       head -n 1 |
-      cut -d/ -f3)
+      cut -d/ -f3)"
   fi
 
-  export GIT_BRANCH=$(read_config "GIT_BRANCH" "$GIT_BRANCH")
+  GIT_BRANCH="$(read_config "GIT_BRANCH" "$GIT_BRANCH")"
+  export GIT_BRANCH
 
   # Find the current version for the branch.
-  local VERSION=$(curl -s "$ASF_REPO_WEBUI;a=blob_plain;f=pom.xml;hb=refs/heads/$GIT_BRANCH" |
-    parse_version)
-  echo "Current branch VERSION is $VERSION."
+  local version
+  version="$(curl -s "$ASF_REPO_WEBUI;a=blob_plain;f=pom.xml;hb=refs/heads/$GIT_BRANCH" |
+    parse_version)"
+  echo "Current branch VERSION is $version."
 
-  NEXT_VERSION="$VERSION"
+  NEXT_VERSION="$version"
   RELEASE_VERSION=""
-  SHORT_VERSION=$(echo "$VERSION" | cut -d . -f 1-2)
-   if [[ ! $VERSION =~ .*-SNAPSHOT ]]; then
-    RELEASE_VERSION="$VERSION"
+  SHORT_VERSION="$(echo "$version" | cut -d . -f 1-2)"
+  if [[ ! "$version" =~ .*-SNAPSHOT ]]; then
+    RELEASE_VERSION="$version"
   else
-    RELEASE_VERSION="${VERSION/-SNAPSHOT/}"
+    RELEASE_VERSION="${version/-SNAPSHOT/}"
   fi
 
-  local REV=$(echo "${RELEASE_VERSION}" | cut -d . -f 3)
+  local REV
+  REV="$(echo "${RELEASE_VERSION}" | cut -d . -f 3)"
 
   # Find out what RC is being prepared.
   # - If the current version is "x.y.0", then this is RC0 of the "x.y.0" release.
@@ -148,7 +155,7 @@ function get_release_info {
   #   - If it has, then we're building RC0 of the current version.
   #   - If it has not, we're building the next RC of the previous version.
   local RC_COUNT
-  if [ $REV != 0 ]; then
+  if [ "$REV" != 0 ]; then
     local PREV_REL_REV=$((REV - 1))
     PREV_REL_TAG="rel/${SHORT_VERSION}.${PREV_REL_REV}"
     if check_for_tag "$PREV_REL_TAG"; then
@@ -157,7 +164,7 @@ function get_release_info {
       NEXT_VERSION="${SHORT_VERSION}.${REV}-SNAPSHOT"
     else
       RELEASE_VERSION="${SHORT_VERSION}.${PREV_REL_REV}"
-      RC_COUNT=$(git ls-remote --tags "$ASF_REPO" "${RELEASE_VERSION}RC*" | wc -l)
+      RC_COUNT="$(git ls-remote --tags "$ASF_REPO" "${RELEASE_VERSION}RC*" | wc -l)"
       # This makes a 'number' of it.
       RC_COUNT=$((RC_COUNT))
     fi
@@ -167,17 +174,17 @@ function get_release_info {
     RC_COUNT=0
   fi
 
-  export RELEASE_VERSION=$(read_config "RELEASE_VERSION" "$RELEASE_VERSION")
-  export NEXT_VERSION=$(read_config "NEXT_VERSION" "$NEXT_VERSION")
+  RELEASE_VERSION="$(read_config "RELEASE_VERSION" "$RELEASE_VERSION")"
+  NEXT_VERSION="$(read_config "NEXT_VERSION" "$NEXT_VERSION")"
+  export RELEASE_VERSION NEXT_VERSION
 
-
-  RC_COUNT=$(read_config "RC_COUNT" "$RC_COUNT")
+  RC_COUNT="$(read_config "RC_COUNT" "$RC_COUNT")"
 
   # Check if the RC already exists, and if re-creating the RC, skip tag creation.
   RELEASE_TAG="${RELEASE_VERSION}RC${RC_COUNT}"
   SKIP_TAG=0
   if check_for_tag "$RELEASE_TAG"; then
-    read -p "$RELEASE_TAG already exists. Continue anyway [y/n]? " ANSWER
+    read -r -p "$RELEASE_TAG already exists. Continue anyway [y/n]? " ANSWER
     if [ "$ANSWER" != "y" ]; then
       echo "Exiting."
       exit 1
@@ -185,26 +192,27 @@ function get_release_info {
     SKIP_TAG=1
   fi
 
-  export RELEASE_TAG
+  export RELEASE_TAG SKIP_TAG
 
   GIT_REF="$RELEASE_TAG"
   if is_dry_run; then
     echo "This is a dry run. Please confirm the ref that will be built for testing."
-    GIT_REF=$(read_config "GIT_REF" "$GIT_REF")
+    GIT_REF="$(read_config "GIT_REF" "$GIT_REF")"
   fi
   export GIT_REF
   export PACKAGE_VERSION="$RELEASE_TAG"
 
-  export API_DIFF_TAG=$(get_api_diff_version $RELEASE_VERSION)
+  API_DIFF_TAG="$(get_api_diff_version "$RELEASE_VERSION")"
 
   # Gather some user information.
-  export ASF_USERNAME=$(read_config "ASF_USERNAME" "$LOGNAME")
+  ASF_USERNAME="$(read_config "ASF_USERNAME" "$LOGNAME")"
 
-  GIT_NAME=$(git config user.name || echo "")
-  export GIT_NAME=$(read_config "GIT_NAME" "$GIT_NAME")
+  GIT_NAME="$(git config user.name || echo "")"
+  GIT_NAME="$(read_config "GIT_NAME" "$GIT_NAME")"
 
-  export GIT_EMAIL="$ASF_USERNAME@apache.org"
-  export GPG_KEY=$(read_config "GPG_KEY" "$GIT_EMAIL")
+  GIT_EMAIL="$ASF_USERNAME@apache.org"
+  GPG_KEY="$(read_config "GPG_KEY" "$GIT_EMAIL")"
+  export API_DIFF_TAG ASF_USERNAME GIT_NAME GIT_EMAIL GPG_KEY
 
   cat <<EOF
 ================
@@ -222,7 +230,7 @@ DRY_RUN:         $(is_dry_run && echo "yes" || echo "NO, THIS BUILD WILL BE PUBL
 ================
 EOF
 
-  read -p "Is this info correct [y/n]? " ANSWER
+  read -r -p "Is this info correct [y/n]? " ANSWER
   if [ "$ANSWER" != "y" ]; then
     echo "Exiting."
     exit 1
@@ -230,15 +238,16 @@ EOF
 
   if ! is_dry_run; then
     if [ -z "$ASF_PASSWORD" ]; then
-      stty -echo && printf "ASF_PASSWORD: " && read ASF_PASSWORD && printf '\n' && stty echo
+      stty -echo && printf "ASF_PASSWORD: " && read -r ASF_PASSWORD && printf '\n' && stty echo
     fi
   else
     ASF_PASSWORD="***INVALID***"
   fi
 
   if [ -z "$GPG_PASSPHRASE" ]; then
-    stty -echo && printf "GPG_PASSPHRASE: " && read GPG_PASSPHRASE && printf '\n' && stty echo
-    export GPG_TTY=$(tty)
+    stty -echo && printf "GPG_PASSPHRASE: " && read -r GPG_PASSPHRASE && printf '\n' && stty echo
+    GPG_TTY="$(tty)"
+    export GPG_TTY
   fi
 
   export ASF_PASSWORD
@@ -246,7 +255,7 @@ EOF
 }
 
 function is_dry_run {
-  [[ $DRY_RUN = 1 ]]
+  [[ "$DRY_RUN" = 1 ]]
 }
 
 function check_get_passwords {
@@ -254,9 +263,11 @@ function check_get_passwords {
     if [ -z "${!env}" ]; then
       echo "The environment variable $env is not set. Please enter the password or passphrase."
       echo
-      stty -echo && printf "$env : " && read $env && printf '\n' && stty echo
-      export $env
+      # shellcheck disable=SC2229
+      stty -echo && printf "%s : " "$env" && read -r "$env" && printf '\n' && stty echo
     fi
+    # shellcheck disable=SC2163
+    export "$env"
   done
 }
 
@@ -267,7 +278,8 @@ function check_needed_vars {
       echo "$env must be set to run this script"
       (( missing++ ))
     else
-      export $env
+      # shellcheck disable=SC2163
+      export "$env"
     fi
   done
   (( missing > 0 )) && exit_with_usage
@@ -288,21 +300,21 @@ function init_python {
   if ! [ -x "$(command -v python2)"  ]; then
     error 'python2 needed by yetus. Install or add link? E.g: sudo ln -sf /usr/bin/python2.7 /usr/local/bin/python2'
   fi
-  echo "python version: `python2 --version`"
+  echo "python version: $(python2 --version)"
 }
 
 # Set MVN
 function init_mvn {
   if [ -n "$MAVEN_HOME" ]; then
-      MVN=${MAVEN_HOME}/bin/mvn
-  elif [ $(type -P mvn) ]; then
-      MVN=mvn
+      MVN=("${MAVEN_HOME}/bin/mvn")
+  elif [ "$(type -P mvn)" ]; then
+      MVN=(mvn)
   else
     error "MAVEN_HOME is not set nor is mvn on the current path."
   fi
-  echo "mvn version: `$MVN --version`"
-  # Add timestamped logging.
-  MVN="${MVN} -B"
+  echo "mvn version: $("${MVN[@]}" --version)"
+  # Add batch mode.
+  MVN=("${MVN[@]}" -B)
   export MVN
   configure_maven
 }
@@ -313,7 +325,8 @@ function configure_maven {
   MAVEN_LOCAL_REPO="${REPO:-$(pwd)/$(mktemp -d hbase-repo-XXXXX)}"
   [[ -d "$MAVEN_LOCAL_REPO" ]] || mkdir -p "$MAVEN_LOCAL_REPO"
   MAVEN_SETTINGS_FILE="${MAVEN_LOCAL_REPO}/tmp-settings.xml"
-  export MAVEN_OPTS MAVEN_SETTINGS_FILE MAVEN_LOCAL_REPO
+  MVN=("${MVN[@]}" --settings "${MAVEN_SETTINGS_FILE}")
+  export MVN MAVEN_OPTS MAVEN_SETTINGS_FILE MAVEN_LOCAL_REPO
   export ASF_USERNAME ASF_PASSWORD
   # reference passwords from env rather than storing in the settings.xml file.
   cat <<'EOF' > "$MAVEN_SETTINGS_FILE"
@@ -337,12 +350,13 @@ function generate_api_report {
   local project="$1"
   local previous_tag="$2"
   local release_tag="$3"
+  local previous_version
   # Generate api report.
-  ${project}/dev-support/checkcompatibility.py --annotation \
+  "${project}"/dev-support/checkcompatibility.py --annotation \
     org.apache.yetus.audience.InterfaceAudience.Public  \
-    $previous_tag $release_tag
-  local previous_version=$(echo ${previous_tag} | sed -e 's/rel\///')
-  cp ${project}/target/compat-check/report.html "./api_compare_${previous_version}_to_${release_tag}.html"
+    "$previous_tag" "$release_tag"
+  previous_version="$(echo "${previous_tag}" | sed -e 's/rel\///')"
+  cp "${project}/target/compat-check/report.html" "./api_compare_${previous_version}_to_${release_tag}.html"
 }
 
 # Look up the Jira name associated with project.
@@ -370,7 +384,8 @@ function update_releasenotes {
   local project_dir="$1"
   local jira_fix_version="$2"
   local yetus="apache-yetus-${YETUS_VERSION}"
-  local jira_project="$(get_jira_name "$(basename "$project_dir")")"
+  local jira_project
+  jira_project="$(get_jira_name "$(basename "$project_dir")")"
   wget -qO- "https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=/yetus/${YETUS_VERSION}/${yetus}-bin.tar.gz" | \
     tar xvz -C . || exit
   cd "./${yetus}" || exit
@@ -409,12 +424,12 @@ make_src_release() {
   # Tar up the src and sign and hash it.
   project="${1}"
   version="${2}"
-  basename="${project}-${version}"
-  rm -rf "${basename}-src*"
-  tgz="${basename}-src.tar.gz"
+  base_name="${project}-${version}"
+  rm -rf "${base_name}"-src*
+  tgz="${base_name}-src.tar.gz"
   cd "${project}" || exit
   git clean -d -f -x
-  git archive --format=tar.gz --output="../${tgz}" --prefix="${basename}/" "${GIT_REF:-master}"
+  git archive --format=tar.gz --output="../${tgz}" --prefix="${base_name}/" "${GIT_REF:-master}"
   cd .. || exit
   echo "$GPG_PASSPHRASE" | $GPG --passphrase-fd 0 --armour --output "${tgz}.asc" \
     --detach-sig "${tgz}"
@@ -429,15 +444,15 @@ make_src_release() {
 # - GPG needs to be defined, with the path to GPG: defaults 'gpg'.
 # - The passphrase in the GPG_PASSPHRASE variable: no default (we don't make .asc file).
 # - GIT_REF which is the tag to create the tgz from: defaults to 'master'.
-# - MVN Default is 'mvn -B'.
+# - MVN Default is "mvn -B --settings $MAVEN_SETTINGS_FILE".
 # For example:
 # $ GPG_PASSPHRASE="XYZ" GIT_REF="master" make_src_release hbase-operator-tools 1.0.0
 make_binary_release() {
   project="${1}"
   version="${2}"
-  basename="${project}-${version}"
-  rm -rf "${basename}-bin*"
-  cd $project || exit
+  base_name="${project}-${version}"
+  rm -rf "${base_name}"-bin*
+  cd "$project" || exit
 
   git clean -d -f -x
   # Three invocations of maven. This seems to work. One to
@@ -445,30 +460,35 @@ make_binary_release() {
   # a third to assemble the binary artifact. Trying to do
   # all in the one invocation fails; a problem in our
   # assembly spec to in maven. TODO. Meantime, three invocations.
-  ${MVN} --settings $MAVEN_SETTINGS_FILE clean install -DskipTests
-  ${MVN} --settings $MAVEN_SETTINGS_FILE site -DskipTests
-  ${MVN} --settings $MAVEN_SETTINGS_FILE install assembly:single -DskipTests \
-    -Dcheckstyle.skip=true "${PUBLISH_PROFILES[@]}"
+  "${MVN[@]}" clean install -DskipTests
+  "${MVN[@]}" site -DskipTests
+  "${MVN[@]}" install assembly:single -DskipTests -Dcheckstyle.skip=true "${PUBLISH_PROFILES[@]}"
 
   # Check there is a bin gz output. The build may not produce one: e.g. hbase-thirdparty.
-  f_bin_tgz="./${PROJECT}-assembly/target/${basename}*-bin.tar.gz"
-  if ls ${f_bin_tgz} &>/dev/null; then
-    cp ${f_bin_tgz} ..
+  local f_bin_prefix="./${PROJECT}-assembly/target/${base_name}"
+  if ls "${f_bin_prefix}"*-bin.tar.gz &>/dev/null; then
+    cp "${f_bin_prefix}"*-bin.tar.gz ..
     cd .. || exit
-    for i in "${basename}"*-bin.tar.gz; do
+    for i in "${base_name}"*-bin.tar.gz; do
       echo "$GPG_PASSPHRASE" | $GPG --passphrase-fd 0 --armour --output "$i.asc" --detach-sig "$i"
       echo "$GPG_PASSPHRASE" | $GPG --passphrase-fd 0 --print-md SHA512 "${i}" > "$i.sha512"
     done
   else
     cd .. || exit
-    echo "No ${f_bin_tgz} product; expected?"
+    echo "No ${f_bin_prefix}*-bin.tar.gz product; expected?"
   fi
 }
 
 # Do maven command to set version into local pom
 function maven_set_version { #input: <version_to_set>
   local this_version="$1"
-  $MVN versions:set -DnewVersion="$this_version" | grep -v "no value" # silence logs
+  "${MVN[@]}" versions:set -DnewVersion="$this_version" | grep -v "no value" # silence logs
+}
+
+# Do maven command to read version from local pom
+function maven_get_version {
+  # shellcheck disable=SC2016
+  "${MVN[@]}" -q -N -Dexec.executable="echo" -Dexec.args='${project.version}' exec:exec
 }
 
 # Do maven deploy to snapshot or release artifact repository, with checks.
@@ -482,12 +502,14 @@ function maven_deploy { #inputs: <snapshot|release> <log_file_path>
   if [[ -z "$log_file" ]] || ! touch "$log_file"; then
     error "must provide writable maven log output filepath"
   fi
-  if [[ $deploy_type == "snapshot" ]] && ! [[ $VERSION =~ -SNAPSHOT$ ]]; then
+  # shellcheck disable=SC2153
+  if [[ "$deploy_type" == "snapshot" ]] && ! [[ "$VERSION" =~ -SNAPSHOT$ ]]; then
     error "Snapshots must have a version with suffix '-SNAPSHOT'; you gave version '$VERSION'"
-  elif [[ $deploy_type == "release" ]] && [[ $VERSION =~ SNAPSHOT ]]; then
+  elif [[ "$deploy_type" == "release" ]] && [[ "$VERSION" =~ SNAPSHOT ]]; then
     error "Non-snapshot release version must not include the word 'SNAPSHOT'; you gave version '$VERSION'"
   fi
   # Publish ${PROJECT} to Maven release repo
+  # shellcheck disable=SC2154
   echo "Publishing ${PROJECT} checkout at '$GIT_REF' ($git_hash)"
   echo "Publish version is $VERSION"
   # Coerce the requested version
@@ -496,8 +518,7 @@ function maven_deploy { #inputs: <snapshot|release> <log_file_path>
   if ! is_dry_run; then
     mvn_goals=("${mvn_goals[@]}" deploy)
   fi
-  if ! ${MVN} --settings "$MAVEN_SETTINGS_FILE" \
-      -DskipTests -Dcheckstyle.skip=true "${PUBLISH_PROFILES[@]}" \
+  if ! "${MVN[@]}" -DskipTests -Dcheckstyle.skip=true "${PUBLISH_PROFILES[@]}" \
       "${mvn_goals[@]}" > "$log_file"; then
     error "Deploy build failed, for details see log at '$log_file'."
   fi

@@ -20,7 +20,8 @@
 trap cleanup EXIT
 
 # Source in utils.
-SELF=$(cd $(dirname $0) && pwd)
+SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=SCRIPTDIR/release-util.sh
 . "$SELF/release-util.sh"
 
 # Print usage and exit.
@@ -84,13 +85,14 @@ if [ $# -ne 1 ]; then
   exit_with_usage
 fi
 
-if [[ $@ == *"help"* ]]; then
+if [[ "$*" == *"help"* ]]; then
   exit_with_usage
 fi
 
 export LC_ALL=C.UTF-8
 export LANG=C.UTF-8
-export GPG_TTY=$(tty)
+GPG_TTY="$(tty)"
+export GPG_TTY
 
 init_java
 init_mvn
@@ -107,9 +109,9 @@ if [[ "$1" == "tag" ]]; then
   check_needed_vars PROJECT ASF_USERNAME ASF_PASSWORD RELEASE_VERSION RELEASE_TAG NEXT_VERSION \
       GIT_EMAIL GIT_NAME GIT_BRANCH
   ASF_REPO="gitbox.apache.org/repos/asf/${PROJECT}.git"
-  encoded_username=$(python -c "import urllib; print urllib.quote('''$ASF_USERNAME''')")
-  encoded_password=$(python -c "import urllib; print urllib.quote('''$ASF_PASSWORD''')")
-  git clone "https://$encoded_username:$encoded_password@$ASF_REPO" -b $GIT_BRANCH
+  encoded_username="$(python -c "import urllib; print urllib.quote('''$ASF_USERNAME''')")"
+  encoded_password="$(python -c "import urllib; print urllib.quote('''$ASF_PASSWORD''')")"
+  git clone "https://$encoded_username:$encoded_password@$ASF_REPO" -b "$GIT_BRANCH" "${PROJECT}"
 
   # 'update_releasenotes' searches the project's Jira for issues where 'Fix Version' matches specified
   # $jira_fix_version. For most projects this is same as ${RELEASE_VERSION}. However, all the 'hbase-*'
@@ -122,35 +124,35 @@ if [[ "$1" == "tag" ]]; then
     jira_fix_version="${PROJECT}-${RELEASE_VERSION}"
   fi
   shopt -u nocasematch
-  update_releasenotes `pwd`/${PROJECT} "${jira_fix_version}"
+  update_releasenotes "$(pwd)/${PROJECT}" "${jira_fix_version}"
 
-  cd ${PROJECT}
+  cd "${PROJECT}"
 
   git config user.name "$GIT_NAME"
-  git config user.email $GIT_EMAIL
+  git config user.email "$GIT_EMAIL"
 
   # Create release version
-  maven_set_version $RELEASE_VERSION
+  maven_set_version "$RELEASE_VERSION"
   git add RELEASENOTES.md CHANGES.md
 
   git commit -a -m "Preparing ${PROJECT} release $RELEASE_TAG; tagging and updates to CHANGES.md and RELEASENOTES.md"
   echo "Creating tag $RELEASE_TAG at the head of $GIT_BRANCH"
-  git tag $RELEASE_TAG
+  git tag "$RELEASE_TAG"
 
   # Create next version
-  maven_set_version $NEXT_VERSION
+  maven_set_version "$NEXT_VERSION"
 
   git commit -a -m "Preparing development version $NEXT_VERSION"
 
   if ! is_dry_run; then
     # Push changes
-    git push origin $RELEASE_TAG
-    git push origin HEAD:$GIT_BRANCH
+    git push origin "$RELEASE_TAG"
+    git push origin "HEAD:$GIT_BRANCH"
     cd ..
-    rm -rf ${PROJECT}
+    rm -rf "${PROJECT}"
   else
     cd ..
-    mv ${PROJECT} ${PROJECT}.tag
+    mv "${PROJECT}" "${PROJECT}.tag"
     echo "Clone with version changes and tag available as ${PROJECT}.tag in the output directory."
   fi
   exit 0
@@ -177,17 +179,13 @@ else
   ASF_REPO="${ASF_REPO:-https://gitbox.apache.org/repos/asf/${PROJECT}.git}"
   git clone "$ASF_REPO" "${PROJECT}"
 fi
-cd ${PROJECT}
-git checkout $GIT_REF
-git_hash=`git rev-parse --short HEAD`
-echo "Checked out ${PROJECT} git hash $git_hash"
+cd "${PROJECT}"
+git checkout "$GIT_REF"
+git_hash="$(git rev-parse --short HEAD)"
+echo "Checked out ${PROJECT} at ${GIT_REF} commit $git_hash"
 
 if [ -z "$VERSION" ]; then
-  # Run $MVN in a separate command so that 'set -e' does the right thing.
-  TMP=$(mktemp)
-  $MVN help:evaluate -Dexpression=project.version > $TMP
-  VERSION=$(cat $TMP | grep -v INFO | grep -v WARNING | grep -v Download)
-  rm $TMP
+  VERSION="$(maven_get_version)"
 fi
 
 # This is a band-aid fix to avoid the failure of Maven nightly snapshot in some Jenkins
@@ -210,9 +208,9 @@ if [[ "$1" == "publish-dist" ]]; then
   echo "Packaging release source tarballs"
   make_src_release "${PROJECT}" "${VERSION}"
 
-  echo "`date -u +'%Y-%m-%dT%H:%M:%SZ'` Building binary dist"
+  echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') Building binary dist"
   make_binary_release "${PROJECT}" "${VERSION}"
-  echo "`date -u +'%Y-%m-%dT%H:%M:%SZ'` Done building binary distribution"
+  echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') Done building binary distribution"
 
   if [[ "$PROJECT" =~ ^hbase- ]]; then
     DEST_DIR_NAME="${PROJECT}-${PACKAGE_VERSION}"
@@ -221,18 +219,18 @@ if [[ "$1" == "publish-dist" ]]; then
   fi
   svn_target="svn-${PROJECT}"
   svn co --depth=empty "$RELEASE_STAGING_LOCATION" "$svn_target"
-  rm -rf "$svn_target/${DEST_DIR_NAME}"
+  rm -rf "${svn_target:?}/${DEST_DIR_NAME}"
   mkdir -p "$svn_target/${DEST_DIR_NAME}"
 
   echo "Copying release tarballs"
-  cp ${PROJECT}-*.tar.* "$svn_target/${DEST_DIR_NAME}/"
-  cp ${PROJECT}/CHANGES.md "$svn_target/${DEST_DIR_NAME}/"
-  cp ${PROJECT}/RELEASENOTES.md "$svn_target/${DEST_DIR_NAME}/"
+  cp "${PROJECT}"-*.tar.* "$svn_target/${DEST_DIR_NAME}/"
+  cp "${PROJECT}/CHANGES.md" "$svn_target/${DEST_DIR_NAME}/"
+  cp "${PROJECT}/RELEASENOTES.md" "$svn_target/${DEST_DIR_NAME}/"
   shopt -s nocasematch
   # Generate api report only if project is hbase for now.
   if [ "${PROJECT}" == "hbase" ]; then
     # This script usually reports an errcode along w/ the report.
-    generate_api_report ./${PROJECT} "${API_DIFF_TAG}" "${PACKAGE_VERSION}" || true
+    generate_api_report "./${PROJECT}" "${API_DIFF_TAG}" "${PACKAGE_VERSION}" || true
     cp api*.html "$svn_target/${DEST_DIR_NAME}/"
   fi
   shopt -u nocasematch
@@ -241,7 +239,7 @@ if [[ "$1" == "publish-dist" ]]; then
 
   if ! is_dry_run; then
     cd "$svn_target"
-    svn ci --username $ASF_USERNAME --password "$ASF_PASSWORD" -m"Apache ${PROJECT} $PACKAGE_VERSION" --no-auth-cache
+    svn ci --username "$ASF_USERNAME" --password "$ASF_PASSWORD" -m"Apache ${PROJECT} $PACKAGE_VERSION" --no-auth-cache
     cd ..
     rm -rf "$svn_target"
   else
@@ -275,7 +273,8 @@ if [[ "$1" == "publish-release" ]]; then
   fi
   # Dump out email to send. Where we find vote.tmpl depends
   # on where this script is run from
-  export PROJECT_TEXT=$(echo "${PROJECT}" | sed "s/-/ /g")
+  PROJECT_TEXT="${PROJECT//-/ }" #substitute like 's/-/ /g'
+  export PROJECT_TEXT
   eval "echo \"$(< "${SELF}/vote.tmpl")\"" |tee "${BASE_DIR}/vote.txt"
   )
   exit 0

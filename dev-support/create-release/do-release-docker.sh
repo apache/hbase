@@ -50,12 +50,13 @@ set -e
 # Set this to build other hbase repos: e.g. PROJECT=hbase-operator-tools
 export PROJECT="${PROJECT:-hbase}"
 
-SELF=$(cd $(dirname "$0") && pwd)
+SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=SCRIPTDIR/release-util.sh
 . "$SELF/release-util.sh"
 
 function usage {
   local NAME
-  NAME="$(basename "$0")"
+  NAME="$(basename "${BASH_SOURCE[0]}")"
   cat <<EOF
 Usage: $NAME [options]
 
@@ -92,6 +93,10 @@ while getopts "d:fhj:p:s:t:" opt; do
     ?) error "Invalid option. Run with -h for help." ;;
   esac
 done
+shift $((OPTIND-1))
+if (( $# > 0 )); then
+  error "Arguments can only be provided with option flags, invalid args: $*"
+fi
 
 if [ -z "$WORKDIR" ] || [ ! -d "$WORKDIR" ]; then
   error "Work directory (-d) must be defined and exist. Run with -h for help."
@@ -158,15 +163,17 @@ RELEASE_STEP=$RELEASE_STEP
 API_DIFF_TAG=$API_DIFF_TAG
 EOF
 
-JAVA_VOL=
+JAVA_VOL=()
 if [ -n "$JAVA" ]; then
   echo "JAVA_HOME=/opt/hbase-java" >> "$ENVFILE"
-  JAVA_VOL="--volume $JAVA:/opt/hbase-java"
+  JAVA_VOL=(--volume "$JAVA:/opt/hbase-java")
 fi
 
 echo "Building $RELEASE_TAG; output will be at $WORKDIR/output"
-docker run -ti \
+cmd=(docker run -ti \
   --env-file "$ENVFILE" \
   --volume "$WORKDIR:/opt/hbase-rm" \
-  $JAVA_VOL \
-  "hbase-rm:$IMGTAG"
+  "${JAVA_VOL[@]}" \
+  "hbase-rm:$IMGTAG")
+echo "${cmd[*]}"
+"${cmd[@]}"
