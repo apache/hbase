@@ -496,11 +496,13 @@ public class ReplicationSourceManager implements ReplicationListener {
     // synchronized on oldsources to avoid race with NodeFailoverWorker
     synchronized (this.oldsources) {
       List<String> previousQueueIds = new ArrayList<>();
-      for (ReplicationSourceInterface oldSource : this.oldsources) {
+      for (Iterator<ReplicationSourceInterface> iter = this.oldsources.iterator(); iter
+          .hasNext();) {
+        ReplicationSourceInterface oldSource = iter.next();
         if (oldSource.getPeerId().equals(peerId)) {
           previousQueueIds.add(oldSource.getQueueId());
           oldSource.terminate(terminateMessage);
-          this.oldsources.remove(oldSource);
+          iter.remove();
         }
       }
       for (String queueId : previousQueueIds) {
