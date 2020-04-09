@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -120,9 +119,8 @@ public class TestExportSnapshotAdjunct {
     conf.setInt(ExportSnapshot.Testing.CONF_TEST_FAILURE_COUNT, 2);
     conf.setInt("mapreduce.map.maxattempts", 3);
     TestExportSnapshot.testExportFileSystemState(conf, tableName,
-      Bytes.toBytes(snapshotName), Bytes.toBytes(snapshotName),
-      tableNumFiles, TEST_UTIL.getDefaultRootDirPath(), copyDir, true,
-      null, true);
+      snapshotName, snapshotName, tableNumFiles, TEST_UTIL.getDefaultRootDirPath(),
+      copyDir, true, null, true);
   }
 
   /**
@@ -138,7 +136,7 @@ public class TestExportSnapshotAdjunct {
     conf.setInt(ExportSnapshot.Testing.CONF_TEST_FAILURE_COUNT, 4);
     conf.setInt("mapreduce.map.maxattempts", 3);
     TestExportSnapshot.testExportFileSystemState(conf, tableName,
-      Bytes.toBytes(snapshotName), Bytes.toBytes(snapshotName),
-      tableNumFiles, TEST_UTIL.getDefaultRootDirPath(), copyDir, true, null, false);
+      snapshotName, snapshotName, tableNumFiles, TEST_UTIL.getDefaultRootDirPath(),
+      copyDir, true, null, false);
   }
 }
