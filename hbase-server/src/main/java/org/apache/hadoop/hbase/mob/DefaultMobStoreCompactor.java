@@ -439,9 +439,9 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
                       mobRefSet.get().put(refTable.get(), fName);
                       writer.append(c);
                     } else {
-                      throw new IOException("MOB cell did not contain a tablename "
+                      throw new IOException(String.format("MOB cell did not contain a tablename "
                         + "tag. should not be possible. see ref guide on mob troubleshooting. "
-                        + "store=" + getStoreInfo() + " cell=" + c);
+                        + "store=%s cell=%s", getStoreInfo(), c));
                     }
                   }
                 }
@@ -495,9 +495,9 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
                 mobRefSet.get().put(refTable.get(), MobUtils.getMobFileName(c));
                 writer.append(c);
               } else {
-                throw new IOException("MOB cell did not contain a tablename "
-                  + "tag. should not be possible. see ref guide on mob troubleshooting. " + "store="
-                  + getStoreInfo() + " cell=" + c);
+                throw new IOException(String.format("MOB cell did not contain a tablename "
+                  + "tag. should not be possible. see ref guide on mob troubleshooting. "
+                  + "store=%s cell=%s", getStoreInfo(), c));
               }
             } else {
               String errMsg = String.format("Corrupted MOB reference: %s", c.toString());
