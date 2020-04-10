@@ -83,7 +83,7 @@ class LocalityBasedCandidateGenerator extends CandidateGenerator {
 
   private double getWeightedLocality(BaseLoadBalancer.Cluster cluster, int region, int server) {
     return cluster.getOrComputeWeightedLocality(region, server,
-      BaseLoadBalancer.Cluster.LocalityType.SERVER);
+      BaseLoadBalancer.Cluster.LocalityType.SERVER, BaseLoadBalancer.Cluster.IncludeStorageType.ALL);
   }
 
   void setServices(MasterServices services) {

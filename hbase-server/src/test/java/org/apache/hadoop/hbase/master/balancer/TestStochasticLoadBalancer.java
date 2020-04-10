@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.master.MockNoopMasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster;
 import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer.ServerLocalityCostFunction;
+import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer.ServerSsdLocalityCostFunction;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -271,9 +272,11 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
   public void testLocalityCost() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     MockNoopMasterServices master = new MockNoopMasterServices();
-    StochasticLoadBalancer.CostFunction
-        costFunction = new ServerLocalityCostFunction(conf, master);
+    testLocalityCost(new ServerLocalityCostFunction(conf, master));
+    testLocalityCost(new ServerSsdLocalityCostFunction(conf, master));
+  }
 
+  private void testLocalityCost(StochasticLoadBalancer.CostFunction costFunction) {
     for (int test = 0; test < clusterRegionLocationMocks.length; test++) {
       int[][] clusterRegionLocations = clusterRegionLocationMocks[test];
       MockCluster cluster = new MockCluster(clusterRegionLocations);
@@ -511,7 +514,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     }
 
     @Override
-    float getLocalityOfRegion(int region, int server) {
+    float getLocalityOfRegion(int region, int server, IncludeStorageType includeStorageType) {
       // convert the locality percentage to a fraction
       return localities[region][server] / 100.0f;
     }
