@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.tmpl.tool.CanaryStatusTmpl;
 import org.apache.yetus.audience.InterfaceAudience;
 
 
-
 @InterfaceAudience.Private
 public class CanaryStatusServlet extends HttpServlet {
   @Override
@@ -36,7 +35,11 @@ public class CanaryStatusServlet extends HttpServlet {
     CanaryTool.RegionStdOutSink sink =
       (CanaryTool.RegionStdOutSink) getServletContext().getAttribute(
         "sink");
-    assert sink != null : "No tool in context!";
+
+    if (sink == null) {
+      throw new ServletException(
+        "RegionStdOutSink is null! The CanaryTool's InfoServer is not initialized correctly");
+    }
 
     resp.setContentType("text/html");
 

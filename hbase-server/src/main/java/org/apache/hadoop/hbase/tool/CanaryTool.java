@@ -131,28 +131,28 @@ public class CanaryTool implements Tool, Canary {
 
   public static final String HBASE_CANARY_INFO_BINDADDRESS = "hbase.canary.info.bindAddress";
 
+  private InfoServer infoServer;
 
   private void putUpWebUI() throws IOException {
+    int port = conf.getInt(HBASE_CANARY_INFO_PORT, DEFAULT_CANARY_INFOPORT);
+    // -1 is for disabling info server
+    if (port < 0) {
+      return;
+    }
     if (zookeeperMode) {
       LOG.info("WebUI is not supported in Zookeeper mode");
     } else if (regionServerMode) {
       LOG.info("WebUI is not supported in RegionServer mode");
     } else {
-      Configuration conf = new Configuration();
-      int port = conf.getInt(HBASE_CANARY_INFO_PORT, DEFAULT_CANARY_INFOPORT);
-      // -1 is for disabling info server
-      if (port < 0) {
-        return;
-      }
       String addr = conf.get(HBASE_CANARY_INFO_BINDADDRESS, "0.0.0.0");
       try {
-        InfoServer infoServer = new InfoServer("canary", addr, port, false, conf);
+        infoServer = new InfoServer("canary", addr, port, false, conf);
         infoServer.addUnprivilegedServlet("canary", "/canary-status", CanaryStatusServlet.class);
         infoServer.setAttribute("sink", this.sink);
         infoServer.start();
-        LOG.info("Bind Canary http info server to port: " + port);
+        LOG.info("Bind Canary http info server to {}:{} ", addr, port);
       } catch (BindException e) {
-        LOG.warn("Failed binding Canary http info server to port: " + port, e);
+        LOG.warn("Failed binding Canary http info server to {}:{}", addr, port, e);
       }
     }
   }
