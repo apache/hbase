@@ -18,18 +18,15 @@
  */
 package org.apache.hadoop.hbase.tool;
 
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.tmpl.tool.CanaryStatusTmpl;
-import org.apache.yetus.audience.InterfaceAudience;
-
+import java.io.IOException;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.atomic.LongAdder;
+import org.apache.hadoop.hbase.tmpl.tool.CanaryStatusTmpl;
+import org.apache.yetus.audience.InterfaceAudience;
+
+
 
 @InterfaceAudience.Private
 public class CanaryStatusServlet extends HttpServlet {

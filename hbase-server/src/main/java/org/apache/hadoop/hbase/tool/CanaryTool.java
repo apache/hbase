@@ -141,7 +141,9 @@ public class CanaryTool implements Tool, Canary {
       Configuration conf = new Configuration();
       int port = conf.getInt(HBASE_CANARY_INFO_PORT, DEFAULT_CANARY_INFOPORT);
       // -1 is for disabling info server
-      if (port < 0) return;
+      if (port < 0) {
+        return;
+      }
       String addr = conf.get(HBASE_CANARY_INFO_BINDADDRESS, "0.0.0.0");
       try {
         InfoServer infoServer = new InfoServer("canary", addr, port, false, conf);
@@ -305,8 +307,10 @@ public class CanaryTool implements Tool, Canary {
   public static class RegionStdOutSink extends StdOutSink {
     private Map<String, LongAdder> perTableReadLatency = new HashMap<>();
     private LongAdder writeLatency = new LongAdder();
-    private final ConcurrentMap<String, List<RegionTaskResult>> regionMap = new ConcurrentHashMap<>();
-    private ConcurrentMap<ServerName, LongAdder> perServerFailuresCount = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, List<RegionTaskResult>> regionMap =
+      new ConcurrentHashMap<>();
+    private ConcurrentMap<ServerName, LongAdder> perServerFailuresCount =
+      new ConcurrentHashMap<>();
     private ConcurrentMap<String, LongAdder> perTableFailuresCount = new ConcurrentHashMap<>();
 
     public ConcurrentMap<ServerName, LongAdder> getPerServerFailuresCount() {
