@@ -81,8 +81,7 @@ public class ByteBufferPool {
     this.directByteBuffer = directByteBuffer;
     // TODO can add initialPoolSize config also and make those many BBs ready for use.
     LOG.info("Created with bufferSize={} and maxPoolSize={}",
-        org.apache.hadoop.util.StringUtils.byteDesc(bufferSize),
-        org.apache.hadoop.util.StringUtils.byteDesc(maxPoolSize));
+      org.apache.hadoop.util.StringUtils.byteDesc(bufferSize), maxPoolSize);
     this.count = new AtomicInteger(0);
   }
 
