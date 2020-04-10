@@ -405,10 +405,10 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     }
 
     RSGroupInfo oldGroup = getRSGroup(oldName);
-    Map<String,RSGroupInfo> newGroupMap = Maps.newHashMap(rsGroupMap);
+    Map<String, RSGroupInfo> newGroupMap = Maps.newHashMap(rsGroupMap);
     newGroupMap.remove(oldName);
-    RSGroupInfo newGroup = new RSGroupInfo(newName,
-      (SortedSet<Address>) oldGroup.getServers(), oldGroup.getTables());
+    RSGroupInfo newGroup =
+      new RSGroupInfo(newName, (SortedSet<Address>) oldGroup.getServers(), oldGroup.getTables());
     newGroupMap.put(newName, newGroup);
     flushConfig(newGroupMap);
   }
