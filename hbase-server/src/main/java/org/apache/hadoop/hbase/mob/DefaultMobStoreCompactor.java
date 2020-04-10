@@ -437,7 +437,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
                     } else {
                       throw new IOException(String.format("MOB cell did not contain a tablename " +
                           "tag. should not be possible. see ref guide on mob troubleshooting. " +
-                          "store={} cell={}", getStoreInfo(), c));
+                          "store=%s cell=%s", getStoreInfo(), c));
                     }
                   }
                 }
@@ -493,7 +493,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
               } else {
                 throw new IOException(String.format("MOB cell did not contain a tablename " +
                     "tag. should not be possible. see ref guide on mob troubleshooting. " +
-                    "store={} cell={}", getStoreInfo(), c));
+                    "store=%s cell=%s", getStoreInfo(), c));
               }
             } else {
               String errMsg = String.format("Corrupted MOB reference: %s", c.toString());
