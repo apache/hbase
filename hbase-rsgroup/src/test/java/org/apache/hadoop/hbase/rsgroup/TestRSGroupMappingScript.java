@@ -26,7 +26,7 @@ import java.io.PrintWriter;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.rsgroup.RSGroupAdminEndpoint.RSGroupMappingScript;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfoManagerImpl.RSGroupMappingScript;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.After;
 import org.junit.Assert;

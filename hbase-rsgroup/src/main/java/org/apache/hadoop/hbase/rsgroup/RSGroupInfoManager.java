@@ -125,4 +125,11 @@ public interface RSGroupInfoManager {
    * @param servers set of servers to remove
    */
   void removeServers(Set<Address> servers) throws IOException;
+
+  /**
+   * Determine {@code RSGroupInfo} for the given table.
+   * @param tableName table name
+   * @return {@link RSGroupInfo} which table should belong to
+   */
+  RSGroupInfo determineRSGroupInfoForTable(TableName tableName) throws IOException;
 }
