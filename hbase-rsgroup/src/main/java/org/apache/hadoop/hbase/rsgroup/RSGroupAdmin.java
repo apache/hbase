@@ -104,7 +104,6 @@ public interface RSGroupAdmin extends Closeable {
    * Rename rsgroup.
    * @param oldName old rsgroup name
    * @param newName new rsgroup name
-   * @throws IOException
    */
   void renameRSGroup(String oldName, String newName) throws IOException;
 }
