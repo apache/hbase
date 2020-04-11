@@ -873,8 +873,7 @@ public class MetaTableAccessor {
    * @param replicaId the replicaId of the region
    * @return a byte[] for sn column qualifier
    */
-  @VisibleForTesting
-  static byte[] getServerNameColumn(int replicaId) {
+  public static byte[] getServerNameColumn(int replicaId) {
     return replicaId == 0 ? HConstants.SERVERNAME_QUALIFIER
         : Bytes.toBytes(HConstants.SERVERNAME_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
             + String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
@@ -967,19 +966,30 @@ public class MetaTableAccessor {
   }
 
   /**
-   * Returns a host:port string of server where the region is transitioning on.
-   * It reads "sn" column from {@link Result}, a row in catalog table.
-   * @param r Result to pull from
-   * @return A host:port string or null if necessary fields not found or empty.
+   * Returns the {@link ServerName} from catalog table {@link Result} where the region is
+   * transitioning on. It should be the same as {@link MetaTableAccessor#getServerName(Result,int)}
+   * if the server is at OPEN state.
+   *
+   * @param r Result to pull the transitioning server name from
+   * @return A ServerName instance or {@link MetaTableAccessor#getServerName(Result,int)}
+   * if necessary fields not found or empty.
    */
   @Nullable
-  @InterfaceAudience.Private // for use by RegionReplicaInfo which is used by meta browser
-  public static String getTransitioningOnServerName(final Result r, final int replicaId) {
-      byte[] serverColumn = getServerNameColumn(replicaId);
-      Cell cell = r.getColumnLatestCell(getCatalogFamily(), serverColumn);
-      return (cell != null && cell.getValueLength() > 0)
-        ? Bytes.toString(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength())
-        : null;
+  public static ServerName getTargetServerName(final Result r, final int replicaId) {
+    final Cell cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+      getServerNameColumn(replicaId));
+    if (cell == null || cell.getValueLength() == 0) {
+      RegionLocations locations = MetaTableAccessor.getRegionLocations(r);
+      if (locations != null) {
+        HRegionLocation location = locations.getRegionLocation(replicaId);
+        if (location != null) {
+          return location.getServerName();
+        }
+      }
+      return null;
+    }
+    return ServerName.parseServerName(Bytes.toString(cell.getValueArray(), cell.getValueOffset(),
+      cell.getValueLength()));
   }
 
   /**

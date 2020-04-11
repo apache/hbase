@@ -69,6 +69,7 @@
 <%@ page import="org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos" %>
 <%@ page import="org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas" %>
 <%@ page import="org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota" %>
+<%@ page import="java.util.stream.Collectors" %>
 <%!
   /**
    * @return An empty region load stamped with the passed in <code>regionInfo</code>
@@ -396,8 +397,9 @@ if (fqtn != null && master.isInitialized()) {
       <th>Replica ID</th>
       <th>RegionState</th>
       <th>ServerName</th>
-      <th>TransitioningOnServerName</th>
-      <th>MergeRegionNames</th>
+      <th>Sequence Number</th>
+      <th>Target ServerName</th>
+      <th>Merge RegionNames</th>
       <th>SplitA</th>
       <th>SplitB</th>
     </tr>
@@ -439,8 +441,10 @@ if (fqtn != null && master.isInitialized()) {
       final RegionState.State regionState = regionReplicaInfo.getRegionState();
       final int rsPort = master.getRegionServerInfoPort(serverName);
 
-      final String transitioningOnServerName = regionReplicaInfo.getTransitioningOnServerName();
-      final String mergeRegionNames = regionReplicaInfo.getMergeRegionName();
+      final long seqNum = regionReplicaInfo.getSeqNum();
+
+      final String targetServerName = regionReplicaInfo.getTargetServerName().toString();
+      final String mergeRegionNames = String.join("<br/>", regionReplicaInfo.getMergeRegionName());
       final String splitAName = regionReplicaInfo.getSplitAName() != null
         ? Bytes.toStringBinary(regionReplicaInfo.getSplitAName())
         : "";
@@ -449,16 +453,17 @@ if (fqtn != null && master.isInitialized()) {
         : "";
   %>
     <tr>
-      <td style="white-space: nowrap;"><%= regionNameDisplay %></td>
-      <td style="white-space: nowrap;"><%= startKeyDisplay %></td>
-      <td style="white-space: nowrap;"><%= endKeyDisplay %></td>
-      <td style="white-space: nowrap;"><%= replicaIdDisplay %></td>
-      <td style="white-space: nowrap;"><%= regionStateDisplay %></td>
-      <td style="white-space: nowrap;"><%= buildRegionServerLink(serverName, rsPort, regionInfo, regionState) %></td>
-      <td style="white-space: nowrap;"><%= transitioningOnServerName %></td>
-      <td style="white-space: nowrap;"><%= mergeRegionNames %></td>
-      <td style="white-space: nowrap;"><%= splitAName %></td>
-      <td style="white-space: nowrap;"><%= splitBName %></td>
+      <td><%= regionNameDisplay %></td>
+      <td><%= startKeyDisplay %></td>
+      <td><%= endKeyDisplay %></td>
+      <td><%= replicaIdDisplay %></td>
+      <td><%= regionStateDisplay %></td>
+      <td><%= buildRegionServerLink(serverName, rsPort, regionInfo, regionState) %></td>
+      <td><%= seqNum %></td>
+      <td><%= targetServerName %></td>
+      <td><%= mergeRegionNames %></td>
+      <td><%= splitAName %></td>
+      <td><%= splitBName %></td>
     </tr>
   <%
       }

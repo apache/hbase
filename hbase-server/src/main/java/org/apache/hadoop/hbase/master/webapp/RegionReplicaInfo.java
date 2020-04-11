@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.webapp;
 
+import static org.apache.hbase.thirdparty.org.apache.commons.collections4.ListUtils.emptyIfNull;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -25,6 +27,7 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
@@ -46,8 +49,9 @@ public final class RegionReplicaInfo {
   private final RegionInfo regionInfo;
   private final RegionState.State regionState;
   private final ServerName serverName;
+  private final long seqNum;
   /** See {@link org.apache.hadoop.hbase.HConstants#SERVERNAME_QUALIFIER_STR}. */
-  private final String transitioningOnServerName;
+  private final ServerName targetServerName;
   private final List<RegionInfo> mergeRegionInfo;
   private final RegionInfo splitA;
   private final RegionInfo splitB;
@@ -59,8 +63,9 @@ public final class RegionReplicaInfo {
       ? RegionStateStore.getRegionState(result, regionInfo)
       : null;
     this.serverName = location != null ? location.getServerName() : null;
-    this.transitioningOnServerName = (result != null && regionInfo != null)
-      ? MetaTableAccessor.getTransitioningOnServerName(result, regionInfo.getReplicaId())
+    this.seqNum = (location != null) ? location.getSeqNum() : HConstants.NO_SEQNUM;
+    this.targetServerName = (result != null && regionInfo != null)
+      ? MetaTableAccessor.getTargetServerName(result, regionInfo.getReplicaId())
       : null;
     this.mergeRegionInfo = (result != null)
       ? MetaTableAccessor.getMergeRegions(result.rawCells())
@@ -117,17 +122,20 @@ public final class RegionReplicaInfo {
     return serverName;
   }
 
-  public String getTransitioningOnServerName() {
-    return transitioningOnServerName;
+  public long getSeqNum() {
+    return seqNum;
   }
 
-  public String getMergeRegionName() {
-    return (mergeRegionInfo != null)
-      ? mergeRegionInfo.stream()
-                       .map(RegionInfo::getRegionName)
-                       .map(Bytes::toStringBinary)
-                       .collect(Collectors.joining(", "))
-      : "";
+  public ServerName getTargetServerName() {
+    return targetServerName;
+  }
+
+  public List<String> getMergeRegionName() {
+    return emptyIfNull(mergeRegionInfo)
+      .stream()
+      .map(RegionInfo::getRegionName)
+      .map(Bytes::toStringBinary)
+      .collect(Collectors.toList());
   }
 
   public byte[] getSplitAName() {
@@ -155,7 +163,7 @@ public final class RegionReplicaInfo {
       .append(regionInfo, that.regionInfo)
       .append(regionState, that.regionState)
       .append(serverName, that.serverName)
-      .append(transitioningOnServerName, that.transitioningOnServerName)
+      .append(targetServerName, that.targetServerName)
       .append(mergeRegionInfo, that.mergeRegionInfo)
       .append(splitA, that.splitA)
       .append(splitB, that.splitB)
@@ -169,7 +177,7 @@ public final class RegionReplicaInfo {
       .append(regionInfo)
       .append(regionState)
       .append(serverName)
-      .append(transitioningOnServerName)
+      .append(targetServerName)
       .append(mergeRegionInfo)
       .append(splitA)
       .append(splitB)
@@ -183,7 +191,7 @@ public final class RegionReplicaInfo {
       .append("regionInfo", regionInfo)
       .append("regionState", regionState)
       .append("serverName", serverName)
-      .append("transitioningOnServerName", transitioningOnServerName)
+      .append("transitioningOnServerName", targetServerName)
       .append("merge*",mergeRegionInfo)
       .append("splitA", splitA)
       .append("splitB", splitB)
