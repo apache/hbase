@@ -19,7 +19,7 @@
 DRY_RUN=${DRY_RUN:-0}
 GPG="gpg --pinentry-mode loopback --no-tty --batch"
 YETUS_VERSION=${YETUS_VERSION:-0.11.1}
-set -x
+set -e
 
 function error {
   echo "$*"
@@ -87,9 +87,9 @@ function get_api_diff_version {
     local major=$(echo "$version" | cut -d . -f 1)
     local minor=$(echo "$version" | cut -d . -f 2)
     if [ $minor != 0 ]; then
-      api_diff_tag="rel/${major}.$((minor - 1)).0)"
+      api_diff_tag="rel/${major}.$((minor - 1)).0"
     else
-      api_diff_tag="rel/$((major - 1)).0.0)"
+      api_diff_tag="rel/$((major - 1)).0.0"
     fi
   fi
   api_diff_tag=$(read_config "api_diff_tag", "$api_diff_tag")
@@ -136,7 +136,7 @@ function get_release_info {
     RELEASE_VERSION="${VERSION/-SNAPSHOT/}"
   fi
 
-  local REV=$(echo "$VERSION" | cut -d . -f 3)
+  local REV=$(echo "${RELEASE_VERSION}" | cut -d . -f 3)
 
   # Find out what RC is being prepared.
   # - If the current version is "x.y.0", then this is RC0 of the "x.y.0" release.

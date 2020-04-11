@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.regionserver.slowlog.RpcLogDetails;
 import org.apache.hadoop.hbase.regionserver.slowlog.SlowLogRecorder;
+import org.apache.hadoop.hbase.security.HBasePolicyProvider;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
 import org.apache.hadoop.hbase.security.User;
@@ -58,6 +59,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.PolicyProvider;
+import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -313,6 +315,14 @@ public abstract class RpcServer implements RpcServerInterface,
     if (scheduler instanceof ConfigurationObserver) {
       ((ConfigurationObserver) scheduler).onConfigurationChange(newConf);
     }
+    // Make sure authManager will read hbase-policy file
+    System.setProperty("hadoop.policy.file", "hbase-policy.xml");
+    synchronized (authManager) {
+      authManager.refresh(newConf, new HBasePolicyProvider());
+    }
+    LOG.info("Refreshed hbase-policy.xml successfully");
+    ProxyUsers.refreshSuperUserGroupsConfiguration(newConf);
+    LOG.info("Refreshed super and proxy users successfully");
   }
 
   protected void initReconfigurable(Configuration confToLoad) {

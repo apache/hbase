@@ -57,7 +57,6 @@ public class MultiVersionConcurrencyControl {
   private final LinkedList<WriteEntry> writeQueue = new LinkedList<>();
 
   public MultiVersionConcurrencyControl() {
-    super();
   }
 
   /**
