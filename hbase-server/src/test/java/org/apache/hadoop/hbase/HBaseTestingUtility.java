@@ -418,6 +418,20 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       "mapreduce.cluster.local.dir",
       testPath, "mapred-local-dir");
 
+    // Frustrate yarn's attempts at writing /tmp.
+    String property = "yarn.node-labels.fs-store.root-dir";
+    createSubDir(property, testPath, property);
+    property = "yarn.nodemanager.log-dirs";
+    createSubDir(property, testPath, property);
+    property = "yarn.nodemanager.remote-app-log-dir";
+    createSubDir(property, testPath, property);
+    property = "yarn.timeline-service.entity-group-fs-store.active-dir";
+    createSubDir(property, testPath, property);
+    property = "yarn.timeline-service.entity-group-fs-store.done-dir";
+    createSubDir(property, testPath, property);
+    property = "yarn.nodemanager.remote-app-log-dir";
+    createSubDir(property, testPath, property);
+
     return testPath;
   }
 
