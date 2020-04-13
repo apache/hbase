@@ -2110,4 +2110,19 @@ Copyright (c) 2007-2017 The JRuby project
       </licenses>
     </project>
   </supplement>
+  <supplement>
+    <project>
+      <groupId>jline</groupId>
+      <artifactId>jline</artifactId>
+      <name>JLine</name>
+      <version>2.11</version>
+      <licenses>
+        <license>
+          <name>BSD License</name>
+          <url>http://www.opensource.org/licenses/bsd-license.php</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
 </supplementalDataModels>
