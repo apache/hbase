@@ -151,6 +151,11 @@ public class TransitRegionStateProcedure
     this.forceNewPlan = forceNewPlan;
     this.type = type;
     setInitalAndLastState();
+
+    // when do reopen TRSP, let the rs know the targetServer so it can keep some info on close
+    if (type == TransitionType.REOPEN) {
+      this.assignCandidate = getRegionStateNode(env).getRegionLocation();
+    }
   }
 
   @Override
