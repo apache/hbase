@@ -867,6 +867,19 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     this.maxCellSize = conf.getLong(HBASE_MAX_CELL_SIZE_KEY, DEFAULT_MAX_CELL_SIZE);
     this.miniBatchSize = conf.getInt(HBASE_REGIONSERVER_MINIBATCH_SIZE,
         DEFAULT_HBASE_REGIONSERVER_MINIBATCH_SIZE);
+
+    // recover the metrics of read and write requests count if they were retained
+    if (rsServices != null && rsServices.getRegionServerAccounting() != null) {
+      Pair<Long, Long> retainedRWRequestsCnt = rsServices.getRegionServerAccounting()
+        .getRetainedRegionRWRequestsCnt().get(getRegionInfo().getEncodedName());
+      if (retainedRWRequestsCnt != null) {
+        this.setReadRequestsCount(retainedRWRequestsCnt.getFirst());
+        this.setWriteRequestsCount(retainedRWRequestsCnt.getSecond());
+        // remove them since won't use again
+        rsServices.getRegionServerAccounting().getRetainedRegionRWRequestsCnt()
+          .remove(getRegionInfo().getEncodedName());
+      }
+    }
   }
 
   void setHTableSpecificConf() {
@@ -8817,5 +8830,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             (plugins.equals("") ? "" : (plugins + ",")) + replicationCoprocessorClass);
       }
     }
+  }
+
+  @VisibleForTesting
+  public void setReadRequestsCount(long readRequestsCount) {
+    this.readRequestsCount.add(readRequestsCount);
+  }
+
+  @VisibleForTesting
+  public void setWriteRequestsCount(long writeRequestsCount) {
+    this.writeRequestsCount.add(writeRequestsCount);
   }
 }
