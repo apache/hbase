@@ -38,6 +38,7 @@ public class RSGroupInfo {
   // Keep servers in a sorted set so has an expected ordering when displayed.
   private final SortedSet<Address> servers;
   // Keep tables sorted too.
+
   /**
    * @deprecated Since 3.0.0, will be removed in 4.0.0. The rsgroup information will be stored in
    *             the configuration of a table so this will be removed.

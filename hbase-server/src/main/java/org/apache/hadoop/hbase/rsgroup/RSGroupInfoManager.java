@@ -106,4 +106,12 @@ public interface RSGroupInfoManager {
    */
   String determineRSGroupInfoForTable(TableName tableName);
 
+  /**
+   * Rename rsgroup
+   * @param oldName old rsgroup name
+   * @param newName new rsgroup name
+   * @throws IOException
+   */
+  void renameRSGroup(String oldName, String newName) throws IOException;
+
 }

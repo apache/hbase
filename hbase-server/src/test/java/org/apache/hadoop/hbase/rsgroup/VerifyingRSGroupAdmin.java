@@ -816,6 +816,12 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     return admin.balanceRSGroup(groupName);
   }
 
+  @Override
+  public void renameRSGroup(String oldName, String newName) throws IOException {
+    admin.renameRSGroup(oldName, newName);
+    verify();
+  }
+
   private void verify() throws IOException {
     Map<String, RSGroupInfo> groupMap = Maps.newHashMap();
     Set<RSGroupInfo> zList = Sets.newHashSet();
