@@ -560,6 +560,10 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
         LOG.debug(prefix("Received Disconnected from ZooKeeper, ignoring"));
         break;
 
+      case Closed:
+        LOG.debug(prefix("ZooKeeper client closed, ignoring"));
+        break;
+
       case Expired:
         String msg = prefix(this.identifier + " received expired from " +
           "ZooKeeper, aborting");
