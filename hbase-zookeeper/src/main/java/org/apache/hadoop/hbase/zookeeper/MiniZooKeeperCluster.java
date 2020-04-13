@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.zookeeper.common.X509Exception;
 import org.apache.zookeeper.server.NIOServerCnxnFactory;
 import org.apache.zookeeper.server.ZooKeeperServer;
 import org.apache.zookeeper.server.persistence.FileTxnLog;
@@ -419,8 +420,8 @@ public class MiniZooKeeperCluster {
     long start = System.currentTimeMillis();
     while (true) {
       try {
-        send4LetterWord(HOST, port, "stat", (int)timeout);
-      } catch (IOException e) {
+        send4LetterWord(HOST, port, "stat", false, (int)timeout);
+      } catch (IOException | X509Exception.SSLContextException e) {
         return true;
       }
 
@@ -442,7 +443,7 @@ public class MiniZooKeeperCluster {
     long start = System.currentTimeMillis();
     while (true) {
       try {
-        String result = send4LetterWord(HOST, port, "stat", (int)timeout);
+        String result = send4LetterWord(HOST, port, "stat", false, (int)timeout);
         if (result.startsWith("Zookeeper version:") && !result.contains("READ-ONLY")) {
           return true;
         } else {
@@ -451,7 +452,7 @@ public class MiniZooKeeperCluster {
       } catch (ConnectException e) {
         // ignore as this is expected, do not log stacktrace
         LOG.info("{}:{} not up: {}", HOST, port, e.toString());
-      } catch (IOException e) {
+      } catch (IOException | X509Exception.SSLContextException e) {
         // ignore as this is expected
         LOG.info("{}:{} not up", HOST, port, e);
       }
