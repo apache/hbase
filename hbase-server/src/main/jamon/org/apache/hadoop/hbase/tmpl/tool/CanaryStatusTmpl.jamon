@@ -57,9 +57,9 @@ org.apache.hadoop.hbase.tool.CanaryTool.RegionStdOutSink;
         </div>
     </div>
 
-	<div class="container">
-		<section>
-		<h2>Failed Servers</h2>
+  <div class="container">
+    <section>
+    <h2>Failed Servers</h2>
         <%java>
            Map<ServerName, LongAdder> perServerFailuresCount = sink.getPerServerFailuresCount();
         </%java>
@@ -78,28 +78,28 @@ org.apache.hadoop.hbase.tool.CanaryTool.RegionStdOutSink;
           </%if>
           <tr><td>Total Failed Servers: <% (perServerFailuresCount != null) ? perServerFailuresCount.size() : 0 %></td></tr>
         </table>
-		</section>
-		<section>
-			<h2>Failed Tables</h2>
-      			<%java>
-      			   Map<String, LongAdder> perTableFailuresCount = sink.getPerTableFailuresCount();
-      			</%java>
-      			<table class="table table-striped">
-      				<tr>
-      				    <th>Table</th>
-      				    <th>Failures Count</th>
-      				</tr>
-      				<%if (perTableFailuresCount != null && perTableFailuresCount.size() > 0)%>
-      				<%for Map.Entry<String, LongAdder> entry : perTableFailuresCount.entrySet()%>
-      				<tr>
-      				    <td><% entry.getKey() %></td>
-      				    <td><% entry.getValue() %></td>
-      				</tr>
-      				</%for>
-      				</%if>
-      				<tr><td>Total Failed Tables: <% (perTableFailuresCount != null) ? perTableFailuresCount.size() : 0 %></td></tr>
-      			</table>
-		</section>
+    </section>
+    <section>
+      <h2>Failed Tables</h2>
+            <%java>
+               Map<String, LongAdder> perTableFailuresCount = sink.getPerTableFailuresCount();
+            </%java>
+            <table class="table table-striped">
+              <tr>
+                  <th>Table</th>
+                  <th>Failures Count</th>
+              </tr>
+              <%if (perTableFailuresCount != null && perTableFailuresCount.size() > 0)%>
+              <%for Map.Entry<String, LongAdder> entry : perTableFailuresCount.entrySet()%>
+              <tr>
+                  <td><% entry.getKey() %></td>
+                  <td><% entry.getValue() %></td>
+              </tr>
+              </%for>
+              </%if>
+              <tr><td>Total Failed Tables: <% (perTableFailuresCount != null) ? perTableFailuresCount.size() : 0 %></td></tr>
+            </table>
+    </section>
 
         <section>
             <h2>Software Attributes</h2>

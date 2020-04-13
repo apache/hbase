@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.tmpl.tool.CanaryStatusTmpl;
+import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -54,7 +55,14 @@ public class TestCanaryStatusServlet {
     regionStdOutSink.publishReadFailure(serverName1, regionInfo1, new IOException());
     regionStdOutSink.publishWriteFailure(serverName2, regionInfo2, new IOException());
     CanaryStatusTmpl tmpl = new CanaryStatusTmpl();
-    tmpl.render(new StringWriter(), regionStdOutSink);
+    StringWriter renderResultWriter = new StringWriter();
+    tmpl.render(renderResultWriter, regionStdOutSink);
+    String renderResult = renderResultWriter.toString();
+    Assert.assertTrue(renderResult.contains("staging-st04.server,22600"));
+    Assert.assertTrue(renderResult.contains("fakeTableName1"));
+    Assert.assertTrue(renderResult.contains("staging-st05.server,22600"));
+    Assert.assertTrue(renderResult.contains("fakeTableName2"));
+
   }
 
   @Test
@@ -68,7 +76,11 @@ public class TestCanaryStatusServlet {
 
     regionStdOutSink.publishReadFailure(serverName1, regionInfo1, new IOException());
     CanaryStatusTmpl tmpl = new CanaryStatusTmpl();
-    tmpl.render(new StringWriter(), regionStdOutSink);
+    StringWriter renderResultWriter = new StringWriter();
+    tmpl.render(renderResultWriter, regionStdOutSink);
+    String renderResult = renderResultWriter.toString();
+    Assert.assertTrue(renderResult.contains("staging-st04.server,22600"));
+    Assert.assertTrue(renderResult.contains("fakeTableName1"));
   }
 
   @Test
@@ -82,14 +94,23 @@ public class TestCanaryStatusServlet {
 
     regionStdOutSink.publishReadFailure(serverName2, regionInfo2, new IOException());
     CanaryStatusTmpl tmpl = new CanaryStatusTmpl();
-    tmpl.render(new StringWriter(), regionStdOutSink);
+    StringWriter renderResultWriter = new StringWriter();
+    tmpl.render(renderResultWriter, regionStdOutSink);
+    String renderResult = renderResultWriter.toString();
+    Assert.assertTrue(renderResult.contains("staging-st05.server,22600"));
+    Assert.assertTrue(renderResult.contains("fakeTableName2"));
+
   }
 
   @Test
   public void testNoFailures() throws IOException {
     CanaryTool.RegionStdOutSink regionStdOutSink = new CanaryTool.RegionStdOutSink();
     CanaryStatusTmpl tmpl = new CanaryStatusTmpl();
-    tmpl.render(new StringWriter(), regionStdOutSink);
+    StringWriter renderResultWriter = new StringWriter();
+    tmpl.render(renderResultWriter, regionStdOutSink);
+    String renderResult = renderResultWriter.toString();
+    Assert.assertTrue(renderResult.contains("Total Failed Servers: 0"));
+    Assert.assertTrue(renderResult.contains("Total Failed Tables: 0"));
   }
 
 }

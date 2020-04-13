@@ -35,7 +35,6 @@ public class CanaryStatusServlet extends HttpServlet {
     CanaryTool.RegionStdOutSink sink =
       (CanaryTool.RegionStdOutSink) getServletContext().getAttribute(
         "sink");
-
     if (sink == null) {
       throw new ServletException(
         "RegionStdOutSink is null! The CanaryTool's InfoServer is not initialized correctly");
