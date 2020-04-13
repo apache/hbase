@@ -194,8 +194,8 @@ method defined in `Table` interface references the method from protobuf's
 `BlockingInterface`, which means we need to use a separated thread pool to execute
 the method to avoid blocking the async client, which is not good.
 
-Since coprocessor is an advance feature, we believe it is OK for coprocessor uses to
-make use of the `AsyncTable` directly. And there is a lightweight
+Since coprocessor is an advanced feature, we believe it is OK for coprocessor users to
+make use of the `AsyncTable` directly. There is a lightweight
 link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Connection.html#toAsyncConnection--[toAsyncConnection]
 method to get an `AsyncConnection` from `Connection`.
 ====
@@ -209,8 +209,8 @@ link:https://issues.apache.org/jira/browse/HBASE-5448[HBASE-5448]). To upgrade y
 HBase cluster from 0.94 or earlier to 0.96 or later, you need to reimplement your
 coprocessor.
 
-And in HBase 2.0.0, we make use of a shaded version of protobuf 3.x but still keep the
-protobuf for coprocessor on 2.5.0. And in 3.0.0, we removed all the dependency on non-shaded
+In HBase 2.0.0, we make use of a shaded version of protobuf 3.x, but still keep the
+protobuf for coprocessor on 2.5.0. In 3.0.0, we removed all dependencies on non-shaded
 protobuf so you need to reimplement your coprocessor to make use of the shaded protobuf
 version provided in hbase-thirdparty. Please see the <<protobuf,protobuf>> section for
 more details.
