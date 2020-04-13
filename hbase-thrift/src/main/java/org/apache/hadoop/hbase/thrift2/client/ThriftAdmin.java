@@ -1257,4 +1257,8 @@ public class ThriftAdmin implements Admin {
     throw new NotImplementedException("setRSGroup not supported in ThriftAdmin");
   }
 
+  @Override
+  public void renameRSGroup(String oldName, String newName) throws IOException {
+    throw new NotImplementedException("renameRSGroup not supported in ThriftAdmin");
+  }
 }

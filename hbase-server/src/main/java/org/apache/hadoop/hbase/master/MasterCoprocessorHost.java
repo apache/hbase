@@ -1542,6 +1542,26 @@ public class MasterCoprocessorHost
     });
   }
 
+  public void preRenameRSGroup(final String oldName, final String newName) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+
+      @Override
+      protected void call(MasterObserver observer) throws IOException {
+        observer.preRenameRSGroup(this, oldName, newName);
+      }
+    });
+  }
+
+  public void postRenameRSGroup(final String oldName, final String newName) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+
+      @Override
+      protected void call(MasterObserver observer) throws IOException {
+        observer.postRenameRSGroup(this, oldName, newName);
+      }
+    });
+  }
+
   public void preGetConfiguredNamespacesAndTablesInRSGroup(final String groupName)
     throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
