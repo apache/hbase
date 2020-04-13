@@ -91,6 +91,7 @@ module Hbase
       end
       assert(found_permission, 'Permission for user ' + global_user_name + ' was not found.')
 
+      found_permission = false
       security_admin.user_permission('.*') do |user, permission|
         if user == global_user_name
           assert_match(/WRITE/, permission.to_s)
