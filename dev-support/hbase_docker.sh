@@ -159,4 +159,4 @@ done
 echo "Successfully built ${IMAGE_NAME}."
 
 echo "Starting hbase shell..."
-docker run -it ${IMAGE_NAME}
+docker run --ulimit nproc=12500 -it ${IMAGE_NAME}

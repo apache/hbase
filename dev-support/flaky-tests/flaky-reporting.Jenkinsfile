@@ -43,7 +43,7 @@ pipeline {
           flaky_args=("${flaky_args[@]}" --urls "${JENKINS_URL}/job/HBase/job/HBase%20Nightly/job/${BRANCH_NAME}" --is-yetus True --max-builds 10)
           flaky_args=("${flaky_args[@]}" --urls "${JENKINS_URL}/job/HBase/job/HBase-Flaky-Tests/job/${BRANCH_NAME}" --is-yetus False --max-builds 30)
           docker build -t hbase-dev-support dev-support
-          docker run -v "${WORKSPACE}":/hbase --workdir=/hbase hbase-dev-support python dev-support/flaky-tests/report-flakies.py --mvn -v "${flaky_args[@]}"
+          docker run --ulimit nproc=12500 -v "${WORKSPACE}":/hbase --workdir=/hbase hbase-dev-support python dev-support/flaky-tests/report-flakies.py --mvn -v "${flaky_args[@]}"
 '''
       }
     }

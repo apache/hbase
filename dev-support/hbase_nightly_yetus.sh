@@ -69,8 +69,6 @@ YETUS_ARGS=("--sentinel" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--branch=${BRANCH_NAME}" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--tests-filter=${TESTS_FILTER}" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--ignore-unknown-options=true" "${YETUS_ARGS[@]}")
-# Why are these not being picked up from hbase-personality?
-YETUS_ARGS=("--proclimit=10000" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--dockermemlimit=20g" "${YETUS_ARGS[@]}")
 
 if [[ -n "${EXCLUDE_TESTS_URL}" ]]; then
