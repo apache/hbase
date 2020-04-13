@@ -81,11 +81,8 @@ function personality_globals
 
   # Yetus 0.7.0 enforces limits. Default proclimit is 1000.
   # Up it. See HBASE-19902 for how we arrived at this number.
-  # NOTE: I don't think changing this has an effect. Set the
-  # --proclimit passed to yetus. This seems to do what we
-  # need changing proclimit.
   #shellcheck disable=SC2034
-  PROCLIMIT=12500
+  PROC_LIMIT=12500
 
   # Set docker container to run with 20g. Default is 4g in yetus.
   # See HBASE-19902 for how we arrived at 20g.
@@ -519,7 +516,6 @@ function hadoopcheck_parse_args
 ## @stability    evolving
 function hadoopcheck_docker_support
 {
-  DOCKER_EXTRAARGS=("${DOCKER_EXTRAARGS[@]}" "--ulimit" "nproc=12500")
   DOCKER_EXTRAARGS=("${DOCKER_EXTRAARGS[@]}" "--env=QUICK_HADOOPCHECK=${QUICK_HADOOPCHECK}")
 }
 
