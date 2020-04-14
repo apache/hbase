@@ -1302,17 +1302,19 @@ The state of tests on the hbase branches varies. Some branches keep good test hy
 reliably with perhaps an unlucky sporadic flakey test failure. On other branches, the case may be less so with
 frequent flakies and even broken tests in need of attention that fail 100% of the time. Try and figure
 the state of tests on the branch you are currently interested in; the current state of nightly
-linke:https://builds.apache.org/view/H-L/view/HBase/job/HBase%20Nightly/[apache jenkins builds] is a good
+link:https://builds.apache.org/view/H-L/view/HBase/job/HBase%20Nightly/[apache jenkins builds] is a good
 place to start. Tests on master branch are generally not in the best of condition as releases
 are less frequent off master. This can make it hard landing patches especially given our dictum that
 patches land on master branch first.
 
 The full test suite can take from 5-6 hours on an anemic VM with 4 CPUs and minimal
-parallelism to 50 minutes or less on a linux machine with dozens of CPUs.
+parallelism to 50 minutes or less on a linux machine with dozens of CPUs and plenty of
+RAM.
 
 When you go to run the full test suite, make sure you up the test runner user nproc
-(`ulimit -u` -- make sure it > ~6000 or more even) and the number of files (`ulimit -n` -- make
-sure it > 10240 or so) limits on your system. Errors because the test run hits
+(`ulimit -u` -- make sure it > 6000 or more if more parallelism) and the number of
+open files (`ulimit -n` -- make sure it > 10240 or more) limits on your system.
+Errors because the test run hits
 limits are often only opaquely related to the constraint. You can see the current
 user settings by running `ulimit -a`.
 
@@ -1370,9 +1372,11 @@ For convenience, you can run `mvn test -P runDevTests` to execute both small and
 
 By default, `$ mvn test -P runAllTests` runs all tests using a quarter of the CPUs available on machine
 hosting the test run (see `surefire.firstPartForkCount` and `surefire.secondPartForkCount` in the top-level
-hbase `pom.xml`). Up these counts to get the build to run faster. You can also have hbase modules
+hbase `pom.xml` which default to 0.25C, or 1/4 of CPU count). Up these counts to get the build to run faster.
+You can also have hbase modules
 run their tests in parrallel when the dependency graph allows by passing `--threads=N` when you invoke
 maven, where `N` is the amount of parallelism wanted.
+maven, where `N` is the amount of _module_ parallelism wanted.
 
 For example, allowing that you want to use all cores on a machine to run tests,
 you could start up the maven test run with:
@@ -1382,16 +1386,17 @@ you could start up the maven test run with:
 ----
 
 If a 32 core machine, you should see periods during which 32 forked jvms appear in your process listing each running unit tests.
-Your milage may vary. Dependent on hardware, overcommittment of CPU, memory, etc., can bring the test suite crashing down,
-usually complaining of system exit and incomplete test report xml files. Start gently, with the default fork setting which
-uses a quarter of the available CPUs.
+Your milage may vary. Dependent on hardware, overcommittment of CPU and/or memory can bring the test suite crashing down,
+usually complaining with a spew of test system exits and incomplete test report xml files. Start gently, with the default fork
+and move up gradually.
 
-Adding the `--threads=N`, maven will run N modules in parallel when dependencies allow. Be aware, if you have
-set the forkcount to `1.0C`, and the threads count to '2', the number of concurrent test runners can approach
-2 * CPU count likely overcommitting the host machine.
+Adding the `--threads=N`, maven will run N maven modules in parallel (when module inter-dependencies allow). Be aware, if you have
+set the forkcount to `1.0C`, and the `--threads` count to '2', the number of concurrent test runners can approach
+2 * CPU, a count likely to overcommit the host machine (with attendant test exits failures).
 
 You will need ~2.2GB of memory per forked JVM plus the memory used by maven itself (3-4G).
 
+===== RAM Disk
 
 To increase the speed, you can as well use a ramdisk. 2-3G should be sufficient. Be sure to
 delete the files between each test run. The typical way to configure a ramdisk on Linux is:
@@ -1405,12 +1410,6 @@ You can then use it to run all HBase tests on 2.0 with the command:
 
 ----
 mvn test -PrunAllTests -Dtest.build.data.basedirectory=/ram2G
-----
-
-On earlier versions, use:
-
-----
-mvn test -P runAllTests -Dtest.build.data.basedirectory=/ram2G
 ----
 
 [[hbase.unittests.cmds.test.hbasetests]]
