@@ -150,7 +150,7 @@ module Hbase
         if !table_regex.nil? && isNamespace?(table_regex)
           nsPerm = permission.to_java(org.apache.hadoop.hbase.security.access.NamespacePermission)
           namespace = nsPerm.getNamespace
-        elsif !table_regex.nil?
+        elsif !table_regex.nil? && isTablePermission?(permission)
           tblPerm = permission.to_java(org.apache.hadoop.hbase.security.access.TablePermission)
           namespace = tblPerm.getNamespace
           table = !tblPerm.getTableName.nil? ? tblPerm.getTableName.getNameAsString : ''
@@ -181,6 +181,10 @@ module Hbase
 
     def isNamespace?(table_name)
       table_name.start_with?('@')
+    end
+
+    def isTablePermission?(permission)
+      permission.java_kind_of?(org.apache.hadoop.hbase.security.access.TablePermission)
     end
 
     # Does Namespace exist
