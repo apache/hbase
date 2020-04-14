@@ -310,6 +310,21 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     return false;
   }
 
+  private synchronized boolean areThereIdleRegions(Cluster c){
+    if (!isByTable){
+      for (ServerName server:c.servers) {
+        int serverIndex = c.serversToIndex.get(server.getServerName());
+        LOG.debug(
+          "Number of regions in server: "+server.getServerName()
+          + ": "+ String.valueOf(c.getNumRegions(serverIndex))
+        );
+        if (c.getNumRegions(serverIndex) < 1)
+          return true;
+      }
+    }
+    return false;
+  }
+
   @Override
   protected boolean needsBalance(TableName tableName, Cluster cluster) {
     ClusterLoadState cs = new ClusterLoadState(cluster.clusterState);
@@ -321,6 +336,10 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       return false;
     }
     if (areSomeRegionReplicasColocated(cluster)) {
+      return true;
+    }
+
+    if ( areThereIdleRegions(cluster)){
       return true;
     }
 
