@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
-import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.util.Pair;
@@ -357,10 +356,6 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
     // Create the balancer
     Class<? extends LoadBalancer> balancerKlass = config.getClass(HBASE_RSGROUP_LOADBALANCER_CLASS,
         StochasticLoadBalancer.class, LoadBalancer.class);
-    if (balancerKlass.equals(this.getClass())) {
-      LOG.warn("The internal balancer of RSGroupBasedLoadBalancer cannot be itself, falling back to the default LoadBalancer class");
-      balancerKlass = LoadBalancerFactory.getDefaultLoadBalancerClass();
-    }
     internalBalancer = ReflectionUtils.newInstance(balancerKlass, config);
     internalBalancer.setMasterServices(masterServices);
     if (clusterStatus != null) {
