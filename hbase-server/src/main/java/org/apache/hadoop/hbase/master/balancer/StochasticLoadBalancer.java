@@ -311,18 +311,16 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   }
 
   private synchronized boolean areThereIdleRegions(Cluster c){
-    if (!isByTable){
-      for (ServerName server:c.servers) {
-        int serverIndex = c.serversToIndex.get(server.getServerName());
-        LOG.debug(
-          "Number of regions in server: "+server.getServerName()
-          + ": "+ String.valueOf(c.getNumRegions(serverIndex))
-        );
-        if (c.getNumRegions(serverIndex) < 1)
-          return true;
-      }
+    boolean isServerExistsWithMoreRegions=false;
+    boolean isServerExistsWithZeroRegions=false;
+    for (ServerName server:c.servers){
+      int serverindex=c.serversToIndex.get(server.getServerName());
+      if (c.getNumRegions(serverindex) > 1)
+        isServerExistsWithMoreRegions = true;
+      if (c.getNumRegions(serverindex) < 1)
+        isServerExistsWithZeroRegions = true;
     }
-    return false;
+    return isServerExistsWithMoreRegions && isServerExistsWithZeroRegions;
   }
 
   @Override
