@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
 
 public abstract class EnableRSGroupsTestBase {
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestEnableRSGroupsCompatibility.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestEnableRSGroups.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 

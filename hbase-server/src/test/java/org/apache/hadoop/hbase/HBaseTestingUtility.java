@@ -101,6 +101,7 @@ import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil;
 import org.apache.hadoop.hbase.master.assignment.RegionStateStore;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
+import org.apache.hadoop.hbase.master.balancer.MiniHBaseLoadBalancer;
 import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.ChunkCreator;
@@ -341,6 +342,8 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     // tests opt-out for random port assignment
     this.conf.setBoolean(LocalHBaseCluster.ASSIGN_RANDOM_PORTS,
         this.conf.getBoolean(LocalHBaseCluster.ASSIGN_RANDOM_PORTS, true));
+    this.conf.set(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
+      this.conf.get(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, MiniHBaseLoadBalancer.class.getName()));
   }
 
   /**

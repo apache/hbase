@@ -60,7 +60,6 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.TableStateManager;
-import org.apache.hadoop.hbase.master.balancer.FavoredStochasticBalancer;
 import org.apache.hadoop.hbase.master.procedure.HBCKServerCrashProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler;
@@ -189,8 +188,10 @@ public class AssignmentManager {
     final Configuration conf = master.getConfiguration();
 
     // Only read favored nodes if using the favored nodes load balancer.
-    this.shouldAssignRegionsWithFavoredNodes = FavoredStochasticBalancer.class.isAssignableFrom(
-        conf.getClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, Object.class));
+
+    String balancerName = conf.get(HConstants.HBASE_MASTER_LOADBALANCER_CLASS);
+    this.shouldAssignRegionsWithFavoredNodes =
+        balancerName != null && balancerName.contains("FavoredStochasticBalancer");
 
     this.assignDispatchWaitMillis = conf.getInt(ASSIGN_DISPATCH_WAIT_MSEC_CONF_KEY,
         DEFAULT_ASSIGN_DISPATCH_WAIT_MSEC);
@@ -1031,8 +1032,9 @@ public class AssignmentManager {
 
     // If the RS is < 2.0 throw an exception to abort the operation, we are handling the split
     if (master.getServerManager().getVersionNumber(serverName) < 0x0200000) {
-      throw new UnsupportedOperationException(String.format(
-        "Split handled by the master: parent=%s hriA=%s hriB=%s", parent.getShortNameToLog(), hriA, hriB));
+      throw new UnsupportedOperationException(
+          String.format("Split handled by the master: parent=%s hriA=%s hriB=%s",
+            parent.getShortNameToLog(), hriA, hriB));
     }
   }
 
@@ -1323,9 +1325,13 @@ public class AssignmentManager {
 
     public boolean isRegionTwiceOverThreshold(final RegionInfo regionInfo) {
       Map<String, RegionState> m = this.ritsOverThreshold;
-      if (m == null) return false;
+      if (m == null) {
+        return false;
+      }
       final RegionState state = m.get(regionInfo.getEncodedName());
-      if (state == null) return false;
+      if (state == null) {
+        return false;
+      }
       return (statTimestamp - state.getStamp()) > (ritThreshold * 2);
     }
 
@@ -1620,12 +1626,13 @@ public class AssignmentManager {
   /**
    * Used by the client (via master) to identify if all regions have the schema updates
    *
-   * @param tableName
+   * @param tableName the table name
    * @return Pair indicating the status of the alter command (pending/total)
-   * @throws IOException
    */
   public Pair<Integer, Integer> getReopenStatus(TableName tableName) {
-    if (isTableDisabled(tableName)) return new Pair<Integer, Integer>(0, 0);
+    if (isTableDisabled(tableName)) {
+      return new Pair<Integer, Integer>(0, 0);
+    }
 
     final List<RegionState> states = regionStates.getTableRegionStates(tableName);
     int ritCount = 0;
@@ -1957,7 +1964,9 @@ public class AssignmentManager {
         assignQueueFullCond.await();
       }
 
-      if (!isRunning()) return null;
+      if (!isRunning()) {
+        return null;
+      }
       assignQueueFullCond.await(assignDispatchWaitMillis, TimeUnit.MILLISECONDS);
       regions = new HashMap<RegionInfo, RegionStateNode>(pendingAssignQueue.size());
       for (RegionStateNode regionNode: pendingAssignQueue) {
@@ -2094,7 +2103,9 @@ public class AssignmentManager {
       throw new HBaseIOException("unable to compute plans for regions=" + regions.size());
     }
 
-    if (plan.isEmpty()) return;
+    if (plan.isEmpty()) {
+      return;
+    }
 
     int evcount = 0;
     for (Map.Entry<ServerName, List<RegionInfo>> entry: plan.entrySet()) {
@@ -2150,8 +2161,9 @@ public class AssignmentManager {
     if (serverList.isEmpty()) {
       return Collections.emptyList();
     }
-    String highestVersion = Collections.max(serverList,
-        (o1, o2) -> VersionInfo.compareVersion(o1.getSecond(), o2.getSecond())).getSecond();
+    String highestVersion = Collections
+        .max(serverList, (o1, o2) -> VersionInfo.compareVersion(o1.getSecond(), o2.getSecond()))
+        .getSecond();
     return serverList.stream()
         .filter((p)->!p.getSecond().equals(highestVersion))
         .map(Pair::getFirst)

@@ -3532,7 +3532,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    */
   public String getLoadBalancerClassName() {
     return conf.get(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
-      LoadBalancerFactory.getDefaultLoadBalancerClass().getName());
+      HConstants.HBASE_MASTER_LOADBALANCER_CLASS_DEFAULT);
   }
 
   /**

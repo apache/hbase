@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coordination.ZkSplitLogWorkerCoordination;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
-import org.apache.hadoop.hbase.master.balancer.SimpleLoadBalancer;
+import org.apache.hadoop.hbase.master.balancer.MiniHBaseLoadBalancer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -273,7 +273,7 @@ public class TestZooKeeper {
     }
   }
 
-  static class MockLoadBalancer extends SimpleLoadBalancer {
+  static class MockLoadBalancer extends MiniHBaseLoadBalancer {
     static boolean retainAssignCalled = false;
 
     @Override

@@ -81,7 +81,8 @@ public class TestMasterOperationsForRegionReplicas {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestMasterOperationsForRegionReplicas.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestRegionPlacement.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestMasterOperationsForRegionReplicas.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Connection CONNECTION = null;
   private static Admin ADMIN;
@@ -164,7 +165,9 @@ public class TestMasterOperationsForRegionReplicas {
       for (Result result : metaRows) {
         RegionLocations locations = MetaTableAccessor.getRegionLocations(result);
         RegionInfo hri = locations.getRegionLocation().getRegion();
-        if (!hri.getTable().equals(tableName)) continue;
+        if (!hri.getTable().equals(tableName)) {
+          continue;
+        }
         numRows += 1;
         HRegionLocation[] servers = locations.getRegionLocations();
         // have two locations for the replicas of a region, and the locations should be different
@@ -340,7 +343,9 @@ public class TestMasterOperationsForRegionReplicas {
     Visitor visitor = new Visitor() {
       @Override
       public boolean visit(Result r) throws IOException {
-        if (MetaTableAccessor.getRegionInfo(r).getTable().equals(table)) count.incrementAndGet();
+        if (MetaTableAccessor.getRegionInfo(r).getTable().equals(table)) {
+          count.incrementAndGet();
+        }
         return true;
       }
     };

@@ -38,8 +38,6 @@ public class TestSCPWithReplicasWithRSGroup extends TestSCPBase {
 
   @Override
   protected void setupConf(Configuration conf) {
-    conf.setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, RSGroupBasedLoadBalancer.class,
-      LoadBalancer.class);
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, RSGroupAdminEndpoint.class.getName());
   }
 

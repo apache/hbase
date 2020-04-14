@@ -86,8 +86,7 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
 
   /**
    * Perform the major balance operation for cluster, will invoke {@link #balanceTable} to do actual
-   * balance. Normally not need override this method, except
-   * {@link org.apache.hadoop.hbase.master.balancer.SimpleLoadBalancer} and
+   * balance. Normally not need override this method, except SimpleLoadBalancer and
    * {@link org.apache.hadoop.hbase.rsgroup.RSGroupBasedLoadBalancer}
    * @param loadOfAllTable region load of servers for all table
    * @return a list of regions to be moved, including source and destination, or null if cluster is

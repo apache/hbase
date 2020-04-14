@@ -158,8 +158,9 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     int[][] numRegionsPerServerPerTable; //serverIndex -> tableIndex -> # regions
     int[]   numMaxRegionsPerTable;       //tableIndex -> max number of regions in a single RS
     int[]   regionIndexToPrimaryIndex;   //regionIndex -> regionIndex of the primary
-    boolean hasRegionReplicas = false;   //whether there is regions with replicas
 
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings("URF_UNREAD_FIELD")
+    boolean hasRegionReplicas = false;   //whether there is regions with replicas
     Integer[] serverIndicesSortedByRegionCount;
     Integer[] serverIndicesSortedByLocality;
 
@@ -168,6 +169,8 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     Map<String, Integer> racksToIndex;
     Map<String, Integer> tablesToIndex;
     Map<RegionInfo, Integer> regionsToIndex;
+
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings("URF_UNREAD_FIELD")
     float[] localityPerServer;
 
     int numServers;

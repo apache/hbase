@@ -29,12 +29,21 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class LoadBalancerFactory {
 
+  private LoadBalancerFactory() {
+
+  }
+
   /**
    * The default {@link LoadBalancer} class.
    * @return The Class for the default {@link LoadBalancer}.
    */
   public static Class<? extends LoadBalancer> getDefaultLoadBalancerClass() {
-    return StochasticLoadBalancer.class;
+    try {
+      return (Class<? extends LoadBalancer>) Class
+          .forName(HConstants.HBASE_MASTER_LOADBALANCER_CLASS_DEFAULT);
+    } catch (ClassNotFoundException e) {
+      return null;
+    }
   }
 
   /**

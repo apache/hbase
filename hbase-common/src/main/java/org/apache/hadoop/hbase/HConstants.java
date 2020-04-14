@@ -131,6 +131,10 @@ public final class HConstants {
   /** Config for pluggable load balancers */
   public static final String HBASE_MASTER_LOADBALANCER_CLASS = "hbase.master.loadbalancer.class";
 
+  /** Config for pluggable default load balancers */
+  public static final String HBASE_MASTER_LOADBALANCER_CLASS_DEFAULT =
+      "org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer";
+
   /** Config for balancing the cluster by table */
   public static final String HBASE_MASTER_LOADBALANCE_BYTABLE = "hbase.master.loadbalance.bytable";
 
