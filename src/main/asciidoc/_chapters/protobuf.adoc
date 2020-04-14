@@ -150,12 +150,14 @@ by CPEPs that will have the same guarantees against change as does our
 public API. TODO.
 
 === protobuf changes for hbase-3.0.0 (HBASE-23797)
-Since hadoop also shades protobuf and bumps the version to 3.x, there is no
-reason for us to stay on protobuf 2.5.0 any more.
+Since hadoop(-3.3.x) also shades protobuf and bumps the version to 3.x, there
+is no reason for us to stay on protobuf 2.5.0 any more.
 
-In 3.0.0, the hbase-protocol module has been purged, the CPEP implementation
-should use the protos in hbase-protocol-shaded module, and also make use of
-the shaded protobuf in hbase-thirdparty.
+In HBase 3.0.0, the hbase-protocol module has been purged, the CPEP
+implementation should use the protos in hbase-protocol-shaded module, and also
+make use of the shaded protobuf in hbase-thirdparty. In general, we will keep
+the protobuf version compatible for a whole major release, unless there are
+critical problems, for example, a critical CVE on protobuf.
 
 Add this dependency to your pom:
 [source,xml]
@@ -212,3 +214,9 @@ in hbase-thirdparty.
   </configuration>
 </plugin>
 ----
+
+In hbase-examples module, we have some examples under the
+`org.apache.hadoop.hbase.coprocessor.example` package. You can see
+`BulkDeleteEndpoint` and `BulkDelete.proto` for more details, and you can also
+check the `pom.xml` of hbase-examples module to see how to make use of the above
+plugin.
