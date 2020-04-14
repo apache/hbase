@@ -1605,11 +1605,11 @@
     <surefire.timeout>900</surefire.timeout>
     <test.exclude.pattern></test.exclude.pattern>
     <!--
-      default Xmx value is 2800m. Use -Dsurefire.Xmx=xxg to run tests with different JVM Xmx value.
-      this value is managed separately for jdk11.
+      Use -Dsurefire.Xmx=xxg to run tests with different JVM Xmx value.
+      This value is managed separately for jdk11. See below.
     -->
-    <surefire.Xmx>2800m</surefire.Xmx>
-    <surefire.cygwinXmx>2800m</surefire.cygwinXmx>
+    <surefire.Xmx>2200m</surefire.Xmx>
+    <surefire.cygwinXmx>2200m</surefire.cygwinXmx>
     <!--Mark our test runs with '-Dhbase.build.id' so we can identify a surefire test as ours in a process listing
 
       And for netty eventloops that have no explicit configuration, netty sets
@@ -2407,12 +2407,10 @@
         <!-- We need a minimum HDFS version of 3.2.0 for HADOOP-12760 -->
         <hadoop-three.version>3.2.0</hadoop-three.version>
         <!--
-          JDK11 appears to consume more heap than JDK8 does; OOME are more common in
-          -PrunLargeTests on this platform. Bump up heap allocated to tests (current default for
-          JDK8 is 2800m.
+          Value to use for surefire when running jdk11.
           TODO: replicate logic for windows
         -->
-        <surefire.Xmx>3200m</surefire.Xmx>
+        <surefire.Xmx>2200m</surefire.Xmx>
       </properties>
       <build>
         <plugins>
