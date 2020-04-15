@@ -51,6 +51,8 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 @InterfaceAudience.Private
 class MetaFixer {
   private static final Logger LOG = LoggerFactory.getLogger(MetaFixer.class);
+  private static final String MAX_MERGE_COUNT_KEY = "hbase.master.metafixer.max.merge.count";
+  private static final int MAX_MERGE_COUNT_DEFAULT = 10;
 
   private final MasterServices masterServices;
   /**
@@ -61,7 +63,7 @@ class MetaFixer {
   MetaFixer(MasterServices masterServices) {
     this.masterServices = masterServices;
     this.maxMergeCount = this.masterServices.getConfiguration().
-        getInt("hbase.master.metafixer.max.merge.count", 10);
+      getInt(MAX_MERGE_COUNT_KEY, MAX_MERGE_COUNT_DEFAULT);
   }
 
   void fix() throws IOException {
