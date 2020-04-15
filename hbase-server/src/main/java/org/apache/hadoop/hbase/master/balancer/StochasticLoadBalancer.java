@@ -310,14 +310,13 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     return false;
   }
 
-  private synchronized boolean areThereIdleRegions(Cluster c){
-    boolean isServerExistsWithMoreRegions=false;
-    boolean isServerExistsWithZeroRegions=false;
-    for (ServerName server:c.servers){
-      int serverindex=c.serversToIndex.get(server.getServerName());
-      if (c.getNumRegions(serverindex) > 1)
+  protected final synchronized boolean idleRegionExist(Cluster c){
+    boolean isServerExistsWithMoreRegions = false;
+    boolean isServerExistsWithZeroRegions = false;
+    for (int[] serverList: c.regionsPerServer){
+      if (serverList.length > 1)
         isServerExistsWithMoreRegions = true;
-      if (c.getNumRegions(serverindex) < 1)
+      if (serverList.length < 1)
         isServerExistsWithZeroRegions = true;
     }
     return isServerExistsWithMoreRegions && isServerExistsWithZeroRegions;
@@ -337,7 +336,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       return true;
     }
 
-    if ( areThereIdleRegions(cluster)){
+    if (idleRegionExist(cluster)){
       return true;
     }
 
