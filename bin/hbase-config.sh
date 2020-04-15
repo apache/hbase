@@ -168,3 +168,26 @@ if [ -z "$JAVA_HOME" ]; then
 EOF
     exit 1
 fi
+
+function read_java_version() {
+  properties="$("${JAVA_HOME}/bin/java" -XshowSettings:properties -version 2>&1)"
+  echo "${properties}" | "${GREP}" java.runtime.version | head -1 | "${SED}" -e 's/.* = \([^ ]*\)/\1/'
+}
+
+# Inspect the system properties exposed by this JVM to identify the major
+# version number. Normalize on the popular version number, thus consider JDK
+# 1.8 as version "8".
+function parse_java_major_version() {
+  complete_version=$1
+  # split off suffix version info like '-b10' or '+10' or '_10'
+  # careful to not use GNU Sed extensions
+  version="$(echo "$complete_version" | "${SED}" -e 's/+/_/g' -e 's/-/_/g' | cut -d'_' -f1)"
+  case "$version" in
+  1.*)
+    echo "$version" | cut -d'.' -f2
+    ;;
+  *)
+    echo "$version" | cut -d'.' -f1
+    ;;
+  esac
+}
