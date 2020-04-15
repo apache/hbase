@@ -396,6 +396,23 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     }
   }
 
+  @Override
+  public void renameRSGroup(String oldName, String newName) throws IOException {
+    checkGroupName(oldName);
+    checkGroupName(newName);
+    if (oldName.equals(RSGroupInfo.DEFAULT_GROUP)) {
+      throw new ConstraintException("Can't rename default rsgroup");
+    }
+
+    RSGroupInfo oldGroup = getRSGroup(oldName);
+    Map<String,RSGroupInfo> newGroupMap = Maps.newHashMap(rsGroupMap);
+    newGroupMap.remove(oldName);
+    RSGroupInfo newGroup = new RSGroupInfo(newName,
+      (SortedSet<Address>) oldGroup.getServers(), oldGroup.getTables());
+    newGroupMap.put(newName, newGroup);
+    flushConfig(newGroupMap);
+  }
+
   /**
    * Will try to get the rsgroup from {@code tableMap} first
    * then try to get the rsgroup from {@code script}

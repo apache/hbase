@@ -127,6 +127,13 @@ public interface RSGroupInfoManager {
   void removeServers(Set<Address> servers) throws IOException;
 
   /**
+   * Rename RSGroup
+   * @param oldName old rsgroup name
+   * @param newName new rsgroup name
+   */
+  void renameRSGroup(String oldName, String newName) throws IOException;
+
+  /**
    * Determine {@code RSGroupInfo} for the given table.
    * @param tableName table name
    * @return {@link RSGroupInfo} which table should belong to

@@ -525,6 +525,13 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     }
   }
 
+  @Override
+  public void renameRSGroup(String oldName, String newName) throws IOException {
+    synchronized (rsGroupInfoManager) {
+      rsGroupInfoManager.renameRSGroup(oldName, newName);
+    }
+  }
+
   private Map<String, RegionState> rsGroupGetRegionsInTransition(String groupName)
       throws IOException {
     Map<String, RegionState> rit = Maps.newTreeMap();

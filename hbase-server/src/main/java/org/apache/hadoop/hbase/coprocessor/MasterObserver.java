@@ -1624,4 +1624,26 @@ public interface MasterObserver {
   default void postHasUserPermissions(ObserverContext<MasterCoprocessorEnvironment> ctx,
       String userName, List<Permission> permissions) throws IOException {
   }
+
+  /**
+   * Called before rename rsgroup.
+   * @param ctx the environment to interact with the framework and master
+   * @param oldName old rsgroup name
+   * @param newName new rsgroup name
+   * @throws IOException on failure
+   */
+  default void preRenameRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final String oldName, final String newName) throws IOException {
+  }
+
+  /**
+   * Called after rename rsgroup.
+   * @param ctx the environment to interact with the framework and master
+   * @param oldName old rsgroup name
+   * @param newName new rsgroup name
+   * @throws IOException on failure
+   */
+  default void postRenameRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final String oldName, final String newName) throws IOException {
+  }
 }
