@@ -21,7 +21,9 @@ import static org.apache.hadoop.hbase.util.FutureUtils.get;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -64,6 +66,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -1064,7 +1067,31 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   default Collection<ServerName> getRegionServers() throws IOException {
-    return getClusterMetrics(EnumSet.of(Option.SERVERS_NAME)).getServersName();
+    return getRegionServers(false);
+  }
+
+  /**
+   * Retrieve all current live region servers including decommissioned
+   * if excludeDecommissionedRS is false, else non-decommissioned ones only
+   *
+   * @param excludeDecommissionedRS should we exclude decommissioned RS nodes
+   * @return all current live region servers including/excluding decommissioned hosts
+   * @throws IOException if a remote or network exception occurs
+   */
+  default Collection<ServerName> getRegionServers(boolean excludeDecommissionedRS)
+      throws IOException {
+    List<ServerName> allServers =
+      getClusterMetrics(EnumSet.of(Option.SERVERS_NAME)).getServersName();
+    if (!excludeDecommissionedRS) {
+      return allServers;
+    }
+    List<ServerName> decommissionedRegionServers = listDecommissionedRegionServers();
+    if (CollectionUtils.isNotEmpty(decommissionedRegionServers)) {
+      allServers = new ArrayList<>(allServers);
+      allServers.removeIf(decommissionedRegionServers::contains);
+      return Collections.unmodifiableList(allServers);
+    }
+    return allServers;
   }
 
   /**
