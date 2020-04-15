@@ -497,4 +497,47 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     TEST_UTIL.getConfiguration().setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
     initialize();
   }
+
+  @Test
+  public void testRenameRSGroup() throws Exception {
+    // Add rsgroup, and assign 2 servers and a table to it.
+    RSGroupInfo oldgroup = addGroup("oldgroup", 2);
+    final TableName tb1 = TableName.valueOf("testRename");
+    TEST_UTIL.createTable(tb1, "tr");
+    rsGroupAdmin.moveTables(Sets.newHashSet(tb1), oldgroup.getName());
+    TEST_UTIL.waitFor(1000,
+      (Waiter.Predicate<Exception>) () ->
+        rsGroupAdmin.getRSGroupInfoOfTable(tb1).getServers().size() == 2);
+    oldgroup = rsGroupAdmin.getRSGroupInfo(oldgroup.getName());
+    assertEquals(2, oldgroup.getServers().size());
+    assertEquals(oldgroup.getName(), rsGroupAdmin.getRSGroupInfoOfTable(tb1).getName());
+    assertTrue(oldgroup.getTables().contains(tb1));
+
+    // Another rsgroup and table for verification
+    // that they are unchanged during we're renaming oldgroup.
+    RSGroupInfo normal = addGroup("normal", 1);
+    final TableName tb2 = TableName.valueOf("unmovedTable");
+    TEST_UTIL.createTable(tb2, "ut");
+    rsGroupAdmin.moveTables(Sets.newHashSet(tb2), normal.getName());
+    TEST_UTIL.waitFor(1000,
+      (Waiter.Predicate<Exception>) () ->
+        rsGroupAdmin.getRSGroupInfoOfTable(tb2).getServers().size() == 1);
+    normal = rsGroupAdmin.getRSGroupInfo(normal.getName());
+    assertEquals(1, normal.getServers().size());
+    assertEquals(normal.getName(), rsGroupAdmin.getRSGroupInfoOfTable(tb2).getName());
+    assertTrue(normal.containsTable(tb2));
+
+
+    // Rename rsgroup
+    rsGroupAdmin.renameRSGroup(oldgroup.getName(), "newgroup");
+    Set<Address> servers = oldgroup.getServers();
+    RSGroupInfo newgroup = rsGroupAdmin.getRSGroupInfo("newgroup");
+    assertEquals(servers.size(), newgroup.getServers().size());
+    for (Address server : servers) {
+      assertTrue(newgroup.containsServer(server));
+    }
+    assertEquals(newgroup.getName(), rsGroupAdmin.getRSGroupInfoOfTable(tb1).getName());
+    assertTrue(newgroup.containsTable(tb1));
+    assertEquals(normal.getName(), rsGroupAdmin.getRSGroupInfoOfTable(tb2).getName());
+  }
 }
