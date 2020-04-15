@@ -92,8 +92,25 @@ public class ChaosMonkeyRunner extends AbstractHBaseTool {
   protected int doWork() throws Exception {
     setUpCluster();
     getAndStartMonkey();
-    while (true) {// loop here until got killed
-      Thread.sleep(10000);
+    while (!monkey.isStopped()) {
+      // loop here until got killed
+      try{
+        Thread.sleep(5000);
+      } catch (InterruptedException ite) {
+        // Chaos monkeys got interrupted.
+        // It is ok to stop monkeys and exit.
+        monkey.stop("Interruption occurred.");
+        break;
+      }
+    }
+    monkey.waitForStop();
+    return 0;
+  }
+
+
+  public void stopRunner() {
+    if (monkey != null) {
+      monkey.stop("Program Control");
     }
   }
 
