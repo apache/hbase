@@ -88,6 +88,8 @@ import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveRSGro
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse;
+import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RenameRSGroupRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RenameRSGroupResponse;
 import org.apache.hadoop.hbase.protobuf.generated.TableProtos;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -487,6 +489,27 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
     if (!rsGroupInfo.containsTable(desc.getTableName())) {
       groupAdminServer.moveTables(Sets.newHashSet(desc.getTableName()), groupName);
     }
+  }
+
+  @Override
+  public void renameRSGroup(RpcController controller,
+                            RenameRSGroupRequest request,
+                            RpcCallback<RenameRSGroupResponse> done) {
+    RenameRSGroupResponse.Builder builder = RenameRSGroupResponse.newBuilder();
+    String oldRSGroup = request.getOldRsgroupName();
+    String newRSGroup = request.getNewRsgroupName();
+    try {
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preRenameRSGroup(oldRSGroup, newRSGroup);
+      }
+      groupAdminServer.renameRSGroup(oldRSGroup, newRSGroup);
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postRenameRSGroup(oldRSGroup, newRSGroup);
+      }
+    } catch (IOException e) {
+      ResponseConverter.setControllerException(controller, e);
+    }
+    done.run(builder.build());
   }
 
   /////////////////////////////////////////////////////////////////////////////
@@ -1229,6 +1252,16 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
   public void postBalanceRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
                                  String groupName, boolean balancerRan) throws IOException {
 
+  }
+
+  @Override
+  public void preRenameRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
+                               String oldName, String newName) throws IOException {
+  }
+
+  @Override
+  public void postRenameRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
+                                String oldName, String newName) throws IOException {
   }
 
   public void checkPermission(String request) throws IOException {

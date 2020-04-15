@@ -1215,4 +1215,25 @@ public interface MasterObserver extends Coprocessor {
    */
   void postBalanceRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx,
                           String groupName, boolean balancerRan) throws IOException;
+
+  /**
+   * Called before rename rsgroup.
+   * @param ctx the environment to interact with the framework and master
+   * @param oldName old rsgroup name
+   * @param newName new rsgroup name
+   * @throws IOException on failure
+   */
+  void preRenameRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+                        final String oldName, final String newName) throws IOException;
+
+  /**
+   * Called after rename rsgroup.
+   * @param ctx the environment to interact with the framework and master
+   * @param oldName old rsgroup name
+   * @param newName new rsgroup name
+   * @throws IOException on failure
+   */
+  void postRenameRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+                         final String oldName, final String newName) throws IOException;
+
 }

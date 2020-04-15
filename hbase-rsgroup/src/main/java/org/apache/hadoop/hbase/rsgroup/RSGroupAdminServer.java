@@ -504,6 +504,13 @@ public class RSGroupAdminServer implements RSGroupAdmin {
   }
 
   @Override
+  public void renameRSGroup(String oldName, String newName) throws IOException {
+    synchronized (rsGroupInfoManager) {
+      rsGroupInfoManager.renameRSGroup(oldName, newName);
+    }
+  }
+
+  @Override
   public void close() throws IOException {
   }
 

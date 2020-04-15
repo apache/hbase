@@ -685,4 +685,14 @@ public class BaseMasterObserver implements MasterObserver {
   public void postBalanceRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
                                  String groupName, boolean balancerRan) throws IOException {
   }
+
+  @Override
+  public void preRenameRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
+                               String oldName, String newName) throws IOException {
+  }
+
+  @Override
+  public void postRenameRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
+                                String oldName, String newName) throws IOException {
+  }
 }
