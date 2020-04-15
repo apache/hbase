@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.snapshot;
 
+import static org.junit.Assert.assertFalse;
+import java.util.Iterator;
+import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -68,6 +71,20 @@ public class TestExportSnapshotAdjunct {
     TestExportSnapshot.setUpBaseConf(TEST_UTIL.getConfiguration());
     TEST_UTIL.startMiniCluster(3);
     TEST_UTIL.startMiniMapReduceCluster();
+    Configuration conf = TEST_UTIL.getConfiguration();
+    for (Iterator<Map.Entry<String, String>> i = conf.iterator(); i.hasNext();) {
+      Map.Entry<String, String> e = i.next();
+      if (e.getValue().contains("java.io.tmpdir")) {
+        continue;
+      }
+      if (e.getValue().contains("hadoop.tmp.dir")) {
+        continue;
+      }
+      if (e.getValue().contains("hbase.tmp.dir")) {
+        continue;
+      }
+      assertFalse(e.getKey() + " " + e.getValue(), e.getValue().contains("tmp"));
+    }
   }
 
   @AfterClass
