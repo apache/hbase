@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.chaos.util;
 
+import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
@@ -29,9 +31,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * This class can be used to control chaos monkeys life cycle.
