@@ -150,8 +150,8 @@ by CPEPs that will have the same guarantees against change as does our
 public API. TODO.
 
 === protobuf changes for hbase-3.0.0 (HBASE-23797)
-Since hadoop(-3.3.x) also shades protobuf and bumps the version to 3.x, there
-is no reason for us to stay on protobuf 2.5.0 any more.
+Since hadoop(start from 3.3.x) also shades protobuf and bumps the version to
+3.x, there is no reason for us to stay on protobuf 2.5.0 any more.
 
 In HBase 3.0.0, the hbase-protocol module has been purged, the CPEP
 implementation should use the protos in hbase-protocol-shaded module, and also
