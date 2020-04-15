@@ -597,8 +597,7 @@ function hadoopcheck_rebuild
       hbase_hadoop2_versions="2.10.0"
     fi
   else
-    yetus_info "Setting Hadoop 2 versions to test based on master/feature branch rules."
-    # we do not support hadoop 2 for hbase 3.x any more
+    yetus_info "Setting Hadoop 2 versions to null on master/feature branch rules since we do not support hadoop 2 for hbase 3.x any more."
     hbase_hadoop2_versions=""
   fi
   if [[ "${PATCH_BRANCH}" = branch-1* ]]; then

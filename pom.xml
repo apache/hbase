@@ -2592,6 +2592,10 @@
       </build>
     </profile>
     <!-- Dependency management profiles for submodules when building against specific hadoop branches.-->
+    <!-- Submodules that need hadoop dependencies should declare
+         profiles with activation properties matching the profile here.
+         Generally, it should be sufficient to copy the first
+         few lines of the profile you want to match. -->
     <!-- Profile for building against Hadoop 3.0.0. Activate by default -->
     <profile>
       <id>hadoop-3.0</id>
