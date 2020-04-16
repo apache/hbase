@@ -73,6 +73,9 @@ public class TestExportSnapshotAdjunct {
     Configuration conf = TEST_UTIL.getConfiguration();
     for (Iterator<Map.Entry<String, String>> i = conf.iterator(); i.hasNext();) {
       Map.Entry<String, String> e = i.next();
+      if (e.getKey().contains("original.hbase.dir")) {
+        continue;
+      }
       if (e.getValue().contains("java.io.tmpdir")) {
         continue;
       }
