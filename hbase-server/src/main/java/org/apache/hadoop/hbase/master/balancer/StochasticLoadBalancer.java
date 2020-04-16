@@ -310,8 +310,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     return false;
   }
 
-
-
   @Override
   protected boolean needsBalance(TableName tableName, Cluster cluster) {
     ClusterLoadState cs = new ClusterLoadState(cluster.clusterState);

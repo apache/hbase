@@ -1192,7 +1192,9 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       return false;
     }
     if(areSomeRegionReplicasColocated(c)) return true;
-    if(idleRegionExist(c)) return true;
+    if(idleRegionExist(c)) {
+      return true;
+    }
 
     // Check if we even need to do any load balancing
     // HBASE-3681 check sloppiness first
@@ -1232,7 +1234,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       if (serverList.length > 1) {
         isServerExistsWithMoreRegions = true;
       }
-      if (serverList.length < 1) {
+      if (serverList.length == 0) {
         isServerExistsWithZeroRegions = true;
       }
     }
