@@ -25,6 +25,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -893,6 +894,46 @@ public class TestAdmin2 extends TestAdminBase {
 
     // after cleanup of slowlog responses, total count of slowlog payloads should be 0
     Assert.assertEquals(onlineLogRecords.size(), 0);
+  }
+
+  @Test
+  public void testGetRegionServers() throws Exception {
+    // get all live server names
+    List<ServerName> serverNames = new ArrayList<>(ADMIN.getRegionServers(true));
+    Assert.assertEquals(3, serverNames.size());
+
+    List<ServerName> serversToDecom = new ArrayList<>();
+    ServerName serverToDecommission = serverNames.get(0);
+
+    serversToDecom.add(serverToDecommission);
+    ADMIN.decommissionRegionServers(serversToDecom, false);
+    waitForServerCommissioned(serverToDecommission, true);
+
+    Assert.assertEquals(2, ADMIN.getRegionServers(true).size());
+    Assert.assertEquals(3, ADMIN.getRegionServers(false).size());
+
+    ADMIN.recommissionRegionServer(serverToDecommission, Collections.emptyList());
+    waitForServerCommissioned(null, false);
+
+    Assert.assertEquals(3, ADMIN.getRegionServers(true).size());
+    Assert.assertEquals(3, ADMIN.getRegionServers(false).size());
+  }
+
+  private static void waitForServerCommissioned(ServerName excludeServer,
+      boolean anyServerDecommissioned) {
+    TEST_UTIL.waitFor(3000, () -> {
+      try {
+        List<ServerName> decomServers = TEST_UTIL.getAdmin().listDecommissionedRegionServers();
+        if (anyServerDecommissioned) {
+          return decomServers.size() == 1
+            && decomServers.get(0).equals(excludeServer);
+        } else {
+          return decomServers.size() == 0;
+        }
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    });
   }
 
 }
