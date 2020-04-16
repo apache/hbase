@@ -1083,7 +1083,10 @@ public class HttpServer implements FilterContainer {
           listener.open();
           LOG.info("Jetty bound to port " + listener.getLocalPort());
           break;
-        } catch (BindException ex) {
+        } catch (IOException ex) {
+          if(!(ex instanceof BindException) && !(ex.getCause() instanceof BindException)) {
+            throw ex;
+          }
           if (port == 0 || !findPort) {
             BindException be = new BindException("Port in use: "
                 + listener.getHost() + ":" + listener.getPort());
