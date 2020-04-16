@@ -398,132 +398,141 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
   @Override
   public EncodedSeeker createSeeker(KVComparator comparator,
       final HFileBlockDecodingContext decodingCtx) {
-    return new BufferedEncodedSeeker<FastDiffSeekerState>(comparator, decodingCtx) {
-      private void decode(boolean isFirst) {
-        byte flag = currentBuffer.get();
-        if ((flag & FLAG_SAME_KEY_LENGTH) == 0) {
-          if (!isFirst) {
-            System.arraycopy(current.keyBuffer,
-                current.keyLength - current.prevTimestampAndType.length,
-                current.prevTimestampAndType, 0,
-                current.prevTimestampAndType.length);
-          }
-          current.keyLength = ByteBufferUtils.readCompressedInt(currentBuffer);
+    return new FastDiffSeekerStateBufferedEncodedSeeker(comparator, decodingCtx);
+  }
+
+  private class FastDiffSeekerStateBufferedEncodedSeeker
+      extends BufferedEncodedSeeker<FastDiffSeekerState> {
+
+    private FastDiffSeekerStateBufferedEncodedSeeker(KVComparator comparator,
+      HFileBlockDecodingContext decodingCtx) {
+      super(comparator, decodingCtx);
+    }
+
+    private void decode(boolean isFirst) {
+      byte flag = currentBuffer.get();
+      if ((flag & FLAG_SAME_KEY_LENGTH) == 0) {
+        if (!isFirst) {
+          System.arraycopy(current.keyBuffer,
+              current.keyLength - current.prevTimestampAndType.length,
+              current.prevTimestampAndType, 0,
+              current.prevTimestampAndType.length);
         }
-        if ((flag & FLAG_SAME_VALUE_LENGTH) == 0) {
-          current.valueLength =
-              ByteBufferUtils.readCompressedInt(currentBuffer);
-        }
-        current.lastCommonPrefix =
+        current.keyLength = ByteBufferUtils.readCompressedInt(currentBuffer);
+      }
+      if ((flag & FLAG_SAME_VALUE_LENGTH) == 0) {
+        current.valueLength =
             ByteBufferUtils.readCompressedInt(currentBuffer);
+      }
+      current.lastCommonPrefix =
+          ByteBufferUtils.readCompressedInt(currentBuffer);
 
-        current.ensureSpaceForKey();
+      current.ensureSpaceForKey();
 
-        if (isFirst) {
-          // copy everything
-          currentBuffer.get(current.keyBuffer, current.lastCommonPrefix,
-              current.keyLength - current.prevTimestampAndType.length);
-          current.rowLengthWithSize = Bytes.toShort(current.keyBuffer, 0) +
-              Bytes.SIZEOF_SHORT;
-          current.familyLengthWithSize =
-              current.keyBuffer[current.rowLengthWithSize] + Bytes.SIZEOF_BYTE;
-        } else if (current.lastCommonPrefix < Bytes.SIZEOF_SHORT) {
-          // length of row is different, copy everything except family
+      if (isFirst) {
+        // copy everything
+        currentBuffer.get(current.keyBuffer, current.lastCommonPrefix,
+            current.keyLength - current.prevTimestampAndType.length);
+        current.rowLengthWithSize = Bytes.toShort(current.keyBuffer, 0) +
+            Bytes.SIZEOF_SHORT;
+        current.familyLengthWithSize =
+            current.keyBuffer[current.rowLengthWithSize] + Bytes.SIZEOF_BYTE;
+      } else if (current.lastCommonPrefix < Bytes.SIZEOF_SHORT) {
+        // length of row is different, copy everything except family
 
-          // copy the row size
-          int oldRowLengthWithSize = current.rowLengthWithSize;
-          currentBuffer.get(current.keyBuffer, current.lastCommonPrefix,
-              Bytes.SIZEOF_SHORT - current.lastCommonPrefix);
-          current.rowLengthWithSize = Bytes.toShort(current.keyBuffer, 0) +
-              Bytes.SIZEOF_SHORT;
+        // copy the row size
+        int oldRowLengthWithSize = current.rowLengthWithSize;
+        currentBuffer.get(current.keyBuffer, current.lastCommonPrefix,
+            Bytes.SIZEOF_SHORT - current.lastCommonPrefix);
+        current.rowLengthWithSize = Bytes.toShort(current.keyBuffer, 0) +
+            Bytes.SIZEOF_SHORT;
 
-          // move the column family
-          System.arraycopy(current.keyBuffer, oldRowLengthWithSize,
-              current.keyBuffer, current.rowLengthWithSize,
-              current.familyLengthWithSize);
+        // move the column family
+        System.arraycopy(current.keyBuffer, oldRowLengthWithSize,
+            current.keyBuffer, current.rowLengthWithSize,
+            current.familyLengthWithSize);
 
-          // copy the rest of row
-          currentBuffer.get(current.keyBuffer, Bytes.SIZEOF_SHORT,
-              current.rowLengthWithSize - Bytes.SIZEOF_SHORT);
+        // copy the rest of row
+        currentBuffer.get(current.keyBuffer, Bytes.SIZEOF_SHORT,
+            current.rowLengthWithSize - Bytes.SIZEOF_SHORT);
 
-          // copy the qualifier
-          currentBuffer.get(current.keyBuffer, current.rowLengthWithSize
-              + current.familyLengthWithSize, current.keyLength
-              - current.rowLengthWithSize - current.familyLengthWithSize
-              - current.prevTimestampAndType.length);
-        } else if (current.lastCommonPrefix < current.rowLengthWithSize) {
-          // We have to copy part of row and qualifier, but the column family
-          // is in the right place.
+        // copy the qualifier
+        currentBuffer.get(current.keyBuffer, current.rowLengthWithSize
+            + current.familyLengthWithSize, current.keyLength
+            - current.rowLengthWithSize - current.familyLengthWithSize
+            - current.prevTimestampAndType.length);
+      } else if (current.lastCommonPrefix < current.rowLengthWithSize) {
+        // We have to copy part of row and qualifier, but the column family
+        // is in the right place.
 
-          // before column family (rest of row)
-          currentBuffer.get(current.keyBuffer, current.lastCommonPrefix,
-              current.rowLengthWithSize - current.lastCommonPrefix);
+        // before column family (rest of row)
+        currentBuffer.get(current.keyBuffer, current.lastCommonPrefix,
+            current.rowLengthWithSize - current.lastCommonPrefix);
 
-          // after column family (qualifier)
-          currentBuffer.get(current.keyBuffer, current.rowLengthWithSize
-              + current.familyLengthWithSize, current.keyLength
-              - current.rowLengthWithSize - current.familyLengthWithSize
-              - current.prevTimestampAndType.length);
-        } else {
-          // copy just the ending
-          currentBuffer.get(current.keyBuffer, current.lastCommonPrefix,
-              current.keyLength - current.prevTimestampAndType.length
-                  - current.lastCommonPrefix);
-        }
-
-        // timestamp
-        int pos = current.keyLength - current.prevTimestampAndType.length;
-        int commonTimestampPrefix = (flag & MASK_TIMESTAMP_LENGTH) >>>
-          SHIFT_TIMESTAMP_LENGTH;
-        if ((flag & FLAG_SAME_KEY_LENGTH) == 0) {
-          System.arraycopy(current.prevTimestampAndType, 0, current.keyBuffer,
-              pos, commonTimestampPrefix);
-        }
-        pos += commonTimestampPrefix;
-        currentBuffer.get(current.keyBuffer, pos,
-            Bytes.SIZEOF_LONG - commonTimestampPrefix);
-        pos += Bytes.SIZEOF_LONG - commonTimestampPrefix;
-
-        // type
-        if ((flag & FLAG_SAME_TYPE) == 0) {
-          currentBuffer.get(current.keyBuffer, pos, Bytes.SIZEOF_BYTE);
-        } else if ((flag & FLAG_SAME_KEY_LENGTH) == 0) {
-          current.keyBuffer[pos] =
-              current.prevTimestampAndType[Bytes.SIZEOF_LONG];
-        }
-
-        // handle value
-        if ((flag & FLAG_SAME_VALUE) == 0) {
-          current.valueOffset = currentBuffer.position();
-          ByteBufferUtils.skip(currentBuffer, current.valueLength);
-        }
-
-        if (includesTags()) {
-          decodeTags();
-        }
-        if (includesMvcc()) {
-          current.memstoreTS = ByteBufferUtils.readVLong(currentBuffer);
-        } else {
-          current.memstoreTS = 0;
-        }
-        current.nextKvOffset = currentBuffer.position();
+        // after column family (qualifier)
+        currentBuffer.get(current.keyBuffer, current.rowLengthWithSize
+            + current.familyLengthWithSize, current.keyLength
+            - current.rowLengthWithSize - current.familyLengthWithSize
+            - current.prevTimestampAndType.length);
+      } else {
+        // copy just the ending
+        currentBuffer.get(current.keyBuffer, current.lastCommonPrefix,
+            current.keyLength - current.prevTimestampAndType.length
+                - current.lastCommonPrefix);
       }
 
-      @Override
-      protected void decodeFirst() {
-        ByteBufferUtils.skip(currentBuffer, Bytes.SIZEOF_INT);
-        decode(true);
+      // timestamp
+      int pos = current.keyLength - current.prevTimestampAndType.length;
+      int commonTimestampPrefix = (flag & MASK_TIMESTAMP_LENGTH) >>>
+        SHIFT_TIMESTAMP_LENGTH;
+      if ((flag & FLAG_SAME_KEY_LENGTH) == 0) {
+        System.arraycopy(current.prevTimestampAndType, 0, current.keyBuffer,
+            pos, commonTimestampPrefix);
+      }
+      pos += commonTimestampPrefix;
+      currentBuffer.get(current.keyBuffer, pos,
+          Bytes.SIZEOF_LONG - commonTimestampPrefix);
+      pos += Bytes.SIZEOF_LONG - commonTimestampPrefix;
+
+      // type
+      if ((flag & FLAG_SAME_TYPE) == 0) {
+        currentBuffer.get(current.keyBuffer, pos, Bytes.SIZEOF_BYTE);
+      } else if ((flag & FLAG_SAME_KEY_LENGTH) == 0) {
+        current.keyBuffer[pos] =
+            current.prevTimestampAndType[Bytes.SIZEOF_LONG];
       }
 
-      @Override
-      protected void decodeNext() {
-        decode(false);
+      // handle value
+      if ((flag & FLAG_SAME_VALUE) == 0) {
+        current.valueOffset = currentBuffer.position();
+        ByteBufferUtils.skip(currentBuffer, current.valueLength);
       }
 
-      @Override
-      protected FastDiffSeekerState createSeekerState() {
-        return new FastDiffSeekerState();
+      if (includesTags()) {
+        decodeTags();
       }
-    };
+      if (includesMvcc()) {
+        current.memstoreTS = ByteBufferUtils.readVLong(currentBuffer);
+      } else {
+        current.memstoreTS = 0;
+      }
+      current.nextKvOffset = currentBuffer.position();
+    }
+
+    @Override
+    protected void decodeFirst() {
+      ByteBufferUtils.skip(currentBuffer, Bytes.SIZEOF_INT);
+      decode(true);
+    }
+
+    @Override
+    protected void decodeNext() {
+      decode(false);
+    }
+
+    @Override
+    protected FastDiffSeekerState createSeekerState() {
+      return new FastDiffSeekerState();
+    }
   }
 }

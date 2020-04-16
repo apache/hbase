@@ -84,35 +84,7 @@ public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
   @Override
   public EncodedSeeker createSeeker(KVComparator comparator,
       final HFileBlockDecodingContext decodingCtx) {
-    return new BufferedEncodedSeeker<SeekerState>(comparator, decodingCtx) {
-      @Override
-      protected void decodeNext() {
-        current.keyLength = currentBuffer.getInt();
-        current.valueLength = currentBuffer.getInt();
-        current.ensureSpaceForKey();
-        currentBuffer.get(current.keyBuffer, 0, current.keyLength);
-        current.valueOffset = currentBuffer.position();
-        ByteBufferUtils.skip(currentBuffer, current.valueLength);
-        if (includesTags()) {
-          // Read short as unsigned, high byte first
-          current.tagsLength = ((currentBuffer.get() & 0xff) << 8) ^ (currentBuffer.get() & 0xff);
-          ByteBufferUtils.skip(currentBuffer, current.tagsLength);
-        }
-        if (includesMvcc()) {
-          current.memstoreTS = ByteBufferUtils.readVLong(currentBuffer);
-        } else {
-          current.memstoreTS = 0;
-        }
-        current.nextKvOffset = currentBuffer.position();
-      }
-
-      @Override
-      protected void decodeFirst() {
-        ByteBufferUtils.skip(currentBuffer, Bytes.SIZEOF_INT);
-        current.lastCommonPrefix = 0;
-        decodeNext();
-      }
-    };
+    return new SeekerStateBufferedEncodedSeeker(comparator, decodingCtx);
   }
 
   @Override
@@ -125,5 +97,42 @@ public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
     ByteBufferUtils.copyFromStreamToBuffer(buffer, source, decompressedSize);
 
     return buffer;
+  }
+
+  private static class SeekerStateBufferedEncodedSeeker
+      extends BufferedEncodedSeeker<SeekerState> {
+
+    public SeekerStateBufferedEncodedSeeker(KVComparator comparator,
+      HFileBlockDecodingContext decodingCtx) {
+      super(comparator, decodingCtx);
+    }
+
+    @Override
+    protected void decodeNext() {
+      current.keyLength = currentBuffer.getInt();
+      current.valueLength = currentBuffer.getInt();
+      current.ensureSpaceForKey();
+      currentBuffer.get(current.keyBuffer, 0, current.keyLength);
+      current.valueOffset = currentBuffer.position();
+      ByteBufferUtils.skip(currentBuffer, current.valueLength);
+      if (includesTags()) {
+        // Read short as unsigned, high byte first
+        current.tagsLength = ((currentBuffer.get() & 0xff) << 8) ^ (currentBuffer.get() & 0xff);
+        ByteBufferUtils.skip(currentBuffer, current.tagsLength);
+      }
+      if (includesMvcc()) {
+        current.memstoreTS = ByteBufferUtils.readVLong(currentBuffer);
+      } else {
+        current.memstoreTS = 0;
+      }
+      current.nextKvOffset = currentBuffer.position();
+    }
+
+    @Override
+    protected void decodeFirst() {
+      ByteBufferUtils.skip(currentBuffer, Bytes.SIZEOF_INT);
+      current.lastCommonPrefix = 0;
+      decodeNext();
+    }
   }
 }
