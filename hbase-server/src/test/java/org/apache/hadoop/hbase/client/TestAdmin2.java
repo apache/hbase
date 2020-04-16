@@ -876,17 +876,19 @@ public class TestAdmin2 extends TestAdminBase {
 
     serversToDecom.add(serverToDecommission);
     ADMIN.decommissionRegionServers(serversToDecom, false);
-    waitForServerDecom(serverToDecommission, true);
+    waitForServerCommissioned(serverToDecommission, true);
 
     Assert.assertEquals(2, ADMIN.getRegionServers(true).size());
+    Assert.assertEquals(3, ADMIN.getRegionServers(false).size());
 
     ADMIN.recommissionRegionServer(serverToDecommission, Collections.emptyList());
+    waitForServerCommissioned(null, false);
 
     Assert.assertEquals(3, ADMIN.getRegionServers(true).size());
-    waitForServerDecom(serverToDecommission, false);
+    Assert.assertEquals(3, ADMIN.getRegionServers(false).size());
   }
 
-  private static void waitForServerDecom(ServerName excludeServer,
+  private static void waitForServerCommissioned(ServerName excludeServer,
       boolean anyServerDecommissioned) {
     TEST_UTIL.waitFor(3000, () -> {
       try {

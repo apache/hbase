@@ -21,9 +21,7 @@ import static org.apache.hadoop.hbase.util.FutureUtils.get;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -66,8 +64,9 @@ import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 
 /**
  * The administrative API for HBase. Obtain an instance from {@link Connection#getAdmin()} and
@@ -1086,12 +1085,9 @@ public interface Admin extends Abortable, Closeable {
       return allServers;
     }
     List<ServerName> decommissionedRegionServers = listDecommissionedRegionServers();
-    if (CollectionUtils.isNotEmpty(decommissionedRegionServers)) {
-      allServers = new ArrayList<>(allServers);
-      allServers.removeIf(decommissionedRegionServers::contains);
-      return Collections.unmodifiableList(allServers);
-    }
-    return allServers;
+    return allServers.stream()
+      .filter(s -> !decommissionedRegionServers.contains(s))
+      .collect(ImmutableList.toImmutableList());
   }
 
   /**
