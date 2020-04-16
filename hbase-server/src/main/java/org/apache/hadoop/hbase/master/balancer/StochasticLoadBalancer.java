@@ -310,17 +310,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     return false;
   }
 
-  protected final synchronized boolean idleRegionExist(Cluster c){
-    boolean isServerExistsWithMoreRegions = false;
-    boolean isServerExistsWithZeroRegions = false;
-    for (int[] serverList: c.regionsPerServer){
-      if (serverList.length > 1)
-        isServerExistsWithMoreRegions = true;
-      if (serverList.length < 1)
-        isServerExistsWithZeroRegions = true;
-    }
-    return isServerExistsWithMoreRegions && isServerExistsWithZeroRegions;
-  }
+
 
   @Override
   protected boolean needsBalance(TableName tableName, Cluster cluster) {
