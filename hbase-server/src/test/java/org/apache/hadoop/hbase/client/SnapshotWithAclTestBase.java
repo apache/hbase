@@ -17,7 +17,11 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertNotSame;
+
 import java.io.IOException;
+import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -227,5 +231,16 @@ public abstract class SnapshotWithAclTestBase extends SecureTestUtil {
     verifyDenied(new AccessReadAction(TEST_TABLE), USER_NONE);
     verifyAllowed(new AccessWriteAction(TEST_TABLE), USER_OWNER, USER_RW);
     verifyDenied(new AccessWriteAction(TEST_TABLE), USER_RO, USER_NONE);
+  }
+
+  @Test
+  public void testListSnapshot() throws Exception {
+    String snapshotName1 = TEST_UTIL.getRandomUUID().toString();
+    snapshot(snapshotName1, TEST_TABLE);
+    List<SnapshotDescription> snapshotDescriptions = TEST_UTIL.getAdmin().listSnapshots();
+    snapshotDescriptions.forEach(snapshotDescription -> {
+      assertNotSame(snapshotDescription.getOwner(), "");
+    });
+    TEST_UTIL.getAdmin().deleteSnapshot(snapshotName1);
   }
 }
