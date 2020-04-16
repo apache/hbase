@@ -118,9 +118,9 @@ function should_build {
 
 if should_build "tag" && [ "$SKIP_TAG" = 0 ]; then
   if [ -z "${YETUS_HOME}" ] && [ "${RUNNING_IN_DOCKER}" != "1" ]; then
-    declare local_yetus="/opt/apache-yetus/0.11.1/"
+    declare local_yetus="/opt/apache-yetus/0.12.0/"
     if [ "$(get_host_os)" = "DARWIN" ]; then
-      local_yetus="/usr/local/Cellar/yetus/0.11.1/"
+      local_yetus="/usr/local/Cellar/yetus/0.12.0/"
     fi
     YETUS_HOME="$(read_config "YETUS_HOME not defined. Absolute path to local install of Apache Yetus" "${local_yetus}")"
     export YETUS_HOME
