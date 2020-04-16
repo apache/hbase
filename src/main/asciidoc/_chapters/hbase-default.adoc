@@ -2245,3 +2245,16 @@ The percent of region server RPC threads failed to abort RS.
 .Default
 `false`
 
+
+[[hbase.master.metafixer.max.merge.count]]
+*`hbase.master.metafixer.max.merge.count`*::
++
+.Description
+
+      Maximum regions to merge at a time when we fix overlaps noted in
+      CJ consistency report, but avoid merging 100 regions in one go!
+
+
++
+.Default
+`10`
