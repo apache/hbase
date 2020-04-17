@@ -1639,6 +1639,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
     }
     this.closing.set(true);
+    LOG.info("Closing region {}", this);
     status.setStatus("Disabling writes for close");
     try {
       if (this.isClosed()) {
