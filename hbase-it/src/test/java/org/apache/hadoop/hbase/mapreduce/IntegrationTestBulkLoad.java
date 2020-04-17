@@ -705,7 +705,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     Scan scan = new Scan();
     scan.addFamily(CHAIN_FAM);
     scan.addFamily(SORT_FAM);
-    scan.setMaxVersions(1);
+    scan.readVersions(1);
     scan.setCacheBlocks(false);
     scan.setBatch(1000);
 

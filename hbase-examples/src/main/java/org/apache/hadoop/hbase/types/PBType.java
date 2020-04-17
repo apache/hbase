@@ -17,15 +17,19 @@
  */
 package org.apache.hadoop.hbase.types;
 
-import com.google.protobuf.CodedInputStream;
-import com.google.protobuf.CodedOutputStream;
-import com.google.protobuf.Message;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
+import org.apache.hbase.thirdparty.com.google.protobuf.CodedOutputStream;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+
 /**
  * A base-class for {@link DataType} implementations backed by protobuf. See {@link PBCell}.
+ * <p/>
+ * Notice that, in hbase we always uses our own shaded version of protobuf, but you are free to use
+ * the original version of protobuf in your own project.
  */
 @InterfaceAudience.Private
 public abstract class PBType<T extends Message> implements DataType<T> {
@@ -59,6 +63,7 @@ public abstract class PBType<T extends Message> implements DataType<T> {
    * {@code src}'s position after consuming from the stream.
    * <p/>
    * For example:
+   *
    * <pre>
    * Foo.Builder builder = ...
    * CodedInputStream is = inputStreamFromByteRange(src);
@@ -76,6 +81,7 @@ public abstract class PBType<T extends Message> implements DataType<T> {
    * {@code dst}'s position after writing to the stream.
    * <p/>
    * For example:
+   *
    * <pre>
    * CodedOutputStream os = outputStreamFromByteRange(dst);
    * int before = os.spaceLeft(), after, written;

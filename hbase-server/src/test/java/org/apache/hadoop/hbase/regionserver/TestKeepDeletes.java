@@ -800,7 +800,7 @@ public class TestKeepDeletes {
     d = new Delete(T2, ts+2);
     region.delete(d);
 
-    Scan s = new Scan(T1);
+    Scan s = new Scan().withStartRow(T1);
     s.setTimeRange(0, ts+1);
     InternalScanner scanner = region.getScanner(s);
     List<Cell> kvs = new ArrayList<>();
@@ -808,7 +808,7 @@ public class TestKeepDeletes {
     assertEquals(4, kvs.size());
     scanner.close();
 
-    s = new Scan(T2);
+    s = new Scan().withStartRow(T2);
     s.setTimeRange(0, ts+2);
     scanner = region.getScanner(s);
     kvs = new ArrayList<>();
@@ -956,7 +956,7 @@ public class TestKeepDeletes {
     Scan s = new Scan();
     s.setRaw(true);
     // use max versions from the store(s)
-    s.setMaxVersions(region.getStores().iterator().next().getScanInfo().getMaxVersions());
+    s.readVersions(region.getStores().iterator().next().getScanInfo().getMaxVersions());
     InternalScanner scan = region.getScanner(s);
     List<Cell> kvs = new ArrayList<>();
     int res = 0;

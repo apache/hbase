@@ -65,7 +65,7 @@ public class TestClusterPortAssignment {
           cluster.getRegionServer(0).getRpcServer().getListenerAddress().getPort());
         assertEquals("RS info port is incorrect", rsInfoPort,
           cluster.getRegionServer(0).getInfoServer().getPort());
-      } catch (BindException|UnsupportedOperationException e) {
+      } catch (Exception e) {
         if (e instanceof  BindException || e.getCause() != null &&
             (e.getCause() instanceof BindException || e.getCause().getCause() != null &&
               e.getCause().getCause() instanceof BindException)) {

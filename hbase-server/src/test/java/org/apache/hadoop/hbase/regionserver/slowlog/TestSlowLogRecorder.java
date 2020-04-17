@@ -197,6 +197,19 @@ public class TestSlowLogRecorder {
 
     Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
       () -> {
+        List<SlowLogPayload> slowLogPayloadsList = slowLogRecorder.getLargeLogPayloads(request);
+        // confirm ringbuffer is full
+        // and ordered events
+        return slowLogPayloadsList.size() == 8
+          && confirmPayloadParams(0, 14, slowLogPayloadsList)
+          && confirmPayloadParams(1, 13, slowLogPayloadsList)
+          && confirmPayloadParams(2, 12, slowLogPayloadsList)
+          && confirmPayloadParams(3, 11, slowLogPayloadsList);
+      })
+    );
+
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
+      () -> {
         boolean isRingBufferCleaned = slowLogRecorder.clearSlowLogPayloads();
 
         LOG.debug("cleared the ringbuffer of Online Slow Log records");
@@ -388,11 +401,100 @@ public class TestSlowLogRecorder {
 
     Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(
       5000, () -> slowLogRecorder.getSlowLogPayloads(request).size() > 10000));
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(
+      5000, () -> slowLogRecorder.getLargeLogPayloads(request).size() > 10000));
+  }
+
+  @Test
+  public void testSlowLargeLogEvents() throws Exception {
+    Configuration conf = applySlowLogRecorderConf(28);
+    slowLogRecorder = new SlowLogRecorder(conf);
+    AdminProtos.SlowLogResponseRequest request =
+      AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(14 * 11).build();
+
+    Assert.assertEquals(slowLogRecorder.getSlowLogPayloads(request).size(), 0);
+    LOG.debug("Initially ringbuffer of Slow Log records is empty");
+
+    boolean isSlowLog;
+    boolean isLargeLog;
+    for (int i = 0; i < 14 * 11; i++) {
+      if (i % 2 == 0) {
+        isSlowLog = true;
+        isLargeLog = false;
+      } else {
+        isSlowLog = false;
+        isLargeLog = true;
+      }
+      RpcLogDetails rpcLogDetails =
+        getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1),
+          isSlowLog, isLargeLog);
+      slowLogRecorder.addSlowLogPayload(rpcLogDetails);
+    }
+    LOG.debug("Added 14 * 11 records, ringbuffer should only provide latest 14 records");
+
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
+      () -> slowLogRecorder.getSlowLogPayloads(request).size() == 14));
+
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
+      () -> {
+        List<SlowLogPayload> slowLogPayloads = slowLogRecorder.getSlowLogPayloads(request);
+
+        // confirm strict order of slow log payloads
+        return slowLogPayloads.size() == 14
+          && confirmPayloadParams(0, 153, slowLogPayloads)
+          && confirmPayloadParams(1, 151, slowLogPayloads)
+          && confirmPayloadParams(2, 149, slowLogPayloads)
+          && confirmPayloadParams(3, 147, slowLogPayloads)
+          && confirmPayloadParams(4, 145, slowLogPayloads)
+          && confirmPayloadParams(5, 143, slowLogPayloads)
+          && confirmPayloadParams(6, 141, slowLogPayloads)
+          && confirmPayloadParams(7, 139, slowLogPayloads)
+          && confirmPayloadParams(8, 137, slowLogPayloads)
+          && confirmPayloadParams(9, 135, slowLogPayloads)
+          && confirmPayloadParams(10, 133, slowLogPayloads)
+          && confirmPayloadParams(11, 131, slowLogPayloads)
+          && confirmPayloadParams(12, 129, slowLogPayloads)
+          && confirmPayloadParams(13, 127, slowLogPayloads);
+      })
+    );
+
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
+      () -> slowLogRecorder.getLargeLogPayloads(request).size() == 14));
+
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
+      () -> {
+        List<SlowLogPayload> largeLogPayloads = slowLogRecorder.getLargeLogPayloads(request);
+
+        // confirm strict order of slow log payloads
+        return largeLogPayloads.size() == 14
+          && confirmPayloadParams(0, 154, largeLogPayloads)
+          && confirmPayloadParams(1, 152, largeLogPayloads)
+          && confirmPayloadParams(2, 150, largeLogPayloads)
+          && confirmPayloadParams(3, 148, largeLogPayloads)
+          && confirmPayloadParams(4, 146, largeLogPayloads)
+          && confirmPayloadParams(5, 144, largeLogPayloads)
+          && confirmPayloadParams(6, 142, largeLogPayloads)
+          && confirmPayloadParams(7, 140, largeLogPayloads)
+          && confirmPayloadParams(8, 138, largeLogPayloads)
+          && confirmPayloadParams(9, 136, largeLogPayloads)
+          && confirmPayloadParams(10, 134, largeLogPayloads)
+          && confirmPayloadParams(11, 132, largeLogPayloads)
+          && confirmPayloadParams(12, 130, largeLogPayloads)
+          && confirmPayloadParams(13, 128, largeLogPayloads);
+      })
+    );
+
   }
 
   private RpcLogDetails getRpcLogDetails(String userName, String clientAddress,
       String className) {
-    return new RpcLogDetails(getRpcCall(userName), clientAddress, 0, className);
+    return new RpcLogDetails(getRpcCall(userName), clientAddress, 0, className, true, true);
+  }
+
+  private RpcLogDetails getRpcLogDetails(String userName, String clientAddress,
+      String className, boolean isSlowLog, boolean isLargeLog) {
+    return new RpcLogDetails(getRpcCall(userName), clientAddress, 0, className, isSlowLog,
+      isLargeLog);
   }
 
   private RpcCall getRpcCall(String userName) {

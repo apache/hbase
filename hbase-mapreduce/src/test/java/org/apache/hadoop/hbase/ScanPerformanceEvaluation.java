@@ -134,7 +134,7 @@ public class ScanPerformanceEvaluation extends AbstractHBaseTool {
   private Scan getScan() {
     Scan scan = new Scan(); // default scan settings
     scan.setCacheBlocks(false);
-    scan.setMaxVersions(1);
+    scan.readVersions(1);
     scan.setScanMetricsEnabled(true);
     if (caching != null) {
       scan.setCaching(Integer.parseInt(caching));

@@ -122,7 +122,7 @@ public class TestBlocksScanned {
     Scan scan = new Scan().withStartRow(Bytes.toBytes("aaa")).withStopRow(Bytes.toBytes("aaz"))
         .setReadType(Scan.ReadType.PREAD);
     scan.addColumn(FAMILY, COL);
-    scan.setMaxVersions(1);
+    scan.readVersions(1);
 
     InternalScanner s = r.getScanner(scan);
     List<Cell> results = new ArrayList<>();

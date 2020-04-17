@@ -837,7 +837,9 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
    * testForceCopyOfBigCellIntoImmutableSegment checks that the
    * ImmutableMemStoreLAB's forceCopyOfBigCellInto does what it's supposed to do.
    */
-  @Test
+  @org.junit.Ignore @Test // Flakey. Disabled by HBASE-24128. HBASE-24129 is for reenable.
+  // TestCompactingToCellFlatMapMemStore.testForceCopyOfBigCellIntoImmutableSegment:902 i=1
+  //   expected:<8389924> but was:<8389992>
   public void testForceCopyOfBigCellIntoImmutableSegment() throws IOException {
 
     if (toCellChunkMap == false) {

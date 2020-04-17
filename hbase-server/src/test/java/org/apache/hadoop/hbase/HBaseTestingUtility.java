@@ -417,7 +417,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     createSubDir(
       "mapreduce.cluster.local.dir",
       testPath, "mapred-local-dir");
-
     return testPath;
   }
 
@@ -636,16 +635,24 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     return dfsCluster;
   }
 
-  /** This is used before starting HDFS and map-reduce mini-clusters */
+  /** This is used before starting HDFS and map-reduce mini-clusters
+   * Run something like the below to check for the likes of '/tmp' references -- i.e.
+   * references outside of the test data dir -- in the conf.
+   *     Configuration conf = TEST_UTIL.getConfiguration();
+   *     for (Iterator<Map.Entry<String, String>> i = conf.iterator(); i.hasNext();) {
+   *       Map.Entry<String, String> e = i.next();
+   *       assertFalse(e.getKey() + " " + e.getValue(), e.getValue().contains("/tmp"));
+   *     }
+   */
   private void createDirsAndSetProperties() throws IOException {
     setupClusterTestDir();
     conf.set(TEST_DIRECTORY_KEY, clusterTestDir.getPath());
     System.setProperty(TEST_DIRECTORY_KEY, clusterTestDir.getPath());
-    createDirAndSetProperty("cache_data", "test.cache.data");
-    createDirAndSetProperty("hadoop_tmp", "hadoop.tmp.dir");
-    hadoopLogDir = createDirAndSetProperty("hadoop_logs", "hadoop.log.dir");
-    createDirAndSetProperty("mapred_local", "mapreduce.cluster.local.dir");
-    createDirAndSetProperty("mapred_temp", "mapreduce.cluster.temp.dir");
+    createDirAndSetProperty("test.cache.data", "test.cache.data");
+    createDirAndSetProperty("hadoop.tmp.dir", "hadoop.tmp.dir");
+    hadoopLogDir = createDirAndSetProperty("hadoop.log.dir", "hadoop.log.dir");
+    createDirAndSetProperty("mapreduce.cluster.local.dir", "mapreduce.cluster.local.dir");
+    createDirAndSetProperty("mapreduce.cluster.temp.dir", "mapreduce.cluster.temp.dir");
     enableShortCircuit();
 
     Path root = getDataTestDirOnTestFS("hadoop");
@@ -657,6 +664,28 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     conf.set("mapreduce.job.working.dir", new Path(root, "mapred-working-dir").toString());
     conf.set("yarn.app.mapreduce.am.staging-dir",
       new Path(root, "mapreduce-am-staging-root-dir").toString());
+
+    // Frustrate yarn's and hdfs's attempts at writing /tmp.
+    String property = "yarn.node-labels.fs-store.root-dir";
+    createDirAndSetProperty(property, property);
+    property = "yarn.nodemanager.log-dirs";
+    createDirAndSetProperty(property, property);
+    property = "yarn.nodemanager.remote-app-log-dir";
+    createDirAndSetProperty(property, property);
+    property = "yarn.timeline-service.entity-group-fs-store.active-dir";
+    createDirAndSetProperty(property, property);
+    property = "yarn.timeline-service.entity-group-fs-store.done-dir";
+    createDirAndSetProperty(property, property);
+    property = "yarn.nodemanager.remote-app-log-dir";
+    createDirAndSetProperty(property, property);
+    property = "dfs.journalnode.edits.dir";
+    createDirAndSetProperty(property, property);
+    property = "dfs.datanode.shared.file.descriptor.paths";
+    createDirAndSetProperty(property, property);
+    property = "nfs.dump.dir";
+    createDirAndSetProperty(property, property);
+    property = "java.io.tmpdir";
+    createDirAndSetProperty(property, property);
   }
 
   /**
@@ -4318,7 +4347,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   public Result getClosestRowBefore(Region r, byte[] row, byte[] family) throws IOException {
-    Scan scan = new Scan(row);
+    Scan scan = new Scan().withStartRow(row);
     scan.setSmall(true);
     scan.setCaching(1);
     scan.setReversed(true);

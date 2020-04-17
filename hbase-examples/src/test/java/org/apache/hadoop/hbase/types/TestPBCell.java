@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.types;
 
 import static org.junit.Assert.assertEquals;
 
-import com.google.protobuf.ByteString;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.example.protobuf.generated.CellMessage;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -29,6 +28,8 @@ import org.apache.hadoop.hbase.util.SimplePositionedByteRange;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 
 @Category({ SmallTests.class, MiscTests.class })
 public class TestPBCell {

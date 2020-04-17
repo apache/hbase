@@ -18,7 +18,7 @@
 
 set -e
 function usage {
-  echo "Usage: ${0} [options] /path/to/component/bin-install /path/to/hadoop/executable /path/to/hadoop/hadoop-yarn-server-tests-tests.jar /path/to/hadoop/hadoop-mapreduce-client-jobclient-tests.jar /path/to/mapred/executable"
+  echo "Usage: ${0} [options] /path/to/component/bin-install /path/to/hadoop/executable /path/to/share/hadoop/yarn/timelineservice /path/to/hadoop/hadoop-yarn-server-tests-tests.jar /path/to/hadoop/hadoop-mapreduce-client-jobclient-tests.jar /path/to/mapred/executable"
   echo ""
   echo "    --zookeeper-data /path/to/use                                     Where the embedded zookeeper instance should write its data."
   echo "                                                                      defaults to 'zk-data' in the working-dir."
@@ -67,9 +67,10 @@ if [ $# -lt 5 ]; then
 fi
 component_install="$(cd "$(dirname "$1")"; pwd)/$(basename "$1")"
 hadoop_exec="$(cd "$(dirname "$2")"; pwd)/$(basename "$2")"
-yarn_server_tests_test_jar="$(cd "$(dirname "$3")"; pwd)/$(basename "$3")"
-mapred_jobclient_test_jar="$(cd "$(dirname "$4")"; pwd)/$(basename "$4")"
-mapred_exec="$(cd "$(dirname "$5")"; pwd)/$(basename "$5")"
+timeline_service_dir="$(cd "$(dirname "$3")"; pwd)/$(basename "$3")"
+yarn_server_tests_test_jar="$(cd "$(dirname "$4")"; pwd)/$(basename "$4")"
+mapred_jobclient_test_jar="$(cd "$(dirname "$5")"; pwd)/$(basename "$5")"
+mapred_exec="$(cd "$(dirname "$6")"; pwd)/$(basename "$6")"
 
 if [ ! -x "${hadoop_exec}" ]; then
   echo "hadoop cli does not appear to be executable." >&2
@@ -285,17 +286,24 @@ echo "Starting up Hadoop"
 if [ "${hadoop_version%.*.*}" -gt 2 ]; then
   "${mapred_exec}" minicluster -format -writeConfig "${working_dir}/hbase-conf/core-site.xml" -writeDetails "${working_dir}/hadoop_cluster_info.json" >"${working_dir}/hadoop_cluster_command.out" 2>"${working_dir}/hadoop_cluster_command.err" &
 else
-  HADOOP_CLASSPATH="${yarn_server_tests_test_jar}" "${hadoop_exec}" jar "${mapred_jobclient_test_jar}" minicluster -format -writeConfig "${working_dir}/hbase-conf/core-site.xml" -writeDetails "${working_dir}/hadoop_cluster_info.json" >"${working_dir}/hadoop_cluster_command.out" 2>"${working_dir}/hadoop_cluster_command.err" &
+  HADOOP_CLASSPATH="${timeline_service_dir}/*:${timeline_service_dir}/lib/*:${yarn_server_tests_test_jar}" "${hadoop_exec}" jar "${mapred_jobclient_test_jar}" minicluster -format -writeConfig "${working_dir}/hbase-conf/core-site.xml" -writeDetails "${working_dir}/hadoop_cluster_info.json" >"${working_dir}/hadoop_cluster_command.out" 2>"${working_dir}/hadoop_cluster_command.err" &
 fi
 
 echo "$!" > "${working_dir}/hadoop.pid"
 
+# 2 + 4 + 8 + .. + 256 ~= 8.5 minutes.
+max_sleep_time=512
 sleep_time=2
-until [ -s "${working_dir}/hbase-conf/core-site.xml" ]; do
+until [[ -s "${working_dir}/hbase-conf/core-site.xml" || "${sleep_time}" -ge "${max_sleep_time}" ]]; do
   printf '\twaiting for Hadoop to finish starting up.\n'
   sleep "${sleep_time}"
   sleep_time="$((sleep_time*2))"
 done
+
+if [ "${sleep_time}" -ge "${max_sleep_time}" ] ; then
+  echo "time out waiting for Hadoop to startup" >&2
+  exit 1
+fi
 
 if [ "${hadoop_version%.*.*}" -gt 2 ]; then
   echo "Verifying configs"

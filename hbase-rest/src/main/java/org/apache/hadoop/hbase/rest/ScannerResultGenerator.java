@@ -73,9 +73,9 @@ public class ScannerResultGenerator extends ResultGenerator {
     try {
       Scan scan;
       if (rowspec.hasEndRow()) {
-        scan = new Scan(rowspec.getStartRow(), rowspec.getEndRow());
+        scan = new Scan().withStartRow(rowspec.getStartRow()).withStopRow(rowspec.getEndRow());
       } else {
-        scan = new Scan(rowspec.getStartRow());
+        scan = new Scan().withStartRow(rowspec.getStartRow());
       }
       if (rowspec.hasColumns()) {
         byte[][] columns = rowspec.getColumns();
@@ -91,7 +91,7 @@ public class ScannerResultGenerator extends ResultGenerator {
         }
       }
       scan.setTimeRange(rowspec.getStartTime(), rowspec.getEndTime());          
-      scan.setMaxVersions(rowspec.getMaxVersions());
+      scan.readVersions(rowspec.getMaxVersions());
       if (filter != null) {
         scan.setFilter(filter);
       }

@@ -46,6 +46,8 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Confirm that we will do backoff when retrying on closing a region, to avoid consuming all the
@@ -53,6 +55,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category({ MasterTests.class, MediumTests.class })
 public class TestCloseRegionWhileRSCrash {
+  private static final Logger LOG = LoggerFactory.getLogger(TestCloseRegionWhileRSCrash.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -160,7 +163,7 @@ public class TestCloseRegionWhileRSCrash {
     UTIL.shutdownMiniCluster();
   }
 
-  @Test
+  @org.junit.Ignore @Test // Until root-cause of flakeyness, HBASE-24117, is addressed.
   public void testRetryBackoff() throws IOException, InterruptedException {
     HRegionServer srcRs = UTIL.getRSForFirstRegionInTable(TABLE_NAME);
     RegionInfo region = srcRs.getRegions(TABLE_NAME).get(0).getRegionInfo();
@@ -176,6 +179,7 @@ public class TestCloseRegionWhileRSCrash {
       try {
         UTIL.getAdmin().move(region.getEncodedNameAsBytes(), dstRs.getServerName());
       } catch (IOException e) {
+        LOG.info("Failed move of {}", region.getRegionNameAsString(), e);
       }
     });
     t.start();
@@ -185,12 +189,13 @@ public class TestCloseRegionWhileRSCrash {
     // wait until the timeout value increase three times
     ProcedureTestUtil.waitUntilProcedureTimeoutIncrease(UTIL, TransitRegionStateProcedure.class, 3);
     // close connection to make sure that we can not finish the TRSP
-    HMaster master = UTIL.getMiniHBaseCluster().getMaster();
+    final HMaster master = UTIL.getMiniHBaseCluster().getMaster();
     master.getConnection().close();
     RESUME.countDown();
     UTIL.waitFor(30000, () -> !master.isAlive());
     // here we start a new master
-    UTIL.getMiniHBaseCluster().startMaster();
+    HMaster master2 = UTIL.getMiniHBaseCluster().startMaster().getMaster();
+    LOG.info("Master2 {}, joining move thread", master2.getServerName());
     t.join();
     // Make sure that the region is online, it may not on the original target server, as we will set
     // forceNewPlan to true if there is a server crash

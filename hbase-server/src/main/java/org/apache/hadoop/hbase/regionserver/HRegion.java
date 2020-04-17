@@ -179,7 +179,6 @@ import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.hadoop.hbase.wal.WALSplitUtil.MutationReplay;
-import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -682,7 +681,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private long flushPerChanges;
   private long blockingMemStoreSize;
   // Used to guard closes
-  final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+  final ReentrantReadWriteLock lock;
 
   // Stop updates lock
   private final ReentrantReadWriteLock updatesLock = new ReentrantReadWriteLock();
@@ -773,6 +772,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     this.conf = new CompoundConfiguration()
       .add(confParam)
       .addBytesMap(htd.getValues());
+    this.lock = new ReentrantReadWriteLock(conf.getBoolean(FAIR_REENTRANT_CLOSE_LOCK,
+        DEFAULT_FAIR_REENTRANT_CLOSE_LOCK));
     this.flushCheckInterval = conf.getInt(MEMSTORE_PERIODIC_FLUSH_INTERVAL,
         DEFAULT_CACHE_FLUSH_INTERVAL);
     this.flushPerChanges = conf.getLong(MEMSTORE_FLUSH_PER_CHANGES, DEFAULT_FLUSH_PER_CHANGES);
@@ -1152,7 +1153,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             try {
               store.close();
             } catch (IOException e) {
-              LOG.warn("close store failed", e);
+              LOG.warn("close store {} failed in region {}", store.toString(), this, e);
             }
           }
         }
@@ -1522,6 +1523,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   private final Object closeLock = new Object();
 
+  /** Conf key for fair locking policy */
+  public static final String FAIR_REENTRANT_CLOSE_LOCK =
+      "hbase.regionserver.fair.region.close.lock";
+  public static final boolean DEFAULT_FAIR_REENTRANT_CLOSE_LOCK = true;
   /** Conf key for the periodic flush interval */
   public static final String MEMSTORE_PERIODIC_FLUSH_INTERVAL =
       "hbase.regionserver.optionalcacheflushinterval";
@@ -1761,7 +1766,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       if (!canFlush) {
         decrMemStoreSize(this.memStoreSizing.getMemStoreSize());
       } else if (this.memStoreSizing.getDataSize() != 0) {
-        LOG.error("Memstore data size is {}", this.memStoreSizing.getDataSize());
+        LOG.error("Memstore data size is {} in region {}", this.memStoreSizing.getDataSize(), this);
       }
       if (coprocessorHost != null) {
         status.setStatus("Running coprocessor post-close hooks");
@@ -1800,7 +1805,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             writestate.wait();
           } catch (InterruptedException iex) {
             // essentially ignore and propagate the interrupt back up
-            LOG.warn("Interrupted while waiting");
+            LOG.warn("Interrupted while waiting in region {}", this);
             interrupted = true;
             break;
           }
@@ -1841,7 +1846,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             writestate.wait(toWait);
           } catch (InterruptedException iex) {
             // essentially ignore and propagate the interrupt back up
-            LOG.warn("Interrupted while waiting");
+            LOG.warn("Interrupted while waiting in region {}", this);
             interrupted = true;
             break;
           } finally {
@@ -1853,7 +1858,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           Thread.currentThread().interrupt();
         }
       }
-      LOG.debug("Waited " + duration + " ms for flush to complete");
+      LOG.debug("Waited {} ms for region {} flush to complete", duration, this);
       return !(writestate.flushing);
     }
   }
@@ -2282,7 +2287,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           requestNeedsCancellation = false;
           store.compact(compaction, throughputController, user);
         } catch (InterruptedIOException iioe) {
-          String msg = "compaction interrupted";
+          String msg = "region " + this + " compaction interrupted";
           LOG.info(msg, iioe);
           status.abort(msg);
           return false;
@@ -2753,8 +2758,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       WALUtil.writeFlushMarker(wal, this.getReplicationScope(), getRegionInfo(), desc, false,
           mvcc);
     } catch (Throwable t) {
-      LOG.warn("Received unexpected exception trying to write ABORT_FLUSH marker to WAL:" +
-          StringUtils.stringifyException(t));
+      LOG.warn("Received unexpected exception trying to write ABORT_FLUSH marker to WAL: {} in "
+        + " region {}", StringUtils.stringifyException(t), this);
       // ignore this since we will be aborting the RS with DSE.
     }
     // we have called wal.startCacheFlush(), now we have to abort it
@@ -3339,7 +3344,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           durability = tmpDur;
         }
       } catch (NoSuchColumnFamilyException nscfe) {
-        final String msg = "No such column family in batch mutation. ";
+        final String msg = "No such column family in batch mutation in region " + this;
         if (observedExceptions.hasSeenNoSuchFamily()) {
           LOG.warn(msg + nscfe.getMessage());
         } else {
@@ -3352,7 +3357,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           throw nscfe;
         }
       } catch (FailedSanityCheckException fsce) {
-        final String msg = "Batch Mutation did not pass sanity check. ";
+        final String msg = "Batch Mutation did not pass sanity check in region " + this;
         if (observedExceptions.hasSeenFailedSanityCheck()) {
           LOG.warn(msg + fsce.getMessage());
         } else {
@@ -3365,7 +3370,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           throw fsce;
         }
       } catch (WrongRegionException we) {
-        final String msg = "Batch mutation had a row that does not belong to this region. ";
+        final String msg = "Batch mutation had a row that does not belong to this region " + this;
         if (observedExceptions.hasSeenWrongRegion()) {
           LOG.warn(msg + we.getMessage());
         } else {
@@ -3438,7 +3443,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           throwException = true;
           throw e;
         } catch (IOException ioe) {
-          LOG.warn("Failed getting lock, row=" + Bytes.toStringBinary(mutation.getRow()), ioe);
+          LOG.warn("Failed getting lock, row={}, in region {}",
+            Bytes.toStringBinary(mutation.getRow()), this, ioe);
           if (isAtomic()) { // fail, atomic means all or none
             throwException = true;
             throw ioe;
@@ -3976,7 +3982,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       if (nonExistentList != null) {
         for (byte[] family : nonExistentList) {
           // Perhaps schema was changed between crash and replay
-          LOG.info("No family for " + Bytes.toString(family) + " omit from reply.");
+          LOG.info("No family for {} omit from reply in region {}.", Bytes.toString(family), this);
           familyCellMap.remove(family);
         }
       }
@@ -4810,7 +4816,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       if (maxSeqId <= minSeqIdForTheRegion) {
         if (LOG.isDebugEnabled()) {
           String msg = "Maximum sequenceid for this wal is " + maxSeqId
-              + " and minimum sequenceid for the region is " + minSeqIdForTheRegion
+              + " and minimum sequenceid for the region " + this + "  is " + minSeqIdForTheRegion
               + ", skipped the whole file, path=" + edits;
           LOG.debug(msg);
         }
@@ -4904,7 +4910,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
                     " edits=" + editsCount);
                 // Timeout reached
                 if(!reporter.progress()) {
-                  msg = "Progressable reporter failed, stopping replay";
+                  msg = "Progressable reporter failed, stopping replay for region " + this;
                   LOG.warn(msg);
                   status.abort(msg);
                   throw new IOException(msg);
@@ -4972,13 +4978,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             if (store == null) {
               // This should never happen.  Perhaps schema was changed between
               // crash and redeploy?
-              LOG.warn("No family for " + cell);
+              LOG.warn("No family for cell {} in region {}", cell, this);
               skippedEdits++;
               continue;
             }
             if (checkRowWithinBoundary && !rowIsInRange(this.getRegionInfo(),
               cell.getRowArray(), cell.getRowOffset(), cell.getRowLength())) {
-              LOG.warn("Row of " + cell + " is not within region boundary");
+              LOG.warn("Row of {} is not within region boundary for region {}", cell, this);
               skippedEdits++;
               continue;
             }
@@ -5011,9 +5017,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
       } catch (EOFException eof) {
         Path p = WALSplitUtil.moveAsideBadEditsFile(walFS, edits);
-        msg = "EnLongAddered EOF. Most likely due to Master failure during " +
-            "wal splitting, so we have this data in another edit.  " +
-            "Continuing, but renaming " + edits + " as " + p;
+        msg = "EnLongAddered EOF. Most likely due to Master failure during "
+            + "wal splitting, so we have this data in another edit. Continuing, but renaming "
+            + edits + " as " + p + " for region " + this;
         LOG.warn(msg, eof);
         status.abort(msg);
       } catch (IOException ioe) {
@@ -6093,7 +6099,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       success = true;
       return result;
     } catch (InterruptedException ie) {
-      LOG.warn("Thread interrupted waiting for lock on row: " + rowKey);
+      LOG.warn("Thread interrupted waiting for lock on row: {}, in region {}", rowKey,
+        getRegionInfo().getRegionNameAsString());
       InterruptedIOException iie = new InterruptedIOException();
       iie.initCause(ie);
       TraceUtil.addTimelineAnnotation("Interrupted exception getting row lock");
@@ -6103,7 +6110,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // The maximum lock count for read lock is 64K (hardcoded), when this maximum count
       // is reached, it will throw out an Error. This Error needs to be caught so it can
       // go ahead to process the minibatch with lock acquired.
-      LOG.warn("Error to get row lock for " + Bytes.toStringBinary(row) + ", cause: " + error);
+      LOG.warn("Error to get row lock for {}, in region {}, cause: {}", Bytes.toStringBinary(row),
+        getRegionInfo().getRegionNameAsString(), error);
       IOException ioe = new IOException(error);
       TraceUtil.addTimelineAnnotation("Error getting row lock");
       throw ioe;
@@ -6315,8 +6323,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @throws IOException if failed unrecoverably.
    */
   public Map<byte[], List<Path>> bulkLoadHFiles(Collection<Pair<byte[], String>> familyPaths,
-      boolean assignSeqId, BulkLoadListener bulkLoadListener,
-        boolean copyFile, List<String> clusterIds, boolean replicate) throws IOException {
+      boolean assignSeqId, BulkLoadListener bulkLoadListener, boolean copyFile,
+      List<String> clusterIds, boolean replicate) throws IOException {
     long seqId = -1;
     Map<byte[], List<Path>> storeFiles = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     Map<String, Long> storeFilesSizes = new HashMap<>();
@@ -6328,9 +6336,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       this.writeRequestsCount.increment();
 
       // There possibly was a split that happened between when the split keys
-      // were gathered and before the HRegion's write lock was taken.  We need
+      // were gathered and before the HRegion's write lock was taken. We need
       // to validate the HFile region before attempting to bulk load all of them
-      List<IOException> ioes = new ArrayList<>();
+      IOException ioException = null;
       List<Pair<byte[], String>> failures = new ArrayList<>();
       for (Pair<byte[], String> p : familyPaths) {
         byte[] familyName = p.getFirst();
@@ -6338,9 +6346,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
         HStore store = getStore(familyName);
         if (store == null) {
-          IOException ioe = new org.apache.hadoop.hbase.DoNotRetryIOException(
+          ioException = new org.apache.hadoop.hbase.DoNotRetryIOException(
               "No such column family " + Bytes.toStringBinary(familyName));
-          ioes.add(ioe);
         } else {
           try {
             store.assertBulkLoadHFileOk(new Path(path));
@@ -6349,18 +6356,17 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             failures.add(p);
           } catch (IOException ioe) {
             // unrecoverable (hdfs problem)
-            ioes.add(ioe);
+            ioException = ioe;
           }
         }
-      }
 
-      // validation failed because of some sort of IO problem.
-      if (ioes.size() != 0) {
-        IOException e = MultipleIOException.createIOException(ioes);
-        LOG.error("There were one or more IO errors when checking if the bulk load is ok.", e);
-        throw e;
+        // validation failed because of some sort of IO problem.
+        if (ioException != null) {
+          LOG.error("There was IO error when checking if the bulk load is ok in region {}.", this,
+            ioException);
+          throw ioException;
+        }
       }
-
       // validation failed, bail out before doing anything permanent.
       if (failures.size() != 0) {
         StringBuilder list = new StringBuilder();
@@ -6369,8 +6375,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               .append(p.getSecond());
         }
         // problem when validating
-        LOG.warn("There was a recoverable bulk load failure likely due to a" +
-            " split.  These (family, HFile) pairs were not loaded: " + list);
+        LOG.warn("There was a recoverable bulk load failure likely due to a split. These (family,"
+          + " HFile) pairs were not loaded: {}, in region {}", list.toString(), this);
         return null;
       }
 
@@ -7712,7 +7718,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               prevRowLock = rowLock;
             }
           } catch (IOException ioe) {
-            LOG.warn("Failed getting lock, row=" + Bytes.toStringBinary(row), ioe);
+            LOG.warn("Failed getting lock, row={}, in region {}", Bytes.toStringBinary(row), this,
+              ioe);
             throw ioe;
           }
         }
@@ -7911,8 +7918,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       } catch (IOException e) {
         String row = processor.getRowsToLock().isEmpty() ? "" :
           " on row(s):" + Bytes.toStringBinary(processor.getRowsToLock().iterator().next()) + "...";
-        LOG.warn("RowProcessor:" + processor.getClass().getName() +
-            " throws Exception" + row, e);
+        LOG.warn("RowProcessor: {}, in region {}, throws Exception {}",
+          processor.getClass().getName(), getRegionInfo().getRegionNameAsString(), row, e);
         throw e;
       }
       return;
@@ -7928,8 +7935,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           } catch (IOException e) {
             String row = processor.getRowsToLock().isEmpty() ? "" :
               " on row(s):" + Bytes.toStringBinary(processor.getRowsToLock().iterator().next()) + "...";
-            LOG.warn("RowProcessor:" + processor.getClass().getName() +
-                " throws Exception" + row, e);
+            LOG.warn("RowProcessor: {}, in region {}, throws Exception {}",
+              processor.getClass().getName(), getRegionInfo().getRegionNameAsString(), row, e);
             throw e;
           }
         }
@@ -7940,7 +7947,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     } catch (TimeoutException te) {
       String row = processor.getRowsToLock().isEmpty() ? "" :
         " on row(s):" + Bytes.toStringBinary(processor.getRowsToLock().iterator().next()) + "...";
-      LOG.error("RowProcessor timeout:" + timeout + " ms" + row);
+      LOG.error("RowProcessor timeout: {} ms, in region {}, {}", timeout,
+        getRegionInfo().getRegionNameAsString(), row);
       throw new IOException(te);
     } catch (Exception e) {
       throw new IOException(e);
@@ -8244,8 +8252,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
       int newCellSize = PrivateCellUtil.estimatedSerializedSizeOf(newCell);
       if (newCellSize > this.maxCellSize) {
-        String msg = "Cell with size " + newCellSize + " exceeds limit of " +
-            this.maxCellSize + " bytes";
+        String msg = "Cell with size " + newCellSize + " exceeds limit of " + this.maxCellSize
+          + " bytes in region " + this;
         if (LOG.isDebugEnabled()) {
           LOG.debug(msg);
         }
@@ -8400,8 +8408,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     ServiceDescriptor serviceDesc = instance.getDescriptorForType();
     String serviceName = CoprocessorRpcUtils.getServiceName(serviceDesc);
     if (coprocessorServiceHandlers.containsKey(serviceName)) {
-      LOG.error("Coprocessor service " + serviceName +
-        " already registered, rejecting request from " + instance);
+      LOG.error("Coprocessor service {} already registered, rejecting request from {} in region {}",
+        serviceName, instance, this);
       return false;
     }
 
@@ -8529,7 +8537,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       try {
         checkRow(ret, "calculated split");
       } catch (IOException e) {
-        LOG.error("Ignoring invalid split", e);
+        LOG.error("Ignoring invalid split for region {}", this, e);
         return null;
       }
     }
@@ -8697,7 +8705,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
                 this.getRegionServerServices().getServerName()));
       }
     } catch (InterruptedException ie) {
-      LOG.info("Interrupted while waiting for a lock");
+      LOG.info("Interrupted while waiting for a lock in region {}", this);
       InterruptedIOException iie = new InterruptedIOException();
       iie.initCause(ie);
       throw iie;
