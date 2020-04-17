@@ -21,7 +21,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -qq update && \
   DEBIAN_FRONTEND=noninteractive apt-get -qq install --no-install-recommends -y \
     ca-certificates=20180409 \
     curl=7.58.0-2ubuntu3.8 \
-    git=1:2.17.1-1ubuntu0.5 \
+    git=1:2.17.1-1ubuntu0.6 \
     locales=2.27-3ubuntu1 \
     && \
     apt-get clean && \
