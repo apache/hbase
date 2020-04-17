@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.ipc;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
@@ -86,7 +87,7 @@ public interface RpcServerInterface {
    * @param pp
    */
   @VisibleForTesting
-  void refreshAuthManager(PolicyProvider pp);
+  void refreshAuthManager(Configuration conf, PolicyProvider pp);
 
   RpcScheduler getScheduler();
 
