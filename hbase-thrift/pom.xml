@@ -72,7 +72,6 @@
       <plugin>
         <!--Make it so assembly:single does nothing in here-->
         <artifactId>maven-assembly-plugin</artifactId>
-        <version>${maven.assembly.version}</version>
         <configuration>
           <skipAssembly>true</skipAssembly>
         </configuration>
@@ -349,6 +348,12 @@
     <dependency>
       <groupId>org.apache.thrift</groupId>
       <artifactId>libthrift</artifactId>
+      <exclusions>
+	<exclusion>
+	  <groupId>javax.annotation</groupId>
+	  <artifactId>javax.annotation-api</artifactId>
+	</exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
@@ -471,12 +476,12 @@
                     <requireProperty>
                       <property>thrift.version</property>
                       <message>"The Thrift version must be specified."</message>
-                      <regex>0\.9\.3-1</regex>
+                      <regex>0\.13\.0</regex>
                       <regexMessage>
 -
 -
 [FATAL] ==========================================================================================
-[FATAL] HBase Thrift requires the thrift generator version 0.9.3-1.
+[FATAL] HBase Thrift requires the thrift generator version 0.13.0.
 [FATAL] Setting it to something else needs to be reviewed for wire and behavior compatibility.
 [FATAL] ==========================================================================================
 -
@@ -505,9 +510,8 @@
                   <workingDirectory>${basedir}</workingDirectory>
                   <arguments>
                     <argument>-c</argument>
-                    <!-- Hardcode the version number here since curent thrift.version (0.9.3-1), is a java-only release -->
                     <argument>${thrift.path} -version | \
-                      fgrep 'Thrift version 0.9.3' &amp;&amp; exit 0;
+                      fgrep 'Thrift version ${thrift.version}' &amp;&amp; exit 0;
                       echo "========== [FATAL] Need Thrift version ${thrift.version} ==========";
                       exit 1</argument>
                   </arguments>
@@ -525,7 +529,7 @@
                   <arguments>
                     <argument>-strict</argument>
                     <argument>--gen</argument>
-                    <argument>java:hashcode</argument>
+                    <argument>java</argument>
                     <argument>-out</argument>
                     <argument>${basedir}/src/main/java</argument>
                     <argument>${basedir}/src/main/resources/org/apache/hadoop/hbase/thrift/Hbase.thrift</argument>
@@ -544,7 +548,7 @@
                   <arguments>
                     <argument>-strict</argument>
                     <argument>--gen</argument>
-                    <argument>java:hashcode</argument>
+                    <argument>java</argument>
                     <argument>-out</argument>
                     <argument>${basedir}/src/main/java</argument>
                     <argument>${basedir}/src/main/resources/org/apache/hadoop/hbase/thrift2/hbase.thrift</argument>
@@ -760,7 +764,6 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-compiler-plugin</artifactId>
-            <version>${maven.compiler.version}</version>
             <configuration>
               <compilerId>javac-with-errorprone</compilerId>
               <forceJavacCompilerUse>true</forceJavacCompilerUse>
