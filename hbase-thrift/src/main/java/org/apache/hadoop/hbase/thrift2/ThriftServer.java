@@ -504,14 +504,13 @@ public class ThriftServer {
       // Create a processor wrapper, to get the caller
       processor = new TProcessor() {
         @Override
-        public boolean process(TProtocol inProt,
-            TProtocol outProt) throws TException {
+        public void process(TProtocol inProt, TProtocol outProt) throws TException {
           TSaslServerTransport saslServerTransport =
-            (TSaslServerTransport)inProt.getTransport();
+              (TSaslServerTransport)inProt.getTransport();
           SaslServer saslServer = saslServerTransport.getSaslServer();
           String principal = saslServer.getAuthorizationID();
           hbaseHandler.setEffectiveUser(principal);
-          return p.process(inProt, outProt);
+          p.process(inProt, outProt);
         }
       };
     }
