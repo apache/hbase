@@ -596,9 +596,7 @@ public abstract class RpcServer implements RpcServerInterface,
       InetAddress addr) throws AuthorizationException {
     if (authorize) {
       Class<?> c = getServiceInterface(services, connection.getServiceName());
-      synchronized (authManager) {
-        authManager.authorize(user, c, getConf(), addr);
-      }
+      authManager.authorize(user, c, getConf(), addr);
     }
   }
 
