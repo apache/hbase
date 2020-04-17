@@ -1596,9 +1596,11 @@ public class ProcedureExecutor<TEnvironment> {
     } catch (InterruptedException e) {
       handleInterruptedException(proc, e);
       return LockState.LOCK_YIELD_WAIT;
+    } catch (UnsupportedOperationException e) {
+      LOG.debug("Rollback is not supported for {}", proc);
     } catch (Throwable e) {
       // Catch NullPointerExceptions or similar errors...
-      LOG.error(HBaseMarkers.FATAL, "CODE-BUG: Uncaught runtime exception for " + proc, e);
+      LOG.error(HBaseMarkers.FATAL, "CODE-BUG: Uncaught runtime exception for {}", proc, e);
     }
 
     // allows to kill the executor before something is stored to the wal.
