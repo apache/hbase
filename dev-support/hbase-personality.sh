@@ -146,7 +146,7 @@ function personality_modules
   fi
 
   if [[ -n "${HADOOP_PROFILE}" ]]; then
-    extra="${extra} -Dhadoop.profile=${HADOOP_PROFILE}"
+    extra="${extra} -Phadoop-${HADOOP_PROFILE}"
   fi
 
   # BUILDMODE value is 'full' when there is no patch to be tested, and we are running checks on
@@ -459,7 +459,7 @@ function shadedjars_rebuild
     '-Dtest=NoUnitTests' '-DHBasePatchProcess' '-Prelease'
     '-Dmaven.javadoc.skip=true' '-Dcheckstyle.skip=true' '-Dspotbugs.skip=true')
   if [[ -n "${HADOOP_PROFILE}" ]]; then
-    maven_args+=("-Dhadoop.profile=${HADOOP_PROFILE}")
+    maven_args+=("-Phadoop-${HADOOP_PROFILE}")
   fi
 
   # disabled because "maven_executor" needs to return both command and args
@@ -638,22 +638,12 @@ function hadoopcheck_rebuild
 
   for hadoopver in ${hbase_hadoop3_versions}; do
     logfile="${PATCH_DIR}/patch-javac-${hadoopver}.txt"
-    # no hbase_hadoop2_versions means hadoop 3.x only, so we do not need to
-    # specify hadoop.profile
     # disabled because "maven_executor" needs to return both command and args
     # shellcheck disable=2046
-    if [[ -n "${hbase_hadoop2_versions}" ]]; then
-      echo_and_redirect "${logfile}" \
-        $(maven_executor) clean install \
-          -DskipTests -DHBasePatchProcess \
-          -Dhadoop-three.version="${hadoopver}" \
-          -Dhadoop.profile=3.0
-    else
-      echo_and_redirect "${logfile}" \
-        $(maven_executor) clean install \
-          -DskipTests -DHBasePatchProcess \
-          -Dhadoop-three.version="${hadoopver}"
-    fi
+    $(maven_executor) clean install \
+        -DskipTests -DHBasePatchProcess \
+        -Dhadoop-three.version="${hadoopver}" \
+        -Phadoop-3.0
     count=$(${GREP} -c '\[ERROR\]' "${logfile}")
     if [[ ${count} -gt 0 ]]; then
       add_vote_table -1 hadoopcheck "${BUILDMODEMSG} causes ${count} errors with Hadoop v${hadoopver}."
