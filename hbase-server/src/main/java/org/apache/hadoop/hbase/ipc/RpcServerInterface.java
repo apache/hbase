@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.ipc;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.CellScanner;
@@ -78,11 +79,12 @@ public interface RpcServerInterface {
 
   /**
    * Refresh authentication manager policy.
+   * @param conf configuration for refresh
    * @param pp
    */
   @VisibleForTesting
-  void refreshAuthManager(PolicyProvider pp);
-  
+  void refreshAuthManager(Configuration conf, PolicyProvider pp);
+
   RpcScheduler getScheduler();
 
   void setRsRpcServices(RSRpcServices rsRpcServices);
