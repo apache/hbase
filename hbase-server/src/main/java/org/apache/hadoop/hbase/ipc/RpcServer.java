@@ -2202,7 +2202,6 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       final InetSocketAddress bindAddress, Configuration conf,
       RpcScheduler scheduler)
       throws IOException {
-    
     if (conf.getBoolean("hbase.ipc.server.reservoir.enabled", true)) {
       this.reservoir = new BoundedByteBufferPool(
           conf.getInt("hbase.ipc.server.reservoir.max.buffer.size", 1024 * 1024),
@@ -2265,14 +2264,9 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     if (scheduler instanceof ConfigurationObserver) {
       ((ConfigurationObserver)scheduler).onConfigurationChange(newConf);
     }
-    // Make sure authManager will read hbase-policy file
-    System.setProperty("hadoop.policy.file", "hbase-policy.xml");
-    synchronized (authManager) {
-      authManager.refresh(newConf, new HBasePolicyProvider());
+    if (authorize) {
+      refreshAuthManager(newConf, new HBasePolicyProvider());
     }
-    LOG.info("Refreshed hbase-policy.xml successfully");
-    ProxyUsers.refreshSuperUserGroupsConfiguration(newConf);
-    LOG.info("Refreshed super and proxy users successfully");
   }
 
   private void initReconfigurable(Configuration confToLoad) {
@@ -2353,10 +2347,14 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
   }
 
   @Override
-  public synchronized void refreshAuthManager(PolicyProvider pp) {
+  public synchronized void refreshAuthManager(Configuration conf, PolicyProvider pp) {
     // Ignore warnings that this should be accessed in a static way instead of via an instance;
     // it'll break if you go via static route.
-    this.authManager.refresh(this.conf, pp);
+    System.setProperty("hadoop.policy.file", "hbase-policy.xml");
+    this.authManager.refresh(conf, pp);
+    LOG.info("Refreshed hbase-policy.xml successfully");
+    ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
+    LOG.info("Refreshed super and proxy users successfully");
   }
 
   private AuthenticationTokenSecretManager createSecretManager() {
