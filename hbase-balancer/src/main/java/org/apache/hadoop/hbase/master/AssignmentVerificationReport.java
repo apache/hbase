@@ -35,7 +35,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 /**
- * Helper class that is used by {@link RegionPlacementMaintainer} to print
+ * Helper class that is used by RegionPlacementMaintainer to print
  * information for favored nodes
  *
  */
