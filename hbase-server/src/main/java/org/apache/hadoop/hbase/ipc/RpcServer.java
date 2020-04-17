@@ -592,7 +592,7 @@ public abstract class RpcServer implements RpcServerInterface,
    * @param addr InetAddress of incoming connection
    * @throws AuthorizationException when the client isn't authorized to talk the protocol
    */
-  public void authorize(UserGroupInformation user, ConnectionHeader connection,
+  public synchronized void authorize(UserGroupInformation user, ConnectionHeader connection,
       InetAddress addr) throws AuthorizationException {
     if (authorize) {
       Class<?> c = getServiceInterface(services, connection.getServiceName());
