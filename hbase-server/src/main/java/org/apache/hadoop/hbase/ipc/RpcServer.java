@@ -120,8 +120,6 @@ public abstract class RpcServer implements RpcServerInterface,
   protected SecretManager<TokenIdentifier> secretManager;
   protected final Map<String, String> saslProps;
 
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IS2_INCONSISTENT_SYNC",
-      justification="Start is synchronized so authManager creation is single-threaded")
   protected ServiceAuthorizationManager authManager;
 
   /** This is set to Call object before Handler invokes an RPC and ybdie
@@ -313,14 +311,9 @@ public abstract class RpcServer implements RpcServerInterface,
     if (scheduler instanceof ConfigurationObserver) {
       ((ConfigurationObserver) scheduler).onConfigurationChange(newConf);
     }
-    // Make sure authManager will read hbase-policy file
-    System.setProperty("hadoop.policy.file", "hbase-policy.xml");
-    synchronized (authManager) {
-      authManager.refresh(newConf, new HBasePolicyProvider());
+    if (authorize) {
+      refreshAuthManager(newConf, new HBasePolicyProvider());
     }
-    LOG.info("Refreshed hbase-policy.xml successfully");
-    ProxyUsers.refreshSuperUserGroupsConfiguration(newConf);
-    LOG.info("Refreshed super and proxy users successfully");
   }
 
   protected void initReconfigurable(Configuration confToLoad) {
@@ -347,12 +340,14 @@ public abstract class RpcServer implements RpcServerInterface,
   }
 
   @Override
-  public void refreshAuthManager(PolicyProvider pp) {
+  public synchronized void refreshAuthManager(Configuration conf, PolicyProvider pp) {
     // Ignore warnings that this should be accessed in a static way instead of via an instance;
     // it'll break if you go via static route.
-    synchronized (authManager) {
-      authManager.refresh(this.conf, pp);
-    }
+    System.setProperty("hadoop.policy.file", "hbase-policy.xml");
+    this.authManager.refresh(conf, pp);
+    LOG.info("Refreshed hbase-policy.xml successfully");
+    ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
+    LOG.info("Refreshed super and proxy users successfully");
   }
 
   protected AuthenticationTokenSecretManager createSecretManager() {
@@ -595,13 +590,11 @@ public abstract class RpcServer implements RpcServerInterface,
    * @param addr InetAddress of incoming connection
    * @throws AuthorizationException when the client isn't authorized to talk the protocol
    */
-  public void authorize(UserGroupInformation user, ConnectionHeader connection,
+  public synchronized void authorize(UserGroupInformation user, ConnectionHeader connection,
       InetAddress addr) throws AuthorizationException {
     if (authorize) {
       Class<?> c = getServiceInterface(services, connection.getServiceName());
-      synchronized (authManager) {
-        authManager.authorize(user, c, getConf(), addr);
-      }
+      authManager.authorize(user, c, getConf(), addr);
     }
   }
 
