@@ -70,14 +70,6 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
   }
 
   @Override
-  protected LockState acquireLock(MasterProcedureEnv env) {
-    if (env.getProcedureScheduler().waitTableExclusiveLock(this, getTableName())) {
-      return LockState.LOCK_EVENT_WAIT;
-    }
-    return LockState.LOCK_ACQUIRED;
-  }
-
-  @Override
   protected void rollbackState(MasterProcedureEnv env, InitMetaState state)
       throws IOException, InterruptedException {
     throw new UnsupportedOperationException();
