@@ -66,13 +66,12 @@ Used only for 'publish':
     separately define GIT_REF if RELEASE_TAG is not actually present as a tag at publish time)
     If both RELEASE_TAG and GIT_REF are undefined it will default to HEAD of master.
   GPG_KEY - GPG key id (usually email addr) used to sign release artifacts
-  GPG_PASSPHRASE - Passphrase for GPG key
   REPO - Set to full path of a directory to use as maven local repo (dependencies cache)
     to avoid re-downloading dependencies for each stage.  It is automatically set if you
     request full sequence of stages (tag, publish-dist, publish-release) in do-release.sh.
 
 For example:
- $ PROJECT="hbase-operator-tools" ASF_USERNAME=NAME ASF_PASSWORD=PASSWORD GPG_PASSPHRASE=PASSWORD GPG_KEY=stack@apache.org ./release-build.sh publish-dist
+ $ PROJECT="hbase-operator-tools" ASF_USERNAME=NAME ASF_PASSWORD=PASSWORD GPG_KEY=stack@apache.org ./release-build.sh publish-dist
 EOF
   exit 1
 }
@@ -165,12 +164,7 @@ fi
 
 ### Below is for 'publish-*' stages ###
 check_get_passwords ASF_PASSWORD
-if [[ -z "$GPG_PASSPHRASE" ]]; then
-  check_get_passwords GPG_PASSPHRASE
-  GPG_TTY="$(tty)"
-  export GPG_TTY
-fi
-check_needed_vars PROJECT ASF_USERNAME ASF_PASSWORD GPG_KEY GPG_PASSPHRASE
+check_needed_vars PROJECT ASF_USERNAME ASF_PASSWORD GPG_KEY
 
 # Commit ref to checkout when building
 BASE_DIR=$(pwd)

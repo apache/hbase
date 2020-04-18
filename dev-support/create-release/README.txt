@@ -17,6 +17,16 @@ anomalies are explained up in JIRA.
 
 See http://hbase.apache.org/book.html#maven.release
 
+Before starting an RC build, make sure your local gpg-agent has configs
+to properly handle your credentials, especially if you want to avoid
+typing the passphrase to your secret key.
+
+e.g. if you are going to run and step away, best to increase the TTL
+on caching the unlocked secret via ~/.gnupg/gpg-agent.conf
+  # in seconds, e.g. a day
+  default-cache-ttl 86400
+  max-cache-ttl 86400
+
 Running a build on GCE is easy enough. Here are some notes if of use.
 Create an instance. 4CPU/15G/10G disk seems to work well enough.
 Once up, run the below to make your machine fit for RC building:

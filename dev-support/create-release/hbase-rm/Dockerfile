@@ -50,10 +50,15 @@ RUN wget -qO- "https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&fi
         tar xvz -C /opt
 ENV YETUS_HOME /opt/apache-yetus-${YETUS_VERSION}
 
-WORKDIR /opt/hbase-rm/output
-
 ARG UID
-RUN useradd -m -s /bin/bash -p hbase-rm -u $UID hbase-rm
-USER hbase-rm:hbase-rm
+ARG RM_USER
+RUN groupadd hbase-rm && \
+    useradd --create-home --shell /bin/bash -p hbase-rm -u $UID $RM_USER && \
+    mkdir /home/$RM_USER/.gnupg && \
+    chown -R $RM_USER:hbase-rm /home/$RM_USER && \
+    chmod -R 700 /home/$RM_USER
 
-ENTRYPOINT [ "/opt/hbase-rm/do-release.sh" ]
+USER $RM_USER:hbase-rm
+WORKDIR /home/$RM_USER/hbase-rm/
+
+ENTRYPOINT [ "./do-release.sh" ]

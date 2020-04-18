@@ -42,27 +42,41 @@ fi
 
 # If running in docker, import and then cache keys.
 if [ "$RUNNING_IN_DOCKER" = "1" ]; then
-  # Run gpg agent.
-  eval "$(gpg-agent --disable-scdaemon --daemon --no-grab  --allow-preset-passphrase \
-          --default-cache-ttl=86400 --max-cache-ttl=86400)"
-  echo "GPG Version: $(gpg --version)"
-  # Inside docker, need to import the GPG keyfile stored in the current directory.
-  # (On workstation, assume GPG has access to keychain/cache with key_id already imported.)
-  echo "$GPG_PASSPHRASE" | $GPG --passphrase-fd 0 --import "$SELF/gpg.key"
+  # when Docker Desktop for mac is running under load there is a delay before the mounted volume
+  # becomes available. if we do not pause then we may try to use the gpg-agent socket before docker
+  # has got it ready and we will not think there is a gpg-agent.
+  if [ "${HOST_OS}" == "DARWIN" ]; then
+    sleep 5
+  fi
+  # in docker our working dir is set to where all of our scripts are held
+  # and we want default output to go into the "output" directory that should be in there.
+  if [ -d "output" ]; then
+    cd output
+  fi
+  echo "GPG Version: $("${GPG}" "${GPG_ARGS[@]}" --version)"
+  # Inside docker, need to import the GPG key stored in the current directory.
+  $GPG "${GPG_ARGS[@]}" --import "$SELF/gpg.key.public"
 
   # We may need to adjust the path since JAVA_HOME may be overridden by the driver script.
   if [ -n "$JAVA_HOME" ]; then
+    echo "Using JAVA_HOME from host."
     export PATH="$JAVA_HOME/bin:$PATH"
   else
     # JAVA_HOME for the openjdk package.
-    export JAVA_HOME=/usr
+    export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/
   fi
 else
   # Outside docker, need to ask for information about the release.
   get_release_info
 fi
+
 GPG_TTY="$(tty)"
 export GPG_TTY
+echo "Testing gpg signing."
+echo "foo" > gpg_test.txt
+"${GPG}" "${GPG_ARGS[@]}" --detach --armor --sign gpg_test.txt
+# In --batch mode we have to be explicit about what we are verifying
+"${GPG}" "${GPG_ARGS[@]}" --verify gpg_test.txt.asc gpg_test.txt
 
 if [[ -z "$RELEASE_STEP" ]]; then
   # If doing all stages, leave out 'publish-snapshot'
