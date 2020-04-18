@@ -17,7 +17,9 @@
 # limitations under the License.
 #
 DRY_RUN=${DRY_RUN:-1} #default to dry run
-GPG="gpg --pinentry-mode loopback --no-tty --batch"
+DEBUG=${DEBUG:-0}
+GPG=${GPG:-gpg}
+GPG_ARGS=(--no-autostart --batch)
 # Maven Profiles for publishing snapshots and release to Maven Central and Dist
 PUBLISH_PROFILES=("-P" "apache-release,release")
 
@@ -46,23 +48,26 @@ function parse_version {
     head -n 2 | tail -n 1 | cut -d'>' -f2 | cut -d '<' -f1
 }
 
+function banner {
+  local msg="$1"
+  echo "========================"
+  echo "=== ${msg}"
+  echo
+}
+
 function run_silent {
   local BANNER="$1"
   local LOG_FILE="$2"
   shift 2
 
-  echo "========================"
-  echo "=== $BANNER"
+  banner "${BANNER}"
   echo "Command: $*"
   echo "Log file: $LOG_FILE"
 
-  "$@" 1>"$LOG_FILE" 2>&1
-
-  local EC=$?
-  if [ $EC != 0 ]; then
+  if ! "$@" 1>"$LOG_FILE" 2>&1; then
     echo "Command FAILED. Check full logs for details."
     tail "$LOG_FILE"
-    exit $EC
+    exit 1
   fi
   echo "=== SUCCESS"
 }
@@ -260,18 +265,15 @@ EOF
     ASF_PASSWORD="***INVALID***"
   fi
 
-  if [ -z "$GPG_PASSPHRASE" ]; then
-    stty -echo && printf "GPG_PASSPHRASE: " && read -r GPG_PASSPHRASE && printf '\n' && stty echo
-    GPG_TTY="$(tty)"
-    export GPG_TTY
-  fi
-
   export ASF_PASSWORD
-  export GPG_PASSPHRASE
 }
 
 function is_dry_run {
   [[ "$DRY_RUN" = 1 ]]
+}
+
+function is_debug {
+  [[ "${DEBUG}" = 1 ]]
 }
 
 function check_get_passwords {
@@ -381,8 +383,6 @@ function configure_maven {
       <password>${env.ASF_PASSWORD}</password></server>
     <server><id>apache.releases.https</id><username>${env.ASF_USERNAME}</username>
       <password>${env.ASF_PASSWORD}</password></server>
-    <server><id>gpg.passphrase</id>
-      <passphrase>${env.GPG_PASSPHRASE}</passphrase></server>
   </servers>
   <profiles>
     <profile>
@@ -436,6 +436,7 @@ function git_clone_overwrite {
 }
 
 # Writes report into cwd!
+# TODO should have option for maintenance release that include LimitedPrivate in report
 function generate_api_report {
   local project="$1"
   local previous_tag="$2"
@@ -518,10 +519,9 @@ function update_releasenotes {
 # named for 'project', the first arg passed.
 # Expects the following three defines in the environment:
 # - GPG needs to be defined, with the path to GPG: defaults 'gpg'.
-# - The passphrase in the GPG_PASSPHRASE variable: no default (we don't make .asc file).
 # - GIT_REF which is the tag to create the tgz from: defaults to 'master'.
 # For example:
-# $ GPG_PASSPHRASE="XYZ" GIT_REF="master" make_src_release hbase-operator-tools 1.0.0
+# $ GIT_REF="master" make_src_release hbase-operator-tools 1.0.0
 make_src_release() {
   # Tar up the src and sign and hash it.
   local project="${1}"
@@ -533,9 +533,8 @@ make_src_release() {
   git clean -d -f -x
   git archive --format=tar.gz --output="../${tgz}" --prefix="${base_name}/" "${GIT_REF:-master}"
   cd .. || exit
-  echo "$GPG_PASSPHRASE" | $GPG --passphrase-fd 0 --armour --output "${tgz}.asc" \
-    --detach-sig "${tgz}"
-  echo "$GPG_PASSPHRASE" | $GPG --passphrase-fd 0 --print-md SHA512 "${tgz}" > "${tgz}.sha512"
+  $GPG "${GPG_ARGS[@]}" --armor --output "${tgz}.asc" --detach-sig "${tgz}"
+  $GPG "${GPG_ARGS[@]}" --print-md SHA512 "${tgz}" > "${tgz}.sha512"
 }
 
 # Make binary release.
@@ -544,11 +543,10 @@ make_src_release() {
 # named for 'project', the first arg passed.
 # Expects the following three defines in the environment:
 # - GPG needs to be defined, with the path to GPG: defaults 'gpg'.
-# - The passphrase in the GPG_PASSPHRASE variable: no default (we don't make .asc file).
 # - GIT_REF which is the tag to create the tgz from: defaults to 'master'.
 # - MVN Default is "mvn -B --settings $MAVEN_SETTINGS_FILE".
 # For example:
-# $ GPG_PASSPHRASE="XYZ" GIT_REF="master" make_src_release hbase-operator-tools 1.0.0
+# $ GIT_REF="master" make_src_release hbase-operator-tools 1.0.0
 make_binary_release() {
   local project="${1}"
   local version="${2}"
@@ -573,8 +571,8 @@ make_binary_release() {
     cp "${f_bin_prefix}"*-bin.tar.gz ..
     cd .. || exit
     for i in "${base_name}"*-bin.tar.gz; do
-      echo "$GPG_PASSPHRASE" | $GPG --passphrase-fd 0 --armour --output "$i.asc" --detach-sig "$i"
-      echo "$GPG_PASSPHRASE" | $GPG --passphrase-fd 0 --print-md SHA512 "${i}" > "$i.sha512"
+      "${GPG}" "${GPG_ARGS[@]}" --armour --output "${i}.asc" --detach-sig "${i}"
+      "${GPG}" "${GPG_ARGS[@]}" --print-md SHA512 "${i}" > "${i}.sha512"
     done
   else
     cd .. || exit
@@ -588,10 +586,11 @@ make_binary_release() {
 # 'assembly' build (where gpg signing occurs) experiences timeout, without this "kick".
 function kick_gpg_agent {
   # All that's needed is to run gpg on a random file
+  # TODO could we just call gpg-connect-agent /bye
   local i
   i="$(mktemp)"
   echo "This is a test file" > "$i"
-  echo "$GPG_PASSPHRASE" | $GPG --passphrase-fd 0 --armour --output "$i.asc" --detach-sig "$i"
+  "${GPG}" "${GPG_ARGS[@]}" --armour --output "${i}.asc" --detach-sig "${i}"
   rm "$i" "$i.asc"
 }
 
