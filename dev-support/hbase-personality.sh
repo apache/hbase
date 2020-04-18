@@ -640,7 +640,8 @@ function hadoopcheck_rebuild
     logfile="${PATCH_DIR}/patch-javac-${hadoopver}.txt"
     # disabled because "maven_executor" needs to return both command and args
     # shellcheck disable=2046
-    $(maven_executor) clean install \
+    echo_and_redirect "${logfile}" \
+      $(maven_executor) clean install \
         -DskipTests -DHBasePatchProcess \
         -Dhadoop-three.version="${hadoopver}" \
         -Phadoop-3.0
