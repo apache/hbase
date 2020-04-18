@@ -743,7 +743,7 @@ public final class ZKUtil {
       for (String node : nodes) {
         if (Thread.interrupted()) {
           // Partial data should not be processed. Cancel processing by sending empty list.
-          return new ArrayList<>();
+          return Collections.emptyList();
         }
         String nodePath = ZNodePaths.joinZNode(baseNode, node);
         byte[] data = ZKUtil.getDataAndWatch(zkw, nodePath);
