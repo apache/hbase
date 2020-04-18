@@ -401,7 +401,7 @@ public class TestTokenAuthentication {
     while (!server.isStarted() && !server.isStopped()) {
       Thread.sleep(10);
     }
-    server.rpcServer.refreshAuthManager(new PolicyProvider() {
+    server.rpcServer.refreshAuthManager(conf, new PolicyProvider() {
       @Override
       public Service[] getServices() {
         return new Service [] {

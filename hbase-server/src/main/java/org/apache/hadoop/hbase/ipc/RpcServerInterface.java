@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
@@ -84,7 +85,7 @@ public interface RpcServerInterface {
    * @param pp
    */
   @VisibleForTesting
-  void refreshAuthManager(PolicyProvider pp);
+  void refreshAuthManager(Configuration conf, PolicyProvider pp);
 
   RpcScheduler getScheduler();
 
