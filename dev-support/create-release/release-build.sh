@@ -89,11 +89,7 @@ if [[ "$*" == *"help"* ]]; then
   exit_with_usage
 fi
 
-export LC_ALL=C.UTF-8
-export LANG=C.UTF-8
-GPG_TTY="$(tty)"
-export GPG_TTY
-
+init_locale
 init_java
 init_mvn
 init_python
@@ -159,8 +155,13 @@ if [[ "$1" == "tag" ]]; then
 fi
 
 ### Below is for 'publish-*' stages ###
-
-check_get_passwords ASF_PASSWORD GPG_PASSPHRASE
+set -x
+check_get_passwords ASF_PASSWORD
+if [[ -z "$GPG_PASSPHRASE" ]]; then
+  check_get_passwords GPG_PASSPHRASE
+  GPG_TTY="$(tty)"
+  export GPG_TTY
+fi
 check_needed_vars PROJECT ASF_USERNAME ASF_PASSWORD GPG_KEY GPG_PASSPHRASE
 
 # Commit ref to checkout when building
@@ -209,6 +210,7 @@ if [[ "$1" == "publish-dist" ]]; then
   make_src_release "${PROJECT}" "${VERSION}"
 
   echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') Building binary dist"
+  debug_show_gpg_params
   make_binary_release "${PROJECT}" "${VERSION}"
   echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') Done building binary distribution"
 

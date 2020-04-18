@@ -219,8 +219,8 @@ function get_release_info {
 Release details:
 GIT_BRANCH:      $GIT_BRANCH
 RELEASE_VERSION: $RELEASE_VERSION
-RELEASE_TAG:     $RELEASE_TAG
 NEXT_VERSION:    $NEXT_VERSION
+RELEASE_TAG:     $RELEASE_TAG $([[ "$GIT_REF" != "$RELEASE_TAG" ]] && printf "\n%s\n" "GIT_REF:         $GIT_REF")
 API_DIFF_TAG:    $API_DIFF_TAG
 ASF_USERNAME:    $ASF_USERNAME
 GPG_KEY:         $GPG_KEY
@@ -284,6 +284,28 @@ function check_needed_vars {
   done
   (( missing > 0 )) && exit_with_usage
   return 0
+}
+
+function debug_show_gpg_params {
+  echo "==================="
+  echo "GPG-related env variables:"
+  env | grep -i gpg | sort
+  echo "==================="
+  echo "Available key ids:"
+  gpg --list-keys
+  echo "==================="
+}
+
+function init_locale {
+  local locale_value
+  OS=`uname -s`
+  case "${OS}" in
+    Darwin*)    locale_value="en_US.UTF-8";;
+    Linux*)     locale_value="C.UTF-8";;
+    *)          error "unknown OS";;
+  esac
+  export LC_ALL="$locale_value"
+  export LANG="$locale_value"
 }
 
 # Initializes JAVA_VERSION to the version of the JVM in use.
@@ -462,7 +484,7 @@ make_binary_release() {
   # assembly spec to in maven. TODO. Meantime, three invocations.
   "${MVN[@]}" clean install -DskipTests
   "${MVN[@]}" site -DskipTests
-  "${MVN[@]}" install assembly:single -DskipTests -Dcheckstyle.skip=true "${PUBLISH_PROFILES[@]}"
+  "${MVN[@]}" -e -X install assembly:single -DskipTests -Dcheckstyle.skip=true "${PUBLISH_PROFILES[@]}"
 
   # Check there is a bin gz output. The build may not produce one: e.g. hbase-thirdparty.
   local f_bin_prefix="./${PROJECT}-assembly/target/${base_name}"

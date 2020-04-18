@@ -45,7 +45,8 @@ if [ "$RUNNING_IN_DOCKER" = "1" ]; then
   eval "$(gpg-agent --disable-scdaemon --daemon --no-grab  --allow-preset-passphrase \
           --default-cache-ttl=86400 --max-cache-ttl=86400)"
   echo "GPG Version: $(gpg --version)"
-  # Inside docker, need to import the GPG key stored in the current directory.
+  # Inside docker, need to import the GPG keyfile stored in the current directory.
+  # (On workstation, assume GPG has access to keychain/cache with key_id already imported.)
   echo "$GPG_PASSPHRASE" | $GPG --passphrase-fd 0 --import "$SELF/gpg.key"
 
   # We may need to adjust the path since JAVA_HOME may be overridden by the driver script.
@@ -93,6 +94,7 @@ else
 fi
 
 if should_build "publish-dist"; then
+  debug_show_gpg_params
   run_silent "Publishing distribution packages (tarballs)" "publish-dist.log" \
     "$SELF/release-build.sh" publish-dist
 else
