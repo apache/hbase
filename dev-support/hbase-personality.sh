@@ -208,7 +208,17 @@ function personality_modules
 
   if [[ ${testtype} == compile ]] && [[ "${SKIP_ERRORPRONE}" != "true" ]] &&
       [[ "${PATCH_BRANCH}" != branch-1* ]] ; then
-    extra="${extra} -PerrorProne"
+    properties="$("${JAVA_HOME}/bin/java" -XshowSettings:properties -version 2>&1)"
+    runtime_version="$(echo "${properties}" | "${GREP}" java.runtime.version | head -1 | "${SED}" -e 's/.* = \([^ ]*\)/\1/')"
+    version="$(echo "$runtime_version" | "${SED}" -e 's/+/_/g' -e 's/-/_/g' | cut -d'_' -f1)"
+    case "$version" in
+    1.*)
+      extra="${extra} -PerrorProne-jdk8"
+      ;;
+    *)
+      extra="${extra} -PerrorProne-jdk9+"
+      ;;
+    esac
   fi
 
   # If EXCLUDE_TESTS_URL/INCLUDE_TESTS_URL is set, fetches the url

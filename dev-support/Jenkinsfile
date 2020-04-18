@@ -517,8 +517,6 @@ pipeline {
             SET_JAVA_HOME = "/usr/lib/jvm/java-11"
             // Activates hadoop 3.0 profile in maven runs.
             HADOOP_PROFILE = '3.0'
-            // ErrorProne is broken on JDK11, see HBASE-23894
-            SKIP_ERROR_PRONE = 'true'
           }
           steps {
             // Must do prior to anything else, since if one of them timesout we'll stash the commentfile
