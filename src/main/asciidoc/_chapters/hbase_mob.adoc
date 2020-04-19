@@ -618,7 +618,6 @@ of the table, and then delete it.
 Bulk load and WAL split-to-HFile feature write data into the normal /hbase/data directory irrespective of data over than the MOB threshold.
 
 [NOTE]
-====
 In both cases the next compaction to include those files and write the data out to MOB HFiles.
 
 === MOB Upgrade Considerations
