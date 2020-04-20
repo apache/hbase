@@ -311,6 +311,12 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
         mrb.addGauge(Interns.info(tableNamePrefix + MetricsRegionServerSource.NUM_REFERENCE_FILES,
             MetricsRegionServerSource.NUM_REFERENCE_FILES_DESC),
             tableWrapperAgg.getNumReferenceFiles(tableName.getNameAsString()));
+        mrb.addGauge(Interns.info(tableNamePrefix + MetricsRegionSource.GET_REQUEST_ON_MEMSTORE,
+          MetricsRegionSource.GET_REQUEST_ON_MEMSTORE_DESC),
+          tableWrapperAgg.getMemstoreReadRequestCount(tableName.getNameAsString()));
+        mrb.addGauge(Interns.info(tableNamePrefix + MetricsRegionSource.GET_REQUEST_ON_FILE,
+          MetricsRegionSource.GET_REQUEST_ON_FILE_DESC),
+          tableWrapperAgg.getFileRequestCount(tableName.getNameAsString()));
       }
     }
   }

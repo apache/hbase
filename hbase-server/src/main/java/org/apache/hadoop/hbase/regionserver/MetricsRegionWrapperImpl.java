@@ -58,6 +58,8 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   private long numReferenceFiles;
   private long maxFlushQueueSize;
   private long maxCompactionQueueSize;
+  private long readsFromMemstore;
+  private long readsFromFile;
 
   private ScheduledFuture<?> regionMetricsUpdateTask;
 
@@ -233,6 +235,16 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
     return this.region.hashCode();
   }
 
+  @Override
+  public long getMemstoreReadRequestsCount() {
+    return readsFromMemstore;
+  }
+
+  @Override
+  public long getFileReadRequestCount() {
+    return readsFromFile;
+  }
+  
   public class HRegionMetricsWrapperRunnable implements Runnable {
 
     @Override
@@ -249,6 +261,8 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
       long tempMaxFlushQueueSize = 0;
       long avgAgeNumerator = 0;
       long numHFiles = 0;
+      long tempReadsFromMemstore = 0l;
+      long tempReadsFromFile = 0l;
       if (region.stores != null) {
         for (HStore store : region.stores.values()) {
           tempNumStoreFiles += store.getStorefilesCount();
@@ -279,6 +293,8 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
           if (storeAvgStoreFileAge.isPresent()) {
             avgAgeNumerator += (long) storeAvgStoreFileAge.getAsDouble() * storeHFiles;
           }
+          tempReadsFromMemstore += store.getGetRequestsCountFromMemstore();
+          tempReadsFromFile += store.getGetRequestsCountFromFile();
         }
       }
 
@@ -305,6 +321,8 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
       if (tempMaxFlushQueueSize > maxFlushQueueSize) {
         maxFlushQueueSize = tempMaxFlushQueueSize;
       }
+      readsFromMemstore = tempReadsFromMemstore;
+      readsFromFile = tempReadsFromFile;
     }
   }
 

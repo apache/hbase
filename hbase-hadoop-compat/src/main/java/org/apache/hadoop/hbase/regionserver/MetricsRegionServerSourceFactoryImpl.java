@@ -34,6 +34,7 @@ public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServer
     private MetricsUserAggregateSourceImpl userAggImpl;
     private MetricsTableAggregateSourceImpl tblAggImpl;
     private MetricsHeapMemoryManagerSourceImpl heapMemMngImpl;
+    private MetricsStoreAggregateSourceImpl storeAggImpl;
   }
 
   private synchronized MetricsRegionAggregateSourceImpl getRegionAggregate() {
@@ -42,6 +43,16 @@ public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServer
         FactoryStorage.INSTANCE.regionAggImpl = new MetricsRegionAggregateSourceImpl();
       }
       return FactoryStorage.INSTANCE.regionAggImpl;
+    }
+  }
+
+  private synchronized MetricsStoreAggregateSourceImpl
+      getStoreAggregate(MetricsStoreWrapper wrapper) {
+    synchronized (FactoryStorage.INSTANCE.aggLock) {
+      if (FactoryStorage.INSTANCE.storeAggImpl == null) {
+        FactoryStorage.INSTANCE.storeAggImpl = new MetricsStoreAggregateSourceImpl();
+      }
+      return FactoryStorage.INSTANCE.storeAggImpl;
     }
   }
 
@@ -83,6 +94,11 @@ public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServer
   @Override
   public MetricsRegionSource createRegion(MetricsRegionWrapper wrapper) {
     return new MetricsRegionSourceImpl(wrapper, getRegionAggregate());
+  }
+
+  @Override
+  public MetricsStoreSource createStore(MetricsStoreWrapper wrapper) {
+    return new MetricsStoreSourceImpl(wrapper, getStoreAggregate(wrapper));
   }
 
   @Override

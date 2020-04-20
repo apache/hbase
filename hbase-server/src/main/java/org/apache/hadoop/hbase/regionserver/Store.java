@@ -282,4 +282,22 @@ public interface Store {
   boolean isSloppyMemStore();
 
   int getCurrentParallelPutCount();
+
+  /**
+   * Indicates the number of read requests that was targetted at this store.
+   * @return
+   */
+  long getReadRequestsFromStoreCount();
+
+  /**
+   * Indicates the number of read requests that was targeted at the memstore part of this store
+   * @return
+   */
+  long getGetRequestsCountFromMemstore();
+  
+  /**
+   * Indicates the number of read requests from the files under this store.
+   * @return
+   */
+  long getGetRequestsCountFromFile();
 }

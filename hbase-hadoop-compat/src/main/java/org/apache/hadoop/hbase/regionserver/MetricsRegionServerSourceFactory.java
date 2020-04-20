@@ -45,6 +45,13 @@ public interface MetricsRegionServerSourceFactory {
   MetricsRegionSource createRegion(MetricsRegionWrapper wrapper);
 
   /**
+   * Create a MetricsStoreSource from a MetricsStoreWrapper
+   * @param wrapper The wrapper store
+   * @return A metrics store source
+   */
+  MetricsStoreSource createStore(MetricsStoreWrapper wrapper);
+
+  /**
    * Create a MetricsUserSource from a user
    * @return A metrics user source
    */

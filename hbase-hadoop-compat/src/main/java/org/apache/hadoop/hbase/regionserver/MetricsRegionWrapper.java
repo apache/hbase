@@ -170,4 +170,15 @@ public interface MetricsRegionWrapper {
    *   all compacted store files that belong to this region
    */
   long getMaxCompactedStoreFileRefCount();
+
+  /**
+   * @return the number of reads on memstore
+   */
+  long getMemstoreReadRequestsCount();
+
+  /**
+   * @return the reads happening on files
+   */
+  long getFileReadRequestCount();
+
 }

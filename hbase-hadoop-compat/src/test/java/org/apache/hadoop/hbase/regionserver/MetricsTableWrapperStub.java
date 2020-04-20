@@ -109,4 +109,16 @@ public class MetricsTableWrapperStub implements MetricsTableWrapperAggregate {
   public long getCpRequestsCount(String table) {
     return 99;
   }
+
+  @Override
+  public long getMemstoreReadRequestCount(String table) {
+    // TODO Auto-generated method stub
+    return 3;
+  }
+
+  @Override
+  public long getFileRequestCount(String table) {
+    // TODO Auto-generated method stub
+    return 3;
+  }
 }

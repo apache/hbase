@@ -184,6 +184,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     if (get) {
       this.readType = Scan.ReadType.PREAD;
       this.scanUsePread = true;
+      this.store.incrGetRequestsFromStore();
     } else if (scanType != ScanType.USER_SCAN) {
       // For compaction scanners never use Pread as already we have stream based scanners on the
       // store files to be compacted
@@ -565,6 +566,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
     int count = 0;
     long totalBytesRead = 0;
+    boolean trackGets =  false;
+
 
     LOOP: do {
       // Update and check the time limit based on the configured value of cellsPerTimeoutCheck
@@ -608,7 +611,17 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           if (f != null) {
             cell = f.transformCell(cell);
           }
-
+          // tracking gets only and currently per row
+          // and not per cell. Even scans metrics at the region level are
+          // being tracked row wise.
+          if (get && !trackGets) {
+            if (!heap.current.isFileScanner()) {
+              updateMetricsStore(true);
+            } else {
+              updateMetricsStore(false);
+            }
+            trackGets = true;
+          }
           this.countPerRow++;
           if (storeLimit > -1 && this.countPerRow > (storeLimit + storeOffset)) {
             // do what SEEK_NEXT_ROW does.
@@ -732,6 +745,10 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     // No more keys
     close(false);// Do all cleanup except heap.close()
     return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
+  }
+
+  private void updateMetricsStore(boolean memstoreRead) {
+    store.updateMetricsStore(memstoreRead);
   }
 
   /**

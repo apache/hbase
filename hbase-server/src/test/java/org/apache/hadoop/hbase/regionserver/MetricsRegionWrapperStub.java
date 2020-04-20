@@ -182,4 +182,15 @@ public class MetricsRegionWrapperStub implements MetricsRegionWrapper {
   public long getTotalRequestCount() {
     return 0;
   }
+
+  @Override
+  public long getMemstoreReadRequestsCount() {
+    return 0;
+  }
+
+  @Override
+  public long getFileReadRequestCount() {
+    // TODO Auto-generated method stub
+    return 0;
+  }
 }

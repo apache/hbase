@@ -89,13 +89,14 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
                   (long) store.getAvgStoreFileAge().getAsDouble() * store.getStorefilesCount();
             }
             mt.storeCount += 1;
+            mt.memstoreGetCount += store.getGetRequestsCountFromMemstore();
+            mt.fileGetCount += store.getGetRequestsCountFromFile();
           }
           mt.regionCount += 1;
 
           mt.readRequestCount += r.getReadRequestsCount();
-          mt.filteredReadRequestCount += getFilteredReadRequestCount(tbl.getNameAsString());
+          mt.filteredReadRequestCount += r.getFilteredReadRequestsCount();
           mt.writeRequestCount += r.getWriteRequestsCount();
-
         }
       }
 
@@ -130,6 +131,26 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
       return 0;
     } else {
       return metricsTable.readRequestCount;
+    }
+  }
+
+  @Override
+  public long getMemstoreReadRequestCount(String table) {
+    MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
+    if (metricsTable == null) {
+      return 0;
+    } else {
+      return metricsTable.memstoreGetCount;
+    }
+  }
+
+  @Override
+  public long getFileRequestCount(String table) {
+    MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
+    if (metricsTable == null) {
+      return 0;
+    } else {
+      return metricsTable.fileGetCount;
     }
   }
 
@@ -304,6 +325,8 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
     long totalStoreFileAge;
     long referenceFileCount;
     long cpRequestCount;
+    long memstoreGetCount;
+    long fileGetCount;
   }
 
 }
