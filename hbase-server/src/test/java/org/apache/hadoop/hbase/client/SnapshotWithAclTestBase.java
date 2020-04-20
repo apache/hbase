@@ -18,8 +18,11 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -227,5 +230,46 @@ public abstract class SnapshotWithAclTestBase extends SecureTestUtil {
     verifyDenied(new AccessReadAction(TEST_TABLE), USER_NONE);
     verifyAllowed(new AccessWriteAction(TEST_TABLE), USER_OWNER, USER_RW);
     verifyDenied(new AccessWriteAction(TEST_TABLE), USER_RO, USER_NONE);
+  }
+
+
+  final class AccessSnapshotAction implements AccessTestAction {
+    private String snapshotName;
+    private AccessSnapshotAction(String snapshotName) {
+      this.snapshotName = snapshotName;
+    }
+    @Override
+    public Object run() throws Exception {
+      try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
+        Admin admin = conn.getAdmin()) {
+        admin.snapshot(this.snapshotName, TEST_TABLE);
+      }
+      return null;
+    }
+  }
+
+  @Test
+  public void testDeleteSnapshot() throws Exception {
+    String testSnapshotName = HBaseCommonTestingUtility.getRandomUUID().toString();
+    verifyAllowed(new AccessSnapshotAction(testSnapshotName), USER_OWNER);
+    verifyDenied(new AccessSnapshotAction(HBaseCommonTestingUtility.getRandomUUID().toString()),
+      USER_RO, USER_RW, USER_NONE);
+    List<SnapshotDescription> snapshotDescriptions = TEST_UTIL.getAdmin().listSnapshots(
+      Pattern.compile(testSnapshotName));
+    Assert.assertEquals(1, snapshotDescriptions.size());
+    Assert.assertEquals(USER_OWNER.getShortName(), snapshotDescriptions.get(0).getOwner());
+    AccessTestAction deleteSnapshotAction = () -> {
+      try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
+        Admin admin = conn.getAdmin()) {
+        admin.deleteSnapshot(testSnapshotName);
+      }
+      return null;
+    };
+    verifyDenied(deleteSnapshotAction, USER_RO, USER_RW, USER_NONE);
+    verifyAllowed(deleteSnapshotAction, USER_OWNER);
+
+    List<SnapshotDescription> snapshotsAfterDelete = TEST_UTIL.getAdmin().listSnapshots(
+      Pattern.compile(testSnapshotName));
+    Assert.assertEquals(0, snapshotsAfterDelete.size());
   }
 }
