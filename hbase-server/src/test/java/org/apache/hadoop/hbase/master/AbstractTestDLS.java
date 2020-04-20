@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -30,7 +30,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -43,6 +42,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.LongAdder;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -92,7 +92,6 @@ import org.junit.Test;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
@@ -225,7 +224,7 @@ public abstract class AbstractTestDLS {
         Path editsdir = WALSplitUtil
             .getRegionDirRecoveredEditsDir(FSUtils.getWALRegionDir(conf,
                 tableName, hri.getEncodedName()));
-        LOG.debug("checking edits dir " + editsdir);
+        LOG.debug("Checking edits dir " + editsdir);
         FileStatus[] files = fs.listStatus(editsdir, new PathFilter() {
           @Override
           public boolean accept(Path p) {
@@ -235,9 +234,9 @@ public abstract class AbstractTestDLS {
             return true;
           }
         });
-        assertTrue(
-          "edits dir should have more than a single file in it. instead has " + files.length,
-          files.length > 1);
+        LOG.info("Files {}", Arrays.stream(files).map(f -> f.getPath().toString()).
+          collect(Collectors.joining(",")));
+        assertTrue("Edits dir should have more than a one file", files.length > 1);
         for (int i = 0; i < files.length; i++) {
           int c = countWAL(files[i].getPath(), fs, conf);
           count += c;

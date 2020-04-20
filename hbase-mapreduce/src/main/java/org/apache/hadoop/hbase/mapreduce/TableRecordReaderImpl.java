@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,24 +20,22 @@ package org.apache.hadoop.hbase.mapreduce;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.Map;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.ScannerCallable;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.util.StringUtils;
-
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -102,10 +100,9 @@ public class TableRecordReaderImpl {
    * In new mapreduce APIs, TaskAttemptContext has two getCounter methods
    * Check if getCounter(String, String) method is available.
    * @return The getCounter method or null if not available.
-   * @throws IOException
    */
   protected static Method retrieveGetCounterWithStringsParams(TaskAttemptContext context)
-  throws IOException {
+      throws IOException {
     Method m = null;
     try {
       m = context.getClass().getMethod("getCounter",
@@ -126,7 +123,7 @@ public class TableRecordReaderImpl {
   public void setHTable(Table htable) {
     Configuration conf = htable.getConfiguration();
     logScannerActivity = conf.getBoolean(
-      ScannerCallable.LOG_SCANNER_ACTIVITY, false);
+      "hbase.client.log.scanner.activity" /*ScannerCallable.LOG_SCANNER_ACTIVITY*/, false);
     logPerRowCount = conf.getInt(LOG_PER_ROW_COUNT, 100);
     this.htable = htable;
   }
@@ -142,9 +139,6 @@ public class TableRecordReaderImpl {
 
   /**
    * Build the scanner. Not done in constructor to allow for extension.
-   *
-   * @throws IOException
-   * @throws InterruptedException
    */
   public void initialize(InputSplit inputsplit,
       TaskAttemptContext context) throws IOException,
@@ -176,7 +170,6 @@ public class TableRecordReaderImpl {
    * Returns the current key.
    *
    * @return The current key.
-   * @throws IOException
    * @throws InterruptedException When the job is aborted.
    */
   public ImmutableBytesWritable getCurrentKey() throws IOException,
@@ -204,12 +197,18 @@ public class TableRecordReaderImpl {
    * @throws InterruptedException When the job was aborted.
    */
   public boolean nextKeyValue() throws IOException, InterruptedException {
-    if (key == null) key = new ImmutableBytesWritable();
-    if (value == null) value = new Result();
+    if (key == null) {
+      key = new ImmutableBytesWritable();
+    }
+    if (value == null) {
+      value = new Result();
+    }
     try {
       try {
         value = this.scanner.next();
-        if (value != null && value.isStale()) numStale++;
+        if (value != null && value.isStale()) {
+          numStale++;
+        }
         if (logScannerActivity) {
           rowcount ++;
           if (rowcount >= logPerRowCount) {
@@ -242,7 +241,9 @@ public class TableRecordReaderImpl {
           scanner.next();    // skip presumed already mapped row
         }
         value = scanner.next();
-        if (value != null && value.isStale()) numStale++;
+        if (value != null && value.isStale()) {
+          numStale++;
+        }
         numRestarts++;
       }
 
@@ -281,7 +282,6 @@ public class TableRecordReaderImpl {
    * counters thus can update counters based on scanMetrics.
    * If hbase runs on old version of mapreduce, it won't be able to get
    * access to counters and TableRecorderReader can't update counter values.
-   * @throws IOException
    */
   private void updateCounters() throws IOException {
     ScanMetrics scanMetrics = scanner.getScanMetrics();
