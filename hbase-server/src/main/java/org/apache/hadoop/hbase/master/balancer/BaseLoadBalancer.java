@@ -1192,7 +1192,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       return false;
     }
     if(areSomeRegionReplicasColocated(c)) return true;
-    if(idleRegionExist(c)) {
+    if(idleRegionServerExist(c)) {
       return true;
     }
 
@@ -1227,7 +1227,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     return false;
   }
 
-  protected final synchronized boolean idleRegionExist(Cluster c){
+  protected final boolean idleRegionServerExist(Cluster c){
     boolean isServerExistsWithMoreRegions = false;
     boolean isServerExistsWithZeroRegions = false;
     for (int[] serverList: c.regionsPerServer){

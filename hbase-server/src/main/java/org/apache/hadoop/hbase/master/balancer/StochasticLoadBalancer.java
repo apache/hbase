@@ -324,7 +324,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       return true;
     }
 
-    if (idleRegionExist(cluster)){
+    if (idleRegionServerExist(cluster)){
       return true;
     }
 
