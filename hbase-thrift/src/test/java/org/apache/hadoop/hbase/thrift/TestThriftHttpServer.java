@@ -207,7 +207,8 @@ public class TestThriftHttpServer {
     HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
     conn.setRequestMethod("TRACE");
     conn.connect();
-    Assert.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, conn.getResponseCode());
+    Assert.assertEquals(conn.getResponseMessage(),
+      HttpURLConnection.HTTP_FORBIDDEN, conn.getResponseCode());
   }
 
   protected static volatile boolean tableCreated = false;
