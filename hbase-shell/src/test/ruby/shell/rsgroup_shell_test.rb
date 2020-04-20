@@ -135,6 +135,7 @@ module Hbase
 
       @hbase.rsgroup_admin.rename_rsgroup(old_rs_group_name, new_rs_group_name)
       assert_not_nil(@admin.getRSGroup(new_rs_group_name))
+      assert_nil(@admin.getRSGroup(old_rs_group_name))
       assert_equal(1, @admin.getRSGroup(new_rs_group_name).getServers.count)
       assert_equal(1, @admin.listTablesInRSGroup(new_rs_group_name).count)
       assert_true(@admin.listTablesInRSGroup(new_rs_group_name).contains(org.apache.hadoop.hbase.TableName.valueOf(table_name)))
