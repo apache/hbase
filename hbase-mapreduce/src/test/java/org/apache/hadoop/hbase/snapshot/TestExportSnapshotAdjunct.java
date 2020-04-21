@@ -71,6 +71,17 @@ public class TestExportSnapshotAdjunct {
     TestExportSnapshot.setUpBaseConf(TEST_UTIL.getConfiguration());
     TEST_UTIL.startMiniCluster(3);
     TEST_UTIL.startMiniMapReduceCluster();
+  }
+
+  /**
+   * Check for references to '/tmp'. We are trying to avoid having references to outside of the
+   * test data dir when running tests. References outside of the test dir makes it so concurrent
+   * tests can stamp on each other by mistake. This check is for references to the 'tmp'.
+   *
+   * This is a strange place for this test but I want somewhere where the configuration is
+   * full -- filed w/ hdfs and mapreduce configurations.
+   */
+  private void checkForReferencesToTmpDir() {
     Configuration conf = TEST_UTIL.getConfiguration();
     for (Iterator<Map.Entry<String, String>> i = conf.iterator(); i.hasNext();) {
       Map.Entry<String, String> e = i.next();
