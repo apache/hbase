@@ -202,6 +202,22 @@
          <groupId>com.sun.jersey</groupId>
          <artifactId>jersey-core</artifactId>
         </exclusion>
+        <exclusion>
+         <groupId>com.sun.jersey</groupId>
+         <artifactId>jersey-client</artifactId>
+        </exclusion>
+        <exclusion>
+         <groupId>com.sun.jersey</groupId>
+         <artifactId>jersey-server</artifactId>
+        </exclusion>
+        <exclusion>
+         <groupId>com.sun.jersey</groupId>
+         <artifactId>jersey-json</artifactId>
+        </exclusion>
+        <exclusion>
+         <groupId>com.sun.jersey.contribs</groupId>
+         <artifactId>jersey-guice</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <dependency>
@@ -376,7 +392,6 @@
       </properties>
     </profile>
     <!-- Hadoop-specific dependencies -->
-    <!-- Profile for building against Hadoop 3.0.0. Activate by default -->
     <profile>
       <id>hadoop-3.0</id>
       <activation>
@@ -431,6 +446,28 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-mapreduce-client-core</artifactId>
           <scope>test</scope>
+          <exclusions>
+            <exclusion>
+              <groupId>com.sun.jersey</groupId>
+              <artifactId>jersey-client</artifactId>
+            </exclusion>
+            <!--
+            Can't exclude this one; dependency on com.sun.xml package
+              included from here.
+            <exclusion>
+              <groupId>com.sun.jersey</groupId>
+              <artifactId>jersey-json</artifactId>
+            </exclusion>
+            -->
+            <exclusion>
+              <groupId>com.sun.jersey.contribs</groupId>
+              <artifactId>jersey-guice</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>com.sun.jersey</groupId>
+              <artifactId>jersey-server</artifactId>
+            </exclusion>
+          </exclusions>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
