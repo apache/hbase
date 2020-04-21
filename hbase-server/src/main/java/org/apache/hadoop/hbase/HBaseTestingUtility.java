@@ -17,11 +17,8 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 import edu.umd.cs.findbugs.annotations.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -50,6 +47,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.logging.impl.Jdk14Logger;
@@ -147,12 +145,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooKeeper.States;
+import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.impl.Log4jLoggerAdapter;
-
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
@@ -335,7 +332,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     String dataTestDir = getDataTestDir().toString();
     this.conf.set("fs.defaultFS","file:///");
     this.conf.set(HConstants.HBASE_DIR, "file://" + dataTestDir);
-    LOG.debug("Setting {} to {}", HConstants.HBASE_DIR, dataTestDir);
+    HBaseCommonTestingUtility.LOG.debug("Setting {} to {}", HConstants.HBASE_DIR, dataTestDir);
     this.conf.setBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE,false);
     // If the value for random ports isn't set set it to true, thus making
     // tests opt-out for random port assignment
@@ -429,11 +426,11 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     if (sysValue != null) {
       // There is already a value set. So we do nothing but hope
       //  that there will be no conflicts
-      LOG.info("System.getProperty(\""+propertyName+"\") already set to: "+
+      HBaseCommonTestingUtility.LOG.info("System.getProperty(\""+propertyName+"\") already set to: "+
         sysValue + " so I do NOT create it in " + parent);
       String confValue = conf.get(propertyName);
       if (confValue != null && !confValue.endsWith(sysValue)){
-       LOG.warn(
+       HBaseCommonTestingUtility.LOG.warn(
          propertyName + " property value differs in configuration and system: "+
          "Configuration="+confValue+" while System="+sysValue+
          " Erasing configuration value by system value."
@@ -489,7 +486,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    */
   private void setupDataTestDirOnTestFS() throws IOException {
     if (dataTestDirOnTestFS != null) {
-      LOG.warn("Data test on test fs dir already setup in "
+      HBaseCommonTestingUtility.LOG.warn("Data test on test fs dir already setup in "
           + dataTestDirOnTestFS.toString());
       return;
     }
@@ -506,7 +503,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     //the working directory, and create a unique sub dir there
     FileSystem fs = getTestFileSystem();
     Path newDataTestDir;
-    String randomStr = getRandomUUID().toString();
+    String randomStr = HBaseCommonTestingUtility.getRandomUUID().toString();
     if (fs.getUri().getScheme().equals(FileSystem.getLocal(conf).getUri().getScheme())) {
       newDataTestDir = new Path(getDataTestDir(), randomStr);
       File dataTestDir = new File(newDataTestDir.toString());
@@ -588,7 +585,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   private void setFs() throws IOException {
     if(this.dfsCluster == null){
-      LOG.info("Skipping setting fs because dfsCluster is null");
+      HBaseCommonTestingUtility.LOG.info("Skipping setting fs because dfsCluster is null");
       return;
     }
     FileSystem fs = this.dfsCluster.getFileSystem();
@@ -624,7 +621,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     dataTestDirOnTestFS = null;
     String dataTestDir = getDataTestDir().toString();
     conf.set(HConstants.HBASE_DIR, dataTestDir);
-    LOG.debug("Setting {} to {}", HConstants.HBASE_DIR, dataTestDir);
+    HBaseCommonTestingUtility.LOG.debug("Setting {} to {}", HConstants.HBASE_DIR, dataTestDir);
 
     return this.dfsCluster;
   }
@@ -693,7 +690,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   private void enableShortCircuit() {
     if (isReadShortCircuitOn()) {
       String curUser = System.getProperty("user.name");
-      LOG.info("read short circuit is ON for user " + curUser);
+      HBaseCommonTestingUtility.LOG.info("read short circuit is ON for user " + curUser);
       // read short circuit, for hdfs
       conf.set("dfs.block.local-path-access.user", curUser);
       // read short circuit, for hbase
@@ -701,7 +698,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       // Skip checking checksum, for the hdfs client and the datanode
       conf.setBoolean("dfs.client.read.shortcircuit.skip.checksum", true);
     } else {
-      LOG.info("read short circuit is OFF");
+      HBaseCommonTestingUtility.LOG.info("read short circuit is OFF");
     }
   }
 
@@ -710,7 +707,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     System.setProperty(property, path);
     conf.set(property, path);
     new File(path).mkdirs();
-    LOG.info("Setting " + property + " to " + path + " in system properties and HBase conf");
+    HBaseCommonTestingUtility.LOG.info("Setting " + property + " to " + path + " in system properties and HBase conf");
     return path;
   }
 
@@ -1021,7 +1018,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @see #shutdownMiniDFSCluster()
    */
   public MiniHBaseCluster startMiniCluster(StartMiniClusterOption option) throws Exception {
-    LOG.info("Starting up minicluster with option: {}", option);
+    HBaseCommonTestingUtility.LOG.info("Starting up minicluster with option: {}", option);
 
     // If we already put up a cluster, fail.
     if (miniClusterRunning) {
@@ -1035,10 +1032,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     // Bring up mini dfs cluster. This spews a bunch of warnings about missing
     // scheme. Complaints are 'Scheme is undefined for build/test/data/dfs/name1'.
     if (dfsCluster == null) {
-      LOG.info("STARTING DFS");
+      HBaseCommonTestingUtility.LOG.info("STARTING DFS");
       dfsCluster = startMiniDFSCluster(option.getNumDataNodes(), option.getDataNodeHosts());
     } else {
-      LOG.info("NOT STARTING DFS");
+      HBaseCommonTestingUtility.LOG.info("NOT STARTING DFS");
     }
 
     // Start up a zk cluster.
@@ -1096,7 +1093,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     t.close();
 
     getAdmin(); // create immediately the hbaseAdmin
-    LOG.info("Minicluster is up; activeMaster={}", getHBaseCluster().getMaster());
+    HBaseCommonTestingUtility.LOG.info("Minicluster is up; activeMaster={}", getHBaseCluster().getMaster());
 
     return (MiniHBaseCluster) hbaseCluster;
   }
@@ -1222,7 +1219,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     while (s.next() != null) {
       // do nothing
     }
-    LOG.info("HBase has been restarted");
+    HBaseCommonTestingUtility.LOG.info("HBase has been restarted");
     s.close();
     t.close();
     conn.close();
@@ -1246,14 +1243,14 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @see #startMiniCluster(int)
    */
   public void shutdownMiniCluster() throws IOException {
-    LOG.info("Shutting down minicluster");
+    HBaseCommonTestingUtility.LOG.info("Shutting down minicluster");
     shutdownMiniHBaseCluster();
     shutdownMiniDFSCluster();
     shutdownMiniZKCluster();
 
     cleanupTestDir();
     miniClusterRunning = false;
-    LOG.info("Minicluster is down");
+    HBaseCommonTestingUtility.LOG.info("Minicluster is down");
   }
 
   /**
@@ -1377,9 +1374,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     String hbaseFsTmpDirInString = this.conf.get("hbase.fs.tmp.dir");
     if (hbaseFsTmpDirInString == null) {
       this.conf.set("hbase.fs.tmp.dir",  getDataTestDirOnTestFS("hbase-staging").toString());
-      LOG.info("Setting hbase.fs.tmp.dir to " + this.conf.get("hbase.fs.tmp.dir"));
+      HBaseCommonTestingUtility.LOG.info("Setting hbase.fs.tmp.dir to " + this.conf.get("hbase.fs.tmp.dir"));
     } else {
-      LOG.info("The hbase.fs.tmp.dir is set to " + hbaseFsTmpDirInString);
+      HBaseCommonTestingUtility.LOG.info("The hbase.fs.tmp.dir is set to " + hbaseFsTmpDirInString);
     }
   }
 
@@ -1871,7 +1868,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     try {
       getAdmin().disableTable(tableName);
     } catch (TableNotEnabledException e) {
-      LOG.debug("Table: " + tableName + " already disabled, so just deleting it.");
+      HBaseCommonTestingUtility.LOG.debug("Table: " + tableName + " already disabled, so just deleting it.");
     }
     getAdmin().deleteTable(tableName);
   }
@@ -2322,10 +2319,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       get.setReplicaId(replicaId);
       get.setConsistency(Consistency.TIMELINE);
       Result result = table.get(get);
-      assertTrue(failMsg, result.containsColumn(f, null));
-      assertEquals(failMsg, 1, result.getColumnCells(f, null).size());
+      Assert.assertTrue(failMsg, result.containsColumn(f, null));
+      Assert.assertEquals(failMsg, 1, result.getColumnCells(f, null).size());
       Cell cell = result.getColumnLatestCell(f, null);
-      assertTrue(failMsg,
+      Assert.assertTrue(failMsg,
         Bytes.equals(data, 0, data.length, cell.getValueArray(), cell.getValueOffset(),
           cell.getValueLength()));
     }
@@ -2354,13 +2351,13 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       Result result = region.get(new Get(data));
 
       boolean hasResult = result != null && !result.isEmpty();
-      assertEquals(failMsg + result, present, hasResult);
+      Assert.assertEquals(failMsg + result, present, hasResult);
       if (!present) continue;
 
-      assertTrue(failMsg, result.containsColumn(f, null));
-      assertEquals(failMsg, 1, result.getColumnCells(f, null).size());
+      Assert.assertTrue(failMsg, result.containsColumn(f, null));
+      Assert.assertEquals(failMsg, 1, result.getColumnCells(f, null).size());
       Cell cell = result.getColumnLatestCell(f, null);
-      assertTrue(failMsg,
+      Assert.assertTrue(failMsg,
         Bytes.equals(data, 0, data.length, cell.getValueArray(), cell.getValueOffset(),
           cell.getValueLength()));
     }
@@ -2598,7 +2595,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     List<byte[]> rows = new ArrayList<>();
     ResultScanner s = t.getScanner(new Scan());
     for (Result result : s) {
-      LOG.info("getMetaTableRows: row -> " +
+      HBaseCommonTestingUtility.LOG.info("getMetaTableRows: row -> " +
         Bytes.toStringBinary(result.getRow()));
       rows.add(result.getRow());
     }
@@ -2620,13 +2617,13 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     for (Result result : s) {
       RegionInfo info = MetaTableAccessor.getRegionInfo(result);
       if (info == null) {
-        LOG.error("No region info for row " + Bytes.toString(result.getRow()));
+        HBaseCommonTestingUtility.LOG.error("No region info for row " + Bytes.toString(result.getRow()));
         // TODO figure out what to do for this new hosed case.
         continue;
       }
 
       if (info.getTable().equals(tableName)) {
-        LOG.info("getMetaTableRows: row -> " +
+        HBaseCommonTestingUtility.LOG.info("getMetaTableRows: row -> " +
             Bytes.toStringBinary(result.getRow()) + info);
         rows.add(result.getRow());
       }
@@ -2678,7 +2675,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     if (regions == null || regions.isEmpty()) {
       return null;
     }
-    LOG.debug("Found " + regions.size() + " regions for table " +
+    HBaseCommonTestingUtility.LOG.debug("Found " + regions.size() + " regions for table " +
         tableName);
 
     byte[] firstRegionName = regions.stream()
@@ -2687,7 +2684,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
         .findFirst()
         .orElseThrow(() -> new IOException("online regions not found in table " + tableName));
 
-    LOG.debug("firstRegionName=" + Bytes.toString(firstRegionName));
+    HBaseCommonTestingUtility.LOG.debug("firstRegionName=" + Bytes.toString(firstRegionName));
     long pause = getConfiguration().getLong(HConstants.HBASE_CLIENT_PAUSE,
       HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
     int numRetries = getConfiguration().getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
@@ -2756,7 +2753,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     if (mrCluster != null) {
       throw new IllegalStateException("MiniMRCluster is already running");
     }
-    LOG.info("Starting mini mapreduce cluster...");
+    HBaseCommonTestingUtility.LOG.info("Starting mini mapreduce cluster...");
     setupClusterTestDir();
     createDirsAndSetProperties();
 
@@ -2784,7 +2781,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
     jobConf.set("mapreduce.cluster.local.dir",
       conf.get("mapreduce.cluster.local.dir")); //Hadoop MiniMR overwrites this while it should not
-    LOG.info("Mini mapreduce cluster started");
+    HBaseCommonTestingUtility.LOG.info("Mini mapreduce cluster started");
 
     // In hadoop2, YARN/MR2 starts a mini cluster with its own conf instance and updates settings.
     // Our HBase MR jobs need several of these settings in order to properly run.  So we copy the
@@ -2823,10 +2820,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    */
   public void shutdownMiniMapReduceCluster() {
     if (mrCluster != null) {
-      LOG.info("Stopping mini mapreduce cluster...");
+      HBaseCommonTestingUtility.LOG.info("Stopping mini mapreduce cluster...");
       mrCluster.shutdown();
       mrCluster = null;
-      LOG.info("Mini mapreduce cluster stopped");
+      HBaseCommonTestingUtility.LOG.info("Mini mapreduce cluster stopped");
     }
     // Restore configuration to point to local jobtracker
     conf.set("mapreduce.jobtracker.address", "local");
@@ -2950,7 +2947,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       1000, new org.apache.zookeeper.Watcher(){
       @Override
       public void process(WatchedEvent watchedEvent) {
-        LOG.info("Monitor ZKW received event="+watchedEvent);
+        HBaseCommonTestingUtility.LOG.info("Monitor ZKW received event="+watchedEvent);
       }
     } , sessionID, password);
 
@@ -2966,7 +2963,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
        Thread.sleep(1);
     }
     newZK.close();
-    LOG.info("ZK Closed Session 0x" + Long.toHexString(sessionID));
+    HBaseCommonTestingUtility.LOG.info("ZK Closed Session 0x" + Long.toHexString(sessionID));
 
     // Now closing & waiting to be sure that the clients get it.
     monitor.close();
@@ -3019,7 +3016,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     // Update the master addresses if they changed.
     final String masterConfigBefore = conf.get(HConstants.MASTER_ADDRS_KEY);
     final String masterConfAfter = getMiniHBaseCluster().conf.get(HConstants.MASTER_ADDRS_KEY);
-    LOG.info("Invalidated connection. Updating master addresses before: {} after: {}",
+    HBaseCommonTestingUtility.LOG.info("Invalidated connection. Updating master addresses before: {} after: {}",
         masterConfigBefore, masterConfAfter);
     conf.set(HConstants.MASTER_ADDRS_KEY,
         getMiniHBaseCluster().conf.get(HConstants.MASTER_ADDRS_KEY));
@@ -3142,7 +3139,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
           regions.get(idx).checkSplit();
           return regions.get(idx);
         } catch (Exception ex) {
-          LOG.warn("Caught exception", ex);
+          HBaseCommonTestingUtility.LOG.warn("Caught exception", ex);
           attempted.add(idx);
         }
       }
@@ -3338,7 +3335,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     boolean startedServer = false;
     MiniHBaseCluster hbaseCluster = getMiniHBaseCluster();
     for (int i=hbaseCluster.getLiveRegionServerThreads().size(); i<num; ++i) {
-      LOG.info("Started new server=" + hbaseCluster.startRegionServer());
+      HBaseCommonTestingUtility.LOG.info("Started new server=" + hbaseCluster.startRegionServer());
       startedServer = true;
     }
 
@@ -3364,13 +3361,13 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
       HRegionServer hrs = rst.getRegionServer();
       if (hrs.isStopping() || hrs.isStopped()) {
-        LOG.info("A region server is stopped or stopping:"+hrs);
+        HBaseCommonTestingUtility.LOG.info("A region server is stopped or stopping:"+hrs);
       } else {
         nonStoppedServers++;
       }
     }
     for (int i=nonStoppedServers; i<num; ++i) {
-      LOG.info("Started new server=" + getMiniHBaseCluster().startRegionServer());
+      HBaseCommonTestingUtility.LOG.info("Started new server=" + getMiniHBaseCluster().startRegionServer());
       startedServer = true;
     }
     return startedServer;
@@ -3463,7 +3460,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
         }
       }
     } catch (Exception e) {
-      LOG.info("Could not set max recovery field", e);
+      HBaseCommonTestingUtility.LOG.info("Could not set max recovery field", e);
     }
   }
 
@@ -3538,7 +3535,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       throws IOException {
     if (!TableName.isMetaTableName(tableName)) {
       try (final Table meta = getConnection().getTable(TableName.META_TABLE_NAME)) {
-        LOG.debug("Waiting until all regions of table " + tableName + " get assigned. Timeout = " +
+        HBaseCommonTestingUtility.LOG.debug("Waiting until all regions of table " + tableName + " get assigned. Timeout = " +
             timeout + "ms");
         waitFor(timeout, 200, true, new ExplainingPredicate<IOException>() {
           @Override
@@ -3582,14 +3579,14 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
               }
             }
             if (!tableFound) {
-              LOG.warn("Didn't find the entries for table " + tableName + " in meta, already deleted?");
+              HBaseCommonTestingUtility.LOG.warn("Didn't find the entries for table " + tableName + " in meta, already deleted?");
             }
             return tableFound;
           }
         });
       }
     }
-    LOG.info("All regions for table " + tableName + " assigned to meta. Checking AM states.");
+    HBaseCommonTestingUtility.LOG.info("All regions for table " + tableName + " assigned to meta. Checking AM states.");
     // check from the master state if we are using a mini cluster
     if (!getHBaseClusterInterface().isDistributedCluster()) {
       // So, all regions are in the meta table but make sure master knows of the assignments before
@@ -3609,7 +3606,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
         }
       });
     }
-    LOG.info("All regions for table " + tableName + " assigned.");
+    HBaseCommonTestingUtility.LOG.info("All regions for table " + tableName + " assigned.");
   }
 
   /**
@@ -3647,7 +3644,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @return resulting split keys
    */
   public byte[][] getRegionSplitStartKeys(byte[] startKey, byte[] endKey, int numRegions){
-    assertTrue(numRegions>3);
+    Assert.assertTrue(numRegions>3);
     byte [][] tmpSplitKeys = Bytes.split(startKey, endKey, numRegions - 3);
     byte [][] result = new byte[tmpSplitKeys.length+1][];
     System.arraycopy(tmpSplitKeys, 0, result, 1, tmpSplitKeys.length);
@@ -3722,7 +3719,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       final int numRowsPerFlush)
       throws IOException, InterruptedException {
 
-    LOG.info("\n\nCreating random table " + tableName + " with " + numRegions +
+    HBaseCommonTestingUtility.LOG.info("\n\nCreating random table " + tableName + " with " + numRegions +
         " regions, " + numFlushes + " storefiles per region, " +
         numRowsPerFlush + " rows per flush, maxVersions=" +  maxVersions +
         "\n");
@@ -3786,7 +3783,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
           mutator.mutate(del);
         }
       }
-      LOG.info("Initiating flush #" + iFlush + " for table " + tableName);
+      HBaseCommonTestingUtility.LOG.info("Initiating flush #" + iFlush + " for table " + tableName);
       mutator.flush();
       if (hbaseCluster != null) {
         getMiniHBaseCluster().flushcache(table.getName());
@@ -3880,13 +3877,13 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     final int maxTimeMs = 10000;
     final int maxNumAttempts = maxTimeMs / HConstants.SOCKET_RETRY_WAIT_MS;
     IOException savedException = null;
-    LOG.info("Waiting for server at " + host + ":" + port);
+    HBaseCommonTestingUtility.LOG.info("Waiting for server at " + host + ":" + port);
     for (int attempt = 0; attempt < maxNumAttempts; ++attempt) {
       try {
         Socket sock = new Socket(InetAddress.getByName(host), port);
         sock.close();
         savedException = null;
-        LOG.info("Server at " + host + ":" + port + " is available");
+        HBaseCommonTestingUtility.LOG.info("Server at " + host + ":" + port + " is available");
         break;
       } catch (UnknownHostException e) {
         throw new IOException("Failed to look up " + host, e);
@@ -4022,7 +4019,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       }
 
       totalNumberOfRegions = numberOfServers * numRegionsPerServer;
-      LOG.info("Number of live regionservers: " + numberOfServers + ", " +
+      HBaseCommonTestingUtility.LOG.info("Number of live regionservers: " + numberOfServers + ", " +
           "pre-splitting table into " + totalNumberOfRegions + " regions " +
           "(regions per server: " + numRegionsPerServer + ")");
 
@@ -4031,10 +4028,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
       admin.createTable(td, splits);
     } catch (MasterNotRunningException e) {
-      LOG.error("Master not running", e);
+      HBaseCommonTestingUtility.LOG.error("Master not running", e);
       throw new IOException(e);
     } catch (TableExistsException e) {
-      LOG.warn("Table " + td.getTableName() +
+      HBaseCommonTestingUtility.LOG.warn("Table " + td.getTableName() +
           " already exists, continuing");
     } finally {
       admin.close();
@@ -4066,7 +4063,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       if (now > timeoutTime) break;
       Thread.sleep(10);
     }
-    fail("Could not find region " + hri.getRegionNameAsString()
+    Assert.fail("Could not find region " + hri.getRegionNameAsString()
       + " on server " + server);
   }
 
@@ -4090,7 +4087,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
           }
           Collection<HRegion> hrs = rs.getOnlineRegionsLocalContext();
           for (HRegion r: hrs) {
-            assertTrue("Region should not be double assigned",
+            Assert.assertTrue("Region should not be double assigned",
               r.getRegionInfo().getRegionId() != hri.getRegionId());
           }
         }
@@ -4100,7 +4097,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       if (now > timeoutTime) break;
       Thread.sleep(10);
     }
-    fail("Could not find region " + hri.getRegionNameAsString()
+    Assert.fail("Could not find region " + hri.getRegionNameAsString()
       + " on server " + server);
   }
 
@@ -4365,10 +4362,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
         FileUtils.deleteDirectory(dir);  // clean directory
         numTries++;
         if (numTries == 3) {
-          LOG.error("Failed setting up MiniKDC. Tried " + numTries + " times.");
+          HBaseCommonTestingUtility.LOG.error("Failed setting up MiniKDC. Tried " + numTries + " times.");
           throw e;
         }
-        LOG.error("BindException encountered when setting up MiniKdc. Trying again.");
+        HBaseCommonTestingUtility.LOG.error("BindException encountered when setting up MiniKdc. Trying again.");
         bindException = true;
       }
     } while (bindException);
@@ -4395,13 +4392,13 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   public void verifyTableDescriptorIgnoreTableName(TableDescriptor ltd, TableDescriptor rtd) {
-    assertEquals(ltd.getValues().hashCode(), rtd.getValues().hashCode());
+    Assert.assertEquals(ltd.getValues().hashCode(), rtd.getValues().hashCode());
     Collection<ColumnFamilyDescriptor> ltdFamilies = Arrays.asList(ltd.getColumnFamilies());
     Collection<ColumnFamilyDescriptor> rtdFamilies = Arrays.asList(rtd.getColumnFamilies());
-    assertEquals(ltdFamilies.size(), rtdFamilies.size());
+    Assert.assertEquals(ltdFamilies.size(), rtdFamilies.size());
     for (Iterator<ColumnFamilyDescriptor> it = ltdFamilies.iterator(), it2 =
          rtdFamilies.iterator(); it.hasNext();) {
-      assertEquals(0,
+      Assert.assertEquals(0,
           ColumnFamilyDescriptor.COMPARATOR.compare(it.next(), it2.next()));
     }
   }

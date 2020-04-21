@@ -46,8 +46,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.security.ssl.FileBasedKeyStoresFactory;
 import org.apache.hadoop.security.ssl.SSLFactory;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.bouncycastle.x509.X509V1CertificateGenerator;
 
+@InterfaceAudience.Private
 public final class KeyStoreTestUtil {
   private KeyStoreTestUtil() {
   }

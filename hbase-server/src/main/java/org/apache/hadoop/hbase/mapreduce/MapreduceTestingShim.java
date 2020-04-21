@@ -28,6 +28,7 @@ import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobID;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This class provides shims for HBase to interact with the Hadoop 1.0.x and the
@@ -35,6 +36,7 @@ import org.apache.hadoop.mapreduce.JobID;
  * 
  * NOTE: No testing done against 0.22.x, or 0.21.x.
  */
+@InterfaceAudience.Private
 abstract public class MapreduceTestingShim {
   private static MapreduceTestingShim instance;
   private static Class[] emptyParam = new Class[] {};

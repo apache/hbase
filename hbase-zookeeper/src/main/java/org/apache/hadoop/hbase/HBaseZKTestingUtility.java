@@ -73,14 +73,14 @@ public class HBaseZKTestingUtility extends HBaseCommonTestingUtility {
 
     // Using randomUUID ensures that multiple clusters can be launched by
     // a same test, if it stops & starts them
-    Path testDir = getDataTestDir("cluster_" + getRandomUUID().toString());
+    Path testDir = getDataTestDir("cluster_" + HBaseCommonTestingUtility.getRandomUUID().toString());
     clusterTestDir = new File(testDir.toString()).getAbsoluteFile();
     // Have it cleaned up on exit
     boolean b = deleteOnExit();
     if (b) {
       clusterTestDir.deleteOnExit();
     }
-    LOG.info("Created new mini-cluster data directory: " + clusterTestDir + ", deleteOnExit=" + b);
+    HBaseCommonTestingUtility.LOG.info("Created new mini-cluster data directory: " + clusterTestDir + ", deleteOnExit=" + b);
   }
 
   /**

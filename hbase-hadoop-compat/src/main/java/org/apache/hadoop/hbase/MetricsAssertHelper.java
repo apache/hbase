@@ -16,11 +16,13 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.test;
+package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.hbase.metrics.BaseSource;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /** Interface of a class to make assertions about metrics values. */
+@InterfaceAudience.Private
 public interface MetricsAssertHelper {
 
   /**

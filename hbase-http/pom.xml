@@ -256,6 +256,12 @@
       <artifactId>hadoop-minikdc</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <artifactId>bcprov-jdk15</artifactId>
+      <groupId>bouncycastle</groupId>
+      <version>140</version>
+      <scope>compile</scope>
+    </dependency>
   </dependencies>
   <profiles>
     <!-- Needs to make the profile in apache parent pom -->
