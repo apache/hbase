@@ -129,5 +129,18 @@ module Hbase
         @hbase.rsgroup_admin().get_rsgroup_of_table('foobar')
       end
     end
+
+    define_test 'Test rsgroup rename' do
+      old_rs_group_name = 'test_group'
+      new_rs_group_name = 'renamed_test_group'
+      table_name = 'test_table'
+
+      @hbase.rsgroup_admin.rename_rsgroup(old_rs_group_name, new_rs_group_name)
+      assert_not_nil(@rsgroup_admin.getRSGroupInfo(new_rs_group_name))
+      assert_nil(@rsgroup_admin.getRSGroupInfo(old_rs_group_name))
+      assert_equal(1, @rsgroup_admin.getRSGroupInfo(new_rs_group_name).getServers.count)
+      assert_equal(1, @rsgroup_admin.getRSGroupInfo(new_rs_group_name).getTables.count)
+      assert_equal(table_name, @rsgroup_admin.getRSGroupInfo(new_rs_group_name).getTables.iterator.next.toString)
+    end
   end
 end
