@@ -294,7 +294,7 @@ public interface Store {
    * @return
    */
   long getGetRequestsCountFromMemstore();
-  
+
   /**
    * Indicates the number of read requests from the files under this store.
    * @return

@@ -184,7 +184,9 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     if (get) {
       this.readType = Scan.ReadType.PREAD;
       this.scanUsePread = true;
-      this.store.incrGetRequestsFromStore();
+      if (this.store != null) {
+        this.store.incrGetRequestsFromStore();
+      }
     } else if (scanType != ScanType.USER_SCAN) {
       // For compaction scanners never use Pread as already we have stream based scanners on the
       // store files to be compacted
@@ -748,7 +750,9 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   }
 
   private void updateMetricsStore(boolean memstoreRead) {
-    store.updateMetricsStore(memstoreRead);
+    if (store != null) {
+      store.updateMetricsStore(memstoreRead);
+    }
   }
 
   /**

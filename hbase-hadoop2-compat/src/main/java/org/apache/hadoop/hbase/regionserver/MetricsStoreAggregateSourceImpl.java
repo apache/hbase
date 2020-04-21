@@ -42,7 +42,6 @@ public class MetricsStoreAggregateSourceImpl extends BaseSourceImpl
   private final Set<MetricsStoreSource> storeSources =
       Collections.newSetFromMap(new ConcurrentHashMap<MetricsStoreSource, Boolean>());
 
-  
   public MetricsStoreAggregateSourceImpl() {
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT);
   }

@@ -57,11 +57,6 @@ public interface MetricsStoreWrapper {
   long getStoreFileSize();
 
   /**
-   * Get the total number of filtered read requests that have been issued against this store
-   */
-//  long getFilteredReadRequestCount();
-
-  /**
    * @return Max age of store files under this store
    */
   long getMaxStoreFileAge();
@@ -87,18 +82,17 @@ public interface MetricsStoreWrapper {
   long getStoreRefCount();
 
   /**
-   * Get the total number of read requests that have been issued against this store
+   * @return the total number of read requests that have been issued against this store
    */
   long getReadRequestCount();
 
   /**
-   * Get the number of read requests from the memstore 
+   * @return the number of read requests from the memstore
    */
   long getMemstoreReadRequestsCount();
-  
+
   /**
-   * Get the number of read requests from the store files
-   * @return
+   * @return the number of read requests from the store files
    */
   long getFileReadRequestCount();
 }

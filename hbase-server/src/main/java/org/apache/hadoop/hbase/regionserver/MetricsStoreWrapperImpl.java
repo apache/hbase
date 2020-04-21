@@ -153,8 +153,6 @@ public class MetricsStoreWrapperImpl implements MetricsStoreWrapper, Closeable {
       if (storeAvgStoreFileAge.isPresent()) {
         avgAgeNumerator += (long) storeAvgStoreFileAge.getAsDouble() * numHFiles;
       }
-      // this need not be pushed periodically. This can be always available 
-      //readsFromMemstore = store.getReadRequestsCountFromMemstore();
 
       if (tempMinStoreFileAge != Long.MAX_VALUE) {
         minStoreFileAge = tempMinStoreFileAge;

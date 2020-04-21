@@ -140,6 +140,11 @@ public class MetricsStoreSourceImpl implements MetricsStoreSource {
         || (obj instanceof MetricsStoreSourceImpl && compareTo((MetricsStoreSourceImpl) obj) == 0);
   }
 
+  @Override
+  public int hashCode() {
+    return this.storeWrapper.getStoreName().hashCode();
+  }
+
   void snapshot(MetricsRecordBuilder mrb, boolean ignored) {
 
     // If there is a close that started be double extra sure

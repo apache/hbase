@@ -108,13 +108,11 @@ public interface MetricsTableWrapperAggregate {
   long getNumReferenceFiles(String table);
 
   /**
-   * 
    * @return number of get requests on memstore for this table
    */
   long getMemstoreReadRequestCount(String table);
 
   /**
-   * 
    * @return number of get requests from file for this table
    */
   long getFileRequestCount(String table);

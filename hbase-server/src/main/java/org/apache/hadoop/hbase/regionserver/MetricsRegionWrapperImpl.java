@@ -244,7 +244,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   public long getFileReadRequestCount() {
     return readsFromFile;
   }
-  
+
   public class HRegionMetricsWrapperRunnable implements Runnable {
 
     @Override
@@ -261,8 +261,8 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
       long tempMaxFlushQueueSize = 0;
       long avgAgeNumerator = 0;
       long numHFiles = 0;
-      long tempReadsFromMemstore = 0l;
-      long tempReadsFromFile = 0l;
+      long tempReadsFromMemstore = 0L;
+      long tempReadsFromFile = 0L;
       if (region.stores != null) {
         for (HStore store : region.stores.values()) {
           tempNumStoreFiles += store.getStorefilesCount();
