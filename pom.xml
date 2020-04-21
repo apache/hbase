@@ -2860,6 +2860,7 @@
         <module>hbase-hadoop2-compat</module>
       </modules>
       <properties>
+        <hadoop.profile>3.0</hadoop.profile>
         <hadoop.version>${hadoop-three.version}</hadoop.version>
         <!--Use this compat module for now. TODO: Make h3 one if we need one-->
         <compat.module>hbase-hadoop2-compat</compat.module>
