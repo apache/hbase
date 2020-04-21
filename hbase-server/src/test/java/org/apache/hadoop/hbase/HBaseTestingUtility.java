@@ -648,11 +648,11 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     setupClusterTestDir();
     conf.set(TEST_DIRECTORY_KEY, clusterTestDir.getPath());
     System.setProperty(TEST_DIRECTORY_KEY, clusterTestDir.getPath());
-    createDirAndSetProperty("test.cache.data", "test.cache.data");
-    createDirAndSetProperty("hadoop.tmp.dir", "hadoop.tmp.dir");
-    hadoopLogDir = createDirAndSetProperty("hadoop.log.dir", "hadoop.log.dir");
-    createDirAndSetProperty("mapreduce.cluster.local.dir", "mapreduce.cluster.local.dir");
-    createDirAndSetProperty("mapreduce.cluster.temp.dir", "mapreduce.cluster.temp.dir");
+    createDirAndSetProperty("test.cache.data");
+    createDirAndSetProperty("hadoop.tmp.dir");
+    hadoopLogDir = createDirAndSetProperty("hadoop.log.dir");
+    createDirAndSetProperty("mapreduce.cluster.local.dir");
+    createDirAndSetProperty("mapreduce.cluster.temp.dir");
     enableShortCircuit();
 
     Path root = getDataTestDirOnTestFS("hadoop");
@@ -680,6 +680,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     createDirAndSetProperty("java.io.tmpdir");
     createDirAndSetProperty("dfs.journalnode.edits.dir");
     createDirAndSetProperty("dfs.provided.aliasmap.inmemory.leveldb.dir");
+    createDirAndSetProperty("fs.s3a.committer.staging.tmp.path");
   }
 
   /**
