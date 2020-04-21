@@ -728,7 +728,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     }
   }
 
-  private String createDirAndSetProperty(String relPath, String property) {
+  private String createDirAndSetProperty(final String property) {
     return createDirAndSetProperty(property, property);
   }
 
