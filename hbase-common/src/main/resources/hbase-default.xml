@@ -1946,4 +1946,15 @@ possible configurations would overwhelm and obscure the important.
       responses with complete data.
     </description>
   </property>
+  <property>
+    <name>hbase.rpc.rows.size.threshold.reject</name>
+    <value>false</value>
+    <description>
+      If value is true, RegionServer will abort RPC multi() requests with number of rows
+      in a batch operation exceeding threshold defined by value of config:
+      hbase.rpc.rows.warning.threshold. The default value is false and hence, by default, only
+      warning will be logged. This config should be used to prevent RS from serving very large
+      batch size of rows and hence consuming a lot of CPU.
+    </description>
+  </property>
 </configuration>

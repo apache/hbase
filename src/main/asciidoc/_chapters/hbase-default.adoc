@@ -2245,3 +2245,20 @@ The percent of region server RPC threads failed to abort RS.
 .Default
 `false`
 
+
+[[hbase.rpc.rows.size.threshold.reject]]
+*`hbase.rpc.rows.size.threshold.reject`*::
++
+.Description
+
+      If value is true, RegionServer will abort RPC multi() requests with
+      number of rows in a batch operation exceeding threshold defined by
+      value of config: hbase.rpc.rows.warning.threshold.
+      The default value is false and hence, by default, only
+      warning will be logged. This config should be used to prevent
+      RS from serving very large batch size of rows and hence
+      consuming a lot of CPU.
+
++
+.Default
+`false`
