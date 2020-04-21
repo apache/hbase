@@ -284,20 +284,17 @@ public interface Store {
   int getCurrentParallelPutCount();
 
   /**
-   * Indicates the number of read requests that was targetted at this store.
-   * @return
+   * @return the number of read requests that was targeted at this store.
    */
   long getReadRequestsFromStoreCount();
 
   /**
-   * Indicates the number of read requests that was targeted at the memstore part of this store
-   * @return
+   * @return the number of read requests that was targeted at the memstore part of this store
    */
   long getGetRequestsCountFromMemstore();
 
   /**
-   * Indicates the number of read requests from the files under this store.
-   * @return
+   * @return the number of read requests from the files under this store.
    */
   long getGetRequestsCountFromFile();
 }

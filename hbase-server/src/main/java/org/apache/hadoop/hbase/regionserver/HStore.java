@@ -95,8 +95,6 @@ import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -118,6 +116,8 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.IterableUtils;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
 
 /**
  * A Store holds a column family in a Region.  Its a memstore and a set of zero
@@ -2900,8 +2900,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   }
 
   /**
-   * @return get maximum ref count of storeFile among all compacted HStore Files
-   * for the HStore
+   * @return get maximum ref count of storeFile among all compacted HStore Files for the HStore
    */
   public int getMaxCompactedStoreFileRefCount() {
     OptionalInt maxCompactedStoreFileRefCount = this.storeEngine.getStoreFileManager()
@@ -2924,7 +2923,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   public long getGetRequestsCountFromMemstore() {
     return getRequestsFromMemstore.sum();
   }
-  
+
   @Override
   public long getGetRequestsCountFromFile() {
     return getRequestsFromFile.sum();
