@@ -66,6 +66,8 @@ public final class HBaseClassTestRule implements TestRule {
 
   private final Timeout timeout;
 
+  private final SystemExitRule systemExitRule = new SystemExitRule();
+
   private HBaseClassTestRule(Class<?> clazz, Timeout timeout) {
     this.clazz = clazz;
     this.timeout = timeout;
@@ -161,6 +163,7 @@ public final class HBaseClassTestRule implements TestRule {
 
   @Override
   public Statement apply(Statement base, Description description) {
-    return timeout.apply(base, description);
+    return timeout.apply(systemExitRule.apply(base, description), description);
   }
+
 }
