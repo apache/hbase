@@ -729,26 +729,20 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       new Path(root, "mapreduce-am-staging-root-dir").toString());
 
     // Frustrate yarn's and hdfs's attempts at writing /tmp.
-    String property = "yarn.node-labels.fs-store.root-dir";
-    createDirAndSetProperty(property, property);
-    property = "yarn.nodemanager.log-dirs";
-    createDirAndSetProperty(property, property);
-    property = "yarn.nodemanager.remote-app-log-dir";
-    createDirAndSetProperty(property, property);
-    property = "yarn.timeline-service.entity-group-fs-store.active-dir";
-    createDirAndSetProperty(property, property);
-    property = "yarn.timeline-service.entity-group-fs-store.done-dir";
-    createDirAndSetProperty(property, property);
-    property = "yarn.nodemanager.remote-app-log-dir";
-    createDirAndSetProperty(property, property);
-    property = "dfs.journalnode.edits.dir";
-    createDirAndSetProperty(property, property);
-    property = "dfs.datanode.shared.file.descriptor.paths";
-    createDirAndSetProperty(property, property);
-    property = "nfs.dump.dir";
-    createDirAndSetProperty(property, property);
-    property = "java.io.tmpdir";
-    createDirAndSetProperty(property, property);
+    // Below is fragile. Make it so we just interpolate any 'tmp' reference.
+    createDirAndSetProperty("yarn.node-labels.fs-store.root-dir");
+    createDirAndSetProperty("yarn.nodemanager.log-dirs");
+    createDirAndSetProperty("yarn.nodemanager.remote-app-log-dir");
+    createDirAndSetProperty("yarn.timeline-service.entity-group-fs-store.active-dir");
+    createDirAndSetProperty("yarn.timeline-service.entity-group-fs-store.done-dir");
+    createDirAndSetProperty("yarn.nodemanager.remote-app-log-dir");
+    createDirAndSetProperty("dfs.journalnode.edits.dir");
+    createDirAndSetProperty("dfs.datanode.shared.file.descriptor.paths");
+    createDirAndSetProperty("nfs.dump.dir");
+    createDirAndSetProperty("java.io.tmpdir");
+    createDirAndSetProperty("java.io.tmpdir");
+    createDirAndSetProperty("dfs.journalnode.edits.dir");
+    createDirAndSetProperty("dfs.provided.aliasmap.inmemory.leveldb.dir");
   }
 
   /**
@@ -795,6 +789,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     } else {
       LOG.info("read short circuit is OFF");
     }
+  }
+
+  private String createDirAndSetProperty(String relPath, String property) {
+    return createDirAndSetProperty(property, property);
   }
 
   private String createDirAndSetProperty(final String relPath, String property) {
