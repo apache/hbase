@@ -147,19 +147,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
-      <artifactId>${compat.module}</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-hadoop-compat</artifactId>
-      <type>test-jar</type>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <!--Do not removed. maven dependency:analyze says not needed but it
-           is; perhaps it comes in via reflection so maven can't figure it-->
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>${compat.module}</artifactId>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
