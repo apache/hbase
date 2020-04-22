@@ -105,7 +105,7 @@ module Shell
     def hbase_visibility_labels_admin
       @hbase_visibility_labels_admin ||= hbase.visibility_labels_admin()
     end
-    
+
     def hbase_quotas_admin
       @hbase_quotas_admin ||= hbase.quotas_admin()
     end
@@ -472,5 +472,6 @@ Shell.load_command_group(
     get_server_rsgroup
     get_table_rsgroup
     remove_servers_rsgroup
+    rename_rsgroup
   ]
 )
