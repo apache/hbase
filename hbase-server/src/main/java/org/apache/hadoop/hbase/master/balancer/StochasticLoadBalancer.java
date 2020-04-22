@@ -323,6 +323,10 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       return true;
     }
 
+    if (idleRegionServerExist(cluster)){
+      return true;
+    }
+
     double total = 0.0;
     float sumMultiplier = 0.0f;
     for (CostFunction c : costFunctions) {
