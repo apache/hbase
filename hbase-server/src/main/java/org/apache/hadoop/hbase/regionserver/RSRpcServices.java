@@ -240,6 +240,19 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    */
   static final int BATCH_ROWS_THRESHOLD_DEFAULT = 5000;
 
+  /*
+   * Whether to reject rows with size > threshold defined by
+   * {@link RSRpcServices#BATCH_ROWS_THRESHOLD_NAME}
+   */
+  private static final String REJECT_BATCH_ROWS_OVER_THRESHOLD =
+    "hbase.rpc.rows.size.threshold.reject";
+
+  /*
+   * Default value of config {@link RSRpcServices#REJECT_BATCH_ROWS_OVER_THRESHOLD}
+   */
+  private static final boolean DEFAULT_REJECT_BATCH_ROWS_OVER_THRESHOLD = false;
+
+  // Request counter. (Includes requests that are not serviced by regions.)
   // Count only once for requests with multiple actions like multi/caching-scan/replayBatch
   final Counter requestCount = new Counter();
 
@@ -290,6 +303,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * Row size threshold for multi requests above which a warning is logged
    */
   private final int rowSizeWarnThreshold;
+  /*
+   * Whether we should reject requests with very high no of rows i.e. beyond threshold
+   * defined by rowSizeWarnThreshold
+   */
+  private final boolean rejectRowsWithSizeOverThreshold;
 
   // We want to vet all accesses at the point of entry itself; limiting scope of access checker
   // instance to only this class to prevent its use from spreading deeper into implementation.
@@ -1112,6 +1130,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     regionServer = rs;
     rowSizeWarnThreshold = rs.conf.getInt(BATCH_ROWS_THRESHOLD_NAME, BATCH_ROWS_THRESHOLD_DEFAULT);
     RpcSchedulerFactory rpcSchedulerFactory;
+    rejectRowsWithSizeOverThreshold = rs.conf
+      .getBoolean(REJECT_BATCH_ROWS_OVER_THRESHOLD, DEFAULT_REJECT_BATCH_ROWS_OVER_THRESHOLD);
+
     try {
       Class<?> rpcSchedulerFactoryClass = rs.conf.getClass(
           REGION_SERVER_RPC_SCHEDULER_FACTORY_CLASS,
@@ -2371,7 +2392,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
   }
 
-  private void checkBatchSizeAndLogLargeSize(MultiRequest request) {
+  private void checkBatchSizeAndLogLargeSize(MultiRequest request) throws ServiceException {
     int sum = 0;
     String firstRegionName = null;
     for (RegionAction regionAction : request.getRegionActionList()) {
@@ -2382,6 +2403,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
     if (sum > rowSizeWarnThreshold) {
       ld.logBatchWarning(firstRegionName, sum, rowSizeWarnThreshold);
+      if (rejectRowsWithSizeOverThreshold) {
+        throw new ServiceException(
+          "Rejecting large batch operation for current batch with firstRegionName: "
+            + firstRegionName + " , Requested Number of Rows: " + sum + " , Size Threshold: "
+            + rowSizeWarnThreshold);
+      }
     }
   }
 
