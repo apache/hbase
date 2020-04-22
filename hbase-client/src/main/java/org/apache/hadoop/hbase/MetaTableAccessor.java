@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -384,30 +385,40 @@ public class MetaTableAccessor {
   }
 
   /**
-   * @return Deserialized regioninfo values taken from column values that match
+   * @return Deserialized values of <qualifier,regioninfo> pairs taken from column values that match
    *   the regex 'info:merge.*' in array of <code>cells</code>.
    */
   @Nullable
-  public static List<RegionInfo> getMergeRegions(Cell [] cells) {
+  public static Map<String, RegionInfo> getMergeRegionsWithName(Cell [] cells) {
     if (cells == null) {
       return null;
     }
-    List<RegionInfo> regionsToMerge = null;
+    Map<String, RegionInfo> regionsToMerge = null;
     for (Cell cell: cells) {
       if (!isMergeQualifierPrefix(cell)) {
         continue;
       }
       // Ok. This cell is that of a info:merge* column.
       RegionInfo ri = RegionInfo.parseFromOrNull(cell.getValueArray(), cell.getValueOffset(),
-         cell.getValueLength());
+        cell.getValueLength());
       if (ri != null) {
         if (regionsToMerge == null) {
-          regionsToMerge = new ArrayList<>();
+          regionsToMerge = new HashMap<>();
         }
-        regionsToMerge.add(ri);
+        regionsToMerge.put(Bytes.toString(CellUtil.cloneQualifier(cell)), ri);
       }
     }
     return regionsToMerge;
+  }
+
+  /**
+   * @return Deserialized regioninfo values taken from column values that match
+   *   the regex 'info:merge.*' in array of <code>cells</code>.
+   */
+  @Nullable
+  public static List<RegionInfo> getMergeRegions(Cell [] cells) {
+    Map<String, RegionInfo> mergeRegionsWithName = getMergeRegionsWithName(cells);
+    return (mergeRegionsWithName == null) ? null : new ArrayList<>(mergeRegionsWithName.values());
   }
 
   /**

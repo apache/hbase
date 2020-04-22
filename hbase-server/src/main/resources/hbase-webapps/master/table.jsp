@@ -442,19 +442,28 @@ if (fqtn != null && master.isInitialized()) {
 
       final long seqNum = regionReplicaInfo.getSeqNum();
 
+      final String regionSpanFormat = "<span title=" + HConstants.CATALOG_FAMILY_STR + ":%s>%s</span>";
       final String targetServerName = regionReplicaInfo.getTargetServerName().toString();
-      final String mergeRegionNames = String.join("<br/>", regionReplicaInfo.getMergeRegionName());
-      final String splitName = String.join("<br/>", regionReplicaInfo.getSplitRegionName());
+      final Map<String, RegionInfo> mergeRegions = regionReplicaInfo.getMergeRegionInfo();
+      final String mergeRegionNames = (mergeRegions == null) ? "" :
+        mergeRegions.entrySet().stream()
+          .map(entry -> String.format(regionSpanFormat, entry.getKey(), entry.getValue().getRegionNameAsString()))
+          .collect(Collectors.joining("<br/>"));
+      final Map<String, RegionInfo> splitRegions = regionReplicaInfo.getSplitRegionInfo();
+      final String splitName = (splitRegions == null) ? "" :
+        splitRegions.entrySet().stream()
+          .map(entry -> String.format(regionSpanFormat, entry.getKey(), entry.getValue().getRegionNameAsString()))
+          .collect(Collectors.joining("<br/>"));
   %>
     <tr>
-      <td><%= regionNameDisplay %></td>
-      <td><%= startKeyDisplay %></td>
-      <td><%= endKeyDisplay %></td>
-      <td><%= replicaIdDisplay %></td>
-      <td><%= regionStateDisplay %></td>
-      <td><%= buildRegionServerLink(serverName, rsPort, regionInfo, regionState) %></td>
-      <td><%= seqNum %></td>
-      <td><%= targetServerName %></td>
+      <td title="info:regioninfo"><%= regionNameDisplay %></td>
+      <td title="startKey"><%= startKeyDisplay %></td>
+      <td title="endKey"><%= endKeyDisplay %></td>
+      <td title="replicaId"><%= replicaIdDisplay %></td>
+      <td title="regionState"><%= regionStateDisplay %></td>
+      <td title="info:server,info:serverstartcode"><%= buildRegionServerLink(serverName, rsPort, regionInfo, regionState) %></td>
+      <td title="info:seqnumDuringOpen"><%= seqNum %></td>
+      <td title="info:sn"><%= targetServerName %></td>
       <td><%= mergeRegionNames %></td>
       <td><%= splitName %></td>
     </tr>

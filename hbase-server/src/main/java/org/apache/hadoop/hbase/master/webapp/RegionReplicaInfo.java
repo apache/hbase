@@ -21,7 +21,9 @@ import static org.apache.hbase.thirdparty.org.apache.commons.collections4.ListUt
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -54,8 +56,8 @@ public final class RegionReplicaInfo {
   private final long seqNum;
   /** See {@link org.apache.hadoop.hbase.HConstants#SERVERNAME_QUALIFIER_STR}. */
   private final ServerName targetServerName;
-  private final List<RegionInfo> mergeRegionInfo;
-  private final List<RegionInfo> splitRegionInfo;
+  private final Map<String, RegionInfo> mergeRegionInfo;
+  private final Map<String, RegionInfo> splitRegionInfo;
 
   private RegionReplicaInfo(final Result result, final HRegionLocation location) {
     this.row = result != null ? result.getRow() : null;
@@ -69,11 +71,18 @@ public final class RegionReplicaInfo {
       ? MetaTableAccessor.getTargetServerName(result, regionInfo.getReplicaId())
       : null;
     this.mergeRegionInfo = (result != null)
-      ? MetaTableAccessor.getMergeRegions(result.rawCells())
+      ? MetaTableAccessor.getMergeRegionsWithName(result.rawCells())
       : null;
+
     if (result != null) {
       PairOfSameType<RegionInfo> daughterRegions = MetaTableAccessor.getDaughterRegions(result);
-      this.splitRegionInfo = Arrays.asList(daughterRegions.getFirst(), daughterRegions.getSecond());
+      this.splitRegionInfo = new HashMap<>();
+      if (daughterRegions.getFirst() != null) {
+        splitRegionInfo.put(HConstants.SPLITA_QUALIFIER_STR, daughterRegions.getFirst());
+      }
+      if (daughterRegions.getSecond() != null) {
+        splitRegionInfo.put(HConstants.SPLITB_QUALIFIER_STR, daughterRegions.getSecond());
+      }
     } else {
       this.splitRegionInfo = null;
     }
@@ -134,21 +143,12 @@ public final class RegionReplicaInfo {
     return targetServerName;
   }
 
-  public List<String> getMergeRegionName() {
-    return getRegionNames(mergeRegionInfo);
+  public Map<String, RegionInfo> getMergeRegionInfo() {
+    return mergeRegionInfo;
   }
 
-  public List<String> getSplitRegionName() {
-    return getRegionNames(splitRegionInfo);
-  }
-
-  private static List<String> getRegionNames(List<RegionInfo> regionInfos) {
-    return emptyIfNull(regionInfos)
-      .stream()
-      .filter(Objects::nonNull)
-      .map(RegionInfo::getRegionName)
-      .map(Bytes::toStringBinary)
-      .collect(Collectors.toList());
+  public Map<String, RegionInfo> getSplitRegionInfo() {
+    return splitRegionInfo;
   }
 
   @Override
