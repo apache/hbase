@@ -135,7 +135,7 @@ RUN ruby-switch --set ruby2.3
 # Install rubocop
 ###
 RUN gem install rake
-RUN gem install rubocop:'<= 0.81'
+RUN gem install rubocop
 
 ####
 # Install ruby-lint
