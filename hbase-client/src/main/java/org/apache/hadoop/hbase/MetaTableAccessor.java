@@ -403,7 +403,7 @@ public class MetaTableAccessor {
         cell.getValueLength());
       if (ri != null) {
         if (regionsToMerge == null) {
-          regionsToMerge = new HashMap<>();
+          regionsToMerge = new LinkedHashMap<>();
         }
         regionsToMerge.put(Bytes.toString(CellUtil.cloneQualifier(cell)), ri);
       }

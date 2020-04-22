@@ -22,6 +22,7 @@ import static org.apache.hbase.thirdparty.org.apache.commons.collections4.ListUt
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -76,7 +77,7 @@ public final class RegionReplicaInfo {
 
     if (result != null) {
       PairOfSameType<RegionInfo> daughterRegions = MetaTableAccessor.getDaughterRegions(result);
-      this.splitRegionInfo = new HashMap<>();
+      this.splitRegionInfo = new LinkedHashMap<>();
       if (daughterRegions.getFirst() != null) {
         splitRegionInfo.put(HConstants.SPLITA_QUALIFIER_STR, daughterRegions.getFirst());
       }
