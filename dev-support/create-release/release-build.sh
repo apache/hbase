@@ -72,11 +72,10 @@ EOF
 set -e
 
 function cleanup {
-  echo "Cleaning up temp settings file." >&2
-  rm -f "${MAVEN_SETTINGS_FILE}" &> /dev/null || true
   # If REPO was set, then leave things be. Otherwise if we defined a repo clean it out.
   if [[ -z "${REPO}" ]] && [[ -n "${MAVEN_LOCAL_REPO}" ]]; then
-    echo "Cleaning up temp repo in '${MAVEN_LOCAL_REPO}'. set REPO to reuse downloads." >&2
+    echo "Cleaning up temp repo in '${MAVEN_LOCAL_REPO}'. Set REPO to reuse downloads." >&2
+    rm -f "${MAVEN_SETTINGS_FILE}" &> /dev/null || true
     rm -rf "${MAVEN_LOCAL_REPO}" &> /dev/null || true
   fi
 }
@@ -155,7 +154,6 @@ if [[ "$1" == "tag" ]]; then
 fi
 
 ### Below is for 'publish-*' stages ###
-set -x
 check_get_passwords ASF_PASSWORD
 if [[ -z "$GPG_PASSPHRASE" ]]; then
   check_get_passwords GPG_PASSPHRASE
@@ -210,7 +208,6 @@ if [[ "$1" == "publish-dist" ]]; then
   make_src_release "${PROJECT}" "${VERSION}"
 
   echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') Building binary dist"
-  debug_show_gpg_params
   make_binary_release "${PROJECT}" "${VERSION}"
   echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') Done building binary distribution"
 

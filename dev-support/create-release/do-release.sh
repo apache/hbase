@@ -94,7 +94,6 @@ else
 fi
 
 if should_build "publish-dist"; then
-  debug_show_gpg_params
   run_silent "Publishing distribution packages (tarballs)" "publish-dist.log" \
     "$SELF/release-build.sh" publish-dist
 else

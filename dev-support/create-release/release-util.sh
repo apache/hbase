@@ -286,16 +286,6 @@ function check_needed_vars {
   return 0
 }
 
-function debug_show_gpg_params {
-  echo "==================="
-  echo "GPG-related env variables:"
-  env | grep -i gpg | sort
-  echo "==================="
-  echo "Available key ids:"
-  gpg --list-keys
-  echo "==================="
-}
-
 function init_locale {
   local locale_value
   OS=`uname -s`
@@ -362,7 +352,19 @@ function configure_maven {
       <password>${env.ASF_PASSWORD}</password></server>
     <server><id>apache.releases.https</id><username>${env.ASF_USERNAME}</username>
       <password>${env.ASF_PASSWORD}</password></server>
+    <server><id>gpg.passphrase</id>
+      <passphrase>${env.GPG_PASSPHRASE}</passphrase></server>
   </servers>
+  <profiles>
+    <profile>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <properties>
+        <gpg.keyname>${env.GPG_KEY}</gpg.keyname>
+      </properties>
+    </profile>
+  </profiles>
 </settings>
 EOF
 }
@@ -484,7 +486,8 @@ make_binary_release() {
   # assembly spec to in maven. TODO. Meantime, three invocations.
   "${MVN[@]}" clean install -DskipTests
   "${MVN[@]}" site -DskipTests
-  "${MVN[@]}" -e -X install assembly:single -DskipTests -Dcheckstyle.skip=true "${PUBLISH_PROFILES[@]}"
+  kick_gpg_agent
+  "${MVN[@]}" install assembly:single -DskipTests -Dcheckstyle.skip=true "${PUBLISH_PROFILES[@]}"
 
   # Check there is a bin gz output. The build may not produce one: e.g. hbase-thirdparty.
   local f_bin_prefix="./${PROJECT}-assembly/target/${base_name}"
@@ -499,6 +502,19 @@ make_binary_release() {
     cd .. || exit
     echo "No ${f_bin_prefix}*-bin.tar.gz product; expected?"
   fi
+}
+
+# "Wake up" the gpg agent so it responds properly to maven-gpg-plugin, and doesn't cause timeout.
+# Specifically this is done between invocation of 'mvn site' and 'mvn assembly:single', because
+# the 'site' build takes long enough that the gpg-agent does become unresponsive and the following
+# 'assembly' build (where gpg signing occurs) experiences timeout, without this "kick".
+function kick_gpg_agent {
+  # All that's needed is to run gpg on a random file
+  local i
+  i="$(mktemp)"
+  echo "This is a test file" > "$i"
+  echo "$GPG_PASSPHRASE" | $GPG --passphrase-fd 0 --armour --output "$i.asc" --detach-sig "$i"
+  rm "$i" "$i.asc"
 }
 
 # Do maven command to set version into local pom
