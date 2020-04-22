@@ -29,7 +29,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This class contains the mapping information between each region name and
- * its favored region server list. Used by {@link FavoredNodeLoadBalancer} set
+ * its favored region server list. Used by FavoredNodeLoadBalancer set
  * of classes and from unit tests (hence the class is public)
  *
  * All the access to this class is thread-safe.
