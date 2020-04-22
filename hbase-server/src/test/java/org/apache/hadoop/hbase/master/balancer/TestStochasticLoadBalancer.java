@@ -39,6 +39,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerLoad;
@@ -161,11 +162,17 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     float minCost = conf.getFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 0.05f);
     conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 1.0f);
     try {
-      loadBalancer.setConf(conf);
-      for (int[] mockCluster : clusterStateMocks) {
-        Map<ServerName, List<HRegionInfo>> servers = mockClusterServers(mockCluster);
-        List<RegionPlan> plans = loadBalancer.balanceCluster(servers);
-        assertNull(plans);
+      // Test with/without per table balancer.
+      boolean[] perTableBalancerConfigs = {true, false};
+      for (boolean isByTable : perTableBalancerConfigs) {
+        conf.setBoolean(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, isByTable);
+        loadBalancer.setConf(conf);
+        for (int[] mockCluster : clusterStateMocks) {
+          Map<ServerName, List<HRegionInfo>> servers = mockClusterServers(mockCluster);
+          List<RegionPlan> plans = loadBalancer.balanceCluster(servers);
+          boolean emptyPlans = plans == null || plans.isEmpty();
+          assertTrue(emptyPlans || needsBalanceIdleRegion(mockCluster));
+        }
       }
     } finally {
       // reset config
@@ -682,6 +689,19 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     assertTrue(Arrays.
             asList(loadBalancer.getCostFunctionNames()).
             contains(DummyCostFunction.class.getSimpleName()));
+  }
+
+  private boolean needsBalanceIdleRegion(int[] clusters) {
+    boolean b1 = false;
+    boolean b2 = false;
+    for (int cluster : clusters) {
+      if (cluster > 1) {
+        b1 = true;
+      } else {
+        b2 = true;
+      }
+    }
+    return b1 && b2;
   }
 
   // This mock allows us to test the LocalityCostFunction

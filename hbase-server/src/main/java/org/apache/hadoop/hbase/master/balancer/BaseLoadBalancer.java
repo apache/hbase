@@ -1297,6 +1297,10 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       return false;
     }
     if(areSomeRegionReplicasColocated(c)) return true;
+    if(idleRegionServerExist(c)) {
+      return true;
+    }
+
     // Check if we even need to do any load balancing
     // HBASE-3681 check sloppiness first
     float average = cs.getLoadAverage(); // for logging
@@ -1326,6 +1330,20 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
    */
   protected boolean areSomeRegionReplicasColocated(Cluster c) {
     return false;
+  }
+
+  protected final boolean idleRegionServerExist(Cluster c){
+    boolean isServerExistsWithMoreRegions = false;
+    boolean isServerExistsWithZeroRegions = false;
+    for (int[] serverList: c.regionsPerServer){
+      if (serverList.length > 1) {
+        isServerExistsWithMoreRegions = true;
+      }
+      if (serverList.length == 0) {
+        isServerExistsWithZeroRegions = true;
+      }
+    }
+    return isServerExistsWithMoreRegions && isServerExistsWithZeroRegions;
   }
 
   /**
