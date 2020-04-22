@@ -255,7 +255,8 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
           Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
               (Map) mockClusterServersWithTables(servers);
           List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
-          assertTrue(plans == null || plans.isEmpty());
+          boolean emptyPlans = plans == null || plans.isEmpty();
+          assertTrue(emptyPlans || needsBalanceIdleRegion(mockCluster));
         }
       }
     } finally {
@@ -481,6 +482,10 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     assertTrue(Arrays.
             asList(loadBalancer.getCostFunctionNames()).
             contains(DummyCostFunction.class.getSimpleName()));
+  }
+
+  private boolean needsBalanceIdleRegion(int[] cluster){
+    return (Arrays.stream(cluster).anyMatch(x -> x>1)) && (Arrays.stream(cluster).anyMatch(x -> x<1));
   }
 
   // This mock allows us to test the LocalityCostFunction
