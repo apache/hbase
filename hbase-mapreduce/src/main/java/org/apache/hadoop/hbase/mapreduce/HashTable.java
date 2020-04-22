@@ -198,7 +198,7 @@ public class HashTable extends Configured implements Tool {
         scan.withStartRow(startRow);
       }
       if (!isTableEndRow(stopRow)) {
-        scan.setStopRow(stopRow);
+        scan.withStopRow(stopRow);
       }
       if(families != null) {
         for(String fam : families.split(",")) {

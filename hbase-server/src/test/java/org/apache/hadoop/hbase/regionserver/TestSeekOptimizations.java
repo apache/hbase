@@ -221,7 +221,7 @@ public class TestSeekOptimizations {
     {
       final byte[] scannerStopRow =
           rowBytes(endRow + (startRow != endRow ? 1 : 0));
-      scan.setStopRow(scannerStopRow);
+      scan.withStopRow(scannerStopRow);
     }
 
     final long initialSeekCount = StoreFileScanner.getSeekCount();

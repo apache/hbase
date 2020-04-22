@@ -101,7 +101,7 @@ public class TestCleanupCompactedFileOnRegionClose {
 
     //Create a scanner and keep it open to add references to StoreFileReaders
     Scan scan = new Scan();
-    scan.setStopRow(Bytes.toBytes(refSFCount-2));
+    scan.withStopRow(Bytes.toBytes(refSFCount-2));
     scan.setCaching(1);
     ResultScanner scanner = table.getScanner(scan);
     Result res = scanner.next();

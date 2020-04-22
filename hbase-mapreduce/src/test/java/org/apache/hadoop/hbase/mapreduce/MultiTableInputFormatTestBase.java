@@ -241,7 +241,7 @@ public abstract class MultiTableInputFormatTestBase {
         scan.withStartRow(Bytes.toBytes(start));
       }
       if (stop != null) {
-        scan.setStopRow(Bytes.toBytes(stop));
+        scan.withStopRow(Bytes.toBytes(stop));
       }
 
       scans.add(scan);
