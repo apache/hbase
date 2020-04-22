@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -250,9 +249,9 @@ public abstract class SnapshotWithAclTestBase extends SecureTestUtil {
 
   @Test
   public void testDeleteSnapshot() throws Exception {
-    String testSnapshotName = HBaseCommonTestingUtility.getRandomUUID().toString();
+    String testSnapshotName = TEST_UTIL.getRandomUUID().toString();
     verifyAllowed(new AccessSnapshotAction(testSnapshotName), USER_OWNER);
-    verifyDenied(new AccessSnapshotAction(HBaseCommonTestingUtility.getRandomUUID().toString()),
+    verifyDenied(new AccessSnapshotAction(TEST_UTIL.getRandomUUID().toString()),
       USER_RO, USER_RW, USER_NONE);
     List<SnapshotDescription> snapshotDescriptions = TEST_UTIL.getAdmin().listSnapshots(
       Pattern.compile(testSnapshotName));
