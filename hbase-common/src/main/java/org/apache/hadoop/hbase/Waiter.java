@@ -18,12 +18,12 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.Assert.fail;
 
 import java.text.MessageFormat;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -200,7 +200,7 @@ public final class Waiter {
             System.currentTimeMillis() - started));
         } else if (failIfTimeout) {
           String msg = getExplanation(predicate);
-          Assert.fail(MessageFormat
+          fail(MessageFormat
               .format("Waiting timed out after [{0}] msec", adjustedTimeout) + msg);
         } else {
           String msg = getExplanation(predicate);

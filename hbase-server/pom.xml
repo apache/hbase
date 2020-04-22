@@ -536,6 +536,12 @@
       <artifactId>hadoop-minikdc</artifactId>
       <scope>compile</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-hdfs</artifactId>
+      <version>${hadoop.version}</version>
+      <classifier>tests</classifier>
+    </dependency>
   </dependencies>
   <profiles>
     <!-- Needs to make the profile in apache parent pom -->
@@ -680,12 +686,6 @@
           <artifactId>hadoop-hdfs</artifactId>
           <type>test-jar</type>
           <scope>test</scope>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-hdfs</artifactId>
-          <type>test-jar</type>
-          <scope>compile</scope>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
