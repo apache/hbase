@@ -105,7 +105,7 @@ public class ChecksumUtil {
     int onDiskDataSizeWithHeader =
         buffer.getInt(HFileBlock.Header.ON_DISK_DATA_SIZE_WITH_HEADER_INDEX);
     if (LOG.isTraceEnabled()) {
-      LOG.info("dataLength=" + buffer.capacity()
+      LOG.trace("dataLength=" + buffer.capacity()
           + ", sizeWithHeader=" + onDiskDataSizeWithHeader
           + ", checksumType=" + cktype.getName()
           + ", file=" + pathName
