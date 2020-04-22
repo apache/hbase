@@ -71,9 +71,22 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
     this.ugi = ugi;
     this.conf = conf;
     this.provider = provider;
-    this.saslRpcClient = new NettyHBaseSaslRpcClient(conf, provider, token, serverAddr,
-        securityInfo, fallbackAllowed, conf.get(
-        "hbase.rpc.protection", SaslUtil.QualityOfProtection.AUTHENTICATION.name().toLowerCase()));
+    NettyHBaseSaslRpcClient saslClient = null;
+    try {
+      saslClient = ugi.doAs(new PrivilegedExceptionAction<NettyHBaseSaslRpcClient>() {
+
+        @Override
+        public NettyHBaseSaslRpcClient run() throws Exception {
+          return new NettyHBaseSaslRpcClient(conf, provider, token, serverAddr,
+              securityInfo, fallbackAllowed, conf.get(
+              "hbase.rpc.protection", SaslUtil.QualityOfProtection.AUTHENTICATION.name().toLowerCase()));
+        }
+      });
+    } catch (Exception e) {
+      saslPromise.tryFailure(e);
+      throw new IOException(e);
+    }
+    this.saslRpcClient = saslClient;
   }
 
   private void writeResponse(ChannelHandlerContext ctx, byte[] response) {
