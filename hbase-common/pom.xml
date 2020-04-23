@@ -220,10 +220,6 @@
       <artifactId>junit</artifactId>
       <groupId>junit</groupId>
     </dependency>
-    <dependency>
-      <artifactId>junit</artifactId>
-      <groupId>junit</groupId>
-    </dependency>
   </dependencies>
 
   <profiles>
