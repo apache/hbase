@@ -532,6 +532,7 @@ function hadoopcheck_rebuild
   local result=0
   local hbase_hadoop2_versions
   local hbase_hadoop3_versions
+  local jetty_version
 
   if [[ "${repostatus}" = branch ]]; then
     return 0
@@ -615,7 +616,7 @@ function hadoopcheck_rebuild
     if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
       hbase_hadoop3_versions="3.1.2 3.2.1"
     else
-      hbase_hadoop3_versions="3.1.1 3.1.2 3.2.0 3.2.1"
+      hbase_hadoop3_versions="3.1.1 3.1.2 3.2.0 3.2.1 3.3.0-SNAPSHOT"
     fi
   fi
 
@@ -638,13 +639,20 @@ function hadoopcheck_rebuild
 
   for hadoopver in ${hbase_hadoop3_versions}; do
     logfile="${PATCH_DIR}/patch-javac-${hadoopver}.txt"
+    # temporary workaround before HBASE-23834
+    if [[ $hadoopver =~ ^3.3.0 ]]; then
+      jetty_version="-Djetty.version=9.4.20.v20190813"
+    else
+      jetty_version=""
+    fi
     # disabled because "maven_executor" needs to return both command and args
     # shellcheck disable=2046
     echo_and_redirect "${logfile}" \
       $(maven_executor) clean install \
         -DskipTests -DHBasePatchProcess \
         -Dhadoop-three.version="${hadoopver}" \
-        -Phadoop-3.0
+        -Phadoop-3.0 \
+        "${jetty_version}"
     count=$(${GREP} -c '\[ERROR\]' "${logfile}")
     if [[ ${count} -gt 0 ]]; then
       add_vote_table -1 hadoopcheck "${BUILDMODEMSG} causes ${count} errors with Hadoop v${hadoopver}."
