@@ -58,7 +58,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -74,14 +73,12 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
-import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSHedgedReadMetrics;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -1571,33 +1568,6 @@ public abstract class FSUtils extends CommonFSUtils {
         return status2;
       }
     }
-  }
-
-  /**
-   * Throw an exception if an action is not permitted by a user on a file.
-   *
-   * @param ugi
-   *          the user
-   * @param file
-   *          the file
-   * @param action
-   *          the action
-   */
-  public static void checkAccess(UserGroupInformation ugi, FileStatus file,
-      FsAction action) throws AccessDeniedException {
-    if (ugi.getShortUserName().equals(file.getOwner())) {
-      if (file.getPermission().getUserAction().implies(action)) {
-        return;
-      }
-    } else if (ArrayUtils.contains(ugi.getGroupNames(), file.getGroup())) {
-      if (file.getPermission().getGroupAction().implies(action)) {
-        return;
-      }
-    } else if (file.getPermission().getOtherAction().implies(action)) {
-      return;
-    }
-    throw new AccessDeniedException("Permission denied:" + " action=" + action
-        + " path=" + file.getPath() + " user=" + ugi.getShortUserName());
   }
 
   /**
