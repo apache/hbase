@@ -94,6 +94,7 @@ public abstract class MonkeyFactory {
       try {
         klass = Class.forName(factoryName);
         if (klass != null) {
+          LOG.info(String.format("Instantiating %s", klass.getName()));
           fact = (MonkeyFactory) ReflectionUtils.newInstance(klass);
         }
       } catch (Exception e) {
