@@ -27,7 +27,7 @@ COPY . /hbase/dev-support
 RUN DEBIAN_FRONTEND=noninteractive apt-get -qq -y update \
     && DEBIAN_FRONTEND=noninteractive apt-get -qq -y install --no-install-recommends \
       curl=7.58.0-2ubuntu3.8 \
-      python2.7=2.7.17-1~18.04 \
+      python2.7=2.7.17-1~18.04ubuntu1 \
       python-pip=9.0.1-2.3~ubuntu1.18.04.1 \
       python-setuptools=39.0.1-2 \
     && apt-get clean \
