@@ -2941,6 +2941,11 @@
                <groupId>com.google.code.findbugs</groupId>
                <artifactId>jsr305</artifactId>
              </exclusion>
+             <exclusion>
+               <!-- conflicts with javax.ws.rs:javax.ws.rs-api:jar:2.0.1 -->
+               <groupId>javax.ws.rs</groupId>
+               <artifactId>jsr311-api</artifactId>
+             </exclusion>
            </exclusions>
          </dependency>
          <dependency>
