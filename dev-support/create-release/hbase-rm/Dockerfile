@@ -28,7 +28,7 @@ FROM ubuntu:18.04
 RUN DEBIAN_FRONTEND=noninteractive apt-get -qq -y update \
   && DEBIAN_FRONTEND=noninteractive apt-get -qq -y install --no-install-recommends \
     curl=7.58.0-2ubuntu3.8 \
-    git=1:2.17.1-1ubuntu0.6 \
+    git=1:2.17.1-1ubuntu0.7 \
     gnupg=2.2.4-1ubuntu1.2 \
     libcurl4-openssl-dev=7.58.0-2ubuntu3.8 \
     libxml2-dev=2.9.4+dfsg1-6.1ubuntu1.3 \
