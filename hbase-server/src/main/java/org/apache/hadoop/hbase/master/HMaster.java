@@ -2085,6 +2085,10 @@ public class HMaster extends HRegionServer implements MasterServices {
         return;
       }
     }
+    if (dest.equals(LoadBalancer.BOGUS_SERVER_NAME)) {
+      LOG.debug("Unable to determine a server to assign {}.", hri);
+      return;
+    }
 
     if (dest.equals(regionState.getServerName())) {
       LOG.debug("Skipping move of region " + hri.getRegionNameAsString()
