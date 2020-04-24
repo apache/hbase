@@ -2086,6 +2086,15 @@ public class HMaster extends HRegionServer implements MasterServices {
       }
     }
 
+    // When rsgroup is enabled, a region can be moved to same rsgroup servers only.
+    // If region's current server and target server do not belong to same rsgroup the region move is invalid.
+    // While moving a region to different rsgroup server balancer assigns invalid target server named as BOGUS_SERVER_NAME.
+    // So if target server is BOGUS_SERVER_NAME, region move is invalid.
+    if (dest.equals(LoadBalancer.BOGUS_SERVER_NAME)) {
+      LOG.debug("Unable to determine a server to assign {}.", hri);
+      return;
+    }
+
     if (dest.equals(regionState.getServerName())) {
       LOG.debug("Skipping move of region " + hri.getRegionNameAsString()
         + " because region already assigned to the same server " + dest + ".");

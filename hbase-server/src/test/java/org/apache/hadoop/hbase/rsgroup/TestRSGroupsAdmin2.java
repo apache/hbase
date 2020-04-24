@@ -136,6 +136,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     });
 
     // Lets move this region to the new group.
+    long preOpCount = getRegionMoveProcCount();
     TEST_UTIL.getAdmin()
       .move(Bytes.toBytes(RegionInfo.encodeRegionName(Bytes.toBytes(targetRegion))), targetServer);
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
@@ -147,6 +148,8 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
             .getRegionStatesInTransition().size() < 1;
       }
     });
+    long postOpCount = getRegionMoveProcCount();
+    assertEquals("Move region procedure should not have been submitted.", preOpCount, postOpCount);
 
     // verify that targetServer didn't open it
     for (RegionInfo region : ADMIN.getRegions(targetServer)) {
@@ -154,6 +157,11 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
         fail("Target server opened region");
       }
     }
+  }
+
+  private long getRegionMoveProcCount() {
+    return TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
+      .getAssignmentManagerMetrics().getMoveProcMetrics().getSubmittedCounter().getCount();
   }
 
   @Test
