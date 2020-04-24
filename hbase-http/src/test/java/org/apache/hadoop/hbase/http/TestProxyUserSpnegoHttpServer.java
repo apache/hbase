@@ -76,7 +76,7 @@ public class TestProxyUserSpnegoHttpServer extends HttpServerFunctionalTest {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestProxyUserSpnegoHttpServer.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestSpnegoHttpServer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestProxyUserSpnegoHttpServer.class);
   private static final String KDC_SERVER_HOST = "localhost";
   private static final String WHEEL_PRINCIPAL = "wheel";
   private static final String STANDARD_PRINCIPAL = "standard";
@@ -154,7 +154,7 @@ public class TestProxyUserSpnegoHttpServer extends HttpServerFunctionalTest {
     SimpleKdcServer kdc = new SimpleKdcServer();
 
     final File target = new File(System.getProperty("user.dir"), "target");
-    File kdcDir = new File(target, TestSpnegoHttpServer.class.getSimpleName());
+    File kdcDir = new File(target, TestProxyUserSpnegoHttpServer.class.getSimpleName());
     if (kdcDir.exists()) {
       deleteRecursively(kdcDir);
     }
@@ -188,8 +188,6 @@ public class TestProxyUserSpnegoHttpServer extends HttpServerFunctionalTest {
 
     conf.set(HttpServer.HTTP_SPNEGO_AUTHENTICATION_ADMIN_USERS_KEY, DOAS_PRINCIPAL);
     conf.set(HttpServer.HTTP_SPNEGO_AUTHENTICATION_PROXYUSER_ENABLE_KEY, "true");
-
-    conf.set(HttpServer.HTTP_SPNEGO_AUTHENTICATION_ADMIN_USERS_KEY, DOAS_PRINCIPAL);
 
     conf.set("hadoop.proxyuser.wheel.hosts", "*");
     conf.set("hadoop.proxyuser.wheel.users", "doas");
