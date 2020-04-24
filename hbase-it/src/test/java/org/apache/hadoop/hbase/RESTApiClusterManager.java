@@ -74,6 +74,8 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
       "hbase.it.clustermanager.restapi.password";
   private static final String REST_API_CLUSTER_MANAGER_CLUSTER_NAME =
       "hbase.it.clustermanager.restapi.clustername";
+  private static final String REST_API_DELEGATE_CLUSTER_MANAGER =
+    "hbase.it.clustermanager.restapi.delegate";
 
   private static final JsonParser parser = new JsonParser();
 
@@ -86,8 +88,6 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
   // Fields for the hostname, username, password, and cluster name of the cluster management server
   // to be used.
   private String serverHostname;
-  private String serverUsername;
-  private String serverPassword;
   private String clusterName;
 
   // Each version of Cloudera Manager supports a particular API versions. Version 6 of this API
@@ -103,10 +103,7 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
 
   private static final Logger LOG = LoggerFactory.getLogger(RESTApiClusterManager.class);
 
-  RESTApiClusterManager() {
-    hBaseClusterManager = ReflectionUtils.newInstance(HBaseClusterManager.class,
-        new IntegrationTestingUtility().getConfiguration());
-  }
+  RESTApiClusterManager() { }
 
   @Override
   public void setConf(Configuration conf) {
@@ -115,12 +112,17 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
       // `Configured()` constructor calls `setConf(null)` before calling again with a real value.
       return;
     }
+
+    final Class<? extends ClusterManager> clazz = conf.getClass(REST_API_DELEGATE_CLUSTER_MANAGER,
+      HBaseClusterManager.class, ClusterManager.class);
+    hBaseClusterManager = ReflectionUtils.newInstance(clazz, conf);
+
     serverHostname = conf.get(REST_API_CLUSTER_MANAGER_HOSTNAME, DEFAULT_SERVER_HOSTNAME);
-    serverUsername = conf.get(REST_API_CLUSTER_MANAGER_USERNAME, DEFAULT_SERVER_USERNAME);
-    serverPassword = conf.get(REST_API_CLUSTER_MANAGER_PASSWORD, DEFAULT_SERVER_PASSWORD);
     clusterName = conf.get(REST_API_CLUSTER_MANAGER_CLUSTER_NAME, DEFAULT_CLUSTER_NAME);
 
     // Add filter to Client instance to enable server authentication.
+    String serverUsername = conf.get(REST_API_CLUSTER_MANAGER_USERNAME, DEFAULT_SERVER_USERNAME);
+    String serverPassword = conf.get(REST_API_CLUSTER_MANAGER_PASSWORD, DEFAULT_SERVER_PASSWORD);
     client.register(HttpAuthenticationFeature.basic(serverUsername, serverPassword));
   }
 
