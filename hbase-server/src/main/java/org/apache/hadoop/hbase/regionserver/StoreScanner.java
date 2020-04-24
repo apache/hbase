@@ -617,11 +617,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           // and not per cell. Even scans metrics at the region level are
           // being tracked row wise.
           if (get && !trackGets) {
-            if (!heap.current.isFileScanner()) {
-              updateMetricsStore(true);
-            } else {
-              updateMetricsStore(false);
-            }
+            updateMetricsStore(!heap.current.isFileScanner());
             trackGets = true;
           }
           this.countPerRow++;

@@ -73,15 +73,7 @@ public class MetricsStoreAggregateSourceImpl extends BaseSourceImpl
 
   @Override
   public void deregister(MetricsStoreSource toRemove) {
-    try {
-      storeSources.remove(toRemove);
-    } catch (Exception e) {
-      // Ignored. If this errors out it means that someone is double
-      // closing the region source and the region is already nulled out.
-      LOG.info(
-          "Error trying to remove " + toRemove + " from " + this.getClass().getSimpleName(),
-          e);
-    }
+    storeSources.remove(toRemove);
     clearCache();
   }
 

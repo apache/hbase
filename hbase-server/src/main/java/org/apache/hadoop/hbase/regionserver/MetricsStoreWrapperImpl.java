@@ -28,19 +28,14 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.metrics2.MetricsExecutor;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class MetricsStoreWrapperImpl implements MetricsStoreWrapper, Closeable {
 
   private final HStore store;
-  private static final Logger LOG = LoggerFactory.getLogger(MetricsStoreWrapperImpl.class);
 
   public static final int PERIOD = 45;
   public static final String UNKNOWN = "unknown";
-  private ScheduledExecutorService executor;
-  private Runnable runnable;
   // add others also. check if anything is redundant
   private long numStoreFiles;
   private long memstoreSize;
@@ -59,10 +54,9 @@ public class MetricsStoreWrapperImpl implements MetricsStoreWrapper, Closeable {
 
   public MetricsStoreWrapperImpl(HStore store) {
     this.store = store;
-    this.executor = CompatibilitySingletonFactory.getInstance(MetricsExecutor.class).getExecutor();
-    this.runnable = new HStoreMetricsWrapperRunnable();
-    this.storeMetricUpdateTask =
-        this.executor.scheduleWithFixedDelay(this.runnable, PERIOD, PERIOD, TimeUnit.SECONDS);
+    ScheduledExecutorService executor = CompatibilitySingletonFactory.getInstance(MetricsExecutor.class).getExecutor();
+    this.storeMetricUpdateTask = executor.scheduleWithFixedDelay(new HStoreMetricsWrapperRunnable(),
+      PERIOD, PERIOD, TimeUnit.SECONDS);
   }
 
   @Override

@@ -39,7 +39,7 @@ public class TestMetricsStore {
 
   @Test
   public void testStoreWrapperMetrics() {
-    MetricsStore ms = new MetricsStore(new MetricsStoreWrapperStub(), new Configuration());
+    MetricsStore ms = new MetricsStore(new MetricsStoreWrapperStub());
     MetricsStoreAggregateSource agg = ms.getSource().getAggregateSource();
     // increment the metrics based on the new registry
     ms.updateFileGet();

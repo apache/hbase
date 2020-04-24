@@ -26,7 +26,7 @@ public class MetricsStore {
   private final MetricsStoreSource source;
   private MetricsStoreWrapper storeWrapper;
 
-  public MetricsStore(final MetricsStoreWrapper wrapper, Configuration conf) {
+  public MetricsStore(final MetricsStoreWrapper wrapper) {
     source = CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
                                              .createStore(wrapper);
     this.storeWrapper = wrapper;

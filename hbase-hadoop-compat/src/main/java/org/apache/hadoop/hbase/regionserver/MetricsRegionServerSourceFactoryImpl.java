@@ -46,8 +46,7 @@ public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServer
     }
   }
 
-  private synchronized MetricsStoreAggregateSourceImpl
-      getStoreAggregate(MetricsStoreWrapper wrapper) {
+  private synchronized MetricsStoreAggregateSourceImpl getStoreAggregate() {
     synchronized (FactoryStorage.INSTANCE.aggLock) {
       if (FactoryStorage.INSTANCE.storeAggImpl == null) {
         FactoryStorage.INSTANCE.storeAggImpl = new MetricsStoreAggregateSourceImpl();
@@ -98,7 +97,7 @@ public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServer
 
   @Override
   public MetricsStoreSource createStore(MetricsStoreWrapper wrapper) {
-    return new MetricsStoreSourceImpl(wrapper, getStoreAggregate(wrapper));
+    return new MetricsStoreSourceImpl(wrapper, getStoreAggregate());
   }
 
   @Override
