@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.junit.After;
 import org.slf4j.Logger;
@@ -77,7 +77,7 @@ public class TestRefreshHFilesBase {
 
   protected void addHFilesToRegions() throws IOException {
     MasterFileSystem mfs = HTU.getMiniHBaseCluster().getMaster().getMasterFileSystem();
-    Path tableDir = FSUtils.getTableDir(mfs.getRootDir(), TABLE_NAME);
+    Path tableDir = CommonFSUtils.getTableDir(mfs.getRootDir(), TABLE_NAME);
     for (Region region : cluster.getRegions(TABLE_NAME)) {
       Path regionDir = new Path(tableDir, region.getRegionInfo().getEncodedName());
       Path familyDir = new Path(regionDir, Bytes.toString(FAMILY));

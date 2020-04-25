@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.apache.hadoop.hbase.HConstants.ZOOKEEPER_QUORUM;
+
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
@@ -27,7 +28,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -67,7 +68,7 @@ public class TestMasterNoCluster {
   public static void setUpBeforeClass() throws Exception {
     Configuration c = TESTUTIL.getConfiguration();
     // We use local filesystem.  Set it so it writes into the testdir.
-    FSUtils.setRootDir(c, TESTUTIL.getDataTestDir());
+    CommonFSUtils.setRootDir(c, TESTUTIL.getDataTestDir());
     DefaultMetricsSystem.setMiniClusterMode(true);
     // Startup a mini zk cluster.
     TESTUTIL.startMiniZKCluster();

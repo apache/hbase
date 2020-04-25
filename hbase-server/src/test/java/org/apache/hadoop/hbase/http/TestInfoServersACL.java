@@ -20,11 +20,13 @@ package org.apache.hadoop.hbase.http;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
 import java.io.File;
 import java.lang.management.ManagementFactory;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.security.PrivilegedExceptionAction;
+import javax.management.ObjectName;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.Path;
@@ -39,9 +41,8 @@ import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.security.token.TokenProvider;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.http.auth.AuthSchemeProvider;
@@ -70,10 +71,6 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.management.InstanceNotFoundException;
-import javax.management.MBeanInfo;
-import javax.management.ObjectName;
 
 /**
  * Testing info servers for admin acl.
@@ -125,7 +122,7 @@ public class TestInfoServersACL {
         TokenProvider.class.getName());
     UTIL.startMiniDFSCluster(1);
     Path rootdir = UTIL.getDataTestDirOnTestFS("TestInfoServersACL");
-    FSUtils.setRootDir(conf, rootdir);
+    CommonFSUtils.setRootDir(conf, rootdir);
 
     // The info servers do not run in tests by default.
     // Set them to ephemeral ports so they will start

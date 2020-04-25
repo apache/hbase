@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Test our recoverLease loop against mocked up filesystem.
  */
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 public class TestFSHDFSUtils {
 
   @ClassRule
@@ -54,7 +54,7 @@ public class TestFSHDFSUtils {
     conf.setInt("hbase.lease.recovery.first.pause", 10);
     conf.setInt("hbase.lease.recovery.pause", 10);
   }
-  private FSHDFSUtils fsHDFSUtils = new FSHDFSUtils();
+
   private static Path FILE = new Path(HTU.getDataTestDir(), "file.txt");
   long startTime = -1;
 
@@ -75,7 +75,7 @@ public class TestFSHDFSUtils {
     // Fail four times and pass on the fifth.
     Mockito.when(dfs.recoverLease(FILE)).
       thenReturn(false).thenReturn(false).thenReturn(false).thenReturn(false).thenReturn(true);
-    assertTrue(this.fsHDFSUtils.recoverDFSFileLease(dfs, FILE, HTU.getConfiguration(), reporter));
+    FSUtils.recoverFileLease(dfs, FILE, HTU.getConfiguration(), reporter);
     Mockito.verify(dfs, Mockito.times(5)).recoverLease(FILE);
     // Make sure we waited at least hbase.lease.recovery.dfs.timeout * 3 (the first two
     // invocations will happen pretty fast... the we fall into the longer wait loop).
@@ -99,35 +99,27 @@ public class TestFSHDFSUtils {
     Mockito.when(dfs.recoverLease(FILE)).
       thenReturn(false).thenReturn(false).thenReturn(true);
     Mockito.when(dfs.isFileClosed(FILE)).thenReturn(true);
-    assertTrue(this.fsHDFSUtils.recoverDFSFileLease(dfs, FILE, HTU.getConfiguration(), reporter));
+    FSUtils.recoverFileLease(dfs, FILE, HTU.getConfiguration(), reporter);
     Mockito.verify(dfs, Mockito.times(2)).recoverLease(FILE);
     Mockito.verify(dfs, Mockito.times(1)).isFileClosed(FILE);
   }
 
   void testIsSameHdfs(int nnport) throws IOException {
-    try {
-      Class dfsUtilClazz = Class.forName("org.apache.hadoop.hdfs.DFSUtil");
-      dfsUtilClazz.getMethod("getNNServiceRpcAddresses", Configuration.class);
-    } catch (Exception e) {
-      LOG.info("Skip testIsSameHdfs test case because of the no-HA hadoop version.");
-      return;
-    }
-
     Configuration conf = HBaseConfiguration.create();
     Path srcPath = new Path("hdfs://localhost:" + nnport + "/");
     Path desPath = new Path("hdfs://127.0.0.1/");
     FileSystem srcFs = srcPath.getFileSystem(conf);
     FileSystem desFs = desPath.getFileSystem(conf);
 
-    assertTrue(FSHDFSUtils.isSameHdfs(conf, srcFs, desFs));
+    assertTrue(FSUtils.isSameHdfs(conf, srcFs, desFs));
 
     desPath = new Path("hdfs://127.0.0.1:8070/");
     desFs = desPath.getFileSystem(conf);
-    assertTrue(!FSHDFSUtils.isSameHdfs(conf, srcFs, desFs));
+    assertTrue(!FSUtils.isSameHdfs(conf, srcFs, desFs));
 
     desPath = new Path("hdfs://127.0.1.1:" + nnport + "/");
     desFs = desPath.getFileSystem(conf);
-    assertTrue(!FSHDFSUtils.isSameHdfs(conf, srcFs, desFs));
+    assertTrue(!FSUtils.isSameHdfs(conf, srcFs, desFs));
 
     conf.set("fs.defaultFS", "hdfs://haosong-hadoop");
     conf.set("dfs.nameservices", "haosong-hadoop");
@@ -139,13 +131,13 @@ public class TestFSHDFSUtils {
     conf.set("dfs.namenode.rpc-address.haosong-hadoop.nn2", "127.10.2.1:8000");
     desPath = new Path("/");
     desFs = desPath.getFileSystem(conf);
-    assertTrue(FSHDFSUtils.isSameHdfs(conf, srcFs, desFs));
+    assertTrue(FSUtils.isSameHdfs(conf, srcFs, desFs));
 
     conf.set("dfs.namenode.rpc-address.haosong-hadoop.nn1", "127.10.2.1:"+nnport);
     conf.set("dfs.namenode.rpc-address.haosong-hadoop.nn2", "127.0.0.1:8000");
     desPath = new Path("/");
     desFs = desPath.getFileSystem(conf);
-    assertTrue(!FSHDFSUtils.isSameHdfs(conf, srcFs, desFs));
+    assertTrue(!FSUtils.isSameHdfs(conf, srcFs, desFs));
   }
 
   @Test

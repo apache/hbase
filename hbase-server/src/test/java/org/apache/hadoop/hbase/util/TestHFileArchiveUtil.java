@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
@@ -57,7 +57,7 @@ public class TestHFileArchiveUtil {
   @Test
   public void testGetArchivePath() throws Exception {
     Configuration conf = new Configuration();
-    FSUtils.setRootDir(conf, new Path("root"));
+    CommonFSUtils.setRootDir(conf, new Path("root"));
     assertNotNull(HFileArchiveUtil.getArchivePath(conf));
   }
 
@@ -71,10 +71,10 @@ public class TestHFileArchiveUtil {
   @Test
   public void testGetStoreArchivePath() throws IOException {
       byte[] family = Bytes.toBytes("Family");
-    Path tabledir = FSUtils.getTableDir(rootDir, TableName.valueOf(name.getMethodName()));
+    Path tabledir = CommonFSUtils.getTableDir(rootDir, TableName.valueOf(name.getMethodName()));
     HRegionInfo region = new HRegionInfo(TableName.valueOf(name.getMethodName()));
     Configuration conf = new Configuration();
-    FSUtils.setRootDir(conf, new Path("root"));
+    CommonFSUtils.setRootDir(conf, new Path("root"));
     assertNotNull(HFileArchiveUtil.getStoreArchivePath(conf, region, tabledir, family));
   }
 }

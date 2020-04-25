@@ -45,21 +45,21 @@ public class TestRootPath extends TestCase {
   public void testRootPath() {
     try {
       // Try good path
-      FSUtils.validateRootPath(new Path("file:///tmp/hbase/hbase"));
+      CommonFSUtils.validateRootPath(new Path("file:///tmp/hbase/hbase"));
     } catch (IOException e) {
       LOG.error(HBaseMarkers.FATAL, "Unexpected exception checking valid path:", e);
       fail();
     }
     try {
       // Try good path
-      FSUtils.validateRootPath(new Path("hdfs://a:9000/hbase"));
+      CommonFSUtils.validateRootPath(new Path("hdfs://a:9000/hbase"));
     } catch (IOException e) {
       LOG.error(HBaseMarkers.FATAL, "Unexpected exception checking valid path:", e);
       fail();
     }
     try {
       // bad path
-      FSUtils.validateRootPath(new Path("/hbase"));
+      CommonFSUtils.validateRootPath(new Path("/hbase"));
       fail();
     } catch (IOException e) {
       // Expected.

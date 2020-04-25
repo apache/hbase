@@ -78,6 +78,7 @@ import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.AfterClass;
@@ -2577,7 +2578,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
     t.put(new Put(ROW).addColumn(cf1, QUALIFIER, Bytes.toBytes("val1")));
     t.put(new Put(ROW).addColumn(cf2, QUALIFIER, Bytes.toBytes("val2")));
     admin.flush(tableName);
-    Path tableDir = FSUtils.getTableDir(TEST_UTIL.getDefaultRootDirPath(), tableName);
+    Path tableDir = CommonFSUtils.getTableDir(TEST_UTIL.getDefaultRootDirPath(), tableName);
     List<Path> regionDirs = FSUtils.getRegionDirs(TEST_UTIL.getTestFileSystem(), tableDir);
     assertEquals(1, regionDirs.size());
     List<Path> familyDirs = FSUtils.getFamilyDirs(TEST_UTIL.getTestFileSystem(), regionDirs.get(0));

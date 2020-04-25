@@ -48,7 +48,6 @@ import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -514,7 +513,6 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
       boolean overwrite, boolean createParent, short replication, long blockSize,
       EventLoopGroup eventLoopGroup, Class<? extends Channel> channelClass) throws IOException {
     Configuration conf = dfs.getConf();
-    FSUtils fsUtils = FSUtils.getInstance(dfs, conf);
     DFSClient client = dfs.getClient();
     String clientName = client.getClientName();
     ClientProtocol namenode = client.getNamenode();
@@ -557,8 +555,8 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
         }
         Encryptor encryptor = createEncryptor(conf, stat, client);
         FanOutOneBlockAsyncDFSOutput output =
-          new FanOutOneBlockAsyncDFSOutput(conf, fsUtils, dfs, client, namenode, clientName, src,
-              stat.getFileId(), locatedBlock, encryptor, datanodeList, summer, ALLOC);
+          new FanOutOneBlockAsyncDFSOutput(conf, dfs, client, namenode, clientName, src,
+            stat.getFileId(), locatedBlock, encryptor, datanodeList, summer, ALLOC);
         succ = true;
         return output;
       } catch (RemoteException e) {

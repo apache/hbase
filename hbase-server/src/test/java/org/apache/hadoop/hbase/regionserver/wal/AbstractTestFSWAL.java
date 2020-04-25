@@ -74,7 +74,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -506,7 +505,7 @@ public abstract class AbstractTestFSWAL {
     final CountDownLatch closeFinished = new CountDownLatch(1);
     final CountDownLatch putFinished = new CountDownLatch(1);
 
-    try (AbstractFSWAL<?> wal = newWAL(FS, FSUtils.getRootDir(CONF), testName,
+    try (AbstractFSWAL<?> wal = newWAL(FS, CommonFSUtils.getRootDir(CONF), testName,
       HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null)) {
       wal.init();
       wal.registerWALActionsListener(new WALActionsListener() {

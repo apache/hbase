@@ -28,15 +28,19 @@ import java.io.InterruptedIOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
@@ -47,7 +51,6 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
-
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
@@ -56,14 +59,13 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.ClusterId;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -75,12 +77,13 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSHedgedReadMetrics;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.Progressable;
-import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -88,6 +91,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterators;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.com.google.common.primitives.Ints;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -97,7 +101,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.FSProtos;
  * Utility methods for interacting with the underlying file system.
  */
 @InterfaceAudience.Private
-public abstract class FSUtils extends CommonFSUtils {
+public final class FSUtils {
   private static final Logger LOG = LoggerFactory.getLogger(FSUtils.class);
 
   private static final String THREAD_POOLSIZE = "hbase.client.localityCheck.threadPoolSize";
@@ -107,8 +111,7 @@ public abstract class FSUtils extends CommonFSUtils {
   @VisibleForTesting // currently only used in testing. TODO refactor into a test class
   public static final boolean WINDOWS = System.getProperty("os.name").startsWith("Windows");
 
-  protected FSUtils() {
-    super();
+  private FSUtils() {
   }
 
   /**
@@ -161,32 +164,17 @@ public abstract class FSUtils extends CommonFSUtils {
     return result;
   }
 
-  public static FSUtils getInstance(FileSystem fs, Configuration conf) {
-    String scheme = fs.getUri().getScheme();
-    if (scheme == null) {
-      LOG.warn("Could not find scheme for uri " +
-          fs.getUri() + ", default to hdfs");
-      scheme = "hdfs";
-    }
-    Class<?> fsUtilsClass = conf.getClass("hbase.fsutil." +
-        scheme + ".impl", FSHDFSUtils.class); // Default to HDFS impl
-    FSUtils fsUtils = (FSUtils)ReflectionUtils.newInstance(fsUtilsClass, conf);
-    return fsUtils;
-  }
-
   /**
    * Delete the region directory if exists.
-   * @param conf
-   * @param hri
    * @return True if deleted the region directory.
    * @throws IOException
    */
-  public static boolean deleteRegionDir(final Configuration conf, final HRegionInfo hri)
-  throws IOException {
-    Path rootDir = getRootDir(conf);
+  public static boolean deleteRegionDir(final Configuration conf, final RegionInfo hri)
+    throws IOException {
+    Path rootDir = CommonFSUtils.getRootDir(conf);
     FileSystem fs = rootDir.getFileSystem(conf);
-    return deleteDirectory(fs,
-      new Path(getTableDir(rootDir, hri.getTable()), hri.getEncodedName()));
+    return CommonFSUtils.deleteDirectory(fs,
+      new Path(CommonFSUtils.getTableDir(rootDir, hri.getTable()), hri.getEncodedName()));
   }
 
  /**
@@ -196,7 +184,7 @@ public abstract class FSUtils extends CommonFSUtils {
    * <li>apply the umask in the configuration (if it is enabled)</li>
    * <li>use the fs configured buffer size (or 4096 if not set)</li>
    * <li>use the configured column family replication or default replication if
-   * {@link HColumnDescriptor#DEFAULT_DFS_REPLICATION}</li>
+   * {@link ColumnFamilyDescriptorBuilder#DEFAULT_DFS_REPLICATION}</li>
    * <li>use the default block size</li>
    * <li>not track progress</li>
    * </ol>
@@ -204,38 +192,38 @@ public abstract class FSUtils extends CommonFSUtils {
    * @param fs {@link FileSystem} on which to write the file
    * @param path {@link Path} to the file to write
    * @param perm permissions
-   * @param favoredNodes
+   * @param favoredNodes favored data nodes
    * @return output stream to the created file
    * @throws IOException if the file cannot be created
    */
   public static FSDataOutputStream create(Configuration conf, FileSystem fs, Path path,
-      FsPermission perm, InetSocketAddress[] favoredNodes) throws IOException {
+    FsPermission perm, InetSocketAddress[] favoredNodes) throws IOException {
     if (fs instanceof HFileSystem) {
-      FileSystem backingFs = ((HFileSystem)fs).getBackingFs();
+      FileSystem backingFs = ((HFileSystem) fs).getBackingFs();
       if (backingFs instanceof DistributedFileSystem) {
         // Try to use the favoredNodes version via reflection to allow backwards-
         // compatibility.
-        short replication = Short.parseShort(conf.get(HColumnDescriptor.DFS_REPLICATION,
-          String.valueOf(HColumnDescriptor.DEFAULT_DFS_REPLICATION)));
+        short replication = Short.parseShort(conf.get(ColumnFamilyDescriptorBuilder.DFS_REPLICATION,
+          String.valueOf(ColumnFamilyDescriptorBuilder.DEFAULT_DFS_REPLICATION)));
         try {
-          return (FSDataOutputStream) (DistributedFileSystem.class.getDeclaredMethod("create",
-            Path.class, FsPermission.class, boolean.class, int.class, short.class, long.class,
-            Progressable.class, InetSocketAddress[].class).invoke(backingFs, path, perm, true,
-            getDefaultBufferSize(backingFs),
-            replication > 0 ? replication : getDefaultReplication(backingFs, path),
-            getDefaultBlockSize(backingFs, path), null, favoredNodes));
+          return (FSDataOutputStream) (DistributedFileSystem.class
+            .getDeclaredMethod("create", Path.class, FsPermission.class, boolean.class, int.class,
+              short.class, long.class, Progressable.class, InetSocketAddress[].class)
+            .invoke(backingFs, path, perm, true, CommonFSUtils.getDefaultBufferSize(backingFs),
+              replication > 0 ? replication : CommonFSUtils.getDefaultReplication(backingFs, path),
+              CommonFSUtils.getDefaultBlockSize(backingFs, path), null, favoredNodes));
         } catch (InvocationTargetException ite) {
           // Function was properly called, but threw it's own exception.
           throw new IOException(ite.getCause());
         } catch (NoSuchMethodException e) {
           LOG.debug("DFS Client does not support most favored nodes create; using default create");
           LOG.trace("Ignoring; use default create", e);
-        } catch (IllegalArgumentException | SecurityException |  IllegalAccessException e) {
+        } catch (IllegalArgumentException | SecurityException | IllegalAccessException e) {
           LOG.debug("Ignoring (most likely Reflection related exception) " + e);
         }
       }
     }
-    return create(fs, path, perm, true);
+    return CommonFSUtils.create(fs, path, perm, true);
   }
 
   /**
@@ -792,10 +780,9 @@ public abstract class FSUtils extends CommonFSUtils {
    *
    * @throws IOException When scanning the directory fails.
    */
-  public static Map<String, Integer> getTableFragmentation(
-    final HMaster master)
-  throws IOException {
-    Path path = getRootDir(master.getConfiguration());
+  public static Map<String, Integer> getTableFragmentation(final HMaster master)
+    throws IOException {
+    Path path = CommonFSUtils.getRootDir(master.getConfiguration());
     // since HMaster.getFileSystem() is package private
     FileSystem fs = path.getFileSystem(master.getConfiguration());
     return getTableFragmentation(fs, path);
@@ -841,7 +828,7 @@ public abstract class FSUtils extends CommonFSUtils {
         }
       }
       // compute percentage per table and store in result list
-      frags.put(FSUtils.getTableName(d).getNameAsString(),
+      frags.put(CommonFSUtils.getTableName(d).getNameAsString(),
         cfCount == 0? 0: Math.round((float) cfFrag / cfCount * 100));
     }
     // set overall percentage for all tables
@@ -955,22 +942,6 @@ public abstract class FSUtils extends CommonFSUtils {
     }
   }
 
-  public void recoverFileLease(final FileSystem fs, final Path p, Configuration conf)
-      throws IOException {
-    recoverFileLease(fs, p, conf, null);
-  }
-
-  /**
-   * Recover file lease. Used when a file might be suspect
-   * to be had been left open by another process.
-   * @param fs FileSystem handle
-   * @param p Path of file to recover lease
-   * @param conf Configuration handle
-   * @throws IOException
-   */
-  public abstract void recoverFileLease(final FileSystem fs, final Path p,
-      Configuration conf, CancelableProgressable reporter) throws IOException;
-
   public static List<Path> getTableDirs(final FileSystem fs, final Path rootdir)
       throws IOException {
     List<Path> tableDirs = new ArrayList<>();
@@ -1051,7 +1022,7 @@ public abstract class FSUtils extends CommonFSUtils {
   }
 
   public static Path getRegionDirFromRootDir(Path rootDir, RegionInfo region) {
-    return getRegionDirFromTableDir(getTableDir(rootDir, region.getTable()), region);
+    return getRegionDirFromTableDir(CommonFSUtils.getTableDir(rootDir, region.getTable()), region);
   }
 
   public static Path getRegionDirFromTableDir(Path tableDir, RegionInfo region) {
@@ -1294,7 +1265,7 @@ public abstract class FSUtils extends CommonFSUtils {
         resultMap == null ? new ConcurrentHashMap<>(128, 0.75f, 32) : resultMap;
 
     // only include the directory paths to tables
-    Path tableDir = FSUtils.getTableDir(hbaseRootDir, tableName);
+    Path tableDir = CommonFSUtils.getTableDir(hbaseRootDir, tableName);
     // Inside a table, there are compaction.dir directories to skip.  Otherwise, all else
     // should be regions.
     final FamilyDirFilter familyFilter = new FamilyDirFilter(fs);
@@ -1392,8 +1363,8 @@ public abstract class FSUtils extends CommonFSUtils {
       if (!exceptions.isEmpty()) {
         // Just throw the first exception as an indication something bad happened
         // Don't need to propagate all the exceptions, we already logged them all anyway
-        Throwables.propagateIfInstanceOf(exceptions.firstElement(), IOException.class);
-        throw Throwables.propagate(exceptions.firstElement());
+        Throwables.propagateIfPossible(exceptions.firstElement(), IOException.class);
+        throw new IOException(exceptions.firstElement());
       }
     }
 
@@ -1494,8 +1465,8 @@ public abstract class FSUtils extends CommonFSUtils {
 
     // only include the directory paths to tables
     for (Path tableDir : FSUtils.getTableDirs(fs, hbaseRootDir)) {
-      getTableStoreFilePathMap(map, fs, hbaseRootDir,
-          FSUtils.getTableName(tableDir), sfFilter, executor, progressReporter);
+      getTableStoreFilePathMap(map, fs, hbaseRootDir, CommonFSUtils.getTableName(tableDir),
+        sfFilter, executor, progressReporter);
     }
     return map;
   }
@@ -1634,17 +1605,19 @@ public abstract class FSUtils extends CommonFSUtils {
    *           in case of file system errors or interrupts
    */
   private static void getRegionLocalityMappingFromFS(final Configuration conf,
-      final String desiredTable, int threadPoolSize,
-      final Map<String, Map<String, Float>> regionDegreeLocalityMapping) throws IOException {
-    final FileSystem fs =  FileSystem.get(conf);
-    final Path rootPath = FSUtils.getRootDir(conf);
+    final String desiredTable, int threadPoolSize,
+    final Map<String, Map<String, Float>> regionDegreeLocalityMapping) throws IOException {
+    final FileSystem fs = FileSystem.get(conf);
+    final Path rootPath = CommonFSUtils.getRootDir(conf);
     final long startTime = EnvironmentEdgeManager.currentTime();
     final Path queryPath;
     // The table files are in ${hbase.rootdir}/data/<namespace>/<table>/*
     if (null == desiredTable) {
-      queryPath = new Path(new Path(rootPath, HConstants.BASE_NAMESPACE_DIR).toString() + "/*/*/*/");
+      queryPath =
+        new Path(new Path(rootPath, HConstants.BASE_NAMESPACE_DIR).toString() + "/*/*/*/");
     } else {
-      queryPath = new Path(FSUtils.getTableDir(rootPath, TableName.valueOf(desiredTable)).toString() + "/*/");
+      queryPath = new Path(
+        CommonFSUtils.getTableDir(rootPath, TableName.valueOf(desiredTable)).toString() + "/*/");
     }
 
     // reject all paths that are not appropriate
@@ -1770,7 +1743,9 @@ public abstract class FSUtils extends CommonFSUtils {
    */
   public static DFSHedgedReadMetrics getDFSHedgedReadMetrics(final Configuration c)
       throws IOException {
-    if (!isHDFS(c)) return null;
+    if (!CommonFSUtils.isHDFS(c)) {
+      return null;
+    }
     // getHedgedReadMetrics is package private. Get the DFSClient instance that is internal
     // to the DFS FS instance and make the method getHedgedReadMetrics accessible, then invoke it
     // to get the singleton instance of DFSHedgedReadMetrics shared by DFSClients.
@@ -1838,5 +1813,254 @@ public abstract class FSUtils extends CommonFSUtils {
       futures.add(future);
     }
     return traversedPaths;
+  }
+  
+
+  /**
+   * @return A set containing all namenode addresses of fs
+   */
+  private static Set<InetSocketAddress> getNNAddresses(DistributedFileSystem fs,
+    Configuration conf) {
+    Set<InetSocketAddress> addresses = new HashSet<>();
+    String serviceName = fs.getCanonicalServiceName();
+
+    if (serviceName.startsWith("ha-hdfs")) {
+      try {
+        Map<String, Map<String, InetSocketAddress>> addressMap =
+          DFSUtil.getNNLifelineRpcAddressesForCluster(conf);
+        String nameService = serviceName.substring(serviceName.indexOf(":") + 1);
+        if (addressMap.containsKey(nameService)) {
+          Map<String, InetSocketAddress> nnMap = addressMap.get(nameService);
+          for (Map.Entry<String, InetSocketAddress> e2 : nnMap.entrySet()) {
+            InetSocketAddress addr = e2.getValue();
+            addresses.add(addr);
+          }
+        }
+      } catch (Exception e) {
+        LOG.warn("DFSUtil.getNNServiceRpcAddresses failed. serviceName=" + serviceName, e);
+      }
+    } else {
+      URI uri = fs.getUri();
+      int port = uri.getPort();
+      if (port < 0) {
+        int idx = serviceName.indexOf(':');
+        port = Integer.parseInt(serviceName.substring(idx + 1));
+      }
+      InetSocketAddress addr = new InetSocketAddress(uri.getHost(), port);
+      addresses.add(addr);
+    }
+
+    return addresses;
+  }
+
+  /**
+   * @param conf the Configuration of HBase
+   * @return Whether srcFs and desFs are on same hdfs or not
+   */
+  public static boolean isSameHdfs(Configuration conf, FileSystem srcFs, FileSystem desFs) {
+    // By getCanonicalServiceName, we could make sure both srcFs and desFs
+    // show a unified format which contains scheme, host and port.
+    String srcServiceName = srcFs.getCanonicalServiceName();
+    String desServiceName = desFs.getCanonicalServiceName();
+
+    if (srcServiceName == null || desServiceName == null) {
+      return false;
+    }
+    if (srcServiceName.equals(desServiceName)) {
+      return true;
+    }
+    if (srcServiceName.startsWith("ha-hdfs") && desServiceName.startsWith("ha-hdfs")) {
+      Collection<String> internalNameServices =
+        conf.getTrimmedStringCollection("dfs.internal.nameservices");
+      if (!internalNameServices.isEmpty()) {
+        if (internalNameServices.contains(srcServiceName.split(":")[1])) {
+          return true;
+        } else {
+          return false;
+        }
+      }
+    }
+    if (srcFs instanceof DistributedFileSystem && desFs instanceof DistributedFileSystem) {
+      // If one serviceName is an HA format while the other is a non-HA format,
+      // maybe they refer to the same FileSystem.
+      // For example, srcFs is "ha-hdfs://nameservices" and desFs is "hdfs://activeNamenode:port"
+      Set<InetSocketAddress> srcAddrs = getNNAddresses((DistributedFileSystem) srcFs, conf);
+      Set<InetSocketAddress> desAddrs = getNNAddresses((DistributedFileSystem) desFs, conf);
+      if (Sets.intersection(srcAddrs, desAddrs).size() > 0) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  public static void recoverFileLease(FileSystem fs, Path p, Configuration conf)
+    throws IOException {
+    recoverFileLease(fs, p, conf, null);
+  }
+
+  /**
+   * Recover the lease from HDFS, retrying multiple times.
+   */
+  public static void recoverFileLease(FileSystem fs, Path p, Configuration conf,
+    CancelableProgressable reporter) throws IOException {
+    if (fs instanceof FilterFileSystem) {
+      fs = ((FilterFileSystem) fs).getRawFileSystem();
+    }
+    // lease recovery not needed for local file system case.
+    if (!(fs instanceof DistributedFileSystem)) {
+      return;
+    }
+    recoverDFSFileLease((DistributedFileSystem) fs, p, conf, reporter);
+  }
+
+  /*
+   * Run the dfs recover lease. recoverLease is asynchronous. It returns: -false when it starts the
+   * lease recovery (i.e. lease recovery not *yet* done) - true when the lease recovery has
+   * succeeded or the file is closed. But, we have to be careful. Each time we call recoverLease, it
+   * starts the recover lease process over from the beginning. We could put ourselves in a situation
+   * where we are doing nothing but starting a recovery, interrupting it to start again, and so on.
+   * The findings over in HBASE-8354 have it that the namenode will try to recover the lease on the
+   * file's primary node. If all is well, it should return near immediately. But, as is common, it
+   * is the very primary node that has crashed and so the namenode will be stuck waiting on a socket
+   * timeout before it will ask another datanode to start the recovery. It does not help if we call
+   * recoverLease in the meantime and in particular, subsequent to the socket timeout, a
+   * recoverLease invocation will cause us to start over from square one (possibly waiting on socket
+   * timeout against primary node). So, in the below, we do the following: 1. Call recoverLease. 2.
+   * If it returns true, break. 3. If it returns false, wait a few seconds and then call it again.
+   * 4. If it returns true, break. 5. If it returns false, wait for what we think the datanode
+   * socket timeout is (configurable) and then try again. 6. If it returns true, break. 7. If it
+   * returns false, repeat starting at step 5. above. If HDFS-4525 is available, call it every
+   * second and we might be able to exit early.
+   */
+  private static boolean recoverDFSFileLease(final DistributedFileSystem dfs, final Path p,
+    final Configuration conf, final CancelableProgressable reporter) throws IOException {
+    LOG.info("Recover lease on dfs file " + p);
+    long startWaiting = EnvironmentEdgeManager.currentTime();
+    // Default is 15 minutes. It's huge, but the idea is that if we have a major issue, HDFS
+    // usually needs 10 minutes before marking the nodes as dead. So we're putting ourselves
+    // beyond that limit 'to be safe'.
+    long recoveryTimeout = conf.getInt("hbase.lease.recovery.timeout", 900000) + startWaiting;
+    // This setting should be a little bit above what the cluster dfs heartbeat is set to.
+    long firstPause = conf.getInt("hbase.lease.recovery.first.pause", 4000);
+    // This should be set to how long it'll take for us to timeout against primary datanode if it
+    // is dead. We set it to 64 seconds, 4 second than the default READ_TIMEOUT in HDFS, the
+    // default value for DFS_CLIENT_SOCKET_TIMEOUT_KEY. If recovery is still failing after this
+    // timeout, then further recovery will take liner backoff with this base, to avoid endless
+    // preemptions when this value is not properly configured.
+    long subsequentPauseBase = conf.getLong("hbase.lease.recovery.dfs.timeout", 64 * 1000);
+
+    Method isFileClosedMeth = null;
+    // whether we need to look for isFileClosed method
+    boolean findIsFileClosedMeth = true;
+    boolean recovered = false;
+    // We break the loop if we succeed the lease recovery, timeout, or we throw an exception.
+    for (int nbAttempt = 0; !recovered; nbAttempt++) {
+      recovered = recoverLease(dfs, nbAttempt, p, startWaiting);
+      if (recovered) break;
+      checkIfCancelled(reporter);
+      if (checkIfTimedout(conf, recoveryTimeout, nbAttempt, p, startWaiting)) break;
+      try {
+        // On the first time through wait the short 'firstPause'.
+        if (nbAttempt == 0) {
+          Thread.sleep(firstPause);
+        } else {
+          // Cycle here until (subsequentPause * nbAttempt) elapses. While spinning, check
+          // isFileClosed if available (should be in hadoop 2.0.5... not in hadoop 1 though.
+          long localStartWaiting = EnvironmentEdgeManager.currentTime();
+          while ((EnvironmentEdgeManager.currentTime() - localStartWaiting) < subsequentPauseBase *
+            nbAttempt) {
+            Thread.sleep(conf.getInt("hbase.lease.recovery.pause", 1000));
+            if (findIsFileClosedMeth) {
+              try {
+                isFileClosedMeth =
+                  dfs.getClass().getMethod("isFileClosed", new Class[] { Path.class });
+              } catch (NoSuchMethodException nsme) {
+                LOG.debug("isFileClosed not available");
+              } finally {
+                findIsFileClosedMeth = false;
+              }
+            }
+            if (isFileClosedMeth != null && isFileClosed(dfs, isFileClosedMeth, p)) {
+              recovered = true;
+              break;
+            }
+            checkIfCancelled(reporter);
+          }
+        }
+      } catch (InterruptedException ie) {
+        InterruptedIOException iioe = new InterruptedIOException();
+        iioe.initCause(ie);
+        throw iioe;
+      }
+    }
+    return recovered;
+  }
+
+  private static boolean checkIfTimedout(final Configuration conf, final long recoveryTimeout,
+    final int nbAttempt, final Path p, final long startWaiting) {
+    if (recoveryTimeout < EnvironmentEdgeManager.currentTime()) {
+      LOG.warn("Cannot recoverLease after trying for " +
+        conf.getInt("hbase.lease.recovery.timeout", 900000) +
+        "ms (hbase.lease.recovery.timeout); continuing, but may be DATALOSS!!!; " +
+        getLogMessageDetail(nbAttempt, p, startWaiting));
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Try to recover the lease.
+   * @return True if dfs#recoverLease came by true.
+   * @throws FileNotFoundException
+   */
+  private static boolean recoverLease(final DistributedFileSystem dfs, final int nbAttempt,
+    final Path p, final long startWaiting) throws FileNotFoundException {
+    boolean recovered = false;
+    try {
+      recovered = dfs.recoverLease(p);
+      LOG.info((recovered ? "Recovered lease, " : "Failed to recover lease, ") +
+        getLogMessageDetail(nbAttempt, p, startWaiting));
+    } catch (IOException e) {
+      if (e instanceof LeaseExpiredException && e.getMessage().contains("File does not exist")) {
+        // This exception comes out instead of FNFE, fix it
+        throw new FileNotFoundException("The given WAL wasn't found at " + p);
+      } else if (e instanceof FileNotFoundException) {
+        throw (FileNotFoundException) e;
+      }
+      LOG.warn(getLogMessageDetail(nbAttempt, p, startWaiting), e);
+    }
+    return recovered;
+  }
+
+  /**
+   * @return Detail to append to any log message around lease recovering.
+   */
+  private static String getLogMessageDetail(final int nbAttempt, final Path p,
+    final long startWaiting) {
+    return "attempt=" + nbAttempt + " on file=" + p + " after " +
+      (EnvironmentEdgeManager.currentTime() - startWaiting) + "ms";
+  }
+
+  /**
+   * Call HDFS-4525 isFileClosed if it is available.
+   * @return True if file is closed.
+   */
+  private static boolean isFileClosed(final DistributedFileSystem dfs, final Method m,
+    final Path p) {
+    try {
+      return (Boolean) m.invoke(dfs, p);
+    } catch (SecurityException e) {
+      LOG.warn("No access", e);
+    } catch (Exception e) {
+      LOG.warn("Failed invocation for " + p.toString(), e);
+    }
+    return false;
+  }
+
+  private static void checkIfCancelled(final CancelableProgressable reporter)
+    throws InterruptedIOException {
+    if (reporter == null) return;
+    if (!reporter.progress()) throw new InterruptedIOException("Operation cancelled");
   }
 }

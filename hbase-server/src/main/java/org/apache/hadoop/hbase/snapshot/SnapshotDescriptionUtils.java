@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -37,6 +36,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.PermissionStorage;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
 import org.apache.hadoop.hbase.security.access.UserPermission;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -44,6 +44,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
@@ -262,7 +263,7 @@ public final class SnapshotDescriptionUtils {
    */
   public static boolean isWithinDefaultWorkingDir(final Path workingDir, Configuration conf)
     throws IOException {
-    Path defaultWorkingDir = getDefaultWorkingSnapshotDir(FSUtils.getRootDir(conf));
+    Path defaultWorkingDir = getDefaultWorkingSnapshotDir(CommonFSUtils.getRootDir(conf));
     return workingDir.equals(defaultWorkingDir) || isSubDirectoryOf(workingDir, defaultWorkingDir);
   }
 
@@ -337,11 +338,11 @@ public final class SnapshotDescriptionUtils {
    */
   public static void writeSnapshotInfo(SnapshotDescription snapshot, Path workingDir, FileSystem fs)
       throws IOException {
-    FsPermission perms = FSUtils.getFilePermissions(fs, fs.getConf(),
+    FsPermission perms = CommonFSUtils.getFilePermissions(fs, fs.getConf(),
       HConstants.DATA_FILE_UMASK_KEY);
     Path snapshotInfo = new Path(workingDir, SnapshotDescriptionUtils.SNAPSHOTINFO_FILE);
     try {
-      FSDataOutputStream out = FSUtils.create(fs, snapshotInfo, perms, true);
+      FSDataOutputStream out = CommonFSUtils.create(fs, snapshotInfo, perms, true);
       try {
         snapshot.writeTo(out);
       } finally {

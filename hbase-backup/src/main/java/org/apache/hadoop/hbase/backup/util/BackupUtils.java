@@ -123,7 +123,7 @@ public final class BackupUtils {
    */
   public static void copyTableRegionInfo(Connection conn, BackupInfo backupInfo, Configuration conf)
           throws IOException {
-    Path rootDir = FSUtils.getRootDir(conf);
+    Path rootDir = CommonFSUtils.getRootDir(conf);
     FileSystem fs = rootDir.getFileSystem(conf);
 
     // for each table in the table set, copy out the table info and region
@@ -138,7 +138,7 @@ public final class BackupUtils {
       // write a copy of descriptor to the target directory
       Path target = new Path(backupInfo.getTableBackupDir(table));
       FileSystem targetFs = target.getFileSystem(conf);
-      FSTableDescriptors descriptors = new FSTableDescriptors(targetFs, FSUtils.getRootDir(conf));
+      FSTableDescriptors descriptors = new FSTableDescriptors(targetFs, CommonFSUtils.getRootDir(conf));
       descriptors.createTableDescriptorForTableDirectory(target, orig, false);
       LOG.debug("Attempting to copy table info for:" + table + " target: " + target
           + " descriptor: " + orig);
@@ -164,7 +164,7 @@ public final class BackupUtils {
     final byte[] content = RegionInfo.toDelimitedByteArray(regionInfo);
     Path regionInfoFile = new Path(regionInfoDir, "." + HConstants.REGIONINFO_QUALIFIER_STR);
     // First check to get the permissions
-    FsPermission perms = FSUtils.getFilePermissions(fs, conf, HConstants.DATA_FILE_UMASK_KEY);
+    FsPermission perms = CommonFSUtils.getFilePermissions(fs, conf, HConstants.DATA_FILE_UMASK_KEY);
     // Write the RegionInfo file content
     FSDataOutputStream out = FSUtils.create(conf, fs, regionInfoFile, perms, null);
     try {
@@ -225,7 +225,7 @@ public final class BackupUtils {
    */
   public static long getFilesLength(FileSystem fs, Path dir) throws IOException {
     long totalLength = 0;
-    FileStatus[] files = FSUtils.listStatus(fs, dir);
+    FileStatus[] files = CommonFSUtils.listStatus(fs, dir);
     if (files != null) {
       for (FileStatus fileStatus : files) {
         if (fileStatus.isDirectory()) {
