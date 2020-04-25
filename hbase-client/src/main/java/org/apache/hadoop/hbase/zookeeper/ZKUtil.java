@@ -29,6 +29,7 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -801,6 +802,10 @@ public class ZKUtil {
     if (nodes != null) {
       List<NodeAndData> newNodes = new ArrayList<NodeAndData>();
       for (String node : nodes) {
+        if (Thread.interrupted()) {
+          // Partial data should not be processed. Cancel processing by sending empty list.
+          return Collections.emptyList();
+        }
         String nodePath = ZKUtil.joinZNode(baseNode, node);
         byte[] data = ZKUtil.getDataAndWatch(zkw, nodePath);
         newNodes.add(new NodeAndData(nodePath, data));
