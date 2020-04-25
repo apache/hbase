@@ -304,7 +304,8 @@ public class TestVerifyReplicationAdjunct extends TestReplicationBase {
     String[] args = new String[] { "--sourceSnapshotName=" + sourceSnapshotName,
       "--sourceSnapshotTmpDir=" + temPath1, "--peerSnapshotName=" + peerSnapshotName,
       "--peerSnapshotTmpDir=" + temPath2, "--peerFSAddress=" + peerFSAddress,
-      "--peerHBaseRootAddress=" + CommonFSUtils.getRootDir(CONF2), "2", tableName.getNameAsString() };
+      "--peerHBaseRootAddress=" + CommonFSUtils.getRootDir(CONF2), "2",
+      tableName.getNameAsString() };
     TestVerifyReplication.runVerifyReplication(args, NB_ROWS_IN_BATCH, 0);
     TestVerifyReplication.checkRestoreTmpDir(CONF1, temPath1, 1);
     TestVerifyReplication.checkRestoreTmpDir(CONF2, temPath2, 1);

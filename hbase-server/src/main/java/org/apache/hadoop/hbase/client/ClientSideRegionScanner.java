@@ -57,8 +57,8 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
     htd = TableDescriptorBuilder.newBuilder(htd).setReadOnly(true).build();
 
     // open region from the snapshot directory
-    region = HRegion.newHRegion(CommonFSUtils.getTableDir(rootDir, htd.getTableName()), null, fs, conf,
-      hri, htd, null);
+    region = HRegion.newHRegion(CommonFSUtils.getTableDir(rootDir, htd.getTableName()), null, fs,
+      conf, hri, htd, null);
     region.setRestoredRegion(true);
     // we won't initialize the MobFileCache when not running in RS process. so provided an
     // initialized cache. Consider the case: an CF was set from an mob to non-mob. if we only

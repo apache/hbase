@@ -1814,7 +1814,6 @@ public final class FSUtils {
     }
     return traversedPaths;
   }
-  
 
   /**
    * @return A set containing all namenode addresses of fs
@@ -1957,9 +1956,13 @@ public final class FSUtils {
     // We break the loop if we succeed the lease recovery, timeout, or we throw an exception.
     for (int nbAttempt = 0; !recovered; nbAttempt++) {
       recovered = recoverLease(dfs, nbAttempt, p, startWaiting);
-      if (recovered) break;
+      if (recovered) {
+        break;
+      }
       checkIfCancelled(reporter);
-      if (checkIfTimedout(conf, recoveryTimeout, nbAttempt, p, startWaiting)) break;
+      if (checkIfTimedout(conf, recoveryTimeout, nbAttempt, p, startWaiting)) {
+        break;
+      }
       try {
         // On the first time through wait the short 'firstPause'.
         if (nbAttempt == 0) {
@@ -2012,7 +2015,6 @@ public final class FSUtils {
   /**
    * Try to recover the lease.
    * @return True if dfs#recoverLease came by true.
-   * @throws FileNotFoundException
    */
   private static boolean recoverLease(final DistributedFileSystem dfs, final int nbAttempt,
     final Path p, final long startWaiting) throws FileNotFoundException {
@@ -2060,7 +2062,11 @@ public final class FSUtils {
 
   private static void checkIfCancelled(final CancelableProgressable reporter)
     throws InterruptedIOException {
-    if (reporter == null) return;
-    if (!reporter.progress()) throw new InterruptedIOException("Operation cancelled");
+    if (reporter == null) {
+      return;
+    }
+    if (!reporter.progress()) {
+      throw new InterruptedIOException("Operation cancelled");
+    }
   }
 }

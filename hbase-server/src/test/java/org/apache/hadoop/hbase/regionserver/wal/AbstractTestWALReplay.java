@@ -911,13 +911,12 @@ public abstract class AbstractTestWALReplay {
       wals, null);
     FileStatus[] listStatus1 =
       this.fs.listStatus(new Path(CommonFSUtils.getWALTableDir(conf, tableName),
-        new Path(hri.getEncodedName(), "recovered.edits")),
-      new PathFilter() {
-        @Override
-        public boolean accept(Path p) {
-          return !WALSplitUtil.isSequenceIdFile(p);
-        }
-      });
+        new Path(hri.getEncodedName(), "recovered.edits")), new PathFilter() {
+          @Override
+          public boolean accept(Path p) {
+            return !WALSplitUtil.isSequenceIdFile(p);
+          }
+        });
     int editCount = 0;
     for (FileStatus fileStatus : listStatus1) {
       editCount = Integer.parseInt(fileStatus.getPath().getName());

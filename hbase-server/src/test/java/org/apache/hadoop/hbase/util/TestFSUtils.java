@@ -396,8 +396,8 @@ public class TestFSUtils {
     // There should be no exception thrown when setting to default storage policy, which indicates
     // the HDFS API hasn't been called
     try {
-      CommonFSUtils.setStoragePolicy(testFs, new Path("non-exist"), HConstants.DEFAULT_WAL_STORAGE_POLICY,
-        true);
+      CommonFSUtils.setStoragePolicy(testFs, new Path("non-exist"),
+        HConstants.DEFAULT_WAL_STORAGE_POLICY, true);
     } catch (IOException e) {
       Assert.fail("Should have bypassed the FS API when setting default storage policy");
     }
