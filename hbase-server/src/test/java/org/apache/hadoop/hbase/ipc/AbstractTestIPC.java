@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Assume;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -371,6 +372,7 @@ public abstract class AbstractTestIPC {
    * failing servers.
    */
   @Test
+  @Ignore
   public void testHedgedAsyncEcho() throws Exception {
     // Hedging is not supported for blocking connection types.
     Assume.assumeFalse(this instanceof TestBlockingIPC);
