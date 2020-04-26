@@ -149,10 +149,6 @@ class NettyRpcConnection extends RpcConnection {
     if (error instanceof FallbackDisallowedException) {
       return;
     }
-    if (!provider.canRetry()) {
-      LOG.trace("SASL Provider does not support retries");
-      return;
-    }
     synchronized (this) {
       if (reloginInProgress) {
         return;
@@ -163,7 +159,9 @@ class NettyRpcConnection extends RpcConnection {
         @Override
         public void run() {
           try {
-            provider.relogin();
+            if (provider.canRetry()) {
+              provider.relogin();
+            }
           } catch (IOException e) {
             LOG.warn("Relogin failed", e);
           }
