@@ -1826,7 +1826,7 @@ public final class FSUtils {
     if (serviceName.startsWith("ha-hdfs")) {
       try {
         Map<String, Map<String, InetSocketAddress>> addressMap =
-          DFSUtil.getNNLifelineRpcAddressesForCluster(conf);
+          DFSUtil.getNNServiceRpcAddressesForCluster(conf);
         String nameService = serviceName.substring(serviceName.indexOf(":") + 1);
         if (addressMap.containsKey(nameService)) {
           Map<String, InetSocketAddress> nnMap = addressMap.get(nameService);

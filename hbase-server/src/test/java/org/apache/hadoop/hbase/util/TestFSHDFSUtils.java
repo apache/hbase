@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -56,18 +55,13 @@ public class TestFSHDFSUtils {
   }
 
   private static Path FILE = new Path(HTU.getDataTestDir(), "file.txt");
-  long startTime = -1;
-
-  @Before
-  public void setup() {
-    this.startTime = EnvironmentEdgeManager.currentTime();
-  }
 
   /**
    * Test recover lease eventually succeeding.
    */
   @Test
   public void testRecoverLease() throws IOException {
+    long startTime = EnvironmentEdgeManager.currentTime();
     HTU.getConfiguration().setInt("hbase.lease.recovery.dfs.timeout", 1000);
     CancelableProgressable reporter = Mockito.mock(CancelableProgressable.class);
     Mockito.when(reporter.progress()).thenReturn(true);
@@ -79,7 +73,7 @@ public class TestFSHDFSUtils {
     Mockito.verify(dfs, Mockito.times(5)).recoverLease(FILE);
     // Make sure we waited at least hbase.lease.recovery.dfs.timeout * 3 (the first two
     // invocations will happen pretty fast... the we fall into the longer wait loop).
-    assertTrue((EnvironmentEdgeManager.currentTime() - this.startTime) >
+    assertTrue((EnvironmentEdgeManager.currentTime() - startTime) >
       (3 * HTU.getConfiguration().getInt("hbase.lease.recovery.dfs.timeout", 61000)));
   }
 
@@ -104,7 +98,7 @@ public class TestFSHDFSUtils {
     Mockito.verify(dfs, Mockito.times(1)).isFileClosed(FILE);
   }
 
-  void testIsSameHdfs(int nnport) throws IOException {
+  private void testIsSameHdfs(int nnport) throws IOException {
     Configuration conf = HBaseConfiguration.create();
     Path srcPath = new Path("hdfs://localhost:" + nnport + "/");
     Path desPath = new Path("hdfs://127.0.0.1/");
@@ -159,13 +153,13 @@ public class TestFSHDFSUtils {
   /**
    * Version of DFS that has HDFS-4525 in it.
    */
-  static class IsFileClosedDistributedFileSystem extends DistributedFileSystem {
+  private static class IsFileClosedDistributedFileSystem extends DistributedFileSystem {
     /**
      * Close status of a file. Copied over from HDFS-4525
      * @return true if file is already closed
      **/
     @Override
-    public boolean isFileClosed(Path f) throws IOException{
+    public boolean isFileClosed(Path f) throws IOException {
       return false;
     }
   }
