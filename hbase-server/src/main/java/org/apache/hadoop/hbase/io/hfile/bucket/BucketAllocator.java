@@ -269,7 +269,7 @@ public final class BucketAllocator {
 
   // Default block size in hbase is 64K, so we choose more sizes near 64K, you'd better
   // reset it according to your cluster's block size distribution
-  // The real block size in hfile may a little larger than the size we configured ,
+  // The real block size in hfile maybe a little larger than the size we configured ,
   // so we need add extra 1024 bytes for fit.
   // TODO Support the view of block size distribution statistics
   private static final int DEFAULT_BUCKET_SIZES[] = { 4 * 1024 + 1024, 8 * 1024 + 1024,
