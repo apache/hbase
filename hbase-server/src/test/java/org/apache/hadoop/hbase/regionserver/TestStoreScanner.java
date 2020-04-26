@@ -1049,7 +1049,6 @@ public class TestStoreScanner {
     try (StoreScanner scan = new StoreScanner(scanSpec, scanInfo, null, scanners)) {
       List<Cell> results = new ArrayList<>();
       assertEquals(true, scan.next(results));
-      System.out.println(results.toString());
       assertEquals(2, results.size());
     }
   }
