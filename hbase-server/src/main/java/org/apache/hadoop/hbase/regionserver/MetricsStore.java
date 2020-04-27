@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 
