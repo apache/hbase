@@ -81,11 +81,8 @@ public class TestProxyUserSpnegoHttpServer extends HttpServerFunctionalTest {
   private static final String KDC_SERVER_HOST = "localhost";
   private static final String WHEEL_PRINCIPAL = "wheel";
   private static final String UNPRIVILEGED_PRINCIPAL = "unprivileged";
-  private static final String UNSUDOABLE_PRINCIPAL = "unsudoable";
   private static final String PRIVILEGED_PRINCIPAL = "privileged";
   private static final String PRIVILEGED2_PRINCIPAL = "privileged2";
-
-//  private static final String UNPRIVILEGED_PRINCIPAL = "unprivileged";
 
   private static HttpServer server;
   private static URL baseUrl;
@@ -95,7 +92,6 @@ public class TestProxyUserSpnegoHttpServer extends HttpServerFunctionalTest {
   private static File unprivilegedKeytab;
   private static File privilegedKeytab;
   private static File privileged2Keytab;
-  private static File unsudoableKeytab;
 
 
   @BeforeClass
@@ -118,13 +114,11 @@ public class TestProxyUserSpnegoHttpServer extends HttpServerFunctionalTest {
     unprivilegedKeytab = new File(keytabDir, UNPRIVILEGED_PRINCIPAL + ".keytab");
     privilegedKeytab = new File(keytabDir, PRIVILEGED_PRINCIPAL + ".keytab");
     privileged2Keytab = new File(keytabDir, PRIVILEGED2_PRINCIPAL + ".keytab");
-    unsudoableKeytab  = new File(keytabDir, unsudoableKeytab + ".keytab");
 
     setupUser(kdc, wheelKeytab, WHEEL_PRINCIPAL);
     setupUser(kdc, unprivilegedKeytab, UNPRIVILEGED_PRINCIPAL);
     setupUser(kdc, privilegedKeytab, PRIVILEGED_PRINCIPAL);
     setupUser(kdc, privileged2Keytab, PRIVILEGED2_PRINCIPAL);
-    setupUser(kdc, unsudoableKeytab, UNSUDOABLE_PRINCIPAL);
 
     setupUser(kdc, infoServerKeytab, serverPrincipal);
 
