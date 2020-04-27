@@ -57,9 +57,6 @@ import javax.servlet.http.HttpServletResponse;
  * hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/security/authentication/
  * server/ProxyUserAuthenticationFilter.java
  * 
- * When HBase is rebased to a Hadoop release that includes filter, this file should be removed, 
- * and references to it should be replaced with the Hadoop one.
- * 
  * AuthenticationFilter which adds support to perform operations
  * using end user instead of proxy user. Fetches the end user from
  * doAs Query Parameter.
