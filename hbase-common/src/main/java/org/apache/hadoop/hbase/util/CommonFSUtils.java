@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -352,7 +352,7 @@ public abstract class CommonFSUtils {
   public static FileSystem getWALFileSystem(final Configuration c) throws IOException {
     Path p = getWALRootDir(c);
     FileSystem fs = p.getFileSystem(c);
-    // hadoop-core does fs caching, so need to propogate this if set
+    // hadoop-core does fs caching, so need to propagate this if set
     String enforceStreamCapability = c.get(UNSAFE_STREAM_CAPABILITY_ENFORCE);
     if (enforceStreamCapability != null) {
       fs.getConf().set(UNSAFE_STREAM_CAPABILITY_ENFORCE, enforceStreamCapability);
