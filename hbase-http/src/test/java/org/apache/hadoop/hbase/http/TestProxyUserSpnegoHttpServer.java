@@ -131,7 +131,7 @@ public class TestProxyUserSpnegoHttpServer extends HttpServerFunctionalTest {
     buildSpnegoConfiguration(conf, serverPrincipal, infoServerKeytab);
     AccessControlList acl = buildAdminAcl(conf);
  
-    server = createTestServerWithSecurity(conf, acl);
+    server = createTestServerWithSecurityAndAcl(conf, acl);
     server.addPrivilegedServlet("echo", "/echo", EchoServlet.class);
     server.addJerseyResourcePackage(JerseyResource.class.getPackage().getName(), "/jersey/*");
     server.start();
