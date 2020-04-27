@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.http.resource.JerseyResource;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.security.authentication.util.KerberosName;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
 import org.apache.http.auth.AuthSchemeProvider;
@@ -79,16 +80,23 @@ public class TestProxyUserSpnegoHttpServer extends HttpServerFunctionalTest {
   private static final Logger LOG = LoggerFactory.getLogger(TestProxyUserSpnegoHttpServer.class);
   private static final String KDC_SERVER_HOST = "localhost";
   private static final String WHEEL_PRINCIPAL = "wheel";
-  private static final String STANDARD_PRINCIPAL = "standard";
-  private static final String DOAS_PRINCIPAL = "doas";
+  private static final String UNPRIVILEGED_PRINCIPAL = "unprivileged";
+  private static final String UNSUDOABLE_PRINCIPAL = "unsudoable";
+  private static final String PRIVILEGED_PRINCIPAL = "privileged";
+  private static final String PRIVILEGED2_PRINCIPAL = "privileged2";
+
+//  private static final String UNPRIVILEGED_PRINCIPAL = "unprivileged";
 
   private static HttpServer server;
   private static URL baseUrl;
   private static SimpleKdcServer kdc;
   private static File infoServerKeytab;
   private static File wheelKeytab;
-  private static File standardKeytab;
-  private static File doasKeytab;
+  private static File unprivilegedKeytab;
+  private static File privilegedKeytab;
+  private static File privileged2Keytab;
+  private static File unsudoableKeytab;
+
 
   @BeforeClass
   public static void setupServer() throws Exception {
@@ -107,17 +115,23 @@ public class TestProxyUserSpnegoHttpServer extends HttpServerFunctionalTest {
 
     infoServerKeytab = new File(keytabDir, serverPrincipal.replace('/', '_') + ".keytab");
     wheelKeytab = new File(keytabDir, WHEEL_PRINCIPAL + ".keytab");
-    standardKeytab = new File(keytabDir, STANDARD_PRINCIPAL + ".keytab");
-    doasKeytab = new File(keytabDir, DOAS_PRINCIPAL + ".keytab");
+    unprivilegedKeytab = new File(keytabDir, UNPRIVILEGED_PRINCIPAL + ".keytab");
+    privilegedKeytab = new File(keytabDir, PRIVILEGED_PRINCIPAL + ".keytab");
+    privileged2Keytab = new File(keytabDir, PRIVILEGED2_PRINCIPAL + ".keytab");
+    unsudoableKeytab  = new File(keytabDir, unsudoableKeytab + ".keytab");
 
     setupUser(kdc, wheelKeytab, WHEEL_PRINCIPAL);
-    setupUser(kdc, standardKeytab, STANDARD_PRINCIPAL);
-    setupUser(kdc, doasKeytab, DOAS_PRINCIPAL);
+    setupUser(kdc, unprivilegedKeytab, UNPRIVILEGED_PRINCIPAL);
+    setupUser(kdc, privilegedKeytab, PRIVILEGED_PRINCIPAL);
+    setupUser(kdc, privileged2Keytab, PRIVILEGED2_PRINCIPAL);
+    setupUser(kdc, unsudoableKeytab, UNSUDOABLE_PRINCIPAL);
+
     setupUser(kdc, infoServerKeytab, serverPrincipal);
 
     buildSpnegoConfiguration(conf, serverPrincipal, infoServerKeytab);
+    AccessControlList acl = buildAdminAcl(conf);
  
-    server = createTestServerWithSecurity(conf);
+    server = createTestServerWithSecurity(conf, acl);
     server.addPrivilegedServlet("echo", "/echo", EchoServlet.class);
     server.addJerseyResourcePackage(JerseyResource.class.getPackage().getName(), "/jersey/*");
     server.start();
@@ -186,25 +200,46 @@ public class TestProxyUserSpnegoHttpServer extends HttpServerFunctionalTest {
     conf.set(HttpServer.HTTP_SPNEGO_AUTHENTICATION_PRINCIPAL_KEY, serverPrincipal);
     conf.set(HttpServer.HTTP_SPNEGO_AUTHENTICATION_KEYTAB_KEY, serverKeytab.getAbsolutePath());
 
-    conf.set(HttpServer.HTTP_SPNEGO_AUTHENTICATION_ADMIN_USERS_KEY, DOAS_PRINCIPAL);
+    conf.set(HttpServer.HTTP_SPNEGO_AUTHENTICATION_ADMIN_USERS_KEY, PRIVILEGED_PRINCIPAL);
     conf.set(HttpServer.HTTP_SPNEGO_AUTHENTICATION_PROXYUSER_ENABLE_KEY, "true");
+    conf.set("hadoop.security.authorization", "true");
 
     conf.set("hadoop.proxyuser.wheel.hosts", "*");
-    conf.set("hadoop.proxyuser.wheel.users", "doas");
+    conf.set("hadoop.proxyuser.wheel.users", PRIVILEGED_PRINCIPAL + "," + UNPRIVILEGED_PRINCIPAL);
     return conf;
+  }
+
+  /**
+   * Builds an ACL that will restrict the users who can issue commands to endpoints on the UI
+   * which are meant only for administrators.
+   */
+  public static AccessControlList buildAdminAcl(Configuration conf) {
+    final String userGroups = conf.get(HttpServer.HTTP_SPNEGO_AUTHENTICATION_ADMIN_USERS_KEY, null);
+    final String adminGroups = conf.get(
+        HttpServer.HTTP_SPNEGO_AUTHENTICATION_ADMIN_GROUPS_KEY, null);
+    if (userGroups == null && adminGroups == null) {
+      // Backwards compatibility - if the user doesn't have anything set, allow all users in.
+      return new AccessControlList("*", null);
+    }
+    return new AccessControlList(userGroups, adminGroups);
   }
 
   @Test
   public void testProxyAllowed() throws Exception {
-      testProxy(WHEEL_PRINCIPAL, HttpURLConnection.HTTP_OK);
+      testProxy(WHEEL_PRINCIPAL, PRIVILEGED_PRINCIPAL, HttpURLConnection.HTTP_OK, null);
   }
 
   @Test
-  public void testProxyDisallowed() throws Exception {
-      testProxy(STANDARD_PRINCIPAL, HttpURLConnection.HTTP_FORBIDDEN);
+  public void testProxyDisallowedForUnprivileged() throws Exception {
+      testProxy(WHEEL_PRINCIPAL, UNPRIVILEGED_PRINCIPAL, HttpURLConnection.HTTP_FORBIDDEN, "403 User unprivileged is unauthorized to access this page.");
   }
 
-  public void testProxy(String clientPrincipal, int responseCode) throws Exception {
+  @Test
+  public void testProxyDisallowedForNotSudoAble() throws Exception {
+      testProxy(WHEEL_PRINCIPAL, PRIVILEGED2_PRINCIPAL, HttpURLConnection.HTTP_FORBIDDEN, "403 Forbidden");
+  }
+
+  public void testProxy(String clientPrincipal, String doAs, int responseCode, String statusLine) throws Exception {
     // Create the subject for the client
     final Subject clientSubject = JaasKrbUtil.loginUsingKeytab(WHEEL_PRINCIPAL, wheelKeytab);
     final Set<Principal> clientPrincipals = clientSubject.getPrincipals();
@@ -244,7 +279,7 @@ public class TestProxyUserSpnegoHttpServer extends HttpServerFunctionalTest {
           BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
           credentialsProvider.setCredentials(AuthScope.ANY, new KerberosCredentials(credential));
 
-          URL url = new URL(getServerURL(server), "/echo?doAs=doas&a=b");
+          URL url = new URL(getServerURL(server), "/echo?doAs=" + doAs + "&a=b");
           context.setTargetHost(new HttpHost(url.getHost(), url.getPort()));
           context.setCredentialsProvider(credentialsProvider);
           context.setAuthSchemeRegistry(authRegistry);
@@ -255,8 +290,12 @@ public class TestProxyUserSpnegoHttpServer extends HttpServerFunctionalTest {
     });
 
     assertNotNull(resp);
-    assertEquals(HttpURLConnection.HTTP_OK, resp.getStatusLine().getStatusCode());
-    assertTrue(EntityUtils.toString(resp.getEntity()).trim().contains("a:b"));
+    assertEquals(responseCode, resp.getStatusLine().getStatusCode());
+    if(responseCode == HttpURLConnection.HTTP_OK) {
+        assertTrue(EntityUtils.toString(resp.getEntity()).trim().contains("a:b"));
+    } else {
+        assertTrue(resp.getStatusLine().toString().contains(statusLine));
+    }
   }
 
 }

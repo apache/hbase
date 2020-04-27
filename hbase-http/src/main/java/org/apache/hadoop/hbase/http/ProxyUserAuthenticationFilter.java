@@ -47,9 +47,17 @@ import javax.servlet.http.HttpServletResponse;
 /**
  * This file has been copied directly (changing only the package name and and the ASF license
  * text format, and adding the Yetus annotations) from Hadoop, as the Hadoop version that HBase 
- * depends on doesn't have it yet.
+ * depends on doesn't have it yet
+ * (as of 2020 Apr 24, there is no Hadoop release that has it either).
  * 
- * As soon as HBase is rebased to a sufficiently recent Hadoop, this file should be removed, 
+ * Hadoop version:
+ * unreleased, master branch commit 4ea6c2f457496461afc63f38ef4cef3ab0efce49
+ * 
+ * Haddop path:
+ * hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/security/authentication/
+ * server/ProxyUserAuthenticationFilter.java
+ * 
+ * When HBase is rebased to a Hadoop release that includes filter, this file should be removed, 
  * and references to it should be replaced with the Hadoop one.
  * 
  * AuthenticationFilter which adds support to perform operations
