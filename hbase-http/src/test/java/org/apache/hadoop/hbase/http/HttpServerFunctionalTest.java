@@ -96,11 +96,22 @@ public class HttpServerFunctionalTest extends Assert {
   }
 
   public static HttpServer createTestServerWithSecurity(Configuration conf) throws IOException {
+      prepareTestWebapp();
+      return localServerBuilder(TEST).setFindPort(true).setConf(conf).setSecurityEnabled(true)
+          // InfoServer normally sets these for us
+          .setUsernameConfKey(HttpServer.HTTP_SPNEGO_AUTHENTICATION_PRINCIPAL_KEY)
+          .setKeytabConfKey(HttpServer.HTTP_SPNEGO_AUTHENTICATION_KEYTAB_KEY)
+          .build();
+    }
+
+  public static HttpServer createTestServerWithSecurityAndAcl(Configuration conf, AccessControlList acl) throws IOException {
     prepareTestWebapp();
     return localServerBuilder(TEST).setFindPort(true).setConf(conf).setSecurityEnabled(true)
         // InfoServer normally sets these for us
         .setUsernameConfKey(HttpServer.HTTP_SPNEGO_AUTHENTICATION_PRINCIPAL_KEY)
         .setKeytabConfKey(HttpServer.HTTP_SPNEGO_AUTHENTICATION_KEYTAB_KEY)
+        .setSecurityEnabled(true)
+        .setACL(acl)
         .build();
   }
 
