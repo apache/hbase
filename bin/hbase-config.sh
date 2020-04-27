@@ -134,6 +134,10 @@ if [ -z "$HBASE_ENV_INIT" ] && [ -f "${HBASE_CONF_DIR}/hbase-env.sh" ]; then
   export HBASE_ENV_INIT="true"
 fi
 
+# These variables can be specified in hbase-env.sh, so these defines follow sourcing of that script.
+export GREP="${GREP-grep}"
+export SED="${SED-sed}"
+
 # Verify if hbase has the mlock agent
 if [ "$HBASE_REGIONSERVER_MLOCK" = "true" ]; then
   MLOCK_AGENT="$HBASE_HOME/lib/native/libmlockall_agent.so"
