@@ -23,3 +23,4 @@ linklint/
 .java-version
 *.log
 **/*.log
+tmp
