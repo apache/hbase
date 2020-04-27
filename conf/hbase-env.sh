@@ -140,5 +140,5 @@
 # export HBASE_DISABLE_HADOOP_CLASSPATH_LOOKUP="true"
 
 # Override text processing tools for use by these launch scripts.
-export GREP="${GREP-grep}"
-export SED="${SED-sed}"
+# export GREP="${GREP-grep}"
+# export SED="${SED-sed}"
