@@ -133,7 +133,7 @@ public class MergeTableRegionsProcedure
           LOG.warn(msg);
           throw new MergeRegionException(msg);
         }
-        if (!force && !ri.isAdjacent(previous) && !ri.isOverlap(previous)) {
+        if (!force && !ri.isAdjacent(previous) && !ri.isOverlap(regions)) {
           String msg = "Unable to merge non-adjacent or non-overlapping regions " +
               previous.getShortNameToLog() + ", " + ri.getShortNameToLog() + " when force=false";
           LOG.warn(msg);
@@ -142,7 +142,7 @@ public class MergeTableRegionsProcedure
       }
 
       if (ri.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
-        throw new MergeRegionException("Can't merge non-default replicas; " + ri);
+        throw new MergeRegionException("Can't merge non-default/replicaId!=0 replicas; " + ri);
       }
       try {
         checkOnline(env, ri);
