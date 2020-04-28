@@ -22,8 +22,9 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -32,6 +33,7 @@ import org.apache.hadoop.hbase.util.PrettyPrinter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
@@ -86,12 +88,10 @@ class HedgedRpcChannel implements RpcChannel {
    * Refer to the comments in doCallMethod().
    */
   private final NettyRpcClient rpcClient;
-  // List of service addresses to hedge the requests to.
-  private final List<InetSocketAddress> addrs;
+  // List of service addresses to hedge the requests to. These are chunked by 'fanOutSize'
+  private final List<List<InetSocketAddress>> addrs;
   private final User ticket;
   private final int rpcTimeout;
-  // Controls the size of request fan out (number of rpcs per a single batch).
-  private final int fanOutSize;
 
   /**
    * A simple rpc call back implementation to notify the batch context if any rpc is successful.
@@ -110,11 +110,66 @@ class HedgedRpcChannel implements RpcChannel {
   }
 
   /**
+   * Shared Call state across all batches.
+   */
+  class CallDetails {
+    private final Descriptors.MethodDescriptor method;
+    private final RpcController controller;
+    private final Message request;
+    private final Message responsePrototype;
+    // Queued batches of addresses that are attempted. Each batch, at the end of it's run kicks off
+    // the next batch by popping one from this queue.
+    private Queue<List<InetSocketAddress>> targetAddrs;
+
+    CallDetails(Descriptors.MethodDescriptor method, RpcController controller, Message request,
+        Message responsePrototype, Queue<List<InetSocketAddress>> targetAddrs) {
+      this.method = method;
+      this.controller = controller;
+      this.request = request;
+      this.responsePrototype = responsePrototype;
+      this.targetAddrs = targetAddrs;
+    }
+
+    List<InetSocketAddress> popNextBatch() {
+      return targetAddrs.poll();
+    }
+
+    Descriptors.MethodDescriptor getMethod() {
+      return method;
+    }
+
+    RpcController getOriginalController() {
+      return controller;
+    }
+
+    HBaseRpcController getController() {
+      return applyRpcTimeout(controller);
+    }
+
+    Message getRequest() {
+      return request;
+    }
+
+    Message getResponsePrototype() {
+      return responsePrototype;
+    }
+
+    private HBaseRpcController applyRpcTimeout(RpcController controller) {
+      HBaseRpcController hBaseRpcController = (HBaseRpcController) controller;
+      int rpcTimeoutToSet =
+          hBaseRpcController.hasCallTimeout() ? hBaseRpcController.getCallTimeout() : rpcTimeout;
+      HBaseRpcController response = new HBaseRpcControllerImpl();
+      response.setCallTimeout(rpcTimeoutToSet);
+      return response;
+    }
+  }
+
+  /**
    * A shared RPC context between a batch of hedged RPCs. Tracks the state and helpers needed to
    * synchronize on multiple RPCs to different end points fetching the result. All the methods are
    * thread-safe.
    */
-  private static class BatchRpcCtx {
+  private class BatchRpcCtx {
     // Result set by the thread finishing first. Set only once.
     private final AtomicReference<Message> result = new AtomicReference<>();
     // Caller waits on this latch being set.
@@ -131,11 +186,13 @@ class HedgedRpcChannel implements RpcChannel {
     private final RpcCallback<Message> callBack;
     // Last failed rpc's exception. Used to propagate the reason to the controller.
     private IOException lastFailedRpcReason;
+    private final CallDetails callDetails;
 
-
-    BatchRpcCtx(List<InetSocketAddress> addresses, RpcCallback<Message> callBack) {
+    BatchRpcCtx(CallDetails callDetails, List<InetSocketAddress> addresses,
+        RpcCallback<Message> callBack) {
       this.addresses = addresses;
       this.callBack = Preconditions.checkNotNull(callBack);
+      this.callDetails = callDetails;
     }
 
     /**
@@ -143,13 +200,15 @@ class HedgedRpcChannel implements RpcChannel {
      * sets the result also count downs the latch.
      * @param result Result to be set.
      */
-    public void setResultIfNotSet(Message result, HBaseRpcController rpcController) {
+    void setResultIfNotSet(Message result, HBaseRpcController rpcController) {
       if (rpcController.failed()) {
+        LOG.debug("Failed :" + rpcController.getFailed());
         incrementFailedRpcs(rpcController.getFailed());
         return;
       }
       if (this.result.compareAndSet(null, result)) {
-        resultsReady.countDown();
+        LOG.debug("Calling with result: " + this.result.get());
+        callBack.run(this.result.get());
         // Cancel all pending in flight calls.
         for (Call call: callsInFlight) {
           // It is ok to do it for all calls as it is a no-op if the call is already done.
@@ -160,40 +219,22 @@ class HedgedRpcChannel implements RpcChannel {
       }
     }
 
-    /**
-     * Waits until the results are populated and calls the callback if the call is successful.
-     * @return true for successful rpc and false otherwise.
-     */
-    public boolean waitForResults() {
-      try {
-        // We do not set a timeout on await() because we rely on the underlying RPCs to timeout if
-        // something on the remote is broken. Worst case we should wait for rpc time out to kick in.
-        resultsReady.await();
-      } catch (InterruptedException e) {
-        LOG.warn("Interrupted while waiting for batched master RPC results. Aborting wait.", e);
-      }
-      Message message = result.get();
-      if (message != null) {
-        callBack.run(message);
-        return true;
-      }
-      return false;
-    }
-
-    public void addCallInFlight(Call c) {
+    void addCallInFlight(Call c) {
       callsInFlight.add(c);
     }
 
-    public void incrementFailedRpcs(IOException reason) {
+    void incrementFailedRpcs(IOException reason) {
       if (failedRpcCount.incrementAndGet() == addresses.size()) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Failed RPCs for batch: " + toString());
+        }
         lastFailedRpcReason = reason;
-        // All the rpcs in this batch have failed. Invoke the waiting threads.
-        resultsReady.countDown();
+        if (!triggerBatch(rpcClient, callDetails, callBack)) {
+          //  All batches finished. Mark the RPC call as failed.
+          callDetails.getOriginalController().setFailed(lastFailedRpcReason.getMessage());
+          callBack.run(null);
+        }
       }
-    }
-
-    public IOException getLastFailedRpcReason() {
-      return lastFailedRpcReason;
     }
 
     @Override
@@ -202,73 +243,52 @@ class HedgedRpcChannel implements RpcChannel {
     }
   }
 
-  public HedgedRpcChannel(NettyRpcClient rpcClient, Set<InetSocketAddress> addrs,
+  HedgedRpcChannel(NettyRpcClient rpcClient, Set<InetSocketAddress> addrs,
       User ticket, int rpcTimeout, int fanOutSize) {
     this.rpcClient = rpcClient;
-    this.addrs = new ArrayList<>(Preconditions.checkNotNull(addrs));
-    Preconditions.checkArgument(this.addrs.size() >= 1);
+    Preconditions.checkArgument(Preconditions.checkNotNull(addrs).size() >= 1);
+    List addrList = new ArrayList<>(addrs);
     // For non-deterministic client query pattern. Not all clients want to hedge RPCs in the same
     // order, creating hot spots on the service end points.
-    Collections.shuffle(this.addrs);
+    Collections.shuffle(addrList);
+    this.addrs = Lists.partition(addrList, fanOutSize);
     this.ticket = ticket;
     this.rpcTimeout = rpcTimeout;
-    // fanOutSize controls the number of hedged RPCs per batch.
-    this.fanOutSize = fanOutSize;
   }
 
-  private HBaseRpcController applyRpcTimeout(RpcController controller) {
-    HBaseRpcController hBaseRpcController = (HBaseRpcController) controller;
-    int rpcTimeoutToSet =
-        hBaseRpcController.hasCallTimeout() ? hBaseRpcController.getCallTimeout() : rpcTimeout;
-    HBaseRpcController response = new HBaseRpcControllerImpl();
-    response.setCallTimeout(rpcTimeoutToSet);
-    return response;
-  }
-
-  private void doCallMethod(Descriptors.MethodDescriptor method, HBaseRpcController controller,
-      Message request, Message responsePrototype, RpcCallback<Message> done) {
-    int i = 0;
-    BatchRpcCtx lastBatchCtx = null;
-    while (i < addrs.size()) {
-      // Each iteration picks fanOutSize addresses to run as batch.
-      int batchEnd = Math.min(addrs.size(), i + fanOutSize);
-      List<InetSocketAddress> addrSubList = addrs.subList(i, batchEnd);
-      BatchRpcCtx batchRpcCtx = new BatchRpcCtx(addrSubList, done);
-      lastBatchCtx = batchRpcCtx;
-      LOG.debug("Attempting request {}, {}", method.getName(), batchRpcCtx);
-      for (InetSocketAddress address : addrSubList) {
-        HBaseRpcController rpcController = applyRpcTimeout(controller);
-        // ** WARN ** This is a blocking call if the underlying connection for the rpc client is
-        // a blocking implementation (ex: BlockingRpcConnection). That essentially serializes all
-        // the write calls. Handling blocking connection means that this should be run in a separate
-        // thread and hence more code complexity. Is it ok to handle only non-blocking connections?
-        batchRpcCtx.addCallInFlight(rpcClient.callMethod(method, rpcController, request,
-            responsePrototype, ticket, address,
-            new BatchRpcCtxCallBack(batchRpcCtx, rpcController)));
-      }
-      if (batchRpcCtx.waitForResults()) {
-        return;
-      }
-      // Entire batch has failed, lets try the next batch.
-      LOG.debug("Failed request {}, {}.", method.getName(), batchRpcCtx);
-      i = batchEnd;
+  /**
+   * Triggers a batch of async RPCs with the given callDetails. Returns true if a new batch has been
+   * started, false otherwise.
+   */
+  private boolean triggerBatch(NettyRpcClient rpcClient,
+      CallDetails callDetails, RpcCallback<Message> done) {
+    List<InetSocketAddress> targetAddrs = callDetails.popNextBatch();
+    if (targetAddrs == null) {
+      return false;
     }
-    Preconditions.checkNotNull(lastBatchCtx);
-    // All the batches failed, mark it a failed rpc.
-    // Propagate the failure reason. We propagate the last batch's last failing rpc reason.
-    // Can we do something better?
-    controller.setFailed(lastBatchCtx.getLastFailedRpcReason());
-    done.run(null);
+    BatchRpcCtx batchRpcCtx = new BatchRpcCtx(callDetails, targetAddrs, done);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Starting RPCs to batch: " + batchRpcCtx.toString());
+    }
+    for (InetSocketAddress address: batchRpcCtx.addresses) {
+      // ** WARN ** This is a blocking call if the underlying connection for the rpc client is
+      // a blocking implementation (ex: BlockingRpcConnection). That essentially serializes all
+      // the write calls. Handling blocking connection means that this should be run in a separate
+      // thread and hence more code complexity. Is it ok to handle only non-blocking connections?
+      HBaseRpcController controller = callDetails.getController();
+      batchRpcCtx.addCallInFlight(rpcClient.callMethod(callDetails.getMethod(),
+          controller, callDetails.getRequest(), callDetails.getResponsePrototype(),
+          ticket, address, new BatchRpcCtxCallBack(batchRpcCtx, controller)));
+    }
+    return true;
   }
 
   @Override
   public void callMethod(Descriptors.MethodDescriptor method, RpcController controller,
       Message request, Message responsePrototype, RpcCallback<Message> done) {
-    // There is no reason to use any other implementation of RpcController.
-    Preconditions.checkState(controller instanceof HBaseRpcController);
-    // To make the channel non-blocking, we run the actual doCalMethod() async. The call back is
-    // called once the hedging finishes.
-    CompletableFuture.runAsync(
-      () -> doCallMethod(method, (HBaseRpcController)controller, request, responsePrototype, done));
+    Queue<List<InetSocketAddress>> batchedAddrs = new ConcurrentLinkedQueue<>(this.addrs);
+    CallDetails callDetails =
+        new CallDetails(method, controller, request, responsePrototype, batchedAddrs);
+    Preconditions.checkState(triggerBatch(rpcClient, callDetails, done));
   }
 }

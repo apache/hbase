@@ -372,7 +372,6 @@ public abstract class AbstractTestIPC {
    * failing servers.
    */
   @Test
-  @Ignore
   public void testHedgedAsyncEcho() throws Exception {
     // Hedging is not supported for blocking connection types.
     Assume.assumeFalse(this instanceof TestBlockingIPC);
