@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -122,8 +122,8 @@ public class TestLogRollAbort {
 
     // disable region rebalancing (interferes with log watching)
     cluster.getMaster().balanceSwitch(false);
-    FSUtils.setRootDir(conf, HBASEDIR);
-    FSUtils.setWALRootDir(conf, HBASELOGDIR);
+    CommonFSUtils.setRootDir(conf, HBASEDIR);
+    CommonFSUtils.setWALRootDir(conf, HBASELOGDIR);
   }
 
   @After

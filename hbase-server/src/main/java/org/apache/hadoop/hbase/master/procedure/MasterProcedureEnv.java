@@ -57,8 +57,7 @@ public class MasterProcedureEnv implements ConfigurationObserver {
     @Override
     public void recoverFileLease(final FileSystem fs, final Path path) throws IOException {
       final Configuration conf = master.getConfiguration();
-      final FSUtils fsUtils = FSUtils.getInstance(fs, conf);
-      fsUtils.recoverFileLease(fs, path, conf, new CancelableProgressable() {
+      FSUtils.recoverFileLease(fs, path, conf, new CancelableProgressable() {
         @Override
         public boolean progress() {
           LOG.debug("Recover Procedure Store log lease: " + path);

@@ -1485,7 +1485,6 @@
     -->
     <hadoop.version>${hadoop-three.version}</hadoop.version>
     <hadoop.guava.version>11.0.2</hadoop.guava.version>
-    <compat.module>hbase-hadoop2-compat</compat.module>
     <assembly.file>src/main/assembly/hadoop-two-compat.xml</assembly.file>
     <!--This property is for hadoops netty. HBase netty
          comes in via hbase-thirdparty hbase-shaded-netty-->
@@ -1705,18 +1704,6 @@
       <dependency>
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-hadoop-compat</artifactId>
-        <version>${project.version}</version>
-        <type>test-jar</type>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>${compat.module}</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>${compat.module}</artifactId>
         <version>${project.version}</version>
         <type>test-jar</type>
         <scope>test</scope>
@@ -2608,14 +2595,8 @@
       <activation>
         <property><name>!hadoop.profile</name></property>
       </activation>
-      <modules>
-        <!--For now, use hadoop2 compat module-->
-        <module>hbase-hadoop2-compat</module>
-      </modules>
       <properties>
         <hadoop.version>${hadoop-three.version}</hadoop.version>
-        <!--Use this compat module for now. TODO: Make h3 one if we need one-->
-        <compat.module>hbase-hadoop2-compat</compat.module>
         <assembly.file>src/main/assembly/hadoop-three-compat.xml</assembly.file>
         <!--This property is for hadoops netty. HBase netty
              comes in via hbase-thirdparty hbase-shaded-netty-->
@@ -2644,6 +2625,10 @@
                <groupId>io.netty</groupId>
                <artifactId>netty</artifactId>
              </exclusion>
+              <exclusion>
+                <groupId>javax.servlet</groupId>
+                <artifactId>servlet-api</artifactId>
+              </exclusion>
               <exclusion>
                 <groupId>javax.inject</groupId>
                 <artifactId>javax.inject</artifactId>
@@ -2675,6 +2660,10 @@
                <groupId>io.netty</groupId>
                <artifactId>netty</artifactId>
              </exclusion>
+              <exclusion>
+                <groupId>javax.servlet</groupId>
+                <artifactId>servlet-api</artifactId>
+              </exclusion>
            </exclusions>
          </dependency>
          <dependency>
@@ -2692,6 +2681,10 @@
                <groupId>io.netty</groupId>
                <artifactId>netty</artifactId>
              </exclusion>
+              <exclusion>
+                <groupId>javax.servlet</groupId>
+                <artifactId>servlet-api</artifactId>
+              </exclusion>
            </exclusions>
          </dependency>
          <dependency>

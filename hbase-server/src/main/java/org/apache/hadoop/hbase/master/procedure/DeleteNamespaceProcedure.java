@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -234,7 +234,7 @@ public class DeleteNamespaceProcedure
       throws IOException {
     MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
     FileSystem fs = mfs.getFileSystem();
-    Path p = FSUtils.getNamespaceDir(mfs.getRootDir(), namespaceName);
+    Path p = CommonFSUtils.getNamespaceDir(mfs.getRootDir(), namespaceName);
 
     try {
       for (FileStatus status : fs.listStatus(p)) {
@@ -242,7 +242,7 @@ public class DeleteNamespaceProcedure
           throw new IOException("Namespace directory contains table dir: " + status.getPath());
         }
       }
-      if (!fs.delete(FSUtils.getNamespaceDir(mfs.getRootDir(), namespaceName), true)) {
+      if (!fs.delete(CommonFSUtils.getNamespaceDir(mfs.getRootDir(), namespaceName), true)) {
         throw new IOException("Failed to remove namespace: " + namespaceName);
       }
     } catch (FileNotFoundException e) {

@@ -102,8 +102,6 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
 
   private final Configuration conf;
 
-  private final FSUtils fsUtils;
-
   private final DistributedFileSystem dfs;
 
   private final DFSClient client;
@@ -324,12 +322,11 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     }
   }
 
-  FanOutOneBlockAsyncDFSOutput(Configuration conf, FSUtils fsUtils, DistributedFileSystem dfs,
+  FanOutOneBlockAsyncDFSOutput(Configuration conf,DistributedFileSystem dfs,
       DFSClient client, ClientProtocol namenode, String clientName, String src, long fileId,
       LocatedBlock locatedBlock, Encryptor encryptor, List<Channel> datanodeList,
       DataChecksum summer, ByteBufAllocator alloc) {
     this.conf = conf;
-    this.fsUtils = fsUtils;
     this.dfs = dfs;
     this.client = client;
     this.namenode = namenode;
@@ -556,7 +553,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     datanodeList.forEach(ch -> ch.close());
     datanodeList.forEach(ch -> ch.closeFuture().awaitUninterruptibly());
     endFileLease(client, fileId);
-    fsUtils.recoverFileLease(dfs, new Path(src), conf,
+    FSUtils.recoverFileLease(dfs, new Path(src), conf,
       reporter == null ? new CancelOnClose(client) : reporter);
   }
 

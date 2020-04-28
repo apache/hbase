@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.Test;
 
@@ -38,7 +39,7 @@ public class RestoreSnapshotFromClientSchemaChangeTestBase
   private Set<String> getFamiliesFromFS(final TableName tableName) throws IOException {
     MasterFileSystem mfs = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
     Set<String> families = new HashSet<>();
-    Path tableDir = FSUtils.getTableDir(mfs.getRootDir(), tableName);
+    Path tableDir = CommonFSUtils.getTableDir(mfs.getRootDir(), tableName);
     for (Path regionDir : FSUtils.getRegionDirs(mfs.getFileSystem(), tableDir)) {
       for (Path familyDir : FSUtils.getFamilyDirs(mfs.getFileSystem(), regionDir)) {
         families.add(familyDir.getName());

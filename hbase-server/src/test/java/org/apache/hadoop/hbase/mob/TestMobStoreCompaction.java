@@ -32,7 +32,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -69,7 +68,7 @@ import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.ClassRule;
@@ -229,7 +228,7 @@ public class TestMobStoreCompaction {
     init(UTIL.getConfiguration(), 300);
     byte[] dummyData = makeDummyData(600);
 
-    Path hbaseRootDir = FSUtils.getRootDir(conf);
+    Path hbaseRootDir = CommonFSUtils.getRootDir(conf);
     Path basedir = new Path(hbaseRootDir, tableDescriptor.getTableName().getNameAsString());
     List<Pair<byte[], String>> hfiles = new ArrayList<>(1);
     for (int i = 0; i < compactionThreshold; i++) {

@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.MatcherAssert.assertThat;
+
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MetricsTests;
@@ -26,18 +29,18 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- *  Test for the CompatibilitySingletonFactory and building MetricsReplicationSource
+ * Test for the CompatibilitySingletonFactory and building MetricsReplicationSource
  */
-@Category({MetricsTests.class, SmallTests.class})
+@Category({ MetricsTests.class, SmallTests.class })
 public class TestMetricsReplicationSourceFactory {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMetricsReplicationSourceFactory.class);
+    HBaseClassTestRule.forClass(TestMetricsReplicationSourceFactory.class);
 
-  @Test(expected=RuntimeException.class)
-  public void testGetInstanceNoHadoopCompat() throws Exception {
-    //This should throw an exception because there is no compat lib on the class path.
-    CompatibilitySingletonFactory.getInstance(MetricsReplicationSource.class);
+  @Test
+  public void testGetInstance() throws Exception {
+    assertThat(CompatibilitySingletonFactory.getInstance(MetricsReplicationSource.class),
+      instanceOf(MetricsReplicationSourceImpl.class));
   }
 }
