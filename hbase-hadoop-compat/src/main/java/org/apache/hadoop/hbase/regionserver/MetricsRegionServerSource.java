@@ -397,19 +397,28 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String UPDATES_BLOCKED_DESC =
       "Number of MS updates have been blocked so that the memstore can be flushed.";
   String DELETE_KEY = "delete";
+  String DELETE_BYTES_KEY = "deleteBytes";
   String CHECK_AND_DELETE_KEY = "checkAndDelete";
   String CHECK_AND_PUT_KEY = "checkAndPut";
   String DELETE_BATCH_KEY = "deleteBatch";
   String GET_SIZE_KEY = "getSize";
   String GET_KEY = "get";
+  String GET_BYTES_KEY = "getBytes";
   String INCREMENT_KEY = "increment";
+  String INCREMENT_BYTES_KEY = "incrementBytes";
   String PUT_KEY = "put";
+  String PUT_BYTES_KEY = "putBytes";
   String PUT_BATCH_KEY = "putBatch";
   String APPEND_KEY = "append";
+  String APPEND_BYTES_KEY = "appendBytes";
   String REPLAY_KEY = "replay";
   String SCAN_KEY = "scan";
   String SCAN_SIZE_KEY = "scanSize";
+  String SCAN_BYTES_KEY = "scanBytes";
   String SCAN_TIME_KEY = "scanTime";
+  String BULKLOAD_BYTES_KEY = "bulkLoadBytes";
+  String RECEIVED_BYTES_KEY = "receivedBytes";
+  String SENT_BYTES_KEY = "sentBytes";
 
   String SLOW_PUT_KEY = "slowPutCount";
   String SLOW_GET_KEY = "slowGetCount";

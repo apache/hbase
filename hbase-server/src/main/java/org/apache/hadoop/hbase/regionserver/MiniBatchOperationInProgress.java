@@ -45,6 +45,8 @@ public class MiniBatchOperationInProgress<T> {
   private int cellCount = 0;
   private int numOfPuts = 0;
   private int numOfDeletes = 0;
+  private long bytesForPuts = 0;
+  private long bytesForDeletes = 0;
 
 
   public MiniBatchOperationInProgress(T[] operations, OperationStatus[] retCodeDetails,
@@ -168,5 +170,21 @@ public class MiniBatchOperationInProgress<T> {
 
   public void incrementNumOfDeletes() {
     this.numOfDeletes += 1;
+  }
+
+  public long getBytesForPuts() {
+    return bytesForPuts;
+  }
+
+  public void incrementBytesForPuts(long size) {
+    this.bytesForPuts += size;
+  }
+
+  public long getBytesForDeletes() {
+    return bytesForDeletes;
+  }
+
+  public void incrementBytesForDeletes(long size) {
+    this.bytesForDeletes += size;
   }
 }

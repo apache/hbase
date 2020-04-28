@@ -3689,21 +3689,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           return true;
         }
       });
-
-      // FIXME: we may update metrics twice! here for all operations bypassed by CP and later in
-      // normal processing.
-      // Update metrics in same way as it is done when we go the normal processing route (we now
-      // update general metrics though a Coprocessor did the work).
-      if (region.metricsRegion != null) {
-        if (metrics[0] > 0) {
-          // There were some Puts in the batch.
-          region.metricsRegion.updatePut();
-        }
-        if (metrics[1] > 0) {
-          // There were some Deletes in the batch.
-          region.metricsRegion.updateDelete();
-        }
-      }
     }
 
     @Override
@@ -3715,9 +3700,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         if (mutation instanceof Put) {
           HRegion.updateCellTimestamps(familyCellMaps[index].values(), byteTS);
           miniBatchOp.incrementNumOfPuts();
+          miniBatchOp.incrementBytesForPuts(mutation.heapSize());
         } else {
           region.prepareDeleteTimestamps(mutation, familyCellMaps[index], byteTS);
           miniBatchOp.incrementNumOfDeletes();
+          miniBatchOp.incrementBytesForDeletes(mutation.heapSize());
         }
         region.rewriteCellTags(familyCellMaps[index], mutation);
 
@@ -3806,11 +3793,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         if (region.metricsRegion != null) {
           if (miniBatchOp.getNumOfPuts() > 0) {
             // There were some Puts in the batch.
-            region.metricsRegion.updatePut();
+            region.metricsRegion.updatePut(miniBatchOp.getBytesForPuts());
           }
           if (miniBatchOp.getNumOfDeletes() > 0) {
             // There were some Deletes in the batch.
-            region.metricsRegion.updateDelete();
+            region.metricsRegion.updateDelete(miniBatchOp.getBytesForDeletes());
           }
         }
       }
@@ -5753,6 +5740,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             try {
               storeFileInfo = fs.getStoreFileInfo(Bytes.toString(family), storeFile);
               store.bulkLoadHFile(storeFileInfo);
+              if (storeFileInfo != null && metricsRegion != null
+                && storeFileInfo.getFileStatus() != null) {
+                metricsRegion.updateBulkLoad(storeFileInfo.getFileStatus().getLen());
+              }
             } catch(FileNotFoundException ex) {
               LOG.warn(getRegionInfo().getEncodedName() + " : "
                       + ((storeFileInfo != null) ? storeFileInfo.toString() :
@@ -6453,8 +6444,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             // Note the size of the store file
             try {
               FileSystem fs = commitedStoreFile.getFileSystem(baseConf);
-              storeFilesSizes.put(commitedStoreFile.getName(), fs.getFileStatus(commitedStoreFile)
-                  .getLen());
+              long size = fs.getFileStatus(commitedStoreFile).getLen();
+              storeFilesSizes.put(commitedStoreFile.getName(), size);
+              if (metricsRegion != null) {
+                metricsRegion.updateBulkLoad(size);
+              }
+
             } catch (IOException e) {
               LOG.warn("Failed to find the size of hfile " + commitedStoreFile, e);
               storeFilesSizes.put(commitedStoreFile.getName(), 0L);
@@ -7678,7 +7673,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   void metricsUpdateForGet(List<Cell> results, long before) {
     if (this.metricsRegion != null) {
-      this.metricsRegion.updateGet(EnvironmentEdgeManager.currentTime() - before);
+      long size = 0L;
+      if (results != null) {
+        for (Cell cell : results) {
+          size += cell.heapSize();
+        }
+      }
+      this.metricsRegion.updateGet(EnvironmentEdgeManager.currentTime() - before, size);
     }
   }
 
@@ -8055,10 +8056,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       if (this.metricsRegion != null) {
         switch (op) {
           case INCREMENT:
-            this.metricsRegion.updateIncrement();
+            this.metricsRegion.updateIncrement(memstoreAccounting.getDataSize());
             break;
           case APPEND:
-            this.metricsRegion.updateAppend();
+            this.metricsRegion.updateAppend(memstoreAccounting.getDataSize());
             break;
           default:
             break;

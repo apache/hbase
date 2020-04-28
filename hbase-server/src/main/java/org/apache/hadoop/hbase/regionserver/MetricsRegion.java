@@ -44,31 +44,48 @@ public class MetricsRegion {
     source.close();
   }
 
-  public void updatePut() {
+  public void updatePut(final long size) {
     source.updatePut();
+    source.updatePutBytes(size);
+    source.updateReceivedBytes(size);
   }
 
-  public void updateDelete() {
+  public void updateDelete(final long size) {
     source.updateDelete();
+    source.updateDeleteBytes(size);
+    source.updateReceivedBytes(size);
   }
 
-  public void updateGet(final long t) {
+  public void updateGet(final long t, final long size) {
     source.updateGet(t);
+    source.updateGetBytes(size);
+    source.updateSentBytes(size);
   }
 
-  public void updateScanTime(final long t) {
+  public void updateScan(final long t, final long size) {
     source.updateScanTime(t);
+    source.updateScanBytes(size);
+    source.updateSentBytes(size);
   }
 
   public void updateFilteredRecords(){
     userAggregate.updateFilteredReadRequests();
   }
-  public void updateAppend() {
+  public void updateAppend(final long size) {
     source.updateAppend();
+    source.updateAppendBytes(size);
+    source.updateReceivedBytes(size);
   }
 
-  public void updateIncrement() {
+  public void updateIncrement(final long size) {
     source.updateIncrement();
+    source.updateIncrementBytes(size);
+    source.updateReceivedBytes(size);
+  }
+
+  public void updateBulkLoad(final long size) {
+    source.updateBulkLoadBytes(size);
+    source.updateReceivedBytes(size);
   }
 
   MetricsRegionSource getSource() {
