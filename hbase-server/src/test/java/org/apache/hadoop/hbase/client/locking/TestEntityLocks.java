@@ -175,7 +175,10 @@ public class TestEntityLocks {
     assertTrue(lock.isLocked());
     // Should get unlocked in next heartbeat i.e. after workerSleepTime. Wait 10x time to be sure.
     assertTrue(waitLockTimeOut(lock, 10 * workerSleepTime));
-    assertFalse(lock.getWorker().isAlive());
+
+    // Works' run() returns, there is a small gap that the thread is still alive(os
+    // has not declare it is dead yet), so remove the following assertion.
+    // assertFalse(lock.getWorker().isAlive());
     verify(abortable, times(1)).abort(any(), eq(null));
   }
 

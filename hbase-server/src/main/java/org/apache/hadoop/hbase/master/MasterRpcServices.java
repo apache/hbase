@@ -341,6 +341,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.Remo
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RenameRSGroupRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RenameRSGroupResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.FileArchiveNotificationRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.FileArchiveNotificationResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
@@ -2456,7 +2458,7 @@ public class MasterRpcServices extends RSRpcServices implements
       throw new ServiceException(e);
     }
   }
- 
+
   // HBCK Services
 
   @Override
@@ -3212,6 +3214,28 @@ public class MasterRpcServices extends RSRpcServices implements
       }
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().postGetConfiguredNamespacesAndTablesInRSGroup(groupName);
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return builder.build();
+  }
+
+  @Override
+  public RenameRSGroupResponse renameRSGroup(RpcController controller,
+      RenameRSGroupRequest request) throws ServiceException {
+    RenameRSGroupResponse.Builder builder = RenameRSGroupResponse.newBuilder();
+    String oldRSGroup = request.getOldRsgroupName();
+    String newRSGroup = request.getNewRsgroupName();
+    LOG.info("{} rename rsgroup from {} to {} ",
+      master.getClientIdAuditPrefix(), oldRSGroup, newRSGroup);
+    try {
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preRenameRSGroup(oldRSGroup, newRSGroup);
+      }
+      master.getRSGroupInfoManager().renameRSGroup(oldRSGroup, newRSGroup);
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postRenameRSGroup(oldRSGroup, newRSGroup);
       }
     } catch (IOException e) {
       throw new ServiceException(e);

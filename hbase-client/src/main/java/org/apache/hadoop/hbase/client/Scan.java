@@ -411,34 +411,6 @@ public class Scan extends Query {
    * @return this
    * @throws IllegalArgumentException if stopRow does not meet criteria for a row key (when length
    *           exceeds {@link HConstants#MAX_ROW_LENGTH})
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use {@link #withStopRow(byte[])} instead.
-   *   This method may change the inclusive of the stop row to keep compatible with the old
-   *   behavior.
-   * @see #withStopRow(byte[])
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17320">HBASE-17320</a>
-   */
-  @Deprecated
-  public Scan setStopRow(byte[] stopRow) {
-    withStopRow(stopRow);
-    if (ClientUtil.areScanStartRowAndStopRowEqual(this.startRow, this.stopRow)) {
-      // for keeping the old behavior that a scan with the same start and stop row is a get scan.
-      this.includeStopRow = true;
-    }
-    return this;
-  }
-
-  /**
-   * Set the stop row of the scan.
-   * <p>
-   * The scan will include rows that are lexicographically less than the provided stopRow.
-   * <p>
-   * <b>Note:</b> When doing a filter for a rowKey <u>Prefix</u> use
-   * {@link #setRowPrefixFilter(byte[])}. The 'trailing 0' will not yield the desired result.
-   * </p>
-   * @param stopRow row to end at (exclusive)
-   * @return this
-   * @throws IllegalArgumentException if stopRow does not meet criteria for a row key (when length
-   *           exceeds {@link HConstants#MAX_ROW_LENGTH})
    */
   public Scan withStopRow(byte[] stopRow) {
     return withStopRow(stopRow, false);
@@ -471,7 +443,7 @@ public class Scan extends Query {
    * <p>This is a utility method that converts the desired rowPrefix into the appropriate values
    * for the startRow and stopRow to achieve the desired result.</p>
    * <p>This can safely be used in combination with setFilter.</p>
-   * <p><b>NOTE: Doing a {@link #withStartRow(byte[])} and/or {@link #setStopRow(byte[])}
+   * <p><b>NOTE: Doing a {@link #withStartRow(byte[])} and/or {@link #withStopRow(byte[])}
    * after this method will yield undefined results.</b></p>
    * @param rowPrefix the prefix all rows must start with. (Set <i>null</i> to remove the filter.)
    * @return this
@@ -479,10 +451,10 @@ public class Scan extends Query {
   public Scan setRowPrefixFilter(byte[] rowPrefix) {
     if (rowPrefix == null) {
       withStartRow(HConstants.EMPTY_START_ROW);
-      setStopRow(HConstants.EMPTY_END_ROW);
+      withStopRow(HConstants.EMPTY_END_ROW);
     } else {
       this.withStartRow(rowPrefix);
-      this.setStopRow(ClientUtil.calculateTheClosestNextRowKeyForPrefix(rowPrefix));
+      this.withStopRow(ClientUtil.calculateTheClosestNextRowKeyForPrefix(rowPrefix));
     }
     return this;
   }

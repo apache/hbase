@@ -102,7 +102,6 @@ YETUS_ARGS+=("--reapermode=kill")
 # set relatively high limits for ASF machines
 # changing these to higher values may cause problems
 # with other jobs on systemd-enabled machines
-YETUS_ARGS+=("--proclimit=10000")
 YETUS_ARGS+=("--dockermemlimit=20g")
 # -1 spotbugs issues that show up prior to the patch being applied
 YETUS_ARGS+=("--spotbugs-strict-precheck")

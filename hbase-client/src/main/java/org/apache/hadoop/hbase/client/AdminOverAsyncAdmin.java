@@ -1036,4 +1036,9 @@ class AdminOverAsyncAdmin implements Admin {
   public void setRSGroup(Set<TableName> tables, String groupName) throws IOException {
     get(admin.setRSGroup(tables, groupName));
   }
+
+  @Override
+  public void renameRSGroup(String oldName, String newName) throws IOException {
+    get(admin.renameRSGroup(oldName, newName));
+  }
 }

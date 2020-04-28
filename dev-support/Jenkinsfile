@@ -341,6 +341,9 @@ pipeline {
               label 'Hadoop'
             }
           }
+          when {
+            anyOf { branch 'branch-1*'; branch 'branch-2*' }
+          }
           environment {
             BASEDIR = "${env.WORKSPACE}/component"
             TESTS = "${env.DEEP_CHECKS}"

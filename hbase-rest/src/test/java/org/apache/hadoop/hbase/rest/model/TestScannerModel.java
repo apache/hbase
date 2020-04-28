@@ -47,27 +47,27 @@ public class TestScannerModel extends TestModelBase<ScannerModel> {
   private static final long START_TIME = 1245219839331L;
   private static final long END_TIME = 1245393318192L;
   private static final int CACHING = 1000;
+  private static final int LIMIT = 10000;
   private static final int BATCH = 100;
   private static final boolean CACHE_BLOCKS = false;
 
   public TestScannerModel() throws Exception {
     super(ScannerModel.class);
+
     AS_XML = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
-        + "<Scanner batch=\"100\" cacheBlocks=\"false\" caching=\"1000\" endRow=\"enp5eng=\" "
-        + "endTime=\"1245393318192\" maxVersions=\"2147483647\" startRow=\"YWJyYWNhZGFicmE=\" "
-        + "startTime=\"1245219839331\">"
-        + "<column>Y29sdW1uMQ==</column><column>Y29sdW1uMjpmb28=</column>"
-        + "<labels>private</labels><labels>public</labels>"
-        + "</Scanner>";
+      + "<Scanner batch=\"100\" cacheBlocks=\"false\" caching=\"1000\" endRow=\"enp5eng=\" endTime=\"1245393318192\""
+      + " limit=\"10000\" maxVersions=\"2147483647\" startRow=\"YWJyYWNhZGFicmE=\" startTime=\"1245219839331\">"
+      + "<column>Y29sdW1uMQ==</column> <column>Y29sdW1uMjpmb28=</column>"
+      + "<labels>private</labels> <labels>public</labels></Scanner>";
 
     AS_JSON = "{\"batch\":100,\"caching\":1000,\"cacheBlocks\":false,\"endRow\":\"enp5eng=\","
-        + "\"endTime\":1245393318192,\"maxVersions\":2147483647,\"startRow\":\"YWJyYWNhZGFicmE=\","
-        + "\"startTime\":1245219839331,\"column\":[\"Y29sdW1uMQ==\",\"Y29sdW1uMjpmb28=\"],"
-        +"\"labels\":[\"private\",\"public\"]"
-        +"}";
+      + "\"endTime\":1245393318192,\"maxVersions\":2147483647,\"startRow\":\"YWJyYWNhZGFicmE=\","
+      + "\"startTime\":1245219839331,\"column\":[\"Y29sdW1uMQ==\",\"Y29sdW1uMjpmb28=\"],"
+      +"\"labels\":[\"private\",\"public\"],"
+      +"\"limit\":10000}";
 
-    AS_PB = "CgthYnJhY2FkYWJyYRIFenp5engaB2NvbHVtbjEaC2NvbHVtbjI6Zm9vIGQo47qL554kMLDi57mf"
-        + "JDj/////B0joB1IHcHJpdmF0ZVIGcHVibGljWAA=";
+    AS_PB = "CgthYnJhY2FkYWJyYRIFenp5engaB2NvbHVtbjEaC2NvbHVtbjI6Zm9vIGQo47qL554kMLDi57mfJDj"
+      +"/////B0joB1IHcHJpdmF0ZVIGcHVibGljWABgkE4=";
   }
 
   @Override
@@ -84,6 +84,7 @@ public class TestScannerModel extends TestModelBase<ScannerModel> {
     model.addLabel(PRIVATE);
     model.addLabel(PUBLIC);
     model.setCacheBlocks(CACHE_BLOCKS);
+    model.setLimit(LIMIT);
     return model;
   }
 
@@ -104,6 +105,7 @@ public class TestScannerModel extends TestModelBase<ScannerModel> {
     assertEquals(START_TIME, model.getStartTime());
     assertEquals(END_TIME, model.getEndTime());
     assertEquals(BATCH, model.getBatch());
+    assertEquals(LIMIT, model.getLimit());
     assertEquals(CACHING, model.getCaching());
     assertEquals(CACHE_BLOCKS, model.getCacheBlocks());
     boolean foundLabel1 = false;

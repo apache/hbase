@@ -908,7 +908,7 @@ public class TestScannersFromClientSide {
       scan.addFamily(Bytes.toBytes("c"));
       scan.setAttribute(Scan.SCAN_ATTRIBUTES_TABLE_NAME, tableName.getName());
       scan.setMaxResultSize(10001);
-      scan.setStopRow(Bytes.toBytes("bbbb"));
+      scan.withStopRow(Bytes.toBytes("bbbb"));
       scan.setFilter(new LimitKVsReturnFilter());
       ResultScanner rs = table.getScanner(scan);
       Result result;

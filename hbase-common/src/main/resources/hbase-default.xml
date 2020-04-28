@@ -1949,7 +1949,21 @@ possible configurations would overwhelm and obscure the important.
   <property>
     <name>hbase.master.metafixer.max.merge.count</name>
     <value>10</value>
-    <description>Maximum regions to merge at a time when we fix overlaps noted in
-      CJ consistency report, but avoid merging 100 regions in one go!</description>
+    <description>
+      Maximum regions to merge at a time when we fix overlaps noted in
+      CJ consistency report, but avoid merging 100 regions in one go!
+    </description>
+  </property>
+  <property>
+    <name>hbase.rpc.rows.size.threshold.reject</name>
+    <value>false</value>
+    <description>
+      If value is true, RegionServer will abort batch requests of Put/Delete with number of rows
+      in a batch operation exceeding threshold defined by value of config:
+      hbase.rpc.rows.warning.threshold. The default value is false and hence, by default, only
+      warning will be logged. This config should be turned on to prevent RegionServer from serving
+      very large batch size of rows and this way we can improve CPU usages by discarding
+      too large batch request.
+    </description>
   </property>
 </configuration>

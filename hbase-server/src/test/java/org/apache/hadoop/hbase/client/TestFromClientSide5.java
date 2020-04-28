@@ -1320,7 +1320,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
 
       Scan scan = new Scan();
       scan.withStartRow(Bytes.toBytes(1));
-      scan.setStopRow(Bytes.toBytes(3));
+      scan.withStopRow(Bytes.toBytes(3));
       scan.addColumn(FAMILY, FAMILY);
       scan.setFilter(new RowFilter(CompareOperator.NOT_EQUAL,
               new BinaryComparator(Bytes.toBytes(1))));
@@ -2139,7 +2139,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
     scan.setSmall(small);
     scan.setReversed(true);
     scan.withStartRow(Bytes.toBytes("002"));
-    scan.setStopRow(Bytes.toBytes("000"));
+    scan.withStopRow(Bytes.toBytes("000"));
     try (ResultScanner scanner = table.getScanner(scan)) {
       int count = 0;
       byte[] lastRow = null;
@@ -2203,7 +2203,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
     scan.setSmall(small);
     scan.setReversed(true);
     scan.withStartRow(Bytes.toBytes("006"));
-    scan.setStopRow(Bytes.toBytes("002"));
+    scan.withStopRow(Bytes.toBytes("002"));
     try (ResultScanner scanner = table.getScanner(scan)) {
       int count = 0;
       byte[] lastRow = null;

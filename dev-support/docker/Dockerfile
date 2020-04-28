@@ -39,7 +39,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -qq update && \
     bash=4.4.18-2ubuntu1.2 \
     build-essential=12.4ubuntu1 \
     diffutils=1:3.6-1 \
-    git=1:2.17.1-1ubuntu0.5 \
+    git=1:2.17.1-1ubuntu0.7 \
     rsync=3.1.2-2.1ubuntu1 \
     tar=1.29b-2ubuntu0.1 \
     wget=1.19.4-1ubuntu2.2 \
@@ -178,7 +178,7 @@ RUN mkdir -p /usr/lib/jvm && \
 # TODO (nd): is this really true? investigate and file a ticket.
 ENV SPOTBUGS_HOME '/opt/spotbugs'
 ENV MAVEN_HOME '/opt/maven'
-ENV MAVEN_OPTS '-Xmx4G'
+ENV MAVEN_OPTS '-Xmx3.6G'
 
 CMD ["/bin/bash"]
 

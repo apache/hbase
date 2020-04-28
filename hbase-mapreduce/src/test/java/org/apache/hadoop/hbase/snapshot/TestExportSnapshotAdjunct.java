@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.snapshot;
 
+import static org.junit.Assert.assertFalse;
+import java.util.Iterator;
+import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -67,6 +70,34 @@ public class TestExportSnapshotAdjunct {
     TestExportSnapshot.setUpBaseConf(TEST_UTIL.getConfiguration());
     TEST_UTIL.startMiniCluster(3);
     TEST_UTIL.startMiniMapReduceCluster();
+  }
+
+  /**
+   * Check for references to '/tmp'. We are trying to avoid having references to outside of the
+   * test data dir when running tests. References outside of the test dir makes it so concurrent
+   * tests can stamp on each other by mistake. This check is for references to the 'tmp'.
+   *
+   * This is a strange place for this test but I want somewhere where the configuration is
+   * full -- filed w/ hdfs and mapreduce configurations.
+   */
+  private void checkForReferencesToTmpDir() {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    for (Iterator<Map.Entry<String, String>> i = conf.iterator(); i.hasNext();) {
+      Map.Entry<String, String> e = i.next();
+      if (e.getKey().contains("original.hbase.dir")) {
+        continue;
+      }
+      if (e.getValue().contains("java.io.tmpdir")) {
+        continue;
+      }
+      if (e.getValue().contains("hadoop.tmp.dir")) {
+        continue;
+      }
+      if (e.getValue().contains("hbase.tmp.dir")) {
+        continue;
+      }
+      assertFalse(e.getKey() + " " + e.getValue(), e.getValue().contains("tmp"));
+    }
   }
 
   @AfterClass

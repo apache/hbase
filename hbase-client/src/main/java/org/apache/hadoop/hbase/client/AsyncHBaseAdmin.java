@@ -913,4 +913,9 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   public CompletableFuture<Void> setRSGroup(Set<TableName> tables, String groupName) {
     return wrap(rawAdmin.setRSGroup(tables, groupName));
   }
+
+  @Override
+  public CompletableFuture<Void> renameRSGroup(String oldName, String newName) {
+    return wrap(rawAdmin.renameRSGroup(oldName, newName));
+  }
 }

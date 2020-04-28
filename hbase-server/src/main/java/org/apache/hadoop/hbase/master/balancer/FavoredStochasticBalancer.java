@@ -65,7 +65,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
  * RegionServer as the new Primary RegionServer) after a region is recovered. This
  * should help provide consistent read latencies for the regions even when their
  * primary region servers die. This provides two
- * {@link org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer.CandidateGenerator}
+ * {@link CandidateGenerator}
  *
  */
 @InterfaceAudience.Private

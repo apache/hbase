@@ -121,4 +121,8 @@ class DisabledRSGroupInfoManager implements RSGroupInfoManager {
     return RSGroupInfo.DEFAULT_GROUP;
   }
 
+  @Override
+  public void renameRSGroup(String oldName, String newName) throws IOException {
+  }
+
 }

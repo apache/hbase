@@ -1119,6 +1119,9 @@ service MasterService {
 
   rpc GetConfiguredNamespacesAndTablesInRSGroup(GetConfiguredNamespacesAndTablesInRSGroupRequest)
     returns (GetConfiguredNamespacesAndTablesInRSGroupResponse);
+
+  rpc RenameRSGroup(RenameRSGroupRequest)
+    returns (RenameRSGroupResponse);
 }
 
 // HBCK Service definitions.

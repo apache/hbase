@@ -32,10 +32,10 @@ public class MetricsBalancer {
   public MetricsBalancer() {
     initSource();
   }
-  
+
   /**
-   * A function to instantiate the metrics source. This function can be overridden in its 
-   * subclasses to provide extended sources
+   * A function to instantiate the metrics source. This function can be overridden in its subclasses
+   * to provide extended sources
    */
   protected void initSource() {
     source = CompatibilitySingletonFactory.getInstance(MetricsBalancerSource.class);

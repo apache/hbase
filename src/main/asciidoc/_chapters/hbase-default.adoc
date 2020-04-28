@@ -2246,6 +2246,7 @@ The percent of region server RPC threads failed to abort RS.
 `false`
 
 
+
 [[hbase.master.metafixer.max.merge.count]]
 *`hbase.master.metafixer.max.merge.count`*::
 +
@@ -2254,7 +2255,27 @@ The percent of region server RPC threads failed to abort RS.
       Maximum regions to merge at a time when we fix overlaps noted in
       CJ consistency report, but avoid merging 100 regions in one go!
 
-
 +
 .Default
 `10`
+
+
+[[hbase.rpc.rows.size.threshold.reject]]
+*`hbase.rpc.rows.size.threshold.reject`*::
++
+.Description
+
+      If value is true, RegionServer will abort batch requests of
+      Put/Delete with number of rows in a batch operation exceeding
+      threshold defined by value of config:
+      hbase.rpc.rows.warning.threshold.
+      The default value is false and hence, by default, only
+      warning will be logged. This config should be turned on to
+      prevent RegionServer from serving
+      very large batch size of rows and this way we can improve
+      CPU usages by discarding too large batch request.
+
++
+.Default
+`false`
+

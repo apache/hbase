@@ -60,11 +60,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.FavoredNodes;
 
 /**
- * Helper class for {@link FavoredNodeLoadBalancer} that has all the intelligence for racks,
- * meta scans, etc. Instantiated by the {@link FavoredNodeLoadBalancer} when needed (from
- * within calls like {@link FavoredNodeLoadBalancer#randomAssignment(RegionInfo, List)}).
- * All updates to favored nodes should only be done from {@link FavoredNodesManager} and not
- * through this helper class (except for tests).
+ * Helper class for FavoredNodeLoadBalancer that has all the intelligence for racks, meta scans,
+ * etc. Instantiated by the FavoredNodeLoadBalancer when needed (from within calls like
+ * FavoredNodeLoadBalancer#randomAssignment(RegionInfo, List). All updates to favored nodes should
+ * only be done from FavoredNodesManager and not through this helper class (except for tests).
  */
 @InterfaceAudience.Private
 public class FavoredNodeAssignmentHelper {
