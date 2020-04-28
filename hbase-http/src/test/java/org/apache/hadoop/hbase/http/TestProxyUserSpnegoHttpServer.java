@@ -203,7 +203,7 @@ public class TestProxyUserSpnegoHttpServer extends HttpServerFunctionalTest {
 
   @Test
   public void testProxyDisallowedForUnprivileged() throws Exception {
-      testProxy(WHEEL_PRINCIPAL, UNPRIVILEGED_PRINCIPAL, HttpURLConnection.HTTP_FORBIDDEN, "403 User unprivileged is unauthorized to access this page.");
+      testProxy(WHEEL_PRINCIPAL, UNPRIVILEGED_PRINCIPAL, HttpURLConnection.HTTP_FORBIDDEN, "403 Forbidden");
   }
 
   @Test
