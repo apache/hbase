@@ -157,4 +157,13 @@ public class MetricsAssignmentManagerSourceImpl
   public OperationMetrics getCloseMetrics() {
     return closeMetrics;
   }
+
+  @Override
+  public void getMetrics(MetricsCollector metricsCollector, boolean all) {
+    MetricsRecordBuilder metricsRecordBuilder = metricsCollector.addRecord(metricsName);
+    metricsRegistry.snapshot(metricsRecordBuilder, all);
+    if(metricsAdapter != null) {
+      metricsAdapter.snapshotAllMetrics(registry, metricsRecordBuilder);
+    }
+  }
 }
