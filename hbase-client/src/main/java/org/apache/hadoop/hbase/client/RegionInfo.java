@@ -796,6 +796,16 @@ public interface RegionInfo extends Comparable<RegionInfo> {
     return !isLast() && Bytes.compareTo(getStartKey(), getEndKey()) > 0;
   }
 
+
+  default boolean isOverlap(RegionInfo [] ris) {
+    for (RegionInfo ri: ris) {
+      if (isOverlap(ri)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /**
    * @return True if an overlap in region range.
    * @see #isDegenerate()
