@@ -146,7 +146,7 @@ function personality_modules
   fi
 
   if [[ -n "${HADOOP_PROFILE}" ]]; then
-    extra="${extra} -Phadoop-${HADOOP_PROFILE}"
+    extra="${extra} -Dhadoop.profile=${HADOOP_PROFILE}"
   fi
 
   # BUILDMODE value is 'full' when there is no patch to be tested, and we are running checks on
@@ -459,7 +459,7 @@ function shadedjars_rebuild
     '-Dtest=NoUnitTests' '-DHBasePatchProcess' '-Prelease'
     '-Dmaven.javadoc.skip=true' '-Dcheckstyle.skip=true' '-Dspotbugs.skip=true')
   if [[ -n "${HADOOP_PROFILE}" ]]; then
-    maven_args+=("-Phadoop-${HADOOP_PROFILE}")
+    maven_args+=("-Dhadoop.profile=${HADOOP_PROFILE}")
   fi
 
   # disabled because "maven_executor" needs to return both command and args
@@ -644,7 +644,7 @@ function hadoopcheck_rebuild
       $(maven_executor) clean install \
         -DskipTests -DHBasePatchProcess \
         -Dhadoop-three.version="${hadoopver}" \
-        -Phadoop-3.0
+        -Dhadoop.profile="3.0"
     count=$(${GREP} -c '\[ERROR\]' "${logfile}")
     if [[ ${count} -gt 0 ]]; then
       add_vote_table -1 hadoopcheck "${BUILDMODEMSG} causes ${count} errors with Hadoop v${hadoopver}."
