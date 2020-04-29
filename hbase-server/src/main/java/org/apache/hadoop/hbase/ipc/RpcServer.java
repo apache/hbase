@@ -502,12 +502,15 @@ public abstract class RpcServer implements RpcServerInterface,
     responseInfo.put("param", stringifiedParam);
     if (param instanceof ClientProtos.ScanRequest && rsRpcServices != null) {
       ClientProtos.ScanRequest request = ((ClientProtos.ScanRequest) param);
+      String scanDetails;
       if (request.hasScannerId()) {
         long scannerId = request.getScannerId();
-        String scanDetails = rsRpcServices.getScanDetailsWithId(scannerId);
-        if (scanDetails != null) {
-          responseInfo.put("scandetails", scanDetails);
-        }
+        scanDetails = rsRpcServices.getScanDetailsWithId(scannerId);
+      } else {
+        scanDetails = rsRpcServices.getScanDetailsWithRequest(request);
+      }
+      if (scanDetails != null) {
+        responseInfo.put("scandetails", scanDetails);
       }
     }
     if (param instanceof ClientProtos.MultiRequest) {
