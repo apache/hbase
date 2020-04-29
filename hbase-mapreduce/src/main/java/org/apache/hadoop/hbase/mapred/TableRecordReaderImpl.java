@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.mapred;
 
 import static org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl.LOG_PER_ROW_COUNT;
-
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -58,9 +57,6 @@ public class TableRecordReaderImpl {
 
   /**
    * Restart from survivable exceptions by creating a new scanner.
-   *
-   * @param firstRow
-   * @throws IOException
    */
   public void restart(byte[] firstRow) throws IOException {
     Scan currentScan;
@@ -100,8 +96,6 @@ public class TableRecordReaderImpl {
 
   /**
    * Build the scanner. Not done in constructor to allow for extension.
-   *
-   * @throws IOException
    */
   public void init() throws IOException {
     restart(startRow);
@@ -194,10 +188,8 @@ public class TableRecordReaderImpl {
    * @param key HStoreKey as input key.
    * @param value MapWritable as input value
    * @return true if there was more data
-   * @throws IOException
    */
-  public boolean next(ImmutableBytesWritable key, Result value)
-  throws IOException {
+  public boolean next(ImmutableBytesWritable key, Result value) throws IOException {
     Result result;
     try {
       try {

@@ -164,6 +164,7 @@ import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HashedBytes;
@@ -1049,8 +1050,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // This means we have replayed all the recovered edits and also written out the max sequence
         // id file, let's delete the wrong directories introduced in HBASE-20734, see HBASE-22617
         // for more details.
-        Path wrongRegionWALDir = FSUtils.getWrongWALRegionDir(conf, getRegionInfo().getTable(),
-          getRegionInfo().getEncodedName());
+        Path wrongRegionWALDir = CommonFSUtils.getWrongWALRegionDir(conf,
+          getRegionInfo().getTable(), getRegionInfo().getEncodedName());
         FileSystem walFs = getWalFileSystem();
         if (walFs.exists(wrongRegionWALDir)) {
           if (!walFs.delete(wrongRegionWALDir, true)) {
@@ -1248,11 +1249,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param tableDescriptor TableDescriptor of the table
    * @param regionInfo encoded name of the region
    * @return The HDFS blocks distribution for the given region.
-   * @throws IOException
    */
   public static HDFSBlocksDistribution computeHDFSBlocksDistribution(Configuration conf,
-      TableDescriptor tableDescriptor, RegionInfo regionInfo) throws IOException {
-    Path tablePath = FSUtils.getTableDir(FSUtils.getRootDir(conf), tableDescriptor.getTableName());
+    TableDescriptor tableDescriptor, RegionInfo regionInfo) throws IOException {
+    Path tablePath =
+      CommonFSUtils.getTableDir(CommonFSUtils.getRootDir(conf), tableDescriptor.getTableName());
     return computeHDFSBlocksDistribution(conf, tableDescriptor, regionInfo, tablePath);
   }
 
@@ -1655,6 +1656,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
     }
     this.closing.set(true);
+    LOG.info("Closing region {}", this);
     status.setStatus("Disabling writes for close");
     try {
       if (this.isClosed()) {
@@ -1977,13 +1979,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /** @return the WAL {@link HRegionFileSystem} used by this region */
   HRegionWALFileSystem getRegionWALFileSystem() throws IOException {
     return new HRegionWALFileSystem(conf, getWalFileSystem(),
-        FSUtils.getWALTableDir(conf, htableDescriptor.getTableName()), fs.getRegionInfo());
+      CommonFSUtils.getWALTableDir(conf, htableDescriptor.getTableName()), fs.getRegionInfo());
   }
 
   /** @return the WAL {@link FileSystem} being used by this region */
   FileSystem getWalFileSystem() throws IOException {
     if (walFS == null) {
-      walFS = FSUtils.getWALFileSystem(conf);
+      walFS = CommonFSUtils.getWALFileSystem(conf);
     }
     return walFS;
   }
@@ -1995,8 +1997,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   @VisibleForTesting
   public Path getWALRegionDir() throws IOException {
     if (regionDir == null) {
-      regionDir = FSUtils.getWALRegionDir(conf, getRegionInfo().getTable(),
-          getRegionInfo().getEncodedName());
+      regionDir = CommonFSUtils.getWALRegionDir(conf, getRegionInfo().getTable(),
+        getRegionInfo().getEncodedName());
     }
     return regionDir;
   }
@@ -4445,7 +4447,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   public void addRegionToSnapshot(SnapshotDescription desc,
       ForeignExceptionSnare exnSnare) throws IOException {
-    Path rootDir = FSUtils.getRootDir(conf);
+    Path rootDir = CommonFSUtils.getRootDir(conf);
     Path snapshotDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir, conf);
 
     SnapshotManifest manifest = SnapshotManifest.create(conf, getFilesystem(),
@@ -4721,10 +4723,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (org.apache.commons.lang3.StringUtils.isBlank(specialRecoveredEditsDirStr)) {
       FileSystem walFS = getWalFileSystem();
       FileSystem rootFS = getFilesystem();
-      Path wrongRegionWALDir = FSUtils.getWrongWALRegionDir(conf, getRegionInfo().getTable(),
+      Path wrongRegionWALDir = CommonFSUtils.getWrongWALRegionDir(conf, getRegionInfo().getTable(),
         getRegionInfo().getEncodedName());
       Path regionWALDir = getWALRegionDir();
-      Path regionDir = FSUtils.getRegionDirFromRootDir(FSUtils.getRootDir(conf), getRegionInfo());
+      Path regionDir =
+        FSUtils.getRegionDirFromRootDir(CommonFSUtils.getRootDir(conf), getRegionInfo());
 
       // We made a mistake in HBASE-20734 so we need to do this dirty hack...
       NavigableSet<Path> filesUnderWrongRegionWALDir =
@@ -7267,7 +7270,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       (hTableDescriptor == null ? "null" : hTableDescriptor) + ", regionDir=" + rootDir);
     createRegionDir(conf, info, rootDir);
     FileSystem fs = rootDir.getFileSystem(conf);
-    Path tableDir = FSUtils.getTableDir(rootDir, info.getTable());
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, info.getTable());
     HRegion region = HRegion.newHRegion(tableDir, wal, fs, conf, info, hTableDescriptor, null);
     if (initialize) {
       region.initialize(null);
@@ -7294,7 +7297,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         Path rootDir)
       throws IOException {
     FileSystem fs = rootDir.getFileSystem(configuration);
-    Path tableDir = FSUtils.getTableDir(rootDir, ri.getTable());
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, ri.getTable());
     // If directory already exists, will log warning and keep going. Will try to create
     // .regioninfo. If one exists, will overwrite.
     return HRegionFileSystem.createRegionOnFileSystem(configuration, fs, tableDir, ri);
@@ -7347,7 +7350,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     final RegionServerServices rsServices,
     final CancelableProgressable reporter)
   throws IOException {
-    return openHRegion(FSUtils.getRootDir(conf), info, htd, wal, conf, rsServices, reporter);
+    return openHRegion(CommonFSUtils.getRootDir(conf), info, htd, wal, conf, rsServices, reporter);
   }
 
   /**
@@ -7437,7 +7440,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     final Path rootDir, final RegionInfo info, final TableDescriptor htd, final WAL wal,
     final RegionServerServices rsServices, final CancelableProgressable reporter)
     throws IOException {
-    Path tableDir = FSUtils.getTableDir(rootDir, info.getTable());
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, info.getTable());
     return openHRegionFromTableDir(conf, fs, tableDir, info, htd, wal, rsServices, reporter);
   }
 
@@ -7561,8 +7564,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       LOG.debug("HRegion.Warming up region: " + info);
     }
 
-    Path rootDir = FSUtils.getRootDir(conf);
-    Path tableDir = FSUtils.getTableDir(rootDir, info.getTable());
+    Path rootDir = CommonFSUtils.getRootDir(conf);
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, info.getTable());
 
     FileSystem fs = null;
     if (rsServices != null) {

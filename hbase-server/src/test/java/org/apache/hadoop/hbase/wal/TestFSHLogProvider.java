@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -120,13 +120,13 @@ public class TestFSHLogProvider {
   @Test
   public void testGetServerNameFromWALDirectoryName() throws IOException {
     ServerName sn = ServerName.valueOf("hn", 450, 1398);
-    String hl = FSUtils.getRootDir(conf) + "/" +
+    String hl = CommonFSUtils.getRootDir(conf) + "/" +
         AbstractFSWALProvider.getWALDirectoryName(sn.toString());
 
     // Must not throw exception
     assertNull(AbstractFSWALProvider.getServerNameFromWALDirectoryName(conf, null));
     assertNull(AbstractFSWALProvider.getServerNameFromWALDirectoryName(conf,
-        FSUtils.getRootDir(conf).toUri().toString()));
+      CommonFSUtils.getRootDir(conf).toUri().toString()));
     assertNull(AbstractFSWALProvider.getServerNameFromWALDirectoryName(conf, ""));
     assertNull(AbstractFSWALProvider.getServerNameFromWALDirectoryName(conf, "                  "));
     assertNull(AbstractFSWALProvider.getServerNameFromWALDirectoryName(conf, hl));
@@ -135,7 +135,7 @@ public class TestFSHLogProvider {
 
     final String wals = "/WALs/";
     ServerName parsed = AbstractFSWALProvider.getServerNameFromWALDirectoryName(conf,
-      FSUtils.getRootDir(conf).toUri().toString() + wals + sn +
+      CommonFSUtils.getRootDir(conf).toUri().toString() + wals + sn +
       "/localhost%2C32984%2C1343316388997.1343316390417");
     assertEquals("standard",  sn, parsed);
 
@@ -143,7 +143,7 @@ public class TestFSHLogProvider {
     assertEquals("subdir", sn, parsed);
 
     parsed = AbstractFSWALProvider.getServerNameFromWALDirectoryName(conf,
-      FSUtils.getRootDir(conf).toUri().toString() + wals + sn +
+      CommonFSUtils.getRootDir(conf).toUri().toString() + wals + sn +
       "-splitting/localhost%3A57020.1340474893931");
     assertEquals("split", sn, parsed);
   }

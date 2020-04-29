@@ -25,7 +25,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -40,6 +39,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.Before;
@@ -209,7 +209,7 @@ public class TestHbckChore extends TestAssignmentManagerBase {
     hbckChore.choreForTesting();
     assertEquals(0, hbckChore.getOrphanRegionsOnFS().size());
 
-    HRegion.createRegionDir(conf, regionInfo, FSUtils.getRootDir(conf));
+    HRegion.createRegionDir(conf, regionInfo, CommonFSUtils.getRootDir(conf));
     hbckChore.choreForTesting();
     assertEquals(1, hbckChore.getOrphanRegionsOnFS().size());
     assertTrue(hbckChore.getOrphanRegionsOnFS().containsKey(regionInfo.getEncodedName()));

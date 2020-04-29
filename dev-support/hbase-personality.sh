@@ -146,7 +146,7 @@ function personality_modules
   fi
 
   if [[ -n "${HADOOP_PROFILE}" ]]; then
-    extra="${extra} -Dhadoop.profile=${HADOOP_PROFILE}"
+    extra="${extra} -Phadoop-${HADOOP_PROFILE}"
   fi
 
   # BUILDMODE value is 'full' when there is no patch to be tested, and we are running checks on
@@ -459,7 +459,7 @@ function shadedjars_rebuild
     '-Dtest=NoUnitTests' '-DHBasePatchProcess' '-Prelease'
     '-Dmaven.javadoc.skip=true' '-Dcheckstyle.skip=true' '-Dspotbugs.skip=true')
   if [[ -n "${HADOOP_PROFILE}" ]]; then
-    maven_args+=("-Dhadoop.profile=${HADOOP_PROFILE}")
+    maven_args+=("-Phadoop-${HADOOP_PROFILE}")
   fi
 
   # disabled because "maven_executor" needs to return both command and args
@@ -589,13 +589,16 @@ function hadoopcheck_rebuild
     else
       hbase_hadoop2_versions="2.8.5 2.9.2 2.10.0"
     fi
-  else
-    yetus_info "Setting Hadoop 2 versions to test based on branch-2.3+/master/feature branch rules."
+  elif [[ "${PATCH_BRANCH}" = branch-2.* ]]; then
+    yetus_info "Setting Hadoop 2 versions to test based on branch-2.3+ rules."
     if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
       hbase_hadoop2_versions="2.10.0"
     else
       hbase_hadoop2_versions="2.10.0"
     fi
+  else
+    yetus_info "Setting Hadoop 2 versions to null on master/feature branch rules since we do not support hadoop 2 for hbase 3.x any more."
+    hbase_hadoop2_versions=""
   fi
   if [[ "${PATCH_BRANCH}" = branch-1* ]]; then
     yetus_info "Setting Hadoop 3 versions to test based on branch-1.x rules."
@@ -610,9 +613,9 @@ function hadoopcheck_rebuild
   else
     yetus_info "Setting Hadoop 3 versions to test based on branch-2.2+/master/feature branch rules"
     if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-      hbase_hadoop3_versions="3.1.2"
+      hbase_hadoop3_versions="3.1.2 3.2.1"
     else
-      hbase_hadoop3_versions="3.1.1 3.1.2"
+      hbase_hadoop3_versions="3.1.1 3.1.2 3.2.0 3.2.1"
     fi
   fi
 
@@ -641,7 +644,7 @@ function hadoopcheck_rebuild
       $(maven_executor) clean install \
         -DskipTests -DHBasePatchProcess \
         -Dhadoop-three.version="${hadoopver}" \
-        -Dhadoop.profile=3.0
+        -Phadoop-3.0
     count=$(${GREP} -c '\[ERROR\]' "${logfile}")
     if [[ ${count} -gt 0 ]]; then
       add_vote_table -1 hadoopcheck "${BUILDMODEMSG} causes ${count} errors with Hadoop v${hadoopver}."
@@ -655,7 +658,11 @@ function hadoopcheck_rebuild
   fi
 
   if [[ -n "${hbase_hadoop3_versions}" ]]; then
-    add_vote_table +1 hadoopcheck "Patch does not cause any errors with Hadoop ${hbase_hadoop2_versions} or ${hbase_hadoop3_versions}."
+    if [[ -n "${hbase_hadoop2_versions}" ]]; then
+      add_vote_table +1 hadoopcheck "Patch does not cause any errors with Hadoop ${hbase_hadoop2_versions} or ${hbase_hadoop3_versions}."
+    else
+      add_vote_table +1 hadoopcheck "Patch does not cause any errors with Hadoop ${hbase_hadoop3_versions}."
+    fi
   else
     add_vote_table +1 hadoopcheck "Patch does not cause any errors with Hadoop ${hbase_hadoop2_versions}."
   fi

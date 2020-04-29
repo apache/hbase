@@ -26,10 +26,12 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
@@ -65,7 +67,7 @@ public class CachedClusterId {
   private AtomicInteger cacheMisses = new AtomicInteger(0);
 
   public CachedClusterId(Server server, Configuration conf) throws IOException {
-    this.rootDir = FSUtils.getRootDir(conf);
+    this.rootDir = CommonFSUtils.getRootDir(conf);
     this.fs = rootDir.getFileSystem(conf);
     this.server = server;
   }

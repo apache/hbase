@@ -24,7 +24,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
@@ -56,13 +55,14 @@ import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
@@ -133,7 +133,7 @@ public class MergeTableRegionsProcedure
           LOG.warn(msg);
           throw new MergeRegionException(msg);
         }
-        if (!force && !ri.isAdjacent(previous) && !ri.isOverlap(previous)) {
+        if (!force && !ri.isAdjacent(previous) && !ri.isOverlap(regions)) {
           String msg = "Unable to merge non-adjacent or non-overlapping regions " +
               previous.getShortNameToLog() + ", " + ri.getShortNameToLog() + " when force=false";
           LOG.warn(msg);
@@ -142,7 +142,7 @@ public class MergeTableRegionsProcedure
       }
 
       if (ri.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
-        throw new MergeRegionException("Can't merge non-default replicas; " + ri);
+        throw new MergeRegionException("Can't merge non-default/replicaId!=0 replicas; " + ri);
       }
       try {
         checkOnline(env, ri);
@@ -575,7 +575,7 @@ public class MergeTableRegionsProcedure
    */
   private void createMergedRegion(final MasterProcedureEnv env) throws IOException {
     final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
-    final Path tabledir = FSUtils.getTableDir(mfs.getRootDir(), regionsToMerge[0].getTable());
+    final Path tabledir = CommonFSUtils.getTableDir(mfs.getRootDir(), regionsToMerge[0].getTable());
     final FileSystem fs = mfs.getFileSystem();
     HRegionFileSystem mergeRegionFs = null;
     for (RegionInfo ri: this.regionsToMerge) {
@@ -624,7 +624,7 @@ public class MergeTableRegionsProcedure
   private void cleanupMergedRegion(final MasterProcedureEnv env) throws IOException {
     final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
     TableName tn = this.regionsToMerge[0].getTable();
-    final Path tabledir = FSUtils.getTableDir(mfs.getRootDir(), tn);
+    final Path tabledir = CommonFSUtils.getTableDir(mfs.getRootDir(), tn);
     final FileSystem fs = mfs.getFileSystem();
     // See createMergedRegion above where we specify the merge dir as being in the
     // FIRST merge parent region.

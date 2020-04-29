@@ -341,7 +341,7 @@ public class SyncTable extends Configured implements Tool {
         ImmutableBytesWritable stopRow) throws IOException, InterruptedException {
       Scan scan = sourceTableHash.initScan();
       scan.withStartRow(startRow.copyBytes());
-      scan.setStopRow(stopRow.copyBytes());
+      scan.withStopRow(stopRow.copyBytes());
 
       ResultScanner sourceScanner = sourceTable.getScanner(scan);
       CellScanner sourceCells = new CellScanner(sourceScanner.iterator());
@@ -683,9 +683,9 @@ public class SyncTable extends Configured implements Tool {
           Scan scan = sourceTableHash.initScan();
           scan.withStartRow(splitEndRow);
           if (nextSourceKey == null) {
-            scan.setStopRow(sourceTableHash.stopRow);
+            scan.withStopRow(sourceTableHash.stopRow);
           } else {
-            scan.setStopRow(nextSourceKey.copyBytes());
+            scan.withStopRow(nextSourceKey.copyBytes());
           }
 
           ResultScanner targetScanner = null;

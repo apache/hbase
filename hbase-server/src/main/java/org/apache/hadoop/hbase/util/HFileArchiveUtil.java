@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
@@ -77,10 +76,9 @@ public final class HFileArchiveUtil {
    * @return {@link Path} to the directory to archive the given store or <tt>null</tt> if it should
    *         not be archived
    */
-  public static Path getStoreArchivePath(Configuration conf,
-                                         RegionInfo region,
-      byte[] family) throws IOException {
-    Path rootDir = FSUtils.getRootDir(conf);
+  public static Path getStoreArchivePath(Configuration conf, RegionInfo region, byte[] family)
+    throws IOException {
+    Path rootDir = CommonFSUtils.getRootDir(conf);
     Path tableArchiveDir = getTableArchivePath(rootDir, region.getTable());
     return HStore.getStoreHomedir(tableArchiveDir, region, family);
   }
@@ -147,7 +145,7 @@ public final class HFileArchiveUtil {
    * @return {@link Path} to the archive directory for the table
    */
   public static Path getTableArchivePath(final Path rootdir, final TableName tableName) {
-    return FSUtils.getTableDir(getArchivePath(rootdir), tableName);
+    return CommonFSUtils.getTableDir(getArchivePath(rootdir), tableName);
   }
 
   /**
@@ -158,10 +156,9 @@ public final class HFileArchiveUtil {
    * @param tableName Name of the table to be archived. Cannot be null.
    * @return {@link Path} to the archive directory for the table
    */
-  public static Path getTableArchivePath(final Configuration conf,
-                                         final TableName tableName)
-      throws IOException {
-    return FSUtils.getTableDir(getArchivePath(conf), tableName);
+  public static Path getTableArchivePath(final Configuration conf, final TableName tableName)
+    throws IOException {
+    return CommonFSUtils.getTableDir(getArchivePath(conf), tableName);
   }
 
   /**
@@ -173,7 +170,7 @@ public final class HFileArchiveUtil {
    * @throws IOException if an unexpected error occurs
    */
   public static Path getArchivePath(Configuration conf) throws IOException {
-    return getArchivePath(FSUtils.getRootDir(conf));
+    return getArchivePath(CommonFSUtils.getRootDir(conf));
   }
 
   /**

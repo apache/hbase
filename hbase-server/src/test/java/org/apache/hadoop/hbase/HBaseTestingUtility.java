@@ -417,21 +417,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     createSubDir(
       "mapreduce.cluster.local.dir",
       testPath, "mapred-local-dir");
-
-    // Frustrate yarn's attempts at writing /tmp.
-    String property = "yarn.node-labels.fs-store.root-dir";
-    createSubDir(property, testPath, property);
-    property = "yarn.nodemanager.log-dirs";
-    createSubDir(property, testPath, property);
-    property = "yarn.nodemanager.remote-app-log-dir";
-    createSubDir(property, testPath, property);
-    property = "yarn.timeline-service.entity-group-fs-store.active-dir";
-    createSubDir(property, testPath, property);
-    property = "yarn.timeline-service.entity-group-fs-store.done-dir";
-    createSubDir(property, testPath, property);
-    property = "yarn.nodemanager.remote-app-log-dir";
-    createSubDir(property, testPath, property);
-
     return testPath;
   }
 
@@ -606,7 +591,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       return;
     }
     FileSystem fs = this.dfsCluster.getFileSystem();
-    FSUtils.setFsDefault(this.conf, new Path(fs.getUri()));
+    CommonFSUtils.setFsDefault(this.conf, new Path(fs.getUri()));
 
     // re-enable this check with dfs
     conf.unset(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE);
@@ -650,16 +635,24 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     return dfsCluster;
   }
 
-  /** This is used before starting HDFS and map-reduce mini-clusters */
+  /** This is used before starting HDFS and map-reduce mini-clusters
+   * Run something like the below to check for the likes of '/tmp' references -- i.e.
+   * references outside of the test data dir -- in the conf.
+   *     Configuration conf = TEST_UTIL.getConfiguration();
+   *     for (Iterator<Map.Entry<String, String>> i = conf.iterator(); i.hasNext();) {
+   *       Map.Entry<String, String> e = i.next();
+   *       assertFalse(e.getKey() + " " + e.getValue(), e.getValue().contains("/tmp"));
+   *     }
+   */
   private void createDirsAndSetProperties() throws IOException {
     setupClusterTestDir();
     conf.set(TEST_DIRECTORY_KEY, clusterTestDir.getPath());
     System.setProperty(TEST_DIRECTORY_KEY, clusterTestDir.getPath());
-    createDirAndSetProperty("cache_data", "test.cache.data");
-    createDirAndSetProperty("hadoop_tmp", "hadoop.tmp.dir");
-    hadoopLogDir = createDirAndSetProperty("hadoop_logs", "hadoop.log.dir");
-    createDirAndSetProperty("mapred_local", "mapreduce.cluster.local.dir");
-    createDirAndSetProperty("mapred_temp", "mapreduce.cluster.temp.dir");
+    createDirAndSetProperty("test.cache.data");
+    createDirAndSetProperty("hadoop.tmp.dir");
+    hadoopLogDir = createDirAndSetProperty("hadoop.log.dir");
+    createDirAndSetProperty("mapreduce.cluster.local.dir");
+    createDirAndSetProperty("mapreduce.cluster.temp.dir");
     enableShortCircuit();
 
     Path root = getDataTestDirOnTestFS("hadoop");
@@ -671,6 +664,23 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     conf.set("mapreduce.job.working.dir", new Path(root, "mapred-working-dir").toString());
     conf.set("yarn.app.mapreduce.am.staging-dir",
       new Path(root, "mapreduce-am-staging-root-dir").toString());
+
+    // Frustrate yarn's and hdfs's attempts at writing /tmp.
+    // Below is fragile. Make it so we just interpolate any 'tmp' reference.
+    createDirAndSetProperty("yarn.node-labels.fs-store.root-dir");
+    createDirAndSetProperty("yarn.nodemanager.log-dirs");
+    createDirAndSetProperty("yarn.nodemanager.remote-app-log-dir");
+    createDirAndSetProperty("yarn.timeline-service.entity-group-fs-store.active-dir");
+    createDirAndSetProperty("yarn.timeline-service.entity-group-fs-store.done-dir");
+    createDirAndSetProperty("yarn.nodemanager.remote-app-log-dir");
+    createDirAndSetProperty("dfs.journalnode.edits.dir");
+    createDirAndSetProperty("dfs.datanode.shared.file.descriptor.paths");
+    createDirAndSetProperty("nfs.dump.dir");
+    createDirAndSetProperty("java.io.tmpdir");
+    createDirAndSetProperty("java.io.tmpdir");
+    createDirAndSetProperty("dfs.journalnode.edits.dir");
+    createDirAndSetProperty("dfs.provided.aliasmap.inmemory.leveldb.dir");
+    createDirAndSetProperty("fs.s3a.committer.staging.tmp.path");
   }
 
   /**
@@ -719,6 +729,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     }
   }
 
+  private String createDirAndSetProperty(final String property) {
+    return createDirAndSetProperty(property, property);
+  }
+
   private String createDirAndSetProperty(final String relPath, String property) {
     String path = getDataTestDir(relPath).toString();
     System.setProperty(property, path);
@@ -739,7 +753,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       this.dfsCluster.shutdown();
       dfsCluster = null;
       dataTestDirOnTestFS = null;
-      FSUtils.setFsDefault(this.conf, new Path("file:///"));
+      CommonFSUtils.setFsDefault(this.conf, new Path("file:///"));
     }
   }
 
@@ -1354,7 +1368,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   public Path createRootDir(boolean create) throws IOException {
     FileSystem fs = FileSystem.get(this.conf);
     Path hbaseRootdir = getDefaultRootDirPath(create);
-    FSUtils.setRootDir(this.conf, hbaseRootdir);
+    CommonFSUtils.setRootDir(this.conf, hbaseRootdir);
     fs.mkdirs(hbaseRootdir);
     FSUtils.setVersion(fs, hbaseRootdir);
     return hbaseRootdir;
@@ -1382,7 +1396,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   public Path createWALRootDir() throws IOException {
     FileSystem fs = FileSystem.get(this.conf);
     Path walDir = getNewDataTestDirOnTestFS();
-    FSUtils.setWALRootDir(this.conf, walDir);
+    CommonFSUtils.setWALRootDir(this.conf, walDir);
     fs.mkdirs(walDir);
     return walDir;
   }

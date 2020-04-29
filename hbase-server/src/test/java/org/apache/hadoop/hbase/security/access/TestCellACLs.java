@@ -242,7 +242,7 @@ public class TestCellACLs extends SecureTestUtil {
       public List<Cell> run() throws Exception {
         Scan scan = new Scan();
         scan.withStartRow(TEST_ROW);
-        scan.setStopRow(Bytes.add(TEST_ROW, new byte[]{ 0 } ));
+        scan.withStopRow(Bytes.add(TEST_ROW, new byte[]{ 0 }));
         scan.addFamily(TEST_FAMILY);
         Connection connection = ConnectionFactory.createConnection(conf);
         Table t = connection.getTable(testTable.getTableName());

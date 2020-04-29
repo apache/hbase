@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
@@ -181,9 +182,10 @@ public class MasterProcedureTestingUtility {
       final RegionInfo[] regions, boolean hasFamilyDirs, String... family) throws IOException {
     // check filesystem
     final FileSystem fs = master.getMasterFileSystem().getFileSystem();
-    final Path tableDir = FSUtils.getTableDir(master.getMasterFileSystem().getRootDir(), tableName);
+    final Path tableDir =
+      CommonFSUtils.getTableDir(master.getMasterFileSystem().getRootDir(), tableName);
     assertTrue(fs.exists(tableDir));
-    FSUtils.logFileSystemState(fs, tableDir, LOG);
+    CommonFSUtils.logFileSystemState(fs, tableDir, LOG);
     List<Path> unwantedRegionDirs = FSUtils.getRegionDirs(fs, tableDir);
     for (int i = 0; i < regions.length; ++i) {
       Path regionDir = new Path(tableDir, regions[i].getEncodedName());
@@ -225,7 +227,8 @@ public class MasterProcedureTestingUtility {
       final HMaster master, final TableName tableName) throws IOException {
     // check filesystem
     final FileSystem fs = master.getMasterFileSystem().getFileSystem();
-    final Path tableDir = FSUtils.getTableDir(master.getMasterFileSystem().getRootDir(), tableName);
+    final Path tableDir =
+      CommonFSUtils.getTableDir(master.getMasterFileSystem().getRootDir(), tableName);
     assertFalse(fs.exists(tableDir));
 
     // check meta
@@ -304,8 +307,9 @@ public class MasterProcedureTestingUtility {
 
     // verify fs
     final FileSystem fs = master.getMasterFileSystem().getFileSystem();
-    final Path tableDir = FSUtils.getTableDir(master.getMasterFileSystem().getRootDir(), tableName);
-    for (Path regionDir: FSUtils.getRegionDirs(fs, tableDir)) {
+    final Path tableDir =
+      CommonFSUtils.getTableDir(master.getMasterFileSystem().getRootDir(), tableName);
+    for (Path regionDir : FSUtils.getRegionDirs(fs, tableDir)) {
       final Path familyDir = new Path(regionDir, family);
       assertFalse(family + " family dir should not exist", fs.exists(familyDir));
     }

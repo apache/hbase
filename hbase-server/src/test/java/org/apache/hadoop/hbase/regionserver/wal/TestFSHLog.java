@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
@@ -102,8 +102,8 @@ public class TestFSHLog extends AbstractTestFSWAL {
   public void testSyncRunnerIndexOverflow() throws IOException, NoSuchFieldException,
       SecurityException, IllegalArgumentException, IllegalAccessException {
     final String name = this.name.getMethodName();
-    FSHLog log = new FSHLog(FS, FSUtils.getRootDir(CONF), name, HConstants.HREGION_OLDLOGDIR_NAME,
-      CONF, null, true, null, null);
+    FSHLog log = new FSHLog(FS, CommonFSUtils.getRootDir(CONF), name,
+      HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null);
     log.init();
     try {
       Field ringBufferEventHandlerField = FSHLog.class.getDeclaredField("ringBufferEventHandler");
@@ -144,9 +144,8 @@ public class TestFSHLog extends AbstractTestFSWAL {
     final CountDownLatch flushFinished = new CountDownLatch(1);
     final CountDownLatch putFinished = new CountDownLatch(1);
 
-    try (FSHLog log =
-        new FSHLog(FS, FSUtils.getRootDir(CONF), name, HConstants.HREGION_OLDLOGDIR_NAME, CONF,
-            null, true, null, null)) {
+    try (FSHLog log = new FSHLog(FS, CommonFSUtils.getRootDir(CONF), name,
+      HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null)) {
       log.init();
       log.registerWALActionsListener(new WALActionsListener() {
         @Override

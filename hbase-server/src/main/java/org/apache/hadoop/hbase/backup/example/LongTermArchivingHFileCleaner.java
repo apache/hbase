@@ -18,14 +18,13 @@
 package org.apache.hadoop.hbase.backup.example;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -59,7 +58,7 @@ public class LongTermArchivingHFileCleaner extends BaseHFileCleanerDelegate {
       
       Path file = fStat.getPath();
       // check to see if
-      FileStatus[] deleteStatus = FSUtils.listStatus(this.fs, file, null);
+      FileStatus[] deleteStatus = CommonFSUtils.listStatus(this.fs, file, null);
       // if the file doesn't exist, then it can be deleted (but should never
       // happen since deleted files shouldn't get passed in)
       if (deleteStatus == null) {

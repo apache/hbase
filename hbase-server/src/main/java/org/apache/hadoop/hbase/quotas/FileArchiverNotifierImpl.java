@@ -33,7 +33,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -47,11 +46,11 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -201,7 +200,7 @@ public class FileArchiverNotifierImpl implements FileArchiverNotifier {
     }
 
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(
-        snapshotName, FSUtils.getRootDir(conf));
+        snapshotName, CommonFSUtils.getRootDir(conf));
     SnapshotDescription sd = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
     SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, sd);
     // For each region referenced by the snapshot
@@ -380,7 +379,7 @@ public class FileArchiverNotifierImpl implements FileArchiverNotifier {
    */
   List<SnapshotWithSize> computeSnapshotSizes(List<String> snapshots) throws IOException {
     final List<SnapshotWithSize> snapshotSizes = new ArrayList<>(snapshots.size());
-    final Path rootDir = FSUtils.getRootDir(conf);
+    final Path rootDir = CommonFSUtils.getRootDir(conf);
 
     // Get the map of store file names to store file path for this table
     final Set<String> tableReferencedStoreFiles;

@@ -178,11 +178,28 @@ average or summation for an entire table which spans hundreds of regions.
 
 In contrast to observer coprocessors, where your code is run transparently, endpoint
 coprocessors must be explicitly invoked using the
-link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html#coprocessorService-java.lang.Class-byte:A-byte:A-org.apache.hadoop.hbase.client.coprocessor.Batch.Call-[CoprocessorService()]
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/AsyncTable.html#coprocessorService-java.util.function.Function-org.apache.hadoop.hbase.client.ServiceCaller-byte:A-[CoprocessorService()]
 method available in
-link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html[Table]
-or
-link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/HTable.html[HTable].
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/AsyncTable.html[AsyncTable].
+
+[WARNING]
+.On using coprocessorService method with sync client
+====
+The coprocessorService method in link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html[Table]
+has been deprecated.
+
+In link:https://issues.apache.org/jira/browse/HBASE-21512[HBASE-21512]
+we reimplement the sync client based on the async client. The coprocessorService
+method defined in `Table` interface directly references a method from protobuf's
+`BlockingInterface`, which means we need to use a separate thread pool to execute
+the method so we avoid blocking the async client(We want to avoid blocking calls in
+our async implementation).
+
+Since coprocessor is an advanced feature, we believe it is OK for coprocessor users to
+instead switch over to use `AsyncTable`. There is a lightweight
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Connection.html#toAsyncConnection--[toAsyncConnection]
+method to get an `AsyncConnection` from `Connection` if needed.
+====
 
 Starting with HBase 0.96, endpoint coprocessors are implemented using Google Protocol
 Buffers (protobuf). For more details on protobuf, see Google's
@@ -192,6 +209,12 @@ See
 link:https://issues.apache.org/jira/browse/HBASE-5448[HBASE-5448]). To upgrade your
 HBase cluster from 0.94 or earlier to 0.96 or later, you need to reimplement your
 coprocessor.
+
+In HBase 2.x, we made use of a shaded version of protobuf 3.x, but kept the
+protobuf for coprocessors on 2.5.0. In HBase 3.0.0, we removed all dependencies on
+non-shaded protobuf so you need to reimplement your coprocessor to make use of the
+shaded protobuf version provided in hbase-thirdparty. Please see
+the <<protobuf,protobuf>> section for more details.
 
 Coprocessor Endpoints should make no use of HBase internals and
 only avail of public APIs; ideally a CPEP should depend on Interfaces

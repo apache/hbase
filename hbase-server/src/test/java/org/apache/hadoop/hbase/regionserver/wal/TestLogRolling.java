@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
@@ -494,13 +495,12 @@ public class TestLogRolling extends AbstractTestLogRolling {
 
       // read back the data written
       Set<String> loggedRows = new HashSet<>();
-      FSUtils fsUtils = FSUtils.getInstance(fs, TEST_UTIL.getConfiguration());
       for (Path p : paths) {
         LOG.debug("recovering lease for " + p);
-        fsUtils.recoverFileLease(((HFileSystem) fs).getBackingFs(), p, TEST_UTIL.getConfiguration(),
+        FSUtils.recoverFileLease(((HFileSystem) fs).getBackingFs(), p, TEST_UTIL.getConfiguration(),
           null);
 
-        LOG.debug("Reading WAL " + FSUtils.getPath(p));
+        LOG.debug("Reading WAL " + CommonFSUtils.getPath(p));
         WAL.Reader reader = null;
         try {
           reader = WALFactory.createReader(fs, p, TEST_UTIL.getConfiguration());
@@ -513,7 +513,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
             }
           }
         } catch (EOFException e) {
-          LOG.debug("EOF reading file " + FSUtils.getPath(p));
+          LOG.debug("EOF reading file " + CommonFSUtils.getPath(p));
         } finally {
           if (reader != null) reader.close();
         }

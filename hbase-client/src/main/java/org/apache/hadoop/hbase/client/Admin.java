@@ -66,6 +66,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
+
 /**
  * The administrative API for HBase. Obtain an instance from {@link Connection#getAdmin()} and
  * call {@link #close()} when done.
@@ -1064,7 +1066,28 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   default Collection<ServerName> getRegionServers() throws IOException {
-    return getClusterMetrics(EnumSet.of(Option.SERVERS_NAME)).getServersName();
+    return getRegionServers(false);
+  }
+
+  /**
+   * Retrieve all current live region servers including decommissioned
+   * if excludeDecommissionedRS is false, else non-decommissioned ones only
+   *
+   * @param excludeDecommissionedRS should we exclude decommissioned RS nodes
+   * @return all current live region servers including/excluding decommissioned hosts
+   * @throws IOException if a remote or network exception occurs
+   */
+  default Collection<ServerName> getRegionServers(boolean excludeDecommissionedRS)
+      throws IOException {
+    List<ServerName> allServers =
+      getClusterMetrics(EnumSet.of(Option.SERVERS_NAME)).getServersName();
+    if (!excludeDecommissionedRS) {
+      return allServers;
+    }
+    List<ServerName> decommissionedRegionServers = listDecommissionedRegionServers();
+    return allServers.stream()
+      .filter(s -> !decommissionedRegionServers.contains(s))
+      .collect(ImmutableList.toImmutableList());
   }
 
   /**

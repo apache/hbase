@@ -168,11 +168,6 @@
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-hadoop-compat</artifactId>
     </dependency>
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>${compat.module}</artifactId>
-      <version>${project.version}</version>
-    </dependency>
     <!--Below MR wanted by PE-->
     <dependency>
       <groupId>org.apache.hbase</groupId>
@@ -201,6 +196,22 @@
         <exclusion>
          <groupId>com.sun.jersey</groupId>
          <artifactId>jersey-core</artifactId>
+        </exclusion>
+        <exclusion>
+         <groupId>com.sun.jersey</groupId>
+         <artifactId>jersey-client</artifactId>
+        </exclusion>
+        <exclusion>
+         <groupId>com.sun.jersey</groupId>
+         <artifactId>jersey-server</artifactId>
+        </exclusion>
+        <exclusion>
+         <groupId>com.sun.jersey</groupId>
+         <artifactId>jersey-json</artifactId>
+        </exclusion>
+        <exclusion>
+         <groupId>com.sun.jersey.contribs</groupId>
+         <artifactId>jersey-guice</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -376,55 +387,10 @@
       </properties>
     </profile>
     <!-- Hadoop-specific dependencies -->
-    <!-- profile for building against Hadoop 2.0.x
-         This is the default.
-         -->
-    <profile>
-      <id>hadoop-2.0</id>
-      <activation>
-        <property>
-          <!--Below formatting for dev-support/generate-hadoopX-poms.sh-->
-          <!--h2-->
-          <name>!hadoop.profile</name>
-        </property>
-      </activation>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-core</artifactId>
-          <scope>test</scope>
-          <exclusions>
-            <exclusion>
-              <groupId>com.google.guava</groupId>
-              <artifactId>guava</artifactId>
-            </exclusion>
-          </exclusions>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-annotations</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-auth</artifactId>
-        </dependency>
-      </dependencies>
-    </profile>
-    <!--
-      profile for building against Hadoop 3.0.0. Activate using:
-       mvn -Dhadoop.profile=3.0
-    -->
     <profile>
       <id>hadoop-3.0</id>
       <activation>
-        <property>
-          <name>hadoop.profile</name>
-          <value>3.0</value>
-        </property>
+        <property><name>!hadoop.profile</name></property>
       </activation>
       <dependencyManagement>
         <dependencies>
@@ -475,6 +441,28 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-mapreduce-client-core</artifactId>
           <scope>test</scope>
+          <exclusions>
+            <exclusion>
+              <groupId>com.sun.jersey</groupId>
+              <artifactId>jersey-client</artifactId>
+            </exclusion>
+            <!--
+            Can't exclude this one; dependency on com.sun.xml package
+              included from here.
+            <exclusion>
+              <groupId>com.sun.jersey</groupId>
+              <artifactId>jersey-json</artifactId>
+            </exclusion>
+            -->
+            <exclusion>
+              <groupId>com.sun.jersey.contribs</groupId>
+              <artifactId>jersey-guice</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>com.sun.jersey</groupId>
+              <artifactId>jersey-server</artifactId>
+            </exclusion>
+          </exclusions>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>

@@ -124,7 +124,7 @@ public final class ExportUtils {
       s.withStartRow(Bytes.toBytesBinary(conf.get(TableInputFormat.SCAN_ROW_START)));
     }
     if (conf.get(TableInputFormat.SCAN_ROW_STOP) != null) {
-      s.setStopRow(Bytes.toBytesBinary(conf.get(TableInputFormat.SCAN_ROW_STOP)));
+      s.withStopRow(Bytes.toBytesBinary(conf.get(TableInputFormat.SCAN_ROW_STOP)));
     }
     // Set Scan Column Family
     boolean raw = Boolean.parseBoolean(conf.get(RAW_SCAN));

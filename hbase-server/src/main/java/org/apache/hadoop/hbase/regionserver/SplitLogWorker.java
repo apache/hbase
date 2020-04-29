@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerImpl;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -115,10 +116,11 @@ public class SplitLogWorker implements Runnable {
       Path remoteWALDirForPeer = ReplicationUtils.getPeerRemoteWALDir(remoteWALDir, peerId);
       Path tmpRemoteWAL = new Path(remoteWALDirForPeer, filename + ".tmp");
       FileSystem remoteFs = ReplicationUtils.getRemoteWALFileSystem(conf, remoteWALDir);
-      try (FSDataInputStream in = fs.open(walFile); @SuppressWarnings("deprecation")
-      FSDataOutputStream out = remoteFs.createNonRecursive(tmpRemoteWAL, true,
-        FSUtils.getDefaultBufferSize(remoteFs), remoteFs.getDefaultReplication(tmpRemoteWAL),
-        remoteFs.getDefaultBlockSize(tmpRemoteWAL), null)) {
+      try (FSDataInputStream in = fs.open(walFile);
+        FSDataOutputStream out = remoteFs.createNonRecursive(tmpRemoteWAL, true,
+          CommonFSUtils.getDefaultBufferSize(remoteFs),
+          remoteFs.getDefaultReplication(tmpRemoteWAL), remoteFs.getDefaultBlockSize(tmpRemoteWAL),
+          null)) {
         IOUtils.copy(in, out);
       }
       Path toCommitRemoteWAL =
@@ -157,7 +159,7 @@ public class SplitLogWorker implements Runnable {
     Path walDir;
     FileSystem fs;
     try {
-      walDir = FSUtils.getWALRootDir(conf);
+      walDir = CommonFSUtils.getWALRootDir(conf);
       fs = walDir.getFileSystem(conf);
     } catch (IOException e) {
       LOG.warn("could not find root dir or fs", e);

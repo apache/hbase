@@ -41,7 +41,7 @@ import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -111,7 +111,7 @@ public class TestWALRecordReader {
 
     hbaseDir = TEST_UTIL.createRootDir();
     walRootDir = TEST_UTIL.createWALRootDir();
-    walFs = FSUtils.getWALFileSystem(conf);
+    walFs = CommonFSUtils.getWALFileSystem(conf);
     logDir = new Path(walRootDir, HConstants.HREGION_LOGDIR_NAME);
   }
 
