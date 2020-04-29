@@ -142,7 +142,7 @@ public class TestMasterMetrics {
     metricsHelper.assertTag("clusterId", master.getClusterId(), masterSource);
     metricsHelper.assertTag("zookeeperQuorum", master.getZooKeeper().getQuorum(), masterSource);
 
-    metricsHelper.assertCounter("serverCrash", 2, masterSource);
+    metricsHelper.assertCounter(MetricsMasterSource.SERVER_CRASH_PREIX+"SubmittedCount", 2, masterSource);
   }
 
   @Test
