@@ -42,7 +42,9 @@ public class TestBindExceptionHandling {
         createBoundServer(true, false);
       assertNotNull(thriftServer.tserver);
     } finally {
-      thriftServer.stop();
+      if (thriftServer != null) {
+        thriftServer.stop();
+      }
     }
   }
 
@@ -57,7 +59,9 @@ public class TestBindExceptionHandling {
         createBoundServer(false, true);
       assertNotNull(thriftServer.tserver);
     } finally {
-      thriftServer.stop();
+      if (thriftServer != null) {
+        thriftServer.stop();
+      }
     }
   }
 }
