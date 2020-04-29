@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -204,15 +204,15 @@ public class TestSnapshotFromClient {
     UTIL.loadTable(table, TEST_FAM, false);
 
     LOG.debug("FS state before disable:");
-    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
-      FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
+    CommonFSUtils.logFileSystemState(UTIL.getTestFileSystem(),
+      CommonFSUtils.getRootDir(UTIL.getConfiguration()), LOG);
     // XXX if this is flakey, might want to consider using the async version and looping as
     // disableTable can succeed and still timeout.
     admin.disableTable(TABLE_NAME);
 
     LOG.debug("FS state before snapshot:");
-    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
-      FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
+    CommonFSUtils.logFileSystemState(UTIL.getTestFileSystem(),
+      CommonFSUtils.getRootDir(UTIL.getConfiguration()), LOG);
 
     // take a snapshot of the disabled table
     final String SNAPSHOT_NAME = "offlineTableSnapshot";
@@ -230,8 +230,8 @@ public class TestSnapshotFromClient {
     FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
     Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
     LOG.debug("FS state after snapshot:");
-    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
-      FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
+    CommonFSUtils.logFileSystemState(UTIL.getTestFileSystem(),
+      CommonFSUtils.getRootDir(UTIL.getConfiguration()), LOG);
     SnapshotTestingUtils.confirmSnapshotValid(
       ProtobufUtil.createHBaseProtosSnapshotDesc(snapshots.get(0)), TABLE_NAME, TEST_FAM,
       rootDir, admin, fs);
@@ -279,13 +279,13 @@ public class TestSnapshotFromClient {
     SnapshotTestingUtils.assertNoSnapshots(admin);
 
     LOG.debug("FS state before disable:");
-    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
-      FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
+    CommonFSUtils.logFileSystemState(UTIL.getTestFileSystem(),
+      CommonFSUtils.getRootDir(UTIL.getConfiguration()), LOG);
     admin.disableTable(TABLE_NAME);
 
     LOG.debug("FS state before snapshot:");
-    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
-      FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
+    CommonFSUtils.logFileSystemState(UTIL.getTestFileSystem(),
+      CommonFSUtils.getRootDir(UTIL.getConfiguration()), LOG);
 
     // take a snapshot of the disabled table
     String snapshot = "testOfflineTableSnapshotWithEmptyRegions";
@@ -300,8 +300,8 @@ public class TestSnapshotFromClient {
     FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
     Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
     LOG.debug("FS state after snapshot:");
-    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
-      FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
+    CommonFSUtils.logFileSystemState(UTIL.getTestFileSystem(),
+      CommonFSUtils.getRootDir(UTIL.getConfiguration()), LOG);
 
     List<byte[]> emptyCfs = Lists.newArrayList(TEST_FAM); // no file in the region
     List<byte[]> nonEmptyCfs = Lists.newArrayList();

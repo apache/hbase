@@ -55,7 +55,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.mapreduce.Job;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -281,14 +281,14 @@ public class TestVerifyReplication extends TestReplicationBase {
     runSmallBatchTest();
 
     // Take source and target tables snapshot
-    Path rootDir = FSUtils.getRootDir(CONF1);
+    Path rootDir = CommonFSUtils.getRootDir(CONF1);
     FileSystem fs = rootDir.getFileSystem(CONF1);
     String sourceSnapshotName = "sourceSnapshot-" + System.currentTimeMillis();
     SnapshotTestingUtils.createSnapshotAndValidate(UTIL1.getAdmin(), tableName,
       Bytes.toString(famName), sourceSnapshotName, rootDir, fs, true);
 
     // Take target snapshot
-    Path peerRootDir = FSUtils.getRootDir(CONF2);
+    Path peerRootDir = CommonFSUtils.getRootDir(CONF2);
     FileSystem peerFs = peerRootDir.getFileSystem(CONF2);
     String peerSnapshotName = "peerSnapshot-" + System.currentTimeMillis();
     SnapshotTestingUtils.createSnapshotAndValidate(UTIL2.getAdmin(), tableName,
@@ -301,7 +301,7 @@ public class TestVerifyReplication extends TestReplicationBase {
     String[] args = new String[] { "--sourceSnapshotName=" + sourceSnapshotName,
       "--sourceSnapshotTmpDir=" + tmpPath1, "--peerSnapshotName=" + peerSnapshotName,
       "--peerSnapshotTmpDir=" + tmpPath2, "--peerFSAddress=" + peerFSAddress,
-      "--peerHBaseRootAddress=" + FSUtils.getRootDir(CONF2), UTIL2.getClusterKey(),
+      "--peerHBaseRootAddress=" + CommonFSUtils.getRootDir(CONF2), UTIL2.getClusterKey(),
       tableName.getNameAsString() };
     runVerifyReplication(args, NB_ROWS_IN_BATCH, 0);
     checkRestoreTmpDir(CONF1, tmpPath1, 1);
@@ -331,7 +331,7 @@ public class TestVerifyReplication extends TestReplicationBase {
     args = new String[] { "--sourceSnapshotName=" + sourceSnapshotName,
       "--sourceSnapshotTmpDir=" + tmpPath1, "--peerSnapshotName=" + peerSnapshotName,
       "--peerSnapshotTmpDir=" + tmpPath2, "--peerFSAddress=" + peerFSAddress,
-      "--peerHBaseRootAddress=" + FSUtils.getRootDir(CONF2), UTIL2.getClusterKey(),
+      "--peerHBaseRootAddress=" + CommonFSUtils.getRootDir(CONF2), UTIL2.getClusterKey(),
       tableName.getNameAsString() };
     runVerifyReplication(args, 0, NB_ROWS_IN_BATCH);
     checkRestoreTmpDir(CONF1, tmpPath1, 2);
@@ -386,14 +386,14 @@ public class TestVerifyReplication extends TestReplicationBase {
     runBatchCopyTest();
 
     // Take source and target tables snapshot
-    Path rootDir = FSUtils.getRootDir(CONF1);
+    Path rootDir = CommonFSUtils.getRootDir(CONF1);
     FileSystem fs = rootDir.getFileSystem(CONF1);
     String sourceSnapshotName = "sourceSnapshot-" + System.currentTimeMillis();
     SnapshotTestingUtils.createSnapshotAndValidate(UTIL1.getAdmin(), tableName,
             Bytes.toString(noRepfamName), sourceSnapshotName, rootDir, fs, true);
 
     // Take target snapshot
-    Path peerRootDir = FSUtils.getRootDir(CONF2);
+    Path peerRootDir = CommonFSUtils.getRootDir(CONF2);
     FileSystem peerFs = peerRootDir.getFileSystem(CONF2);
     String peerSnapshotName = "peerSnapshot-" + System.currentTimeMillis();
     SnapshotTestingUtils.createSnapshotAndValidate(UTIL2.getAdmin(), peerTableName,
@@ -407,7 +407,7 @@ public class TestVerifyReplication extends TestReplicationBase {
       "--sourceSnapshotName=" + sourceSnapshotName,
       "--sourceSnapshotTmpDir=" + tmpPath1, "--peerSnapshotName=" + peerSnapshotName,
       "--peerSnapshotTmpDir=" + tmpPath2, "--peerFSAddress=" + peerFSAddress,
-      "--peerHBaseRootAddress=" + FSUtils.getRootDir(CONF2), UTIL2.getClusterKey(),
+      "--peerHBaseRootAddress=" + CommonFSUtils.getRootDir(CONF2), UTIL2.getClusterKey(),
       tableName.getNameAsString() };
     runVerifyReplication(args, NB_ROWS_IN_BATCH, 0);
     checkRestoreTmpDir(CONF1, tmpPath1, 1);
@@ -438,7 +438,7 @@ public class TestVerifyReplication extends TestReplicationBase {
       "--sourceSnapshotName=" + sourceSnapshotName,
       "--sourceSnapshotTmpDir=" + tmpPath1, "--peerSnapshotName=" + peerSnapshotName,
       "--peerSnapshotTmpDir=" + tmpPath2, "--peerFSAddress=" + peerFSAddress,
-      "--peerHBaseRootAddress=" + FSUtils.getRootDir(CONF2), UTIL2.getClusterKey(),
+      "--peerHBaseRootAddress=" + CommonFSUtils.getRootDir(CONF2), UTIL2.getClusterKey(),
       tableName.getNameAsString() };
     runVerifyReplication(args, 0, NB_ROWS_IN_BATCH);
     checkRestoreTmpDir(CONF1, tmpPath1, 2);

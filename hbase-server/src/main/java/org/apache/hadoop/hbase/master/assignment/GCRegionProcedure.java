@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -90,14 +90,14 @@ public class GCRegionProcedure extends AbstractStateMachineRegionProcedure<GCReg
           }
           FileSystem walFs = mfs.getWALFileSystem();
           // Cleanup the directories on WAL filesystem also
-          Path regionWALDir = FSUtils.getWALRegionDir(env.getMasterConfiguration(),
+          Path regionWALDir = CommonFSUtils.getWALRegionDir(env.getMasterConfiguration(),
             getRegion().getTable(), getRegion().getEncodedName());
           if (walFs.exists(regionWALDir)) {
             if (!walFs.delete(regionWALDir, true)) {
               LOG.debug("Failed to delete {}", regionWALDir);
             }
           }
-          Path wrongRegionWALDir = FSUtils.getWrongWALRegionDir(env.getMasterConfiguration(),
+          Path wrongRegionWALDir = CommonFSUtils.getWrongWALRegionDir(env.getMasterConfiguration(),
             getRegion().getTable(), getRegion().getEncodedName());
           if (walFs.exists(wrongRegionWALDir)) {
             if (!walFs.delete(wrongRegionWALDir, true)) {

@@ -140,7 +140,7 @@ public class ReplaySyncReplicationWALCallable implements RSProcedureCallable {
     Path path = new Path(rs.getWALRootDir(), wal);
     long length = rs.getWALFileSystem().getFileStatus(path).getLen();
     try {
-      FSUtils.getInstance(fs, conf).recoverFileLease(fs, path, conf);
+      FSUtils.recoverFileLease(fs, path, conf);
       return WALFactory.createReader(rs.getWALFileSystem(), path, rs.getConfiguration());
     } catch (EOFException e) {
       if (length <= 0) {

@@ -84,19 +84,20 @@ public class TestFSTableDescriptors {
   @Test
   public void testCreateAndUpdate() throws IOException {
     Path testdir = UTIL.getDataTestDir(name.getMethodName());
-    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
+    TableDescriptor htd =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     FSTableDescriptors fstd = new FSTableDescriptors(fs, testdir);
     assertTrue(fstd.createTableDescriptor(htd));
     assertFalse(fstd.createTableDescriptor(htd));
-    FileStatus [] statuses = fs.listStatus(testdir);
-    assertTrue("statuses.length="+statuses.length, statuses.length == 1);
+    FileStatus[] statuses = fs.listStatus(testdir);
+    assertTrue("statuses.length=" + statuses.length, statuses.length == 1);
     for (int i = 0; i < 10; i++) {
       fstd.updateTableDescriptor(htd);
     }
     statuses = fs.listStatus(testdir);
     assertTrue(statuses.length == 1);
-    Path tmpTableDir = new Path(FSUtils.getTableDir(testdir, htd.getTableName()), ".tmp");
+    Path tmpTableDir = new Path(CommonFSUtils.getTableDir(testdir, htd.getTableName()), ".tmp");
     statuses = fs.listStatus(tmpTableDir);
     assertTrue(statuses.length == 0);
   }
@@ -104,7 +105,8 @@ public class TestFSTableDescriptors {
   @Test
   public void testSequenceIdAdvancesOnTableInfo() throws IOException {
     Path testdir = UTIL.getDataTestDir(name.getMethodName());
-    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
+    TableDescriptor htd =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     FSTableDescriptors fstd = new FSTableDescriptors(fs, testdir);
     Path p0 = fstd.updateTableDescriptor(htd);
@@ -432,7 +434,7 @@ public class TestFSTableDescriptors {
   public void testReadingInvalidDirectoryFromFS() throws IOException {
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     try {
-      new FSTableDescriptors(fs, FSUtils.getRootDir(UTIL.getConfiguration()))
+      new FSTableDescriptors(fs, CommonFSUtils.getRootDir(UTIL.getConfiguration()))
           .get(TableName.valueOf(HConstants.HBASE_TEMP_DIRECTORY));
       fail("Shouldn't be able to read a table descriptor for the archive directory.");
     } catch (Exception e) {

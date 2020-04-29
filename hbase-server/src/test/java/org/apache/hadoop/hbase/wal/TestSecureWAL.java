@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -93,7 +93,7 @@ public class TestSecureWAL {
     conf.setClass("hbase.regionserver.hlog.async.writer.impl", SecureAsyncProtobufLogWriter.class,
       WALProvider.AsyncWriter.class);
     conf.setBoolean(HConstants.ENABLE_WAL_ENCRYPTION, true);
-    FSUtils.setRootDir(conf, TEST_UTIL.getDataTestDirOnTestFS());
+    CommonFSUtils.setRootDir(conf, TEST_UTIL.getDataTestDirOnTestFS());
     TEST_UTIL.startMiniDFSCluster(3);
   }
 

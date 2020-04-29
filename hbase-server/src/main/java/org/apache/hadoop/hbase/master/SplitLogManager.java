@@ -35,7 +35,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -52,13 +51,14 @@ import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -173,7 +173,7 @@ public class SplitLogManager {
         LOG.warn(logDir + " doesn't exist. Nothing to do!");
         continue;
       }
-      FileStatus[] logfiles = FSUtils.listStatus(fs, logDir, filter);
+      FileStatus[] logfiles = CommonFSUtils.listStatus(fs, logDir, filter);
       if (logfiles == null || logfiles.length == 0) {
         LOG.info("{} dir is empty, no logs to split.", logDir);
       } else {
@@ -254,7 +254,7 @@ public class SplitLogManager {
         // recover-lease is done. totalSize will be under in most cases and the
         // metrics that it drives will also be under-reported.
         totalSize += lf.getLen();
-        String pathToLog = FSUtils.removeWALRootPath(lf.getPath(), conf);
+        String pathToLog = CommonFSUtils.removeWALRootPath(lf.getPath(), conf);
         if (!enqueueSplitTask(pathToLog, batch)) {
           throw new IOException("duplicate log split scheduled for " + lf.getPath());
         }

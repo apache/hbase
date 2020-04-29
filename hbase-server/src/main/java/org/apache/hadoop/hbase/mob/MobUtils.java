@@ -31,7 +31,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -62,11 +61,12 @@ import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSetMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.SetMultimap;
 
@@ -282,7 +282,7 @@ public final class MobUtils {
     LOG.info("MOB HFiles older than " + expireDate.toGMTString() + " will be deleted!");
 
     FileStatus[] stats = null;
-    Path mobTableDir = FSUtils.getTableDir(getMobHome(conf), tableName);
+    Path mobTableDir = CommonFSUtils.getTableDir(getMobHome(conf), tableName);
     Path path = getMobFamilyPath(conf, tableName, columnDescriptor.getNameAsString());
     try {
       stats = fs.listStatus(path);
@@ -369,7 +369,7 @@ public final class MobUtils {
    * @return The table dir of the mob file.
    */
   public static Path getMobTableDir(Path rootDir, TableName tableName) {
-    return FSUtils.getTableDir(getMobHome(rootDir), tableName);
+    return CommonFSUtils.getTableDir(getMobHome(rootDir), tableName);
   }
 
   /**
@@ -391,7 +391,7 @@ public final class MobUtils {
    * @return The region dir of the mob files.
    */
   public static Path getMobRegionPath(Path rootDir, TableName tableName) {
-    Path tablePath = FSUtils.getTableDir(getMobHome(rootDir), tableName);
+    Path tablePath = CommonFSUtils.getTableDir(getMobHome(rootDir), tableName);
     RegionInfo regionInfo = getMobRegionInfo(tableName);
     return new Path(tablePath, regionInfo.getEncodedName());
   }

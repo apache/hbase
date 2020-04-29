@@ -41,7 +41,6 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_YARN_
 import java.io.IOException;
 import java.net.URI;
 import java.util.Objects;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -49,7 +48,7 @@ import org.apache.hadoop.hbase.backup.BackupRestoreConstants.BackupCommand;
 import org.apache.hadoop.hbase.backup.impl.BackupCommands;
 import org.apache.hadoop.hbase.backup.impl.BackupManager;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
@@ -179,9 +178,9 @@ public class BackupDriver extends AbstractHBaseTool {
 
   public static void main(String[] args) throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    Path hbasedir = FSUtils.getRootDir(conf);
+    Path hbasedir = CommonFSUtils.getRootDir(conf);
     URI defaultFs = hbasedir.getFileSystem(conf).getUri();
-    FSUtils.setFsDefault(conf, new Path(defaultFs));
+    CommonFSUtils.setFsDefault(conf, new Path(defaultFs));
     int ret = ToolRunner.run(conf, new BackupDriver(), args);
     System.exit(ret);
   }

@@ -26,7 +26,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -271,7 +270,7 @@ public class CompactionTool extends Configured implements Tool {
      */
     private static String[] getStoreDirHosts(final FileSystem fs, final Path path)
         throws IOException {
-      FileStatus[] files = FSUtils.listStatus(fs, path);
+      FileStatus[] files = CommonFSUtils.listStatus(fs, path);
       if (files == null) {
         return new String[] {};
       }
