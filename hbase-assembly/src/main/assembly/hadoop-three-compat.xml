@@ -41,7 +41,6 @@
         <include>org.apache.hbase:hbase-examples</include>
         <include>org.apache.hbase:hbase-external-blockcache</include>
         <include>org.apache.hbase:hbase-hadoop-compat</include>
-        <include>org.apache.hbase:hbase-hadoop2-compat</include>
         <include>org.apache.hbase:hbase-http</include>
         <include>org.apache.hbase:hbase-it</include>
         <include>org.apache.hbase:hbase-mapreduce</include>
