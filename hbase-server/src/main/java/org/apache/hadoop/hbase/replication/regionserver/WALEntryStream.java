@@ -383,10 +383,8 @@ class WALEntryStream implements Closeable {
   // For HBASE-15019
   private void recoverLease(final Configuration conf, final Path path) {
     try {
-
       final FileSystem dfs = CommonFSUtils.getWALFileSystem(conf);
-      FSUtils fsUtils = FSUtils.getInstance(dfs, conf);
-      fsUtils.recoverFileLease(dfs, path, conf, new CancelableProgressable() {
+      FSUtils.recoverFileLease(dfs, path, conf, new CancelableProgressable() {
         @Override
         public boolean progress() {
           LOG.debug("recover WAL lease: " + path);

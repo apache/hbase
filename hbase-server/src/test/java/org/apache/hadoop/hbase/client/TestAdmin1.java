@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.ClassRule;
@@ -489,7 +489,7 @@ public class TestAdmin1 extends TestAdminBase {
         for (HStoreFile sf : store.getStorefiles()) {
           assertTrue(sf.toString().contains(fn));
           assertTrue("Column family " + fn + " should have 3 copies",
-            FSUtils.getDefaultReplication(TEST_UTIL.getTestFileSystem(),
+            CommonFSUtils.getDefaultReplication(TEST_UTIL.getTestFileSystem(),
               sf.getPath()) == (sf.getFileInfo().getFileStatus().getReplication()));
         }
 

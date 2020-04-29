@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.util.Progressable;
 import org.junit.ClassRule;
@@ -146,13 +147,13 @@ public class TestHRegionFileSystem {
       // there should be 3 files in store dir
       FileSystem fs = TEST_UTIL.getDFSCluster().getFileSystem();
       Path storePath = regionFs.getStoreDir(Bytes.toString(FAMILIES[0]));
-      FileStatus[] storeFiles = FSUtils.listStatus(fs, storePath);
+      FileStatus[] storeFiles = CommonFSUtils.listStatus(fs, storePath);
       assertNotNull(storeFiles);
       assertEquals(3, storeFiles.length);
       // store temp dir still exists but empty
       Path storeTempDir = new Path(regionFs.getTempDir(), Bytes.toString(FAMILIES[0]));
       assertTrue(fs.exists(storeTempDir));
-      FileStatus[] tempFiles = FSUtils.listStatus(fs, storeTempDir);
+      FileStatus[] tempFiles = CommonFSUtils.listStatus(fs, storeTempDir);
       assertNull(tempFiles);
       // storage policy of cf temp dir and 3 store files should be ONE_SSD
       assertEquals("ONE_SSD",
@@ -182,7 +183,7 @@ public class TestHRegionFileSystem {
 
   private HRegionFileSystem getHRegionFS(HTable table, Configuration conf) throws IOException {
     FileSystem fs = TEST_UTIL.getDFSCluster().getFileSystem();
-    Path tableDir = FSUtils.getTableDir(TEST_UTIL.getDefaultRootDirPath(), table.getName());
+    Path tableDir = CommonFSUtils.getTableDir(TEST_UTIL.getDefaultRootDirPath(), table.getName());
     List<Path> regionDirs = FSUtils.getRegionDirs(fs, tableDir);
     assertEquals(1, regionDirs.size());
     List<Path> familyDirs = FSUtils.getFamilyDirs(fs, regionDirs.get(0));
@@ -201,7 +202,7 @@ public class TestHRegionFileSystem {
     // Create a Region
     RegionInfo hri = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs,
-        FSUtils.getTableDir(rootDir, hri.getTable()), hri);
+      CommonFSUtils.getTableDir(rootDir, hri.getTable()), hri);
 
     // Verify if the region is on disk
     Path regionDir = regionFs.getRegionDir();
@@ -213,12 +214,12 @@ public class TestHRegionFileSystem {
 
     // Open the region
     regionFs = HRegionFileSystem.openRegionFromFileSystem(conf, fs,
-        FSUtils.getTableDir(rootDir, hri.getTable()), hri, false);
+      CommonFSUtils.getTableDir(rootDir, hri.getTable()), hri, false);
     assertEquals(regionDir, regionFs.getRegionDir());
 
     // Delete the region
     HRegionFileSystem.deleteRegionFromFileSystem(conf, fs,
-        FSUtils.getTableDir(rootDir, hri.getTable()), hri);
+      CommonFSUtils.getTableDir(rootDir, hri.getTable()), hri);
     assertFalse("The region folder should be removed", fs.exists(regionDir));
 
     fs.delete(rootDir, true);

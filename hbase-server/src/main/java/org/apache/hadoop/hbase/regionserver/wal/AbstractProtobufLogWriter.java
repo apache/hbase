@@ -25,17 +25,12 @@ import java.io.OutputStream;
 import java.security.Key;
 import java.security.SecureRandom;
 import java.util.concurrent.atomic.AtomicLong;
-
 import javax.crypto.spec.SecretKeySpec;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
@@ -43,12 +38,17 @@ import org.apache.hadoop.hbase.io.crypto.Encryptor;
 import org.apache.hadoop.hbase.io.util.LRUDictionary;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALHeader;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALTrailer;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.CommonFSUtils.StreamLacksCapabilityException;
 import org.apache.hadoop.hbase.util.EncryptionTest;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALHeader;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALTrailer;
 
 /**
  * Base class for Protobuf log writer.
@@ -144,8 +144,8 @@ public abstract class AbstractProtobufLogWriter {
     boolean doCompress = conf.getBoolean(HConstants.ENABLE_WAL_COMPRESSION, false);
     if (doCompress) {
       try {
-        this.compressionContext = new CompressionContext(LRUDictionary.class,
-            FSUtils.isRecoveredEdits(path),
+        this.compressionContext =
+          new CompressionContext(LRUDictionary.class, CommonFSUtils.isRecoveredEdits(path),
             conf.getBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, true));
       } catch (Exception e) {
         throw new IOException("Failed to initiate CompressionContext", e);
@@ -159,9 +159,9 @@ public abstract class AbstractProtobufLogWriter {
     this.conf = conf;
     boolean doCompress = initializeCompressionContext(conf, path);
     this.trailerWarnSize = conf.getInt(WAL_TRAILER_WARN_SIZE, DEFAULT_WAL_TRAILER_WARN_SIZE);
-    int bufferSize = FSUtils.getDefaultBufferSize(fs);
+    int bufferSize = CommonFSUtils.getDefaultBufferSize(fs);
     short replication = (short) conf.getInt("hbase.regionserver.hlog.replication",
-      FSUtils.getDefaultReplication(fs, path));
+      CommonFSUtils.getDefaultReplication(fs, path));
 
     initOutput(fs, path, overwritable, bufferSize, replication, blocksize);
 

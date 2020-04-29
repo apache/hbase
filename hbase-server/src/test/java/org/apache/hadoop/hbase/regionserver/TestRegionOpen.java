@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -117,7 +117,7 @@ public class TestRegionOpen {
     HRegionInfo hri = new HRegionInfo(htd.getTableName(),  Bytes.toBytes("A"), Bytes.toBytes("B"), false,
         System.currentTimeMillis(), 2);
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs,
-        FSUtils.getTableDir(rootDir, hri.getTable()), hri);
+      CommonFSUtils.getTableDir(rootDir, hri.getTable()), hri);
     Path regionDir = regionFs.getRegionDir();
     try {
       HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);

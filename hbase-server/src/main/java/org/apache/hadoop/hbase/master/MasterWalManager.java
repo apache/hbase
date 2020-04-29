@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -188,7 +189,7 @@ public class MasterWalManager {
    */
   public FileStatus[] getWALDirPaths(final PathFilter filter) throws IOException {
     Path walDirPath = new Path(CommonFSUtils.getWALRootDir(conf), HConstants.HREGION_LOGDIR_NAME);
-    FileStatus[] walDirForServerNames = FSUtils.listStatus(fs, walDirPath, filter);
+    FileStatus[] walDirForServerNames = CommonFSUtils.listStatus(fs, walDirPath, filter);
     return walDirForServerNames == null? new FileStatus[0]: walDirForServerNames;
   }
 
@@ -215,7 +216,7 @@ public class MasterWalManager {
       }
       try {
         if (!this.fs.exists(logsDirPath)) return serverNames;
-        FileStatus[] logFolders = FSUtils.listStatus(this.fs, logsDirPath, null);
+        FileStatus[] logFolders = CommonFSUtils.listStatus(this.fs, logsDirPath, null);
         // Get online servers after getting log folders to avoid log folder deletion of newly
         // checked in region servers . see HBASE-5916
         Set<ServerName> onlineServers = services.getServerManager().getOnlineServers().keySet();
@@ -225,7 +226,7 @@ public class MasterWalManager {
           return serverNames;
         }
         for (FileStatus status : logFolders) {
-          FileStatus[] curLogFiles = FSUtils.listStatus(this.fs, status.getPath(), null);
+          FileStatus[] curLogFiles = CommonFSUtils.listStatus(this.fs, status.getPath(), null);
           if (curLogFiles == null || curLogFiles.length == 0) {
             // Empty log folder. No recovery needed
             continue;
@@ -372,13 +373,13 @@ public class MasterWalManager {
           AbstractFSWALProvider.getWALDirectoryName(serverName.toString()));
       Path splitDir = logDir.suffix(AbstractFSWALProvider.SPLITTING_EXT);
       if (fs.exists(splitDir)) {
-        FileStatus[] logfiles = FSUtils.listStatus(fs, splitDir, META_FILTER);
+        FileStatus[] logfiles = CommonFSUtils.listStatus(fs, splitDir, META_FILTER);
         if (logfiles != null) {
           for (FileStatus status : logfiles) {
             if (!status.isDir()) {
               Path newPath = AbstractFSWAL.getWALArchivePath(this.oldLogDir,
                   status.getPath());
-              if (!FSUtils.renameAndSetModifyTime(fs, status.getPath(), newPath)) {
+              if (!CommonFSUtils.renameAndSetModifyTime(fs, status.getPath(), newPath)) {
                 LOG.warn("Unable to move  " + status.getPath() + " to " + newPath);
               } else {
                 LOG.debug("Archived meta log " + status.getPath() + " to " + newPath);

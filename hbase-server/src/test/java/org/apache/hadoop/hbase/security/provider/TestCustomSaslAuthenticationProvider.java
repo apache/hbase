@@ -22,6 +22,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.io.ByteArrayInputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
@@ -85,7 +86,7 @@ import org.apache.hadoop.hbase.security.token.TokenProvider;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
@@ -108,7 +109,9 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation;
 
 /**
@@ -442,7 +445,7 @@ public class TestCustomSaslAuthenticationProvider {
         TokenProvider.class.getName());
     util.startMiniDFSCluster(1);
     Path rootdir = util.getDataTestDirOnTestFS("TestGenerateDelegationToken");
-    FSUtils.setRootDir(util.getConfiguration(), rootdir);
+    CommonFSUtils.setRootDir(util.getConfiguration(), rootdir);
   }
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();

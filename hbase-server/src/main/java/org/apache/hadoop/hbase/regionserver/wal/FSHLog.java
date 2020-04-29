@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.FSHLogProvider;
@@ -212,7 +212,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
       final boolean failIfWALExists, final String prefix, final String suffix) throws IOException {
     super(fs, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix, suffix);
     this.minTolerableReplication = conf.getInt("hbase.regionserver.hlog.tolerable.lowreplication",
-      FSUtils.getDefaultReplication(fs, this.walDir));
+      CommonFSUtils.getDefaultReplication(fs, this.walDir));
     this.lowReplicationRollLimit = conf.getInt("hbase.regionserver.hlog.lowreplication.rolllimit",
       5);
     this.closeErrorsTolerated = conf.getInt("hbase.regionserver.logroll.errors.tolerated", 2);
@@ -422,7 +422,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     }
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Closing WAL writer in " + FSUtils.getPath(walDir));
+      LOG.debug("Closing WAL writer in " + CommonFSUtils.getPath(walDir));
     }
     if (this.writer != null) {
       this.writer.close();

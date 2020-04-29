@@ -21,7 +21,8 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.NavigableMap;
-
+import junit.framework.AssertionFailedError;
+import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -35,14 +36,11 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionAsTable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import junit.framework.AssertionFailedError;
-import junit.framework.TestCase;
 
 /**
  * Abstract HBase test class.  Initializes a few things that can come in handly
@@ -117,7 +115,7 @@ public abstract class HBaseTestCase extends TestCase {
           fs.delete(testDir, true);
         }
       } else {
-        testDir = FSUtils.getRootDir(conf);
+        testDir = CommonFSUtils.getRootDir(conf);
       }
     } catch (Exception e) {
       LOG.error(HBaseMarkers.FATAL, "error during setup", e);

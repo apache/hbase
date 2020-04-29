@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -193,7 +194,7 @@ public class WALSplitter {
       Configuration conf, CancelableProgressable reporter, LastSequenceId idChecker,
       SplitLogWorkerCoordination splitLogWorkerCoordination, WALFactory factory,
       RegionServerServices rsServices) throws IOException {
-    Path rootDir = FSUtils.getRootDir(conf);
+    Path rootDir = CommonFSUtils.getRootDir(conf);
     FileSystem rootFS = rootDir.getFileSystem(conf);
     WALSplitter s = new WALSplitter(factory, conf, walDir, walFS, rootDir, rootFS, idChecker,
         splitLogWorkerCoordination, rsServices);
@@ -207,7 +208,7 @@ public class WALSplitter {
   @VisibleForTesting
   public static List<Path> split(Path walDir, Path logDir, Path oldLogDir, FileSystem walFS,
       Configuration conf, final WALFactory factory) throws IOException {
-    Path rootDir = FSUtils.getRootDir(conf);
+    Path rootDir = CommonFSUtils.getRootDir(conf);
     FileSystem rootFS = rootDir.getFileSystem(conf);
     final FileStatus[] logfiles =
         SplitLogManager.getFileList(conf, Collections.singletonList(logDir), null);
@@ -392,7 +393,7 @@ public class WALSplitter {
     }
 
     try {
-      FSUtils.getInstance(walFS, conf).recoverFileLease(walFS, path, conf, reporter);
+      FSUtils.recoverFileLease(walFS, path, conf, reporter);
       try {
         in = getReader(path, reporter);
       } catch (EOFException e) {

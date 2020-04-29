@@ -136,21 +136,21 @@ public class TestHFileArchiving {
   @Test
   public void testArchiveStoreFilesDifferentFileSystemsWallWithSchemaPlainRoot() throws Exception {
     String walDir = "mockFS://mockFSAuthority:9876/mockDir/wals/";
-    String baseDir = FSUtils.getRootDir(UTIL.getConfiguration()).toString() + "/";
+    String baseDir = CommonFSUtils.getRootDir(UTIL.getConfiguration()).toString() + "/";
     testArchiveStoreFilesDifferentFileSystems(walDir, baseDir,
       HFileArchiver::archiveStoreFiles);
   }
 
   @Test
   public void testArchiveStoreFilesDifferentFileSystemsWallNullPlainRoot() throws Exception {
-    String baseDir = FSUtils.getRootDir(UTIL.getConfiguration()).toString() + "/";
+    String baseDir = CommonFSUtils.getRootDir(UTIL.getConfiguration()).toString() + "/";
     testArchiveStoreFilesDifferentFileSystems(null, baseDir,
       HFileArchiver::archiveStoreFiles);
   }
 
   @Test
   public void testArchiveStoreFilesDifferentFileSystemsWallAndRootSame() throws Exception {
-    String baseDir = FSUtils.getRootDir(UTIL.getConfiguration()).toString() + "/";
+    String baseDir = CommonFSUtils.getRootDir(UTIL.getConfiguration()).toString() + "/";
     testArchiveStoreFilesDifferentFileSystems("/hbase/wals/", baseDir,
       HFileArchiver::archiveStoreFiles);
   }
@@ -217,7 +217,7 @@ public class TestHFileArchiving {
 
   @Test(expected = IOException.class)
   public void testArchiveRecoveredEditsWrongFS() throws Exception {
-    String baseDir = FSUtils.getRootDir(UTIL.getConfiguration()).toString() + "/";
+    String baseDir = CommonFSUtils.getRootDir(UTIL.getConfiguration()).toString() + "/";
     //Internally, testArchiveStoreFilesDifferentFileSystems will pass a "mockedFS"
     // to HFileArchiver.archiveRecoveredEdits, but since wal-dir is supposedly on same FS
     // as root dir it would lead to conflicting FSes and an IOException is expected.
@@ -306,9 +306,9 @@ public class TestHFileArchiving {
     FileSystem fs = region.getRegionFileSystem().getFileSystem();
 
     // make sure there are some files in the regiondir
-    Path rootDir = FSUtils.getRootDir(fs.getConf());
+    Path rootDir = CommonFSUtils.getRootDir(fs.getConf());
     Path regionDir = FSUtils.getRegionDirFromRootDir(rootDir, region.getRegionInfo());
-    FileStatus[] regionFiles = FSUtils.listStatus(fs, regionDir, null);
+    FileStatus[] regionFiles = CommonFSUtils.listStatus(fs, regionDir, null);
     Assert.assertNotNull("No files in the region directory", regionFiles);
     if (LOG.isDebugEnabled()) {
       List<Path> files = new ArrayList<>();
@@ -325,7 +325,7 @@ public class TestHFileArchiving {
         return dirFilter.accept(file) && !file.getName().toString().startsWith(".");
       }
     };
-    FileStatus[] storeDirs = FSUtils.listStatus(fs, regionDir, nonHidden);
+    FileStatus[] storeDirs = CommonFSUtils.listStatus(fs, regionDir, nonHidden);
     for (FileStatus store : storeDirs) {
       LOG.debug("Deleting store for test");
       fs.delete(store.getPath(), true);
@@ -371,8 +371,8 @@ public class TestHFileArchiving {
     FileSystem fs = UTIL.getTestFileSystem();
 
     // now attempt to depose the regions
-    Path rootDir = FSUtils.getRootDir(UTIL.getConfiguration());
-    Path tableDir = FSUtils.getTableDir(rootDir, regions.get(0).getRegionInfo().getTable());
+    Path rootDir = CommonFSUtils.getRootDir(UTIL.getConfiguration());
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, regions.get(0).getRegionInfo().getTable());
     List<Path> regionDirList = regions.stream()
       .map(region -> FSUtils.getRegionDirFromTableDir(tableDir, region.getRegionInfo()))
       .collect(Collectors.toList());
@@ -409,8 +409,8 @@ public class TestHFileArchiving {
     List<HRegion> regions = initTableForArchivingRegions(tableName);
 
     // now attempt to depose the regions
-    Path rootDir = FSUtils.getRootDir(UTIL.getConfiguration());
-    Path tableDir = FSUtils.getTableDir(rootDir, regions.get(0).getRegionInfo().getTable());
+    Path rootDir = CommonFSUtils.getRootDir(UTIL.getConfiguration());
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, regions.get(0).getRegionInfo().getTable());
     List<Path> regionDirList = regions.stream()
       .map(region -> FSUtils.getRegionDirFromTableDir(tableDir, region.getRegionInfo()))
       .collect(Collectors.toList());
@@ -571,7 +571,7 @@ public class TestHFileArchiving {
     FileSystem fs = UTIL.getTestFileSystem();
 
     Path archiveDir = new Path(rootDir, HConstants.HFILE_ARCHIVE_DIRECTORY);
-    Path regionDir = new Path(FSUtils.getTableDir(new Path("./"),
+    Path regionDir = new Path(CommonFSUtils.getTableDir(new Path("./"),
         TableName.valueOf(name.getMethodName())), "abcdef");
     Path familyDir = new Path(regionDir, "cf");
 
@@ -634,7 +634,7 @@ public class TestHFileArchiving {
 
   @Test
   public void testArchiveRegionWithTableDirNull() throws IOException {
-    Path regionDir = new Path(FSUtils.getTableDir(new Path("./"),
+    Path regionDir = new Path(CommonFSUtils.getTableDir(new Path("./"),
             TableName.valueOf(name.getMethodName())), "xyzabc");
     Path familyDir = new Path(regionDir, "rd");
     Path rootDir = UTIL.getDataTestDirOnTestFS("testCleaningRace");
@@ -651,7 +651,7 @@ public class TestHFileArchiving {
 
   @Test
   public void testArchiveRegionWithRegionDirNull() throws IOException {
-    Path regionDir = new Path(FSUtils.getTableDir(new Path("./"),
+    Path regionDir = new Path(CommonFSUtils.getTableDir(new Path("./"),
             TableName.valueOf(name.getMethodName())), "elgn4nf");
     Path familyDir = new Path(regionDir, "rdar");
     Path rootDir = UTIL.getDataTestDirOnTestFS("testCleaningRace");
@@ -681,7 +681,7 @@ public class TestHFileArchiving {
    * @throws IOException
    */
   private List<String> getAllFileNames(final FileSystem fs, Path archiveDir) throws IOException {
-    FileStatus[] files = FSUtils.listStatus(fs, archiveDir, new PathFilter() {
+    FileStatus[] files = CommonFSUtils.listStatus(fs, archiveDir, new PathFilter() {
       @Override
       public boolean accept(Path p) {
         if (p.getName().contains(HConstants.RECOVERED_EDITS_DIR)) {
@@ -695,13 +695,15 @@ public class TestHFileArchiving {
 
   /** Recursively lookup all the file names under the file[] array **/
   private List<String> recurseOnFiles(FileSystem fs, FileStatus[] files, List<String> fileNames)
-      throws IOException {
+    throws IOException {
     if (files == null || files.length == 0) return fileNames;
 
     for (FileStatus file : files) {
       if (file.isDirectory()) {
-        recurseOnFiles(fs, FSUtils.listStatus(fs, file.getPath(), null), fileNames);
-      } else fileNames.add(file.getPath().getName());
+        recurseOnFiles(fs, CommonFSUtils.listStatus(fs, file.getPath(), null), fileNames);
+      } else {
+        fileNames.add(file.getPath().getName());
+      }
     }
     return fileNames;
   }

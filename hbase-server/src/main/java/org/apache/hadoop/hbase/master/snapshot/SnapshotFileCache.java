@@ -34,7 +34,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
@@ -109,9 +109,9 @@ public class SnapshotFileCache implements Stoppable {
    * @throws IOException if the {@link FileSystem} or root directory cannot be loaded
    */
   public SnapshotFileCache(Configuration conf, long cacheRefreshPeriod, String refreshThreadName,
-      SnapshotFileInspector inspectSnapshotFiles) throws IOException {
-    this(FSUtils.getCurrentFileSystem(conf), FSUtils.getRootDir(conf), 0, cacheRefreshPeriod,
-      refreshThreadName, inspectSnapshotFiles);
+    SnapshotFileInspector inspectSnapshotFiles) throws IOException {
+    this(CommonFSUtils.getCurrentFileSystem(conf), CommonFSUtils.getRootDir(conf), 0,
+      cacheRefreshPeriod, refreshThreadName, inspectSnapshotFiles);
   }
 
   /**
@@ -212,7 +212,7 @@ public class SnapshotFileCache implements Stoppable {
     // just list the snapshot directory directly, do not check the modification time for the root
     // snapshot directory, as some file system implementations do not modify the parent directory's
     // modTime when there are new sub items, for example, S3.
-    FileStatus[] snapshotDirs = FSUtils.listStatus(fs, snapshotDir,
+    FileStatus[] snapshotDirs = CommonFSUtils.listStatus(fs, snapshotDir,
       p -> !p.getName().equals(SnapshotDescriptionUtils.SNAPSHOT_TMP_DIR_NAME));
 
     // clear the cache, as in the below code, either we will also clear the snapshots, or we will

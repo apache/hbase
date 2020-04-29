@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -44,8 +44,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Test that the snapshot hfile cleaner finds hfiles referenced in a snapshot
@@ -57,7 +55,6 @@ public class TestSnapshotHFileCleaner {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestSnapshotHFileCleaner.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotFileCache.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final String TABLE_NAME_STR = "testSnapshotManifest";
   private static final String SNAPSHOT_NAME_STR = "testSnapshotManifest-snapshot";
@@ -73,7 +70,7 @@ public class TestSnapshotHFileCleaner {
   @BeforeClass
   public static void setup() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
-    rootDir = FSUtils.getRootDir(conf);
+    rootDir = CommonFSUtils.getRootDir(conf);
     fs = FileSystem.get(conf);
   }
 
@@ -87,8 +84,8 @@ public class TestSnapshotHFileCleaner {
   @Test
   public void testFindsSnapshotFilesWhenCleaning() throws IOException {
     Configuration conf = TEST_UTIL.getConfiguration();
-    FSUtils.setRootDir(conf, TEST_UTIL.getDataTestDir());
-    Path rootDir = FSUtils.getRootDir(conf);
+    CommonFSUtils.setRootDir(conf, TEST_UTIL.getDataTestDir());
+    Path rootDir = CommonFSUtils.getRootDir(conf);
     Path archivedHfileDir = new Path(TEST_UTIL.getDataTestDir(), HConstants.HFILE_ARCHIVE_DIRECTORY);
 
     FileSystem fs = FileSystem.get(conf);

@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.AfterClass;
@@ -81,9 +81,9 @@ public class TestHFileLinkCleaner {
   @Test
   public void testHFileLinkCleaning() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
-    FSUtils.setRootDir(conf, TEST_UTIL.getDataTestDir());
+    CommonFSUtils.setRootDir(conf, TEST_UTIL.getDataTestDir());
     conf.set(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS, HFileLinkCleaner.class.getName());
-    Path rootDir = FSUtils.getRootDir(conf);
+    Path rootDir = CommonFSUtils.getRootDir(conf);
     FileSystem fs = FileSystem.get(conf);
 
     final TableName tableName = TableName.valueOf(name.getMethodName());
@@ -127,8 +127,8 @@ public class TestHFileLinkCleaner {
     assertTrue(fs.exists(hfilePath));
 
     // Link backref can be removed
-    fs.rename(FSUtils.getTableDir(rootDir, tableLinkName),
-        FSUtils.getTableDir(archiveDir, tableLinkName));
+    fs.rename(CommonFSUtils.getTableDir(rootDir, tableLinkName),
+      CommonFSUtils.getTableDir(archiveDir, tableLinkName));
     cleaner.chore();
     assertFalse("Link should be deleted", fs.exists(linkBackRef));
 
@@ -142,13 +142,15 @@ public class TestHFileLinkCleaner {
       Thread.sleep(ttl * 2);
       cleaner.chore();
     }
-    assertFalse("HFile should be deleted", fs.exists(FSUtils.getTableDir(archiveDir, tableName)));
-    assertFalse("Link should be deleted", fs.exists(FSUtils.getTableDir(archiveDir, tableLinkName)));
+    assertFalse("HFile should be deleted",
+      fs.exists(CommonFSUtils.getTableDir(archiveDir, tableName)));
+    assertFalse("Link should be deleted",
+      fs.exists(CommonFSUtils.getTableDir(archiveDir, tableLinkName)));
   }
 
-  private static Path getFamilyDirPath (final Path rootDir, final TableName table,
+  private static Path getFamilyDirPath(final Path rootDir, final TableName table,
     final String region, final String family) {
-    return new Path(new Path(FSUtils.getTableDir(rootDir, table), region), family);
+    return new Path(new Path(CommonFSUtils.getTableDir(rootDir, table), region), family);
   }
 
   static class DummyServer implements Server {

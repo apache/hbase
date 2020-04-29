@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.snapshot;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -35,7 +36,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils.SnapshotMock;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -179,16 +180,16 @@ public class TestSnapshotFileCache {
       assertFalse("Cache didn't find " + path, contains(getNonSnapshotFiles(cache, path), path));
     }
 
-    FSUtils.logFileSystemState(fs, rootDir, LOG);
+    CommonFSUtils.logFileSystemState(fs, rootDir, LOG);
     if (removeOnExit) {
       LOG.debug("Deleting snapshot.");
       fs.delete(builder.getSnapshotsDir(), true);
-      FSUtils.logFileSystemState(fs, rootDir, LOG);
+      CommonFSUtils.logFileSystemState(fs, rootDir, LOG);
 
       // then trigger a refresh
       cache.triggerCacheRefreshForTesting();
       // and not it shouldn't find those files
-      for (Path filePath: files) {
+      for (Path filePath : files) {
         assertTrue("Cache found '" + filePath + "', but it shouldn't have.",
           contains(getNonSnapshotFiles(cache, filePath), filePath));
 
@@ -207,9 +208,8 @@ public class TestSnapshotFileCache {
   }
 
   private static Iterable<FileStatus> getNonSnapshotFiles(SnapshotFileCache cache, Path storeFile)
-      throws IOException {
+    throws IOException {
     return cache.getUnreferencedFiles(
-        Arrays.asList(FSUtils.listStatus(fs, storeFile.getParent())), null
-    );
+      Arrays.asList(CommonFSUtils.listStatus(fs, storeFile.getParent())), null);
   }
 }

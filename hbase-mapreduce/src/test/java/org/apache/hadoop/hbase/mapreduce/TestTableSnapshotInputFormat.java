@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -325,7 +325,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       admin.split(tableName, Bytes.toBytes("eee"));
       TestTableSnapshotScanner.blockUntilSplitFinished(UTIL, tableName, 2);
 
-      Path rootDir = FSUtils.getRootDir(UTIL.getConfiguration());
+      Path rootDir = CommonFSUtils.getRootDir(UTIL.getConfiguration());
       FileSystem fs = rootDir.getFileSystem(UTIL.getConfiguration());
 
       SnapshotTestingUtils.createSnapshotAndValidate(admin, tableName, Arrays.asList(FAMILIES),

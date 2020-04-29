@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -141,8 +141,8 @@ public class TestBlockReorderMultiBlocks {
 
     // Now we need to find the log file, its locations, and look at it
 
-    String rootDir = new Path(FSUtils.getWALRootDir(conf) + "/" + HConstants.HREGION_LOGDIR_NAME +
-            "/" + targetRs.getServerName().toString()).toUri().getPath();
+    String rootDir = new Path(CommonFSUtils.getWALRootDir(conf) + "/" +
+      HConstants.HREGION_LOGDIR_NAME + "/" + targetRs.getServerName().toString()).toUri().getPath();
 
     DistributedFileSystem mdfs = (DistributedFileSystem)
         hbm.getMaster().getMasterFileSystem().getFileSystem();

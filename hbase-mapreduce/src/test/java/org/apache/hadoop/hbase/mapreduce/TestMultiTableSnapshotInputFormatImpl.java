@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
 
@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -77,13 +77,13 @@ public class TestMultiTableSnapshotInputFormatImpl {
 
     this.conf = new Configuration();
     this.rootDir = new Path("file:///test-root-dir");
-    FSUtils.setRootDir(conf, rootDir);
+    CommonFSUtils.setRootDir(conf, rootDir);
     this.snapshotScans = ImmutableMap.<String, Collection<Scan>>of("snapshot1",
         ImmutableList.of(new Scan(Bytes.toBytes("1"), Bytes.toBytes("2"))), "snapshot2",
         ImmutableList.of(new Scan(Bytes.toBytes("3"), Bytes.toBytes("4")),
             new Scan(Bytes.toBytes("5"), Bytes.toBytes("6"))));
 
-    this.restoreDir = new Path(FSUtils.getRootDir(conf), "restore-dir");
+    this.restoreDir = new Path(CommonFSUtils.getRootDir(conf), "restore-dir");
 
   }
 

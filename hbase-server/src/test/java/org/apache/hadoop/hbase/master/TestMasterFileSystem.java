@@ -22,7 +22,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.util.List;
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -33,7 +32,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveTestingUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -76,8 +75,8 @@ public class TestMasterFileSystem {
   public void testFsUriSetProperly() throws Exception {
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
     MasterFileSystem fs = master.getMasterFileSystem();
-    Path masterRoot = FSUtils.getRootDir(fs.getConfiguration());
-    Path rootDir = FSUtils.getRootDir(fs.getFileSystem().getConf());
+    Path masterRoot = CommonFSUtils.getRootDir(fs.getConfiguration());
+    Path rootDir = CommonFSUtils.getRootDir(fs.getFileSystem().getConf());
     // make sure the fs and the found root dir have the same scheme
     LOG.debug("from fs uri:" + FileSystem.getDefaultUri(fs.getFileSystem().getConf()));
     LOG.debug("from configuration uri:" + FileSystem.getDefaultUri(fs.getConfiguration()));
@@ -111,9 +110,9 @@ public class TestMasterFileSystem {
     // disable the table so that we can manipulate the files
     UTIL.getAdmin().disableTable(tableName);
 
-    final Path tableDir = FSUtils.getTableDir(masterFileSystem.getRootDir(), tableName);
+    final Path tableDir = CommonFSUtils.getTableDir(masterFileSystem.getRootDir(), tableName);
     final Path tempDir = masterFileSystem.getTempDir();
-    final Path tempTableDir = FSUtils.getTableDir(tempDir, tableName);
+    final Path tempTableDir = CommonFSUtils.getTableDir(tempDir, tableName);
     final FileSystem fs = masterFileSystem.getFileSystem();
 
     // move the table to the temporary directory
