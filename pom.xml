@@ -2893,6 +2893,10 @@
                <artifactId>netty</artifactId>
              </exclusion>
               <exclusion>
+                <groupId>javax.servlet</groupId>
+                <artifactId>servlet-api</artifactId>
+              </exclusion>
+              <exclusion>
                 <groupId>javax.inject</groupId>
                 <artifactId>javax.inject</artifactId>
               </exclusion>
@@ -2923,6 +2927,10 @@
                <groupId>io.netty</groupId>
                <artifactId>netty</artifactId>
              </exclusion>
+              <exclusion>
+                <groupId>javax.servlet</groupId>
+                <artifactId>servlet-api</artifactId>
+              </exclusion>
            </exclusions>
          </dependency>
          <dependency>
@@ -2940,6 +2948,10 @@
                <groupId>io.netty</groupId>
                <artifactId>netty</artifactId>
              </exclusion>
+              <exclusion>
+                <groupId>javax.servlet</groupId>
+                <artifactId>servlet-api</artifactId>
+              </exclusion>
            </exclusions>
          </dependency>
          <dependency>
