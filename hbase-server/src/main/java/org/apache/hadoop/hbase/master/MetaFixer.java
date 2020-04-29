@@ -219,7 +219,7 @@ class MetaFixer {
       RegionInfo [] regionsArray = regions.toArray(new RegionInfo [] {});
       try {
         this.masterServices.mergeRegions(regionsArray,
-            false, HConstants.NO_NONCE, HConstants.NO_NONCE);
+            true, HConstants.NO_NONCE, HConstants.NO_NONCE);
       } catch (MergeRegionException mre) {
         LOG.warn("Failed overlap fix of {}", regionsArray, mre);
       }
