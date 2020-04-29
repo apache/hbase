@@ -30,7 +30,6 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.ScheduledReporter;
 import com.codahale.metrics.Snapshot;
 import com.codahale.metrics.Timer;
-
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.IOException;
@@ -47,7 +46,6 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -73,11 +71,10 @@ import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
@@ -210,8 +207,8 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       String regionName = cmd.getOptionValue("r");
       byte[] rn = Bytes.toBytes(regionName);
       byte[][] hri = HRegionInfo.parseRegionName(rn);
-      Path rootDir = FSUtils.getRootDir(getConf());
-      Path tableDir = FSUtils.getTableDir(rootDir, TableName.valueOf(hri[0]));
+      Path rootDir = CommonFSUtils.getRootDir(getConf());
+      Path tableDir = CommonFSUtils.getTableDir(rootDir, TableName.valueOf(hri[0]));
       String enc = HRegionInfo.encodeRegionName(rn);
       Path regionDir = new Path(tableDir, enc);
       if (verbose)
@@ -253,9 +250,10 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       throw new RuntimeException("A Configuration instance must be provided.");
     }
     try {
-      FSUtils.setFsDefault(getConf(), FSUtils.getRootDir(getConf()));
-      if (!parseOptions(args))
+      CommonFSUtils.setFsDefault(getConf(), CommonFSUtils.getRootDir(getConf()));
+      if (!parseOptions(args)) {
         return 1;
+      }
     } catch (IOException ex) {
       LOG.error("Error parsing command-line options", ex);
       return 1;
@@ -291,7 +289,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     }
 
     if (checkRootDir) {
-      Path rootPath = FSUtils.getRootDir(getConf());
+      Path rootPath = CommonFSUtils.getRootDir(getConf());
       String rootString = rootPath + rootPath.SEPARATOR;
       if (!file.toString().startsWith(rootString)) {
         // First we see if fully-qualified URI matches the root dir. It might

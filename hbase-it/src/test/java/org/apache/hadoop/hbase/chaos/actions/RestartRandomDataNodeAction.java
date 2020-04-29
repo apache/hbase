@@ -21,10 +21,9 @@ package org.apache.hadoop.hbase.chaos.actions;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -50,7 +49,7 @@ public class RestartRandomDataNodeAction extends RestartActionBaseAction {
   }
 
   public ServerName[] getDataNodes() throws IOException {
-    DistributedFileSystem fs = (DistributedFileSystem) FSUtils.getRootDir(getConf())
+    DistributedFileSystem fs = (DistributedFileSystem) CommonFSUtils.getRootDir(getConf())
         .getFileSystem(getConf());
     DFSClient dfsClient = fs.getClient();
     List<ServerName> hosts = new LinkedList<>();

@@ -19,10 +19,9 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -55,7 +54,7 @@ public class RestartActiveNameNodeAction extends RestartActionBaseAction {
   @Override
   public void perform() throws Exception {
     LOG.info("Performing action: Restart active namenode");
-    Configuration conf = FSUtils.getRootDir(getConf()).getFileSystem(getConf()).getConf();
+    Configuration conf = CommonFSUtils.getRootDir(getConf()).getFileSystem(getConf()).getConf();
     String nameServiceID = DFSUtil.getNamenodeNameServiceId(conf);
     if (!HAUtil.isHAEnabled(conf, nameServiceID)) {
       throw new Exception("HA for namenode is not enabled");

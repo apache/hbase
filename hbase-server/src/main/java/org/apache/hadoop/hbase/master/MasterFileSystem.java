@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -43,6 +42,7 @@ import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.security.access.SnapshotScannerHDFSAclHelper;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.ipc.RemoteException;
@@ -107,16 +107,16 @@ public class MasterFileSystem {
     // mismatched filesystems if hbase.rootdir is hdfs and fs.defaultFS is
     // default localfs.  Presumption is that rootdir is fully-qualified before
     // we get to here with appropriate fs scheme.
-    this.rootdir = FSUtils.getRootDir(conf);
+    this.rootdir = CommonFSUtils.getRootDir(conf);
     this.tempdir = new Path(this.rootdir, HConstants.HBASE_TEMP_DIRECTORY);
     // Cover both bases, the old way of setting default fs and the new.
     // We're supposed to run on 0.20 and 0.21 anyways.
     this.fs = this.rootdir.getFileSystem(conf);
-    this.walRootDir = FSUtils.getWALRootDir(conf);
-    this.walFs = FSUtils.getWALFileSystem(conf);
-    FSUtils.setFsDefault(conf, new Path(this.walFs.getUri()));
+    this.walRootDir = CommonFSUtils.getWALRootDir(conf);
+    this.walFs = CommonFSUtils.getWALFileSystem(conf);
+    CommonFSUtils.setFsDefault(conf, new Path(this.walFs.getUri()));
     walFs.setConf(conf);
-    FSUtils.setFsDefault(conf, new Path(this.fs.getUri()));
+    CommonFSUtils.setFsDefault(conf, new Path(this.fs.getUri()));
     // make sure the fs has the same conf
     fs.setConf(conf);
     this.secureRootSubDirPerms = new FsPermission(conf.get("hbase.rootdir.perms", "700"));
@@ -443,7 +443,7 @@ public class MasterFileSystem {
   public void deleteFamilyFromFS(Path rootDir, RegionInfo region, byte[] familyName)
       throws IOException {
     // archive family store files
-    Path tableDir = FSUtils.getTableDir(rootDir, region.getTable());
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, region.getTable());
     HFileArchiver.archiveFamily(fs, conf, region, tableDir, familyName);
 
     // delete the family folder
@@ -463,6 +463,6 @@ public class MasterFileSystem {
   }
 
   public void logFileSystemState(Logger log) throws IOException {
-    FSUtils.logFileSystemState(fs, rootdir, log);
+    CommonFSUtils.logFileSystemState(fs, rootdir, log);
   }
 }

@@ -401,7 +401,7 @@ public class HBaseFsck extends Configured implements Closeable {
    */
   @VisibleForTesting
   public static Path getTmpDir(Configuration conf) throws IOException {
-    return new Path(FSUtils.getRootDir(conf), HConstants.HBASE_TEMP_DIRECTORY);
+    return new Path(CommonFSUtils.getRootDir(conf), HConstants.HBASE_TEMP_DIRECTORY);
   }
 
   private static class FileLockCallable implements Callable<FSDataOutputStream> {
@@ -424,9 +424,9 @@ public class HBaseFsck extends Configured implements Closeable {
     @Override
     public FSDataOutputStream call() throws IOException {
       try {
-        FileSystem fs = FSUtils.getCurrentFileSystem(this.conf);
-        FsPermission defaultPerms = FSUtils.getFilePermissions(fs, this.conf,
-            HConstants.DATA_FILE_UMASK_KEY);
+        FileSystem fs = CommonFSUtils.getCurrentFileSystem(this.conf);
+        FsPermission defaultPerms =
+          CommonFSUtils.getFilePermissions(fs, this.conf, HConstants.DATA_FILE_UMASK_KEY);
         Path tmpDir = getTmpDir(conf);
         this.hbckLockPath = new Path(tmpDir, HBCK_LOCK_FILE);
         fs.mkdirs(tmpDir);
@@ -453,7 +453,7 @@ public class HBaseFsck extends Configured implements Closeable {
       IOException exception = null;
       do {
         try {
-          return FSUtils.create(fs, hbckLockFilePath, defaultPerms, false);
+          return CommonFSUtils.create(fs, hbckLockFilePath, defaultPerms, false);
         } catch (IOException ioe) {
           LOG.info("Failed to create lock file " + hbckLockFilePath.getName()
               + ", try=" + (retryCounter.getAttemptTimes() + 1) + " of "
@@ -513,7 +513,7 @@ public class HBaseFsck extends Configured implements Closeable {
       do {
         try {
           IOUtils.closeQuietly(hbckOutFd);
-          FSUtils.delete(FSUtils.getCurrentFileSystem(getConf()), HBCK_LOCK_PATH, true);
+          CommonFSUtils.delete(CommonFSUtils.getCurrentFileSystem(getConf()), HBCK_LOCK_PATH, true);
           LOG.info("Finishing hbck");
           return;
         } catch (IOException ioe) {
@@ -892,9 +892,9 @@ public class HBaseFsck extends Configured implements Closeable {
       List<RegionInfo> regions = MetaTableAccessor.getAllRegions(connection, true);
       final RegionBoundariesInformation currentRegionBoundariesInformation =
           new RegionBoundariesInformation();
-      Path hbaseRoot = FSUtils.getRootDir(getConf());
+      Path hbaseRoot = CommonFSUtils.getRootDir(getConf());
       for (RegionInfo regionInfo : regions) {
-        Path tableDir = FSUtils.getTableDir(hbaseRoot, regionInfo.getTable());
+        Path tableDir = CommonFSUtils.getTableDir(hbaseRoot, regionInfo.getTable());
         currentRegionBoundariesInformation.regionName = regionInfo.getRegionName();
         // For each region, get the start and stop key from the META and compare them to the
         // same information from the Stores.
@@ -1131,7 +1131,7 @@ public class HBaseFsck extends Configured implements Closeable {
   private void offlineReferenceFileRepair() throws IOException, InterruptedException {
     clearState();
     Configuration conf = getConf();
-    Path hbaseRoot = FSUtils.getRootDir(conf);
+    Path hbaseRoot = CommonFSUtils.getRootDir(conf);
     FileSystem fs = hbaseRoot.getFileSystem(conf);
     LOG.info("Computing mapping of all store files");
     Map<String, Path> allFiles = FSUtils.getTableStoreFilePathMap(fs, hbaseRoot,
@@ -1184,7 +1184,7 @@ public class HBaseFsck extends Configured implements Closeable {
    */
   private void offlineHLinkFileRepair() throws IOException, InterruptedException {
     Configuration conf = getConf();
-    Path hbaseRoot = FSUtils.getRootDir(conf);
+    Path hbaseRoot = CommonFSUtils.getRootDir(conf);
     FileSystem fs = hbaseRoot.getFileSystem(conf);
     LOG.info("Computing mapping of all link files");
     Map<String, Path> allFiles = FSUtils
@@ -1313,7 +1313,7 @@ public class HBaseFsck extends Configured implements Closeable {
       }
     }
 
-    Path hbaseRoot = FSUtils.getRootDir(getConf());
+    Path hbaseRoot = CommonFSUtils.getRootDir(getConf());
     FileSystem fs = hbaseRoot.getFileSystem(getConf());
     // serialized table info gathering.
     for (HbckRegionInfo hbi: hbckRegionInfos) {
@@ -1512,7 +1512,7 @@ public class HBaseFsck extends Configured implements Closeable {
 
   Path getSidelineDir() throws IOException {
     if (sidelineDir == null) {
-      Path hbaseDir = FSUtils.getRootDir(getConf());
+      Path hbaseDir = CommonFSUtils.getRootDir(getConf());
       Path hbckDir = new Path(hbaseDir, HConstants.HBCK_SIDELINEDIR_NAME);
       sidelineDir = new Path(hbckDir, hbaseDir.getName() + "-"
           + startMillis);
@@ -1549,7 +1549,7 @@ public class HBaseFsck extends Configured implements Closeable {
     if (parentDir != null) {
       rootDir = new Path(rootDir, parentDir);
     }
-    Path sidelineTableDir= FSUtils.getTableDir(rootDir, tableName);
+    Path sidelineTableDir= CommonFSUtils.getTableDir(rootDir, tableName);
     Path sidelineRegionDir = new Path(sidelineTableDir, regionDir.getName());
     fs.mkdirs(sidelineRegionDir);
     boolean success = false;
@@ -1635,7 +1635,7 @@ public class HBaseFsck extends Configured implements Closeable {
    * regionInfoMap
    */
   public void loadHdfsRegionDirs() throws IOException, InterruptedException {
-    Path rootDir = FSUtils.getRootDir(getConf());
+    Path rootDir = CommonFSUtils.getRootDir(getConf());
     FileSystem fs = rootDir.getFileSystem(getConf());
 
     // list all tables from HDFS
@@ -1645,7 +1645,7 @@ public class HBaseFsck extends Configured implements Closeable {
 
     List<Path> paths = FSUtils.getTableDirs(fs, rootDir);
     for (Path path : paths) {
-      TableName tableName = FSUtils.getTableName(path);
+      TableName tableName = CommonFSUtils.getTableName(path);
        if ((!checkMetaOnly &&
            isTableIncluded(tableName)) ||
            tableName.equals(TableName.META_TABLE_NAME)) {
@@ -1939,7 +1939,7 @@ public class HBaseFsck extends Configured implements Closeable {
       return;
     }
 
-    Path hbaseDir = FSUtils.getRootDir(getConf());
+    Path hbaseDir = CommonFSUtils.getRootDir(getConf());
     FileSystem fs = hbaseDir.getFileSystem(getConf());
     UserProvider userProvider = UserProvider.instantiate(getConf());
     UserGroupInformation ugi = userProvider.getCurrent().getUGI();
@@ -3604,9 +3604,9 @@ public class HBaseFsck extends Configured implements Closeable {
   public static void main(String[] args) throws Exception {
     // create a fsck object
     Configuration conf = HBaseConfiguration.create();
-    Path hbasedir = FSUtils.getRootDir(conf);
+    Path hbasedir = CommonFSUtils.getRootDir(conf);
     URI defaultFs = hbasedir.getFileSystem(conf).getUri();
-    FSUtils.setFsDefault(conf, new Path(defaultFs));
+    CommonFSUtils.setFsDefault(conf, new Path(defaultFs));
     int ret = ToolRunner.run(new HBaseFsckTool(conf), args);
     System.exit(ret);
   }
@@ -3811,13 +3811,13 @@ public class HBaseFsck extends Configured implements Closeable {
         setHFileCorruptionChecker(hfcc); // so we can get result
         Collection<TableName> tables = getIncludedTables();
         Collection<Path> tableDirs = new ArrayList<>();
-        Path rootdir = FSUtils.getRootDir(getConf());
+        Path rootdir = CommonFSUtils.getRootDir(getConf());
         if (tables.size() > 0) {
           for (TableName t : tables) {
-            tableDirs.add(FSUtils.getTableDir(rootdir, t));
+            tableDirs.add(CommonFSUtils.getTableDir(rootdir, t));
           }
         } else {
-          tableDirs = FSUtils.getTableDirs(FSUtils.getCurrentFileSystem(getConf()), rootdir);
+          tableDirs = FSUtils.getTableDirs(CommonFSUtils.getCurrentFileSystem(getConf()), rootdir);
         }
         hfcc.checkTables(tableDirs);
         hfcc.report(errors);

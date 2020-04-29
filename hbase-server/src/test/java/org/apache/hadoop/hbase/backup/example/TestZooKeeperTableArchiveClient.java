@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -49,7 +50,7 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.StoppableImplementation;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -119,7 +120,7 @@ public class TestZooKeeperTableArchiveClient {
       // cleanup each of the files/directories registered
       for (Path file : toCleanup) {
       // remove the table and archive directories
-        FSUtils.delete(fs, file, true);
+        CommonFSUtils.delete(fs, file, true);
       }
     } catch (IOException e) {
       LOG.warn("Failure to delete archive directory", e);
@@ -196,7 +197,7 @@ public class TestZooKeeperTableArchiveClient {
     // get the current hfiles in the archive directory
     List<Path> files = getAllFiles(fs, archiveDir);
     if (files == null) {
-      FSUtils.logFileSystemState(fs, UTIL.getDataTestDir(), LOG);
+      CommonFSUtils.logFileSystemState(fs, UTIL.getDataTestDir(), LOG);
       throw new RuntimeException("Didn't archive any files!");
     }
     CountDownLatch finished = setupCleanerWatching(delegate, cleaners, files.size());
@@ -260,7 +261,7 @@ public class TestZooKeeperTableArchiveClient {
     // Should  be archived
     List<Path> files = getAllFiles(fs, archiveDir);
     if (files == null) {
-      FSUtils.logFileSystemState(fs, archiveDir, LOG);
+      CommonFSUtils.logFileSystemState(fs, archiveDir, LOG);
       throw new RuntimeException("Didn't load archive any files!");
     }
 
@@ -323,7 +324,7 @@ public class TestZooKeeperTableArchiveClient {
 
   private Path getTableDir(String tableName) throws IOException {
     Path testDataDir = UTIL.getDataTestDir();
-    FSUtils.setRootDir(UTIL.getConfiguration(), testDataDir);
+    CommonFSUtils.setRootDir(UTIL.getConfiguration(), testDataDir);
     return new Path(testDataDir, tableName);
   }
 
@@ -399,7 +400,7 @@ public class TestZooKeeperTableArchiveClient {
    * @return all files under the directory
    */
   private List<Path> getAllFiles(FileSystem fs, Path dir) throws IOException {
-    FileStatus[] files = FSUtils.listStatus(fs, dir, null);
+    FileStatus[] files = CommonFSUtils.listStatus(fs, dir, null);
     if (files == null) {
       LOG.warn("No files under:" + dir);
       return null;

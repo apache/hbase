@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
@@ -32,7 +33,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.junit.After;
@@ -99,13 +100,13 @@ public class TestClusterId {
     TEST_UTIL.startMiniZKCluster();
     TEST_UTIL.startMiniDFSCluster(1);
     TEST_UTIL.createRootDir();
-    Path rootDir = FSUtils.getRootDir(TEST_UTIL.getConfiguration());
+    Path rootDir = CommonFSUtils.getRootDir(TEST_UTIL.getConfiguration());
     FileSystem fs = rootDir.getFileSystem(TEST_UTIL.getConfiguration());
     Path filePath = new Path(rootDir, HConstants.CLUSTER_ID_FILE_NAME);
     FSDataOutputStream s = null;
     try {
       s = fs.create(filePath);
-      s.writeUTF(TEST_UTIL.getRandomUUID().toString());
+      s.writeUTF(HBaseCommonTestingUtility.getRandomUUID().toString());
     } finally {
       if (s != null) {
         s.close();

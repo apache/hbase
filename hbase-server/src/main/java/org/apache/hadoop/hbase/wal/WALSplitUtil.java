@@ -28,7 +28,6 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -49,6 +48,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.ConcurrentMapUtils.IOExceptionSupplier;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -91,10 +91,10 @@ public final class WALSplitUtil {
    * @throws IOException
    */
   public static void finishSplitLogFile(String logfile, Configuration conf) throws IOException {
-    Path walDir = FSUtils.getWALRootDir(conf);
+    Path walDir = CommonFSUtils.getWALRootDir(conf);
     Path oldLogDir = new Path(walDir, HConstants.HREGION_OLDLOGDIR_NAME);
     Path walPath;
-    if (FSUtils.isStartingWithPath(walDir, logfile)) {
+    if (CommonFSUtils.isStartingWithPath(walDir, logfile)) {
       walPath = new Path(logfile);
     } else {
       walPath = new Path(walDir, logfile);
@@ -123,7 +123,8 @@ public final class WALSplitUtil {
    */
   private static void archiveWALs(final List<Path> corruptedWALs, final List<Path> processedWALs,
       final Path oldWALDir, final FileSystem walFS, final Configuration conf) throws IOException {
-    final Path corruptDir = new Path(FSUtils.getWALRootDir(conf), HConstants.CORRUPT_DIR_NAME);
+    final Path corruptDir =
+      new Path(CommonFSUtils.getWALRootDir(conf), HConstants.CORRUPT_DIR_NAME);
     if (conf.get("hbase.regionserver.hlog.splitlog.corrupt.dir") != null) {
       LOG.warn("hbase.regionserver.hlog.splitlog.corrupt.dir is deprecated. Default to {}",
         corruptDir);
@@ -149,7 +150,7 @@ public final class WALSplitUtil {
     for (Path p : processedWALs) {
       Path newPath = AbstractFSWAL.getWALArchivePath(oldWALDir, p);
       if (walFS.exists(p)) {
-        if (!FSUtils.renameAndSetModifyTime(walFS, p, newPath)) {
+        if (!CommonFSUtils.renameAndSetModifyTime(walFS, p, newPath)) {
           LOG.warn("Unable to move {} to {}", p, newPath);
         } else {
           LOG.info("Archived processed log {} to {}", p, newPath);
@@ -176,8 +177,8 @@ public final class WALSplitUtil {
   @VisibleForTesting
   static Path getRegionSplitEditsPath(TableName tableName, byte[] encodedRegionName, long seqId,
       String fileNameBeingSplit, String tmpDirName, Configuration conf) throws IOException {
-    FileSystem walFS = FSUtils.getWALFileSystem(conf);
-    Path tableDir = FSUtils.getWALTableDir(conf, tableName);
+    FileSystem walFS = CommonFSUtils.getWALFileSystem(conf);
+    Path tableDir = CommonFSUtils.getWALTableDir(conf, tableName);
     String encodedRegionNameStr = Bytes.toString(encodedRegionName);
     Path regionDir = HRegion.getRegionDir(tableDir, encodedRegionNameStr);
     Path dir = getRegionDirRecoveredEditsDir(regionDir);
@@ -251,12 +252,12 @@ public final class WALSplitUtil {
     // Only default replica region can reach here, so we can use regioninfo
     // directly without converting it to default replica's regioninfo.
     Path regionWALDir =
-        FSUtils.getWALRegionDir(conf, regionInfo.getTable(), regionInfo.getEncodedName());
-    Path regionDir = FSUtils.getRegionDirFromRootDir(FSUtils.getRootDir(conf), regionInfo);
+      CommonFSUtils.getWALRegionDir(conf, regionInfo.getTable(), regionInfo.getEncodedName());
+    Path regionDir = FSUtils.getRegionDirFromRootDir(CommonFSUtils.getRootDir(conf), regionInfo);
     Path wrongRegionWALDir =
-        FSUtils.getWrongWALRegionDir(conf, regionInfo.getTable(), regionInfo.getEncodedName());
-    FileSystem walFs = FSUtils.getWALFileSystem(conf);
-    FileSystem rootFs = FSUtils.getRootDirFileSystem(conf);
+      CommonFSUtils.getWrongWALRegionDir(conf, regionInfo.getTable(), regionInfo.getEncodedName());
+    FileSystem walFs = CommonFSUtils.getWALFileSystem(conf);
+    FileSystem rootFs = CommonFSUtils.getRootDirFileSystem(conf);
     NavigableSet<Path> files = getSplitEditFilesSorted(walFs, regionWALDir);
     if (!files.isEmpty()) {
       return true;
@@ -280,16 +281,17 @@ public final class WALSplitUtil {
    */
   @Deprecated
   public static long getMaxRegionSequenceId(Configuration conf, RegionInfo region,
-      IOExceptionSupplier<FileSystem> rootFsSupplier, IOExceptionSupplier<FileSystem> walFsSupplier)
-      throws IOException {
+    IOExceptionSupplier<FileSystem> rootFsSupplier, IOExceptionSupplier<FileSystem> walFsSupplier)
+    throws IOException {
     FileSystem rootFs = rootFsSupplier.get();
     FileSystem walFs = walFsSupplier.get();
-    Path regionWALDir = FSUtils.getWALRegionDir(conf, region.getTable(), region.getEncodedName());
+    Path regionWALDir =
+      CommonFSUtils.getWALRegionDir(conf, region.getTable(), region.getEncodedName());
     // This is the old place where we store max sequence id file
-    Path regionDir = FSUtils.getRegionDirFromRootDir(FSUtils.getRootDir(conf), region);
+    Path regionDir = FSUtils.getRegionDirFromRootDir(CommonFSUtils.getRootDir(conf), region);
     // This is for HBASE-20734, where we use a wrong directory, see HBASE-22617 for more details.
     Path wrongRegionWALDir =
-      FSUtils.getWrongWALRegionDir(conf, region.getTable(), region.getEncodedName());
+      CommonFSUtils.getWrongWALRegionDir(conf, region.getTable(), region.getEncodedName());
     long maxSeqId = getMaxRegionSequenceId(walFs, regionWALDir);
     maxSeqId = Math.max(maxSeqId, getMaxRegionSequenceId(rootFs, regionDir));
     maxSeqId = Math.max(maxSeqId, getMaxRegionSequenceId(walFs, wrongRegionWALDir));
@@ -310,7 +312,7 @@ public final class WALSplitUtil {
     if (!walFS.exists(editsdir)) {
       return filesSorted;
     }
-    FileStatus[] files = FSUtils.listStatus(walFS, editsdir, new PathFilter() {
+    FileStatus[] files = CommonFSUtils.listStatus(walFS, editsdir, new PathFilter() {
       @Override
       public boolean accept(Path p) {
         boolean result = false;
@@ -579,8 +581,8 @@ public final class WALSplitUtil {
    */
   static Path tryCreateRecoveredHFilesDir(FileSystem rootFS, Configuration conf,
       TableName tableName, String encodedRegionName, String familyName) throws IOException {
-    Path rootDir = FSUtils.getRootDir(conf);
-    Path regionDir = FSUtils.getRegionDirFromTableDir(FSUtils.getTableDir(rootDir, tableName),
+    Path rootDir = CommonFSUtils.getRootDir(conf);
+    Path regionDir = FSUtils.getRegionDirFromTableDir(CommonFSUtils.getTableDir(rootDir, tableName),
       encodedRegionName);
     Path dir = getRecoveredHFilesDir(regionDir, familyName);
     if (!rootFS.exists(dir) && !rootFS.mkdirs(dir)) {
@@ -602,6 +604,6 @@ public final class WALSplitUtil {
   public static FileStatus[] getRecoveredHFiles(final FileSystem rootFS,
       final Path regionDir, String familyName) throws IOException {
     Path dir = getRecoveredHFilesDir(regionDir, familyName);
-    return FSUtils.listStatus(rootFS, dir);
+    return CommonFSUtils.listStatus(rootFS, dir);
   }
 }

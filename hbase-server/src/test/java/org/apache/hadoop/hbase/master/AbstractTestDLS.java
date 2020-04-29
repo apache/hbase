@@ -30,6 +30,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -72,7 +73,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
@@ -92,6 +93,7 @@ import org.junit.Test;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
@@ -169,7 +171,8 @@ public abstract class AbstractTestDLS {
   @After
   public void after() throws Exception {
     TEST_UTIL.shutdownMiniHBaseCluster();
-    TEST_UTIL.getTestFileSystem().delete(FSUtils.getRootDir(TEST_UTIL.getConfiguration()), true);
+    TEST_UTIL.getTestFileSystem().delete(CommonFSUtils.getRootDir(TEST_UTIL.getConfiguration()),
+      true);
     ZKUtil.deleteNodeRecursively(TEST_UTIL.getZooKeeperWatcher(), "/hbase");
   }
 
@@ -187,7 +190,7 @@ public abstract class AbstractTestDLS {
 
     List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
 
-    Path rootdir = FSUtils.getRootDir(conf);
+    Path rootdir = CommonFSUtils.getRootDir(conf);
 
     int numRegions = 50;
     try (Table t = installTable(numRegions)) {
@@ -222,7 +225,7 @@ public abstract class AbstractTestDLS {
       for (RegionInfo hri : regions) {
         @SuppressWarnings("deprecation")
         Path editsdir = WALSplitUtil
-            .getRegionDirRecoveredEditsDir(FSUtils.getWALRegionDir(conf,
+            .getRegionDirRecoveredEditsDir(CommonFSUtils.getWALRegionDir(conf,
                 tableName, hri.getEncodedName()));
         LOG.debug("Checking edits dir " + editsdir);
         FileStatus[] files = fs.listStatus(editsdir, new PathFilter() {
@@ -319,7 +322,7 @@ public abstract class AbstractTestDLS {
 
     List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
     HRegionServer hrs = findRSToKill(false);
-    Path rootdir = FSUtils.getRootDir(conf);
+    Path rootdir = CommonFSUtils.getRootDir(conf);
     final Path logDir = new Path(rootdir,
         AbstractFSWALProvider.getWALDirectoryName(hrs.getServerName().toString()));
 
@@ -412,7 +415,8 @@ public abstract class AbstractTestDLS {
     startCluster(1);
     final SplitLogManager slm = master.getMasterWalManager().getSplitLogManager();
     final FileSystem fs = master.getMasterFileSystem().getFileSystem();
-    final Path logDir = new Path(new Path(FSUtils.getWALRootDir(conf), HConstants.HREGION_LOGDIR_NAME),
+    final Path logDir =
+      new Path(new Path(CommonFSUtils.getWALRootDir(conf), HConstants.HREGION_LOGDIR_NAME),
         ServerName.valueOf("x", 1, 1).toString());
     fs.mkdirs(logDir);
     ExecutorService executor = null;

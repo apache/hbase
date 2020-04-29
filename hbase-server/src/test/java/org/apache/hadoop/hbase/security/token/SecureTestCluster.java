@@ -18,18 +18,17 @@
 
 package org.apache.hadoop.hbase.security.token;
 
+import java.io.File;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-
-import java.io.File;
 
 /**
  * The class for set up a security cluster with kerberos, hdfs, hbase.
@@ -88,7 +87,7 @@ public class SecureTestCluster {
         TokenProvider.class.getName());
     TEST_UTIL.startMiniDFSCluster(1);
     Path rootdir = TEST_UTIL.getDataTestDirOnTestFS("TestGenerateDelegationToken");
-    FSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootdir);
+    CommonFSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootdir);
     CLUSTER = new LocalHBaseCluster(TEST_UTIL.getConfiguration(), 1);
     CLUSTER.startup();
   }

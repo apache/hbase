@@ -30,7 +30,6 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Map.Entry;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -60,7 +59,7 @@ import org.apache.hadoop.hbase.security.token.TokenProvider;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.AfterClass;
@@ -104,7 +103,7 @@ public class TestShadeSaslAuthenticationProvider {
         USER_DATABASE_FILE.toString());
 
     Path rootdir = new Path(testDir, "hbase-root");
-    FSUtils.setRootDir(CONF, rootdir);
+    CommonFSUtils.setRootDir(CONF, rootdir);
     LocalHBaseCluster cluster = new LocalHBaseCluster(CONF, 1);
     return cluster;
   }

@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
@@ -55,7 +56,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  * <a href="https://issues.apache.org/jira/browse/HBASE-20838">HBASE-20838</a> for more details.
  */
 @InterfaceAudience.Private
-public abstract class CommonFSUtils {
+public final class CommonFSUtils {
   private static final Logger LOG = LoggerFactory.getLogger(CommonFSUtils.class);
 
   /** Parameter name for HBase WAL directory */
@@ -68,8 +69,7 @@ public abstract class CommonFSUtils {
   /** Full access permissions (starting point for a umask) */
   public static final String FULL_RWX_PERMISSIONS = "777";
 
-  protected CommonFSUtils() {
-    super();
+  private CommonFSUtils() {
   }
 
   /**

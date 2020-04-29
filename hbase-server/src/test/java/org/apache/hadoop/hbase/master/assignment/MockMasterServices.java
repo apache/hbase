@@ -56,7 +56,7 @@ import org.apache.hadoop.hbase.procedure2.store.NoopProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureStoreListener;
 import org.apache.hadoop.hbase.security.Superusers;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.zookeeper.KeeperException;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -149,8 +149,8 @@ public class MockMasterServices extends MockNoopMasterServices {
           Mockito.mock(AdminProtos.AdminService.BlockingInterface.class), ri, MOCK_MASTER_SERVERNAME,
           RegionInfoBuilder.FIRST_META_REGIONINFO);
     // Set hbase.rootdir into test dir.
-    Path rootdir = FSUtils.getRootDir(getConfiguration());
-    FSUtils.setRootDir(getConfiguration(), rootdir);
+    Path rootdir = CommonFSUtils.getRootDir(getConfiguration());
+    CommonFSUtils.setRootDir(getConfiguration(), rootdir);
   }
 
   public void start(final int numServes, final RSProcedureDispatcher remoteDispatcher)

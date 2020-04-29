@@ -63,9 +63,9 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.FSVisitor;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -583,7 +583,7 @@ public final class SnapshotTestingUtils {
        * @throws IOException on unexecpted error from the FS
        */
       public void corruptOneRegionManifest() throws IOException {
-        FileStatus[] manifestFiles = FSUtils.listStatus(fs, snapshotDir, new PathFilter() {
+        FileStatus[] manifestFiles = CommonFSUtils.listStatus(fs, snapshotDir, new PathFilter() {
           @Override public boolean accept(Path path) {
             return path.getName().startsWith(SnapshotManifestV2.SNAPSHOT_MANIFEST_PREFIX);
           }
@@ -597,7 +597,7 @@ public final class SnapshotTestingUtils {
       }
 
       public void missOneRegionSnapshotFile() throws IOException {
-        FileStatus[] manifestFiles = FSUtils.listStatus(fs, snapshotDir);
+        FileStatus[] manifestFiles = CommonFSUtils.listStatus(fs, snapshotDir);
         for (FileStatus fileStatus : manifestFiles) {
           String fileName = fileStatus.getPath().getName();
           if (fileName.endsWith(SnapshotDescriptionUtils.SNAPSHOTINFO_FILE)
@@ -614,7 +614,7 @@ public final class SnapshotTestingUtils {
        * @throws IOException on unexecpted error from the FS
        */
       public void corruptDataManifest() throws IOException {
-        FileStatus[] manifestFiles = FSUtils.listStatus(fs, snapshotDir, new PathFilter() {
+        FileStatus[] manifestFiles = CommonFSUtils.listStatus(fs, snapshotDir, new PathFilter() {
           @Override
           public boolean accept(Path path) {
             return path.getName().startsWith(SnapshotManifest.DATA_MANIFEST_NAME);
@@ -723,7 +723,7 @@ public final class SnapshotTestingUtils {
 
     private RegionData[] createTable(final TableDescriptor htd, final int nregions)
         throws IOException {
-      Path tableDir = FSUtils.getTableDir(rootDir, htd.getTableName());
+      Path tableDir = CommonFSUtils.getTableDir(rootDir, htd.getTableName());
       new FSTableDescriptors(conf).createTableDescriptorForTableDirectory(tableDir, htd, false);
 
       assertTrue(nregions % 2 == 0);
