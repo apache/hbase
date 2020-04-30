@@ -142,7 +142,7 @@ public class TestClusterRestartFailover extends AbstractTestRestartCluster {
     assertNull("serverNode should be deleted after SCP finished", serverNode);
 
     MetricsMasterSource masterSource = UTIL.getHBaseCluster().getMaster().getMasterMetrics().getMetricsSource();
-    metricsHelper.assertCounter(MetricsMasterSource.SERVER_CRASH_METRIC_PREFIX+"SubmittedCount", 0, masterSource);
+    metricsHelper.assertCounter(MetricsMasterSource.SERVER_CRASH_METRIC_PREFIX+"SubmittedCount", 4, masterSource);
   }
 
   private void setupCluster() throws Exception {
