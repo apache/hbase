@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.chaos.actions;
 import java.io.IOException;
 import java.util.Random;
 import java.util.Set;
-
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -40,12 +39,16 @@ public class RemoveColumnAction extends Action {
   private final TableName tableName;
   private final Set<String> protectedColumns;
   private Admin admin;
-  private Random random;
+  private final Random random;
 
   public RemoveColumnAction(TableName tableName, Set<String> protectedColumns) {
     this.tableName = tableName;
     this.protectedColumns = protectedColumns;
     random = new Random();
+  }
+
+  @Override protected Logger getLogger() {
+    return LOG;
   }
 
   @Override
@@ -69,7 +72,7 @@ public class RemoveColumnAction extends Action {
       index = random.nextInt(columnDescriptors.length);
     }
     byte[] colDescName = columnDescriptors[index].getName();
-    LOG.debug("Performing action: Removing " + Bytes.toString(colDescName)+ " from "
+    getLogger().debug("Performing action: Removing " + Bytes.toString(colDescName)+ " from "
         + tableName.getNameAsString());
 
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableDescriptor);

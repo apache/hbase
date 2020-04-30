@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,35 +39,38 @@ public class GracefulRollingRestartRsAction extends RestartActionBaseAction {
     super(sleepTime);
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
-    LOG.info("Performing action: Rolling restarting non-master region servers");
+    getLogger().info("Performing action: Rolling restarting non-master region servers");
     List<ServerName> selectedServers = selectServers();
 
-    LOG.info("Disabling balancer to make unloading possible");
+    getLogger().info("Disabling balancer to make unloading possible");
     setBalancer(false, true);
 
     for (ServerName server : selectedServers) {
       String rsName = server.getAddress().toString();
       try (RegionMover rm =
           new RegionMover.RegionMoverBuilder(rsName, getConf()).ack(true).build()) {
-        LOG.info("Unloading {}", server);
+        getLogger().info("Unloading {}", server);
         rm.unload();
-        LOG.info("Restarting {}", server);
+        getLogger().info("Restarting {}", server);
         gracefulRestartRs(server, sleepTime);
-        LOG.info("Loading {}", server);
+        getLogger().info("Loading {}", server);
         rm.load();
       } catch (Shell.ExitCodeException e) {
-        LOG.info("Problem restarting but presume successful; code={}", e.getExitCode(), e);
+        getLogger().info("Problem restarting but presume successful; code={}", e.getExitCode(), e);
       }
       sleep(RandomUtils.nextInt(0, (int)sleepTime));
     }
-    LOG.info("Enabling balancer");
+    getLogger().info("Enabling balancer");
     setBalancer(true, true);
   }
 
   protected List<ServerName> selectServers() throws IOException {
     return Arrays.asList(getCurrentServers());
   }
-
 }
