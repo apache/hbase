@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,12 +19,11 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.List;
-
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,22 +45,26 @@ public class MergeRandomAdjacentRegionsOfTableAction extends Action {
     this.sleepTime = sleepTime;
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
     HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
     Admin admin = util.getAdmin();
 
-    LOG.info("Performing action: Merge random adjacent regions of table " + tableName);
-    List<HRegionInfo> regions = admin.getTableRegions(tableName);
+    getLogger().info("Performing action: Merge random adjacent regions of table " + tableName);
+    List<RegionInfo> regions = admin.getRegions(tableName);
     if (regions == null || regions.size() < 2) {
-      LOG.info("Table " + tableName + " doesn't have enough regions to merge");
+      getLogger().info("Table " + tableName + " doesn't have enough regions to merge");
       return;
     }
 
     int i = RandomUtils.nextInt(0, regions.size() - 1);
-    HRegionInfo a = regions.get(i++);
-    HRegionInfo b = regions.get(i);
-    LOG.debug("Merging " + a.getRegionNameAsString() + " and " + b.getRegionNameAsString());
+    RegionInfo a = regions.get(i++);
+    RegionInfo b = regions.get(i);
+    getLogger().debug("Merging " + a.getRegionNameAsString() + " and " + b.getRegionNameAsString());
 
     // Don't try the merge if we're stopping
     if (context.isStopping()) {
@@ -71,7 +74,7 @@ public class MergeRandomAdjacentRegionsOfTableAction extends Action {
     try {
       admin.mergeRegionsAsync(a.getEncodedNameAsBytes(), b.getEncodedNameAsBytes(), false);
     } catch (Exception ex) {
-      LOG.warn("Merge failed, might be caused by other chaos: " + ex.getMessage());
+      getLogger().warn("Merge failed, might be caused by other chaos: " + ex.getMessage());
     }
     if (sleepTime > 0) {
       Thread.sleep(sleepTime);
