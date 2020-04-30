@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,25 +45,29 @@ public class FlushRandomRegionOfTableAction extends Action {
     this.tableName = tableName;
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
     HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
     Admin admin = util.getAdmin();
 
-    LOG.info("Performing action: Flush random region of table " + tableName);
+    getLogger().info("Performing action: Flush random region of table " + tableName);
     List<RegionInfo> regions = admin.getRegions(tableName);
     if (regions == null || regions.isEmpty()) {
-      LOG.info("Table " + tableName + " doesn't have regions to flush");
+      getLogger().info("Table " + tableName + " doesn't have regions to flush");
       return;
     }
 
     RegionInfo region = PolicyBasedChaosMonkey.selectRandomItem(
-      regions.toArray(new RegionInfo[regions.size()]));
-    LOG.debug("Flushing region " + region.getRegionNameAsString());
+      regions.toArray(new RegionInfo[0]));
+    getLogger().debug("Flushing region " + region.getRegionNameAsString());
     try {
       admin.flushRegion(region.getRegionName());
     } catch (Exception ex) {
-      LOG.warn("Flush failed, might be caused by other chaos: " + ex.getMessage());
+      getLogger().warn("Flush failed, might be caused by other chaos: " + ex.getMessage());
     }
     if (sleepTime > 0) {
       Thread.sleep(sleepTime);

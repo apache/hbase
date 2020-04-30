@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory;
  */
 public class CorruptDataFilesAction extends Action {
   private static final Logger LOG = LoggerFactory.getLogger(CorruptDataFilesAction.class);
-  private float chance;
+  private final float chance;
 
   /**
    * Corrupts HFiles with a certain chance
@@ -44,9 +44,13 @@ public class CorruptDataFilesAction extends Action {
     this.chance = chance * 100;
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
-    LOG.info("Start corrupting data files");
+    getLogger().info("Start corrupting data files");
 
     FileSystem fs = CommonFSUtils.getRootDirFileSystem(getConf());
     Path rootDir = CommonFSUtils.getRootDir(getConf());
@@ -67,9 +71,9 @@ public class CorruptDataFilesAction extends Action {
       } finally {
         out.close();
       }
-      LOG.info("Corrupting {}", status.getPath());
+      getLogger().info("Corrupting {}", status.getPath());
     }
-    LOG.info("Done corrupting data files");
+    getLogger().info("Done corrupting data files");
   }
 
 }

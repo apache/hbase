@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.chaos.actions;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.slf4j.Logger;
@@ -32,17 +31,20 @@ import org.slf4j.LoggerFactory;
  */
 public class BatchRestartRsAction extends RestartActionBaseAction {
   float ratio; //ratio of regionservers to restart
-  private static final Logger LOG =
-      LoggerFactory.getLogger(BatchRestartRsAction.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BatchRestartRsAction.class);
 
   public BatchRestartRsAction(long sleepTime, float ratio) {
     super(sleepTime);
     this.ratio = ratio;
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
-    LOG.info(String.format("Performing action: Batch restarting %d%% of region servers",
+    getLogger().info(String.format("Performing action: Batch restarting %d%% of region servers",
         (int)(ratio * 100)));
     List<ServerName> selectedServers = PolicyBasedChaosMonkey.selectRandomItems(getCurrentServers(),
         ratio);
@@ -55,7 +57,7 @@ public class BatchRestartRsAction extends RestartActionBaseAction {
       if (context.isStopping()) {
         break;
       }
-      LOG.info("Killing region server:" + server);
+      getLogger().info("Killing region server:" + server);
       cluster.killRegionServer(server);
       killedServers.add(server);
     }
@@ -64,13 +66,13 @@ public class BatchRestartRsAction extends RestartActionBaseAction {
       cluster.waitForRegionServerToStop(server, PolicyBasedChaosMonkey.TIMEOUT);
     }
 
-    LOG.info("Killed " + killedServers.size() + " region servers. Reported num of rs:"
+    getLogger().info("Killed " + killedServers.size() + " region servers. Reported num of rs:"
         + cluster.getClusterMetrics().getLiveServerMetrics().size());
 
     sleep(sleepTime);
 
     for (ServerName server : killedServers) {
-      LOG.info("Starting region server:" + server.getHostname());
+      getLogger().info("Starting region server:" + server.getHostname());
       cluster.startRegionServer(server.getHostname(), server.getPort());
 
     }
@@ -79,7 +81,7 @@ public class BatchRestartRsAction extends RestartActionBaseAction {
           server.getPort(),
           PolicyBasedChaosMonkey.TIMEOUT);
     }
-    LOG.info("Started " + killedServers.size() +" region servers. Reported num of rs:"
+    getLogger().info("Started " + killedServers.size() +" region servers. Reported num of rs:"
         + cluster.getClusterMetrics().getLiveServerMetrics().size());
   }
 }

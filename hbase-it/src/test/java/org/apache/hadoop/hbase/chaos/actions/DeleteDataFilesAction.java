@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,7 +33,7 @@ import org.slf4j.LoggerFactory;
  */
 public class DeleteDataFilesAction extends Action {
   private static final Logger LOG = LoggerFactory.getLogger(DeleteDataFilesAction.class);
-  private float chance;
+  private final float chance;
 
   /**
    * Delets HFiles with a certain chance
@@ -43,9 +43,13 @@ public class DeleteDataFilesAction extends Action {
     this.chance = chance * 100;
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
-    LOG.info("Start deleting data files");
+    getLogger().info("Start deleting data files");
     FileSystem fs = CommonFSUtils.getRootDirFileSystem(getConf());
     Path rootDir = CommonFSUtils.getRootDir(getConf());
     Path defaultDir = rootDir.suffix("/data/default");
@@ -58,9 +62,9 @@ public class DeleteDataFilesAction extends Action {
       if(RandomUtils.nextFloat(0, 100) > chance){
         continue;
       }
-      fs.delete(status.getPath());
-      LOG.info("Deleting {}", status.getPath());
+      fs.delete(status.getPath(), true);
+      getLogger().info("Deleting {}", status.getPath());
     }
-    LOG.info("Done deleting data files");
+    getLogger().info("Done deleting data files");
   }
 }
