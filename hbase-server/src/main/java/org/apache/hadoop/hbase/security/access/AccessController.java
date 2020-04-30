@@ -773,7 +773,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       familyMap.put(family, null);
     }
     requireNamespacePermission(c, "createTable",
-        desc.getTableName().getNamespaceAsString(), desc.getTableName(), familyMap, Action.ADMIN, Action.CREATE);
+        desc.getTableName().getNamespaceAsString(), desc.getTableName(), familyMap, Action.ADMIN,
+        Action.CREATE);
   }
 
   @Override
@@ -1942,7 +1943,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   public void prePrepareBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx)
   throws IOException {
     requireAccess(ctx, "prePrepareBulkLoad",
-        ctx.getEnvironment().getRegion().getTableDescriptor().getTableName(), Action.ADMIN, Action.CREATE);
+        ctx.getEnvironment().getRegion().getTableDescriptor().getTableName(), Action.ADMIN,
+        Action.CREATE);
   }
 
   /**
@@ -1955,7 +1957,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   public void preCleanupBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx)
   throws IOException {
     requireAccess(ctx, "preCleanupBulkLoad",
-        ctx.getEnvironment().getRegion().getTableDescriptor().getTableName(), Action.ADMIN, Action.CREATE);
+        ctx.getEnvironment().getRegion().getTableDescriptor().getTableName(), Action.ADMIN,
+        Action.CREATE);
   }
 
   /* ---- EndpointObserver implementation ---- */
