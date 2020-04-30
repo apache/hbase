@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,6 +46,10 @@ public class MoveRandomRegionOfTableAction extends Action {
     this.tableName = tableName;
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
     if (sleepTime > 0) {
@@ -55,16 +59,16 @@ public class MoveRandomRegionOfTableAction extends Action {
     HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
     Admin admin = util.getHBaseAdmin();
 
-    LOG.info("Performing action: Move random region of table " + tableName);
+    getLogger().info("Performing action: Move random region of table " + tableName);
     List<HRegionInfo> regions = admin.getTableRegions(tableName);
     if (regions == null || regions.isEmpty()) {
-      LOG.info("Table " + tableName + " doesn't have regions to move");
+      getLogger().info("Table " + tableName + " doesn't have regions to move");
       return;
     }
 
     HRegionInfo region = PolicyBasedChaosMonkey.selectRandomItem(
       regions.toArray(new HRegionInfo[regions.size()]));
-    LOG.debug("Unassigning region " + region.getRegionNameAsString());
+    getLogger().debug("Unassigning region " + region.getRegionNameAsString());
     admin.unassign(region.getRegionName(), false);
     if (sleepTime > 0) {
       Thread.sleep(sleepTime);

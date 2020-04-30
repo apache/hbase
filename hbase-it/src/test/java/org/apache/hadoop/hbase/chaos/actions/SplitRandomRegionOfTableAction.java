@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,15 +46,19 @@ public class SplitRandomRegionOfTableAction extends Action {
     this.tableName = tableName;
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
     HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
     Admin admin = util.getHBaseAdmin();
 
-    LOG.info("Performing action: Split random region of table " + tableName);
+    getLogger().info("Performing action: Split random region of table " + tableName);
     List<HRegionInfo> regions = admin.getTableRegions(tableName);
     if (regions == null || regions.isEmpty()) {
-      LOG.info("Table " + tableName + " doesn't have regions to split");
+      getLogger().info("Table " + tableName + " doesn't have regions to split");
       return;
     }
     // Don't try the split if we're stopping
@@ -64,11 +68,11 @@ public class SplitRandomRegionOfTableAction extends Action {
 
     HRegionInfo region = PolicyBasedChaosMonkey.selectRandomItem(
         regions.toArray(new HRegionInfo[regions.size()]));
-    LOG.debug("Splitting region " + region.getRegionNameAsString());
+    getLogger().debug("Splitting region " + region.getRegionNameAsString());
     try {
       admin.splitRegion(region.getRegionName());
     } catch (Exception ex) {
-      LOG.warn("Split failed, might be caused by other chaos: " + ex.getMessage());
+      getLogger().warn("Split failed, might be caused by other chaos: " + ex.getMessage());
     }
     if (sleepTime > 0) {
       Thread.sleep(sleepTime);

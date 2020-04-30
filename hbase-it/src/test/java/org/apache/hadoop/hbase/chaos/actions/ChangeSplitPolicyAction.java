@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,17 +45,20 @@ public class ChangeSplitPolicyAction extends Action {
     this.random = new Random();
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
 
   @Override
   public void perform() throws Exception {
     HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
     Admin admin = util.getHBaseAdmin();
 
-    LOG.info("Performing action: Change split policy of table " + tableName);
+    getLogger().info("Performing action: Change split policy of table " + tableName);
     HTableDescriptor tableDescriptor = admin.getTableDescriptor(tableName);
     String chosenPolicy = possiblePolicies[random.nextInt(possiblePolicies.length)];
     tableDescriptor.setRegionSplitPolicyClassName(chosenPolicy);
-    LOG.info("Changing "  + tableName + " split policy to " + chosenPolicy);
+    getLogger().info("Changing "  + tableName + " split policy to " + chosenPolicy);
     admin.modifyTable(tableName, tableDescriptor);
   }
 }

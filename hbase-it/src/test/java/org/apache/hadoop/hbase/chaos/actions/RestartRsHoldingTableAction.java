@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,15 +43,19 @@ public class RestartRsHoldingTableAction extends RestartActionBaseAction {
     this.tableName = tableName;
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
     HTable table = null;
     try {
-      LOG.info("Performing action: Restart random RS holding table " + this.tableName);
+      getLogger().info("Performing action: Restart random RS holding table " + this.tableName);
       Configuration conf = context.getHBaseIntegrationTestingUtility().getConfiguration();
       table = new HTable(conf, TableName.valueOf(tableName));
     } catch (IOException e) {
-      LOG.debug("Error creating HTable used to get list of region locations.", e);
+      getLogger().debug("Error creating HTable used to get list of region locations.", e);
       return;
     }
 

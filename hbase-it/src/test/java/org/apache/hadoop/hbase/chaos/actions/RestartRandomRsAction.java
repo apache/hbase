@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,9 +33,13 @@ public class RestartRandomRsAction extends RestartActionBaseAction {
     super(sleepTime);
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
-    LOG.info("Performing action: Restart random region server");
+    getLogger().info("Performing action: Restart random region server");
     ServerName server = PolicyBasedChaosMonkey.selectRandomItem(getCurrentServers());
 
     restartRs(server, sleepTime);
