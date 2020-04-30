@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,10 +27,10 @@ import java.util.Objects;
 import java.util.Queue;
 
 import org.apache.commons.lang.math.RandomUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Restarts a ratio of the regionservers in a rolling fashion. At each step, either kills a
@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
  * can be down at the same time during rolling restarts.
  */
 public class RollingBatchRestartRsAction extends BatchRestartRsAction {
-  private static final Log LOG = LogFactory.getLog(RollingBatchRestartRsAction.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RollingBatchRestartRsAction.class);
   protected int maxDeadServers; // number of maximum dead servers at any given time. Defaults to 5
 
   public RollingBatchRestartRsAction(long sleepTime, float ratio) {
@@ -56,9 +56,14 @@ public class RollingBatchRestartRsAction extends BatchRestartRsAction {
     START
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
-    LOG.info(String.format("Performing action: Rolling batch restarting %d%% of region servers",
+    getLogger().info(
+      String.format("Performing action: Rolling batch restarting %d%% of region servers",
         (int)(ratio * 100)));
     List<ServerName> selectedServers = selectServers();
 
@@ -91,7 +96,7 @@ public class RollingBatchRestartRsAction extends BatchRestartRsAction {
           } catch (org.apache.hadoop.util.Shell.ExitCodeException e) {
             // We've seen this in test runs where we timeout but the kill went through. HBASE-9743
             // So, add to deadServers even if exception so the start gets called.
-            LOG.info("Problem killing but presume successful; code=" + e.getExitCode(), e);
+            getLogger().info("Problem killing but presume successful; code=" + e.getExitCode(), e);
           }
           deadServers.add(server);
           break;
@@ -105,7 +110,7 @@ public class RollingBatchRestartRsAction extends BatchRestartRsAction {
             // The start may fail but better to just keep going though we may lose server.
             // Shuffle the dead list to avoid getting stuck on a single stubborn host.
             Collections.shuffle(deadServers);
-            LOG.info(String.format(
+            getLogger().info(String.format(
               "Problem starting %s, will retry; code=%s", server, e.getExitCode(), e));
           }
           break;
@@ -139,7 +144,7 @@ public class RollingBatchRestartRsAction extends BatchRestartRsAction {
 
       @Override
       protected void killRs(ServerName server) throws IOException {
-        LOG.info("Killed " + server);
+        getLogger().info("Killed " + server);
         if (this.invocations++ % 3 == 0) {
           throw new org.apache.hadoop.util.Shell.ExitCodeException(-1, "Failed");
         }
@@ -147,7 +152,7 @@ public class RollingBatchRestartRsAction extends BatchRestartRsAction {
 
       @Override
       protected void startRs(ServerName server) throws IOException {
-        LOG.info("Started " + server);
+        getLogger().info("Started " + server);
         if (this.invocations++ % 3 == 0) {
           throw new org.apache.hadoop.util.Shell.ExitCodeException(-1, "Failed");
         }

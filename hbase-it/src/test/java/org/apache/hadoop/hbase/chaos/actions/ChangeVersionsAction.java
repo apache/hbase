@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,15 +34,19 @@ import org.slf4j.LoggerFactory;
  * Always keeps at least 1 as the number of versions.
  */
 public class ChangeVersionsAction extends Action {
-  private final TableName tableName;
   private static final Logger LOG = LoggerFactory.getLogger(ChangeVersionsAction.class);
+  private final TableName tableName;
+  private final Random random;
 
   private Admin admin;
-  private Random random;
 
   public ChangeVersionsAction(TableName tableName) {
     this.tableName = tableName;
     this.random = new Random();
+  }
+
+  @Override protected Logger getLogger() {
+    return LOG;
   }
 
   @Override
@@ -68,7 +72,7 @@ public class ChangeVersionsAction extends Action {
     if (context.isStopping()) {
       return;
     }
-    LOG.debug("Performing action: Changing versions on " + tableName.getNameAsString());
+    getLogger().debug("Performing action: Changing versions on " + tableName.getNameAsString());
     admin.modifyTable(tableName, tableDescriptor);
   }
 }

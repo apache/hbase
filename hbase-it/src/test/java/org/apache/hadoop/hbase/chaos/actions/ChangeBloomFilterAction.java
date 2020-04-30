@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,13 +47,17 @@ public class ChangeBloomFilterAction extends Action {
     this.tableName = tableName;
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
     Random random = new Random();
     HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
     Admin admin = util.getHBaseAdmin();
 
-    LOG.info("Performing action: Change bloom filter on all columns of table "
+    getLogger().info("Performing action: Change bloom filter on all columns of table "
         + tableName);
     HTableDescriptor tableDescriptor = admin.getTableDescriptor(tableName);
     HColumnDescriptor[] columnDescriptors = tableDescriptor.getColumnFamilies();
@@ -67,11 +71,11 @@ public class ChangeBloomFilterAction extends Action {
 
     for (HColumnDescriptor descriptor : columnDescriptors) {
       int bloomFilterIndex = random.nextInt(bloomArraySize);
-      LOG.debug("Performing action: About to set bloom filter type to "
+      getLogger().debug("Performing action: About to set bloom filter type to "
           + bloomArray[bloomFilterIndex] + " on column "
           + descriptor.getNameAsString() + " of table " + tableName);
       descriptor.setBloomFilterType(bloomArray[bloomFilterIndex]);
-      LOG.debug("Performing action: Just set bloom filter type to "
+      getLogger().debug("Performing action: Just set bloom filter type to "
           + bloomArray[bloomFilterIndex] + " on column "
           + descriptor.getNameAsString() + " of table " + tableName);
     }
