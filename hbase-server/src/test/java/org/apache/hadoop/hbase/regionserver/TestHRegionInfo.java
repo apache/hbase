@@ -153,11 +153,6 @@ public class TestHRegionInfo {
     org.apache.hadoop.hbase.client.RegionInfo efri =
       org.apache.hadoop.hbase.client.RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).
         setStartKey(e).setEndKey(f).build();
-    RegionInfo [] subsumes = new RegionInfo [] {ari, abri, eri};
-    assertTrue(abri.isOverlap(subsumes));
-    subsumes = new RegionInfo [] {ari, cdri, eri};
-    assertTrue(cdri.isOverlap(subsumes));
-    assertFalse(efri.isOverlap(subsumes));
   }
 
   @Test

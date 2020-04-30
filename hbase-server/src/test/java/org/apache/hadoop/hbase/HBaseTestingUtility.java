@@ -668,6 +668,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     // Frustrate yarn's and hdfs's attempts at writing /tmp.
     // Below is fragile. Make it so we just interpolate any 'tmp' reference.
     createDirAndSetProperty("yarn.node-labels.fs-store.root-dir");
+    createDirAndSetProperty("yarn.node-attribute.fs-store.root-dir");
     createDirAndSetProperty("yarn.nodemanager.log-dirs");
     createDirAndSetProperty("yarn.nodemanager.remote-app-log-dir");
     createDirAndSetProperty("yarn.timeline-service.entity-group-fs-store.active-dir");
