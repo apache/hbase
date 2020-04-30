@@ -59,6 +59,8 @@ public class TestClusterRestartFailover extends AbstractTestRestartCluster {
     HBaseClassTestRule.forClass(TestClusterRestartFailover.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestClusterRestartFailover.class);
+  private static final MetricsAssertHelper metricsHelper =
+    CompatibilityFactory.getInstance(MetricsAssertHelper.class);
 
   private volatile static CountDownLatch SCP_LATCH;
   private static ServerName SERVER_FOR_TEST;
@@ -136,6 +138,9 @@ public class TestClusterRestartFailover extends AbstractTestRestartCluster {
     serverNode = UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
         .getServerNode(SERVER_FOR_TEST);
     assertNull("serverNode should be deleted after SCP finished", serverNode);
+
+    MetricsMasterSource masterSource = UTIL.getHBaseCluster().getMaster().getMasterMetrics().getMetricsSource();
+    metricsHelper.assertCounter(MetricsMasterSource.SERVER_CRASH_METRIC_PREFIX+"SubmittedCount", 0, masterSource);
   }
 
   private void setupCluster() throws Exception {
