@@ -102,6 +102,7 @@ public class TestBulkLoadHFiles {
     // change default behavior so that tag values are returned with normal rpcs
     util.getConfiguration().set(HConstants.RPC_CODEC_CONF_KEY,
       KeyValueCodecWithTags.class.getCanonicalName());
+    util.getConfiguration().setBoolean(BulkLoadHFilesTool.BULK_LOAD_HFILES_BY_FAMILY, false);
     util.startMiniCluster();
 
     setupNamespace();
