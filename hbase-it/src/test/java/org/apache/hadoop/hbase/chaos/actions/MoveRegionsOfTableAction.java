@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,12 +22,9 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-
 import org.apache.commons.lang3.RandomUtils;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.chaos.factories.MonkeyConstants;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.slf4j.Logger;
@@ -37,20 +34,19 @@ import org.slf4j.LoggerFactory;
 * Action that tries to move every region of a table.
 */
 public class MoveRegionsOfTableAction extends Action {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(MoveRegionsOfTableAction.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MoveRegionsOfTableAction.class);
   private final long sleepTime;
   private final TableName tableName;
   private final long maxTime;
-
-  public MoveRegionsOfTableAction(TableName tableName) {
-    this(-1, MonkeyConstants.DEFAULT_MOVE_REGIONS_MAX_TIME, tableName);
-  }
 
   public MoveRegionsOfTableAction(long sleepTime, long maxSleepTime, TableName tableName) {
     this.sleepTime = sleepTime;
     this.tableName = tableName;
     this.maxTime = maxSleepTime;
+  }
+
+  @Override protected Logger getLogger() {
+    return LOG;
   }
 
   @Override
@@ -62,24 +58,24 @@ public class MoveRegionsOfTableAction extends Action {
     Admin admin = this.context.getHBaseIntegrationTestingUtility().getAdmin();
     ServerName[] servers = getServers(admin);
 
-    LOG.info("Performing action: Move regions of table {}", tableName);
-    List<HRegionInfo> regions = admin.getTableRegions(tableName);
+    getLogger().info("Performing action: Move regions of table {}", tableName);
+    List<RegionInfo> regions = admin.getRegions(tableName);
     if (regions == null || regions.isEmpty()) {
-      LOG.info("Table {} doesn't have regions to move", tableName);
+      getLogger().info("Table {} doesn't have regions to move", tableName);
       return;
     }
 
     Collections.shuffle(regions);
 
     long start = System.currentTimeMillis();
-    for (HRegionInfo regionInfo:regions) {
+    for (RegionInfo regionInfo:regions) {
 
       // Don't try the move if we're stopping
       if (context.isStopping()) {
         return;
       }
 
-      moveRegion(admin, servers, regionInfo);
+      moveRegion(admin, servers, regionInfo, getLogger());
       if (sleepTime > 0) {
         Thread.sleep(sleepTime);
       }
@@ -94,16 +90,16 @@ public class MoveRegionsOfTableAction extends Action {
 
   static ServerName [] getServers(Admin admin) throws IOException {
     Collection<ServerName> serversList = admin.getRegionServers();
-    return serversList.toArray(new ServerName[serversList.size()]);
+    return serversList.toArray(new ServerName[0]);
   }
 
-  static void moveRegion(Admin admin, ServerName [] servers, RegionInfo regionInfo) {
+  static void moveRegion(Admin admin, ServerName [] servers, RegionInfo regionInfo, Logger logger) {
     try {
       ServerName destServerName = servers[RandomUtils.nextInt(0, servers.length)];
-      LOG.debug("Moving {} to {}", regionInfo.getRegionNameAsString(), destServerName);
+      logger.debug("Moving {} to {}", regionInfo.getRegionNameAsString(), destServerName);
       admin.move(regionInfo.getEncodedNameAsBytes(), destServerName);
     } catch (Exception ex) {
-      LOG.warn("Move failed, might be caused by other chaos: {}", ex.getMessage());
+      logger.warn("Move failed, might be caused by other chaos: {}", ex.getMessage());
     }
   }
 }
