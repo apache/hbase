@@ -372,10 +372,11 @@ public abstract class ScanQueryMatcher implements ShipperListener {
     if (userScan != null) {
       if (userScan.isRaw()) {
         resultMaxVersion = userScan.getMaxVersions();
+        maxVersionToCheck = userScan.hasFilter() ? Integer.MAX_VALUE : resultMaxVersion;
       } else {
         resultMaxVersion = Math.min(userScan.getMaxVersions(), scanInfo.getMaxVersions());
+        maxVersionToCheck = userScan.hasFilter() ? scanInfo.getMaxVersions() : resultMaxVersion;
       }
-      maxVersionToCheck = userScan.hasFilter() ? scanInfo.getMaxVersions() : resultMaxVersion;
     }
 
     DeleteTracker deleteTracker;
