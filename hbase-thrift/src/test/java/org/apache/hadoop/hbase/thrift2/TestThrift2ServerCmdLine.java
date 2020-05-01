@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,12 +19,14 @@ package org.apache.hadoop.hbase.thrift2;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.function.Supplier;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.thrift.ImplType;
 import org.apache.hadoop.hbase.thrift.TestThriftServerCmdLine;
+import org.apache.hadoop.hbase.thrift.ThriftServer;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
 import org.apache.hadoop.hbase.thrift2.generated.TTableDescriptor;
@@ -48,19 +50,17 @@ public class TestThrift2ServerCmdLine extends TestThriftServerCmdLine {
 
   private static final String TABLENAME = "TestThrift2ServerCmdLineTable";
 
-
-  @Override
-  protected ThriftServer createThriftServer() {
-    return new ThriftServer(TEST_UTIL.getConfiguration());
-  }
-
   public TestThrift2ServerCmdLine(ImplType implType, boolean specifyFramed,
       boolean specifyBindIP, boolean specifyCompact) {
     super(implType, specifyFramed, specifyBindIP, specifyCompact);
   }
 
+  @Override protected Supplier<ThriftServer> getThriftServerSupplier() {
+    return () -> new org.apache.hadoop.hbase.thrift2.ThriftServer(TEST_UTIL.getConfiguration());
+  }
+
   @Override
-  protected void talkToThriftServer() throws Exception {
+  protected void talkToThriftServer(int port) throws Exception {
     TSocket sock = new TSocket(InetAddress.getLoopbackAddress().getHostName(), port);
     TTransport transport = sock;
     if (specifyFramed || implType.isAlwaysFramed()) {
