@@ -145,8 +145,11 @@ function personality_modules
     extra="${extra} -Dhttps.protocols=TLSv1.2"
   fi
 
-  if [[ -n "${HADOOP_PROFILE}" ]]; then
-    extra="${extra} -Phadoop-${HADOOP_PROFILE}"
+  # If we have HADOOP_PROFILE specified and we're on branch-2.x, pass along
+  # the hadoop.profile system property. Ensures that Hadoop2 and Hadoop3
+  # logic is not both activated within Maven.
+  if [[ -n "${HADOOP_PROFILE}" ]] && [[ "${PATCH_BRANCH}" =~ branch-2* ]] ; then
+    extra="${extra} -Dhadoop.profile=${HADOOP_PROFILE}"
   fi
 
   # BUILDMODE value is 'full' when there is no patch to be tested, and we are running checks on
@@ -458,8 +461,11 @@ function shadedjars_rebuild
     '-pl' 'hbase-shaded/hbase-shaded-check-invariants' '-am'
     '-Dtest=NoUnitTests' '-DHBasePatchProcess' '-Prelease'
     '-Dmaven.javadoc.skip=true' '-Dcheckstyle.skip=true' '-Dspotbugs.skip=true')
-  if [[ -n "${HADOOP_PROFILE}" ]]; then
-    maven_args+=("-Phadoop-${HADOOP_PROFILE}")
+  # If we have HADOOP_PROFILE specified and we're on branch-2.x, pass along
+  # the hadoop.profile system property. Ensures that Hadoop2 and Hadoop3
+  # logic is not both activated within Maven.
+  if [[ -n "${HADOOP_PROFILE}" ]] && [[ "${PATCH_BRANCH}" =~ branch-2* ]] ; then
+    maven_args+=("-Dhadoop.profile=${HADOOP_PROFILE}")
   fi
 
   # disabled because "maven_executor" needs to return both command and args
@@ -636,6 +642,10 @@ function hadoopcheck_rebuild
     fi
   done
 
+  hadoop_profile=""
+  if [[ "${PATCH_BRANCH}" =~ branch-2* ]]; then
+    hadoop_profile="-Dhadoop.profile=3.0"
+  fi
   for hadoopver in ${hbase_hadoop3_versions}; do
     logfile="${PATCH_DIR}/patch-javac-${hadoopver}.txt"
     # disabled because "maven_executor" needs to return both command and args
@@ -644,7 +654,7 @@ function hadoopcheck_rebuild
       $(maven_executor) clean install \
         -DskipTests -DHBasePatchProcess \
         -Dhadoop-three.version="${hadoopver}" \
-        -Phadoop-3.0
+        ${hadoop_profile}
     count=$(${GREP} -c '\[ERROR\]' "${logfile}")
     if [[ ${count} -gt 0 ]]; then
       add_vote_table -1 hadoopcheck "${BUILDMODEMSG} causes ${count} errors with Hadoop v${hadoopver}."
