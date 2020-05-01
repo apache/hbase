@@ -76,9 +76,11 @@ public class TestZooKeeper {
     Configuration conf = TEST_UTIL.getConfiguration();
     TEST_UTIL.startMiniDFSCluster(2);
     TEST_UTIL.startMiniZKCluster();
+    conf.set(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
+      HConstants.ZK_CONNECTION_REGISTRY_CLASS);
     conf.setInt(HConstants.ZK_SESSION_TIMEOUT, 1000);
     conf.setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, MockLoadBalancer.class,
-        LoadBalancer.class);
+      LoadBalancer.class);
     TEST_UTIL.startMiniDFSCluster(2);
   }
 
