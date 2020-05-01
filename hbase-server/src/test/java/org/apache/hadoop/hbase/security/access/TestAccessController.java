@@ -396,11 +396,11 @@ public class TestAccessController extends SecureTestUtil {
     };
 
     // verify that superuser can create tables
-    verifyAllowed(createTable, SUPERUSER, USER_ADMIN, USER_GROUP_CREATE);
+    verifyAllowed(createTable, SUPERUSER, USER_ADMIN, USER_GROUP_CREATE, USER_GROUP_ADMIN);
 
     // all others should be denied
-    verifyDenied(createTable, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_ADMIN,
-      USER_GROUP_READ, USER_GROUP_WRITE);
+    verifyDenied(createTable, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE);
   }
 
   @Test
@@ -997,9 +997,8 @@ public class TestAccessController extends SecureTestUtil {
       // User performing bulk loads must have privilege to read table metadata
       // (ADMIN or CREATE)
       verifyAllowed(bulkLoadAction, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE,
-        USER_GROUP_CREATE);
-      verifyDenied(bulkLoadAction, USER_RW, USER_NONE, USER_RO, USER_GROUP_READ, USER_GROUP_WRITE,
-        USER_GROUP_ADMIN);
+        USER_GROUP_CREATE, USER_GROUP_ADMIN);
+      verifyDenied(bulkLoadAction, USER_RW, USER_NONE, USER_RO, USER_GROUP_READ, USER_GROUP_WRITE);
     } finally {
       // Reinit after the bulk upload
       TEST_UTIL.getAdmin().disableTable(TEST_TABLE);
@@ -2881,9 +2880,8 @@ public class TestAccessController extends SecureTestUtil {
 
   private void verifyAnyCreate(AccessTestAction action) throws Exception {
     verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE, USER_ADMIN_CF,
-      USER_GROUP_CREATE);
-    verifyDenied(action, USER_NONE, USER_RO, USER_RW, USER_GROUP_READ, USER_GROUP_WRITE,
-      USER_GROUP_ADMIN);
+      USER_GROUP_CREATE, USER_GROUP_ADMIN);
+    verifyDenied(action, USER_NONE, USER_RO, USER_RW, USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
   @Test
