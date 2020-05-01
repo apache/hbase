@@ -27,10 +27,11 @@ SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=SCRIPTDIR/release-util.sh
 . "$SELF/release-util.sh"
 
-while getopts "b:f" opt; do
+while getopts "b:fs:" opt; do
   case $opt in
     b) export GIT_BRANCH=$OPTARG ;;
     f) export DRY_RUN=0 ;;  # "force", ie actually publish this release (otherwise defaults to dry run)
+    s) RELEASE_STEP="$OPTARG" ;;
     ?) error "Invalid option: $OPTARG" ;;
   esac
 done
@@ -63,6 +64,13 @@ fi
 GPG_TTY="$(tty)"
 export GPG_TTY
 
+if [[ -z "$RELEASE_STEP" ]]; then
+  # If doing all stages, leave out 'publish-snapshot'
+  RELEASE_STEP="tag_publish-dist_publish-release"
+  # and use shared maven local repo for efficiency
+  export REPO="${REPO:-$(pwd)/$(mktemp -d hbase-repo-XXXXX)}"
+fi
+
 function should_build {
   local WHAT=$1
   if [[ -z "$RELEASE_STEP" ]]; then
@@ -73,11 +81,6 @@ function should_build {
     return 1
   fi
 }
-
-# If doing all stages, use shared maven local repo
-if [[ -z "$RELEASE_STEP" ]]; then
-  export REPO="${REPO:-$(pwd)/$(mktemp -d hbase-repo-XXXXX)}"
-fi
 
 if should_build "tag" && [ "$SKIP_TAG" = 0 ]; then
   run_silent "Creating release tag $RELEASE_TAG..." "tag.log" \

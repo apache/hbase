@@ -179,9 +179,10 @@ function get_release_info {
   export RELEASE_VERSION NEXT_VERSION
 
   RC_COUNT="$(read_config "RC_COUNT" "$RC_COUNT")"
+  RELEASE_TAG="${RELEASE_VERSION}RC${RC_COUNT}"
+  RELEASE_TAG="$(read_config "RELEASE_TAG" "$RELEASE_TAG")"
 
   # Check if the RC already exists, and if re-creating the RC, skip tag creation.
-  RELEASE_TAG="${RELEASE_VERSION}RC${RC_COUNT}"
   SKIP_TAG=0
   if check_for_tag "$RELEASE_TAG"; then
     read -r -p "$RELEASE_TAG already exists. Continue anyway [y/n]? " ANSWER
@@ -196,11 +197,10 @@ function get_release_info {
 
   GIT_REF="$RELEASE_TAG"
   if is_dry_run; then
-    echo "This is a dry run. Please confirm the ref that will be built for testing."
+    echo "This is a dry run. If tag does not actually exist, please confirm the ref that will be built for testing."
     GIT_REF="$(read_config "GIT_REF" "$GIT_REF")"
   fi
   export GIT_REF
-  export PACKAGE_VERSION="$RELEASE_TAG"
 
   API_DIFF_TAG="$(get_api_diff_version "$RELEASE_VERSION")"
 
@@ -288,7 +288,7 @@ function check_needed_vars {
 
 function init_locale {
   local locale_value
-  OS=`uname -s`
+  OS="$(uname -s)"
   case "${OS}" in
     Darwin*)    locale_value="en_US.UTF-8";;
     Linux*)     locale_value="C.UTF-8";;
@@ -324,16 +324,19 @@ function init_mvn {
   else
     error "MAVEN_HOME is not set nor is mvn on the current path."
   fi
-  echo "mvn version: $("${MVN[@]}" --version)"
   # Add batch mode.
   MVN=("${MVN[@]}" -B)
   export MVN
+  echo -n "mvn version: "
+  "${MVN[@]}" --version
   configure_maven
 }
 
 function configure_maven {
   # Add timestamps to mvn logs.
   MAVEN_OPTS="-Dorg.slf4j.simpleLogger.showDateTime=true -Dorg.slf4j.simpleLogger.dateTimeFormat=HH:mm:ss ${MAVEN_OPTS}"
+  # Suppress gobs of "Download from central:" messages
+  MAVEN_OPTS="-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn ${MAVEN_OPTS}"
   MAVEN_LOCAL_REPO="${REPO:-$(pwd)/$(mktemp -d hbase-repo-XXXXX)}"
   [[ -d "$MAVEN_LOCAL_REPO" ]] || mkdir -p "$MAVEN_LOCAL_REPO"
   MAVEN_SETTINGS_FILE="${MAVEN_LOCAL_REPO}/tmp-settings.xml"
@@ -446,9 +449,9 @@ function update_releasenotes {
 # $ GPG_PASSPHRASE="XYZ" GIT_REF="master" make_src_release hbase-operator-tools 1.0.0
 make_src_release() {
   # Tar up the src and sign and hash it.
-  project="${1}"
-  version="${2}"
-  base_name="${project}-${version}"
+  local project="${1}"
+  local version="${2}"
+  local base_name="${project}-${version}"
   rm -rf "${base_name}"-src*
   tgz="${base_name}-src.tar.gz"
   cd "${project}" || exit
@@ -472,9 +475,9 @@ make_src_release() {
 # For example:
 # $ GPG_PASSPHRASE="XYZ" GIT_REF="master" make_src_release hbase-operator-tools 1.0.0
 make_binary_release() {
-  project="${1}"
-  version="${2}"
-  base_name="${project}-${version}"
+  local project="${1}"
+  local version="${2}"
+  local base_name="${project}-${version}"
   rm -rf "${base_name}"-bin*
   cd "$project" || exit
 
@@ -542,17 +545,17 @@ function maven_deploy { #inputs: <snapshot|release> <log_file_path>
     error "must provide writable maven log output filepath"
   fi
   # shellcheck disable=SC2153
-  if [[ "$deploy_type" == "snapshot" ]] && ! [[ "$VERSION" =~ -SNAPSHOT$ ]]; then
-    error "Snapshots must have a version with suffix '-SNAPSHOT'; you gave version '$VERSION'"
-  elif [[ "$deploy_type" == "release" ]] && [[ "$VERSION" =~ SNAPSHOT ]]; then
-    error "Non-snapshot release version must not include the word 'SNAPSHOT'; you gave version '$VERSION'"
+  if [[ "$deploy_type" == "snapshot" ]] && ! [[ "$RELEASE_VERSION" =~ -SNAPSHOT$ ]]; then
+    error "Snapshots must have a version with suffix '-SNAPSHOT'; you gave version '$RELEASE_VERSION'"
+  elif [[ "$deploy_type" == "release" ]] && [[ "$RELEASE_VERSION" =~ SNAPSHOT ]]; then
+    error "Non-snapshot release version must not include the word 'SNAPSHOT'; you gave version '$RELEASE_VERSION'"
   fi
   # Publish ${PROJECT} to Maven repo
   # shellcheck disable=SC2154
   echo "Publishing ${PROJECT} checkout at '$GIT_REF' ($git_hash)"
-  echo "Publish version is $VERSION"
+  echo "Publish version is $RELEASE_VERSION"
   # Coerce the requested version
-  maven_set_version "$VERSION"
+  maven_set_version "$RELEASE_VERSION"
   # Prepare for signing
   kick_gpg_agent
   declare -a mvn_goals=(clean install)
@@ -561,9 +564,15 @@ function maven_deploy { #inputs: <snapshot|release> <log_file_path>
   fi
   echo "${MVN[@]}" -DskipTests -Dcheckstyle.skip=true "${PUBLISH_PROFILES[@]}" \
       "${mvn_goals[@]}"
+  echo "Logging to ${mvn_log_file}.  This will take a while..."
+  rm -f "$mvn_log_file"
+  # The tortuous redirect in the next command allows mvn's stdout and stderr to go to mvn_log_file,
+  # while also sending stderr back to the caller.
+  # shellcheck disable=SC2094
   if ! "${MVN[@]}" -DskipTests -Dcheckstyle.skip=true "${PUBLISH_PROFILES[@]}" \
-      "${mvn_goals[@]}" | tee "$mvn_log_file"; then
+      "${mvn_goals[@]}" 1>> "$mvn_log_file" 2> >( tee -a "$mvn_log_file" >&2 ); then
     error "Deploy build failed, for details see log at '$mvn_log_file'."
   fi
+  echo "BUILD SUCCESS."
   return 0
 }

@@ -5,9 +5,11 @@ For usage, pass '-h':
 
  $ ./do-release-docker.sh -h
 
-To run a build w/o invoking docker (not recommended!), use
-_do_release.sh_. It does not take parameters. It will ask
-you what commands to run with taking defaults from environment.
+To run a build w/o invoking docker (not recommended!), use _do_release.sh_.
+
+Both scripts will query interactively for needed parameters and passphrases.
+For explanation of the parameters, execute:
+ $ release-build.sh --help
 
 Before starting the RC build, run a reconciliation of what is in
 JIRA with what is in the commit log. Make sure they align and that

@@ -29,39 +29,46 @@ function exit_with_usage {
   cat <<'EOF'
 Usage: release-build.sh <tag|publish-dist|publish-snapshot|publish-release>
 Creates release deliverables from a tag or commit.
-Arguments:
- tag               Prepares for release on specified git branch: Set release version,
-                   update CHANGES and RELEASENOTES, create release tag,
-                   increment version for ongoing dev, and publish to Apache git repo.
- publish-dist      Build and publish distribution packages (tarballs) to Apache dist repo
- publish-snapshot  Build and publish maven artifacts snapshot release to Apache snapshots repo
- publish-release   Build and publish maven artifacts release to Apache release repo, and
-                   construct vote email from template
+Argument: one of 'tag', 'publish-dist', 'publish-snapshot', or 'publish-release'
+  tag               Prepares for release on specified git branch: Set release version,
+                    update CHANGES and RELEASENOTES, create release tag,
+                    increment version for ongoing dev, and publish to Apache git repo.
+  publish-dist      Build and publish distribution packages (tarballs) to Apache dist repo
+  publish-snapshot  Build and publish maven artifacts snapshot release to Apache snapshots repo
+  publish-release   Build and publish maven artifacts release to Apache release repo, and
+                    construct vote email from template
 
-All other inputs are environment variables:
-Used for 'tag' and 'publish':
+All other inputs are environment variables.  Please use do-release-docker.sh or
+do-release.sh to set up the needed environment variables.  This script, release-build.sh,
+is not intended to be called stand-alone, and such use is untested.  The env variables used are:
+
+Used for 'tag' and 'publish' stages:
   PROJECT - The project to build. No default.
+  RELEASE_VERSION - Version used in pom files for release (e.g. 2.1.2)
+    Required for 'tag'; defaults for 'publish' to the version in pom at GIT_REF
+  RELEASE_TAG - Name of release tag (e.g. 2.1.2RC0), also used by
+    publish-dist as package version name in dist directory path
   ASF_USERNAME - Username of ASF committer account
   ASF_PASSWORD - Password of ASF committer account
+  DRY_RUN - 1:true (default), 0:false. If "1", does almost all the work, but doesn't actually
+    publish anything to upstream source or object repositories. It defaults to "1", so if you want
+    to actually publish you have to set '-f' (force) flag in do-release.sh or do-release-docker.sh.
 
 Used only for 'tag':
   GIT_NAME - Name to use with git
   GIT_EMAIL - E-mail address to use with git
-  GIT_BRANCH - Git branch on which to make release
-  RELEASE_VERSION - Version used in pom files for release (e.g. 2.1.2)
-  RELEASE_TAG - Name of release tag (e.g. 2.1.2RC0)
+  GIT_BRANCH - Git branch on which to make release. Tag is always placed at HEAD of this branch.
   NEXT_VERSION - Development version after release (e.g. 2.1.3-SNAPSHOT)
 
 Used only for 'publish':
-  GIT_REF - Release tag or commit to build from (default $RELEASE_TAG)
-  VERSION - Version of project to be built (e.g. 2.1.2).
-    Optional for 'publish', as it defaults to the version in pom at GIT_REF,
-    which typically will have been set by 'tag'.
-  PACKAGE_VERSION - Release identifier in top level dist directory (default $RELEASE_TAG)
+  GIT_REF - Release tag or commit to build from (defaults to $RELEASE_TAG; only need to
+    separately define GIT_REF if RELEASE_TAG is not actually present as a tag at publish time)
+    If both RELEASE_TAG and GIT_REF are undefined it will default to HEAD of master.
   GPG_KEY - GPG key id (usually email addr) used to sign release artifacts
   GPG_PASSPHRASE - Passphrase for GPG key
   REPO - Set to full path of a directory to use as maven local repo (dependencies cache)
-    to avoid re-downloading dependencies for each stage.
+    to avoid re-downloading dependencies for each stage.  It is automatically set if you
+    request full sequence of stages (tag, publish-dist, publish-release) in do-release.sh.
 
 For example:
  $ PROJECT="hbase-operator-tools" ASF_USERNAME=NAME ASF_PASSWORD=PASSWORD GPG_PASSPHRASE=PASSWORD GPG_KEY=stack@apache.org ./release-build.sh publish-dist
@@ -100,6 +107,7 @@ rm -rf "${PROJECT}"
 if [[ "$1" == "tag" ]]; then
   # for 'tag' stage
   set -o pipefail
+  set -x  # detailed logging during action
   check_get_passwords ASF_PASSWORD
   check_needed_vars PROJECT ASF_USERNAME ASF_PASSWORD RELEASE_VERSION RELEASE_TAG NEXT_VERSION \
       GIT_EMAIL GIT_NAME GIT_BRANCH
@@ -183,8 +191,8 @@ git checkout "$GIT_REF"
 git_hash="$(git rev-parse --short HEAD)"
 echo "Checked out ${PROJECT} at ${GIT_REF} commit $git_hash"
 
-if [ -z "$VERSION" ]; then
-  VERSION="$(maven_get_version)"
+if [ -z "${RELEASE_VERSION}" ]; then
+  RELEASE_VERSION="$(maven_get_version)"
 fi
 
 # This is a band-aid fix to avoid the failure of Maven nightly snapshot in some Jenkins
@@ -195,26 +203,28 @@ if ! hash $LSOF 2>/dev/null; then
   LSOF=/usr/sbin/lsof
 fi
 
-if [ -z "$PACKAGE_VERSION" ]; then
-  PACKAGE_VERSION="${VERSION}-$(date +%Y_%m_%d_%H_%M)-${git_hash}"
+package_version_name="$RELEASE_TAG"
+if [ -z "$package_version_name" ]; then
+  package_version_name="${RELEASE_VERSION}-$(date +%Y_%m_%d_%H_%M)-${git_hash}"
 fi
 
 git clean -d -f -x
 cd ..
+set -x  # detailed logging during action
 
 if [[ "$1" == "publish-dist" ]]; then
   # Source and binary tarballs
   echo "Packaging release source tarballs"
-  make_src_release "${PROJECT}" "${VERSION}"
+  make_src_release "${PROJECT}" "${RELEASE_VERSION}"
 
   echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') Building binary dist"
-  make_binary_release "${PROJECT}" "${VERSION}"
+  make_binary_release "${PROJECT}" "${RELEASE_VERSION}"
   echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') Done building binary distribution"
 
   if [[ "$PROJECT" =~ ^hbase- ]]; then
-    DEST_DIR_NAME="${PROJECT}-${PACKAGE_VERSION}"
+    DEST_DIR_NAME="${PROJECT}-${package_version_name}"
   else
-    DEST_DIR_NAME="$PACKAGE_VERSION"
+    DEST_DIR_NAME="$package_version_name"
   fi
   svn_target="svn-${PROJECT}"
   svn co --depth=empty "$RELEASE_STAGING_LOCATION" "$svn_target"
@@ -229,7 +239,7 @@ if [[ "$1" == "publish-dist" ]]; then
   # Generate api report only if project is hbase for now.
   if [ "${PROJECT}" == "hbase" ]; then
     # This script usually reports an errcode along w/ the report.
-    generate_api_report "./${PROJECT}" "${API_DIFF_TAG}" "${PACKAGE_VERSION}" || true
+    generate_api_report "./${PROJECT}" "${API_DIFF_TAG}" "${GIT_REF}" || true
     cp api*.html "$svn_target/${DEST_DIR_NAME}/"
   fi
   shopt -u nocasematch
@@ -238,7 +248,7 @@ if [[ "$1" == "publish-dist" ]]; then
 
   if ! is_dry_run; then
     cd "$svn_target"
-    svn ci --username "$ASF_USERNAME" --password "$ASF_PASSWORD" -m"Apache ${PROJECT} $PACKAGE_VERSION" --no-auth-cache
+    svn ci --username "$ASF_USERNAME" --password "$ASF_PASSWORD" -m"Apache ${PROJECT} $package_version_name" --no-auth-cache
     cd ..
     rm -rf "$svn_target"
   else
@@ -290,6 +300,7 @@ if [[ "$1" == "publish-release" ]]; then
   exit $?
 fi
 
+set +x  # done with detailed logging
 cd ..
 rm -rf "${PROJECT}"
 echo "ERROR: expects to be called with 'tag', 'publish-dist', 'publish-release', or 'publish-snapshot'" >&2
