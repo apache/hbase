@@ -73,6 +73,7 @@ public class HashTable extends Configured implements Tool {
   final static String MANIFEST_FILE_NAME = "manifest";
   final static String HASH_DATA_DIR = "hashes";
   final static String OUTPUT_DATA_FILE_PREFIX = "part-r-";
+  final static String IGNORE_TIMESTAMPS = "ignoreTimestamps";
   private final static String TMP_MANIFEST_FILE_NAME = "manifest.tmp";
 
   TableHash tableHash = new TableHash();
@@ -96,6 +97,7 @@ public class HashTable extends Configured implements Tool {
     int versions = -1;
     long startTime = 0;
     long endTime = 0;
+    boolean ignoreTimestamps;
 
     List<ImmutableBytesWritable> partitions;
 
@@ -434,6 +436,7 @@ public class HashTable extends Configured implements Tool {
           getConf().get("mapreduce.job.name", "hashTable_" + tableHash.tableName));
     Configuration jobConf = job.getConfiguration();
     jobConf.setLong(HASH_BATCH_SIZE_CONF_KEY, tableHash.batchSize);
+    jobConf.setBoolean(IGNORE_TIMESTAMPS, tableHash.ignoreTimestamps);
     job.setJarByClass(HashTable.class);
 
     TableMapReduceUtil.initTableMapperJob(tableHash.tableName, tableHash.initScan(),
@@ -471,6 +474,7 @@ public class HashTable extends Configured implements Tool {
     private ImmutableBytesWritable batchStartKey;
     private ImmutableBytesWritable batchHash;
     private long batchSize = 0;
+    boolean ignoreTimestamps;
 
 
     public ResultHasher() {
@@ -503,10 +507,13 @@ public class HashTable extends Configured implements Tool {
         digest.update(cell.getRowArray(), cell.getRowOffset(), rowLength);
         digest.update(cell.getFamilyArray(), cell.getFamilyOffset(), familyLength);
         digest.update(cell.getQualifierArray(), cell.getQualifierOffset(), qualifierLength);
-        long ts = cell.getTimestamp();
-        for (int i = 8; i > 0; i--) {
-          digest.update((byte) ts);
-          ts >>>= 8;
+
+        if (!ignoreTimestamps) {
+          long ts = cell.getTimestamp();
+          for (int i = 8; i > 0; i--) {
+            digest.update((byte) ts);
+            ts >>>= 8;
+          }
         }
         digest.update(cell.getValueArray(), cell.getValueOffset(), valueLength);
 
@@ -552,7 +559,8 @@ public class HashTable extends Configured implements Tool {
       targetBatchSize = context.getConfiguration()
           .getLong(HASH_BATCH_SIZE_CONF_KEY, DEFAULT_BATCH_SIZE);
       hasher = new ResultHasher();
-
+      hasher.ignoreTimestamps = context.getConfiguration().
+        getBoolean(IGNORE_TIMESTAMPS, false);
       TableSplit split = (TableSplit) context.getInputSplit();
       hasher.startBatch(new ImmutableBytesWritable(split.getStartRow()));
     }
@@ -699,6 +707,13 @@ public class HashTable extends Configured implements Tool {
         final String familiesArgKey = "--families=";
         if (cmd.startsWith(familiesArgKey)) {
           tableHash.families = cmd.substring(familiesArgKey.length());
+          continue;
+        }
+
+        final String ignoreTimestampsKey = "--ignoreTimestamps=";
+        if (cmd.startsWith(ignoreTimestampsKey)) {
+          tableHash.ignoreTimestamps = Boolean.
+            parseBoolean(cmd.substring(ignoreTimestampsKey.length()));
           continue;
         }
 
