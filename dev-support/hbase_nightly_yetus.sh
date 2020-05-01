@@ -76,7 +76,11 @@ fi
 
 # For testing with specific hadoop version. Activates corresponding profile in maven runs.
 if [[ -n "${HADOOP_PROFILE}" ]]; then
-  YETUS_ARGS=("--hadoop-profile=${HADOOP_PROFILE}" "${YETUS_ARGS[@]}")
+  # Master has only Hadoop3 support. We don't need to activate any profile.
+  # The Jenkinsfile should not attempt to run any Hadoop2 tests.
+  if [[ "${BRANCH_NAME}" =~ branch-2* ]]; then
+    YETUS_ARGS=("--hadoop-profile=${HADOOP_PROFILE}" "${YETUS_ARGS[@]}")
+  fi
 fi
 
 if [[ -n "${SKIP_ERROR_PRONE}" ]]; then
