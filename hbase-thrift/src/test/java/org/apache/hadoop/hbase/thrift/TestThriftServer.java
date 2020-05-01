@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,6 +32,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -254,7 +255,9 @@ public class TestThriftServer {
 
   public static void createTestTables(Hbase.Iface handler) throws Exception {
     // Create/enable/disable/delete tables, ensure methods act correctly
-    assertEquals(0, handler.getTableNames().size());
+    List<java.nio.ByteBuffer> bbs = handler.getTableNames();
+    assertEquals(bbs.stream().map(b -> Bytes.toString(b.array())).
+      collect(Collectors.joining(",")), 0, bbs.size());
     handler.createTable(tableAname, getColumnDescriptors());
     assertEquals(1, handler.getTableNames().size());
     assertEquals(2, handler.getColumnDescriptors(tableAname).size());
