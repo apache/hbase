@@ -100,7 +100,11 @@ else
   echo "Skipping publish-dist step."
 fi
 
-if should_build "publish-release"; then
+if should_build "publish-snapshot"; then
+  run_silent "Publishing snapshot" "publish-snapshot.log" \
+    "$SELF/release-build.sh" publish-snapshot
+
+elif should_build "publish-release"; then
   run_silent "Publishing release" "publish-release.log" \
     "$SELF/release-build.sh" publish-release
 else

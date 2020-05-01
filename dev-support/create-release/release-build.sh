@@ -48,16 +48,16 @@ Used only for 'tag':
   GIT_NAME - Name to use with git
   GIT_EMAIL - E-mail address to use with git
   GIT_BRANCH - Git branch on which to make release
-  RELEASE_VERSION - Version used in pom files for release
-  RELEASE_TAG - Name of release tag
-  NEXT_VERSION - Development version after release
+  RELEASE_VERSION - Version used in pom files for release (e.g. 2.1.2)
+  RELEASE_TAG - Name of release tag (e.g. 2.1.2RC0)
+  NEXT_VERSION - Development version after release (e.g. 2.1.3-SNAPSHOT)
 
 Used only for 'publish':
-  GIT_REF - Release tag or commit to build from
+  GIT_REF - Release tag or commit to build from (default $RELEASE_TAG)
   VERSION - Version of project to be built (e.g. 2.1.2).
     Optional for 'publish', as it defaults to the version in pom at GIT_REF,
     which typically will have been set by 'tag'.
-  PACKAGE_VERSION - Release identifier in top level dist directory (e.g. 2.1.2RC1)
+  PACKAGE_VERSION - Release identifier in top level dist directory (default $RELEASE_TAG)
   GPG_KEY - GPG key id (usually email addr) used to sign release artifacts
   GPG_PASSPHRASE - Passphrase for GPG key
   REPO - Set to full path of a directory to use as maven local repo (dependencies cache)
@@ -148,7 +148,7 @@ if [[ "$1" == "tag" ]]; then
   else
     cd ..
     mv "${PROJECT}" "${PROJECT}.tag"
-    echo "Clone with version changes and tag available as ${PROJECT}.tag in the output directory."
+    echo "Dry run: Clone with version changes and tag available as ${PROJECT}.tag in the output directory."
   fi
   exit 0
 fi
@@ -243,7 +243,7 @@ if [[ "$1" == "publish-dist" ]]; then
     rm -rf "$svn_target"
   else
     mv "$svn_target/${DEST_DIR_NAME}" "${svn_target}_${DEST_DIR_NAME}.dist"
-    echo "svn-managed 'dist' directory with release tarballs, CHANGES.md and RELEASENOTES.md available as $(pwd)/${svn_target}_${DEST_DIR_NAME}.dist"
+    echo "Dry run: svn-managed 'dist' directory with release tarballs, CHANGES.md and RELEASENOTES.md available as $(pwd)/${svn_target}_${DEST_DIR_NAME}.dist"
     rm -rf "$svn_target"
   fi
 
@@ -251,24 +251,35 @@ if [[ "$1" == "publish-dist" ]]; then
 fi
 
 if [[ "$1" == "publish-snapshot" ]]; then
-  pushd "${PROJECT}"
-  maven_deploy snapshot "${BASE_DIR}/mvn_deploy.log"
-  popd
-  exit 0
+  (
+  cd "${PROJECT}"
+  mvn_log="${BASE_DIR}/mvn_deploy_snapshot.log"
+  echo "Publishing snapshot to nexus"
+  maven_deploy snapshot "$mvn_log"
+  if ! is_dry_run; then
+    echo "Snapshot artifacts successfully published to repo."
+    rm "$mvn_log"
+  else
+    echo "Dry run: Snapshot artifacts successfully built, but not published due to dry run."
+  fi
+  )
+  exit $?
 fi
 
 if [[ "$1" == "publish-release" ]]; then
   (
   cd "${PROJECT}"
+  mvn_log="${BASE_DIR}/mvn_deploy_release.log"
   echo "Staging release in nexus"
-  maven_deploy release "${BASE_DIR}/mvn_deploy.log"
+  maven_deploy release "$mvn_log"
   declare staged_repo_id="dryrun-no-repo"
   if ! is_dry_run; then
-    staged_repo_id=$(grep -o "Closing staging repository with ID .*" "${BASE_DIR}/mvn_deploy.log" \
+    staged_repo_id=$(grep -o "Closing staging repository with ID .*" "$mvn_log" \
         | sed -e 's/Closing staging repository with ID "\([^"]*\)"./\1/')
-    echo "Artifacts successfully staged to repo ${staged_repo_id}"
+    echo "Release artifacts successfully published to repo ${staged_repo_id}"
+    rm "$mvn_log"
   else
-    echo "Artifacts successfully built. Not staged due to dry run."
+    echo "Dry run: Release artifacts successfully built, but not published due to dry run."
   fi
   # Dump out email to send. Where we find vote.tmpl depends
   # on where this script is run from
@@ -276,7 +287,7 @@ if [[ "$1" == "publish-release" ]]; then
   export PROJECT_TEXT
   eval "echo \"$(< "${SELF}/vote.tmpl")\"" |tee "${BASE_DIR}/vote.txt"
   )
-  exit 0
+  exit $?
 fi
 
 cd ..

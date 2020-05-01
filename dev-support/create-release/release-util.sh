@@ -520,6 +520,7 @@ function kick_gpg_agent {
 # Do maven command to set version into local pom
 function maven_set_version { #input: <version_to_set>
   local this_version="$1"
+  echo "${MVN[@]}" versions:set -DnewVersion="$this_version"
   "${MVN[@]}" versions:set -DnewVersion="$this_version" | grep -v "no value" # silence logs
 }
 
@@ -533,11 +534,11 @@ function maven_get_version {
 function maven_deploy { #inputs: <snapshot|release> <log_file_path>
   # Invoke with cwd=$PROJECT
   local deploy_type="$1"
-  local log_file="$2"
+  local mvn_log_file="$2" #secondary log file used later to extract staged_repo_id
   if [[ "$deploy_type" != "snapshot" && "$deploy_type" != "release" ]]; then
     error "unrecognized deploy type, must be 'snapshot'|'release'"
   fi
-  if [[ -z "$log_file" ]] || ! touch "$log_file"; then
+  if [[ -z "$mvn_log_file" ]] || ! touch "$mvn_log_file"; then
     error "must provide writable maven log output filepath"
   fi
   # shellcheck disable=SC2153
@@ -546,19 +547,23 @@ function maven_deploy { #inputs: <snapshot|release> <log_file_path>
   elif [[ "$deploy_type" == "release" ]] && [[ "$VERSION" =~ SNAPSHOT ]]; then
     error "Non-snapshot release version must not include the word 'SNAPSHOT'; you gave version '$VERSION'"
   fi
-  # Publish ${PROJECT} to Maven release repo
+  # Publish ${PROJECT} to Maven repo
   # shellcheck disable=SC2154
   echo "Publishing ${PROJECT} checkout at '$GIT_REF' ($git_hash)"
   echo "Publish version is $VERSION"
   # Coerce the requested version
   maven_set_version "$VERSION"
+  # Prepare for signing
+  kick_gpg_agent
   declare -a mvn_goals=(clean install)
   if ! is_dry_run; then
     mvn_goals=("${mvn_goals[@]}" deploy)
   fi
+  echo "${MVN[@]}" -DskipTests -Dcheckstyle.skip=true "${PUBLISH_PROFILES[@]}" \
+      "${mvn_goals[@]}"
   if ! "${MVN[@]}" -DskipTests -Dcheckstyle.skip=true "${PUBLISH_PROFILES[@]}" \
-      "${mvn_goals[@]}" > "$log_file"; then
-    error "Deploy build failed, for details see log at '$log_file'."
+      "${mvn_goals[@]}" | tee "$mvn_log_file"; then
+    error "Deploy build failed, for details see log at '$mvn_log_file'."
   fi
   return 0
 }
