@@ -619,7 +619,7 @@ public class AssignmentVerificationReport {
       if ((i++) % 3 == 0) {
         System.out.print("\n\t\t\t");
       }
-      System.out.print(addr.getHostAndPort() + " ; ");
+      System.out.print(addr.getAddress() + " ; ");
     }
     System.out.println("\n");
   }
