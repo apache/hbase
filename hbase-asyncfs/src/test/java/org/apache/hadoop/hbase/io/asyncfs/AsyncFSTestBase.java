@@ -28,7 +28,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class AsyncFSTestBase {
+public abstract class AsyncFSTestBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(AsyncFSTestBase.class);
 

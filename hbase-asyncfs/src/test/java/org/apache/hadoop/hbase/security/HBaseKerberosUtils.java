@@ -37,7 +37,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 
 @InterfaceAudience.Private
-public class HBaseKerberosUtils {
+public final class HBaseKerberosUtils {
   private static final Logger LOG = LoggerFactory.getLogger(HBaseKerberosUtils.class);
 
   public static final String KRB_PRINCIPAL = SecurityConstants.REGIONSERVER_KRB_PRINCIPAL;
@@ -45,6 +45,9 @@ public class HBaseKerberosUtils {
   public static final String KRB_KEYTAB_FILE = SecurityConstants.REGIONSERVER_KRB_KEYTAB_FILE;
   public static final String CLIENT_PRINCIPAL = AuthUtil.HBASE_CLIENT_KERBEROS_PRINCIPAL;
   public static final String CLIENT_KEYTAB = AuthUtil.HBASE_CLIENT_KEYTAB_FILE;
+
+  private HBaseKerberosUtils() {
+  }
 
   public static boolean isKerberosPropertySetted() {
     String krbPrincipal = System.getProperty(KRB_PRINCIPAL);

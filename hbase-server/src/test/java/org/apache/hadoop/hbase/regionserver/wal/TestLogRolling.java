@@ -497,8 +497,8 @@ public class TestLogRolling extends AbstractTestLogRolling {
       Set<String> loggedRows = new HashSet<>();
       for (Path p : paths) {
         LOG.debug("recovering lease for " + p);
-        RecoverLeaseFSUtils.recoverFileLease(((HFileSystem) fs).getBackingFs(), p, TEST_UTIL.getConfiguration(),
-          null);
+        RecoverLeaseFSUtils.recoverFileLease(((HFileSystem) fs).getBackingFs(), p,
+          TEST_UTIL.getConfiguration(), null);
 
         LOG.debug("Reading WAL " + CommonFSUtils.getPath(p));
         WAL.Reader reader = null;
