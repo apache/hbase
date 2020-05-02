@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.io.asyncfs;
 
 import java.io.File;
 import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
@@ -57,8 +58,7 @@ public class AsyncFSTestBase {
     if (b) {
       CLUSTER_TEST_DIR.deleteOnExit();
     }
-    LOG
-      .info("Created new mini-cluster data directory: " + CLUSTER_TEST_DIR + ", deleteOnExit=" + b);
+    LOG.info("Created new mini-cluster data directory: {}, deleteOnExit={}", CLUSTER_TEST_DIR, b);
   }
 
   private static String createDirAndSetProperty(final String property) {
@@ -76,6 +76,7 @@ public class AsyncFSTestBase {
 
   private static void createDirsAndSetProperties() throws IOException {
     setupClusterTestDir();
+    System.setProperty("test.build.data", CLUSTER_TEST_DIR.getPath());
     createDirAndSetProperty("test.cache.data");
     createDirAndSetProperty("hadoop.tmp.dir");
 
@@ -110,7 +111,7 @@ public class AsyncFSTestBase {
 
   protected static void shutdownMiniDFSCluster() {
     if (CLUSTER != null) {
-      CLUSTER.shutdown();
+      CLUSTER.shutdown(true);
       CLUSTER = null;
     }
   }

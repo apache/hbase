@@ -197,6 +197,7 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     if (KDC != null) {
       KDC.stop();
     }
+    shutdownMiniDFSCluster();
   }
 
   private Path testDirOnTestFs;
