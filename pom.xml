@@ -91,6 +91,7 @@
     <module>hbase-backup</module>
     <module>hbase-zookeeper</module>
     <module>hbase-hbtop</module>
+    <module>hbase-asyncfs</module>
   </modules>
   <scm>
     <connection>scm:git:git://gitbox.apache.org/repos/asf/hbase.git</connection>
@@ -1883,6 +1884,18 @@
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-shaded-mapreduce</artifactId>
         <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-asyncfs</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-asyncfs</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+        <scope>test</scope>
       </dependency>
       <!-- General dependencies -->
       <dependency>

@@ -20,21 +20,21 @@ package org.apache.hadoop.hbase.security;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.AuthUtil;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.http.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.http.HttpConfig;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Strings;
-import org.apache.hadoop.security.UserGroupInformation;
 
 @InterfaceAudience.Private
 public class HBaseKerberosUtils {
@@ -111,8 +111,8 @@ public class HBaseKerberosUtils {
    * @param servicePrincipal service principal used by NN, HM and RS.
    * @param spnegoPrincipal SPNEGO principal used by NN web UI.
    */
-  public static void setSecuredConfiguration(Configuration conf,
-      String servicePrincipal, String spnegoPrincipal) {
+  public static void setSecuredConfiguration(Configuration conf, String servicePrincipal,
+    String spnegoPrincipal) {
     setPrincipalForTesting(servicePrincipal);
     setSecuredConfiguration(conf);
     setSecuredHadoopConfiguration(conf, spnegoPrincipal);
@@ -128,17 +128,13 @@ public class HBaseKerberosUtils {
   }
 
   private static void setSecuredHadoopConfiguration(Configuration conf,
-      String spnegoServerPrincipal) {
-    // if we drop support for hadoop-2.4.0 and hadoop-2.4.1,
-    // the following key should be changed.
-    // 1) DFS_NAMENODE_USER_NAME_KEY -> DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY
-    // 2) DFS_DATANODE_USER_NAME_KEY -> DFS_DATANODE_KERBEROS_PRINCIPAL_KEY
+    String spnegoServerPrincipal) {
     String serverPrincipal = System.getProperty(KRB_PRINCIPAL);
     String keytabFilePath = System.getProperty(KRB_KEYTAB_FILE);
     // HDFS
-    conf.set(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, serverPrincipal);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY, serverPrincipal);
     conf.set(DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY, keytabFilePath);
-    conf.set(DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY, serverPrincipal);
+    conf.set(DFSConfigKeys.DFS_DATANODE_KERBEROS_PRINCIPAL_KEY, serverPrincipal);
     conf.set(DFSConfigKeys.DFS_DATANODE_KEYTAB_FILE_KEY, keytabFilePath);
     conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
     // YARN
@@ -146,8 +142,7 @@ public class HBaseKerberosUtils {
     conf.set(YarnConfiguration.NM_PRINCIPAL, KRB_PRINCIPAL);
 
     if (spnegoServerPrincipal != null) {
-      conf.set(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY,
-          spnegoServerPrincipal);
+      conf.set(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY, spnegoServerPrincipal);
     }
 
     conf.setBoolean("ignore.secure.ports.for.testing", true);
@@ -161,8 +156,8 @@ public class HBaseKerberosUtils {
    * @param clazz the caller test class.
    * @throws Exception if unable to set up SSL configuration
    */
-  public static void setSSLConfiguration(HBaseTestingUtility utility, Class clazz)
-      throws Exception {
+  public static void setSSLConfiguration(HBaseCommonTestingUtility utility, Class<?> clazz)
+    throws Exception {
     Configuration conf = utility.getConfiguration();
     conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, HttpConfig.Policy.HTTPS_ONLY.name());
     conf.set(DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY, "localhost:0");
@@ -175,19 +170,19 @@ public class HBaseKerberosUtils {
   }
 
   public static UserGroupInformation loginAndReturnUGI(Configuration conf, String username)
-      throws IOException {
+    throws IOException {
     String hostname = InetAddress.getLocalHost().getHostName();
     String keyTabFileConfKey = "hbase." + username + ".keytab.file";
     String keyTabFileLocation = conf.get(keyTabFileConfKey);
     String principalConfKey = "hbase." + username + ".kerberos.principal";
     String principal = org.apache.hadoop.security.SecurityUtil
-        .getServerPrincipal(conf.get(principalConfKey), hostname);
+      .getServerPrincipal(conf.get(principalConfKey), hostname);
     if (keyTabFileLocation == null || principal == null) {
-      LOG.warn("Principal or key tab file null for : " + principalConfKey + ", "
-          + keyTabFileConfKey);
+      LOG.warn(
+        "Principal or key tab file null for : " + principalConfKey + ", " + keyTabFileConfKey);
     }
     UserGroupInformation ugi =
-        UserGroupInformation.loginUserFromKeytabAndReturnUGI(principal, keyTabFileLocation);
+      UserGroupInformation.loginUserFromKeytabAndReturnUGI(principal, keyTabFileLocation);
     return ugi;
   }
 }

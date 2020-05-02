@@ -25,11 +25,14 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_KEY
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.net.BindException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.ExecutionException;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CipherSuite;
@@ -37,8 +40,8 @@ import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
+import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -57,6 +60,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoop;
@@ -66,13 +71,14 @@ import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioSocketChannel;
 
 @RunWith(Parameterized.class)
 @Category({ MiscTests.class, LargeTests.class })
-public class TestSaslFanOutOneBlockAsyncDFSOutput {
+public class TestSaslFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
+
+  private static final Logger LOG =
+    LoggerFactory.getLogger(TestSaslFanOutOneBlockAsyncDFSOutput.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSaslFanOutOneBlockAsyncDFSOutput.class);
-
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+    HBaseClassTestRule.forClass(TestSaslFanOutOneBlockAsyncDFSOutput.class);
 
   private static DistributedFileSystem FS;
 
@@ -82,8 +88,7 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput {
 
   private static int READ_TIMEOUT_MS = 200000;
 
-  private static final File KEYTAB_FILE =
-    new File(TEST_UTIL.getDataTestDir("keytab").toUri().getPath());
+  private static final File KEYTAB_FILE = new File(UTIL.getDataTestDir("keytab").toUri().getPath());
 
   private static MiniKdc KDC;
 
@@ -124,7 +129,7 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput {
 
   private static void setUpKeyProvider(Configuration conf) throws Exception {
     URI keyProviderUri =
-      new URI("jceks://file" + TEST_UTIL.getDataTestDir("test.jks").toUri().toString());
+      new URI("jceks://file" + UTIL.getDataTestDir("test.jks").toUri().toString());
     conf.set("dfs.encryption.key.provider.uri", keyProviderUri.toString());
     KeyProvider keyProvider = KeyProviderFactory.get(keyProviderUri, conf);
     keyProvider.createKey(TEST_KEY_NAME, KeyProvider.options(conf));
@@ -132,21 +137,56 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput {
     keyProvider.close();
   }
 
+  /**
+   * Sets up {@link MiniKdc} for testing security. Uses {@link HBaseKerberosUtils} to set the given
+   * keytab file as {@link HBaseKerberosUtils#KRB_KEYTAB_FILE}.
+   */
+  private static MiniKdc setupMiniKdc(File keytabFile) throws Exception {
+    Properties conf = MiniKdc.createConf();
+    conf.put(MiniKdc.DEBUG, true);
+    MiniKdc kdc = null;
+    File dir = null;
+    // There is time lag between selecting a port and trying to bind with it. It's possible that
+    // another service captures the port in between which'll result in BindException.
+    boolean bindException;
+    int numTries = 0;
+    do {
+      try {
+        bindException = false;
+        dir = new File(UTIL.getDataTestDir("kdc").toUri().getPath());
+        kdc = new MiniKdc(conf, dir);
+        kdc.start();
+      } catch (BindException e) {
+        FileUtils.deleteDirectory(dir); // clean directory
+        numTries++;
+        if (numTries == 3) {
+          LOG.error("Failed setting up MiniKDC. Tried " + numTries + " times.");
+          throw e;
+        }
+        LOG.error("BindException encountered when setting up MiniKdc. Trying again.");
+        bindException = true;
+      }
+    } while (bindException);
+    System.setProperty(SecurityConstants.REGIONSERVER_KRB_KEYTAB_FILE,
+      keytabFile.getAbsolutePath());
+    return kdc;
+  }
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     EVENT_LOOP_GROUP = new NioEventLoopGroup();
     CHANNEL_CLASS = NioSocketChannel.class;
-    TEST_UTIL.getConfiguration().setInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY, READ_TIMEOUT_MS);
-    KDC = TEST_UTIL.setupMiniKdc(KEYTAB_FILE);
+    UTIL.getConfiguration().setInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY, READ_TIMEOUT_MS);
+    KDC = setupMiniKdc(KEYTAB_FILE);
     USERNAME = UserGroupInformation.getLoginUser().getShortUserName();
     PRINCIPAL = USERNAME + "/" + HOST;
     HTTP_PRINCIPAL = "HTTP/" + HOST;
     KDC.createPrincipal(KEYTAB_FILE, PRINCIPAL, HTTP_PRINCIPAL);
 
-    setUpKeyProvider(TEST_UTIL.getConfiguration());
-    HBaseKerberosUtils.setSecuredConfiguration(TEST_UTIL.getConfiguration(),
-        PRINCIPAL + "@" + KDC.getRealm(), HTTP_PRINCIPAL + "@" + KDC.getRealm());
-    HBaseKerberosUtils.setSSLConfiguration(TEST_UTIL, TestSaslFanOutOneBlockAsyncDFSOutput.class);
+    setUpKeyProvider(UTIL.getConfiguration());
+    HBaseKerberosUtils.setSecuredConfiguration(UTIL.getConfiguration(),
+      PRINCIPAL + "@" + KDC.getRealm(), HTTP_PRINCIPAL + "@" + KDC.getRealm());
+    HBaseKerberosUtils.setSSLConfiguration(UTIL, TestSaslFanOutOneBlockAsyncDFSOutput.class);
   }
 
   @AfterClass
@@ -171,25 +211,25 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput {
 
   @Before
   public void setUp() throws Exception {
-    TEST_UTIL.getConfiguration().set("dfs.data.transfer.protection", protection);
+    UTIL.getConfiguration().set("dfs.data.transfer.protection", protection);
     if (StringUtils.isBlank(encryptionAlgorithm) && StringUtils.isBlank(cipherSuite)) {
-      TEST_UTIL.getConfiguration().setBoolean(DFS_ENCRYPT_DATA_TRANSFER_KEY, false);
+      UTIL.getConfiguration().setBoolean(DFS_ENCRYPT_DATA_TRANSFER_KEY, false);
     } else {
-      TEST_UTIL.getConfiguration().setBoolean(DFS_ENCRYPT_DATA_TRANSFER_KEY, true);
+      UTIL.getConfiguration().setBoolean(DFS_ENCRYPT_DATA_TRANSFER_KEY, true);
     }
     if (StringUtils.isBlank(encryptionAlgorithm)) {
-      TEST_UTIL.getConfiguration().unset(DFS_DATA_ENCRYPTION_ALGORITHM_KEY);
+      UTIL.getConfiguration().unset(DFS_DATA_ENCRYPTION_ALGORITHM_KEY);
     } else {
-      TEST_UTIL.getConfiguration().set(DFS_DATA_ENCRYPTION_ALGORITHM_KEY, encryptionAlgorithm);
+      UTIL.getConfiguration().set(DFS_DATA_ENCRYPTION_ALGORITHM_KEY, encryptionAlgorithm);
     }
     if (StringUtils.isBlank(cipherSuite)) {
-      TEST_UTIL.getConfiguration().unset(DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY);
+      UTIL.getConfiguration().unset(DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY);
     } else {
-      TEST_UTIL.getConfiguration().set(DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY, cipherSuite);
+      UTIL.getConfiguration().set(DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY, cipherSuite);
     }
 
-    TEST_UTIL.startMiniDFSCluster(3);
-    FS = TEST_UTIL.getDFSCluster().getFileSystem();
+    startMiniDFSCluster(3);
+    FS = CLUSTER.getFileSystem();
     testDirOnTestFs = new Path("/" + name.getMethodName().replaceAll("[^0-9a-zA-Z]", "_"));
     FS.mkdirs(testDirOnTestFs);
     entryptionTestDirOnTestFs = new Path("/" + testDirOnTestFs.getName() + "_enc");
@@ -199,7 +239,7 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput {
 
   @After
   public void tearDown() throws IOException {
-    TEST_UTIL.shutdownMiniDFSCluster();
+    shutdownMiniDFSCluster();
   }
 
   private Path getTestFile() {

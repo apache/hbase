@@ -39,7 +39,6 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -63,15 +62,13 @@ import org.apache.hbase.thirdparty.io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioSocketChannel;
 
 @Category({ MiscTests.class, MediumTests.class })
-public class TestFanOutOneBlockAsyncDFSOutput {
+public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFanOutOneBlockAsyncDFSOutput.class);
+    HBaseClassTestRule.forClass(TestFanOutOneBlockAsyncDFSOutput.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFanOutOneBlockAsyncDFSOutput.class);
-
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private static DistributedFileSystem FS;
 
@@ -86,9 +83,9 @@ public class TestFanOutOneBlockAsyncDFSOutput {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    TEST_UTIL.getConfiguration().setInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY, READ_TIMEOUT_MS);
-    TEST_UTIL.startMiniDFSCluster(3);
-    FS = TEST_UTIL.getDFSCluster().getFileSystem();
+    UTIL.getConfiguration().setInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY, READ_TIMEOUT_MS);
+    startMiniDFSCluster(3);
+    FS = CLUSTER.getFileSystem();
     EVENT_LOOP_GROUP = new NioEventLoopGroup();
     CHANNEL_CLASS = NioSocketChannel.class;
   }
@@ -98,11 +95,11 @@ public class TestFanOutOneBlockAsyncDFSOutput {
     if (EVENT_LOOP_GROUP != null) {
       EVENT_LOOP_GROUP.shutdownGracefully().sync();
     }
-    TEST_UTIL.shutdownMiniDFSCluster();
+    shutdownMiniDFSCluster();
   }
 
   static void writeAndVerify(FileSystem fs, Path f, AsyncFSOutput out)
-      throws IOException, InterruptedException, ExecutionException {
+    throws IOException, InterruptedException, ExecutionException {
     List<CompletableFuture<Long>> futures = new ArrayList<>();
     byte[] b = new byte[10];
     Random rand = new Random(12345);
@@ -151,7 +148,7 @@ public class TestFanOutOneBlockAsyncDFSOutput {
     out.write(b, 0, b.length);
     out.flush(false).get();
     // restart one datanode which causes one connection broken
-    TEST_UTIL.getDFSCluster().restartDataNode(0);
+    CLUSTER.restartDataNode(0);
     out.write(b, 0, b.length);
     try {
       out.flush(false).get();
@@ -199,8 +196,8 @@ public class TestFanOutOneBlockAsyncDFSOutput {
 
   @Test
   public void testConnectToDatanodeFailed()
-      throws IOException, ClassNotFoundException, NoSuchMethodException, IllegalAccessException,
-      InvocationTargetException, InterruptedException, NoSuchFieldException {
+    throws IOException, ClassNotFoundException, NoSuchMethodException, IllegalAccessException,
+    InvocationTargetException, InterruptedException, NoSuchFieldException {
     Field xceiverServerDaemonField = DataNode.class.getDeclaredField("dataXceiverServer");
     xceiverServerDaemonField.setAccessible(true);
     Class<?> xceiverServerClass =
@@ -208,7 +205,7 @@ public class TestFanOutOneBlockAsyncDFSOutput {
     Method numPeersMethod = xceiverServerClass.getDeclaredMethod("getNumPeers");
     numPeersMethod.setAccessible(true);
     // make one datanode broken
-    DataNodeProperties dnProp = TEST_UTIL.getDFSCluster().stopDataNode(0);
+    DataNodeProperties dnProp = CLUSTER.stopDataNode(0);
     Path f = new Path("/test");
     EventLoop eventLoop = EVENT_LOOP_GROUP.next();
     try (FanOutOneBlockAsyncDFSOutput output = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS,
@@ -216,7 +213,7 @@ public class TestFanOutOneBlockAsyncDFSOutput {
       // should exclude the dead dn when retry so here we only have 2 DNs in pipeline
       assertEquals(2, output.getPipeline().length);
     } finally {
-      TEST_UTIL.getDFSCluster().restartDataNode(dnProp);
+      CLUSTER.restartDataNode(dnProp);
     }
   }
 
