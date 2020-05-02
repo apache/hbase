@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.Action.Type;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
@@ -163,7 +164,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     Integer[] serverIndicesSortedByRegionCount;
     Integer[] serverIndicesSortedByLocality;
 
-    Map<String, Integer> serversToIndex;
+    Map<Address, Integer> serversToIndex;
     Map<String, Integer> hostsToIndex;
     Map<String, Integer> racksToIndex;
     Map<String, Integer> tablesToIndex;
@@ -232,15 +233,15 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
           }
           continue;
         }
-        if (serversToIndex.get(sn.getAddress().toString()) == null) {
-          serversToIndex.put(sn.getHostAndPort(), numServers++);
+        if (serversToIndex.get(sn.getAddress()) == null) {
+          serversToIndex.put(sn.getAddress(), numServers++);
         }
         if (!hostsToIndex.containsKey(sn.getHostname())) {
           hostsToIndex.put(sn.getHostname(), numHosts++);
           serversPerHostList.add(new ArrayList<>(1));
         }
 
-        int serverIndex = serversToIndex.get(sn.getHostAndPort());
+        int serverIndex = serversToIndex.get(sn.getAddress());
         int hostIndex = hostsToIndex.get(sn.getHostname());
         serversPerHostList.get(hostIndex).add(serverIndex);
 
@@ -292,7 +293,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
           LOG.warn("SERVERNAME IS NULL, skipping " + entry.getValue());
           continue;
         }
-        int serverIndex = serversToIndex.get(entry.getKey().getHostAndPort());
+        int serverIndex = serversToIndex.get(entry.getKey().getAddress());
 
         // keep the servername if this is the first server name for this hostname
         // or this servername has the newest startcode.
@@ -323,7 +324,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       }
 
       for (Entry<ServerName, List<RegionInfo>> entry : clusterState.entrySet()) {
-        int serverIndex = serversToIndex.get(entry.getKey().getHostAndPort());
+        int serverIndex = serversToIndex.get(entry.getKey().getAddress());
         regionPerServerIndex = serverIndexToRegionsOffset[serverIndex];
 
         int hostIndex = hostsToIndex.get(entry.getKey().getHostname());
@@ -495,8 +496,8 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
         regionLocations[regionIndex] = new int[loc.size()];
         for (int i = 0; i < loc.size(); i++) {
           regionLocations[regionIndex][i] = loc.get(i) == null ? -1
-              : (serversToIndex.get(loc.get(i).getHostAndPort()) == null ? -1
-                  : serversToIndex.get(loc.get(i).getHostAndPort()));
+              : (serversToIndex.get(loc.get(i).getAddress()) == null ? -1
+                  : serversToIndex.get(loc.get(i).getAddress()));
         }
       }
     }
@@ -741,10 +742,10 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
      * @return true or false
      */
     boolean wouldLowerAvailability(RegionInfo regionInfo, ServerName serverName) {
-      if (!serversToIndex.containsKey(serverName.getHostAndPort())) {
+      if (!serversToIndex.containsKey(serverName.getAddress())) {
         return false; // safeguard against race between cluster.servers and servers from LB method args
       }
-      int server = serversToIndex.get(serverName.getHostAndPort());
+      int server = serversToIndex.get(serverName.getAddress());
       int region = regionsToIndex.get(regionInfo);
 
       // Region replicas for same region should better assign to different servers
@@ -804,10 +805,10 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     }
 
     void doAssignRegion(RegionInfo regionInfo, ServerName serverName) {
-      if (!serversToIndex.containsKey(serverName.getHostAndPort())) {
+      if (!serversToIndex.containsKey(serverName.getAddress())) {
         return;
       }
-      int server = serversToIndex.get(serverName.getHostAndPort());
+      int server = serversToIndex.get(serverName.getAddress());
       int region = regionsToIndex.get(regionInfo);
       doAction(new AssignRegionAction(region, server));
     }
@@ -1003,7 +1004,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     public String toString() {
       StringBuilder desc = new StringBuilder("Cluster={servers=[");
       for(ServerName sn:servers) {
-        desc.append(sn.getHostAndPort()).append(", ");
+        desc.append(sn.getAddress().toString()).append(", ");
       }
       desc.append("], serverIndicesSortedByRegionCount=")
           .append(Arrays.toString(serverIndicesSortedByRegionCount))

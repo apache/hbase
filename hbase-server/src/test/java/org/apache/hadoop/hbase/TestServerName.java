@@ -55,20 +55,6 @@ public class TestServerName {
   }
 
   @Test
-  public void testGetHostNameMinusDomain() {
-    assertEquals("2607:f0d0:1002:51::4",
-        ServerName.getHostNameMinusDomain("2607:f0d0:1002:51::4"));
-    assertEquals("2607:f0d0:1002:0051:0000:0000:0000:0004",
-        ServerName.getHostNameMinusDomain("2607:f0d0:1002:0051:0000:0000:0000:0004"));
-    assertEquals("1.1.1.1", ServerName.getHostNameMinusDomain("1.1.1.1"));
-    assertEquals("x", ServerName.getHostNameMinusDomain("x"));
-    assertEquals("x", ServerName.getHostNameMinusDomain("x.y.z"));
-    assertEquals("asf000", ServerName.getHostNameMinusDomain("asf000.sp2.ygridcore.net"));
-    ServerName sn = ServerName.valueOf("asf000.sp2.ygridcore.net", 1, 1);
-    assertEquals("asf000.sp2.ygridcore.net,1,1", sn.toString());
-  }
-
-  @Test
   public void testShortString() {
     ServerName sn = ServerName.valueOf("asf000.sp2.ygridcore.net", 1, 1);
     assertEquals("asf000:1", sn.toShortString());
