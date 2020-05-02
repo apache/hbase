@@ -478,8 +478,7 @@ public class TestSyncTable {
   }
 
   private void writeTestData(TableName sourceTableName, TableName targetTableName,
-    long...timestamps)
-      throws Exception {
+      long... timestamps) throws Exception {
     final byte[] family = Bytes.toBytes("family");
     final byte[] column1 = Bytes.toBytes("c1");
     final byte[] column2 = Bytes.toBytes("c2");
