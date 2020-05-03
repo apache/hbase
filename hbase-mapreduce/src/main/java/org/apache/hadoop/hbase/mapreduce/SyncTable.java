@@ -483,6 +483,23 @@ public class SyncTable extends Configured implements Tool {
       }
     }
 
+    private Cell checkAndResetTimestamp(Cell sourceCell){
+      if (ignoreTimestamp) {
+        sourceCell = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+          .setType(sourceCell.getType())
+          .setRow(sourceCell.getRowArray(),
+            sourceCell.getRowOffset(), sourceCell.getRowLength())
+          .setFamily(sourceCell.getFamilyArray(),
+            sourceCell.getFamilyOffset(), sourceCell.getFamilyLength())
+          .setQualifier(sourceCell.getQualifierArray(),
+            sourceCell.getQualifierOffset(), sourceCell.getQualifierLength())
+          .setTimestamp(System.currentTimeMillis())
+          .setValue(sourceCell.getValueArray(),
+            sourceCell.getValueOffset(), sourceCell.getValueLength()).build();
+      }
+      return sourceCell;
+    }
+
     /**
      * Compare the cells for the given row from the source and target tables.
      * Count and log any differences.
@@ -511,19 +528,7 @@ public class SyncTable extends Configured implements Tool {
             if (put == null) {
               put = new Put(rowKey);
             }
-            if (ignoreTimestamp) {
-              sourceCell = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-                .setType(sourceCell.getType())
-                .setRow(sourceCell.getRowArray(),
-                  sourceCell.getRowOffset(), sourceCell.getRowLength())
-                .setFamily(sourceCell.getFamilyArray(),
-                  sourceCell.getFamilyOffset(), sourceCell.getFamilyLength())
-                .setQualifier(sourceCell.getQualifierArray(),
-                  sourceCell.getQualifierOffset(), sourceCell.getQualifierLength())
-                .setTimestamp(System.currentTimeMillis())
-                .setValue(sourceCell.getValueArray(),
-                  sourceCell.getValueOffset(), sourceCell.getValueLength()).build();
-            }
+            sourceCell = checkAndResetTimestamp(sourceCell);
             put.add(sourceCell);
           }
 
@@ -567,19 +572,7 @@ public class SyncTable extends Configured implements Tool {
               if (put == null) {
                 put = new Put(rowKey);
               }
-              if (ignoreTimestamp) {
-                sourceCell = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-                  .setType(sourceCell.getType())
-                  .setRow(sourceCell.getRowArray(),
-                    sourceCell.getRowOffset(), sourceCell.getRowLength())
-                  .setFamily(sourceCell.getFamilyArray(),
-                    sourceCell.getFamilyOffset(), sourceCell.getFamilyLength())
-                  .setQualifier(sourceCell.getQualifierArray(),
-                    sourceCell.getQualifierOffset(), sourceCell.getQualifierLength())
-                  .setTimestamp(System.currentTimeMillis())
-                  .setValue(sourceCell.getValueArray(),
-                    sourceCell.getValueOffset(), sourceCell.getValueLength()).build();
-              }
+              sourceCell = checkAndResetTimestamp(sourceCell);
               put.add(sourceCell);
             }
           }

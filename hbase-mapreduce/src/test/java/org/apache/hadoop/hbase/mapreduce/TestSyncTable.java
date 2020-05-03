@@ -459,10 +459,10 @@ public class TestSyncTable {
     HashTable hashTable = new HashTable(TEST_UTIL.getConfiguration());
     String[] args = Arrays.copyOf(options, options.length+5);
     args[options.length] = "--batchsize=" + batchSize;
-    args[options.length+1] = "--numhashfiles=" + numHashFiles;
-    args[options.length+2] = "--scanbatch=" + scanBatch;
-    args[options.length+3] = sourceTableName.getNameAsString();
-    args[options.length+4] = testDir.toString();
+    args[options.length + 1] = "--numhashfiles=" + numHashFiles;
+    args[options.length + 2] = "--scanbatch=" + scanBatch;
+    args[options.length + 3] = sourceTableName.getNameAsString();
+    args[options.length + 4] = testDir.toString();
     int code = hashTable.run(args);
     assertEquals("hash table job failed", 0, code);
 
