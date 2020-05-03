@@ -344,7 +344,7 @@ public class TestLruBlockCache {
         false,
         16 * 1024 * 1024,
         100,
-        10
+        10,
         10 * 1024 * 1024);
 
     CachedItem [] singleBlocks = generateFixedBlocks(5, blockSize, "single");
@@ -469,7 +469,7 @@ public class TestLruBlockCache {
         true,
         16 * 1024 * 1024,
         100,
-        10
+        10,
         10 * 1024 * 1024);
 
     CachedItem [] singleBlocks = generateFixedBlocks(10, blockSize, "single");
@@ -579,7 +579,7 @@ public class TestLruBlockCache {
         false,
         16 * 1024 * 1024,
         100,
-        10
+        10,
         10 * 1024 * 1024);
 
 
@@ -647,7 +647,7 @@ public class TestLruBlockCache {
         false,
         1024,
         100,
-        10
+        10,
         10 * 1024 * 1024);
     CachedItem [] tooLong = generateFixedBlocks(10, 1024+5, "long");
     CachedItem [] small = generateFixedBlocks(15, 600, "small");
@@ -690,7 +690,7 @@ public class TestLruBlockCache {
         false,
         16 * 1024 * 1024,
         100,
-        10
+        10,
         10 * 1024 * 1024);
 
     CachedItem [] singleBlocks = generateFixedBlocks(10, blockSize, "single");
@@ -855,7 +855,7 @@ public class TestLruBlockCache {
         false,
         1024,
         100,
-        10
+        10,
         10 * 1024 * 1024);
 
     BlockCacheKey key = new BlockCacheKey("key1", 0);
@@ -1047,7 +1047,7 @@ public class TestLruBlockCache {
             1.2f, // limit
             false, 1024,
             100,
-            10
+            10,
             10 * 1024 * 1024);
     testMultiThreadGetAndEvictBlockInternal(cache);
   }
