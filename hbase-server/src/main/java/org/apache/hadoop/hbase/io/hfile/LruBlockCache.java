@@ -37,52 +37,60 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
 import org.apache.hbase.thirdparty.com.google.common.base.Objects;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
- * A block cache implementation that is memory-aware using {@link HeapSize}, memory-bound using an
- * LRU eviction algorithm, and concurrent: backed by a {@link ConcurrentHashMap} and with a
- * non-blocking eviction thread giving constant-time {@link #cacheBlock} and {@link #getBlock}
- * operations.
- * </p>
+ * A block cache implementation that is memory-aware using {@link HeapSize},
+ * memory-bound using an LRU eviction algorithm, and concurrent: backed by a
+ * {@link ConcurrentHashMap} and with a non-blocking eviction thread giving
+ * constant-time {@link #cacheBlock} and {@link #getBlock} operations.<p>
+ *
  * Contains three levels of block priority to allow for scan-resistance and in-memory families
- * {@link org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder#setInMemory(boolean)} (An
- * in-memory column family is a column family that should be served from memory if possible):
- * single-access, multiple-accesses, and in-memory priority. A block is added with an in-memory
- * priority flag if {@link org.apache.hadoop.hbase.client.ColumnFamilyDescriptor#isInMemory()},
- * otherwise a block becomes a single access priority the first time it is read into this block
- * cache. If a block is accessed again while in cache, it is marked as a multiple access priority
- * block. This delineation of blocks is used to prevent scans from thrashing the cache adding a
- * least-frequently-used element to the eviction algorithm.
- * <p/>
- * Each priority is given its own chunk of the total cache to ensure fairness during eviction. Each
- * priority will retain close to its maximum size, however, if any priority is not using its entire
- * chunk the others are able to grow beyond their chunk size.
- * <p/>
- * Instantiated at a minimum with the total size and average block size. All sizes are in bytes. The
- * block size is not especially important as this cache is fully dynamic in its sizing of blocks. It
- * is only used for pre-allocating data structures and in initial heap estimation of the map.
- * <p/>
- * The detailed constructor defines the sizes for the three priorities (they should total to the
- * <code>maximum size</code> defined). It also sets the levels that trigger and control the eviction
- * thread.
- * <p/>
- * The <code>acceptable size</code> is the cache size level which triggers the eviction process to
- * start. It evicts enough blocks to get the size below the minimum size specified.
- * <p/>
- * Eviction happens in a separate thread and involves a single full-scan of the map. It determines
- * how many bytes must be freed to reach the minimum size, and then while scanning determines the
- * fewest least-recently-used blocks necessary from each of the three priorities (would be 3 times
- * bytes to free). It then uses the priority chunk sizes to evict fairly according to the relative
- * sizes and usage.
+ * {@link org.apache.hadoop.hbase.HColumnDescriptor#setInMemory(boolean)} (An in-memory column
+ * family is a column family that should be served from memory if possible):
+ * single-access, multiple-accesses, and in-memory priority.
+ * A block is added with an in-memory priority flag if
+ * {@link org.apache.hadoop.hbase.HColumnDescriptor#isInMemory()}, otherwise a block becomes a
+ * single access priority the first time it is read into this block cache.  If a block is
+ * accessed again while in cache, it is marked as a multiple access priority block.  This
+ * delineation of blocks is used to prevent scans from thrashing the cache adding a
+ * least-frequently-used element to the eviction algorithm.<p>
+ *
+ * Each priority is given its own chunk of the total cache to ensure
+ * fairness during eviction.  Each priority will retain close to its maximum
+ * size, however, if any priority is not using its entire chunk the others
+ * are able to grow beyond their chunk size.<p>
+ *
+ * Instantiated at a minimum with the total size and average block size.
+ * All sizes are in bytes.  The block size is not especially important as this
+ * cache is fully dynamic in its sizing of blocks.  It is only used for
+ * pre-allocating data structures and in initial heap estimation of the map.<p>
+ *
+ * The detailed constructor defines the sizes for the three priorities (they
+ * should total to the <code>maximum size</code> defined).  It also sets the levels that
+ * trigger and control the eviction thread.<p>
+ *
+ * The <code>acceptable size</code> is the cache size level which triggers the eviction
+ * process to start.  It evicts enough blocks to get the size below the
+ * minimum size specified.<p>
+ *
+ * Eviction happens in a separate thread and involves a single full-scan
+ * of the map.  It determines how many bytes must be freed to reach the minimum
+ * size, and then while scanning determines the fewest least-recently-used
+ * blocks necessary from each of the three priorities (would be 3 times bytes
+ * to free).  It then uses the priority chunk sizes to evict fairly according
+ * to the relative sizes and usage.
  */
 @InterfaceAudience.Private
 public class LruBlockCache implements FirstLevelBlockCache {
@@ -454,7 +462,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
     map.put(cacheKey, cb);
     long val = elements.incrementAndGet();
     if (buf.getBlockType().isData()) {
-      dataBlockElements.increment();
+       dataBlockElements.increment();
     }
     if (LOG.isTraceEnabled()) {
       long size = map.size();
@@ -511,7 +519,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
       heapsize *= -1;
     }
     if (bt != null && bt.isData()) {
-      dataBlockSize.add(heapsize);
+       dataBlockSize.add(heapsize);
     }
     return size.addAndGet(heapsize);
   }
@@ -597,9 +605,8 @@ public class LruBlockCache implements FirstLevelBlockCache {
     int numEvicted = 0;
     for (BlockCacheKey key : map.keySet()) {
       if (key.getHfileName().equals(hfileName)) {
-        if (evictBlock(key)) {
+        if (evictBlock(key))
           ++numEvicted;
-        }
       }
     }
     if (victimHandler != null) {
@@ -656,10 +663,12 @@ public class LruBlockCache implements FirstLevelBlockCache {
     }
   }
 
+  @VisibleForTesting
   boolean isEvictionInProgress() {
     return evictionInProgress;
   }
 
+  @VisibleForTesting
   long getOverhead() {
     return overhead;
   }
@@ -670,9 +679,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
   void evict() {
 
     // Ensure only one eviction at a time
-    if (!evictionLock.tryLock()) {
-      return;
-    }
+    if(!evictionLock.tryLock()) return;
 
     try {
       evictionInProgress = true;
@@ -685,9 +692,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
           StringUtils.byteDesc(currentSize));
       }
 
-      if (bytesToFree <= 0) {
-        return;
-      }
+      if (bytesToFree <= 0) return;
 
       // Instantiate priority buckets
       BlockBucket bucketSingle = new BlockBucket("single", bytesToFree, blockSize, singleSize());
@@ -936,7 +941,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
    *
    * Thread is triggered into action by {@link LruBlockCache#runEviction()}
    */
-  static class EvictionThread extends Thread {
+  static class EvictionThread extends HasThread {
 
     private WeakReference<LruBlockCache> cache;
     private volatile boolean go = true;
@@ -962,9 +967,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
           }
         }
         LruBlockCache cache = this.cache.get();
-        if (cache == null) {
-          break;
-        }
+        if (cache == null) break;
         cache.evict();
       }
     }
@@ -1041,8 +1044,10 @@ public class LruBlockCache implements FirstLevelBlockCache {
     return this.stats;
   }
 
-  public final static long CACHE_FIXED_OVERHEAD =
-      ClassSize.estimateBase(LruBlockCache.class, false);
+  public final static long CACHE_FIXED_OVERHEAD = ClassSize.align(
+      (4 * Bytes.SIZEOF_LONG) + (11 * ClassSize.REFERENCE) +
+      (6 * Bytes.SIZEOF_FLOAT) + (2 * Bytes.SIZEOF_BOOLEAN)
+      + ClassSize.OBJECT);
 
   @Override
   public long heapSize() {
@@ -1110,13 +1115,9 @@ public class LruBlockCache implements FirstLevelBlockCache {
           @Override
           public int compareTo(CachedBlock other) {
             int diff = this.getFilename().compareTo(other.getFilename());
-            if (diff != 0) {
-              return diff;
-            }
+            if (diff != 0) return diff;
             diff = Long.compare(this.getOffset(), other.getOffset());
-            if (diff != 0) {
-              return diff;
-            }
+            if (diff != 0) return diff;
             if (other.getCachedTime() < 0 || this.getCachedTime() < 0) {
               throw new IllegalStateException(this.getCachedTime() + ", " + other.getCachedTime());
             }
@@ -1191,6 +1192,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
   }
 
   /** Clears the cache. Used in tests. */
+  @VisibleForTesting
   public void clearCache() {
     this.map.clear();
     this.elements.set(0);
@@ -1201,6 +1203,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
    *
    * @return the set of cached file names
    */
+  @VisibleForTesting
   SortedSet<String> getCachedFileNamesForTest() {
     SortedSet<String> fileNames = new TreeSet<>();
     for (BlockCacheKey cacheKey : map.keySet()) {
@@ -1209,6 +1212,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
     return fileNames;
   }
 
+  @VisibleForTesting
   public Map<DataBlockEncoding, Integer> getEncodingCountsForTest() {
     Map<DataBlockEncoding, Integer> counts = new EnumMap<>(DataBlockEncoding.class);
     for (LruCachedBlock block : map.values()) {
@@ -1219,6 +1223,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
     return counts;
   }
 
+  @VisibleForTesting
   Map<BlockCacheKey, LruCachedBlock> getMapForTests() {
     return map;
   }
