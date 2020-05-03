@@ -37,11 +37,16 @@ public interface BulkLoadHFiles {
 
   static final String RETRY_ON_IO_EXCEPTION = "hbase.bulkload.retries.retryOnIOException";
   static final String MAX_FILES_PER_REGION_PER_FAMILY =
-    "hbase.mapreduce.bulkload.max.hfiles.perRegion.perFamily";
+      "hbase.mapreduce.bulkload.max.hfiles.perRegion.perFamily";
   static final String ASSIGN_SEQ_IDS = "hbase.mapreduce.bulkload.assign.sequenceNumbers";
   static final String CREATE_TABLE_CONF_KEY = "create.table";
   static final String IGNORE_UNMATCHED_CF_CONF_KEY = "ignore.unmatched.families";
   static final String ALWAYS_COPY_FILES = "always.copy.files";
+  /**
+   * HBASE-24221 Support bulkLoadHFile by family to avoid long time waiting of bulkLoadHFile because
+   * of compacting at server side
+   */
+  public static final String BULK_LOAD_HFILES_BY_FAMILY = "hbase.mapreduce.bulkload.by.family";
 
   /**
    * Represents an HFile waiting to be loaded. An queue is used in this class in order to support
