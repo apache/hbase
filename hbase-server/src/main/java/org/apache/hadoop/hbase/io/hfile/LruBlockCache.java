@@ -684,7 +684,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
     try {
       evictionInProgress = true;
       long currentSize = this.size.get();
-      long bytesToFree = currentSize - minSize();
+      bytesToFree = currentSize - minSize();
 
       if (LOG.isTraceEnabled()) {
         LOG.trace("Block cache LRU eviction started; Attempting to free " +
