@@ -145,6 +145,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
   private final int maxFilesPerRegionPerFamily;
   private final boolean assignSeqIds;
+  private boolean bulkLoadByFamily;
 
   // Source delegation token
   private final FsDelegationToken fsDelegationToken;
@@ -187,6 +188,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     fsDelegationToken = new FsDelegationToken(userProvider, "renewer");
     assignSeqIds = conf.getBoolean(ASSIGN_SEQ_IDS, true);
     maxFilesPerRegionPerFamily = conf.getInt(MAX_FILES_PER_REGION_PER_FAMILY, 32);
+    bulkLoadByFamily = conf.getBoolean(BulkLoadHFiles.BULK_LOAD_HFILES_BY_FAMILY, false);
     nrThreads = conf.getInt("hbase.loadincremental.threads.max",
       Runtime.getRuntime().availableProcessors());
     numRetries = new AtomicInteger(0);
@@ -462,6 +464,14 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     return item2RegionMap;
   }
 
+  private Map<byte[], Collection<LoadQueueItem>>
+      groupByFamilies(Collection<LoadQueueItem> itemsInRegion) {
+    Map<byte[], Collection<LoadQueueItem>> families2Queue = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+    itemsInRegion.forEach(item -> families2Queue
+        .computeIfAbsent(item.getFamily(), queue -> new ArrayList<>()).add(item));
+    return families2Queue;
+  }
+
   /**
    * This takes the LQI's grouped by likely regions and attempts to bulk load them. Any failures are
    * re-queued for another pass with the groupOrSplitPhase.
@@ -478,24 +488,18 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         .entrySet()) {
       byte[] first = e.getKey().array();
       Collection<LoadQueueItem> lqis = e.getValue();
-
-      ClientServiceCallable<byte[]> serviceCallable =
-          buildClientServiceCallable(conn, table.getName(), first, lqis, copyFile);
-
-      Callable<List<LoadQueueItem>> call = new Callable<List<LoadQueueItem>>() {
-        @Override
-        public List<LoadQueueItem> call() throws Exception {
-          List<LoadQueueItem> toRetry =
-              tryAtomicRegionLoad(serviceCallable, table.getName(), first, lqis);
-          return toRetry;
-        }
-      };
       if (item2RegionMap != null) {
         for (LoadQueueItem lqi : lqis) {
           item2RegionMap.put(lqi, e.getKey());
         }
       }
-      loadingFutures.add(pool.submit(call));
+      if (bulkLoadByFamily) {
+        groupByFamilies(lqis).values().forEach(familyQueue -> loadingFutures.add(pool.submit(
+          () -> tryAtomicRegionLoad(conn, table.getName(), first, familyQueue, copyFile))));
+      } else {
+        loadingFutures.add(
+          pool.submit(() -> tryAtomicRegionLoad(conn, table.getName(), first, lqis, copyFile)));
+      }
     }
 
     // get all the results.
@@ -799,10 +803,12 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * @return empty list if success, list of items to retry on recoverable failure
    */
   @VisibleForTesting
-  protected List<LoadQueueItem> tryAtomicRegionLoad(ClientServiceCallable<byte[]> serviceCallable,
-      final TableName tableName, final byte[] first, final Collection<LoadQueueItem> lqis)
-      throws IOException {
+  protected List<LoadQueueItem> tryAtomicRegionLoad(final Connection conn,
+      final TableName tableName, final byte[] first, final Collection<LoadQueueItem> lqis,
+      boolean copyFile) throws IOException {
     List<LoadQueueItem> toRetry = new ArrayList<>();
+    ClientServiceCallable<byte[]> serviceCallable =
+        buildClientServiceCallable(conn, tableName, first, lqis, copyFile);
     try {
       Configuration conf = getConf();
       byte[] region = RpcRetryingCallerFactory.instantiate(conf, null).<byte[]> newCaller()
