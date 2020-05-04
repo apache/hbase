@@ -1065,8 +1065,9 @@ public class TestLruBlockCache {
 
     // Check if all offset of cached blocks less
     // It means some of blocka were not put into BlockCache
-    for (BlockCacheKey key : cache.getMapForTests().keySet())
+    for (BlockCacheKey key : cache.getMapForTests().keySet()) {
       Assert.assertTrue(key.getOffset() % 100 < percentOfCachedBlocks);
+    }
   }
 
   @Test
