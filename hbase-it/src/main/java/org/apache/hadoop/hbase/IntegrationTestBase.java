@@ -80,7 +80,7 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
 
   /**
    * This allows tests that subclass children of this base class such as
-   * {@link org.apache.hadoop.hbase.test.IntegrationTestReplication} to
+   * {#@link org.apache.hadoop.hbase.test.IntegrationTestReplication} to
    * include the base options without having to also include the options from the test.
    *
    * @param cmd the command line
