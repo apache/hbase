@@ -2243,6 +2243,60 @@ Copyright (c) 2000-2005 INRIA, France Telecom
   </supplement>
   <supplement>
     <project>
+      <groupId>org.ow2.asm</groupId>
+      <artifactId>asm-analysis</artifactId>
+      <name>ASM: a very small and fast Java bytecode manipulation framework</name>
+
+      <licenses>
+        <license>
+          <name>BSD 3-Clause License</name>
+          <url>https://github.com/llbit/ow2-asm/blob/master/LICENSE.txt</url>
+          <distribution>repo</distribution>
+          <comments>
+            Copyright (c) 2000-2011 INRIA, France Telecom
+          </comments>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>
+      <groupId>org.ow2.asm</groupId>
+      <artifactId>asm-commons</artifactId>
+      <name>ASM: a very small and fast Java bytecode manipulation framework</name>
+
+      <licenses>
+        <license>
+          <name>BSD 3-Clause License</name>
+          <url>https://github.com/llbit/ow2-asm/blob/master/LICENSE.txt</url>
+          <distribution>repo</distribution>
+          <comments>
+            Copyright (c) 2000-2011 INRIA, France Telecom
+          </comments>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>
+      <groupId>org.ow2.asm</groupId>
+      <artifactId>asm-tree</artifactId>
+      <name>ASM: a very small and fast Java bytecode manipulation framework</name>
+
+      <licenses>
+        <license>
+          <name>BSD 3-Clause License</name>
+          <url>https://github.com/llbit/ow2-asm/blob/master/LICENSE.txt</url>
+          <distribution>repo</distribution>
+          <comments>
+            Copyright (c) 2000-2011 INRIA, France Telecom
+          </comments>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>
       <groupId>org.fusesource.leveldbjni</groupId>
       <artifactId>leveldbjni-all</artifactId>
 
