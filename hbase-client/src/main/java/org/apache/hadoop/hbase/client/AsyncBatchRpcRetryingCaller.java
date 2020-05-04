@@ -256,7 +256,7 @@ class AsyncBatchRpcRetryingCaller<T> {
   }
 
   private ClientProtos.MultiRequest buildReq(Map<byte[], RegionRequest> actionsByRegion,
-      List<CellScannable> cells, Map<Integer, Integer> rowMutationsIndexMap) throws IOException {
+      List<CellScannable> cells, Map<Integer, Integer> indexMap) throws IOException {
     ClientProtos.MultiRequest.Builder multiRequestBuilder = ClientProtos.MultiRequest.newBuilder();
     ClientProtos.RegionAction.Builder regionActionBuilder = ClientProtos.RegionAction.newBuilder();
     ClientProtos.Action.Builder actionBuilder = ClientProtos.Action.newBuilder();
@@ -264,14 +264,14 @@ class AsyncBatchRpcRetryingCaller<T> {
     for (Map.Entry<byte[], RegionRequest> entry : actionsByRegion.entrySet()) {
       long nonceGroup = conn.getNonceGenerator().getNonceGroup();
       // multiRequestBuilder will be populated with region actions.
-      // rowMutationsIndexMap will be non-empty after the call if there is RowMutations in the
+      // indexMap will be non-empty after the call if there is RowMutations/CheckAndMutate in the
       // action list.
       RequestConverter.buildNoDataRegionActions(entry.getKey(),
         entry.getValue().actions.stream()
           .sorted((a1, a2) -> Integer.compare(a1.getOriginalIndex(), a2.getOriginalIndex()))
           .collect(Collectors.toList()),
-        cells, multiRequestBuilder, regionActionBuilder, actionBuilder, mutationBuilder, nonceGroup,
-        rowMutationsIndexMap);
+        cells, multiRequestBuilder, regionActionBuilder, actionBuilder, mutationBuilder,
+        nonceGroup, indexMap);
     }
     return multiRequestBuilder.build();
   }
@@ -367,10 +367,10 @@ class AsyncBatchRpcRetryingCaller<T> {
     List<CellScannable> cells = new ArrayList<>();
     // Map from a created RegionAction to the original index for a RowMutations within
     // the original list of actions. This will be used to process the results when there
-    // is RowMutations in the action list.
-    Map<Integer, Integer> rowMutationsIndexMap = new HashMap<>();
+    // is RowMutations/CheckAndMutate in the action list.
+    Map<Integer, Integer> indexMap = new HashMap<>();
     try {
-      req = buildReq(serverReq.actionsByRegion, cells, rowMutationsIndexMap);
+      req = buildReq(serverReq.actionsByRegion, cells, indexMap);
     } catch (IOException e) {
       onError(serverReq.actionsByRegion, tries, e, serverName);
       return;
@@ -387,7 +387,7 @@ class AsyncBatchRpcRetryingCaller<T> {
       } else {
         try {
           onComplete(serverReq.actionsByRegion, tries, serverName, ResponseConverter.getResults(req,
-            rowMutationsIndexMap, resp, controller.cellScanner()));
+            indexMap, resp, controller.cellScanner()));
         } catch (Exception e) {
           onError(serverReq.actionsByRegion, tries, e, serverName);
           return;
