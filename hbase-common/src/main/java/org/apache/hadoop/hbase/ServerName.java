@@ -116,12 +116,6 @@ public class ServerName implements Comparable<ServerName>, Serializable {
         this.address.getPort(), startcode);
   }
 
-  private ServerName(final String serverName) {
-    this(serverName.substring(0, serverName.indexOf(SERVERNAME_SEPARATOR)),
-      Integer.parseInt(serverName.split(SERVERNAME_SEPARATOR)[1]),
-      Long.parseLong(serverName.substring(serverName.lastIndexOf(SERVERNAME_SEPARATOR) + 1)));
-  }
-
   private ServerName(final String hostAndPort, final long startCode) {
     this(Address.fromString(hostAndPort), startCode);
   }
@@ -134,8 +128,8 @@ public class ServerName implements Comparable<ServerName>, Serializable {
     if (InetAddresses.isInetAddress(hostname)) {
       return hostname;
     }
-    String [] parts = hostname.split("\\.");
-    if (parts == null || parts.length == 0) {
+    String[] parts = hostname.split("\\.");
+    if (parts.length == 0) {
       return hostname;
     }
 
@@ -157,7 +151,11 @@ public class ServerName implements Comparable<ServerName>, Serializable {
    * a shared immutable object as an internal optimization.
    */
   public static ServerName valueOf(final String serverName) {
-    return INTERN_POOL.intern(new ServerName(serverName));
+    final String hostname = serverName.substring(0, serverName.indexOf(SERVERNAME_SEPARATOR));
+    final int port = Integer.parseInt(serverName.split(SERVERNAME_SEPARATOR)[1]);
+    final long statuscode =
+      Long.parseLong(serverName.substring(serverName.lastIndexOf(SERVERNAME_SEPARATOR) + 1));
+    return INTERN_POOL.intern(new ServerName(hostname, port, statuscode));
   }
 
   /**
@@ -240,13 +238,8 @@ public class ServerName implements Comparable<ServerName>, Serializable {
    *   startcode formatted as <code>&lt;hostname&gt; ',' &lt;port&gt; ',' &lt;startcode&gt;</code>
    */
   private static String getServerName(String hostName, int port, long startcode) {
-    final StringBuilder name = new StringBuilder(hostName.length() + 1 + 5 + 1 + 13);
-    name.append(hostName.toLowerCase(Locale.ROOT));
-    name.append(SERVERNAME_SEPARATOR);
-    name.append(port);
-    name.append(SERVERNAME_SEPARATOR);
-    name.append(startcode);
-    return name.toString();
+    return hostName.toLowerCase(Locale.ROOT) + SERVERNAME_SEPARATOR + port
+      + SERVERNAME_SEPARATOR + startcode;
   }
 
   public Address getAddress() {
@@ -303,17 +296,8 @@ public class ServerName implements Comparable<ServerName>, Serializable {
    * @param right the second server address to compare
    * @return {@code true} if {@code left} and {@code right} have the same hostname and port.
    */
-  public static boolean isSameAddress(final ServerName left,
-                                      final ServerName right) {
-    // TODO: Make this left.getAddress().equals(right.getAddress())
-    if (left == null) {
-      return false;
-    }
-    if (right == null) {
-      return false;
-    }
-    return left.getHostname().compareToIgnoreCase(right.getHostname()) == 0 &&
-      left.getPort() == right.getPort();
+  public static boolean isSameAddress(final ServerName left, final ServerName right) {
+    return left.getAddress().equals(right.getAddress());
   }
 
   /**

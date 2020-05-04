@@ -367,9 +367,10 @@ public final class BackupUtils {
       String n = p.getName();
       int idx = n.lastIndexOf(LOGNAME_SEPARATOR);
       String s = URLDecoder.decode(n.substring(0, idx), "UTF8");
-      return ServerName.valueOf(s).getHostname() + ":" + ServerName.valueOf(s).getPort();
+      final ServerName serverName = ServerName.valueOf(s);
+      return serverName.getHostname() + ":" + serverName.getPort();
     } catch (Exception e) {
-      LOG.warn("Skip log file (can't parse): " + p);
+      LOG.warn("Skip log file (can't parse): {}", p);
       return null;
     }
   }
