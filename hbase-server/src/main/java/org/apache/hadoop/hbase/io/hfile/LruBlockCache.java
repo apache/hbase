@@ -709,7 +709,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
   long evict() {
 
     // Ensure only one eviction at a time
-    if (!evictionLock.tryLock()) {return 0};
+    if (!evictionLock.tryLock()) {return 0;}
     long bytesToFree = 0L;
 
     try {
@@ -723,7 +723,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
           StringUtils.byteDesc(currentSize));
       }
 
-      if (bytesToFree <= 0) {return 0};
+      if (bytesToFree <= 0) {return 0;}
 
       // Instantiate priority buckets
       BlockBucket bucketSingle = new BlockBucket("single", bytesToFree, blockSize, singleSize());
