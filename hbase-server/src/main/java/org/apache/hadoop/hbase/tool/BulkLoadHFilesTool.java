@@ -374,15 +374,9 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
    * hfiles that need to be retried. If it is successful it will return an empty list. NOTE: To
    * maintain row atomicity guarantees, region server side should succeed atomically and fails
    * atomically.
-   * @param conn Connection to use
-   * @param tableName Table to which these hfiles should be loaded to
-   * @param copyFiles whether replicate to peer cluster while bulkloading
-   * @param first the start key of region
-   * @param lqis hfiles should be loaded
    * @return empty list if success, list of items to retry on recoverable failure
    */
-  @VisibleForTesting
-  protected CompletableFuture<Collection<LoadQueueItem>> tryAtomicRegionLoad(
+  private CompletableFuture<Collection<LoadQueueItem>> tryAtomicRegionLoad(
       final AsyncClusterConnection conn, final TableName tableName, boolean copyFiles,
       final byte[] first, Collection<LoadQueueItem> lqis) {
     List<Pair<byte[], String>> familyPaths =
