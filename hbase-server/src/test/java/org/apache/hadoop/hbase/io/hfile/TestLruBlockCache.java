@@ -1067,7 +1067,6 @@ public class TestLruBlockCache {
     // It means some of blocka were not put into BlockCache
     for (BlockCacheKey key : cache.getMapForTests().keySet())
       Assert.assertTrue(key.getOffset() % 100 < percentOfCachedBlocks);
-
   }
 
   @Test
