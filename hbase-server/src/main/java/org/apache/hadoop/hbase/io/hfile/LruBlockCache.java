@@ -251,7 +251,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
   private static int heavyEvictionCount;
 
   /** Limit of count eviction process when start to avoid to cache blocks */
-  private final int heavyEvictionCountLimit;
+  private static int heavyEvictionCountLimit;
 
   /** Limit of volume eviction process when start to avoid to cache blocks */
   private static int heavyEvictionBytesSizeLimit;
