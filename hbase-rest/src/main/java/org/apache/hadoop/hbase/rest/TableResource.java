@@ -151,12 +151,12 @@ public class TableResource extends ResourceBase {
       }
       Table hTable = RESTServlet.getInstance().getTable(this.table);
       tableScan.setBatch(batchSize);
-      tableScan.setMaxVersions(maxVersions);
+      tableScan.readVersions(maxVersions);
       tableScan.setTimeRange(startTime, endTime);
       if (!startRow.isEmpty()) {
         tableScan.withStartRow(Bytes.toBytes(startRow));
       }
-      tableScan.setStopRow(Bytes.toBytes(endRow));
+      tableScan.withStopRow(Bytes.toBytes(endRow));
       for (String col : column) {
         byte [][] parts = CellUtil.parseColumn(Bytes.toBytes(col.trim()));
         if (parts.length == 1) {

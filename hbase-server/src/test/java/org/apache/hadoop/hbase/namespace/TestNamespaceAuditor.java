@@ -81,7 +81,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -206,7 +206,7 @@ public class TestNamespaceAuditor {
       exceptionCaught = true;
     } finally {
       assertTrue(exceptionCaught);
-      assertFalse(fs.exists(FSUtils.getNamespaceDir(rootDir, nspDesc.getName())));
+      assertFalse(fs.exists(CommonFSUtils.getNamespaceDir(rootDir, nspDesc.getName())));
     }
     nspDesc =
         NamespaceDescriptor.create(prefix + "vq2")
@@ -219,7 +219,7 @@ public class TestNamespaceAuditor {
       exceptionCaught = true;
     } finally {
       assertTrue(exceptionCaught);
-      assertFalse(fs.exists(FSUtils.getNamespaceDir(rootDir, nspDesc.getName())));
+      assertFalse(fs.exists(CommonFSUtils.getNamespaceDir(rootDir, nspDesc.getName())));
     }
     nspDesc =
         NamespaceDescriptor.create(prefix + "vq3")
@@ -232,7 +232,7 @@ public class TestNamespaceAuditor {
       exceptionCaught = true;
     } finally {
       assertTrue(exceptionCaught);
-      assertFalse(fs.exists(FSUtils.getNamespaceDir(rootDir, nspDesc.getName())));
+      assertFalse(fs.exists(CommonFSUtils.getNamespaceDir(rootDir, nspDesc.getName())));
     }
     nspDesc =
         NamespaceDescriptor.create(prefix + "vq4")
@@ -245,7 +245,7 @@ public class TestNamespaceAuditor {
       exceptionCaught = true;
     } finally {
       assertTrue(exceptionCaught);
-      assertFalse(fs.exists(FSUtils.getNamespaceDir(rootDir, nspDesc.getName())));
+      assertFalse(fs.exists(CommonFSUtils.getNamespaceDir(rootDir, nspDesc.getName())));
     }
   }
 

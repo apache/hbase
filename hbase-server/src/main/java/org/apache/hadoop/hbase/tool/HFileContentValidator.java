@@ -24,13 +24,13 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
@@ -53,7 +53,7 @@ public class HFileContentValidator extends AbstractHBaseTool {
    * @throws IOException if a remote or network exception occurs
    */
   private boolean validateHFileContent(Configuration conf) throws IOException {
-    FileSystem fileSystem = FSUtils.getCurrentFileSystem(conf);
+    FileSystem fileSystem = CommonFSUtils.getCurrentFileSystem(conf);
 
     ExecutorService threadPool = createThreadPool(conf);
     HFileCorruptionChecker checker;
@@ -61,7 +61,7 @@ public class HFileContentValidator extends AbstractHBaseTool {
     try {
       checker = new HFileCorruptionChecker(conf, threadPool, false);
 
-      Path rootDir = FSUtils.getRootDir(conf);
+      Path rootDir = CommonFSUtils.getRootDir(conf);
       LOG.info("Validating HFile contents under {}", rootDir);
 
       Collection<Path> tableDirs = FSUtils.getTableDirs(fileSystem, rootDir);

@@ -117,8 +117,10 @@ public class TestClearRegionBlockCache {
       HTU.getNumHFilesForRS(rs2, TABLE_NAME, FAMILY));
     clearRegionBlockCache(rs2);
 
-    assertEquals(initialBlockCount1, blockCache1.getBlockCount());
-    assertEquals(initialBlockCount2, blockCache2.getBlockCount());
+    assertEquals("" + blockCache1.getBlockCount(),
+      initialBlockCount1, blockCache1.getBlockCount());
+    assertEquals("" + blockCache2.getBlockCount(),
+      initialBlockCount2, blockCache2.getBlockCount());
   }
 
   @Test

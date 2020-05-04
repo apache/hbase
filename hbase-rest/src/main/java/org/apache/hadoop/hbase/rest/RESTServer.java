@@ -90,6 +90,7 @@ public class RESTServer implements Constants {
   static final String REST_CSRF_METHODS_TO_IGNORE_KEY = "hbase.rest.csrf.methods.to.ignore";
   static final String REST_CSRF_METHODS_TO_IGNORE_DEFAULT = "GET,OPTIONS,HEAD,TRACE";
   public static final String SKIP_LOGIN_KEY = "hbase.rest.skip.login";
+  static final int DEFAULT_HTTP_MAX_HEADER_SIZE = 64 * 1024; // 64k
 
   private static final String PATH_SPEC_ANY = "/*";
 
@@ -117,7 +118,7 @@ public class RESTServer implements Constants {
     HelpFormatter formatter = new HelpFormatter();
     formatter.printHelp("hbase rest start", "", options,
       "\nTo run the REST server as a daemon, execute " +
-      "hbase-daemon.sh start|stop rest [--infoport <port>] [-p <port>] [-ro]\n", true);
+      "hbase-daemon.sh start|stop rest [-i <port>] [-p <port>] [-ro]\n", true);
     System.exit(exitCode);
   }
 
@@ -185,7 +186,7 @@ public class RESTServer implements Constants {
     options.addOption("p", "port", true, "Port to bind to [default: " + DEFAULT_LISTEN_PORT + "]");
     options.addOption("ro", "readonly", false, "Respond only to GET HTTP " +
       "method requests [default: false]");
-    options.addOption(null, "infoport", true, "Port for web UI");
+    options.addOption("i", "infoport", true, "Port for WEB UI");
 
     CommandLine commandLine = null;
     try {
@@ -217,7 +218,7 @@ public class RESTServer implements Constants {
       String val = commandLine.getOptionValue("infoport");
       conf.setInt("hbase.rest.info.port", Integer.parseInt(val));
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Web UI port set to " + val);
+        LOG.debug("WEB UI port set to " + val);
       }
     }
 
@@ -290,6 +291,9 @@ public class RESTServer implements Constants {
     HttpConfiguration httpConfig = new HttpConfiguration();
     httpConfig.setSecureScheme("https");
     httpConfig.setSecurePort(servicePort);
+    httpConfig.setHeaderCacheSize(DEFAULT_HTTP_MAX_HEADER_SIZE);
+    httpConfig.setRequestHeaderSize(DEFAULT_HTTP_MAX_HEADER_SIZE);
+    httpConfig.setResponseHeaderSize(DEFAULT_HTTP_MAX_HEADER_SIZE);
     httpConfig.setSendServerVersion(false);
     httpConfig.setSendDateHeader(false);
 

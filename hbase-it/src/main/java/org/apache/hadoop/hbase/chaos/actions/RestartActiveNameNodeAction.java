@@ -19,11 +19,9 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -31,19 +29,15 @@ import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.server.namenode.ha.proto.HAZKInfoProtos.ActiveNodeInfo;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Action that tries to restart the active namenode.
  */
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
-@InterfaceStability.Evolving
 public class RestartActiveNameNodeAction extends RestartActionBaseAction {
   private static final Logger LOG =
-      LoggerFactory.getLogger(RestartActiveNameNodeAction.class);
+    LoggerFactory.getLogger(RestartActiveNameNodeAction.class);
 
   // Value taken from org.apache.hadoop.ha.ActiveStandbyElector.java, variable :- LOCK_FILENAME
   private static final String ACTIVE_NN_LOCK_NAME = "ActiveStandbyElectorLock";
@@ -60,7 +54,7 @@ public class RestartActiveNameNodeAction extends RestartActionBaseAction {
   @Override
   public void perform() throws Exception {
     LOG.info("Performing action: Restart active namenode");
-    Configuration conf = FSUtils.getRootDir(getConf()).getFileSystem(getConf()).getConf();
+    Configuration conf = CommonFSUtils.getRootDir(getConf()).getFileSystem(getConf()).getConf();
     String nameServiceID = DFSUtil.getNamenodeNameServiceId(conf);
     if (!HAUtil.isHAEnabled(conf, nameServiceID)) {
       throw new Exception("HA for namenode is not enabled");
@@ -77,8 +71,8 @@ public class RestartActiveNameNodeAction extends RestartActionBaseAction {
       for (String eachEntry : subChildern) {
         if (eachEntry.contains(ACTIVE_NN_LOCK_NAME)) {
           byte[] data =
-              rzk.getData(ZNodePaths.joinZNode(hadoopHAZkNodePath, ACTIVE_NN_LOCK_NAME), false,
-                null);
+            rzk.getData(ZNodePaths.joinZNode(hadoopHAZkNodePath, ACTIVE_NN_LOCK_NAME), false,
+              null);
           ActiveNodeInfo proto = ActiveNodeInfo.parseFrom(data);
           activeNamenode = proto.getHostname();
         }

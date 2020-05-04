@@ -339,6 +339,7 @@ Shell.load_command_group(
     compaction_switch
     flush
     get_slowlog_responses
+    get_largelog_responses
     major_compact
     move
     split
@@ -507,5 +508,6 @@ Shell.load_command_group(
     get_server_rsgroup
     get_table_rsgroup
     remove_servers_rsgroup
+    rename_rsgroup
   ]
 )

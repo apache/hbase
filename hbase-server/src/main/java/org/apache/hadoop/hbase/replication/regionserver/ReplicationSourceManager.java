@@ -496,11 +496,13 @@ public class ReplicationSourceManager implements ReplicationListener {
     // synchronized on oldsources to avoid race with NodeFailoverWorker
     synchronized (this.oldsources) {
       List<String> previousQueueIds = new ArrayList<>();
-      for (ReplicationSourceInterface oldSource : this.oldsources) {
+      for (Iterator<ReplicationSourceInterface> iter = this.oldsources.iterator(); iter
+          .hasNext();) {
+        ReplicationSourceInterface oldSource = iter.next();
         if (oldSource.getPeerId().equals(peerId)) {
           previousQueueIds.add(oldSource.getQueueId());
           oldSource.terminate(terminateMessage);
-          this.oldsources.remove(oldSource);
+          iter.remove();
         }
       }
       for (String queueId : previousQueueIds) {
@@ -579,8 +581,13 @@ public class ReplicationSourceManager implements ReplicationListener {
       if (e.getCause() != null && e.getCause() instanceof KeeperException.SystemErrorException
           && e.getCause().getCause() != null && e.getCause()
           .getCause() instanceof InterruptedException) {
-        throw new RuntimeException(
-            "Thread is interrupted, the replication source may be terminated");
+        // ReplicationRuntimeException(a RuntimeException) is thrown out here. The reason is
+        // that thread is interrupted deep down in the stack, it should pass the following
+        // processing logic and propagate to the most top layer which can handle this exception
+        // properly. In this specific case, the top layer is ReplicationSourceShipper#run().
+        throw new ReplicationRuntimeException(
+          "Thread is interrupted, the replication source may be terminated",
+          e.getCause().getCause());
       }
       server.abort("Failed to operate on replication queue", e);
     }

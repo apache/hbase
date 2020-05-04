@@ -116,7 +116,7 @@ public class TestMultipleColumnPrefixFilter {
 
     MultipleColumnPrefixFilter filter;
     Scan scan = new Scan();
-    scan.setMaxVersions();
+    scan.readAllVersions();
     byte [][] filter_prefix = new byte [2][];
     filter_prefix[0] = new byte [] {'p'};
     filter_prefix[1] = new byte [] {'q'};
@@ -194,7 +194,7 @@ public class TestMultipleColumnPrefixFilter {
 
     MultipleColumnPrefixFilter filter;
     Scan scan = new Scan();
-    scan.setMaxVersions();
+    scan.readAllVersions();
     byte [][] filter_prefix = new byte [2][];
     filter_prefix[0] = new byte [] {'p'};
     filter_prefix[1] = new byte [] {'q'};
@@ -244,7 +244,7 @@ public class TestMultipleColumnPrefixFilter {
 
     MultipleColumnPrefixFilter multiplePrefixFilter;
     Scan scan1 = new Scan();
-    scan1.setMaxVersions();
+    scan1.readAllVersions();
     byte [][] filter_prefix = new byte [1][];
     filter_prefix[0] = new byte [] {'p'};
 
@@ -257,7 +257,7 @@ public class TestMultipleColumnPrefixFilter {
 
     ColumnPrefixFilter singlePrefixFilter;
     Scan scan2 = new Scan();
-    scan2.setMaxVersions();
+    scan2.readAllVersions();
     singlePrefixFilter = new ColumnPrefixFilter(Bytes.toBytes("p"));
 
     scan2.setFilter(singlePrefixFilter);

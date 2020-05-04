@@ -16,14 +16,12 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.regionserver;
-
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -48,9 +46,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
 @Category({RegionServerTests.class, SmallTests.class})
@@ -131,6 +127,34 @@ public class TestHRegionInfo {
     assertTrue(adri.isOverlap(abri));
   }
 
+  /**
+   * Tests {@link RegionInfo#isOverlap(RegionInfo[])}
+   */
+  @Test
+  public void testIsOverlaps() {
+    byte[] a = Bytes.toBytes("a");
+    byte[] b = Bytes.toBytes("b");
+    byte[] c = Bytes.toBytes("c");
+    byte[] d = Bytes.toBytes("d");
+    byte[] e = Bytes.toBytes("e");
+    byte[] f = Bytes.toBytes("f");
+    org.apache.hadoop.hbase.client.RegionInfo ari =
+      org.apache.hadoop.hbase.client.RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).
+        setEndKey(a).build();
+    org.apache.hadoop.hbase.client.RegionInfo abri =
+      org.apache.hadoop.hbase.client.RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).
+        setStartKey(a).setEndKey(b).build();
+    org.apache.hadoop.hbase.client.RegionInfo eri =
+      org.apache.hadoop.hbase.client.RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).
+        setEndKey(e).build();
+    org.apache.hadoop.hbase.client.RegionInfo cdri =
+      org.apache.hadoop.hbase.client.RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).
+        setStartKey(c).setEndKey(d).build();
+    org.apache.hadoop.hbase.client.RegionInfo efri =
+      org.apache.hadoop.hbase.client.RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).
+        setStartKey(e).setEndKey(f).build();
+  }
+
   @Test
   public void testPb() throws DeserializationException {
     HRegionInfo hri = HRegionInfo.FIRST_META_REGIONINFO;
@@ -159,9 +183,11 @@ public class TestHRegionInfo {
     long modtime2 = getModTime(r);
     assertEquals(modtime, modtime2);
     // Now load the file.
-    org.apache.hadoop.hbase.client.RegionInfo deserializedHri = HRegionFileSystem.loadRegionInfoFileContent(
+    org.apache.hadoop.hbase.client.RegionInfo deserializedHri =
+      HRegionFileSystem.loadRegionInfoFileContent(
         r.getRegionFileSystem().getFileSystem(), r.getRegionFileSystem().getRegionDir());
-    assertTrue(org.apache.hadoop.hbase.client.RegionInfo.COMPARATOR.compare(hri, deserializedHri) == 0);
+    assertEquals(0,
+      org.apache.hadoop.hbase.client.RegionInfo.COMPARATOR.compare(hri, deserializedHri));
     HBaseTestingUtility.closeRegionAndWAL(r);
   }
 

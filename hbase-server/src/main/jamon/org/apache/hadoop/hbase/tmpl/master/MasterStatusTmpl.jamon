@@ -50,7 +50,6 @@ org.apache.hadoop.hbase.master.DeadServer;
 org.apache.hadoop.hbase.master.HMaster;
 org.apache.hadoop.hbase.master.RegionState;
 org.apache.hadoop.hbase.master.ServerManager;
-org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 org.apache.hadoop.hbase.quotas.QuotaUtil;
 org.apache.hadoop.hbase.rsgroup.RSGroupInfoManager;
 org.apache.hadoop.hbase.rsgroup.RSGroupUtil;
@@ -59,7 +58,7 @@ org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
 org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 org.apache.hadoop.hbase.tool.CanaryTool;
 org.apache.hadoop.hbase.util.Bytes;
-org.apache.hadoop.hbase.util.FSUtils;
+org.apache.hadoop.hbase.util.CommonFSUtils;
 org.apache.hadoop.hbase.util.JvmVersion;
 org.apache.hadoop.util.StringUtils;
 </%import>
@@ -330,8 +329,8 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
                 </tr>
                 <tr>
                     <td>ZooKeeper Client Version</td>
-                    <td><% org.apache.zookeeper.Version.getVersion() %>, revision=<% org.apache.zookeeper.Version.getRevision() %></td>
-                    <td>ZooKeeper client version and revision</td>
+                    <td><% org.apache.zookeeper.Version.getVersion() %>, revision=<% org.apache.zookeeper.Version.getRevisionHash() %></td>
+                    <td>ZooKeeper client version and revision hash</td>
                 </tr>
                 <tr>
                     <td>ZooKeeper Client Compiled</td>
@@ -356,7 +355,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
                 </tr>
                 <tr>
                     <td>HBase Root Directory</td>
-                    <td><% FSUtils.getRootDir(master.getConfiguration()).toString() %></td>
+                    <td><% CommonFSUtils.getRootDir(master.getConfiguration()).toString() %></td>
                     <td>Location of HBase home directory</td>
                 </tr>
                 <tr>

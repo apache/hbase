@@ -134,6 +134,10 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
     return serverManager.getDeadServers().size();
   }
 
+  @Override public boolean isRunning() {
+    return !(master.isStopped() || master.isStopping());
+  }
+
   @Override
   public String getServerName() {
     ServerName serverName = master.getServerName();

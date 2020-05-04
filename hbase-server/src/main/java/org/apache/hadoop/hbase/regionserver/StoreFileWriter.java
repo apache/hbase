@@ -26,8 +26,8 @@ import static org.apache.hadoop.hbase.regionserver.HStoreFile.MAJOR_COMPACTION_K
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.MAX_SEQ_ID_KEY;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.MOB_CELLS_COUNT;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.MOB_FILE_REFS;
-import static org.apache.hadoop.hbase.regionserver.HStoreFile.NULL_VALUE;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.TIMERANGE_KEY;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Collection;
@@ -38,8 +38,6 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -47,24 +45,29 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileWriterImpl;
+import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.util.BloomContext;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.RowBloomContext;
 import org.apache.hadoop.hbase.util.RowColBloomContext;
 import org.apache.hadoop.hbase.util.RowPrefixFixedLengthBloomContext;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.collect.SetMultimap;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
@@ -248,17 +251,11 @@ public class StoreFileWriter implements CellSink, ShipperListener {
 
   /**
    * Appends MOB - specific metadata (even if it is empty)
-   * @param mobRefSet - set of MOB file names
+   * @param mobRefSet - original table -> set of MOB file names
    * @throws IOException problem writing to FS
    */
-  public void appendMobMetadata(Set<String> mobRefSet) throws IOException {
-    if (mobRefSet != null && mobRefSet.size() > 0) {
-      String sb = StringUtils.join(mobRefSet, ",");
-      byte[] bytes = Bytes.toBytes(sb.toString());
-      writer.appendFileInfo(MOB_FILE_REFS, bytes);
-    } else {
-      writer.appendFileInfo(MOB_FILE_REFS, NULL_VALUE);
-    }
+  public void appendMobMetadata(SetMultimap<TableName, String> mobRefSet) throws IOException {
+    writer.appendFileInfo(MOB_FILE_REFS, MobUtils.serializeMobFileRefs(mobRefSet));
   }
 
   /**
@@ -547,7 +544,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
       if (null == policyName) {
         policyName = this.conf.get(HStore.BLOCK_STORAGE_POLICY_KEY);
       }
-      FSUtils.setStoragePolicy(this.fs, dir, policyName);
+      CommonFSUtils.setStoragePolicy(this.fs, dir, policyName);
 
       if (filePath == null) {
         filePath = getUniqueFile(fs, dir);

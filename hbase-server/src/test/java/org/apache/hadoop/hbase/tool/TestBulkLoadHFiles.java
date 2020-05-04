@@ -26,10 +26,13 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -41,6 +44,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Table;
@@ -56,7 +60,7 @@ import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -383,15 +387,15 @@ public class TestBulkLoadHFiles {
   }
 
   private void runTest(String testName, TableDescriptor htd, boolean preCreateTable,
-      byte[][] tableSplitKeys, byte[][][] hfileRanges, boolean useMap, boolean copyFiles, int depth)
-      throws Exception {
+    byte[][] tableSplitKeys, byte[][][] hfileRanges, boolean useMap, boolean copyFiles, int depth)
+    throws Exception {
     loadHFiles(testName, htd, util, FAMILY, QUALIFIER, preCreateTable, tableSplitKeys, hfileRanges,
       useMap, true, copyFiles, 0, 1000, depth);
 
     final TableName tableName = htd.getTableName();
     // verify staging folder has been cleaned up
-    Path stagingBasePath =
-      new Path(FSUtils.getRootDir(util.getConfiguration()), HConstants.BULKLOAD_STAGING_DIR_NAME);
+    Path stagingBasePath = new Path(CommonFSUtils.getRootDir(util.getConfiguration()),
+      HConstants.BULKLOAD_STAGING_DIR_NAME);
     FileSystem fs = util.getTestFileSystem();
     if (fs.exists(stagingBasePath)) {
       FileStatus[] files = fs.listStatus(stagingBasePath);
@@ -738,6 +742,44 @@ public class TestBulkLoadHFiles {
         QUALIFIER, from, to, 1000);
       BulkLoadHFiles.create(conf).bulkLoad(table.getName(), dir);
       assertEquals(1000, countRows(table));
+    }
+  }
+
+  @Test
+  public void testBulkLoadByFamily() throws Exception {
+    Path dir = util.getDataTestDirOnTestFS("testBulkLoadByFamily");
+    FileSystem fs = util.getTestFileSystem();
+    dir = dir.makeQualified(fs.getUri(), fs.getWorkingDirectory());
+    String tableName = tn.getMethodName();
+    String[] families = { "cf1", "cf2", "cf3" };
+    for (int i = 0; i < families.length; i++) {
+      byte[] from = Bytes.toBytes(i + "begin");
+      byte[] to = Bytes.toBytes(i + "end");
+      Path familyDir = new Path(dir, families[i]);
+      HFileTestUtil.createHFile(util.getConfiguration(), fs, new Path(familyDir, "hfile"),
+        Bytes.toBytes(families[i]), QUALIFIER, from, to, 1000);
+    }
+    Table table = util.createTable(TableName.valueOf(tableName), families);
+    final AtomicInteger attmptedCalls = new AtomicInteger();
+    util.getConfiguration().setBoolean(BulkLoadHFilesTool.BULK_LOAD_HFILES_BY_FAMILY, true);
+    BulkLoadHFiles loader = new BulkLoadHFilesTool(util.getConfiguration()) {
+      @Override
+      protected CompletableFuture<Collection<LoadQueueItem>> tryAtomicRegionLoad(
+          final AsyncClusterConnection conn, final TableName tableName, boolean copyFiles,
+          final byte[] first, Collection<LoadQueueItem> lqis) {
+        attmptedCalls.incrementAndGet();
+        return super.tryAtomicRegionLoad(conn, tableName, copyFiles, first, lqis);
+      }
+    };
+    try {
+      loader.bulkLoad(table.getName(), dir);
+      assertEquals(families.length, attmptedCalls.get());
+      assertEquals(1000 * families.length, HBaseTestingUtility.countRows(table));
+    } finally {
+      if (null != table) {
+        table.close();
+      }
+      util.getConfiguration().setBoolean(BulkLoadHFilesTool.BULK_LOAD_HFILES_BY_FAMILY, false);
     }
   }
 }

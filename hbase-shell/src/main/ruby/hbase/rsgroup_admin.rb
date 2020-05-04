@@ -185,5 +185,11 @@ module Hbase
     def list_tables_in_rs_group(group_name)
       @admin.listTablesInRSGroup(group_name)
     end
+
+    #--------------------------------------------------------------------------
+    # rename rsgroup
+    def rename_rsgroup(oldname, newname)
+      @admin.renameRSGroup(oldname, newname)
+    end
   end
 end

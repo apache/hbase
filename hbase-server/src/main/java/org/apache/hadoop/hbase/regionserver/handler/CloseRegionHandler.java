@@ -117,9 +117,7 @@ public class CloseRegionHandler extends EventHandler {
         HConstants.NO_SEQNUM, Procedure.NO_PROC_ID, -1, regionInfo));
 
       // Done!  Region is closed on this RS
-      this.rsServices.getRegionsInTransitionInRS().
-        remove(this.regionInfo.getEncodedNameAsBytes(), Boolean.FALSE);
-      LOG.debug("Closed {}" + region.getRegionInfo().getRegionNameAsString());
+      LOG.debug("Closed {}", region.getRegionInfo().getRegionNameAsString());
     } finally {
       // Clear any reference in getServer().getRegionsInTransitionInRS() on success or failure,
       // since a reference was added before this CRH was invoked. If we don't clear it, it can

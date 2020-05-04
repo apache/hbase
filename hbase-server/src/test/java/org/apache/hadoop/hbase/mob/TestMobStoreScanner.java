@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.io.hfile.TestHFile;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -131,7 +131,7 @@ public class TestMobStoreScanner {
    */
   public void setScan(Scan scan, boolean reversed, boolean mobScanRaw) {
     scan.setReversed(reversed);
-    scan.setMaxVersions(4);
+    scan.readVersions(4);
     if(mobScanRaw) {
       scan.setAttribute(MobConstants.MOB_SCAN_RAW, Bytes.toBytes(Boolean.TRUE));
     }
@@ -406,8 +406,8 @@ public class TestMobStoreScanner {
     FileStatus[] files = fs.listStatus(mobFamilyPath);
 
     // Get the archive path
-    Path rootDir = FSUtils.getRootDir(TEST_UTIL.getConfiguration());
-    Path tableDir = FSUtils.getTableDir(rootDir, tn);
+    Path rootDir = CommonFSUtils.getRootDir(TEST_UTIL.getConfiguration());
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, tn);
     RegionInfo regionInfo = MobUtils.getMobRegionInfo(tn);
     Path storeArchiveDir = HFileArchiveUtil.getStoreArchivePath(TEST_UTIL.getConfiguration(),
         regionInfo, tableDir, family);

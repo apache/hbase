@@ -843,9 +843,9 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<List<SlowLogRecord>> getSlowLogResponses(
-      final Set<ServerName> serverNames, final SlowLogQueryFilter slowLogQueryFilter) {
-    return wrap(rawAdmin.getSlowLogResponses(serverNames, slowLogQueryFilter));
+  public CompletableFuture<List<OnlineLogRecord>> getSlowLogResponses(
+      final Set<ServerName> serverNames, final LogQueryFilter logQueryFilter) {
+    return wrap(rawAdmin.getSlowLogResponses(serverNames, logQueryFilter));
   }
 
   @Override
@@ -912,5 +912,10 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<Void> setRSGroup(Set<TableName> tables, String groupName) {
     return wrap(rawAdmin.setRSGroup(tables, groupName));
+  }
+
+  @Override
+  public CompletableFuture<Void> renameRSGroup(String oldName, String newName) {
+    return wrap(rawAdmin.renameRSGroup(oldName, newName));
   }
 }

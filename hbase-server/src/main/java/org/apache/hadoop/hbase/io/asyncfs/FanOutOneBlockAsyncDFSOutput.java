@@ -68,7 +68,6 @@ import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandler.Sharable;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelId;
 import org.apache.hbase.thirdparty.io.netty.channel.SimpleChannelInboundHandler;
-import org.apache.hbase.thirdparty.io.netty.handler.codec.protobuf.ProtobufDecoder;
 import org.apache.hbase.thirdparty.io.netty.handler.codec.protobuf.ProtobufVarint32FrameDecoder;
 import org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleStateEvent;
 import org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleStateHandler;
@@ -102,8 +101,6 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
   private static final int MAX_DATA_LEN = 12 * 1024 * 1024;
 
   private final Configuration conf;
-
-  private final FSUtils fsUtils;
 
   private final DistributedFileSystem dfs;
 
@@ -325,12 +322,11 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     }
   }
 
-  FanOutOneBlockAsyncDFSOutput(Configuration conf, FSUtils fsUtils, DistributedFileSystem dfs,
+  FanOutOneBlockAsyncDFSOutput(Configuration conf,DistributedFileSystem dfs,
       DFSClient client, ClientProtocol namenode, String clientName, String src, long fileId,
       LocatedBlock locatedBlock, Encryptor encryptor, List<Channel> datanodeList,
       DataChecksum summer, ByteBufAllocator alloc) {
     this.conf = conf;
-    this.fsUtils = fsUtils;
     this.dfs = dfs;
     this.client = client;
     this.namenode = namenode;
@@ -557,7 +553,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     datanodeList.forEach(ch -> ch.close());
     datanodeList.forEach(ch -> ch.closeFuture().awaitUninterruptibly());
     endFileLease(client, fileId);
-    fsUtils.recoverFileLease(dfs, new Path(src), conf,
+    FSUtils.recoverFileLease(dfs, new Path(src), conf,
       reporter == null ? new CancelOnClose(client) : reporter);
   }
 

@@ -33,7 +33,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -72,7 +71,6 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -105,6 +103,7 @@ public class TestWALSplitToHFile {
   private WALFactory wals;
 
   private static final byte[] ROW = Bytes.toBytes("row");
+  private static final byte[] QUALIFIER = Bytes.toBytes("q");
   private static final byte[] VALUE1 = Bytes.toBytes("value1");
   private static final byte[] VALUE2 = Bytes.toBytes("value2");
   private static final int countPerFamily = 10;
@@ -119,7 +118,7 @@ public class TestWALSplitToHFile {
     UTIL.startMiniCluster(3);
     Path hbaseRootDir = UTIL.getDFSCluster().getFileSystem().makeQualified(new Path("/hbase"));
     LOG.info("hbase.rootdir=" + hbaseRootDir);
-    FSUtils.setRootDir(conf, hbaseRootDir);
+    CommonFSUtils.setRootDir(conf, hbaseRootDir);
   }
 
   @AfterClass
@@ -132,7 +131,7 @@ public class TestWALSplitToHFile {
     this.conf = HBaseConfiguration.create(UTIL.getConfiguration());
     this.conf.setBoolean(HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS, false);
     this.fs = UTIL.getDFSCluster().getFileSystem();
-    this.rootDir = FSUtils.getRootDir(this.conf);
+    this.rootDir = CommonFSUtils.getRootDir(this.conf);
     this.oldLogDir = new Path(this.rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     String serverName =
         ServerName.valueOf(TEST_NAME.getMethodName() + "-manual", 16010, System.currentTimeMillis())
@@ -178,16 +177,67 @@ public class TestWALSplitToHFile {
     return wal;
   }
 
+  private WAL createWAL(FileSystem fs, Path hbaseRootDir, String logName) throws IOException {
+    FSHLog wal = new FSHLog(fs, hbaseRootDir, logName, this.conf);
+    wal.init();
+    return wal;
+  }
+
   private Pair<TableDescriptor, RegionInfo> setupTableAndRegion() throws IOException {
     final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
     final TableDescriptor td = createBasic3FamilyTD(tableName);
     final RegionInfo ri = RegionInfoBuilder.newBuilder(tableName).build();
-    final Path tableDir = FSUtils.getTableDir(this.rootDir, tableName);
+    final Path tableDir = CommonFSUtils.getTableDir(this.rootDir, tableName);
     deleteDir(tableDir);
     FSTableDescriptors.createTableDescriptorForTableDirectory(fs, tableDir, td, false);
     HRegion region = HBaseTestingUtility.createRegionAndWAL(ri, rootDir, this.conf, td);
     HBaseTestingUtility.closeRegionAndWAL(region);
     return new Pair<>(td, ri);
+  }
+
+  private void writeData(TableDescriptor td, HRegion region) throws IOException {
+    final long timestamp = this.ee.currentTime();
+    for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
+      region.put(new Put(ROW).addColumn(cfd.getName(), QUALIFIER, timestamp, VALUE1));
+    }
+  }
+
+  @Test
+  public void testDifferentRootDirAndWALRootDir() throws Exception {
+    // Change wal root dir and reset the configuration
+    Path walRootDir = UTIL.createWALRootDir();
+    this.conf = HBaseConfiguration.create(UTIL.getConfiguration());
+
+    FileSystem walFs = CommonFSUtils.getWALFileSystem(this.conf);
+    this.oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    String serverName =
+        ServerName.valueOf(TEST_NAME.getMethodName() + "-manual", 16010, System.currentTimeMillis())
+            .toString();
+    this.logName = AbstractFSWALProvider.getWALDirectoryName(serverName);
+    this.logDir = new Path(walRootDir, logName);
+    this.wals = new WALFactory(conf, TEST_NAME.getMethodName());
+
+    Pair<TableDescriptor, RegionInfo> pair = setupTableAndRegion();
+    TableDescriptor td = pair.getFirst();
+    RegionInfo ri = pair.getSecond();
+
+    WAL wal = createWAL(walFs, walRootDir, logName);
+    HRegion region = HRegion.openHRegion(this.conf, this.fs, rootDir, ri, td, wal);
+    writeData(td, region);
+
+    // Now close the region without flush
+    region.close(true);
+    wal.shutdown();
+    // split the log
+    WALSplitter.split(walRootDir, logDir, oldLogDir, FileSystem.get(this.conf), this.conf, wals);
+
+    WAL wal2 = createWAL(walFs, walRootDir, logName);
+    HRegion region2 = HRegion.openHRegion(this.conf, this.fs, rootDir, ri, td, wal2);
+    Result result2 = region2.get(new Get(ROW));
+    assertEquals(td.getColumnFamilies().length, result2.size());
+    for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
+      assertTrue(Bytes.equals(VALUE1, result2.getValue(cfd.getName(), QUALIFIER)));
+    }
   }
 
   @Test
@@ -198,21 +248,9 @@ public class TestWALSplitToHFile {
 
     WAL wal = createWAL(this.conf, rootDir, logName);
     HRegion region = HRegion.openHRegion(this.conf, this.fs, rootDir, ri, td, wal);
-    final long timestamp = this.ee.currentTime();
-    // Write data and flush
-    for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
-      region.put(new Put(ROW).addColumn(cfd.getName(), Bytes.toBytes("x"), timestamp, VALUE1));
-    }
-    region.flush(true);
+    writeData(td, region);
 
-    // Now assert edits made it in.
-    Result result1 = region.get(new Get(ROW));
-    assertEquals(td.getColumnFamilies().length, result1.size());
-    for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
-      assertTrue(Bytes.equals(VALUE1, result1.getValue(cfd.getName(), Bytes.toBytes("x"))));
-    }
-
-    // Now close the region
+    // Now close the region without flush
     region.close(true);
     wal.shutdown();
     // split the log
@@ -244,7 +282,7 @@ public class TestWALSplitToHFile {
     Result result2 = region2.get(new Get(ROW));
     assertEquals(td.getColumnFamilies().length, result2.size());
     for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
-      assertTrue(Bytes.equals(VALUE1, result2.getValue(cfd.getName(), Bytes.toBytes("x"))));
+      assertTrue(Bytes.equals(VALUE1, result2.getValue(cfd.getName(), QUALIFIER)));
       // Assert the corrupt file was skipped and still exist
       FileStatus[] files =
           WALSplitUtil.getRecoveredHFiles(this.fs, regionDir, cfd.getNameAsString());
@@ -265,22 +303,15 @@ public class TestWALSplitToHFile {
     final long timestamp = this.ee.currentTime();
     // Write data and flush
     for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
-      region.put(new Put(ROW).addColumn(cfd.getName(), Bytes.toBytes("x"), timestamp, VALUE1));
+      region.put(new Put(ROW).addColumn(cfd.getName(), QUALIFIER, timestamp, VALUE1));
     }
     region.flush(true);
 
-    // Now assert edits made it in.
-    Result result1 = region.get(new Get(ROW));
-    assertEquals(td.getColumnFamilies().length, result1.size());
-    for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
-      assertTrue(Bytes.equals(VALUE1, result1.getValue(cfd.getName(), Bytes.toBytes("x"))));
-    }
-
     // Write data with same timestamp and do not flush
     for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
-      region.put(new Put(ROW).addColumn(cfd.getName(), Bytes.toBytes("x"), timestamp, VALUE2));
+      region.put(new Put(ROW).addColumn(cfd.getName(), QUALIFIER, timestamp, VALUE2));
     }
-    // Now close the region (without flush)
+    // Now close the region without flush
     region.close(true);
     wal.shutdown();
     // split the log
@@ -292,7 +323,7 @@ public class TestWALSplitToHFile {
     Result result2 = region2.get(new Get(ROW));
     assertEquals(td.getColumnFamilies().length, result2.size());
     for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
-      assertTrue(Bytes.equals(VALUE2, result2.getValue(cfd.getName(), Bytes.toBytes("x"))));
+      assertTrue(Bytes.equals(VALUE2, result2.getValue(cfd.getName(), QUALIFIER)));
     }
   }
 
@@ -308,9 +339,9 @@ public class TestWALSplitToHFile {
     // Write data and do not flush
     for (int i = 0; i < countPerFamily; i++) {
       for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
-        region.put(new Put(Bytes.toBytes(i)).addColumn(cfd.getName(), Bytes.toBytes("x"), VALUE1));
+        region.put(new Put(Bytes.toBytes(i)).addColumn(cfd.getName(), QUALIFIER, VALUE1));
         Result result = region.get(new Get(Bytes.toBytes(i)).addFamily(cfd.getName()));
-        assertTrue(Bytes.equals(VALUE1, result.getValue(cfd.getName(), Bytes.toBytes("x"))));
+        assertTrue(Bytes.equals(VALUE1, result.getValue(cfd.getName(), QUALIFIER)));
         List<Cell> cells = result.listCells();
         assertEquals(1, cells.size());
         seqIdMap.computeIfAbsent(i, r -> new HashMap<>()).put(cfd.getNameAsString(),
@@ -318,7 +349,7 @@ public class TestWALSplitToHFile {
       }
     }
 
-    // Now close the region (without flush)
+    // Now close the region without flush
     region.close(true);
     wal.shutdown();
     // split the log
@@ -331,7 +362,7 @@ public class TestWALSplitToHFile {
     for (int i = 0; i < countPerFamily; i++) {
       for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
         Result result = region2.get(new Get(Bytes.toBytes(i)).addFamily(cfd.getName()));
-        assertTrue(Bytes.equals(VALUE1, result.getValue(cfd.getName(), Bytes.toBytes("x"))));
+        assertTrue(Bytes.equals(VALUE1, result.getValue(cfd.getName(), QUALIFIER)));
         List<Cell> cells = result.listCells();
         assertEquals(1, cells.size());
         assertEquals((long) seqIdMap.get(i).get(cfd.getNameAsString()),
@@ -407,7 +438,7 @@ public class TestWALSplitToHFile {
         FileSystem newFS = FileSystem.get(newConf);
         // Make a new wal for new region open.
         WAL wal3 = createWAL(newConf, rootDir, logName);
-        Path tableDir = FSUtils.getTableDir(rootDir, td.getTableName());
+        Path tableDir = CommonFSUtils.getTableDir(rootDir, td.getTableName());
         HRegion region3 = new HRegion(tableDir, wal3, newFS, newConf, ri, td, null);
         long seqid3 = region3.initialize();
         Result result3 = region3.get(g);

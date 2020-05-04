@@ -805,26 +805,27 @@ public class TableMapReduceUtil {
     addDependencyJarsForClasses(conf,
       // explicitly pull a class from each module
       org.apache.hadoop.hbase.HConstants.class,                      // hbase-common
-      org.apache.hadoop.hbase.protobuf.generated.ClientProtos.class, // hbase-protocol
       org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.class, // hbase-protocol-shaded
       org.apache.hadoop.hbase.client.Put.class,                      // hbase-client
       org.apache.hadoop.hbase.ipc.RpcServer.class,                   // hbase-server
       org.apache.hadoop.hbase.CompatibilityFactory.class,            // hbase-hadoop-compat
       org.apache.hadoop.hbase.mapreduce.JobUtil.class,               // hbase-hadoop2-compat
-      org.apache.hadoop.hbase.mapreduce.TableMapper.class,           // hbase-server
+      org.apache.hadoop.hbase.mapreduce.TableMapper.class,           // hbase-mapreduce
       org.apache.hadoop.hbase.metrics.impl.FastLongHistogram.class,  // hbase-metrics
       org.apache.hadoop.hbase.metrics.Snapshot.class,                // hbase-metrics-api
+      org.apache.hadoop.hbase.replication.ReplicationUtils.class,    // hbase-replication
+      org.apache.hadoop.hbase.http.HttpServer.class,                 // hbase-http
+      org.apache.hadoop.hbase.procedure2.Procedure.class,            // hbase-procedure
+      org.apache.hadoop.hbase.zookeeper.ZKWatcher.class,             // hbase-zookeeper
+      org.apache.hbase.thirdparty.com.google.common.collect.Lists.class, // hb-shaded-miscellaneous
       org.apache.hbase.thirdparty.com.google.gson.GsonBuilder.class, // hbase-shaded-gson
-      org.apache.zookeeper.ZooKeeper.class,
-      org.apache.hbase.thirdparty.io.netty.channel.Channel.class,
-      com.google.protobuf.Message.class,
-      org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations.class,
-      org.apache.hbase.thirdparty.com.google.common.collect.Lists.class,
-      org.apache.htrace.core.Tracer.class,
-      com.codahale.metrics.MetricRegistry.class,
-      org.apache.commons.lang3.ArrayUtils.class,
-      org.apache.hbase.thirdparty.com.google.gson.Gson.class,
-      org.apache.hadoop.hbase.zookeeper.ZKWatcher.class);
+      org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations.class, // hb-sh-protobuf
+      org.apache.hbase.thirdparty.io.netty.channel.Channel.class,    // hbase-shaded-netty
+      org.apache.zookeeper.ZooKeeper.class,                          // zookeeper
+      com.google.protobuf.Message.class,                             // protobuf
+      org.apache.htrace.core.Tracer.class,                           // htrace
+      com.codahale.metrics.MetricRegistry.class,                     // metrics-core
+      org.apache.commons.lang3.ArrayUtils.class);                    // commons-lang
   }
 
   /**

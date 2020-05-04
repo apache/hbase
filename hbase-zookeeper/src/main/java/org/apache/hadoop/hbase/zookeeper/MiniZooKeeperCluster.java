@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.zookeeper.common.X509Exception;
 import org.apache.zookeeper.server.NIOServerCnxnFactory;
 import org.apache.zookeeper.server.ZooKeeperServer;
 import org.apache.zookeeper.server.persistence.FileTxnLog;
@@ -322,19 +323,18 @@ public class MiniZooKeeperCluster {
   public void shutdown() throws IOException {
     // shut down all the zk servers
     for (int i = 0; i < standaloneServerFactoryList.size(); i++) {
-      NIOServerCnxnFactory standaloneServerFactory =
-        standaloneServerFactoryList.get(i);
+      NIOServerCnxnFactory standaloneServerFactory = standaloneServerFactoryList.get(i);
       int clientPort = clientPortList.get(i);
-
       standaloneServerFactory.shutdown();
       if (!waitForServerDown(clientPort, connectionTimeout)) {
-        throw new IOException("Waiting for shutdown of standalone server");
+        throw new IOException("Waiting for shutdown of standalone server at port=" + clientPort +
+          ", timeout=" + this.connectionTimeout);
       }
     }
     standaloneServerFactoryList.clear();
 
     for (ZooKeeperServer zkServer: zooKeeperServers) {
-      //explicitly close ZKDatabase since ZookeeperServer does not close them
+      // Explicitly close ZKDatabase since ZookeeperServer does not close them
       zkServer.getZKDatabase().close();
     }
     zooKeeperServers.clear();
@@ -421,8 +421,8 @@ public class MiniZooKeeperCluster {
     long start = System.currentTimeMillis();
     while (true) {
       try {
-        send4LetterWord(HOST, port, "stat", (int)timeout);
-      } catch (IOException e) {
+        send4LetterWord(HOST, port, "stat", false, (int)timeout);
+      } catch (IOException | X509Exception.SSLContextException e) {
         return true;
       }
 
@@ -444,7 +444,7 @@ public class MiniZooKeeperCluster {
     long start = System.currentTimeMillis();
     while (true) {
       try {
-        String result = send4LetterWord(HOST, port, "stat", (int)timeout);
+        String result = send4LetterWord(HOST, port, "stat", false, (int)timeout);
         if (result.startsWith("Zookeeper version:") && !result.contains("READ-ONLY")) {
           return true;
         } else {
@@ -453,7 +453,7 @@ public class MiniZooKeeperCluster {
       } catch (ConnectException e) {
         // ignore as this is expected, do not log stacktrace
         LOG.info("{}:{} not up: {}", HOST, port, e.toString());
-      } catch (IOException e) {
+      } catch (IOException | X509Exception.SSLContextException e) {
         // ignore as this is expected
         LOG.info("{}:{} not up", HOST, port, e);
       }

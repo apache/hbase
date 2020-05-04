@@ -119,7 +119,7 @@ public class RegionGroupingProvider implements WALProvider {
   public static final String REGION_GROUPING_STRATEGY = "hbase.wal.regiongrouping.strategy";
   public static final String DEFAULT_REGION_GROUPING_STRATEGY = Strategies.defaultStrategy.name();
 
-  /** delegate provider for WAL creation/roll/close */
+  /** delegate provider for WAL creation/roll/close, but not support multiwal */
   public static final String DELEGATE_PROVIDER = "hbase.wal.regiongrouping.delegate.provider";
   public static final String DEFAULT_DELEGATE_PROVIDER = WALFactory.Providers.defaultProvider
       .name();
@@ -162,6 +162,10 @@ public class RegionGroupingProvider implements WALProvider {
     }
     this.strategy = getStrategy(conf, REGION_GROUPING_STRATEGY, DEFAULT_REGION_GROUPING_STRATEGY);
     this.providerClass = factory.getProviderClass(DELEGATE_PROVIDER, DEFAULT_DELEGATE_PROVIDER);
+    if (providerClass.equals(this.getClass())) {
+      LOG.warn("delegate provider not support multiwal, falling back to defaultProvider.");
+      providerClass = factory.getDefaultProvider().clazz;
+    }
   }
 
   private WALProvider createProvider(String group) throws IOException {

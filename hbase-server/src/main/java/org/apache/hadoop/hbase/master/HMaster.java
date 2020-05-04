@@ -586,7 +586,7 @@ public class HMaster extends HRegionServer implements MasterServices {
         this.metaRegionLocationCache = null;
         this.activeMasterManager = null;
       }
-      cachedClusterId = new CachedClusterId(conf);
+      cachedClusterId = new CachedClusterId(this, conf);
     } catch (Throwable t) {
       // Make sure we log the exception. HMaster is often started via reflection and the
       // cause of failed startup is lost.
@@ -1975,8 +1975,8 @@ public class HMaster extends HRegionServer implements MasterServices {
           " failed because merge switch is off");
     }
 
-    final String mergeRegionsStr = Arrays.stream(regionsToMerge).
-      map(r -> RegionInfo.getShortNameToLog(r)).collect(Collectors.joining(", "));
+    final String mergeRegionsStr = Arrays.stream(regionsToMerge).map(r -> r.getEncodedName()).
+      collect(Collectors.joining(", "));
     return MasterProcedureUtil.submitProcedure(new NonceProcedureRunnable(this, ng, nonce) {
       @Override
       protected void run() throws IOException {
@@ -2793,6 +2793,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   @Override
   public void abort(String reason, Throwable cause) {
     if (isAborted() || isStopped()) {
+      LOG.debug("Abort called but aborted={}, stopped={}", isAborted(), isStopped());
       return;
     }
     setAbortRequested();

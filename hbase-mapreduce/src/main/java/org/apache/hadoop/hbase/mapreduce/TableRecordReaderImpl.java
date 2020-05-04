@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,7 +37,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -102,10 +101,9 @@ public class TableRecordReaderImpl {
    * In new mapreduce APIs, TaskAttemptContext has two getCounter methods
    * Check if getCounter(String, String) method is available.
    * @return The getCounter method or null if not available.
-   * @throws IOException
    */
   protected static Method retrieveGetCounterWithStringsParams(TaskAttemptContext context)
-  throws IOException {
+      throws IOException {
     Method m = null;
     try {
       m = context.getClass().getMethod("getCounter",
@@ -142,9 +140,6 @@ public class TableRecordReaderImpl {
 
   /**
    * Build the scanner. Not done in constructor to allow for extension.
-   *
-   * @throws IOException
-   * @throws InterruptedException
    */
   public void initialize(InputSplit inputsplit,
       TaskAttemptContext context) throws IOException,
@@ -176,7 +171,6 @@ public class TableRecordReaderImpl {
    * Returns the current key.
    *
    * @return The current key.
-   * @throws IOException
    * @throws InterruptedException When the job is aborted.
    */
   public ImmutableBytesWritable getCurrentKey() throws IOException,
@@ -204,12 +198,18 @@ public class TableRecordReaderImpl {
    * @throws InterruptedException When the job was aborted.
    */
   public boolean nextKeyValue() throws IOException, InterruptedException {
-    if (key == null) key = new ImmutableBytesWritable();
-    if (value == null) value = new Result();
+    if (key == null) {
+      key = new ImmutableBytesWritable();
+    }
+    if (value == null) {
+      value = new Result();
+    }
     try {
       try {
         value = this.scanner.next();
-        if (value != null && value.isStale()) numStale++;
+        if (value != null && value.isStale()) {
+          numStale++;
+        }
         if (logScannerActivity) {
           rowcount ++;
           if (rowcount >= logPerRowCount) {
@@ -242,7 +242,9 @@ public class TableRecordReaderImpl {
           scanner.next();    // skip presumed already mapped row
         }
         value = scanner.next();
-        if (value != null && value.isStale()) numStale++;
+        if (value != null && value.isStale()) {
+          numStale++;
+        }
         numRestarts++;
       }
 
@@ -281,7 +283,6 @@ public class TableRecordReaderImpl {
    * counters thus can update counters based on scanMetrics.
    * If hbase runs on old version of mapreduce, it won't be able to get
    * access to counters and TableRecorderReader can't update counter values.
-   * @throws IOException
    */
   private void updateCounters() throws IOException {
     ScanMetrics scanMetrics = scanner.getScanMetrics();

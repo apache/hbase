@@ -309,6 +309,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.Remo
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RenameRSGroupRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RenameRSGroupResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest;
@@ -3951,27 +3953,48 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<List<SlowLogRecord>> getSlowLogResponses(
-    @Nullable final Set<ServerName> serverNames,
-    final SlowLogQueryFilter slowLogQueryFilter) {
+  public CompletableFuture<List<OnlineLogRecord>> getSlowLogResponses(
+      @Nullable final Set<ServerName> serverNames,
+    final LogQueryFilter logQueryFilter) {
     if (CollectionUtils.isEmpty(serverNames)) {
       return CompletableFuture.completedFuture(Collections.emptyList());
     }
-    return CompletableFuture.supplyAsync(() -> serverNames.stream()
-      .map((ServerName serverName) ->
-        getSlowLogResponseFromServer(serverName, slowLogQueryFilter))
-      .map(CompletableFuture::join)
-      .flatMap(List::stream)
-      .collect(Collectors.toList()));
+    if (logQueryFilter.getType() == null
+        || logQueryFilter.getType() == LogQueryFilter.Type.SLOW_LOG) {
+      return CompletableFuture.supplyAsync(() -> serverNames.stream()
+        .map((ServerName serverName) ->
+          getSlowLogResponseFromServer(serverName, logQueryFilter))
+        .map(CompletableFuture::join)
+        .flatMap(List::stream)
+        .collect(Collectors.toList()));
+    } else {
+      return CompletableFuture.supplyAsync(() -> serverNames.stream()
+        .map((ServerName serverName) ->
+          getLargeLogResponseFromServer(serverName, logQueryFilter))
+        .map(CompletableFuture::join)
+        .flatMap(List::stream)
+        .collect(Collectors.toList()));
+    }
   }
 
-  private CompletableFuture<List<SlowLogRecord>> getSlowLogResponseFromServer(
-    final ServerName serverName, final SlowLogQueryFilter slowLogQueryFilter) {
-    return this.<List<SlowLogRecord>>newAdminCaller()
+  private CompletableFuture<List<OnlineLogRecord>> getSlowLogResponseFromServer(
+    final ServerName serverName, final LogQueryFilter logQueryFilter) {
+    return this.<List<OnlineLogRecord>>newAdminCaller()
       .action((controller, stub) -> this
         .adminCall(
-          controller, stub, RequestConverter.buildSlowLogResponseRequest(slowLogQueryFilter),
+          controller, stub, RequestConverter.buildSlowLogResponseRequest(logQueryFilter),
           AdminService.Interface::getSlowLogResponses,
+          ProtobufUtil::toSlowLogPayloads))
+      .serverName(serverName).call();
+  }
+
+  private CompletableFuture<List<OnlineLogRecord>> getLargeLogResponseFromServer(
+    final ServerName serverName, final LogQueryFilter logQueryFilter) {
+    return this.<List<OnlineLogRecord>>newAdminCaller()
+      .action((controller, stub) -> this
+        .adminCall(
+          controller, stub, RequestConverter.buildSlowLogResponseRequest(logQueryFilter),
+          AdminService.Interface::getLargeLogResponses,
           ProtobufUtil::toSlowLogPayloads))
       .serverName(serverName).call();
   }
@@ -4124,5 +4147,22 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           (s, c, req, done) -> s.getRSGroupInfo(c, req, done),
           resp -> resp.hasRSGroupInfo() ? ProtobufUtil.toGroupInfo(resp.getRSGroupInfo()) : null)))
       .call();
+  }
+
+  @Override
+  public CompletableFuture<Void> renameRSGroup(String oldName, String newName) {
+    return this.<Void> newMasterCaller()
+      .action(
+        (
+          (controller, stub) -> this.<RenameRSGroupRequest, RenameRSGroupResponse, Void> call(
+            controller,
+            stub,
+            RenameRSGroupRequest.newBuilder().setOldRsgroupName(oldName).setNewRsgroupName(newName)
+                                .build(),
+            (s, c, req, done) -> s.renameRSGroup(c, req, done),
+            resp -> null
+          )
+        )
+      ).call();
   }
 }

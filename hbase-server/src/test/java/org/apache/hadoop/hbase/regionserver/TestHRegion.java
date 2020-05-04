@@ -150,7 +150,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
@@ -389,7 +388,7 @@ public class TestHRegion {
       Configuration conf, TableName tableName) throws IOException {
     final Path logDir = TEST_UTIL.getDataTestDirOnTestFS(callingMethod + ".log");
     final Configuration walConf = new Configuration(conf);
-    FSUtils.setRootDir(walConf, logDir);
+    CommonFSUtils.setRootDir(walConf, logDir);
     return new WALFactory(walConf, callingMethod)
         .getWAL(RegionInfoBuilder.newBuilder(tableName).build());
   }
@@ -612,7 +611,7 @@ public class TestHRegion {
     region.flush(true);
 
     Scan scan = new Scan();
-    scan.setMaxVersions(3);
+    scan.readVersions(3);
     // open the first scanner
     RegionScanner scanner1 = region.getScanner(scan);
 
@@ -663,7 +662,7 @@ public class TestHRegion {
     region.flush(true);
 
     Scan scan = new Scan();
-    scan.setMaxVersions(3);
+    scan.readVersions(3);
     // open the first scanner
     RegionScanner scanner1 = region.getScanner(scan);
 
@@ -972,7 +971,7 @@ public class TestHRegion {
 
       // now find the compacted file, and manually add it to the recovered edits
       Path tmpDir = new Path(region.getRegionFileSystem().getTempDir(), Bytes.toString(family));
-      FileStatus[] files = FSUtils.listStatus(fs, tmpDir);
+      FileStatus[] files = CommonFSUtils.listStatus(fs, tmpDir);
       String errorMsg = "Expected to find 1 file in the region temp directory "
           + "from the compaction, could not find any";
       assertNotNull(errorMsg, files);
@@ -1027,7 +1026,7 @@ public class TestHRegion {
       if (!mismatchedRegionName) {
         assertEquals(1, region.getStore(family).getStorefilesCount());
       }
-      files = FSUtils.listStatus(fs, tmpDir);
+      files = CommonFSUtils.listStatus(fs, tmpDir);
       assertTrue("Expected to find 0 files inside " + tmpDir, files == null || files.length == 0);
 
       for (long i = minSeqId; i < maxSeqId; i++) {
@@ -1050,7 +1049,7 @@ public class TestHRegion {
     byte[] family = Bytes.toBytes("family");
     Path logDir = TEST_UTIL.getDataTestDirOnTestFS(method + ".log");
     final Configuration walConf = new Configuration(TEST_UTIL.getConfiguration());
-    FSUtils.setRootDir(walConf, logDir);
+    CommonFSUtils.setRootDir(walConf, logDir);
     final WALFactory wals = new WALFactory(walConf, method);
     final WAL wal = wals.getWAL(RegionInfoBuilder.newBuilder(tableName).build());
 
@@ -1204,7 +1203,7 @@ public class TestHRegion {
     Path logDir = TEST_UTIL.getDataTestDirOnTestFS(method + "log");
 
     final Configuration walConf = new Configuration(TEST_UTIL.getConfiguration());
-    FSUtils.setRootDir(walConf, logDir);
+    CommonFSUtils.setRootDir(walConf, logDir);
     // Make up a WAL that we can manipulate at append time.
     class FailAppendFlushMarkerWAL extends FSHLog {
       volatile FlushAction [] flushActions = null;
@@ -1251,9 +1250,8 @@ public class TestHRegion {
         };
       }
     }
-    FailAppendFlushMarkerWAL wal =
-      new FailAppendFlushMarkerWAL(FileSystem.get(walConf), FSUtils.getRootDir(walConf),
-        method, walConf);
+    FailAppendFlushMarkerWAL wal = new FailAppendFlushMarkerWAL(FileSystem.get(walConf),
+      CommonFSUtils.getRootDir(walConf), method, walConf);
     wal.init();
     this.region = initHRegion(tableName, HConstants.EMPTY_START_ROW,
       HConstants.EMPTY_END_ROW, false, Durability.USE_DEFAULT, wal, family);
@@ -1282,9 +1280,9 @@ public class TestHRegion {
     wal.close();
 
     // 2. Test case where START_FLUSH succeeds but COMMIT_FLUSH will throw exception
-    wal.flushActions = new FlushAction [] {FlushAction.COMMIT_FLUSH};
-    wal = new FailAppendFlushMarkerWAL(FileSystem.get(walConf), FSUtils.getRootDir(walConf),
-          method, walConf);
+    wal.flushActions = new FlushAction[] { FlushAction.COMMIT_FLUSH };
+    wal = new FailAppendFlushMarkerWAL(FileSystem.get(walConf), CommonFSUtils.getRootDir(walConf),
+      method, walConf);
     wal.init();
     this.region = initHRegion(tableName, HConstants.EMPTY_START_ROW,
       HConstants.EMPTY_END_ROW, false, Durability.USE_DEFAULT, wal, family);
@@ -1896,40 +1894,41 @@ public class TestHRegion {
     // Setting up region
     this.region = initHRegion(tableName, method, CONF, fam1);
     // Putting data in key
+    long now = System.currentTimeMillis();
     Put put = new Put(row1);
-    put.addColumn(fam1, qf1, val1);
+    put.addColumn(fam1, qf1, now, val1);
     region.put(put);
 
     // checkAndPut with correct value
     boolean res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL,
         new BinaryComparator(val1), put);
-    assertEquals(true, res);
+    assertEquals("First", true, res);
 
     // checkAndDelete with correct value
-    Delete delete = new Delete(row1);
+    Delete delete = new Delete(row1, now + 1);
     delete.addColumn(fam1, qf1);
     res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BinaryComparator(val1),
         delete);
-    assertEquals(true, res);
+    assertEquals("Delete", true, res);
 
     // Putting data in key
     put = new Put(row1);
-    put.addColumn(fam1, qf1, Bytes.toBytes(bd1));
+    put.addColumn(fam1, qf1, now + 2, Bytes.toBytes(bd1));
     region.put(put);
 
     // checkAndPut with correct value
     res =
         region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BigDecimalComparator(
             bd1), put);
-    assertEquals(true, res);
+    assertEquals("Second put", true, res);
 
     // checkAndDelete with correct value
-    delete = new Delete(row1);
+    delete = new Delete(row1, now + 3);
     delete.addColumn(fam1, qf1);
     res =
         region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BigDecimalComparator(
             bd1), delete);
-    assertEquals(true, res);
+    assertEquals("Second delete", true, res);
   }
 
   @Test
@@ -2106,6 +2105,8 @@ public class TestHRegion {
     put.addColumn(fam2, qf3, val1);
     put.addColumn(fam1, qf3, val1);
     region.put(put);
+
+    LOG.info("get={}", region.get(new Get(row1).addColumn(fam1, qf1)).toString());
 
     // Multi-column delete
     Delete delete = new Delete(row1);
@@ -2738,7 +2739,7 @@ public class TestHRegion {
     assertArrayEquals(value2, r.getValue(fam1, qual1));
 
     // next:
-    Scan scan = new Scan(row);
+    Scan scan = new Scan().withStartRow(row);
     scan.addColumn(fam1, qual1);
     InternalScanner s = region.getScanner(scan);
 
@@ -3137,9 +3138,9 @@ public class TestHRegion {
     expected.add(kv13);
     expected.add(kv12);
 
-    Scan scan = new Scan(row1);
+    Scan scan = new Scan().withStartRow(row1);
     scan.addColumn(fam1, qf1);
-    scan.setMaxVersions(MAX_VERSIONS);
+    scan.readVersions(MAX_VERSIONS);
     List<Cell> actual = new ArrayList<>();
     InternalScanner scanner = region.getScanner(scan);
 
@@ -3193,10 +3194,10 @@ public class TestHRegion {
     expected.add(kv23);
     expected.add(kv22);
 
-    Scan scan = new Scan(row1);
+    Scan scan = new Scan().withStartRow(row1);
     scan.addColumn(fam1, qf1);
     scan.addColumn(fam1, qf2);
-    scan.setMaxVersions(MAX_VERSIONS);
+    scan.readVersions(MAX_VERSIONS);
     List<Cell> actual = new ArrayList<>();
     InternalScanner scanner = region.getScanner(scan);
 
@@ -3269,11 +3270,11 @@ public class TestHRegion {
     expected.add(kv23);
     expected.add(kv22);
 
-    Scan scan = new Scan(row1);
+    Scan scan = new Scan().withStartRow(row1);
     scan.addColumn(fam1, qf1);
     scan.addColumn(fam1, qf2);
     int versions = 3;
-    scan.setMaxVersions(versions);
+    scan.readVersions(versions);
     List<Cell> actual = new ArrayList<>();
     InternalScanner scanner = region.getScanner(scan);
 
@@ -3326,9 +3327,9 @@ public class TestHRegion {
     expected.add(kv23);
     expected.add(kv22);
 
-    Scan scan = new Scan(row1);
+    Scan scan = new Scan().withStartRow(row1);
     scan.addFamily(fam1);
-    scan.setMaxVersions(MAX_VERSIONS);
+    scan.readVersions(MAX_VERSIONS);
     List<Cell> actual = new ArrayList<>();
     InternalScanner scanner = region.getScanner(scan);
 
@@ -3381,9 +3382,9 @@ public class TestHRegion {
     expected.add(kv23);
     expected.add(kv22);
 
-    Scan scan = new Scan(row1);
+    Scan scan = new Scan().withStartRow(row1);
     scan.addFamily(fam1);
-    scan.setMaxVersions(MAX_VERSIONS);
+    scan.readVersions(MAX_VERSIONS);
     List<Cell> actual = new ArrayList<>();
     InternalScanner scanner = region.getScanner(scan);
 
@@ -3429,8 +3430,8 @@ public class TestHRegion {
     put.addColumn(family, col1, Bytes.toBytes(40L));
     region.put(put);
 
-    Scan scan = new Scan(row3, row4);
-    scan.setMaxVersions();
+    Scan scan = new Scan().withStartRow(row3).withStopRow(row4);
+    scan.readAllVersions();
     scan.addColumn(family, col1);
     InternalScanner s = region.getScanner(scan);
 
@@ -3497,9 +3498,9 @@ public class TestHRegion {
     expected.add(kv23);
     expected.add(kv22);
 
-    Scan scan = new Scan(row1);
+    Scan scan = new Scan().withStartRow(row1);
     int versions = 3;
-    scan.setMaxVersions(versions);
+    scan.readVersions(versions);
     List<Cell> actual = new ArrayList<>();
     InternalScanner scanner = region.getScanner(scan);
 
@@ -3824,6 +3825,20 @@ public class TestHRegion {
   }
 
   /**
+   * So can be overridden in subclasses.
+   */
+  int getNumQualifiersForTestWritesWhileScanning() {
+    return 100;
+  }
+
+  /**
+   * So can be overridden in subclasses.
+   */
+  int getTestCountForTestWritesWhileScanning() {
+    return 100;
+  }
+
+  /**
    * Writes very wide records and scans for the latest every time.. Flushes and
    * compacts the region every now and then to keep things realistic.
    *
@@ -3834,10 +3849,10 @@ public class TestHRegion {
    */
   @Test
   public void testWritesWhileScanning() throws IOException, InterruptedException {
-    int testCount = 100;
+    int testCount = getTestCountForTestWritesWhileScanning();
     int numRows = 1;
     int numFamilies = 10;
-    int numQualifiers = 100;
+    int numQualifiers = getNumQualifiersForTestWritesWhileScanning();
     int flushInterval = 7;
     int compactInterval = 5 * flushInterval;
     byte[][] families = new byte[numFamilies][];
@@ -3858,7 +3873,8 @@ public class TestHRegion {
 
       flushThread.start();
 
-      Scan scan = new Scan(Bytes.toBytes("row0"), Bytes.toBytes("row1"));
+      Scan scan = new Scan().withStartRow(Bytes.toBytes("row0"))
+        .withStopRow(Bytes.toBytes("row1"));
 
       int expectedCount = numFamilies * numQualifiers;
       List<Cell> res = new ArrayList<>();
@@ -4770,7 +4786,7 @@ public class TestHRegion {
     byte[] family = Bytes.toBytes("family");
     Path logDir = new Path(new Path(dir + method), "log");
     final Configuration walConf = new Configuration(conf);
-    FSUtils.setRootDir(walConf, logDir);
+    CommonFSUtils.setRootDir(walConf, logDir);
     // XXX: The spied AsyncFSWAL can not work properly because of a Mockito defect that can not
     // deal with classes which have a field of an inner class. See discussions in HBASE-15536.
     walConf.set(WALFactory.WAL_PROVIDER, "filesystem");
@@ -4820,7 +4836,7 @@ public class TestHRegion {
     // create a primary region, load some data and flush
     // create a secondary region, and do a get against that
     Path rootDir = new Path(dir + name.getMethodName());
-    FSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootDir);
+    CommonFSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootDir);
 
     byte[][] families = new byte[][] {
         Bytes.toBytes("cf1"), Bytes.toBytes("cf2"), Bytes.toBytes("cf3")
@@ -4873,7 +4889,7 @@ public class TestHRegion {
     // create a primary region, load some data and flush
     // create a secondary region, and do a put against that
     Path rootDir = new Path(dir + name.getMethodName());
-    FSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootDir);
+    CommonFSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootDir);
 
     byte[][] families = new byte[][] {
         Bytes.toBytes("cf1"), Bytes.toBytes("cf2"), Bytes.toBytes("cf3")
@@ -4935,7 +4951,7 @@ public class TestHRegion {
   @Test
   public void testCompactionFromPrimary() throws IOException {
     Path rootDir = new Path(dir + name.getMethodName());
-    FSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootDir);
+    CommonFSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootDir);
 
     byte[][] families = new byte[][] {
         Bytes.toBytes("cf1"), Bytes.toBytes("cf2"), Bytes.toBytes("cf3")
@@ -5214,8 +5230,8 @@ public class TestHRegion {
     put.add(kv3);
     region.put(put);
 
-    Scan scan = new Scan(rowC);
-    scan.setMaxVersions(5);
+    Scan scan = new Scan().withStartRow(rowC);
+    scan.readVersions(5);
     scan.setReversed(true);
     InternalScanner scanner = region.getScanner(scan);
     List<Cell> currRow = new ArrayList<>();
@@ -5268,10 +5284,10 @@ public class TestHRegion {
     put.add(kv3);
     region.put(put);
 
-    Scan scan = new Scan(rowD);
+    Scan scan = new Scan().withStartRow(rowD);
     List<Cell> currRow = new ArrayList<>();
     scan.setReversed(true);
-    scan.setMaxVersions(5);
+    scan.readVersions(5);
     InternalScanner scanner = region.getScanner(scan);
     boolean hasNext = scanner.next(currRow);
     assertEquals(2, currRow.size());
@@ -5384,7 +5400,7 @@ public class TestHRegion {
     put.add(kv5);
     region.put(put);
     region.flush(true);
-    Scan scan = new Scan(rowD, rowA);
+    Scan scan = new Scan().withStartRow(rowD).withStopRow(rowA);
     scan.addColumn(families[0], col1);
     scan.setReversed(true);
     List<Cell> currRow = new ArrayList<>();
@@ -5408,7 +5424,7 @@ public class TestHRegion {
     assertFalse(hasNext);
     scanner.close();
 
-    scan = new Scan(rowD, rowA);
+    scan = new Scan().withStartRow(rowD).withStopRow(rowA);
     scan.addColumn(families[0], col2);
     scan.setReversed(true);
     currRow.clear();
@@ -5462,7 +5478,7 @@ public class TestHRegion {
     put.add(kv5);
     region.put(put);
     region.flush(true);
-    Scan scan = new Scan(rowD, rowA);
+    Scan scan = new Scan().withStartRow(rowD).withStopRow(rowA);
     scan.addColumn(families[0], col1);
     scan.setReversed(true);
     List<Cell> currRow = new ArrayList<>();
@@ -5486,7 +5502,7 @@ public class TestHRegion {
     assertFalse(hasNext);
     scanner.close();
 
-    scan = new Scan(rowD, rowA);
+    scan = new Scan().withStartRow(rowD).withStopRow(rowA);
     scan.addColumn(families[0], col2);
     scan.setReversed(true);
     currRow.clear();
@@ -5600,8 +5616,8 @@ public class TestHRegion {
     put.add(kv5_2_2);
     region.put(put);
     // scan range = ["row4", min), skip the max "row5"
-    Scan scan = new Scan(row4);
-    scan.setMaxVersions(5);
+    Scan scan = new Scan().withStartRow(row4);
+    scan.readVersions(5);
     scan.setBatch(3);
     scan.setReversed(true);
     InternalScanner scanner = region.getScanner(scan);
@@ -5703,7 +5719,7 @@ public class TestHRegion {
     put.add(kv4);
     region.put(put);
     // scan range = ["row4", min)
-    Scan scan = new Scan(row4);
+    Scan scan = new Scan().withStartRow(row4);
     scan.setReversed(true);
     scan.setBatch(10);
     InternalScanner scanner = region.getScanner(scan);
@@ -5752,7 +5768,7 @@ public class TestHRegion {
     put2.addColumn(cf1, col, Bytes.toBytes("val"));
     region.put(put2);
 
-    Scan scan = new Scan(Bytes.toBytes("19998"));
+    Scan scan = new Scan().withStartRow(Bytes.toBytes("19998"));
     scan.setReversed(true);
     InternalScanner scanner = region.getScanner(scan);
 
@@ -5800,7 +5816,7 @@ public class TestHRegion {
     put2.addColumn(cf1, col, Bytes.toBytes("val"));
     region.put(put2);
     // create a reverse scan
-    Scan scan = new Scan(Bytes.toBytes("19996"));
+    Scan scan = new Scan().withStartRow(Bytes.toBytes("19996"));
     scan.setReversed(true);
     RegionScannerImpl scanner = region.getScanner(scan);
 
@@ -5854,7 +5870,7 @@ public class TestHRegion {
     region.put(put2);
 
     // Create a reverse scan
-    Scan scan = new Scan(Bytes.toBytes("199996"));
+    Scan scan = new Scan().withStartRow(Bytes.toBytes("199996"));
     scan.setReversed(true);
     RegionScannerImpl scanner = region.getScanner(scan);
 
@@ -6032,7 +6048,7 @@ public class TestHRegion {
   @Test
   public void testCloseRegionWrittenToWAL() throws Exception {
     Path rootDir = new Path(dir + name.getMethodName());
-    FSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootDir);
+    CommonFSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootDir);
 
     final ServerName serverName = ServerName.valueOf("testCloseRegionWrittenToWAL", 100, 42);
     final RegionServerServices rss = spy(TEST_UTIL.createMockRegionServerService(serverName));

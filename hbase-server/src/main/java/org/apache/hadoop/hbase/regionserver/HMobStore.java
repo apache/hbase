@@ -24,6 +24,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -55,7 +56,6 @@ import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.mob.MobFileName;
 import org.apache.hadoop.hbase.mob.MobStoreEngine;
 import org.apache.hadoop.hbase.mob.MobUtils;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.IdLock;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -94,7 +94,7 @@ public class HMobStore extends HStore {
   private AtomicLong mobScanCellsCount = new AtomicLong();
   private AtomicLong mobScanCellsSize = new AtomicLong();
   private ColumnFamilyDescriptor family;
-  private Map<String, List<Path>> map = new ConcurrentHashMap<>();
+  private Map<TableName, List<Path>> map = new ConcurrentHashMap<>();
   private final IdLock keyLock = new IdLock();
   // When we add a MOB reference cell to the HFile, we will add 2 tags along with it
   // 1. A ref tag with type TagType.MOB_REFERENCE_TAG_TYPE. This just denote this this cell is not
@@ -117,7 +117,7 @@ public class HMobStore extends HStore {
     TableName tn = region.getTableDescriptor().getTableName();
     locations.add(HFileArchiveUtil.getStoreArchivePath(conf, tn, MobUtils.getMobRegionInfo(tn)
         .getEncodedName(), family.getNameAsString()));
-    map.put(Bytes.toString(tn.getName()), locations);
+    map.put(tn, locations);
     List<Tag> tags = new ArrayList<>(2);
     tags.add(MobConstants.MOB_REF_TAG);
     Tag tableNameTag = new ArrayBackedTag(TagType.MOB_TABLE_NAME_TAG_TYPE,
@@ -315,26 +315,9 @@ public class HMobStore extends HStore {
     MobCell mobCell = null;
     if (MobUtils.hasValidMobRefCellValue(reference)) {
       String fileName = MobUtils.getMobFileName(reference);
-      Tag tableNameTag = MobUtils.getTableNameTag(reference);
-      if (tableNameTag != null) {
-        String tableNameString = Tag.getValueAsString(tableNameTag);
-        List<Path> locations = map.get(tableNameString);
-        if (locations == null) {
-          IdLock.Entry lockEntry = keyLock.getLockEntry(tableNameString.hashCode());
-          try {
-            locations = map.get(tableNameString);
-            if (locations == null) {
-              locations = new ArrayList<>(2);
-              TableName tn = TableName.valueOf(tableNameString);
-              locations.add(MobUtils.getMobFamilyPath(conf, tn, family.getNameAsString()));
-              locations.add(HFileArchiveUtil.getStoreArchivePath(conf, tn,
-                MobUtils.getMobRegionInfo(tn).getEncodedName(), family.getNameAsString()));
-              map.put(tableNameString, locations);
-            }
-          } finally {
-            keyLock.releaseLockEntry(lockEntry);
-          }
-        }
+      Optional<TableName> tableName = MobUtils.getTableName(reference);
+      if (tableName.isPresent()) {
+        List<Path> locations = getLocations(tableName.get());
         mobCell = readCell(locations, fileName, reference, cacheBlocks, readPt,
           readEmptyValueOnMobCellMiss);
       }
@@ -355,6 +338,30 @@ public class HMobStore extends HStore {
       mobCell = new MobCell(cell);
     }
     return mobCell;
+  }
+
+  /**
+   * @param tableName to look up locations for, can not be null
+   * @return a list of location in order of working dir, archive dir. will not be null.
+   */
+  public List<Path> getLocations(TableName tableName) throws IOException {
+    List<Path> locations = map.get(tableName);
+    if (locations == null) {
+      IdLock.Entry lockEntry = keyLock.getLockEntry(tableName.hashCode());
+      try {
+        locations = map.get(tableName);
+        if (locations == null) {
+          locations = new ArrayList<>(2);
+          locations.add(MobUtils.getMobFamilyPath(conf, tableName, family.getNameAsString()));
+          locations.add(HFileArchiveUtil.getStoreArchivePath(conf, tableName,
+            MobUtils.getMobRegionInfo(tableName).getEncodedName(), family.getNameAsString()));
+          map.put(tableName, locations);
+        }
+      } finally {
+        keyLock.releaseLockEntry(lockEntry);
+      }
+    }
+    return locations;
   }
 
   /**

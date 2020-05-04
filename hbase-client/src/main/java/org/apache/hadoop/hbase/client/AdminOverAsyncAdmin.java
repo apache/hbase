@@ -965,9 +965,9 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
-  public List<SlowLogRecord> getSlowLogResponses(final Set<ServerName> serverNames,
-      final SlowLogQueryFilter slowLogQueryFilter) throws IOException {
-    return get(admin.getSlowLogResponses(serverNames, slowLogQueryFilter));
+  public List<OnlineLogRecord> getSlowLogResponses(final Set<ServerName> serverNames,
+      final LogQueryFilter logQueryFilter) throws IOException {
+    return get(admin.getSlowLogResponses(serverNames, logQueryFilter));
   }
 
   @Override
@@ -1035,5 +1035,10 @@ class AdminOverAsyncAdmin implements Admin {
   @Override
   public void setRSGroup(Set<TableName> tables, String groupName) throws IOException {
     get(admin.setRSGroup(tables, groupName));
+  }
+
+  @Override
+  public void renameRSGroup(String oldName, String newName) throws IOException {
+    get(admin.renameRSGroup(oldName, newName));
   }
 }

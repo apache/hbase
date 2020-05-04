@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.regionserver.slowlog.RpcLogDetails;
 import org.apache.hadoop.hbase.regionserver.slowlog.SlowLogRecorder;
+import org.apache.hadoop.hbase.security.HBasePolicyProvider;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
 import org.apache.hadoop.hbase.security.User;
@@ -58,6 +59,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.PolicyProvider;
+import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -120,8 +122,6 @@ public abstract class RpcServer implements RpcServerInterface,
   protected SecretManager<TokenIdentifier> secretManager;
   protected final Map<String, String> saslProps;
 
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IS2_INCONSISTENT_SYNC",
-      justification="Start is synchronized so authManager creation is single-threaded")
   protected ServiceAuthorizationManager authManager;
 
   /** This is set to Call object before Handler invokes an RPC and ybdie
@@ -313,6 +313,9 @@ public abstract class RpcServer implements RpcServerInterface,
     if (scheduler instanceof ConfigurationObserver) {
       ((ConfigurationObserver) scheduler).onConfigurationChange(newConf);
     }
+    if (authorize) {
+      refreshAuthManager(newConf, new HBasePolicyProvider());
+    }
   }
 
   protected void initReconfigurable(Configuration confToLoad) {
@@ -339,12 +342,14 @@ public abstract class RpcServer implements RpcServerInterface,
   }
 
   @Override
-  public void refreshAuthManager(PolicyProvider pp) {
+  public synchronized void refreshAuthManager(Configuration conf, PolicyProvider pp) {
     // Ignore warnings that this should be accessed in a static way instead of via an instance;
     // it'll break if you go via static route.
-    synchronized (authManager) {
-      authManager.refresh(this.conf, pp);
-    }
+    System.setProperty("hadoop.policy.file", "hbase-policy.xml");
+    this.authManager.refresh(conf, pp);
+    LOG.info("Refreshed hbase-policy.xml successfully");
+    ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
+    LOG.info("Refreshed super and proxy users successfully");
   }
 
   protected AuthenticationTokenSecretManager createSecretManager() {
@@ -427,12 +432,13 @@ public abstract class RpcServer implements RpcServerInterface,
           tooLarge, tooSlow,
           status.getClient(), startTime, processingTime, qTime,
           responseSize, userName);
-        if (tooSlow && this.slowLogRecorder != null) {
+        if (this.slowLogRecorder != null) {
           // send logs to ring buffer owned by slowLogRecorder
           final String className = server == null ? StringUtils.EMPTY :
             server.getClass().getSimpleName();
           this.slowLogRecorder.addSlowLogPayload(
-            new RpcLogDetails(call, status.getClient(), responseSize, className));
+            new RpcLogDetails(call, status.getClient(), responseSize, className, tooSlow,
+              tooLarge));
         }
       }
       return new Pair<>(result, controller.cellScanner());
@@ -498,12 +504,15 @@ public abstract class RpcServer implements RpcServerInterface,
     responseInfo.put("param", stringifiedParam);
     if (param instanceof ClientProtos.ScanRequest && rsRpcServices != null) {
       ClientProtos.ScanRequest request = ((ClientProtos.ScanRequest) param);
+      String scanDetails;
       if (request.hasScannerId()) {
         long scannerId = request.getScannerId();
-        String scanDetails = rsRpcServices.getScanDetailsWithId(scannerId);
-        if (scanDetails != null) {
-          responseInfo.put("scandetails", scanDetails);
-        }
+        scanDetails = rsRpcServices.getScanDetailsWithId(scannerId);
+      } else {
+        scanDetails = rsRpcServices.getScanDetailsWithRequest(request);
+      }
+      if (scanDetails != null) {
+        responseInfo.put("scandetails", scanDetails);
       }
     }
     if (param instanceof ClientProtos.MultiRequest) {
@@ -586,13 +595,11 @@ public abstract class RpcServer implements RpcServerInterface,
    * @param addr InetAddress of incoming connection
    * @throws AuthorizationException when the client isn't authorized to talk the protocol
    */
-  public void authorize(UserGroupInformation user, ConnectionHeader connection,
+  public synchronized void authorize(UserGroupInformation user, ConnectionHeader connection,
       InetAddress addr) throws AuthorizationException {
     if (authorize) {
       Class<?> c = getServiceInterface(services, connection.getServiceName());
-      synchronized (authManager) {
-        authManager.authorize(user, c, getConf(), addr);
-      }
+      authManager.authorize(user, c, getConf(), addr);
     }
   }
 

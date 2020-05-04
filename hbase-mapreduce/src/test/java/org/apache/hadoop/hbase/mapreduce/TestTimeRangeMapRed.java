@@ -182,7 +182,7 @@ public class TestTimeRangeMapRed {
       Scan scan = new Scan();
       scan.addColumn(FAMILY_NAME, COLUMN_NAME);
       scan.setTimeRange(MINSTAMP, MAXSTAMP);
-      scan.setMaxVersions();
+      scan.readAllVersions();
       TableMapReduceUtil.initTableMapperJob(TABLE_NAME,
         scan, ProcessTimeRangeMapper.class, Text.class, Text.class, job);
       job.waitForCompletion(true);
@@ -200,7 +200,7 @@ public class TestTimeRangeMapRed {
   private void verify(final Table table) throws IOException {
     Scan scan = new Scan();
     scan.addColumn(FAMILY_NAME, COLUMN_NAME);
-    scan.setMaxVersions(1);
+    scan.readVersions(1);
     ResultScanner scanner = table.getScanner(scan);
     for (Result r: scanner) {
       for (Cell kv : r.listCells()) {

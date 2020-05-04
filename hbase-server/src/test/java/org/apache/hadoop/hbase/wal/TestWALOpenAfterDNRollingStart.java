@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -117,7 +117,7 @@ public class TestWALOpenAfterDNRollingStart {
     }
 
     if (!server.getFileSystem().exists(currentFile)) {
-      Path walRootDir = FSUtils.getWALRootDir(TEST_UTIL.getConfiguration());
+      Path walRootDir = CommonFSUtils.getWALRootDir(TEST_UTIL.getConfiguration());
       final Path oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
       currentFile = new Path(oldLogDir, currentFile.getName());
     }

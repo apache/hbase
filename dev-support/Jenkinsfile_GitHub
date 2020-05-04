@@ -50,7 +50,7 @@ pipeline {
         // stage works in its own subdirectory. there is an "output" under each of these
         // directories, which we retrieve after the build is complete.
         WORKDIR_REL_GENERAL_CHECK = 'yetus-general-check'
-        WORKDIR_REL_JDK8_HADOOP2_CHECK = 'yetus-jdk8-hadoop2-check'
+        WORKDIR_REL_JDK8_HADOOP3_CHECK = 'yetus-jdk8-hadoop3-check'
         WORKDIR_REL_JDK11_HADOOP3_CHECK = 'yetus-jdk11-hadoop3-check'
     }
 
@@ -149,7 +149,7 @@ pipeline {
                         }
                     }
                 }
-                stage ('yetus jdk8 Hadoop2 checks') {
+                stage ('yetus jdk8 Hadoop3 checks') {
                     agent {
                         node {
                             label 'Hadoop'
@@ -159,7 +159,7 @@ pipeline {
                         // customized per parallel stage
                         PLUGINS = "${JDK_SPECIFIC_PLUGINS}"
                         SET_JAVA_HOME = '/usr/lib/jvm/java-8'
-                        WORKDIR_REL = "${WORKDIR_REL_JDK8_HADOOP2_CHECK}"
+                        WORKDIR_REL = "${WORKDIR_REL_JDK8_HADOOP3_CHECK}"
                         // identical for all parallel stages
                         WORKDIR = "${WORKSPACE}/${WORKDIR_REL}"
                         YETUSDIR = "${WORKDIR}/${YETUS_REL}"
@@ -259,10 +259,7 @@ pipeline {
                         // customized per parallel stage
                         PLUGINS = "${JDK_SPECIFIC_PLUGINS}"
                         SET_JAVA_HOME = '/usr/lib/jvm/java-11'
-                        HADOOP_PROFILE = '3.0'
                         WORKDIR_REL = "${WORKDIR_REL_JDK11_HADOOP3_CHECK}"
-                        // vote -0 on JDK11 unit failures until HBASE-22972
-                        TESTS_FILTER = "${TESTS_FILTER},unit"
                         // identical for all parallel stages
                         WORKDIR = "${WORKSPACE}/${WORKDIR_REL}"
                         YETUSDIR = "${WORKDIR}/${YETUS_REL}"

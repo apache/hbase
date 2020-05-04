@@ -23,7 +23,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -34,7 +33,6 @@ import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -94,7 +92,7 @@ public class TestHFilePrettyPrinter {
 
   @Test
   public void testHFilePrettyPrinterRootDir() throws Exception {
-    Path rootPath = FSUtils.getRootDir(conf);
+    Path rootPath = CommonFSUtils.getRootDir(conf);
     String rootString = rootPath + rootPath.SEPARATOR;
     Path fileInRootDir = new Path(rootString + "hfile");
     TestHRegionServerBulkLoad.createHFile(fs, fileInRootDir, cf, fam, value, 1000);

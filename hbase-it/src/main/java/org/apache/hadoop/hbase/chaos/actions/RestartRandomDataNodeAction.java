@@ -21,25 +21,19 @@ package org.apache.hadoop.hbase.chaos.actions;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
-
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Action that restarts a random datanode.
  */
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
-@InterfaceStability.Evolving
 public class RestartRandomDataNodeAction extends RestartActionBaseAction {
   private static final Logger LOG = LoggerFactory.getLogger(RestartRandomDataNodeAction.class);
 
@@ -55,8 +49,8 @@ public class RestartRandomDataNodeAction extends RestartActionBaseAction {
   }
 
   public ServerName[] getDataNodes() throws IOException {
-    DistributedFileSystem fs = (DistributedFileSystem) FSUtils.getRootDir(getConf())
-        .getFileSystem(getConf());
+    DistributedFileSystem fs = (DistributedFileSystem) CommonFSUtils.getRootDir(getConf())
+      .getFileSystem(getConf());
     DFSClient dfsClient = fs.getClient();
     List<ServerName> hosts = new LinkedList<>();
     for (DatanodeInfo dataNode: dfsClient.datanodeReport(HdfsConstants.DatanodeReportType.LIVE)) {

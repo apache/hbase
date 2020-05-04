@@ -976,7 +976,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     @Override
     void testRow(final int i) throws IOException {
-      Scan scan = new Scan(getRandomRow(this.rand, this.totalRows));
+      Scan scan = new Scan().withStartRow(getRandomRow(this.rand, this.totalRows));
       scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
       scan.setFilter(new WhileMatchFilter(new PageFilter(120)));
       ResultScanner s = this.table.getScanner(scan);
@@ -999,7 +999,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     @Override
     void testRow(final int i) throws IOException {
       Pair<byte[], byte[]> startAndStopRow = getStartAndStopRow();
-      Scan scan = new Scan(startAndStopRow.getFirst(), startAndStopRow.getSecond());
+      Scan scan = new Scan().withStartRow(startAndStopRow.getFirst())
+        .withStopRow(startAndStopRow.getSecond());
       scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
       ResultScanner s = this.table.getScanner(scan);
       int count = 0;
@@ -1140,7 +1141,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     @Override
     void testRow(final int i) throws IOException {
       if (this.testScanner == null) {
-        Scan scan = new Scan(format(this.startRow));
+        Scan scan = new Scan().withStartRow(format(this.startRow));
         scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
         this.testScanner = table.getScanner(scan);
       }

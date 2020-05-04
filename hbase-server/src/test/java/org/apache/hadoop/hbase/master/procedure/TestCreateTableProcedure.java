@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.hadoop.hbase.util.TableDescriptorChecker;
@@ -224,7 +225,7 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
           Configuration conf = env.getMasterConfiguration();
           MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
           Path tempdir = mfs.getTempDir();
-          Path tableDir = FSUtils.getTableDir(tempdir, regionInfo.getTable());
+          Path tableDir = CommonFSUtils.getTableDir(tempdir, regionInfo.getTable());
           Path regionDir = FSUtils.getRegionDirFromTableDir(tableDir, regionInfo);
           FileSystem fs = FileSystem.get(conf);
           fs.mkdirs(regionDir);

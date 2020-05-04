@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.io.asyncfs;
 
-import static org.apache.hadoop.fs.CreateFlag.CREATE;
-import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
 import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputSaslHelper.createEncryptor;
 import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputSaslHelper.trySaslNegotiate;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
@@ -50,7 +48,6 @@ import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -101,7 +98,6 @@ import org.apache.hbase.thirdparty.io.netty.channel.ChannelPipeline;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoop;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.SimpleChannelInboundHandler;
-import org.apache.hbase.thirdparty.io.netty.handler.codec.protobuf.ProtobufDecoder;
 import org.apache.hbase.thirdparty.io.netty.handler.codec.protobuf.ProtobufVarint32FrameDecoder;
 import org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleStateEvent;
 import org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleStateHandler;
@@ -176,6 +172,11 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
   }
 
   private static final FileCreator FILE_CREATOR;
+
+  // CreateFlag.SHOULD_REPLICATE is to make OutputStream on a EC directory support hflush/hsync, but
+  // EC is introduced in hadoop 3.x so we do not have this enum on 2.x, that's why we need to
+  // indirectly reference it through reflection.
+  private static final CreateFlag SHOULD_REPLICATE_FLAG;
 
   private static DFSClientAdaptor createDFSClientAdaptor() throws NoSuchMethodException {
     Method isClientRunningMethod = DFSClient.class.getDeclaredMethod("isClientRunning");
@@ -272,6 +273,15 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     return createFileCreator2();
   }
 
+  private static CreateFlag loadShouldReplicateFlag() {
+    try {
+      return CreateFlag.valueOf("SHOULD_REPLICATE");
+    } catch (IllegalArgumentException e) {
+      LOG.debug("can not find SHOULD_REPLICATE flag, should be hadoop 2.x", e);
+      return null;
+    }
+  }
+
   // cancel the processing if DFSClient is already closed.
   static final class CancelOnClose implements CancelableProgressable {
 
@@ -292,6 +302,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
       LEASE_MANAGER = createLeaseManager();
       DFS_CLIENT_ADAPTOR = createDFSClientAdaptor();
       FILE_CREATOR = createFileCreator();
+      SHOULD_REPLICATE_FLAG = loadShouldReplicateFlag();
     } catch (Exception e) {
       String msg = "Couldn't properly initialize access to HDFS internals. Please " +
           "update your WAL Provider to not make use of the 'asyncfs' provider. See " +
@@ -486,11 +497,22 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     }
   }
 
+  private static EnumSetWritable<CreateFlag> getCreateFlags(boolean overwrite) {
+    List<CreateFlag> flags = new ArrayList<>();
+    flags.add(CreateFlag.CREATE);
+    if (overwrite) {
+      flags.add(CreateFlag.OVERWRITE);
+    }
+    if (SHOULD_REPLICATE_FLAG != null) {
+      flags.add(SHOULD_REPLICATE_FLAG);
+    }
+    return new EnumSetWritable<>(EnumSet.copyOf(flags));
+  }
+
   private static FanOutOneBlockAsyncDFSOutput createOutput(DistributedFileSystem dfs, String src,
       boolean overwrite, boolean createParent, short replication, long blockSize,
       EventLoopGroup eventLoopGroup, Class<? extends Channel> channelClass) throws IOException {
     Configuration conf = dfs.getConf();
-    FSUtils fsUtils = FSUtils.getInstance(dfs, conf);
     DFSClient client = dfs.getClient();
     String clientName = client.getClientName();
     ClientProtocol namenode = client.getNamenode();
@@ -502,8 +524,8 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
       try {
         stat = FILE_CREATOR.create(namenode, src,
           FsPermission.getFileDefault().applyUMask(FsPermission.getUMask(conf)), clientName,
-          new EnumSetWritable<>(overwrite ? EnumSet.of(CREATE, OVERWRITE) : EnumSet.of(CREATE)),
-          createParent, replication, blockSize, CryptoProtocolVersion.supported());
+          getCreateFlags(overwrite), createParent, replication, blockSize,
+          CryptoProtocolVersion.supported());
       } catch (Exception e) {
         if (e instanceof RemoteException) {
           throw (RemoteException) e;
@@ -533,8 +555,8 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
         }
         Encryptor encryptor = createEncryptor(conf, stat, client);
         FanOutOneBlockAsyncDFSOutput output =
-          new FanOutOneBlockAsyncDFSOutput(conf, fsUtils, dfs, client, namenode, clientName, src,
-              stat.getFileId(), locatedBlock, encryptor, datanodeList, summer, ALLOC);
+          new FanOutOneBlockAsyncDFSOutput(conf, dfs, client, namenode, clientName, src,
+            stat.getFileId(), locatedBlock, encryptor, datanodeList, summer, ALLOC);
         succ = true;
         return output;
       } catch (RemoteException e) {

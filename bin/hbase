@@ -136,6 +136,21 @@ if [ -f "$HBASE_HOME/conf/hbase-env-$COMMAND.sh" ]; then
   . "$HBASE_HOME/conf/hbase-env-$COMMAND.sh"
 fi
 
+# establish a default value for HBASE_OPTS if it's not already set. For now,
+# all we set is the garbage collector.
+if [ -z "${HBASE_OPTS}" ] ; then
+  major_version_number="$(parse_java_major_version "$(read_java_version)")"
+  case "$major_version_number" in
+  8|9|10)
+    HBASE_OPTS="-XX:+UseConcMarkSweepGC"
+    ;;
+  11|*)
+    HBASE_OPTS="-XX:+UseG1GC"
+    ;;
+  esac
+  export HBASE_OPTS
+fi
+
 add_size_suffix() {
     # add an 'm' suffix if the argument is missing one, otherwise use whats there
     local val="$1"
@@ -706,18 +721,15 @@ if [ "${HBASE_JDK11}" != "" ]; then
   fi
 else
   # Use JDK detection
-  JAVA=$JAVA_HOME/bin/java
-
-  version=$($JAVA -version 2>&1 | awk -F '"' '/version/ {print $2}')
-  # '-' check is for cases such as "13-ea"
-  version_number=$(echo "$version" | cut -d'.' -f1 | cut -d'-' -f1)
+  version="$(read_java_version)"
+  major_version_number="$(parse_java_major_version "$version")"
 
   if [ "${DEBUG}" = "true" ]; then
     echo "HBASE_JDK11 not set hence using JDK detection."
-    echo "Extracted JDK version - ${version}, version_number - ${version_number}"
+    echo "Extracted JDK version - ${version}, major_version_number - ${major_version_number}"
   fi
 
-  if [[ "$version_number" -ge "11" ]]; then
+  if [[ "$major_version_number" -ge "11" ]]; then
     if [ "${DEBUG}" = "true" ]; then
       echo "Version ${version} is greater-than/equal to 11 hence adding JDK11 jars to classpath."
     fi

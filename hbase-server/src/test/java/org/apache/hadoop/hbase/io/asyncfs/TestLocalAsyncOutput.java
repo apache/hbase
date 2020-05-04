@@ -25,7 +25,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.AfterClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -41,7 +41,7 @@ public class TestLocalAsyncOutput {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestLocalAsyncOutput.class);
+    HBaseClassTestRule.forClass(TestLocalAsyncOutput.class);
 
   private static EventLoopGroup GROUP = new NioEventLoopGroup();
 
@@ -57,7 +57,7 @@ public class TestLocalAsyncOutput {
 
   @Test
   public void test() throws IOException, InterruptedException, ExecutionException,
-      FSUtils.StreamLacksCapabilityException {
+    CommonFSUtils.StreamLacksCapabilityException {
     Path f = new Path(TEST_UTIL.getDataTestDir(), "test");
     FileSystem fs = FileSystem.getLocal(TEST_UTIL.getConfiguration());
     AsyncFSOutput out = AsyncFSOutputHelper.createOutput(fs, f, false, true,

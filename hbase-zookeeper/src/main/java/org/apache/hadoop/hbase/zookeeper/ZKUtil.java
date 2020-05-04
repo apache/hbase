@@ -36,6 +36,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.AppConfigurationEntry.LoginModuleControlFlag;
@@ -1535,6 +1536,10 @@ public final class ZKUtil {
   public abstract static class ZKUtilOp {
     private String path;
 
+    @Override public String toString() {
+      return this.getClass().getSimpleName() + ", path=" + this.path;
+    }
+
     private ZKUtilOp(String path) {
       this.path = path;
     }
@@ -1750,12 +1755,13 @@ public final class ZKUtil {
         case NONODE:
         case BADVERSION:
         case NOAUTH:
+        case NOTEMPTY:
           // if we get an exception that could be solved by running sequentially
           // (and the client asked us to), then break out and run sequentially
           if (runSequentialOnMultiFailure) {
-            LOG.info("On call to ZK.multi, received exception: " + ke.toString() + "."
-                + "  Attempting to run operations sequentially because"
-                + " runSequentialOnMultiFailure is: " + runSequentialOnMultiFailure + ".");
+            LOG.info("multi exception: {}; running operations sequentially " +
+              "(runSequentialOnMultiFailure=true); {}", ke.toString(),
+              ops.stream().map(o -> o.toString()).collect(Collectors.joining(",")));
             processSequentially(zkw, ops);
             break;
           }

@@ -181,9 +181,9 @@ public class BaseTestHBaseFsck {
 
         if (regionInfoOnly) {
           LOG.info("deleting hdfs .regioninfo data: " + hri.toString() + hsa.toString());
-          Path rootDir = FSUtils.getRootDir(conf);
+          Path rootDir = CommonFSUtils.getRootDir(conf);
           FileSystem fs = rootDir.getFileSystem(conf);
-          Path p = new Path(FSUtils.getTableDir(rootDir, htd.getTableName()),
+          Path p = new Path(CommonFSUtils.getTableDir(rootDir, htd.getTableName()),
               hri.getEncodedName());
           Path hriPath = new Path(p, HRegionFileSystem.REGION_INFO_FILE);
           fs.delete(hriPath, true);
@@ -191,9 +191,9 @@ public class BaseTestHBaseFsck {
 
         if (hdfs) {
           LOG.info("deleting hdfs data: " + hri.toString() + hsa.toString());
-          Path rootDir = FSUtils.getRootDir(conf);
+          Path rootDir = CommonFSUtils.getRootDir(conf);
           FileSystem fs = rootDir.getFileSystem(conf);
-          Path p = new Path(FSUtils.getTableDir(rootDir, htd.getTableName()),
+          Path p = new Path(CommonFSUtils.getTableDir(rootDir, htd.getTableName()),
               hri.getEncodedName());
           HBaseFsck.debugLsr(conf, p);
           boolean success = fs.delete(p, true);
@@ -295,7 +295,7 @@ public class BaseTestHBaseFsck {
    * Counts the number of rows to verify data loss or non-dataloss.
    */
   int countRows(byte[] start, byte[] end) throws IOException {
-    return TEST_UTIL.countRows(tbl, new Scan(start, end));
+    return TEST_UTIL.countRows(tbl, new Scan().withStartRow(start).withStopRow(end));
   }
 
   /**
@@ -342,9 +342,9 @@ public class BaseTestHBaseFsck {
   }
 
   public void deleteTableDir(TableName table) throws IOException {
-    Path rootDir = FSUtils.getRootDir(conf);
+    Path rootDir = CommonFSUtils.getRootDir(conf);
     FileSystem fs = rootDir.getFileSystem(conf);
-    Path p = FSUtils.getTableDir(rootDir, table);
+    Path p = CommonFSUtils.getTableDir(rootDir, table);
     HBaseFsck.debugLsr(conf, p);
     boolean success = fs.delete(p, true);
     LOG.info("Deleted " + p + " sucessfully? " + success);
@@ -359,7 +359,7 @@ public class BaseTestHBaseFsck {
    * @throws IOException
    */
   Path getFlushedHFile(FileSystem fs, TableName table) throws IOException {
-    Path tableDir= FSUtils.getTableDir(FSUtils.getRootDir(conf), table);
+    Path tableDir= CommonFSUtils.getTableDir(CommonFSUtils.getRootDir(conf), table);
     Path regionDir = FSUtils.getRegionDirs(fs, tableDir).get(0);
     Path famDir = new Path(regionDir, FAM_STR);
 
@@ -552,7 +552,7 @@ public class BaseTestHBaseFsck {
 
     if (regionInfoOnly) {
       LOG.info("deleting hdfs .regioninfo data: " + hri.toString() + hsa.toString());
-      Path rootDir = FSUtils.getRootDir(conf);
+      Path rootDir = CommonFSUtils.getRootDir(conf);
       FileSystem fs = rootDir.getFileSystem(conf);
       Path p = new Path(rootDir + "/" + TableName.META_TABLE_NAME.getNameAsString(),
           hri.getEncodedName());
@@ -562,7 +562,7 @@ public class BaseTestHBaseFsck {
 
     if (hdfs) {
       LOG.info("deleting hdfs data: " + hri.toString() + hsa.toString());
-      Path rootDir = FSUtils.getRootDir(conf);
+      Path rootDir = CommonFSUtils.getRootDir(conf);
       FileSystem fs = rootDir.getFileSystem(conf);
       Path p = new Path(rootDir + "/" + TableName.META_TABLE_NAME.getNameAsString(),
           hri.getEncodedName());

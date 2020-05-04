@@ -98,7 +98,7 @@ public class TestAsyncTableGetMultiThreaded {
     TEST_UTIL.getConfiguration().set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
       String.valueOf(memoryCompaction));
 
-    TEST_UTIL.startMiniCluster(5);
+    TEST_UTIL.startMiniCluster(3);
     SPLIT_KEYS = new byte[8][];
     for (int i = 111; i < 999; i += 111) {
       SPLIT_KEYS[i / 111 - 1] = Bytes.toBytes(String.format("%03d", i));
@@ -134,7 +134,7 @@ public class TestAsyncTableGetMultiThreaded {
   @Test
   public void test() throws Exception {
     LOG.info("====== Test started ======");
-    int numThreads = 20;
+    int numThreads = 7;
     AtomicBoolean stop = new AtomicBoolean(false);
     ExecutorService executor =
       Executors.newFixedThreadPool(numThreads, Threads.newDaemonThreadFactory("TestAsyncGet-"));

@@ -21,7 +21,6 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -54,7 +53,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.base.Optional;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 
@@ -326,33 +324,38 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       return true;
     }
 
+    if (idleRegionServerExist(cluster)){
+      return true;
+    }
+
     double total = 0.0;
     float sumMultiplier = 0.0f;
     for (CostFunction c : costFunctions) {
       float multiplier = c.getMultiplier();
       if (multiplier <= 0) {
+        LOG.trace("{} not needed because multiplier is <= 0", c.getClass().getSimpleName());
         continue;
       }
       if (!c.isNeeded()) {
-        LOG.debug("{} not needed", c.getClass().getSimpleName());
+        LOG.trace("{} not needed", c.getClass().getSimpleName());
         continue;
       }
       sumMultiplier += multiplier;
       total += c.cost() * multiplier;
     }
 
-    if (total <= 0 || sumMultiplier <= 0
-        || (sumMultiplier > 0 && (total / sumMultiplier) < minCostNeedBalance)) {
+    boolean balanced = total <= 0 || sumMultiplier <= 0 ||
+        (sumMultiplier > 0 && (total / sumMultiplier) < minCostNeedBalance);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("{} {}; total cost={}, sum multiplier={}; cost/multiplier to need a balance is {}",
+          balanced ? "Skipping load balancing because balanced" : "We need to load balance",
+          isByTable ? String.format("table (%s)", tableName) : "cluster",
+          total, sumMultiplier, minCostNeedBalance);
       if (LOG.isTraceEnabled()) {
-        final String loadBalanceTarget =
-            isByTable ? String.format("table (%s)", tableName) : "cluster";
-        LOG.trace("Skipping load balancing because the {} is balanced. Total cost: {}, "
-            + "Sum multiplier: {}, Minimum cost needed for balance: {}", loadBalanceTarget, total,
-            sumMultiplier, minCostNeedBalance);
+        LOG.trace("Balance decision detailed function costs={}", functionCost());
       }
-      return false;
     }
-    return true;
+    return !balanced;
   }
 
   @VisibleForTesting
@@ -641,123 +644,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     return total;
   }
 
-  /** Generates a candidate action to be applied to the cluster for cost function search */
-  abstract static class CandidateGenerator {
-    abstract Cluster.Action generate(Cluster cluster);
-
-    /**
-     * From a list of regions pick a random one. Null can be returned which
-     * {@link StochasticLoadBalancer#balanceCluster(Map)} recognize as signal to try a region move
-     * rather than swap.
-     *
-     * @param cluster        The state of the cluster
-     * @param server         index of the server
-     * @param chanceOfNoSwap Chance that this will decide to try a move rather
-     *                       than a swap.
-     * @return a random {@link RegionInfo} or null if an asymmetrical move is
-     *         suggested.
-     */
-    protected int pickRandomRegion(Cluster cluster, int server, double chanceOfNoSwap) {
-      // Check to see if this is just a move.
-      if (cluster.regionsPerServer[server].length == 0 || RANDOM.nextFloat() < chanceOfNoSwap) {
-        // signal a move only.
-        return -1;
-      }
-      int rand = RANDOM.nextInt(cluster.regionsPerServer[server].length);
-      return cluster.regionsPerServer[server][rand];
-
-    }
-    protected int pickRandomServer(Cluster cluster) {
-      if (cluster.numServers < 1) {
-        return -1;
-      }
-
-      return RANDOM.nextInt(cluster.numServers);
-    }
-
-    protected int pickRandomRack(Cluster cluster) {
-      if (cluster.numRacks < 1) {
-        return -1;
-      }
-
-      return RANDOM.nextInt(cluster.numRacks);
-    }
-
-    protected int pickOtherRandomServer(Cluster cluster, int serverIndex) {
-      if (cluster.numServers < 2) {
-        return -1;
-      }
-      while (true) {
-        int otherServerIndex = pickRandomServer(cluster);
-        if (otherServerIndex != serverIndex) {
-          return otherServerIndex;
-        }
-      }
-    }
-
-    protected int pickOtherRandomRack(Cluster cluster, int rackIndex) {
-      if (cluster.numRacks < 2) {
-        return -1;
-      }
-      while (true) {
-        int otherRackIndex = pickRandomRack(cluster);
-        if (otherRackIndex != rackIndex) {
-          return otherRackIndex;
-        }
-      }
-    }
-
-    protected Cluster.Action pickRandomRegions(Cluster cluster,
-                                                       int thisServer,
-                                                       int otherServer) {
-      if (thisServer < 0 || otherServer < 0) {
-        return Cluster.NullAction;
-      }
-
-      // Decide who is most likely to need another region
-      int thisRegionCount = cluster.getNumRegions(thisServer);
-      int otherRegionCount = cluster.getNumRegions(otherServer);
-
-      // Assign the chance based upon the above
-      double thisChance = (thisRegionCount > otherRegionCount) ? 0 : 0.5;
-      double otherChance = (thisRegionCount <= otherRegionCount) ? 0 : 0.5;
-
-      int thisRegion = pickRandomRegion(cluster, thisServer, thisChance);
-      int otherRegion = pickRandomRegion(cluster, otherServer, otherChance);
-
-      return getAction(thisServer, thisRegion, otherServer, otherRegion);
-    }
-
-    protected Cluster.Action getAction(int fromServer, int fromRegion,
-        int toServer, int toRegion) {
-      if (fromServer < 0 || toServer < 0) {
-        return Cluster.NullAction;
-      }
-      if (fromRegion > 0 && toRegion > 0) {
-        return new Cluster.SwapRegionsAction(fromServer, fromRegion,
-          toServer, toRegion);
-      } else if (fromRegion > 0) {
-        return new Cluster.MoveRegionAction(fromRegion, fromServer, toServer);
-      } else if (toRegion > 0) {
-        return new Cluster.MoveRegionAction(toRegion, toServer, fromServer);
-      } else {
-        return Cluster.NullAction;
-      }
-    }
-
-    /**
-     * Returns a random iteration order of indexes of an array with size length
-     */
-    protected List<Integer> getRandomIterationOrder(int length) {
-      ArrayList<Integer> order = new ArrayList<>(length);
-      for (int i = 0; i < length; i++) {
-        order.add(i);
-      }
-      Collections.shuffle(order);
-      return order;
-    }
-  }
-
   static class RandomCandidateGenerator extends CandidateGenerator {
 
     @Override
@@ -769,201 +655,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       int otherServer = pickOtherRandomServer(cluster, thisServer);
 
       return pickRandomRegions(cluster, thisServer, otherServer);
-    }
-  }
-
-  static class LoadCandidateGenerator extends CandidateGenerator {
-
-    @Override
-    Cluster.Action generate(Cluster cluster) {
-      cluster.sortServersByRegionCount();
-      int thisServer = pickMostLoadedServer(cluster, -1);
-      int otherServer = pickLeastLoadedServer(cluster, thisServer);
-
-      return pickRandomRegions(cluster, thisServer, otherServer);
-    }
-
-    private int pickLeastLoadedServer(final Cluster cluster, int thisServer) {
-      Integer[] servers = cluster.serverIndicesSortedByRegionCount;
-
-      int index = 0;
-      while (servers[index] == null || servers[index] == thisServer) {
-        index++;
-        if (index == servers.length) {
-          return -1;
-        }
-      }
-      return servers[index];
-    }
-
-    private int pickMostLoadedServer(final Cluster cluster, int thisServer) {
-      Integer[] servers = cluster.serverIndicesSortedByRegionCount;
-
-      int index = servers.length - 1;
-      while (servers[index] == null || servers[index] == thisServer) {
-        index--;
-        if (index < 0) {
-          return -1;
-        }
-      }
-      return servers[index];
-    }
-  }
-
-  static class LocalityBasedCandidateGenerator extends CandidateGenerator {
-
-    private MasterServices masterServices;
-
-    LocalityBasedCandidateGenerator(MasterServices masterServices) {
-      this.masterServices = masterServices;
-    }
-
-    @Override
-    Cluster.Action generate(Cluster cluster) {
-      if (this.masterServices == null) {
-        int thisServer = pickRandomServer(cluster);
-        // Pick the other server
-        int otherServer = pickOtherRandomServer(cluster, thisServer);
-        return pickRandomRegions(cluster, thisServer, otherServer);
-      }
-
-      // Randomly iterate through regions until you find one that is not on ideal host
-      for (int region : getRandomIterationOrder(cluster.numRegions)) {
-        int currentServer = cluster.regionIndexToServerIndex[region];
-        if (currentServer != cluster.getOrComputeRegionsToMostLocalEntities(LocalityType.SERVER)[region]) {
-          Optional<Action> potential = tryMoveOrSwap(
-              cluster,
-              currentServer,
-              region,
-              cluster.getOrComputeRegionsToMostLocalEntities(LocalityType.SERVER)[region]
-          );
-          if (potential.isPresent()) {
-            return potential.get();
-          }
-        }
-      }
-      return Cluster.NullAction;
-    }
-
-    /**
-     * Try to generate a move/swap fromRegion between fromServer and toServer such that locality is improved.
-     * Returns empty optional if no move can be found
-     */
-    private Optional<Action> tryMoveOrSwap(Cluster cluster,
-                                           int fromServer,
-                                           int fromRegion,
-                                           int toServer) {
-      // Try move first. We know apriori fromRegion has the highest locality on toServer
-      if (cluster.serverHasTooFewRegions(toServer)) {
-        return Optional.of(getAction(fromServer, fromRegion, toServer, -1));
-      }
-
-      // Compare locality gain/loss from swapping fromRegion with regions on toServer
-      double fromRegionLocalityDelta =
-          getWeightedLocality(cluster, fromRegion, toServer) - getWeightedLocality(cluster, fromRegion, fromServer);
-      for (int toRegionIndex : getRandomIterationOrder(cluster.regionsPerServer[toServer].length)) {
-        int toRegion = cluster.regionsPerServer[toServer][toRegionIndex];
-        double toRegionLocalityDelta =
-            getWeightedLocality(cluster, toRegion, fromServer) - getWeightedLocality(cluster, toRegion, toServer);
-        // If locality would remain neutral or improve, attempt the swap
-        if (fromRegionLocalityDelta + toRegionLocalityDelta >= 0) {
-          return Optional.of(getAction(fromServer, fromRegion, toServer, toRegion));
-        }
-      }
-
-      return Optional.absent();
-    }
-
-    private double getWeightedLocality(Cluster cluster, int region, int server) {
-      return cluster.getOrComputeWeightedLocality(region, server, LocalityType.SERVER);
-    }
-
-    void setServices(MasterServices services) {
-      this.masterServices = services;
-    }
-  }
-
-  /**
-   * Generates candidates which moves the replicas out of the region server for
-   * co-hosted region replicas
-   */
-  static class RegionReplicaCandidateGenerator extends CandidateGenerator {
-
-    RandomCandidateGenerator randomGenerator = new RandomCandidateGenerator();
-
-    /**
-     * Randomly select one regionIndex out of all region replicas co-hosted in the same group
-     * (a group is a server, host or rack)
-     * @param primariesOfRegionsPerGroup either Cluster.primariesOfRegionsPerServer,
-     * primariesOfRegionsPerHost or primariesOfRegionsPerRack
-     * @param regionsPerGroup either Cluster.regionsPerServer, regionsPerHost or regionsPerRack
-     * @param regionIndexToPrimaryIndex Cluster.regionsIndexToPrimaryIndex
-     * @return a regionIndex for the selected primary or -1 if there is no co-locating
-     */
-    int selectCoHostedRegionPerGroup(int[] primariesOfRegionsPerGroup, int[] regionsPerGroup
-        , int[] regionIndexToPrimaryIndex) {
-      int currentPrimary = -1;
-      int currentPrimaryIndex = -1;
-      int selectedPrimaryIndex = -1;
-      double currentLargestRandom = -1;
-      // primariesOfRegionsPerGroup is a sorted array. Since it contains the primary region
-      // ids for the regions hosted in server, a consecutive repetition means that replicas
-      // are co-hosted
-      for (int j = 0; j <= primariesOfRegionsPerGroup.length; j++) {
-        int primary = j < primariesOfRegionsPerGroup.length
-            ? primariesOfRegionsPerGroup[j] : -1;
-        if (primary != currentPrimary) { // check for whether we see a new primary
-          int numReplicas = j - currentPrimaryIndex;
-          if (numReplicas > 1) { // means consecutive primaries, indicating co-location
-            // decide to select this primary region id or not
-            double currentRandom = RANDOM.nextDouble();
-            // we don't know how many region replicas are co-hosted, we will randomly select one
-            // using reservoir sampling (http://gregable.com/2007/10/reservoir-sampling.html)
-            if (currentRandom > currentLargestRandom) {
-              selectedPrimaryIndex = currentPrimary;
-              currentLargestRandom = currentRandom;
-            }
-          }
-          currentPrimary = primary;
-          currentPrimaryIndex = j;
-        }
-      }
-
-      // we have found the primary id for the region to move. Now find the actual regionIndex
-      // with the given primary, prefer to move the secondary region.
-      for (int j = 0; j < regionsPerGroup.length; j++) {
-        int regionIndex = regionsPerGroup[j];
-        if (selectedPrimaryIndex == regionIndexToPrimaryIndex[regionIndex]) {
-          // always move the secondary, not the primary
-          if (selectedPrimaryIndex != regionIndex) {
-            return regionIndex;
-          }
-        }
-      }
-      return -1;
-    }
-
-    @Override
-    Cluster.Action generate(Cluster cluster) {
-      int serverIndex = pickRandomServer(cluster);
-      if (cluster.numServers <= 1 || serverIndex == -1) {
-        return Cluster.NullAction;
-      }
-
-      int regionIndex = selectCoHostedRegionPerGroup(
-        cluster.primariesOfRegionsPerServer[serverIndex],
-        cluster.regionsPerServer[serverIndex],
-        cluster.regionIndexToPrimaryIndex);
-
-      // if there are no pairs of region replicas co-hosted, default to random generator
-      if (regionIndex == -1) {
-        // default to randompicker
-        return randomGenerator.generate(cluster);
-      }
-
-      int toServerIndex = pickOtherRandomServer(cluster, serverIndex);
-      int toRegionIndex = pickRandomRegion(cluster, toServerIndex, 0.9f);
-      return getAction(serverIndex, regionIndex, toServerIndex, toRegionIndex);
     }
   }
 
@@ -1190,15 +881,26 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
 
     @Override
+    void init(Cluster cluster) {
+      super.init(cluster);
+      LOG.debug("{} sees a total of {} servers and {} regions.", getClass().getSimpleName(),
+          cluster.numServers, cluster.numRegions);
+      if (LOG.isTraceEnabled()) {
+        for (int i =0; i < cluster.numServers; i++) {
+          LOG.trace("{} sees server '{}' has {} regions", getClass().getSimpleName(),
+              cluster.servers[i], cluster.regionsPerServer[i].length);
+        }
+      }
+    }
+
+    @Override
     protected double cost() {
       if (stats == null || stats.length != cluster.numServers) {
         stats = new double[cluster.numServers];
       }
-
       for (int i =0; i < cluster.numServers; i++) {
         stats[i] = cluster.regionsPerServer[i].length;
       }
-
       return costFromArray(stats);
     }
   }

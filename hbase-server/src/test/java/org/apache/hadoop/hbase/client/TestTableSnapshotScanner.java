@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
@@ -124,7 +125,7 @@ public class TestTableSnapshotScanner {
     Table table = util.getConnection().getTable(tableName);
     util.loadTable(table, FAMILIES);
 
-    Path rootDir = FSUtils.getRootDir(util.getConfiguration());
+    Path rootDir = CommonFSUtils.getRootDir(util.getConfiguration());
     FileSystem fs = rootDir.getFileSystem(util.getConfiguration());
 
     SnapshotTestingUtils.createSnapshotAndValidate(admin, tableName,
@@ -160,7 +161,7 @@ public class TestTableSnapshotScanner {
       admin.split(tableName, Bytes.toBytes("eee"));
       blockUntilSplitFinished(UTIL, tableName, 2);
 
-      Path rootDir = FSUtils.getRootDir(UTIL.getConfiguration());
+      Path rootDir = CommonFSUtils.getRootDir(UTIL.getConfiguration());
       FileSystem fs = rootDir.getFileSystem(UTIL.getConfiguration());
 
       SnapshotTestingUtils.createSnapshotAndValidate(admin, tableName,
@@ -212,10 +213,10 @@ public class TestTableSnapshotScanner {
     try {
       createTableAndSnapshot(UTIL, tableName, snapshotName, 50);
       Path restoreDir = UTIL.getDataTestDirOnTestFS(snapshotName);
-      Scan scan = new Scan(bbb, yyy); // limit the scan
+      Scan scan = new Scan().withStartRow(bbb).withStopRow(yyy); // limit the scan
 
       Configuration conf = UTIL.getConfiguration();
-      Path rootDir = FSUtils.getRootDir(conf);
+      Path rootDir = CommonFSUtils.getRootDir(conf);
 
       TableSnapshotScanner scanner0 =
           new TableSnapshotScanner(conf, restoreDir, snapshotName, scan);
@@ -262,7 +263,7 @@ public class TestTableSnapshotScanner {
       }
 
       Path restoreDir = util.getDataTestDirOnTestFS(snapshotName);
-      Scan scan = new Scan(bbb, yyy); // limit the scan
+      Scan scan = new Scan().withStartRow(bbb).withStopRow(yyy); // limit the scan
 
       TableSnapshotScanner scanner = new TableSnapshotScanner(UTIL.getConfiguration(), restoreDir,
         snapshotName, scan);
@@ -339,7 +340,7 @@ public class TestTableSnapshotScanner {
       // wait flush is finished
       UTIL.waitFor(timeout, () -> {
         try {
-          Path tableDir = FSUtils.getTableDir(rootDir, tableName);
+          Path tableDir = CommonFSUtils.getTableDir(rootDir, tableName);
           for (RegionInfo region : regions) {
             Path regionDir = new Path(tableDir, region.getEncodedName());
             for (Path familyDir : FSUtils.getFamilyDirs(fs, regionDir)) {
@@ -383,7 +384,7 @@ public class TestTableSnapshotScanner {
               }
             }
           }
-          Path tableDir = FSUtils.getTableDir(rootDir, tableName);
+          Path tableDir = CommonFSUtils.getTableDir(rootDir, tableName);
           HRegionFileSystem regionFs = HRegionFileSystem
               .openRegionFromFileSystem(UTIL.getConfiguration(), fs, tableDir, mergedRegion, true);
           return !regionFs.hasReferences(admin.getDescriptor(tableName));
@@ -396,7 +397,7 @@ public class TestTableSnapshotScanner {
       UTIL.getMiniHBaseCluster().getMaster().getCatalogJanitor().choreForTesting();
       UTIL.waitFor(timeout, () -> {
         try {
-          Path tableDir = FSUtils.getTableDir(rootDir, tableName);
+          Path tableDir = CommonFSUtils.getTableDir(rootDir, tableName);
           for (FileStatus fileStatus : fs.listStatus(tableDir)) {
             String name = fileStatus.getPath().getName();
             if (name.equals(region0.getEncodedName()) || name.equals(region1.getEncodedName())) {
@@ -415,7 +416,8 @@ public class TestTableSnapshotScanner {
       UTIL.getMiniHBaseCluster().getMaster().getHFileCleaner().runCleaner();
       // scan snapshot
       try (TableSnapshotScanner scanner = new TableSnapshotScanner(conf,
-          UTIL.getDataTestDirOnTestFS(snapshotName), snapshotName, new Scan(bbb, yyy))) {
+        UTIL.getDataTestDirOnTestFS(snapshotName), snapshotName,
+        new Scan().withStartRow(bbb).withStopRow(yyy))) {
         verifyScanner(scanner, bbb, yyy);
       }
     } catch (Exception e) {
