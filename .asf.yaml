@@ -34,8 +34,8 @@ github:
     squash:  true
     merge:   false
     rebase:  true
-  notifications:
-    commits:      commits@hbase.apache.org
-    issues:       issues@hbase.apache.org
-    pullrequests: issues@hbase.apache.org
-    jira_options: link
+notifications:
+  commits:      commits@hbase.apache.org
+  issues:       issues@hbase.apache.org
+  pullrequests: issues@hbase.apache.org
+  jira_options: link
