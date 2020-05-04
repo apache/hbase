@@ -149,10 +149,10 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    * @return a list of Cell objects, returns an empty list if one doesn't exist.
    */
   List<Cell> getCellList(byte[] family) {
-    List<Cell> list = this.familyMap.get(family);
+    List<Cell> list = getFamilyCellMap().get(family);
     if (list == null) {
       list = new ArrayList<>();
-      this.familyMap.put(family, list);
+      getFamilyCellMap().put(family, list);
     }
     return list;
   }
@@ -201,11 +201,11 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
   @Override
   public Map<String, Object> getFingerprint() {
     Map<String, Object> map = new HashMap<>();
-    List<String> families = new ArrayList<>(this.familyMap.entrySet().size());
+    List<String> families = new ArrayList<>(getFamilyCellMap().entrySet().size());
     // ideally, we would also include table information, but that information
     // is not stored in each Operation instance.
     map.put("families", families);
-    for (Map.Entry<byte [], List<Cell>> entry : this.familyMap.entrySet()) {
+    for (Map.Entry<byte [], List<Cell>> entry : getFamilyCellMap().entrySet()) {
       families.add(Bytes.toStringBinary(entry.getKey()));
     }
     return map;
@@ -229,7 +229,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
     map.put("row", Bytes.toStringBinary(this.row));
     int colCount = 0;
     // iterate through all column families affected
-    for (Map.Entry<byte [], List<Cell>> entry : this.familyMap.entrySet()) {
+    for (Map.Entry<byte [], List<Cell>> entry : getFamilyCellMap().entrySet()) {
       // map from this family to details for each cell affected within the family
       List<Map<String, Object>> qualifierDetails = new ArrayList<>();
       columns.put(Bytes.toStringBinary(entry.getKey()), qualifierDetails);
@@ -319,7 +319,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    * @return true if empty, false otherwise
    */
   public boolean isEmpty() {
-    return familyMap.isEmpty();
+    return getFamilyCellMap().isEmpty();
   }
 
   /**
@@ -461,7 +461,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    */
   public int size() {
     int size = 0;
-    for (List<Cell> cells : this.familyMap.values()) {
+    for (List<Cell> cells : getFamilyCellMap().values()) {
       size += cells.size();
     }
     return size;
@@ -471,7 +471,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    * @return the number of different families
    */
   public int numFamilies() {
-    return familyMap.size();
+    return getFamilyCellMap().size();
   }
 
   /**
@@ -485,8 +485,8 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
 
     // Adding map overhead
     heapsize +=
-      ClassSize.align(this.familyMap.size() * ClassSize.MAP_ENTRY);
-    for(Map.Entry<byte [], List<Cell>> entry : this.familyMap.entrySet()) {
+      ClassSize.align(getFamilyCellMap().size() * ClassSize.MAP_ENTRY);
+    for(Map.Entry<byte [], List<Cell>> entry : getFamilyCellMap().entrySet()) {
       //Adding key overhead
       heapsize +=
         ClassSize.align(ClassSize.ARRAY + entry.getKey().length);

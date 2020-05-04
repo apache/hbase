@@ -36,6 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
@@ -396,7 +397,6 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     return new CheckAndMutateBuilderImpl(row, family);
   }
 
-
   private final class CheckAndMutateWithFilterBuilderImpl
     implements CheckAndMutateWithFilterBuilder {
 
@@ -456,6 +456,54 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
   @Override
   public CheckAndMutateWithFilterBuilder checkAndMutate(byte[] row, Filter filter) {
     return new CheckAndMutateWithFilterBuilderImpl(row, filter);
+  }
+
+  @Override
+  public CompletableFuture<Boolean> checkAndMutate(CheckAndMutate checkAndMutate) {
+    if (checkAndMutate.getAction() instanceof Put) {
+      validatePut((Put) checkAndMutate.getAction(), conn.connConf.getMaxKeyValueSize());
+    }
+    if (checkAndMutate.getAction() instanceof Put ||
+      checkAndMutate.getAction() instanceof Delete) {
+      Mutation mutation = (Mutation) checkAndMutate.getAction();
+      if (mutation instanceof Put) {
+        validatePut((Put) mutation, conn.connConf.getMaxKeyValueSize());
+      }
+      return RawAsyncTableImpl.this.<Boolean> newCaller(checkAndMutate.getRow(),
+        mutation.getPriority(), rpcTimeoutNs)
+        .action((controller, loc, stub) -> RawAsyncTableImpl.mutate(controller,
+          loc, stub, mutation,
+          (rn, m) -> RequestConverter.buildMutateRequest(rn, checkAndMutate.getRow(),
+            checkAndMutate.getFamily(), checkAndMutate.getQualifier(),
+            checkAndMutate.getCompareOp(), checkAndMutate.getValue(), checkAndMutate.getFilter(),
+            checkAndMutate.getTimeRange(), m),
+          (c, r) -> r.getProcessed()))
+        .call();
+    } else if (checkAndMutate.getAction() instanceof RowMutations) {
+      RowMutations rowMutations = (RowMutations) checkAndMutate.getAction();
+      return RawAsyncTableImpl.this.<Boolean> newCaller(checkAndMutate.getRow(),
+        rowMutations.getMaxPriority(), rpcTimeoutNs)
+        .action((controller, loc, stub) -> RawAsyncTableImpl.this.mutateRow(controller,
+          loc, stub, rowMutations,
+          (rn, rm) -> RequestConverter.buildMutateRequest(rn, checkAndMutate.getRow(),
+            checkAndMutate.getFamily(), checkAndMutate.getQualifier(),
+            checkAndMutate.getCompareOp(), checkAndMutate.getValue(), checkAndMutate.getFilter(),
+            checkAndMutate.getTimeRange(), rm),
+          resp -> resp.getExists()))
+        .call();
+    } else {
+      CompletableFuture<Boolean> future = new CompletableFuture<>();
+      future.completeExceptionally(new DoNotRetryIOException(
+        "CheckAndMutate doesn't support " + checkAndMutate.getAction().getClass().getName()));
+      return future;
+    }
+  }
+
+  @Override
+  public List<CompletableFuture<Boolean>> checkAndMutate(List<CheckAndMutate> checkAndMutates) {
+    return batch(checkAndMutates, rpcTimeoutNs).stream()
+      .map(f -> f.thenApply(r -> ((Result)r).getExists()))
+      .collect(toList());
   }
 
   // We need the MultiRequest when constructing the org.apache.hadoop.hbase.client.MultiResponse,
@@ -594,8 +642,16 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
   }
 
   private <T> List<CompletableFuture<T>> batch(List<? extends Row> actions, long rpcTimeoutNs) {
-    actions.stream().filter(action -> action instanceof Put).map(action -> (Put) action)
-      .forEach(put -> validatePut(put, conn.connConf.getMaxKeyValueSize()));
+    for (Row action : actions) {
+      if (action instanceof Put) {
+        validatePut((Put) action, conn.connConf.getMaxKeyValueSize());
+      } else if (action instanceof CheckAndMutate) {
+        CheckAndMutate checkAndMutate = (CheckAndMutate) action;
+        if (checkAndMutate.getAction() instanceof Put) {
+          validatePut((Put) checkAndMutate.getAction(), conn.connConf.getMaxKeyValueSize());
+        }
+      }
+    }
     return conn.callerFactory.batch().table(tableName).actions(actions)
       .operationTimeout(operationTimeoutNs, TimeUnit.NANOSECONDS)
       .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS).pause(pauseNs, TimeUnit.NANOSECONDS)

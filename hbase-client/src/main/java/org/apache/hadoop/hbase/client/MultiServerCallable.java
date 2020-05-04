@@ -99,10 +99,10 @@ class MultiServerCallable extends CancellableRegionServerCallable<MultiResponse>
 
     long nonceGroup = multiAction.getNonceGroup();
 
-    // Map from a created RegionAction to the original index for a RowMutations within
-    // the original list of actions. This will be used to process the results when there
-    // is RowMutations in the action list.
-    Map<Integer, Integer> rowMutationsIndexMap = new HashMap<>();
+    // Map from a created RegionAction to the original index for a RowMutations/CheckAndMutate
+    // within the original list of actions. This will be used to process the results when there
+    // is RowMutations/CheckAndMutate in the action list.
+    Map<Integer, Integer> indexMap = new HashMap<>();
     // The multi object is a list of Actions by region. Iterate by region.
     for (Map.Entry<byte[], List<Action>> e: this.multiAction.actions.entrySet()) {
       final byte [] regionName = e.getKey();
@@ -110,17 +110,16 @@ class MultiServerCallable extends CancellableRegionServerCallable<MultiResponse>
       if (this.cellBlock) {
         // Send data in cellblocks.
         // multiRequestBuilder will be populated with region actions.
-        // rowMutationsIndexMap will be non-empty after the call if there is RowMutations in the
-        // action list.
+        // indexMap will be non-empty after the call if there is RowMutations/CheckAndMutate in
+        // the action list.
         RequestConverter.buildNoDataRegionActions(regionName, actions, cells, multiRequestBuilder,
-          regionActionBuilder, actionBuilder, mutationBuilder, nonceGroup, rowMutationsIndexMap);
-      }
-      else {
+          regionActionBuilder, actionBuilder, mutationBuilder, nonceGroup, indexMap);
+      } else {
         // multiRequestBuilder will be populated with region actions.
-        // rowMutationsIndexMap will be non-empty after the call if there is RowMutations in the
-        // action list.
+        // indexMap will be non-empty after the call if there is RowMutations/CheckAndMutate in
+        // the action list.
         RequestConverter.buildRegionActions(regionName, actions, multiRequestBuilder,
-          regionActionBuilder, actionBuilder, mutationBuilder, nonceGroup, rowMutationsIndexMap);
+          regionActionBuilder, actionBuilder, mutationBuilder, nonceGroup, indexMap);
       }
     }
 
@@ -130,7 +129,7 @@ class MultiServerCallable extends CancellableRegionServerCallable<MultiResponse>
     ClientProtos.MultiRequest requestProto = multiRequestBuilder.build();
     ClientProtos.MultiResponse responseProto = getStub().multi(getRpcController(), requestProto);
     if (responseProto == null) return null; // Occurs on cancel
-    return ResponseConverter.getResults(requestProto, rowMutationsIndexMap, responseProto,
+    return ResponseConverter.getResults(requestProto, indexMap, responseProto,
       getRpcControllerCellScanner());
   }
 

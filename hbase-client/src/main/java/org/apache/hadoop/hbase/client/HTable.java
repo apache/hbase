@@ -772,11 +772,13 @@ public class HTable implements Table {
   }
 
   @Override
+  @Deprecated
   public CheckAndMutateBuilder checkAndMutate(byte[] row, byte[] family) {
     return new CheckAndMutateBuilderImpl(row, family);
   }
 
   @Override
+  @Deprecated
   public CheckAndMutateWithFilterBuilder checkAndMutate(byte[] row, Filter filter) {
     return new CheckAndMutateWithFilterBuilderImpl(row, filter);
   }
@@ -847,6 +849,52 @@ public class HTable implements Table {
   public boolean checkAndMutate(final byte [] row, final byte [] family, final byte [] qualifier,
       final CompareOperator op, final byte [] value, final RowMutations rm) throws IOException {
     return doCheckAndMutate(row, family, qualifier, op, value, null, null, rm);
+  }
+
+  @Override
+  public boolean checkAndMutate(CheckAndMutate checkAndMutate) throws IOException {
+    Row action = checkAndMutate.getAction();
+    if (action instanceof Put) {
+      Put put = (Put) action;
+      validatePut(put);
+      return doCheckAndPut(checkAndMutate.getRow(), checkAndMutate.getFamily(),
+        checkAndMutate.getQualifier(), checkAndMutate.getCompareOp(), checkAndMutate.getValue(),
+        checkAndMutate.getFilter(), checkAndMutate.getTimeRange(), put);
+    } else if (action instanceof Delete) {
+      return doCheckAndDelete(checkAndMutate.getRow(), checkAndMutate.getFamily(),
+        checkAndMutate.getQualifier(), checkAndMutate.getCompareOp(), checkAndMutate.getValue(),
+        checkAndMutate.getFilter(), checkAndMutate.getTimeRange(), (Delete) action);
+    } else {
+      return doCheckAndMutate(checkAndMutate.getRow(), checkAndMutate.getFamily(),
+        checkAndMutate.getQualifier(), checkAndMutate.getCompareOp(), checkAndMutate.getValue(),
+        checkAndMutate.getFilter(), checkAndMutate.getTimeRange(), (RowMutations) action);
+    }
+  }
+
+  @Override
+  public boolean[] checkAndMutate(List<CheckAndMutate> checkAndMutates) throws IOException {
+    if (checkAndMutates.isEmpty()) {
+      return new boolean[]{};
+    }
+    if (checkAndMutates.size() == 1) {
+      return new boolean[]{ checkAndMutate(checkAndMutates.get(0)) };
+    }
+
+    Object[] results = new Object[checkAndMutates.size()];
+    try {
+      batch(checkAndMutates, results, writeRpcTimeoutMs);
+    } catch (InterruptedException e) {
+      throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+    }
+
+    // translate.
+    boolean[] ret = new boolean[results.length];
+    int i = 0;
+    for (Object r : results) {
+      // Batch ensures if there is a failure we get an exception instead
+      ret[i++] = ((Result) r).getExists();
+    }
+    return ret;
   }
 
   private CompareOperator toCompareOperator(CompareOp compareOp) {
