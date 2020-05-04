@@ -712,7 +712,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
     if (!evictionLock.tryLock()) {
       return 0;
     }
-    
+
     long bytesToFree = 0L;
 
     try {
