@@ -156,7 +156,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
   private static final String LRU_CACHE_DATA_BLOCK_PERCENT = "hbase.lru.cache.data.block.percent";
   private static final int DEFAULT_LRU_CACHE_DATA_BLOCK_PERCENT = 50;
 
-  private static final String LRU_CACHE_HEAVY_EVICTION_COUNT_LIMIT 
+  private static final String LRU_CACHE_HEAVY_EVICTION_COUNT_LIMIT
     = "hbase.lru.cache.heavy.eviction.count.limit";
   private static final int DEFAULT_LRU_CACHE_HEAVY_EVICTION_COUNT_LIMIT = 10;
 
@@ -246,16 +246,16 @@ public class LruBlockCache implements FirstLevelBlockCache {
 
   /** Percent of cached data blocks */
   private final int cacheDataBlockPercent;
-  
+
   /** Counter to control of eviction process */
   private static int heavyEvictionCount;
 
   /** Limit of count eviction process when start to avoid to cache blocks */
   private final int heavyEvictionCountLimit;
-  
+
   /** Limit of volume eviction process when start to avoid to cache blocks */
   private static int heavyEvictionBytesSizeLimit;
-  
+
   /**
    * Default constructor.  Specify maximum size and expected average block
    * size (approximation is fine).
@@ -304,8 +304,10 @@ public class LruBlockCache implements FirstLevelBlockCache {
         conf.getBoolean(LRU_IN_MEMORY_FORCE_MODE_CONFIG_NAME, DEFAULT_IN_MEMORY_FORCE_MODE),
         conf.getLong(LRU_MAX_BLOCK_SIZE, DEFAULT_MAX_BLOCK_SIZE),
         conf.getInt(LRU_CACHE_DATA_BLOCK_PERCENT, DEFAULT_LRU_CACHE_DATA_BLOCK_PERCENT),
-        conf.getInt(LRU_CACHE_HEAVY_EVICTION_COUNT_LIMIT, DEFAULT_LRU_CACHE_HEAVY_EVICTION_COUNT_LIMIT),
-        conf.getInt(LRU_CACHE_HEAVY_EVICTION_BYTES_SIZE_LIMIT, DEFAULT_LRU_CACHE_HEAVY_EVICTION_BYTES_SIZE_LIMIT));
+        conf.getInt(LRU_CACHE_HEAVY_EVICTION_COUNT_LIMIT, 
+                      DEFAULT_LRU_CACHE_HEAVY_EVICTION_COUNT_LIMIT),
+        conf.getInt(LRU_CACHE_HEAVY_EVICTION_BYTES_SIZE_LIMIT, 
+                      DEFAULT_LRU_CACHE_HEAVY_EVICTION_BYTES_SIZE_LIMIT));
   }
 
   public LruBlockCache(long maxSize, long blockSize, Configuration conf) {
@@ -437,8 +439,8 @@ public class LruBlockCache implements FirstLevelBlockCache {
    */
   @Override
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory) {
-  
-    // Don't cache this DATA block when too many blocks evicted
+
+    // Don't cache this DATA block when too many blocks evict
     // and if we have limit on percent of blocks to cache
     // good for performance (HBASE-23887)
     if (heavyEvictionCount > heavyEvictionCountLimit) {
@@ -707,7 +709,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
   long evict() {
 
     // Ensure only one eviction at a time
-    if(!evictionLock.tryLock()) return 0;
+    if (!evictionLock.tryLock()) {return 0};
     long bytesToFree = 0L;
 
     try {
@@ -721,7 +723,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
           StringUtils.byteDesc(currentSize));
       }
 
-      if (bytesToFree <= 0) return 0;
+      if (bytesToFree <= 0) {return 0};
 
       // Instantiate priority buckets
       BlockBucket bucketSingle = new BlockBucket("single", bytesToFree, blockSize, singleSize());
@@ -1002,10 +1004,12 @@ public class LruBlockCache implements FirstLevelBlockCache {
         if (cache == null) break;
         bytesFreed = cache.evict();
         // Control of heavy cleaning BlockCache
-        if (bytesFreed > 0 && bytesFreed > heavyEvictionBytesSizeLimit)
+        if (bytesFreed > 0 && bytesFreed > heavyEvictionBytesSizeLimit) {
           heavyEvictionCount++;
-        else
+        }
+        else {
           heavyEvictionCount = 0;
+        }
       }
     }
 
