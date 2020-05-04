@@ -166,7 +166,8 @@
       <p>
         <span>
           The below are Regions we've lost account of. To be safe, run bulk load of any data found in these Region orphan directories back into the HBase cluster.
-          First make sure <em>hbase:meta</em> is in a healthy state; run <em>hbck2 fixMeta</em> to be sure. Once this is done, per Region below, run a bulk
+          First make sure <em>hbase:meta</em> is in a healthy state, that there are no holes, overlaps or inconsistencies (else bulk load may complain);
+          run <em>hbck2 fixMeta</em>. Once this is done, per Region below, run a bulk
           load -- <em>$ hbase completebulkload REGION_DIR_PATH TABLE_NAME</em> -- and then delete the desiccated directory content (HFiles are removed upon
           successful load; all that is left are empty directories and occasionally a seqid marking file).
         </span>
@@ -223,8 +224,8 @@
             </tr>
             <% for (Pair<RegionInfo, RegionInfo> p : report.getHoles()) { %>
             <tr>
-              <td><%= p.getFirst() %></td>
-              <td><%= p.getSecond() %></td>
+              <td><span title="<%= p.getFirst() %>"><%= p.getFirst().getEncodedName() %></span></td>
+              <td><span title="<%= p.getSecond() %>"><%= p.getSecond().getEncodedName() %></span></td>
             </tr>
             <% } %>
 
@@ -244,8 +245,8 @@
               </tr>
               <% for (Pair<RegionInfo, RegionInfo> p : report.getOverlaps()) { %>
               <tr>
-                <td><%= p.getFirst() %></td>
-                <td><%= p.getSecond() %></td>
+                <td><span title="<%= p.getFirst() %>"><%= p.getFirst().getEncodedName() %></span></td>
+                <td><span title="<%= p.getSecond() %>"><%= p.getSecond().getEncodedName() %></span></td>
               </tr>
               <% } %>
 
@@ -265,7 +266,7 @@
               </tr>
               <% for (Pair<RegionInfo, ServerName> p: report.getUnknownServers()) { %>
               <tr>
-                <td><%= p.getFirst() %></td>
+                <td><span title="<%= p.getFirst() %>"><%= p.getFirst().getEncodedName() %></span></td>
                 <td><%= p.getSecond() %></td>
               </tr>
               <% } %>

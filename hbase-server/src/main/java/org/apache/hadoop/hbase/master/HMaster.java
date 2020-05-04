@@ -1881,8 +1881,8 @@ public class HMaster extends HRegionServer implements MasterServices {
           " failed because merge switch is off");
     }
 
-    final String mergeRegionsStr = Arrays.stream(regionsToMerge).
-      map(r -> RegionInfo.getShortNameToLog(r)).collect(Collectors.joining(", "));
+    final String mergeRegionsStr = Arrays.stream(regionsToMerge).map(r -> r.getEncodedName()).
+      collect(Collectors.joining(", "));
     return MasterProcedureUtil.submitProcedure(new NonceProcedureRunnable(this, ng, nonce) {
       @Override
       protected void run() throws IOException {

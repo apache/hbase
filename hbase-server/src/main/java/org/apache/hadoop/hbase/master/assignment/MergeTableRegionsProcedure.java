@@ -61,7 +61,6 @@ import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -135,8 +134,8 @@ public class MergeTableRegionsProcedure
           throw new MergeRegionException(msg);
         }
         if (!force && !ri.isAdjacent(previous) && !ri.isOverlap(previous)) {
-          String msg = "Unable to merge non-adjacent or non-overlapping regions " +
-              previous.getShortNameToLog() + ", " + ri.getShortNameToLog() + " when force=false";
+          String msg = "Unable to merge non-adjacent or non-overlapping regions '" +
+              previous.getShortNameToLog() + "', '" + ri.getShortNameToLog() + "' when force=false";
           LOG.warn(msg);
           throw new MergeRegionException(msg);
         }
@@ -479,16 +478,20 @@ public class MergeTableRegionsProcedure
     for (RegionInfo ri: this.regionsToMerge) {
       if (!catalogJanitor.cleanMergeQualifier(ri)) {
         String msg = "Skip merging " + RegionInfo.getShortNameToLog(regionsToMerge) +
-            ", because parent " + RegionInfo.getShortNameToLog(ri) + " has a merge qualifier";
+            ", because a parent, " + RegionInfo.getShortNameToLog(ri) + ", has a merge qualifier " +
+          "(if a 'merge column' in parent, it was recently merged but still has outstanding " +
+          "references to its parents that must be cleared before it can participate in merge -- " +
+          "major compact it to hurry clearing of its references)";
         LOG.warn(msg);
         throw new MergeRegionException(msg);
       }
       RegionState state = regionStates.getRegionState(ri.getEncodedName());
       if (state == null) {
-        throw new UnknownRegionException("No state for " + RegionInfo.getShortNameToLog(ri));
+        throw new UnknownRegionException(RegionInfo.getShortNameToLog(ri) +
+          " UNKNOWN (Has it been garbage collected?)");
       }
       if (!state.isOpened()) {
-        throw new MergeRegionException("Unable to merge regions that are not online: " + ri);
+        throw new MergeRegionException("Unable to merge regions that are NOT online: " + ri);
       }
       // Ask the remote regionserver if regions are mergeable. If we get an IOE, report it
       // along with the failure, so we can see why regions are not mergeable at this time.
