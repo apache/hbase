@@ -252,9 +252,8 @@ public class TestMalformedCellFromClient {
       actionBuilder.setMutation(mp);
       builder.addAction(actionBuilder.build());
     }
-    ClientProtos.MultiRequest request =
-      ClientProtos.MultiRequest.newBuilder().addRegionAction(builder.build())
-        .setCondition(condition).build();
+    ClientProtos.MultiRequest request = ClientProtos.MultiRequest.newBuilder()
+        .addRegionAction(builder.setCondition(condition).build()).build();
     return request;
   }
 
