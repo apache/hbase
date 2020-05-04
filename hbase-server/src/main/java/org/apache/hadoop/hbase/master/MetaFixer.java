@@ -52,7 +52,7 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 class MetaFixer {
   private static final Logger LOG = LoggerFactory.getLogger(MetaFixer.class);
   private static final String MAX_MERGE_COUNT_KEY = "hbase.master.metafixer.max.merge.count";
-  private static final int MAX_MERGE_COUNT_DEFAULT = 10;
+  private static final int MAX_MERGE_COUNT_DEFAULT = 64;
 
   private final MasterServices masterServices;
   /**
@@ -247,6 +247,10 @@ class MetaFixer {
       if (regionInfoWithlargestEndKey != null) {
         if (!isOverlap(regionInfoWithlargestEndKey, pair) ||
             currentMergeSet.size() >= maxMergeCount) {
+          // Log when we cut-off-merge because we hit the configured maximum merge limit.
+          if (currentMergeSet.size() >= maxMergeCount) {
+            LOG.warn("Ran into maximum-at-a-time merges limit={}", maxMergeCount);
+          }
           merges.add(currentMergeSet);
           currentMergeSet = new TreeSet<>();
         }
