@@ -22,6 +22,7 @@ import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.hbase.metrics.Interns;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.metrics2.lib.MutableHistogram;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -65,8 +66,20 @@ public class MetricsMasterProcSourceImpl
     // masterWrapper can be null because this function is called inside of init.
     if (masterWrapper != null) {
       metricsRecordBuilder
-          .addGauge(Interns.info(NUM_MASTER_WALS_NAME, NUM_MASTER_WALS_DESC),
-              masterWrapper.getNumWALFiles());
+        .addGauge(Interns.info(NUM_MASTER_WALS_NAME, NUM_MASTER_WALS_DESC),
+          masterWrapper.getNumWALFiles());
+      metricsRecordBuilder
+          .addGauge(Interns.info(NUM_SPLIT_PROCEDURE_REQUEST_NAME, NUM_SPLIT_PROCEDURE_REQUEST_DESC),
+              masterWrapper.getSplitProcedureRequestCount());
+      metricsRecordBuilder
+        .addGauge(Interns.info(NUM_SPLIT_PROCEDURE_FAILED_NAME, NUM_SPLIT_PROCEDURE_FAILED_DESC),
+          masterWrapper.getSplitProcedureFailureCount());
+      metricsRecordBuilder
+        .addGauge(Interns.info(NUM_SPLIT_PROCEDURE_SUCCESS_NAME, NUM_SPLIT_PROCEDURE_SUCCESS_DESC),
+          masterWrapper.getSplitProcedureSuccessCount());
+
+      MutableHistogram.snapshot(SPLIT_PROCEDURE_TIME_HISTO_NAME, SPLIT_PROCEDURE_TIME_HISTO_DESC,
+        masterWrapper.getSplitProcedureTimeHisto(), metricsRecordBuilder, all);
     }
 
     metricsRegistry.snapshot(metricsRecordBuilder, all);

@@ -30,6 +30,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.metrics.Histogram;
+import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.quotas.QuotaObserverChore;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
@@ -216,5 +218,31 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
     } catch (IOException e) {
       return new PairOfSameType<>(0, 0);
     }
+  }
+
+  @Override
+  public long getSplitProcedureRequestCount() {
+    return master.getAssignmentManager().getAssignmentManagerMetrics().getSplitProcMetrics()
+      .getSubmittedCounter().getCount();
+  }
+
+  @Override
+  public long getSplitProcedureFailureCount() {
+    return master.getAssignmentManager().getAssignmentManagerMetrics().getSplitProcMetrics()
+      .getFailedCounter().getCount();
+  }
+
+  @Override
+  public long getSplitProcedureSuccessCount() {
+    ProcedureMetrics splitProcMetrics =
+      master.getAssignmentManager().getAssignmentManagerMetrics().getSplitProcMetrics();
+    return splitProcMetrics.getSubmittedCounter().getCount() - splitProcMetrics.getFailedCounter()
+      .getCount();
+  }
+
+  @Override
+  public Histogram getSplitProcedureTimeHisto() {
+    return master.getAssignmentManager().getAssignmentManagerMetrics().getSplitProcMetrics()
+      .getTimeHisto();
   }
 }
