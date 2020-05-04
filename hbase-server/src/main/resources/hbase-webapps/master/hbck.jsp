@@ -166,7 +166,7 @@
       <p>
         <span>
           The below are Regions we've lost account of. To be safe, run bulk load of any data found in these Region orphan directories back into the HBase cluster.
-          First make sure <em>hbase:meta</em> is in a healthy state, that there are not holes, overlaps or inconsistencies (else bulk load may complain);
+          First make sure <em>hbase:meta</em> is in a healthy state, that there are no holes, overlaps or inconsistencies (else bulk load may complain);
           run <em>hbck2 fixMeta</em>. Once this is done, per Region below, run a bulk
           load -- <em>$ hbase completebulkload REGION_DIR_PATH TABLE_NAME</em> -- and then delete the desiccated directory content (HFiles are removed upon
           successful load; all that is left are empty directories and occasionally a seqid marking file).
