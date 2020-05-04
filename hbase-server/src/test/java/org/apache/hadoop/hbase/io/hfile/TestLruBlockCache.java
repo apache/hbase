@@ -1029,4 +1029,51 @@ public class TestLruBlockCache {
         false, 1024);
     testMultiThreadGetAndEvictBlockInternal(cache);
   }
+
+  public void testSkipCacheDataBlocksInteral(int percentOfCachedBlocks) throws Exception {
+    long maxSize = 100000;
+    int numBlocks = 100;
+    final long blockSize = calculateBlockSizeDefault(maxSize, numBlocks);
+    assertTrue("calculateBlockSize appears broken.", blockSize * numBlocks <= maxSize);
+
+    final LruBlockCache cache =
+        new LruBlockCache(maxSize, blockSize, true, (int) Math.ceil(1.2 * maxSize / blockSize),
+            LruBlockCache.DEFAULT_LOAD_FACTOR, LruBlockCache.DEFAULT_CONCURRENCY_LEVEL, 0.5f, // min
+            0.99f, // acceptable
+            0.33f, // single
+            0.33f, // multi
+            0.34f, // memory
+            1.2f, // limit
+            false,
+            maxSize,
+            percentOfCachedBlocks,
+            0,
+            1);
+
+    EvictionThread evictionThread = cache.getEvictionThread();
+    assertTrue(evictionThread != null);
+    while (!evictionThread.isEnteringRun()) {
+      Thread.sleep(1);
+    }
+
+    final String hfileName = "hfile";
+    for (int blockIndex = 0; blockIndex <= numBlocks * 5; ++blockIndex) {
+      CachedItem block = new CachedItem(hfileName, (int) blockSize, blockIndex);
+      cache.cacheBlock(block.cacheKey, block, false);
+      Thread.sleep(1);
+    }
+
+    // Check if all offset of cached blocks less
+    // It means some of blocka were not put into BlockCache
+    for (BlockCacheKey key : cache.getMapForTests().keySet())
+      Assert.assertTrue(key.getOffset() % 100 < percentOfCachedBlocks);
+
+  }
+
+  @Test
+  public void testSkipCacheDataBlocks() throws Exception {
+    for (int percentOfCachedBlocks = 25; percentOfCachedBlocks <= 100; percentOfCachedBlocks+=25) {
+      testSkipCacheDataBlocksInteral(percentOfCachedBlocks);
+    }
+  }
 }
