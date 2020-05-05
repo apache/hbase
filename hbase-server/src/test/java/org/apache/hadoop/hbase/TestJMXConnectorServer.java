@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.net.ServerSocket;
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import javax.naming.ServiceUnavailableException;
@@ -56,12 +57,13 @@ public class TestJMXConnectorServer {
   private static Configuration conf = null;
   private static Admin admin;
   // RMI registry port
-  private static int rmiRegistryPort = 61120;
+  private static int rmiRegistryPort;
   // Switch for customized Accesscontroller to throw ACD exception while executing test case
   static boolean hasAccess;
 
   @Before
   public void setUp() throws Exception {
+    rmiRegistryPort = getFreePort();
     UTIL = new HBaseTestingUtility();
     conf = UTIL.getConfiguration();
   }
@@ -185,7 +187,8 @@ public class TestJMXConnectorServer {
    */
   public static class MyAccessController extends AccessController {
     @Override
-    public void postStartMaster(ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+    public void postStartMaster(ObserverContext<MasterCoprocessorEnvironment> ctx)
+        throws IOException {
       // Do nothing. In particular, stop the creation of the hbase:acl table. It makes the
       // shutdown take time.
     }
@@ -219,4 +222,18 @@ public class TestJMXConnectorServer {
       // the systemuser nor the superuser so we can not call executeProcedures...
     }
   }
+
+  protected static int getFreePort() throws IOException {
+    ServerSocket s = new ServerSocket(0);
+    try {
+      s.setReuseAddress(true);
+      int port = s.getLocalPort();
+      return port;
+    } finally {
+      if (null != s) {
+        s.close();
+      }
+    }
+  }
+
 }
