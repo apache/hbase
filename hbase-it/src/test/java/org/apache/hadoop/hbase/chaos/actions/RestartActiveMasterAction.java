@@ -26,7 +26,7 @@ import org.slf4j.LoggerFactory;
 * Action that tries to restart the active master.
 */
 public class RestartActiveMasterAction extends RestartActionBaseAction {
-  private static final Logger LOG = LoggerFactory.getLogger(RestartActionBaseAction.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RestartActiveMasterAction.class);
 
   public RestartActiveMasterAction(long sleepTime) {
     super(sleepTime);
