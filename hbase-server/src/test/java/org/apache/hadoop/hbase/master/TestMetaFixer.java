@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Threads;
@@ -146,10 +147,12 @@ public class TestMetaFixer {
   @Test
   public void testOverlap() throws Exception {
     TableName tn = TableName.valueOf(this.name.getMethodName());
-    TEST_UTIL.createMultiRegionTable(tn, HConstants.CATALOG_FAMILY);
+    Table t = TEST_UTIL.createMultiRegionTable(tn, HConstants.CATALOG_FAMILY);
+    TEST_UTIL.loadTable(t, HConstants.CATALOG_FAMILY);
     List<RegionInfo> ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), tn);
     assertTrue(ris.size() > 5);
-    MasterServices services = TEST_UTIL.getHBaseCluster().getMaster();
+    HMaster services = TEST_UTIL.getHBaseCluster().getMaster();
+    HbckChore hbckChore = services.getHbckChore();
     services.getCatalogJanitor().scan();
     CatalogJanitor.Report report = services.getCatalogJanitor().getLastReport();
     assertTrue(report.isEmpty());
@@ -173,6 +176,9 @@ public class TestMetaFixer {
         throw new RuntimeException(e);
       }
     });
+
+    hbckChore.chore();
+    assertEquals(0, hbckChore.getOrphanRegionsOnFS().size());
   }
 
   /**
