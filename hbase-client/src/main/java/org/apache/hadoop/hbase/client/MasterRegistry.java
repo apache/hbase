@@ -153,9 +153,9 @@ public class MasterRegistry implements ConnectionRegistry {
    * For describing the actual asynchronous rpc call.
    * <p/>
    * Typically, you can use lambda expression to implement this interface as
-   * 
+   *
    * <pre>
-   * (c, s, d) -> s.xxx(c, <your request here>, d)
+   * (c, s, d) -> s.xxx(c, your request here, d)
    * </pre>
    */
   @FunctionalInterface
