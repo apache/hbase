@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.KeepDeletedCells;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -64,4 +65,10 @@ public interface ScanOptions {
   void setKeepDeletedCells(KeepDeletedCells keepDeletedCells);
 
   KeepDeletedCells getKeepDeletedCells();
+
+  int getMinVersions();
+
+  void setMinVersions(int minVersions);
+
+  Scan getScan();
 }

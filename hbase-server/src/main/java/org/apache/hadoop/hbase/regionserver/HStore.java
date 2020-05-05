@@ -2142,7 +2142,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     try {
       ScanInfo scanInfo;
       if (this.getCoprocessorHost() != null) {
-        scanInfo = this.getCoprocessorHost().preStoreScannerOpen(this);
+        scanInfo = this.getCoprocessorHost().preStoreScannerOpen(this, scan);
       } else {
         scanInfo = getScanInfo();
       }

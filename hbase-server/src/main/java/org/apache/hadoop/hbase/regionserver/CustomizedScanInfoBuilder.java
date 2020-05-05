@@ -18,7 +18,9 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.KeepDeletedCells;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.yetus.audience.InterfaceAudience;
+import java.io.IOException;
 
 /**
  * Helper class for CP hooks to change max versions and TTL.
@@ -34,8 +36,18 @@ public class CustomizedScanInfoBuilder implements ScanOptions {
 
   private KeepDeletedCells keepDeletedCells = null;
 
+  private Integer minVersions;
+
+  private final Scan scan;
+
   public CustomizedScanInfoBuilder(ScanInfo scanInfo) {
     this.scanInfo = scanInfo;
+    this.scan = new Scan();
+  }
+  public CustomizedScanInfoBuilder(ScanInfo scanInfo, Scan scan) throws IOException {
+    this.scanInfo = scanInfo;
+    //copy the scan so no coproc using this ScanOptions can alter the "real" scan
+    this.scan = new Scan(scan);
   }
 
   @Override
@@ -62,12 +74,13 @@ public class CustomizedScanInfoBuilder implements ScanOptions {
     if (maxVersions == null && ttl == null && keepDeletedCells == null) {
       return scanInfo;
     }
-    return scanInfo.customize(getMaxVersions(), getTTL(), getKeepDeletedCells());
+    return scanInfo.customize(getMaxVersions(), getTTL(), getKeepDeletedCells(), getMinVersions());
   }
 
   @Override
   public String toString() {
-    return "ScanOptions [maxVersions=" + getMaxVersions() + ", TTL=" + getTTL() + "]";
+    return "ScanOptions [maxVersions=" + getMaxVersions() + ", TTL=" + getTTL() +
+      ", KeepDeletedCells=" + getKeepDeletedCells() + ", MinVersions=" + getMinVersions() + "]";
   }
 
   @Override
@@ -78,6 +91,21 @@ public class CustomizedScanInfoBuilder implements ScanOptions {
   @Override
   public KeepDeletedCells getKeepDeletedCells() {
     return keepDeletedCells != null ? keepDeletedCells : scanInfo.getKeepDeletedCells();
+  }
+
+  @Override
+  public int getMinVersions() {
+    return minVersions != null ? minVersions : scanInfo.getMinVersions();
+  }
+
+  @Override
+  public void setMinVersions(int minVersions) {
+    this.minVersions = minVersions;
+  }
+
+  @Override
+  public Scan getScan() {
+    return scan;
   }
 
 }
