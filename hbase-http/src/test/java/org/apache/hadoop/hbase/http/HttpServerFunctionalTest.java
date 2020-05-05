@@ -273,22 +273,6 @@ public class HttpServerFunctionalTest extends Assert {
   }
 
   /**
-   * Picks a free port on the host by binding a Socket to '0'.
-   */
-  protected static int getFreePort() throws IOException {
-    ServerSocket s = new ServerSocket(0);
-    try {
-      s.setReuseAddress(true);
-      int port = s.getLocalPort();
-      return port;
-    } finally {
-      if (null != s) {
-        s.close();
-      }
-    }
-  }
-
-  /**
    * access a url, ignoring some IOException such as the page does not exist
    */
   public static void access(String urlstring) throws IOException {

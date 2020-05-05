@@ -423,12 +423,8 @@ public class TestHBaseTestingUtility {
         }
       });
 
-    HBaseTestingUtility.PortAllocator.AvailablePortChecker portChecker =
-      mock(HBaseTestingUtility.PortAllocator.AvailablePortChecker.class);
-    when(portChecker.available(anyInt())).thenReturn(true);
-
     HBaseTestingUtility.PortAllocator portAllocator =
-      new HBaseTestingUtility.PortAllocator(random, portChecker);
+      new HBaseTestingUtility.PortAllocator();
 
     int port1 = portAllocator.randomFreePort();
     int port2 = portAllocator.randomFreePort();

@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.ServerSocket;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -263,5 +264,35 @@ public class HBaseCommonTestingUtility {
   public <E extends Exception> long waitFor(long timeout, long interval,
       boolean failIfTimeout, Predicate<E> predicate) throws E {
     return Waiter.waitFor(this.conf, timeout, interval, failIfTimeout, predicate);
+  }
+
+  private static final PortAllocator portAllocator = new PortAllocator();
+
+  public static int randomFreePort() {
+    try {
+      return portAllocator.randomFreePort();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  static class PortAllocator {
+
+    public PortAllocator() {
+
+    }
+
+    public int randomFreePort() throws IOException {
+      ServerSocket s = new ServerSocket(0);
+      try {
+        s.setReuseAddress(true);
+        int port = s.getLocalPort();
+        return port;
+      } finally {
+        if (null != s) {
+          s.close();
+        }
+      }
+    }
   }
 }

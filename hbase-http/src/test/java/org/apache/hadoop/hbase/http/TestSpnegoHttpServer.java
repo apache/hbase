@@ -152,7 +152,7 @@ public class TestSpnegoHttpServer extends HttpServerFunctionalTest {
     kdc.setWorkDir(kdcDir);
 
     kdc.setKdcHost(KDC_SERVER_HOST);
-    int kdcPort = getFreePort();
+    int kdcPort = HBaseCommonTestingUtility.randomFreePort();
     kdc.setAllowTcp(true);
     kdc.setAllowUdp(false);
     kdc.setKdcTcpPort(kdcPort);

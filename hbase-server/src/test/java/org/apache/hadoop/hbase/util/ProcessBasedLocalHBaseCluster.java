@@ -187,11 +187,19 @@ public class ProcessBasedLocalHBaseCluster {
   }
 
   public void startRegionServer(int port) {
-    startServer(ServerType.RS, port);
+    try {
+      startServer(ServerType.RS, port);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   public void startMaster(int port) {
-    startServer(ServerType.MASTER, port);
+    try {
+      startServer(ServerType.MASTER, port);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   public void killRegionServer(int port) throws IOException {
@@ -202,7 +210,7 @@ public class ProcessBasedLocalHBaseCluster {
     killServer(ServerType.MASTER, 0);
   }
 
-  public void startZK() {
+  public void startZK() throws IOException {
     startServer(ServerType.ZK, 0);
   }
 
@@ -335,7 +343,7 @@ public class ProcessBasedLocalHBaseCluster {
     executeCommand(cmd);
   }
 
-  private void startServer(ServerType serverType, int rsPort) {
+  private void startServer(ServerType serverType, int rsPort) throws IOException {
     // create working directory for this region server.
     String dir = serverWorkingDir(serverType, rsPort);
     String confStr = generateConfig(serverType, rsPort, dir);
@@ -378,7 +386,7 @@ public class ProcessBasedLocalHBaseCluster {
   }
 
   private final String generateConfig(ServerType serverType, int rpcPort,
-      String daemonDir) {
+      String daemonDir) throws IOException {
     StringBuilder sb = new StringBuilder();
     Map<String, Object> confMap = new TreeMap<>();
     confMap.put(HConstants.CLUSTER_DISTRIBUTED, true);
