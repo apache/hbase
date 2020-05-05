@@ -63,7 +63,7 @@ class MetaFixer {
   MetaFixer(MasterServices masterServices) {
     this.masterServices = masterServices;
     this.maxMergeCount = this.masterServices.getConfiguration().
-        getInt(MAX_MERGE_COUNT_KEY, MAX_MERGE_COUNT_DEFAULT);
+      getInt(MAX_MERGE_COUNT_KEY, MAX_MERGE_COUNT_DEFAULT);
   }
 
   void fix() throws IOException {
