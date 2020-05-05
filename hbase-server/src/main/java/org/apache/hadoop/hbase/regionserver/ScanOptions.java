@@ -22,6 +22,7 @@ import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import java.io.IOException;
 
 /**
  * This class gives you the ability to change the max versions and TTL options before opening a
@@ -70,5 +71,5 @@ public interface ScanOptions {
 
   void setMinVersions(int minVersions);
 
-  Scan getScan();
+  Scan getScan() throws IOException;
 }

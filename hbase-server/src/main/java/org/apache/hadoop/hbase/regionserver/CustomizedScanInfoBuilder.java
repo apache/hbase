@@ -104,8 +104,8 @@ public class CustomizedScanInfoBuilder implements ScanOptions {
   }
 
   @Override
-  public Scan getScan() {
-    return scan;
+  public Scan getScan() throws IOException {
+    return new Scan(scan);
   }
 
 }
