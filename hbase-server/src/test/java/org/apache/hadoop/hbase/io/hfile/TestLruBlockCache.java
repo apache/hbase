@@ -1063,7 +1063,7 @@ public class TestLruBlockCache {
       Thread.sleep(1);
     }
 
-    // Check if all offset of cached blocks less
+    // Check if all offset (last two digits) of cached blocks less than the percent.
     // It means some of blocka were not put into BlockCache
     for (BlockCacheKey key : cache.getMapForTests().keySet()) {
       Assert.assertTrue(key.getOffset() % 100 < percentOfCachedBlocks);
