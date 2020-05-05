@@ -129,12 +129,12 @@ public class TestServerName {
     assertSame(sn1, ServerName.valueOf("www.example.org", 1234, 5671));
   }
 
-  @Ignore // Enable and let fun for hours to make sure weak references working fine.
   @Test
   public void testInterningDoesWeakReferences() {
-    for (int i = 0; i < Integer.MAX_VALUE; i++) {
-      ServerName.valueOf("www.example.org", 1234, i++);
+    for (int i = 0; i < 5000; i++) {
+      final int startcode = i++;
+      final ServerName sn1 = ServerName.valueOf("www.example.org", 1234, startcode);
+      assertSame(sn1, ServerName.valueOf("www.example.org", 1234, startcode));
     }
   }
 }
-
