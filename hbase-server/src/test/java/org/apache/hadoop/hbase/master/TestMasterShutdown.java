@@ -129,7 +129,7 @@ public class TestMasterShutdown {
     try {
       htu =  new HBaseTestingUtility(
         createMasterShutdownBeforeStartingAnyRegionServerConfiguration());
-
+      htu.getConfiguration().setInt("hbase.client.retries.number", 64);
       // configure a cluster with
       final StartMiniClusterOption options = StartMiniClusterOption.builder()
         .numDataNodes(1)
