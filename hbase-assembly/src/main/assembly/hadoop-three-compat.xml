@@ -34,7 +34,9 @@
       <includes>
         <!-- Keep this list sorted by name -->
         <include>org.apache.hbase:hbase-annotations</include>
+        <include>org.apache.hbase:hbase-asyncfs</include>
         <include>org.apache.hbase:hbase-backup</include>
+        <include>org.apache.hbase:hbase-balancer</include>
         <include>org.apache.hbase:hbase-client</include>
         <include>org.apache.hbase:hbase-common</include>
         <include>org.apache.hbase:hbase-endpoint</include>
@@ -49,7 +51,6 @@
         <include>org.apache.hbase:hbase-procedure</include>
         <include>org.apache.hbase:hbase-protocol</include>
         <include>org.apache.hbase:hbase-protocol-shaded</include>
-        <include>org.apache.hbase:hbase-balancer</include>
         <include>org.apache.hbase:hbase-replication</include>
         <include>org.apache.hbase:hbase-rest</include>
         <include>org.apache.hbase:hbase-rsgroup</include>
