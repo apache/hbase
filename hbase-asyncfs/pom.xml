@@ -31,8 +31,6 @@
   <artifactId>hbase-asyncfs</artifactId>
   <name>Apache HBase - Asynchronous FileSystem</name>
   <description>HBase Asynchronous FileSystem Implementation for WAL</description>
-  <!--REMOVE-->
-
   <build>
     <plugins>
       <!-- Make a jar and put the sources in the jar -->
