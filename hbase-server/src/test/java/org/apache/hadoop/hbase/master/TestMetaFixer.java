@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.function.BooleanSupplier;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -31,8 +32,12 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.assignment.GCRegionProcedure;
+import org.apache.hadoop.hbase.master.assignment.GCMultipleMergedRegionsProcedure;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Threads;
@@ -168,18 +173,44 @@ public class TestMetaFixer {
     assertEquals(1, MetaFixer.calculateMerges(10, report.getOverlaps()).size());
     MetaFixer fixer = new MetaFixer(services);
     fixer.fixOverlaps(report);
+
+    CatalogJanitor cj = services.getCatalogJanitor();
     await(10, () -> {
       try {
-        services.getCatalogJanitor().scan();
-        final CatalogJanitor.Report postReport = services.getCatalogJanitor().getLastReport();
-        return postReport.isEmpty();
+        if (cj.scan() > 0) {
+          // It submits GC once, then it will immediately kick off another GC to test if
+          // GCMultipleMergedRegionsProcedure is idempotent. If it is not, it will create
+          // a hole.
+          Map<RegionInfo, Result> mergedRegions = cj.getLastReport().mergedRegions;
+          for (Map.Entry<RegionInfo, Result> e : mergedRegions.entrySet()) {
+            List<RegionInfo> parents = MetaTableAccessor.getMergeRegions(e.getValue().rawCells());
+            if (parents != null) {
+              ProcedureExecutor<MasterProcedureEnv> pe = services.getMasterProcedureExecutor();
+              pe.submitProcedure(new GCMultipleMergedRegionsProcedure(pe.getEnvironment(),
+                e.getKey(), parents));
+            }
+          }
+          return true;
+        }
+        return false;
       } catch (Exception e) {
         throw new RuntimeException(e);
       }
     });
 
+    // Wait until all GCs settled down
+    await(10, () -> {
+      return services.getMasterProcedureExecutor().getActiveProcIds().isEmpty();
+    });
+
+    // No orphan regions on FS
     hbckChore.chore();
     assertEquals(0, hbckChore.getOrphanRegionsOnFS().size());
+
+    // No holes reported.
+    cj.scan();
+    final CatalogJanitor.Report postReport = cj.getLastReport();
+    assertTrue(postReport.isEmpty());
   }
 
   /**

@@ -1846,6 +1846,16 @@ public class MetaTableAccessor {
       qualifiers.add(qualifier);
       delete.addColumns(getCatalogFamily(), qualifier, HConstants.LATEST_TIMESTAMP);
     }
+
+    // There will be race condition that a GCMultipleMergedRegionsProcedure is scheduled while
+    // the previous GCMultipleMergedRegionsProcedure is still going on, in this case, the second
+    // GCMultipleMergedRegionsProcedure could delete the merged region by accident!
+    if (qualifiers.isEmpty()) {
+      LOG.info("No merged qualifiers for region " + mergeRegion.getRegionNameAsString() +
+        " in meta table, they are cleaned up already, Skip.");
+      return;
+    }
+
     deleteFromMetaTable(connection, delete);
     LOG.info("Deleted merge references in " + mergeRegion.getRegionNameAsString() +
         ", deleted qualifiers " + qualifiers.stream().map(Bytes::toStringBinary).
