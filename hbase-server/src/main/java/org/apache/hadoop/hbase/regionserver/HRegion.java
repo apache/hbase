@@ -683,7 +683,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private boolean splitRequest;
   private byte[] explicitSplitPoint = null;
 
-  private final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
+  private final MultiVersionConcurrencyControl mvcc;
 
   // Coprocessor host
   private RegionCoprocessorHost coprocessorHost;
@@ -761,6 +761,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     this.wal = wal;
     this.fs = fs;
+    this.mvcc = new MultiVersionConcurrencyControl(getRegionInfo().getShortNameToLog());
 
     // 'conf' renamed to 'confParam' b/c we use this.conf in the constructor
     this.baseConf = confParam;
