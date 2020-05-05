@@ -20,8 +20,9 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.procedure2.RSProcedureCallable;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.log4j.Logger;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
@@ -34,7 +35,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.R
 @InterfaceAudience.Private
 public class RefreshPeerCallable implements RSProcedureCallable {
 
-  private static final Logger LOG = Logger.getLogger(RefreshPeerCallable.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RefreshPeerCallable.class);
+
   private HRegionServer rs;
 
   private String peerId;
