@@ -2257,7 +2257,7 @@ The percent of region server RPC threads failed to abort RS.
 
 +
 .Default
-`10`
+`64`
 
 
 [[hbase.rpc.rows.size.threshold.reject]]

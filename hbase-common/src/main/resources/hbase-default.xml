@@ -1948,7 +1948,7 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.master.metafixer.max.merge.count</name>
-    <value>10</value>
+    <value>64</value>
     <description>
       Maximum regions to merge at a time when we fix overlaps noted in
       CJ consistency report, but avoid merging 100 regions in one go!
