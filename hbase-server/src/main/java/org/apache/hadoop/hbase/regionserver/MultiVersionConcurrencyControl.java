@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Objects;
+import com.google.common.base.Objects.ToStringHelper;
 
 import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicLong;
@@ -40,7 +41,9 @@ import org.apache.hadoop.hbase.util.ClassSize;
 public class MultiVersionConcurrencyControl {
   private static final Log LOG = LogFactory.getLog(MultiVersionConcurrencyControl.class);
   static final long NO_WRITE_NUMBER = 0;
+  private static final long READPOINT_ADVANCE_WAIT_TIME = 10L;
 
+  final String regionName;
   final AtomicLong readPoint = new AtomicLong(0);
   final AtomicLong writePoint = new AtomicLong(0);
   private final Object readWaiters = new Object();
@@ -58,13 +61,18 @@ public class MultiVersionConcurrencyControl {
   private final LinkedList<WriteEntry> writeQueue = new LinkedList<WriteEntry>();
 
   public MultiVersionConcurrencyControl() {
-    super();
+    this(null);
+  }
+
+  public MultiVersionConcurrencyControl(String regionName) {
+    this.regionName = regionName;
   }
 
   /**
    * Construct and set read point. Write point is uninitialized.
    */
   public MultiVersionConcurrencyControl(long startPoint) {
+    this(null);
     tryAdvanceTo(startPoint, NONE);
   }
 
@@ -227,11 +235,12 @@ public class MultiVersionConcurrencyControl {
     synchronized (readWaiters) {
       while (readPoint.get() < e.getWriteNumber()) {
         if (count % 100 == 0 && count > 0) {
-          LOG.warn("STUCK: " + this);
+          long totalWaitTillNow = READPOINT_ADVANCE_WAIT_TIME * count;
+          LOG.warn("STUCK for : " + totalWaitTillNow + " millis. " + this);
         }
         count++;
         try {
-          readWaiters.wait(10);
+          readWaiters.wait(READPOINT_ADVANCE_WAIT_TIME);
         } catch (InterruptedException ie) {
           // We were interrupted... finish the loop -- i.e. cleanup --and then
           // on our way out, reset the interrupt flag.
@@ -247,9 +256,12 @@ public class MultiVersionConcurrencyControl {
   @VisibleForTesting
   @Override
   public String toString() {
-    return Objects.toStringHelper(this)
-        .add("readPoint", readPoint)
-        .add("writePoint", writePoint).toString();
+    ToStringHelper helper = Objects.toStringHelper(this).add("readPoint", readPoint)
+        .add("writePoint", writePoint);
+    if (this.regionName != null) {
+      helper.add("regionName", this.regionName);
+    }
+    return helper.toString();
   }
 
   public long getReadPoint() {
