@@ -373,7 +373,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
 
     // check the bounds
     cacheDataBlockPercent = cacheDataBlockPercent > 100 ? 100 : cacheDataBlockPercent;
-    this.cacheDataBlockPercent = cacheDataBlockPercent < 0 ? 0 : cacheDataBlockPercent;
+    this.cacheDataBlockPercent = cacheDataBlockPercent < 1 ? 1 : cacheDataBlockPercent;
     this.heavyEvictionCountLimit = heavyEvictionCountLimit;
     this.heavyEvictionBytesSizeLimit = heavyEvictionBytesSizeLimit;
     this.heavyEvictionCount = 0;
