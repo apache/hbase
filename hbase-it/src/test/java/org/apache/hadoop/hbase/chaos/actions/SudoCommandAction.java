@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,18 +19,14 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.DistributedHBaseCluster;
 import org.apache.hadoop.hbase.HBaseCluster;
 import org.apache.hadoop.hbase.HBaseClusterManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Base class for performing Actions based on linux commands requiring sudo privileges
  */
 abstract public class SudoCommandAction extends Action {
-  private static final Logger LOG = LoggerFactory.getLogger(SudoCommandAction.class);
 
   protected long timeout;
   protected HBaseClusterManager clusterManager;
@@ -43,9 +39,9 @@ abstract public class SudoCommandAction extends Action {
   public void init(ActionContext context) throws IOException {
     super.init(context);
     HBaseCluster cluster = context.getHBaseCluster();
-    if(cluster != null && cluster instanceof DistributedHBaseCluster){
+    if (cluster instanceof DistributedHBaseCluster){
       Object manager = ((DistributedHBaseCluster)cluster).getClusterManager();
-      if(manager != null && manager instanceof HBaseClusterManager){
+      if (manager instanceof HBaseClusterManager){
         clusterManager = (HBaseClusterManager) manager;
       }
     }
@@ -53,8 +49,8 @@ abstract public class SudoCommandAction extends Action {
 
   @Override
   public void perform() throws Exception {
-    if(clusterManager == null){
-      LOG.info("Couldn't perform command action, it requires a distributed cluster.");
+    if (clusterManager == null){
+      getLogger().info("Couldn't perform command action, it requires a distributed cluster.");
       return;
     }
 

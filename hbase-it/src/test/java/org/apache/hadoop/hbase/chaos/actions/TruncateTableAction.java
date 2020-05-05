@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.Random;
-
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -30,14 +29,17 @@ import org.slf4j.LoggerFactory;
  * Action that tries to truncate of a table.
  */
 public class TruncateTableAction extends Action {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(TruncateTableAction.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TruncateTableAction.class);
   private final TableName tableName;
   private final Random random;
 
   public TruncateTableAction(String tableName) {
     this.tableName = TableName.valueOf(tableName);
     this.random = new Random();
+  }
+
+  @Override protected Logger getLogger() {
+    return LOG;
   }
 
   @Override
@@ -51,8 +53,8 @@ public class TruncateTableAction extends Action {
     }
 
     boolean preserveSplits = random.nextBoolean();
-    LOG.info("Performing action: Truncate table " + tableName.getNameAsString() +
-             "preserve splits " + preserveSplits);
+    getLogger().info("Performing action: Truncate table {} preserve splits {}",
+      tableName.getNameAsString(), preserveSplits);
     admin.truncateTable(tableName, preserveSplits);
   }
 }

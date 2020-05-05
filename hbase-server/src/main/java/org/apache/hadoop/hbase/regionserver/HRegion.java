@@ -689,7 +689,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private boolean splitRequest;
   private byte[] explicitSplitPoint = null;
 
-  private final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
+  private final MultiVersionConcurrencyControl mvcc;
 
   // Coprocessor host
   private RegionCoprocessorHost coprocessorHost;
@@ -767,6 +767,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     this.wal = wal;
     this.fs = fs;
+    this.mvcc = new MultiVersionConcurrencyControl(getRegionInfo().getShortNameToLog());
 
     // 'conf' renamed to 'confParam' b/c we use this.conf in the constructor
     this.baseConf = confParam;
@@ -2218,15 +2219,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    *  }
    * Also in compactor.performCompaction():
    * check periodically to see if a system stop is requested
-   * if (closeCheckInterval > 0) {
-   *   bytesWritten += len;
-   *   if (bytesWritten > closeCheckInterval) {
-   *     bytesWritten = 0;
-   *     if (!store.areWritesEnabled()) {
-   *       progress.cancel();
-   *       return false;
-   *     }
-   *   }
+   * if (closeChecker != null && closeChecker.isTimeLimit(store, now)) {
+   *    progress.cancel();
+   *    return false;
+   * }
+   * if (closeChecker != null && closeChecker.isSizeLimit(store, len)) {
+   *   progress.cancel();
+   *   return false;
    * }
    */
   public boolean compact(CompactionContext compaction, HStore store,

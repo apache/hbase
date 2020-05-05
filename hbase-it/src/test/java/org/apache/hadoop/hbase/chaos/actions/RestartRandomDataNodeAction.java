@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,9 +41,13 @@ public class RestartRandomDataNodeAction extends RestartActionBaseAction {
     super(sleepTime);
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
-    LOG.info("Performing action: Restart random data node");
+    getLogger().info("Performing action: Restart random data node");
     ServerName server = PolicyBasedChaosMonkey.selectRandomItem(getDataNodes());
     restartDataNode(server, sleepTime);
   }
@@ -56,6 +60,6 @@ public class RestartRandomDataNodeAction extends RestartActionBaseAction {
     for (DatanodeInfo dataNode: dfsClient.datanodeReport(HdfsConstants.DatanodeReportType.LIVE)) {
       hosts.add(ServerName.valueOf(dataNode.getHostName(), -1, -1));
     }
-    return hosts.toArray(new ServerName[hosts.size()]);
+    return hosts.toArray(new ServerName[0]);
   }
 }

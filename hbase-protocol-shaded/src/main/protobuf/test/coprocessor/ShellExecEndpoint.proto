@@ -16,28 +16,27 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.chaos.actions;
+/*
+ * Opens a tunnel for remote shell execution on the target server. Used by `CoprocClusterManager`.
+ */
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+syntax = "proto2";
+option java_package = "org.apache.hadoop.hbase.coprocessor.protobuf.generated";
+option java_outer_classname = "ShellExecEndpoint";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
 
-/**
-* Action that tries to force a balancer run.
-*/
-public class ForceBalancerAction extends Action {
-  private static final Logger LOG = LoggerFactory.getLogger(ForceBalancerAction.class);
+message ShellExecRequest {
+  required string command = 1;
+  optional bool await_response = 2;
+}
 
-  @Override protected Logger getLogger() {
-    return LOG;
-  }
+message ShellExecResponse {
+  optional int32 exit_code = 1;
+  optional string stdout = 2;
+  optional string stderr = 3;
+}
 
-  @Override
-  public void perform() throws Exception {
-    // Don't try the flush if we're stopping
-    if (context.isStopping()) {
-      return;
-    }
-    getLogger().info("Balancing regions");
-    forceBalancer();
-  }
+service ShellExecService {
+  rpc shell_exec(ShellExecRequest) returns(ShellExecResponse);
 }

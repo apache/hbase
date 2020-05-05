@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.slf4j.Logger;
@@ -30,8 +29,8 @@ import org.slf4j.LoggerFactory;
  */
 public class DelayPacketsCommandAction extends TCCommandAction {
   private static final Logger LOG = LoggerFactory.getLogger(DelayPacketsCommandAction.class);
-  private long delay;
-  private long duration;
+  private final long delay;
+  private final long duration;
 
   /**
    * Adds latency to communication on a random region server
@@ -47,8 +46,12 @@ public class DelayPacketsCommandAction extends TCCommandAction {
     this.duration = duration;
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   protected void localPerform() throws IOException {
-    LOG.info("Starting to execute DelayPacketsCommandAction");
+    getLogger().info("Starting to execute DelayPacketsCommandAction");
     ServerName server = PolicyBasedChaosMonkey.selectRandomItem(getCurrentServers());
     String hostname = server.getHostname();
 
@@ -56,12 +59,12 @@ public class DelayPacketsCommandAction extends TCCommandAction {
       clusterManager.execSudoWithRetries(hostname, timeout, getCommand(ADD));
       Thread.sleep(duration);
     } catch (InterruptedException e) {
-      LOG.debug("Failed to run the command for the full duration", e);
+      getLogger().debug("Failed to run the command for the full duration", e);
     } finally {
       clusterManager.execSudoWithRetries(hostname, timeout, getCommand(DELETE));
     }
 
-    LOG.info("Finished to execute DelayPacketsCommandAction");
+    getLogger().info("Finished to execute DelayPacketsCommandAction");
   }
 
   private String getCommand(String operation){

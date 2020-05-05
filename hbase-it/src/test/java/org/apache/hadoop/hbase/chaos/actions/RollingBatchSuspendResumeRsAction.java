@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
-
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
@@ -40,9 +39,9 @@ import org.slf4j.LoggerFactory;
 public class RollingBatchSuspendResumeRsAction extends Action {
   private static final Logger LOG =
       LoggerFactory.getLogger(RollingBatchSuspendResumeRsAction.class);
-  private float ratio;
-  private long sleepTime;
-  private int maxSuspendedServers; // number of maximum suspended servers at any given time.
+  private final float ratio;
+  private final long sleepTime;
+  private final int maxSuspendedServers; // number of maximum suspended servers at any given time.
 
   public RollingBatchSuspendResumeRsAction(long sleepTime, float ratio) {
     this(sleepTime, ratio, 5);
@@ -58,10 +57,14 @@ public class RollingBatchSuspendResumeRsAction extends Action {
     SUSPEND, RESUME
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
-    LOG.info(String.format("Performing action: Rolling batch restarting %d%% of region servers",
-        (int) (ratio * 100)));
+    getLogger().info("Performing action: Rolling batch restarting {}% of region servers",
+      (int) (ratio * 100));
     List<ServerName> selectedServers = selectServers();
 
     Queue<ServerName> serversToBeSuspended = new LinkedList<>(selectedServers);
@@ -70,8 +73,8 @@ public class RollingBatchSuspendResumeRsAction extends Action {
     // loop while there are servers to be suspended or suspended servers to be resumed
     while ((!serversToBeSuspended.isEmpty() || !suspendedServers.isEmpty()) && !context
         .isStopping()) {
-      SuspendOrResume action;
 
+      final SuspendOrResume action;
       if (serversToBeSuspended.isEmpty()) { // no more servers to suspend
         action = SuspendOrResume.RESUME;
       } else if (suspendedServers.isEmpty()) {
@@ -105,7 +108,7 @@ public class RollingBatchSuspendResumeRsAction extends Action {
           break;
       }
 
-      LOG.info("Sleeping for:{}", sleepTime);
+      getLogger().info("Sleeping for:{}", sleepTime);
       Threads.sleep(sleepTime);
     }
   }
