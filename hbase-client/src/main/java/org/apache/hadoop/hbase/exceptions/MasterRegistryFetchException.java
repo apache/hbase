@@ -30,6 +30,9 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class MasterRegistryFetchException extends HBaseIOException {
+
+  private static final long serialVersionUID = 6992134872168185171L;
+
   public MasterRegistryFetchException(Set<ServerName> masters, Throwable failure) {
     super(String.format("Exception making rpc to masters %s", PrettyPrinter.toString(masters)),
         failure);
