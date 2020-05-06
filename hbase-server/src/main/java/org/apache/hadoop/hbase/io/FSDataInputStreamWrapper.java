@@ -238,7 +238,7 @@ public class FSDataInputStreamWrapper {
         readStatistics.totalBytesRead += hdfsDataInputStream.getReadStatistics().
           getTotalBytesRead();
         readStatistics.totalLocalBytesRead += hdfsDataInputStream.getReadStatistics().
-          getTotalBytesRead();
+          getTotalLocalBytesRead();
         readStatistics.totalShortCircuitBytesRead += hdfsDataInputStream.getReadStatistics().
           getTotalShortCircuitBytesRead();
         readStatistics.totalZeroCopyBytesRead += hdfsDataInputStream.getReadStatistics().
