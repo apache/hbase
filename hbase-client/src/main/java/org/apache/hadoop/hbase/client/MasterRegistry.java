@@ -181,10 +181,12 @@ public class MasterRegistry implements ConnectionRegistry {
     return new IOException(String.format("Invalid result for request %s. Will be retried", debug));
   }
 
-  // send requests concurrently to hedgedReadsFanout masters. If any of the request is succeeded, we
-  // will complete the future and quit. If all the requests in one round are failed, we will start
-  // another round to send requests concurrently tohedgedReadsFanout masters. If all masters have
-  // been tried and all of them are failed, we will fail the future.
+  /**
+   * send requests concurrently to hedgedReadsFanout masters. If any of the request is succeeded, we
+   * will complete the future and quit. If all the requests in one round are failed, we will start
+   * another round to send requests concurrently tohedgedReadsFanout masters. If all masters have
+   * been tried and all of them are failed, we will fail the future.
+   */
   private <T extends Message> void groupCall(CompletableFuture<T> future,
     List<ClientMetaService.Interface> masterStubs, int startIndexInclusive, Callable<T> callable,
     Predicate<T> isValidResp, String debug, ConcurrentLinkedQueue<Throwable> errors) {

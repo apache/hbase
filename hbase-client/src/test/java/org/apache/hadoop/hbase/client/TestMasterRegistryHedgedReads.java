@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -44,6 +45,7 @@ import org.apache.hadoop.hbase.util.FutureUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
@@ -61,6 +63,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetCluster
 
 @Category({ ClientTests.class, SmallTests.class })
 public class TestMasterRegistryHedgedReads {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestMasterRegistryHedgedReads.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterRegistryHedgedReads.class);
 
