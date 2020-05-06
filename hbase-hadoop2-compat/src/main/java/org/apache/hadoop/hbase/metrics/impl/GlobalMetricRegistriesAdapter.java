@@ -18,17 +18,13 @@
 package org.apache.hadoop.hbase.metrics.impl;
 
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.lang.reflect.FieldUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.metrics.MetricRegistries;
@@ -37,11 +33,8 @@ import org.apache.hadoop.hbase.metrics.MetricRegistryInfo;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsExecutor;
 import org.apache.hadoop.metrics2.MetricsSource;
-import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.impl.JmxCacheBuster;
-import org.apache.hadoop.metrics2.impl.MetricsSystemImpl;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
-import org.apache.hadoop.metrics2.lib.DefaultMetricsSystemHelper;
 import org.apache.hadoop.metrics2.lib.MetricsExecutorImpl;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -87,7 +80,6 @@ public class GlobalMetricRegistriesAdapter {
 
   private final MetricsExecutor executor;
   private final AtomicBoolean stopped;
-  private final DefaultMetricsSystemHelper helper;
   private final HBaseMetrics2HadoopMetricsAdapter metricsAdapter;
   private final HashMap<MetricRegistryInfo, MetricsSourceAdapter> registeredSources;
 
@@ -96,7 +88,6 @@ public class GlobalMetricRegistriesAdapter {
     this.stopped = new AtomicBoolean(false);
     this.metricsAdapter = new HBaseMetrics2HadoopMetricsAdapter();
     this.registeredSources = new HashMap<>();
-    this.helper = new DefaultMetricsSystemHelper();
     executor.getExecutor().scheduleAtFixedRate(new Runnable(){
       @Override
       public void run() {
@@ -167,67 +158,13 @@ public class GlobalMetricRegistriesAdapter {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Removing adapter for the MetricRegistry: " + info.getMetricsJmxContext());
         }
-        synchronized(DefaultMetricsSystem.instance()) {
-          unregisterSource(info);
-          helper.removeSourceName(info.getMetricsJmxContext());
-          helper.removeObjectName(info.getMetricsJmxContext());
-          it.remove();
-          removed = true;
-        }
+        DefaultMetricsSystem.instance().unregisterSource(info.getMetricsJmxContext());
+        it.remove();
+        removed = true;
       }
     }
     if (removed) {
       JmxCacheBuster.clearJmxCache();
-    }
-  }
-
-  /**
-   * Use reflection to unregister the Hadoop metric source, since MetricsSystem#unregisterSource()
-   * is only available in Hadoop 2.6+ (HADOOP-10839)
-   */
-  @VisibleForTesting
-  protected void unregisterSource(MetricRegistryInfo info) {
-    // unregisterSource is only available in Hadoop 2.6+ (HADOOP-10839). Don't unregister for now
-    MetricsSystem metricsSystem = DefaultMetricsSystem.instance();
-    if (metricsSystem instanceof MetricsSystemImpl) {
-      try {
-        // it's actually a Map<String, MetricsSourceAdapter> , but MetricsSourceAdapter isn't
-        // accessible
-        @SuppressWarnings("unchecked")
-        Map<String, Object> sources =
-            (Map<String, Object>) FieldUtils.readField(metricsSystem, "sources", true);
-        String sourceName = info.getMetricsJmxContext();
-        if (sources.containsKey(sourceName)) {
-          Object sourceAdapter = sources.get(sourceName);
-          Method method = null;
-          try {
-            method = sourceAdapter.getClass().getDeclaredMethod("stop");
-          } catch (NoSuchMethodException e) {
-            LOG.info("Stop method not found on MetricsSourceAdapter");
-          } catch (SecurityException e) {
-            LOG.info("Don't have access to call stop method not found on MetricsSourceAdapter", e);
-          }
-          if (method != null) {
-            method.setAccessible(true);
-            try {
-              method.invoke(sourceAdapter);
-            } catch (IllegalArgumentException | InvocationTargetException e) {
-              LOG.warn("Couldn't invoke stop on metrics source adapter: " + sourceName);
-              e.printStackTrace();
-            }
-          }
-          sources.remove(sourceName);
-
-        }
-        @SuppressWarnings("unchecked")
-        Map<String, MetricsSource> allSources =
-            (Map<String, MetricsSource>) FieldUtils.readField(metricsSystem, "allSources", true);
-        if (allSources.containsKey(sourceName)) {
-          allSources.remove(sourceName);
-        }
-      } catch (IllegalAccessException e) {
-        LOG.warn("Error unregistering metric source " + info.getMetricsJmxContext());
-      }
     }
   }
 }
