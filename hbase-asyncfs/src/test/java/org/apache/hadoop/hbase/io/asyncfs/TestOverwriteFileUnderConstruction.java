@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.io.asyncfs;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
 import java.io.FileNotFoundException;
@@ -29,7 +29,6 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
@@ -47,13 +46,11 @@ import org.junit.rules.TestName;
  * Used to confirm that it is OK to overwrite a file which is being written currently.
  */
 @Category({ MiscTests.class, MediumTests.class })
-public class TestOverwriteFileUnderConstruction {
+public class TestOverwriteFileUnderConstruction extends AsyncFSTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestOverwriteFileUnderConstruction.class);
-
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   private static FileSystem FS;
 
@@ -62,13 +59,13 @@ public class TestOverwriteFileUnderConstruction {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    UTIL.startMiniDFSCluster(3);
-    FS = UTIL.getDFSCluster().getFileSystem();
+    startMiniDFSCluster(3);
+    FS = CLUSTER.getFileSystem();
   }
 
   @AfterClass
   public static void tearDown() throws Exception {
-    UTIL.shutdownMiniCluster();
+    shutdownMiniDFSCluster();
   }
 
   @Test

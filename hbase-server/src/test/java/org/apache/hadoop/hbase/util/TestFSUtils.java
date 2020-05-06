@@ -28,6 +28,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Random;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -37,6 +38,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
@@ -645,17 +647,12 @@ public class TestFSUtils {
   }
 
 
-  private static final boolean STREAM_CAPABILITIES_IS_PRESENT;
   static {
-    boolean tmp = false;
     try {
       Class.forName("org.apache.hadoop.fs.StreamCapabilities");
-      tmp = true;
       LOG.debug("Test thought StreamCapabilities class was present.");
     } catch (ClassNotFoundException exception) {
       LOG.debug("Test didn't think StreamCapabilities class was present.");
-    } finally {
-      STREAM_CAPABILITIES_IS_PRESENT = tmp;
     }
   }
 
@@ -670,6 +667,58 @@ public class TestFSUtils {
       assertFalse(stream.hasCapability("a capability that hopefully HDFS doesn't add."));
     } finally {
       cluster.shutdown();
+    }
+  }
+
+  private void testIsSameHdfs(int nnport) throws IOException {
+    Configuration conf = HBaseConfiguration.create();
+    Path srcPath = new Path("hdfs://localhost:" + nnport + "/");
+    Path desPath = new Path("hdfs://127.0.0.1/");
+    FileSystem srcFs = srcPath.getFileSystem(conf);
+    FileSystem desFs = desPath.getFileSystem(conf);
+
+    assertTrue(FSUtils.isSameHdfs(conf, srcFs, desFs));
+
+    desPath = new Path("hdfs://127.0.0.1:8070/");
+    desFs = desPath.getFileSystem(conf);
+    assertTrue(!FSUtils.isSameHdfs(conf, srcFs, desFs));
+
+    desPath = new Path("hdfs://127.0.1.1:" + nnport + "/");
+    desFs = desPath.getFileSystem(conf);
+    assertTrue(!FSUtils.isSameHdfs(conf, srcFs, desFs));
+
+    conf.set("fs.defaultFS", "hdfs://haosong-hadoop");
+    conf.set("dfs.nameservices", "haosong-hadoop");
+    conf.set("dfs.ha.namenodes.haosong-hadoop", "nn1,nn2");
+    conf.set("dfs.client.failover.proxy.provider.haosong-hadoop",
+      "org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider");
+
+    conf.set("dfs.namenode.rpc-address.haosong-hadoop.nn1", "127.0.0.1:" + nnport);
+    conf.set("dfs.namenode.rpc-address.haosong-hadoop.nn2", "127.10.2.1:8000");
+    desPath = new Path("/");
+    desFs = desPath.getFileSystem(conf);
+    assertTrue(FSUtils.isSameHdfs(conf, srcFs, desFs));
+
+    conf.set("dfs.namenode.rpc-address.haosong-hadoop.nn1", "127.10.2.1:" + nnport);
+    conf.set("dfs.namenode.rpc-address.haosong-hadoop.nn2", "127.0.0.1:8000");
+    desPath = new Path("/");
+    desFs = desPath.getFileSystem(conf);
+    assertTrue(!FSUtils.isSameHdfs(conf, srcFs, desFs));
+  }
+
+  @Test
+  public void testIsSameHdfs() throws IOException {
+    String hadoopVersion = org.apache.hadoop.util.VersionInfo.getVersion();
+    LOG.info("hadoop version is: " + hadoopVersion);
+    boolean isHadoop3_0_0 = hadoopVersion.startsWith("3.0.0");
+    if (isHadoop3_0_0) {
+      // Hadoop 3.0.0 alpha1+ ~ 3.0.0 GA changed default nn port to 9820.
+      // See HDFS-9427
+      testIsSameHdfs(9820);
+    } else {
+      // pre hadoop 3.0.0 defaults to port 8020
+      // Hadoop 3.0.1 changed it back to port 8020. See HDFS-12990
+      testIsSameHdfs(8020);
     }
   }
 }

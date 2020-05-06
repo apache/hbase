@@ -678,7 +678,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     createDirAndSetProperty("dfs.datanode.shared.file.descriptor.paths");
     createDirAndSetProperty("nfs.dump.dir");
     createDirAndSetProperty("java.io.tmpdir");
-    createDirAndSetProperty("java.io.tmpdir");
     createDirAndSetProperty("dfs.journalnode.edits.dir");
     createDirAndSetProperty("dfs.provided.aliasmap.inmemory.leveldb.dir");
     createDirAndSetProperty("fs.s3a.committer.staging.tmp.path");
