@@ -17,15 +17,10 @@
  */
 package org.apache.hadoop.hbase.master.webapp;
 
-import static org.apache.hbase.thirdparty.org.apache.commons.collections4.ListUtils.emptyIfNull;
-
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import org.apache.commons.lang3.builder.EqualsBuilder;

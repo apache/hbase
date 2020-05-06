@@ -387,18 +387,24 @@ if (fqtn != null && master.isInitialized()) {
 <%
     }
   }
+
+  String regionInfoColumnName = HConstants.CATALOG_FAMILY_STR + ":" + HConstants.REGIONINFO_QUALIFIER_STR;
+  String serverColumnName = HConstants.CATALOG_FAMILY_STR + ":" + HConstants.SERVER_QUALIFIER_STR;
+  String startCodeColumnName = HConstants.CATALOG_FAMILY_STR + ":" + HConstants.STARTCODE_QUALIFIER_STR;
+  String serverNameColumnName = HConstants.CATALOG_FAMILY_STR + ":" + HConstants.SERVERNAME_QUALIFIER_STR;
+  String seqNumColumnName = HConstants.CATALOG_FAMILY_STR + ":" + HConstants.SEQNUM_QUALIFIER_STR;
 %>
 <div style="overflow-x: auto">
   <table class="table table-striped nowrap">
     <tr>
-      <th title="Region name">RegionName</th>
+      <th title="Region name, stored in <%= regionInfoColumnName %> column">RegionName</th>
       <th title="The startKey of this region">Start Key</th>
       <th title="The endKey of this region">End Key</th>
       <th title="Region replica id">Replica ID</th>
       <th title="State of the region while undergoing transitions">RegionState</th>
-      <th title="Server hosting this region replica, stored in info:server column">Server</th>
-      <th title="The seqNum for the region at the time the server opened this region replica">Sequence Number</th>
-      <th title="Server where the region is transitioning on, stored in info:sn column">Target Server</th>
+      <th title="Server hosting this region replica, stored in <%= serverColumnName %> column">Server</th>
+      <th title="The seqNum for the region at the time the server opened this region replica, stored in <%= seqNumColumnName %>">Sequence Number</th>
+      <th title="The server to which the region is transiting, stored in <%= serverNameColumnName %> column">Target Server</th>
       <th title="The parents regions if this region is undergoing a merge">info:merge*</th>
       <th title="The daughter regions if this region is split">info:split*</th>
     </tr>
@@ -456,14 +462,14 @@ if (fqtn != null && master.isInitialized()) {
           .collect(Collectors.joining("<br/>"));
   %>
     <tr>
-      <td title="info:regioninfo"><%= regionNameDisplay %></td>
+      <td title="<%= regionInfoColumnName %>"><%= regionNameDisplay %></td>
       <td title="startKey"><%= startKeyDisplay %></td>
       <td title="endKey"><%= endKeyDisplay %></td>
       <td title="replicaId"><%= replicaIdDisplay %></td>
       <td title="regionState"><%= regionStateDisplay %></td>
-      <td title="info:server,info:serverstartcode"><%= buildRegionServerLink(serverName, rsPort, regionInfo, regionState) %></td>
-      <td title="info:seqnumDuringOpen"><%= seqNum %></td>
-      <td title="info:sn"><%= targetServerName %></td>
+      <td title="<%= serverColumnName + "," + startCodeColumnName %>"><%= buildRegionServerLink(serverName, rsPort, regionInfo, regionState) %></td>
+      <td title="<%= seqNumColumnName %>"><%= seqNum %></td>
+      <td title="<%= serverNameColumnName %>"><%= targetServerName %></td>
       <td><%= mergeRegionNames %></td>
       <td><%= splitName %></td>
     </tr>
