@@ -111,12 +111,11 @@ if [[ "$1" == "tag" ]]; then
   set -o pipefail
   set -x  # detailed logging during action
   check_get_passwords ASF_PASSWORD
-  check_needed_vars PROJECT ASF_USERNAME ASF_PASSWORD RELEASE_VERSION RELEASE_TAG NEXT_VERSION \
-      GIT_EMAIL GIT_NAME GIT_BRANCH
-  ASF_REPO="gitbox.apache.org/repos/asf/${PROJECT}.git"
-  encoded_username="$(python -c "import urllib; print urllib.quote('''$ASF_USERNAME''')")"
-  encoded_password="$(python -c "import urllib; print urllib.quote('''$ASF_PASSWORD''')")"
-  git clone "https://$encoded_username:$encoded_password@$ASF_REPO" -b "$GIT_BRANCH" "${PROJECT}"
+  check_needed_vars PROJECT RELEASE_VERSION RELEASE_TAG NEXT_VERSION GIT_EMAIL GIT_NAME GIT_BRANCH
+  if [ -z "${GIT_REPO}" ]; then
+    check_needed_vars ASF_USERNAME ASF_PASSWORD
+  fi
+  git_clone_overwrite
 
   # 'update_releasenotes' searches the project's Jira for issues where 'Fix Version' matches specified
   # $jira_fix_version. For most projects this is same as ${RELEASE_VERSION}. However, all the 'hbase-*'
@@ -186,8 +185,7 @@ fi
 if is_dry_run && [[ "${TAG_SAME_DRY_RUN:-}" == "true" && -d "${PROJECT}.tag" ]]; then
   ln -s "${PROJECT}.tag" "${PROJECT}"
 else
-  ASF_REPO="${ASF_REPO:-https://gitbox.apache.org/repos/asf/${PROJECT}.git}"
-  git clone "$ASF_REPO" "${PROJECT}"
+  git_clone_overwrite
 fi
 cd "${PROJECT}"
 git checkout "$GIT_REF"

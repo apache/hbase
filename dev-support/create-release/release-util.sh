@@ -398,6 +398,43 @@ function configure_maven {
 EOF
 }
 
+# clone of the repo, deleting anything that exists in the working directory named after the project.
+# optionally with auth details for pushing.
+function git_clone_overwrite {
+  local asf_repo
+  if [ -z "${PROJECT}" ] || [ "${PROJECT}" != "${PROJECT#/}" ]; then
+    error "Project name must be defined and not start with a '/'. PROJECT='${PROJECT}'"
+  fi
+  rm -rf "${PROJECT}"
+
+  if [[ -z "${GIT_REPO}" ]]; then
+    asf_repo="gitbox.apache.org/repos/asf/${PROJECT}.git"
+    echo "[INFO] clone will be of the gitbox repo for ${PROJECT}."
+    if [ -n "${ASF_USERNAME}" ] && [ -n "${ASF_PASSWORD}" ]; then
+      # Ugly!
+      encoded_username=$(python -c "import urllib; print urllib.quote('''$ASF_USERNAME''')")
+      encoded_password=$(python -c "import urllib; print urllib.quote('''$ASF_PASSWORD''')")
+      GIT_REPO="https://$encoded_username:$encoded_password@${asf_repo}"
+    else
+      GIT_REPO="https://${asf_repo}"
+    fi
+  else
+    echo "[INFO] clone will be of provided git repo."
+  fi
+  # N.B. we use the shared flag because the clone is short lived and if a local repo repo was
+  #      given this will let us refer to objects there directly instead of hardlinks or copying.
+  #      The option is silently ignored for non-local repositories. see the note on git help clone
+  #      for the --shared option for details.
+  git clone --shared -b "${GIT_BRANCH}" -- "${GIT_REPO}" "${PROJECT}"
+  # If this was a host local git repo then add in an alternates and remote that will
+  # work back on the host if the RM needs to do any post-processing steps, i.e. pushing the git tag
+  # for more info see 'git help remote' and 'git help repository-layout'.
+  if [ -n "$HOST_GIT_REPO" ]; then
+    echo "${HOST_GIT_REPO}/objects" >> "${PROJECT}/.git/objects/info/alternates"
+    (cd "${PROJECT}"; git remote add host "${HOST_GIT_REPO}")
+  fi
+}
+
 # Writes report into cwd!
 function generate_api_report {
   local project="$1"
