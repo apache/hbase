@@ -53,6 +53,7 @@ export PROJECT="${PROJECT:-hbase}"
 SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=SCRIPTDIR/release-util.sh
 . "$SELF/release-util.sh"
+ORIG_PWD="$(pwd)"
 
 function usage {
   local NAME
@@ -71,6 +72,7 @@ Options:
   -j [path]    path to local JDK installation to use building. By default the script will
                use openjdk8 installed in the docker image.
   -p [project] project to build, such as 'hbase' or 'hbase-thirdparty'; defaults to $PROJECT env var
+  -r [repo]    git repo to use for remote git operations. defaults to ASF gitbox for project.
   -s [step]    runs a single step of the process; valid steps are: tag|publish-dist|publish-release.
                If none specified, runs tag, then publish-dist, and then publish-release.
                'publish-snapshot' is also an allowed, less used, option.
@@ -81,13 +83,15 @@ WORKDIR=
 IMGTAG=latest
 JAVA=
 RELEASE_STEP=
-while getopts "d:fhj:p:s:t:" opt; do
+GIT_REPO=
+while getopts "d:fhj:p:r:s:t:" opt; do
   case $opt in
     d) WORKDIR="$OPTARG" ;;
     f) DRY_RUN=0 ;;
     t) IMGTAG="$OPTARG" ;;
     j) JAVA="$OPTARG" ;;
     p) PROJECT="$OPTARG" ;;
+    r) GIT_REPO="$OPTARG" ;;
     s) RELEASE_STEP="$OPTARG" ;;
     h) usage ;;
     ?) error "Invalid option. Run with -h for help." ;;
@@ -168,11 +172,65 @@ if [ -n "$JAVA" ]; then
   JAVA_VOL=(--volume "$JAVA:/opt/hbase-java")
 fi
 
+#TODO some debug output would be good here
+GIT_REPO_MOUNT=()
+if [ -n "${GIT_REPO}" ]; then
+  case "${GIT_REPO}" in
+    # skip the easy to identify remote protocols
+    ssh://*|git://*|http://*|https://*|ftp://*|ftps://*) ;;
+    # for sure local
+    /*)
+      GIT_REPO_MOUNT=(--mount "type=bind,src=${GIT_REPO},dst=/opt/hbase-repo")
+      echo "HOST_GIT_REPO=${GIT_REPO}" >> "${ENVFILE}"
+      GIT_REPO="/opt/hbase-repo"
+      ;;
+    # on the host but normally git wouldn't use the local optimization
+    file://*)
+      echo "[INFO] converted file:// git repo to a local path, which changes git to assume --local."
+      GIT_REPO_MOUNT=(--mount "type=bind,src=${GIT_REPO#file://},dst=/opt/hbase-repo")
+      echo "HOST_GIT_REPO=${GIT_REPO}" >> "${ENVFILE}"
+      GIT_REPO="/opt/hbase-repo"
+      ;;
+    # have to decide if it's a local path or the "scp-ish" remote
+    *)
+      declare colon_remove_prefix;
+      declare slash_remove_prefix;
+      declare local_path;
+      colon_remove_prefix="${GIT_REPO#*:}"
+      slash_remove_prefix="${GIT_REPO#*/}"
+      if [ "${GIT_REPO}" = "${colon_remove_prefix}" ]; then
+        # if there was no colon at all, we assume this must be a local path
+        local_path="no colon at all"
+      elif [ "${GIT_REPO}" != "${slash_remove_prefix}" ]; then
+        # if there was a colon and there is no slash, then we assume it must be scp-style host
+        # and a relative path
+
+        if [ "${#colon_remove_prefix}" -lt "${#slash_remove_prefix}" ]; then
+          # Given the substrings made by removing everything up to the first colon and slash
+          # we can determine which comes first based on the longer substring length.
+          # if the slash is first, then we assume the colon is part of a path name and if the colon
+          # is first then it is the seperator between a scp-style host name and the path.
+          local_path="slash happened before a colon"
+        fi
+      fi
+      if [ -n "${local_path}" ]; then
+        # convert to an absolute path
+        GIT_REPO="$(cd "$(dirname "${ORIG_PWD}/${GIT_REPO}")"; pwd)/$(basename "${ORIG_PWD}/${GIT_REPO}")"
+        GIT_REPO_MOUNT=(--mount "type=bind,src=${GIT_REPO},dst=/opt/hbase-repo")
+        echo "HOST_GIT_REPO=${GIT_REPO}" >> "${ENVFILE}"
+        GIT_REPO="/opt/hbase-repo"
+      fi
+      ;;
+  esac
+  echo "GIT_REPO=${GIT_REPO}" >> "${ENVFILE}"
+fi
+
 echo "Building $RELEASE_TAG; output will be at $WORKDIR/output"
 cmd=(docker run -ti \
   --env-file "$ENVFILE" \
   --volume "$WORKDIR:/opt/hbase-rm" \
   "${JAVA_VOL[@]}" \
+  "${GIT_REPO_MOUNT[@]}" \
   "hbase-rm:$IMGTAG")
 echo "${cmd[*]}"
 "${cmd[@]}"
