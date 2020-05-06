@@ -28,6 +28,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -134,7 +135,7 @@ public class HbckChore extends ScheduledChore {
       loadRegionsFromInMemoryState();
       loadRegionsFromRSReport();
       try {
-        loadRegionsFromFS();
+        loadRegionsFromFS(scanForMergedParentRegions());
       } catch (IOException e) {
         LOG.warn("Failed to load the regions from filesystem", e);
       }
@@ -185,6 +186,31 @@ public class HbckChore extends ScheduledChore {
     } finally {
       rwLock.writeLock().unlock();
     }
+  }
+
+  /**
+   * Scan hbase:meta to get set of merged parent regions, this is a very heavy scan.
+   *
+   * @return Return generated {@link HashSet}
+   */
+  private HashSet<String> scanForMergedParentRegions() throws IOException {
+    HashSet<String> mergedParentRegions = new HashSet<>();
+    // Null tablename means scan all of meta.
+    MetaTableAccessor.scanMetaForTableRegions(this.master.getConnection(),
+      r -> {
+        List<RegionInfo> mergeParents = MetaTableAccessor.getMergeRegions(r.rawCells());
+        if (mergeParents != null) {
+          for (RegionInfo mergeRegion : mergeParents) {
+            if (mergeRegion != null) {
+              // This region is already being merged
+              mergedParentRegions.add(mergeRegion.getEncodedName());
+            }
+          }
+        }
+        return true;
+        },
+      null);
+    return mergedParentRegions;
   }
 
   private void loadRegionsFromInMemoryState() {
@@ -256,7 +282,7 @@ public class HbckChore extends ScheduledChore {
     }
   }
 
-  private void loadRegionsFromFS() throws IOException {
+  private void loadRegionsFromFS(final HashSet<String> mergedParentRegions) throws IOException {
     Path rootDir = master.getMasterFileSystem().getRootDir();
     FileSystem fs = master.getMasterFileSystem().getFileSystem();
 
@@ -271,12 +297,12 @@ public class HbckChore extends ScheduledChore {
           continue;
         }
         HbckRegionInfo hri = regionInfoMap.get(encodedRegionName);
-        if (hri == null) {
+        // If it is not in in-memory database and not a merged region,
+        // report it as an orphan region.
+        if (hri == null && !mergedParentRegions.contains(encodedRegionName)) {
           orphanRegionsOnFS.put(encodedRegionName, regionDir);
           continue;
         }
-        HbckRegionInfo.HdfsEntry hdfsEntry = new HbckRegionInfo.HdfsEntry(regionDir);
-        hri.setHdfsEntry(hdfsEntry);
       }
       numRegions += regionDirs.size();
     }
