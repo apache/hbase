@@ -79,6 +79,23 @@ function check_for_tag {
   curl -s --head --fail "$ASF_GITHUB_REPO/releases/tag/$1" > /dev/null
 }
 
+function wait_for_tag {
+  # Confirm the tag synchronizes to github.  This can take a couple minutes,
+  # but usually it just takes a few seconds.
+  local max_propagation_time=300
+  local prop_delay=30
+  while ! check_for_tag "$1"; do
+    if (( max_propagation_time <= 0 )); then
+      echo "ERROR: Taking more than 5 minutes to propagate Release Tag $1 to github mirror." >&2
+      echo "Please wait and resume other create-release steps when $1 is available in github." >&2
+      exit 1
+    fi
+    echo "Waiting up to $max_propagation_time seconds for tag to propagate to github mirror..."
+    sleep $prop_delay
+    max_propagation_time=$((max_propagation_time - prop_delay))
+  done
+}
+
 # API compare version.
 function get_api_diff_version {
   local version="$1"
