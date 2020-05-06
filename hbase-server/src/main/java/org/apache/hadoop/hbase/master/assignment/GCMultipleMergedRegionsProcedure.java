@@ -63,6 +63,26 @@ public class GCMultipleMergedRegionsProcedure extends
     super();
   }
 
+  @Override protected boolean holdLock(MasterProcedureEnv env) {
+    return true;
+  }
+
+  @Override
+  protected LockState acquireLock(final MasterProcedureEnv env) {
+    // It now takes an exclusive lock on the merged child region to make sure
+    // that no two parallel running of two GCMultipleMergedRegionsProcedures on the
+    // region.
+    if (env.getProcedureScheduler().waitRegion(this, mergedChild)) {
+      return LockState.LOCK_EVENT_WAIT;
+    }
+    return LockState.LOCK_ACQUIRED;
+  }
+
+  @Override
+  protected void releaseLock(final MasterProcedureEnv env) {
+    env.getProcedureScheduler().wakeRegion(this, mergedChild);
+  }
+
   @Override
   public TableOperationType getTableOperationType() {
     return TableOperationType.MERGED_REGIONS_GC;
