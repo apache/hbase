@@ -200,7 +200,7 @@ public class ZKPermissionWatcher extends ZooKeeperListener implements Closeable 
         @Override public void run() {
           try {
             final List<ZKUtil.NodeAndData> nodeList =
-              ZKUtil.getChildDataAndWatchForNewChildren(watcher, aclZNode);
+              ZKUtil.getChildDataAndWatchForNewChildren(watcher, aclZNode, false);
             refreshNodes(nodeList);
 
           } catch (KeeperException ke) {
