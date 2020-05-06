@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.client.Scan;
@@ -28,8 +27,9 @@ import org.apache.yetus.audience.InterfaceStability;
  * This class gives you the ability to change the max versions and TTL options before opening a
  * scanner for a Store. And also gives you some information for the scan.
  * <p>
- * Changing max versions and TTL are usually safe even for flush/compaction, so here we provide a
- * way to do it for you. If you want to do other complicated stuffs such as filtering, please wrap
+ * Changing max versions, min versins, KeepDeletedCells, and TTL are usually safe even
+ * for flush/compaction, so here we provide a way to do it for you. If you want to do other
+ * complicated operations such as filtering, please wrap
  * the {@link InternalScanner} in the {@code preCompact} and {@code preFlush} methods in
  * {@link org.apache.hadoop.hbase.coprocessor.RegionObserver}.
  * <p>
@@ -71,5 +71,8 @@ public interface ScanOptions {
 
   void setMinVersions(int minVersions);
 
-  Scan getScan() throws IOException;
+  /**
+   * Returns a read-only copy of the Scan object
+   */
+  Scan getScan();
 }
