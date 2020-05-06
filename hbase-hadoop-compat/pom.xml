@@ -111,10 +111,6 @@
         <artifactId>slf4j-api</artifactId>
       </dependency>
       <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase-metrics-api</artifactId>
-      </dependency>
-      <dependency>
       <!--
         a missing transitive dependency on JDK9+ (obsoleted by Hadoop-3.3.0+, HADOOP-15775)
       -->
