@@ -836,7 +836,6 @@ public class ZKUtil {
    * @return list of data of children of the specified node, an empty list if the node
    *          exists but has no children, and null if the node does not exist
    * @throws KeeperException if unexpected zookeeper exception
-   * @deprecated Unused
    */
   public static List<NodeAndData> getChildDataAndWatchForNewChildren(
       ZooKeeperWatcher zkw, String baseNode, boolean throwOnInterrupt) throws KeeperException {
@@ -850,7 +849,7 @@ public class ZKUtil {
           return Collections.emptyList();
         }
         String nodePath = ZKUtil.joinZNode(baseNode, node);
-        byte[] data = ZKUtil.getDataAndWatch(zkw, nodePath);
+        byte[] data = ZKUtil.getDataAndWatch(zkw, nodePath, throwOnInterrupt);
         newNodes.add(new NodeAndData(nodePath, data));
       }
       return newNodes;
