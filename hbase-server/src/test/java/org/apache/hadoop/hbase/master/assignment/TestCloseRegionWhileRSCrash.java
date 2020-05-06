@@ -202,5 +202,10 @@ public class TestCloseRegionWhileRSCrash {
     try (Table table = UTIL.getConnection().getTable(TABLE_NAME)) {
       table.put(new Put(Bytes.toBytes(1)).addColumn(CF, Bytes.toBytes("cq"), Bytes.toBytes(1)));
     }
+    // Make sure that the region is online, it may not be on the original target server, as we will
+    // set forceNewPlan to true if there is a server crash.
+    try (Table table = UTIL.getConnection().getTable(TABLE_NAME)) {
+      table.put(new Put(Bytes.toBytes(1)).addColumn(CF, Bytes.toBytes("cq"), Bytes.toBytes(1)));
+    }
   }
 }
