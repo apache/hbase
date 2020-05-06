@@ -18,9 +18,10 @@
 package org.apache.hadoop.hbase.thrift;
 
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SUPPORT_PROXYUSER_KEY;
-import static org.junit.Assert.*;
-
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import java.io.File;
+import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.nio.file.Paths;
 import java.security.Principal;
@@ -29,19 +30,17 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-
 import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosTicket;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.SimpleKdcServerUtil;
 import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.http.HttpHeaders;
 import org.apache.http.auth.AuthSchemeProvider;
@@ -64,6 +63,7 @@ import org.ietf.jgss.GSSManager;
 import org.ietf.jgss.GSSName;
 import org.ietf.jgss.Oid;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -93,26 +93,6 @@ public class TestThriftSpnegoHttpServer extends TestThriftHttpServer {
   private static String serverPrincipal;
   private static String spnegoServerPrincipal;
 
-  private static SimpleKdcServer buildMiniKdc() throws Exception {
-    SimpleKdcServer kdc = new SimpleKdcServer();
-
-    File kdcDir = Paths.get(TEST_UTIL.getRandomDir().toString()).toAbsolutePath().toFile();
-    kdcDir.mkdirs();
-    kdc.setWorkDir(kdcDir);
-
-    kdc.setKdcHost(HConstants.LOCALHOST);
-    int kdcPort = HBaseTestingUtility.randomFreePort();
-    kdc.setAllowTcp(true);
-    kdc.setAllowUdp(false);
-    kdc.setKdcTcpPort(kdcPort);
-
-    LOG.info("Starting KDC server at " + HConstants.LOCALHOST + ":" + kdcPort);
-
-    kdc.init();
-
-    return kdc;
-  }
-
   private static void addSecurityConfigurations(Configuration conf) {
     KerberosName.setRules("DEFAULT");
 
@@ -133,21 +113,22 @@ public class TestThriftSpnegoHttpServer extends TestThriftHttpServer {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    kdc = buildMiniKdc();
-    kdc.start();
-
+    kdc = SimpleKdcServerUtil.
+      getRunningSimpleKdcServer(new File(TEST_UTIL.getDataTestDir().toString()),
+        HBaseTestingUtility::randomFreePort);
     File keytabDir = Paths.get(TEST_UTIL.getRandomDir().toString()).toAbsolutePath().toFile();
-    keytabDir.mkdirs();
+    Assert.assertTrue(keytabDir.mkdirs());
 
     clientPrincipal = "client@" + kdc.getKdcConfig().getKdcRealm();
     clientKeytab = new File(keytabDir, clientPrincipal + ".keytab");
     kdc.createAndExportPrincipals(clientKeytab, clientPrincipal);
 
-    serverPrincipal = "hbase/" + HConstants.LOCALHOST + "@" + kdc.getKdcConfig().getKdcRealm();
+    String hostname = InetAddress.getLoopbackAddress().getHostName();
+    serverPrincipal = "hbase/" + hostname + "@" + kdc.getKdcConfig().getKdcRealm();
     serverKeytab = new File(keytabDir, serverPrincipal.replace('/', '_') + ".keytab");
 
     // Setup separate SPNEGO keytab
-    spnegoServerPrincipal = "HTTP/" + HConstants.LOCALHOST + "@" + kdc.getKdcConfig().getKdcRealm();
+    spnegoServerPrincipal = "HTTP/" + hostname + "@" + kdc.getKdcConfig().getKdcRealm();
     spnegoServerKeytab = new File(keytabDir, spnegoServerPrincipal.replace('/', '_') + ".keytab");
     kdc.createAndExportPrincipals(spnegoServerKeytab, spnegoServerPrincipal);
     kdc.createAndExportPrincipals(serverKeytab, serverPrincipal);

@@ -20,17 +20,15 @@ package org.apache.hadoop.hbase.thrift;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SUPPORT_PROXYUSER_KEY;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
-
+import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.nio.file.Paths;
 import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
 import java.util.Set;
 import java.util.function.Supplier;
-
 import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosTicket;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -39,6 +37,7 @@ import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
+import org.apache.hadoop.hbase.util.SimpleKdcServerUtil;
 import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.http.HttpHeaders;
 import org.apache.http.auth.AuthSchemeProvider;
@@ -93,26 +92,6 @@ public class TestThriftSpnegoHttpFallbackServer extends TestThriftHttpServer {
   private static String serverPrincipal;
   private static String spnegoServerPrincipal;
 
-  private static SimpleKdcServer buildMiniKdc() throws Exception {
-    SimpleKdcServer kdc = new SimpleKdcServer();
-
-    File kdcDir = Paths.get(TEST_UTIL.getRandomDir().toString()).toAbsolutePath().toFile();
-    kdcDir.mkdirs();
-    kdc.setWorkDir(kdcDir);
-
-    kdc.setKdcHost(HConstants.LOCALHOST);
-    int kdcPort = HBaseTestingUtility.randomFreePort();
-    kdc.setAllowTcp(true);
-    kdc.setAllowUdp(false);
-    kdc.setKdcTcpPort(kdcPort);
-
-    LOG.info("Starting KDC server at " + HConstants.LOCALHOST + ":" + kdcPort);
-
-    kdc.init();
-
-    return kdc;
-  }
-
   private static void addSecurityConfigurations(Configuration conf) {
     KerberosName.setRules("DEFAULT");
 
@@ -133,11 +112,12 @@ public class TestThriftSpnegoHttpFallbackServer extends TestThriftHttpServer {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    kdc = buildMiniKdc();
-    kdc.start();
+    kdc = SimpleKdcServerUtil.
+      getRunningSimpleKdcServer(new File(TEST_UTIL.getDataTestDir().toString()),
+        HBaseTestingUtility::randomFreePort);
 
     File keytabDir = Paths.get(TEST_UTIL.getRandomDir().toString()).toAbsolutePath().toFile();
-    keytabDir.mkdirs();
+    assertTrue(keytabDir.mkdirs());
 
     clientPrincipal = "client@" + kdc.getKdcConfig().getKdcRealm();
     clientKeytab = new File(keytabDir, clientPrincipal + ".keytab");

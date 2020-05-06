@@ -27,14 +27,13 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.net.BindException;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Supplier;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.net.BoundSocketMaker;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
@@ -159,7 +158,8 @@ public class TestThriftServerCmdLine {
 
   static ThriftServerRunner createBoundServer(Supplier<ThriftServer> thriftServerSupplier,
       boolean protocolPortClash, boolean infoPortClash) throws Exception {
-    return createBoundServer(thriftServerSupplier, null, false, false, false, protocolPortClash, infoPortClash);
+    return createBoundServer(thriftServerSupplier, null, false, false,
+      false, protocolPortClash, infoPortClash);
   }
 
   static ThriftServerRunner createBoundServer(Supplier<ThriftServer> thriftServerSupplier,
@@ -167,27 +167,6 @@ public class TestThriftServerCmdLine {
       throws Exception {
     return createBoundServer(thriftServerSupplier, implType, specifyFramed, specifyCompact,
       specifyBindIP, false, false);
-  }
-
-  static ServerSocket getBoundSocket() {
-    ServerSocket ss = null;
-    int port = -1;
-    while (true) {
-      port = getRandomPort();
-      try {
-        ss = new ServerSocket();
-        ss.bind(new InetSocketAddress(port));
-        break;
-      } catch (IOException ioe) {
-        LOG.warn("Failed bind", ioe);
-        try {
-          ss.close();
-        } catch (IOException ioe2) {
-          LOG.warn("FAILED CLOSE of failed bind socket", ioe2);
-        }
-      }
-    }
-    return ss;
   }
 
   /**
@@ -204,7 +183,7 @@ public class TestThriftServerCmdLine {
     boolean testClashOfFirstProtocolPort = protocolPortClash;
     boolean testClashOfFirstInfoPort = infoPortClash;
     List<String> args = new ArrayList<>();
-    ServerSocket ss = null;
+    BoundSocketMaker bsm = null;
     int port = -1;
     ThriftServerRunner tsr = null;
     for (int i = 0; i < 100; i++) {
@@ -217,8 +196,8 @@ public class TestThriftServerCmdLine {
       if (testClashOfFirstProtocolPort) {
         // Test what happens if already something bound to the socket.
         // Occupy the random port we just pulled.
-        ss = getBoundSocket();
-        port = ss.getLocalPort();
+        bsm = new BoundSocketMaker(() -> getRandomPort());
+        port = bsm.getPort();
         testClashOfFirstProtocolPort = false;
       } else {
         port = getRandomPort();
@@ -228,8 +207,8 @@ public class TestThriftServerCmdLine {
       args.add("-" + INFOPORT_OPTION);
       int infoPort;
       if (testClashOfFirstInfoPort) {
-        ss = getBoundSocket();
-        infoPort = ss.getLocalPort();
+        bsm = new BoundSocketMaker(() -> getRandomPort());
+        infoPort = bsm.getPort();
         testClashOfFirstInfoPort = false;
       } else {
         infoPort = getRandomPort();
@@ -266,9 +245,9 @@ public class TestThriftServerCmdLine {
       }
       break;
     }
-    if (ss != null) {
+    if (bsm != null) {
       try {
-        ss.close();
+        bsm.close();
       } catch (IOException ioe) {
         LOG.warn("Failed close", ioe);
       }
@@ -317,9 +296,9 @@ public class TestThriftServerCmdLine {
         thriftServerRunner.close();
         thriftServerRunner.join();
         if (thriftServerRunner.getRunException() != null) {
-           LOG.error("Command-line invocation of HBase Thrift server threw exception",
-             thriftServerRunner.getRunException());
-           throw thriftServerRunner.getRunException();
+          LOG.error("Command-line invocation of HBase Thrift server threw exception",
+            thriftServerRunner.getRunException());
+          throw thriftServerRunner.getRunException();
         }
       }
     }
