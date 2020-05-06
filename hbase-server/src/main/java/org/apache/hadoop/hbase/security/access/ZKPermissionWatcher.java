@@ -185,25 +185,28 @@ public class ZKPermissionWatcher extends ZKListener implements Closeable {
   public void nodeChildrenChanged(final String path) {
     waitUntilStarted();
     if (path.equals(aclZNode)) {
-      try {
-        final List<ZKUtil.NodeAndData> nodeList =
-            ZKUtil.getChildDataAndWatchForNewChildren(watcher, aclZNode);
-        // preempt any existing nodeChildrenChanged event processing
-        if (childrenChangedFuture != null && !childrenChangedFuture.isDone()) {
-          boolean cancelled = childrenChangedFuture.cancel(true);
-          if (!cancelled) {
-            // task may have finished between our check and attempted cancel, this is fine.
-            if (! childrenChangedFuture.isDone()) {
-              LOG.warn("Could not cancel processing node children changed event, " +
-                  "please file a JIRA and attach logs if possible.");
-            }
+      // preempt any existing nodeChildrenChanged event processing
+      if (childrenChangedFuture != null && !childrenChangedFuture.isDone()) {
+        boolean cancelled = childrenChangedFuture.cancel(true);
+        if (!cancelled) {
+          // task may have finished between our check and attempted cancel, this is fine.
+          if (!childrenChangedFuture.isDone()) {
+            LOG.warn("Could not cancel processing node children changed event, "
+              + "please file a JIRA and attach logs if possible.");
           }
         }
-        childrenChangedFuture = asyncProcessNodeUpdate(() -> refreshNodes(nodeList));
-      } catch (KeeperException ke) {
-        LOG.error("Error reading data from zookeeper for path "+path, ke);
-        watcher.abort("ZooKeeper error get node children for path "+path, ke);
       }
+      childrenChangedFuture = asyncProcessNodeUpdate(() -> {
+        try {
+          final List<ZKUtil.NodeAndData> nodeList =
+            ZKUtil.getChildDataAndWatchForNewChildren(watcher, aclZNode, false);
+          refreshNodes(nodeList);
+        } catch (KeeperException ke) {
+          String msg = "ZooKeeper error while reading node children data for path " + path;
+          LOG.error(msg, ke);
+          watcher.abort(msg, ke);
+        }
+      });
     }
   }
 
