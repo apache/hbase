@@ -72,7 +72,7 @@ public interface ScanOptions {
   void setMinVersions(int minVersions);
 
   /**
-   * Returns a read-only copy of the Scan object
+   * Returns a copy of the Scan object. Modifying it will have no effect.
    */
   Scan getScan();
 }
