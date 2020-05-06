@@ -19,8 +19,12 @@ package org.apache.hadoop.hbase;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.ServerSocket;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.commons.io.FileUtils;
@@ -263,5 +267,80 @@ public class HBaseCommonTestingUtility {
   public <E extends Exception> long waitFor(long timeout, long interval,
       boolean failIfTimeout, Predicate<E> predicate) throws E {
     return Waiter.waitFor(this.conf, timeout, interval, failIfTimeout, predicate);
+  }
+
+  // Support for Random Port Generation.
+  static Random random = new Random();
+
+  private static final PortAllocator portAllocator = new PortAllocator(random);
+
+  public static int randomFreePort() {
+    return portAllocator.randomFreePort();
+  }
+
+  static class PortAllocator {
+    private static final int MIN_RANDOM_PORT = 0xc000;
+    private static final int MAX_RANDOM_PORT = 0xfffe;
+
+    /** A set of ports that have been claimed using {@link #randomFreePort()}. */
+    private final Set<Integer> takenRandomPorts = new HashSet<>();
+
+    private final Random random;
+    private final AvailablePortChecker portChecker;
+
+    public PortAllocator(Random random) {
+      this.random = random;
+      this.portChecker = new AvailablePortChecker() {
+        @Override
+        public boolean available(int port) {
+          try {
+            ServerSocket sock = new ServerSocket(port);
+            sock.close();
+            return true;
+          } catch (IOException ex) {
+            return false;
+          }
+        }
+      };
+    }
+
+    public PortAllocator(Random random, AvailablePortChecker portChecker) {
+      this.random = random;
+      this.portChecker = portChecker;
+    }
+
+    /**
+     * Returns a random free port and marks that port as taken. Not thread-safe. Expected to be
+     * called from single-threaded test setup code/
+     */
+    public int randomFreePort() {
+      int port = 0;
+      do {
+        port = randomPort();
+        if (takenRandomPorts.contains(port)) {
+          port = 0;
+          continue;
+        }
+        takenRandomPorts.add(port);
+
+        if (!portChecker.available(port)) {
+          port = 0;
+        }
+      } while (port == 0);
+      return port;
+    }
+
+    /**
+     * Returns a random port. These ports cannot be registered with IANA and are
+     * intended for dynamic allocation (see http://bit.ly/dynports).
+     */
+    private int randomPort() {
+      return MIN_RANDOM_PORT
+        + random.nextInt(MAX_RANDOM_PORT - MIN_RANDOM_PORT);
+    }
+
+    interface AvailablePortChecker {
+      boolean available(int port);
+    }
   }
 }
