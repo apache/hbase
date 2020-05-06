@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.yetus.audience.InterfaceAudience;
-import java.io.IOException;
 
 /**
  * Helper class for CP hooks to change max versions and TTL.
@@ -44,10 +44,14 @@ public class CustomizedScanInfoBuilder implements ScanOptions {
     this.scanInfo = scanInfo;
     this.scan = new Scan();
   }
-  public CustomizedScanInfoBuilder(ScanInfo scanInfo, Scan scan) throws IOException {
+  public CustomizedScanInfoBuilder(ScanInfo scanInfo, Scan scan) {
     this.scanInfo = scanInfo;
     //copy the scan so no coproc using this ScanOptions can alter the "real" scan
-    this.scan = new Scan(scan);
+    try {
+      this.scan = new Scan(scan);
+    } catch (IOException e) {
+      throw new AssertionError("Scan should not throw IOException", e);
+    }
   }
 
   @Override
@@ -104,8 +108,12 @@ public class CustomizedScanInfoBuilder implements ScanOptions {
   }
 
   @Override
-  public Scan getScan() throws IOException {
-    return new Scan(scan);
+  public Scan getScan() {
+    try {
+      return new Scan(scan);
+    } catch(IOException e) {
+      throw new AssertionError("Scan should not throw IOException anymore", e);
+    }
   }
 
 }
