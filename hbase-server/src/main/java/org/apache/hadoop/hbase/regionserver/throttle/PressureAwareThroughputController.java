@@ -161,6 +161,10 @@ public abstract class PressureAwareThroughputController extends Configured imple
     return stopped;
   }
 
+  public void setStopped(boolean stopped) {
+    this.stopped = stopped;
+  }
+
   public double getMaxThroughput() {
     return maxThroughput;
   }
@@ -169,4 +173,17 @@ public abstract class PressureAwareThroughputController extends Configured imple
     this.maxThroughput = maxThroughput;
     maxThroughputPerOperation = getMaxThroughput() / activeOperations.size();
   }
+
+  public long getMaxThroughputUpperBound() {
+    return maxThroughputUpperBound;
+  }
+
+  public long getMaxThroughputLowerBound() {
+    return maxThroughputLowerBound;
+  }
+
+  public OffPeakHours getOffPeakHours() {
+    return offPeakHours;
+  }
+
 }

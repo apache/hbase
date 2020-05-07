@@ -146,4 +146,38 @@ public class PressureAwareCompactionThroughputController extends PressureAwareTh
         + throughputDesc(getMaxThroughput()) + ", activeCompactions=" + activeOperations.size()
         + "]";
   }
+
+  @Override
+  public void updateConfig(Configuration newConf,
+      final RegionServerServices server) {
+    LOG.debug("update Config");
+    this.setConf(newConf);
+    restartChore(server);
+
+  }
+
+  public void restartChore(RegionServerServices server) {
+    super.stop("configuration change");
+    super.setStopped(false);
+    server.getChoreService().scheduleChore(
+        new ScheduledChore("CompactionThroughputTuner", this, tuningPeriod) {
+
+          @Override protected void chore() {
+            tune(server.getCompactionPressure());
+          }
+        });
+  }
+
+  public long getMaxThroughputUpperBound() {
+    return maxThroughputUpperBound;
+  }
+
+  public long getMaxThroughputLowerBound() {
+    return maxThroughputLowerBound;
+  }
+
+  public OffPeakHours getOffPeakHours() {
+    return offPeakHours;
+  }
+
 }

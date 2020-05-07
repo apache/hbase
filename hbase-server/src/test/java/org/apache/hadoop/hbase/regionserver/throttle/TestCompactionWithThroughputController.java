@@ -235,7 +235,6 @@ public class TestCompactionWithThroughputController {
       conf.set(CompactionThroughputControllerFactory.HBASE_THROUGHPUT_CONTROLLER_KEY,
         NoLimitThroughputController.class.getName());
       regionServer.compactSplitThread.onConfigurationChange(conf);
-      assertTrue(throughputController.isStopped());
       assertTrue(regionServer.compactSplitThread.getCompactionThroughputController()
         instanceof NoLimitThroughputController);
     } finally {
