@@ -183,12 +183,14 @@ EOF
         visibility = args[VISIBILITY]
         set_cell_visibility(d, visibility) if visibility
       end
-      if column && all_version
-        family, qualifier = parse_column_name(column)
-        d.addColumns(family, qualifier, timestamp)
-      elsif column && !all_version
-        family, qualifier = parse_column_name(column)
-        d.addColumn(family, qualifier, timestamp)
+      if column != ""
+        if column && all_version
+          family, qualifier = parse_column_name(column)
+          d.addColumns(family, qualifier, timestamp)
+        elsif column && !all_version
+          family, qualifier = parse_column_name(column)
+          d.addColumn(family, qualifier, timestamp)
+        end
       end
       d
     end
