@@ -18,7 +18,6 @@
 #
 DRY_RUN=${DRY_RUN:-1} #default to dry run
 GPG="gpg --pinentry-mode loopback --no-tty --batch"
-YETUS_VERSION=${YETUS_VERSION:-0.11.1}
 # Maven Profiles for publishing snapshots and release to Maven Central and Dist
 PUBLISH_PROFILES=("-P" "apache-release,release")
 
@@ -349,6 +348,16 @@ function init_mvn {
   configure_maven
 }
 
+function init_yetus {
+  declare YETUS_VERSION
+  if [ -z "${YETUS_HOME}" ]; then
+    error "Missing Apache Yetus."
+  fi
+  # Work around yetus bug by asking test-patch for the version instead of rdm.
+  YETUS_VERSION=$("${YETUS_HOME}/bin/test-patch" --version)
+  echo "Apache Yetus version ${YETUS_VERSION}"
+}
+
 function configure_maven {
   # Add timestamps to mvn logs.
   MAVEN_OPTS="-Dorg.slf4j.simpleLogger.showDateTime=true -Dorg.slf4j.simpleLogger.dateTimeFormat=HH:mm:ss ${MAVEN_OPTS}"
@@ -423,17 +432,15 @@ function get_jira_name {
 
 # Update the CHANGES.md
 # DOES NOT DO COMMITS! Caller should do that.
+# requires yetus to have a defined home already.
 # yetus requires python2 to be on the path.
 function update_releasenotes {
   local project_dir="$1"
   local jira_fix_version="$2"
-  local yetus="apache-yetus-${YETUS_VERSION}"
   local jira_project
   jira_project="$(get_jira_name "$(basename "$project_dir")")"
-  wget -qO- "https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=/yetus/${YETUS_VERSION}/${yetus}-bin.tar.gz" | \
-    tar xvz -C . || exit
-  cd "./${yetus}" || exit
-  ./bin/releasedocmaker -p "${jira_project}" --fileversions -v "${jira_fix_version}" -l --sortorder=newer --skip-credits
+  "${YETUS_HOME}/bin/releasedocmaker" -p "${jira_project}" --fileversions -v "${jira_fix_version}" \
+      -l --sortorder=newer --skip-credits
   pwd
   # First clear out the changes written by previous RCs.
   if [ -f "${project_dir}/CHANGES.md" ]; then
@@ -466,7 +473,6 @@ function update_releasenotes {
   else
     mv "RELEASENOTES.${jira_fix_version}.md" "${project_dir}/RELEASENOTES.md"
   fi
-  cd .. || exit
 }
 
 # Make src release.
@@ -607,4 +613,11 @@ function maven_deploy { #inputs: <snapshot|release> <log_file_path>
   fi
   echo "BUILD SUCCESS."
   return 0
+}
+
+# guess the host os
+# * DARWIN
+# * LINUX
+function get_host_os() {
+  uname -s | tr '[:lower:]' '[:upper:]'
 }

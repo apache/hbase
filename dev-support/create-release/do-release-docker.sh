@@ -75,6 +75,7 @@ Options:
                If none specified, runs tag, then publish-dist, and then publish-release.
                'publish-snapshot' is also an allowed, less used, option.
 EOF
+  exit 1
 }
 
 WORKDIR=
