@@ -142,6 +142,7 @@ import org.apache.hadoop.hbase.master.replication.ReplicationPeerManager;
 import org.apache.hadoop.hbase.master.replication.SyncReplicationReplayWALManager;
 import org.apache.hadoop.hbase.master.replication.TransitPeerSyncReplicationStateProcedure;
 import org.apache.hadoop.hbase.master.replication.UpdatePeerConfigProcedure;
+import org.apache.hadoop.hbase.master.slowlog.SlowLogMasterService;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.master.zksyncer.MasterAddressSyncer;
 import org.apache.hadoop.hbase.master.zksyncer.MetaLocationSyncer;
@@ -1170,6 +1171,8 @@ public class HMaster extends HRegionServer implements MasterServices {
       // Start the chore to read snapshots and add their usage to table/NS quotas
       getChoreService().scheduleChore(snapshotQuotaChore);
     }
+    final SlowLogMasterService slowLogMasterService = new SlowLogMasterService(conf, this);
+    slowLogMasterService.init();
 
     // clear the dead servers with same host name and port of online server because we are not
     // removing dead server with same hostname and port of rs which is trying to check in before

@@ -30,6 +30,7 @@ import java.util.Queue;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.SlowLogParams;
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -55,10 +56,18 @@ class LogEventHandler implements EventHandler<RingBufferEnvelope> {
   private static final Logger LOG = LoggerFactory.getLogger(LogEventHandler.class);
 
   private final Queue<SlowLogPayload> queue;
+  private final boolean isSlowLogTableEnabled;
 
-  LogEventHandler(int eventCount) {
+  private Connection connection;
+
+  LogEventHandler(int eventCount, boolean isSlowLogTableEnabled) {
     EvictingQueue<SlowLogPayload> evictingQueue = EvictingQueue.create(eventCount);
     queue = Queues.synchronizedQueue(evictingQueue);
+    this.isSlowLogTableEnabled = isSlowLogTableEnabled;
+  }
+
+  public void setConnection(Connection connection) {
+    this.connection = connection;
   }
 
   /**
@@ -83,7 +92,7 @@ class LogEventHandler implements EventHandler<RingBufferEnvelope> {
       return;
     }
     Descriptors.MethodDescriptor methodDescriptor = rpcCall.getMethod();
-    Message param = rpcCall.getParam();
+    Message param = rpcCallDetails.getParam();
     long receiveTime = rpcCall.getReceiveTime();
     long startTime = rpcCall.getStartTime();
     long endTime = System.currentTimeMillis();
@@ -130,6 +139,9 @@ class LogEventHandler implements EventHandler<RingBufferEnvelope> {
       .setUserName(userName)
       .build();
     queue.add(slowLogPayload);
+    if (isSlowLogTableEnabled && this.connection != null) {
+      SlowLogTableAccessor.addSlowLogRecord(slowLogPayload, this.connection);
+    }
   }
 
   private SlowLogPayload.Type getLogType(RpcLogDetails rpcCallDetails) {
@@ -207,8 +219,7 @@ class LogEventHandler implements EventHandler<RingBufferEnvelope> {
     if (isFilterProvided(request)) {
       logPayloadList = filterLogs(request, logPayloadList);
     }
-    int limit = request.getLimit() >= logPayloadList.size() ? logPayloadList.size()
-      : request.getLimit();
+    int limit = Math.min(request.getLimit(), logPayloadList.size());
     return logPayloadList.subList(0, limit);
   }
 
