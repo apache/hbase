@@ -698,14 +698,18 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     return dfsCluster;
   }
 
-  /** This is used before starting HDFS and map-reduce mini-clusters
-   * Run something like the below to check for the likes of '/tmp' references -- i.e.
-   * references outside of the test data dir -- in the conf.
-   *     Configuration conf = TEST_UTIL.getConfiguration();
-   *     for (Iterator<Map.Entry<String, String>> i = conf.iterator(); i.hasNext();) {
-   *       Map.Entry<String, String> e = i.next();
-   *       assertFalse(e.getKey() + " " + e.getValue(), e.getValue().contains("/tmp"));
-   *     }
+  /**
+   * This is used before starting HDFS and map-reduce mini-clusters Run something like the below to
+   * check for the likes of '/tmp' references -- i.e. references outside of the test data dir -- in
+   * the conf.
+   *
+   * <pre>
+   * Configuration conf = TEST_UTIL.getConfiguration();
+   * for (Iterator&lt;Map.Entry&lt;String, String&gt;&gt; i = conf.iterator(); i.hasNext();) {
+   *   Map.Entry&lt;String, String&gt; e = i.next();
+   *   assertFalse(e.getKey() + " " + e.getValue(), e.getValue().contains("/tmp"));
+   * }
+   * </pre>
    */
   private void createDirsAndSetProperties() throws IOException {
     setupClusterTestDir();
@@ -740,7 +744,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     createDirAndSetProperty("dfs.journalnode.edits.dir");
     createDirAndSetProperty("dfs.datanode.shared.file.descriptor.paths");
     createDirAndSetProperty("nfs.dump.dir");
-    createDirAndSetProperty("java.io.tmpdir");
     createDirAndSetProperty("java.io.tmpdir");
     createDirAndSetProperty("dfs.journalnode.edits.dir");
     createDirAndSetProperty("dfs.provided.aliasmap.inmemory.leveldb.dir");
