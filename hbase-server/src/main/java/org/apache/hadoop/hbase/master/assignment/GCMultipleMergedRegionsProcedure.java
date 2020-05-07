@@ -77,7 +77,16 @@ public class GCMultipleMergedRegionsProcedure extends
     try {
       switch (state) {
         case GC_MERGED_REGIONS_PREPARE:
-          // Nothing to do to prepare.
+          // If GCMultipleMergedRegionsProcedure processing is slower than the CatalogJanitor's scan
+          // interval, it will end resubmitting GCMultipleMergedRegionsProcedure for the same
+          // region, we can skip duplicate GCMultipleMergedRegionsProcedure while previous finished
+          List<RegionInfo> parents = MetaTableAccessor.getMergeRegions(
+            env.getMasterServices().getConnection(), mergedChild.getRegionName());
+          if (parents == null || parents.isEmpty()) {
+            LOG.info("Region=" + mergedChild.getShortNameToLog()
+                + " info:merge qualifier has been deleted");
+            return Flow.NO_MORE_STATE;
+          }
           setNextState(GCMergedRegionsState.GC_MERGED_REGIONS_PURGE);
           break;
         case GC_MERGED_REGIONS_PURGE:
