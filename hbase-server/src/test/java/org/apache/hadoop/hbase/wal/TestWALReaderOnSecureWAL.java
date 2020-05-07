@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.wal;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -51,7 +52,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -85,7 +86,7 @@ public class TestWALReaderOnSecureWAL {
     conf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
     conf.setBoolean("hbase.hlog.split.skip.errors", true);
     conf.setBoolean(HConstants.ENABLE_WAL_ENCRYPTION, true);
-    FSUtils.setRootDir(conf, TEST_UTIL.getDataTestDir());
+    CommonFSUtils.setRootDir(conf, TEST_UTIL.getDataTestDir());
   }
 
   private Path writeWAL(final WALFactory wals, final String tblName, boolean offheap)
@@ -171,7 +172,7 @@ public class TestWALReaderOnSecureWAL {
     }
 
     FileStatus[] listStatus = fs.listStatus(walPath.getParent());
-    Path rootdir = FSUtils.getRootDir(conf);
+    Path rootdir = CommonFSUtils.getRootDir(conf);
     try {
       WALSplitter s = new WALSplitter(wals, conf, rootdir, fs, rootdir, fs, null, null, null);
       s.splitLogFile(listStatus[0], null);
@@ -215,7 +216,7 @@ public class TestWALReaderOnSecureWAL {
     }
 
     FileStatus[] listStatus = fs.listStatus(walPath.getParent());
-    Path rootdir = FSUtils.getRootDir(conf);
+    Path rootdir = CommonFSUtils.getRootDir(conf);
     try {
       WALSplitter s = new WALSplitter(wals, conf, rootdir, fs, rootdir, fs, null, null, null);
       s.splitLogFile(listStatus[0], null);

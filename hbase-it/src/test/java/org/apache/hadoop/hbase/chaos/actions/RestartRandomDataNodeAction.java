@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,10 +21,9 @@ package org.apache.hadoop.hbase.chaos.actions;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -42,21 +41,25 @@ public class RestartRandomDataNodeAction extends RestartActionBaseAction {
     super(sleepTime);
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
-    LOG.info("Performing action: Restart random data node");
+    getLogger().info("Performing action: Restart random data node");
     ServerName server = PolicyBasedChaosMonkey.selectRandomItem(getDataNodes());
     restartDataNode(server, sleepTime);
   }
 
   public ServerName[] getDataNodes() throws IOException {
-    DistributedFileSystem fs = (DistributedFileSystem) FSUtils.getRootDir(getConf())
+    DistributedFileSystem fs = (DistributedFileSystem) CommonFSUtils.getRootDir(getConf())
         .getFileSystem(getConf());
     DFSClient dfsClient = fs.getClient();
     List<ServerName> hosts = new LinkedList<>();
     for (DatanodeInfo dataNode: dfsClient.datanodeReport(HdfsConstants.DatanodeReportType.LIVE)) {
       hosts.add(ServerName.valueOf(dataNode.getHostName(), -1, -1));
     }
-    return hosts.toArray(new ServerName[hosts.size()]);
+    return hosts.toArray(new ServerName[0]);
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -19,14 +19,16 @@
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
-
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.attribute.FileTime;
+import java.time.Instant;
 import java.util.Arrays;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -90,7 +92,7 @@ public class TestVerifyBucketCacheFile {
       new BucketCache("file:" + testDir + "/bucket.cache", capacitySize, constructedBlockSize,
         constructedBlockSizes, writeThreads, writerQLen, testDir + "/bucket.persistence");
     long usedSize = bucketCache.getAllocator().getUsedSize();
-    assertTrue(usedSize == 0);
+    assertEquals(0, usedSize);
     CacheTestUtils.HFileBlockPair[] blocks =
       CacheTestUtils.generateHFileBlocks(constructedBlockSize, 1);
     // Add blocks
@@ -98,7 +100,7 @@ public class TestVerifyBucketCacheFile {
       cacheAndWaitUntilFlushedToBucket(bucketCache, block.getBlockName(), block.getBlock());
     }
     usedSize = bucketCache.getAllocator().getUsedSize();
-    assertTrue(usedSize != 0);
+    assertNotEquals(0, usedSize);
     // 1.persist cache to file
     bucketCache.shutdown();
     // restore cache from file
@@ -110,8 +112,9 @@ public class TestVerifyBucketCacheFile {
     bucketCache.shutdown();
 
     // 2.delete bucket cache file
-    File cacheFile = new File(testDir + "/bucket.cache");
-    assertTrue(cacheFile.delete());
+    final java.nio.file.Path cacheFile =
+      FileSystems.getDefault().getPath(testDir.toString(), "bucket.cache");
+    assertTrue(Files.deleteIfExists(cacheFile));
     // can't restore cache from file
     bucketCache =
       new BucketCache("file:" + testDir + "/bucket.cache", capacitySize, constructedBlockSize,
@@ -123,13 +126,14 @@ public class TestVerifyBucketCacheFile {
       cacheAndWaitUntilFlushedToBucket(bucketCache, block.getBlockName(), block.getBlock());
     }
     usedSize = bucketCache.getAllocator().getUsedSize();
-    assertTrue(usedSize != 0);
+    assertNotEquals(0, usedSize);
     // persist cache to file
     bucketCache.shutdown();
 
     // 3.delete backingMap persistence file
-    File mapFile = new File(testDir + "/bucket.persistence");
-    assertTrue(mapFile.delete());
+    final java.nio.file.Path mapFile =
+      FileSystems.getDefault().getPath(testDir.toString(), "bucket.persistence");
+    assertTrue(Files.deleteIfExists(mapFile));
     // can't restore cache from file
     bucketCache =
       new BucketCache("file:" + testDir + "/bucket.cache", capacitySize, constructedBlockSize,
@@ -157,7 +161,7 @@ public class TestVerifyBucketCacheFile {
       new BucketCache("file:" + testDir + "/bucket.cache", capacitySize, constructedBlockSize,
         constructedBlockSizes, writeThreads, writerQLen, testDir + "/bucket.persistence");
     long usedSize = bucketCache.getAllocator().getUsedSize();
-    assertTrue(usedSize == 0);
+    assertEquals(0, usedSize);
 
     CacheTestUtils.HFileBlockPair[] blocks =
       CacheTestUtils.generateHFileBlocks(constructedBlockSize, 1);
@@ -166,7 +170,7 @@ public class TestVerifyBucketCacheFile {
       cacheAndWaitUntilFlushedToBucket(bucketCache, block.getBlockName(), block.getBlock());
     }
     usedSize = bucketCache.getAllocator().getUsedSize();
-    assertTrue(usedSize != 0);
+    assertNotEquals(0, usedSize);
     // persist cache to file
     bucketCache.shutdown();
 
@@ -204,7 +208,7 @@ public class TestVerifyBucketCacheFile {
       new BucketCache("file:" + testDir + "/bucket.cache", capacitySize, constructedBlockSize,
         constructedBlockSizes, writeThreads, writerQLen, testDir + "/bucket.persistence");
     long usedSize = bucketCache.getAllocator().getUsedSize();
-    assertTrue(usedSize == 0);
+    assertEquals(0, usedSize);
 
     CacheTestUtils.HFileBlockPair[] blocks =
       CacheTestUtils.generateHFileBlocks(constructedBlockSize, 1);
@@ -213,13 +217,14 @@ public class TestVerifyBucketCacheFile {
       cacheAndWaitUntilFlushedToBucket(bucketCache, block.getBlockName(), block.getBlock());
     }
     usedSize = bucketCache.getAllocator().getUsedSize();
-    assertTrue(usedSize != 0);
+    assertNotEquals(0, usedSize);
     // persist cache to file
     bucketCache.shutdown();
 
     // modified bucket cache file LastModifiedTime
-    File file = new File(testDir + "/bucket.cache");
-    assertTrue(file.setLastModified(System.currentTimeMillis() + 1000));
+    final java.nio.file.Path file =
+      FileSystems.getDefault().getPath(testDir.toString(), "bucket.cache");
+    Files.setLastModifiedTime(file, FileTime.from(Instant.now().plusMillis(1_000)));
     // can't restore cache from file
     bucketCache =
       new BucketCache("file:" + testDir + "/bucket.cache", capacitySize, constructedBlockSize,

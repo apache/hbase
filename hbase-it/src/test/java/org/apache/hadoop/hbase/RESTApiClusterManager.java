@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,15 +34,13 @@ import javax.ws.rs.core.UriBuilder;
 import javax.xml.ws.http.HTTPException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.hbase.util.GsonUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.gson.Gson;
 import org.apache.hbase.thirdparty.com.google.gson.JsonElement;
 import org.apache.hbase.thirdparty.com.google.gson.JsonObject;
+import org.apache.hbase.thirdparty.com.google.gson.JsonParser;
 
 /**
  * A ClusterManager implementation designed to control Cloudera Manager (http://www.cloudera.com)
@@ -76,8 +74,10 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
       "hbase.it.clustermanager.restapi.password";
   private static final String REST_API_CLUSTER_MANAGER_CLUSTER_NAME =
       "hbase.it.clustermanager.restapi.clustername";
+  private static final String REST_API_DELEGATE_CLUSTER_MANAGER =
+    "hbase.it.clustermanager.restapi.delegate";
 
-  private static final Gson GSON = GsonUtil.createGson().create();
+  private static final JsonParser parser = new JsonParser();
 
   // Some default values for the above properties.
   private static final String DEFAULT_SERVER_HOSTNAME = "http://localhost:7180";
@@ -88,8 +88,6 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
   // Fields for the hostname, username, password, and cluster name of the cluster management server
   // to be used.
   private String serverHostname;
-  private String serverUsername;
-  private String serverPassword;
   private String clusterName;
 
   // Each version of Cloudera Manager supports a particular API versions. Version 6 of this API
@@ -105,24 +103,26 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
 
   private static final Logger LOG = LoggerFactory.getLogger(RESTApiClusterManager.class);
 
-  RESTApiClusterManager() {
-    hBaseClusterManager = ReflectionUtils.newInstance(HBaseClusterManager.class,
-        new IntegrationTestingUtility().getConfiguration());
-  }
+  RESTApiClusterManager() { }
 
   @Override
   public void setConf(Configuration conf) {
     super.setConf(conf);
     if (conf == null) {
-      // Configured gets passed null before real conf. Why? I don't know.
+      // `Configured()` constructor calls `setConf(null)` before calling again with a real value.
       return;
     }
+
+    final Class<? extends ClusterManager> clazz = conf.getClass(REST_API_DELEGATE_CLUSTER_MANAGER,
+      HBaseClusterManager.class, ClusterManager.class);
+    hBaseClusterManager = ReflectionUtils.newInstance(clazz, conf);
+
     serverHostname = conf.get(REST_API_CLUSTER_MANAGER_HOSTNAME, DEFAULT_SERVER_HOSTNAME);
-    serverUsername = conf.get(REST_API_CLUSTER_MANAGER_USERNAME, DEFAULT_SERVER_USERNAME);
-    serverPassword = conf.get(REST_API_CLUSTER_MANAGER_PASSWORD, DEFAULT_SERVER_PASSWORD);
     clusterName = conf.get(REST_API_CLUSTER_MANAGER_CLUSTER_NAME, DEFAULT_CLUSTER_NAME);
 
     // Add filter to Client instance to enable server authentication.
+    String serverUsername = conf.get(REST_API_CLUSTER_MANAGER_USERNAME, DEFAULT_SERVER_USERNAME);
+    String serverPassword = conf.get(REST_API_CLUSTER_MANAGER_PASSWORD, DEFAULT_SERVER_PASSWORD);
     client.register(HttpAuthenticationFeature.basic(serverUsername, serverPassword));
   }
 
@@ -238,16 +238,18 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
 
   // Execute GET against URI, returning a JsonNode object to be traversed.
   private JsonElement getJsonNodeFromURIGet(URI uri) throws IOException {
-    LOG.info("Executing GET against " + uri + "...");
-    WebTarget webTarget = client.target(uri);
-    Invocation.Builder invocationBuilder = webTarget.request(MediaType.APPLICATION_JSON);
-    Response response = invocationBuilder.get();
+    LOG.debug("Executing GET against " + uri + "...");
+    final Response response = client.target(uri)
+      .request(MediaType.APPLICATION_JSON_TYPE)
+      .get();
     int statusCode = response.getStatus();
     if (statusCode != Response.Status.OK.getStatusCode()) {
       throw new HTTPException(statusCode);
     }
     // This API folds information as the value to an "items" attribute.
-    return GSON.toJsonTree(response.readEntity(String.class)).getAsJsonObject().get("items");
+    return parser.parse(response.readEntity(String.class))
+      .getAsJsonObject()
+      .get("items");
   }
 
   // This API assigns a unique role name to each host's instance of a role.
@@ -334,7 +336,7 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
     roleServiceType.put(ServiceType.HBASE_REGIONSERVER, Service.HBASE);
   }
 
-  private enum Service {
+  enum Service {
     HBASE, HDFS, MAPREDUCE
   }
 }

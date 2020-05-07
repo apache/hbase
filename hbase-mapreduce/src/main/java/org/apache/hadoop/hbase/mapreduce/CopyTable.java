@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.mapreduce.Import.Importer;
 import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.tool.BulkLoadHFilesTool;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -78,7 +78,7 @@ public class CopyTable extends Configured implements Tool {
   private final static String JOB_NAME_CONF_KEY = "mapreduce.job.name";
 
   private Path generateUniqTempDir(boolean withDirCreated) throws IOException {
-    FileSystem fs = FSUtils.getCurrentFileSystem(getConf());
+    FileSystem fs = CommonFSUtils.getCurrentFileSystem(getConf());
     Path dir = new Path(fs.getWorkingDirectory(), NAME);
     if (!fs.exists(dir)) {
       fs.mkdirs(dir);
@@ -422,7 +422,7 @@ public class CopyTable extends Configured implements Tool {
         .isEmpty()) {
         // bulkloadDir is deleted only BulkLoadHFiles was successful so that one can rerun
         // BulkLoadHFiles.
-        FileSystem fs = FSUtils.getCurrentFileSystem(getConf());
+        FileSystem fs = CommonFSUtils.getCurrentFileSystem(getConf());
         if (!fs.delete(this.bulkloadDir, true)) {
           LOG.error("Deleting folder " + bulkloadDir + " failed!");
           code = 1;

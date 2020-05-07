@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,8 +28,7 @@ import org.slf4j.LoggerFactory;
 * Action that tries to flush a table.
 */
 public class FlushTableAction extends Action {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(FlushTableAction.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FlushTableAction.class);
   private final long sleepTime;
   private final TableName tableName;
 
@@ -42,6 +41,10 @@ public class FlushTableAction extends Action {
     this.tableName = tableName;
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
     HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
@@ -52,11 +55,11 @@ public class FlushTableAction extends Action {
       return;
     }
 
-    LOG.info("Performing action: Flush table " + tableName);
+    getLogger().info("Performing action: Flush table " + tableName);
     try {
       admin.flush(tableName);
     } catch (Exception ex) {
-      LOG.warn("Flush failed, might be caused by other chaos: " + ex.getMessage());
+      getLogger().warn("Flush failed, might be caused by other chaos: " + ex.getMessage());
     }
     if (sleepTime > 0) {
       Thread.sleep(sleepTime);

@@ -185,13 +185,6 @@ public final class HConstants {
   public static final String ZK_CONNECTION_REGISTRY_CLASS =
       "org.apache.hadoop.hbase.client.ZKConnectionRegistry";
 
-  /** Configuration to enable hedged reads on master registry **/
-  public static final String MASTER_REGISTRY_ENABLE_HEDGED_READS_KEY =
-      "hbase.client.master_registry.enable_hedged_reads";
-
-  /** Default value for enabling hedging reads on master registry **/
-  public static final boolean MASTER_REGISTRY_ENABLE_HEDGED_READS_DEFAULT = false;
-
   /** Parameter name for the master type being backup (waits for primary to go inactive). */
   public static final String MASTER_TYPE_BACKUP = "hbase.master.backup";
 
@@ -916,12 +909,6 @@ public final class HConstants {
    * timeout for each RPC
    */
   public static final String HBASE_RPC_TIMEOUT_KEY = "hbase.rpc.timeout";
-
-  /** Configuration key that controls the fan out of requests in hedged channel implementation. **/
-  public static final String HBASE_RPCS_HEDGED_REQS_FANOUT_KEY = "hbase.rpc.hedged.fanout";
-
-  /** Default value for the fan out of hedged requests. **/
-  public static final int HBASE_RPCS_HEDGED_REQS_FANOUT_DEFAULT = 2;
 
   /**
    * timeout for each read RPC

@@ -52,6 +52,8 @@ public class CompactionConfiguration {
   public static final String HBASE_HSTORE_COMPACTION_RATIO_KEY = "hbase.hstore.compaction.ratio";
   public static final String HBASE_HSTORE_COMPACTION_RATIO_OFFPEAK_KEY =
     "hbase.hstore.compaction.ratio.offpeak";
+  public static final String HBASE_HSTORE_COMPACTION_MIN_KEY_OLD =
+    "hbase.hstore.compactionThreshold";
   public static final String HBASE_HSTORE_COMPACTION_MIN_KEY = "hbase.hstore.compaction.min";
   public static final String HBASE_HSTORE_COMPACTION_MIN_SIZE_KEY =
     "hbase.hstore.compaction.min.size";
@@ -121,7 +123,7 @@ public class CompactionConfiguration {
     minCompactSize = conf.getLong(HBASE_HSTORE_COMPACTION_MIN_SIZE_KEY,
         storeConfigInfo.getMemStoreFlushSize());
     minFilesToCompact = Math.max(2, conf.getInt(HBASE_HSTORE_COMPACTION_MIN_KEY,
-          /*old name*/ conf.getInt("hbase.hstore.compactionThreshold", 3)));
+        conf.getInt(HBASE_HSTORE_COMPACTION_MIN_KEY_OLD, 3)));
     maxFilesToCompact = conf.getInt(HBASE_HSTORE_COMPACTION_MAX_KEY, 10);
     compactionRatio = conf.getFloat(HBASE_HSTORE_COMPACTION_RATIO_KEY, 1.2F);
     offPeakCompactionRatio = conf.getFloat(HBASE_HSTORE_COMPACTION_RATIO_OFFPEAK_KEY, 5.0F);
@@ -189,14 +191,14 @@ public class CompactionConfiguration {
   }
 
   /**
-   * @return upper bound on number of files to be included in minor compactions
+   * @return lower bound on number of files to be included in minor compactions
    */
   public int getMinFilesToCompact() {
     return minFilesToCompact;
   }
 
   /**
-   * Set upper bound on number of files to be included in minor compactions
+   * Set lower bound on number of files to be included in minor compactions
    * @param threshold value to set to
    */
   public void setMinFilesToCompact(int threshold) {

@@ -166,12 +166,13 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-hadoop-compat</artifactId>
+      <artifactId>hbase-asyncfs</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
-      <artifactId>${compat.module}</artifactId>
-      <version>${project.version}</version>
+      <artifactId>hbase-hadoop-compat</artifactId>
     </dependency>
     <!--Below MR wanted by PE-->
     <dependency>
@@ -197,7 +198,7 @@
       <exclusions>
         <!--This dependency pulls in hadoop-minicluster
              which pulls in the below. It messes up
-             this build at assembly time. See HBASE-22029-->
+        this build at assembly time. See HBASE-22029 -->
         <exclusion>
          <groupId>com.sun.jersey</groupId>
          <artifactId>jersey-core</artifactId>
@@ -376,7 +377,6 @@
       </properties>
     </profile>
     <!-- Hadoop-specific dependencies -->
-    <!-- Profile for building against Hadoop 3.0.0. Activate by default -->
     <profile>
       <id>hadoop-3.0</id>
       <activation>
@@ -431,6 +431,12 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-mapreduce-client-core</artifactId>
           <scope>test</scope>
+          <exclusions>
+            <exclusion>
+             <groupId>com.google.guava</groupId>
+             <artifactId>guava</artifactId>
+            </exclusion>
+          </exclusions>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
@@ -443,6 +449,15 @@
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-auth</artifactId>
+        </dependency>
+        <!--Needed when jdk11/hadoop3 else complaint about
+          NoSuchMethodError: 'java.util.Map javax.ws.rs.core.Application.getProperties()'
+          when REST server is started.
+          -->
+        <dependency>
+          <groupId>org.glassfish.jaxb</groupId>
+          <artifactId>jaxb-runtime</artifactId>
+          <version>2.3.2</version>
         </dependency>
       </dependencies>
     </profile>

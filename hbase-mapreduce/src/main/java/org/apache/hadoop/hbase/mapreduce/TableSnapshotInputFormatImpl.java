@@ -26,7 +26,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -45,7 +44,7 @@ import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.io.Writable;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -53,6 +52,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MapReduceProtos.TableSnapshotRegionSplit;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
@@ -223,7 +223,7 @@ public class TableSnapshotInputFormatImpl {
       this.split = split;
       TableDescriptor htd = split.htd;
       HRegionInfo hri = this.split.getRegionInfo();
-      FileSystem fs = FSUtils.getCurrentFileSystem(conf);
+      FileSystem fs = CommonFSUtils.getCurrentFileSystem(conf);
 
 
       // region is immutable, this should be fine,
@@ -277,7 +277,7 @@ public class TableSnapshotInputFormatImpl {
   public static List<InputSplit> getSplits(Configuration conf) throws IOException {
     String snapshotName = getSnapshotName(conf);
 
-    Path rootDir = FSUtils.getRootDir(conf);
+    Path rootDir = CommonFSUtils.getRootDir(conf);
     FileSystem fs = rootDir.getFileSystem(conf);
 
     SnapshotManifest manifest = getSnapshotManifest(conf, snapshotName, rootDir, fs);
@@ -363,7 +363,7 @@ public class TableSnapshotInputFormatImpl {
     // load table descriptor
     TableDescriptor htd = manifest.getTableDescriptor();
 
-    Path tableDir = FSUtils.getTableDir(restoreDir, htd.getTableName());
+    Path tableDir = CommonFSUtils.getTableDir(restoreDir, htd.getTableName());
 
     boolean localityEnabled = conf.getBoolean(SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_KEY,
                                               SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_DEFAULT);
@@ -533,7 +533,7 @@ public class TableSnapshotInputFormatImpl {
       conf.set(SPLIT_ALGO, splitAlgo.getClass().getName());
     }
     conf.setInt(NUM_SPLITS_PER_REGION, numSplitsPerRegion);
-    Path rootDir = FSUtils.getRootDir(conf);
+    Path rootDir = CommonFSUtils.getRootDir(conf);
     FileSystem fs = rootDir.getFileSystem(conf);
 
     restoreDir = new Path(restoreDir, UUID.randomUUID().toString());

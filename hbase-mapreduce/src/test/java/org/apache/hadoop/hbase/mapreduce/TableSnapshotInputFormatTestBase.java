@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.junit.Assert;
@@ -126,8 +127,9 @@ public abstract class TableSnapshotInputFormatTestBase {
 
       testRestoreSnapshotDoesNotCreateBackRefLinksInit(tableName, snapshotName,tmpTableDir);
 
-      Path rootDir = FSUtils.getRootDir(UTIL.getConfiguration());
-      for (Path regionDir : FSUtils.getRegionDirs(fs, FSUtils.getTableDir(rootDir, tableName))) {
+      Path rootDir = CommonFSUtils.getRootDir(UTIL.getConfiguration());
+      for (Path regionDir : FSUtils.getRegionDirs(fs,
+        CommonFSUtils.getTableDir(rootDir, tableName))) {
         for (Path storeDir : FSUtils.getFamilyDirs(fs, regionDir)) {
           for (FileStatus status : fs.listStatus(storeDir)) {
             System.out.println(status.getPath());
@@ -212,7 +214,7 @@ public abstract class TableSnapshotInputFormatTestBase {
     Table table = util.getConnection().getTable(tableName);
     util.loadTable(table, FAMILIES);
 
-    Path rootDir = FSUtils.getRootDir(util.getConfiguration());
+    Path rootDir = CommonFSUtils.getRootDir(util.getConfiguration());
     FileSystem fs = rootDir.getFileSystem(util.getConfiguration());
 
     LOG.info("snapshot");

@@ -120,7 +120,7 @@ public class ChaosMonkeyRunner extends AbstractHBaseTool {
       util.createDistributedHBaseCluster();
       util.checkNodeCount(1);// make sure there's at least 1 alive rs
     } else {
-      throw new RuntimeException("ChaosMonkeyRunner must run againt a distributed cluster,"
+      throw new RuntimeException("ChaosMonkeyRunner must run against a distributed cluster,"
           + " please check and point to the right configuration dir");
     }
     this.setConf(util.getConfiguration());

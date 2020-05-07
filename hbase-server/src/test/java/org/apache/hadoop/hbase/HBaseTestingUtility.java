@@ -591,7 +591,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       return;
     }
     FileSystem fs = this.dfsCluster.getFileSystem();
-    FSUtils.setFsDefault(this.conf, new Path(fs.getUri()));
+    CommonFSUtils.setFsDefault(this.conf, new Path(fs.getUri()));
 
     // re-enable this check with dfs
     conf.unset(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE);
@@ -648,11 +648,11 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     setupClusterTestDir();
     conf.set(TEST_DIRECTORY_KEY, clusterTestDir.getPath());
     System.setProperty(TEST_DIRECTORY_KEY, clusterTestDir.getPath());
-    createDirAndSetProperty("test.cache.data", "test.cache.data");
-    createDirAndSetProperty("hadoop.tmp.dir", "hadoop.tmp.dir");
-    hadoopLogDir = createDirAndSetProperty("hadoop.log.dir", "hadoop.log.dir");
-    createDirAndSetProperty("mapreduce.cluster.local.dir", "mapreduce.cluster.local.dir");
-    createDirAndSetProperty("mapreduce.cluster.temp.dir", "mapreduce.cluster.temp.dir");
+    createDirAndSetProperty("test.cache.data");
+    createDirAndSetProperty("hadoop.tmp.dir");
+    hadoopLogDir = createDirAndSetProperty("hadoop.log.dir");
+    createDirAndSetProperty("mapreduce.cluster.local.dir");
+    createDirAndSetProperty("mapreduce.cluster.temp.dir");
     enableShortCircuit();
 
     Path root = getDataTestDirOnTestFS("hadoop");
@@ -666,26 +666,21 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       new Path(root, "mapreduce-am-staging-root-dir").toString());
 
     // Frustrate yarn's and hdfs's attempts at writing /tmp.
-    String property = "yarn.node-labels.fs-store.root-dir";
-    createDirAndSetProperty(property, property);
-    property = "yarn.nodemanager.log-dirs";
-    createDirAndSetProperty(property, property);
-    property = "yarn.nodemanager.remote-app-log-dir";
-    createDirAndSetProperty(property, property);
-    property = "yarn.timeline-service.entity-group-fs-store.active-dir";
-    createDirAndSetProperty(property, property);
-    property = "yarn.timeline-service.entity-group-fs-store.done-dir";
-    createDirAndSetProperty(property, property);
-    property = "yarn.nodemanager.remote-app-log-dir";
-    createDirAndSetProperty(property, property);
-    property = "dfs.journalnode.edits.dir";
-    createDirAndSetProperty(property, property);
-    property = "dfs.datanode.shared.file.descriptor.paths";
-    createDirAndSetProperty(property, property);
-    property = "nfs.dump.dir";
-    createDirAndSetProperty(property, property);
-    property = "java.io.tmpdir";
-    createDirAndSetProperty(property, property);
+    // Below is fragile. Make it so we just interpolate any 'tmp' reference.
+    createDirAndSetProperty("yarn.node-labels.fs-store.root-dir");
+    createDirAndSetProperty("yarn.node-attribute.fs-store.root-dir");
+    createDirAndSetProperty("yarn.nodemanager.log-dirs");
+    createDirAndSetProperty("yarn.nodemanager.remote-app-log-dir");
+    createDirAndSetProperty("yarn.timeline-service.entity-group-fs-store.active-dir");
+    createDirAndSetProperty("yarn.timeline-service.entity-group-fs-store.done-dir");
+    createDirAndSetProperty("yarn.nodemanager.remote-app-log-dir");
+    createDirAndSetProperty("dfs.journalnode.edits.dir");
+    createDirAndSetProperty("dfs.datanode.shared.file.descriptor.paths");
+    createDirAndSetProperty("nfs.dump.dir");
+    createDirAndSetProperty("java.io.tmpdir");
+    createDirAndSetProperty("dfs.journalnode.edits.dir");
+    createDirAndSetProperty("dfs.provided.aliasmap.inmemory.leveldb.dir");
+    createDirAndSetProperty("fs.s3a.committer.staging.tmp.path");
   }
 
   /**
@@ -734,6 +729,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     }
   }
 
+  private String createDirAndSetProperty(final String property) {
+    return createDirAndSetProperty(property, property);
+  }
+
   private String createDirAndSetProperty(final String relPath, String property) {
     String path = getDataTestDir(relPath).toString();
     System.setProperty(property, path);
@@ -754,7 +753,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       this.dfsCluster.shutdown();
       dfsCluster = null;
       dataTestDirOnTestFS = null;
-      FSUtils.setFsDefault(this.conf, new Path("file:///"));
+      CommonFSUtils.setFsDefault(this.conf, new Path("file:///"));
     }
   }
 
@@ -1369,7 +1368,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   public Path createRootDir(boolean create) throws IOException {
     FileSystem fs = FileSystem.get(this.conf);
     Path hbaseRootdir = getDefaultRootDirPath(create);
-    FSUtils.setRootDir(this.conf, hbaseRootdir);
+    CommonFSUtils.setRootDir(this.conf, hbaseRootdir);
     fs.mkdirs(hbaseRootdir);
     FSUtils.setVersion(fs, hbaseRootdir);
     return hbaseRootdir;
@@ -1397,7 +1396,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   public Path createWALRootDir() throws IOException {
     FileSystem fs = FileSystem.get(this.conf);
     Path walDir = getNewDataTestDirOnTestFS();
-    FSUtils.setWALRootDir(this.conf, walDir);
+    CommonFSUtils.setWALRootDir(this.conf, walDir);
     fs.mkdirs(walDir);
     return walDir;
   }
@@ -3826,80 +3825,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     return table;
   }
 
-  private static Random random = new Random();
-
-  private static final PortAllocator portAllocator = new PortAllocator(random);
-
   public static int randomFreePort() {
-    return portAllocator.randomFreePort();
+    return HBaseCommonTestingUtility.randomFreePort();
   }
-
-  static class PortAllocator {
-    private static final int MIN_RANDOM_PORT = 0xc000;
-    private static final int MAX_RANDOM_PORT = 0xfffe;
-
-    /** A set of ports that have been claimed using {@link #randomFreePort()}. */
-    private final Set<Integer> takenRandomPorts = new HashSet<>();
-
-    private final Random random;
-    private final AvailablePortChecker portChecker;
-
-    public PortAllocator(Random random) {
-      this.random = random;
-      this.portChecker = new AvailablePortChecker() {
-        @Override
-        public boolean available(int port) {
-          try {
-            ServerSocket sock = new ServerSocket(port);
-            sock.close();
-            return true;
-          } catch (IOException ex) {
-            return false;
-          }
-        }
-      };
-    }
-
-    public PortAllocator(Random random, AvailablePortChecker portChecker) {
-      this.random = random;
-      this.portChecker = portChecker;
-    }
-
-    /**
-     * Returns a random free port and marks that port as taken. Not thread-safe. Expected to be
-     * called from single-threaded test setup code/
-     */
-    public int randomFreePort() {
-      int port = 0;
-      do {
-        port = randomPort();
-        if (takenRandomPorts.contains(port)) {
-          port = 0;
-          continue;
-        }
-        takenRandomPorts.add(port);
-
-        if (!portChecker.available(port)) {
-          port = 0;
-        }
-      } while (port == 0);
-      return port;
-    }
-
-    /**
-     * Returns a random port. These ports cannot be registered with IANA and are
-     * intended for dynamic allocation (see http://bit.ly/dynports).
-     */
-    private int randomPort() {
-      return MIN_RANDOM_PORT
-          + random.nextInt(MAX_RANDOM_PORT - MIN_RANDOM_PORT);
-    }
-
-    interface AvailablePortChecker {
-      boolean available(int port);
-    }
-  }
-
   public static String randomMultiCastAddress() {
     return "226.1.1." + random.nextInt(254);
   }
@@ -4374,6 +4302,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * Sets up {@link MiniKdc} for testing security.
    * Uses {@link HBaseKerberosUtils} to set the given keytab file as
    * {@link HBaseKerberosUtils#KRB_KEYTAB_FILE}.
+   * FYI, there is also the easier-to-use kerby KDC server and utility for using it,
+   * {@link org.apache.hadoop.hbase.util.SimpleKdcServerUtil}. The kerby KDC server is preferred;
+   * less baggage. It came in in HBASE-5291.
    */
   public MiniKdc setupMiniKdc(File keytabFile) throws Exception {
     Properties conf = MiniKdc.createConf();

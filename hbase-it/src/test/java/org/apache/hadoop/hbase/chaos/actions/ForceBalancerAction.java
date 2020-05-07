@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,8 +25,11 @@ import org.slf4j.LoggerFactory;
 * Action that tries to force a balancer run.
 */
 public class ForceBalancerAction extends Action {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(ForceBalancerAction.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ForceBalancerAction.class);
+
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
 
   @Override
   public void perform() throws Exception {
@@ -34,7 +37,7 @@ public class ForceBalancerAction extends Action {
     if (context.isStopping()) {
       return;
     }
-    LOG.info("Balancing regions");
+    getLogger().info("Balancing regions");
     forceBalancer();
   }
 }

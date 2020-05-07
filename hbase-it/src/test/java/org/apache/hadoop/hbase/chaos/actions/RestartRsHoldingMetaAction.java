@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,12 +33,17 @@ public class RestartRsHoldingMetaAction extends RestartActionBaseAction {
   public RestartRsHoldingMetaAction(long sleepTime) {
     super(sleepTime);
   }
+
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
-    LOG.info("Performing action: Restart region server holding META");
+    getLogger().info("Performing action: Restart region server holding META");
     ServerName server = cluster.getServerHoldingMeta();
     if (server == null) {
-      LOG.warn("No server is holding hbase:meta right now.");
+      getLogger().warn("No server is holding hbase:meta right now.");
       return;
     }
     ClusterMetrics clusterStatus = cluster.getClusterMetrics();

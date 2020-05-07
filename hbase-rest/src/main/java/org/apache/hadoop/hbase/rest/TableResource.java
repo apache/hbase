@@ -156,7 +156,7 @@ public class TableResource extends ResourceBase {
       if (!startRow.isEmpty()) {
         tableScan.withStartRow(Bytes.toBytes(startRow));
       }
-      tableScan.setStopRow(Bytes.toBytes(endRow));
+      tableScan.withStopRow(Bytes.toBytes(endRow));
       for (String col : column) {
         byte [][] parts = CellUtil.parseColumn(Bytes.toBytes(col.trim()));
         if (parts.length == 1) {

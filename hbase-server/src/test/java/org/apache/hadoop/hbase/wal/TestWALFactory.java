@@ -60,7 +60,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WALFactory.Providers;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -181,7 +181,7 @@ public class TestWALFactory {
     final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl(1);
     final int howmany = 3;
     RegionInfo[] infos = new RegionInfo[3];
-    Path tabledir = FSUtils.getWALTableDir(conf, tableName);
+    Path tabledir = CommonFSUtils.getWALTableDir(conf, tableName);
     fs.mkdirs(tabledir);
     for (int i = 0; i < howmany; i++) {
       infos[i] = RegionInfoBuilder.newBuilder(tableName).setStartKey(Bytes.toBytes("" + i))
@@ -451,14 +451,14 @@ public class TestWALFactory {
 
     class RecoverLogThread extends Thread {
       public Exception exception = null;
+
       @Override
       public void run() {
-          try {
-            FSUtils.getInstance(fs, rlConf)
-              .recoverFileLease(recoveredFs, walPath, rlConf, null);
-          } catch (IOException e) {
-            exception = e;
-          }
+        try {
+          RecoverLeaseFSUtils.recoverFileLease(recoveredFs, walPath, rlConf, null);
+        } catch (IOException e) {
+          exception = e;
+        }
       }
     }
 

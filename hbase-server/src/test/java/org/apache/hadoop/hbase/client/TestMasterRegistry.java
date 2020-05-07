@@ -19,7 +19,8 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.HConstants.META_REPLICAS_NUM;
 import static org.junit.Assert.assertEquals;
-import java.net.UnknownHostException;
+
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -77,14 +78,15 @@ public class TestMasterRegistry {
   /**
    * Makes sure the master registry parses the master end points in the configuration correctly.
    */
-  @Test public void testMasterAddressParsing() throws UnknownHostException {
+  @Test
+  public void testMasterAddressParsing() throws IOException {
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     int numMasters = 10;
     conf.set(HConstants.MASTER_ADDRS_KEY, generateDummyMastersList(numMasters));
     try (MasterRegistry registry = new MasterRegistry(conf)) {
       List<ServerName> parsedMasters = new ArrayList<>(registry.getParsedMasterServers());
       // Half of them would be without a port, duplicates are removed.
-      assertEquals(numMasters/2 + 1, parsedMasters.size());
+      assertEquals(numMasters / 2 + 1, parsedMasters.size());
       // Sort in the increasing order of port numbers.
       Collections.sort(parsedMasters, Comparator.comparingInt(ServerName::getPort));
       for (int i = 0; i < parsedMasters.size(); i++) {
@@ -100,18 +102,14 @@ public class TestMasterRegistry {
     }
   }
 
-  @Test public void testRegistryRPCs() throws Exception {
+  @Test
+  public void testRegistryRPCs() throws Exception {
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     HMaster activeMaster = TEST_UTIL.getHBaseCluster().getMaster();
-    final int size = activeMaster.getMetaRegionLocationCache().
-      getMetaRegionLocations().get().size();
-    for (int numHedgedReqs = 1; numHedgedReqs <= 3; numHedgedReqs++) {
-      if (numHedgedReqs == 1) {
-        conf.setBoolean(HConstants.MASTER_REGISTRY_ENABLE_HEDGED_READS_KEY, false);
-      } else {
-        conf.setBoolean(HConstants.MASTER_REGISTRY_ENABLE_HEDGED_READS_KEY, true);
-      }
-      conf.setInt(HConstants.HBASE_RPCS_HEDGED_REQS_FANOUT_KEY, numHedgedReqs);
+    final int size =
+      activeMaster.getMetaRegionLocationCache().getMetaRegionLocations().get().size();
+    for (int numHedgedReqs = 1; numHedgedReqs <= size; numHedgedReqs++) {
+      conf.setInt(MasterRegistry.MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY, numHedgedReqs);
       try (MasterRegistry registry = new MasterRegistry(conf)) {
         // Add wait on all replicas being assigned before proceeding w/ test. Failed on occasion
         // because not all replicas had made it up before test started.
@@ -119,9 +117,9 @@ public class TestMasterRegistry {
         assertEquals(registry.getClusterId().get(), activeMaster.getClusterId());
         assertEquals(registry.getActiveMaster().get(), activeMaster.getServerName());
         List<HRegionLocation> metaLocations =
-            Arrays.asList(registry.getMetaRegionLocations().get().getRegionLocations());
-        List<HRegionLocation> actualMetaLocations = activeMaster.getMetaRegionLocationCache()
-            .getMetaRegionLocations().get();
+          Arrays.asList(registry.getMetaRegionLocations().get().getRegionLocations());
+        List<HRegionLocation> actualMetaLocations =
+          activeMaster.getMetaRegionLocationCache().getMetaRegionLocations().get();
         Collections.sort(metaLocations);
         Collections.sort(actualMetaLocations);
         assertEquals(actualMetaLocations, metaLocations);

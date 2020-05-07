@@ -21,8 +21,9 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
@@ -35,14 +36,13 @@ import org.apache.hadoop.hbase.snapshot.MobSnapshotTestingUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category(LargeTests.class)
 public class TestRemoteBackup extends TestBackupBase {
@@ -56,6 +56,7 @@ public class TestRemoteBackup extends TestBackupBase {
   @Override
   public void setUp() throws Exception {
     useSecondCluster = true;
+    conf1.setInt(HConstants.REGION_SERVER_HANDLER_COUNT, 10);
     super.setUp();
   }
 
@@ -101,7 +102,7 @@ public class TestRemoteBackup extends TestBackupBase {
     familyDescriptor.setMobEnabled(true);
     familyDescriptor.setMobThreshold(0L);
     table1Desc.setColumnFamily(familyDescriptor);
-    HBaseTestingUtility.modifyTableSync(TEST_UTIL.getAdmin(), table1Desc);
+    TEST_UTIL.getAdmin().modifyTable(table1Desc);
 
     SnapshotTestingUtils.loadData(TEST_UTIL, table1, 50, fam2Name);
     Table t1 = conn.getTable(table1);

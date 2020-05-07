@@ -32,7 +32,7 @@
   <parent>
     <groupId>org.apache</groupId>
     <artifactId>apache</artifactId>
-    <version>22</version>
+    <version>23</version>
     <relativePath/>
     <!-- no parent resolution -->
   </parent>
@@ -63,6 +63,7 @@
   <modules>
     <module>hbase-build-configuration</module>
     <module>hbase-replication</module>
+    <module>hbase-balancer</module>
     <module>hbase-mapreduce</module>
     <module>hbase-resource-bundle</module>
     <module>hbase-http</module>
@@ -90,6 +91,7 @@
     <module>hbase-backup</module>
     <module>hbase-zookeeper</module>
     <module>hbase-hbtop</module>
+    <module>hbase-asyncfs</module>
   </modules>
   <scm>
     <connection>scm:git:git://gitbox.apache.org/repos/asf/hbase.git</connection>
@@ -860,7 +862,6 @@
           <!-- excludes are inherited -->
           <groupId>org.apache.rat</groupId>
           <artifactId>apache-rat-plugin</artifactId>
-          <version>${apache.rat.version}</version>
           <configuration>
             <excludes>
               <exclude>**/*.versionsBackup</exclude>
@@ -1483,12 +1484,10 @@
     <!-- These must be defined here for downstream build tools that don't look at profiles.
     -->
     <hadoop.version>${hadoop-three.version}</hadoop.version>
-    <hadoop.guava.version>11.0.2</hadoop.guava.version>
-    <compat.module>hbase-hadoop2-compat</compat.module>
-    <assembly.file>src/main/assembly/hadoop-two-compat.xml</assembly.file>
+    <assembly.file>src/main/assembly/hadoop-three-compat.xml</assembly.file>
     <!--This property is for hadoops netty. HBase netty
          comes in via hbase-thirdparty hbase-shaded-netty-->
-    <netty.hadoop.version>3.6.2.Final</netty.hadoop.version>
+    <netty.hadoop.version>3.10.5.Final</netty.hadoop.version>
     <!-- end HBASE-15925 default hadoop compatibility values -->
     <audience-annotations.version>0.5.0</audience-annotations.version>
     <avro.version>1.7.7</avro.version>
@@ -1527,7 +1526,7 @@
     <external.protobuf.version>2.5.0</external.protobuf.version>
     <protobuf.plugin.version>0.6.1</protobuf.plugin.version>
     <thrift.path>thrift</thrift.path>
-    <thrift.version>0.12.0</thrift.version>
+    <thrift.version>0.13.0</thrift.version>
     <zookeeper.version>3.5.7</zookeeper.version>
     <jline.version>2.11</jline.version>
     <slf4j.version>1.7.30</slf4j.version>
@@ -1543,7 +1542,6 @@
     <commons-crypto.version>1.0.0</commons-crypto.version>
     <curator.version>4.2.0</curator.version>
     <!-- Plugin Dependencies -->
-    <apache.rat.version>0.13</apache.rat.version>
     <asciidoctor.plugin.version>1.5.8</asciidoctor.plugin.version>
     <asciidoctorj.pdf.version>1.5.0-rc.2</asciidoctorj.pdf.version>
     <build.helper.maven.version>3.0.0</build.helper.maven.version>
@@ -1569,7 +1567,7 @@
     <surefire.version>3.0.0-M4</surefire.version>
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
-    <hbase-thirdparty.version>3.2.0</hbase-thirdparty.version>
+    <hbase-thirdparty.version>3.3.0</hbase-thirdparty.version>
     <!-- Intraproject jar naming properties -->
     <!-- TODO this is pretty ugly, but works for the moment.
       Modules are pretty heavy-weight things, so doing this work isn't too bad. -->
@@ -1580,6 +1578,7 @@
     <annotations.test.jar>hbase-annotations-${project.version}-tests.jar</annotations.test.jar>
     <mapreduce.test.jar>hbase-mapreduce-${project.version}-tests.jar</mapreduce.test.jar>
     <zookeeper.test.jar>hbase-zookeeper-${project.version}-tests.jar</zookeeper.test.jar>
+    <asyncfs.test.jar>hbase-asyncfs-${project.version}-tests.jar</asyncfs.test.jar>
     <shell-executable>bash</shell-executable>
     <surefire.provider>surefire-junit47</surefire.provider>
     <!-- default: run small & medium, medium with 2 threads -->
@@ -1709,19 +1708,12 @@
         <scope>test</scope>
       </dependency>
       <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>${compat.module}</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>${compat.module}</artifactId>
-        <version>${project.version}</version>
-        <type>test-jar</type>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
         <artifactId>hbase-replication</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <artifactId>hbase-balancer</artifactId>
         <groupId>org.apache.hbase</groupId>
         <version>${project.version}</version>
       </dependency>
@@ -1893,6 +1885,18 @@
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-shaded-mapreduce</artifactId>
         <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-asyncfs</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-asyncfs</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+        <scope>test</scope>
       </dependency>
       <!-- General dependencies -->
       <dependency>
@@ -2602,18 +2606,9 @@
       <activation>
         <property><name>!hadoop.profile</name></property>
       </activation>
-      <modules>
-        <!--For now, use hadoop2 compat module-->
-        <module>hbase-hadoop2-compat</module>
-      </modules>
       <properties>
         <hadoop.version>${hadoop-three.version}</hadoop.version>
-        <!--Use this compat module for now. TODO: Make h3 one if we need one-->
-        <compat.module>hbase-hadoop2-compat</compat.module>
         <assembly.file>src/main/assembly/hadoop-three-compat.xml</assembly.file>
-        <!--This property is for hadoops netty. HBase netty
-             comes in via hbase-thirdparty hbase-shaded-netty-->
-        <netty.hadoop.version>3.10.5.Final</netty.hadoop.version>
       </properties>
      <dependencyManagement>
        <dependencies>
@@ -2638,6 +2633,10 @@
                <groupId>io.netty</groupId>
                <artifactId>netty</artifactId>
              </exclusion>
+              <exclusion>
+                <groupId>javax.servlet</groupId>
+                <artifactId>servlet-api</artifactId>
+              </exclusion>
               <exclusion>
                 <groupId>javax.inject</groupId>
                 <artifactId>javax.inject</artifactId>
@@ -2669,6 +2668,10 @@
                <groupId>io.netty</groupId>
                <artifactId>netty</artifactId>
              </exclusion>
+              <exclusion>
+                <groupId>javax.servlet</groupId>
+                <artifactId>servlet-api</artifactId>
+              </exclusion>
            </exclusions>
          </dependency>
          <dependency>
@@ -2686,6 +2689,10 @@
                <groupId>io.netty</groupId>
                <artifactId>netty</artifactId>
              </exclusion>
+              <exclusion>
+                <groupId>javax.servlet</groupId>
+                <artifactId>servlet-api</artifactId>
+              </exclusion>
            </exclusions>
          </dependency>
          <dependency>

@@ -503,6 +503,40 @@ If you see `Unable to find resource 'VM_global_library.vm'`, ignore it.
 It's not an error.
 It is link:https://issues.apache.org/jira/browse/MSITE-286[officially ugly] though.
 
+[[build.on.linux.aarch64]]
+=== Build On Linux Aarch64
+HBase runs on both Windows and UNIX-like systems, and it should run on any platform
+that runs a supported version of Java. This should include JVMs on x86_64 and aarch64.
+The documentation below describes how to build hbase on aarch64 platform.
+
+==== Set Environment Variables
+Manually install Java and Maven on aarch64 servers if they are not installed,
+and set environment variables. For example:
+
+[source,bourne]
+----
+export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-arm64
+export MAVEN_HOME=/opt/maven
+export PATH=${MAVEN_HOME}/bin:${JAVA_HOME}/bin:${PATH}
+----
+
+==== Use Protobuf Supported On Aarch64
+Now HBase uses protobuf of two versions. Version '3.11.4' of protobuf that hbase uses
+internally and version '2.5.0' as external usage.
+Package protoc-2.5.0 does not work on aarch64 platform, we should add maven
+profile '-Paarch64' when building. It downloads protoc-2.5.0 package from maven
+repository which we made on aarch64 platform locally.
+
+[source,bourne]
+----
+mvn clean install -Paarch64 -DskipTests
+----
+
+[NOTE]
+Protobuf is released with aarch64 protoc since version '3.5.0', and we are planning to
+upgrade protobuf later, then we don't have to add the profile '-Paarch64' anymore.
+
+
 [[releasing]]
 == Releasing Apache HBase
 

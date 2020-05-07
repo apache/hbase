@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.rest;
 
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.MatcherAssert.assertThat;
+
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MetricsTests;
@@ -26,18 +29,18 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- *   Test of Rest Metrics Source interface.
+ * Test of Rest Metrics Source interface.
  */
-@Category({MetricsTests.class, SmallTests.class})
+@Category({ MetricsTests.class, SmallTests.class })
 public class TestMetricsRESTSource {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMetricsRESTSource.class);
+    HBaseClassTestRule.forClass(TestMetricsRESTSource.class);
 
-  @Test(expected=RuntimeException.class)
+  @Test
   public void testGetInstanceNoHadoopCompat() throws Exception {
-    //This should throw an exception because there is no compat lib on the class path.
-    CompatibilitySingletonFactory.getInstance(MetricsRESTSource.class);
+    assertThat(CompatibilitySingletonFactory.getInstance(MetricsRESTSource.class),
+      instanceOf(MetricsRESTSourceImpl.class));
   }
 }

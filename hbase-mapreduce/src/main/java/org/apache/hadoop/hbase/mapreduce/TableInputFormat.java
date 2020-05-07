@@ -152,7 +152,7 @@ implements Configurable {
     }
 
     if (conf.get(SCAN_ROW_STOP) != null) {
-      scan.setStopRow(Bytes.toBytesBinary(conf.get(SCAN_ROW_STOP)));
+      scan.withStopRow(Bytes.toBytesBinary(conf.get(SCAN_ROW_STOP)));
     }
 
     if (conf.get(SCAN_COLUMNS) != null) {

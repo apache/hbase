@@ -19,11 +19,13 @@ package org.apache.hadoop.hbase.thrift;
 
 import static org.junit.Assert.assertNotNull;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import java.io.IOException;
 
 @Category({ ClientTests.class, MediumTests.class})
 public class TestBindExceptionHandling {
@@ -31,18 +33,16 @@ public class TestBindExceptionHandling {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestBindExceptionHandling.class);
 
+  private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
+
   /**
    * See if random port choosing works around protocol port clashes
    */
   @Test
-  public void testProtocolPortClash() {
-    ThriftServer thriftServer = null;
-    try {
-      thriftServer = new TestThriftServerCmdLine(null, false, false, false).
-        createBoundServer(true, false);
-      assertNotNull(thriftServer.tserver);
-    } finally {
-      thriftServer.stop();
+  public void testProtocolPortClash() throws Exception {
+    try (ThriftServerRunner tsr = TestThriftServerCmdLine.
+        createBoundServer(() -> new ThriftServer(HTU.getConfiguration()), true, false)) {
+      assertNotNull(tsr.getThriftServer());
     }
   }
 
@@ -50,14 +50,10 @@ public class TestBindExceptionHandling {
    * See if random port choosing works around protocol port clashes
    */
   @Test
-  public void testInfoPortClash() {
-    ThriftServer thriftServer = null;
-    try {
-      thriftServer = new TestThriftServerCmdLine(null, false, false, false).
-        createBoundServer(false, true);
-      assertNotNull(thriftServer.tserver);
-    } finally {
-      thriftServer.stop();
+  public void testInfoPortClash() throws Exception {
+    try (ThriftServerRunner tsr = TestThriftServerCmdLine.
+        createBoundServer(() -> new ThriftServer(HTU.getConfiguration()), false, true)) {
+      assertNotNull(tsr.getThriftServer());
     }
   }
 }

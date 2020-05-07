@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.function.BooleanSupplier;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -31,6 +32,12 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.master.assignment.GCRegionProcedure;
+import org.apache.hadoop.hbase.master.assignment.GCMultipleMergedRegionsProcedure;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Threads;
@@ -146,10 +153,12 @@ public class TestMetaFixer {
   @Test
   public void testOverlap() throws Exception {
     TableName tn = TableName.valueOf(this.name.getMethodName());
-    TEST_UTIL.createMultiRegionTable(tn, HConstants.CATALOG_FAMILY);
+    Table t = TEST_UTIL.createMultiRegionTable(tn, HConstants.CATALOG_FAMILY);
+    TEST_UTIL.loadTable(t, HConstants.CATALOG_FAMILY);
     List<RegionInfo> ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), tn);
     assertTrue(ris.size() > 5);
-    MasterServices services = TEST_UTIL.getHBaseCluster().getMaster();
+    HMaster services = TEST_UTIL.getHBaseCluster().getMaster();
+    HbckChore hbckChore = services.getHbckChore();
     services.getCatalogJanitor().scan();
     CatalogJanitor.Report report = services.getCatalogJanitor().getLastReport();
     assertTrue(report.isEmpty());
@@ -161,6 +170,80 @@ public class TestMetaFixer {
     services.getCatalogJanitor().scan();
     report = services.getCatalogJanitor().getLastReport();
     assertEquals(6, report.getOverlaps().size());
+    assertEquals(1, MetaFixer.calculateMerges(10, report.getOverlaps()).size());
+    MetaFixer fixer = new MetaFixer(services);
+    fixer.fixOverlaps(report);
+
+    CatalogJanitor cj = services.getCatalogJanitor();
+    await(10, () -> {
+      try {
+        if (cj.scan() > 0) {
+          // It submits GC once, then it will immediately kick off another GC to test if
+          // GCMultipleMergedRegionsProcedure is idempotent. If it is not, it will create
+          // a hole.
+          Map<RegionInfo, Result> mergedRegions = cj.getLastReport().mergedRegions;
+          for (Map.Entry<RegionInfo, Result> e : mergedRegions.entrySet()) {
+            List<RegionInfo> parents = MetaTableAccessor.getMergeRegions(e.getValue().rawCells());
+            if (parents != null) {
+              ProcedureExecutor<MasterProcedureEnv> pe = services.getMasterProcedureExecutor();
+              pe.submitProcedure(new GCMultipleMergedRegionsProcedure(pe.getEnvironment(),
+                e.getKey(), parents));
+            }
+          }
+          return true;
+        }
+        return false;
+      } catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+    });
+
+    // Wait until all GCs settled down
+    await(10, () -> {
+      return services.getMasterProcedureExecutor().getActiveProcIds().isEmpty();
+    });
+
+    // No orphan regions on FS
+    hbckChore.chore();
+    assertEquals(0, hbckChore.getOrphanRegionsOnFS().size());
+
+    // No holes reported.
+    cj.scan();
+    final CatalogJanitor.Report postReport = cj.getLastReport();
+    assertTrue(postReport.isEmpty());
+  }
+
+  /**
+   * Make it so a big overlap spans many Regions, some of which are non-contiguous. Make it so
+   * we can fix this condition. HBASE-24247
+   */
+  @Test
+  public void testOverlapWithMergeOfNonContiguous() throws Exception {
+    TableName tn = TableName.valueOf(this.name.getMethodName());
+    TEST_UTIL.createMultiRegionTable(tn, HConstants.CATALOG_FAMILY);
+    List<RegionInfo> ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), tn);
+    assertTrue(ris.size() > 5);
+    MasterServices services = TEST_UTIL.getHBaseCluster().getMaster();
+    services.getCatalogJanitor().scan();
+    CatalogJanitor.Report report = services.getCatalogJanitor().getLastReport();
+    assertTrue(report.isEmpty());
+    // Make a simple overlap spanning second and third region.
+    makeOverlap(services, ris.get(1), ris.get(5));
+    // Now Delete a region under the overlap to manufacture non-contiguous sub regions.
+    RegionInfo deletedRegion = ris.get(3);
+    long pid = services.getAssignmentManager().unassign(deletedRegion);
+    while (!services.getMasterProcedureExecutor().isFinished(pid)) {
+      Threads.sleep(100);
+    }
+    GCRegionProcedure procedure =
+      new GCRegionProcedure(services.getMasterProcedureExecutor().getEnvironment(), ris.get(3));
+    pid = services.getMasterProcedureExecutor().submitProcedure(procedure);
+    while (!services.getMasterProcedureExecutor().isFinished(pid)) {
+      Threads.sleep(100);
+    }
+    Threads.sleep(10000);
+    services.getCatalogJanitor().scan();
+    report = services.getCatalogJanitor().getLastReport();
     assertEquals(1, MetaFixer.calculateMerges(10, report.getOverlaps()).size());
     MetaFixer fixer = new MetaFixer(services);
     fixer.fixOverlaps(report);

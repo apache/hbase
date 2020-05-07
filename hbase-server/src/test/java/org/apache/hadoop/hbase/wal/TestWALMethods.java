@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.WALSplitter.PipelineController;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -103,7 +103,7 @@ public class TestWALMethods {
       Long.toString(Long.MAX_VALUE) + "." + System.currentTimeMillis());
 
     final Configuration walConf = new Configuration(util.getConfiguration());
-    FSUtils.setRootDir(walConf, regiondir);
+    CommonFSUtils.setRootDir(walConf, regiondir);
     (new WALFactory(walConf, "dummyLogName")).getWAL(null);
 
     NavigableSet<Path> files = WALSplitUtil.getSplitEditFilesSorted(fs, regiondir);

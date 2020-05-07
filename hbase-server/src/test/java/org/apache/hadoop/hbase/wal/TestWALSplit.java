@@ -67,8 +67,8 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WAL.Reader;
@@ -191,7 +191,7 @@ public class TestWALSplit {
     HBASELOGDIR = TEST_UTIL.createWALRootDir();
     OLDLOGDIR = new Path(HBASELOGDIR, HConstants.HREGION_OLDLOGDIR_NAME);
     CORRUPTDIR = new Path(HBASELOGDIR, HConstants.CORRUPT_DIR_NAME);
-    TABLEDIR = FSUtils.getTableDir(HBASEDIR, TABLE_NAME);
+    TABLEDIR = CommonFSUtils.getTableDir(HBASEDIR, TABLE_NAME);
     TMPDIRNAME = conf.get(HConstants.TEMPORARY_FS_DIRECTORY_KEY,
       HConstants.DEFAULT_TEMPORARY_HDFS_DIRECTORY);
     REGIONS.clear();
@@ -395,7 +395,7 @@ public class TestWALSplit {
   @Test
   public void testOldRecoveredEditsFileSidelined() throws IOException {
     Path p = createRecoveredEditsPathForRegion();
-    Path tdir = FSUtils.getTableDir(HBASEDIR, TableName.META_TABLE_NAME);
+    Path tdir = CommonFSUtils.getTableDir(HBASEDIR, TableName.META_TABLE_NAME);
     Path regiondir = new Path(tdir,
       RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName());
     fs.mkdirs(regiondir);
@@ -474,7 +474,8 @@ public class TestWALSplit {
     RegionInfo hri = RegionInfoBuilder.newBuilder(TABLE_NAME).build();
     REGIONS.clear();
     REGIONS.add(hri.getEncodedName());
-    Path regionDir = new Path(FSUtils.getTableDir(HBASEDIR, TABLE_NAME), hri.getEncodedName());
+    Path regionDir =
+      new Path(CommonFSUtils.getTableDir(HBASEDIR, TABLE_NAME), hri.getEncodedName());
     LOG.info("Creating region directory: " + regionDir);
     assertTrue(fs.mkdirs(regionDir));
 
@@ -1102,7 +1103,7 @@ public class TestWALSplit {
     useDifferentDFSClient();
 
     WALSplitter.split(HBASELOGDIR, WALDIR, OLDLOGDIR, fs, conf, wals);
-    Path tdir = FSUtils.getTableDir(HBASEDIR, TABLE_NAME);
+    Path tdir = CommonFSUtils.getTableDir(HBASEDIR, TABLE_NAME);
     assertFalse(fs.exists(tdir));
 
     assertEquals(0, countWAL(fs.listStatus(OLDLOGDIR)[0].getPath()));
@@ -1128,7 +1129,8 @@ public class TestWALSplit {
     useDifferentDFSClient();
     WALSplitter.split(HBASELOGDIR, WALDIR, OLDLOGDIR, fs, conf, wals);
 
-    final Path corruptDir = new Path(FSUtils.getWALRootDir(conf), HConstants.CORRUPT_DIR_NAME);
+    final Path corruptDir =
+      new Path(CommonFSUtils.getWALRootDir(conf), HConstants.CORRUPT_DIR_NAME);
     assertEquals(1, fs.listStatus(corruptDir).length);
   }
 
@@ -1243,7 +1245,7 @@ public class TestWALSplit {
 
   private Path[] getLogForRegion(TableName table, String region)
       throws IOException {
-    Path tdir = FSUtils.getWALTableDir(conf, table);
+    Path tdir = CommonFSUtils.getWALTableDir(conf, table);
     @SuppressWarnings("deprecation")
     Path editsdir = WALSplitUtil.getRegionDirRecoveredEditsDir(HRegion.getRegionDir(tdir,
         Bytes.toString(Bytes.toBytes(region))));
