@@ -434,23 +434,38 @@ function update_releasenotes {
     tar xvz -C . || exit
   cd "./${yetus}" || exit
   ./bin/releasedocmaker -p "${jira_project}" --fileversions -v "${jira_fix_version}" -l --sortorder=newer --skip-credits
-  # First clear out the changes written by previous RCs.
   pwd
-  sed -i -e "/^## Release ${jira_fix_version}/,/^## Release/ {//!d; /^## Release ${jira_fix_version}/d;}" \
-    "${project_dir}/CHANGES.md" || true
-  sed -i -e "/^# ${jira_project}  ${jira_fix_version} Release Notes/,/^# ${jira_project}/{//!d; /^# ${jira_project}  ${jira_fix_version} Release Notes/d;}" \
-    "${project_dir}/RELEASENOTES.md" || true
+  # First clear out the changes written by previous RCs.
+  if [ -f "${project_dir}/CHANGES.md" ]; then
+    sed -i -e \
+        "/^## Release ${jira_fix_version}/,/^## Release/ {//!d; /^## Release ${jira_fix_version}/d;}" \
+        "${project_dir}/CHANGES.md" || true
+  fi
+  if [ -f "${project_dir}/RELEASENODES.md" ]; then
+    sed -i -e \
+        "/^# ${jira_project}  ${jira_fix_version} Release Notes/,/^# ${jira_project}/{//!d; /^# ${jira_project}  ${jira_fix_version} Release Notes/d;}" \
+        "${project_dir}/RELEASENOTES.md" || true
+  fi
 
-  # The above generates RELEASENOTES.X.X.X.md and CHANGELOG.X.X.X.md.
-  # To insert into project's CHANGES.md...need to cut the top off the
-  # CHANGELOG.X.X.X.md file removing license and first line and then
-  # insert it after the license comment closing where we have a
-  # DO NOT REMOVE marker text!
-  sed -i -e '/## Release/,$!d' "CHANGELOG.${jira_fix_version}.md"
-  sed -i -e "/DO NOT REMOVE/r CHANGELOG.${jira_fix_version}.md" "${project_dir}/CHANGES.md"
-  # Similar for RELEASENOTES but slightly different.
-  sed -i -e '/Release Notes/,$!d' "RELEASENOTES.${jira_fix_version}.md"
-  sed -i -e "/DO NOT REMOVE/r RELEASENOTES.${jira_fix_version}.md" "${project_dir}/RELEASENOTES.md"
+  # The releasedocmaker call above generates RELEASENOTES.X.X.X.md and CHANGELOG.X.X.X.md.
+  if [ -f "${project_dir}/CHANGES.md" ]; then
+    # To insert into project's CHANGES.md...need to cut the top off the
+    # CHANGELOG.X.X.X.md file removing license and first line and then
+    # insert it after the license comment closing where we have a
+    # DO NOT REMOVE marker text!
+    sed -i -e '/## Release/,$!d' "CHANGELOG.${jira_fix_version}.md"
+    sed -i -e "/DO NOT REMOVE/r CHANGELOG.${jira_fix_version}.md" "${project_dir}/CHANGES.md"
+  else
+    mv "CHANGELOG.${jira_fix_version}.md" "${project_dir}/CHANGES.md"
+  fi
+  if [ -f "${project_dir}/RELEASENOTES.md" ]; then
+    # Similar for RELEASENOTES but slightly different.
+    sed -i -e '/Release Notes/,$!d' "RELEASENOTES.${jira_fix_version}.md"
+    sed -i -e "/DO NOT REMOVE/r RELEASENOTES.${jira_fix_version}.md" \
+        "${project_dir}/RELEASENOTES.md"
+  else
+    mv "RELEASENOTES.${jira_fix_version}.md" "${project_dir}/RELEASENOTES.md"
+  fi
   cd .. || exit
 }
 
