@@ -55,6 +55,7 @@ Used for 'tag' and 'publish' stages:
     to actually publish you have to set '-f' (force) flag in do-release.sh or do-release-docker.sh.
 
 Used only for 'tag':
+  YETUS_HOME - installation location for Apache Yetus
   GIT_NAME - Name to use with git
   GIT_EMAIL - E-mail address to use with git
   GIT_BRANCH - Git branch on which to make release. Tag is always placed at HEAD of this branch.
@@ -105,6 +106,7 @@ perl --version | grep 'This is'
 rm -rf "${PROJECT}"
 
 if [[ "$1" == "tag" ]]; then
+  init_yetus
   # for 'tag' stage
   set -o pipefail
   set -x  # detailed logging during action

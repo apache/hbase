@@ -43,6 +43,12 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -qq -y update \
   && update-alternatives --set java /usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java \
   && pip install \
     python-dateutil==2.8.1
+# Install Apache Yetus
+ENV YETUS_VERSION 0.11.1
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN wget -qO- "https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=/yetus/${YETUS_VERSION}/apache-yetus-${YETUS_VERSION}-bin.tar.gz" | \
+        tar xvz -C /opt
+ENV YETUS_HOME /opt/apache-yetus-${YETUS_VERSION}
 
 WORKDIR /opt/hbase-rm/output
 
