@@ -43,12 +43,16 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Testcase for HBASE-23636.
  */
 @Category({ MasterTests.class, MediumTests.class })
 public class TestRaceBetweenSCPAndDTP {
+  private static final Logger LOG = LoggerFactory.getLogger(TestRaceBetweenSCPAndDTP.class);
+
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestRaceBetweenSCPAndDTP.class);
@@ -115,12 +119,15 @@ public class TestRaceBetweenSCPAndDTP {
     RegionInfo region = UTIL.getMiniHBaseCluster().getRegions(NAME).get(0).getRegionInfo();
     AssignmentManager am = UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager();
     ServerName sn = am.getRegionStates().getRegionState(region).getServerName();
+    LOG.info("ServerName={}, region={}", sn, region);
 
     ARRIVE_GET_REGIONS_ON_TABLE = new CountDownLatch(1);
     RESUME_GET_REGIONS_ON_SERVER = new CountDownLatch(1);
-
+    // Assign to local variable because this static gets set to null in above running thread and
+    // so NPE.
+    CountDownLatch cdl = ARRIVE_GET_REGIONS_ON_TABLE;
     UTIL.getAdmin().disableTableAsync(NAME);
-    ARRIVE_GET_REGIONS_ON_TABLE.await();
+    cdl.await();
 
     ProcedureExecutor<?> procExec =
       UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
