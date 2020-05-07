@@ -171,7 +171,7 @@ module Hbase
       assert_nil(res)
     end
 
-    define_test "deleteall should work timestamps but w/o columns" do
+    define_test "deleteall should work with timestamps but w/o columns" do
       @test_table.deleteall("106", "", 1588765900005)
       res = @test_table._get_internal('106', 'x:a')
       assert_nil(res)
