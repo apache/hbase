@@ -30,12 +30,16 @@ row key prefix. Examples:
   hbase> deleteall 't1', 'r1'
   hbase> deleteall 't1', 'r1', 'c1'
   hbase> deleteall 't1', 'r1', 'c1', ts1
+  //'' means no specific column, will delete all cells in the row which timestamp is lower than
+  //the one specified in the command
+  hbase> deleteall 't1', 'r1', '', ts1
   hbase> deleteall 't1', 'r1', 'c1', ts1, {VISIBILITY=>'PRIVATE|SECRET'}
 
 ROWPREFIXFILTER can be used to delete row ranges
   hbase> deleteall 't1', {ROWPREFIXFILTER => 'prefix'}
   hbase> deleteall 't1', {ROWPREFIXFILTER => 'prefix'}, 'c1'        //delete certain column family in the row ranges
   hbase> deleteall 't1', {ROWPREFIXFILTER => 'prefix'}, 'c1', ts1
+  hbase> deleteall 't1', {ROWPREFIXFILTER => 'prefix'}, '', ts1
   hbase> deleteall 't1', {ROWPREFIXFILTER => 'prefix'}, 'c1', ts1, {VISIBILITY=>'PRIVATE|SECRET'}
 
 CACHE can be used to specify how many deletes batched to be sent to server at one time, default is 100

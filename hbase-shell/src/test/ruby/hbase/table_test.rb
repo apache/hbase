@@ -115,6 +115,9 @@ module Hbase
       @test_table.put(105, "x:a", "3")
       @test_table.put(105, "x:a", "4")
 
+      @test_table.put(106, "x:a", "3", 1588765900000)
+      @test_table.put(106, "x:b", "4", 1588765900010)
+
       @test_table.put("111", "x:a", "5")
       @test_table.put("111", "x:b", "6")
       @test_table.put("112", "x:a", "5")
@@ -166,6 +169,14 @@ module Hbase
       @test_table.deleteall("104")
       res = @test_table._get_internal('104', 'x:a', 'x:b')
       assert_nil(res)
+    end
+
+    define_test "deleteall should work with timestamps but w/o columns" do
+      @test_table.deleteall("106", "", 1588765900005)
+      res = @test_table._get_internal('106', 'x:a')
+      assert_nil(res)
+      res = @test_table._get_internal('106', 'x:b')
+      assert_not_nil(res)
     end
 
     define_test "deleteall should work with integer keys" do
