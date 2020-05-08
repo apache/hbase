@@ -319,6 +319,16 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
     validateAdminPermissions(action);
   }
 
+  @Test
+  public void testRenameRSGroup() throws Exception {
+    AccessTestAction action = () -> {
+      checkPermission("renameRSGroup");
+      return null;
+    };
+
+    validateAdminPermissions(action);
+  }
+
   private void validateAdminPermissions(AccessTestAction action) throws Exception {
     verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
     verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
