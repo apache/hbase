@@ -4,7 +4,6 @@
 .DS_Store
 .classpath
 /build
-/.idea/
 /logs
 *target/
 *.orig
@@ -21,3 +20,45 @@ linklint/
 .checkstyle
 **/.checkstyle
 .java-version
+
+# .idea/libraries appears to contain version-specific details about maven dependencies
+.idea/libraries
+# this file appears to contain module-specific settings. modules change over time, so don't commit either
+.idea/encodings.xml
+
+# entries for managing Jetbrains project files, https://github.com/github/gitignore/blob/599646e/Global/JetBrains.gitignore
+
+# User-specific stuff
+.idea/**/workspace.xml
+.idea/**/tasks.xml
+.idea/**/usage.statistics.xml
+.idea/**/dictionaries
+.idea/**/shelf
+
+# Generated files
+.idea/**/contentModel.xml
+
+# Sensitive or high-churn files
+.idea/**/dataSources/
+.idea/**/dataSources.ids
+.idea/**/dataSources.local.xml
+.idea/**/sqlDataSources.xml
+.idea/**/dynamic.xml
+.idea/**/uiDesigner.xml
+.idea/**/dbnavigator.xml
+
+# Gradle and Maven with auto-import
+# When using Gradle or Maven with auto-import, you should exclude module files,
+# since they will be recreated, and may cause churn.  Uncomment if using
+# auto-import.
+.idea/artifacts
+.idea/compiler.xml
+.idea/jarRepositories.xml
+.idea/modules.xml
+.idea/*.iml
+.idea/modules
+*.iml
+*.ipr
+
+# File-based project format
+*.iws
