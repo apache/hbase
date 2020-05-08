@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.exceptions.MasterRegistryFetchException;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
@@ -163,7 +164,15 @@ public class TestMasterShutdown {
       assertNotEquals("Timeout waiting for server manager to become available.",
         -1, Waiter.waitFor(htu.getConfiguration(), timeout,
           () -> masterThread.getMaster().getServerManager() != null));
-      htu.getConnection().getAdmin().shutdown();
+      try {
+        htu.getConnection().getAdmin().shutdown();
+      } catch (IOException e) {
+        LOG.error("Failed to shut down the cluster.", e);
+        if (!(e.getCause() instanceof MasterRegistryFetchException) || !(e.getCause().getCause()
+          .getMessage().startsWith("Failed contacting masters"))) {
+          throw e;
+        }
+      }
       masterThread.join();
     } finally {
       if (hbaseCluster != null) {
