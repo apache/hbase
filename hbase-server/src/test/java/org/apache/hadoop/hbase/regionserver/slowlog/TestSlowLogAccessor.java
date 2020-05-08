@@ -41,6 +41,8 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests for SlowLog System Table
@@ -52,12 +54,19 @@ public class TestSlowLogAccessor {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestSlowLogAccessor.class);
 
+  private static final Logger LOG = LoggerFactory.getLogger(TestSlowLogRecorder.class);
+
   private static final HBaseTestingUtility HBASE_TESTING_UTILITY = new HBaseTestingUtility();
 
   private SlowLogRecorder slowLogRecorder;
 
   @BeforeClass
   public static void setup() throws Exception {
+    try {
+      HBASE_TESTING_UTILITY.shutdownMiniHBaseCluster();
+    } catch (IOException e) {
+      LOG.debug("No worries.");
+    }
     Configuration conf = HBASE_TESTING_UTILITY.getConfiguration();
     conf.setBoolean(HConstants.SLOW_LOG_BUFFER_ENABLED_KEY, true);
     conf.setBoolean(HConstants.SLOW_LOG_SYS_TABLE_ENABLED_KEY, true);
@@ -166,11 +175,17 @@ public class TestSlowLogAccessor {
       });
     }
 
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY
-      .waitFor(7000, () -> slowLogRecorder.getSlowLogPayloads(request).size() > 4000));
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(7000, () -> {
+      int count = slowLogRecorder.getSlowLogPayloads(request).size();
+      LOG.debug("RingBuffer records count: {}", count);
+      return count > 2000;
+    }));
 
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY
-      .waitFor(3000, () -> getTableCount(connection) > 4000));
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+      int count = getTableCount(connection);
+      LOG.debug("SlowLog Table records count: {}", count);
+      return count > 2000;
+    }));
   }
 
 }
