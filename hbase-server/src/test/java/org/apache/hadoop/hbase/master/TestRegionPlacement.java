@@ -450,7 +450,7 @@ public class TestRegionPlacement {
 
             assertNotNull(addrFromRS);
             assertNotNull(addrFromPlan);
-            assertTrue("Region server " + rs.getServerName().getHostAndPort()
+            assertTrue("Region server " + rs.getServerName().getAddress()
                 + " has the " + positions[j] +
                 " for region " + region.getRegionInfo().getRegionNameAsString() + " is " +
                 addrFromRS + " which is inconsistent with the plan "

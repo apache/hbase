@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,17 +22,14 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
-
 import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Pattern;
-
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -47,25 +44,11 @@ public class TestServerName {
   public void testHash() {
     ServerName sn1 = ServerName.parseServerName("asf903.gq1.ygridcore.net,52690,1517835491385");
     ServerName sn2 = ServerName.parseServerName("asf903.gq1.ygridcore.net,42231,1517835491329");
-    Set<ServerName> sns = new HashSet<ServerName>();
+    Set<ServerName> sns = new HashSet<>();
     sns.add(sn2);
     sns.add(sn1);
     sns.add(sn1);
     assertEquals(2, sns.size());
-  }
-
-  @Test
-  public void testGetHostNameMinusDomain() {
-    assertEquals("2607:f0d0:1002:51::4",
-        ServerName.getHostNameMinusDomain("2607:f0d0:1002:51::4"));
-    assertEquals("2607:f0d0:1002:0051:0000:0000:0000:0004",
-        ServerName.getHostNameMinusDomain("2607:f0d0:1002:0051:0000:0000:0000:0004"));
-    assertEquals("1.1.1.1", ServerName.getHostNameMinusDomain("1.1.1.1"));
-    assertEquals("x", ServerName.getHostNameMinusDomain("x"));
-    assertEquals("x", ServerName.getHostNameMinusDomain("x.y.z"));
-    assertEquals("asf000", ServerName.getHostNameMinusDomain("asf000.sp2.ygridcore.net"));
-    ServerName sn = ServerName.valueOf("asf000.sp2.ygridcore.net", 1, 1);
-    assertEquals("asf000.sp2.ygridcore.net,1,1", sn.toString());
   }
 
   @Test
@@ -143,12 +126,12 @@ public class TestServerName {
     assertSame(sn1, ServerName.valueOf("www.example.org", 1234, 5671));
   }
 
-  @Ignore // Enable and let fun for hours to make sure weak references working fine.
   @Test
   public void testInterningDoesWeakReferences() {
-    for (int i = 0; i < Integer.MAX_VALUE; i++) {
-      ServerName.valueOf("www.example.org", 1234, i++);
+    for (int i = 0; i < 5000; i++) {
+      final int startcode = i++;
+      final ServerName sn1 = ServerName.valueOf("www.example.org", 1234, startcode);
+      assertSame(sn1, ServerName.valueOf("www.example.org", 1234, startcode));
     }
   }
 }
-
