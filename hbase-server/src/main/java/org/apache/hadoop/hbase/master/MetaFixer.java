@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -242,6 +243,7 @@ class MetaFixer {
     }
     List<SortedSet<RegionInfo>> merges = new ArrayList<>();
     SortedSet<RegionInfo> currentMergeSet = new TreeSet<>();
+    HashSet<RegionInfo> regionsInMergeSet = new HashSet<>();
     RegionInfo regionInfoWithlargestEndKey =  null;
     for (Pair<RegionInfo, RegionInfo> pair: overlaps) {
       if (regionInfoWithlargestEndKey != null) {
@@ -251,12 +253,33 @@ class MetaFixer {
           if (currentMergeSet.size() >= maxMergeCount) {
             LOG.warn("Ran into maximum-at-a-time merges limit={}", maxMergeCount);
           }
-          merges.add(currentMergeSet);
-          currentMergeSet = new TreeSet<>();
+
+          // In the case of the merge set contains only 1 region or empty, it does not need to
+          // submit this merge request as no merge is going to happen. currentMergeSet can be
+          // reused in this case.
+          if (currentMergeSet.size() <= 1) {
+            for (RegionInfo ri : currentMergeSet) {
+              regionsInMergeSet.remove(ri);
+            }
+            currentMergeSet.clear();
+          } else {
+            merges.add(currentMergeSet);
+            currentMergeSet = new TreeSet<>();
+          }
         }
       }
-      currentMergeSet.add(pair.getFirst());
-      currentMergeSet.add(pair.getSecond());
+
+      // Do not add the same region into multiple merge set, this will fail
+      // the second merge request.
+      if (!regionsInMergeSet.contains(pair.getFirst())) {
+        currentMergeSet.add(pair.getFirst());
+        regionsInMergeSet.add(pair.getFirst());
+      }
+      if (!regionsInMergeSet.contains(pair.getSecond())) {
+        currentMergeSet.add(pair.getSecond());
+        regionsInMergeSet.add(pair.getSecond());
+      }
+
       regionInfoWithlargestEndKey = getRegionInfoWithLargestEndKey(
         getRegionInfoWithLargestEndKey(pair.getFirst(), pair.getSecond()),
           regionInfoWithlargestEndKey);
