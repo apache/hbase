@@ -168,8 +168,9 @@ public class TestMasterShutdown {
         htu.getConnection().getAdmin().shutdown();
       } catch (IOException e) {
         LOG.error("Failed to shut down the cluster.", e);
-        if (!(e.getCause() instanceof MasterRegistryFetchException) || !(e.getCause().getCause()
-          .getMessage().startsWith("Failed contacting masters"))) {
+        if (!(e.getCause() instanceof MasterRegistryFetchException)
+            || !(e.getCause().getCause() != null && e.getCause().getCause().getMessage()
+              .startsWith("Failed contacting masters"))) {
           throw e;
         }
       }
