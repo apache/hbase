@@ -169,7 +169,7 @@ public class TestMetaTableAccessorNoCluster {
           RegionInfo.toByteArray(RegionInfoBuilder.FIRST_META_REGIONINFO)));
       kvs.add(new KeyValue(rowToVerify,
         HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
-        Bytes.toBytes(sn.getHostAndPort())));
+        Bytes.toBytes(sn.getAddress().toString())));
       kvs.add(new KeyValue(rowToVerify,
         HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
         Bytes.toBytes(sn.getStartcode())));

@@ -84,7 +84,7 @@ public class TestShortCircuitConnection {
     ClientService.BlockingInterface client = connection.getClient(regionServer.getServerName());
     assertTrue(admin instanceof RSRpcServices);
     assertTrue(client instanceof RSRpcServices);
-    ServerName anotherSn = ServerName.valueOf(regionServer.getServerName().getHostAndPort(),
+    ServerName anotherSn = ServerName.valueOf(regionServer.getServerName().getAddress(),
       EnvironmentEdgeManager.currentTime());
     admin = connection.getAdmin(anotherSn);
     client = connection.getClient(anotherSn);

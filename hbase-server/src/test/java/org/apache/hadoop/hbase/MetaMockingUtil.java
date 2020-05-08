@@ -79,7 +79,7 @@ public class MetaMockingUtil {
     if (sn != null) {
       kvs.add(new KeyValue(region.getRegionName(),
         HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
-        Bytes.toBytes(sn.getHostAndPort())));
+        Bytes.toBytes(sn.getAddress().toString())));
       kvs.add(new KeyValue(region.getRegionName(),
         HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
         Bytes.toBytes(sn.getStartcode())));

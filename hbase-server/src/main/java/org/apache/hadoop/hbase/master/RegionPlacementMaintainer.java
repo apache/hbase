@@ -716,7 +716,7 @@ public class RegionPlacementMaintainer {
           " region servers with its corresponding favored nodes");
       for (Map.Entry<ServerName, Exception> entry :
         failedUpdateMap.entrySet() ) {
-        LOG.error("Failed to update " + entry.getKey().getHostAndPort() +
+        LOG.error("Failed to update " + entry.getKey().getAddress() +
             " because of " + entry.getValue().getMessage());
       }
     }

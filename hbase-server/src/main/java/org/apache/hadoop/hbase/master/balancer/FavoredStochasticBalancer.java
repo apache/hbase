@@ -596,8 +596,8 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
         int currentServer) {
       List<Integer> fnIndex = new ArrayList<>();
       for (ServerName sn : favoredNodes) {
-        if (cluster.serversToIndex.containsKey(sn.getHostAndPort())) {
-          fnIndex.add(cluster.serversToIndex.get(sn.getHostAndPort()));
+        if (cluster.serversToIndex.containsKey(sn.getAddress())) {
+          fnIndex.add(cluster.serversToIndex.get(sn.getAddress()));
         }
       }
       float locality = 0;
@@ -660,8 +660,8 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
         int currentServerIndex) {
       List<Integer> fnIndex = new ArrayList<>();
       for (ServerName sn : favoredNodes) {
-        if (cluster.serversToIndex.containsKey(sn.getHostAndPort())) {
-          fnIndex.add(cluster.serversToIndex.get(sn.getHostAndPort()));
+        if (cluster.serversToIndex.containsKey(sn.getAddress())) {
+          fnIndex.add(cluster.serversToIndex.get(sn.getAddress()));
         }
       }
       int leastLoadedFN = -1;
