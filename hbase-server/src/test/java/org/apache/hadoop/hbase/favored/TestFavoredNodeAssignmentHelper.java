@@ -476,7 +476,7 @@ public class TestFavoredNodeAssignmentHelper {
     for (int attempts = 0 ; attempts < MAX_ATTEMPTS; attempts++) {
       ServerName sn = helper.getOneRandomServer(rack, skipServers);
       assertNotEquals("Skip server should not be selected ",
-          skipSN.getHostAndPort(), sn.getHostAndPort());
+          skipSN.getAddress(), sn.getAddress());
       assertTrue("Server:" + sn + " does not belong to list: " + servers, servers.contains(sn));
     }
   }

@@ -170,7 +170,7 @@ public class TestRegionServerAbort {
   public void testStopOverrideFromCoprocessor() throws Exception {
     Admin admin = testUtil.getHBaseAdmin();
     HRegionServer regionserver = cluster.getRegionServer(0);
-    admin.stopRegionServer(regionserver.getServerName().getHostAndPort());
+    admin.stopRegionServer(regionserver.getServerName().getAddress().toString());
 
     // regionserver should have failed to stop due to coprocessor
     assertFalse(cluster.getRegionServer(0).isAborted());
