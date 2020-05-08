@@ -19,39 +19,27 @@ package org.apache.hadoop.hbase.http;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.log4j.Logger;
-import org.eclipse.jetty.server.NCSARequestLog;
 import org.eclipse.jetty.server.RequestLog;
+import org.eclipse.jetty.server.Slf4jRequestLog;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestHttpRequestLog {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHttpRequestLog.class);
-
-  @Test
-  public void testAppenderUndefined() {
-    RequestLog requestLog = HttpRequestLog.getRequestLog("test");
-    assertNull("RequestLog should be null", requestLog);
-  }
+    HBaseClassTestRule.forClass(TestHttpRequestLog.class);
 
   @Test
   public void testAppenderDefined() {
-    HttpRequestLogAppender requestLogAppender = new HttpRequestLogAppender();
-    requestLogAppender.setName("testrequestlog");
-    Logger.getLogger("http.requests.test").addAppender(requestLogAppender);
     RequestLog requestLog = HttpRequestLog.getRequestLog("test");
-    Logger.getLogger("http.requests.test").removeAppender(requestLogAppender);
     assertNotNull("RequestLog should not be null", requestLog);
-    assertEquals("Class mismatch", NCSARequestLog.class, requestLog.getClass());
+    assertEquals("Class mismatch", Slf4jRequestLog.class, requestLog.getClass());
   }
 }
