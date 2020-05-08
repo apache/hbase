@@ -24,6 +24,7 @@ import java.util.Random;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog;
@@ -62,6 +63,7 @@ public class SlowLogTableAccessor {
       final Connection connection) {
     final byte[] rowKey = getRowKey(slowLogPayload);
     final Put put = new Put(rowKey)
+      .setDurability(Durability.SKIP_WAL)
       .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("call_details"),
         Bytes.toBytes(slowLogPayload.getCallDetails()))
       .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("client_address"),
