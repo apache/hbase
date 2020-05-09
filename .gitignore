@@ -21,3 +21,5 @@ linklint/
 .checkstyle
 **/.checkstyle
 .java-version
+*.log
+**/*.log

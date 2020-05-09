@@ -23,24 +23,32 @@
 # and passwords to use building.
 export PROJECT="${PROJECT:-hbase}"
 
-SELF=$(cd $(dirname $0) && pwd)
+SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=SCRIPTDIR/release-util.sh
 . "$SELF/release-util.sh"
 
-while getopts "bn" opt; do
+while getopts "b:fs:" opt; do
   case $opt in
-    b) GIT_BRANCH=$OPTARG ;;
-    n) DRY_RUN=1 ;;
+    b) export GIT_BRANCH=$OPTARG ;;
+    f) export DRY_RUN=0 ;;  # "force", ie actually publish this release (otherwise defaults to dry run)
+    s) RELEASE_STEP="$OPTARG" ;;
     ?) error "Invalid option: $OPTARG" ;;
   esac
 done
+shift $((OPTIND-1))
+if (( $# > 0 )); then
+  error "Arguments can only be provided with option flags, invalid args: $*"
+fi
 
 # If running in docker, import and then cache keys.
 if [ "$RUNNING_IN_DOCKER" = "1" ]; then
   # Run gpg agent.
-  eval $(gpg-agent --disable-scdaemon --daemon --no-grab  --allow-preset-passphrase --default-cache-ttl=86400 --max-cache-ttl=86400)
-  echo "GPG Version: `gpg --version`"
-  # Inside docker, need to import the GPG key stored in the current directory.
-  echo $GPG_PASSPHRASE | $GPG --passphrase-fd 0 --import "$SELF/gpg.key"
+  eval "$(gpg-agent --disable-scdaemon --daemon --no-grab  --allow-preset-passphrase \
+          --default-cache-ttl=86400 --max-cache-ttl=86400)"
+  echo "GPG Version: $(gpg --version)"
+  # Inside docker, need to import the GPG keyfile stored in the current directory.
+  # (On workstation, assume GPG has access to keychain/cache with key_id already imported.)
+  echo "$GPG_PASSPHRASE" | $GPG --passphrase-fd 0 --import "$SELF/gpg.key"
 
   # We may need to adjust the path since JAVA_HOME may be overridden by the driver script.
   if [ -n "$JAVA_HOME" ]; then
@@ -53,7 +61,15 @@ else
   # Outside docker, need to ask for information about the release.
   get_release_info
 fi
-export GPG_TTY=$(tty)
+GPG_TTY="$(tty)"
+export GPG_TTY
+
+if [[ -z "$RELEASE_STEP" ]]; then
+  # If doing all stages, leave out 'publish-snapshot'
+  RELEASE_STEP="tag_publish-dist_publish-release"
+  # and use shared maven local repo for efficiency
+  export REPO="${REPO:-$(pwd)/$(mktemp -d hbase-repo-XXXXX)}"
+fi
 
 function should_build {
   local WHAT=$1
@@ -66,26 +82,30 @@ function should_build {
   fi
 }
 
-if should_build "tag" && [ $SKIP_TAG = 0 ]; then
+if should_build "tag" && [ "$SKIP_TAG" = 0 ]; then
   run_silent "Creating release tag $RELEASE_TAG..." "tag.log" \
-    "$SELF/release-tag.sh"
-  echo "It may take some time for the tag to be synchronized to github."
-  echo "Press enter when you've verified that the new tag ($RELEASE_TAG) is available."
-  read
+    "$SELF/release-build.sh" tag
+  if is_dry_run; then
+    export TAG_SAME_DRY_RUN="true";
+  fi
 else
   echo "Skipping tag creation for $RELEASE_TAG."
 fi
 
-if should_build "build"; then
-  run_silent "Building ${PROJECT}..." "build.log" \
-    "$SELF/release-build.sh" build
+if should_build "publish-dist"; then
+  run_silent "Publishing distribution packages (tarballs)" "publish-dist.log" \
+    "$SELF/release-build.sh" publish-dist
 else
-  echo "Skipping build step."
+  echo "Skipping publish-dist step."
 fi
 
-if should_build "publish"; then
-  run_silent "Publishing release" "publish.log" \
+if should_build "publish-snapshot"; then
+  run_silent "Publishing snapshot" "publish-snapshot.log" \
+    "$SELF/release-build.sh" publish-snapshot
+
+elif should_build "publish-release"; then
+  run_silent "Publishing release" "publish-release.log" \
     "$SELF/release-build.sh" publish-release
 else
-  echo "Skipping publish step."
+  echo "Skipping publish-release step."
 fi

@@ -47,15 +47,16 @@
 #
 set -e
 
-# Set this building other hbase repos: e.g. PROJECT=hbase-operator-tools
+# Set this to build other hbase repos: e.g. PROJECT=hbase-operator-tools
 export PROJECT="${PROJECT:-hbase}"
 
-SELF=$(cd $(dirname "$0") && pwd)
+SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=SCRIPTDIR/release-util.sh
 . "$SELF/release-util.sh"
 
 function usage {
   local NAME
-  NAME="$(basename "$0")"
+  NAME="$(basename "${BASH_SOURCE[0]}")"
   cat <<EOF
 Usage: $NAME [options]
 
@@ -64,13 +65,15 @@ This script runs the release scripts inside a docker image.
 Options:
 
   -d [path]    required. working directory. output will be written to "output" in here.
-  -n           dry run mode. Checks and local builds, but does not upload anything.
+  -f           "force" -- actually publish this release. Unless you specify '-f', it will
+               default to dry run mode, which checks and does local builds, but does not upload anything.
   -t [tag]     tag for the hbase-rm docker image to use for building (default: "latest").
   -j [path]    path to local JDK installation to use building. By default the script will
                use openjdk8 installed in the docker image.
-  -p [project] project to build; default 'hbase'; alternatively, 'hbase-thirdparty', etc.
-  -s [step]    runs a single step of the process; valid steps are: tag, build, publish. if
-               none specified, runs tag, then build, and then publish.
+  -p [project] project to build, such as 'hbase' or 'hbase-thirdparty'; defaults to $PROJECT env var
+  -s [step]    runs a single step of the process; valid steps are: tag|publish-dist|publish-release.
+               If none specified, runs tag, then publish-dist, and then publish-release.
+               'publish-snapshot' is also an allowed, less used, option.
 EOF
 }
 
@@ -78,10 +81,10 @@ WORKDIR=
 IMGTAG=latest
 JAVA=
 RELEASE_STEP=
-while getopts "d:hj:np:s:t:" opt; do
+while getopts "d:fhj:p:s:t:" opt; do
   case $opt in
     d) WORKDIR="$OPTARG" ;;
-    n) DRY_RUN=1 ;;
+    f) DRY_RUN=0 ;;
     t) IMGTAG="$OPTARG" ;;
     j) JAVA="$OPTARG" ;;
     p) PROJECT="$OPTARG" ;;
@@ -90,6 +93,10 @@ while getopts "d:hj:np:s:t:" opt; do
     ?) error "Invalid option. Run with -h for help." ;;
   esac
 done
+shift $((OPTIND-1))
+if (( $# > 0 )); then
+  error "Arguments can only be provided with option flags, invalid args: $*"
+fi
 
 if [ -z "$WORKDIR" ] || [ ! -d "$WORKDIR" ]; then
   error "Work directory (-d) must be defined and exist. Run with -h for help."
@@ -145,7 +152,6 @@ NEXT_VERSION=$NEXT_VERSION
 RELEASE_VERSION=$RELEASE_VERSION
 RELEASE_TAG=$RELEASE_TAG
 GIT_REF=$GIT_REF
-PACKAGE_VERSION=$PACKAGE_VERSION
 ASF_USERNAME=$ASF_USERNAME
 GIT_NAME=$GIT_NAME
 GIT_EMAIL=$GIT_EMAIL
@@ -153,19 +159,20 @@ GPG_KEY=$GPG_KEY
 ASF_PASSWORD=$ASF_PASSWORD
 GPG_PASSPHRASE=$GPG_PASSPHRASE
 RELEASE_STEP=$RELEASE_STEP
-RELEASE_STEP=$RELEASE_STEP
 API_DIFF_TAG=$API_DIFF_TAG
 EOF
 
-JAVA_VOL=
+JAVA_VOL=()
 if [ -n "$JAVA" ]; then
   echo "JAVA_HOME=/opt/hbase-java" >> "$ENVFILE"
-  JAVA_VOL="--volume $JAVA:/opt/hbase-java"
+  JAVA_VOL=(--volume "$JAVA:/opt/hbase-java")
 fi
 
 echo "Building $RELEASE_TAG; output will be at $WORKDIR/output"
-docker run -ti \
+cmd=(docker run -ti \
   --env-file "$ENVFILE" \
   --volume "$WORKDIR:/opt/hbase-rm" \
-  $JAVA_VOL \
-  "hbase-rm:$IMGTAG"
+  "${JAVA_VOL[@]}" \
+  "hbase-rm:$IMGTAG")
+echo "${cmd[*]}"
+"${cmd[@]}"
