@@ -137,6 +137,12 @@
         </dependency>
         <dependency>
             <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase-asyncfs</artifactId>
+            <type>test-jar</type>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.hbase</groupId>
             <artifactId>hbase-zookeeper</artifactId>
             <type>test-jar</type>
             <scope>compile</scope>
