@@ -157,6 +157,7 @@ public class TestMasterShutdown {
         options.getNumRegionServers(), options.getMasterClass(), options.getRsClass());
       final MasterThread masterThread = hbaseCluster.getMasters().get(0);
 
+      masterThread.start();
       final CompletableFuture<Void> shutdownFuture = CompletableFuture.runAsync(() -> {
         // Switching to master registry exacerbated a race in the master bootstrap that can result
         // in a lost shutdown command (HBASE-8422, HBASE-23836). The race is essentially because
@@ -195,7 +196,6 @@ public class TestMasterShutdown {
           -1, result);
       });
 
-      masterThread.start();
       shutdownFuture.join();
       masterThread.join();
     } finally {
