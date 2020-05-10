@@ -318,5 +318,18 @@
       <artifactId>jaxws-ri</artifactId>
       <type>pom</type>
     </dependency>
+    <!--
+      Include the log framework here.
+      For other sub modules, we only declare slf4j-api as a compile dependency,
+      so here we must pull in the real logging framework to actually log to log4j.
+    -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-log4j12</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
+    </dependency>
   </dependencies>
 </project>

@@ -92,6 +92,7 @@
     <module>hbase-zookeeper</module>
     <module>hbase-hbtop</module>
     <module>hbase-asyncfs</module>
+    <module>hbase-logging</module>
   </modules>
   <scm>
     <connection>scm:git:git://gitbox.apache.org/repos/asf/hbase.git</connection>
@@ -1681,6 +1682,18 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-logging</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-logging</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-protocol-shaded</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -2018,6 +2031,14 @@
           <exclusion>
             <groupId>io.netty</groupId>
             <artifactId>netty</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -2649,10 +2670,18 @@
                 <groupId>org.codehaus.jackson</groupId>
                 <artifactId>jackson-mapper-asl</artifactId>
               </exclusion>
-             <exclusion>
-               <groupId>com.google.guava</groupId>
-               <artifactId>guava</artifactId>
-             </exclusion>
+              <exclusion>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-log4j12</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>log4j</groupId>
+                <artifactId>log4j</artifactId>
+              </exclusion>
            </exclusions>
          </dependency>
          <dependency>
@@ -2672,6 +2701,14 @@
                 <groupId>javax.servlet</groupId>
                 <artifactId>servlet-api</artifactId>
               </exclusion>
+             <exclusion>
+               <groupId>org.slf4j</groupId>
+               <artifactId>slf4j-log4j12</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>log4j</groupId>
+               <artifactId>log4j</artifactId>
+             </exclusion>
            </exclusions>
          </dependency>
          <dependency>
@@ -2692,6 +2729,14 @@
               <exclusion>
                 <groupId>javax.servlet</groupId>
                 <artifactId>servlet-api</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-log4j12</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>log4j</groupId>
+                <artifactId>log4j</artifactId>
               </exclusion>
            </exclusions>
          </dependency>
@@ -2732,10 +2777,18 @@
                <groupId>org.codehaus.jackson</groupId>
                <artifactId>jackson-mapper-asl</artifactId>
              </exclusion>
-              <exclusion>
-                <groupId>com.google.guava</groupId>
-                <artifactId>guava</artifactId>
-              </exclusion>
+             <exclusion>
+               <groupId>com.google.guava</groupId>
+               <artifactId>guava</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>org.slf4j</groupId>
+               <artifactId>slf4j-log4j12</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>log4j</groupId>
+               <artifactId>log4j</artifactId>
+             </exclusion>
            </exclusions>
          </dependency>
          <dependency>
@@ -2777,6 +2830,14 @@
                <groupId>com.sun.jersey</groupId>
                <artifactId>jersey-core</artifactId>
              </exclusion>
+             <exclusion>
+               <groupId>org.slf4j</groupId>
+               <artifactId>slf4j-log4j12</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>log4j</groupId>
+               <artifactId>log4j</artifactId>
+             </exclusion>
            </exclusions>
          </dependency>
          <dependency>
@@ -2805,6 +2866,14 @@
              <exclusion>
                <groupId>net.minidev</groupId>
                <artifactId>json-smart</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>org.slf4j</groupId>
+               <artifactId>slf4j-log4j12</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>log4j</groupId>
+               <artifactId>log4j</artifactId>
              </exclusion>
            </exclusions>
          </dependency>
@@ -2860,6 +2929,14 @@
              <exclusion>
                <groupId>org.codehause.jackson</groupId>
                <artifactId>jackson-mapper-asl</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>org.slf4j</groupId>
+               <artifactId>slf4j-log4j12</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>log4j</groupId>
+               <artifactId>log4j</artifactId>
              </exclusion>
            </exclusions>
          </dependency>
@@ -2942,15 +3019,32 @@
                <groupId>com.google.code.findbugs</groupId>
                <artifactId>jsr305</artifactId>
              </exclusion>
+             <exclusion>
+               <groupId>org.slf4j</groupId>
+               <artifactId>slf4j-log4j12</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>log4j</groupId>
+               <artifactId>log4j</artifactId>
+             </exclusion>
            </exclusions>
          </dependency>
          <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-minikdc</artifactId>
-            <version>${hadoop-three.version}</version>
-            <scope>test</scope>
-          </dependency>
-
+           <groupId>org.apache.hadoop</groupId>
+           <artifactId>hadoop-minikdc</artifactId>
+           <version>${hadoop-three.version}</version>
+           <scope>test</scope>
+           <exclusions>
+             <exclusion>
+               <groupId>org.slf4j</groupId>
+               <artifactId>slf4j-log4j12</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>log4j</groupId>
+               <artifactId>log4j</artifactId>
+             </exclusion>
+           </exclusions>
+         </dependency>
          <dependency>
            <groupId>org.apache.hadoop</groupId>
            <artifactId>hadoop-distcp</artifactId>

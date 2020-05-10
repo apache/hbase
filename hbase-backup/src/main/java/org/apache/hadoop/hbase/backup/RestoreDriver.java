@@ -47,11 +47,10 @@ import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.logging.Log4jUtils;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,7 +82,7 @@ public class RestoreDriver extends AbstractHBaseTool {
 
   protected void init() {
     // disable irrelevant loggers to avoid it mess up command output
-    LogUtils.disableZkAndClientLoggers();
+    Log4jUtils.disableZkAndClientLoggers();
   }
 
   private int parseAndRun(String[] args) throws IOException {
@@ -97,7 +96,7 @@ public class RestoreDriver extends AbstractHBaseTool {
 
     // enable debug logging
     if (cmd.hasOption(OPTION_DEBUG)) {
-      LogManager.getLogger("org.apache.hadoop.hbase.backup").setLevel(Level.DEBUG);
+      Log4jUtils.setLogLevel("org.apache.hadoop.hbase.backup", "DEBUG");
     }
 
     // whether to overwrite to existing table if any, false by default
