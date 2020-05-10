@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.master.procedure;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -57,7 +56,8 @@ public class TestWALProcedureStoreOnHDFS {
 
   private WALProcedureStore store;
 
-  private ProcedureStore.ProcedureStoreListener stopProcedureListener = new ProcedureStore.ProcedureStoreListener() {
+  private ProcedureStore.ProcedureStoreListener stopProcedureListener =
+      new ProcedureStore.ProcedureStoreListener() {
     @Override
     public void postSync() {}
 
@@ -133,7 +133,9 @@ public class TestWALProcedureStoreOnHDFS {
     assertEquals(3, UTIL.getDFSCluster().getDataNodes().size());
     store.registerListener(new ProcedureStore.ProcedureStoreListener() {
       @Override
-      public void postSync() { Threads.sleepWithoutInterrupt(2000); }
+      public void postSync() {
+        Threads.sleepWithoutInterrupt(2000);
+      }
 
       @Override
       public void abortProcess() {}
@@ -156,7 +158,7 @@ public class TestWALProcedureStoreOnHDFS {
       thread[i].start();
     }
 
-    Thread.sleep(1000);
+    Thread.sleep(2000);
     LOG.info("Stop DataNode");
     UTIL.getDFSCluster().stopDataNode(0);
     assertEquals(2, UTIL.getDFSCluster().getDataNodes().size());
