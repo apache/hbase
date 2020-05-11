@@ -27,12 +27,16 @@ import org.apache.yetus.audience.InterfaceAudience;
 /**
  * A bridge class for operating on log4j, such as changing log level, etc.
  * <p/>
+ * Will call the methods in {@link InternalLog4jUtils} to actually operate on the log4j stuff.
  */
 @InterfaceAudience.Private
 public final class Log4jUtils {
 
   private static final String INTERNAL_UTILS_CLASS_NAME =
     "org.apache.hadoop.hbase.logging.InternalLog4jUtils";
+
+  private Log4jUtils() {
+  }
 
   // load class when calling to avoid introducing class not found exception on log4j when loading
   // this class even without calling any of the methods below.
