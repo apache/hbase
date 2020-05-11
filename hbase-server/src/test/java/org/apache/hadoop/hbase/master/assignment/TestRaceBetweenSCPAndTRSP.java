@@ -135,14 +135,17 @@ public class TestRaceBetweenSCPAndTRSP {
 
     ARRIVE_REGION_OPENING = new CountDownLatch(1);
     RESUME_REGION_OPENING = new CountDownLatch(1);
+    // Assign to local variable because this static gets set to null in above running thread and
+    // so can NPE when we check await later below.
     ARRIVE_GET_REGIONS_ON_SERVER = new CountDownLatch(1);
+    CountDownLatch cdl = ARRIVE_GET_REGIONS_ON_SERVER;
     RESUME_GET_REGIONS_ON_SERVER = new CountDownLatch(1);
 
     Future<byte[]> moveFuture = am.moveAsync(new RegionPlan(region, sn, sn));
     ARRIVE_REGION_OPENING.await();
 
     UTIL.getMiniHBaseCluster().killRegionServer(sn);
-    ARRIVE_GET_REGIONS_ON_SERVER.await();
+    cdl.await();
     RESUME_REGION_OPENING.countDown();
 
     moveFuture.get();
