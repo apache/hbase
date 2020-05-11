@@ -830,6 +830,11 @@
                 <goal>jar-no-fork</goal>
                 <goal>test-jar-no-fork</goal>
               </goals>
+              <configuration>
+                <excludes>
+                  <exclude>log4j.properties</exclude>
+                </excludes>
+              </configuration>
             </execution>
           </executions>
         </plugin>
@@ -853,7 +858,6 @@
             <excludes>
               <exclude>hbase-site.xml</exclude>
               <exclude>hdfs-site.xml</exclude>
-              <exclude>log4j.properties</exclude>
               <exclude>mapred-queues.xml</exclude>
               <exclude>mapred-site.xml</exclude>
             </excludes>
