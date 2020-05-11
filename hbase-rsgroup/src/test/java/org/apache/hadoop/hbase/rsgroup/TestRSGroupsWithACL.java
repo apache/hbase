@@ -359,9 +359,12 @@ public class TestRSGroupsWithACL extends SecureTestUtil{
 
   @Test
   public void testRenameRSGroup() throws Exception {
-    AccessTestAction action = () -> {
-      rsGroupAdminEndpoint.checkPermission("renameRSGroup");
-      return null;
+    AccessTestAction action = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        rsGroupAdminEndpoint.checkPermission("renameRSGroup");
+        return null;
+      }
     };
 
     verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
