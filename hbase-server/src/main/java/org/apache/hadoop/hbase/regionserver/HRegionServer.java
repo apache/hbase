@@ -3305,6 +3305,7 @@ public class HRegionServer extends HasThread implements
       addToMovedRegions(r.getRegionInfo().getEncodedName(), destination, closeSeqNum);
     }
     this.regionFavoredNodesMap.remove(r.getRegionInfo().getEncodedName());
+    configurationManager.deregisterObserver(r);
     return toReturn != null;
   }
 
