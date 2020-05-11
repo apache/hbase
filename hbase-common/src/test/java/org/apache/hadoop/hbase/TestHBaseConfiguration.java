@@ -27,9 +27,11 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -99,6 +101,19 @@ public class TestHBaseConfiguration {
       String storepass = HBaseConfiguration.getPassword(conf, "ssl.storepass.alias", null);
       assertEquals(storepass, new String(storePass));
     }
+  }
+
+  @Test
+  public void testSecurityConfCaseInsensitive() {
+    Configuration conf = HBaseConfiguration.create();
+    conf.set("hbase.security.authentication", "kerberos");
+    Assert.assertTrue(User.isHBaseSecurityEnabled(conf));
+
+    conf.set("hbase.security.authentication", "KERBEROS");
+    Assert.assertTrue(User.isHBaseSecurityEnabled(conf));
+
+    conf.set("hbase.security.authentication", "KERBeros");
+    Assert.assertTrue(User.isHBaseSecurityEnabled(conf));
   }
 
   private static class ReflectiveCredentialProviderClient {
