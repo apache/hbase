@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -58,6 +59,7 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
 import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
+import org.apache.hadoop.hbase.regionserver.ScanOptions;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
@@ -684,6 +686,40 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
     ctPostStoreFileReaderOpen.incrementAndGet();
     return reader;
   }
+
+  @Override
+  public void preStoreScannerOpen(ObserverContext<RegionCoprocessorEnvironment> ctx,
+    Store store, ScanOptions options) throws IOException {
+    if (options.getScan().getTimeRange().isAllTime()) {
+      setScanOptions(options);
+    }
+  }
+
+  @Override
+  public void preCompactScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
+    ScanType scanType, ScanOptions options, CompactionLifeCycleTracker tracker,
+    CompactionRequest request) throws IOException {
+    setScanOptions(options);
+  }
+
+  public void preFlushScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
+    ScanOptions options,FlushLifeCycleTracker tracker) throws IOException {
+    setScanOptions(options);
+  }
+
+  public void preMemStoreCompactionCompactScannerOpen(
+    ObserverContext<RegionCoprocessorEnvironment> c, Store store, ScanOptions options)
+    throws IOException {
+    setScanOptions(options);
+  }
+
+  private void setScanOptions(ScanOptions options) {
+    options.setMaxVersions(TestRegionCoprocessorHost.MAX_VERSIONS);
+    options.setMinVersions(TestRegionCoprocessorHost.MIN_VERSIONS);
+    options.setKeepDeletedCells(KeepDeletedCells.TRUE);
+    options.setTTL(TestRegionCoprocessorHost.TTL);
+  }
+
 
   @Override
   public void preWALAppend(ObserverContext<RegionCoprocessorEnvironment> ctx,
