@@ -196,11 +196,6 @@
       <artifactId>commons-crypto</artifactId>
     </dependency>
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>com.github.stephenc.findbugs</groupId>
       <artifactId>findbugs-annotations</artifactId>
       <scope>compile</scope>
@@ -219,6 +214,8 @@
     <dependency>
       <artifactId>junit</artifactId>
       <groupId>junit</groupId>
+    </dependency>
+    <dependency>
       <groupId>org.apache.kerby</groupId>
       <artifactId>kerb-simplekdc</artifactId>
       <scope>test</scope>

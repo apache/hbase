@@ -142,6 +142,12 @@
       <groupId>org.apache.hadoop</groupId>
       <version>3.2.0</version>
       <scope>compile</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>com.google.code.findbugs</groupId>
+          <artifactId>jsr305</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
   </dependencies>
 
