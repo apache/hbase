@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.http.TestHttpServer.EchoServlet;
 import org.apache.hadoop.hbase.http.resource.JerseyResource;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.SimpleKdcServerUtil;
 import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.http.HttpHost;
@@ -69,7 +70,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Test class for SPNEGO Proxyuser authentication on the HttpServer. Uses Kerby's MiniKDC and Apache
  * HttpComponents to verify that the doas= mechanicsm works, and that the proxyuser settings are
- * observed
+ * observed.
  */
 @Category({MiscTests.class, SmallTests.class})
 public class TestProxyUserSpnegoHttpServer extends HttpServerFunctionalTest {
@@ -101,8 +102,8 @@ public class TestProxyUserSpnegoHttpServer extends HttpServerFunctionalTest {
 
     final String serverPrincipal = "HTTP/" + KDC_SERVER_HOST;
 
-    kdc = buildMiniKdc();
-    kdc.start();
+    kdc = SimpleKdcServerUtil.getRunningSimpleKdcServer(new File(htu.getDataTestDir().toString()),
+      HBaseCommonTestingUtility::randomFreePort);
     File keytabDir = new File(htu.getDataTestDir("keytabs").toString());
     if (keytabDir.exists()) {
       deleteRecursively(keytabDir);
@@ -158,32 +159,9 @@ public class TestProxyUserSpnegoHttpServer extends HttpServerFunctionalTest {
     kdc.exportPrincipal(principal, keytab);
   }
 
-  private static SimpleKdcServer buildMiniKdc() throws Exception {
-    SimpleKdcServer kdc = new SimpleKdcServer();
 
-    final File target = new File(System.getProperty("user.dir"), "target");
-    File kdcDir = new File(target, TestProxyUserSpnegoHttpServer.class.getSimpleName());
-    if (kdcDir.exists()) {
-      deleteRecursively(kdcDir);
-    }
-    kdcDir.mkdirs();
-    kdc.setWorkDir(kdcDir);
-
-    kdc.setKdcHost(KDC_SERVER_HOST);
-    int kdcPort = getFreePort();
-    kdc.setAllowTcp(true);
-    kdc.setAllowUdp(false);
-    kdc.setKdcTcpPort(kdcPort);
-
-    LOG.info("Starting KDC server at " + KDC_SERVER_HOST + ":" + kdcPort);
-
-    kdc.init();
-
-    return kdc;
-  }
-
-  protected static Configuration buildSpnegoConfiguration(Configuration conf, String serverPrincipal,
-      File serverKeytab) {
+  protected static Configuration buildSpnegoConfiguration(Configuration conf,
+      String serverPrincipal, File serverKeytab) {
     KerberosName.setRules("DEFAULT");
 
     conf.setInt(HttpServer.HTTP_MAX_THREADS, TestHttpServer.MAX_THREADS);

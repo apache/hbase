@@ -174,8 +174,13 @@ public class ScanInfo {
    * Used for CP users for customizing max versions, ttl and keepDeletedCells.
    */
   ScanInfo customize(int maxVersions, long ttl, KeepDeletedCells keepDeletedCells) {
+    return customize(maxVersions, ttl, keepDeletedCells, minVersions);
+  }
+
+  ScanInfo customize(int maxVersions, long ttl, KeepDeletedCells keepDeletedCells,
+    int minVersions) {
     return new ScanInfo(family, minVersions, maxVersions, ttl, keepDeletedCells, timeToPurgeDeletes,
-        comparator, tableMaxRowSize, usePread, cellsPerTimeoutCheck, parallelSeekEnabled,
-        preadMaxBytes, newVersionBehavior);
+      comparator, tableMaxRowSize, usePread, cellsPerTimeoutCheck, parallelSeekEnabled,
+      preadMaxBytes, newVersionBehavior);
   }
 }

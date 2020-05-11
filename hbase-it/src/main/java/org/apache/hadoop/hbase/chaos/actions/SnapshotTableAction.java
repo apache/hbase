@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,8 +33,7 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
 @InterfaceStability.Evolving
 public class SnapshotTableAction extends Action {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(SnapshotTableAction.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SnapshotTableAction.class);
   private final TableName tableName;
   private final long sleepTime;
 
@@ -45,6 +44,10 @@ public class SnapshotTableAction extends Action {
   public SnapshotTableAction(int sleepTime, TableName tableName) {
     this.tableName = tableName;
     this.sleepTime = sleepTime;
+  }
+
+  @Override protected Logger getLogger() {
+    return LOG;
   }
 
   @Override
@@ -58,7 +61,7 @@ public class SnapshotTableAction extends Action {
       return;
     }
 
-    LOG.info("Performing action: Snapshot table " + tableName);
+    getLogger().info("Performing action: Snapshot table {}", tableName);
     admin.snapshot(snapshotName, tableName);
     if (sleepTime > 0) {
       Thread.sleep(sleepTime);

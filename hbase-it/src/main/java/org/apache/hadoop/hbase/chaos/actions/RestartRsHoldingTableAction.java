@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.List;
-
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -35,8 +34,7 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
 @InterfaceStability.Evolving
 public class RestartRsHoldingTableAction extends RestartActionBaseAction {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(RestartRsHoldingTableAction.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RestartRsHoldingTableAction.class);
 
   private final RegionLocator locator;
 
@@ -45,9 +43,14 @@ public class RestartRsHoldingTableAction extends RestartActionBaseAction {
     this.locator = locator;
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
-    LOG.info("Performing action: Restart random RS holding table " + this.locator.getName());
+    getLogger().info(
+      "Performing action: Restart random RS holding table " + this.locator.getName());
 
     List<HRegionLocation> locations = locator.getAllRegionLocations();
     restartRs(locations.get(RandomUtils.nextInt(0, locations.size())).getServerName(), sleepTime);

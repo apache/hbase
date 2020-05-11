@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,10 +34,11 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
 @InterfaceStability.Evolving
 public class CompactTableAction extends Action {
+  private static final Logger LOG = LoggerFactory.getLogger(CompactTableAction.class);
+
   private final TableName tableName;
   private final int majorRatio;
   private final long sleepTime;
-  private static final Logger LOG = LoggerFactory.getLogger(CompactTableAction.class);
 
   public CompactTableAction(TableName tableName, float majorRatio) {
     this(-1, tableName, majorRatio);
@@ -50,13 +51,17 @@ public class CompactTableAction extends Action {
     this.sleepTime = sleepTime;
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
     HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
     Admin admin = util.getAdmin();
     boolean major = RandomUtils.nextInt(0, 100) < majorRatio;
 
-    LOG.info("Performing action: Compact table " + tableName + ", major=" + major);
+    getLogger().info("Performing action: Compact table " + tableName + ", major=" + major);
     try {
       if (major) {
         admin.majorCompact(tableName);
@@ -64,7 +69,7 @@ public class CompactTableAction extends Action {
         admin.compact(tableName);
       }
     } catch (Exception ex) {
-      LOG.warn("Compaction failed, might be caused by other chaos: " + ex.getMessage());
+      getLogger().warn("Compaction failed, might be caused by other chaos: " + ex.getMessage());
     }
     if (sleepTime > 0) {
       Thread.sleep(sleepTime);

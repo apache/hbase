@@ -331,6 +331,8 @@ public abstract class TestRSGroupsBase {
     boolean postListTablesInRSGroupCalled = false;
     boolean preGetConfiguredNamespacesAndTablesInRSGroupCalled = false;
     boolean postGetConfiguredNamespacesAndTablesInRSGroupCalled = false;
+    boolean preRenameRSGroup = false;
+    boolean postRenameRSGroup = false;
 
     public void resetFlags() {
       preBalanceRSGroupCalled = false;
@@ -361,6 +363,8 @@ public abstract class TestRSGroupsBase {
       postListTablesInRSGroupCalled = false;
       preGetConfiguredNamespacesAndTablesInRSGroupCalled = false;
       postGetConfiguredNamespacesAndTablesInRSGroupCalled = false;
+      preRenameRSGroup = false;
+      postRenameRSGroup = false;
     }
 
     @Override
@@ -522,6 +526,18 @@ public abstract class TestRSGroupsBase {
     public void postGetConfiguredNamespacesAndTablesInRSGroup(
       ObserverContext<MasterCoprocessorEnvironment> ctx, String groupName) throws IOException {
       postGetConfiguredNamespacesAndTablesInRSGroupCalled = true;
+    }
+
+    @Override
+    public void preRenameRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx, String oldName,
+      String newName) throws IOException {
+      preRenameRSGroup = true;
+    }
+
+    @Override
+    public void postRenameRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx, String oldName,
+      String newName) throws IOException {
+      postRenameRSGroup = true;
     }
   }
 }

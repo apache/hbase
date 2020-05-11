@@ -20,12 +20,12 @@ package org.apache.hadoop.hbase.ipc;
 
 import static org.apache.hadoop.hbase.ipc.IPCUtil.toIOE;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.wrapException;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.UnknownHostException;
 import java.util.Collection;
-import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -47,6 +47,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
@@ -60,6 +61,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
 /**
@@ -510,13 +512,6 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
   public RpcChannel createRpcChannel(ServerName sn, User user, int rpcTimeout)
       throws UnknownHostException {
     return new RpcChannelImplementation(this, createAddr(sn), user, rpcTimeout);
-  }
-
-  @Override
-  public RpcChannel createHedgedRpcChannel(Set<ServerName> sns, User user, int rpcTimeout)
-      throws UnknownHostException {
-    // Check HedgedRpcChannel implementation for detailed comments.
-    throw new UnsupportedOperationException("Hedging not supported for this implementation.");
   }
 
   private static class AbstractRpcChannel {

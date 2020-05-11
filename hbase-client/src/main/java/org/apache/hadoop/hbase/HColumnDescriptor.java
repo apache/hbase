@@ -521,19 +521,6 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
     return this;
   }
 
-  /**
-   * This is a noop call from HBase 2.0 onwards
-   *
-   * @return this (for chained invocation)
-   * @deprecated Since 2.0 and will be removed in 3.0 with out any replacement. Caching data in on
-   *             heap Cache, when there are both on heap LRU Cache and Bucket Cache will no longer
-   *             be supported from 2.0.
-   */
-  @Deprecated
-  public HColumnDescriptor setCacheDataInL1(boolean value) {
-    return this;
-  }
-
   @Override
   public boolean isCacheIndexesOnWrite() {
     return delegatee.isCacheIndexesOnWrite();

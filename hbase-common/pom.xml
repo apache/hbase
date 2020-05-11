@@ -219,6 +219,9 @@
     <dependency>
       <artifactId>junit</artifactId>
       <groupId>junit</groupId>
+      <groupId>org.apache.kerby</groupId>
+      <artifactId>kerb-simplekdc</artifactId>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 

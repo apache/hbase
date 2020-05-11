@@ -2219,15 +2219,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    *  }
    * Also in compactor.performCompaction():
    * check periodically to see if a system stop is requested
-   * if (closeCheckInterval > 0) {
-   *   bytesWritten += len;
-   *   if (bytesWritten > closeCheckInterval) {
-   *     bytesWritten = 0;
-   *     if (!store.areWritesEnabled()) {
-   *       progress.cancel();
-   *       return false;
-   *     }
-   *   }
+   * if (closeChecker != null && closeChecker.isTimeLimit(store, now)) {
+   *    progress.cancel();
+   *    return false;
+   * }
+   * if (closeChecker != null && closeChecker.isSizeLimit(store, len)) {
+   *   progress.cancel();
+   *   return false;
    * }
    */
   public boolean compact(CompactionContext compaction, HStore store,
@@ -8393,19 +8391,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   /**
-   * Registers a new protocol buffer {@link Service} subclass as a coprocessor endpoint to
-   * be available for handling Region#execService(com.google.protobuf.RpcController,
-   *    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall) calls.
-   *
-   * <p>
+   * Registers a new protocol buffer {@link Service} subclass as a coprocessor endpoint to be
+   * available for handling {@link #execService(RpcController, CoprocessorServiceCall)} calls.
+   * <p/>
    * Only a single instance may be registered per region for a given {@link Service} subclass (the
-   * instances are keyed on {@link com.google.protobuf.Descriptors.ServiceDescriptor#getFullName()}.
-   * After the first registration, subsequent calls with the same service name will fail with
-   * a return value of {@code false}.
-   * </p>
+   * instances are keyed on {@link ServiceDescriptor#getFullName()}.. After the first registration,
+   * subsequent calls with the same service name will fail with a return value of {@code false}.
    * @param instance the {@code Service} subclass instance to expose as a coprocessor endpoint
-   * @return {@code true} if the registration was successful, {@code false}
-   * otherwise
+   * @return {@code true} if the registration was successful, {@code false} otherwise
    */
   public boolean registerService(Service instance) {
     // No stacking of instances is allowed for a single service name

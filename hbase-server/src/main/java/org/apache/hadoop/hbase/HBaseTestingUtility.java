@@ -678,7 +678,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     createDirAndSetProperty("dfs.datanode.shared.file.descriptor.paths");
     createDirAndSetProperty("nfs.dump.dir");
     createDirAndSetProperty("java.io.tmpdir");
-    createDirAndSetProperty("java.io.tmpdir");
     createDirAndSetProperty("dfs.journalnode.edits.dir");
     createDirAndSetProperty("dfs.provided.aliasmap.inmemory.leveldb.dir");
     createDirAndSetProperty("fs.s3a.committer.staging.tmp.path");
@@ -3826,80 +3825,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     return table;
   }
 
-  private static Random random = new Random();
-
-  private static final PortAllocator portAllocator = new PortAllocator(random);
-
   public static int randomFreePort() {
-    return portAllocator.randomFreePort();
+    return HBaseCommonTestingUtility.randomFreePort();
   }
-
-  static class PortAllocator {
-    private static final int MIN_RANDOM_PORT = 0xc000;
-    private static final int MAX_RANDOM_PORT = 0xfffe;
-
-    /** A set of ports that have been claimed using {@link #randomFreePort()}. */
-    private final Set<Integer> takenRandomPorts = new HashSet<>();
-
-    private final Random random;
-    private final AvailablePortChecker portChecker;
-
-    public PortAllocator(Random random) {
-      this.random = random;
-      this.portChecker = new AvailablePortChecker() {
-        @Override
-        public boolean available(int port) {
-          try {
-            ServerSocket sock = new ServerSocket(port);
-            sock.close();
-            return true;
-          } catch (IOException ex) {
-            return false;
-          }
-        }
-      };
-    }
-
-    public PortAllocator(Random random, AvailablePortChecker portChecker) {
-      this.random = random;
-      this.portChecker = portChecker;
-    }
-
-    /**
-     * Returns a random free port and marks that port as taken. Not thread-safe. Expected to be
-     * called from single-threaded test setup code/
-     */
-    public int randomFreePort() {
-      int port = 0;
-      do {
-        port = randomPort();
-        if (takenRandomPorts.contains(port)) {
-          port = 0;
-          continue;
-        }
-        takenRandomPorts.add(port);
-
-        if (!portChecker.available(port)) {
-          port = 0;
-        }
-      } while (port == 0);
-      return port;
-    }
-
-    /**
-     * Returns a random port. These ports cannot be registered with IANA and are
-     * intended for dynamic allocation (see http://bit.ly/dynports).
-     */
-    private int randomPort() {
-      return MIN_RANDOM_PORT
-        + random.nextInt(MAX_RANDOM_PORT - MIN_RANDOM_PORT);
-    }
-
-    interface AvailablePortChecker {
-      boolean available(int port);
-    }
-  }
-
   public static String randomMultiCastAddress() {
     return "226.1.1." + random.nextInt(254);
   }
@@ -4374,6 +4302,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * Sets up {@link MiniKdc} for testing security.
    * Uses {@link HBaseKerberosUtils} to set the given keytab file as
    * {@link HBaseKerberosUtils#KRB_KEYTAB_FILE}.
+   * FYI, there is also the easier-to-use kerby KDC server and utility for using it,
+   * {@link org.apache.hadoop.hbase.util.SimpleKdcServerUtil}. The kerby KDC server is preferred;
+   * less baggage. It came in in HBASE-5291.
    */
   public MiniKdc setupMiniKdc(File keytabFile) throws Exception {
     Properties conf = MiniKdc.createConf();

@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.procedure2.store.LeaseRecovery;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
@@ -57,7 +57,7 @@ public class MasterProcedureEnv implements ConfigurationObserver {
     @Override
     public void recoverFileLease(final FileSystem fs, final Path path) throws IOException {
       final Configuration conf = master.getConfiguration();
-      FSUtils.recoverFileLease(fs, path, conf, new CancelableProgressable() {
+      RecoverLeaseFSUtils.recoverFileLease(fs, path, conf, new CancelableProgressable() {
         @Override
         public boolean progress() {
           LOG.debug("Recover Procedure Store log lease: " + path);

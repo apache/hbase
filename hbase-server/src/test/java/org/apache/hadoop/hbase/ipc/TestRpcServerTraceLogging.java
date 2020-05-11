@@ -25,14 +25,11 @@ import static org.junit.Assert.assertTrue;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
-
 
 @Category(SmallTests.class)
 public class TestRpcServerTraceLogging {
@@ -41,7 +38,7 @@ public class TestRpcServerTraceLogging {
   public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule
       .forClass(TestRpcServerTraceLogging.class);
 
-  static Logger rpcServerLog = Logger.getLogger(RpcServer.class);
+  static org.apache.log4j.Logger rpcServerLog = org.apache.log4j.Logger.getLogger(RpcServer.class);
 
   static final String TRACE_LOG_MSG =
       "This is dummy message for testing:: region { type: REGION_NAME value: \"hbase:meta,,1\" }"
@@ -65,7 +62,7 @@ public class TestRpcServerTraceLogging {
   @Test
   public void testLoggingWithTraceOff() {
     conf.setInt("hbase.ipc.trace.log.max.length", 250);
-    rpcServerLog.setLevel(Level.DEBUG);
+    rpcServerLog.setLevel(org.apache.log4j.Level.DEBUG);
     String truncatedString = mockRpcServer.truncateTraceLog(TRACE_LOG_MSG);
 
     assertEquals(150 + RpcServer.KEY_WORD_TRUNCATED.length(), truncatedString.length());
@@ -75,7 +72,7 @@ public class TestRpcServerTraceLogging {
   @Test
   public void testLoggingWithTraceOn() {
     conf.setInt("hbase.ipc.trace.log.max.length", 250);
-    rpcServerLog.setLevel(Level.TRACE);
+    rpcServerLog.setLevel(org.apache.log4j.Level.TRACE);
     String truncatedString = mockRpcServer.truncateTraceLog(TRACE_LOG_MSG);
 
     assertEquals(250 + RpcServer.KEY_WORD_TRUNCATED.length(), truncatedString.length());
@@ -85,7 +82,7 @@ public class TestRpcServerTraceLogging {
   @Test
   public void testLoggingWithTraceOnLargeMax() {
     conf.setInt("hbase.ipc.trace.log.max.length", 2000);
-    rpcServerLog.setLevel(Level.TRACE);
+    rpcServerLog.setLevel(org.apache.log4j.Level.TRACE);
     String truncatedString = mockRpcServer.truncateTraceLog(TRACE_LOG_MSG);
 
     assertEquals(TRACE_LOG_LENGTH, truncatedString.length());

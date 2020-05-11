@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -32,8 +31,11 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
 @InterfaceStability.Evolving
 public class DumpClusterStatusAction extends Action {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(DumpClusterStatusAction.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DumpClusterStatusAction.class);
+
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
 
   @Override
   public void init(ActionContext context) throws IOException {
@@ -42,7 +44,7 @@ public class DumpClusterStatusAction extends Action {
 
   @Override
   public void perform() throws Exception {
-    LOG.debug("Performing action: Dump cluster status");
-    LOG.info("Cluster status\n" + cluster.getClusterMetrics());
+    getLogger().debug("Performing action: Dump cluster status");
+    getLogger().info("Cluster status\n" + cluster.getClusterMetrics());
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
@@ -36,8 +35,8 @@ import org.slf4j.LoggerFactory;
 @InterfaceStability.Evolving
 public class CorruptPacketsCommandAction extends TCCommandAction {
   private static final Logger LOG = LoggerFactory.getLogger(CorruptPacketsCommandAction.class);
-  private float ratio;
-  private long duration;
+  private final float ratio;
+  private final long duration;
 
   /**
    * Corrupt network packets on a random regionserver.
@@ -53,8 +52,12 @@ public class CorruptPacketsCommandAction extends TCCommandAction {
     this.duration = duration;
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   protected void localPerform() throws IOException {
-    LOG.info("Starting to execute CorruptPacketsCommandAction");
+    getLogger().info("Starting to execute CorruptPacketsCommandAction");
     ServerName server = PolicyBasedChaosMonkey.selectRandomItem(getCurrentServers());
     String hostname = server.getHostname();
 
@@ -62,12 +65,12 @@ public class CorruptPacketsCommandAction extends TCCommandAction {
       clusterManager.execSudoWithRetries(hostname, timeout, getCommand(ADD));
       Thread.sleep(duration);
     } catch (InterruptedException e) {
-      LOG.debug("Failed to run the command for the full duration", e);
+      getLogger().debug("Failed to run the command for the full duration", e);
     } finally {
       clusterManager.execSudoWithRetries(hostname, timeout, getCommand(DELETE));
     }
 
-    LOG.info("Finished to execute CorruptPacketsCommandAction");
+    getLogger().info("Finished to execute CorruptPacketsCommandAction");
   }
 
   private String getCommand(String operation){

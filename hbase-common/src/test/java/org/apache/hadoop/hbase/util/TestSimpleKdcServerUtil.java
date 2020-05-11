@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,33 +15,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.http;
+package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.assertEquals;
-
+import java.io.File;
+import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.kerby.kerberos.kerb.KrbException;
+import org.apache.kerby.kerberos.kerb.server.SimpleKdcServer;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, SmallTests.class})
-public class TestHttpRequestLogAppender {
-
+@Category({ MiscTests.class, MediumTests.class})
+public class TestSimpleKdcServerUtil {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHttpRequestLogAppender.class);
+    HBaseClassTestRule.forClass(TestSimpleKdcServerUtil.class);
+  private static final HBaseCommonTestingUtility UTIL = new HBaseCommonTestingUtility();
 
+  /**
+   * Test we are able to ride over clashing port... BindException.. when starting up a
+   * kdc server.
+   */
   @Test
-  public void testParameterPropagation() {
-
-    HttpRequestLogAppender requestLogAppender = new HttpRequestLogAppender();
-    requestLogAppender.setFilename("jetty-namenode-yyyy_mm_dd.log");
-    requestLogAppender.setRetainDays(17);
-    assertEquals("Filename mismatch", "jetty-namenode-yyyy_mm_dd.log",
-        requestLogAppender.getFilename());
-    assertEquals("Retain days mismatch", 17,
-        requestLogAppender.getRetainDays());
+  public void testBindException() throws KrbException, IOException {
+    SimpleKdcServer kdc = null;
+    try {
+      File dir = new File(UTIL.getDataTestDir().toString());
+      kdc = SimpleKdcServerUtil.
+        getRunningSimpleKdcServer(dir, HBaseCommonTestingUtility::randomFreePort, true);
+      kdc.createPrincipal("wah");
+    } finally {
+      kdc.stop();
+    }
   }
 }

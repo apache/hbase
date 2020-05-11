@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,7 +28,7 @@ import org.apache.yetus.audience.InterfaceStability;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CHAOS)
 @InterfaceStability.Evolving
 public class CompositeSequentialPolicy extends Policy {
-  private List<Policy> policies;
+  private final List<Policy> policies;
   public CompositeSequentialPolicy(Policy... policies) {
     this.policies = Arrays.asList(policies);
   }

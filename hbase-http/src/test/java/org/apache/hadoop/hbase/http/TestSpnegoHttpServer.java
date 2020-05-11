@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.http.TestHttpServer.EchoServlet;
 import org.apache.hadoop.hbase.http.resource.JerseyResource;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.SimpleKdcServerUtil;
 import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
@@ -91,8 +92,8 @@ public class TestSpnegoHttpServer extends HttpServerFunctionalTest {
 
     final String serverPrincipal = "HTTP/" + KDC_SERVER_HOST;
 
-    kdc = buildMiniKdc();
-    kdc.start();
+    kdc = SimpleKdcServerUtil.getRunningSimpleKdcServer(new File(htu.getDataTestDir().toString()),
+      HBaseCommonTestingUtility::randomFreePort);
     File keytabDir = new File(htu.getDataTestDir("keytabs").toString());
     if (keytabDir.exists()) {
       deleteRecursively(keytabDir);
@@ -138,30 +139,6 @@ public class TestSpnegoHttpServer extends HttpServerFunctionalTest {
       throws KrbException {
     kdc.createPrincipal(principal);
     kdc.exportPrincipal(principal, keytab);
-  }
-
-  private static SimpleKdcServer buildMiniKdc() throws Exception {
-    SimpleKdcServer kdc = new SimpleKdcServer();
-
-    final File target = new File(System.getProperty("user.dir"), "target");
-    File kdcDir = new File(target, TestSpnegoHttpServer.class.getSimpleName());
-    if (kdcDir.exists()) {
-      deleteRecursively(kdcDir);
-    }
-    kdcDir.mkdirs();
-    kdc.setWorkDir(kdcDir);
-
-    kdc.setKdcHost(KDC_SERVER_HOST);
-    int kdcPort = getFreePort();
-    kdc.setAllowTcp(true);
-    kdc.setAllowUdp(false);
-    kdc.setKdcTcpPort(kdcPort);
-
-    LOG.info("Starting KDC server at " + KDC_SERVER_HOST + ":" + kdcPort);
-
-    kdc.init();
-
-    return kdc;
   }
 
   private static Configuration buildSpnegoConfiguration(Configuration conf, String serverPrincipal,

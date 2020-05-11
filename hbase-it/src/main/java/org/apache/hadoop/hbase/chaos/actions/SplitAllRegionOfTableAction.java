@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
@@ -51,6 +50,10 @@ public class SplitAllRegionOfTableAction extends Action {
     this.maxFullTableSplits = getConf().getInt(MAX_SPLIT_KEY, DEFAULT_MAX_SPLITS);
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
     HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
@@ -65,10 +68,10 @@ public class SplitAllRegionOfTableAction extends Action {
     if (ThreadLocalRandom.current().nextDouble()
         < (((double) splits) / ((double) maxFullTableSplits)) / ((double) 2)) {
       splits++;
-      LOG.info("Performing action: Split all regions of  " + tableName);
+      getLogger().info("Performing action: Split all regions of {}", tableName);
       admin.split(tableName);
     } else {
-      LOG.info("Skipping split of all regions.");
+      getLogger().info("Skipping split of all regions.");
     }
   }
 }

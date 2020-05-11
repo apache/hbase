@@ -39,8 +39,8 @@ import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
+import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
@@ -514,7 +514,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   private static void recoverLease(final Configuration conf, final Path path) {
     try {
       final FileSystem dfs = CommonFSUtils.getCurrentFileSystem(conf);
-      FSUtils.recoverFileLease(dfs, path, conf, new CancelableProgressable() {
+      RecoverLeaseFSUtils.recoverFileLease(dfs, path, conf, new CancelableProgressable() {
         @Override
         public boolean progress() {
           LOG.debug("Still trying to recover WAL lease: " + path);

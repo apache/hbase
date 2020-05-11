@@ -47,6 +47,10 @@ public class AddColumnAction extends Action {
     this.tableName = tableName;
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void init(ActionContext context) throws IOException {
     super.init(context);
@@ -68,7 +72,7 @@ public class AddColumnAction extends Action {
       return;
     }
 
-    LOG.debug("Performing action: Adding " + columnDescriptor + " to " + tableName);
+    getLogger().debug("Performing action: Adding " + columnDescriptor + " to " + tableName);
 
     TableDescriptor modifiedTable = TableDescriptorBuilder.newBuilder(tableDescriptor)
         .setColumnFamily(columnDescriptor).build();
