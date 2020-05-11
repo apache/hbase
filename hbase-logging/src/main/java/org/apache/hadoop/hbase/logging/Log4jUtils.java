@@ -110,4 +110,12 @@ public final class Log4jUtils {
     // disable hbase client log to avoid it mess up command output
     setLogLevel("org.apache.hadoop.hbase.client", "OFF");
   }
+
+  /**
+   * Switches the logger for the given class to DEBUG level.
+   * @param clazz The class for which to switch to debug logging.
+   */
+  public static void enableDebug(Class<?> clazz) {
+    setLogLevel(clazz.getName(), "DEBUG");
+  }
 }

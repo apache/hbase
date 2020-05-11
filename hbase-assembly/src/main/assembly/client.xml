@@ -1,5 +1,7 @@
 <?xml version="1.0"?>
-<assembly xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.1 http://maven.apache.org/xsd/assembly-1.1.1.xsd">
+<assembly xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.1 http://maven.apache.org/xsd/assembly-1.1.1.xsd">
 <!--
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -28,7 +30,7 @@
   <!-- Override the root directory in the tarball -->
   <baseDirectory>hbase-${project.version}-client</baseDirectory>
   <componentDescriptors>
-      <componentDescriptor>src/main/assembly/client-components.xml</componentDescriptor>
+    <componentDescriptor>src/main/assembly/client-components.xml</componentDescriptor>
   </componentDescriptors>
   <moduleSets>
     <!-- include regular jars so the shell can use them -->
@@ -40,8 +42,8 @@
       <binaries>
         <unpack>false</unpack>
         <outputDirectory>lib</outputDirectory>
-      <dependencySets>
-        <dependencySet>
+        <dependencySets>
+          <dependencySet>
             <excludes>
             <!-- Exclude J2EE libraries that get pulled in when building on JDK11 -->
               <exclude>com.sun.xml.ws:jaxws-ri</exclude>
@@ -50,20 +52,22 @@
               <exclude>com.sun.jersey:*</exclude>
               <exclude>com.sun.jersey.contribs:*</exclude>
               <exclude>jline:jline</exclude>
-        <exclude>com.github.stephenc.findbugs:findbugs-annotations</exclude>
-        <exclude>commons-logging:commons-logging</exclude>
-        <exclude>log4j:log4j</exclude>
-        <exclude>org.apache.hbase:hbase-shaded-client</exclude>
-        <exclude>org.apache.hbase:hbase-shaded-client-byo-hadoop</exclude>
-        <exclude>org.apache.hbase:hbase-shaded-mapreduce</exclude>
-        <exclude>org.apache.htrace:htrace-core4</exclude>
-        <exclude>org.apache.htrace:htrace-core</exclude>
-        <exclude>org.apache.yetus:audience-annotations</exclude>
-        <exclude>org.slf4j:slf4j-api</exclude>
-        <exclude>org.slf4j:slf4j-log4j12</exclude>
+              <exclude>com.github.stephenc.findbugs:findbugs-annotations</exclude>
+              <exclude>commons-logging:commons-logging</exclude>
+              <exclude>log4j:log4j</exclude>
+              <exclude>org.apache.hbase:hbase-shaded-client</exclude>
+              <exclude>org.apache.hbase:hbase-shaded-client-byo-hadoop</exclude>
+              <exclude>org.apache.hbase:hbase-shaded-mapreduce</exclude>
+              <exclude>org.apache.htrace:htrace-core4</exclude>
+              <exclude>org.apache.htrace:htrace-core</exclude>
+              <exclude>org.apache.yetus:audience-annotations</exclude>
+              <exclude>org.slf4j:slf4j-api</exclude>
+              <exclude>org.slf4j:jcl-over-slf4j</exclude>
+              <exclude>org.slf4j:jul-to-slf4j</exclude>
+              <exclude>org.slf4j:slf4j-log4j12</exclude>
             </excludes>
-        </dependencySet>
-      </dependencySets>
+          </dependencySet>
+        </dependencySets>
       </binaries>
     </moduleSet>
   </moduleSets>
@@ -91,7 +95,7 @@
 
   <dependencySets>
     <dependencySet>
-        <outputDirectory>lib/shaded-clients</outputDirectory>
+      <outputDirectory>lib/shaded-clients</outputDirectory>
       <includes>
         <include>org.apache.hbase:hbase-shaded-client</include>
         <include>org.apache.hbase:hbase-shaded-mapreduce</include>
@@ -146,6 +150,8 @@
         <include>org.apache.htrace:htrace-core</include>
         <include>org.apache.yetus:audience-annotations</include>
         <include>org.slf4j:slf4j-api</include>
+        <include>org.slf4j:jcl-over-slf4j</include>
+        <include>org.slf4j:jul-to-slf4j</include>
         <include>org.slf4j:slf4j-log4j12</include>
       </includes>
     </dependencySet>

@@ -22,11 +22,6 @@ import java.io.IOException;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Set;
-import org.apache.log4j.Appender;
-import org.apache.log4j.FileAppender;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -43,8 +38,8 @@ final class InternalLog4jUtils {
   }
 
   static void setLogLevel(String loggerName, String levelName) {
-    Logger logger = LogManager.getLogger(loggerName);
-    Level level = Level.toLevel(levelName.toUpperCase());
+    org.apache.log4j.Logger logger = org.apache.log4j.LogManager.getLogger(loggerName);
+    org.apache.log4j.Level level = org.apache.log4j.Level.toLevel(levelName.toUpperCase());
     if (!level.toString().equalsIgnoreCase(levelName)) {
       throw new IllegalArgumentException("Unsupported log level " + levelName);
     }
@@ -52,19 +47,20 @@ final class InternalLog4jUtils {
   }
 
   static String getEffectiveLevel(String loggerName) {
-    Logger logger = LogManager.getLogger(loggerName);
+    org.apache.log4j.Logger logger = org.apache.log4j.LogManager.getLogger(loggerName);
     return logger.getEffectiveLevel().toString();
   }
 
   static Set<File> getActiveLogFiles() throws IOException {
     Set<File> ret = new HashSet<>();
-    Appender a;
+    org.apache.log4j.Appender a;
     @SuppressWarnings("unchecked")
-    Enumeration<Appender> e = Logger.getRootLogger().getAllAppenders();
+    Enumeration<org.apache.log4j.Appender> e =
+      org.apache.log4j.Logger.getRootLogger().getAllAppenders();
     while (e.hasMoreElements()) {
       a = e.nextElement();
-      if (a instanceof FileAppender) {
-        FileAppender fa = (FileAppender) a;
+      if (a instanceof org.apache.log4j.FileAppender) {
+        org.apache.log4j.FileAppender fa = (org.apache.log4j.FileAppender) a;
         String filename = fa.getFile();
         ret.add(new File(filename));
       }

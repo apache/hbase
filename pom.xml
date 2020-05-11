@@ -1122,6 +1122,25 @@
             </configuration>
           </execution>
           <execution>
+            <id>banned-commons-logging</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <bannedDependencies>
+                  <excludes>
+                    <exclude>commons-logging:commons-logging</exclude>
+                  </excludes>
+                  <message>
+                    We don't use commons-logging any more, so do not depend on it directly.
+                  </message>
+                  <searchTransitive>false</searchTransitive>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+          <execution>
             <id>check-aggregate-license</id>
             <!-- must check after LICENSE is built at 'generate-resources' -->
             <phase>process-resources</phase>
@@ -1169,8 +1188,17 @@
                   <commentLineBufferSize>512</commentLineBufferSize>
                   <reason>Use SLF4j for logging</reason>
                   <bannedImports>
-                    <bannedImport>org.apache.commons.logging.Log</bannedImport>
-                    <bannedImport>org.apache.commons.logging.LogFactory</bannedImport>
+                    <bannedImport>org.apache.commons.logging.**</bannedImport>
+                  </bannedImports>
+                </restrictImports>
+                <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                  <includeTestCode>false</includeTestCode>
+                  <commentLineBufferSize>512</commentLineBufferSize>
+                  <reason>
+                    Do not use log4j directly in code, see Log4jUtils in hbase-logging for more details.
+                  </reason>
+                  <bannedImports>
+                    <bannedImport>org.apache.log4j.**</bannedImport>
                   </bannedImports>
                 </restrictImports>
                 <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
@@ -1917,7 +1945,16 @@
         <artifactId>findbugs-annotations</artifactId>
         <version>${findbugs-annotations.version}</version>
       </dependency>
-      <!-- General dependencies -->
+      <!--
+        Logging dependencies. In general, we use slf4j as the log facade in HBase, so all sub
+        modules should depend on slf4j-api at compile scope, and then depend on slf4j-log4j12
+        and log4j at test scope(and in hbase-assembly when shipping the binary) to redirect the
+        log message to log4j. Do not introduce logging dependencies other than slf4j-api at compile
+        scope as it will mess up the logging framework for downstream users.
+        Here we also depend on jcl-over-slf4j and jul-to-slf4j, as some of the libraries we depend
+        on use these logging framework so we need to redirect their log message to slf4j, and then
+        redirect the log message to our log4j framework.
+      -->
       <dependency>
         <groupId>org.codehaus.jettison</groupId>
         <artifactId>jettison</artifactId>
@@ -1925,7 +1962,22 @@
       </dependency>
       <dependency>
         <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-api</artifactId>
+        <version>${slf4j.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
         <artifactId>slf4j-log4j12</artifactId>
+        <version>${slf4j.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>jcl-over-slf4j</artifactId>
+        <version>${slf4j.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>jul-to-slf4j</artifactId>
         <version>${slf4j.version}</version>
       </dependency>
       <dependency>
@@ -1941,11 +1993,6 @@
       </dependency>
       <!--This is not used by hbase directly.  Used by thrift,
           dropwizard and zk.-->
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>slf4j-api</artifactId>
-        <version>${slf4j.version}</version>
-      </dependency>
       <dependency>
         <groupId>com.github.ben-manes.caffeine</groupId>
         <artifactId>caffeine</artifactId>
