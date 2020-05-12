@@ -54,16 +54,25 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog.SlowLogPaylo
 class LogEventHandler implements EventHandler<RingBufferEnvelope> {
 
   private static final Logger LOG = LoggerFactory.getLogger(LogEventHandler.class);
+  private static final int SYS_TABLE_QUEUE_SIZE = 1000;
 
-  private final Queue<SlowLogPayload> queue;
+  private final Queue<SlowLogPayload> queueForRingBuffer;
+  private final Queue<SlowLogPayload> queueForSysTable;
   private final boolean isSlowLogTableEnabled;
 
   private Connection connection;
 
   LogEventHandler(int eventCount, boolean isSlowLogTableEnabled) {
     EvictingQueue<SlowLogPayload> evictingQueue = EvictingQueue.create(eventCount);
-    queue = Queues.synchronizedQueue(evictingQueue);
+    queueForRingBuffer = Queues.synchronizedQueue(evictingQueue);
     this.isSlowLogTableEnabled = isSlowLogTableEnabled;
+    if (isSlowLogTableEnabled) {
+      EvictingQueue<SlowLogPayload> evictingQueueForTable = EvictingQueue.create(
+        SYS_TABLE_QUEUE_SIZE);
+      queueForSysTable = Queues.synchronizedQueue(evictingQueueForTable);
+    } else {
+      queueForSysTable = null;
+    }
   }
 
   public void setConnection(Connection connection) {
@@ -138,9 +147,11 @@ class LogEventHandler implements EventHandler<RingBufferEnvelope> {
       .setType(type)
       .setUserName(userName)
       .build();
-    queue.add(slowLogPayload);
+    queueForRingBuffer.add(slowLogPayload);
     if (isSlowLogTableEnabled && this.connection != null) {
-      SlowLogTableAccessor.addSlowLogRecord(slowLogPayload, this.connection);
+      if (!slowLogPayload.getRegionName().startsWith("hbase:slowlog")) {
+        queueForSysTable.add(slowLogPayload);
+      }
     }
   }
 
@@ -172,7 +183,7 @@ class LogEventHandler implements EventHandler<RingBufferEnvelope> {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Received request to clean up online slowlog buffer..");
     }
-    queue.clear();
+    queueForRingBuffer.clear();
     return true;
   }
 
@@ -184,7 +195,7 @@ class LogEventHandler implements EventHandler<RingBufferEnvelope> {
    */
   List<SlowLogPayload> getSlowLogPayloads(final AdminProtos.SlowLogResponseRequest request) {
     List<SlowLogPayload> slowLogPayloadList =
-      Arrays.stream(queue.toArray(new SlowLogPayload[0]))
+      Arrays.stream(queueForRingBuffer.toArray(new SlowLogPayload[0]))
         .filter(e -> e.getType() == SlowLogPayload.Type.ALL
           || e.getType() == SlowLogPayload.Type.SLOW_LOG)
         .collect(Collectors.toList());
@@ -203,7 +214,7 @@ class LogEventHandler implements EventHandler<RingBufferEnvelope> {
    */
   List<SlowLogPayload> getLargeLogPayloads(final AdminProtos.SlowLogResponseRequest request) {
     List<SlowLogPayload> slowLogPayloadList =
-      Arrays.stream(queue.toArray(new SlowLogPayload[0]))
+      Arrays.stream(queueForRingBuffer.toArray(new SlowLogPayload[0]))
         .filter(e -> e.getType() == SlowLogPayload.Type.ALL
           || e.getType() == SlowLogPayload.Type.LARGE_LOG)
         .collect(Collectors.toList());
@@ -265,6 +276,34 @@ class LogEventHandler implements EventHandler<RingBufferEnvelope> {
       }
     }
     return filteredSlowLogPayloads;
+  }
+
+  /**
+   * Poll from queueForSysTable and insert 100 records in hbase:slowlog table in single batch
+   */
+  void addAllLogsToSysTable() {
+    if (queueForSysTable == null) {
+      LOG.warn("hbase.regionserver.slowlog.systable.enabled is turned off. Exiting.");
+      return;
+    }
+    if (this.connection == null) {
+      LOG.warn("LogEventHandler has null connection. Exiting.");
+      return;
+    }
+    List<SlowLogPayload> slowLogPayloads = new ArrayList<>();
+    int i = 0;
+    while (!queueForSysTable.isEmpty()) {
+      slowLogPayloads.add(queueForSysTable.poll());
+      i++;
+      if (i == 100) {
+        SlowLogTableAccessor.addSlowLogRecords(slowLogPayloads, this.connection);
+        slowLogPayloads = new ArrayList<>();
+        i = 0;
+      }
+    }
+    if (slowLogPayloads.size() > 0) {
+      SlowLogTableAccessor.addSlowLogRecords(slowLogPayloads, this.connection);
+    }
   }
 
 }

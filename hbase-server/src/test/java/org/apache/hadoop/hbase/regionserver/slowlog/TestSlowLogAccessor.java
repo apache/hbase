@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.regionserver.slowlog;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -32,11 +33,13 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -70,6 +73,8 @@ public class TestSlowLogAccessor {
     Configuration conf = HBASE_TESTING_UTILITY.getConfiguration();
     conf.setBoolean(HConstants.SLOW_LOG_BUFFER_ENABLED_KEY, true);
     conf.setBoolean(HConstants.SLOW_LOG_SYS_TABLE_ENABLED_KEY, true);
+    conf.setInt("hbase.slowlog.systable.chore.duration", 1000);
+    conf.setInt("hbase.regionserver.slowlog.ringbuffer.size", 50000);
     HBASE_TESTING_UTILITY.startMiniCluster();
   }
 
@@ -78,10 +83,17 @@ public class TestSlowLogAccessor {
     HBASE_TESTING_UTILITY.shutdownMiniHBaseCluster();
   }
 
+  @Before
+  public void setUp() throws Exception {
+    HRegionServer hRegionServer = HBASE_TESTING_UTILITY.getMiniHBaseCluster().getRegionServer(0);
+    Field slowLogRecorder = HRegionServer.class.getDeclaredField("slowLogRecorder");
+    slowLogRecorder.setAccessible(true);
+    this.slowLogRecorder = (SlowLogRecorder) slowLogRecorder.get(hRegionServer);
+  }
+
   @Test
   public void testSlowLogRecords() throws Exception {
 
-    slowLogRecorder = new SlowLogRecorder(HBASE_TESTING_UTILITY.getConfiguration());
     AdminProtos.SlowLogResponseRequest request =
       AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(15).build();
 
@@ -128,7 +140,7 @@ public class TestSlowLogAccessor {
 
   private int getTableCount(Connection connection) {
     try (Table table = connection.getTable(TableName.SLOW_LOG_TABLE_NAME)) {
-      ResultScanner resultScanner = table.getScanner(new Scan());
+      ResultScanner resultScanner = table.getScanner(new Scan().setReadType(Scan.ReadType.STREAM));
       int count = 0;
       for (Result result : resultScanner) {
         ++count;
@@ -155,9 +167,6 @@ public class TestSlowLogAccessor {
 
   @Test
   public void testHigherSlowLogs() throws Exception {
-    Configuration conf = HBASE_TESTING_UTILITY.getConfiguration();
-    conf.setInt("hbase.regionserver.slowlog.ringbuffer.size", 50000);
-    slowLogRecorder = new SlowLogRecorder(conf);
     Connection connection = waitForSlowLogTableCreation();
 
     slowLogRecorder.clearSlowLogPayloads();
@@ -178,13 +187,13 @@ public class TestSlowLogAccessor {
     Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(7000, () -> {
       int count = slowLogRecorder.getSlowLogPayloads(request).size();
       LOG.debug("RingBuffer records count: {}", count);
-      return count > 2000;
+      return count > 999;
     }));
 
     Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
       int count = getTableCount(connection);
       LOG.debug("SlowLog Table records count: {}", count);
-      return count > 2000;
+      return count > 999;
     }));
   }
 

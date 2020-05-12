@@ -170,4 +170,13 @@ public class SlowLogRecorder {
     }
   }
 
+  /**
+   * Poll from queueForSysTable and insert 100 records in hbase:slowlog table in single batch
+   */
+  public void addAllLogsToSysTable() {
+    if (this.logEventHandler != null) {
+      this.logEventHandler.addAllLogsToSysTable();
+    }
+  }
+
 }

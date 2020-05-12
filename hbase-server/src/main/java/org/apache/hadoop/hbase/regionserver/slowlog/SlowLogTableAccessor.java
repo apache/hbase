@@ -20,6 +20,8 @@
 package org.apache.hadoop.hbase.regionserver.slowlog;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -46,53 +48,55 @@ public class SlowLogTableAccessor {
 
   private static final Random RANDOM = new Random();
 
-  private static void doPut(final Connection connection, final Put put)
+  private static void doPut(final Connection connection, final List<Put> puts)
       throws IOException {
     try (Table table = connection.getTable(TableName.SLOW_LOG_TABLE_NAME)) {
-      table.put(put);
+      table.put(puts);
     }
   }
 
   /**
    * Add slow/large log records to hbase:slowlog table
    *
-   * @param slowLogPayload SlowLogPayload to process
+   * @param slowLogPayloads List of SlowLogPayload to process
    * @param connection Connection to put data
    */
-  public static void addSlowLogRecord(final TooSlowLog.SlowLogPayload slowLogPayload,
+  public static void addSlowLogRecords(final List<TooSlowLog.SlowLogPayload> slowLogPayloads,
       final Connection connection) {
-    final byte[] rowKey = getRowKey(slowLogPayload);
-    final Put put = new Put(rowKey)
-      .setDurability(Durability.SKIP_WAL)
-      .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("call_details"),
-        Bytes.toBytes(slowLogPayload.getCallDetails()))
-      .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("client_address"),
-        Bytes.toBytes(slowLogPayload.getClientAddress()))
-      .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("method_name"),
-        Bytes.toBytes(slowLogPayload.getMethodName()))
-      .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("param"),
-        Bytes.toBytes(slowLogPayload.getParam()))
-      .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("processing_time"),
-        Bytes.toBytes(slowLogPayload.getProcessingTime()))
-      .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("queue_time"),
-        Bytes.toBytes(slowLogPayload.getQueueTime()))
-      .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("region_name"),
-        Bytes.toBytes(slowLogPayload.getRegionName()))
-      .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("response_size"),
-        Bytes.toBytes(slowLogPayload.getResponseSize()))
-      .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("server_class"),
-        Bytes.toBytes(slowLogPayload.getServerClass()))
-      .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("start_time"),
-        Bytes.toBytes(slowLogPayload.getStartTime()))
-      .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("type"),
-        Bytes.toBytes(slowLogPayload.getType().name()))
-      .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("username"),
-        Bytes.toBytes(slowLogPayload.getUserName()));
+    List<Put> puts = new ArrayList<>();
+    for (TooSlowLog.SlowLogPayload slowLogPayload : slowLogPayloads) {
+      final byte[] rowKey = getRowKey(slowLogPayload);
+      final Put put = new Put(rowKey).setDurability(Durability.SKIP_WAL)
+        .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("call_details"),
+          Bytes.toBytes(slowLogPayload.getCallDetails()))
+        .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("client_address"),
+          Bytes.toBytes(slowLogPayload.getClientAddress()))
+        .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("method_name"),
+          Bytes.toBytes(slowLogPayload.getMethodName()))
+        .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("param"),
+          Bytes.toBytes(slowLogPayload.getParam()))
+        .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("processing_time"),
+          Bytes.toBytes(slowLogPayload.getProcessingTime()))
+        .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("queue_time"),
+          Bytes.toBytes(slowLogPayload.getQueueTime()))
+        .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("region_name"),
+          Bytes.toBytes(slowLogPayload.getRegionName()))
+        .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("response_size"),
+          Bytes.toBytes(slowLogPayload.getResponseSize()))
+        .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("server_class"),
+          Bytes.toBytes(slowLogPayload.getServerClass()))
+        .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("start_time"),
+          Bytes.toBytes(slowLogPayload.getStartTime()))
+        .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("type"),
+          Bytes.toBytes(slowLogPayload.getType().name()))
+        .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("username"),
+          Bytes.toBytes(slowLogPayload.getUserName()));
+      puts.add(put);
+    }
     try {
-      doPut(connection, put);
+      doPut(connection, puts);
     } catch (IOException e) {
-      LOG.error("Failed to add slow/large log record to hbase:slowlog table for region: {}",
-        slowLogPayload.getRegionName(), e);
+      LOG.error("Failed to add slow/large log records to hbase:slowlog table.", e);
     }
   }
 
