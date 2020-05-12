@@ -31,14 +31,12 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Utility functions for reading the log4j logs that are
- * being written by HBase.
+ * Utility functions for reading the log4j logs that are being written by HBase.
  */
 @InterfaceAudience.Private
 public abstract class LogMonitoring {
 
-  public static void dumpTailOfLogs(
-      PrintWriter out, long tailKb) throws IOException {
+  public static void dumpTailOfLogs(PrintWriter out, long tailKb) throws IOException {
     Set<File> logs = Log4jUtils.getActiveLogFiles();
     for (File f : logs) {
       out.println("+++++++++++++++++++++++++++++++");
@@ -54,13 +52,12 @@ public abstract class LogMonitoring {
     }
   }
 
-  private static void dumpTailOfLog(File f, PrintWriter out, long tailKb)
-      throws IOException {
+  private static void dumpTailOfLog(File f, PrintWriter out, long tailKb) throws IOException {
     FileInputStream fis = new FileInputStream(f);
     BufferedReader r = null;
     try {
       FileChannel channel = fis.getChannel();
-      channel.position(Math.max(0, channel.size() - tailKb*1024));
+      channel.position(Math.max(0, channel.size() - tailKb * 1024));
       r = new BufferedReader(new InputStreamReader(fis));
       r.readLine(); // skip the first partial line
       String line;
@@ -68,7 +65,9 @@ public abstract class LogMonitoring {
         out.println(line);
       }
     } finally {
-      if (r != null) IOUtils.closeStream(r);
+      if (r != null) {
+        IOUtils.closeStream(r);
+      }
       IOUtils.closeStream(fis);
     }
   }
