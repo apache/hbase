@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
-import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
@@ -169,13 +168,26 @@ public class TestMasterShutdown {
 
         // Master has come up far enough that we can terminate it without creating a zombie.
         LOG.debug("Attempting to establish connection.");
-        try (final Connection conn = htu.getConnection()) {
-          conn.getAdmin().shutdown();
+        try {
+          // HBASE-24327 : (Resolve Flaky connection issues)
+          // shutdown() RPC can have flaky ZK connection issues.
+          // e.g
+          // ERROR [RpcServer.priority.RWQ.Fifo.read.handler=1,queue=1,port=53033]
+          // master.HMaster(2878): ZooKeeper exception trying to set cluster as down in ZK
+          // org.apache.zookeeper.KeeperException$SystemErrorException:
+          // KeeperErrorCode = SystemError
+          //
+          // However, even when above flakes happen, shutdown call does get completed even if
+          // RPC call has failure. Hence, subsequent retries will never succeed as HMaster is
+          // already shutdown. Hence, it can fail. To resolve it, after making one shutdown()
+          // call, we are ignoring IOException.
+          htu.getConnection().getAdmin().shutdown();
           LOG.info("Shutdown RPC sent.");
         } catch (IOException | CompletionException e) {
           LOG.warn("Failed to establish connection.", e);
         } catch (Throwable e) {
           LOG.warn("Something unexpected happened.", e);
+          throw new RuntimeException(e);
         }
       });
 
@@ -209,5 +221,4 @@ public class TestMasterShutdown {
     conf.setInt(ReadOnlyZKClient.RECOVERY_RETRY_INTERVAL_MILLIS, 100);
     return conf;
   }
-
 }
