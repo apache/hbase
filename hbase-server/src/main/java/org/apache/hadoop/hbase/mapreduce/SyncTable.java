@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -66,6 +67,7 @@ public class SyncTable extends Configured implements Tool {
   static final String DRY_RUN_CONF_KEY = "sync.table.dry.run";
   static final String DO_DELETES_CONF_KEY = "sync.table.do.deletes";
   static final String DO_PUTS_CONF_KEY = "sync.table.do.puts";
+  static final String IGNORE_TIMESTAMPS = "sync.table.ignore.timestamps";
 
   Path sourceHashDir;
   String sourceTableName;
@@ -76,6 +78,7 @@ public class SyncTable extends Configured implements Tool {
   boolean dryRun;
   boolean doDeletes = true;
   boolean doPuts = true;
+  boolean ignoreTimestamps;
 
   Counters counters;
 
@@ -149,6 +152,7 @@ public class SyncTable extends Configured implements Tool {
     jobConf.setBoolean(DRY_RUN_CONF_KEY, dryRun);
     jobConf.setBoolean(DO_DELETES_CONF_KEY, doDeletes);
     jobConf.setBoolean(DO_PUTS_CONF_KEY, doPuts);
+    jobConf.setBoolean(IGNORE_TIMESTAMPS, ignoreTimestamps);
 
     TableMapReduceUtil.initTableMapperJob(targetTableName, tableHash.initScan(),
         SyncMapper.class, null, null, job);
@@ -185,6 +189,7 @@ public class SyncTable extends Configured implements Tool {
     boolean dryRun;
     boolean doDeletes = true;
     boolean doPuts = true;
+    boolean ignoreTimestamp;
 
     HashTable.TableHash sourceTableHash;
     HashTable.TableHash.Reader sourceHashReader;
@@ -211,6 +216,7 @@ public class SyncTable extends Configured implements Tool {
       dryRun = conf.getBoolean(DRY_RUN_CONF_KEY, false);
       doDeletes = conf.getBoolean(DO_DELETES_CONF_KEY, true);
       doPuts = conf.getBoolean(DO_PUTS_CONF_KEY, true);
+      ignoreTimestamp = conf.getBoolean(IGNORE_TIMESTAMPS, false);
 
       sourceTableHash = HashTable.TableHash.read(conf, sourceHashDir);
       LOG.info("Read source hash manifest: " + sourceTableHash);
@@ -226,6 +232,7 @@ public class SyncTable extends Configured implements Tool {
       // instead, find the first hash batch at or after the start row
       // and skip any rows that come before.  they will be caught by the previous task
       targetHasher = new HashTable.ResultHasher();
+      targetHasher.ignoreTimestamps = ignoreTimestamp;
     }
 
     private static Connection openConnection(Configuration conf, String zkClusterConfKey,
@@ -473,6 +480,14 @@ public class SyncTable extends Configured implements Tool {
       }
     }
 
+    private Cell checkAndResetTimestamp(Cell sourceCell){
+      if (ignoreTimestamp) {
+        sourceCell = new KeyValue(sourceCell);
+        ((KeyValue) sourceCell).setTimestamp(System.currentTimeMillis());
+      }
+      return sourceCell;
+    }
+
     /**
      * Compare the cells for the given row from the source and target tables.
      * Count and log any differences.
@@ -501,6 +516,7 @@ public class SyncTable extends Configured implements Tool {
             if (put == null) {
               put = new Put(rowKey);
             }
+            sourceCell = checkAndResetTimestamp(sourceCell);
             put.add(sourceCell);
           }
 
@@ -544,6 +560,7 @@ public class SyncTable extends Configured implements Tool {
               if (put == null) {
                 put = new Put(rowKey);
               }
+              sourceCell = checkAndResetTimestamp(sourceCell);
               put.add(sourceCell);
             }
           }
@@ -604,7 +621,7 @@ public class SyncTable extends Configured implements Tool {
      * They are assumed to be of the same row.
      * Nulls are after non-nulls.
      */
-     private static int compareCellKeysWithinRow(Cell c1, Cell c2) {
+    private int compareCellKeysWithinRow(Cell c1, Cell c2) {
       if (c1 == null) {
         return 1; // source missing cell
       }
@@ -621,9 +638,12 @@ public class SyncTable extends Configured implements Tool {
       if (result != 0) {
         return result;
       }
-
-      // note timestamp comparison is inverted - more recent cells first
-      return CellComparator.compareTimestamps(c1, c2);
+      if (this.ignoreTimestamp) {
+        return 0;
+      } else{
+        // note timestamp comparison is inverted - more recent cells first
+        return CellComparator.compareTimestamps(c1, c2);
+      }
     }
 
     @Override
@@ -723,6 +743,10 @@ public class SyncTable extends Configured implements Tool {
     System.err.println("                  (defaults to true)");
     System.err.println(" doPuts           if false, does not perform puts ");
     System.err.println("                  (defaults to true)");
+    System.err.println(" ignoreTimestamps if true, ignores cells timestamps while comparing ");
+    System.err.println("                  cell values. Any missing cell on target then gets");
+    System.err.println("                  added with current time as timestamp ");
+    System.err.println("                  (defaults to false)");
     System.err.println();
     System.err.println("Args:");
     System.err.println(" sourcehashdir    path to HashTable output dir for source table");
@@ -783,6 +807,12 @@ public class SyncTable extends Configured implements Tool {
         final String doPutsKey = "--doPuts=";
         if (cmd.startsWith(doPutsKey)) {
           doPuts = Boolean.parseBoolean(cmd.substring(doPutsKey.length()));
+          continue;
+        }
+
+        final String ignoreTimestampsKey = "--ignoreTimestamps=";
+        if (cmd.startsWith(ignoreTimestampsKey)) {
+          ignoreTimestamps = Boolean.parseBoolean(cmd.substring(ignoreTimestampsKey.length()));
           continue;
         }
 
