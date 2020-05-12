@@ -17,22 +17,19 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.log4j.AsyncAppender;
-import org.apache.log4j.ConsoleAppender;
-import org.apache.log4j.PatternLayout;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Logger class that buffers before trying to log to the specified console.
  */
 @InterfaceAudience.Private
-public class AsyncConsoleAppender extends AsyncAppender {
-  private final ConsoleAppender consoleAppender;
+public class AsyncConsoleAppender extends org.apache.log4j.AsyncAppender {
+  private final org.apache.log4j.ConsoleAppender consoleAppender;
 
   public AsyncConsoleAppender() {
     super();
-    consoleAppender = new ConsoleAppender(new PatternLayout(
-        "%d{ISO8601} %-5p [%t] %c{2}: %m%n"));
+    consoleAppender = new org.apache.log4j.ConsoleAppender(
+      new org.apache.log4j.PatternLayout("%d{ISO8601} %-5p [%t] %c{2}: %m%n"));
     this.addAppender(consoleAppender);
   }
 
