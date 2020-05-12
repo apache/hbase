@@ -621,7 +621,7 @@ public class SyncTable extends Configured implements Tool {
      * They are assumed to be of the same row.
      * Nulls are after non-nulls.
      */
-     private int compareCellKeysWithinRow(Cell c1, Cell c2) {
+    private int compareCellKeysWithinRow(Cell c1, Cell c2) {
       if (c1 == null) {
         return 1; // source missing cell
       }
@@ -638,12 +638,12 @@ public class SyncTable extends Configured implements Tool {
       if (result != 0) {
         return result;
       }
-       if (this.ignoreTimestamp) {
-         return 0;
-       } else{
-         // note timestamp comparison is inverted - more recent cells first
-         return CellComparator.compareTimestamps(c1, c2);
-       }
+      if (this.ignoreTimestamp) {
+        return 0;
+      } else{
+        // note timestamp comparison is inverted - more recent cells first
+        return CellComparator.compareTimestamps(c1, c2);
+      }
     }
 
     @Override
