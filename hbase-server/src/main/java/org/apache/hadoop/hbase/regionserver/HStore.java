@@ -1415,7 +1415,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
    *  Since we already have this data, this will be idempotent but we will have a redundant
    *  copy of the data.
    *  - If RS fails between 2 and 3, the region will have a redundant copy of the data. The
-   *  RS that failed won't be able to finish snyc() for WAL because of lease recovery in WAL.
+   *  RS that failed won't be able to finish sync() for WAL because of lease recovery in WAL.
    *  - If RS fails after 3, the region region server who opens the region will pick up the
    *  the compaction marker from the WAL and replay it by removing the compaction input files.
    *  Failed RS can also attempt to delete those files, but the operation will be idempotent
