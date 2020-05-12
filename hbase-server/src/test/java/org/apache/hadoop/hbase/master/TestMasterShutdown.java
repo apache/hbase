@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import java.io.IOException;
-import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -35,8 +34,6 @@ import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.RetriesExhaustedException;
-import org.apache.hadoop.hbase.exceptions.MasterRegistryFetchException;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
@@ -171,24 +168,15 @@ public class TestMasterShutdown {
           htu.waitFor(timeout, () -> masterThread.getMaster().getServerManager() != null));
 
         // Master has come up far enough that we can terminate it without creating a zombie.
-        final long result = htu.waitFor(timeout, 1000, () -> {
-          LOG.debug("Attempting to establish connection.");
-          try (final Connection conn = htu.getConnection()) {
-            conn.getAdmin().shutdown();
-            LOG.info("Shutdown RPC sent.");
-            return true;
-          } catch (IOException|CompletionException e) {
-            LOG.error("Failed to establish connection.");
-            if (connectionFailedWithMaster(e)) {
-              return true;
-            }
-          } catch (Throwable e) {
-            LOG.error("Something unexpected happened.", e);
-          }
-          return false;
-        });
-        assertNotEquals("Failed to issue shutdown RPC after " + Duration.ofMillis(timeout),
-          -1, result);
+        LOG.debug("Attempting to establish connection.");
+        try (final Connection conn = htu.getConnection()) {
+          conn.getAdmin().shutdown();
+          LOG.info("Shutdown RPC sent.");
+        } catch (IOException | CompletionException e) {
+          LOG.warn("Failed to establish connection.", e);
+        } catch (Throwable e) {
+          LOG.warn("Something unexpected happened.", e);
+        }
       });
 
       shutdownFuture.join();
@@ -202,21 +190,6 @@ public class TestMasterShutdown {
         htu = null;
       }
     }
-  }
-
-  private boolean connectionFailedWithMaster(Exception e) {
-    if (e instanceof RetriesExhaustedException) {
-      Throwable cause = e.getCause();
-      if (cause instanceof MasterRegistryFetchException) {
-        cause = cause.getCause();
-        if (cause instanceof RetriesExhaustedException) {
-          final String message = cause.getMessage();
-          return message != null && message
-            .startsWith("Failed contacting masters after 1 attempts");
-        }
-      }
-    }
-    return false;
   }
 
   /**
