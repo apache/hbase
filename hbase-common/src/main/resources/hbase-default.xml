@@ -758,14 +758,15 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.hstore.compaction.min</name>
-    <value>3</value>
+    <value></value>
     <description>The minimum number of StoreFiles which must be eligible for compaction before
       compaction can run. The goal of tuning hbase.hstore.compaction.min is to avoid ending up with
       too many tiny StoreFiles to compact. Setting this value to 2 would cause a minor compaction
       each time you have two StoreFiles in a Store, and this is probably not appropriate. If you
       set this value too high, all the other values will need to be adjusted accordingly. For most
-      cases, the default value is appropriate. In previous versions of HBase, the parameter
-      hbase.hstore.compaction.min was named hbase.hstore.compactionThreshold.</description>
+      cases, the default value is appropriate  (empty value here, results in 3 by code logic). In 
+      previous versions of HBase, the parameter hbase.hstore.compaction.min was named 
+      hbase.hstore.compactionThreshold.</description>
   </property>
   <property>
     <name>hbase.hstore.compaction.max</name>
