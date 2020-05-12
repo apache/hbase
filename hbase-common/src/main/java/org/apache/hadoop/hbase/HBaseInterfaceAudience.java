@@ -58,4 +58,9 @@ public final class HBaseInterfaceAudience {
    * Denotes classes that can be used to build custom authentication solutions.
    */
   public static final String AUTHENTICATION = "Authentication";
+
+  /**
+   * Denotes classes that are being used to build Custom Chaos Monkey.
+   */
+  public static final String CHAOS = "ChaosMonkey";
 }
