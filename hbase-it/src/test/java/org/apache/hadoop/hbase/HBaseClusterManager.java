@@ -73,11 +73,11 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
       "timeout %6$s /usr/bin/ssh %1$s %2$s%3$s%4$s \"sudo %5$s\"";
   private String tunnelSudoCmd;
 
-  private static final String RETRY_ATTEMPTS_KEY = "hbase.it.clustermanager.retry.attempts";
-  private static final int DEFAULT_RETRY_ATTEMPTS = 5;
+  static final String RETRY_ATTEMPTS_KEY = "hbase.it.clustermanager.retry.attempts";
+  static final int DEFAULT_RETRY_ATTEMPTS = 5;
 
-  private static final String RETRY_SLEEP_INTERVAL_KEY = "hbase.it.clustermanager.retry.sleep.interval";
-  private static final int DEFAULT_RETRY_SLEEP_INTERVAL = 1000;
+  static final String RETRY_SLEEP_INTERVAL_KEY = "hbase.it.clustermanager.retry.sleep.interval";
+  static final int DEFAULT_RETRY_SLEEP_INTERVAL = 1000;
 
   protected RetryCounterFactory retryCounterFactory;
 
