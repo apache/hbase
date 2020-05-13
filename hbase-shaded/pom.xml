@@ -51,15 +51,14 @@
       <dependency>
          <groupId>org.apache.hbase</groupId>
          <artifactId>hbase-resource-bundle</artifactId>
-         <version>${project.version}</version>
          <optional>true</optional>
       </dependency>
-      <!-- log4j has to be non-optional for Hadoop 2 atleast -->
+      <!-- put the log implementations to optional -->
       <dependency>
         <groupId>log4j</groupId>
         <artifactId>log4j</artifactId>
+        <optional>true</optional>
       </dependency>
-      <!-- put the log implementations to optional -->
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-log4j12</artifactId>

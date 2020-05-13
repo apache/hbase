@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.monitoring;
+package org.apache.hadoop.hbase.util;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -25,43 +25,19 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.nio.channels.FileChannel;
-import java.util.Enumeration;
 import java.util.Set;
-
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.logging.Log4jUtils;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.log4j.Appender;
-import org.apache.log4j.FileAppender;
-import org.apache.log4j.Logger;
-
-import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Utility functions for reading the log4j logs that are
- * being written by HBase.
+ * Utility functions for reading the log4j logs that are being written by HBase.
  */
 @InterfaceAudience.Private
 public abstract class LogMonitoring {
-  public static Set<File> getActiveLogFiles() throws IOException {
-    Set<File> ret = Sets.newHashSet();
-    Appender a;
-    @SuppressWarnings("unchecked")
-    Enumeration<Appender> e = Logger.getRootLogger().getAllAppenders();
-    while (e.hasMoreElements()) {
-      a = e.nextElement();
-      if (a instanceof FileAppender) {
-        FileAppender fa = (FileAppender) a;
-        String filename = fa.getFile();
-        ret.add(new File(filename));
-      }
-    }
-    return ret;
-  }
-  
 
-  public static void dumpTailOfLogs(
-      PrintWriter out, long tailKb) throws IOException {
-    Set<File> logs = LogMonitoring.getActiveLogFiles();
+  public static void dumpTailOfLogs(PrintWriter out, long tailKb) throws IOException {
+    Set<File> logs = Log4jUtils.getActiveLogFiles();
     for (File f : logs) {
       out.println("+++++++++++++++++++++++++++++++");
       out.println(f.getAbsolutePath());
@@ -76,13 +52,12 @@ public abstract class LogMonitoring {
     }
   }
 
-  private static void dumpTailOfLog(File f, PrintWriter out, long tailKb)
-      throws IOException {
+  private static void dumpTailOfLog(File f, PrintWriter out, long tailKb) throws IOException {
     FileInputStream fis = new FileInputStream(f);
     BufferedReader r = null;
     try {
       FileChannel channel = fis.getChannel();
-      channel.position(Math.max(0, channel.size() - tailKb*1024));
+      channel.position(Math.max(0, channel.size() - tailKb * 1024));
       r = new BufferedReader(new InputStreamReader(fis));
       r.readLine(); // skip the first partial line
       String line;
@@ -90,7 +65,9 @@ public abstract class LogMonitoring {
         out.println(line);
       }
     } finally {
-      if (r != null) IOUtils.closeStream(r);
+      if (r != null) {
+        IOUtils.closeStream(r);
+      }
       IOUtils.closeStream(fis);
     }
   }
