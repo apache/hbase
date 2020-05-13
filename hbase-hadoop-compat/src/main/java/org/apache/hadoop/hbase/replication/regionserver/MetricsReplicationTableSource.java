@@ -18,12 +18,18 @@
 
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import org.apache.hadoop.hbase.metrics.BaseSource;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-public interface MetricsReplicationSourceFactory {
-  public MetricsReplicationSinkSource getSink();
-  public MetricsReplicationSourceSource getSource(String id);
-  public MetricsReplicationTableSource getTableSource(String tableName);
-  public MetricsReplicationSourceSource getGlobalSource();
+public interface MetricsReplicationTableSource extends BaseSource {
+
+  public static final String SOURCE_AGE_OF_LAST_SHIPPED_OP = "source.ageOfLastShippedOp";
+
+  public static final String SOURCE_SHIPPED_BYTES = "source.shippedBytes";
+
+  void setLastShippedAge(long age);
+  void incrShippedBytes(long size);
+  void clear();
+  long getLastShippedAge();
 }

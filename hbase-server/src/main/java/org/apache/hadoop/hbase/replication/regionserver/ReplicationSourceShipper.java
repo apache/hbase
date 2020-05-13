@@ -208,16 +208,13 @@ public class ReplicationSourceShipper extends Thread {
         for (Entry entry : entries) {
           cleanUpHFileRefs(entry.getEdit());
           LOG.trace("shipped entry {}: ", entry);
-          TableName tableName = entry.getKey().getTableName();
-          source.getSourceMetrics().setAgeOfLastShippedOpByTable(entry.getKey().getWriteTime(),
-              tableName.getNameAsString());
         }
         // Log and clean up WAL logs
         updateLogPosition(entryBatch);
 
         //offsets totalBufferUsed by deducting shipped batchSize (excludes bulk load size)
         //this sizeExcludeBulkLoad has to use same calculation that when calling
-        //acquireBufferQuota() in ReplicatinoSourceWALReader because they maintain
+        //acquireBufferQuota() in ReplicationSourceWALReader because they maintain
         //same variable: totalBufferUsed
         source.postShipEdits(entries, sizeExcludeBulkLoad);
         // FIXME check relationship between wal group and overall
@@ -225,6 +222,8 @@ public class ReplicationSourceShipper extends Thread {
           entryBatch.getNbHFiles());
         source.getSourceMetrics().setAgeOfLastShippedOp(
           entries.get(entries.size() - 1).getKey().getWriteTime(), walGroupId);
+        source.getSourceMetrics().updateTableLevelMetrics(entryBatch.getWaEntriesWithSize());
+
         if (LOG.isTraceEnabled()) {
           LOG.debug("Replicated {} entries or {} operations in {} ms",
               entries.size(), entryBatch.getNbOperations(), (endTimeNs - startTimeNs) / 1000000);
