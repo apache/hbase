@@ -334,9 +334,10 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     MetricsReplicationSourceSource spyglobalSourceSource = spy(globalSourceSource);
     doNothing().when(spyglobalSourceSource).incrFailedRecoveryQueue();
 
-    Map<String, MetricsReplicationTableSource> singleSourceSourceByTable = new HashMap<>();
-    MetricsSource source =
-      new MetricsSource(id, singleSourceSource, spyglobalSourceSource, singleSourceSourceByTable);
+    Map<String, MetricsReplicationTableSource> singleSourceSourceByTable =
+      new HashMap<>();
+    MetricsSource source = new MetricsSource(id, singleSourceSource,
+      spyglobalSourceSource, singleSourceSourceByTable);
 
 
     String gaugeName = "gauge";
@@ -391,9 +392,10 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     Assert.assertEquals(true, containsRandomNewTable);
     MetricsReplicationTableSource msr = source.getSingleSourceSourceByTable()
         .get("RandomNewTable");
-    // cannot put more concreate value here to verify because the age is arbitrary.
-    // as long as it's greater than 0, we see it as correct answer.
+
+    // age should be greater than zero we created the entry with time in the past
     Assert.assertTrue(msr.getLastShippedAge() > 0);
+    Assert.assertTrue(msr.getShippedBytes() > 0);
 
   }
 
@@ -401,13 +403,14 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     List<Pair<Entry, Long>> walEntriesWithSize = new ArrayList<>();
     byte[] a = new byte[] { 'a' };
     Entry entry = createEntry(tableName, null, a);
-    walEntriesWithSize.add(new Pair<>(entry, 10l));
+    walEntriesWithSize.add(new Pair<>(entry, 10L));
     return walEntriesWithSize;
   }
 
   private Entry createEntry(String tableName, TreeMap<byte[], Integer> scopes, byte[]... kvs) {
-    WALKeyImpl key1 =
-      new WALKeyImpl(new byte[0], TableName.valueOf(tableName), System.currentTimeMillis(), scopes);
+    WALKeyImpl key1 = new WALKeyImpl(new byte[0], TableName.valueOf(tableName),
+        System.currentTimeMillis() - 1L,
+        scopes);
     WALEdit edit1 = new WALEdit();
 
     for (byte[] kv : kvs) {

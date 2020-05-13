@@ -24,12 +24,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public interface MetricsReplicationTableSource extends BaseSource {
 
-  public static final String SOURCE_AGE_OF_LAST_SHIPPED_OP = "source.ageOfLastShippedOp";
-
-  public static final String SOURCE_SHIPPED_BYTES = "source.shippedBytes";
-
   void setLastShippedAge(long age);
   void incrShippedBytes(long size);
+  long getShippedBytes();
   void clear();
   long getLastShippedAge();
 }

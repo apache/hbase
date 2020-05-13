@@ -21,6 +21,11 @@ import org.apache.hadoop.metrics2.lib.MutableFastCounter;
 import org.apache.hadoop.metrics2.lib.MutableHistogram;
 import org.apache.yetus.audience.InterfaceAudience;
 
+/**
+ * This is the metric source for table level replication metrics.
+ * We can easy monitor some useful table level replication metrics such as
+ * ageOfLastShippedOp and shippedBytes
+ */
 @InterfaceAudience.Private
 public class MetricsReplicationTableSourceImpl implements MetricsReplicationTableSource {
 
@@ -46,15 +51,18 @@ public class MetricsReplicationTableSourceImpl implements MetricsReplicationTabl
     shippedBytesCounter = rms.getMetricsRegistry().getCounter(shippedBytesKey, 0L);
   }
 
-  @Override public void setLastShippedAge(long age) {
+  @Override
+  public void setLastShippedAge(long age) {
     ageOfLastShippedOpHist.add(age);
   }
 
-  @Override public void incrShippedBytes(long size) {
+  @Override
+  public void incrShippedBytes(long size) {
     shippedBytesCounter.incr(size);
   }
 
-  @Override public void clear() {
+  @Override
+  public void clear() {
     rms.removeMetric(ageOfLastShippedOpKey);
     rms.removeMetric(shippedBytesKey);
   }
@@ -62,6 +70,11 @@ public class MetricsReplicationTableSourceImpl implements MetricsReplicationTabl
   @Override
   public long getLastShippedAge() {
     return ageOfLastShippedOpHist.getMax();
+  }
+
+  @Override
+  public long getShippedBytes() {
+    return shippedBytesCounter.value();
   }
 
   @Override
