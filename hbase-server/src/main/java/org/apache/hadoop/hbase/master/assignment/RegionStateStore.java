@@ -134,7 +134,7 @@ public class RegionStateStore {
       final State state = getRegionState(result, regionInfo);
 
       final ServerName lastHost = hrl.getServerName();
-      final ServerName regionLocation = getRegionServer(result, replicaId);
+      ServerName regionLocation = MetaTableAccessor.getTargetServerName(result, replicaId);
       final long openSeqNum = hrl.getSeqNum();
 
       // TODO: move under trace, now is visible for debugging
@@ -199,7 +199,7 @@ public class RegionStateStore {
       put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
           .setRow(put.getRow())
           .setFamily(HConstants.CATALOG_FAMILY)
-          .setQualifier(getServerNameColumn(replicaId))
+          .setQualifier(MetaTableAccessor.getServerNameColumn(replicaId))
           .setTimestamp(put.getTimestamp())
           .setType(Cell.Type.Put)
           .setValue(Bytes.toBytes(regionLocation.getServerName()))
@@ -297,42 +297,6 @@ public class RegionStateStore {
 
   private TableDescriptor getTableDescriptor(TableName tableName) throws IOException {
     return master.getTableDescriptors().get(tableName);
-  }
-
-  // ==========================================================================
-  //  Server Name
-  // ==========================================================================
-
-  /**
-   * Returns the {@link ServerName} from catalog table {@link Result}
-   * where the region is transitioning. It should be the same as
-   * {@link MetaTableAccessor#getServerName(Result,int)} if the server is at OPEN state.
-   * @param r Result to pull the transitioning server name from
-   * @return A ServerName instance or {@link MetaTableAccessor#getServerName(Result,int)}
-   * if necessary fields not found or empty.
-   */
-  static ServerName getRegionServer(final Result r, int replicaId) {
-    final Cell cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-        getServerNameColumn(replicaId));
-    if (cell == null || cell.getValueLength() == 0) {
-      RegionLocations locations = MetaTableAccessor.getRegionLocations(r);
-      if (locations != null) {
-        HRegionLocation location = locations.getRegionLocation(replicaId);
-        if (location != null) {
-          return location.getServerName();
-        }
-      }
-      return null;
-    }
-    return ServerName.parseServerName(Bytes.toString(cell.getValueArray(),
-      cell.getValueOffset(), cell.getValueLength()));
-  }
-
-  private static byte[] getServerNameColumn(int replicaId) {
-    return replicaId == 0
-        ? HConstants.SERVERNAME_QUALIFIER
-        : Bytes.toBytes(HConstants.SERVERNAME_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
-          + String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
   }
 
   // ==========================================================================
