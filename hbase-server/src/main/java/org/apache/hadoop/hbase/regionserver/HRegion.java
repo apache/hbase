@@ -881,7 +881,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         DEFAULT_HBASE_REGIONSERVER_MINIBATCH_SIZE);
 
     // recover the metrics of read and write requests count if they were retained
-    if (rsServices != null) {
+    if (rsServices != null && rsServices.getRegionServerAccounting() != null) {
       Pair<Long, Long> retainedRWRequestsCnt = rsServices.getRegionServerAccounting()
         .getRetainedRegionRWRequestsCnt().get(getRegionInfo().getEncodedName());
       if (retainedRWRequestsCnt != null) {
