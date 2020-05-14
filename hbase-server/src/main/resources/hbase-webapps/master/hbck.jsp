@@ -259,6 +259,17 @@
                 <h2>Unknown Servers</h2>
               </div>
             </div>
+            <p>
+              <span>The below are servers mentioned in the hbase:meta table that are not known to the cluster either as 'live' or 'dead'.
+                The server likely belongs to an older epoch and we no longer have accounting. To clear, run
+                'hbck2 scheduleRecoveries UNKNOWN_SERVERNAME' to schedule a ServerCrashProcedure to clear out references
+                and to schedule reassigns of any hosted Regions. But first, be sure the referenced Region is not currently
+                stuck looping trying to open. Does it show as a Region-In-Transition on the Master home page? Is it mentioned
+                in the 'Procedures and Locks' Procedures list? If so, perhaps it stuck in a loop trying to open but unable to
+                because of a missing reference of file. Read the Master log looking for the most recent mentions of the associated
+                Region name.
+              </span>
+            </p>
             <table class="table table-striped">
               <tr>
                 <th>RegionInfo</th>
