@@ -215,7 +215,7 @@ public class ReplicationSourceShipper extends Thread {
           entryBatch.getNbHFiles());
         source.getSourceMetrics().setAgeOfLastShippedOp(
           entries.get(entries.size() - 1).getKey().getWriteTime(), walGroupId);
-        source.getSourceMetrics().updateTableLevelMetrics(entryBatch.getWaEntriesWithSize());
+        source.getSourceMetrics().updateTableLevelMetrics(entryBatch.getWalEntriesWithSize());
 
         if (LOG.isTraceEnabled()) {
           LOG.trace("Replicated {} entries or {} operations in {} ms",
