@@ -26,9 +26,9 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.logging.Log4jUtils;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
@@ -120,12 +120,9 @@ public class PerfTestCompactionPolicies extends MockStoreFileGenerator {
     this.ratio = inRatio;
 
     // Hide lots of logging so the system out is usable as a tab delimited file.
-    org.apache.log4j.Logger.getLogger(CompactionConfiguration.class).
-        setLevel(org.apache.log4j.Level.ERROR);
-    org.apache.log4j.Logger.getLogger(RatioBasedCompactionPolicy.class).
-        setLevel(org.apache.log4j.Level.ERROR);
-
-    org.apache.log4j.Logger.getLogger(cpClass).setLevel(org.apache.log4j.Level.ERROR);
+    Log4jUtils.setLogLevel(CompactionConfiguration.class.getName(), "ERROR");
+    Log4jUtils.setLogLevel(RatioBasedCompactionPolicy.class.getName(), "ERROR");
+    Log4jUtils.setLogLevel(cpClass.getName(), "ERROR");
 
 
     Configuration configuration = HBaseConfiguration.create();
