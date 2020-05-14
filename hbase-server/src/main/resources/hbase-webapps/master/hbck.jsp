@@ -112,8 +112,7 @@
         need to check the server still exists. If not, schedule <em>ServerCrashProcedure</em> for it. If exists,
         restart Server2 and Server1):
         3. More than one regionserver reports opened this region (Fix: restart the RegionServers).
-        Notice: the reported online regionservers may be not right when there are regions in transition.
-        Please check them in regionserver's web UI.
+        Note: the reported online regionservers may be not be up-to-date when there are regions in transition.
         </span>
       </p>
 
@@ -165,8 +164,9 @@
   </div>
       <p>
         <span>
-          The below are Regions we've lost account of. To be safe, run bulk load of any data found in these Region orphan directories back into the HBase cluster.
-          First make sure <em>hbase:meta</em> is in a healthy state, that there are no holes, overlaps or inconsistencies (else bulk load may complain);
+          The below are Regions we've lost account of. To be safe, run bulk load of any data found under these Region orphan directories to have the
+          cluster re-adopt data.
+          First make sure <em>hbase:meta</em> is in a healthy state, that there are no holes, overlaps or inconsistencies (else bulk load may fail);
           run <em>hbck2 fixMeta</em>. Once this is done, per Region below, run a bulk
           load -- <em>$ hbase completebulkload REGION_DIR_PATH TABLE_NAME</em> -- and then delete the desiccated directory content (HFiles are removed upon
           successful load; all that is left are empty directories and occasionally a seqid marking file).
@@ -273,6 +273,21 @@
                 <h2>Unknown Servers</h2>
               </div>
             </div>
+            <p>
+              <span>The below are servers mentioned in the hbase:meta table that are no longer 'live' or known 'dead'.
+                The server likely belongs to an older cluster epoch since replaced by a new instance because of a restart/crash.
+                To clear 'Unknown Servers', run 'hbck2 scheduleRecoveries UNKNOWN_SERVERNAME'. This will schedule a ServerCrashProcedure.
+                It will clear out 'Unknown Server' references and schedule reassigns of any Regions that were associated with this host.
+                But first!, be sure the referenced Region is not currently stuck looping trying to OPEN. Does it show as a Region-In-Transition on the
+                Master home page? Is it mentioned in the 'Procedures and Locks' Procedures list? If so, perhaps it stuck in a loop
+                trying to OPEN but unable to because of a missing reference or file.
+                Read the Master log looking for the most recent
+                mentions of the associated Region name. Try and address any such complaint first. If successful, a side-effect
+                should be the clean up of the 'Unknown Servers' list. It may take a while. OPENs are retried forever but the interval
+                between retries grows. The 'Unknown Server' may be cleared because it is just the last RegionServer the Region was
+                successfully opened on; on the next open, the 'Unknown Server' will be purged.
+              </span>
+            </p>
             <table class="table table-striped">
               <tr>
                 <th>RegionInfo</th>

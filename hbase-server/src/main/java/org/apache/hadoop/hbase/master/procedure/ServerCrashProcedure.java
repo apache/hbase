@@ -452,6 +452,15 @@ public class ServerCrashProcedure
   }
 
   /**
+   * Moved out here so can be overridden by the HBCK fix-up SCP to be less strict about what
+   * it will tolerate as a 'match'.
+   * @return True if the region location in <code>rsn</code> matches that of this crashed server.
+   */
+  protected boolean isMatchingRegionLocation(RegionStateNode rsn) {
+    return this.serverName.equals(rsn.getRegionLocation());
+  }
+
+  /**
    * Assign the regions on the crashed RS to other Rses.
    * <p/>
    * In this method we will go through all the RegionStateNodes of the give regions to find out
@@ -468,20 +477,23 @@ public class ServerCrashProcedure
       regionNode.lock();
       try {
         // This is possible, as when a server is dead, TRSP will fail to schedule a RemoteProcedure
-        // to us and then try to assign the region to a new RS. And before it has updated the region
+        // and then try to assign the region to a new RS. And before it has updated the region
         // location to the new RS, we may have already called the am.getRegionsOnServer so we will
-        // consider the region is still on us. And then before we arrive here, the TRSP could have
-        // updated the region location, or even finished itself, so the region is no longer on us
-        // any more, we should not try to assign it again. Please see HBASE-23594 for more details.
-        if (!serverName.equals(regionNode.getRegionLocation())) {
+        // consider the region is still on this crashed server. Then before we arrive here, the
+        // TRSP could have updated the region location, or even finished itself, so the region is
+        // no longer on this crashed server any more. We should not try to assign it again. Please
+        // see HBASE-23594 for more details.
+        // UPDATE: HBCKServerCrashProcedure overrides isMatchingRegionLocation; this check can get
+        // in the way of our clearing out 'Unknown Servers'.
+        if (!isMatchingRegionLocation(regionNode)) {
           // See HBASE-24117, though we have already changed the shutdown order, it is still worth
           // double checking here to confirm that we do not skip assignment incorrectly.
           if (!am.isRunning()) {
             throw new DoNotRetryIOException(
-              "AssignmentManager has been stopped, can not process assignment any more");
+                    "AssignmentManager has been stopped, can not process assignment any more");
           }
-          LOG.info("{} found a region {} which is no longer on us {}, give up assigning...", this,
-            regionNode, serverName);
+          LOG.info("{} found {} whose regionLocation no longer matches {}, skipping assign...",
+                  this, regionNode, serverName);
           continue;
         }
         if (regionNode.getProcedure() != null) {
