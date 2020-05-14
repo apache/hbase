@@ -27,10 +27,13 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -47,9 +50,10 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.log4j.Appender;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.spi.LoggingEvent;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.Appender;
+import org.apache.logging.log4j.core.LogEvent;
+import org.apache.logging.log4j.core.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -57,13 +61,10 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.junit.runner.RunWith;
 import org.mockito.ArgumentMatcher;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
-@RunWith(MockitoJUnitRunner.class)
 @Category({LargeTests.class})
 public class TestCanaryTool {
 
@@ -78,21 +79,23 @@ public class TestCanaryTool {
   @Rule
   public TestName name = new TestName();
 
+  private Appender mockAppender;
+
   @Before
   public void setUp() throws Exception {
     testingUtility = new HBaseTestingUtility();
     testingUtility.startMiniCluster();
-    LogManager.getRootLogger().addAppender(mockAppender);
+    mockAppender = mock(Appender.class);
+    when(mockAppender.getName()).thenReturn("mockAppender");
+    when(mockAppender.isStarted()).thenReturn(true);
+    ((Logger) LogManager.getLogger("org.apache.hadoop.hbase")).addAppender(mockAppender);
   }
 
   @After
   public void tearDown() throws Exception {
     testingUtility.shutdownMiniCluster();
-    LogManager.getRootLogger().removeAppender(mockAppender);
+    ((Logger) LogManager.getLogger("org.apache.hadoop.hbase")).removeAppender(mockAppender);
   }
-
-  @Mock
-  Appender mockAppender;
 
   @Test
   public void testBasicZookeeperCanaryWorks() throws Exception {
@@ -230,16 +233,16 @@ public class TestCanaryTool {
         sink.getReadLatencyMap().get(tableNames[i].getNameAsString()));
     }
     // One table's timeout is set for 0 ms and thus, should lead to an error.
-    verify(mockAppender, times(1)).doAppend(argThat(new ArgumentMatcher<LoggingEvent>() {
+    verify(mockAppender, times(1)).append(argThat(new ArgumentMatcher<LogEvent>() {
       @Override
-      public boolean matches(LoggingEvent argument) {
-        return argument.getRenderedMessage().contains("exceeded the configured read timeout.");
+      public boolean matches(LogEvent argument) {
+        return argument.getMessage().getFormattedMessage().contains("exceeded the configured read timeout.");
       }
     }));
-    verify(mockAppender, times(2)).doAppend(argThat(new ArgumentMatcher<LoggingEvent>() {
+    verify(mockAppender, times(2)).append(argThat(new ArgumentMatcher<LogEvent>() {
       @Override
-      public boolean matches(LoggingEvent argument) {
-        return argument.getRenderedMessage().contains("Configured read timeout");
+      public boolean matches(LogEvent argument) {
+        return argument.getMessage().getFormattedMessage().contains("Configured read timeout");
       }
     }));
   }
@@ -253,11 +256,11 @@ public class TestCanaryTool {
     assertEquals(0, ToolRunner.run(testingUtility.getConfiguration(), canary, args));
     assertNotEquals("verify non-null write latency", null, sink.getWriteLatency());
     assertNotEquals("verify non-zero write latency", 0L, sink.getWriteLatency());
-    verify(mockAppender, times(1)).doAppend(argThat(
-        new ArgumentMatcher<LoggingEvent>() {
+    verify(mockAppender, times(1)).append(argThat(
+        new ArgumentMatcher<LogEvent>() {
           @Override
-          public boolean matches(LoggingEvent argument) {
-            return argument.getRenderedMessage().contains("Configured write timeout");
+          public boolean matches(LogEvent argument) {
+            return argument.getMessage().getFormattedMessage().contains("Configured write timeout");
           }
         }));
   }
@@ -266,10 +269,10 @@ public class TestCanaryTool {
   @Test
   public void testRegionserverNoRegions() throws Exception {
     runRegionserverCanary();
-    verify(mockAppender).doAppend(argThat(new ArgumentMatcher<LoggingEvent>() {
+    verify(mockAppender).append(argThat(new ArgumentMatcher<LogEvent>() {
       @Override
-      public boolean matches(LoggingEvent argument) {
-        return argument.getRenderedMessage().contains("Regionserver not serving any regions");
+      public boolean matches(LogEvent argument) {
+        return argument.getMessage().getFormattedMessage().contains("Regionserver not serving any regions");
       }
     }));
   }
@@ -280,10 +283,10 @@ public class TestCanaryTool {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     testingUtility.createTable(tableName, new byte[][] { FAMILY });
     runRegionserverCanary();
-    verify(mockAppender, never()).doAppend(argThat(new ArgumentMatcher<LoggingEvent>() {
+    verify(mockAppender, never()).append(argThat(new ArgumentMatcher<LogEvent>() {
       @Override
-      public boolean matches(LoggingEvent argument) {
-        return argument.getRenderedMessage().contains("Regionserver not serving any regions");
+      public boolean matches(LogEvent argument) {
+        return argument.getMessage().getFormattedMessage().contains("Regionserver not serving any regions");
       }
     }));
   }
@@ -322,8 +325,7 @@ public class TestCanaryTool {
   }
 
   private void testZookeeperCanaryWithArgs(String[] args) throws Exception {
-    Integer port =
-      Iterables.getOnlyElement(testingUtility.getZkCluster().getClientPortList(), null);
+    Iterables.getOnlyElement(testingUtility.getZkCluster().getClientPortList(), null);
     String hostPort = testingUtility.getZkCluster().getAddress().toString();
     testingUtility.getConfiguration().set(HConstants.ZOOKEEPER_QUORUM, hostPort);
     ExecutorService executor = new ScheduledThreadPoolExecutor(2);

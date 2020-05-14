@@ -33,14 +33,13 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
+import org.apache.hadoop.hbase.logging.Log4jUtils;
 import org.apache.hadoop.hbase.metrics.BaseSource;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -65,6 +64,7 @@ public class TestMultiRespectsLimits {
       CompatibilityFactory.getInstance(MetricsAssertHelper.class);
   private final static byte[] FAMILY = Bytes.toBytes("D");
   public static final int MAX_SIZE = 100;
+  private static String LOG_LEVEL;
 
   @Rule
   public TestName name = new TestName();
@@ -72,7 +72,8 @@ public class TestMultiRespectsLimits {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     // disable the debug log to avoid flooding the output
-    LogManager.getLogger(AsyncRegionLocatorHelper.class).setLevel(Level.INFO);
+    LOG_LEVEL = Log4jUtils.getEffectiveLevel(AsyncRegionLocatorHelper.class.getName());
+    Log4jUtils.setLogLevel(AsyncRegionLocatorHelper.class.getName(), "INFO");
     TEST_UTIL.getConfiguration().setLong(HConstants.HBASE_SERVER_SCANNER_MAX_RESULT_SIZE_KEY,
       MAX_SIZE);
 
@@ -82,6 +83,9 @@ public class TestMultiRespectsLimits {
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
+    if (LOG_LEVEL != null) {
+      Log4jUtils.setLogLevel(AsyncRegionLocatorHelper.class.getName(), LOG_LEVEL);
+    }
     TEST_UTIL.shutdownMiniCluster();
   }
 

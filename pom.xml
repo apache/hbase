@@ -1230,13 +1230,6 @@
                   <reason>Use SLF4j for logging</reason>
                   <bannedImports>
                     <bannedImport>org.apache.commons.logging.**</bannedImport>
-                  </bannedImports>
-                </restrictImports>
-                <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
-                  <includeTestCode>false</includeTestCode>
-                  <commentLineBufferSize>512</commentLineBufferSize>
-                  <reason>Use SLF4j for logging</reason>
-                  <bannedImports>
                     <bannedImport>org.apache.log4j.**</bannedImport>
                   </bannedImports>
                 </restrictImports>

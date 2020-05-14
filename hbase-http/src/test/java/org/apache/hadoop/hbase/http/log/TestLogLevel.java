@@ -22,6 +22,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.io.File;
 import java.net.BindException;
 import java.net.SocketException;
@@ -51,9 +52,10 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.config.Configurator;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -296,7 +298,7 @@ public class TestLogLevel {
     if (!LogLevel.isValidProtocol(connectProtocol)) {
       throw new Exception("Invalid client protocol " + connectProtocol);
     }
-    Level oldLevel = log.getEffectiveLevel();
+    Level oldLevel = log.getLevel();
     assertNotEquals("Get default Log Level which shouldn't be ERROR.",
         Level.ERROR, oldLevel);
 
@@ -334,7 +336,7 @@ public class TestLogLevel {
     }
 
     // restore log level
-    GenericTestUtils.setLogLevel(log, oldLevel);
+    Configurator.setLevel(log.getName(), oldLevel);
   }
 
   /**
@@ -366,7 +368,7 @@ public class TestLogLevel {
     cli.run(setLevelArgs);
 
     assertEquals("new level not equal to expected: ", newLevel.toUpperCase(),
-        log.getEffectiveLevel().toString());
+        log.getLevel().toString());
   }
 
   /**
