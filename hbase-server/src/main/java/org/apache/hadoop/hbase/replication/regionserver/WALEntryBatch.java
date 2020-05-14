@@ -83,7 +83,7 @@ class WALEntryBatch {
   /**
    * @return the WAL Entries.
    */
-  public List<Pair<Entry, Long>> getWaEntriesWithSize() {
+  public List<Pair<Entry, Long>> getWalEntriesWithSize() {
     return walEntriesWithSize;
   }
 
