@@ -21,7 +21,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -34,7 +36,8 @@ class WALEntryBatch {
   // used by recovered replication queue to indicate that all the entries have been read.
   public static final WALEntryBatch NO_MORE_DATA = new WALEntryBatch(0, null);
 
-  private List<Entry> walEntries;
+  private List<Pair<Entry, Long>> walEntriesWithSize;
+
   // last WAL that was read
   private Path lastWalPath;
   // position in WAL of last entry in this batch
@@ -54,7 +57,7 @@ class WALEntryBatch {
    * @param lastWalPath Path of the WAL the last entry in this batch was read from
    */
   WALEntryBatch(int maxNbEntries, Path lastWalPath) {
-    this.walEntries = new ArrayList<>(maxNbEntries);
+    this.walEntriesWithSize = new ArrayList<>(maxNbEntries);
     this.lastWalPath = lastWalPath;
   }
 
@@ -66,15 +69,22 @@ class WALEntryBatch {
     return batch;
   }
 
-  public void addEntry(Entry entry) {
-    walEntries.add(entry);
+  public void addEntry(Entry entry, long entrySize) {
+    walEntriesWithSize.add(new Pair<>(entry, entrySize));
   }
 
   /**
    * @return the WAL Entries.
    */
   public List<Entry> getWalEntries() {
-    return walEntries;
+    return walEntriesWithSize.stream().map(Pair::getFirst).collect(Collectors.toList());
+  }
+
+  /**
+   * @return the WAL Entries.
+   */
+  public List<Pair<Entry, Long>> getWaEntriesWithSize() {
+    return walEntriesWithSize;
   }
 
   /**
@@ -96,7 +106,7 @@ class WALEntryBatch {
   }
 
   public int getNbEntries() {
-    return walEntries.size();
+    return walEntriesWithSize.size();
   }
 
   /**
@@ -160,7 +170,7 @@ class WALEntryBatch {
 
   @Override
   public String toString() {
-    return "WALEntryBatch [walEntries=" + walEntries + ", lastWalPath=" + lastWalPath +
+    return "WALEntryBatch [walEntries=" + walEntriesWithSize + ", lastWalPath=" + lastWalPath +
       ", lastWalPosition=" + lastWalPosition + ", nbRowKeys=" + nbRowKeys + ", nbHFiles=" +
       nbHFiles + ", heapSize=" + heapSize + ", lastSeqIds=" + lastSeqIds + ", endOfFile=" +
       endOfFile + "]";
