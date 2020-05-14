@@ -542,9 +542,9 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
     }
   }
 
-  // Assign table to default RSGroup.
+  // Assign table to default RSGroup, called after the table has been actually created.
   @Override
-  public void postCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
+  public void postCompletedCreateTableAction(ObserverContext<MasterCoprocessorEnvironment> ctx,
       TableDescriptor desc, RegionInfo[] regions) throws IOException {
     assignTableToGroup(desc);
   }
