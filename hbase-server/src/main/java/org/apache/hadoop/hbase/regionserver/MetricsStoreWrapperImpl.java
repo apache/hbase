@@ -54,9 +54,9 @@ public class MetricsStoreWrapperImpl implements MetricsStoreWrapper, Closeable {
 
   public MetricsStoreWrapperImpl(HStore store) {
     this.store = store;
-    ScheduledExecutorService executor = CompatibilitySingletonFactory.getInstance(MetricsExecutor.class).getExecutor();
-    this.storeMetricUpdateTask =
-        executor.scheduleWithFixedDelay(new HStoreMetricsWrapperRunnable(),
+    ScheduledExecutorService executor =
+        CompatibilitySingletonFactory.getInstance(MetricsExecutor.class).getExecutor();
+    this.storeMetricUpdateTask = executor.scheduleWithFixedDelay(new HStoreMetricsWrapperRunnable(),
       PERIOD, PERIOD, TimeUnit.SECONDS);
   }
 

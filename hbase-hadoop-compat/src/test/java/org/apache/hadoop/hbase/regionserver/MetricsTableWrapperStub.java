@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class MetricsTableWrapperStub implements MetricsTableWrapperAggregate {
 
   private String tableName;
@@ -111,14 +114,16 @@ public class MetricsTableWrapperStub implements MetricsTableWrapperAggregate {
   }
 
   @Override
-  public long getMemstoreReadRequestCount(String table) {
-    // TODO Auto-generated method stub
-    return 3;
+  public Map<String, Long> getMemstoreReadRequestCount(String table) {
+    Map<String, Long> map = new HashMap<String, Long>();
+    map.put("info", 3l);
+    return map;
   }
 
   @Override
-  public long getFileRequestCount(String table) {
-    // TODO Auto-generated method stub
-    return 3;
+  public Map<String, Long> getFileRequestCount(String table) {
+    Map<String, Long> map = new HashMap<String, Long>();
+    map.put("info", 3l);
+    return map;
   }
 }

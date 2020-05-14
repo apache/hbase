@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.Map;
+
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -110,11 +112,10 @@ public interface MetricsTableWrapperAggregate {
   /**
    * @return number of get requests on memstore for this table
    */
-  long getMemstoreReadRequestCount(String table);
+  Map<String, Long> getMemstoreReadRequestCount(String table);
 
   /**
    * @return number of get requests from file for this table
    */
-  long getFileRequestCount(String table);
-
+  Map<String, Long> getFileRequestCount(String table);
 }
