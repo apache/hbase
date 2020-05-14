@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -174,7 +175,7 @@ public class CompactionConfiguration {
       compactionPolicyForDateTieredWindow,
       dateTieredSingleOutputForMinorCompaction,
       dateTieredCompactionWindowFactory,
-      storeConfigInfo.getRegionInfo().getEncodedName(),
+      RegionInfo.prettyPrint(storeConfigInfo.getRegionInfo().getEncodedName()),
       storeConfigInfo.getColumnFamilyName()
       );
   }
