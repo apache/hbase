@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -35,6 +36,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -47,13 +50,17 @@ import org.apache.hadoop.hbase.replication.regionserver.MetricsReplicationGlobal
 import org.apache.hadoop.hbase.replication.regionserver.MetricsReplicationSourceImpl;
 import org.apache.hadoop.hbase.replication.regionserver.MetricsReplicationSourceSource;
 import org.apache.hadoop.hbase.replication.regionserver.MetricsReplicationSourceSourceImpl;
+import org.apache.hadoop.hbase.replication.regionserver.MetricsReplicationTableSource;
 import org.apache.hadoop.hbase.replication.regionserver.MetricsSource;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry;
 import org.junit.AfterClass;
@@ -304,11 +311,12 @@ public class TestReplicationEndpoint extends TestReplicationBase {
   }
 
   @Test
-  public void testMetricsSourceBaseSourcePassthrough() {
+  public void testMetricsSourceBaseSourcePassThrough() {
     /*
-     * The replication MetricsSource wraps a MetricsReplicationSourceSourceImpl and a
-     * MetricsReplicationGlobalSourceSource, so that metrics get written to both namespaces. Both of
-     * those classes wrap a MetricsReplicationSourceImpl that implements BaseSource, which allows
+     * The replication MetricsSource wraps a MetricsReplicationTableSourceImpl,
+     * MetricsReplicationSourceSourceImpl and a MetricsReplicationGlobalSourceSource,
+     * so that metrics get written to both namespaces. Both of those classes wrap a
+     * MetricsReplicationSourceImpl that implements BaseSource, which allows
      * for custom JMX metrics. This test checks to make sure the BaseSource decorator logic on
      * MetricsSource actually calls down through the two layers of wrapping to the actual
      * BaseSource.
@@ -327,9 +335,10 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     MetricsReplicationSourceSource spyglobalSourceSource = spy(globalSourceSource);
     doNothing().when(spyglobalSourceSource).incrFailedRecoveryQueue();
 
-    Map<String, MetricsReplicationSourceSource> singleSourceSourceByTable = new HashMap<>();
-    MetricsSource source =
-      new MetricsSource(id, singleSourceSource, spyglobalSourceSource, singleSourceSourceByTable);
+    Map<String, MetricsReplicationTableSource> singleSourceSourceByTable =
+      new HashMap<>();
+    MetricsSource source = new MetricsSource(id, singleSourceSource,
+      spyglobalSourceSource, singleSourceSourceByTable);
 
 
     String gaugeName = "gauge";
@@ -378,16 +387,37 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     boolean containsRandomNewTable = source.getSingleSourceSourceByTable()
         .containsKey("RandomNewTable");
     Assert.assertEquals(false, containsRandomNewTable);
-    source.setAgeOfLastShippedOpByTable(123L, "RandomNewTable");
+    source.updateTableLevelMetrics(createWALEntriesWithSize("RandomNewTable"));
     containsRandomNewTable = source.getSingleSourceSourceByTable()
         .containsKey("RandomNewTable");
     Assert.assertEquals(true, containsRandomNewTable);
-    MetricsReplicationSourceSource msr = source.getSingleSourceSourceByTable()
+    MetricsReplicationTableSource msr = source.getSingleSourceSourceByTable()
         .get("RandomNewTable");
-    // cannot put more concreate value here to verify because the age is arbitrary.
-    // as long as it's greater than 0, we see it as correct answer.
-    Assert.assertTrue(msr.getLastShippedAge() > 0);
 
+    // age should be greater than zero we created the entry with time in the past
+    Assert.assertTrue(msr.getLastShippedAge() > 0);
+    Assert.assertTrue(msr.getShippedBytes() > 0);
+
+  }
+
+  private List<Pair<Entry, Long>> createWALEntriesWithSize(String tableName) {
+    List<Pair<Entry, Long>> walEntriesWithSize = new ArrayList<>();
+    byte[] a = new byte[] { 'a' };
+    Entry entry = createEntry(tableName, null, a);
+    walEntriesWithSize.add(new Pair<>(entry, 10L));
+    return walEntriesWithSize;
+  }
+
+  private Entry createEntry(String tableName, TreeMap<byte[], Integer> scopes, byte[]... kvs) {
+    WALKeyImpl key1 = new WALKeyImpl(new byte[0], TableName.valueOf(tableName),
+        System.currentTimeMillis() - 1L,
+        scopes);
+    WALEdit edit1 = new WALEdit();
+
+    for (byte[] kv : kvs) {
+      edit1.add(new KeyValue(kv, kv, kv));
+    }
+    return new Entry(key1, edit1);
   }
 
   private void doPut(byte[] row) throws IOException {
