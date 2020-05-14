@@ -91,7 +91,7 @@ public class SyncTable extends Configured implements Tool {
   private void initCredentialsForHBase(String zookeeper, Job job) throws IOException {
     Configuration peerConf = HBaseConfiguration.createClusterConf(job
             .getConfiguration(), zookeeper);
-    if("kerberos".equalsIgnoreCase(peerConf.get("hbase.security.authentication"))){
+    if(peerConf.get("hbase.security.authentication").equals("kerberos")){
       TableMapReduceUtil.initCredentialsForCluster(job, peerConf);
     }
   }
@@ -105,7 +105,7 @@ public class SyncTable extends Configured implements Tool {
     Job job = Job.getInstance(getConf(),getConf().get("mapreduce.job.name",
         "syncTable_" + sourceTableName + "-" + targetTableName));
     Configuration jobConf = job.getConfiguration();
-    if ("kerberos".equalsIgnoreCase(jobConf.get("hadoop.security.authentication"))) {
+    if (jobConf.get("hadoop.security.authentication").equals("kerberos")) {
       TokenCache.obtainTokensForNamenodes(job.getCredentials(), new
           Path[] { sourceHashDir }, getConf());
     }
