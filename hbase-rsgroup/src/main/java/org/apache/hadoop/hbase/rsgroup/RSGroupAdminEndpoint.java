@@ -551,7 +551,7 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
 
   // Remove table from its RSGroup.
   @Override
-  public void postDeleteTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
+  public void postCompletedDeleteTableAction(ObserverContext<MasterCoprocessorEnvironment> ctx,
                               TableName tableName) throws IOException {
     try {
       RSGroupInfo group = groupAdminServer.getRSGroupInfoOfTable(tableName);
