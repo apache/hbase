@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.hbase.replication.regionserver;
 
-public interface MetricsReplicationSourceFactory {
-  public MetricsReplicationSinkSource getSink();
-  public MetricsReplicationSourceSource getSource(String id);
-  public MetricsReplicationTableSource getTableSource(String tableName);
-  public MetricsReplicationSourceSource getGlobalSource();
+import org.apache.hadoop.hbase.metrics.BaseSource;
+
+public interface MetricsReplicationTableSource extends BaseSource {
+  void setLastShippedAge(long age);
+  void incrShippedBytes(long size);
+  long getShippedBytes();
+  void clear();
+  long getLastShippedAge();
 }

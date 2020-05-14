@@ -145,7 +145,7 @@ public class ReplicationSourceWALReaderThread extends Thread {
               if (edit != null && !edit.isEmpty()) {
                 long entrySize = getEntrySizeIncludeBulkLoad(entry);
                 long entrySizeExcludeBulkLoad = getEntrySizeExcludeBulkLoad(entry);
-                batch.addEntry(entry);
+                batch.addEntry(entry, entrySize);
                 updateBatchStats(batch, entry, entryStream.getPosition(), entrySize);
                 boolean totalBufferTooLarge = acquireBufferQuota(entrySizeExcludeBulkLoad);
                 // Stop if too many entries or too big
@@ -274,9 +274,7 @@ public class ReplicationSourceWALReaderThread extends Thread {
 
   private long getEntrySizeIncludeBulkLoad(Entry entry) {
     WALEdit edit = entry.getEdit();
-    WALKey key = entry.getKey();
-    return edit.heapSize() + sizeOfStoreFilesIncludeBulkLoad(edit) +
-        key.estimatedSerializedSizeOf();
+    return  getEntrySizeExcludeBulkLoad(entry) + sizeOfStoreFilesIncludeBulkLoad(edit);
   }
 
   public long getEntrySizeExcludeBulkLoad(Entry entry) {
@@ -396,7 +394,7 @@ public class ReplicationSourceWALReaderThread extends Thread {
    *
    */
   static class WALEntryBatch {
-    private List<Entry> walEntries;
+    private List<Pair<Entry, Long>> walEntriesWithSize;
     // last WAL that was read
     private Path lastWalPath;
     // position in WAL of last entry in this batch
@@ -414,18 +412,29 @@ public class ReplicationSourceWALReaderThread extends Thread {
      * @param maxNbEntries the number of entries a batch can have
      */
     private WALEntryBatch(int maxNbEntries) {
-      this.walEntries = new ArrayList<>(maxNbEntries);
+      this.walEntriesWithSize = new ArrayList<>(maxNbEntries);
     }
 
-    public void addEntry(Entry entry) {
-      walEntries.add(entry);
+    public void addEntry(Entry entry, long entrySize) {
+      walEntriesWithSize.add(new Pair<>(entry, entrySize));
     }
 
     /**
      * @return the WAL Entries.
      */
     public List<Entry> getWalEntries() {
-      return walEntries;
+      List<Entry> entries = new ArrayList<>(walEntriesWithSize.size());
+      for (Pair<Entry, Long> pair: walEntriesWithSize) {
+        entries.add(pair.getFirst());
+      }
+      return entries;
+    }
+
+    /**
+     * @return the WAL Entries with size.
+     */
+    public List<Pair<Entry, Long>> getWalEntriesWithSize() {
+      return walEntriesWithSize;
     }
 
     /**
@@ -443,7 +452,7 @@ public class ReplicationSourceWALReaderThread extends Thread {
     }
 
     public int getNbEntries() {
-      return walEntries.size();
+      return walEntriesWithSize.size();
     }
 
     /**
@@ -487,7 +496,7 @@ public class ReplicationSourceWALReaderThread extends Thread {
     }
 
     public boolean isEmpty() {
-      return walEntries.isEmpty();
+      return walEntriesWithSize.isEmpty();
     }
 
     public void updatePosition(WALEntryStream entryStream) {

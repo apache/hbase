@@ -35,4 +35,8 @@ public class MetricsReplicationSourceFactoryImpl implements MetricsReplicationSo
   @Override public MetricsReplicationSourceSource getGlobalSource() {
     return new MetricsReplicationGlobalSourceSource(SourceHolder.INSTANCE.source);
   }
+
+  @Override public MetricsReplicationTableSource getTableSource(String tableName) {
+    return new MetricsReplicationTableSourceImpl(SourceHolder.INSTANCE.source, tableName);
+  }
 }

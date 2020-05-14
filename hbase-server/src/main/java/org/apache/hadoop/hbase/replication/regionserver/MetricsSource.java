@@ -19,7 +19,9 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
@@ -27,6 +29,8 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSource;
 import org.apache.hadoop.hbase.metrics.MetricRegistryInfo;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
 
 /**
  * This class is for maintaining the various replication statistics for a source and publishing them
@@ -43,7 +47,7 @@ public class MetricsSource implements BaseSource {
 
   private final MetricsReplicationSourceSource singleSourceSource;
   private final MetricsReplicationSourceSource globalSourceSource;
-  private Map<String, MetricsReplicationSourceSource> singleSourceSourceByTable;
+  private Map<String, MetricsReplicationTableSource> singleSourceSourceByTable;
 
   /**
    * Constructor used to register the metrics
@@ -57,7 +61,7 @@ public class MetricsSource implements BaseSource {
             .getSource(id);
     globalSourceSource = CompatibilitySingletonFactory
         .getInstance(MetricsReplicationSourceFactory.class).getGlobalSource();
-    singleSourceSourceByTable = new HashMap<>();
+    singleSourceSourceByTable = new ConcurrentHashMap<>();
   }
 
   /**
@@ -68,11 +72,47 @@ public class MetricsSource implements BaseSource {
    */
   public MetricsSource(String id, MetricsReplicationSourceSource singleSourceSource,
                        MetricsReplicationSourceSource globalSourceSource,
-                       Map<String, MetricsReplicationSourceSource> singleSourceSourceByTable) {
+                       Map<String, MetricsReplicationTableSource> singleSourceSourceByTable) {
     this.id = id;
     this.singleSourceSource = singleSourceSource;
     this.globalSourceSource = globalSourceSource;
     this.singleSourceSourceByTable = singleSourceSourceByTable;
+  }
+
+  private MetricsReplicationTableSource getSourceForTable(String tableName) {
+    MetricsReplicationTableSource tableSource = singleSourceSourceByTable.get(tableName);
+    if (tableSource == null) {
+      // Not quite Map#computeIfAbsent but we are restricted to what is available in Java 7
+      // for branch-1
+      tableSource = CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class)
+          .getTableSource(tableName);
+      MetricsReplicationTableSource otherTableSource =
+        ((ConcurrentHashMap<String, MetricsReplicationTableSource>)singleSourceSourceByTable)
+          .putIfAbsent(tableName, tableSource);
+      if (otherTableSource != null) {
+        tableSource = otherTableSource;
+      }
+    }
+    return tableSource;
+  }
+
+  /**
+   * Update the table level replication metrics per table
+   *
+   * @param walEntries List of pairs of WAL entry and it's size
+   */
+  public void updateTableLevelMetrics(List<Pair<Entry, Long>> walEntries) {
+    for (Pair<Entry, Long> walEntryWithSize : walEntries) {
+      Entry entry = walEntryWithSize.getFirst();
+      long entrySize = walEntryWithSize.getSecond();
+      String tableName = entry.getKey().getTablename().getNameAsString();
+      long writeTime = entry.getKey().getWriteTime();
+      long age = EnvironmentEdgeManager.currentTime() - writeTime;
+      // get the replication metrics source for table at the run time
+      MetricsReplicationTableSource tableSource = getSourceForTable(tableName);
+      tableSource.setLastShippedAge(age);
+      tableSource.incrShippedBytes(entrySize);
+    }
   }
 
   /**
@@ -94,14 +134,9 @@ public class MetricsSource implements BaseSource {
    * @param tableName String as group and tableName
    */
   public void setAgeOfLastShippedOpByTable(long timestamp, String tableName) {
-    long age = EnvironmentEdgeManager.currentTime() - timestamp;
-    if (!this.getSingleSourceSourceByTable().containsKey(tableName)) {
-      this.getSingleSourceSourceByTable().put(tableName,
-          CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class)
-          .getSource(tableName));
-    }
-    this.singleSourceSourceByTable.get(tableName).setLastShippedAge(age);
+    getSourceForTable(tableName).setLastShippedAge(EnvironmentEdgeManager.currentTime() - timestamp);
   }
+
   /**
    * get the last timestamp of given wal group. If the walGroup is null, return 0.
    * @param walGroup which group we are getting
@@ -116,7 +151,7 @@ public class MetricsSource implements BaseSource {
    * @param walGroup which group we are getting
    * @return age
    */
-  public long getAgeofLastShippedOp(String walGroup) {
+  public long getAgeOfLastShippedOp(String walGroup) {
     return this.ageOfLastShippedOp.get(walGroup) == null ? 0 : ageOfLastShippedOp.get(walGroup);
   }
 
@@ -380,7 +415,7 @@ public class MetricsSource implements BaseSource {
     return globalSourceSource.getMetricsName();
   }
 
-  public Map<String, MetricsReplicationSourceSource> getSingleSourceSourceByTable() {
+  public Map<String, MetricsReplicationTableSource> getSingleSourceSourceByTable() {
     return singleSourceSourceByTable;
   }
 

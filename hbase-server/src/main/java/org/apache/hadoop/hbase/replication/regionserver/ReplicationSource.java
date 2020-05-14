@@ -530,7 +530,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     for (ReplicationSourceShipperThread worker : workerThreads.values()) {
       String walGroupId = worker.getWalGroupId();
       lastTimeStamp = metrics.getLastTimeStampOfWalGroup(walGroupId);
-      ageOfLastShippedOp = metrics.getAgeofLastShippedOp(walGroupId);
+      ageOfLastShippedOp = metrics.getAgeOfLastShippedOp(walGroupId);
       int queueSize = queues.get(walGroupId).size();
       replicationDelay =
           ReplicationLoad.calculateReplicationDelay(ageOfLastShippedOp, lastTimeStamp, queueSize);
@@ -764,11 +764,6 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
             int size = entries.size();
             for (int i = 0; i < size; i++) {
               cleanUpHFileRefs(entries.get(i).getEdit());
-
-              TableName tableName = entries.get(i).getKey().getTablename();
-              source.getSourceMetrics().setAgeOfLastShippedOpByTable(
-                entries.get(i).getKey().getWriteTime(),
-                tableName.getNameAsString());
             }
             //Log and clean up WAL logs
             updateLogPosition(lastReadPosition);
@@ -783,6 +778,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
           metrics.shipBatch(entryBatch.getNbOperations(), currentSize, entryBatch.getNbHFiles());
           metrics.setAgeOfLastShippedOp(entries.get(entries.size() - 1).getKey().getWriteTime(),
             walGroupId);
+          source.getSourceMetrics().updateTableLevelMetrics(entryBatch.getWalEntriesWithSize());
           if (LOG.isTraceEnabled()) {
             LOG.trace("Replicated " + totalReplicatedEdits + " entries in total, or "
                 + totalReplicatedOperations + " operations in "
