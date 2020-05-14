@@ -17,73 +17,83 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.log4j.Appender;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.spi.LoggingEvent;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.Appender;
+import org.apache.logging.log4j.core.LogEvent;
+import org.apache.logging.log4j.core.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
-@RunWith(MockitoJUnitRunner.class)
 @Category({ ClientTests.class, SmallTests.class })
 public class TestFailedServersLog {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFailedServersLog.class);
+    HBaseClassTestRule.forClass(TestFailedServersLog.class);
 
   static final int TEST_PORT = 9999;
+
   private InetSocketAddress addr;
 
-  @Mock
   private Appender mockAppender;
-
-  @Captor
-  private ArgumentCaptor captorLoggingEvent;
 
   @Before
   public void setup() {
-    LogManager.getRootLogger().addAppender(mockAppender);
+    mockAppender = mock(Appender.class);
+    when(mockAppender.getName()).thenReturn("mockAppender");
+    when(mockAppender.isStarted()).thenReturn(true);
+    ((Logger) LogManager.getLogger("org.apache.hadoop.hbase")).addAppender(mockAppender);
+
   }
 
   @After
   public void teardown() {
-    LogManager.getRootLogger().removeAppender(mockAppender);
+    ((Logger) LogManager.getLogger("org.apache.hadoop.hbase")).removeAppender(mockAppender);
   }
 
   @Test
   public void testAddToFailedServersLogging() {
-    Throwable nullException = new NullPointerException();
+    AtomicReference<Level> level = new AtomicReference<>();
+    AtomicReference<String> msg = new AtomicReference<String>();
+    doAnswer(new Answer<Void>() {
 
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        LogEvent logEvent = invocation.getArgument(0, LogEvent.class);
+        level.set(logEvent.getLevel());
+        msg.set(logEvent.getMessage().getFormattedMessage());
+        return null;
+      }
+    }).when(mockAppender).append(any(LogEvent.class));
+
+    Throwable nullException = new NullPointerException();
     FailedServers fs = new FailedServers(new Configuration());
     addr = new InetSocketAddress(TEST_PORT);
-
     fs.addToFailedServers(addr, nullException);
 
-    Mockito.verify(mockAppender).doAppend((LoggingEvent) captorLoggingEvent.capture());
-    LoggingEvent loggingEvent = (LoggingEvent) captorLoggingEvent.getValue();
-    assertThat(loggingEvent.getLevel(), is(Level.DEBUG));
-    assertEquals("Added failed server with address " + addr.toString() + " to list caused by "
-        + nullException.toString(),
-      loggingEvent.getRenderedMessage());
+    verify(mockAppender, times(1)).append(any(LogEvent.class));
+    assertEquals(Level.DEBUG, level.get());
+    assertEquals("Added failed server with address " + addr.toString() + " to list caused by " +
+      nullException.toString(), msg.get());
   }
-
 }

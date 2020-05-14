@@ -43,7 +43,9 @@
 #
 #   HBASE_CONF_DIR   Alternate conf dir. Default is ${HBASE_HOME}/conf.
 #
-#   HBASE_ROOT_LOGGER The root appender. Default is INFO,console
+#   HBASE_ROOT_LOGGER_LEVEL    The root logger level. Default is INFO.
+#
+#   HBASE_ROOT_LOGGER_APPENDER The root logger appemder. Default is console.
 #
 #   JRUBY_HOME       JRuby path: $JRUBY_HOME/lib/jruby.jar should exist.
 #                    Defaults to the jar packaged with HBase.
@@ -294,7 +296,10 @@ fi
 for f in "${HBASE_HOME}"/lib/client-facing-thirdparty/*.jar; do
   if [[ ! "${f}" =~ ^.*/htrace-core-3.*\.jar$ ]] && \
      [ "${f}" != "htrace-core.jar$" ] && \
-     [[ ! "${f}" =~ ^.*/slf4j-log4j.*$ ]]; then
+     [[ ! "${f}" =~ ^.*/log4j.*$ ]] && \
+     [[ ! "${f}" =~ ^.*/slf4j.*$ ]] && \
+     [[ ! "${f}" =~ ^.*/jcl-over-slf4j.*$ ]] && \
+     [[ ! "${f}" =~ ^.*/jul-to-slf4j.*$ ]]; then
     CLASSPATH="${CLASSPATH}:${f}"
   fi
 done
@@ -639,7 +644,10 @@ elif [ "$COMMAND" = "mapredcp" ] ; then
     for f in "${HBASE_HOME}"/lib/client-facing-thirdparty/*.jar; do
       if [[ ! "${f}" =~ ^.*/htrace-core-3.*\.jar$ ]] && \
          [ "${f}" != "htrace-core.jar$" ] && \
-         [[ ! "${f}" =~ ^.*/slf4j-log4j.*$ ]]; then
+         [[ ! "${f}" =~ ^.*/log4j.*$ ]] && \
+         [[ ! "${f}" =~ ^.*/slf4j.*$ ]] && \
+         [[ ! "${f}" =~ ^.*/jcl-over-slf4j.*$ ]] && \
+         [[ ! "${f}" =~ ^.*/jul-to-slf4j.*$ ]]; then
         echo -n ":${f}"
       fi
     done
@@ -756,7 +764,8 @@ HBASE_OPTS="$HBASE_OPTS -Dhbase.log.dir=$HBASE_LOG_DIR"
 HBASE_OPTS="$HBASE_OPTS -Dhbase.log.file=$HBASE_LOGFILE"
 HBASE_OPTS="$HBASE_OPTS -Dhbase.home.dir=$HBASE_HOME"
 HBASE_OPTS="$HBASE_OPTS -Dhbase.id.str=$HBASE_IDENT_STRING"
-HBASE_OPTS="$HBASE_OPTS -Dhbase.root.logger=${HBASE_ROOT_LOGGER:-INFO,console}"
+HBASE_OPTS="$HBASE_OPTS -Dhbase.root.logger.level=${HBASE_ROOT_LOGGER_LEVEL:-INFO}"
+HBASE_OPTS="$HBASE_OPTS -Dhbase.root.logger.appender=${HBASE_ROOT_LOGGER_APPENDER:-console}"
 if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
   HBASE_OPTS="$HBASE_OPTS -Djava.library.path=$JAVA_LIBRARY_PATH"
   export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$JAVA_LIBRARY_PATH"
@@ -764,14 +773,34 @@ fi
 
 # Enable security logging on the master and regionserver only
 if [ "$COMMAND" = "master" ] || [ "$COMMAND" = "regionserver" ]; then
-  HBASE_OPTS="$HBASE_OPTS -Dhbase.security.logger=${HBASE_SECURITY_LOGGER:-INFO,RFAS}"
+  HBASE_OPTS="$HBASE_OPTS -Dhbase.security.logger.level=${HBASE_SECURITY_LOGGER_LEVEL:-INFO}"
+  HBASE_OPTS="$HBASE_OPTS -Dhbase.security.logger.appender=${HBASE_SECURITY_LOGGER_APPENDER:-RFAS}"
 else
-  HBASE_OPTS="$HBASE_OPTS -Dhbase.security.logger=${HBASE_SECURITY_LOGGER:-INFO,NullAppender}"
+  HBASE_OPTS="$HBASE_OPTS -Dhbase.security.logger.level=${HBASE_SECURITY_LOGGER_LEVEL:-INFO,NullAppender}"
+  HBASE_OPTS="$HBASE_OPTS -Dhbase.security.logger.appender=${HBASE_SECURITY_LOGGER_APPENDER:-NullAppender}"
 fi
 
 HEAP_SETTINGS="$JAVA_HEAP_MAX $JAVA_OFFHEAP_MAX"
 # by now if we're running a command it means we need logging
-for f in ${HBASE_HOME}/lib/client-facing-thirdparty/slf4j-log4j*.jar; do
+for f in ${HBASE_HOME}/lib/client-facing-thirdparty/log4j*.jar; do
+  if [ -f "${f}" ]; then
+    CLASSPATH="${CLASSPATH}:${f}"
+    break
+  fi
+done
+for f in ${HBASE_HOME}/lib/client-facing-thirdparty/slf4j*.jar; do
+  if [ -f "${f}" ]; then
+    CLASSPATH="${CLASSPATH}:${f}"
+    break
+  fi
+done
+for f in ${HBASE_HOME}/lib/client-facing-thirdparty/jcl-over-slf4j*.jar; do
+  if [ -f "${f}" ]; then
+    CLASSPATH="${CLASSPATH}:${f}"
+    break
+  fi
+done
+for f in ${HBASE_HOME}/lib/client-facing-thirdparty/jul-to-slf4j*.jar; do
   if [ -f "${f}" ]; then
     CLASSPATH="${CLASSPATH}:${f}"
     break

@@ -24,9 +24,10 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.config.Configurator;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -45,11 +46,11 @@ public class TestLog4jUtils {
   @Test
   public void test() {
     Logger zk = LogManager.getLogger("org.apache.zookeeper");
-    Level zkLevel = zk.getEffectiveLevel();
+    Level zkLevel = zk.getLevel();
     Logger hbaseZk = LogManager.getLogger("org.apache.hadoop.hbase.zookeeper");
-    Level hbaseZkLevel = hbaseZk.getEffectiveLevel();
+    Level hbaseZkLevel = hbaseZk.getLevel();
     Logger client = LogManager.getLogger("org.apache.hadoop.hbase.client");
-    Level clientLevel = client.getEffectiveLevel();
+    Level clientLevel = client.getLevel();
     Log4jUtils.disableZkAndClientLoggers();
     assertEquals(Level.OFF, zk.getLevel());
     assertEquals(Level.OFF.toString(), Log4jUtils.getEffectiveLevel(zk.getName()));
@@ -58,9 +59,9 @@ public class TestLog4jUtils {
     assertEquals(Level.OFF, client.getLevel());
     assertEquals(Level.OFF.toString(), Log4jUtils.getEffectiveLevel(client.getName()));
     // restore the level
-    zk.setLevel(zkLevel);
-    hbaseZk.setLevel(hbaseZkLevel);
-    client.setLevel(clientLevel);
+    Configurator.setLevel(zk.getName(), zkLevel);
+    Configurator.setLevel(hbaseZk.getName(), hbaseZkLevel);
+    Configurator.setLevel(client.getName(), clientLevel);
   }
 
   @Test

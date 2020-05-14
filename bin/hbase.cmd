@@ -36,7 +36,9 @@
 @rem
 @rem   HBASE_CONF_DIR   Alternate conf dir. Default is ${HBASE_HOME}/conf.
 @rem
-@rem   HBASE_ROOT_LOGGER The root appender. Default is INFO,console
+@rem   HBASE_ROOT_LOGGER_LEVEL    The root logger level. Default is INFO.
+@rem
+@rem   HBASE_ROOT_LOGGER_APPENDER The root logger appender. Default is console.
 @rem
 @rem   JRUBY_HOME       JRuby path: $JRUBY_HOME\lib\jruby.jar should exist.
 @rem                    Defaults to the jar packaged with HBase.
@@ -250,10 +252,14 @@ if "%servercommand%" == "true" (
 if defined service_entry (
   set HBASE_LOG_PREFIX=hbase-%hbase-command%-%COMPUTERNAME%
   set HBASE_LOGFILE=!HBASE_LOG_PREFIX!.log
-  if not defined HBASE_ROOT_LOGGER (
-    set HBASE_ROOT_LOGGER=INFO,DRFA
+  if not defined HBASE_ROOT_LOGGER_LEVEL (
+    set HBASE_ROOT_LOGGER_LEVEL=INFO
   )
-  set HBASE_SECURITY_LOGGER=INFO,DRFAS
+  if not defined HBASE_ROOT_LOGGER_APPENDER (
+    set HBASE_ROOT_LOGGER_APPENDER=DRFA
+  )
+  set HBASE_SECURITY_LOGGER_LEVEL=INFO
+  set HBASE_SECURITY_LOGGER_APPENDER=DRFAS
   set loggc=!HBASE_LOG_DIR!\!HBASE_LOG_PREFIX!.gc
   set loglog=!HBASE_LOG_DIR!\!HBASE_LOGFILE!
 
@@ -317,26 +323,42 @@ set HBASE_OPTS=%HBASE_OPTS% -Dhbase.home.dir="%HBASE_HOME%"
 set HBASE_OPTS=%HBASE_OPTS% -Dhbase.id.str="%HBASE_IDENT_STRING%"
 set HBASE_OPTS=%HBASE_OPTS% -XX:OnOutOfMemoryError="taskkill /F /PID %p"
 
-if not defined HBASE_ROOT_LOGGER (
-  set HBASE_ROOT_LOGGER=INFO,console
+if not defined HBASE_ROOT_LOGGER_LEVEL (
+  set HBASE_ROOT_LOGGER_LEVEL=INFO
 )
-set HBASE_OPTS=%HBASE_OPTS% -Dhbase.root.logger="%HBASE_ROOT_LOGGER%"
+
+if not defined HBASE_ROOT_LOGGER_APPENDER (
+  set HBASE_ROOT_LOGGER_LEVEL=console
+)
+
+set HBASE_OPTS=%HBASE_OPTS% -Dhbase.root.logger.level="%HBASE_ROOT_LOGGER_LEVEL% -Dhbase.root.logger.appender="%HBASE_ROOT_LOGGER_APPENDER% "
 
 if defined JAVA_LIBRARY_PATH (
   set HBASE_OPTS=%HBASE_OPTS% -Djava.library.path="%JAVA_LIBRARY_PATH%"
 )
 
 rem Enable security logging on the master and regionserver only
-if not defined HBASE_SECURITY_LOGGER (
-  set HBASE_SECURITY_LOGGER=INFO,NullAppender
+if not defined HBASE_SECURITY_LOGGER_LEVEL (
+  set HBASE_SECURITY_LOGGER_LEVEL=INFO
   if "%hbase-command%"=="master" (
-    set HBASE_SECURITY_LOGGER=INFO,DRFAS
+    set HBASE_SECURITY_LOGGER_LEVEL=INFO
   )
   if "%hbase-command%"=="regionserver" (
-    set HBASE_SECURITY_LOGGER=INFO,DRFAS
+    set HBASE_SECURITY_LOGGER_LEVEL=INFO
   )
 )
-set HBASE_OPTS=%HBASE_OPTS% -Dhbase.security.logger="%HBASE_SECURITY_LOGGER%"
+
+if not defined HBASE_SECURITY_LOGGER_APPENDER (
+  set HBASE_SECURITY_LOGGER_APPENDER=NullAppender
+  if "%hbase-command%"=="master" (
+    set HBASE_SECURITY_LOGGER_APPENDER=DRFAS
+  )
+  if "%hbase-command%"=="regionserver" (
+    set HBASE_SECURITY_LOGGER_APPENDER=DRFAS
+  )
+)
+
+set HBASE_OPTS=%HBASE_OPTS% -Dhbase.security.logger.level="%HBASE_SECURITY_LOGGER_LEVEL% -Dhbase.security.logger.appender="%HBASE_SECURITY_LOGGER_APPENDER%"
 
 set HEAP_SETTINGS=%JAVA_HEAP_MAX% %JAVA_OFFHEAP_MAX%
 set java_arguments=%HEAP_SETTINGS% %HBASE_OPTS% -classpath "%CLASSPATH%" %CLASS% %hbase-command-arguments%
