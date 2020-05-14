@@ -3329,7 +3329,8 @@ public class HRegionServer extends HasThread implements
       boolean selfMove = ServerName.isSameAddress(destination, this.getServerName());
       addToMovedRegions(r.getRegionInfo().getEncodedName(), destination, closeSeqNum, selfMove);
       if (selfMove) {
-        this.regionServerAccounting.getRetainedRegionRWRequestsCnt().put(r.getRegionInfo().getEncodedName()
+        this.regionServerAccounting.getRetainedRegionRWRequestsCnt()
+		  .put(r.getRegionInfo().getEncodedName()
           , new Pair<>(r.getReadRequestsCount(), r.getWriteRequestsCount()));
       }
     }
@@ -3496,7 +3497,8 @@ public class HRegionServer extends HasThread implements
   //  the number of network calls instead of reducing them.
   private static final int TIMEOUT_REGION_MOVED = (2 * 60 * 1000);
 
-  protected void addToMovedRegions(String encodedName, ServerName destination, long closeSeqNum, boolean selfMove) {
+  protected void addToMovedRegions(String encodedName, ServerName destination
+    , long closeSeqNum, boolean selfMove) {
     if (selfMove) {
       LOG.warn("Not adding moved region record: " + encodedName + " to self.");
       return;
