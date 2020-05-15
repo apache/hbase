@@ -43,7 +43,7 @@ public class ChangeEncodingAction extends Action {
   public void perform() throws IOException {
     LOG.debug("Performing action: Changing encodings on " + tableName);
     // possible DataBlockEncoding id's
-    final int[] possibleIds = {0, 2, 3, 4, 6};
+    final int[] possibleIds = {0, 2, 3, 4, 7};
 
     modifyAllTableColumns(tableName, (columnName, columnBuilder) -> {
       short id = (short) possibleIds[random.nextInt(possibleIds.length)];
