@@ -546,7 +546,9 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
   @Override
   public void postCompletedCreateTableAction(ObserverContext<MasterCoprocessorEnvironment> ctx,
       TableDescriptor desc, RegionInfo[] regions) throws IOException {
-    assignTableToGroup(desc);
+    if (!desc.getTableName().isSystemTable()) {
+      assignTableToGroup(desc);
+    }
   }
 
   // Remove table from its RSGroup.
