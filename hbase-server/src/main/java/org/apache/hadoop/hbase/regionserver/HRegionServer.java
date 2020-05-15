@@ -3331,7 +3331,7 @@ public class HRegionServer extends HasThread implements
       if (selfMove) {
         this.regionServerAccounting.getRetainedRegionRWRequestsCnt()
           .put(r.getRegionInfo().getEncodedName()
-          , new Pair<>(r.getReadRequestsCount(), r.getWriteRequestsCount()));
+            , new Pair<>(r.getReadRequestsCount(), r.getWriteRequestsCount()));
       }
     }
     this.regionFavoredNodesMap.remove(r.getRegionInfo().getEncodedName());
