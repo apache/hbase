@@ -3330,7 +3330,7 @@ public class HRegionServer extends HasThread implements
       addToMovedRegions(r.getRegionInfo().getEncodedName(), destination, closeSeqNum, selfMove);
       if (selfMove) {
         this.regionServerAccounting.getRetainedRegionRWRequestsCnt()
-		  .put(r.getRegionInfo().getEncodedName()
+          .put(r.getRegionInfo().getEncodedName()
           , new Pair<>(r.getReadRequestsCount(), r.getWriteRequestsCount()));
       }
     }
