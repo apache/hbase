@@ -349,6 +349,7 @@ class MemStoreFlusher implements FlushRequester {
               // we still select the regions based on the region's memstore data size.
               // TODO : If we want to decide based on heap over head it can be done without tracking
               // it per region.
+              setFlushType(type);
               if (!flushOneForGlobalPressure()) {
                 // Wasn't able to flush any region, but we're above low water mark
                 // This is unlikely to happen, but might happen when closing the
