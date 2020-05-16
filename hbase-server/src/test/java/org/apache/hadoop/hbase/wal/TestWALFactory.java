@@ -60,7 +60,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WALFactory.Providers;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -455,7 +455,7 @@ public class TestWALFactory {
       @Override
       public void run() {
         try {
-          FSUtils.recoverFileLease(recoveredFs, walPath, rlConf, null);
+          RecoverLeaseFSUtils.recoverFileLease(recoveredFs, walPath, rlConf, null);
         } catch (IOException e) {
           exception = e;
         }

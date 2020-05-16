@@ -161,6 +161,14 @@
       <fileMode>0644</fileMode>
     </fileSet>
     <fileSet>
+      <directory>${project.basedir}/../hbase-asyncfs/target/</directory>
+      <outputDirectory>lib</outputDirectory>
+      <includes>
+        <include>${asyncfs.test.jar}</include>
+      </includes>
+      <fileMode>0644</fileMode>
+    </fileSet>
+    <fileSet>
       <directory>${project.basedir}/../hbase-zookeeper/target/</directory>
       <outputDirectory>lib</outputDirectory>
       <includes>

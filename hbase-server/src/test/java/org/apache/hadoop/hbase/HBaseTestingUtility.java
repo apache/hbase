@@ -53,8 +53,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.commons.logging.impl.Jdk14Logger;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -95,6 +93,7 @@ import org.apache.hadoop.hbase.io.hfile.ChecksumUtil;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
+import org.apache.hadoop.hbase.logging.Log4jUtils;
 import org.apache.hadoop.hbase.mapreduce.MapreduceTestingShim;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState;
@@ -144,14 +143,10 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.minikdc.MiniKdc;
-import org.apache.log4j.LogManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooKeeper.States;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.slf4j.impl.Log4jLoggerAdapter;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
@@ -698,14 +693,18 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     return dfsCluster;
   }
 
-  /** This is used before starting HDFS and map-reduce mini-clusters
-   * Run something like the below to check for the likes of '/tmp' references -- i.e.
-   * references outside of the test data dir -- in the conf.
-   *     Configuration conf = TEST_UTIL.getConfiguration();
-   *     for (Iterator<Map.Entry<String, String>> i = conf.iterator(); i.hasNext();) {
-   *       Map.Entry<String, String> e = i.next();
-   *       assertFalse(e.getKey() + " " + e.getValue(), e.getValue().contains("/tmp"));
-   *     }
+  /**
+   * This is used before starting HDFS and map-reduce mini-clusters Run something like the below to
+   * check for the likes of '/tmp' references -- i.e. references outside of the test data dir -- in
+   * the conf.
+   *
+   * <pre>
+   * Configuration conf = TEST_UTIL.getConfiguration();
+   * for (Iterator&lt;Map.Entry&lt;String, String&gt;&gt; i = conf.iterator(); i.hasNext();) {
+   *   Map.Entry&lt;String, String&gt; e = i.next();
+   *   assertFalse(e.getKey() + " " + e.getValue(), e.getValue().contains("/tmp"));
+   * }
+   * </pre>
    */
   private void createDirsAndSetProperties() throws IOException {
     setupClusterTestDir();
@@ -740,7 +739,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     createDirAndSetProperty("dfs.journalnode.edits.dir");
     createDirAndSetProperty("dfs.datanode.shared.file.descriptor.paths");
     createDirAndSetProperty("nfs.dump.dir");
-    createDirAndSetProperty("java.io.tmpdir");
     createDirAndSetProperty("java.io.tmpdir");
     createDirAndSetProperty("dfs.journalnode.edits.dir");
     createDirAndSetProperty("dfs.provided.aliasmap.inmemory.leveldb.dir");
@@ -2992,18 +2990,14 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   /**
    * Switches the logger for the given class to DEBUG level.
-   *
-   * @param clazz  The class for which to switch to debug logging.
+   * @param clazz The class for which to switch to debug logging.
+   * @deprecated In 2.3.0, will be removed in 4.0.0. Only support changing log level on log4j now as
+   *             HBase only uses log4j. You should do this by your own as it you know which log
+   *             framework you are using then set the log level to debug is very easy.
    */
+  @Deprecated
   public void enableDebug(Class<?> clazz) {
-    Logger l = LoggerFactory.getLogger(clazz);
-    if (l instanceof Log4JLogger) {
-      ((Log4JLogger) l).getLogger().setLevel(org.apache.log4j.Level.DEBUG);
-    } else if (l instanceof Log4jLoggerAdapter) {
-      LogManager.getLogger(clazz).setLevel(org.apache.log4j.Level.DEBUG);
-    } else if (l instanceof Jdk14Logger) {
-      ((Jdk14Logger) l).getLogger().setLevel(java.util.logging.Level.ALL);
-    }
+    Log4jUtils.enableDebug(clazz);
   }
 
   /**

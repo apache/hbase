@@ -34,14 +34,17 @@
       <includes>
         <!-- Keep this list sorted by name -->
         <include>org.apache.hbase:hbase-annotations</include>
+        <include>org.apache.hbase:hbase-asyncfs</include>
         <include>org.apache.hbase:hbase-client</include>
         <include>org.apache.hbase:hbase-common</include>
+        <include>org.apache.hbase:hbase-endpoint</include>
         <include>org.apache.hbase:hbase-examples</include>
         <include>org.apache.hbase:hbase-external-blockcache</include>
         <include>org.apache.hbase:hbase-hadoop-compat</include>
         <include>org.apache.hbase:hbase-hadoop2-compat</include>
         <include>org.apache.hbase:hbase-http</include>
         <include>org.apache.hbase:hbase-it</include>
+        <include>org.apache.hbase:hbase-logging</include>
         <include>org.apache.hbase:hbase-mapreduce</include>
         <include>org.apache.hbase:hbase-metrics</include>
         <include>org.apache.hbase:hbase-metrics-api</include>

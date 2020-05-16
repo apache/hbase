@@ -458,6 +458,7 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
         if (master.getMasterCoprocessorHost() != null) {
           master.getMasterCoprocessorHost().preRenameRSGroup(oldRSGroup, newRSGroup);
         }
+        checkPermission("renameRSGroup");
         groupAdminServer.renameRSGroup(oldRSGroup, newRSGroup);
         if (master.getMasterCoprocessorHost() != null) {
           master.getMasterCoprocessorHost().postRenameRSGroup(oldRSGroup, newRSGroup);
