@@ -98,22 +98,23 @@ public class SlowLogTableAccessor {
     }
     try {
       if (connection == null) {
-        synchronized (SlowLogTableAccessor.class) {
-          if (connection == null) {
-            Configuration conf = new Configuration(configuration);
-            // rpc timeout: 20s
-            conf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 20000);
-            // retry count: 5
-            conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 5);
-            conf.setInt(HConstants.HBASE_CLIENT_SERVERSIDE_RETRIES_MULTIPLIER, 1);
-            connection = ConnectionFactory.createConnection(conf);
-          }
-        }
+        createConnection(configuration);
       }
       doPut(connection, puts);
     } catch (Exception e) {
       LOG.warn("Failed to add slow/large log records to hbase:slowlog table.", e);
     }
+  }
+
+  private static synchronized void createConnection(Configuration configuration)
+      throws IOException {
+    Configuration conf = new Configuration(configuration);
+    // rpc timeout: 20s
+    conf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 20000);
+    // retry count: 5
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 5);
+    conf.setInt(HConstants.HBASE_CLIENT_SERVERSIDE_RETRIES_MULTIPLIER, 1);
+    connection = ConnectionFactory.createConnection(conf);
   }
 
   /**
