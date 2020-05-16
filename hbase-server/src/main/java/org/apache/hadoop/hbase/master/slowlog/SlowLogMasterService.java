@@ -47,7 +47,7 @@ public class SlowLogMasterService {
       .setColumnFamily(
         ColumnFamilyDescriptorBuilder.newBuilder(HConstants.SLOWLOG_INFO_FAMILY)
           .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-          .setInMemory(true)
+          .setBlockCacheEnabled(false)
           .setMaxVersions(1).build());
 
   public SlowLogMasterService(final Configuration configuration,
@@ -59,7 +59,7 @@ public class SlowLogMasterService {
 
   public void init() throws IOException {
     if (!slowlogTableEnabled) {
-      LOG.info("SlowLogTable is not enabled. Quitting.");
+      LOG.info("Slow/Large requests logging to system table hbase:slowlog is disabled. Quitting.");
       return;
     }
     if (!MetaTableAccessor.tableExists(masterServices.getConnection(),

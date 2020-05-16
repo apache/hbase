@@ -27,10 +27,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Queue;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.SlowLogParams;
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -60,9 +61,12 @@ class LogEventHandler implements EventHandler<RingBufferEnvelope> {
   private final Queue<SlowLogPayload> queueForSysTable;
   private final boolean isSlowLogTableEnabled;
 
-  private Connection connection;
+  private Configuration configuration;
 
-  LogEventHandler(int eventCount, boolean isSlowLogTableEnabled) {
+  private static final ReentrantLock LOCK = new ReentrantLock();
+
+  LogEventHandler(int eventCount, boolean isSlowLogTableEnabled, Configuration conf) {
+    this.configuration = conf;
     EvictingQueue<SlowLogPayload> evictingQueue = EvictingQueue.create(eventCount);
     queueForRingBuffer = Queues.synchronizedQueue(evictingQueue);
     this.isSlowLogTableEnabled = isSlowLogTableEnabled;
@@ -73,10 +77,6 @@ class LogEventHandler implements EventHandler<RingBufferEnvelope> {
     } else {
       queueForSysTable = null;
     }
-  }
-
-  public void setConnection(Connection connection) {
-    this.connection = connection;
   }
 
   /**
@@ -148,7 +148,7 @@ class LogEventHandler implements EventHandler<RingBufferEnvelope> {
       .setUserName(userName)
       .build();
     queueForRingBuffer.add(slowLogPayload);
-    if (isSlowLogTableEnabled && this.connection != null) {
+    if (isSlowLogTableEnabled) {
       if (!slowLogPayload.getRegionName().startsWith("hbase:slowlog")) {
         queueForSysTable.add(slowLogPayload);
       }
@@ -283,26 +283,30 @@ class LogEventHandler implements EventHandler<RingBufferEnvelope> {
    */
   void addAllLogsToSysTable() {
     if (queueForSysTable == null) {
-      LOG.warn("hbase.regionserver.slowlog.systable.enabled is turned off. Exiting.");
+      // hbase.regionserver.slowlog.systable.enabled is turned off. Exiting.
       return;
     }
-    if (this.connection == null) {
-      LOG.warn("LogEventHandler has null connection. Exiting.");
+    if (LOCK.isLocked()) {
       return;
     }
-    List<SlowLogPayload> slowLogPayloads = new ArrayList<>();
-    int i = 0;
-    while (!queueForSysTable.isEmpty()) {
-      slowLogPayloads.add(queueForSysTable.poll());
-      i++;
-      if (i == 100) {
-        SlowLogTableAccessor.addSlowLogRecords(slowLogPayloads, this.connection);
-        slowLogPayloads = new ArrayList<>();
-        i = 0;
+    LOCK.lock();
+    try {
+      List<SlowLogPayload> slowLogPayloads = new ArrayList<>();
+      int i = 0;
+      while (!queueForSysTable.isEmpty()) {
+        slowLogPayloads.add(queueForSysTable.poll());
+        i++;
+        if (i == 100) {
+          SlowLogTableAccessor.addSlowLogRecords(slowLogPayloads, this.configuration);
+          slowLogPayloads.clear();
+          i = 0;
+        }
       }
-    }
-    if (slowLogPayloads.size() > 0) {
-      SlowLogTableAccessor.addSlowLogRecords(slowLogPayloads, this.connection);
+      if (slowLogPayloads.size() > 0) {
+        SlowLogTableAccessor.addSlowLogRecords(slowLogPayloads, this.configuration);
+      }
+    } finally {
+      LOCK.unlock();
     }
   }
 

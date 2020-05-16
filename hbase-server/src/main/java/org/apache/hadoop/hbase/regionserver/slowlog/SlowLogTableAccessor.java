@@ -23,9 +23,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
@@ -48,6 +50,8 @@ public class SlowLogTableAccessor {
 
   private static final Random RANDOM = new Random();
 
+  private static Connection connection;
+
   private static void doPut(final Connection connection, final List<Put> puts)
       throws IOException {
     try (Table table = connection.getTable(TableName.SLOW_LOG_TABLE_NAME)) {
@@ -57,13 +61,12 @@ public class SlowLogTableAccessor {
 
   /**
    * Add slow/large log records to hbase:slowlog table
-   *
    * @param slowLogPayloads List of SlowLogPayload to process
-   * @param connection Connection to put data
+   * @param configuration Configuration to use for connection
    */
   public static void addSlowLogRecords(final List<TooSlowLog.SlowLogPayload> slowLogPayloads,
-      final Connection connection) {
-    List<Put> puts = new ArrayList<>();
+      final Configuration configuration) {
+    List<Put> puts = new ArrayList<>(slowLogPayloads.size());
     for (TooSlowLog.SlowLogPayload slowLogPayload : slowLogPayloads) {
       final byte[] rowKey = getRowKey(slowLogPayload);
       final Put put = new Put(rowKey).setDurability(Durability.SKIP_WAL)
@@ -76,17 +79,17 @@ public class SlowLogTableAccessor {
         .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("param"),
           Bytes.toBytes(slowLogPayload.getParam()))
         .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("processing_time"),
-          Bytes.toBytes(slowLogPayload.getProcessingTime()))
+          Bytes.toBytes(Integer.toString(slowLogPayload.getProcessingTime())))
         .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("queue_time"),
-          Bytes.toBytes(slowLogPayload.getQueueTime()))
+          Bytes.toBytes(Integer.toString(slowLogPayload.getQueueTime())))
         .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("region_name"),
           Bytes.toBytes(slowLogPayload.getRegionName()))
         .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("response_size"),
-          Bytes.toBytes(slowLogPayload.getResponseSize()))
+          Bytes.toBytes(Long.toString(slowLogPayload.getResponseSize())))
         .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("server_class"),
           Bytes.toBytes(slowLogPayload.getServerClass()))
         .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("start_time"),
-          Bytes.toBytes(slowLogPayload.getStartTime()))
+          Bytes.toBytes(Long.toString(slowLogPayload.getStartTime())))
         .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("type"),
           Bytes.toBytes(slowLogPayload.getType().name()))
         .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("username"),
@@ -94,9 +97,22 @@ public class SlowLogTableAccessor {
       puts.add(put);
     }
     try {
+      if (connection == null) {
+        synchronized (SlowLogTableAccessor.class) {
+          if (connection == null) {
+            Configuration conf = new Configuration(configuration);
+            // rpc timeout: 20s
+            conf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 20000);
+            // retry count: 5
+            conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 5);
+            conf.setInt(HConstants.HBASE_CLIENT_SERVERSIDE_RETRIES_MULTIPLIER, 1);
+            connection = ConnectionFactory.createConnection(conf);
+          }
+        }
+      }
       doPut(connection, puts);
-    } catch (IOException e) {
-      LOG.error("Failed to add slow/large log records to hbase:slowlog table.", e);
+    } catch (Exception e) {
+      LOG.warn("Failed to add slow/large log records to hbase:slowlog table.", e);
     }
   }
 

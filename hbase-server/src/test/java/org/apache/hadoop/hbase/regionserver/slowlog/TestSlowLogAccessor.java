@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.regionserver.slowlog;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -37,6 +38,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -73,7 +75,7 @@ public class TestSlowLogAccessor {
     Configuration conf = HBASE_TESTING_UTILITY.getConfiguration();
     conf.setBoolean(HConstants.SLOW_LOG_BUFFER_ENABLED_KEY, true);
     conf.setBoolean(HConstants.SLOW_LOG_SYS_TABLE_ENABLED_KEY, true);
-    conf.setInt("hbase.slowlog.systable.chore.duration", 1000);
+    conf.setInt("hbase.slowlog.systable.chore.duration", 900);
     conf.setInt("hbase.regionserver.slowlog.ringbuffer.size", 50000);
     HBASE_TESTING_UTILITY.startMiniCluster();
   }
@@ -154,7 +156,6 @@ public class TestSlowLogAccessor {
   private Connection waitForSlowLogTableCreation() {
     Connection connection =
       HBASE_TESTING_UTILITY.getMiniHBaseCluster().getRegionServer(0).getConnection();
-    slowLogRecorder.setupConnection(connection);
     Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(2000, () -> {
       try {
         return MetaTableAccessor.tableExists(connection, TableName.SLOW_LOG_TABLE_NAME);
@@ -177,6 +178,9 @@ public class TestSlowLogAccessor {
     for (int j = 0; j < 100; j++) {
       CompletableFuture.runAsync(() -> {
         for (int i = 0; i < 350; i++) {
+          if (i == 300) {
+            Uninterruptibles.sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
+          }
           RpcLogDetails rpcLogDetails = TestSlowLogRecorder
             .getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1));
           slowLogRecorder.addSlowLogPayload(rpcLogDetails);
@@ -187,13 +191,13 @@ public class TestSlowLogAccessor {
     Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(7000, () -> {
       int count = slowLogRecorder.getSlowLogPayloads(request).size();
       LOG.debug("RingBuffer records count: {}", count);
-      return count > 999;
+      return count > 2000;
     }));
 
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(7000, () -> {
       int count = getTableCount(connection);
       LOG.debug("SlowLog Table records count: {}", count);
-      return count > 999;
+      return count > 2000;
     }));
   }
 

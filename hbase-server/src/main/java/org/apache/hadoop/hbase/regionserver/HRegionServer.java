@@ -956,9 +956,6 @@ public class HRegionServer extends HasThread implements
     } catch (Throwable e) {
       abort("Fatal exception during initialization", e);
     }
-    if (this.slowLogRecorder != null) {
-      this.slowLogRecorder.setupConnection(getConnection());
-    }
 
     try {
       if (!isStopped() && !isAborted()) {

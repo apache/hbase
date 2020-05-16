@@ -89,7 +89,7 @@ public class SlowLogRecorder {
     // initialize ringbuffer event handler
     final boolean isSlowLogTableEnabled = conf.getBoolean(HConstants.SLOW_LOG_SYS_TABLE_ENABLED_KEY,
       HConstants.DEFAULT_SLOW_LOG_SYS_TABLE_ENABLED_KEY);
-    this.logEventHandler = new LogEventHandler(this.eventCount, isSlowLogTableEnabled);
+    this.logEventHandler = new LogEventHandler(this.eventCount, isSlowLogTableEnabled, conf);
     this.disruptor.handleEventsWith(new LogEventHandler[]{this.logEventHandler});
     this.disruptor.start();
   }
@@ -161,12 +161,6 @@ public class SlowLogRecorder {
       ringBuffer.get(seqId).load(rpcLogDetails);
     } finally {
       ringBuffer.publish(seqId);
-    }
-  }
-
-  public void setupConnection(Connection connection) {
-    if (this.logEventHandler != null) {
-      this.logEventHandler.setConnection(connection);
     }
   }
 
