@@ -162,10 +162,10 @@ Arrays.sort(serverNames);
 <tbody>
 <%java>
 final String ZEROMB = "0 MB";
-String usedHeapStr = ZEROMB;
-String maxHeapStr = ZEROMB;
-String memStoreSizeMBStr = ZEROMB;
 for (ServerName serverName: serverNames) {
+    String usedHeapStr = ZEROMB;
+    String maxHeapStr = ZEROMB;
+    String memStoreSizeMBStr = ZEROMB;
     ServerMetrics sl = master.getServerManager().getLoad(serverName);
     if (sl != null) {
       long memStoreSizeMB = 0;
@@ -276,12 +276,12 @@ if (sl != null) {
 <%java>
 final String ZEROKB = "0 KB";
 final String ZEROMB = "0 MB";
+for (ServerName serverName: serverNames) {
+
 String storeUncompressedSizeMBStr = ZEROMB;
 String storeFileSizeMBStr = ZEROMB;
 String totalStaticIndexSizeKBStr = ZEROKB;
 String totalStaticBloomSizeKBStr = ZEROKB;
-for (ServerName serverName: serverNames) {
-
 ServerMetrics sl = master.getServerManager().getLoad(serverName);
 if (sl != null) {
   long storeCount = 0;
