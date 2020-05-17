@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.regionserver.slowlog;
+package org.apache.hadoop.hbase.slowlog;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -52,9 +53,16 @@ public class SlowLogTableAccessor {
 
   private static Connection connection;
 
+  /**
+   * hbase:slowlog table name - can be enabled
+   * with config - hbase.regionserver.slowlog.systable.enabled
+   */
+  public static final TableName SLOW_LOG_TABLE_NAME =
+    TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "slowlog");
+
   private static void doPut(final Connection connection, final List<Put> puts)
       throws IOException {
-    try (Table table = connection.getTable(TableName.SLOW_LOG_TABLE_NAME)) {
+    try (Table table = connection.getTable(SLOW_LOG_TABLE_NAME)) {
       table.put(puts);
     }
   }

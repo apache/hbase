@@ -83,12 +83,6 @@ public final class TableName implements Comparable<TableName> {
   public static final TableName META_TABLE_NAME =
       valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "meta");
 
-  /** hbase:slowlog table name - can be enabled
-   * with config - hbase.regionserver.slowlog.systable.enabled
-   */
-  public static final TableName SLOW_LOG_TABLE_NAME =
-    valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "slowlog");
-
   /**
    * The Namespace table's name.
    * @deprecated since 3.0.0 and will be removed in 4.0.0. We have folded the data in namespace

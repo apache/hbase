@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -36,6 +35,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.slowlog.SlowLogTableAccessor;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
@@ -141,7 +141,7 @@ public class TestSlowLogAccessor {
   }
 
   private int getTableCount(Connection connection) {
-    try (Table table = connection.getTable(TableName.SLOW_LOG_TABLE_NAME)) {
+    try (Table table = connection.getTable(SlowLogTableAccessor.SLOW_LOG_TABLE_NAME)) {
       ResultScanner resultScanner = table.getScanner(new Scan().setReadType(Scan.ReadType.STREAM));
       int count = 0;
       for (Result result : resultScanner) {
@@ -158,7 +158,7 @@ public class TestSlowLogAccessor {
       HBASE_TESTING_UTILITY.getMiniHBaseCluster().getRegionServer(0).getConnection();
     Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(2000, () -> {
       try {
-        return MetaTableAccessor.tableExists(connection, TableName.SLOW_LOG_TABLE_NAME);
+        return MetaTableAccessor.tableExists(connection, SlowLogTableAccessor.SLOW_LOG_TABLE_NAME);
       } catch (IOException e) {
         return false;
       }

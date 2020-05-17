@@ -23,10 +23,10 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.slowlog.SlowLogTableAccessor;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,7 +43,8 @@ public class SlowLogMasterService {
   private final MasterServices masterServices;
 
   private static final TableDescriptorBuilder TABLE_DESCRIPTOR_BUILDER =
-    TableDescriptorBuilder.newBuilder(TableName.SLOW_LOG_TABLE_NAME).setRegionReplication(1)
+    TableDescriptorBuilder.newBuilder(SlowLogTableAccessor.SLOW_LOG_TABLE_NAME)
+      .setRegionReplication(1)
       .setColumnFamily(
         ColumnFamilyDescriptorBuilder.newBuilder(HConstants.SLOWLOG_INFO_FAMILY)
           .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
@@ -63,7 +64,7 @@ public class SlowLogMasterService {
       return;
     }
     if (!MetaTableAccessor.tableExists(masterServices.getConnection(),
-        TableName.SLOW_LOG_TABLE_NAME)) {
+        SlowLogTableAccessor.SLOW_LOG_TABLE_NAME)) {
       LOG.info("slowlog table not found. Creating.");
       this.masterServices.createSystemTable(TABLE_DESCRIPTOR_BUILDER.build());
     }
