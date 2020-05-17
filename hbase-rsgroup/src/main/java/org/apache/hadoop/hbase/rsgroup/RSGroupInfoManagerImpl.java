@@ -32,8 +32,10 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -53,6 +55,7 @@ import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
+import org.apache.hadoop.hbase.master.ClusterSchema;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.ServerListener;
 import org.apache.hadoop.hbase.master.TableStateManager;
@@ -70,11 +73,13 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.hadoop.util.Shell;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
@@ -133,13 +138,55 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   private final ServerEventsListenerThread serverEventsListenerThread =
     new ServerEventsListenerThread();
 
+  /** Get rsgroup table mapping script */
+  @VisibleForTesting
+  RSGroupMappingScript script;
+
+  // Package visibility for testing
+  static class RSGroupMappingScript {
+
+    static final String RS_GROUP_MAPPING_SCRIPT = "hbase.rsgroup.table.mapping.script";
+    static final String RS_GROUP_MAPPING_SCRIPT_TIMEOUT =
+      "hbase.rsgroup.table.mapping.script.timeout";
+
+    private Shell.ShellCommandExecutor rsgroupMappingScript;
+
+    RSGroupMappingScript(Configuration conf) {
+      String script = conf.get(RS_GROUP_MAPPING_SCRIPT);
+      if (script == null || script.isEmpty()) {
+        return;
+      }
+
+      rsgroupMappingScript = new Shell.ShellCommandExecutor(
+        new String[] { script, "", "" }, null, null,
+        conf.getLong(RS_GROUP_MAPPING_SCRIPT_TIMEOUT, 5000) // 5 seconds
+      );
+    }
+
+    String getRSGroup(String namespace, String tablename) {
+      if (rsgroupMappingScript == null) {
+        return null;
+      }
+      String[] exec = rsgroupMappingScript.getExecString();
+      exec[1] = namespace;
+      exec[2] = tablename;
+      try {
+        rsgroupMappingScript.execute();
+      } catch (IOException e) {
+        LOG.error("Failed to get RSGroup from script for table {}:{}", namespace, tablename, e);
+        return null;
+      }
+      return rsgroupMappingScript.getOutput().trim();
+    }
+  }
+
   private RSGroupInfoManagerImpl(MasterServices masterServices) throws IOException {
     this.masterServices = masterServices;
     this.watcher = masterServices.getZooKeeper();
     this.conn = masterServices.getConnection();
     this.rsGroupStartupWorker = new RSGroupStartupWorker();
+    script = new RSGroupMappingScript(masterServices.getConfiguration());
   }
-
 
   private synchronized void init() throws IOException {
     refresh();
@@ -354,6 +401,45 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       (SortedSet<Address>) oldGroup.getServers(), oldGroup.getTables());
     newGroupMap.put(newName, newGroup);
     flushConfig(newGroupMap);
+  }
+
+  /**
+   * Will try to get the rsgroup from {@code tableMap} first
+   * then try to get the rsgroup from {@code script}
+   * try to get the rsgroup from the {@link NamespaceDescriptor} lastly.
+   * If still not present, return default group.
+   */
+  @Override
+  public RSGroupInfo determineRSGroupInfoForTable(TableName tableName)
+    throws IOException {
+    RSGroupInfo groupFromOldRSGroupInfo = getRSGroup(getRSGroupOfTable(tableName));
+    if (groupFromOldRSGroupInfo != null) {
+      return groupFromOldRSGroupInfo;
+    }
+    // RSGroup information determined by administrator.
+    RSGroupInfo groupDeterminedByAdmin = getRSGroup(
+      script.getRSGroup(tableName.getNamespaceAsString(), tableName.getQualifierAsString()));
+    if (groupDeterminedByAdmin != null) {
+      return groupDeterminedByAdmin;
+    }
+    // Finally, we will try to fall back to namespace as rsgroup if exists
+    ClusterSchema clusterSchema = masterServices.getClusterSchema();
+    if (clusterSchema == null) {
+      if (TableName.isMetaTableName(tableName)) {
+        LOG.info("Can not get the namespace rs group config for meta table, since the" +
+          " meta table is not online yet, will use default group to assign meta first");
+      } else {
+        LOG.warn("ClusterSchema is null, can only use default rsgroup, should not happen?");
+      }
+    } else {
+      NamespaceDescriptor nd = clusterSchema.getNamespace(tableName.getNamespaceAsString());
+      RSGroupInfo groupNameOfNs =
+        getRSGroup(nd.getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP));
+      if (groupNameOfNs != null) {
+        return groupNameOfNs;
+      }
+    }
+    return getRSGroup(RSGroupInfo.DEFAULT_GROUP);
   }
 
   List<RSGroupInfo> retrieveGroupListFromGroupTable() throws IOException {
