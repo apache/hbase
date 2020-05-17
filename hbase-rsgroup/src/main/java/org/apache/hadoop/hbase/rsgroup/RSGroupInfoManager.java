@@ -132,4 +132,11 @@ public interface RSGroupInfoManager {
    * @param newName new rsgroup name
    */
   void renameRSGroup(String oldName, String newName) throws IOException;
+
+  /**
+   * Determine {@code RSGroupInfo} for the given table.
+   * @param tableName table name
+   * @return {@link RSGroupInfo} which table should belong to
+   */
+  RSGroupInfo determineRSGroupInfoForTable(TableName tableName) throws IOException;
 }
