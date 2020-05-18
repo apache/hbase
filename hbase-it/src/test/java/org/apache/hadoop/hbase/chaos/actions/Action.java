@@ -190,7 +190,7 @@ public abstract class Action {
     getLogger().info("Stopping regionserver {}", server);
     cluster.stopRegionServer(server);
     cluster.waitForRegionServerToStop(server, killRsTimeout);
-    getLogger().info("Stoppiong regionserver {}. Reported num of rs:{}", server,
+    getLogger().info("Stopping regionserver {}. Reported num of rs:{}", server,
       cluster.getClusterMetrics().getLiveServerMetrics().size());
   }
 
