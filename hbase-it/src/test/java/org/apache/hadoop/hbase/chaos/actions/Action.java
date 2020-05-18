@@ -159,7 +159,7 @@ public class Action {
     LOG.info("Stopping regionserver " + server);
     cluster.stopRegionServer(server);
     cluster.waitForRegionServerToStop(server, killRsTimeout);
-    LOG.info(String.format("Stoppiong regionserver %s. Reported num of rs: %s", server,
+    LOG.info(String.format("Stopping regionserver %s. Reported num of rs: %s", server,
         cluster.getClusterStatus().getLiveServersLoad().size()));
   }
 
