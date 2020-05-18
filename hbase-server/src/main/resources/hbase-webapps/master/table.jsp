@@ -70,6 +70,7 @@
 <%@ page import="org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas" %>
 <%@ page import="org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota" %>
 <%@ page import="java.net.URLEncoder" %>
+<%@ page import="java.util.stream.Collectors" %>
 <%!
   /**
    * @return An empty region load stamped with the passed in <code>regionInfo</code>
@@ -385,16 +386,27 @@
 <%
     }
   }
+
+  String regionInfoColumnName = HConstants.CATALOG_FAMILY_STR + ":" + HConstants.REGIONINFO_QUALIFIER_STR;
+  String serverColumnName = HConstants.CATALOG_FAMILY_STR + ":" + HConstants.SERVER_QUALIFIER_STR;
+  String startCodeColumnName = HConstants.CATALOG_FAMILY_STR + ":" + HConstants.STARTCODE_QUALIFIER_STR;
+  String serverNameColumnName = HConstants.CATALOG_FAMILY_STR + ":" + HConstants.SERVERNAME_QUALIFIER_STR;
+  String seqNumColumnName = HConstants.CATALOG_FAMILY_STR + ":" + HConstants.SEQNUM_QUALIFIER_STR;
 %>
-    <table class="table table-striped">
-      <tr>
-        <th>RegionName</th>
-        <th>Start Key</th>
-        <th>End Key</th>
-        <th>Replica ID</th>
-        <th>RegionState</th>
-        <th>ServerName</th>
-      </tr>
+    <div style="overflow-x: auto">
+      <table class="table table-striped nowrap">
+        <tr>
+          <th title="Region name, stored in <%= regionInfoColumnName %> column">RegionName</th>
+          <th title="The startKey of this region">Start Key</th>
+          <th title="The endKey of this region">End Key</th>
+          <th title="Region replica id">Replica ID</th>
+          <th title="State of the region while undergoing transitions">RegionState</th>
+          <th title="Server hosting this region replica, stored in <%= serverColumnName %> column">Server</th>
+          <th title="The seqNum for the region at the time the server opened this region replica, stored in <%= seqNumColumnName %>">Sequence Number</th>
+          <th title="The server to which the region is transiting, stored in <%= serverNameColumnName %> column">Target Server</th>
+          <th title="The parents regions if this region is undergoing a merge">info:merge*</th>
+          <th title="The daughter regions if this region is split">info:split*</th>
+        </tr>
 <%
   final boolean metaScanHasMore;
   byte[] lastRow = null;
@@ -405,49 +417,69 @@
         .orElse(null);
       if (regionReplicaInfo == null) {
 %>
-      <tr>
-        <td colspan="6">Null result</td>
-      </tr>
+        <tr>
+          <td colspan="6">Null result</td>
+        </tr>
 <%
-    continue;
-  }
+        continue;
+      }
 
-  final String regionNameDisplay = regionReplicaInfo.getRegionName() != null
-    ? Bytes.toStringBinary(regionReplicaInfo.getRegionName())
-    : "";
-  final String startKeyDisplay = regionReplicaInfo.getStartKey() != null
-    ? Bytes.toStringBinary(regionReplicaInfo.getStartKey())
-    : "";
-  final String endKeyDisplay = regionReplicaInfo.getEndKey() != null
-    ? Bytes.toStringBinary(regionReplicaInfo.getEndKey())
-    : "";
-  final String replicaIdDisplay = regionReplicaInfo.getReplicaId() != null
-    ? regionReplicaInfo.getReplicaId().toString()
-    : "";
-  final String regionStateDisplay = regionReplicaInfo.getRegionState() != null
-    ? regionReplicaInfo.getRegionState().toString()
-    : "";
+      final String regionNameDisplay = regionReplicaInfo.getRegionName() != null
+        ? Bytes.toStringBinary(regionReplicaInfo.getRegionName())
+        : "";
+      final String startKeyDisplay = regionReplicaInfo.getStartKey() != null
+        ? Bytes.toStringBinary(regionReplicaInfo.getStartKey())
+        : "";
+      final String endKeyDisplay = regionReplicaInfo.getEndKey() != null
+        ? Bytes.toStringBinary(regionReplicaInfo.getEndKey())
+        : "";
+      final String replicaIdDisplay = regionReplicaInfo.getReplicaId() != null
+        ? regionReplicaInfo.getReplicaId().toString()
+        : "";
+      final String regionStateDisplay = regionReplicaInfo.getRegionState() != null
+        ? regionReplicaInfo.getRegionState().toString()
+        : "";
 
-  final RegionInfo regionInfo = regionReplicaInfo.getRegionInfo();
-  final ServerName serverName = regionReplicaInfo.getServerName();
-  final RegionState.State regionState = regionReplicaInfo.getRegionState();
-  final int rsPort = master.getRegionServerInfoPort(serverName);
+      final RegionInfo regionInfo = regionReplicaInfo.getRegionInfo();
+      final ServerName serverName = regionReplicaInfo.getServerName();
+      final RegionState.State regionState = regionReplicaInfo.getRegionState();
+      final int rsPort = master.getRegionServerInfoPort(serverName);
+
+      final long seqNum = regionReplicaInfo.getSeqNum();
+
+      final String regionSpanFormat = "<span title=" + HConstants.CATALOG_FAMILY_STR + ":%s>%s</span>";
+      final String targetServerName = regionReplicaInfo.getTargetServerName().toString();
+      final Map<String, RegionInfo> mergeRegions = regionReplicaInfo.getMergeRegionInfo();
+      final String mergeRegionNames = (mergeRegions == null) ? "" :
+        mergeRegions.entrySet().stream()
+          .map(entry -> String.format(regionSpanFormat, entry.getKey(), entry.getValue().getRegionNameAsString()))
+          .collect(Collectors.joining("<br/>"));
+      final Map<String, RegionInfo> splitRegions = regionReplicaInfo.getSplitRegionInfo();
+      final String splitName = (splitRegions == null) ? "" :
+        splitRegions.entrySet().stream()
+          .map(entry -> String.format(regionSpanFormat, entry.getKey(), entry.getValue().getRegionNameAsString()))
+          .collect(Collectors.joining("<br/>"));
 %>
-      <tr>
-        <td><%= regionNameDisplay %></td>
-        <td><%= startKeyDisplay %></td>
-        <td><%= endKeyDisplay %></td>
-        <td><%= replicaIdDisplay %></td>
-        <td><%= regionStateDisplay %></td>
-        <td><%= buildRegionServerLink(serverName, rsPort, regionInfo, regionState) %></td>
-      </tr>
+        <tr>
+          <td title="<%= regionInfoColumnName %>"><%= regionNameDisplay %></td>
+          <td title="startKey"><%= startKeyDisplay %></td>
+          <td title="endKey"><%= endKeyDisplay %></td>
+          <td title="replicaId"><%= replicaIdDisplay %></td>
+          <td title="regionState"><%= regionStateDisplay %></td>
+          <td title="<%= serverColumnName + "," + startCodeColumnName %>"><%= buildRegionServerLink(serverName, rsPort, regionInfo, regionState) %></td>
+          <td title="<%= seqNumColumnName %>"><%= seqNum %></td>
+          <td title="<%= serverNameColumnName %>"><%= targetServerName %></td>
+          <td><%= mergeRegionNames %></td>
+          <td><%= splitName %></td>
+        </tr>
 <%
     }
 
     metaScanHasMore = results.hasMoreResults();
   }
 %>
-    </table>
+      </table>
+    </div>
     <div class="row">
       <div class="col-md-4">
         <ul class="pagination" style="margin: 20px 0">

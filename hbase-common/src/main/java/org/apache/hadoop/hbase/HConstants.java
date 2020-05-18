@@ -535,11 +535,15 @@ public final class HConstants {
 
   public static final byte [] SERVERNAME_QUALIFIER = Bytes.toBytes(SERVERNAME_QUALIFIER_STR);
 
+  /** The lower-half split region column qualifier string. */
+  public static final String SPLITA_QUALIFIER_STR = "splitA";
   /** The lower-half split region column qualifier */
-  public static final byte [] SPLITA_QUALIFIER = Bytes.toBytes("splitA");
+  public static final byte [] SPLITA_QUALIFIER = Bytes.toBytes(SPLITA_QUALIFIER_STR);
 
+  /** The upper-half split region column qualifier String. */
+  public static final String SPLITB_QUALIFIER_STR = "splitB";
   /** The upper-half split region column qualifier */
-  public static final byte [] SPLITB_QUALIFIER = Bytes.toBytes("splitB");
+  public static final byte [] SPLITB_QUALIFIER = Bytes.toBytes(SPLITB_QUALIFIER_STR);
 
   /**
    * Merge qualifier prefix.
