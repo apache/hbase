@@ -562,21 +562,22 @@ $ ./bin/hbase org.apache.hadoop.hbase.mapreduce.HashTable --help
 Usage: HashTable [options] <tablename> <outputpath>
 
 Options:
- batchsize     the target amount of bytes to hash in each batch
-               rows are added to the batch until this size is reached
-               (defaults to 8000 bytes)
- numhashfiles  the number of hash files to create
-               if set to fewer than number of regions then
-               the job will create this number of reducers
-               (defaults to 1/100 of regions -- at least 1)
- startrow      the start row
- stoprow       the stop row
- starttime     beginning of the time range (unixtime in millis)
-               without endtime means from starttime to forever
- endtime       end of the time range.  Ignored if no starttime specified.
- scanbatch     scanner batch size to support intra row scans
- versions      number of cell versions to include
- families      comma-separated list of families to include
+ batchsize         the target amount of bytes to hash in each batch
+                   rows are added to the batch until this size is reached
+                   (defaults to 8000 bytes)
+ numhashfiles      the number of hash files to create
+                   if set to fewer than number of regions then
+                   the job will create this number of reducers
+                   (defaults to 1/100 of regions -- at least 1)
+ startrow          the start row
+ stoprow           the stop row
+ starttime         beginning of the time range (unixtime in millis)
+                   without endtime means from starttime to forever
+ endtime           end of the time range.  Ignored if no starttime specified.
+ scanbatch         scanner batch size to support intra row scans
+ versions          number of cell versions to include
+ families          comma-separated list of families to include
+ ignoreTimestamps  if true, ignores cell timestamps
 
 Args:
  tablename     Name of the table to hash
@@ -615,6 +616,10 @@ Options:
                   (defaults to true)
  doPuts           if false, does not perform puts
                   (defaults to true)
+ ignoreTimestamps if true, ignores cells timestamps while comparing
+                  cell values. Any missing cell on target then gets
+                  added with current time as timestamp
+                  (defaults to false)
 
 Args:
  sourcehashdir    path to HashTable output dir for source table
@@ -628,6 +633,13 @@ Examples:
  $ bin/hbase org.apache.hadoop.hbase.mapreduce.SyncTable --dryrun=true --sourcezkcluster=zk1.example.com,zk2.example.com,zk3.example.com:2181:/hbase hdfs://nn:9000/hashes/tableA tableA tableA
 ----
 
+Cell comparison takes ROW/FAMILY/QUALIFIER/TIMESTAMP/VALUE into account for equality. When syncing at the target, missing cells will be
+added with original timestamp value from source. That may cause unexpected results after SyncTable completes, for example, if missing
+cells on target have a delete marker with a timestamp T2 (say, a bulk delete performed by mistake), but source cells timestamps have an
+older value T1, then those cells would still be unavailable at target because of the newer delete marker timestamp. Since cell timestamps
+might not be relevant to all use cases, _ignoreTimestamps_ option adds the flexibility to avoid using cells timestamp in the comparison.
+When using _ignoreTimestamps_ set to true, this option must be specified for both HashTable and SyncTable steps.
+
 The *dryrun* option is useful when a read only, diff report is wanted, as it will produce only COUNTERS indicating the differences, but will not perform
 any actual changes. It can be used as an alternative to VerifyReplication tool.
 
@@ -637,6 +649,7 @@ Setting doDeletes to false modifies default behaviour to not delete target cells
 Similarly, setting doPuts to false modifies default behaviour to not add missing cells on target. Setting both doDeletes
 and doPuts to false would give same effect as setting dryrun to true.
 
+
 .Additional info on doDeletes/doPuts
 [NOTE]
 ====
@@ -645,6 +658,16 @@ link:https://jira.apache.org/jira/browse/HBASE-20305[HBASE-20305], so these may 
 all released versions.
 For major 1.x versions, minimum minor release including it is *1.4.10*.
 For major 2.x versions, minimum minor release including it is *2.1.5*.
+====
+
+.Additional info on ignoreTimestamps
+[NOTE]
+====
+"ignoreTimestamps" was only added by
+link:https://issues.apache.org/jira/browse/HBASE-24302[HBASE-24302], so it may not be available on
+all released versions.
+For major 1.x versions, minimum minor release including it is *1.4.14*.
+For major 2.x versions, minimum minor release including it is *2.2.5*.
 ====
 
 .Set doDeletes to false on Two-Way Replication scenarios
