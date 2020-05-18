@@ -666,7 +666,7 @@ For major 2.x versions, minimum minor release including it is *2.1.5*.
 "ignoreTimestamps" was only added by
 link:https://issues.apache.org/jira/browse/HBASE-24302[HBASE-24302], so it may not be available on
 all released versions.
-Not available in any 1.x versions.
+For major 1.x versions, minimum minor release including it is *1.4.14*.
 For major 2.x versions, minimum minor release including it is *2.2.5*.
 ====
 
