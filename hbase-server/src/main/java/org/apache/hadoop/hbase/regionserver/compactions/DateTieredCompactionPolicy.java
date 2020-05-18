@@ -22,7 +22,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.OptionalLong;
 
 import org.apache.hadoop.conf.Configuration;
@@ -198,8 +200,10 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
 
   public CompactionRequestImpl selectMajorCompaction(ArrayList<HStoreFile> candidateSelection) {
     long now = EnvironmentEdgeManager.currentTime();
+    List<Long> boundaries = getCompactBoundariesForMajor(candidateSelection, now);
+    Map<Long, String> boundariesPolicies = getBoundariesStoragePolicyForMajor(boundaries, now);
     return new DateTieredCompactionRequest(candidateSelection,
-      this.getCompactBoundariesForMajor(candidateSelection, now));
+      boundaries, boundariesPolicies);
   }
 
   /**
@@ -253,7 +257,7 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
             LOG.debug("Processing files: " + fileList + " for window: " + window);
           }
           DateTieredCompactionRequest request = generateCompactionRequest(fileList, window,
-            mayUseOffPeak, mayBeStuck, minThreshold);
+            mayUseOffPeak, mayBeStuck, minThreshold, now);
           if (request != null) {
             return request;
           }
@@ -265,8 +269,8 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
   }
 
   private DateTieredCompactionRequest generateCompactionRequest(ArrayList<HStoreFile> storeFiles,
-      CompactionWindow window, boolean mayUseOffPeak, boolean mayBeStuck, int minThreshold)
-      throws IOException {
+      CompactionWindow window, boolean mayUseOffPeak, boolean mayBeStuck, int minThreshold,
+      long now) throws IOException {
     // The files has to be in ascending order for ratio-based compaction to work right
     // and removeExcessFile to exclude youngest files.
     Collections.reverse(storeFiles);
@@ -281,8 +285,11 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
       boolean singleOutput = storeFiles.size() != storeFileSelection.size() ||
         comConf.useDateTieredSingleOutputForMinorCompaction();
       List<Long> boundaries = getCompactionBoundariesForMinor(window, singleOutput);
+      // we want to generate policy to boundaries for minor compaction
+      Map<Long, String> boundaryPolicyMap =
+        getBoundariesStoragePolicyForMinor(singleOutput, window, now);
       DateTieredCompactionRequest result = new DateTieredCompactionRequest(storeFileSelection,
-        boundaries);
+        boundaries, boundaryPolicyMap);
       return result;
     }
     return null;
@@ -333,5 +340,40 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
           + maxAgeMillis + ". All the files will be eligible for minor compaction.");
       return Long.MIN_VALUE;
     }
+  }
+
+  private Map<Long, String> getBoundariesStoragePolicyForMinor(boolean singleOutput,
+      CompactionWindow window, long now) {
+    Map<Long, String> boundariesPolicy = new HashMap<>();
+    if (!comConf.isDateTieredStoragePolicyEnable()) {
+      return boundariesPolicy;
+    }
+    String windowStoragePolicy = getWindowStoragePolicy(now, window.startMillis());
+    if (singleOutput) {
+      boundariesPolicy.put(Long.MIN_VALUE, windowStoragePolicy);
+    } else {
+      boundariesPolicy.put(window.startMillis(), windowStoragePolicy);
+    }
+    return boundariesPolicy;
+  }
+
+  private Map<Long, String> getBoundariesStoragePolicyForMajor(List<Long> boundaries, long now) {
+    Map<Long, String> boundariesPolicy = new HashMap<>();
+    if (!comConf.isDateTieredStoragePolicyEnable()) {
+      return boundariesPolicy;
+    }
+    for (Long startTs : boundaries) {
+      boundariesPolicy.put(startTs, getWindowStoragePolicy(now, startTs));
+    }
+    return boundariesPolicy;
+  }
+
+  private String getWindowStoragePolicy(long now, long windowStartMillis) {
+    if (windowStartMillis >= (now - comConf.getHotWindowAgeMillis())) {
+      return comConf.getHotWindowStoragePolicy();
+    } else if (windowStartMillis >= (now - comConf.getWarmWindowAgeMillis())) {
+      return comConf.getWarmWindowStoragePolicy();
+    }
+    return comConf.getColdWindowStoragePolicy();
   }
 }
