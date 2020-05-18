@@ -18,13 +18,16 @@
 package org.apache.hadoop.hbase.master.webapp;
 
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
@@ -34,6 +37,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.RegionStateStore;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -45,6 +49,11 @@ public final class RegionReplicaInfo {
   private final RegionInfo regionInfo;
   private final RegionState.State regionState;
   private final ServerName serverName;
+  private final long seqNum;
+  /** See {@link org.apache.hadoop.hbase.HConstants#SERVERNAME_QUALIFIER_STR}. */
+  private final ServerName targetServerName;
+  private final Map<String, RegionInfo> mergeRegionInfo;
+  private final Map<String, RegionInfo> splitRegionInfo;
 
   private RegionReplicaInfo(final Result result, final HRegionLocation location) {
     this.row = result != null ? result.getRow() : null;
@@ -53,6 +62,26 @@ public final class RegionReplicaInfo {
       ? RegionStateStore.getRegionState(result, regionInfo)
       : null;
     this.serverName = location != null ? location.getServerName() : null;
+    this.seqNum = (location != null) ? location.getSeqNum() : HConstants.NO_SEQNUM;
+    this.targetServerName = (result != null && regionInfo != null)
+      ? MetaTableAccessor.getTargetServerName(result, regionInfo.getReplicaId())
+      : null;
+    this.mergeRegionInfo = (result != null)
+      ? MetaTableAccessor.getMergeRegionsWithName(result.rawCells())
+      : null;
+
+    if (result != null) {
+      PairOfSameType<RegionInfo> daughterRegions = MetaTableAccessor.getDaughterRegions(result);
+      this.splitRegionInfo = new LinkedHashMap<>();
+      if (daughterRegions.getFirst() != null) {
+        splitRegionInfo.put(HConstants.SPLITA_QUALIFIER_STR, daughterRegions.getFirst());
+      }
+      if (daughterRegions.getSecond() != null) {
+        splitRegionInfo.put(HConstants.SPLITB_QUALIFIER_STR, daughterRegions.getSecond());
+      }
+    } else {
+      this.splitRegionInfo = null;
+    }
   }
 
   public static List<RegionReplicaInfo> from(final Result result) {
@@ -102,6 +131,22 @@ public final class RegionReplicaInfo {
     return serverName;
   }
 
+  public long getSeqNum() {
+    return seqNum;
+  }
+
+  public ServerName getTargetServerName() {
+    return targetServerName;
+  }
+
+  public Map<String, RegionInfo> getMergeRegionInfo() {
+    return mergeRegionInfo;
+  }
+
+  public Map<String, RegionInfo> getSplitRegionInfo() {
+    return splitRegionInfo;
+  }
+
   @Override
   public boolean equals(Object other) {
     if (this == other) {
@@ -119,6 +164,10 @@ public final class RegionReplicaInfo {
       .append(regionInfo, that.regionInfo)
       .append(regionState, that.regionState)
       .append(serverName, that.serverName)
+      .append(seqNum, that.seqNum)
+      .append(targetServerName, that.targetServerName)
+      .append(mergeRegionInfo, that.mergeRegionInfo)
+      .append(splitRegionInfo, that.splitRegionInfo)
       .isEquals();
   }
 
@@ -129,15 +178,24 @@ public final class RegionReplicaInfo {
       .append(regionInfo)
       .append(regionState)
       .append(serverName)
+      .append(seqNum)
+      .append(targetServerName)
+      .append(mergeRegionInfo)
+      .append(splitRegionInfo)
       .toHashCode();
   }
 
-  @Override public String toString() {
+  @Override
+  public String toString() {
     return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
       .append("row", Bytes.toStringBinary(row))
       .append("regionInfo", regionInfo)
       .append("regionState", regionState)
       .append("serverName", serverName)
+      .append("seqNum", seqNum)
+      .append("transitioningOnServerName", targetServerName)
+      .append("merge*", mergeRegionInfo)
+      .append("split*", splitRegionInfo)
       .toString();
   }
 }

@@ -383,30 +383,40 @@ public class MetaTableAccessor {
   }
 
   /**
-   * @return Deserialized regioninfo values taken from column values that match
+   * @return Deserialized values of <qualifier,regioninfo> pairs taken from column values that match
    *   the regex 'info:merge.*' in array of <code>cells</code>.
    */
   @Nullable
-  public static List<RegionInfo> getMergeRegions(Cell [] cells) {
+  public static Map<String, RegionInfo> getMergeRegionsWithName(Cell [] cells) {
     if (cells == null) {
       return null;
     }
-    List<RegionInfo> regionsToMerge = null;
+    Map<String, RegionInfo> regionsToMerge = null;
     for (Cell cell: cells) {
       if (!isMergeQualifierPrefix(cell)) {
         continue;
       }
       // Ok. This cell is that of a info:merge* column.
       RegionInfo ri = RegionInfo.parseFromOrNull(cell.getValueArray(), cell.getValueOffset(),
-         cell.getValueLength());
+        cell.getValueLength());
       if (ri != null) {
         if (regionsToMerge == null) {
-          regionsToMerge = new ArrayList<>();
+          regionsToMerge = new LinkedHashMap<>();
         }
-        regionsToMerge.add(ri);
+        regionsToMerge.put(Bytes.toString(CellUtil.cloneQualifier(cell)), ri);
       }
     }
     return regionsToMerge;
+  }
+
+  /**
+   * @return Deserialized regioninfo values taken from column values that match
+   *   the regex 'info:merge.*' in array of <code>cells</code>.
+   */
+  @Nullable
+  public static List<RegionInfo> getMergeRegions(Cell [] cells) {
+    Map<String, RegionInfo> mergeRegionsWithName = getMergeRegionsWithName(cells);
+    return (mergeRegionsWithName == null) ? null : new ArrayList<>(mergeRegionsWithName.values());
   }
 
   /**
@@ -904,8 +914,7 @@ public class MetaTableAccessor {
    * @param replicaId the replicaId of the region
    * @return a byte[] for sn column qualifier
    */
-  @VisibleForTesting
-  static byte[] getServerNameColumn(int replicaId) {
+  public static byte[] getServerNameColumn(int replicaId) {
     return replicaId == 0 ? HConstants.SERVERNAME_QUALIFIER
         : Bytes.toBytes(HConstants.SERVERNAME_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
             + String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
@@ -995,6 +1004,33 @@ public class MetaTableAccessor {
       LOG.error("Ignoring invalid region for server " + hostAndPort + "; cell=" + cell, e);
       return null;
     }
+  }
+
+  /**
+   * Returns the {@link ServerName} from catalog table {@link Result} where the region is
+   * transitioning on. It should be the same as {@link MetaTableAccessor#getServerName(Result,int)}
+   * if the server is at OPEN state.
+   *
+   * @param r Result to pull the transitioning server name from
+   * @return A ServerName instance or {@link MetaTableAccessor#getServerName(Result,int)}
+   * if necessary fields not found or empty.
+   */
+  @Nullable
+  public static ServerName getTargetServerName(final Result r, final int replicaId) {
+    final Cell cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+      getServerNameColumn(replicaId));
+    if (cell == null || cell.getValueLength() == 0) {
+      RegionLocations locations = MetaTableAccessor.getRegionLocations(r);
+      if (locations != null) {
+        HRegionLocation location = locations.getRegionLocation(replicaId);
+        if (location != null) {
+          return location.getServerName();
+        }
+      }
+      return null;
+    }
+    return ServerName.parseServerName(Bytes.toString(cell.getValueArray(), cell.getValueOffset(),
+      cell.getValueLength()));
   }
 
   /**
