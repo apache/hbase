@@ -171,10 +171,10 @@ if (master.getServerManager() != null) {
 </tr>
 <%java>
     final String ZEROMB = "0 MB";
-    String usedHeapStr = ZEROMB;
-    String maxHeapStr = ZEROMB;
-    String memstoreSizeStr = ZEROMB;
     for (RSGroupInfo rsGroupInfo: rsGroupInfos) {
+      String usedHeapStr = ZEROMB;
+      String maxHeapStr = ZEROMB;
+      String memstoreSizeStr = ZEROMB;
       String rsGroupName = rsGroupInfo.getName();
       long usedHeap = 0;
       long maxHeap = 0;
@@ -275,11 +275,11 @@ if (master.getServerManager() != null) {
 <%java>
     final String ZEROKB = "0 KB";
     final String ZEROMB = "0 MB";
-    String uncompressedStorefileSizeStr = ZEROMB;
-    String storefileSizeStr = ZEROMB;
-    String indexSizeStr = ZEROKB;
-    String bloomSizeStr = ZEROKB;
     for (RSGroupInfo rsGroupInfo: rsGroupInfos) {
+      String uncompressedStorefileSizeStr = ZEROMB;
+      String storefileSizeStr = ZEROMB;
+      String indexSizeStr = ZEROKB;
+      String bloomSizeStr = ZEROKB;
       String rsGroupName = rsGroupInfo.getName();
       int numStores = 0;
       long numStorefiles = 0;
