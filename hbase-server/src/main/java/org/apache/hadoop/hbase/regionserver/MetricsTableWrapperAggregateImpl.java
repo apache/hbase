@@ -76,11 +76,18 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
               store.getMemStoreSize().getHeapSize() + store.getMemStoreSize().getOffHeapSize());
             mt.storeFileSize += store.getStorefilesSize();
             mt.referenceFileCount += store.getNumReferenceFiles();
-
-            mt.maxStoreFileAge = Math.max(mt.maxStoreFileAge, store.getMaxStoreFileAge().getAsLong());
-            mt.minStoreFileAge = Math.min(mt.minStoreFileAge, store.getMinStoreFileAge().getAsLong());
-            mt.totalStoreFileAge = (long)store.getAvgStoreFileAge().getAsDouble() *
-                store.getStorefilesCount();
+            if (store.getMaxStoreFileAge().isPresent()) {
+              mt.maxStoreFileAge =
+                  Math.max(mt.maxStoreFileAge, store.getMaxStoreFileAge().getAsLong());
+            }
+            if (store.getMinStoreFileAge().isPresent()) {
+              mt.minStoreFileAge =
+                  Math.min(mt.minStoreFileAge, store.getMinStoreFileAge().getAsLong());
+            }
+            if (store.getAvgStoreFileAge().isPresent()) {
+              mt.totalStoreFileAge =
+                  (long) store.getAvgStoreFileAge().getAsDouble() * store.getStorefilesCount();
+            }
             mt.storeCount += 1;
           }
           mt.regionCount += 1;
