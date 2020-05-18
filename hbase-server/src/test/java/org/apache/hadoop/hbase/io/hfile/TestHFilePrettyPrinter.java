@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.io.hfile;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
-
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import org.apache.hadoop.conf.Configuration;
@@ -87,7 +86,8 @@ public class TestHFilePrettyPrinter {
     new HFilePrettyPrinter(conf).run(new String[]{"-v", String.valueOf(fileNotInRootDir)});
     String result = new String(stream.toByteArray());
     String expectedResult = "Scanning -> " + fileNotInRootDir + "\n" + "Scanned kv count -> 1000\n";
-    assertEquals(expectedResult, result);
+    LOG.info(result);
+    assertEquals(result, expectedResult, result);
   }
 
   @Test
@@ -126,5 +126,18 @@ public class TestHFilePrettyPrinter {
     String result = new String(stream.toByteArray());
     String expectedResult = "Scanning -> " + fileNotInRootDir + "\n" + "Scanned kv count -> 1\n";
     assertEquals(expectedResult, result);
+  }
+
+  @Test
+  public void testHFilePrettyPrinterMetaData() throws Exception {
+    Path f =  UTIL.getDataTestDir("metadata");
+    TestHRegionServerBulkLoad.createHFile(fs, f, cf, fam, value, 10);
+    assertNotEquals("directory used is not an HBase root dir",
+      UTIL.getDefaultRootDirPath(), f);
+
+    System.setOut(ps);
+    new HFilePrettyPrinter(conf).run(new String[]{"-m", String.valueOf(f)});
+    String result = new String(stream.toByteArray());
+    LOG.info(result);
   }
 }

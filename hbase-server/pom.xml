@@ -416,6 +416,10 @@
       <groupId>com.lmax</groupId>
       <artifactId>disruptor</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.apache.datasketches</groupId>
+      <artifactId>datasketches-java</artifactId>
+    </dependency>
     <!-- Test dependencies -->
     <dependency>
       <groupId>org.hamcrest</groupId>

@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import static com.codahale.metrics.MetricRegistry.name;
-
 import com.codahale.metrics.ConsoleReporter;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Gauge;
@@ -34,8 +33,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.math.BigDecimal;
 import java.text.DateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -47,7 +48,11 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
+import java.util.function.DoubleSupplier;
+import java.util.stream.DoubleStream;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.datasketches.memory.Memory;
+import org.apache.datasketches.quantiles.DoublesSketch;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
@@ -65,6 +70,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
@@ -80,7 +86,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLineParser;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
@@ -128,6 +133,26 @@ public class HFilePrettyPrinter extends Configured implements Tool {
 
   private static final String FOUR_SPACES = "    ";
 
+  /**
+   * Supplier that goes up in 0.01 increments from 0.
+   */
+  private static final DoubleSupplier IN_POINT_1_INC = new DoubleSupplier() {
+    private BigDecimal accumulator = new BigDecimal(0);
+    private final BigDecimal pointOhOne = new BigDecimal(0.01);
+
+    @Override
+    public double getAsDouble() {
+      double d = this.accumulator.doubleValue();
+      this.accumulator = this.accumulator.add(pointOhOne);
+      return d;
+    }
+  };
+
+  /**
+   * Make an array from 0 to 1 in 0.01 increments.
+   */
+  static double [] NORMALIZED_RANKS = DoubleStream.generate(IN_POINT_1_INC).limit(100).toArray();
+
   public HFilePrettyPrinter() {
     super();
     init();
@@ -168,7 +193,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     this.err = err;
   }
 
-  public boolean parseOptions(String args[]) throws ParseException,
+  public boolean parseOptions(String [] args) throws ParseException,
       IOException {
     if (args.length == 0) {
       HelpFormatter formatter = new HelpFormatter();
@@ -212,19 +237,21 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       Path tableDir = CommonFSUtils.getTableDir(rootDir, TableName.valueOf(hri[0]));
       String enc = RegionInfo.encodeRegionName(rn);
       Path regionDir = new Path(tableDir, enc);
-      if (verbose)
+      if (verbose) {
         out.println("region dir -> " + regionDir);
+      }
       List<Path> regionFiles = HFile.getStoreFiles(FileSystem.get(getConf()),
           regionDir);
-      if (verbose)
-        out.println("Number of region files found -> "
-            + regionFiles.size());
+      if (verbose) {
+        out.println("Number of region files found -> " + regionFiles.size());
+      }
       if (verbose) {
         int i = 1;
         for (Path p : regionFiles) {
-          if (verbose)
+          if (verbose) {
             out.println("Found file[" + i++ + "] -> " + p);
-        }
+          }
+        } 
       }
       files.addAll(regionFiles);
     }
@@ -562,14 +589,15 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     try {
       out.println("Mid-key: " + reader.midKey().map(CellUtil::getCellKeyAsString));
     } catch (Exception e) {
-      out.println ("Unable to retrieve the midkey");
+      out.println("Unable to retrieve the midkey");
     }
 
     // Printing general bloom information
     DataInput bloomMeta = reader.getGeneralBloomFilterMetadata();
     BloomFilter bloomFilter = null;
-    if (bloomMeta != null)
+    if (bloomMeta != null) {
       bloomFilter = BloomFilterFactory.createFromMeta(bloomMeta, reader);
+    }
 
     out.println("Bloom filter:");
     if (bloomFilter != null) {
@@ -582,8 +610,9 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     // Printing delete bloom information
     bloomMeta = reader.getDeleteBloomFilterMetadata();
     bloomFilter = null;
-    if (bloomMeta != null)
+    if (bloomMeta != null) {
       bloomFilter = BloomFilterFactory.createFromMeta(bloomMeta, reader);
+    }
 
     out.println("Delete Family Bloom filter:");
     if (bloomFilter != null) {
@@ -593,6 +622,33 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     } else {
       out.println(FOUR_SPACES + "Not present");
     }
+    DoublesSketch keySizeSketch =
+      getDoublesSketchFromMetaBlock(reader, HFileWriterImpl.KEYSIZE_SKETCH_KEY_STR);
+    printDoublesSketch(keySizeSketch, "keySize");
+    DoublesSketch valueSizeSketch =
+      getDoublesSketchFromMetaBlock(reader, HFileWriterImpl.VALUESIZE_SKETCH_KEY_STR);
+    printDoublesSketch(valueSizeSketch, "valueSize");
+  }
+
+  private void printDoublesSketch(DoublesSketch sketch, String name) {
+    double [] quantiles = sketch.getQuantiles(NORMALIZED_RANKS);
+    out.println(name + " count=" + sketch.getN() +
+        ", min=" + sketch.getMinValue() +
+        ", max=" + sketch.getMaxValue() +
+        ", 50thPercentile=" + quantiles[50] +
+        ", 75thPercentile=" + quantiles[75] +
+        ", 95thPercentile=" + quantiles[95] +
+        ", quantiles(100)=" + Arrays.toString(quantiles));
+  }
+
+  private DoublesSketch getDoublesSketchFromMetaBlock(HFile.Reader reader, String key)
+      throws IOException {
+    HFileBlock hfb = reader.getMetaBlock(key,false);
+    // We wrote w/ an IBW. We are making a copy of bytes when we do the below but having trouble
+    // passing a ByteBuffer to DataSketches Memory.wrap... doesn't work for me.
+    ImmutableBytesWritable ibw = new ImmutableBytesWritable();
+    ibw.readFields(hfb.getByteStream());
+    return DoublesSketch.wrap(Memory.wrap(ibw.get()));
   }
 
   private static class KeyValueStatsCollector {
@@ -652,16 +708,14 @@ public class HFilePrettyPrinter extends Configured implements Tool {
 
     @Override
     public String toString() {
-      if (prevCell == null)
+      if (prevCell == null) {
         return "no data available for statistics";
+      }
 
       // Dump the metrics to the output stream
       simpleReporter.stop();
       simpleReporter.report();
-
-      return
-              metricsOutput.toString() +
-                      "Key of biggest row: " + Bytes.toStringBinary(biggestRow);
+      return metricsOutput.toString() + "Key of biggest row: " + Bytes.toStringBinary(biggestRow);
     }
   }
 
@@ -669,7 +723,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
    * Almost identical to ConsoleReporter, but extending ScheduledReporter,
    * as extending ConsoleReporter in this version of dropwizard is now too much trouble.
    */
-  private static class SimpleReporter extends ScheduledReporter {
+  private static final class SimpleReporter extends ScheduledReporter {
     /**
      * Returns a new {@link Builder} for {@link ConsoleReporter}.
      *
@@ -685,7 +739,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
      * time zone, writing to {@code System.out}, converting rates to events/second, converting
      * durations to milliseconds, and not filtering metrics.
      */
-    public static class Builder {
+    public static final class Builder {
       private final MetricRegistry registry;
       private PrintStream output;
       private Locale locale;

@@ -25,6 +25,8 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.datasketches.quantiles.DoublesSketch;
+import org.apache.datasketches.quantiles.UpdateDoublesSketch;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -38,6 +40,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -53,7 +56,6 @@ import org.apache.hadoop.io.Writable;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -83,15 +85,6 @@ public class HFileWriterImpl implements HFile.Writer {
 
   /** A "file info" block: a key-value map of file-wide metadata. */
   protected HFileInfo fileInfo = new HFileInfo();
-
-  /** Total # of key/value entries, i.e. how many times add() was called. */
-  protected long entryCount = 0;
-
-  /** Used for calculating the average key length. */
-  protected long totalKeyLength = 0;
-
-  /** Used for calculating the average value length. */
-  protected long totalValueLength = 0;
 
   /** Total uncompressed bytes, maybe calculate a compression ratio later. */
   protected long totalUncompressedBytes = 0;
@@ -162,6 +155,18 @@ public class HFileWriterImpl implements HFile.Writer {
   private List<BlockWritable> additionalLoadOnOpenData = new ArrayList<>();
 
   protected long maxMemstoreTS = 0;
+
+  /**
+   * Sketch to keep key sizes.
+   */
+  private final UpdateDoublesSketch keySizeSketch = DoublesSketch.builder().build();
+  public static final String KEYSIZE_SKETCH_KEY_STR = "keySizeSketch";
+
+  /**
+   * Sketch to keep values sizes.
+   */
+  private final UpdateDoublesSketch valueSizeSketch = DoublesSketch.builder().build();
+  public static final String VALUESIZE_SKETCH_KEY_STR = "valueSizeSketch";
 
   public HFileWriterImpl(final Configuration conf, CacheConfig cacheConf, Path path,
       FSDataOutputStream outputStream, HFileContext fileContext) {
@@ -611,7 +616,11 @@ public class HFileWriterImpl implements HFile.Writer {
     finishBlock();
     writeInlineBlocks(true);
 
-    FixedFileTrailer trailer = new FixedFileTrailer(getMajorVersion(), getMinorVersion());
+    // Serialize out accumulated sketches.
+    appendMetaBlock(KEYSIZE_SKETCH_KEY_STR,
+      new ImmutableBytesWritable(this.keySizeSketch.toByteArray()));
+    appendMetaBlock(VALUESIZE_SKETCH_KEY_STR,
+      new ImmutableBytesWritable(this.valueSizeSketch.toByteArray()));
 
     // Write out the metadata blocks if any.
     if (!metaNames.isEmpty()) {
@@ -641,6 +650,7 @@ public class HFileWriterImpl implements HFile.Writer {
     // index.
 
     long rootIndexOffset = dataBlockIndexWriter.writeIndexBlocks(outputStream);
+    FixedFileTrailer trailer = new FixedFileTrailer(getMajorVersion(), getMinorVersion());
     trailer.setLoadOnOpenOffset(rootIndexOffset);
 
     // Meta block index.
@@ -749,8 +759,10 @@ public class HFileWriterImpl implements HFile.Writer {
 
     blockWriter.write(cell);
 
-    totalKeyLength += PrivateCellUtil.estimatedSerializedSizeOfKey(cell);
-    totalValueLength += cell.getValueLength();
+    int keySize = PrivateCellUtil.estimatedSerializedSizeOfKey(cell);
+    this.keySizeSketch.update(keySize);
+    int valueSize = cell.getValueLength();
+    this.valueSizeSketch.update(valueSize);
 
     // Are we the first key in this block?
     if (firstCellInBlock == null) {
@@ -761,7 +773,6 @@ public class HFileWriterImpl implements HFile.Writer {
 
     // TODO: What if cell is 10MB and we write infrequently? We hold on to cell here indefinitely?
     lastCell = cell;
-    entryCount++;
     this.maxMemstoreTS = Math.max(this.maxMemstoreTS, cell.getSequenceId());
     int tagsLength = cell.getTagsLength();
     if (tagsLength > this.maxTagsLength) {
@@ -797,17 +808,16 @@ public class HFileWriterImpl implements HFile.Writer {
       fileInfo.append(HFileInfo.LASTKEY, lastKey, false);
     }
 
-    // Average key length.
-    int avgKeyLen =
-        entryCount == 0 ? 0 : (int) (totalKeyLength / entryCount);
-    fileInfo.append(HFileInfo.AVG_KEY_LEN, Bytes.toBytes(avgKeyLen), false);
+    // Median key length.
+    int medianKeyLen = (int)this.keySizeSketch.getQuantile(0.5);
+    fileInfo.append(HFileInfo.AVG_KEY_LEN, Bytes.toBytes(medianKeyLen), false);
+    // Median value length.
+    int medianValueLen = (int)this.valueSizeSketch.getQuantile(0.5);
+    fileInfo.append(HFileInfo.AVG_VALUE_LEN, Bytes.toBytes(medianValueLen), false);
+
     fileInfo.append(HFileInfo.CREATE_TIME_TS, Bytes.toBytes(hFileContext.getFileCreateTime()),
       false);
 
-    // Average value length.
-    int avgValueLen =
-        entryCount == 0 ? 0 : (int) (totalValueLength / entryCount);
-    fileInfo.append(HFileInfo.AVG_VALUE_LEN, Bytes.toBytes(avgValueLen), false);
     if (hFileContext.isIncludesTags()) {
       // When tags are not being written in this file, MAX_TAGS_LEN is excluded
       // from the FileInfo
@@ -840,7 +850,7 @@ public class HFileWriterImpl implements HFile.Writer {
     // Now we can finish the close
     trailer.setMetaIndexCount(metaNames.size());
     trailer.setTotalUncompressedBytes(totalUncompressedBytes+ trailer.getTrailerSize());
-    trailer.setEntryCount(entryCount);
+    trailer.setEntryCount(this.keySizeSketch.getN());
     trailer.setCompressionCodec(hFileContext.getCompression());
 
     long startTime = System.currentTimeMillis();
