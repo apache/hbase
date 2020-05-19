@@ -24,6 +24,8 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.util.Iterator;
+import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.ChoreService;
@@ -755,6 +757,12 @@ public class TestHeapMemoryManager {
     public boolean requestFlush(HRegion region, boolean forceFlushAllStores,
         FlushLifeCycleTracker tracker) {
       this.listener.flushRequested(flushType, region);
+      return true;
+    }
+
+    @Override
+    public boolean requestFlush(HRegion region, boolean forceFlushAllStores,
+        List<byte[]> families, FlushLifeCycleTracker tracker) {
       return true;
     }
 

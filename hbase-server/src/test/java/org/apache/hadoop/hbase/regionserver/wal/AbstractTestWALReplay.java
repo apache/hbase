@@ -1127,6 +1127,12 @@ public abstract class AbstractTestWALReplay {
     }
 
     @Override
+    public boolean requestFlush(HRegion region, boolean forceFlushAllStores,
+        List<byte[]> families, FlushLifeCycleTracker tracker) {
+      return true;
+    }
+
+    @Override
     public boolean requestDelayedFlush(HRegion region, long when, boolean forceFlushAllStores) {
       return true;
     }

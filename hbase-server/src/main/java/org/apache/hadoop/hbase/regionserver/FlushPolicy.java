@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configured;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -46,4 +49,16 @@ public abstract class FlushPolicy extends Configured {
    */
   public abstract Collection<HStore> selectStoresToFlush();
 
+  /**
+   * select stores which matches the specified families
+   *
+   * @return the stores need to be flushed.
+   */
+  public Collection<HStore> selectStoresToFlush(Map<byte[], HStore> stores, List<byte[]> families) {
+    Collection<HStore> specificStoresToFlush = new ArrayList<>();
+    for (byte[] family : families) {
+      specificStoresToFlush.add(stores.get(family));
+    }
+    return specificStoresToFlush;
+  }
 }

@@ -23,6 +23,7 @@ import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -45,8 +46,8 @@ import org.slf4j.LoggerFactory;
  * NOTE: This class extends Thread rather than Chore because the sleep time can be interrupted when
  * there is something to do, rather than the Chore sleep time which is invariant.
  * <p/>
- * The {@link #scheduleFlush(String)} is abstract here, as sometimes we hold a region without a
- * region server but we still want to roll its WAL.
+ * The {@link #scheduleFlush(String, List<byte[]>)} is abstract here,
+ * as sometimes we hold a region without a region server but we still want to roll its WAL.
  * <p/>
  * TODO: change to a pool of threads
  */
@@ -180,18 +181,18 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
           WAL wal = entry.getKey();
           // reset the flag in front to avoid missing roll request before we return from rollWriter.
           walNeedsRoll.put(wal, Boolean.FALSE);
-          byte[][] regionsToFlush = null;
+          Map<byte[], List<byte[]>> regionsToFlush = null;
           try {
             // Force the roll if the logroll.period is elapsed or if a roll was requested.
-            // The returned value is an array of actual region names.
+            // The returned value is an collection of actual region and family names.
             regionsToFlush = wal.rollWriter(periodic || entry.getValue().booleanValue());
           } catch (WALClosedException e) {
             LOG.warn("WAL has been closed. Skipping rolling of writer and just remove it", e);
             iter.remove();
           }
           if (regionsToFlush != null) {
-            for (byte[] r : regionsToFlush) {
-              scheduleFlush(Bytes.toString(r));
+            for (Map.Entry<byte[], List<byte[]>> r : regionsToFlush.entrySet()) {
+              scheduleFlush(Bytes.toString(r.getKey()), r.getValue());
             }
           }
           afterRoll(wal);
@@ -218,8 +219,9 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
 
   /**
    * @param encodedRegionName Encoded name of region to flush.
+   * @param families stores of region to flush.
    */
-  protected abstract void scheduleFlush(String encodedRegionName);
+  protected abstract void scheduleFlush(String encodedRegionName, List<byte[]> families);
 
   private boolean isWaiting() {
     Thread.State state = getState();

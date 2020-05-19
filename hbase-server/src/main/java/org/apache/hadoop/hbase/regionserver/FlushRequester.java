@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.List;
+
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -35,6 +37,18 @@ public interface FlushRequester {
    * @return true if our region is added into the queue, false otherwise
    */
   boolean requestFlush(HRegion region, boolean forceFlushAllStores, FlushLifeCycleTracker tracker);
+
+  /**
+   * Tell the listener the cache needs to be flushed.
+   *
+   * @param region the Region requesting the cache flush
+   * @param forceFlushAllStores whether we want to flush all stores. e.g., when request from log
+   *          rolling.
+   * @param families stores of region to flush.
+   * @return true if our region is added into the queue, false otherwise
+   */
+  boolean requestFlush(HRegion region, boolean forceFlushAllStores, List<byte[]> families,
+    FlushLifeCycleTracker tracker);
 
   /**
    * Tell the listener the cache needs to be flushed after a delay

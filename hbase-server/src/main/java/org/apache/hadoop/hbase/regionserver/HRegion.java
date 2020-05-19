@@ -169,6 +169,7 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HashedBytes;
+import org.apache.hadoop.hbase.util.ImmutableByteArray;
 import org.apache.hadoop.hbase.util.NonceKey;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
@@ -2386,6 +2387,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     boolean isCompactionNeeded();
   }
 
+  public FlushResultImpl flushcache(boolean forceFlushAllStores,boolean writeFlushRequestWalMarker,
+    FlushLifeCycleTracker tracker) throws IOException {
+    return this.flushcache(forceFlushAllStores, null, writeFlushRequestWalMarker, tracker);
+  }
+
   /**
    * Flush the cache.
    *
@@ -2400,6 +2406,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * <p>This method may block for some time, so it should not be called from a
    * time-sensitive thread.
    * @param forceFlushAllStores whether we want to flush all stores
+   * @param families stores of region to flush.
    * @param writeFlushRequestWalMarker whether to write the flush request marker to WAL
    * @param tracker used to track the life cycle of this flush
    * @return whether the flush is success and whether the region needs compacting
@@ -2409,8 +2416,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * because a Snapshot was not properly persisted. The region is put in closing mode, and the
    * caller MUST abort after this.
    */
-  public FlushResultImpl flushcache(boolean forceFlushAllStores, boolean writeFlushRequestWalMarker,
-      FlushLifeCycleTracker tracker) throws IOException {
+  public FlushResultImpl flushcache(boolean forceFlushAllStores, List<byte[]> families,
+      boolean writeFlushRequestWalMarker, FlushLifeCycleTracker tracker) throws IOException {
     // fail-fast instead of waiting on the lock
     if (this.closing.get()) {
       String msg = "Skipping flush on " + this + " because closing";
@@ -2457,8 +2464,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
 
       try {
-        Collection<HStore> specificStoresToFlush =
+        Collection<HStore> specificStoresToFlush = null;
+        if (!forceFlushAllStores && families != null) {
+          specificStoresToFlush = flushPolicy.selectStoresToFlush(stores, families);
+        } else {
+          specificStoresToFlush =
             forceFlushAllStores ? stores.values() : flushPolicy.selectStoresToFlush();
+        }
         FlushResultImpl fs =
             internalFlushcache(specificStoresToFlush, status, writeFlushRequestWalMarker, tracker);
 

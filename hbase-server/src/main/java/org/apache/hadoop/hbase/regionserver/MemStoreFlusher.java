@@ -286,7 +286,7 @@ class MemStoreFlusher implements FlushRequester {
                 server.getRegionServerAccounting().getGlobalMemStoreOffHeapSize(), "", 1) +
             ", Region memstore size=" +
             TraditionalBinaryPrefix.long2String(regionToFlushSize, "", 1));
-        flushedOne = flushRegion(regionToFlush, true, false, FlushLifeCycleTracker.DUMMY);
+        flushedOne = flushRegion(regionToFlush, true, false, null, FlushLifeCycleTracker.DUMMY);
 
         if (!flushedOne) {
           LOG.info("Excluding unflushable region " + regionToFlush +
@@ -458,13 +458,18 @@ class MemStoreFlusher implements FlushRequester {
   }
 
   @Override
-  public boolean requestFlush(HRegion r, boolean forceFlushAllStores,
-                              FlushLifeCycleTracker tracker) {
+  public boolean requestFlush(HRegion r, boolean forceFlushAllStores, FlushLifeCycleTracker tracker) {
+    return this.requestFlush(r, forceFlushAllStores, null, tracker);
+  }
+
+  @Override
+  public boolean requestFlush(HRegion r, boolean forceFlushAllStores, List<byte[]> families,
+      FlushLifeCycleTracker tracker) {
     synchronized (regionsInQueue) {
       if (!regionsInQueue.containsKey(r)) {
         // This entry has no delay so it will be added at the top of the flush
         // queue. It'll come out near immediately.
-        FlushRegionEntry fqe = new FlushRegionEntry(r, forceFlushAllStores, tracker);
+        FlushRegionEntry fqe = new FlushRegionEntry(r, forceFlushAllStores, families, tracker);
         this.regionsInQueue.put(r, fqe);
         this.flushQueue.add(fqe);
         r.incrementFlushesQueuedCount();
@@ -482,7 +487,7 @@ class MemStoreFlusher implements FlushRequester {
       if (!regionsInQueue.containsKey(r)) {
         // This entry has some delay
         FlushRegionEntry fqe =
-            new FlushRegionEntry(r, forceFlushAllStores, FlushLifeCycleTracker.DUMMY);
+            new FlushRegionEntry(r, forceFlushAllStores, null, FlushLifeCycleTracker.DUMMY);
         fqe.requeue(delay);
         this.regionsInQueue.put(r, fqe);
         this.flushQueue.add(fqe);
@@ -581,7 +586,7 @@ class MemStoreFlusher implements FlushRequester {
         return true;
       }
     }
-    return flushRegion(region, false, fqe.isForceFlushAllStores(), fqe.getTracker());
+    return flushRegion(region, false, fqe.isForceFlushAllStores(), fqe.families, fqe.getTracker());
   }
 
   /**
@@ -592,12 +597,13 @@ class MemStoreFlusher implements FlushRequester {
    * from the main flusher run loop and we got the entry to flush by calling
    * poll on the flush queue (which removed it).
    * @param forceFlushAllStores whether we want to flush all store.
+   * @param families stores of region to flush.
    * @return true if the region was successfully flushed, false otherwise. If
    * false, there will be accompanying log messages explaining why the region was
    * not flushed.
    */
   private boolean flushRegion(HRegion region, boolean emergencyFlush, boolean forceFlushAllStores,
-      FlushLifeCycleTracker tracker) {
+      List<byte[]> families, FlushLifeCycleTracker tracker) {
     synchronized (this.regionsInQueue) {
       FlushRegionEntry fqe = this.regionsInQueue.remove(region);
       // Use the start time of the FlushRegionEntry if available
@@ -612,7 +618,7 @@ class MemStoreFlusher implements FlushRequester {
     lock.readLock().lock();
     try {
       notifyFlushRequest(region, emergencyFlush);
-      FlushResult flushResult = region.flushcache(forceFlushAllStores, false, tracker);
+      FlushResult flushResult = region.flushcache(forceFlushAllStores, families, false, tracker);
       boolean shouldCompact = flushResult.isCompactionNeeded();
       // We just want to check the size
       boolean shouldSplit = region.checkSplit() != null;
@@ -846,14 +852,17 @@ class MemStoreFlusher implements FlushRequester {
     private int requeueCount = 0;
 
     private final boolean forceFlushAllStores;
+    private final List<byte[]> families;
 
     private final FlushLifeCycleTracker tracker;
 
-    FlushRegionEntry(final HRegion r, boolean forceFlushAllStores, FlushLifeCycleTracker tracker) {
+    FlushRegionEntry(final HRegion r, boolean forceFlushAllStores, List<byte[]> families,
+        FlushLifeCycleTracker tracker) {
       this.region = r;
       this.createTime = EnvironmentEdgeManager.currentTime();
       this.whenToExpire = this.createTime;
       this.forceFlushAllStores = forceFlushAllStores;
+      this.families = families;
       this.tracker = tracker;
     }
 
