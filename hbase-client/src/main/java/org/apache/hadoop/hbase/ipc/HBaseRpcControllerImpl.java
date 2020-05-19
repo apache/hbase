@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hadoop.hbase.slowlog.SlowLogTableAccessor;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 
 import java.io.IOException;
@@ -102,12 +101,8 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
 
   @Override
   public void setPriority(final TableName tn) {
-    int priority = HConstants.NORMAL_QOS;
-    if (tn != null && tn.isSystemTable()
-        && !tn.equals(SlowLogTableAccessor.SLOW_LOG_TABLE_NAME)) {
-      priority = HConstants.SYSTEMTABLE_QOS;
-    }
-    setPriority(priority);
+    setPriority(
+      tn != null && tn.isSystemTable() ? HConstants.SYSTEMTABLE_QOS : HConstants.NORMAL_QOS);
   }
 
   @Override

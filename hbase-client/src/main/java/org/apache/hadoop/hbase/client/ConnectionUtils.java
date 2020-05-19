@@ -49,7 +49,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
-import org.apache.hadoop.hbase.slowlog.SlowLogTableAccessor;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.ipc.RemoteException;
@@ -533,7 +532,7 @@ public final class ConnectionUtils {
   }
 
   static int getPriority(TableName tableName) {
-    if (tableName.isSystemTable() && !tableName.equals(SlowLogTableAccessor.SLOW_LOG_TABLE_NAME)) {
+    if (tableName.isSystemTable()) {
       return HConstants.SYSTEMTABLE_QOS;
     } else {
       return HConstants.NORMAL_QOS;

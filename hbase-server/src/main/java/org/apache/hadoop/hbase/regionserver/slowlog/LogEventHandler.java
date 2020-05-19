@@ -60,6 +60,7 @@ class LogEventHandler implements EventHandler<RingBufferEnvelope> {
   private static final String SYS_TABLE_QUEUE_SIZE =
     "hbase.regionserver.slowlog.systable.queue.size";
   private static final int DEFAULT_SYS_TABLE_QUEUE_SIZE = 1000;
+  private static final int SYSTABLE_PUT_BATCH_SIZE = 100;
 
   private final Queue<SlowLogPayload> queueForRingBuffer;
   private final Queue<SlowLogPayload> queueForSysTable;
@@ -301,7 +302,7 @@ class LogEventHandler implements EventHandler<RingBufferEnvelope> {
       while (!queueForSysTable.isEmpty()) {
         slowLogPayloads.add(queueForSysTable.poll());
         i++;
-        if (i == 100) {
+        if (i == SYSTABLE_PUT_BATCH_SIZE) {
           SlowLogTableAccessor.addSlowLogRecords(slowLogPayloads, this.configuration);
           slowLogPayloads.clear();
           i = 0;

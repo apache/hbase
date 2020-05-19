@@ -78,6 +78,7 @@ public class SlowLogTableAccessor {
     for (TooSlowLog.SlowLogPayload slowLogPayload : slowLogPayloads) {
       final byte[] rowKey = getRowKey(slowLogPayload);
       final Put put = new Put(rowKey).setDurability(Durability.SKIP_WAL)
+        .setPriority(HConstants.NORMAL_QOS)
         .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("call_details"),
           Bytes.toBytes(slowLogPayload.getCallDetails()))
         .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("client_address"),
