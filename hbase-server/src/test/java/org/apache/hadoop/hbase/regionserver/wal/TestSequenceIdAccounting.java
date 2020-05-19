@@ -131,7 +131,7 @@ public class TestSequenceIdAccounting {
     sida.update(ENCODED_REGION_NAME, FAMILIES, sequenceid++, true);
     assertTrue(sida.findLower(m) == null);
     m.put(ENCODED_REGION_NAME, sida.getLowestSequenceId(ENCODED_REGION_NAME));
-    assertTrue(sida.findLower(m).length == 1);
+    assertTrue(sida.findLower(m).size() == 1);
     m.put(ENCODED_REGION_NAME, sida.getLowestSequenceId(ENCODED_REGION_NAME) - 1);
     assertTrue(sida.findLower(m) == null);
   }

@@ -115,7 +115,7 @@ class DisabledWALProvider implements WALProvider {
     }
 
     @Override
-    public byte[][] rollWriter() {
+    public Map<byte[], List<byte[]>> rollWriter() {
       if (!listeners.isEmpty()) {
         for (WALActionsListener listener : listeners) {
           listener.logRollRequested(WALActionsListener.RollRequestReason.ERROR);
@@ -139,7 +139,7 @@ class DisabledWALProvider implements WALProvider {
     }
 
     @Override
-    public byte[][] rollWriter(boolean force) {
+    public Map<byte[], List<byte[]>> rollWriter(boolean force) {
       return rollWriter();
     }
 
