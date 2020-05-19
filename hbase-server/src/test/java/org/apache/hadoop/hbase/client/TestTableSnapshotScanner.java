@@ -40,6 +40,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.Rule;
+import org.junit.rules.TestName;
 
 @Category(LargeTests.class)
 public class TestTableSnapshotScanner {
@@ -53,6 +55,9 @@ public class TestTableSnapshotScanner {
 
   private FileSystem fs;
   private Path rootDir;
+
+  @Rule
+  public TestName name = new TestName();
 
   public void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
@@ -153,6 +158,38 @@ public class TestTableSnapshotScanner {
       verifyScanner(scanner, bbb, yyy);
       scanner.close();
     } finally {
+      UTIL.getHBaseAdmin().deleteSnapshot(snapshotName);
+      UTIL.deleteTable(tableName);
+      tearDownCluster();
+    }
+  }
+
+
+  @Test
+  public void testScanLimit() throws Exception {
+    setupCluster();
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final String snapshotName = tableName + "Snapshot";
+    TableSnapshotScanner scanner = null;
+    try {
+      createTableAndSnapshot(UTIL, tableName, snapshotName, 50);
+      Path restoreDir = UTIL.getDataTestDirOnTestFS(snapshotName);
+      Scan scan = new Scan().withStartRow(bbb).setLimit(100); // limit the scan
+
+      scanner = new TableSnapshotScanner(UTIL.getConfiguration(), restoreDir, snapshotName, scan);
+      int count = 0;
+      while (true) {
+        Result result = scanner.next();
+        if (result == null) {
+          break;
+        }
+        count++;
+      }
+      Assert.assertEquals(100, count);
+    } finally {
+      if (scanner != null) {
+        scanner.close();
+      }
       UTIL.getHBaseAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
       tearDownCluster();
