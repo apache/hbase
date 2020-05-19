@@ -56,7 +56,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog.SlowLogPaylo
 class LogEventHandler implements EventHandler<RingBufferEnvelope> {
 
   private static final Logger LOG = LoggerFactory.getLogger(LogEventHandler.class);
-  private static final int SYS_TABLE_QUEUE_SIZE = 1000;
+
+  private static final String SYS_TABLE_QUEUE_SIZE =
+    "hbase.regionserver.slowlog.systable.queue.size";
+  private static final int DEFAULT_SYS_TABLE_QUEUE_SIZE = 1000;
 
   private final Queue<SlowLogPayload> queueForRingBuffer;
   private final Queue<SlowLogPayload> queueForSysTable;
@@ -72,8 +75,9 @@ class LogEventHandler implements EventHandler<RingBufferEnvelope> {
     queueForRingBuffer = Queues.synchronizedQueue(evictingQueue);
     this.isSlowLogTableEnabled = isSlowLogTableEnabled;
     if (isSlowLogTableEnabled) {
-      EvictingQueue<SlowLogPayload> evictingQueueForTable = EvictingQueue.create(
-        SYS_TABLE_QUEUE_SIZE);
+      int sysTableQueueSize = conf.getInt(SYS_TABLE_QUEUE_SIZE, DEFAULT_SYS_TABLE_QUEUE_SIZE);
+      EvictingQueue<SlowLogPayload> evictingQueueForTable =
+        EvictingQueue.create(sysTableQueueSize);
       queueForSysTable = Queues.synchronizedQueue(evictingQueueForTable);
     } else {
       queueForSysTable = null;
