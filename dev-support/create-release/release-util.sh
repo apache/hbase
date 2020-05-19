@@ -349,11 +349,13 @@ function init_mvn {
 }
 
 function init_yetus {
+  declare YETUS_VERSION
   if [ -z "${YETUS_HOME}" ]; then
     error "Missing Apache Yetus."
   fi
   # Work around yetus bug by asking test-patch for the version instead of rdm.
-  echo "Apache Yetus version $("${YETUS_HOME}/bin/test-patch" --version)"
+  YETUS_VERSION=$("${YETUS_HOME}/bin/test-patch" --version)
+  echo "Apache Yetus version ${YETUS_VERSION}"
 }
 
 function configure_maven {
@@ -595,4 +597,11 @@ function maven_deploy { #inputs: <snapshot|release> <log_file_path>
   fi
   echo "BUILD SUCCESS."
   return 0
+}
+
+# guess the host os
+# * DARWIN
+# * LINUX
+function get_host_os() {
+  uname -s | tr '[:lower:]' '[:upper:]'
 }

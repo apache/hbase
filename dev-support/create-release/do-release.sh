@@ -83,6 +83,14 @@ function should_build {
 }
 
 if should_build "tag" && [ "$SKIP_TAG" = 0 ]; then
+  if [ -z "${YETUS_HOME}" ] && [ "${RUNNING_IN_DOCKER}" != "1" ]; then
+    declare local_yetus="/opt/apache-yetus/0.11.1/"
+    if [ "$(get_host_os)" = "DARWIN" ]; then
+      local_yetus="/usr/local/Cellar/yetus/0.11.1/"
+    fi
+    YETUS_HOME="$(read_config "YETUS_HOME not defined. Absolute path to local install of Apache Yetus" "${local_yetus}")"
+    export YETUS_HOME
+  fi
   run_silent "Creating release tag $RELEASE_TAG..." "tag.log" \
     "$SELF/release-build.sh" tag
   if is_dry_run; then
