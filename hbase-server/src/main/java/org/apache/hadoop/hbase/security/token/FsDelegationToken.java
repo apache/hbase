@@ -104,6 +104,7 @@ public class FsDelegationToken {
         hasForwardedToken = false;
         try {
           userToken = fs.getDelegationToken(renewer);
+          userProvider.getCurrent().addToken(userToken);
         } catch (NullPointerException npe) {
           // we need to handle NullPointerException in case HADOOP-10009 is missing
           LOG.error("Failed to get token for " + renewer);
