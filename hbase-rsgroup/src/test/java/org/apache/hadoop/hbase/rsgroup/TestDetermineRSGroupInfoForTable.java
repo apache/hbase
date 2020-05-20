@@ -18,27 +18,28 @@
 package org.apache.hadoop.hbase.rsgroup;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfoManagerImpl.RSGroupMappingScript;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -87,6 +88,14 @@ public class TestDetermineRSGroupInfoForTable {
     admin = UTIL.getAdmin();
     rsGroupAdminClient = new RSGroupAdminClient(UTIL.getConnection());
 
+    UTIL.waitFor(60000, (Predicate<Exception>) () ->
+        master.isInitialized() && ((RSGroupBasedLoadBalancer) master.getLoadBalancer()).isOnline());
+
+    List<RSGroupAdminEndpoint> cps =
+        master.getMasterCoprocessorHost().findCoprocessors(RSGroupAdminEndpoint.class);
+    assertTrue(cps.size() > 0);
+    rsGroupInfoManager = cps.get(0).getGroupInfoManager();
+
     HRegionServer rs = UTIL.getHBaseCluster().getRegionServer(0);
     rsGroupAdminClient.addRSGroup(GROUP_NAME);
     rsGroupAdminClient.moveServers(
@@ -98,21 +107,10 @@ public class TestDetermineRSGroupInfoForTable {
   }
 
   @AfterClass
-  public static void tearDown() throws IOException {
+  public static void tearDown() throws Exception {
     admin.deleteNamespace(NAMESPACE_NAME);
 
     UTIL.shutdownMiniCluster();
-  }
-
-  @Before
-  public void setUpBeforeMethod() throws IOException {
-    rsGroupInfoManager = RSGroupInfoManagerImpl.getInstance(master);
-    rsGroupInfoManager.start();
-  }
-
-  @After
-  public void tearDownAfterMethod() throws IOException {
-    rsGroupInfoManager = RSGroupInfoManagerImpl.getInstance(master);
   }
 
   @Test
@@ -139,10 +137,13 @@ public class TestDetermineRSGroupInfoForTable {
   public void testDetermineByScript() throws IOException {
     RSGroupMappingScript script = mock(RSGroupMappingScript.class);
     when(script.getRSGroup(anyString(), anyString())).thenReturn(GROUP_NAME);
+    RSGroupMappingScript oldScript = ((RSGroupInfoManagerImpl) rsGroupInfoManager).script;
     ((RSGroupInfoManagerImpl) rsGroupInfoManager).script = script;
 
     RSGroupInfo group = rsGroupInfoManager.determineRSGroupInfoForTable(TABLE_NAME);
     assertEquals(group.getName(), GROUP_NAME);
+    // reset script to avoid affecting other tests
+    ((RSGroupInfoManagerImpl) rsGroupInfoManager).script = oldScript;
   }
 
 }
