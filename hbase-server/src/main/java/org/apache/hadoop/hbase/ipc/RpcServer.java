@@ -435,7 +435,7 @@ public abstract class RpcServer implements RpcServerInterface,
           final String className = server == null ? StringUtils.EMPTY :
             server.getClass().getSimpleName();
           this.slowLogRecorder.addSlowLogPayload(
-            new RpcLogDetails(call, status.getClient(), responseSize, className, tooSlow,
+            new RpcLogDetails(call, param, status.getClient(), responseSize, className, tooSlow,
               tooLarge));
         }
       }

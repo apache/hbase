@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver.slowlog;
 
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.hbase.ipc.RpcCall;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -30,15 +31,17 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class RpcLogDetails {
 
   private final RpcCall rpcCall;
+  private final Message param;
   private final String clientAddress;
   private final long responseSize;
   private final String className;
   private final boolean isSlowLog;
   private final boolean isLargeLog;
 
-  public RpcLogDetails(RpcCall rpcCall, String clientAddress, long responseSize,
+  public RpcLogDetails(RpcCall rpcCall, Message param, String clientAddress, long responseSize,
       String className, boolean isSlowLog, boolean isLargeLog) {
     this.rpcCall = rpcCall;
+    this.param = param;
     this.clientAddress = clientAddress;
     this.responseSize = responseSize;
     this.className = className;
@@ -70,10 +73,15 @@ public class RpcLogDetails {
     return isLargeLog;
   }
 
+  public Message getParam() {
+    return param;
+  }
+
   @Override
   public String toString() {
     return new ToStringBuilder(this)
       .append("rpcCall", rpcCall)
+      .append("param", param)
       .append("clientAddress", clientAddress)
       .append("responseSize", responseSize)
       .append("className", className)
@@ -81,5 +89,4 @@ public class RpcLogDetails {
       .append("isLargeLog", isLargeLog)
       .toString();
   }
-
 }

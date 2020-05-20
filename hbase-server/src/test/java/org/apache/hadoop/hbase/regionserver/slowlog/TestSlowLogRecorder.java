@@ -486,18 +486,19 @@ public class TestSlowLogRecorder {
 
   }
 
-  private RpcLogDetails getRpcLogDetails(String userName, String clientAddress,
-      String className) {
-    return new RpcLogDetails(getRpcCall(userName), clientAddress, 0, className, true, true);
+  static RpcLogDetails getRpcLogDetails(String userName, String clientAddress, String className) {
+    RpcCall rpcCall = getRpcCall(userName);
+    return new RpcLogDetails(rpcCall, rpcCall.getParam(), clientAddress, 0, className, true, true);
   }
 
   private RpcLogDetails getRpcLogDetails(String userName, String clientAddress,
       String className, boolean isSlowLog, boolean isLargeLog) {
-    return new RpcLogDetails(getRpcCall(userName), clientAddress, 0, className, isSlowLog,
+    RpcCall rpcCall = getRpcCall(userName);
+    return new RpcLogDetails(rpcCall, rpcCall.getParam(), clientAddress, 0, className, isSlowLog,
       isLargeLog);
   }
 
-  private RpcCall getRpcCall(String userName) {
+  private static RpcCall getRpcCall(String userName) {
     RpcCall rpcCall = new RpcCall() {
       @Override
       public BlockingService getService() {
@@ -646,7 +647,7 @@ public class TestSlowLogRecorder {
     return rpcCall;
   }
 
-  private Message getMessage() {
+  private static Message getMessage() {
 
     i = (i + 1) % 3;
 
@@ -693,7 +694,7 @@ public class TestSlowLogRecorder {
 
   }
 
-  private Optional<User> getUser(String userName) {
+  private static Optional<User> getUser(String userName) {
 
     return Optional.of(new User() {
 
