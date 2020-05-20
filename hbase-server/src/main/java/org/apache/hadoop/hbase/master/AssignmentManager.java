@@ -37,8 +37,8 @@ import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -250,6 +250,9 @@ public class AssignmentManager extends ZooKeeperListener {
    */
   private final ConcurrentHashMap<String, AtomicInteger>
     failedOpenTracker = new ConcurrentHashMap<String, AtomicInteger>();
+
+  private final ConcurrentHashMap<String, AtomicInteger> failedCloseTracker =
+      new ConcurrentHashMap<String, AtomicInteger>();
 
   // A flag to indicate if we are using ZK for region assignment
   private final boolean useZKForAssignment;
@@ -1972,6 +1975,13 @@ public class AssignmentManager extends ZooKeeperListener {
       final RegionState state, final int versionOfClosingNode,
       final ServerName dest, final boolean transitionInZK,
       final ServerName src) {
+    String encodedName = region.getEncodedName();
+    AtomicInteger failedCloseCount = failedCloseTracker.get(encodedName);
+    if (failedCloseCount == null) {
+      failedCloseCount = new AtomicInteger();
+      failedCloseTracker.put(encodedName, failedCloseCount);
+    }
+
     ServerName server = src;
     if (state != null) {
       server = state.getServerName();
@@ -1985,7 +1995,7 @@ public class AssignmentManager extends ZooKeeperListener {
       // ClosedRegionhandler can remove the server from this.regions
       if (!serverManager.isServerOnline(server)) {
         LOG.debug("Offline " + region.getRegionNameAsString()
-          + ", no need to unassign since it's on a dead server: " + server);
+            + ", no need to unassign since it's on a dead server: " + server);
         if (transitionInZK) {
           // delete the node. if no node exists need not bother.
           deleteClosingOrClosedNode(region, server);
@@ -1997,40 +2007,37 @@ public class AssignmentManager extends ZooKeeperListener {
       }
       try {
         // Send CLOSE RPC
-        if (serverManager.sendRegionClose(server, region,
-          versionOfClosingNode, dest, transitionInZK)) {
-          LOG.debug("Sent CLOSE to " + server + " for region " +
-            region.getRegionNameAsString());
+        if (serverManager.sendRegionClose(server, region, versionOfClosingNode, dest,
+          transitionInZK)) {
+          LOG.debug("Sent CLOSE to " + server + " for region " + region.getRegionNameAsString());
           if (useZKForAssignment && !transitionInZK && state != null) {
             // Retry to make sure the region is
             // closed so as to avoid double assignment.
-            unassign(region, state, versionOfClosingNode,
-              dest, transitionInZK, src);
+            unassign(region, state, versionOfClosingNode, dest, transitionInZK, src);
           }
           return;
         }
         // This never happens. Currently regionserver close always return true.
         // Todo; this can now happen (0.96) if there is an exception in a coprocessor
-        LOG.warn("Server " + server + " region CLOSE RPC returned false for " +
-          region.getRegionNameAsString());
+        LOG.warn("Server " + server + " region CLOSE RPC returned false for "
+            + region.getRegionNameAsString());
       } catch (Throwable t) {
         long sleepTime = 0;
         Configuration conf = this.server.getConfiguration();
         if (t instanceof RemoteException) {
-          t = ((RemoteException)t).unwrapRemoteException();
+          t = ((RemoteException) t).unwrapRemoteException();
         }
         boolean logRetries = true;
-        if (t instanceof RegionServerAbortedException
-            || t instanceof RegionServerStoppedException
+        if (t instanceof RegionServerAbortedException || t instanceof RegionServerStoppedException
             || t instanceof ServerNotRunningYetException) {
           // RS is aborting or stopping, we cannot offline the region since the region may need
-          // to do WAL recovery. Until we see  the RS expiration, we should retry.
+          // to do WAL recovery. Until we see the RS expiration, we should retry.
           sleepTime = 1L + conf.getInt(RpcClient.FAILED_SERVER_EXPIRY_KEY,
             RpcClient.FAILED_SERVER_EXPIRY_DEFAULT);
 
         } else if (t instanceof NotServingRegionException) {
-          LOG.debug("Offline " + region.getRegionNameAsString()
-            + ", it's not any more on " + server, t);
+          LOG.debug(
+            "Offline " + region.getRegionNameAsString() + ", it's not any more on " + server, t);
           if (transitionInZK) {
             deleteClosingOrClosedNode(region, server);
           }
@@ -2038,39 +2045,38 @@ public class AssignmentManager extends ZooKeeperListener {
             regionOffline(region);
           }
           return;
-        } else if ((t instanceof FailedServerException) || (state != null &&
-            t instanceof RegionAlreadyInTransitionException)) {
-          if (t instanceof FailedServerException) {
-            sleepTime = 1L + conf.getInt(RpcClient.FAILED_SERVER_EXPIRY_KEY,
+        } else if ((t instanceof FailedServerException)
+            || (state != null && t instanceof RegionAlreadyInTransitionException)) {
+              if (t instanceof FailedServerException) {
+                sleepTime = 1L + conf.getInt(RpcClient.FAILED_SERVER_EXPIRY_KEY,
                   RpcClient.FAILED_SERVER_EXPIRY_DEFAULT);
-          } else {
-            // RS is already processing this region, only need to update the timestamp
-            LOG.debug("update " + state + " the timestamp.");
-            state.updateTimestampToNow();
-            if (maxWaitTime < 0) {
-              maxWaitTime =
-                  EnvironmentEdgeManager.currentTime()
-                      + conf.getLong(ALREADY_IN_TRANSITION_WAITTIME,
-                        DEFAULT_ALREADY_IN_TRANSITION_WAITTIME);
+              } else {
+                // RS is already processing this region, only need to update the timestamp
+                LOG.debug("update " + state + " the timestamp.");
+                state.updateTimestampToNow();
+                if (maxWaitTime < 0) {
+                  maxWaitTime = EnvironmentEdgeManager.currentTime() + conf.getLong(
+                    ALREADY_IN_TRANSITION_WAITTIME, DEFAULT_ALREADY_IN_TRANSITION_WAITTIME);
+                }
+                long now = EnvironmentEdgeManager.currentTime();
+                if (now < maxWaitTime) {
+                  LOG.debug("Region is already in transition; " + "waiting up to "
+                      + (maxWaitTime - now) + "ms",
+                    t);
+                  sleepTime = 100;
+                  i--; // reset the try count
+                  logRetries = false;
+                }
+              }
             }
-            long now = EnvironmentEdgeManager.currentTime();
-            if (now < maxWaitTime) {
-              LOG.debug("Region is already in transition; "
-                + "waiting up to " + (maxWaitTime - now) + "ms", t);
-              sleepTime = 100;
-              i--; // reset the try count
-              logRetries = false;
-            }
-          }
-        }
 
         try {
           if (sleepTime > 0) {
             Thread.sleep(sleepTime);
           }
         } catch (InterruptedException ie) {
-          LOG.warn("Failed to unassign "
-            + region.getRegionNameAsString() + " since interrupted", ie);
+          LOG.warn("Failed to unassign " + region.getRegionNameAsString() + " since interrupted",
+            ie);
           Thread.currentThread().interrupt();
           if (state != null) {
             regionStates.updateRegionState(region, State.FAILED_CLOSE);
@@ -2079,16 +2085,29 @@ public class AssignmentManager extends ZooKeeperListener {
         }
 
         if (logRetries) {
-          LOG.info("Server " + server + " returned " + t + " for "
-            + region.getRegionNameAsString() + ", try=" + i
-            + " of " + this.maximumAttempts, t);
+          LOG.info("Server " + server + " returned " + t + " for " + region.getRegionNameAsString()
+              + ", try=" + i + " of " + this.maximumAttempts,
+            t);
           // Presume retry or server will expire.
         }
       }
     }
-    // Run out of attempts
-    if (state != null) {
-      regionStates.updateRegionState(region, State.FAILED_CLOSE);
+
+    long sleepTime = backoffPolicy.getBackoffTime(retryConfig,
+      getFailedAttempts(encodedName, failedCloseTracker));
+    if (failedCloseCount.incrementAndGet() <= maximumAttempts && sleepTime > 0) {
+      if (failedCloseTracker.containsKey(encodedName)) {
+        // Sleep before trying unassign if this region has failed to close before
+        scheduledThreadPoolExecutor.schedule(new DelayedUnAssignCallable(this, region, state,
+            versionOfClosingNode, dest, transitionInZK, src),
+          sleepTime, TimeUnit.MILLISECONDS);
+      }
+    } else {
+      // Run out of attempts
+      if (state != null) {
+        regionStates.updateRegionState(region, State.FAILED_CLOSE);
+      }
+      failedCloseTracker.remove(encodedName);
     }
   }
 
@@ -3623,7 +3642,7 @@ public class AssignmentManager extends ZooKeeperListener {
     if (failedOpenTracker.containsKey(regionInfo.getEncodedName())) {
       // Sleep before reassigning if this region has failed to open before
       long sleepTime = backoffPolicy.getBackoffTime(retryConfig,
-          getFailedAttempts(regionInfo.getEncodedName()));
+        getFailedAttempts(regionInfo.getEncodedName(), failedOpenTracker));
       invokeAssignLater(regionInfo, forceNewPlan, sleepTime);
     } else {
       // Immediately reassign if this region has never failed an open before
@@ -3631,8 +3650,9 @@ public class AssignmentManager extends ZooKeeperListener {
     }
   }
 
-  private int getFailedAttempts(String regionName) {
-    AtomicInteger failedCount = failedOpenTracker.get(regionName);
+  private int getFailedAttempts(String regionName,
+      ConcurrentHashMap<String, AtomicInteger> tracker) {
+    AtomicInteger failedCount = tracker.get(regionName);
     if (failedCount != null) {
       return failedCount.get();
     } else {
@@ -3996,6 +4016,7 @@ public class AssignmentManager extends ZooKeeperListener {
     }
     regionStates.updateRegionState(hri, RegionState.State.CLOSED);
     sendRegionClosedNotification(hri);
+    failedCloseTracker.remove(hri.getEncodedName());
     // This below has to do w/ online enable/disable of a table
     removeClosedRegion(hri);
     invokeAssign(hri, false);
@@ -4788,6 +4809,38 @@ public class AssignmentManager extends ZooKeeperListener {
     @Override
     public void run() {
       threadPoolExecutorService.submit(callable);
+    }
+  }
+
+  private class DelayedUnAssignCallable implements Runnable {
+    AssignmentManager am;
+    HRegionInfo region;
+    RegionState state;
+    int versionOfClosingNode;
+    ServerName dest;
+    boolean transitionInZK;
+    ServerName src;
+
+    public DelayedUnAssignCallable(AssignmentManager am, HRegionInfo region, RegionState state,
+        int versionOfClosingNode, ServerName dest, boolean transitionInZK, ServerName src) {
+      this.am = am;
+      this.region = region;
+      this.state = state;
+      this.versionOfClosingNode = versionOfClosingNode;
+      this.dest = dest;
+      this.transitionInZK = transitionInZK;
+      this.src = src;
+    }
+
+    @Override
+    public void run() {
+      threadPoolExecutorService.submit(new Runnable() {
+
+        @Override
+        public void run() {
+          am.unassign(region, state, versionOfClosingNode, dest, transitionInZK, src);
+        }
+      });
     }
   }
 
