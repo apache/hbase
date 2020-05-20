@@ -2270,6 +2270,20 @@ public class TestFromClientSide5 extends FromClientSideBase {
         // expected
       }
     }
+    //test cell size no limit
+    final TableName noLimitTable = TableName.valueOf("testCellSizeNoLimit");
+    TableDescriptorBuilder.ModifyableTableDescriptor noLimitTableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(noLimitTable)
+        .setValue(HRegion.HBASE_MAX_CELL_SIZE_KEY, Integer.toString(0));
+    noLimitTableDescriptor.setColumnFamily(familyDescriptor);
+    try (Admin admin = TEST_UTIL.getAdmin()) {
+      admin.createTable(noLimitTableDescriptor);
+    }
+    // Will succeed
+    try (Table nt = TEST_UTIL.getConnection().getTable(noLimitTable)) {
+      nt.put(new Put(ROW).addColumn(FAMILY, QUALIFIER,  new byte[9 * 1024 * 1024]));
+      nt.append(new Append(ROW).addColumn(FAMILY, QUALIFIER, new byte[2 * 1024 * 1024]));
+    }
   }
 
   @Test
