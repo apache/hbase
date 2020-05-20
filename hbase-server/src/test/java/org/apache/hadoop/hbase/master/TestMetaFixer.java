@@ -26,11 +26,15 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BooleanSupplier;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
@@ -43,6 +47,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
@@ -141,7 +146,7 @@ public class TestMetaFixer {
     assertEquals(0, ris.size());
   }
 
-  private static void makeOverlap(MasterServices services, RegionInfo a, RegionInfo b)
+  private static RegionInfo makeOverlap(MasterServices services, RegionInfo a, RegionInfo b)
       throws IOException {
     RegionInfo overlapRegion = RegionInfoBuilder.newBuilder(a.getTable()).
         setStartKey(a.getStartKey()).
@@ -152,6 +157,7 @@ public class TestMetaFixer {
             System.currentTimeMillis())));
     // TODO: Add checks at assign time to PREVENT being able to assign over existing assign.
     services.getAssignmentManager().assign(overlapRegion);
+    return overlapRegion;
   }
 
   private void testOverlapCommon(final TableName tn) throws Exception {
@@ -167,7 +173,6 @@ public class TestMetaFixer {
     makeOverlap(services, ris.get(1), ris.get(3));
     makeOverlap(services, ris.get(2), ris.get(3));
     makeOverlap(services, ris.get(2), ris.get(4));
-    Threads.sleep(10000);
   }
 
   @Test
@@ -309,6 +314,74 @@ public class TestMetaFixer {
   }
 
   /**
+   * This test covers the case that one of merged parent regions is a merged child region that
+   * has not been GCed but there is no reference files anymore. In this case, it will kick off
+   * a GC procedure, but no merge will happen.
+   */
+  @Test
+  public void testMergeWithMergedChildRegion() throws Exception {
+    TableName tn = TableName.valueOf(this.name.getMethodName());
+    Table t = TEST_UTIL.createMultiRegionTable(tn, HConstants.CATALOG_FAMILY);
+    List<RegionInfo> ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), tn);
+    assertTrue(ris.size() > 5);
+    HMaster services = TEST_UTIL.getHBaseCluster().getMaster();
+    CatalogJanitor cj = services.getCatalogJanitor();
+    cj.scan();
+    CatalogJanitor.Report report = cj.getLastReport();
+    assertTrue(report.isEmpty());
+    RegionInfo overlapRegion = makeOverlap(services, ris.get(1), ris.get(2));
+
+    cj.scan();
+    report = cj.getLastReport();
+    assertEquals(2, report.getOverlaps().size());
+
+    // Mark it as a merged child region.
+    RegionInfo fakedParentRegion = RegionInfoBuilder.newBuilder(tn).
+      setStartKey(overlapRegion.getStartKey()).
+      build();
+
+    Table meta = MetaTableAccessor.getMetaHTable(TEST_UTIL.getConnection());
+    Put putOfMerged = MetaTableAccessor.makePutFromRegionInfo(overlapRegion,
+      HConstants.LATEST_TIMESTAMP);
+    String qualifier = String.format(HConstants.MERGE_QUALIFIER_PREFIX_STR + "%04d", 0);
+    putOfMerged.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(
+      putOfMerged.getRow()).
+      setFamily(HConstants.CATALOG_FAMILY).
+      setQualifier(Bytes.toBytes(qualifier)).
+      setTimestamp(putOfMerged.getTimestamp()).
+      setType(Cell.Type.Put).
+      setValue(RegionInfo.toByteArray(fakedParentRegion)).
+      build());
+
+    meta.put(putOfMerged);
+
+    MetaFixer fixer = new MetaFixer(services);
+    fixer.fixOverlaps(report);
+
+    // Wait until all procedures settled down
+    await(200, () -> {
+      return services.getMasterProcedureExecutor().getActiveProcIds().isEmpty();
+    });
+
+    // No merge is done, overlap is still there.
+    cj.scan();
+    report = cj.getLastReport();
+    assertEquals(2, report.getOverlaps().size());
+
+    fixer.fixOverlaps(report);
+
+    // Wait until all procedures settled down
+    await(200, () -> {
+      return services.getMasterProcedureExecutor().getActiveProcIds().isEmpty();
+    });
+
+    // Merge is done and no more overlaps
+    cj.scan();
+    report = cj.getLastReport();
+    assertEquals(0, report.getOverlaps().size());
+  }
+
+  /**
    * Make it so a big overlap spans many Regions, some of which are non-contiguous. Make it so
    * we can fix this condition. HBASE-24247
    */
@@ -336,7 +409,6 @@ public class TestMetaFixer {
     while (!services.getMasterProcedureExecutor().isFinished(pid)) {
       Threads.sleep(100);
     }
-    Threads.sleep(10000);
     services.getCatalogJanitor().scan();
     report = services.getCatalogJanitor().getLastReport();
     assertEquals(1, MetaFixer.calculateMerges(10, report.getOverlaps()).size());
