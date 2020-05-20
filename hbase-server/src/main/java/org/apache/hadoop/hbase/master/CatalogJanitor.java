@@ -424,7 +424,11 @@ public class CatalogJanitor extends ScheduledChore {
       // It doesn't have merge qualifier, no need to clean
       return true;
     }
-    return cleanMergeRegion(region, parents);
+
+    // If a parent region is a merged child region and GC has not kicked in/finish its work yet,
+    // return false in this case to avoid kicking in a merge, trying later.
+    cleanMergeRegion(region, parents);
+    return false;
   }
 
   /**
