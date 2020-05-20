@@ -20,7 +20,9 @@ package org.apache.hadoop.hbase.master.procedure;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.rsgroup.RSGroupAdminEndpoint;
 import org.apache.hadoop.hbase.rsgroup.RSGroupBasedLoadBalancer;
@@ -55,6 +57,9 @@ public class TestSCPWithReplicasWithRSGroup extends TestSCPBase {
 
   @Test
   public void testCrashTargetRs() throws Exception {
+    HMaster master = util.getHBaseCluster().getMaster();
+    util.waitFor(60000, (Predicate<Exception>) () ->
+        master.isInitialized() && ((RSGroupBasedLoadBalancer) master.getLoadBalancer()).isOnline());
     testRecoveryAndDoubleExecution(false, false);
   }
 }
