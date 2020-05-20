@@ -29,6 +29,7 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -86,7 +87,9 @@ public class SlowLogRecorder {
     this.disruptor.setDefaultExceptionHandler(new DisruptorExceptionHandler());
 
     // initialize ringbuffer event handler
-    this.logEventHandler = new LogEventHandler(this.eventCount);
+    final boolean isSlowLogTableEnabled = conf.getBoolean(HConstants.SLOW_LOG_SYS_TABLE_ENABLED_KEY,
+      HConstants.DEFAULT_SLOW_LOG_SYS_TABLE_ENABLED_KEY);
+    this.logEventHandler = new LogEventHandler(this.eventCount, isSlowLogTableEnabled, conf);
     this.disruptor.handleEventsWith(new LogEventHandler[]{this.logEventHandler});
     this.disruptor.start();
   }
@@ -158,6 +161,15 @@ public class SlowLogRecorder {
       ringBuffer.get(seqId).load(rpcLogDetails);
     } finally {
       ringBuffer.publish(seqId);
+    }
+  }
+
+  /**
+   * Poll from queueForSysTable and insert 100 records in hbase:slowlog table in single batch
+   */
+  public void addAllLogsToSysTable() {
+    if (this.logEventHandler != null) {
+      this.logEventHandler.addAllLogsToSysTable();
     }
   }
 

@@ -139,6 +139,7 @@ import org.apache.hadoop.hbase.regionserver.handler.CloseRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.RSProcedureHandler;
 import org.apache.hadoop.hbase.regionserver.handler.RegionReplicaFlushHandler;
 import org.apache.hadoop.hbase.regionserver.slowlog.SlowLogRecorder;
+import org.apache.hadoop.hbase.regionserver.slowlog.SlowLogTableOpsChore;
 import org.apache.hadoop.hbase.regionserver.throttle.FlushThroughputControllerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationLoad;
@@ -426,6 +427,8 @@ public class HRegionServer extends HasThread implements
   private final int shortOperationTimeout;
 
   private final RegionServerAccounting regionServerAccounting;
+
+  private SlowLogTableOpsChore slowLogTableOpsChore = null;
 
   // Block cache
   private BlockCache blockCache;
@@ -2033,6 +2036,9 @@ public class HRegionServer extends HasThread implements
     if (this.fsUtilizationChore != null) {
       choreService.scheduleChore(fsUtilizationChore);
     }
+    if (this.slowLogTableOpsChore != null) {
+      choreService.scheduleChore(slowLogTableOpsChore);
+    }
 
     // Leases is not a Thread. Internally it runs a daemon thread. If it gets
     // an unhandled exception, it will just exit.
@@ -2076,6 +2082,14 @@ public class HRegionServer extends HasThread implements
     this.compactionChecker = new CompactionChecker(this, this.compactionCheckFrequency, this);
     this.periodicFlusher = new PeriodicMemStoreFlusher(this.flushCheckFrequency, this);
     this.leaseManager = new LeaseManager(this.threadWakeFrequency);
+
+    final boolean isSlowLogTableEnabled = conf.getBoolean(HConstants.SLOW_LOG_SYS_TABLE_ENABLED_KEY,
+      HConstants.DEFAULT_SLOW_LOG_SYS_TABLE_ENABLED_KEY);
+    if (isSlowLogTableEnabled) {
+      // default chore duration: 10 min
+      final int duration = conf.getInt("hbase.slowlog.systable.chore.duration", 10 * 60 * 1000);
+      slowLogTableOpsChore = new SlowLogTableOpsChore(this, duration, this.slowLogRecorder);
+    }
 
     // Create the thread to clean the moved regions list
     movedRegionsCleaner = MovedRegionsCleaner.create(this);
@@ -2569,6 +2583,7 @@ public class HRegionServer extends HasThread implements
       choreService.cancelChore(storefileRefresher);
       choreService.cancelChore(movedRegionsCleaner);
       choreService.cancelChore(fsUtilizationChore);
+      choreService.cancelChore(slowLogTableOpsChore);
       // clean up the remaining scheduled chores (in case we missed out any)
       choreService.shutdown();
     }
