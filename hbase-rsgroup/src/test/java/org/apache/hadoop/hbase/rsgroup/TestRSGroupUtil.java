@@ -17,34 +17,45 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+@Category({MediumTests.class})
 public class TestRSGroupUtil {
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRSGroupUtil.class);
 
-  private static Admin admin;
+  private static final Logger LOG = LoggerFactory.getLogger(TestRSGroupUtil.class);
+
+  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   private static HMaster master;
 
   private static RSGroupAdminClient rsGroupAdminClient;
 
   private static final String GROUP_NAME = "rsg";
-
-  private static final String NAMESPACE_NAME = "ns";
 
   private static RSGroupInfoManager rsGroupInfoManager;
 
@@ -57,24 +68,20 @@ public class TestRSGroupUtil {
       RSGroupAdminEndpoint.class.getName());
     UTIL.startMiniCluster(5);
     master = UTIL.getMiniHBaseCluster().getMaster();
-    admin = UTIL.getAdmin();
+
+    UTIL.waitFor(60000, (Predicate<Exception>) () ->
+        master.isInitialized() && ((RSGroupBasedLoadBalancer) master.getLoadBalancer()).isOnline());
+
     rsGroupAdminClient = new RSGroupAdminClient(UTIL.getConnection());
 
-    HRegionServer rs = UTIL.getHBaseCluster().getRegionServer(0);
-    rsGroupAdminClient.addRSGroup(GROUP_NAME);
-    rsGroupAdminClient.moveServers(Collections.singleton(rs.getServerName().getAddress()), GROUP_NAME);
-    admin.createNamespace(NamespaceDescriptor.create(NAMESPACE_NAME)
-      .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, GROUP_NAME)
-      .build());
-
-    rsGroupInfoManager = RSGroupInfoManagerImpl.getInstance(master);
-    rsGroupInfoManager.start();
+    List<RSGroupAdminEndpoint> cps =
+        master.getMasterCoprocessorHost().findCoprocessors(RSGroupAdminEndpoint.class);
+    assertTrue(cps.size() > 0);
+    rsGroupInfoManager = cps.get(0).getGroupInfoManager();
   }
 
   @AfterClass
-  public static void tearDown() throws IOException {
-    admin.deleteNamespace(NAMESPACE_NAME);
-
+  public static void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
@@ -82,14 +89,19 @@ public class TestRSGroupUtil {
   public void rsGroupHasOnlineServer() throws IOException {
     rsGroupInfoManager.refresh();
     RSGroupInfo defaultGroup = rsGroupInfoManager.getRSGroup(RSGroupInfo.DEFAULT_GROUP);
-    Assert.assertTrue(RSGroupUtil.rsGroupHasOnlineServer(master, defaultGroup));
+    assertTrue(RSGroupUtil.rsGroupHasOnlineServer(master, defaultGroup));
 
+    HRegionServer rs = UTIL.getHBaseCluster().getRegionServer(0);
+    rsGroupAdminClient.addRSGroup(GROUP_NAME);
+    rsGroupAdminClient.moveServers(Collections.singleton(rs.getServerName().getAddress()), GROUP_NAME);
+
+    rsGroupInfoManager.refresh();
     RSGroupInfo rsGroup = rsGroupInfoManager.getRSGroup(GROUP_NAME);
-    Assert.assertTrue(RSGroupUtil.rsGroupHasOnlineServer(master, rsGroup));
+    assertTrue(RSGroupUtil.rsGroupHasOnlineServer(master, rsGroup));
 
     rsGroupAdminClient.addRSGroup("empty");
     rsGroupInfoManager.refresh();
     RSGroupInfo emptyGroup = rsGroupInfoManager.getRSGroup("empty");
-    Assert.assertFalse(RSGroupUtil.rsGroupHasOnlineServer(master, emptyGroup));
+    assertFalse(RSGroupUtil.rsGroupHasOnlineServer(master, emptyGroup));
   }
 }
