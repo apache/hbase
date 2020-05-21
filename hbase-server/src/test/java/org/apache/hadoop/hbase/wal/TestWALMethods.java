@@ -142,6 +142,20 @@ public class TestWALMethods {
   }
 
   @Test
+  public void testWALSetTable() {
+    WAL.Entry entry = createTestLogEntry(0);
+    assertEquals("Table name in the WALKey is not correct",
+      TEST_TABLE, entry.getKey().getTableName());
+
+    TableName tableName = TableName.valueOf("TEST_TABLE2");
+    entry.getKey().setTableName(tableName);
+    assertEquals("Table name in the WALKey is not correct",
+      tableName, entry.getKey().getTableName());
+    assertEquals("Table name in the WALKey is not correct",
+      "TEST_TABLE2", entry.getKey().getTableName().getNameAsString());
+  }
+
+  @Test
   public void testEntrySink() throws Exception {
     EntryBuffers sink = new EntryBuffers(new PipelineController(), 1*1024*1024);
     for (int i = 0; i < 1000; i++) {

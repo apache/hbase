@@ -329,7 +329,7 @@ public class WALKeyImpl implements WALKey {
    *
    * @param encodedRegionName Encoded name of the region as returned by
    *                          <code>HRegionInfo#getEncodedNameAsBytes()</code>.
-   * @param tablename
+   * @param tablename table name to which this WALKey belongs to
    * @param logSeqNum
    * @param nonceGroup
    * @param nonce
@@ -408,6 +408,11 @@ public class WALKeyImpl implements WALKey {
   @Override
   public TableName getTableName() {
     return tablename;
+  }
+
+  @Override
+  public void setTableName(TableName tablename) {
+    this.tablename = tablename;
   }
 
   /**

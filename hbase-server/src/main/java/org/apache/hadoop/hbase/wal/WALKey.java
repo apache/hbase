@@ -58,6 +58,14 @@ public interface WALKey extends SequenceId, Comparable<WALKey> {
   TableName getTableName();
 
   /**
+   * set the table name for WALKey. This is mainly for the purpose of
+   * when we want to change the table name in the WALKey.
+   * For example:
+   * replicating across different table names in two different clusters
+   */
+  void setTableName(TableName tableName);
+
+  /**
    * @return the write time
    */
   long getWriteTime();
