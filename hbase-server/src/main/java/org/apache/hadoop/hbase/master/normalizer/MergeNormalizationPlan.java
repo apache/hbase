@@ -69,8 +69,11 @@ public class MergeNormalizationPlan implements NormalizationPlan {
   public void execute(Admin admin) {
     LOG.info("Executing merging normalization plan: " + this);
     try {
+      // Do not use force=true as corner cases can happen, non adjacent regions,
+      // merge with a merged child region with no GC done yet, it is going to
+      // cause all different issues.
       admin.mergeRegionsAsync(firstRegion.getEncodedNameAsBytes(),
-        secondRegion.getEncodedNameAsBytes(), true);
+        secondRegion.getEncodedNameAsBytes(), false);
     } catch (IOException ex) {
       LOG.error("Error during region merge: ", ex);
     }
