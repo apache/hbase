@@ -915,7 +915,7 @@ module Hbase
     end
 
     def build_shipped_stats(source_load, r_source_string)
-      r_source_string << if source_load.getTimeStampOfLastShippedOp.zero?
+      r_source_string << if source_load.getTimestampOfLastShippedOp.zero?
                            "\n           " \
                            'No Ops shipped since last restart'
                          else
@@ -923,7 +923,7 @@ module Hbase
                            source_load.getAgeOfLastShippedOp.to_s +
                            ', TimeStampOfLastShippedOp=' +
                            java.util.Date.new(source_load
-                             .getTimeStampOfLastShippedOp).toString
+                             .getTimestampOfLastShippedOp).toString
                          end
     end
 
