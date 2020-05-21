@@ -49,6 +49,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import javax.servlet.ServletException;
@@ -387,6 +388,8 @@ public class HMaster extends HRegionServer implements MasterServices {
   private final LockManager lockManager = new LockManager(this);
 
   private LoadBalancer balancer;
+  // a lock to prevent concurrent normalization actions.
+  private final ReentrantLock normalizationInProgressLock = new ReentrantLock();
   private RegionNormalizer normalizer;
   private BalancerChore balancerChore;
   private RegionNormalizerChore normalizerChore;
@@ -787,10 +790,11 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.balancer = LoadBalancerFactory.getLoadBalancer(conf);
     this.normalizer = RegionNormalizerFactory.getRegionNormalizer(conf);
     this.normalizer.setMasterServices(this);
-    this.normalizer.setMasterRpcServices((MasterRpcServices)rpcServices);
     this.loadBalancerTracker = new LoadBalancerTracker(zooKeeper, this);
     this.loadBalancerTracker.start();
 
+    this.normalizer = RegionNormalizerFactory.getRegionNormalizer(conf);
+    this.normalizer.setMasterServices(this);
     this.regionNormalizerTracker = new RegionNormalizerTracker(zooKeeper, this);
     this.regionNormalizerTracker.start();
 
@@ -1857,7 +1861,6 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   @Override
-  @VisibleForTesting
   public RegionNormalizer getRegionNormalizer() {
     return this.normalizer;
   }
@@ -1865,9 +1868,9 @@ public class HMaster extends HRegionServer implements MasterServices {
   /**
    * Perform normalization of cluster (invoked by {@link RegionNormalizerChore}).
    *
-   * @return true if normalization step was performed successfully, false otherwise
-   *    (specifically, if HMaster hasn't been initialized properly or normalization
-   *    is globally disabled)
+   * @return true if an existing normalization was already in progress, or if a new normalization
+   *   was performed successfully; false otherwise (specifically, if HMaster finished initializing
+   *   or normalization is globally disabled).
    */
   public boolean normalizeRegions() throws IOException {
     if (regionNormalizerTracker == null || !regionNormalizerTracker.isNormalizerOn()) {
@@ -1881,34 +1884,42 @@ public class HMaster extends HRegionServer implements MasterServices {
       return false;
     }
 
-    synchronized (this.normalizer) {
+    if (!normalizationInProgressLock.tryLock()) {
       // Don't run the normalizer concurrently
+      LOG.info("Normalization already in progress. Skipping request.");
+      return true;
+    }
 
-      List<TableName> allEnabledTables = new ArrayList<>(
-        this.tableStateManager.getTablesInStates(TableState.State.ENABLED));
-
+    try {
+      final List<TableName> allEnabledTables = new ArrayList<>(
+        tableStateManager.getTablesInStates(TableState.State.ENABLED));
       Collections.shuffle(allEnabledTables);
 
-      for (TableName table : allEnabledTables) {
-        TableDescriptor tblDesc = getTableDescriptors().get(table);
-        if (table.isSystemTable() || (tblDesc != null &&
-            !tblDesc.isNormalizationEnabled())) {
-          LOG.trace("Skipping normalization for {}, as it's either system"
-              + " table or doesn't have auto normalization turned on", table);
-          continue;
-        }
+      try (final Admin admin = clusterConnection.getAdmin()) {
+        for (TableName table : allEnabledTables) {
+          if (table.isSystemTable()) {
+            continue;
+          }
+          final TableDescriptor tblDesc = getTableDescriptors().get(table);
+          if (tblDesc != null && !tblDesc.isNormalizationEnabled()) {
+            LOG.debug("Skipping table {} because normalization is disabled in its"
+              + " table properties.", table);
+            continue;
+          }
 
-        // make one last check that the cluster isn't shutting down before proceeding.
-        if (skipRegionManagementAction("region normalizer")) {
-          return false;
-        }
+          // make one last check that the cluster isn't shutting down before proceeding.
+          if (skipRegionManagementAction("region normalizer")) {
+            return false;
+          }
 
-        final List<NormalizationPlan> plans = this.normalizer.computePlanForTable(table);
-        if (CollectionUtils.isEmpty(plans)) {
-          return true;
-        }
+          final List<NormalizationPlan> plans = normalizer.computePlansForTable(table);
+          if (CollectionUtils.isEmpty(plans)) {
+            LOG.debug("No normalization required for table {}.", table);
+            continue;
+          }
 
-        try (final Admin admin = clusterConnection.getAdmin()) {
+          // as of this writing, `plan.execute()` is non-blocking, so there's no artificial rate-
+          // limiting of merge requests due to this serial loop.
           for (NormalizationPlan plan : plans) {
             plan.execute(admin);
             if (plan.getType() == PlanType.SPLIT) {
@@ -1919,9 +1930,9 @@ public class HMaster extends HRegionServer implements MasterServices {
           }
         }
       }
+    } finally {
+      normalizationInProgressLock.unlock();
     }
-    // If Region did not generate any plans, it means the cluster is already balanced.
-    // Return true indicating a success.
     return true;
   }
 
