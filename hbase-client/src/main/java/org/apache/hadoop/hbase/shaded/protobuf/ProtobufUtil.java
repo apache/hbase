@@ -2843,7 +2843,10 @@ public final class ProtobufUtil {
 
   public static ReplicationLoadSink toReplicationLoadSink(
       ClusterStatusProtos.ReplicationLoadSink rls) {
-    return new ReplicationLoadSink(rls.getAgeOfLastAppliedOp(), rls.getTimeStampsOfLastAppliedOp());
+    return new ReplicationLoadSink(rls.getAgeOfLastAppliedOp(),
+        rls.getTimeStampsOfLastAppliedOp(),
+        rls.getTimestampStarted(),
+        rls.getTotalOpsProcessed());
   }
 
   public static ReplicationLoadSource toReplicationLoadSource(
@@ -3438,6 +3441,8 @@ public final class ProtobufUtil {
     return ClusterStatusProtos.ReplicationLoadSink.newBuilder()
         .setAgeOfLastAppliedOp(rls.getAgeOfLastAppliedOp())
         .setTimeStampsOfLastAppliedOp(rls.getTimestampsOfLastAppliedOp())
+        .setTimestampStarted(rls.getTimestampStarted())
+        .setTotalOpsProcessed(rls.getTotalOpsProcessed())
         .build();
   }
 

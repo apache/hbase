@@ -835,12 +835,16 @@ module Hbase
           r_source_string = '       SOURCE:'
           r_load_sink = sl.getReplicationLoadSink
           next if r_load_sink.nil?
+          if (r_load_sink.getTimestampsOfLastAppliedOp() == r_load_sink.getTimeStampStarted())
+            r_sink_string << " TimeStampStarted=" + r_load_sink.getTimeStampStarted().to_s
+            r_sink_string << ", Waiting for OPs... "
+          else
+            r_sink_string << " TimeStampStarted=" + r_load_sink.getTimeStampStarted().to_s
+            r_sink_string << ", AgeOfLastAppliedOp=" + r_load_sink.getAgeOfLastAppliedOp().to_s
+            r_sink_string << ", TimeStampsOfLastAppliedOp=" +
+               (java.util.Date.new(r_load_sink.getTimestampsOfLastAppliedOp())).toString()
+          end
 
-          r_sink_string << ' AgeOfLastAppliedOp=' +
-                           r_load_sink.getAgeOfLastAppliedOp.to_s
-          r_sink_string << ', TimeStampsOfLastAppliedOp=' +
-                           java.util.Date.new(r_load_sink
-                             .getTimestampsOfLastAppliedOp).toString
           r_load_source_map = sl.getReplicationLoadSourceMap
           build_source_string(r_load_source_map, r_source_string)
           puts(format('    %<host>s:', host: server_name.getHostname))
