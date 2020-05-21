@@ -21,6 +21,7 @@ import static org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenId
 import static org.apache.hadoop.hdfs.web.WebHdfsConstants.SWEBHDFS_TOKEN_KIND;
 import static org.apache.hadoop.hdfs.web.WebHdfsConstants.WEBHDFS_TOKEN_KIND;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -88,6 +89,10 @@ public class TestFsDelegationToken {
     fsDelegationToken.acquireDelegationToken(fileSystem);
     assertEquals(
         fsDelegationToken.getUserToken().getKind(), HDFS_DELEGATION_KIND);
+    assertNotNull(
+      "HDFS Token should exist in cache after acquired",
+      userProvider.getCurrent()
+        .getToken(HDFS_DELEGATION_KIND.toString(), fileSystem.getCanonicalServiceName()));
   }
 
   @Test
@@ -95,6 +100,10 @@ public class TestFsDelegationToken {
     fsDelegationToken.acquireDelegationToken(webHdfsFileSystem);
     assertEquals(
         fsDelegationToken.getUserToken().getKind(), WEBHDFS_TOKEN_KIND);
+    assertNotNull(
+      "Webhdfs token should exist in cache after acquired",
+      userProvider.getCurrent()
+        .getToken(WEBHDFS_TOKEN_KIND.toString(), webHdfsFileSystem.getCanonicalServiceName()));
   }
 
   @Test
@@ -102,6 +111,10 @@ public class TestFsDelegationToken {
     fsDelegationToken.acquireDelegationToken(swebHdfsFileSystem);
     assertEquals(
         fsDelegationToken.getUserToken().getKind(), SWEBHDFS_TOKEN_KIND);
+    assertNotNull(
+      "Swebhdfs token should exist in cache after acquired",
+      userProvider.getCurrent()
+        .getToken(SWEBHDFS_TOKEN_KIND.toString(), swebHdfsFileSystem.getCanonicalServiceName()));
   }
 
   @Test(expected = NullPointerException.class)
@@ -114,6 +127,10 @@ public class TestFsDelegationToken {
     fsDelegationToken
         .acquireDelegationToken(WEBHDFS_TOKEN_KIND.toString(), webHdfsFileSystem);
     assertEquals(fsDelegationToken.getUserToken().getKind(), WEBHDFS_TOKEN_KIND);
+    assertNotNull(
+      "Webhdfs token should exist in cache after acquired",
+      userProvider.getCurrent()
+        .getToken(WEBHDFS_TOKEN_KIND.toString(), webHdfsFileSystem.getCanonicalServiceName()));
   }
 
   @Test
@@ -122,5 +139,9 @@ public class TestFsDelegationToken {
         .acquireDelegationToken(
             SWEBHDFS_TOKEN_KIND.toString(), swebHdfsFileSystem);
     assertEquals(fsDelegationToken.getUserToken().getKind(), SWEBHDFS_TOKEN_KIND);
+    assertNotNull(
+      "Swebhdfs token should exist in cache after acquired",
+      userProvider.getCurrent()
+        .getToken(SWEBHDFS_TOKEN_KIND.toString(), swebHdfsFileSystem.getCanonicalServiceName()));
   }
 }
