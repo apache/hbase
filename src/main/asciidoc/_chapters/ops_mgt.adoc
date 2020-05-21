@@ -3537,14 +3537,23 @@ To enable ACL, add the following to your hbase-site.xml and restart your Master:
 [[normalizer]]
 == Region Normalizer
 
-The Region Normalizer tries to make Regions all in a table about the same in size.
-It does this by finding a rough average. Any region that is larger than twice this
-size is split. Any region that is much smaller is merged into an adjacent region.
-It is good to run the Normalizer on occasion on a down time after the cluster has
+The Region Normalizer tries to make Regions all in a table about the same in
+size. It does this by first calculating total table size and average size per
+region. It splits any region that is larger than twice this size. Any region
+that is much smaller is merged into an adjacent region. The Normalizer runs on
+a regular schedule, which is configurable. It can also be disabled entirely via
+a runtime "switch". It can be run manually via the shell or Admin API call.
+Even if normally disabled, it is good to run manually after the cluster has
 been running a while or say after a burst of activity such as a large delete.
 
+The Normalizer works well for bringing a table's region boundaries into
+alignment with the reality of data distribution after an initial effort at
+pre-splitting a table. It is also a nice compliment to the data TTL feature
+when the schema includes timestamp in the rowkey, as it will automatically
+merge away regions whose contents have expired.
+
 (The bulk of the below detail was copied wholesale from the blog by Romil Choksi at
-link:https://community.hortonworks.com/articles/54987/hbase-region-normalizer.html[HBase Region Normalizer])
+link:https://community.hortonworks.com/articles/54987/hbase-region-normalizer.html[HBase Region Normalizer]).
 
 The Region Normalizer is feature available since HBase-1.2. It runs a set of
 pre-calculated merge/split actions to resize regions that are either too
