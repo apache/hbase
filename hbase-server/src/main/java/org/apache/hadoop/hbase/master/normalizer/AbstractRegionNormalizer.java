@@ -170,6 +170,12 @@ public abstract class AbstractRegionNormalizer implements RegionNormalizer {
         + "number of regions: {}",
       table, avgRegionSize, table, tableRegions.size());
 
+    // The list of regionInfo from getRegionsOfTable() is ordered by regionName.
+    // regionName does not necessary guarantee the order by STARTKEY (let's say 'aa1', 'aa1!',
+    // in order by regionName, it will be 'aa1!' followed by 'aa1').
+    // This could result in normalizer merging non-adjacent regions into one and creates overlaps.
+    // In order to avoid that, sort the list by RegionInfo.COMPARATOR.
+    tableRegions.sort(RegionInfo.COMPARATOR);
     final List<NormalizationPlan> plans = new ArrayList<>();
     for (int candidateIdx = 0; candidateIdx < tableRegions.size() - 1; candidateIdx++) {
       final RegionInfo hri = tableRegions.get(candidateIdx);
