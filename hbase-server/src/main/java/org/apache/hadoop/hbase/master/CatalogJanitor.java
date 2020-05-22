@@ -649,7 +649,12 @@ public class CatalogJanitor extends ScheduledChore {
             } else if (ri.isOverlap(this.highestEndKeyRegionInfo)) {
               // We may have seen a region a few rows back that overlaps this one.
               addOverlap(this.highestEndKeyRegionInfo, ri);
-            } else {
+            } else if (!this.highestEndKeyRegionInfo.isNext(ri)) {
+              // Need to check the case if this.highestEndKeyRegionInfo.isNext(ri). If no,
+              // report a hole, otherwise, it is ok. For an example,
+              // previous: [aa, bb), ri: [cc, dd), highestEndKeyRegionInfo: [a, cc)
+              // In this case, it should not report a hole, as highestEndKeyRegionInfo covers
+              // the hole between previous and ri.
               addHole(this.previous, ri);
             }
           } else if (ri.isOverlap(this.highestEndKeyRegionInfo)) {
