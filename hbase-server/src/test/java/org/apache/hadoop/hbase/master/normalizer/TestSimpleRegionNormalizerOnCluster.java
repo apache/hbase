@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.normalizer;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -26,7 +27,6 @@ import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -35,6 +35,8 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.TableNamespaceManager;
 import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan.PlanType;
@@ -93,7 +95,6 @@ public class TestSimpleRegionNormalizerOnCluster {
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   public void testRegionNormalizationSplitOnCluster() throws Exception {
     testRegionNormalizationSplitOnCluster(false);
     testRegionNormalizationSplitOnCluster(true);
@@ -141,9 +142,11 @@ public class TestSimpleRegionNormalizerOnCluster {
       region.flush(true);
     }
 
-    HTableDescriptor htd = new HTableDescriptor(admin.getTableDescriptor(TABLENAME));
-    htd.setNormalizationEnabled(true);
-    admin.modifyTable(TABLENAME, htd);
+    final TableDescriptor td = TableDescriptorBuilder.newBuilder(admin.getDescriptor(TABLENAME))
+      .setNormalizationEnabled(true)
+      .build();
+
+    admin.modifyTable(td);
 
     admin.flush(TABLENAME);
 
@@ -179,8 +182,71 @@ public class TestSimpleRegionNormalizerOnCluster {
     admin.deleteTable(TABLENAME);
   }
 
+  // This test is to make sure that normalizer is only going to merge adjacent regions.
   @Test
-  @SuppressWarnings("deprecation")
+  public void testNormalizerCannotMergeNonAdjacentRegions() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    HMaster m = cluster.getMaster();
+
+    // create 5 regions with sizes to trigger merge of small regions
+    final byte[][] keys = {
+      Bytes.toBytes("aa"),
+      Bytes.toBytes("aa1"),
+      Bytes.toBytes("aa1!"),
+      Bytes.toBytes("aa2")
+    };
+
+    try (Table ht = TEST_UTIL.createTable(tableName, FAMILYNAME, keys)) {
+      // Need to get sorted list of regions here, the order is
+      // [, "aa"), ["aa", "aa1"), ["aa1", "aa1!"), ["aa1!", "aa2"), ["aa2", )
+      List<HRegion> generatedRegions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
+      generatedRegions.sort(Comparator.comparing(HRegion::getRegionInfo, RegionInfo.COMPARATOR));
+
+      // Region ["aa", "aa1") and ["aa1!", "aa2") are not adjacent, they are not supposed to
+      // merged.
+      HRegion region = generatedRegions.get(0);
+      generateTestData(region, 3);
+      region.flush(true);
+
+      region = generatedRegions.get(1);
+      generateTestData(region, 1);
+      region.flush(true);
+
+      region = generatedRegions.get(2);
+      generateTestData(region, 3);
+      region.flush(true);
+
+      region = generatedRegions.get(3);
+      generateTestData(region, 1);
+      region.flush(true);
+
+      region = generatedRegions.get(4);
+      generateTestData(region, 5);
+      region.flush(true);
+
+      final TableDescriptor td = TableDescriptorBuilder.newBuilder(admin.getDescriptor(tableName))
+        .setNormalizationEnabled(true)
+        .build();
+      admin.modifyTable(td);
+      admin.flush(tableName);
+
+      assertEquals(5, MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), tableName));
+
+      Thread.sleep(5000); // to let region load to update
+
+      // Compute the plan, no merge plan returned as they are not adjacent.
+      final List<NormalizationPlan> plans = m.getRegionNormalizer().computePlanForTable(tableName);
+      assertNull(plans);
+    } finally {
+      if (admin.tableExists(tableName)) {
+        admin.disableTable(tableName);
+        admin.deleteTable(tableName);
+      }
+    }
+  }
+
+  @Test
   public void testRegionNormalizationMergeOnCluster() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
@@ -190,7 +256,7 @@ public class TestSimpleRegionNormalizerOnCluster {
     try (Table ht = TEST_UTIL.createMultiRegionTable(tableName, FAMILYNAME, 5)) {
       // Need to get sorted list of regions here
       List<HRegion> generatedRegions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
-      Collections.sort(generatedRegions, Comparator.comparing(HRegion::getRegionInfo, RegionInfo.COMPARATOR));
+      generatedRegions.sort(Comparator.comparing(HRegion::getRegionInfo, RegionInfo.COMPARATOR));
 
       HRegion region = generatedRegions.get(0);
       generateTestData(region, 1);
@@ -213,9 +279,11 @@ public class TestSimpleRegionNormalizerOnCluster {
       region.flush(true);
     }
 
-    HTableDescriptor htd = new HTableDescriptor(admin.getTableDescriptor(tableName));
-    htd.setNormalizationEnabled(true);
-    admin.modifyTable(tableName, htd);
+    final TableDescriptor td = TableDescriptorBuilder.newBuilder(admin.getDescriptor(tableName))
+      .setNormalizationEnabled(true)
+      .build();
+
+    admin.modifyTable(td);
 
     admin.flush(tableName);
 
