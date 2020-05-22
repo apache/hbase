@@ -1955,6 +1955,9 @@ Examples:
 
 ----
 
+include::slow_log_responses_from_systable.adoc[]
+
+
 === Block Cache Monitoring
 
 Starting with HBase 0.98, the HBase Web UI includes the ability to monitor and report on the performance of the block cache.
