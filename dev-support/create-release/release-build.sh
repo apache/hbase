@@ -113,7 +113,7 @@ if [[ "$1" == "tag" ]]; then
   if [ -z "${GIT_REPO}" ]; then
     check_needed_vars ASF_USERNAME ASF_PASSWORD
   fi
-  git_force_clone
+  git_clone_overwrite
 
   # 'update_releasenotes' searches the project's Jira for issues where 'Fix Version' matches specified
   # $jira_fix_version. For most projects this is same as ${RELEASE_VERSION}. However, all the 'hbase-*'
@@ -183,7 +183,7 @@ fi
 if is_dry_run && [[ "${TAG_SAME_DRY_RUN:-}" == "true" && -d "${PROJECT}.tag" ]]; then
   ln -s "${PROJECT}.tag" "${PROJECT}"
 else
-  git_force_clone
+  git_clone_overwrite
 fi
 cd "${PROJECT}"
 git checkout "$GIT_REF"

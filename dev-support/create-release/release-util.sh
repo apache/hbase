@@ -389,12 +389,14 @@ function configure_maven {
 EOF
 }
 
-# force a clone of the repo, optionally with auth details for pushing.
-function git_force_clone {
+# clone of the repo, deleting anything that exists in the working directory named after the project.
+# optionally with auth details for pushing.
+function git_clone_overwrite {
   local asf_repo
-  if [ -d "${PROJECT}" ]; then
-    rm -rf "${PROJECT}"
+  if [ -z "${PROJECT}" ] || [ "${PROJECT}" != "${PROJECT#/}" ]; then
+    error "Project name must be defined and not start with a '/'. PROJECT='${PROJECT}'"
   fi
+  rm -rf "${PROJECT}"
 
   if [[ -z "${GIT_REPO}" ]]; then
     asf_repo="gitbox.apache.org/repos/asf/${PROJECT}.git"
@@ -415,8 +417,9 @@ function git_force_clone {
   #      The option is silently ignored for non-local repositories. see the note on git help clone
   #      for the --shared option for details.
   git clone --shared -b "${GIT_BRANCH}" -- "${GIT_REPO}" "${PROJECT}"
-  # If this was a host local git repo then add in an alterntes and remote that will
+  # If this was a host local git repo then add in an alternates and remote that will
   # work back on the host if the RM needs to do any post-processing steps, i.e. pushing the git tag
+  # for more info see 'git help remote' and 'git help repository-layout'.
   if [ -n "$HOST_GIT_REPO" ]; then
     echo "${HOST_GIT_REPO}/objects" >> "${PROJECT}/.git/objects/info/alternates"
     (cd "${PROJECT}"; git remote add host "${HOST_GIT_REPO}")
