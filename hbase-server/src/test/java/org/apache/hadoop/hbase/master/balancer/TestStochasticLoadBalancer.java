@@ -83,7 +83,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
           new int[]{2, 0, 0, 100},   // region 0 is hosted and entirely local on server 2
           new int[]{0, 100, 0, 0},   // region 1 is hosted and entirely on server 0
           new int[]{0, 100, 0, 0},   // region 2 is hosted and entirely on server 0
-          new int[]{1, 0, 100, 0},   // region 1 is hosted and entirely on server 1
+          new int[]{1, 0, 100, 0},   // region 3 is hosted and entirely on server 1
       },
 
       // Test 2: each region is 0% local on the server that hosts it
@@ -92,7 +92,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
           new int[]{0, 0, 0, 100},   // region 0 is hosted and entirely local on server 2
           new int[]{1, 100, 0, 0},   // region 1 is hosted and entirely on server 0
           new int[]{1, 100, 0, 0},   // region 2 is hosted and entirely on server 0
-          new int[]{2, 0, 100, 0},   // region 1 is hosted and entirely on server 1
+          new int[]{2, 0, 100, 0},   // region 3 is hosted and entirely on server 1
       },
 
       // Test 3: each region is 25% local on the server that hosts it (and 50% locality is possible)
@@ -101,7 +101,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
           new int[]{0, 25, 0, 50},   // region 0 is hosted and entirely local on server 2
           new int[]{1, 50, 25, 0},   // region 1 is hosted and entirely on server 0
           new int[]{1, 50, 25, 0},   // region 2 is hosted and entirely on server 0
-          new int[]{2, 0, 50, 25},   // region 1 is hosted and entirely on server 1
+          new int[]{2, 0, 50, 25},   // region 3 is hosted and entirely on server 1
       },
 
       // Test 4: each region is 25% local on the server that hosts it (and 100% locality is possible)
@@ -110,7 +110,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
           new int[]{0, 25, 0, 100},   // region 0 is hosted and entirely local on server 2
           new int[]{1, 100, 25, 0},   // region 1 is hosted and entirely on server 0
           new int[]{1, 100, 25, 0},   // region 2 is hosted and entirely on server 0
-          new int[]{2, 0, 100, 25},   // region 1 is hosted and entirely on server 1
+          new int[]{2, 0, 100, 25},   // region 3 is hosted and entirely on server 1
       },
 
       // Test 5: each region is 75% local on the server that hosts it (and 75% locality is possible everywhere)
@@ -119,7 +119,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
           new int[]{0, 75, 75, 75},   // region 0 is hosted and entirely local on server 2
           new int[]{1, 75, 75, 75},   // region 1 is hosted and entirely on server 0
           new int[]{1, 75, 75, 75},   // region 2 is hosted and entirely on server 0
-          new int[]{2, 75, 75, 75},   // region 1 is hosted and entirely on server 1
+          new int[]{2, 75, 75, 75},   // region 3 is hosted and entirely on server 1
       },
   };
 
