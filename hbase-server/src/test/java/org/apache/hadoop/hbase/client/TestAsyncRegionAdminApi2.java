@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -35,6 +36,8 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.master.CatalogJanitor;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -161,20 +164,39 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
       .getTableHRegionLocations(metaTable, tableName).get();
     RegionInfo regionA;
     RegionInfo regionB;
+    RegionInfo regionC;
+    RegionInfo mergedChildRegion = null;
 
     // merge with full name
     assertEquals(3, regionLocations.size());
     regionA = regionLocations.get(0).getRegion();
     regionB = regionLocations.get(1).getRegion();
+    regionC = regionLocations.get(2).getRegion();
     admin.mergeRegions(regionA.getRegionName(), regionB.getRegionName(), false).get();
 
     regionLocations = AsyncMetaTableAccessor
       .getTableHRegionLocations(metaTable, tableName).get();
+
     assertEquals(2, regionLocations.size());
+    for (HRegionLocation rl : regionLocations) {
+      if (regionC.compareTo(rl.getRegion()) != 0) {
+        mergedChildRegion = rl.getRegion();
+        break;
+      }
+    }
+
+    assertNotNull(mergedChildRegion);
+    // Need to wait GC for merged child region is done.
+    HMaster services = TEST_UTIL.getHBaseCluster().getMaster();
+    CatalogJanitor cj = services.getCatalogJanitor();
+    cj.cleanMergeQualifier(mergedChildRegion);
+    // Wait until all procedures settled down
+    while (!services.getMasterProcedureExecutor().getActiveProcIds().isEmpty()) {
+      Thread.sleep(200);
+    }
     // merge with encoded name
-    regionA = regionLocations.get(0).getRegion();
-    regionB = regionLocations.get(1).getRegion();
-    admin.mergeRegions(regionA.getRegionName(), regionB.getRegionName(), false).get();
+    admin.mergeRegions(regionC.getRegionName(), mergedChildRegion.getRegionName(),
+      false).get();
 
     regionLocations = AsyncMetaTableAccessor
       .getTableHRegionLocations(metaTable, tableName).get();
