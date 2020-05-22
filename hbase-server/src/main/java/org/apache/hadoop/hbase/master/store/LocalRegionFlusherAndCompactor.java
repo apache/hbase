@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.procedure2.store.region;
+package org.apache.hadoop.hbase.master.store;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -27,22 +27,26 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
+import org.apache.hadoop.hbase.procedure2.store.region.RegionProcedureStore;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
- * As long as there is no RegionServerServices for the procedure store region, we need implement the
- * flush and compaction logic by our own.
+ * As long as there is no RegionServerServices for a 'local' region, we need implement the flush and
+ * compaction logic by our own.
  * <p/>
  * The flush logic is very simple, every time after calling a modification method in
  * {@link RegionProcedureStore}, we will call the {@link #onUpdate()} method below, and in this
@@ -53,26 +57,11 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  * count, if it is above the compactMin, we will do a major compaction.
  */
 @InterfaceAudience.Private
-class RegionFlusherAndCompactor implements Closeable {
+class LocalRegionFlusherAndCompactor implements Closeable {
 
-  private static final Logger LOG = LoggerFactory.getLogger(RegionFlusherAndCompactor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(LocalRegionFlusherAndCompactor.class);
 
-  static final String FLUSH_SIZE_KEY = "hbase.procedure.store.region.flush.size";
-
-  static final long DEFAULT_FLUSH_SIZE = TableDescriptorBuilder.DEFAULT_MEMSTORE_FLUSH_SIZE;
-
-  static final String FLUSH_PER_CHANGES_KEY = "hbase.procedure.store.region.flush.per.changes";
-
-  private static final long DEFAULT_FLUSH_PER_CHANGES = 1_000_000;
-
-  static final String FLUSH_INTERVAL_MS_KEY = "hbase.procedure.store.region.flush.interval.ms";
-
-  // default to flush every 15 minutes, for safety
-  private static final long DEFAULT_FLUSH_INTERVAL_MS = TimeUnit.MINUTES.toMillis(15);
-
-  static final String COMPACT_MIN_KEY = "hbase.procedure.store.region.compact.min";
-
-  private static final int DEFAULT_COMPACT_MIN = 4;
+  private final Configuration conf;
 
   private final Abortable abortable;
 
@@ -89,6 +78,10 @@ class RegionFlusherAndCompactor implements Closeable {
   private final long flushIntervalMs;
 
   private final int compactMin;
+
+  private final Path globalArchivePath;
+
+  private final String archivedHFileSuffix;
 
   private final Thread flushThread;
 
@@ -108,38 +101,60 @@ class RegionFlusherAndCompactor implements Closeable {
 
   private volatile boolean closed = false;
 
-  RegionFlusherAndCompactor(Configuration conf, Abortable abortable, HRegion region) {
+  LocalRegionFlusherAndCompactor(Configuration conf, Abortable abortable, HRegion region,
+    long flushSize, long flushPerChanges, long flushIntervalMs, int compactMin,
+    Path globalArchivePath, String archivedHFileSuffix) {
+    this.conf = conf;
     this.abortable = abortable;
     this.region = region;
-    flushSize = conf.getLong(FLUSH_SIZE_KEY, DEFAULT_FLUSH_SIZE);
-    flushPerChanges = conf.getLong(FLUSH_PER_CHANGES_KEY, DEFAULT_FLUSH_PER_CHANGES);
-    flushIntervalMs = conf.getLong(FLUSH_INTERVAL_MS_KEY, DEFAULT_FLUSH_INTERVAL_MS);
-    compactMin = conf.getInt(COMPACT_MIN_KEY, DEFAULT_COMPACT_MIN);
-    flushThread = new Thread(this::flushLoop, "Procedure-Region-Store-Flusher");
+    this.flushSize = flushSize;
+    this.flushPerChanges = flushPerChanges;
+    this.flushIntervalMs = flushIntervalMs;
+    this.compactMin = compactMin;
+    this.globalArchivePath = globalArchivePath;
+    this.archivedHFileSuffix = archivedHFileSuffix;
+    flushThread = new Thread(this::flushLoop, region.getRegionInfo().getTable() + "-Flusher");
     flushThread.setDaemon(true);
     flushThread.start();
     compactExecutor = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder()
-      .setNameFormat("Procedure-Region-Store-Compactor").setDaemon(true).build());
+      .setNameFormat(region.getRegionInfo().getTable() + "-Store-Compactor").setDaemon(true)
+      .build());
     LOG.info("Constructor flushSize={}, flushPerChanges={}, flushIntervalMs={}, compactMin={}",
       flushSize, flushPerChanges, flushIntervalMs, compactMin);
   }
 
   // inject our flush related configurations
-  static void setupConf(Configuration conf) {
-    long flushSize = conf.getLong(FLUSH_SIZE_KEY, DEFAULT_FLUSH_SIZE);
+  static void setupConf(Configuration conf, long flushSize, long flushPerChanges,
+    long flushIntervalMs) {
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, flushSize);
-    long flushPerChanges = conf.getLong(FLUSH_PER_CHANGES_KEY, DEFAULT_FLUSH_PER_CHANGES);
     conf.setLong(HRegion.MEMSTORE_FLUSH_PER_CHANGES, flushPerChanges);
-    long flushIntervalMs = conf.getLong(FLUSH_INTERVAL_MS_KEY, DEFAULT_FLUSH_INTERVAL_MS);
     conf.setLong(HRegion.MEMSTORE_PERIODIC_FLUSH_INTERVAL, flushIntervalMs);
     LOG.info("Injected flushSize={}, flushPerChanges={}, flushIntervalMs={}", flushSize,
       flushPerChanges, flushIntervalMs);
   }
 
+  private void moveHFileToGlobalArchiveDir() throws IOException {
+    FileSystem fs = region.getRegionFileSystem().getFileSystem();
+    for (HStore store : region.getStores()) {
+      store.closeAndArchiveCompactedFiles();
+      Path storeArchiveDir = HFileArchiveUtil.getStoreArchivePath(conf, region.getRegionInfo(),
+        store.getColumnFamilyDescriptor().getName());
+      Path globalStoreArchiveDir = HFileArchiveUtil.getStoreArchivePathForArchivePath(
+        globalArchivePath, region.getRegionInfo(), store.getColumnFamilyDescriptor().getName());
+      try {
+        LocalRegionUtils.moveFilesUnderDir(fs, storeArchiveDir, globalStoreArchiveDir,
+          archivedHFileSuffix);
+      } catch (IOException e) {
+        LOG.warn("Failed to move archived hfiles from {} to global dir {}", storeArchiveDir,
+          globalStoreArchiveDir, e);
+      }
+    }
+  }
+
   private void compact() {
     try {
       region.compact(true);
-      Iterables.getOnlyElement(region.getStores()).closeAndArchiveCompactedFiles();
+      moveHFileToGlobalArchiveDir();
     } catch (IOException e) {
       LOG.error("Failed to compact procedure store region", e);
     }
@@ -156,7 +171,12 @@ class RegionFlusherAndCompactor implements Closeable {
   }
 
   private boolean needCompaction() {
-    return Iterables.getOnlyElement(region.getStores()).getStorefilesCount() >= compactMin;
+    for (Store store : region.getStores()) {
+      if (store.getStorefilesCount() >= compactMin) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private void flushLoop() {
