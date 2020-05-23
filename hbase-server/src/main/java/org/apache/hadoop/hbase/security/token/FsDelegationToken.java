@@ -50,6 +50,7 @@ public class FsDelegationToken {
   private boolean hasForwardedToken = false;
   private Token<?> userToken = null;
   private FileSystem fs = null;
+  private long renewTimePoint = -1L;
 
   /*
    * @param renewer the account name that is allowed to renew the token.
@@ -103,6 +104,7 @@ public class FsDelegationToken {
       if (userToken == null) {
         hasForwardedToken = false;
         try {
+
           userToken = fs.getDelegationToken(renewer);
           userProvider.getCurrent().addToken(userToken);
         } catch (NullPointerException npe) {
@@ -131,6 +133,25 @@ public class FsDelegationToken {
       this.userToken = null;
       this.fs = null;
     }
+  }
+
+  private boolean tokenValid(final String tokenKind, final FileSystem fs)
+    throws IOException
+  {
+    userToken = userProvider.getCurrent().getToken(tokenKind, fs.getCanonicalServiceName());
+    if(userToken != null && System.currentTimeMillis() < renewTimePoint){
+      return true;
+    }
+    if (userToken != null && System.currentTimeMillis() < renewTimePoint) {
+      try {
+        long expirationTime = userToken.renew(fs.getConf());
+        renewTimePoint = (long)(System.currentTimeMillis() + (expirationTime - System.currentTimeMillis()) * 0.75);
+      }
+      catch (Exception e) {
+        return false;
+      }
+    }
+    return false;
   }
 
   public UserProvider getUserProvider() {
