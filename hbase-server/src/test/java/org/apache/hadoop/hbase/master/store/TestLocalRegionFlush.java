@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.procedure2.store.region;
+package org.apache.hadoop.hbase.master.store;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -25,13 +25,17 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -43,17 +47,17 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ MasterTests.class, MediumTests.class })
-public class TestRegionProcedureStoreFlush {
+public class TestLocalRegionFlush {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionProcedureStoreFlush.class);
+    HBaseClassTestRule.forClass(TestLocalRegionFlush.class);
 
   private Configuration conf;
 
   private HRegion region;
 
-  private RegionFlusherAndCompactor flusher;
+  private LocalRegionFlusherAndCompactor flusher;
 
   private AtomicInteger flushCalled;
 
@@ -68,6 +72,8 @@ public class TestRegionProcedureStoreFlush {
     HStore store = mock(HStore.class);
     when(store.getStorefilesCount()).thenReturn(1);
     when(region.getStores()).thenReturn(Collections.singletonList(store));
+    when(region.getRegionInfo())
+      .thenReturn(RegionInfoBuilder.newBuilder(TableName.valueOf("hbase:local")).build());
     flushCalled = new AtomicInteger(0);
     memstoreHeapSize = new AtomicLong(0);
     memstoreOffHeapSize = new AtomicLong(0);
@@ -90,8 +96,8 @@ public class TestRegionProcedureStoreFlush {
     }
   }
 
-  private void initFlusher() {
-    flusher = new RegionFlusherAndCompactor(conf, new Abortable() {
+  private void initFlusher(long flushSize, long flushPerChanges, long flushIntervalMs) {
+    flusher = new LocalRegionFlusherAndCompactor(conf, new Abortable() {
 
       @Override
       public boolean isAborted() {
@@ -101,13 +107,12 @@ public class TestRegionProcedureStoreFlush {
       @Override
       public void abort(String why, Throwable e) {
       }
-    }, region);
+    }, region, flushSize, flushPerChanges, flushIntervalMs, 4, new Path("/tmp"), "");
   }
 
   @Test
   public void testTriggerFlushBySize() throws IOException, InterruptedException {
-    conf.setLong(RegionFlusherAndCompactor.FLUSH_SIZE_KEY, 1024 * 1024);
-    initFlusher();
+    initFlusher(1024 * 1024, 1_000_000, TimeUnit.MINUTES.toMillis(15));
     memstoreHeapSize.set(1000 * 1024);
     flusher.onUpdate();
     Thread.sleep(1000);
@@ -130,16 +135,14 @@ public class TestRegionProcedureStoreFlush {
 
   @Test
   public void testTriggerFlushByChanges() throws InterruptedException {
-    conf.setLong(RegionFlusherAndCompactor.FLUSH_PER_CHANGES_KEY, 10);
-    initFlusher();
+    initFlusher(128 * 1024 * 1024, 10, TimeUnit.MINUTES.toMillis(15));
     assertTriggerFlushByChanges(10);
     assertTriggerFlushByChanges(10);
   }
 
   @Test
   public void testPeriodicalFlush() throws InterruptedException {
-    conf.setLong(RegionFlusherAndCompactor.FLUSH_INTERVAL_MS_KEY, 1000);
-    initFlusher();
+    initFlusher(128 * 1024 * 1024, 1_000_000, TimeUnit.SECONDS.toMillis(1));
     assertEquals(0, flushCalled.get());
     Thread.sleep(1500);
     assertEquals(1, flushCalled.get());

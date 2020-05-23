@@ -20,21 +20,20 @@ package org.apache.hadoop.hbase.master.cleaner;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.io.HFileLink;
-import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.master.store.LocalStore;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * HFile cleaner that uses the timestamp of the hfile to determine if it should be deleted. By
- * default they are allowed to live for {@value #DEFAULT_TTL}
+ * Master local storage HFile cleaner that uses the timestamp of the HFile to determine if it should
+ * be deleted. By default they are allowed to live for {@value #DEFAULT_TTL}
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public class TimeToLiveHFileCleaner extends BaseTimeToLiveFileCleaner {
+public class TimeToLiveMasterLocalStoreHFileCleaner extends BaseTimeToLiveFileCleaner {
 
-  public static final String TTL_CONF_KEY = "hbase.master.hfilecleaner.ttl";
+  public static final String TTL_CONF_KEY = "hbase.master.local.store.hfilecleaner.ttl";
 
-  // default ttl = 5 minutes
-  public static final long DEFAULT_TTL = 60000 * 5;
+  // default ttl = 7 days
+  public static final long DEFAULT_TTL = 604_800_000L;
 
   @Override
   protected long getTtlMs(Configuration conf) {
@@ -43,7 +42,7 @@ public class TimeToLiveHFileCleaner extends BaseTimeToLiveFileCleaner {
 
   @Override
   protected boolean valiateFilename(Path file) {
-    return HFileLink.isBackReferencesDir(file) || HFileLink.isBackReferencesDir(file.getParent()) ||
-      StoreFileInfo.validateStoreFileName(file.getName());
+    return file.getName().endsWith(LocalStore.ARCHIVED_HFILE_SUFFIX);
   }
+
 }
