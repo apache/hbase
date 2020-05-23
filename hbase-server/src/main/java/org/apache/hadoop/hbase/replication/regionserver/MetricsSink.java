@@ -109,7 +109,7 @@ public class MetricsSink {
   }
 
   /**
-   * Gets the total number of OPs delivered to target by this sink.
+   * Gets the total number of OPs delivered to this sink.
    * @return totalAplliedOps
    */
   public long getAppliedOps() {

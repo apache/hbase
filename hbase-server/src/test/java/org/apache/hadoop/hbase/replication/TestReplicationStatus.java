@@ -134,9 +134,16 @@ public class TestReplicationStatus extends TestReplicationBase {
       assertEquals(loadSink.getTimestampStarted(), loadSink.getTimestampsOfLastAppliedOp());
       //now insert some rows on source, so that it gets delivered to target
       insertRowsOnSource();
-      Thread.sleep(10000);
-      loadSink = getLatestSinkMetric(hbaseAdmin, server);
-      assertTrue(loadSink.getTimestampsOfLastAppliedOp()>loadSink.getTimestampStarted());
+      long wait = Waiter.waitFor(UTIL2.getConfiguration(),
+        100000, new Waiter.Predicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
+          ReplicationLoadSink loadSink = getLatestSinkMetric(hbaseAdmin, server);
+          return loadSink.getTimestampsOfLastAppliedOp()>loadSink.getTimestampStarted();
+        }
+      });
+      //If wait is -1, we know predicate condition was never true
+      assertTrue(wait>=0);
     }
   }
 
