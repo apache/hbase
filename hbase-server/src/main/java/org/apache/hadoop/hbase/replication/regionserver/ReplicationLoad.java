@@ -61,7 +61,7 @@ public class ReplicationLoad {
         ClusterStatusProtos.ReplicationLoadSink.newBuilder();
     rLoadSinkBuild.setAgeOfLastAppliedOp(sinkMetrics.getAgeOfLastAppliedOp());
     rLoadSinkBuild.setTimeStampsOfLastAppliedOp(sinkMetrics.getTimestampOfLastAppliedOp());
-    rLoadSinkBuild.setTimeStampStarted(sinkMetrics.getStartTimestamp());
+    rLoadSinkBuild.setTimestampStarted(sinkMetrics.getStartTimestamp());
     rLoadSinkBuild.setTotalOpsProcessed(sinkMetrics.getAppliedOps());
     this.replicationLoadSink = rLoadSinkBuild.build();
 
