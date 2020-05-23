@@ -126,24 +126,24 @@ public class TestRegionProcedureStore extends RegionProcedureStoreTestBase {
     assertEquals(1, loader.getRunnableCount());
 
     // the row should still be there
-    assertTrue(store.region
+    assertTrue(store.localStore
       .get(new Get(Bytes.toBytes(proc3.getProcId())).setCheckExistenceOnly(true)).getExists());
-    assertTrue(store.region
+    assertTrue(store.localStore
       .get(new Get(Bytes.toBytes(proc2.getProcId())).setCheckExistenceOnly(true)).getExists());
 
     // proc2 will be deleted after cleanup, but proc3 should still be there as it holds the max proc
     // id
     store.cleanup();
-    assertTrue(store.region
+    assertTrue(store.localStore
       .get(new Get(Bytes.toBytes(proc3.getProcId())).setCheckExistenceOnly(true)).getExists());
-    assertFalse(store.region
+    assertFalse(store.localStore
       .get(new Get(Bytes.toBytes(proc2.getProcId())).setCheckExistenceOnly(true)).getExists());
 
     RegionProcedureStoreTestProcedure proc4 = new RegionProcedureStoreTestProcedure();
     store.insert(proc4, null);
     store.cleanup();
     // proc3 should also be deleted as now proc4 holds the max proc id
-    assertFalse(store.region
+    assertFalse(store.localStore
       .get(new Get(Bytes.toBytes(proc3.getProcId())).setCheckExistenceOnly(true)).getExists());
   }
 
@@ -227,7 +227,7 @@ public class TestRegionProcedureStore extends RegionProcedureStoreTestBase {
 
       @Override
       public void setResponse(Message param, CellScanner cells, Throwable errorThrowable,
-          String error) {
+        String error) {
       }
 
       @Override

@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.procedure2.store.region;
+package org.apache.hadoop.hbase.master.store;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -26,62 +26,39 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Stoppable;
-import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.cleaner.DirScanPool;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
-import org.apache.hadoop.hbase.master.cleaner.TimeToLiveProcedureWALCleaner;
-import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.LoadCounter;
-import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
+import org.apache.hadoop.hbase.master.cleaner.TimeToLiveMasterLocalStoreWALCleaner;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.junit.After;
-import org.junit.Before;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ MasterTests.class, MediumTests.class })
-public class TestRegionProcedureStoreWALCleaner {
+public class TestLocalRegionWALCleaner extends LocalRegionTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionProcedureStoreWALCleaner.class);
+    HBaseClassTestRule.forClass(TestLocalRegionWALCleaner.class);
 
-  private HBaseCommonTestingUtility htu;
-
-  private FileSystem fs;
-
-  private RegionProcedureStore store;
-
-  private ChoreService choreService;
-
-  private DirScanPool dirScanPool;
+  private static long TTL_MS = 5000;
 
   private LogCleaner logCleaner;
 
   private Path globalWALArchiveDir;
 
-  @Before
-  public void setUp() throws IOException {
-    htu = new HBaseCommonTestingUtility();
+  @Override
+  protected void postSetUp() throws IOException {
     Configuration conf = htu.getConfiguration();
-    conf.setBoolean(MemStoreLAB.USEMSLAB_KEY, false);
-    // Runs on local filesystem. Test does not need sync. Turn off checks.
-    htu.getConfiguration().setBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, false);
+    conf.setLong(TimeToLiveMasterLocalStoreWALCleaner.TTL_CONF_KEY, TTL_MS);
     Path testDir = htu.getDataTestDir();
-    fs = testDir.getFileSystem(conf);
-    CommonFSUtils.setWALRootDir(conf, testDir);
+    FileSystem fs = testDir.getFileSystem(conf);
     globalWALArchiveDir = new Path(testDir, HConstants.HREGION_OLDLOGDIR_NAME);
-    choreService = new ChoreService("Region-Procedure-Store");
-    dirScanPool = new DirScanPool(conf);
-    conf.setLong(TimeToLiveProcedureWALCleaner.TTL_CONF_KEY, 5000);
-    conf.setInt(HMaster.HBASE_MASTER_CLEANER_INTERVAL, 1000);
     logCleaner = new LogCleaner(1000, new Stoppable() {
 
       private volatile boolean stopped = false;
@@ -95,30 +72,21 @@ public class TestRegionProcedureStoreWALCleaner {
       public boolean isStopped() {
         return stopped;
       }
-    }, conf, fs, globalWALArchiveDir, dirScanPool);
+    }, conf, fs, globalWALArchiveDir, cleanerPool);
     choreService.scheduleChore(logCleaner);
-    store = RegionProcedureStoreTestHelper.createStore(conf, choreService, dirScanPool,
-      new LoadCounter());
-  }
-
-  @After
-  public void tearDown() throws IOException {
-    store.stop(true);
-    logCleaner.cancel();
-    dirScanPool.shutdownNow();
-    choreService.shutdown();
-    htu.cleanupTestDir();
   }
 
   @Test
   public void test() throws IOException, InterruptedException {
-    RegionProcedureStoreTestProcedure proc = new RegionProcedureStoreTestProcedure();
-    store.insert(proc, null);
-    store.region.flush(true);
+    region
+      .update(r -> r.put(new Put(Bytes.toBytes(1)).addColumn(CF1, QUALIFIER, Bytes.toBytes(1))));
+    region.flush(true);
+    Path testDir = htu.getDataTestDir();
+    FileSystem fs = testDir.getFileSystem(htu.getConfiguration());
     // no archived wal files yet
     assertFalse(fs.exists(globalWALArchiveDir));
-    store.walRoller.requestRollAll();
-    store.walRoller.waitUntilWalRollFinished();
+    region.requestRollAll();
+    region.waitUntilWalRollFinished();
     // should have one
     FileStatus[] files = fs.listStatus(globalWALArchiveDir);
     assertEquals(1, files.length);

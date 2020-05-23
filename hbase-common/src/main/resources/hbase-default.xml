@@ -125,7 +125,7 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.master.logcleaner.plugins</name>
-    <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveLogCleaner,org.apache.hadoop.hbase.master.cleaner.TimeToLiveProcedureWALCleaner</value>
+    <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveLogCleaner,org.apache.hadoop.hbase.master.cleaner.TimeToLiveProcedureWALCleaner,org.apache.hadoop.hbase.master.cleaner.TimeToLiveMasterLocalStoreWALCleaner</value>
     <description>A comma-separated list of BaseLogCleanerDelegate invoked by
     the LogsCleaner service. These WAL cleaners are called in order,
     so put the cleaner that prunes the most files in front. To
@@ -140,29 +140,11 @@ possible configurations would overwhelm and obscure the important.
     after which it will be cleaned by a Master thread. The value is in milliseconds.</description>
   </property>
   <property>
-    <name>hbase.master.procedurewalcleaner.ttl</name>
-    <value>604800000</value>
-    <description>How long a Procedure WAL will remain in the
-    archive directory, after which it will be cleaned
-    by a Master thread. The value is in milliseconds.</description>
-  </property>
-  <property>
     <name>hbase.master.hfilecleaner.plugins</name>
-    <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner</value>
+    <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner,org.apache.hadoop.hbase.master.cleaner.TimeToLiveMasterLocalStoreHFileCleaner</value>
     <description>A comma-separated list of BaseHFileCleanerDelegate invoked by
     the HFileCleaner service. These HFiles cleaners are called in order,
     so put the cleaner that prunes the most files in front. To
-    implement your own BaseHFileCleanerDelegate, just put it in HBase's classpath
-    and add the fully qualified class name here. Always add the above
-    default hfile cleaners in the list as they will be overwritten in
-    hbase-site.xml.</description>
-  </property>
-  <property>
-    <name>hbase.procedure.store.region.hfilecleaner.plugins</name>
-    <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner</value>
-    <description>A comma-separated list of BaseHFileCleanerDelegate invoked by
-    the RegionProcedureStore HFileCleaner service. These HFiles cleaners are
-    called in order, so put the cleaner that prunes the most files in front. To
     implement your own BaseHFileCleanerDelegate, just put it in HBase's classpath
     and add the fully qualified class name here. Always add the above
     default hfile cleaners in the list as they will be overwritten in
