@@ -457,14 +457,8 @@ public class HBaseFsck extends Configured implements Closeable {
               + retryCounter.getMaxAttempts());
           LOG.debug("Failed to create lock file " + hbckLockFilePath.getName(),
               ioe);
-          try {
-            exception = ioe;
-            retryCounter.sleepUntilNextRetry();
-          } catch (InterruptedException ie) {
-            throw (InterruptedIOException) new InterruptedIOException(
-                "Can't create lock file " + hbckLockFilePath.getName())
-            .initCause(ie);
-          }
+          exception = ioe;
+          retryCounter.sleepUntilNextRetry();
         }
       } while (retryCounter.shouldRetry());
 
@@ -518,14 +512,7 @@ public class HBaseFsck extends Configured implements Closeable {
               + (retryCounter.getAttemptTimes() + 1) + " of "
               + retryCounter.getMaxAttempts());
           LOG.debug("Failed to delete " + HBCK_LOCK_PATH, ioe);
-          try {
-            retryCounter.sleepUntilNextRetry();
-          } catch (InterruptedException ie) {
-            Thread.currentThread().interrupt();
-            LOG.warn("Interrupted while deleting lock file" +
-                HBCK_LOCK_PATH);
-            return;
-          }
+          retryCounter.sleepUntilNextRetry();
         }
       } while (retryCounter.shouldRetry());
     }
@@ -771,12 +758,7 @@ public class HBaseFsck extends Configured implements Closeable {
       LOG.warn("Fail to create znode " + hbckEphemeralNodePath + ", try=" +
           (retryCounter.getAttemptTimes() + 1) + " of " + retryCounter.getMaxAttempts());
 
-      try {
-        retryCounter.sleepUntilNextRetry();
-      } catch (InterruptedException ie) {
-        throw (InterruptedIOException) new InterruptedIOException(
-              "Can't create znode " + hbckEphemeralNodePath).initCause(ie);
-      }
+      retryCounter.sleepUntilNextRetry();
     } while (retryCounter.shouldRetry());
     return hbckZodeCreated;
   }

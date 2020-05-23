@@ -281,13 +281,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
           if (!retryCounter.shouldRetry()) {
             return false;
           }
-          try {
-            retryCounter.sleepUntilNextRetry();
-          } catch (InterruptedException e1) {
-            // restore the interrupted state
-            Thread.currentThread().interrupt();
-            return false;
-          }
+          retryCounter.sleepUntilNextRetry();
           continue outer;
         }
         if (!requiresReplication(tableDesc, entry)) {
@@ -372,13 +366,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
         if (!retryCounter.shouldRetry()) {
           return false;
         }
-        try {
-          retryCounter.sleepUntilNextRetry();
-        } catch (InterruptedException e) {
-          // restore the interrupted state
-          Thread.currentThread().interrupt();
-          return false;
-        }
+        retryCounter.sleepUntilNextRetry();
       }
     }
 

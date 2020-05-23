@@ -362,12 +362,7 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
       } catch (IOException e) {
         retryOrThrow(retryCounter, e, hostname, cmd);
       }
-      try {
-        retryCounter.sleepUntilNextRetry();
-      } catch (InterruptedException ex) {
-        // ignore
-        LOG.warn("Sleep Interrupted:", ex);
-      }
+      retryCounter.sleepUntilNextRetry();
     }
   }
 
@@ -407,12 +402,7 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
       } catch (IOException e) {
         retryOrThrow(retryCounter, e, hostname, cmd);
       }
-      try {
-        retryCounter.sleepUntilNextRetry();
-      } catch (InterruptedException ex) {
-        // ignore
-        LOG.warn("Sleep Interrupted:", ex);
-      }
+      retryCounter.sleepUntilNextRetry();
     }
   }
 

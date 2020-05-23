@@ -26,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
 
 /**
  * Operation retry accounting.
@@ -177,11 +178,11 @@ public class RetryCounter {
   /**
    * Sleep for a back off time as supplied by the backoff policy, and increases the attempts
    */
-  public void sleepUntilNextRetry() throws InterruptedException {
+  public void sleepUntilNextRetry() {
     int attempts = getAttemptTimes();
     long sleepTime = getBackoffTime();
     LOG.trace("Sleeping {} ms before retry #{}...", sleepTime, attempts);
-    retryConfig.getTimeUnit().sleep(sleepTime);
+    Uninterruptibles.sleepUninterruptibly(sleepTime, retryConfig.getTimeUnit());
     useRetry();
   }
 

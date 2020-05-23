@@ -130,11 +130,7 @@ public class RegionReplicaFlushHandler extends EventHandler {
           ServerRegionReplicaUtil.getRegionInfoForDefaultReplica(region.getRegionInfo())
             .getRegionNameAsString(),
           region.getRegionInfo().getRegionNameAsString(), counter.getAttemptTimes(), e);
-        try {
-          counter.sleepUntilNextRetry();
-        } catch (InterruptedException e1) {
-          throw new InterruptedIOException(e1.getMessage());
-        }
+        counter.sleepUntilNextRetry();
         continue;
       }
 
@@ -188,11 +184,7 @@ public class RegionReplicaFlushHandler extends EventHandler {
           break;
         }
       }
-      try {
-        counter.sleepUntilNextRetry();
-      } catch (InterruptedException e) {
-        throw new InterruptedIOException(e.getMessage());
-      }
+      counter.sleepUntilNextRetry();
     }
     region.setReadsEnabled(true);
   }

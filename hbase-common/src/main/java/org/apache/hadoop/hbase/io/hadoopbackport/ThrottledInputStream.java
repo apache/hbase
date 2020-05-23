@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
 
 /**
  * The ThrottleInputStream provides bandwidth throttling on a specified
@@ -143,14 +144,10 @@ public class ThrottledInputStream extends InputStream {
     }
   }
 
-  private void throttle() throws InterruptedIOException {
+  private void throttle() {
     long sleepTime = calSleepTimeMs();
     totalSleepTime += sleepTime;
-    try {
-      TimeUnit.MILLISECONDS.sleep(sleepTime);
-    } catch (InterruptedException e) {
-      throw new InterruptedIOException("Thread aborted");
-    }
+    Uninterruptibles.sleepUninterruptibly(sleepTime, TimeUnit.MILLISECONDS);
   }
 
   /**

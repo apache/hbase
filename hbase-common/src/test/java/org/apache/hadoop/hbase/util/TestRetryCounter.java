@@ -40,7 +40,7 @@ public class TestRetryCounter {
   private static final Logger LOG = LoggerFactory.getLogger(TestRetryCounter.class);
 
   @Test
-  public void testBasics() throws InterruptedException {
+  public void testBasics() {
     int maxAttempts = 10;
     RetryCounterFactory factory =
         new RetryCounterFactory(maxAttempts, 10, 1000);

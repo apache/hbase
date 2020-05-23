@@ -513,11 +513,7 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
           throw new RuntimeException("retries exhausted", e);
         }
       }
-      try {
-        retryCounter.sleepUntilNextRetry();
-      } catch (InterruptedException e) {
-        throw new RuntimeException(e);
-      }
+      retryCounter.sleepUntilNextRetry();
     }
   }
 
@@ -535,11 +531,7 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
           throw new RuntimeException("retries exhausted", e);
         }
       }
-      try {
-        retryCounter.sleepUntilNextRetry();
-      } catch (InterruptedException e) {
-        throw new RuntimeException(e);
-      }
+      retryCounter.sleepUntilNextRetry();
     }
   }
 

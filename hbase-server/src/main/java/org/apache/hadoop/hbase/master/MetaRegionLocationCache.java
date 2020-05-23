@@ -112,13 +112,7 @@ public class MetaRegionLocationCache extends ZKListener {
           watcher.abort("Error populating meta locations", ke);
           return;
         }
-        try {
-          retryCounter.sleepUntilNextRetry();
-        } catch (InterruptedException ie) {
-          LOG.error("Interrupted while loading meta locations from ZK", ie);
-          Thread.currentThread().interrupt();
-          return;
-        }
+        retryCounter.sleepUntilNextRetry();
       }
     }
     if (znodes == null || znodes.isEmpty()) {
@@ -182,12 +176,7 @@ public class MetaRegionLocationCache extends ZKListener {
           LOG.warn("Error getting meta location for path {}. Retries exhausted.", path, e);
           break;
         }
-        try {
-          retryCounter.sleepUntilNextRetry();
-        } catch (InterruptedException ie) {
-          Thread.currentThread().interrupt();
-          return;
-        }
+        retryCounter.sleepUntilNextRetry();
       }
     }
     if (location == null) {
