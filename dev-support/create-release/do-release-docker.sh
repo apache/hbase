@@ -316,11 +316,11 @@ if [ "${HOST_OS}" == "DARWIN" ]; then
       -i "${HOME}/.ssh/id_rsa" -N -n localhost >gpg-proxy.ssh.log 2>&1 &
   echo $! > "${WORKDIR}/gpg-proxy.ssh.pid"
 else
-  # TODO this presumes we are still trying to make a local gpg-agent available to the container.
-  #      add an option so that we can run the buid on a remote machine and get the forwarded
-  #      gpg-agent in the container. Should look like the side-car container mount above.
-  #      it is important not to do that for a local linux agent because we only want the container
-  #      to get access to the restricted extra socket on our local gpg-agent.
+  # Note that on linux we always directly mount the gpg agent's extra socket to limit what the
+  # container can ask the gpg-agent to do.
+  # When working on a remote linux machine you should be sure to forward both the remote machine's
+  # agent socket and agent extra socket to your local gpg-agent's extra socket. See the README.txt
+  # for an example.
   GPG_PROXY_MOUNT=(--mount \
       "type=bind,src=$(gpgconf --list-dir agent-extra-socket),dst=/home/${USER}/.gnupg/S.gpg-agent")
 fi
