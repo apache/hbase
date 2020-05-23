@@ -144,6 +144,7 @@ import org.apache.hadoop.hbase.master.replication.TransitPeerSyncReplicationStat
 import org.apache.hadoop.hbase.master.replication.UpdatePeerConfigProcedure;
 import org.apache.hadoop.hbase.master.slowlog.SlowLogMasterService;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
+import org.apache.hadoop.hbase.master.store.LocalStore;
 import org.apache.hadoop.hbase.master.zksyncer.MasterAddressSyncer;
 import org.apache.hadoop.hbase.master.zksyncer.MetaLocationSyncer;
 import org.apache.hadoop.hbase.mob.MobFileCleanerChore;
@@ -448,6 +449,9 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   private ProcedureExecutor<MasterProcedureEnv> procedureExecutor;
   private ProcedureStore procedureStore;
+
+  // the master local storage to store procedure data, etc.
+  private LocalStore localStore;
 
   // handle table states
   private TableStateManager tableStateManager;
@@ -913,7 +917,8 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.masterActiveTime = System.currentTimeMillis();
     // TODO: Do this using Dependency Injection, using PicoContainer, Guice or Spring.
 
-    // always initialize the MemStoreLAB as we use a region to store procedure now.
+    // always initialize the MemStoreLAB as we use a region to store data in master now, see
+    // localStore.
     initializeMemStoreChunkCreator();
     this.fileSystemManager = new MasterFileSystem(conf);
     this.walManager = new MasterWalManager(this);
@@ -959,6 +964,9 @@ public class HMaster extends HRegionServer implements MasterServices {
       DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK)) {
       this.splitWALManager = new SplitWALManager(this);
     }
+
+    // initialize local store
+    localStore = LocalStore.create(this);
     createProcedureExecutor();
     Map<Class<?>, List<Procedure<MasterProcedureEnv>>> procsByType =
       procedureExecutor.getActiveProceduresNoCopy().stream()
@@ -1447,6 +1455,8 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.executorService.startExecutorService(ExecutorType.MASTER_TABLE_OPERATIONS, 1);
     startProcedureExecutor();
 
+    // Create cleaner thread pool
+    cleanerPool = new DirScanPool(conf);
     // Start log cleaner thread
     int cleanerInterval =
       conf.getInt(HBASE_MASTER_CLEANER_INTERVAL, DEFAULT_HBASE_MASTER_CLEANER_INTERVAL);
@@ -1534,6 +1544,9 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     stopProcedureExecutor();
 
+    if (localStore != null) {
+      localStore.close(isAborted());
+    }
     if (this.walManager != null) {
       this.walManager.stop();
     }
@@ -1550,10 +1563,8 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   private void createProcedureExecutor() throws IOException {
     MasterProcedureEnv procEnv = new MasterProcedureEnv(this);
-    // Create cleaner thread pool
-    cleanerPool = new DirScanPool(conf);
-    procedureStore = new RegionProcedureStore(this, cleanerPool,
-      new MasterProcedureEnv.FsUtilsLeaseRecovery(this));
+    procedureStore =
+      new RegionProcedureStore(this, localStore, new MasterProcedureEnv.FsUtilsLeaseRecovery(this));
     procedureStore.registerListener(new ProcedureStoreListener() {
 
       @Override
