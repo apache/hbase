@@ -93,8 +93,8 @@ ARG UID
 ARG RM_USER
 RUN groupadd sshgroup && \
     useradd --create-home --shell /bin/bash --groups sshgroup --uid $UID $RM_USER && \
-	mkdir /home/$RM_USER/.ssh /home/$RM_USER/.gnupg && \
-	chown -R $RM_USER:sshgroup /home/$RM_USER/ && \
-	chmod -R 700 /home/$RM_USER/
+    mkdir /home/$RM_USER/.ssh /home/$RM_USER/.gnupg && \
+    chown -R $RM_USER:sshgroup /home/$RM_USER/ && \
+    chmod -R 700 /home/$RM_USER/
 # When we run we run sshd
 ENTRYPOINT ["/usr/sbin/sshd", "-D"]

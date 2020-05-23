@@ -17,6 +17,7 @@
 # limitations under the License.
 #
 
+set -e
 # Use the adjacent do-release-docker.sh instead, if you can.
 # Otherwise, this runs core of the release creation.
 # Will ask you questions on what to build and for logins

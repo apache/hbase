@@ -104,6 +104,7 @@ shift $((OPTIND-1))
 if (( $# > 0 )); then
   error "Arguments can only be provided with option flags, invalid args: $*"
 fi
+export DEBUG
 
 if [ -z "$WORKDIR" ] || [ ! -d "$WORKDIR" ]; then
   error "Work directory (-d) must be defined and exist. Run with -h for help."
@@ -286,7 +287,7 @@ GPG_PROXY_MOUNT=()
 if [ "${HOST_OS}" == "DARWIN" ]; then
   GPG_PROXY_MOUNT=(--mount "type=volume,src=gpgagent,dst=/home/${USER}/.gnupg/")
   echo "Setting up GPG agent proxy container needed on OS X."
-  echo "	we should clean this up for you. If that fails the container ID is below and in " \
+  echo "    we should clean this up for you. If that fails the container ID is below and in " \
       "gpg-proxy.cid"
   #TODO the key pair used should be configurable
   docker run --rm -p 62222:22 \
@@ -297,12 +298,12 @@ if [ "${HOST_OS}" == "DARWIN" ]; then
      "org.apache.hbase/gpg-agent-proxy:${IMGTAG}"
   # gotta trust the container host
   ssh-keyscan -p 62222 localhost 2>/dev/null | sort > "${WORKDIR}/gpg-agent-proxy.ssh-keyscan"
-  cat "${HOME}/.ssh/known_hosts" | sort | comm -1 -3 - "${WORKDIR}/gpg-agent-proxy.ssh-keyscan" > "${WORKDIR}/gpg-agent-proxy.known_hosts"
+  sort "${HOME}/.ssh/known_hosts" | comm -1 -3 - "${WORKDIR}/gpg-agent-proxy.ssh-keyscan" \
+      > "${WORKDIR}/gpg-agent-proxy.known_hosts"
   if [ -s "${WORKDIR}/gpg-agent-proxy.known_hosts" ]; then
-    declare host_key
     echo "Your ssh known_hosts does not include the entries for the gpg-agent proxy container."
     echo "The following entry(ies) arre missing:"
-    cat "${WORKDIR}/gpg-agent-proxy.known_hosts" | sed -e 's/^/	/'
+    sed -e 's/^/    /' "${WORKDIR}/gpg-agent-proxy.known_hosts"
     read -r -p "Okay to add these entries to ${HOME}/.ssh/known_hosts? [y/n] " ANSWER
     if [ "$ANSWER" != "y" ]; then
       error "Exiting."
@@ -310,7 +311,7 @@ if [ "${HOST_OS}" == "DARWIN" ]; then
     cat "${WORKDIR}/gpg-agent-proxy.known_hosts" >> "${HOME}/.ssh/known_hosts"
   fi
   echo "Launching ssh reverse tunnel from the container to gpg agent."
-  echo "	we should clean this up for you. If that fails the PID is in gpg-proxy.ssh.pid"
+  echo "    we should clean this up for you. If that fails the PID is in gpg-proxy.ssh.pid"
   ssh -p 62222 -R "/home/${USER}/.gnupg/S.gpg-agent:$(gpgconf --list-dir agent-extra-socket)" \
       -i "${HOME}/.ssh/id_rsa" -N -n localhost >gpg-proxy.ssh.log 2>&1 &
   echo $! > "${WORKDIR}/gpg-proxy.ssh.pid"
