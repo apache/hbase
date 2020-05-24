@@ -2160,17 +2160,12 @@ public class HStore implements Store {
 
   @Override
   public boolean canSplit() {
-    this.lock.readLock().lock();
-    try {
-      // Not split-able if we find a reference store file present in the store.
-      boolean result = !hasReferences();
-      if (!result && LOG.isDebugEnabled()) {
-        LOG.debug("Cannot split region due to reference files being there");
-      }
-      return result;
-    } finally {
-      this.lock.readLock().unlock();
+    // Not split-able if we find a reference store file present in the store.
+    boolean result = !hasReferences();
+    if (!result && LOG.isTraceEnabled()) {
+      LOG.trace(String.format("Not splittable; has references: %s", this));
     }
+    return result;
   }
 
   @Override
