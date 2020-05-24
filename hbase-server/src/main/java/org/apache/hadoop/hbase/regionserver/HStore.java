@@ -2075,17 +2075,12 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
 
   @Override
   public boolean canSplit() {
-    this.lock.readLock().lock();
-    try {
-      // Not split-able if we find a reference store file present in the store.
-      boolean result = !hasReferences();
-      if (!result) {
-        LOG.trace("Not splittable; has references: {}", this);
-      }
-      return result;
-    } finally {
-      this.lock.readLock().unlock();
+    // Not split-able if we find a reference store file present in the store.
+    boolean result = !hasReferences();
+    if (!result) {
+      LOG.trace("Not splittable; has references: {}", this);
     }
+    return result;
   }
 
   /**
