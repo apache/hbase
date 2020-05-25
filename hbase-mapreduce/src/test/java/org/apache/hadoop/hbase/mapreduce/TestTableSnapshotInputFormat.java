@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import static org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl.SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_DEFAULT;
 import static org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl.SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_KEY;
+import static org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl.SNAPSHOT_INPUTFORMAT_ROW_LIMIT_PER_INPUTSPLIT;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -298,6 +299,56 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
         HConstants.EMPTY_START_ROW);
 
     } finally {
+      UTIL.getAdmin().deleteSnapshot(snapshotName);
+      UTIL.deleteTable(tableName);
+      tearDownCluster();
+    }
+  }
+
+  @Test
+  public void testScanLimit() throws Exception {
+    setupCluster();
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final String snapshotName = tableName + "Snapshot";
+    Table table = null;
+    try {
+      UTIL.getConfiguration().setInt(SNAPSHOT_INPUTFORMAT_ROW_LIMIT_PER_INPUTSPLIT, 10);
+      if (UTIL.getAdmin().tableExists(tableName)) {
+        UTIL.deleteTable(tableName);
+      }
+
+      UTIL.createTable(tableName, FAMILIES, new byte[][] { bbb, yyy });
+
+      Admin admin = UTIL.getAdmin();
+
+      int regionNum = admin.getRegions(tableName).size();
+      // put some stuff in the table
+      table = UTIL.getConnection().getTable(tableName);
+      UTIL.loadTable(table, FAMILIES);
+
+      Path rootDir = CommonFSUtils.getRootDir(UTIL.getConfiguration());
+      FileSystem fs = rootDir.getFileSystem(UTIL.getConfiguration());
+
+      SnapshotTestingUtils.createSnapshotAndValidate(admin, tableName, Arrays.asList(FAMILIES),
+        null, snapshotName, rootDir, fs, true);
+
+      Job job = new Job(UTIL.getConfiguration());
+      Path tmpTableDir = UTIL.getDataTestDirOnTestFS(snapshotName);
+      Scan scan = new Scan();
+      TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
+        TestTableSnapshotInputFormat.class);
+
+      TableMapReduceUtil.initTableSnapshotMapperJob(snapshotName, scan,
+        RowCounter.RowCounterMapper.class, NullWritable.class, NullWritable.class, job, true,
+        tmpTableDir);
+      Assert.assertTrue(job.waitForCompletion(true));
+      Assert.assertEquals(10 * regionNum,
+        job.getCounters().findCounter(RowCounter.RowCounterMapper.Counters.ROWS).getValue());
+    } finally {
+      if (table != null) {
+        table.close();
+      }
+      UTIL.getConfiguration().unset(SNAPSHOT_INPUTFORMAT_ROW_LIMIT_PER_INPUTSPLIT);
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
       tearDownCluster();
