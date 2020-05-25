@@ -20,8 +20,10 @@ package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Queue;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hbase.ServerName;
@@ -70,7 +72,7 @@ public class RollingBatchRestartRsAction extends BatchRestartRsAction {
     List<ServerName> selectedServers = selectServers();
 
     Queue<ServerName> serversToBeKilled = new LinkedList<>(selectedServers);
-    Queue<ServerName> deadServers = new LinkedList<>();
+    LinkedList<ServerName> deadServers = new LinkedList<>();
 
     // loop while there are servers to be killed or dead servers to be restarted
     while ((!serversToBeKilled.isEmpty() || !deadServers.isEmpty())  && !context.isStopping()) {
@@ -103,13 +105,17 @@ public class RollingBatchRestartRsAction extends BatchRestartRsAction {
           deadServers.add(server);
           break;
         case START:
+          server = Objects.requireNonNull(deadServers.peek());
           try {
-            server = deadServers.remove();
             startRs(server);
+            // only remove the server from the known dead list if `startRs` succeeds.
+            deadServers.remove(server);
           } catch (org.apache.hadoop.util.Shell.ExitCodeException e) {
             // The start may fail but better to just keep going though we may lose server.
-            //
-            getLogger().info("Problem starting, will retry; code={}", e.getExitCode(), e);
+            // Shuffle the dead list to avoid getting stuck on a single stubborn host.
+            Collections.shuffle(deadServers);
+            getLogger().info(
+              "Problem starting {}, will retry; code={}", server, e.getExitCode(), e);
           }
           break;
       }

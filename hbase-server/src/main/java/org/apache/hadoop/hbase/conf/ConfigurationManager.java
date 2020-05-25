@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.conf;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
@@ -135,6 +136,16 @@ public class ConfigurationManager {
   public int getNumObservers() {
     synchronized (configurationObservers) {
       return configurationObservers.size();
+    }
+  }
+
+  /**
+   * @return true if contains the observer, for unit test only
+   */
+  @VisibleForTesting
+  public boolean containsObserver(ConfigurationObserver observer) {
+    synchronized (configurationObservers) {
+      return configurationObservers.contains(observer);
     }
   }
 }

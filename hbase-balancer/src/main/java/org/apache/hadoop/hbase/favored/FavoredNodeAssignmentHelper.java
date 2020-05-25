@@ -600,7 +600,7 @@ public class FavoredNodeAssignmentHelper {
     }
 
     if (randomServer != null) {
-      return ServerName.valueOf(randomServer.getHostAndPort(), randomServer.getStartcode());
+      return ServerName.valueOf(randomServer.getAddress(), randomServer.getStartcode());
     } else {
       return null;
     }
@@ -628,7 +628,7 @@ public class FavoredNodeAssignmentHelper {
     StringBuilder strBuf = new StringBuilder();
     int i = 0;
     for (ServerName node : nodes) {
-      strBuf.append(node.getHostAndPort());
+      strBuf.append(node.getAddress());
       if (++i != nodes.size()) strBuf.append(";");
     }
     return strBuf.toString();
@@ -772,7 +772,7 @@ public class FavoredNodeAssignmentHelper {
 
     List<ServerName> favoredNodesForRegion = new ArrayList<>(FAVORED_NODES_NUM);
     ServerName primary = servers.get(random.nextInt(servers.size()));
-    favoredNodesForRegion.add(ServerName.valueOf(primary.getHostAndPort(), ServerName.NON_STARTCODE));
+    favoredNodesForRegion.add(ServerName.valueOf(primary.getAddress(), ServerName.NON_STARTCODE));
 
     Map<RegionInfo, ServerName> primaryRSMap = new HashMap<>(1);
     primaryRSMap.put(hri, primary);
@@ -781,7 +781,7 @@ public class FavoredNodeAssignmentHelper {
     ServerName[] secondaryAndTertiaryNodes = secondaryAndTertiaryRSMap.get(hri);
     if (secondaryAndTertiaryNodes != null && secondaryAndTertiaryNodes.length == 2) {
       for (ServerName sn : secondaryAndTertiaryNodes) {
-        favoredNodesForRegion.add(ServerName.valueOf(sn.getHostAndPort(), ServerName.NON_STARTCODE));
+        favoredNodesForRegion.add(ServerName.valueOf(sn.getAddress(), ServerName.NON_STARTCODE));
       }
       return favoredNodesForRegion;
     } else {

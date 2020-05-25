@@ -83,6 +83,7 @@ public class TableSnapshotScanner extends AbstractClientScanner {
   private ClientSideRegionScanner currentRegionScanner  = null;
   private int currentRegion = -1;
 
+  private int numOfCompleteRows = 0;
   /**
    * Creates a TableSnapshotScanner.
    * @param conf the configuration
@@ -193,6 +194,9 @@ public class TableSnapshotScanner extends AbstractClientScanner {
       try {
         result = currentRegionScanner.next();
         if (result != null) {
+          if (scan.getLimit() > 0 && ++this.numOfCompleteRows > scan.getLimit()) {
+            result = null;
+          }
           return result;
         }
       } finally {

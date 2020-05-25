@@ -209,7 +209,9 @@ public class HFileLink extends FileLink {
    */
   public static boolean isHFileLink(String fileName) {
     Matcher m = LINK_NAME_PATTERN.matcher(fileName);
-    if (!m.matches()) return false;
+    if (!m.matches()) {
+      return false;
+    }
     return m.groupCount() > 2 && m.group(4) != null && m.group(3) != null && m.group(2) != null;
   }
 

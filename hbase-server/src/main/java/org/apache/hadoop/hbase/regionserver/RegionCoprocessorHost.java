@@ -1625,9 +1625,9 @@ public class RegionCoprocessorHost
   /**
    * Called before open store scanner for user scan.
    */
-  public ScanInfo preStoreScannerOpen(HStore store) throws IOException {
+  public ScanInfo preStoreScannerOpen(HStore store, Scan scan) throws IOException {
     if (coprocEnvironments.isEmpty()) return store.getScanInfo();
-    CustomizedScanInfoBuilder builder = new CustomizedScanInfoBuilder(store.getScanInfo());
+    CustomizedScanInfoBuilder builder = new CustomizedScanInfoBuilder(store.getScanInfo(), scan);
     execOperation(new RegionObserverOperationWithoutResult() {
       @Override
       public void call(RegionObserver observer) throws IOException {

@@ -31,7 +31,8 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
-import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.client.RetriesExhaustedException;
+import org.apache.hadoop.hbase.exceptions.ConnectionClosedException;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
@@ -50,7 +51,7 @@ public class TestMasterShutdown {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterShutdown.class);
+    HBaseClassTestRule.forClass(TestMasterShutdown.class);
 
   private HBaseTestingUtility htu;
 
@@ -127,7 +128,7 @@ public class TestMasterShutdown {
   public void testMasterShutdownBeforeStartingAnyRegionServer() throws Exception {
     LocalHBaseCluster hbaseCluster = null;
     try {
-      htu =  new HBaseTestingUtility(
+      htu = new HBaseTestingUtility(
         createMasterShutdownBeforeStartingAnyRegionServerConfiguration());
 
       // configure a cluster with
@@ -151,6 +152,7 @@ public class TestMasterShutdown {
       hbaseCluster = new LocalHBaseCluster(htu.getConfiguration(), options.getNumMasters(),
         options.getNumRegionServers(), options.getMasterClass(), options.getRsClass());
       final MasterThread masterThread = hbaseCluster.getMasters().get(0);
+
       masterThread.start();
       // Switching to master registry exacerbated a race in the master bootstrap that can result
       // in a lost shutdown command (HBASE-8422, HBASE-23836). The race is essentially because
@@ -160,10 +162,32 @@ public class TestMasterShutdown {
       // manager is usually init'ed in time for the RPC to be made. For now, adding an explicit
       // wait() in the test, waiting for the server manager to become available.
       final long timeout = TimeUnit.MINUTES.toMillis(10);
-      assertNotEquals("Timeout waiting for server manager to become available.",
-        -1, Waiter.waitFor(htu.getConfiguration(), timeout,
-          () -> masterThread.getMaster().getServerManager() != null));
-      htu.getConnection().getAdmin().shutdown();
+      assertNotEquals("timeout waiting for server manager to become available.", -1,
+        htu.waitFor(timeout, () -> masterThread.getMaster().getServerManager() != null));
+
+      // Master has come up far enough that we can terminate it without creating a zombie.
+      try {
+        // HBASE-24327 : (Resolve Flaky connection issues)
+        // shutdown() RPC can have flaky ZK connection issues.
+        // e.g
+        // ERROR [RpcServer.priority.RWQ.Fifo.read.handler=1,queue=1,port=53033]
+        // master.HMaster(2878): ZooKeeper exception trying to set cluster as down in ZK
+        // org.apache.zookeeper.KeeperException$SystemErrorException:
+        // KeeperErrorCode = SystemError
+        //
+        // However, even when above flakes happen, shutdown call does get completed even if
+        // RPC call has failure. Hence, subsequent retries will never succeed as HMaster is
+        // already shutdown. Hence, it can fail. To resolve it, after making one shutdown()
+        // call, we are ignoring IOException.
+        htu.getConnection().getAdmin().shutdown();
+      } catch (RetriesExhaustedException e) {
+        if (e.getCause() instanceof ConnectionClosedException) {
+          LOG.info("Connection is Closed to the cluster. The cluster is already down.", e);
+        } else {
+          throw e;
+        }
+      }
+      LOG.info("Shutdown RPC sent.");
       masterThread.join();
     } finally {
       if (hbaseCluster != null) {
@@ -186,19 +210,9 @@ public class TestMasterShutdown {
     conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
     // don't need a long write pipeline for this test.
     conf.setInt("dfs.replication", 1);
-    return conf;
-  }
-
-  /**
-   * Create a new {@link Configuration} based on {@code baseConf} that has ZooKeeper connection
-   * settings tuned very aggressively. The resulting client is used within a retry loop, so there's
-   * no value in having the client itself do the retries. We want to iterate on the base
-   * configuration because we're waiting for the mini-cluster to start and set it's ZK client port.
-   *
-   * @return a new, configured {@link Configuration} instance.
-   */
-  private static Configuration createResponsiveZkConfig(final Configuration baseConf) {
-    final Configuration conf = HBaseConfiguration.create(baseConf);
+    // reduce client retries
+    conf.setInt("hbase.client.retries.number", 1);
+    // Recoverable ZK configs are tuned more aggressively
     conf.setInt(ReadOnlyZKClient.RECOVERY_RETRY, 3);
     conf.setInt(ReadOnlyZKClient.RECOVERY_RETRY_INTERVAL_MILLIS, 100);
     return conf;

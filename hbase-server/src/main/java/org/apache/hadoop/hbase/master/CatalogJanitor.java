@@ -424,7 +424,11 @@ public class CatalogJanitor extends ScheduledChore {
       // It doesn't have merge qualifier, no need to clean
       return true;
     }
-    return cleanMergeRegion(region, parents);
+
+    // If a parent region is a merged child region and GC has not kicked in/finish its work yet,
+    // return false in this case to avoid kicking in a merge, trying later.
+    cleanMergeRegion(region, parents);
+    return false;
   }
 
   /**
@@ -470,6 +474,10 @@ public class CatalogJanitor extends ScheduledChore {
      */
     public List<Pair<RegionInfo, RegionInfo>> getOverlaps() {
       return this.overlaps;
+    }
+
+    public Map<RegionInfo, Result> getMergedRegions() {
+      return this.mergedRegions;
     }
 
     public List<Pair<RegionInfo, ServerName>> getUnknownServers() {
@@ -648,7 +656,12 @@ public class CatalogJanitor extends ScheduledChore {
             } else if (ri.isOverlap(this.highestEndKeyRegionInfo)) {
               // We may have seen a region a few rows back that overlaps this one.
               addOverlap(this.highestEndKeyRegionInfo, ri);
-            } else {
+            } else if (!this.highestEndKeyRegionInfo.isNext(ri)) {
+              // Need to check the case if this.highestEndKeyRegionInfo.isNext(ri). If no,
+              // report a hole, otherwise, it is ok. For an example,
+              // previous: [aa, bb), ri: [cc, dd), highestEndKeyRegionInfo: [a, cc)
+              // In this case, it should not report a hole, as highestEndKeyRegionInfo covers
+              // the hole between previous and ri.
               addHole(this.previous, ri);
             }
           } else if (ri.isOverlap(this.highestEndKeyRegionInfo)) {

@@ -87,7 +87,7 @@ public class RegionsResource extends ResourceBase {
         ServerName addr = e.getSecond();
         model.add(
           new TableRegionModel(tableName.getNameAsString(), hri.getRegionId(),
-            hri.getStartKey(), hri.getEndKey(), addr.getHostAndPort()));
+            hri.getStartKey(), hri.getEndKey(), addr.getAddress().toString()));
       }
       ResponseBuilder response = Response.ok(model);
       response.cacheControl(cacheControl);
