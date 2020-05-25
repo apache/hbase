@@ -2235,7 +2235,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
 
   @Test
   public void testCellSizeLimit() throws IOException {
-    final TableName tableName = TableName.valueOf("testCellSizeLimit");
+    final TableName tableName = name.getTableName();
     TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
       new TableDescriptorBuilder.ModifyableTableDescriptor(tableName)
         .setValue(HRegion.HBASE_MAX_CELL_SIZE_KEY, Integer.toString(10 * 1024));
@@ -2269,6 +2269,28 @@ public class TestFromClientSide5 extends FromClientSideBase {
       } catch (IOException e) {
         // expected
       }
+    }
+  }
+
+  @Test
+  public void testCellSizeNoLimit() throws IOException {
+    final TableName tableName = name.getTableName();
+    ColumnFamilyDescriptor familyDescriptor =
+      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY);
+    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
+      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName)
+        .setValue(HRegion.HBASE_MAX_CELL_SIZE_KEY, Integer.toString(0));
+    tableDescriptor.setColumnFamily(familyDescriptor);
+
+    try (Admin admin = TEST_UTIL.getAdmin()) {
+      admin.createTable(tableDescriptor);
+    }
+
+    // Will succeed
+    try (Table ht = TEST_UTIL.getConnection().getTable(tableName)) {
+      ht.put(new Put(ROW).addColumn(FAMILY, QUALIFIER,  new byte[HRegion.DEFAULT_MAX_CELL_SIZE -
+        1024]));
+      ht.append(new Append(ROW).addColumn(FAMILY, QUALIFIER, new byte[1024 + 1]));
     }
   }
 
