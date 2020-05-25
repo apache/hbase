@@ -136,12 +136,12 @@ public class TestReplicationStatus extends TestReplicationBase {
       insertRowsOnSource();
       long wait = Waiter.waitFor(UTIL2.getConfiguration(),
         10000, new Waiter.Predicate<Exception>() {
-        @Override
-        public boolean evaluate() throws Exception {
-          ReplicationLoadSink loadSink = getLatestSinkMetric(hbaseAdmin, server);
-          return loadSink.getTimestampsOfLastAppliedOp()>loadSink.getTimestampStarted();
-        }
-      });
+          @Override
+          public boolean evaluate() throws Exception {
+            ReplicationLoadSink loadSink = getLatestSinkMetric(hbaseAdmin, server);
+            return loadSink.getTimestampsOfLastAppliedOp()>loadSink.getTimestampStarted();
+          }
+        });
       //If wait is -1, we know predicate condition was never true
       assertTrue(wait>=0);
     }
