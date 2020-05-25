@@ -751,8 +751,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     lock.readLock().lock();
     try {
       if (this.currentParallelPutCount.getAndIncrement() > this.parallelPutCountPrintThreshold) {
-        LOG.trace(this.getTableName() + "tableName={}, encodedName={}, columnFamilyName={} is " +
-          "too busy!", this.getRegionInfo().getEncodedName(), this .getColumnFamilyName());
+        LOG.trace("tableName={}, encodedName={}, columnFamilyName={} is too busy!",
+            this.getTableName(), this.getRegionInfo().getEncodedName(), this.getColumnFamilyName());
       }
       this.memstore.add(cell, memstoreSizing);
     } finally {
@@ -768,8 +768,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     lock.readLock().lock();
     try {
       if (this.currentParallelPutCount.getAndIncrement() > this.parallelPutCountPrintThreshold) {
-        LOG.trace(this.getTableName() + "tableName={}, encodedName={}, columnFamilyName={} is " +
-            "too busy!", this.getRegionInfo().getEncodedName(), this .getColumnFamilyName());
+        LOG.trace("tableName={}, encodedName={}, columnFamilyName={} is too busy!",
+            this.getTableName(), this.getRegionInfo().getEncodedName(), this.getColumnFamilyName());
       }
       memstore.add(cells, memstoreSizing);
     } finally {
