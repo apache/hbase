@@ -38,8 +38,22 @@
 <%@ page import="org.apache.hadoop.hbase.master.CatalogJanitor" %>
 <%@ page import="org.apache.hadoop.hbase.master.CatalogJanitor.Report" %>
 <%
+  final String cacheParameterValue = request.getParameter("cache");
   final HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
   pageContext.setAttribute("pageTitle", "HBase Master HBCK Report: " + master.getServerName());
+  if (!Boolean.parseBoolean(cacheParameterValue)) {
+    // Run the two reporters inline w/ drawing of the page. If exception, will show in page draw.
+    try {
+      master.getMasterRpcServices().runHbckChore(null, null);
+    } catch (org.apache.hbase.thirdparty.com.google.protobuf.ServiceException se) {
+      out.write("Failed generating a new hbck_chore report; using cache; try again or run hbck_chore_run in the shell: " + se.getMessage() + "\n");
+    } 
+    try {
+      master.getMasterRpcServices().runCatalogScan(null, null);
+    } catch (org.apache.hbase.thirdparty.com.google.protobuf.ServiceException se) {
+      out.write("Failed generating a new catalogjanitor report; using cache; try again or run catalogjanitor_run in the shell: " + se.getMessage() + "\n");
+    } 
+  }
   HbckChore hbckChore = master.getHbckChore();
   Map<String, Pair<ServerName, List<ServerName>>> inconsistentRegions = null;
   Map<String, ServerName> orphanRegionsOnRS = null;
@@ -79,7 +93,16 @@
 
   <div class="row">
     <div class="page-header">
-      <p><span>This page displays two reports: the <em>HBCK Chore Report</em> and the <em>CatalogJanitor Consistency Issues</em> report. Only report titles show if there are no problems to list. Note some conditions are <strong>transitory</strong> as regions migrate. See below for how to run reports. ServerNames will be links if server is live, italic if dead, and plain if unknown.</span></p>
+      <p><span>This page displays two reports: the <em>HBCK Chore Report</em> and
+        the <em>CatalogJanitor Consistency Issues</em> report. Only report titles
+        show if there are no problems to list. Note some conditions are
+        <strong>transitory</strong> as regions migrate. Reports are generated
+        when you invoke this page unless you add <em>?cache=true</em> to the URL. Then
+        we display the reports cached from the last time the reports were run.
+        Reports are run by Chores that are hosted by the Master on a cadence.
+        You can also run them on demand from the hbase shell: invoke <em>catalogjanitor_run</em>
+        and/or <em>hbck_chore_run</em>. 
+        ServerNames will be links if server is live, italic if dead, and plain if unknown.</span></p>
     </div>
   </div>
   <div class="row">
@@ -89,11 +112,11 @@
         <% if (hbckChore.isDisabled()) { %>
           <span>HBCK chore is currently disabled. Set hbase.master.hbck.chore.interval > 0 in the config & do a rolling-restart to enable it.</span>
         <% } else if (startTimestamp == 0 && endTimestamp == 0){ %>
-          <span>No report created. Execute <i>hbck_chore_run</i> in hbase shell to generate a new sub-report.</span>
+          <span>No report created.</span>
         <% } else if (startTimestamp > 0 && endTimestamp == 0){ %>
           <span>Checking started at <%= iso8601start %>. Please wait for checking to generate a new sub-report.</span>
         <% } else { %>
-          <span>Checking started at <%= iso8601start %> and generated report at <%= iso8601end %>. Execute <i>hbck_chore_run</i> in hbase shell to generate a new sub-report.</span>
+          <span>Checking started at <%= iso8601start %> and generated report at <%= iso8601end %>.</span>
         <% } %>
       </p>
     </div>
@@ -204,9 +227,9 @@
       <h1>CatalogJanitor <em>hbase:meta</em> Consistency Issues</h1>
       <p>
         <% if (report != null) { %>
-          <span>Report created: <%= iso8601reportTime %> (now=<%= iso8601Now %>). Run <i>catalogjanitor_run</i> in hbase shell to generate a new sub-report.</span></p>
+          <span>Report created: <%= iso8601reportTime %> (now=<%= iso8601Now %>).</span></p>
         <% } else { %>
-          <span>No report created. Run <i>catalogjanitor_run</i> in hbase shell to generate a new sub-report.</span>
+          <span>No report created.</span>
         <% } %>
     </div>
   </div>
