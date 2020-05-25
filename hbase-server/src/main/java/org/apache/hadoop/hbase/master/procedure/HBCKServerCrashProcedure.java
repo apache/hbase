@@ -153,8 +153,7 @@ public class HBCKServerCrashProcedure extends ServerCrashProcedure {
             MetaTableAccessor.updateRegionState(this.connection, hrl.getRegion(),
                 RegionState.State.CLOSED);
           } catch (IOException ioe) {
-            LOG.warn("Failed moving {} from CLOSING to CLOSED",
-              hrl.getRegion().getRegionNameAsString(), ioe);
+            LOG.warn("Failed moving {} from CLOSING to CLOSED", ioe);
           }
         } else if (rs.isOpening() || rs.isOpened()) {
           this.reassigns.add(hrl.getRegion());
