@@ -135,7 +135,7 @@ public class TestReplicationStatus extends TestReplicationBase {
       //now insert some rows on source, so that it gets delivered to target
       insertRowsOnSource();
       long wait = Waiter.waitFor(UTIL2.getConfiguration(),
-        100000, new Waiter.Predicate<Exception>() {
+        10000, new Waiter.Predicate<Exception>() {
         @Override
         public boolean evaluate() throws Exception {
           ReplicationLoadSink loadSink = getLatestSinkMetric(hbaseAdmin, server);
