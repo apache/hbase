@@ -973,9 +973,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         int size = PrivateCellUtil.estimatedSerializedSizeOf(cells.current());
         if (size > r.maxCellSize) {
           String msg = "Cell with size " + size + " exceeds limit of " + r.maxCellSize + " bytes";
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(msg);
-          }
+          LOG.debug(msg);
           throw new DoNotRetryIOException(msg);
         }
       }
