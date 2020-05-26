@@ -1639,4 +1639,12 @@ public interface AsyncAdmin {
    * @throws IOException if a remote or network exception occurs
    */
   CompletableFuture<Void> renameRSGroup(String oldName, String newName);
+
+  /**
+   * Update RSGroup configuration
+   * @param groupName the group name
+   * @param configuration new configuration of the group name to be set
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<Void> updateRSGroupConfig(String groupName, Map<String, String> configuration);
 }

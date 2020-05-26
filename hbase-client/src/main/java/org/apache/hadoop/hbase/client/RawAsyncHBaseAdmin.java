@@ -145,6 +145,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema;
@@ -311,6 +312,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.Remo
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RenameRSGroupRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RenameRSGroupResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.UpdateRSGroupConfigRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.UpdateRSGroupConfigResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest;
@@ -4164,5 +4167,23 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           )
         )
       ).call();
+  }
+
+  @Override
+  public CompletableFuture<Void>
+    updateRSGroupConfig(String groupName, Map<String, String> configuration) {
+    UpdateRSGroupConfigRequest.Builder request = UpdateRSGroupConfigRequest.newBuilder()
+        .setGroupName(groupName);
+    if (configuration != null) {
+      configuration.entrySet().forEach(e ->
+          request.addConfiguration(NameStringPair.newBuilder().setName(e.getKey())
+              .setValue(e.getValue()).build()));
+    }
+    return this.<Void> newMasterCaller()
+        .action(((controller, stub) ->
+            this.<UpdateRSGroupConfigRequest, UpdateRSGroupConfigResponse, Void> call(
+                controller, stub, request.build(),
+              (s, c, req, done) -> s.updateRSGroupConfig(c, req, done), resp -> null))
+        ).call();
   }
 }

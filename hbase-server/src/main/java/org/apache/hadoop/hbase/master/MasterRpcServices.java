@@ -343,6 +343,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.Remo
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RenameRSGroupRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RenameRSGroupResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.UpdateRSGroupConfigRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.UpdateRSGroupConfigResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.FileArchiveNotificationRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.FileArchiveNotificationResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
@@ -3236,6 +3238,30 @@ public class MasterRpcServices extends RSRpcServices implements
       master.getRSGroupInfoManager().renameRSGroup(oldRSGroup, newRSGroup);
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().postRenameRSGroup(oldRSGroup, newRSGroup);
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return builder.build();
+  }
+
+  @Override
+  public UpdateRSGroupConfigResponse updateRSGroupConfig(RpcController controller,
+                                                         UpdateRSGroupConfigRequest request)
+      throws ServiceException {
+    UpdateRSGroupConfigResponse.Builder builder = UpdateRSGroupConfigResponse.newBuilder();
+    String groupName = request.getGroupName();
+    Map<String, String> configuration = new HashMap<>();
+    request.getConfigurationList().forEach(p -> configuration.put(p.getName(), p.getValue()));
+    LOG.info("{} update rsgroup {} configuration {}", master.getClientIdAuditPrefix(), groupName,
+        configuration);
+    try {
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preUpdateRSGroupConfig(groupName, configuration);
+      }
+      master.getRSGroupInfoManager().updateRSGroupConfig(groupName, configuration);
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postUpdateRSGroupConfig(groupName, configuration);
       }
     } catch (IOException e) {
       throw new ServiceException(e);

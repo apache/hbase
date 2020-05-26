@@ -30,4 +30,5 @@ message RSGroupInfo {
   required string name = 1;
   repeated ServerName servers = 4;
   repeated TableName tables = 3;
+  repeated NameStringPair configuration = 5;
 }

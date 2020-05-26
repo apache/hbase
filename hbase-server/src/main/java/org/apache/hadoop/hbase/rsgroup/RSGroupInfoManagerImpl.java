@@ -1244,4 +1244,12 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     setRSGroup(updateTables, newName);
   }
 
+  @Override
+  public synchronized void updateRSGroupConfig(String groupName, Map<String, String> configuration)
+      throws IOException {
+    RSGroupInfo rsGroupInfo = getRSGroupInfo(groupName);
+    rsGroupInfo.getConfiguration().forEach((k, v) -> rsGroupInfo.removeConfiguration(k));
+    configuration.forEach((k, v) -> rsGroupInfo.setConfiguration(k, v));
+    flushConfig();
+  }
 }

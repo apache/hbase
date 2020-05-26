@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
@@ -1558,6 +1559,26 @@ public class MasterCoprocessorHost
       @Override
       protected void call(MasterObserver observer) throws IOException {
         observer.postRenameRSGroup(this, oldName, newName);
+      }
+    });
+  }
+
+  public void preUpdateRSGroupConfig(final String groupName,
+                                     final Map<String, String> configuration) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      protected void call(MasterObserver observer) throws IOException {
+        observer.preUpdateRSGroupConfig(this, groupName, configuration);
+      }
+    });
+  }
+
+  public void postUpdateRSGroupConfig(final String groupName,
+                                      final Map<String, String> configuration) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      protected void call(MasterObserver observer) throws IOException {
+        observer.postUpdateRSGroupConfig(this, groupName, configuration);
       }
     });
   }

@@ -1041,4 +1041,10 @@ class AdminOverAsyncAdmin implements Admin {
   public void renameRSGroup(String oldName, String newName) throws IOException {
     get(admin.renameRSGroup(oldName, newName));
   }
+
+  @Override
+  public void updateRSGroupConfig(String groupName, Map<String, String> configuration)
+      throws IOException {
+    get(admin.updateRSGroupConfig(groupName, configuration));
+  }
 }
