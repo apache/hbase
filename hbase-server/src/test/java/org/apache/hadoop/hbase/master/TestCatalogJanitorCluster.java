@@ -60,6 +60,8 @@ public class TestCatalogJanitorCluster {
   private static final TableName T1 = TableName.valueOf("t1");
   private static final TableName T2 = TableName.valueOf("t2");
   private static final TableName T3 = TableName.valueOf("t3");
+  private static final TableName T4 = TableName.valueOf("t4");
+  private static final TableName T5 = TableName.valueOf("t5");
 
   @Before
   public void before() throws Exception {
@@ -67,6 +69,23 @@ public class TestCatalogJanitorCluster {
     TEST_UTIL.createMultiRegionTable(T1, new byte [][] {HConstants.CATALOG_FAMILY});
     TEST_UTIL.createMultiRegionTable(T2, new byte [][] {HConstants.CATALOG_FAMILY});
     TEST_UTIL.createMultiRegionTable(T3, new byte [][] {HConstants.CATALOG_FAMILY});
+
+    final byte[][] keysForT4 = {
+      Bytes.toBytes("aa"),
+      Bytes.toBytes("bb"),
+      Bytes.toBytes("cc"),
+      Bytes.toBytes("dd")
+    };
+
+    TEST_UTIL.createTable(T4, HConstants.CATALOG_FAMILY, keysForT4);
+
+    final byte[][] keysForT5 = {
+      Bytes.toBytes("bb"),
+      Bytes.toBytes("cc"),
+      Bytes.toBytes("dd")
+    };
+
+    TEST_UTIL.createTable(T5, HConstants.CATALOG_FAMILY, keysForT5);
   }
 
   @After
@@ -141,7 +160,7 @@ public class TestCatalogJanitorCluster {
     emptyInfoServerPut.addColumn(MetaTableAccessor.getCatalogFamily(),
         MetaTableAccessor.getServerColumn(0), Bytes.toBytes(""));
     MetaTableAccessor.putsToMetaTable(TEST_UTIL.getConnection(), Arrays.asList(emptyInfoServerPut));
-    gc = janitor.scan();
+    janitor.scan();
     report = janitor.getLastReport();
     assertEquals(0, report.getUnknownServers().size());
     // Mke an empty regioninfo in t1.
@@ -150,9 +169,56 @@ public class TestCatalogJanitorCluster {
     pEmptyRI.addColumn(MetaTableAccessor.getCatalogFamily(),
         MetaTableAccessor.getRegionInfoColumn(), HConstants.EMPTY_BYTE_ARRAY);
     MetaTableAccessor.putsToMetaTable(TEST_UTIL.getConnection(), Arrays.asList(pEmptyRI));
-    gc = janitor.scan();
+    janitor.scan();
     report = janitor.getLastReport();
     assertEquals(1, report.getEmptyRegionInfo().size());
+
+    int holesReported = report.getHoles().size();
+    int overlapsReported = report.getOverlaps().size();
+
+    // Test the case for T4
+    //    r1: [aa, bb), r2: [cc, dd), r3: [a, cc)
+    // Make sure only overlaps and no holes are reported.
+    List<RegionInfo> t4Ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), T4);
+    // delete the region [bb, cc)
+    MetaTableAccessor.deleteRegionInfo(TEST_UTIL.getConnection(), t4Ris.get(2));
+
+    // add a new region [a, cc)
+    RegionInfo newRiT4 = RegionInfoBuilder.newBuilder(T4).
+      setStartKey("a".getBytes()).
+      setEndKey("cc".getBytes()).build();
+    Put putForT4 = MetaTableAccessor.makePutFromRegionInfo(newRiT4, System.currentTimeMillis());
+    MetaTableAccessor.putsToMetaTable(TEST_UTIL.getConnection(), Arrays.asList(putForT4));
+
+    janitor.scan();
+    report = janitor.getLastReport();
+    // there is no new hole reported, 2 more overLaps added.
+    assertEquals(holesReported, report.getHoles().size());
+    assertEquals(overlapsReported + 2, report.getOverlaps().size());
+
+    holesReported = report.getHoles().size();
+    overlapsReported = report.getOverlaps().size();
+
+    // Test the case for T5
+    //    r0: [, bb), r1: [a, g), r2: [bb, cc), r3: [dd, )
+    // Make sure only overlaps and no holes are reported.
+    List<RegionInfo> t5Ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), T5);
+    // delete the region [cc, dd)
+    MetaTableAccessor.deleteRegionInfo(TEST_UTIL.getConnection(), t5Ris.get(2));
+
+    // add a new region [a, g)
+    RegionInfo newRiT5 = RegionInfoBuilder.newBuilder(T5).
+      setStartKey("a".getBytes()).
+      setEndKey("g".getBytes()).build();
+    Put putForT5 = MetaTableAccessor.makePutFromRegionInfo(newRiT5, System.currentTimeMillis());
+    MetaTableAccessor.putsToMetaTable(TEST_UTIL.getConnection(), Arrays.asList(putForT5));
+
+    janitor.scan();
+    report = janitor.getLastReport();
+    // there is no new hole reported, 3 more overLaps added.
+    // ([a, g), [, bb)), ([a, g), [bb, cc)), ([a, g), [dd, ))
+    assertEquals(holesReported, report.getHoles().size());
+    assertEquals(overlapsReported + 3, report.getOverlaps().size());
   }
 
   /**
