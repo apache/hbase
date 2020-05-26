@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseConfiguration;
+
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -51,12 +51,7 @@ import org.slf4j.LoggerFactory;
 public class SimpleRegionNormalizer extends AbstractRegionNormalizer {
 
   private static final Logger LOG = LoggerFactory.getLogger(SimpleRegionNormalizer.class);
-  private int minRegionCount;
   private static long[] skippedCount = new long[NormalizationPlan.PlanType.values().length];
-
-  public SimpleRegionNormalizer() {
-    minRegionCount = HBaseConfiguration.create().getInt("hbase.normalizer.min.region.count", 3);
-  }
 
   @Override
   public void planSkipped(RegionInfo hri, PlanType type) {
@@ -112,11 +107,7 @@ public class SimpleRegionNormalizer extends AbstractRegionNormalizer {
     List<RegionInfo> tableRegions =
         masterServices.getAssignmentManager().getRegionStates().getRegionsOfTable(table);
 
-    if (tableRegions == null || tableRegions.size() < minRegionCount) {
-      int nrRegions = tableRegions == null ? 0 : tableRegions.size();
-      LOG.debug("Table {} has {} regions, required min number of regions for normalizer to run is "
-          + "{}, not running normalizer",
-        table, nrRegions, minRegionCount);
+    if (tableRegions == null) {
       return null;
     }
 
@@ -131,9 +122,15 @@ public class SimpleRegionNormalizer extends AbstractRegionNormalizer {
     }
 
     if (mergeEnabled) {
-      List<NormalizationPlan> mergePlans = getMergeNormalizationPlan(table);
-      if (mergePlans != null) {
-        plans.addAll(mergePlans);
+      if (tableRegions.size() < minRegionCount) {
+        LOG.debug("Table {} has {} regions, required min number of regions for normalizer to run" +
+                " is {}, not running normalizer",
+            table, tableRegions.size(), minRegionCount);
+      } else {
+        List<NormalizationPlan> mergePlans = getMergeNormalizationPlan(table);
+        if (mergePlans != null) {
+          plans.addAll(mergePlans);
+        }
       }
     }
     if (plans.isEmpty()) {
