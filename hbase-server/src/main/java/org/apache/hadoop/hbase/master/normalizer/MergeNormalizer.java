@@ -23,10 +23,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,13 +63,13 @@ import org.slf4j.LoggerFactory;
 public class MergeNormalizer extends AbstractRegionNormalizer {
   private static final Logger LOG = LoggerFactory.getLogger(MergeNormalizer.class);
 
-  private int minRegionCount;
   private int minRegionAge;
   private static long[] skippedCount = new long[NormalizationPlan.PlanType.values().length];
 
-  public MergeNormalizer() {
-    Configuration conf = HBaseConfiguration.create();
-    minRegionCount = conf.getInt("hbase.normalizer.min.region.count", 3);
+  @Override
+  public void setMasterServices(MasterServices masterServices) {
+    super.setMasterServices(masterServices);
+    Configuration conf = masterServices.getConfiguration();
     minRegionAge = conf.getInt("hbase.normalizer.min.region.merge.age", 3);
   }
 

@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Size;
@@ -42,8 +43,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 @InterfaceAudience.Private
 public abstract class AbstractRegionNormalizer implements RegionNormalizer {
   private static final Logger LOG = LoggerFactory.getLogger(AbstractRegionNormalizer.class);
+
+  public static final String HBASE_REGION_NORMALIZER_MIN_REGION_COUNT_KEY =
+      "hbase.normalizer.min.region.count";
+  public static final int HBASE_REGION_NORMALIZER_MIN_REGION_COUNT_DEFAULT = 3;
+
   protected MasterServices masterServices;
   protected MasterRpcServices masterRpcServices;
+  protected int minRegionCount;
 
   /**
    * Set the master service.
@@ -52,6 +59,9 @@ public abstract class AbstractRegionNormalizer implements RegionNormalizer {
   @Override
   public void setMasterServices(MasterServices masterServices) {
     this.masterServices = masterServices;
+    minRegionCount = masterServices.getConfiguration().getInt(
+        HBASE_REGION_NORMALIZER_MIN_REGION_COUNT_KEY,
+        HBASE_REGION_NORMALIZER_MIN_REGION_COUNT_DEFAULT);
   }
 
   @Override
