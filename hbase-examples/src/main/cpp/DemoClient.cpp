@@ -78,15 +78,15 @@ main(int argc, char** argv)
     return -1;
   }
   bool isFramed = false;
-  std::shared_ptr<TTransport> socket(new TSocket(argv[1], std::stoi(argv[2])));
+  std::shared_ptr<TTransport> socket(std::make_shared<TSocket>(argv[1], std::stoi(argv[2])));
   std::shared_ptr<TTransport> transport;
 
   if (isFramed) {
-    transport.reset(new TFramedTransport(socket));
+    transport = std::make_shared<TFramedTransport>(socket);
   } else {
-    transport.reset(new TBufferedTransport(socket));
+    transport = std::make_shared<TBufferedTransport>(socket);
   }
-  std::shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
+  std::shared_ptr<TProtocol> protocol(std::make_shared<TBinaryProtocol>(transport));
 
   const std::map<Text, Text>  dummyAttributes; // see HBASE-6806 HBASE-4658
   HbaseClient client(protocol);
