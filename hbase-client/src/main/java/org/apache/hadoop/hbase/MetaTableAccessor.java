@@ -384,8 +384,8 @@ public class MetaTableAccessor {
   }
 
   /**
-   * @return Deserialized values of <qualifier,regioninfo> pairs taken from column values that match
-   *   the regex 'info:merge.*' in array of <code>cells</code>.
+   * @return Deserialized values of &lt;qualifier,regioninfo&gt; pairs taken from column values that
+   *         match the regex 'info:merge.*' in array of <code>cells</code>.
    */
   @Nullable
   public static Map<String, RegionInfo> getMergeRegionsWithName(Cell [] cells) {
@@ -1401,6 +1401,21 @@ public class MetaTableAccessor {
       debugLogMutations(deletes);
       t.delete(deletes);
     }
+  }
+
+  public static Delete removeRegionReplica(byte[] metaRow, int replicaIndexToDeleteFrom,
+    int numReplicasToRemove) {
+    int absoluteIndex = replicaIndexToDeleteFrom + numReplicasToRemove;
+    long now = EnvironmentEdgeManager.currentTime();
+    Delete deleteReplicaLocations = new Delete(metaRow);
+    for (int i = replicaIndexToDeleteFrom; i < absoluteIndex; i++) {
+      deleteReplicaLocations.addColumns(getCatalogFamily(), getServerColumn(i), now);
+      deleteReplicaLocations.addColumns(getCatalogFamily(), getSeqNumColumn(i), now);
+      deleteReplicaLocations.addColumns(getCatalogFamily(), getStartCodeColumn(i), now);
+      deleteReplicaLocations.addColumns(getCatalogFamily(), getServerNameColumn(i), now);
+      deleteReplicaLocations.addColumns(getCatalogFamily(), getRegionStateColumn(i), now);
+    }
+    return deleteReplicaLocations;
   }
 
   /**

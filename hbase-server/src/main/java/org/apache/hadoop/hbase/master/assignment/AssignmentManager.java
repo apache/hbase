@@ -32,8 +32,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
@@ -46,8 +46,10 @@ import org.apache.hadoop.hbase.client.DoNotRetryRegionException;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
@@ -66,11 +68,13 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
+import org.apache.hadoop.hbase.master.store.LocalStore;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureInMemoryChore;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
+import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.SequenceId;
 import org.apache.hadoop.hbase.rsgroup.RSGroupBasedLoadBalancer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -79,8 +83,6 @@ import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -172,19 +174,22 @@ public class AssignmentManager {
   private final int assignMaxAttempts;
   private final int assignRetryImmediatelyMaxAttempts;
 
+  private final LocalStore localStore;
+
   private final Object checkIfShouldMoveSystemRegionLock = new Object();
 
   private Thread assignThread;
 
-  public AssignmentManager(final MasterServices master) {
-    this(master, new RegionStateStore(master));
+  public AssignmentManager(MasterServices master, LocalStore localStore) {
+    this(master, localStore, new RegionStateStore(master, localStore));
   }
 
   @VisibleForTesting
-  AssignmentManager(final MasterServices master, final RegionStateStore stateStore) {
+  AssignmentManager(MasterServices master, LocalStore localStore, RegionStateStore stateStore) {
     this.master = master;
     this.regionStateStore = stateStore;
     this.metrics = new MetricsAssignmentManager();
+    this.localStore = localStore;
 
     final Configuration conf = master.getConfiguration();
 
@@ -225,23 +230,52 @@ public class AssignmentManager {
     // Start the Assignment Thread
     startAssignmentThread();
 
-    // load meta region state
-    ZKWatcher zkw = master.getZooKeeper();
-    // it could be null in some tests
-    if (zkw != null) {
-      RegionState regionState = MetaTableLocator.getMetaRegionState(zkw);
-      RegionStateNode regionNode =
-        regionStates.getOrCreateRegionStateNode(RegionInfoBuilder.FIRST_META_REGIONINFO);
-      regionNode.lock();
-      try {
-        regionNode.setRegionLocation(regionState.getServerName());
-        regionNode.setState(regionState.getState());
-        if (regionNode.getProcedure() != null) {
-          regionNode.getProcedure().stateLoaded(this, regionNode);
+    // load meta region states.
+    // notice that, here we will load all replicas, and in MasterMetaBootstrap we may assign new
+    // replicas, or remove excess replicas.
+    try (RegionScanner scanner =
+      localStore.getScanner(new Scan().addFamily(HConstants.CATALOG_FAMILY))) {
+      List<Cell> cells = new ArrayList<>();
+      boolean moreRows;
+      do {
+        moreRows = scanner.next(cells);
+        if (cells.isEmpty()) {
+          continue;
         }
-        setMetaAssigned(regionState.getRegion(), regionState.getState() == State.OPEN);
-      } finally {
-        regionNode.unlock();
+        Result result = Result.create(cells);
+        cells.clear();
+        RegionStateStore
+          .visitMetaEntry((r, regionInfo, state, regionLocation, lastHost, openSeqNum) -> {
+            RegionStateNode regionNode = regionStates.getOrCreateRegionStateNode(regionInfo);
+            regionNode.lock();
+            try {
+              regionNode.setState(state);
+              regionNode.setLastHost(lastHost);
+              regionNode.setRegionLocation(regionLocation);
+              regionNode.setOpenSeqNum(openSeqNum);
+              if (regionNode.getProcedure() != null) {
+                regionNode.getProcedure().stateLoaded(this, regionNode);
+              }
+              if (RegionReplicaUtil.isDefaultReplica(regionInfo)) {
+                setMetaAssigned(regionInfo, state == State.OPEN);
+              }
+            } finally {
+              regionNode.unlock();
+            }
+            if (regionInfo.isFirst()) {
+              // for compatibility, mirror the meta region state to zookeeper
+              try {
+                regionStateStore.mirrorMetaLocation(regionInfo, regionLocation, state);
+              } catch (IOException e) {
+                LOG.warn("Failed to mirror region location for {} to zk",
+                  regionNode.toShortString());
+              }
+            }
+          }, result);
+      } while (moreRows);
+      if (!regionStates.hasTableRegionStates(TableName.META_TABLE_NAME)) {
+        // no meta regions yet, create the region node for the first meta region
+        regionStates.createRegionStateNode(RegionInfoBuilder.FIRST_META_REGIONINFO);
       }
     }
   }

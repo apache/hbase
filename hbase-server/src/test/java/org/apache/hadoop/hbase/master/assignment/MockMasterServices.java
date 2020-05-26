@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher;
+import org.apache.hadoop.hbase.master.store.LocalStore;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
@@ -81,6 +82,7 @@ public class MockMasterServices extends MockNoopMasterServices {
   private final MasterWalManager walManager;
   private final AssignmentManager assignmentManager;
   private final TableStateManager tableStateManager;
+  private final LocalStore localStore;
 
   private MasterProcedureEnv procedureEnv;
   private ProcedureExecutor<MasterProcedureEnv> procedureExecutor;
@@ -100,18 +102,21 @@ public class MockMasterServices extends MockNoopMasterServices {
     Superusers.initialize(conf);
     this.fileSystemManager = new MasterFileSystem(conf);
     this.walManager = new MasterWalManager(this);
+    this.localStore = LocalStore.create(this);
     // Mock an AM.
-    this.assignmentManager = new AssignmentManager(this, new MockRegionStateStore(this)) {
-      @Override
-      public boolean isTableEnabled(final TableName tableName) {
-        return true;
-      }
+    this.assignmentManager =
+      new AssignmentManager(this, localStore, new MockRegionStateStore(this, localStore)) {
 
-      @Override
-      public boolean isTableDisabled(final TableName tableName) {
-        return false;
-      }
-    };
+        @Override
+        public boolean isTableEnabled(final TableName tableName) {
+          return true;
+        }
+
+        @Override
+        public boolean isTableDisabled(final TableName tableName) {
+          return false;
+        }
+      };
     this.balancer = LoadBalancerFactory.getLoadBalancer(conf);
     this.serverManager = new ServerManager(this);
     this.tableStateManager = Mockito.mock(TableStateManager.class);
@@ -290,8 +295,8 @@ public class MockMasterServices extends MockNoopMasterServices {
   }
 
   private static class MockRegionStateStore extends RegionStateStore {
-    public MockRegionStateStore(final MasterServices master) {
-      super(master);
+    public MockRegionStateStore(MasterServices master, LocalStore localStore) {
+      super(master, localStore);
     }
 
     @Override

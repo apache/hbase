@@ -58,6 +58,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.ClusterMetrics;
@@ -81,9 +84,11 @@ import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionStatesCount;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
@@ -100,6 +105,7 @@ import org.apache.hadoop.hbase.master.MasterRpcServices.BalanceSwitchMode;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.MergeTableRegionsProcedure;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
+import org.apache.hadoop.hbase.master.assignment.RegionStateStore;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.master.balancer.BalancerChore;
@@ -176,6 +182,7 @@ import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshotNotifierFactory;
 import org.apache.hadoop.hbase.quotas.SpaceViolationPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
+import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationLoadSource;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -210,6 +217,7 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.RegionNormalizerTracker;
 import org.apache.hadoop.hbase.zookeeper.SnapshotCleanupTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
@@ -450,7 +458,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   private ProcedureExecutor<MasterProcedureEnv> procedureExecutor;
   private ProcedureStore procedureStore;
 
-  // the master local storage to store procedure data, etc.
+  // the master local storage to store procedure data, root table, etc.
   private LocalStore localStore;
 
   // handle table states
@@ -866,8 +874,50 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   // Will be overriden in test to inject customized AssignmentManager
   @VisibleForTesting
-  protected AssignmentManager createAssignmentManager(MasterServices master) {
-    return new AssignmentManager(master);
+  protected AssignmentManager createAssignmentManager(MasterServices master,
+    LocalStore localStore) {
+    return new AssignmentManager(master, localStore);
+  }
+
+  private void tryMigrateRootTableFromZooKeeper() throws IOException, KeeperException {
+    // try migrate data from zookeeper
+    try (RegionScanner scanner =
+      localStore.getScanner(new Scan().addFamily(HConstants.CATALOG_FAMILY))) {
+      List<Cell> cells = new ArrayList<>();
+      boolean moreRows = scanner.next(cells);
+      if (!cells.isEmpty() || moreRows) {
+        // notice that all replicas for a region are in the same row, so the migration can be
+        // done with in a one row put, which means if we have data in root table then we can make
+        // sure that the migration is done.
+        LOG.info("Root table already has data in it, skip migrating...");
+        return;
+      }
+    }
+    // start migrating
+    byte[] row = MetaTableAccessor.getMetaKeyForRegion(RegionInfoBuilder.FIRST_META_REGIONINFO);
+    Put put = new Put(row);
+    List<String> metaReplicaNodes = zooKeeper.getMetaReplicaNodes();
+    StringBuilder info = new StringBuilder("Migrating meta location:");
+    for (String metaReplicaNode : metaReplicaNodes) {
+      int replicaId = zooKeeper.getZNodePaths().getMetaReplicaIdFromZnode(metaReplicaNode);
+      RegionState state = MetaTableLocator.getMetaRegionState(zooKeeper, replicaId);
+      info.append(" ").append(state);
+      put.setTimestamp(state.getStamp());
+      MetaTableAccessor.addRegionInfo(put, state.getRegion());
+      if (state.getServerName() != null) {
+        MetaTableAccessor.addLocation(put, state.getServerName(), HConstants.NO_SEQNUM, replicaId);
+      }
+      put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(put.getRow())
+        .setFamily(HConstants.CATALOG_FAMILY)
+        .setQualifier(RegionStateStore.getStateColumn(replicaId)).setTimestamp(put.getTimestamp())
+        .setType(Cell.Type.Put).setValue(Bytes.toBytes(state.getState().name())).build());
+    }
+    if (!put.isEmpty()) {
+      LOG.info(info.toString());
+      localStore.update(r -> r.put(put));
+    } else {
+      LOG.info("No meta location avaiable on zookeeper, skip migrating...");
+    }
   }
 
   /**
@@ -883,6 +933,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    * region server tracker
    * <ol type='i'>
    * <li>Create server manager</li>
+   * <li>Create root table</li>
    * <li>Create procedure executor, load the procedures, but do not start workers. We will start it
    * later after we finish scheduling SCPs to avoid scheduling duplicated SCPs for the same
    * server</li>
@@ -967,13 +1018,16 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     // initialize local store
     localStore = LocalStore.create(this);
+
+    tryMigrateRootTableFromZooKeeper();
+
     createProcedureExecutor();
     Map<Class<?>, List<Procedure<MasterProcedureEnv>>> procsByType =
       procedureExecutor.getActiveProceduresNoCopy().stream()
         .collect(Collectors.groupingBy(p -> p.getClass()));
 
     // Create Assignment Manager
-    this.assignmentManager = createAssignmentManager(this);
+    this.assignmentManager = createAssignmentManager(this, localStore);
     this.assignmentManager.start();
     // TODO: TRSP can perform as the sub procedure for other procedures, so even if it is marked as
     // completed, it could still be in the procedure list. This is a bit strange but is another
@@ -1318,18 +1372,15 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   /**
-   * <p>
    * Create a {@link MasterMetaBootstrap} instance.
-   * </p>
-   * <p>
+   * <p/>
    * Will be overridden in tests.
-   * </p>
    */
   @VisibleForTesting
   protected MasterMetaBootstrap createMetaBootstrap() {
     // We put this out here in a method so can do a Mockito.spy and stub it out
     // w/ a mocked up MasterMetaBootstrap.
-    return new MasterMetaBootstrap(this);
+    return new MasterMetaBootstrap(this, localStore);
   }
 
   /**

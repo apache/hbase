@@ -444,8 +444,9 @@ public class RegionProcedureStore extends ProcedureStoreBase {
         Cell cell = cells.get(0);
         cells.clear();
         if (cell.getValueLength() == 0) {
-          localStore.update(r -> r
-            .delete(new Delete(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength())));
+          localStore.update(
+            r -> r.delete(new Delete(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength())
+              .addFamily(PROC_FAMILY)));
         }
       }
     } catch (IOException e) {
