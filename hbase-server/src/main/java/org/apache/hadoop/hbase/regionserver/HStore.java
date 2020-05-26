@@ -1921,9 +1921,15 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
         // If we're enqueuing a major, clear the force flag.
         this.forceMajor = this.forceMajor && !request.isMajor();
 
-        // Set common request properties.
-        // Set priority, either override value supplied by caller or from store.
-        request.setPriority((priority != Store.NO_PRIORITY) ? priority : getCompactPriority());
+        if (request.isAfterSplit()) {
+          // If the store belongs to recently splitted daughter regions, better we consider
+          // them with the highest priority in the compaction queue.
+          request.setPriority(Integer.MIN_VALUE);
+        } else {
+          // Set common request properties.
+          // Set priority, either override value supplied by caller or from store.
+          request.setPriority((priority != Store.NO_PRIORITY) ? priority : getCompactPriority());
+        }
         request.setDescription(getRegionInfo().getRegionNameAsString(), getColumnFamilyName());
         request.setTracker(tracker);
       }
