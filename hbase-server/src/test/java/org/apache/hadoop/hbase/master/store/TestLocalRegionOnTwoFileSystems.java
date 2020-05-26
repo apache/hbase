@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,12 +22,13 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -53,6 +54,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
+import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -60,11 +62,13 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 @Category({ MasterTests.class, MediumTests.class })
 public class TestLocalRegionOnTwoFileSystems {
+  private static final Logger LOG = LoggerFactory.getLogger(TestLocalRegionOnTwoFileSystems.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -77,8 +81,6 @@ public class TestLocalRegionOnTwoFileSystems {
   private static byte[] CF = Bytes.toBytes("f");
 
   private static byte[] CQ = Bytes.toBytes("q");
-
-  private static String REGION_DIR_NAME = "local";
 
   private static TableDescriptor TD =
     TableDescriptorBuilder.newBuilder(TableName.valueOf("test:local"))
@@ -114,7 +116,7 @@ public class TestLocalRegionOnTwoFileSystems {
     when(server.getConfiguration()).thenReturn(HFILE_UTIL.getConfiguration());
     when(server.getServerName()).thenReturn(serverName);
     LocalRegionParams params = new LocalRegionParams();
-    params.server(server).regionDirName(REGION_DIR_NAME).tableDescriptor(TD)
+    params.server(server).regionDirName("local").tableDescriptor(TD)
       .flushSize(TableDescriptorBuilder.DEFAULT_MEMSTORE_FLUSH_SIZE).flushPerChanges(1_000_000)
       .flushIntervalMs(TimeUnit.MINUTES.toMillis(15)).compactMin(COMPACT_MIN).maxWals(32)
       .useHsync(false).ringBufferSlotCount(16).rollPeriodMs(TimeUnit.MINUTES.toMillis(15))
@@ -145,7 +147,8 @@ public class TestLocalRegionOnTwoFileSystems {
 
   @Test
   public void testFlushAndCompact() throws Exception {
-    for (int i = 0; i < COMPACT_MIN - 1; i++) {
+    int compactMinMinusOne = COMPACT_MIN - 1;
+    for (int i = 0; i < compactMinMinusOne; i++) {
       final int index = i;
       region
         .update(r -> r.put(new Put(Bytes.toBytes(index)).addColumn(CF, CQ, Bytes.toBytes(index))));
@@ -153,8 +156,8 @@ public class TestLocalRegionOnTwoFileSystems {
     }
     region.requestRollAll();
     region.waitUntilWalRollFinished();
-    region.update(r -> r.put(
-      new Put(Bytes.toBytes(COMPACT_MIN - 1)).addColumn(CF, CQ, Bytes.toBytes(COMPACT_MIN - 1))));
+    byte [] bytes = Bytes.toBytes(compactMinMinusOne);
+    region.update(r -> r.put(new Put(bytes).addColumn(CF, CQ, bytes)));
     region.flusherAndCompactor.requestFlush();
 
     HFILE_UTIL.waitFor(15000, () -> getStorefilesCount() == 1);
@@ -171,14 +174,28 @@ public class TestLocalRegionOnTwoFileSystems {
         return false;
       }
     });
+    LOG.info("hfile archive content {}",
+      Arrays.stream(rootFs.listStatus(storeArchiveDir)).map(f -> f.getPath().toString()).
+        collect(Collectors.joining(",")));
 
     // make sure the archived wal files are on the wal fs
     Path walArchiveDir = new Path(CommonFSUtils.getWALRootDir(HFILE_UTIL.getConfiguration()),
       HConstants.HREGION_OLDLOGDIR_NAME);
+    LOG.info("wal archive dir {}", walArchiveDir);
+    region.requestRollAll();
+    region.waitUntilWalRollFinished();
     HFILE_UTIL.waitFor(15000, () -> {
       try {
         FileStatus[] fses = WAL_UTIL.getTestFileSystem().listStatus(walArchiveDir);
-        return fses != null && fses.length == 1;
+        if (fses != null) {
+          LOG.info("wal archive dir content {}",
+            Arrays.stream(fses).map(f -> f.getPath().toString()).
+            collect(Collectors.joining(",")));
+        } else {
+          LOG.info("none found");
+          Threads.sleep(100);
+        }
+        return fses != null && fses.length >= 1;
       } catch (FileNotFoundException e) {
         return false;
       }
