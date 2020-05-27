@@ -834,12 +834,12 @@ class MetricsRegionServerWrapperImpl
 
   @Override
   public long getHedgedReadOps() {
-    return this.dfsHedgedReadMetrics == null? 0: this.dfsHedgedReadMetrics.getHedgedReadOps();
+    return this.dfsHedgedReadMetrics == null? 0 : this.dfsHedgedReadMetrics.getHedgedReadOps();
   }
 
   @Override
   public long getHedgedReadWins() {
-    return this.dfsHedgedReadMetrics == null? 0: this.dfsHedgedReadMetrics.getHedgedReadWins();
+    return this.dfsHedgedReadMetrics == null? 0 : this.dfsHedgedReadMetrics.getHedgedReadWins();
   }
 
   @Override
