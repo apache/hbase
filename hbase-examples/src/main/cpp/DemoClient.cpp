@@ -23,7 +23,6 @@
 
 #include <iostream>
 
-#include <boost/lexical_cast.hpp>
 #include <protocol/TBinaryProtocol.h>
 #include <transport/TSocket.h>
 #include <transport/TTransportUtils.h>
@@ -79,15 +78,15 @@ main(int argc, char** argv)
     return -1;
   }
   bool isFramed = false;
-  boost::shared_ptr<TTransport> socket(new TSocket(argv[1], boost::lexical_cast<int>(argv[2])));
-  boost::shared_ptr<TTransport> transport;
+  std::shared_ptr<TTransport> socket = std::make_shared<TSocket>(argv[1], std::stoi(argv[2]));
+  std::shared_ptr<TTransport> transport;
 
   if (isFramed) {
-    transport.reset(new TFramedTransport(socket));
+    transport = std::make_shared<TFramedTransport>(socket);
   } else {
-    transport.reset(new TBufferedTransport(socket));
+    transport = std::make_shared<TBufferedTransport>(socket);
   }
-  boost::shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
+  std::shared_ptr<TProtocol> protocol = std::make_shared<TBinaryProtocol>(transport);
 
   const std::map<Text, Text>  dummyAttributes; // see HBASE-6806 HBASE-4658
   HbaseClient client(protocol);
@@ -240,10 +239,10 @@ main(int argc, char** argv)
       mutations.clear();
       mutations.push_back(Mutation());
       mutations.back().column = "entry:num";
-      mutations.back().value = boost::lexical_cast<std::string>(i);
+      mutations.back().value = std::to_string(i);
       mutations.push_back(Mutation());
       mutations.back().column = "entry:sqr";
-      mutations.back().value = boost::lexical_cast<std::string>(i*i);
+      mutations.back().value = std::to_string(i * i);
       client.mutateRow(t, row, mutations, dummyAttributes);
       client.getRow(rowResult, t, row, dummyAttributes);
       printRow(rowResult);
