@@ -492,7 +492,7 @@ public class TestFSUtils {
     actual = new byte[8192];
     doPread(stm, 0L, actual, 0, 8192);
     checkAndEraseData(actual, 0, expected, "Pread Test 1");
-    // Now check to see if the normal read returns 4K-8K byte range
+    // Now check to see if the normal read returns 4K - 8K byte range
     actual = new byte[4096];
     stm.readFully(actual);
     checkAndEraseData(actual, 4096, expected, "Pread Test 2");
@@ -506,12 +506,12 @@ public class TestFSUtils {
     stm.readFully(blockSize - 2048, actual);
     checkAndEraseData(actual, (blockSize - 2048), expected, "Pread Test 4");
     // now see if we can cross two block boundaries that are not cached
-    // read blockSize + 4K bytes from 10*blockSize - 2K offset
+    // read blockSize + 4K bytes from 10 * blockSize - 2K offset
     actual = new byte[blockSize + 4096];
     stm.readFully(10 * blockSize - 2048, actual);
     checkAndEraseData(actual, (10 * blockSize - 2048), expected, "Pread Test 5");
     // now check that even after all these preads, we can still read
-    // bytes 8K-12K
+    // bytes 8K - 12K
     actual = new byte[4096];
     stm.readFully(actual);
     checkAndEraseData(actual, 8192, expected, "Pread Test 6");
@@ -520,19 +520,19 @@ public class TestFSUtils {
     // check block location caching
     stm = fileSys.open(name);
     stm.readFully(1, actual, 0, 4096);
-    stm.readFully(4*blockSize, actual, 0, 4096);
-    stm.readFully(7*blockSize, actual, 0, 4096);
-    actual = new byte[3*4096];
-    stm.readFully(0*blockSize, actual, 0, 3*4096);
+    stm.readFully(4 * blockSize, actual, 0, 4096);
+    stm.readFully(7 * blockSize, actual, 0, 4096);
+    actual = new byte[3 * 4096];
+    stm.readFully(0 * blockSize, actual, 0, 3 * 4096);
     checkAndEraseData(actual, 0, expected, "Pread Test 7");
-    actual = new byte[8*4096];
-    stm.readFully(3*blockSize, actual, 0, 8*4096);
-    checkAndEraseData(actual, 3*blockSize, expected, "Pread Test 8");
+    actual = new byte[8 * 4096];
+    stm.readFully(3 * blockSize, actual, 0, 8 * 4096);
+    checkAndEraseData(actual, 3 * blockSize, expected, "Pread Test 8");
     // read the tail
-    stm.readFully(11*blockSize+blockSize/2, actual, 0, blockSize/2);
+    stm.readFully(11 * blockSize + blockSize / 2, actual, 0, blockSize / 2);
     IOException res = null;
     try { // read beyond the end of the file
-      stm.readFully(11*blockSize+blockSize/2, actual, 0, blockSize);
+      stm.readFully(11 * blockSize + blockSize / 2, actual, 0, blockSize);
     } catch (IOException e) {
       // should throw an exception
       res = e;
@@ -544,9 +544,9 @@ public class TestFSUtils {
 
   private void checkAndEraseData(byte[] actual, int from, byte[] expected, String message) {
     for (int idx = 0; idx < actual.length; idx++) {
-      assertEquals(message+" byte "+(from+idx)+" differs. expected "+
-          expected[from+idx]+" actual "+actual[idx],
-        actual[idx], expected[from+idx]);
+      assertEquals(message + " byte " + (from + idx) + " differs. expected " +
+          expected[from + idx] + " actual " + actual[idx],
+        actual[idx], expected[from + idx]);
       actual[idx] = 0;
     }
   }
