@@ -163,6 +163,7 @@ public class TestStripeCompactionPolicy {
     conf.setInt(StripeStoreConfig.MAX_FILES_KEY, 4);
     conf.setLong(StripeStoreConfig.SIZE_TO_SPLIT_KEY, 1000); // make sure the are no splits
     StoreConfigInformation sci = mock(StoreConfigInformation.class);
+    when(sci.getRegionInfo()).thenReturn(HRegionInfo.FIRST_META_REGIONINFO);
     StripeStoreConfig ssc = new StripeStoreConfig(conf, sci);
     StripeCompactionPolicy policy = new StripeCompactionPolicy(conf, sci, ssc) {
       @Override
@@ -479,6 +480,7 @@ public class TestStripeCompactionPolicy {
     conf.setInt(StripeStoreConfig.INITIAL_STRIPE_COUNT_KEY, initialCount);
     StoreConfigInformation sci = mock(StoreConfigInformation.class);
     when(sci.getStoreFileTtl()).thenReturn(hasTtl ? defaultTtl : Long.MAX_VALUE);
+    when(sci.getRegionInfo()).thenReturn(HRegionInfo.FIRST_META_REGIONINFO);
     StripeStoreConfig ssc = new StripeStoreConfig(conf, sci);
     return new StripeCompactionPolicy(conf, sci, ssc);
   }
