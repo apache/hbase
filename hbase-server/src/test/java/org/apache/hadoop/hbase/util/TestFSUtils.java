@@ -554,14 +554,6 @@ public class TestFSUtils {
   private void doPread(FSDataInputStream stm, long position, byte[] buffer,
     int offset, int length) throws IOException {
     int nread = 0;
-    // long totalRead = 0;
-    // DFSInputStream dfstm = null;
-
-    /* Disable. This counts do not add up. Some issue in original hdfs tests?
-    if (stm.getWrappedStream() instanceof DFSInputStream) {
-      dfstm = (DFSInputStream) (stm.getWrappedStream());
-      totalRead = dfstm.getReadStatistics().getTotalBytesRead();
-    } */
 
     while (nread < length) {
       int nbytes =
@@ -569,16 +561,5 @@ public class TestFSUtils {
       assertTrue("Error in pread", nbytes > 0);
       nread += nbytes;
     }
-
-    /* Disable. This counts do not add up. Some issue in original hdfs tests?
-    if (dfstm != null) {
-      if (isHedgedRead) {
-        assertTrue("Expected read statistic to be incremented",
-          length <= dfstm.getReadStatistics().getTotalBytesRead() - totalRead);
-      } else {
-        assertEquals("Expected read statistic to be incremented", length, dfstm
-            .getReadStatistics().getTotalBytesRead() - totalRead);
-      }
-    }*/
   }
 }
