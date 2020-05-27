@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
@@ -27,6 +28,8 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -83,6 +86,7 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.AssignmentManager;
+import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionState.State;
@@ -113,6 +117,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 
 import com.google.protobuf.ServiceException;
 
@@ -267,6 +272,77 @@ public class TestSplitTransactionOnCluster {
       cluster.getMaster().setCatalogJanitorEnabled(true);
       TESTING_UTIL.deleteTable(tableName);
     }
+  }
+
+  @Test(timeout = 60000)
+  public void testSplitCompactWithPriority() throws Exception {
+    final TableName tableName = TableName.valueOf("testSplitCompactWithPriority");
+    // Create table then get the single region for our new table.
+    byte[] cf = Bytes.toBytes("cf");
+    HTable hTable = createTableAndWait(tableName, cf);
+
+    assertNotEquals("Unable to retrieve regions of the table", -1,
+      TESTING_UTIL.waitFor(10000, new Waiter.Predicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
+          return cluster.getRegions(tableName).size() == 1;
+        }
+      }));
+
+    HRegion region = cluster.getRegions(tableName).get(0);
+    Store store = region.getStore(cf);
+    int regionServerIndex = cluster.getServerWith(region.getRegionInfo().getRegionName());
+    HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
+
+    Table table = TESTING_UTIL.getConnection().getTable(tableName);
+    // insert data
+    insertData(tableName, admin, table);
+    insertData(tableName, admin, table, 20);
+    insertData(tableName, admin, table, 40);
+
+    // Compaction Request
+    store.triggerMajorCompaction();
+    CompactionContext compactionContext = store.requestCompaction();
+    assertNotNull(compactionContext);
+    assertFalse(compactionContext.getRequest().isAfterSplit());
+    assertEquals(compactionContext.getRequest().getPriority(), 7);
+
+    // Split
+    this.admin.split(region.getRegionInfo().getRegionName(), Bytes.toBytes("row4"));
+
+    Thread.sleep(5000);
+    assertEquals(2, cluster.getRegions(tableName).size());
+    // we have 2 daughter regions
+    HRegion hRegion1 = cluster.getRegions(tableName).get(0);
+    HRegion hRegion2 = cluster.getRegions(tableName).get(1);
+    Store store1 = hRegion1.getStore(cf);
+    Store store2 = hRegion2.getStore(cf);
+
+    // For hStore1 && hStore2, set mock reference to one of the storeFiles
+    StoreFileInfo storeFileInfo1 = new ArrayList<>(store1.getStorefiles()).get(0).getFileInfo();
+    StoreFileInfo storeFileInfo2 = new ArrayList<>(store2.getStorefiles()).get(0).getFileInfo();
+    Field field = StoreFileInfo.class.getDeclaredField("reference");
+    field.setAccessible(true);
+    field.set(storeFileInfo1, Mockito.mock(Reference.class));
+    field.set(storeFileInfo2, Mockito.mock(Reference.class));
+    store1.triggerMajorCompaction();
+    store2.triggerMajorCompaction();
+
+    compactionContext = store1.requestCompaction();
+    assertNotNull(compactionContext);
+    // since we set mock reference to one of the storeFiles, we will get isAfterSplit=true &&
+    // highest priority for hStore1's compactionContext
+    assertTrue(compactionContext.getRequest().isAfterSplit());
+    assertEquals(compactionContext.getRequest().getPriority(), Integer.MIN_VALUE + 1000);
+
+    compactionContext =
+      store2.requestCompaction(Integer.MIN_VALUE + 10, null, null);
+    assertNotNull(compactionContext);
+    // compaction request contains higher priority than default priority of daughter region
+    // compaction (Integer.MIN_VALUE + 1000), hence we are expecting request priority to
+    // be accepted.
+    assertTrue(compactionContext.getRequest().isAfterSplit());
+    assertEquals(compactionContext.getRequest().getPriority(), Integer.MIN_VALUE + 10);
   }
 
   @Test(timeout = 60000)
@@ -1057,19 +1133,23 @@ public class TestSplitTransactionOnCluster {
     }
   }
 
-  private void insertData(final TableName tableName, HBaseAdmin admin, Table t) throws IOException,
-      InterruptedException {
-    Put p = new Put(Bytes.toBytes("row1"));
-    p.add(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes("1"));
+  private void insertData(final TableName tableName, HBaseAdmin admin, Table t)
+      throws IOException {
+    insertData(tableName, admin, t, 1);
+  }
+
+  private void insertData(TableName tableName, Admin admin, Table t, int i) throws IOException {
+    Put p = new Put(Bytes.toBytes("row" + i));
+    p.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes("1"));
     t.put(p);
-    p = new Put(Bytes.toBytes("row2"));
-    p.add(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes("2"));
+    p = new Put(Bytes.toBytes("row" + (i + 1)));
+    p.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes("2"));
     t.put(p);
-    p = new Put(Bytes.toBytes("row3"));
-    p.add(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes("3"));
+    p = new Put(Bytes.toBytes("row" + (i + 2)));
+    p.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes("3"));
     t.put(p);
-    p = new Put(Bytes.toBytes("row4"));
-    p.add(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes("4"));
+    p = new Put(Bytes.toBytes("row" + (i + 3)));
+    p.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes("4"));
     t.put(p);
     admin.flush(tableName);
   }

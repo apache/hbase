@@ -131,6 +131,12 @@ public class HStore implements Store {
 
   private static final Log LOG = LogFactory.getLog(HStore.class);
 
+  // HBASE-24428 : Update compaction priority for recently split daughter regions
+  // so as to prioritize their compaction.
+  // Any compaction candidate with higher priority than compaction of newly split daugher regions
+  // should have priority value < (Integer.MIN_VALUE + 1000)
+  public static final int SPLIT_REGION_COMPACTION_PRIORITY = Integer.MIN_VALUE + 1000;
+
   protected final MemStore memstore;
   // This stores directory in the filesystem.
   private final HRegion region;
@@ -1813,7 +1819,23 @@ public class HStore implements Store {
 
         // Set common request properties.
         // Set priority, either override value supplied by caller or from store.
-        request.setPriority((priority != Store.NO_PRIORITY) ? priority : getCompactPriority());
+        final int compactionPriority =
+          (priority != Store.NO_PRIORITY) ? priority : getCompactPriority();
+        request.setPriority(compactionPriority);
+
+        if (request.isAfterSplit()) {
+          // If the store belongs to recently splitted daughter regions, better we consider
+          // them with the higher priority in the compaction queue.
+          // Override priority if it is lower (higher int value) than
+          // SPLIT_REGION_COMPACTION_PRIORITY
+          final int splitHousekeepingPriority =
+            Math.min(compactionPriority, SPLIT_REGION_COMPACTION_PRIORITY);
+          request.setPriority(splitHousekeepingPriority);
+          LOG.info("Keeping/Overriding Compaction request priority to " + splitHousekeepingPriority
+            + " for CF " + this.getColumnFamilyName() + " since it"
+            + " belongs to recently split daughter region " + getRegionInfo()
+            .getRegionNameAsString());
+        }
         request.setDescription(getRegionInfo().getRegionNameAsString(), getColumnFamilyName());
       }
     } finally {
