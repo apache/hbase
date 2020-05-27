@@ -63,7 +63,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 public class SimpleRegionNormalizer implements RegionNormalizer {
 
   private static final Logger LOG = LoggerFactory.getLogger(SimpleRegionNormalizer.class);
-  private static final int MIN_REGION_COUNT = 3;
+
+  public static final String HBASE_REGION_NORMALIZER_MIN_REGION_COUNT_KEY =
+      "hbase.normalizer.min.region.count";
+  public static final int HBASE_REGION_NORMALIZER_MIN_REGION_COUNT_DEFAULT = 3;
+
+  protected int minRegionCount;
   private MasterServices masterServices;
   private MasterRpcServices masterRpcServices;
   private static long[] skippedCount = new long[NormalizationPlan.PlanType.values().length];
@@ -75,6 +80,9 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
   @Override
   public void setMasterServices(MasterServices masterServices) {
     this.masterServices = masterServices;
+    minRegionCount = masterServices.getConfiguration().getInt(
+        HBASE_REGION_NORMALIZER_MIN_REGION_COUNT_KEY,
+        HBASE_REGION_NORMALIZER_MIN_REGION_COUNT_DEFAULT);
   }
 
   @Override
@@ -148,12 +156,15 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
     List<RegionInfo> tableRegions = masterServices.getAssignmentManager().getRegionStates().
       getRegionsOfTable(table);
 
-    //TODO: should we make min number of regions a config param?
-    if (tableRegions == null || tableRegions.size() < MIN_REGION_COUNT) {
-      int nrRegions = tableRegions == null ? 0 : tableRegions.size();
-      LOG.debug("Table " + table + " has " + nrRegions + " regions, required min number"
-        + " of regions for normalizer to run is " + MIN_REGION_COUNT + ", not running normalizer");
+    if (tableRegions == null) {
       return null;
+    }
+
+    if (tableRegions.size() < minRegionCount) {
+      LOG.debug("Table " + table + " has " + tableRegions.size() + " regions, required min number"
+          + " of regions for normalizer merging to run is " + minRegionCount
+          + ", not running normalizer merging");
+      mergeEnabled = false;
     }
 
     LOG.debug("Computing normalization plan for table: " + table +
