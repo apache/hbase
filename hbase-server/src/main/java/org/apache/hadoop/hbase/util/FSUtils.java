@@ -1788,7 +1788,9 @@ public abstract class FSUtils extends CommonFSUtils {
    */
   public static DFSHedgedReadMetrics getDFSHedgedReadMetrics(final Configuration c)
       throws IOException {
-    if (!isHDFS(c)) return null;
+    if (!isHDFS(c)) {
+      return null;
+    }
     // getHedgedReadMetrics is package private. Get the DFSClient instance that is internal
     // to the DFS FS instance and make the method getHedgedReadMetrics accessible, then invoke it
     // to get the singleton instance of DFSHedgedReadMetrics shared by DFSClients.
