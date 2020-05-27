@@ -1,0 +1,116 @@
+/*
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.hadoop.hbase.regionserver.slowlog;
+
+import java.util.ArrayList;
+import java.util.List;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog;
+import org.apache.yetus.audience.InterfaceAudience;
+
+/**
+ * Event Handler utility class
+ */
+@InterfaceAudience.Private
+class LogHandlerUtils {
+
+  private static int getTotalFiltersCount(AdminProtos.SlowLogResponseRequest request) {
+    int totalFilters = 0;
+    if (StringUtils.isNotEmpty(request.getRegionName())) {
+      totalFilters++;
+    }
+    if (StringUtils.isNotEmpty(request.getTableName())) {
+      totalFilters++;
+    }
+    if (StringUtils.isNotEmpty(request.getClientAddress())) {
+      totalFilters++;
+    }
+    if (StringUtils.isNotEmpty(request.getUserName())) {
+      totalFilters++;
+    }
+    return totalFilters;
+  }
+
+  private static List<TooSlowLog.SlowLogPayload> filterLogs(
+      AdminProtos.SlowLogResponseRequest request,
+      List<TooSlowLog.SlowLogPayload> slowLogPayloadList) {
+    List<TooSlowLog.SlowLogPayload> filteredSlowLogPayloads = new ArrayList<>();
+    int totalFilters = getTotalFiltersCount(request);
+    for (TooSlowLog.SlowLogPayload slowLogPayload : slowLogPayloadList) {
+      int totalFilterMatches = 0;
+      if (StringUtils.isNotEmpty(request.getRegionName())) {
+        if (slowLogPayload.getRegionName().equals(request.getRegionName())) {
+          totalFilterMatches++;
+        }
+      }
+      if (StringUtils.isNotEmpty(request.getTableName())) {
+        if (slowLogPayload.getRegionName().startsWith(request.getTableName())) {
+          totalFilterMatches++;
+        }
+      }
+      if (StringUtils.isNotEmpty(request.getClientAddress())) {
+        if (slowLogPayload.getClientAddress().equals(request.getClientAddress())) {
+          totalFilterMatches++;
+        }
+      }
+      if (StringUtils.isNotEmpty(request.getUserName())) {
+        if (slowLogPayload.getUserName().equals(request.getUserName())) {
+          totalFilterMatches++;
+        }
+      }
+      if (request.hasFilterByOperator() && request.getFilterByOperator()
+        .equals(AdminProtos.SlowLogResponseRequest.FilterByOperator.AND)) {
+        // Filter by AND operator
+        if (totalFilterMatches == totalFilters) {
+          filteredSlowLogPayloads.add(slowLogPayload);
+        }
+      } else {
+        // Filter by OR operator
+        if (totalFilterMatches > 0) {
+          filteredSlowLogPayloads.add(slowLogPayload);
+        }
+      }
+    }
+    return filteredSlowLogPayloads;
+  }
+
+  static List<TooSlowLog.SlowLogPayload> getFilteredLogs(
+      AdminProtos.SlowLogResponseRequest request, List<TooSlowLog.SlowLogPayload> logPayloadList) {
+    if (isFilterProvided(request)) {
+      logPayloadList = filterLogs(request, logPayloadList);
+    }
+    int limit = Math.min(request.getLimit(), logPayloadList.size());
+    return logPayloadList.subList(0, limit);
+  }
+
+  private static boolean isFilterProvided(AdminProtos.SlowLogResponseRequest request) {
+    if (StringUtils.isNotEmpty(request.getUserName())) {
+      return true;
+    }
+    if (StringUtils.isNotEmpty(request.getTableName())) {
+      return true;
+    }
+    if (StringUtils.isNotEmpty(request.getClientAddress())) {
+      return true;
+    }
+    return StringUtils.isNotEmpty(request.getRegionName());
+  }
+}
