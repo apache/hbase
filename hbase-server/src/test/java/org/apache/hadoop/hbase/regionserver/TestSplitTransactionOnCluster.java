@@ -90,6 +90,7 @@ import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -331,11 +332,13 @@ public class TestSplitTransactionOnCluster {
     HStore hStore1 = hRegion1.getStore(cf);
     HStore hStore2 = hRegion2.getStore(cf);
 
-    // For hStore1, set mock reference to one of the storeFiles
+    // For hStore1 && hStore2, set mock reference to one of the storeFiles
     StoreFileInfo storeFileInfo1 = new ArrayList<>(hStore1.getStorefiles()).get(0).getFileInfo();
+    StoreFileInfo storeFileInfo2 = new ArrayList<>(hStore2.getStorefiles()).get(0).getFileInfo();
     Field field = StoreFileInfo.class.getDeclaredField("reference");
     field.setAccessible(true);
     field.set(storeFileInfo1, Mockito.mock(Reference.class));
+    field.set(storeFileInfo2, Mockito.mock(Reference.class));
     hStore1.triggerMajorCompaction();
     hStore2.triggerMajorCompaction();
 
@@ -344,13 +347,16 @@ public class TestSplitTransactionOnCluster {
     // since we set mock reference to one of the storeFiles, we will get isAfterSplit=true &&
     // highest priority for hStore1's compactionContext
     assertTrue(compactionContext.get().getRequest().isAfterSplit());
-    assertEquals(compactionContext.get().getRequest().getPriority(), Integer.MIN_VALUE);
-    compactionContext = hStore2.requestCompaction();
+    assertEquals(compactionContext.get().getRequest().getPriority(), Integer.MIN_VALUE + 1000);
+
+    compactionContext =
+      hStore2.requestCompaction(Integer.MIN_VALUE + 10, CompactionLifeCycleTracker.DUMMY, null);
     assertTrue(compactionContext.isPresent());
-    // all of hStore2's storeFiles have null reference, hence we will get isAfterSplit=false
-    // for hStore2's compactionContext
-    assertFalse(compactionContext.get().getRequest().isAfterSplit());
-    assertEquals(compactionContext.get().getRequest().getPriority(), 15);
+    // compaction request contains higher priority than default priority of daughter region
+    // compaction (Integer.MIN_VALUE + 1000), hence we are expecting request priority to
+    // be accepted.
+    assertTrue(compactionContext.get().getRequest().isAfterSplit());
+    assertEquals(compactionContext.get().getRequest().getPriority(), Integer.MIN_VALUE + 10);
   }
 
   public static class FailingSplitMasterObserver implements MasterCoprocessor, MasterObserver {

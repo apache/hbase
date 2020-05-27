@@ -143,6 +143,10 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   public static final int DEFAULT_COMPACTCHECKER_INTERVAL_MULTIPLIER = 1000;
   public static final int DEFAULT_BLOCKING_STOREFILE_COUNT = 16;
 
+  // HBASE-24428 : Update compaction priority for recently split daughter regions
+  // so as to prioritize their compaction.
+  private static final int SPLIT_REGION_COMPACTION_PRIORITY = Integer.MIN_VALUE + 1000;
+
   private static final Logger LOG = LoggerFactory.getLogger(HStore.class);
 
   protected final MemStore memstore;
@@ -1921,14 +1925,23 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
         // If we're enqueuing a major, clear the force flag.
         this.forceMajor = this.forceMajor && !request.isMajor();
 
+        // Set common request properties.
+        // Set priority, either override value supplied by caller or from store.
+        final int compactionPriority =
+          (priority != Store.NO_PRIORITY) ? priority : getCompactPriority();
+        request.setPriority(compactionPriority);
+
         if (request.isAfterSplit()) {
           // If the store belongs to recently splitted daughter regions, better we consider
-          // them with the highest priority in the compaction queue.
-          request.setPriority(Integer.MIN_VALUE);
-        } else {
-          // Set common request properties.
-          // Set priority, either override value supplied by caller or from store.
-          request.setPriority((priority != Store.NO_PRIORITY) ? priority : getCompactPriority());
+          // them with the higher priority in the compaction queue.
+          // Override priority if it is lower (higher int value) than
+          // SPLIT_REGION_COMPACTION_PRIORITY
+          final int splitHousekeepingPriority =
+            Math.min(compactionPriority, SPLIT_REGION_COMPACTION_PRIORITY);
+          request.setPriority(splitHousekeepingPriority);
+          LOG.info("Keeping/Overriding Compaction request priority to {} for CF {} since it"
+              + " belongs to recently split daughter region {}", splitHousekeepingPriority,
+            this.getColumnFamilyName(), getRegionInfo().getRegionNameAsString());
         }
         request.setDescription(getRegionInfo().getRegionNameAsString(), getColumnFamilyName());
         request.setTracker(tracker);
