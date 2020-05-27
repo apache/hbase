@@ -428,7 +428,7 @@ public class AsyncClientExamplesTest {
       TableDescriptor td2 = getTableDescriptor("Table2");
       TableDescriptor td3 = getTableDescriptor("Table3");
 
-      // create table1, table2 and Table3 in parallel
+      // create table1, table2 and Table3 serially
       CompletableFuture<Void> createTable = admin.createTable(td);
       CompletableFuture<Void> createTable2 = admin.createTable(td2);
       CompletableFuture<Void> createTable3 = admin.createTable(td3);
