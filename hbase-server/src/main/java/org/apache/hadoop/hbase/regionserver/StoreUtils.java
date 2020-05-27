@@ -52,7 +52,7 @@ public class StoreUtils {
    */
   public static boolean hasReferences(Collection<HStoreFile> files) {
     // TODO: make sure that we won't pass null here in the future.
-    return files != null ? files.stream().anyMatch(HStoreFile::isReference) : false;
+    return files != null && files.stream().anyMatch(HStoreFile::isReference);
   }
 
   /**

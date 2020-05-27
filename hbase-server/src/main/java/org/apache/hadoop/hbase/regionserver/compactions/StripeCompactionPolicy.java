@@ -122,6 +122,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
       SplitStripeCompactionRequest request = new SplitStripeCompactionRequest(
           allFiles, OPEN_KEY, OPEN_KEY, targetKvs);
       request.setMajorRangeFull();
+      request.getRequest().setAfterSplit(true);
       return request;
     }
 
