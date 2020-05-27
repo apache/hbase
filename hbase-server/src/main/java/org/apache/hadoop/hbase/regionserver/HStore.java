@@ -145,6 +145,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
 
   // HBASE-24428 : Update compaction priority for recently split daughter regions
   // so as to prioritize their compaction.
+  // Any compaction candidate with higher priority than compaction of newly split daugher regions
+  // should have priority value < (Integer.MIN_VALUE + 1000)
   private static final int SPLIT_REGION_COMPACTION_PRIORITY = Integer.MIN_VALUE + 1000;
 
   private static final Logger LOG = LoggerFactory.getLogger(HStore.class);
