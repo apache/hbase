@@ -43,6 +43,7 @@ public class CompactionRequestImpl implements CompactionRequest {
   private DisplayCompactionType isMajor = DisplayCompactionType.MINOR;
   private int priority = NO_PRIORITY;
   private Collection<HStoreFile> filesToCompact;
+  private boolean isAfterSplit = false;
 
   // CompactRequest object creation time.
   private long selectionTime;
@@ -136,6 +137,14 @@ public class CompactionRequestImpl implements CompactionRequest {
     return tracker;
   }
 
+  public boolean isAfterSplit() {
+    return isAfterSplit;
+  }
+
+  public void setAfterSplit(boolean afterSplit) {
+    isAfterSplit = afterSplit;
+  }
+
   @Override
   public int hashCode() {
     final int prime = 31;
@@ -149,6 +158,7 @@ public class CompactionRequestImpl implements CompactionRequest {
     result = prime * result + ((storeName == null) ? 0 : storeName.hashCode());
     result = prime * result + (int) (totalSize ^ (totalSize >>> 32));
     result = prime * result + ((tracker == null) ? 0 : tracker.hashCode());
+    result = prime * result + (isAfterSplit ? 1231 : 1237);
     return result;
   }
 
@@ -198,6 +208,9 @@ public class CompactionRequestImpl implements CompactionRequest {
       return false;
     }
     if (totalSize != other.totalSize) {
+      return false;
+    }
+    if (isAfterSplit != other.isAfterSplit) {
       return false;
     }
     if (tracker == null) {
