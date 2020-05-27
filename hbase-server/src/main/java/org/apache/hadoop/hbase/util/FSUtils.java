@@ -1784,9 +1784,7 @@ public abstract class FSUtils extends CommonFSUtils {
   }
 
   /**
-   * @param c
    * @return The DFSClient DFSHedgedReadMetrics instance or null if can't be found or not on hdfs.
-   * @throws IOException
    */
   public static DFSHedgedReadMetrics getDFSHedgedReadMetrics(final Configuration c)
       throws IOException {
