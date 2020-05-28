@@ -504,6 +504,12 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String MAJOR_COMPACTED_OUTPUT_BYTES_DESC
     = "Total number of bytes that is output from compaction, major only";
 
+  String HEDGED_READS = "hedgedReads";
+  String HEDGED_READS_DESC = "The number of times we started a hedged read";
+  String HEDGED_READ_WINS = "hedgedReadWins";
+  String HEDGED_READ_WINS_DESC =
+    "The number of times we started a hedged read and a hedged read won";
+
   String RPC_GET_REQUEST_COUNT = "rpcGetRequestCount";
   String RPC_GET_REQUEST_COUNT_DESC = "Number of rpc get requests this region server has answered.";
   String RPC_SCAN_REQUEST_COUNT = "rpcScanRequestCount";
