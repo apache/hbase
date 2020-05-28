@@ -127,7 +127,7 @@ ____
 ==  On the number of column families
 
 HBase currently does not do well with anything above two or three column families so keep the number of column families in your schema low.
-Currently, flushing are done on a per Region basis so if one column family is carrying the bulk of the data bringing on flushes, the adjacent families will also be flushed even though the amount of data they carry is small.
+Currently, flushing is done on a per Region basis so if one column family is carrying the bulk of the data bringing on flushes, the adjacent families will also be flushed even though the amount of data they carry is small.
 When many column families exist the flushing interaction can make for a bunch of needless i/o (To be addressed by changing flushing to work on a per column family basis).
 
 Try to make do with one column family if you can in your schemas.
