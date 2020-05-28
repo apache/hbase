@@ -28,6 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
+import org.apache.hbase.thirdparty.io.netty.channel.WriteBufferWaterMark;
 import org.apache.hbase.thirdparty.io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioSocketChannel;
 import org.apache.hbase.thirdparty.io.netty.util.concurrent.DefaultThreadFactory;
@@ -39,24 +40,46 @@ import org.apache.hbase.thirdparty.io.netty.util.concurrent.DefaultThreadFactory
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class NettyRpcClient extends AbstractRpcClient<NettyRpcConnection> {
 
+  protected static final String CLIENT_TCP_REUSEADDR = "hbase.ipc.client.tcpreuseaddr";
+
+  protected static final String CLIENT_BUFFER_LOW_WATERMARK = "hbase.ipc.client.bufferlowwatermark";
+  protected static final String CLIENT_BUFFER_HIGH_WATERMARK =
+      "hbase.ipc.client.bufferhighwatermark";
+
+  protected static final int DEFAULT_CLIENT_BUFFER_LOW_WATERMARK = 32 * 1024;
+  protected static final int DEFAULT_CLIENT_BUFFER_HIGH_WATERMARK = 64 * 1024;
+  protected static final boolean DEFAULT_SERVER_REUSEADDR = true;
+
+  protected final WriteBufferWaterMark writeBufferWaterMark;
+
   final EventLoopGroup group;
 
   final Class<? extends Channel> channelClass;
 
   private final boolean shutdownGroupWhenClose;
 
+  protected final int bufferLowWatermark;
+  protected final int bufferHighWatermark;
+  protected final boolean tcpReuseAddr;
+
   public NettyRpcClient(Configuration configuration, String clusterId, SocketAddress localAddress,
       MetricsConnection metrics) {
     super(configuration, clusterId, localAddress, metrics);
+    this.bufferLowWatermark = conf.getInt(
+        CLIENT_BUFFER_LOW_WATERMARK, DEFAULT_CLIENT_BUFFER_LOW_WATERMARK);
+    this.bufferHighWatermark = conf.getInt(
+        CLIENT_BUFFER_HIGH_WATERMARK, DEFAULT_CLIENT_BUFFER_HIGH_WATERMARK);
+    this.writeBufferWaterMark = new WriteBufferWaterMark(bufferLowWatermark, bufferHighWatermark);
+    this.tcpReuseAddr = conf.getBoolean(CLIENT_TCP_REUSEADDR, DEFAULT_SERVER_REUSEADDR);
     Pair<EventLoopGroup, Class<? extends Channel>> groupAndChannelClass =
-      NettyRpcClientConfigHelper.getEventLoopConfig(conf);
+        NettyRpcClientConfigHelper.getEventLoopConfig(conf);
     if (groupAndChannelClass == null) {
       // Use our own EventLoopGroup.
       int threadCount = conf.getInt(
-        NettyRpcClientConfigHelper.HBASE_NETTY_EVENTLOOP_RPCCLIENT_THREADCOUNT_KEY, 0);
+          NettyRpcClientConfigHelper.HBASE_NETTY_EVENTLOOP_RPCCLIENT_THREADCOUNT_KEY, 0);
       this.group = new NioEventLoopGroup(threadCount,
           new DefaultThreadFactory("RPCClient(own)-NioEventLoopGroup", true,
-            Thread.NORM_PRIORITY));
+              Thread.NORM_PRIORITY));
       this.channelClass = NioSocketChannel.class;
       this.shutdownGroupWhenClose = true;
     } else {

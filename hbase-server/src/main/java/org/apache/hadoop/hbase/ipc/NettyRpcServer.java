@@ -46,6 +46,7 @@ import org.apache.hbase.thirdparty.io.netty.channel.ChannelOption;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelPipeline;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.ServerChannel;
+import org.apache.hbase.thirdparty.io.netty.channel.WriteBufferWaterMark;
 import org.apache.hbase.thirdparty.io.netty.channel.group.ChannelGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.group.DefaultChannelGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.nio.NioEventLoopGroup;
@@ -67,20 +68,46 @@ public class NettyRpcServer extends RpcServer {
    * Tests may set this down from unlimited.
    */
   public static final String HBASE_NETTY_EVENTLOOP_RPCSERVER_THREADCOUNT_KEY =
-    "hbase.netty.eventloop.rpcserver.thread.count";
+      "hbase.netty.eventloop.rpcserver.thread.count";
   private static final int EVENTLOOP_THREADCOUNT_DEFAULT = 0;
+
+  protected static final String SERVER_TCP_BACKLOG = "hbase.ipc.server.tcpbacklog";
+  protected static final String SERVER_TCP_REUSEADDR = "hbase.ipc.server.tcpreuseaddr";
+
+  protected static final String SERVER_BUFFER_LOW_WATERMARK = "hbase.ipc.server.bufferlowwatermark";
+  protected static final String SERVER_BUFFER_HIGH_WATERMARK =
+      "hbase.ipc.server.bufferhighwatermark";
+
+  protected static final boolean DEFAULT_SERVER_REUSEADDR = true;
+  protected static final int DEFAULT_SERVER_BUFFER_LOW_WATERMARK = 32 * 1024;
+  protected static final int DEFAULT_SERVER_BUFFER_HIGH_WATERMARK = 64 * 1024;
 
   private final InetSocketAddress bindAddress;
 
   private final CountDownLatch closed = new CountDownLatch(1);
   private final Channel serverChannel;
   private final ChannelGroup allChannels =
-    new DefaultChannelGroup(GlobalEventExecutor.INSTANCE, true);
+      new DefaultChannelGroup(GlobalEventExecutor.INSTANCE, true);
+
+  protected final WriteBufferWaterMark writeBufferWaterMark;
+
+  protected final int bufferLowWatermark;
+  protected final int bufferHighWatermark;
+
+  protected final boolean tcpReuseAddr;
+  protected final int tcpBacklog;
 
   public NettyRpcServer(Server server, String name, List<BlockingServiceAndInterface> services,
       InetSocketAddress bindAddress, Configuration conf, RpcScheduler scheduler,
       boolean reservoirEnabled) throws IOException {
     super(server, name, services, bindAddress, conf, scheduler, reservoirEnabled);
+    this.bufferLowWatermark =
+        conf.getInt(SERVER_BUFFER_LOW_WATERMARK, DEFAULT_SERVER_BUFFER_LOW_WATERMARK);
+    this.bufferHighWatermark =
+        conf.getInt(SERVER_BUFFER_HIGH_WATERMARK, DEFAULT_SERVER_BUFFER_HIGH_WATERMARK);
+    this.writeBufferWaterMark = new WriteBufferWaterMark(bufferLowWatermark, bufferHighWatermark);
+    this.tcpBacklog = conf.getInt(SERVER_TCP_BACKLOG, -1);
+    this.tcpReuseAddr = conf.getBoolean(SERVER_TCP_REUSEADDR, DEFAULT_SERVER_REUSEADDR);
     this.bindAddress = bindAddress;
     EventLoopGroup eventLoopGroup;
     Class<? extends ServerChannel> channelClass;
@@ -89,17 +116,21 @@ public class NettyRpcServer extends RpcServer {
       eventLoopGroup = config.group();
       channelClass = config.serverChannelClass();
     } else {
-      int threadCount = server == null? EVENTLOOP_THREADCOUNT_DEFAULT:
-        server.getConfiguration().getInt(HBASE_NETTY_EVENTLOOP_RPCSERVER_THREADCOUNT_KEY,
-          EVENTLOOP_THREADCOUNT_DEFAULT);
+      int threadCount = server == null ?
+          EVENTLOOP_THREADCOUNT_DEFAULT :
+          server.getConfiguration().getInt(HBASE_NETTY_EVENTLOOP_RPCSERVER_THREADCOUNT_KEY,
+              EVENTLOOP_THREADCOUNT_DEFAULT);
       eventLoopGroup = new NioEventLoopGroup(threadCount,
-        new DefaultThreadFactory("NettyRpcServer", true, Thread.MAX_PRIORITY));
+          new DefaultThreadFactory("NettyRpcServer", true, Thread.MAX_PRIORITY));
       channelClass = NioServerSocketChannel.class;
     }
     ServerBootstrap bootstrap = new ServerBootstrap().group(eventLoopGroup).channel(channelClass)
+        .option(ChannelOption.SO_REUSEADDR, tcpReuseAddr)
         .childOption(ChannelOption.TCP_NODELAY, tcpNoDelay)
         .childOption(ChannelOption.SO_KEEPALIVE, tcpKeepAlive)
-        .childOption(ChannelOption.SO_REUSEADDR, true)
+        .childOption(ChannelOption.SO_REUSEADDR, tcpReuseAddr)
+        .childOption(ChannelOption.WRITE_BUFFER_WATER_MARK,
+            new WriteBufferWaterMark(bufferLowWatermark, bufferHighWatermark))
         .childHandler(new ChannelInitializer<Channel>() {
 
           @Override
@@ -114,6 +145,9 @@ public class NettyRpcServer extends RpcServer {
             pipeline.addLast("encoder", new NettyRpcServerResponseEncoder(metrics));
           }
         });
+    if (tcpBacklog > -1) {
+      bootstrap = bootstrap.option(ChannelOption.SO_BACKLOG, tcpBacklog);
+    }
     try {
       serverChannel = bootstrap.bind(this.bindAddress).sync().channel();
       LOG.info("Bind to {}", serverChannel.localAddress());

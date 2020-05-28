@@ -21,11 +21,20 @@ import static org.apache.hadoop.hbase.ipc.CallEvent.Type.CANCELLED;
 import static org.apache.hadoop.hbase.ipc.CallEvent.Type.TIMEOUT;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.setCancelled;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.toIOE;
-
-import org.apache.hbase.thirdparty.io.netty.handler.timeout.ReadTimeoutHandler;
+import java.io.IOException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.security.NettyHBaseRpcConnectionHeaderHandler;
+import org.apache.hadoop.hbase.security.NettyHBaseSaslRpcClientHandler;
+import org.apache.hadoop.hbase.security.SaslChallengeDecoder;
+import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
-
 import org.apache.hbase.thirdparty.io.netty.bootstrap.Bootstrap;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBufOutputStream;
@@ -38,27 +47,12 @@ import org.apache.hbase.thirdparty.io.netty.channel.ChannelOption;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelPipeline;
 import org.apache.hbase.thirdparty.io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleStateHandler;
+import org.apache.hbase.thirdparty.io.netty.handler.timeout.ReadTimeoutHandler;
 import org.apache.hbase.thirdparty.io.netty.util.ReferenceCountUtil;
 import org.apache.hbase.thirdparty.io.netty.util.concurrent.Future;
 import org.apache.hbase.thirdparty.io.netty.util.concurrent.FutureListener;
 import org.apache.hbase.thirdparty.io.netty.util.concurrent.Promise;
-
-import java.io.IOException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.ipc.BufferCallBeforeInitHandler.BufferCallEvent;
-import org.apache.hadoop.hbase.ipc.HBaseRpcController.CancellationCallback;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeader;
-import org.apache.hadoop.hbase.security.NettyHBaseSaslRpcClientHandler;
-import org.apache.hadoop.hbase.security.SaslChallengeDecoder;
-import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 
 /**
  * RPC connection implementation based on netty.
@@ -92,7 +86,7 @@ class NettyRpcConnection extends RpcConnection {
     byte[] connectionHeaderPreamble = getConnectionHeaderPreamble();
     this.connectionHeaderPreamble =
         Unpooled.directBuffer(connectionHeaderPreamble.length).writeBytes(connectionHeaderPreamble);
-    ConnectionHeader header = getConnectionHeader();
+    RPCProtos.ConnectionHeader header = getConnectionHeader();
     this.connectionHeaderWithLength = Unpooled.directBuffer(4 + header.getSerializedSize());
     this.connectionHeaderWithLength.writeInt(header.getSerializedSize());
     header.writeTo(new ByteBufOutputStream(this.connectionHeaderWithLength));
@@ -140,7 +134,7 @@ class NettyRpcConnection extends RpcConnection {
     p.addBefore(addBeforeHandler, null, new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4));
     p.addBefore(addBeforeHandler, null,
       new NettyRpcDuplexHandler(this, rpcClient.cellBlockBuilder, codec, compressor));
-    p.fireUserEventTriggered(BufferCallEvent.success());
+    p.fireUserEventTriggered(BufferCallBeforeInitHandler.BufferCallEvent.success());
   }
 
   private boolean reloginInProgress;
@@ -176,7 +170,7 @@ class NettyRpcConnection extends RpcConnection {
   private void failInit(Channel ch, IOException e) {
     synchronized (this) {
       // fail all pending calls
-      ch.pipeline().fireUserEventTriggered(BufferCallEvent.fail(e));
+      ch.pipeline().fireUserEventTriggered(BufferCallBeforeInitHandler.BufferCallEvent.fail(e));
       shutdown0();
       return;
     }
@@ -257,7 +251,9 @@ class NettyRpcConnection extends RpcConnection {
         .option(ChannelOption.TCP_NODELAY, rpcClient.isTcpNoDelay())
         .option(ChannelOption.SO_KEEPALIVE, rpcClient.tcpKeepAlive)
         .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, rpcClient.connectTO)
+        .option(ChannelOption.SO_REUSEADDR, rpcClient.tcpReuseAddr)
         .handler(new BufferCallBeforeInitHandler()).localAddress(rpcClient.localAddr)
+        .option(ChannelOption.WRITE_BUFFER_WATER_MARK, rpcClient.writeBufferWaterMark)
         .remoteAddress(remoteId.address).connect().addListener(new ChannelFutureListener() {
 
           @Override
@@ -311,7 +307,7 @@ class NettyRpcConnection extends RpcConnection {
           }
         }
       }
-    }, new CancellationCallback() {
+    }, new HBaseRpcController.CancellationCallback() {
 
       @Override
       public void run(boolean cancelled) throws IOException {
