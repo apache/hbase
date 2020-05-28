@@ -135,7 +135,7 @@ public class HStore implements Store {
   // so as to prioritize their compaction.
   // Any compaction candidate with higher priority than compaction of newly split daugher regions
   // should have priority value < (Integer.MIN_VALUE + 1000)
-  public static final int SPLIT_REGION_COMPACTION_PRIORITY = Integer.MIN_VALUE + 1000;
+  private static final int SPLIT_REGION_COMPACTION_PRIORITY = Integer.MIN_VALUE + 1000;
 
   protected final MemStore memstore;
   // This stores directory in the filesystem.
