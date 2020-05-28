@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALClosedException;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -52,7 +51,7 @@ import org.slf4j.LoggerFactory;
  * TODO: change to a pool of threads
  */
 @InterfaceAudience.Private
-public abstract class AbstractWALRoller<T extends Abortable> extends HasThread
+public abstract class AbstractWALRoller<T extends Abortable> extends Thread
   implements Closeable {
   private static final Logger LOG = LoggerFactory.getLogger(AbstractWALRoller.class);
 
@@ -223,7 +222,7 @@ public abstract class AbstractWALRoller<T extends Abortable> extends HasThread
   protected abstract void scheduleFlush(String encodedRegionName);
 
   private boolean isWaiting() {
-    Thread.State state = getThread().getState();
+    Thread.State state = getState();
     return state == Thread.State.WAITING || state == Thread.State.TIMED_WAITING;
   }
 
