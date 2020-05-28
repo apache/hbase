@@ -23,7 +23,9 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -55,9 +57,11 @@ import com.google.protobuf.ServiceException;
 @InterfaceAudience.Private
 public class RSGroupAdminClient implements RSGroupAdmin {
   private RSGroupAdminService.BlockingInterface stub;
+  private Admin admin;
 
   public RSGroupAdminClient(Connection conn) throws IOException {
-    stub = RSGroupAdminService.newBlockingStub(conn.getAdmin().coprocessorService());
+    admin = conn.getAdmin();
+    stub = RSGroupAdminService.newBlockingStub(admin.coprocessorService());
   }
 
   @Override
@@ -114,6 +118,9 @@ public class RSGroupAdminClient implements RSGroupAdmin {
     MoveTablesRequest.Builder builder = MoveTablesRequest.newBuilder().setTargetGroup(targetGroup);
     for(TableName tableName: tables) {
       builder.addTableName(ProtobufUtil.toProtoTableName(tableName));
+      if (!admin.tableExists(tableName)) {
+        throw new TableNotFoundException(tableName);
+      }
     }
     try {
       stub.moveTables(null, builder.build());
@@ -200,6 +207,9 @@ public class RSGroupAdminClient implements RSGroupAdmin {
     }
     for(TableName tableName: tables) {
       builder.addTableName(ProtobufUtil.toProtoTableName(tableName));
+      if (!admin.tableExists(tableName)) {
+        throw new TableNotFoundException(tableName);
+      }
     }
     try {
       stub.moveServersAndTables(null, builder.build());
