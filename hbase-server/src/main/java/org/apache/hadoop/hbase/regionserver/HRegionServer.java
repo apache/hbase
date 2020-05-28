@@ -1459,7 +1459,7 @@ public class HRegionServer extends Thread implements
           LOG.debug("Waiting on {}", this.regionsInTransitionInRS.keySet().stream().
             map(e -> Bytes.toString(e)).collect(Collectors.joining(", ")));
         }
-        if (sleeps(200)) {
+        if (sleepInterrupted(200)) {
           interrupted = true;
         }
       }
@@ -1470,7 +1470,7 @@ public class HRegionServer extends Thread implements
     }
   }
 
-  private static boolean sleeps(long millis) {
+  private static boolean sleepInterrupted(long millis) {
     boolean interrupted = false;
     try {
       Thread.sleep(millis);
@@ -2673,7 +2673,7 @@ public class HRegionServer extends Thread implements
             previousLogTime = System.currentTimeMillis();
           }
           refresh = true; // let's try pull it from ZK directly
-          if (sleeps(200)) {
+          if (sleepInterrupted(200)) {
             interrupted = true;
           }
           continue;
@@ -2705,7 +2705,7 @@ public class HRegionServer extends Thread implements
             }
             previousLogTime = System.currentTimeMillis();
           }
-          if (sleeps(200)) {
+          if (sleepInterrupted(200)) {
             interrupted = true;
           }
         }
