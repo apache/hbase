@@ -121,7 +121,7 @@ public class SplitLogManager {
       throws IOException {
     this.server = master;
     this.conf = conf;
-    // Get Server Thread name. Sometimes the Server is mocked so may not implement Thread.
+    // Get Server Thread name. Sometimes the Server is mocked so may not extends Thread.
     // For example, in tests.
     String name = master instanceof Thread? ((Thread)master).getName():
         master.getServerName().toShortString();
