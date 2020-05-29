@@ -606,7 +606,7 @@ public class HStore implements Store {
         try {
           if (file != null) file.closeReader(evictOnClose);
         } catch (IOException e) {
-          LOG.warn(e.getMessage());
+          LOG.warn("Could not close store file " + file, e);
         }
       }
       throw ioe;
