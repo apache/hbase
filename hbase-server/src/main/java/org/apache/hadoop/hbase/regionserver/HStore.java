@@ -608,7 +608,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
             file.closeStoreFile(evictOnClose);
           }
         } catch (IOException e) {
-          LOG.warn("Could not close store file", e);
+          LOG.warn("Could not close store file {}", file, e);
         }
       }
       throw ioe;
@@ -2815,13 +2815,15 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
       file.initReader();
       length = file.getReader().length();
     } catch (IOException e) {
-      LOG.trace("Failed to open reader when trying to compute store file size, ignoring", e);
+      LOG.trace("Failed to open reader when trying to compute store file size for {}, ignoring",
+        file, e);
     } finally {
       try {
         file.closeStoreFile(
             file.getCacheConf() != null ? file.getCacheConf().shouldEvictOnClose() : true);
       } catch (IOException e) {
-        LOG.trace("Failed to close reader after computing store file size, ignoring", e);
+        LOG.trace("Failed to close reader after computing store file size for {}, ignoring",
+          file, e);
       }
     }
     return length;
