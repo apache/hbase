@@ -569,7 +569,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
     int count = 0;
     long totalBytesRead = 0;
-    boolean fromMemstore = false;
+    boolean onlyFromMemstore = false;
+    boolean onlyFromFile = false;
     try {
       LOOP: do {
         // Update and check the time limit based on the configured value of cellsPerTimeoutCheck
@@ -616,14 +617,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
             if (f != null) {
               cell = f.transformCell(cell);
             }
-            /**
-             * For a read request see in the current row if atleast one cell is from memstore. If
-             * that is the case mark it as memstoreRead, if not mark it as fileRead. Generally reads
-             * for a single row wont be split across cells
-             */
-            if (!fromMemstore && !heap.current.isFileScanner()) {
-              fromMemstore = true;
-            }
             this.countPerRow++;
             if (storeLimit > -1 && this.countPerRow > (storeLimit + storeOffset)) {
               // do what SEEK_NEXT_ROW does.
@@ -645,6 +638,16 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
               count++;
               totalBytesRead += cellSize;
 
+              /**
+               * See if at the end of the loop if both the booleans are true. If so we wont't
+               * increment the metric. If any one of them alone stays true - increment the related
+               * metric
+               */
+              if (heap.current.isFileScanner()) {
+                onlyFromFile = true;
+              } else {
+                onlyFromMemstore = true;
+              }
               // Update the progress of the scanner context
               scannerContext.incrementSizeProgress(cellSize, cell.heapSize());
               scannerContext.incrementBatchProgress(1);
@@ -751,7 +754,13 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     } finally {
       // increment only if we have some result
       if (count > 0) {
-        updateMetricsStore(fromMemstore);
+        // pure memstore
+        if (onlyFromMemstore && !onlyFromFile) {
+          updateMetricsStore(true);
+        } else if (onlyFromFile && !onlyFromMemstore) {
+          // pure file reads
+          updateMetricsStore(false);
+        }
       }
     }
   }
