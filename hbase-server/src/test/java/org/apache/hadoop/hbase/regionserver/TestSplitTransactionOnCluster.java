@@ -322,8 +322,10 @@ public class TestSplitTransactionOnCluster {
     // the procedure will return true; if the split fails, the procedure would throw exception.
     ProcedureTestingUtility.waitProcedure(cluster.getMaster().getMasterProcedureExecutor(),
       procId);
-
-    assertEquals(2, cluster.getRegions(tableName).size());
+    Thread.sleep(3000);
+    assertNotEquals("Table is not split properly?", -1,
+      TESTING_UTIL.waitFor(3000,
+        () -> cluster.getRegions(tableName).size() == 2));
     // we have 2 daughter regions
     HRegion hRegion1 = cluster.getRegions(tableName).get(0);
     HRegion hRegion2 = cluster.getRegions(tableName).get(1);
@@ -355,6 +357,8 @@ public class TestSplitTransactionOnCluster {
     // be accepted.
     assertTrue(compactionContext.get().getRequest().isAfterSplit());
     assertEquals(compactionContext.get().getRequest().getPriority(), Integer.MIN_VALUE + 10);
+    admin.disableTable(tableName);
+    admin.deleteTable(tableName);
   }
 
   public static class FailingSplitMasterObserver implements MasterCoprocessor, MasterObserver {
