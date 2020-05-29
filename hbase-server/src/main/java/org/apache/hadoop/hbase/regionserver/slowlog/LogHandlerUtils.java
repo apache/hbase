@@ -51,30 +51,29 @@ class LogHandlerUtils {
 
   private static List<TooSlowLog.SlowLogPayload> filterLogs(
       AdminProtos.SlowLogResponseRequest request,
-      List<TooSlowLog.SlowLogPayload> slowLogPayloadList) {
+      List<TooSlowLog.SlowLogPayload> slowLogPayloadList, int totalFilters) {
     List<TooSlowLog.SlowLogPayload> filteredSlowLogPayloads = new ArrayList<>();
-    int totalFilters = getTotalFiltersCount(request);
+    final String regionName =
+      StringUtils.isNotEmpty(request.getRegionName()) ? request.getRegionName() : null;
+    final String tableName =
+      StringUtils.isNotEmpty(request.getTableName()) ? request.getTableName() : null;
+    final String clientAddress =
+      StringUtils.isNotEmpty(request.getClientAddress()) ? request.getClientAddress() : null;
+    final String userName =
+      StringUtils.isNotEmpty(request.getUserName()) ? request.getUserName() : null;
     for (TooSlowLog.SlowLogPayload slowLogPayload : slowLogPayloadList) {
       int totalFilterMatches = 0;
-      if (StringUtils.isNotEmpty(request.getRegionName())) {
-        if (slowLogPayload.getRegionName().equals(request.getRegionName())) {
-          totalFilterMatches++;
-        }
+      if (slowLogPayload.getRegionName().equals(regionName)) {
+        totalFilterMatches++;
       }
-      if (StringUtils.isNotEmpty(request.getTableName())) {
-        if (slowLogPayload.getRegionName().startsWith(request.getTableName())) {
-          totalFilterMatches++;
-        }
+      if (tableName != null && slowLogPayload.getRegionName().startsWith(tableName)) {
+        totalFilterMatches++;
       }
-      if (StringUtils.isNotEmpty(request.getClientAddress())) {
-        if (slowLogPayload.getClientAddress().equals(request.getClientAddress())) {
-          totalFilterMatches++;
-        }
+      if (slowLogPayload.getClientAddress().equals(clientAddress)) {
+        totalFilterMatches++;
       }
-      if (StringUtils.isNotEmpty(request.getUserName())) {
-        if (slowLogPayload.getUserName().equals(request.getUserName())) {
-          totalFilterMatches++;
-        }
+      if (slowLogPayload.getUserName().equals(userName)) {
+        totalFilterMatches++;
       }
       if (request.hasFilterByOperator() && request.getFilterByOperator()
         .equals(AdminProtos.SlowLogResponseRequest.FilterByOperator.AND)) {
@@ -94,23 +93,12 @@ class LogHandlerUtils {
 
   static List<TooSlowLog.SlowLogPayload> getFilteredLogs(
       AdminProtos.SlowLogResponseRequest request, List<TooSlowLog.SlowLogPayload> logPayloadList) {
-    if (isFilterProvided(request)) {
-      logPayloadList = filterLogs(request, logPayloadList);
+    int totalFilters = getTotalFiltersCount(request);
+    if (totalFilters > 0) {
+      logPayloadList = filterLogs(request, logPayloadList, totalFilters);
     }
     int limit = Math.min(request.getLimit(), logPayloadList.size());
     return logPayloadList.subList(0, limit);
   }
 
-  private static boolean isFilterProvided(AdminProtos.SlowLogResponseRequest request) {
-    if (StringUtils.isNotEmpty(request.getUserName())) {
-      return true;
-    }
-    if (StringUtils.isNotEmpty(request.getTableName())) {
-      return true;
-    }
-    if (StringUtils.isNotEmpty(request.getClientAddress())) {
-      return true;
-    }
-    return StringUtils.isNotEmpty(request.getRegionName());
-  }
 }
