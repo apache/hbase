@@ -245,7 +245,8 @@ public class TestCacheConfig {
         .setBlockCacheEnabled(false)
         .build();
 
-    cacheConfig = new CacheConfig(conf, columnFamilyDescriptor, null, ByteBuffAllocator.HEAP);
+    cacheConfig = new CacheConfig(conf, columnFamilyDescriptor, null,
+      null, ByteBuffAllocator.HEAP);
     assertFalse(cacheConfig.shouldCacheBlockOnRead(BlockCategory.DATA));
     assertFalse(cacheConfig.shouldCacheCompressed(BlockCategory.DATA));
     assertFalse(cacheConfig.shouldCacheDataCompressed());

@@ -21,6 +21,7 @@ import java.util.Optional;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -166,7 +167,7 @@ public class CacheConfig {
   }
 
   public CacheConfig(Configuration conf, BlockCache blockCache) {
-    this(conf, null, blockCache, ByteBuffAllocator.HEAP);
+    this(conf, null, null, blockCache, ByteBuffAllocator.HEAP);
   }
 
   /**
@@ -175,8 +176,8 @@ public class CacheConfig {
    * @param conf hbase configuration
    * @param family column family configuration
    */
-  public CacheConfig(Configuration conf, ColumnFamilyDescriptor family, BlockCache blockCache,
-      ByteBuffAllocator byteBuffAllocator) {
+  public CacheConfig(Configuration conf, ColumnFamilyDescriptor family, RegionInfo hri,
+      BlockCache blockCache, ByteBuffAllocator byteBuffAllocator) {
     this.cacheDataOnRead = conf.getBoolean(CACHE_DATA_ON_READ_KEY, DEFAULT_CACHE_DATA_ON_READ) &&
         (family == null ? true : family.isBlockCacheEnabled());
     this.inMemory = family == null ? DEFAULT_IN_MEMORY : family.isInMemory();
@@ -205,6 +206,7 @@ public class CacheConfig {
     this.blockCache = blockCache;
     this.byteBuffAllocator = byteBuffAllocator;
     LOG.info("Created cacheConfig: " + this + (family == null ? "" : " for family " + family) +
+        (hri == null ? "" : " in region " + hri.getRegionNameAsString()) +
         " with blockCache=" + blockCache);
   }
 

@@ -78,7 +78,7 @@ public class TestPrefetch {
     Configuration c = HBaseConfiguration.create();
     assertFalse(c.getBoolean(CacheConfig.PREFETCH_BLOCKS_ON_OPEN_KEY, false));
     CacheConfig cc =
-        new CacheConfig(c, columnFamilyDescriptor, blockCache, ByteBuffAllocator.HEAP);
+        new CacheConfig(c, columnFamilyDescriptor, null, blockCache, ByteBuffAllocator.HEAP);
     assertTrue(cc.shouldPrefetchOnOpen());
   }
 

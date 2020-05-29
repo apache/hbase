@@ -192,7 +192,7 @@ public class TestHFileScannerImplReferenceCount {
     writeHFile(conf, fs, hfilePath, compression, encoding, CELL_COUNT);
     HFileBlock curBlock, prevBlock;
     BlockCache defaultBC = BlockCacheFactory.createBlockCache(conf);
-    CacheConfig cacheConfig = new CacheConfig(conf, null, defaultBC, allocator);
+    CacheConfig cacheConfig = new CacheConfig(conf, null, null, defaultBC, allocator);
     Assert.assertNotNull(defaultBC);
     Assert.assertTrue(cacheConfig.isCombinedBlockCache());
     HFile.Reader reader = HFile.createReader(fs, hfilePath, cacheConfig, true, conf);
@@ -276,7 +276,7 @@ public class TestHFileScannerImplReferenceCount {
     HFileBlock curBlock, prevBlock;
     writeHFile(conf, fs, hfilePath, Algorithm.NONE, DataBlockEncoding.NONE, CELL_COUNT);
     BlockCache defaultBC = BlockCacheFactory.createBlockCache(conf);
-    CacheConfig cacheConfig = new CacheConfig(conf, null, defaultBC, allocator);
+    CacheConfig cacheConfig = new CacheConfig(conf, null, null, defaultBC, allocator);
     Assert.assertNotNull(defaultBC);
     Assert.assertTrue(cacheConfig.isCombinedBlockCache());
     HFile.Reader reader = HFile.createReader(fs, hfilePath, cacheConfig, true, conf);
@@ -406,7 +406,7 @@ public class TestHFileScannerImplReferenceCount {
     // Set LruBlockCache
     conf.set(BUCKET_CACHE_IOENGINE_KEY, "");
     BlockCache defaultBC = BlockCacheFactory.createBlockCache(conf);
-    CacheConfig cacheConfig = new CacheConfig(conf, null, defaultBC, allocator);
+    CacheConfig cacheConfig = new CacheConfig(conf, null, null, defaultBC, allocator);
     Assert.assertNotNull(defaultBC);
     Assert.assertFalse(cacheConfig.isCombinedBlockCache()); // Must be LruBlockCache.
     HFile.Reader reader = HFile.createReader(fs, hfilePath, cacheConfig, true, conf);
@@ -458,7 +458,7 @@ public class TestHFileScannerImplReferenceCount {
     conf.setFloat(HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
     BlockCache defaultBC = BlockCacheFactory.createBlockCache(conf);
     Assert.assertNull(defaultBC);
-    CacheConfig cacheConfig = new CacheConfig(conf, null, defaultBC, allocator);
+    CacheConfig cacheConfig = new CacheConfig(conf, null, null, defaultBC, allocator);
     Assert.assertFalse(cacheConfig.isCombinedBlockCache()); // Must be LruBlockCache.
     HFile.Reader reader = HFile.createReader(fs, hfilePath, cacheConfig, true, conf);
     Assert.assertTrue(reader instanceof HFileReaderImpl);

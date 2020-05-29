@@ -182,7 +182,7 @@ public class TestHFile  {
     Path storeFilePath = writeStoreFile();
     // Open the file reader with LRUBlockCache
     BlockCache lru = new LruBlockCache(1024 * 1024 * 32, blockSize, true, conf);
-    CacheConfig cacheConfig = new CacheConfig(conf, null, lru, alloc);
+    CacheConfig cacheConfig = new CacheConfig(conf, null, null, lru, alloc);
     HFile.Reader reader = HFile.createReader(fs, storeFilePath, cacheConfig, true, conf);
     long offset = 0;
     while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
@@ -226,7 +226,7 @@ public class TestHFile  {
     // Open the file reader with CombinedBlockCache
     BlockCache combined = initCombinedBlockCache();
     conf.setBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, true);
-    CacheConfig cacheConfig = new CacheConfig(conf, null, combined, alloc);
+    CacheConfig cacheConfig = new CacheConfig(conf, null, null, combined, alloc);
     HFile.Reader reader = HFile.createReader(fs, storeFilePath, cacheConfig, true, conf);
     long offset = 0;
     while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
@@ -260,7 +260,7 @@ public class TestHFile  {
   private void readStoreFile(Path storeFilePath, Configuration conf, ByteBuffAllocator alloc)
       throws Exception {
     // Open the file reader with block cache disabled.
-    CacheConfig cache = new CacheConfig(conf, null, null, alloc);
+    CacheConfig cache = new CacheConfig(conf, null, null, null, alloc);
     HFile.Reader reader = HFile.createReader(fs, storeFilePath, cache, true, conf);
     long offset = 0;
     while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
