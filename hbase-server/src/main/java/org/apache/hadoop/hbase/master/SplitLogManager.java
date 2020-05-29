@@ -53,7 +53,6 @@ import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -122,9 +121,9 @@ public class SplitLogManager {
       throws IOException {
     this.server = master;
     this.conf = conf;
-    // Get Server Thread name. Sometimes the Server is mocked so may not implement HasThread.
+    // Get Server Thread name. Sometimes the Server is mocked so may not extends Thread.
     // For example, in tests.
-    String name = master instanceof HasThread? ((HasThread)master).getName():
+    String name = master instanceof Thread? ((Thread)master).getName():
         master.getServerName().toShortString();
     this.choreService =
         new ChoreService(name + ".splitLogManager.");
