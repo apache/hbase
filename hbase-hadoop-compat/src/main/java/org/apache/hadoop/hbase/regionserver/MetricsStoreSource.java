@@ -25,25 +25,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface MetricsStoreSource extends Comparable<MetricsStoreSource>, Closeable {
 
   /**
-   * Updates the get count on the current store
-   */
-  void updateGet();
-
-  /**
    * Closes the current store source.
    */
   void close();
-
-  /**
-   * Updates the get count when get happens on the memstore
-   */
-  void updateMemtoreGet();
-
-  /**
-   * Updates the get count when get happens on the file
-   */
-  void updateFileGet();
-
   /**
    * Get the aggregate source to which this reports.
    */

@@ -40,9 +40,8 @@ public class MetricsStoreWrapperImpl implements MetricsStoreWrapper, Closeable {
   private long numStoreFiles;
   private long memstoreSize;
   private long storeFileSize;
-  private long getsFromMemstore;
-  private long getsOnStore;
-  private long getsOnFile;
+  private long readsFromMemstore;
+  private long readsFromFile;
   private long numReferenceFiles;
   private long minStoreFileAge;
   private long maxStoreFileAge;
@@ -102,18 +101,13 @@ public class MetricsStoreWrapperImpl implements MetricsStoreWrapper, Closeable {
   }
 
   @Override
-  public long getReadRequestCount() {
-    return getsOnStore;
-  }
-
-  @Override
   public long getMemstoreReadRequestsCount() {
-    return getsFromMemstore;
+    return readsFromMemstore;
   }
 
   @Override
-  public long getFileReadRequestCount() {
-    return getsOnFile;
+  public long getFileReadRequestsCount() {
+    return readsFromFile;
   }
 
   public class HStoreMetricsWrapperRunnable implements Runnable {
@@ -156,9 +150,8 @@ public class MetricsStoreWrapperImpl implements MetricsStoreWrapper, Closeable {
       if (numHFiles != 0) {
         avgStoreFileAge = avgAgeNumerator / numHFiles;
       }
-      getsFromMemstore = store.getGetRequestsCountFromMemstore();
-      getsOnStore = store.getReadRequestsFromStoreCount();
-      getsOnFile = store.getGetRequestsCountFromFile();
+      readsFromMemstore = store.getReadRequestsCountFromMemstore();
+      readsFromFile = store.getReadRequestsCountFromFile();
     }
   }
 

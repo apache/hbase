@@ -82,11 +82,6 @@ public interface MetricsStoreWrapper {
   long getStoreRefCount();
 
   /**
-   * @return the total number of read requests that have been issued against this store
-   */
-  long getReadRequestCount();
-
-  /**
    * @return the number of read requests from the memstore
    */
   long getMemstoreReadRequestsCount();
@@ -94,5 +89,5 @@ public interface MetricsStoreWrapper {
   /**
    * @return the number of read requests from the store files
    */
-  long getFileReadRequestCount();
+  long getFileReadRequestsCount();
 }

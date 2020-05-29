@@ -19,9 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.hadoop.hbase.metrics.Counter;
 import org.apache.hadoop.hbase.metrics.Interns;
-import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -35,15 +33,7 @@ public class MetricsStoreSourceImpl implements MetricsStoreSource {
   private AtomicBoolean closed = new AtomicBoolean(false);
 
   private String storeNamePrefix;
-  private final MetricRegistry registry;
   private static final Logger LOG = LoggerFactory.getLogger(MetricsStoreSourceImpl.class);
-  String storeReadsKey;
-
-  String memstoreReadsKey;
-  String fileReadsKey;
-  private final Counter storeReads;
-  private final Counter memstoreReads;
-  private final Counter fileReads;
 
   public MetricsStoreSourceImpl(MetricsStoreWrapper storeWrapper,
       MetricsStoreAggregateSourceImpl aggreagate) {
@@ -51,28 +41,12 @@ public class MetricsStoreSourceImpl implements MetricsStoreSource {
     this.aggreagate = aggreagate;
     aggreagate.register(this);
 
-    LOG.debug("Creating new MetricsRegionSourceImpl for table " + storeWrapper.getStoreName() + " "
-        + storeWrapper.getRegionName());
-
-    // we are using the hbase-metrics API
-    registry = aggreagate.getMetricRegistry();
+    LOG.info("Creating new MetricsStoreSourceImpl for store " + storeWrapper.getRegionName() + " "
+        + storeWrapper.getStoreName());
 
     storeNamePrefix = "Namespace_" + storeWrapper.getNamespace() + "_table_"
         + storeWrapper.getTableName() + "_region_" + storeWrapper.getRegionName() + "_store_"
         + storeWrapper.getStoreName() + "_metric_";
-
-    String suffix = "Count";
-
-    storeReadsKey = storeNamePrefix + MetricsRegionServerSource.GET_KEY + suffix;
-    // all the counters are hbase-metrics API
-    storeReads = registry.counter(storeReadsKey);
-
-    memstoreReadsKey = storeNamePrefix + MetricsRegionServerSource.MEMSTORE_GET_KEY + suffix;
-    memstoreReads = registry.counter(memstoreReadsKey);
-
-    fileReadsKey = storeNamePrefix + MetricsRegionServerSource.FILE_GET_KEY + suffix;
-    fileReads = registry.counter(fileReadsKey);
-
   }
 
   @Override
@@ -94,11 +68,6 @@ public class MetricsStoreSourceImpl implements MetricsStoreSource {
       if (LOG.isTraceEnabled()) {
         LOG.trace("Removing store Metrics: " + storeWrapper.getStoreName());
       }
-
-      registry.remove(storeReadsKey);
-      registry.remove(memstoreReadsKey);
-      registry.remove(fileReadsKey);
-
       storeWrapper = null;
     }
   }
@@ -114,24 +83,7 @@ public class MetricsStoreSourceImpl implements MetricsStoreSource {
       return -1;
     }
 
-    // TODO : make this better
-    return Long.compare(this.storeWrapper.getStoreName().hashCode(),
-      impl.storeWrapper.getStoreName().hashCode());
-  }
-
-  @Override
-  public void updateGet() {
-    storeReads.increment();
-  }
-
-  @Override
-  public void updateMemtoreGet() {
-    memstoreReads.increment();
-  }
-
-  @Override
-  public void updateFileGet() {
-    fileReads.increment();
+    return Long.compare(this.hashCode(), impl.hashCode());
   }
 
   @Override
@@ -142,7 +94,7 @@ public class MetricsStoreSourceImpl implements MetricsStoreSource {
 
   @Override
   public int hashCode() {
-    return this.storeWrapper.getStoreName().hashCode();
+    return (this.storeWrapper.getRegionName() + this.storeWrapper.getStoreName()).hashCode();
   }
 
   void snapshot(MetricsRecordBuilder mrb, boolean ignored) {
@@ -190,17 +142,13 @@ public class MetricsStoreSourceImpl implements MetricsStoreSource {
       mrb.addGauge(Interns.info(storeNamePrefix + MetricsRegionServerSource.STOREFILE_SIZE,
         MetricsRegionServerSource.STOREFILE_SIZE_DESC), this.storeWrapper.getStoreFileSize());
       mrb.addCounter(
-        Interns.info(storeNamePrefix + MetricsRegionServerSource.READ_REQUEST_COUNT,
-          MetricsRegionServerSource.READ_REQUEST_COUNT_DESC),
-        this.storeWrapper.getReadRequestCount());
-      mrb.addCounter(
-        Interns.info(storeNamePrefix + MetricsRegionSource.GET_REQUEST_ON_MEMSTORE,
-          MetricsRegionSource.GET_REQUEST_ON_MEMSTORE_DESC),
+        Interns.info(storeNamePrefix + MetricsRegionSource.READ_REQUEST_ON_MEMSTORE,
+          MetricsRegionSource.READ_REQUEST_ON_MEMSTORE_DESC),
         this.storeWrapper.getMemstoreReadRequestsCount());
       mrb.addCounter(
-        Interns.info(storeNamePrefix + MetricsRegionSource.GET_REQUEST_ON_FILE,
-          MetricsRegionSource.GET_REQUEST_ON_FILE_DESC),
-        this.storeWrapper.getFileReadRequestCount());
+        Interns.info(storeNamePrefix + MetricsRegionSource.READ_REQUEST_ON_FILE,
+          MetricsRegionSource.READ_REQUEST_ON_FILE_DESC),
+        this.storeWrapper.getFileReadRequestsCount());
     }
   }
 

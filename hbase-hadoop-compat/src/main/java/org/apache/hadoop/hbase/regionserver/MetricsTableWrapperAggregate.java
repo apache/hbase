@@ -28,7 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public interface MetricsTableWrapperAggregate {
-
+  public String UNDERSCORE = "_";
   /**
    * Get the number of read requests that have been issued against this table
    */
@@ -110,12 +110,12 @@ public interface MetricsTableWrapperAggregate {
   long getNumReferenceFiles(String table);
 
   /**
-   * @return number of get requests on memstore for this table
+   * @return number of get requests from memstore per store for this table
    */
-  Map<String, Long> getMemstoreReadRequestCount(String table);
+  Map<String, Long> getMemstoreReadRequestsCount(String table);
 
   /**
-   * @return number of get requests from file for this table
+   * @return number of get requests from file per store for this table
    */
-  Map<String, Long> getFileRequestCount(String table);
+  Map<String, Long> getFileRequestsCount(String table);
 }

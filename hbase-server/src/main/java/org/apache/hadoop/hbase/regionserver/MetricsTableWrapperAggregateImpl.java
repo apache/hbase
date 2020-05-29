@@ -29,7 +29,6 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricsExecutor;
@@ -41,19 +40,17 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
   private final HRegionServer regionServer;
   private ScheduledExecutorService executor;
   private Runnable runnable;
-  private long period;
+  private static final int PERIOD = 45;
   private ScheduledFuture<?> tableMetricsUpdateTask;
   private ConcurrentHashMap<TableName, MetricsTableValues> metricsTableMap
     = new ConcurrentHashMap<>();
 
   public MetricsTableWrapperAggregateImpl(final HRegionServer regionServer) {
     this.regionServer = regionServer;
-    this.period = regionServer.getConfiguration().getLong(HConstants.REGIONSERVER_METRICS_PERIOD,
-      HConstants.DEFAULT_REGIONSERVER_METRICS_PERIOD) + 1000;
     this.executor = CompatibilitySingletonFactory.getInstance(MetricsExecutor.class).getExecutor();
     this.runnable = new TableMetricsWrapperRunnable();
-    this.tableMetricsUpdateTask = this.executor.scheduleWithFixedDelay(this.runnable, period,
-      this.period, TimeUnit.MILLISECONDS);
+    this.tableMetricsUpdateTask = this.executor.scheduleWithFixedDelay(this.runnable, PERIOD,
+      PERIOD, TimeUnit.SECONDS);
   }
 
   public class TableMetricsWrapperRunnable implements Runnable {
@@ -68,9 +65,10 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
           mt = new MetricsTableValues();
           localMetricsTableMap.put(tbl, mt);
         }
+        long memstoreReadCount = 0l;
+        long fileReadCount = 0l;
+        String tempKey = null;
         if (r.getStores() != null) {
-          long memstoreReadCount = 0l;
-          long fileReadCount = 0l;
           String familyName = null;
           for (Store store : r.getStores()) {
             familyName = store.getColumnFamilyName();
@@ -93,10 +91,20 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
                   (long) store.getAvgStoreFileAge().getAsDouble() * store.getStorefilesCount();
             }
             mt.storeCount += 1;
-            memstoreReadCount += store.getGetRequestsCountFromMemstore();
-            fileReadCount += store.getGetRequestsCountFromFile();
-            mt.storeMemstoreGetCount.putIfAbsent(familyName, memstoreReadCount);
-            mt.storeFileGetCount.putIfAbsent(familyName, fileReadCount);
+            tempKey = tbl.getNameAsString() + UNDERSCORE + familyName;
+            Long tempVal = mt.perStoreMemstoreReadCount.get(tempKey);
+            if (tempVal == null) {
+              tempVal = 0l;
+            }
+            memstoreReadCount = store.getReadRequestsCountFromMemstore() + tempVal;
+            tempVal = mt.perStoreFileReadCount.get(tempKey);
+            if (tempVal == null) {
+              tempVal = 0l;
+            }
+            fileReadCount = store.getReadRequestsCountFromFile() + tempVal;
+            // accumulate the count
+            mt.perStoreMemstoreReadCount.put(tempKey, memstoreReadCount);
+            mt.perStoreFileReadCount.put(tempKey, fileReadCount);
           }
 
           mt.regionCount += 1;
@@ -142,22 +150,22 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
   }
 
   @Override
-  public Map<String, Long> getMemstoreReadRequestCount(String table) {
+  public Map<String, Long> getMemstoreReadRequestsCount(String table) {
     MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
     if (metricsTable == null) {
       return null;
     } else {
-      return metricsTable.storeMemstoreGetCount;
+      return metricsTable.perStoreMemstoreReadCount;
     }
   }
 
   @Override
-  public Map<String, Long> getFileRequestCount(String table) {
+  public Map<String, Long> getFileRequestsCount(String table) {
     MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
     if (metricsTable == null) {
       return null;
     } else {
-      return metricsTable.storeFileGetCount;
+      return metricsTable.perStoreFileReadCount;
     }
   }
 
@@ -332,8 +340,8 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
     long totalStoreFileAge;
     long referenceFileCount;
     long cpRequestCount;
-    Map<String, Long> storeMemstoreGetCount = new HashMap<>();
-    Map<String, Long> storeFileGetCount = new HashMap<>();
+    Map<String, Long> perStoreMemstoreReadCount = new HashMap<>();
+    Map<String, Long> perStoreFileReadCount = new HashMap<>();
   }
 
 }

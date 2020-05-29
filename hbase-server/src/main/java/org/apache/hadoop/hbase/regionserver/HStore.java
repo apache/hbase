@@ -164,9 +164,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   volatile boolean forceMajor = false;
   private AtomicLong storeSize = new AtomicLong();
   private AtomicLong totalUncompressedBytes = new AtomicLong();
-  private LongAdder getRequestsFromMemstore = new LongAdder();
-  private LongAdder getRequestsFromFile = new LongAdder();
-  private LongAdder getRequestsFromStore = new LongAdder();
+  private LongAdder readRequestsFromMemstore = new LongAdder();
+  private LongAdder readRequestsFromFile = new LongAdder();
 
   private boolean cacheOnWriteLogged;
 
@@ -2915,39 +2914,20 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   }
 
   @Override
-  public long getReadRequestsFromStoreCount() {
-    return getRequestsFromStore.sum();
+  public long getReadRequestsCountFromMemstore() {
+    return readRequestsFromMemstore.sum();
   }
 
   @Override
-  public long getGetRequestsCountFromMemstore() {
-    return getRequestsFromMemstore.sum();
-  }
-
-  @Override
-  public long getGetRequestsCountFromFile() {
-    return getRequestsFromFile.sum();
-  }
-
-  void incrGetRequestsFromStore() {
-    getRequestsFromStore.increment();
-    if (metricsStore != null) {
-      metricsStore.updateGet();
-    }
+  public long getReadRequestsCountFromFile() {
+    return readRequestsFromFile.sum();
   }
 
   void updateMetricsStore(boolean memstoreRead) {
     if (memstoreRead) {
-      getRequestsFromMemstore.increment();
+      readRequestsFromMemstore.increment();
     } else {
-      getRequestsFromFile.increment();
-    }
-    if (metricsStore != null) {
-      if (memstoreRead) {
-        metricsStore.updateMemstoreGet();
-      } else {
-        metricsStore.updateFileGet();
-      }
+      readRequestsFromFile.increment();
     }
   }
 

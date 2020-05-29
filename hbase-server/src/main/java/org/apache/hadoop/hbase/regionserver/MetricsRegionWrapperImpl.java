@@ -293,8 +293,8 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
           if (storeAvgStoreFileAge.isPresent()) {
             avgAgeNumerator += (long) storeAvgStoreFileAge.getAsDouble() * storeHFiles;
           }
-          tempReadsFromMemstore += store.getGetRequestsCountFromMemstore();
-          tempReadsFromFile += store.getGetRequestsCountFromFile();
+          tempReadsFromMemstore += store.getReadRequestsCountFromMemstore();
+          tempReadsFromFile += store.getReadRequestsCountFromFile();
         }
       }
 

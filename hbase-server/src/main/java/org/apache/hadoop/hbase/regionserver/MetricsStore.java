@@ -35,14 +35,6 @@ public class MetricsStore {
     source.close();
   }
 
-  public void updateGet() {
-    source.updateGet();
-  }
-
-  public void updateMemstoreGet() {
-    source.updateMemtoreGet();
-  }
-
   MetricsStoreSource getSource() {
     return source;
   }
@@ -50,9 +42,4 @@ public class MetricsStore {
   public MetricsStoreWrapper getStoreWrapper() {
     return storeWrapper;
   }
-
-  public void updateFileGet() {
-    source.updateFileGet();
-  }
-
 }

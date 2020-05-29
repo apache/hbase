@@ -40,9 +40,6 @@ public class TestMetricsStore {
   public void testStoreWrapperMetrics() {
     MetricsStore ms = new MetricsStore(new MetricsStoreWrapperStub());
     MetricsStoreAggregateSource agg = ms.getSource().getAggregateSource();
-    // increment the metrics based on the new registry
-    ms.updateFileGet();
-    ms.updateMemstoreGet();
     HELPER.assertGauge(
       "namespace_ns_table_table1_region_region1_store_store1_metric_maxStoreFileAge",
       50, agg);

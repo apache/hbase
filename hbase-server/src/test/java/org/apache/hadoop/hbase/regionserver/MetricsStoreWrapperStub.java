@@ -80,17 +80,12 @@ public class MetricsStoreWrapperStub implements MetricsStoreWrapper {
   }
 
   @Override
-  public long getReadRequestCount() {
-    return 1000;
-  }
-
-  @Override
   public long getMemstoreReadRequestsCount() {
     return 500;
   }
 
   @Override
-  public long getFileReadRequestCount() {
+  public long getFileReadRequestsCount() {
     return 500;
   }
 

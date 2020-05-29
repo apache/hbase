@@ -303,12 +303,12 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
               MetricsRegionSource.MAX_FLUSH_QUEUE_DESC),
           this.regionWrapper.getMaxFlushQueueSize());
       mrb.addCounter(
-        Interns.info(regionNamePrefix + MetricsRegionSource.GET_REQUEST_ON_MEMSTORE,
-          MetricsRegionSource.GET_REQUEST_ON_MEMSTORE_DESC),
+        Interns.info(regionNamePrefix + MetricsRegionSource.READ_REQUEST_ON_MEMSTORE,
+          MetricsRegionSource.READ_REQUEST_ON_MEMSTORE_DESC),
         this.regionWrapper.getMemstoreReadRequestsCount());
       mrb.addCounter(
-        Interns.info(regionNamePrefix + MetricsRegionSource.GET_REQUEST_ON_FILE,
-          MetricsRegionSource.GET_REQUEST_ON_FILE_DESC),
+        Interns.info(regionNamePrefix + MetricsRegionSource.READ_REQUEST_ON_FILE,
+          MetricsRegionSource.READ_REQUEST_ON_FILE_DESC),
         this.regionWrapper.getFileReadRequestCount());
     }
   }

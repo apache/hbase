@@ -79,6 +79,8 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class MetricsTableSourceImpl implements MetricsTableSource {
 
+  private static final String _STORE = "_store_";
+
   private static final Logger LOG = LoggerFactory.getLogger(MetricsTableSourceImpl.class);
 
   private AtomicBoolean closed = new AtomicBoolean(false);
@@ -320,11 +322,11 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
         mrb.addGauge(Interns.info(tableNamePrefix + MetricsRegionServerSource.NUM_REFERENCE_FILES,
             MetricsRegionServerSource.NUM_REFERENCE_FILES_DESC),
             tableWrapperAgg.getNumReferenceFiles(tableName.getNameAsString()));
-        addGauge(mrb, tableWrapperAgg.getMemstoreReadRequestCount(tableName.getNameAsString()),
-          MetricsRegionSource.GET_REQUEST_ON_MEMSTORE,
-          MetricsRegionSource.GET_REQUEST_ON_MEMSTORE_DESC);
-        addGauge(mrb, tableWrapperAgg.getFileRequestCount(tableName.getNameAsString()),
-          MetricsRegionSource.GET_REQUEST_ON_FILE, MetricsRegionSource.GET_REQUEST_ON_FILE_DESC);
+        addGauge(mrb, tableWrapperAgg.getMemstoreReadRequestsCount(tableName.getNameAsString()),
+          MetricsRegionSource.READ_REQUEST_ON_MEMSTORE,
+          MetricsRegionSource.READ_REQUEST_ON_MEMSTORE_DESC);
+        addGauge(mrb, tableWrapperAgg.getFileRequestsCount(tableName.getNameAsString()),
+          MetricsRegionSource.READ_REQUEST_ON_FILE, MetricsRegionSource.READ_REQUEST_ON_FILE_DESC);
       }
     }
   }
@@ -336,7 +338,8 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
       while (iterator.hasNext()) {
         Entry<String, Long> entry = iterator.next();
         // append 'store' and its name to the metric
-        mrb.addGauge(Interns.info(this.tableNamePrefixPart1 + "_store_" + entry.getKey()
+        mrb.addGauge(Interns.info(this.tableNamePrefixPart1 + _STORE
+            + entry.getKey().split(MetricsTableWrapperAggregate.UNDERSCORE)[1]
             + this.tableNamePrefixPart2 + metricName,
           metricDesc), entry.getValue());
       }
