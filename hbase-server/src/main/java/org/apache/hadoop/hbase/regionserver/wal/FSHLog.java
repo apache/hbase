@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.FSHLogProvider;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -453,7 +452,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
    * SyncFutures are 'artificial', something to hold the Handler until the filesystem sync
    * completes.
    */
-  private class SyncRunner extends HasThread {
+  private class SyncRunner extends Thread {
     private volatile long sequence;
     // Keep around last exception thrown. Clear on successful sync.
     private final BlockingQueue<SyncFuture> syncFutures;

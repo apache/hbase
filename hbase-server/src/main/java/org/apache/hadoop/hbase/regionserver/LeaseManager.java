@@ -28,7 +28,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,7 +52,7 @@ import org.slf4j.LoggerFactory;
  * sleep time which is invariant.
  */
 @InterfaceAudience.Private
-public class LeaseManager extends HasThread {
+public class LeaseManager extends Thread {
   private static final Logger LOG = LoggerFactory.getLogger(LeaseManager.class.getName());
   private static final int MIN_WAIT_TIME = 100;
 
