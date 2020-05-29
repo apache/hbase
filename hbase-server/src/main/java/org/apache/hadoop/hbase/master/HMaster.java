@@ -193,7 +193,6 @@ import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
-import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.IdLock;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -250,7 +249,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    * Protection against zombie master. Started once Master accepts active responsibility and
    * starts taking over responsibilities. Allows a finite time window before giving up ownership.
    */
-  private static class InitializationMonitor extends HasThread {
+  private static class InitializationMonitor extends Thread {
     /** The amount of time in milliseconds to sleep before checking initialization status. */
     public static final String TIMEOUT_KEY = "hbase.master.initializationmonitor.timeout";
     public static final long TIMEOUT_DEFAULT = TimeUnit.MILLISECONDS.convert(15, TimeUnit.MINUTES);

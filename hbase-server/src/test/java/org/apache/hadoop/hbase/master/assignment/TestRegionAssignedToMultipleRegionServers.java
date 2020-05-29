@@ -163,7 +163,7 @@ public class TestRegionAssignedToMultipleRegionServers {
     KILL = true;
     HMaster activeMaster = UTIL.getMiniHBaseCluster().getMaster();
     activeMaster.abort("For testing");
-    activeMaster.getThread().join();
+    activeMaster.join();
     KILL = false;
 
     // sleep a while to reproduce the problem, as after the fix in HBASE-21472 the execution logic
