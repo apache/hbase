@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.rsgroup;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -37,6 +38,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -296,6 +298,37 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     assertEquals(2, newGroupServers.size());
 
     assertTrue(observer.preRemoveServersCalled);
+  }
+
+  @Test
+  public void testNonExistentTableMove() throws Exception {
+    TableName tableName = TableName.valueOf(tablePrefix + rand.nextInt());
+
+    RSGroupInfo tableGrp = rsGroupAdmin.getRSGroupInfoOfTable(tableName);
+    assertNull(tableGrp);
+
+    //test if table exists already.
+    boolean exist = admin.tableExists(tableName);
+    assertFalse(exist);
+
+    LOG.info("Moving table "+ tableName + " to " + RSGroupInfo.DEFAULT_GROUP);
+    try {
+      rsGroupAdmin.moveTables(Sets.newHashSet(tableName), RSGroupInfo.DEFAULT_GROUP);
+      fail("Table " + tableName + " shouldn't have been successfully moved.");
+    } catch(IOException ex) {
+      assertTrue(ex instanceof TableNotFoundException);
+    }
+
+    try {
+      rsGroupAdmin.moveServersAndTables(
+        Sets.newHashSet(Address.fromParts("bogus",123)),
+        Sets.newHashSet(tableName), RSGroupInfo.DEFAULT_GROUP);
+      fail("Table " + tableName + " shouldn't have been successfully moved.");
+    } catch(IOException ex) {
+      assertTrue(ex instanceof TableNotFoundException);
+    }
+    //verify group change
+    assertNull(rsGroupAdmin.getRSGroupInfoOfTable(tableName));
   }
 
   @Test

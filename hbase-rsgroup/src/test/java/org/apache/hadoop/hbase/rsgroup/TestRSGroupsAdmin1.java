@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.master.ServerManager;
@@ -118,7 +119,7 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     try {
       rsGroupAdmin.moveTables(Sets.newHashSet(TableName.valueOf("bogustable")), "bogus");
       fail("Expected move with bogus group to fail");
-    } catch(ConstraintException ex) {
+    } catch(ConstraintException | TableNotFoundException ex) {
       //expected
     }
 
