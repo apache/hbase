@@ -57,24 +57,12 @@ public class TestMetricsStore {
       1000, agg);
     HELPER.assertCounter(
       "namespace_ns_table_table1_region_region1_store_store1_metric_" +
-        "readRequestCount",
-      1000, agg);
-    HELPER.assertCounter(
-      "namespace_ns_table_table1_region_region1_store_store1_metric_" +
-        "getRequestCountOnMemstore",
+        "readRequestCountOnMemstore",
       500, agg);
     HELPER.assertCounter(
       "namespace_ns_table_table1_region_region1_store_store1_metric_" +
-        "getRequestCountOnFiles",
+        "readRequestCountOnFiles",
       500, agg);
-    HELPER.assertCounter(
-      "namespace_ns_table_table1_region_region1_store_store1_metric_" +
-        "getsOnMemstoreCount",
-      1, agg);
-    HELPER.assertCounter(
-      "namespace_ns_table_table1_region_region1_store_store1_metric_" +
-        "getsOnFileCount",
-      1, agg);
     ms.close();
   }
 
