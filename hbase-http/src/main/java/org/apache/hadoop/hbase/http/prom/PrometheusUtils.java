@@ -23,7 +23,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import java.util.regex.Pattern;
 
 @InterfaceAudience.Private
-class PrometheusUtils {
+public class PrometheusUtils {
 
   private static final Pattern SPLIT_PATTERN =
     Pattern.compile("(?<!(^|[A-Z_]))(?=[A-Z])|(?<!^)(?=[A-Z][a-z])");
@@ -32,7 +32,12 @@ class PrometheusUtils {
     String baseName = StringUtils.capitalize(recordName) + StringUtils.capitalize(metricName);
     baseName = baseName.replace('-', '_');
     String[] parts = SPLIT_PATTERN.split(baseName);
-    return String.join("_", parts).toLowerCase();
+    return String
+            .join("_", parts)
+            .toLowerCase()
+            .replace('.', '_')
+            .replace('-', '_')
+            .replaceAll("(_)+", "_");
   }
 
 }
