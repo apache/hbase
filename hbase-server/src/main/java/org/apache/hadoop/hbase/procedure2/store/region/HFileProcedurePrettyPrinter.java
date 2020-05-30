@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
-import org.apache.hadoop.hbase.master.store.LocalStore;
+import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
@@ -84,8 +84,8 @@ public class HFileProcedurePrettyPrinter extends AbstractHBaseTool {
   }
 
   private void addAllHFiles() throws IOException {
-    Path masterProcDir = new Path(CommonFSUtils.getRootDir(conf), LocalStore.MASTER_STORE_DIR);
-    Path tableDir = CommonFSUtils.getTableDir(masterProcDir, LocalStore.TABLE_NAME);
+    Path masterProcDir = new Path(CommonFSUtils.getRootDir(conf), MasterRegionFactory.MASTER_STORE_DIR);
+    Path tableDir = CommonFSUtils.getTableDir(masterProcDir, MasterRegionFactory.TABLE_NAME);
     FileSystem fs = tableDir.getFileSystem(conf);
     Path regionDir =
       fs.listStatus(tableDir, p -> RegionInfo.isEncodedRegionName(Bytes.toBytes(p.getName())))[0]

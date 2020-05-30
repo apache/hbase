@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.store;
+package org.apache.hadoop.hbase.master.region;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -39,11 +39,11 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.After;
 import org.junit.Before;
 
-public class LocalRegionTestBase {
+public class MasterRegionTestBase {
 
   protected HBaseCommonTestingUtility htu;
 
-  protected LocalRegion region;
+  protected MasterRegion region;
 
   protected ChoreService choreService;
 
@@ -65,7 +65,7 @@ public class LocalRegionTestBase {
   protected void configure(Configuration conf) throws IOException {
   }
 
-  protected void configure(LocalRegionParams params) {
+  protected void configure(MasterRegionParams params) {
   }
 
   protected void postSetUp() throws IOException {
@@ -87,15 +87,15 @@ public class LocalRegionTestBase {
     when(server.getChoreService()).thenReturn(choreService);
     Path testDir = htu.getDataTestDir();
     CommonFSUtils.setRootDir(htu.getConfiguration(), testDir);
-    LocalRegionParams params = new LocalRegionParams();
+    MasterRegionParams params = new MasterRegionParams();
     params.server(server).regionDirName(REGION_DIR_NAME).tableDescriptor(TD)
       .flushSize(TableDescriptorBuilder.DEFAULT_MEMSTORE_FLUSH_SIZE).flushPerChanges(1_000_000)
       .flushIntervalMs(TimeUnit.MINUTES.toMillis(15)).compactMin(4).maxWals(32).useHsync(false)
       .ringBufferSlotCount(16).rollPeriodMs(TimeUnit.MINUTES.toMillis(15))
-      .archivedWalSuffix(LocalStore.ARCHIVED_WAL_SUFFIX)
-      .archivedHFileSuffix(LocalStore.ARCHIVED_HFILE_SUFFIX);
+      .archivedWalSuffix(MasterRegionFactory.ARCHIVED_WAL_SUFFIX)
+      .archivedHFileSuffix(MasterRegionFactory.ARCHIVED_HFILE_SUFFIX);
     configure(params);
-    region = LocalRegion.create(params);
+    region = MasterRegion.create(params);
     postSetUp();
   }
 

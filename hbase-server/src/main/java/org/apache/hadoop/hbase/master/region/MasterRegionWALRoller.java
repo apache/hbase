@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.store;
+package org.apache.hadoop.hbase.master.region;
 
 import static org.apache.hadoop.hbase.HConstants.HREGION_OLDLOGDIR_NAME;
 
@@ -35,19 +35,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * As long as there is no RegionServerServices for a local region, we need implement log roller
- * logic by our own.
+ * As long as there is no RegionServerServices for a master local region, we need implement log
+ * roller logic by our own.
  * <p/>
  * We can reuse most of the code for normal wal roller, the only difference is that there is only
- * one region, so in {@link #scheduleFlush(String)} method we can just schedule flush for the
- * procedure store region.
+ * one region, so in {@link #scheduleFlush(String)} method we can just schedule flush for the master
+ * local region.
  */
 @InterfaceAudience.Private
-public final class LocalRegionWALRoller extends AbstractWALRoller<Abortable> {
+public final class MasterRegionWALRoller extends AbstractWALRoller<Abortable> {
 
-  private static final Logger LOG = LoggerFactory.getLogger(LocalRegionWALRoller.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MasterRegionWALRoller.class);
 
-  private volatile LocalRegionFlusherAndCompactor flusherAndCompactor;
+  private volatile MasterRegionFlusherAndCompactor flusherAndCompactor;
 
   private final FileSystem fs;
 
@@ -57,7 +57,7 @@ public final class LocalRegionWALRoller extends AbstractWALRoller<Abortable> {
 
   private final String archivedWALSuffix;
 
-  private LocalRegionWALRoller(String name, Configuration conf, Abortable abortable, FileSystem fs,
+  private MasterRegionWALRoller(String name, Configuration conf, Abortable abortable, FileSystem fs,
     Path walRootDir, Path globalWALRootDir, String archivedWALSuffix) {
     super(name, conf, abortable);
     this.fs = fs;
@@ -70,7 +70,8 @@ public final class LocalRegionWALRoller extends AbstractWALRoller<Abortable> {
   protected void afterRoll(WAL wal) {
     // move the archived WAL files to the global archive path
     try {
-      LocalRegionUtils.moveFilesUnderDir(fs, walArchiveDir, globalWALArchiveDir, archivedWALSuffix);
+      MasterRegionUtils.moveFilesUnderDir(fs, walArchiveDir, globalWALArchiveDir,
+        archivedWALSuffix);
     } catch (IOException e) {
       LOG.warn("Failed to move archived wals from {} to global dir {}", walArchiveDir,
         globalWALArchiveDir, e);
@@ -79,17 +80,17 @@ public final class LocalRegionWALRoller extends AbstractWALRoller<Abortable> {
 
   @Override
   protected void scheduleFlush(String encodedRegionName) {
-    LocalRegionFlusherAndCompactor flusher = this.flusherAndCompactor;
+    MasterRegionFlusherAndCompactor flusher = this.flusherAndCompactor;
     if (flusher != null) {
       flusher.requestFlush();
     }
   }
 
-  void setFlusherAndCompactor(LocalRegionFlusherAndCompactor flusherAndCompactor) {
+  void setFlusherAndCompactor(MasterRegionFlusherAndCompactor flusherAndCompactor) {
     this.flusherAndCompactor = flusherAndCompactor;
   }
 
-  static LocalRegionWALRoller create(String name, Configuration conf, Abortable abortable,
+  static MasterRegionWALRoller create(String name, Configuration conf, Abortable abortable,
     FileSystem fs, Path walRootDir, Path globalWALRootDir, String archivedWALSuffix,
     long rollPeriodMs, long flushSize) {
     // we can not run with wal disabled, so force set it to true.
@@ -100,7 +101,7 @@ public final class LocalRegionWALRoller extends AbstractWALRoller<Abortable> {
     // make the roll size the same with the flush size, as we only have one region here
     conf.setLong(WALUtil.WAL_BLOCK_SIZE, flushSize * 2);
     conf.setFloat(AbstractFSWAL.WAL_ROLL_MULTIPLIER, 0.5f);
-    return new LocalRegionWALRoller(name, conf, abortable, fs, walRootDir, globalWALRootDir,
+    return new MasterRegionWALRoller(name, conf, abortable, fs, walRootDir, globalWALRootDir,
       archivedWALSuffix);
   }
 
