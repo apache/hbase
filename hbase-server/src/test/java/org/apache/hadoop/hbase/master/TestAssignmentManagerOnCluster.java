@@ -77,6 +77,7 @@ import org.apache.hadoop.hbase.util.ConfigUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.hbase.util.TestTableName;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
@@ -84,6 +85,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -101,6 +103,8 @@ public class TestAssignmentManagerOnCluster {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   final static Configuration conf = TEST_UTIL.getConfiguration();
   private static HBaseAdmin admin;
+  @Rule
+  public TestTableName testTableName = new TestTableName();
 
   static void setupOnce() throws Exception {
     // Using the our load balancer to control region plans
@@ -606,7 +610,7 @@ public class TestAssignmentManagerOnCluster {
    */
   @Test(timeout = 60000)
   public void testCloseRegionWithExponentialBackOff() throws Exception {
-    String table = "testCloseRegionWithExponentialBackOff";
+    String table = testTableName.getTableName().toString();
     // Set the backoff time between each retry for failed close
     TEST_UTIL.getMiniHBaseCluster().getConf().setLong("hbase.assignment.retry.sleep.initial", 1000);
     HMaster activeMaster = TEST_UTIL.getHBaseCluster().getMaster();

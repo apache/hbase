@@ -95,7 +95,6 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Regio
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.regionserver.RegionAlreadyInTransitionException;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
-import org.apache.hadoop.hbase.regionserver.RegionServerAbortedException;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.ConfigUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -2018,7 +2017,7 @@ public class AssignmentManager extends ZooKeeperListener {
           t = ((RemoteException) t).unwrapRemoteException();
         }
         boolean logRetries = true;
-        if (t instanceof RegionServerAbortedException || t instanceof RegionServerStoppedException
+        if (t instanceof RegionServerStoppedException
             || t instanceof ServerNotRunningYetException) {
           // RS is aborting or stopping, we cannot offline the region since the region may need
           // to do WAL recovery. Until we see the RS expiration, we should retry.
@@ -2067,6 +2066,11 @@ public class AssignmentManager extends ZooKeeperListener {
           // Presume retry or server will expire.
         }
       }
+      // sleepTime is set in one of the following cases (reasons commented above):
+      // 1. Region server stopping or aborting
+      // 2. Region already in transition
+      // 3. Connecting to server that is already dead
+      //
       // If sleepTime is not set by any of the cases, set it to sleep for
       // configured exponential backoff time
       if (sleepTime == 0 && i != maximumAttempts) {
@@ -2081,10 +2085,10 @@ public class AssignmentManager extends ZooKeeperListener {
         }
       } catch (InterruptedException ie) {
         LOG.warn("Failed to unassign " + region.getRegionNameAsString() + " since interrupted", ie);
-        Thread.currentThread().interrupt();
         if (state != null) {
           regionStates.updateRegionState(region, State.FAILED_CLOSE);
         }
+        Thread.currentThread().interrupt();
         return;
       }
     }
