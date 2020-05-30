@@ -610,7 +610,7 @@ public class TestAssignmentManagerOnCluster {
    */
   @Test(timeout = 60000)
   public void testCloseRegionWithExponentialBackOff() throws Exception {
-    String table = testTableName.getTableName().toString();
+    TableName tableName = testTableName.getTableName();
     // Set the backoff time between each retry for failed close
     TEST_UTIL.getMiniHBaseCluster().getConf().setLong("hbase.assignment.retry.sleep.initial", 1000);
     HMaster activeMaster = TEST_UTIL.getHBaseCluster().getMaster();
@@ -621,7 +621,7 @@ public class TestAssignmentManagerOnCluster {
       ScheduledThreadPoolExecutor scheduledThreadPoolExecutor =
           new ScheduledThreadPoolExecutor(1, Threads.newDaemonThreadFactory("ExponentialBackOff"));
 
-      HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(table));
+      HTableDescriptor desc = new HTableDescriptor(tableName);
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
@@ -657,7 +657,7 @@ public class TestAssignmentManagerOnCluster {
       TEST_UTIL.assertRegionOnServer(hri, serverName, 6000);
     } finally {
       MyRegionObserver.preCloseEnabled.set(false);
-      TEST_UTIL.deleteTable(Bytes.toBytes(table));
+      TEST_UTIL.deleteTable(tableName);
 
       // reset the backoff time to default
       TEST_UTIL.getMiniHBaseCluster().getConf().unset("hbase.assignment.retry.sleep.initial");

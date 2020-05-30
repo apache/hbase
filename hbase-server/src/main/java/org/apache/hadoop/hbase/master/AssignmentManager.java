@@ -2011,7 +2011,7 @@ public class AssignmentManager extends ZooKeeperListener {
         // Todo; this can now happen (0.96) if there is an exception in a coprocessor
         LOG.warn("Server " + server + " region CLOSE RPC returned false for "
             + region.getRegionNameAsString());
-      } catch (Throwable t) {       
+      } catch (Throwable t) {
         Configuration conf = this.server.getConfiguration();
         if (t instanceof RemoteException) {
           t = ((RemoteException) t).unwrapRemoteException();
@@ -2036,28 +2036,28 @@ public class AssignmentManager extends ZooKeeperListener {
           return;
         } else if ((t instanceof FailedServerException)
             || (state != null && t instanceof RegionAlreadyInTransitionException)) {
-              if (t instanceof FailedServerException) {
-                sleepTime = 1L + conf.getInt(RpcClient.FAILED_SERVER_EXPIRY_KEY,
-                  RpcClient.FAILED_SERVER_EXPIRY_DEFAULT);
-              } else {
-                // RS is already processing this region, only need to update the timestamp
-                LOG.debug("update " + state + " the timestamp.");
-                state.updateTimestampToNow();
-                if (maxWaitTime < 0) {
-                  maxWaitTime = EnvironmentEdgeManager.currentTime() + conf.getLong(
-                    ALREADY_IN_TRANSITION_WAITTIME, DEFAULT_ALREADY_IN_TRANSITION_WAITTIME);
-                }
-                long now = EnvironmentEdgeManager.currentTime();
-                if (now < maxWaitTime) {
-                  LOG.debug("Region is already in transition; " + "waiting up to "
-                      + (maxWaitTime - now) + "ms",
-                    t);
-                  sleepTime = 100;
-                  i--; // reset the try count
-                  logRetries = false;
-                }
-              }
+          if (t instanceof FailedServerException) {
+            sleepTime = 1L + conf.getInt(RpcClient.FAILED_SERVER_EXPIRY_KEY,
+              RpcClient.FAILED_SERVER_EXPIRY_DEFAULT);
+          } else {
+            // RS is already processing this region, only need to update the timestamp
+            LOG.debug("update " + state + " the timestamp.");
+            state.updateTimestampToNow();
+            if (maxWaitTime < 0) {
+              maxWaitTime = EnvironmentEdgeManager.currentTime() + conf.getLong(
+                ALREADY_IN_TRANSITION_WAITTIME, DEFAULT_ALREADY_IN_TRANSITION_WAITTIME);
             }
+            long now = EnvironmentEdgeManager.currentTime();
+            if (now < maxWaitTime) {
+              LOG.debug("Region is already in transition; " + "waiting up to "
+                  + (maxWaitTime - now) + "ms",
+                t);
+              sleepTime = 100;
+              i--; // reset the try count
+              logRetries = false;
+            }
+          }
+        }
 
         if (logRetries) {
           LOG.info("Server " + server + " returned " + t + " for " + region.getRegionNameAsString()
@@ -2163,7 +2163,7 @@ public class AssignmentManager extends ZooKeeperListener {
         default:
           LOG.error("Trying to assign region " + region + ", which is " + state);
           return null;
-        }
+      }
     } finally {
       lock.unlock();
     }
