@@ -718,7 +718,7 @@ public class HRegionServer extends Thread implements
   }
 
   private void initializeFileSystem() throws IOException {
-    // Get fs instance used by this RS.  Do we use checksum verification in the hbase? If hbase
+    // Get fs instance used by this RS. Do we use checksum verification in the hbase? If hbase
     // checksum verification enabled, then automatically switch off hdfs checksum verification.
     boolean useHBaseChecksum = conf.getBoolean(HConstants.HBASE_CHECKSUM_VERIFICATION, true);
     CommonFSUtils.setFsDefault(this.conf, CommonFSUtils.getWALRootDir(this.conf));
@@ -731,12 +731,7 @@ public class HRegionServer extends Thread implements
     this.dataFs = new HFileSystem(this.conf, useHBaseChecksum);
     this.dataRootDir = CommonFSUtils.getRootDir(this.conf);
     this.tableDescriptors =
-        new FSTableDescriptors(this.dataFs, this.dataRootDir, !canUpdateTableDescriptor(), false);
-    if (this instanceof HMaster) {
-      FSTableDescriptors.tryUpdateMetaTableDescriptor(this.conf, this.dataFs, this.dataRootDir,
-        builder -> builder.setRegionReplication(
-          conf.getInt(HConstants.META_REPLICAS_NUM, HConstants.DEFAULT_META_REPLICA_NUM)));
-    }
+      new FSTableDescriptors(this.dataFs, this.dataRootDir, !canUpdateTableDescriptor(), false);
   }
 
   protected void login(UserProvider user, String host) throws IOException {

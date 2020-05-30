@@ -468,7 +468,8 @@ message ReopenTableRegionsStateData {
 }
 
 enum InitMetaState {
-   INIT_META_ASSIGN_META = 1;
+  INIT_META_WRITE_FS_LAYOUT = 1;
+  INIT_META_ASSIGN_META = 2;
 }
 
 message InitMetaStateData {

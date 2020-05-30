@@ -119,6 +119,7 @@ public class FSTableDescriptors implements TableDescriptors {
     this.usecache = usecache;
   }
 
+  @VisibleForTesting
   public static void tryUpdateMetaTableDescriptor(Configuration conf) throws IOException {
     tryUpdateMetaTableDescriptor(conf, CommonFSUtils.getCurrentFileSystem(conf),
       CommonFSUtils.getRootDir(conf), null);
