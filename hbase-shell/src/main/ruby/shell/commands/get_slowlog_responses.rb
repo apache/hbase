@@ -55,6 +55,26 @@ Examples:
                                                                    => get slowlog responses that match either
                                                                       provided client IP address or user name
 
+All of above queries with filters have default OR operation applied i.e. all
+records with any of the provided filters applied will be returned. However,
+we can also apply AND operator i.e. all records that match all (not any) of
+the provided filters should be returned.
+
+  hbase> get_slowlog_responses '*', {'REGION_NAME' => 'hbase:meta,,1', 'TABLE_NAME' => 't1', 'FILTER_BY_OP' => 'AND'}
+                                                                   => get slowlog responses with given region name
+                                                                      and table name, both should match
+
+  hbase> get_slowlog_responses '*', {'REGION_NAME' => 'hbase:meta,,1', 'TABLE_NAME' => 't1', 'FILTER_BY_OP' => 'OR'}
+                                                                   => get slowlog responses with given region name
+                                                                      or table name, any one can match
+
+  hbase> get_slowlog_responses '*', {'TABLE_NAME' => 't1', 'CLIENT_IP' => '192.163.41.53:52781', 'FILTER_BY_OP' => 'AND'}
+                                                                   => get slowlog responses with given region name
+                                                                      and client IP address, both should match
+
+Since OR is the default filter operator, without providing 'FILTER_BY_OP', query will have
+same result as providing 'FILTER_BY_OP' => 'OR'.
+
 Sometimes output can be long pretty printed json for user to scroll in
 a single screen and hence user might prefer
 redirecting output of get_slowlog_responses to a file.
