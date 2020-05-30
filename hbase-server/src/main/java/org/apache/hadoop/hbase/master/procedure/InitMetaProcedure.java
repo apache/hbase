@@ -20,16 +20,29 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
+import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
+import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.InitMetaState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.InitMetaStateData;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
 /**
  * This procedure is used to initialize meta table for a new hbase deploy. It will just schedule an
@@ -38,7 +51,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.I
 @InterfaceAudience.Private
 public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMetaState> {
 
+  private static final Logger LOG = LoggerFactory.getLogger(InitMetaProcedure.class);
+
   private CountDownLatch latch = new CountDownLatch(1);
+
+  private RetryCounter retryCounter;
 
   @Override
   public TableName getTableName() {
@@ -50,16 +67,56 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
     return TableOperationType.CREATE;
   }
 
+  private static void writeFsLayout(Path rootDir, Configuration conf) throws IOException {
+    LOG.info("BOOTSTRAP: creating hbase:meta region");
+    FileSystem fs = rootDir.getFileSystem(conf);
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, TableName.META_TABLE_NAME);
+    if (fs.exists(tableDir) && !fs.delete(tableDir, true)) {
+      LOG.warn("Can not delete partial created meta table, continue...");
+    }
+    // Bootstrapping, make sure blockcache is off. Else, one will be
+    // created here in bootstrap and it'll need to be cleaned up. Better to
+    // not make it in first place. Turn off block caching for bootstrap.
+    // Enable after.
+    FSTableDescriptors.tryUpdateMetaTableDescriptor(conf, fs, rootDir,
+      builder -> builder.setRegionReplication(
+        conf.getInt(HConstants.META_REPLICAS_NUM, HConstants.DEFAULT_META_REPLICA_NUM)));
+    TableDescriptor metaDescriptor = new FSTableDescriptors(conf).get(TableName.META_TABLE_NAME);
+    HRegion
+      .createHRegion(RegionInfoBuilder.FIRST_META_REGIONINFO, rootDir, conf, metaDescriptor, null)
+      .close();
+  }
+
   @Override
   protected Flow executeFromState(MasterProcedureEnv env, InitMetaState state)
-      throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
-    switch (state) {
-      case INIT_META_ASSIGN_META:
-        addChildProcedure(env.getAssignmentManager()
-          .createAssignProcedures(Arrays.asList(RegionInfoBuilder.FIRST_META_REGIONINFO)));
-        return Flow.NO_MORE_STATE;
-      default:
-        throw new UnsupportedOperationException("unhandled state=" + state);
+    throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
+    LOG.debug("Execute {}", this);
+    try {
+      switch (state) {
+        case INIT_META_WRITE_FS_LAYOUT:
+          Configuration conf = env.getMasterConfiguration();
+          Path rootDir = CommonFSUtils.getRootDir(conf);
+          writeFsLayout(rootDir, conf);
+          setNextState(InitMetaState.INIT_META_ASSIGN_META);
+          return Flow.HAS_MORE_STATE;
+        case INIT_META_ASSIGN_META:
+          LOG.info("Going to assign meta");
+          addChildProcedure(env.getAssignmentManager()
+            .createAssignProcedures(Arrays.asList(RegionInfoBuilder.FIRST_META_REGIONINFO)));
+          return Flow.NO_MORE_STATE;
+        default:
+          throw new UnsupportedOperationException("unhandled state=" + state);
+      }
+    } catch (IOException e) {
+      if (retryCounter == null) {
+        retryCounter = ProcedureUtil.createRetryCounter(env.getMasterConfiguration());
+      }
+      long backoff = retryCounter.getBackoffTimeAndIncrementAttempts();
+      LOG.warn("Failed to init meta, suspend {}secs", backoff, e);
+      setTimeout(Math.toIntExact(backoff));
+      setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);
+      skipPersistence();
+      throw new ProcedureSuspendedException();
     }
   }
 
@@ -71,7 +128,7 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
 
   @Override
   protected void rollbackState(MasterProcedureEnv env, InitMetaState state)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     throw new UnsupportedOperationException();
   }
 
@@ -87,7 +144,7 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
 
   @Override
   protected InitMetaState getInitialState() {
-    return InitMetaState.INIT_META_ASSIGN_META;
+    return InitMetaState.INIT_META_WRITE_FS_LAYOUT;
   }
 
   @Override
