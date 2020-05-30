@@ -55,8 +55,12 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.http.conf.ConfServlet;
 import org.apache.hadoop.hbase.http.jmx.JMXJsonServlet;
 import org.apache.hadoop.hbase.http.log.LogLevel;
+import org.apache.hadoop.hbase.http.prom.PrometheusHadoop2Servlet;
+import org.apache.hadoop.hbase.http.prom.PrometheusMetricsSink;
+import org.apache.hadoop.hbase.http.prom.PrometheusServlet;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
@@ -153,6 +157,7 @@ public class HttpServer implements FilterContainer {
   public static final String SPNEGO_PROXYUSER_FILTER = "SpnegoProxyUserFilter";
   public static final String NO_CACHE_FILTER = "NoCacheFilter";
   public static final String APP_DIR = "webapps";
+  public static final String PROMETHEUS_SINK = "PROMETHEUS_SINK";
 
   private final AccessControlList adminsAcl;
 
@@ -769,6 +774,15 @@ public class HttpServer implements FilterContainer {
       LOG.info("ASYNC_PROFILER_HOME environment variable and async.profiler.home system property " +
         "not specified. Disabling /prof endpoint.");
     }
+
+    PrometheusMetricsSink prometheusMetricsSink = new PrometheusMetricsSink();
+    setAttribute(PROMETHEUS_SINK, prometheusMetricsSink);
+    DefaultMetricsSystem.instance()
+      .register("prometheus", "Hadoop metrics prometheus exporter",
+        prometheusMetricsSink);
+
+    addPrivilegedServlet("prometheus", "/prom", PrometheusServlet.class);
+    addPrivilegedServlet("prometheus2", "/prom2", PrometheusHadoop2Servlet.class);
   }
 
   /**
