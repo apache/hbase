@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.mob.MobConstants;
+import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.security.access.SnapshotScannerHDFSAclHelper;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -143,12 +144,11 @@ public class MasterFileSystem {
         MobConstants.MOB_DIR_NAME
     };
 
-    //With the introduction of RegionProcedureStore,
-    // there's no need to create MasterProcWAL dir here anymore. See HBASE-23715
     final String[] protectedSubLogDirs = new String[] {
       HConstants.HREGION_LOGDIR_NAME,
       HConstants.HREGION_OLDLOGDIR_NAME,
-      HConstants.CORRUPT_DIR_NAME
+      HConstants.CORRUPT_DIR_NAME,
+      WALProcedureStore.MASTER_PROCEDURE_LOGDIR
     };
     // check if the root directory exists
     checkRootDir(this.rootdir, conf, this.fs);
