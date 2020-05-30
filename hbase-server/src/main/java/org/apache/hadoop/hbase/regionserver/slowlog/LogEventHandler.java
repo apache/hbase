@@ -209,7 +209,7 @@ class LogEventHandler implements EventHandler<RingBufferEnvelope> {
     // latest slow logs first, operator is interested in latest records from in-memory buffer
     Collections.reverse(slowLogPayloadList);
 
-    return getFilteredLogs(request, slowLogPayloadList);
+    return LogHandlerUtils.getFilteredLogs(request, slowLogPayloadList);
   }
 
   /**
@@ -228,60 +228,7 @@ class LogEventHandler implements EventHandler<RingBufferEnvelope> {
     // latest large logs first, operator is interested in latest records from in-memory buffer
     Collections.reverse(slowLogPayloadList);
 
-    return getFilteredLogs(request, slowLogPayloadList);
-  }
-
-  private List<SlowLogPayload> getFilteredLogs(AdminProtos.SlowLogResponseRequest request,
-      List<SlowLogPayload> logPayloadList) {
-    if (isFilterProvided(request)) {
-      logPayloadList = filterLogs(request, logPayloadList);
-    }
-    int limit = Math.min(request.getLimit(), logPayloadList.size());
-    return logPayloadList.subList(0, limit);
-  }
-
-  private boolean isFilterProvided(AdminProtos.SlowLogResponseRequest request) {
-    if (StringUtils.isNotEmpty(request.getUserName())) {
-      return true;
-    }
-    if (StringUtils.isNotEmpty(request.getTableName())) {
-      return true;
-    }
-    if (StringUtils.isNotEmpty(request.getClientAddress())) {
-      return true;
-    }
-    return StringUtils.isNotEmpty(request.getRegionName());
-  }
-
-  private List<SlowLogPayload> filterLogs(AdminProtos.SlowLogResponseRequest request,
-      List<SlowLogPayload> slowLogPayloadList) {
-    List<SlowLogPayload> filteredSlowLogPayloads = new ArrayList<>();
-    for (SlowLogPayload slowLogPayload : slowLogPayloadList) {
-      if (StringUtils.isNotEmpty(request.getRegionName())) {
-        if (slowLogPayload.getRegionName().equals(request.getRegionName())) {
-          filteredSlowLogPayloads.add(slowLogPayload);
-          continue;
-        }
-      }
-      if (StringUtils.isNotEmpty(request.getTableName())) {
-        if (slowLogPayload.getRegionName().startsWith(request.getTableName())) {
-          filteredSlowLogPayloads.add(slowLogPayload);
-          continue;
-        }
-      }
-      if (StringUtils.isNotEmpty(request.getClientAddress())) {
-        if (slowLogPayload.getClientAddress().equals(request.getClientAddress())) {
-          filteredSlowLogPayloads.add(slowLogPayload);
-          continue;
-        }
-      }
-      if (StringUtils.isNotEmpty(request.getUserName())) {
-        if (slowLogPayload.getUserName().equals(request.getUserName())) {
-          filteredSlowLogPayloads.add(slowLogPayload);
-        }
-      }
-    }
-    return filteredSlowLogPayloads;
+    return LogHandlerUtils.getFilteredLogs(request, slowLogPayloadList);
   }
 
   /**

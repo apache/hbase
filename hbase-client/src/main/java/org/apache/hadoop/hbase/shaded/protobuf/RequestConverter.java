@@ -1955,6 +1955,12 @@ public final class RequestConverter {
     if (StringUtils.isNotEmpty(userName)) {
       builder.setUserName(userName);
     }
+    LogQueryFilter.FilterByOperator filterByOperator = logQueryFilter.getFilterByOperator();
+    if (LogQueryFilter.FilterByOperator.AND.equals(filterByOperator)) {
+      builder.setFilterByOperator(SlowLogResponseRequest.FilterByOperator.AND);
+    } else {
+      builder.setFilterByOperator(SlowLogResponseRequest.FilterByOperator.OR);
+    }
     return builder.setLimit(logQueryFilter.getLimit()).build();
   }
 
