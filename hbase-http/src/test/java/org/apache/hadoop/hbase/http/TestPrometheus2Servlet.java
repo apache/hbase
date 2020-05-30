@@ -15,28 +15,34 @@
  */
 package org.apache.hadoop.hbase.http;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.apache.hadoop.hbase.http.prom.PrometheusUtils.toPrometheusName;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.http.prom.PrometheusMetricsSink;
-import org.apache.hadoop.hbase.http.prom.PrometheusUtils;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
-
 import org.junit.Assert;
+import org.junit.ClassRule;
 import org.junit.Test;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.apache.hadoop.hbase.http.prom.PrometheusUtils.toPrometheusName;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test prometheus Sink.
  */
+@Category({ SmallTests.class, MiscTests.class })
 public class TestPrometheus2Servlet {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_TEST_RULE =
+    HBaseClassTestRule.forClass(TestPrometheus2Servlet.class);
 
   @Test
   public void testPublish() throws IOException {

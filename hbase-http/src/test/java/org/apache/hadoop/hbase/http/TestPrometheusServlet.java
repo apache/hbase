@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.http;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.http.prom.PrometheusServlet;
 import org.apache.hadoop.hbase.metrics.Counter;
 import org.apache.hadoop.hbase.metrics.Histogram;
@@ -31,11 +32,16 @@ import org.apache.hadoop.hbase.metrics.Timer;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ SmallTests.class, MiscTests.class })
 public class TestPrometheusServlet {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_TEST_RULE =
+    HBaseClassTestRule.forClass(TestPrometheusServlet.class);
 
   PrometheusServlet ps;
   MetricRegistry mr;
