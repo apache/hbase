@@ -486,6 +486,71 @@ public class TestSlowLogRecorder {
 
   }
 
+  @Test
+  public void testSlowLogMixedFilters() throws Exception {
+
+    Configuration conf = applySlowLogRecorderConf(30);
+    slowLogRecorder = new SlowLogRecorder(conf);
+    AdminProtos.SlowLogResponseRequest request =
+      AdminProtos.SlowLogResponseRequest.newBuilder()
+        .setLimit(15)
+        .setUserName("userName_87")
+        .setClientAddress("client_88")
+        .build();
+
+    Assert.assertEquals(slowLogRecorder.getSlowLogPayloads(request).size(), 0);
+
+    for (int i = 0; i < 100; i++) {
+      RpcLogDetails rpcLogDetails =
+        getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1));
+      slowLogRecorder.addSlowLogPayload(rpcLogDetails);
+    }
+
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
+      () -> slowLogRecorder.getSlowLogPayloads(request).size() == 2));
+
+    AdminProtos.SlowLogResponseRequest request2 = AdminProtos.SlowLogResponseRequest.newBuilder()
+      .setLimit(15)
+      .setUserName("userName_1")
+      .setClientAddress("client_2")
+      .build();
+    Assert.assertEquals(0, slowLogRecorder.getSlowLogPayloads(request2).size());
+
+    AdminProtos.SlowLogResponseRequest request3 =
+      AdminProtos.SlowLogResponseRequest.newBuilder()
+        .setLimit(15)
+        .setUserName("userName_87")
+        .setClientAddress("client_88")
+        .setFilterByOperator(AdminProtos.SlowLogResponseRequest.FilterByOperator.AND)
+        .build();
+    Assert.assertEquals(0, slowLogRecorder.getSlowLogPayloads(request3).size());
+
+    AdminProtos.SlowLogResponseRequest request4 =
+      AdminProtos.SlowLogResponseRequest.newBuilder()
+        .setLimit(15)
+        .setUserName("userName_87")
+        .setClientAddress("client_87")
+        .setFilterByOperator(AdminProtos.SlowLogResponseRequest.FilterByOperator.AND)
+        .build();
+    Assert.assertEquals(1, slowLogRecorder.getSlowLogPayloads(request4).size());
+
+    AdminProtos.SlowLogResponseRequest request5 =
+      AdminProtos.SlowLogResponseRequest.newBuilder()
+        .setLimit(15)
+        .setUserName("userName_88")
+        .setClientAddress("client_89")
+        .setFilterByOperator(AdminProtos.SlowLogResponseRequest.FilterByOperator.OR)
+        .build();
+    Assert.assertEquals(2, slowLogRecorder.getSlowLogPayloads(request5).size());
+
+    AdminProtos.SlowLogResponseRequest requestSlowLog =
+      AdminProtos.SlowLogResponseRequest.newBuilder()
+        .setLimit(15)
+        .build();
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
+      () -> slowLogRecorder.getSlowLogPayloads(requestSlowLog).size() == 15));
+  }
+
   static RpcLogDetails getRpcLogDetails(String userName, String clientAddress, String className) {
     RpcCall rpcCall = getRpcCall(userName);
     return new RpcLogDetails(rpcCall, rpcCall.getParam(), clientAddress, 0, className, true, true);
