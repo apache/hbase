@@ -3890,8 +3890,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<List<OnlineLogRecord>> getSlowLogResponses(
-      @Nullable final Set<ServerName> serverNames,
-      final LogQueryFilter logQueryFilter) {
+      @Nullable final Set<ServerName> serverNames, final LogQueryFilter logQueryFilter) {
     if (CollectionUtils.isEmpty(serverNames)) {
       return CompletableFuture.completedFuture(Collections.emptyList());
     }
@@ -3914,7 +3913,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   private CompletableFuture<List<OnlineLogRecord>> getLargeLogResponseFromServer(
-    final ServerName serverName, final LogQueryFilter logQueryFilter) {
+      final ServerName serverName, final LogQueryFilter logQueryFilter) {
     return this.<List<OnlineLogRecord>>newAdminCaller()
       .action((controller, stub) -> this
         .adminCall(

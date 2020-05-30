@@ -37,10 +37,16 @@ public class LogQueryFilter {
   private String userName;
   private int limit = 10;
   private Type type = Type.SLOW_LOG;
+  private FilterByOperator filterByOperator = FilterByOperator.OR;
 
   public enum Type {
     SLOW_LOG,
     LARGE_LOG
+  }
+
+  public enum FilterByOperator {
+    AND,
+    OR
   }
 
   public String getRegionName() {
@@ -91,6 +97,14 @@ public class LogQueryFilter {
     this.type = type;
   }
 
+  public FilterByOperator getFilterByOperator() {
+    return filterByOperator;
+  }
+
+  public void setFilterByOperator(FilterByOperator filterByOperator) {
+    this.filterByOperator = filterByOperator;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -110,6 +124,7 @@ public class LogQueryFilter {
       .append(tableName, that.tableName)
       .append(userName, that.userName)
       .append(type, that.type)
+      .append(filterByOperator, that.filterByOperator)
       .isEquals();
   }
 
@@ -122,6 +137,7 @@ public class LogQueryFilter {
       .append(userName)
       .append(limit)
       .append(type)
+      .append(filterByOperator)
       .toHashCode();
   }
 
@@ -134,6 +150,7 @@ public class LogQueryFilter {
       .append("userName", userName)
       .append("limit", limit)
       .append("type", type)
+      .append("filterByOperator", filterByOperator)
       .toString();
   }
 }

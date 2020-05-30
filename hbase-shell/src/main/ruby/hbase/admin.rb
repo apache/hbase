@@ -1480,6 +1480,16 @@ module Hbase
         limit = args['LIMIT']
         filter_params.setLimit(limit)
       end
+      if args.key? 'FILTER_BY_OP'
+        filter_by_op = args['FILTER_BY_OP']
+        if filter_by_op != 'OR' && filter_by_op != 'AND'
+          raise(ArgumentError, "FILTER_BY_OP should be either OR / AND")
+        end
+        if filter_by_op == 'AND'
+          filter_params.setFilterByOperator(
+              org.apache.hadoop.hbase.client.LogQueryFilter::FilterByOperator::AND)
+        end
+      end
       filter_params
     end
 
