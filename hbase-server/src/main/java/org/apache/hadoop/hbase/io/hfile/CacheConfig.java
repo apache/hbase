@@ -204,8 +204,6 @@ public class CacheConfig {
     this.cacheCompactedDataOnWriteThreshold = getCacheCompactedBlocksOnWriteThreshold(conf);
     this.blockCache = blockCache;
     this.byteBuffAllocator = byteBuffAllocator;
-    LOG.info("Created cacheConfig: " + this + (family == null ? "" : " for family " + family) +
-        " with blockCache=" + blockCache);
   }
 
   /**
