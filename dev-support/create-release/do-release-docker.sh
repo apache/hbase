@@ -71,6 +71,7 @@ Options:
   -t [tag]     tag for the hbase-rm docker image to use for building (default: "latest").
   -j [path]    path to local JDK installation to use building. By default the script will
                use openjdk8 installed in the docker image.
+  -m [volume]  named volume to use for maven artifact caching
   -p [project] project to build, such as 'hbase' or 'hbase-thirdparty'; defaults to $PROJECT env var
   -r [repo]    git repo to use for remote git operations. defaults to ASF gitbox for project.
   -s [step]    runs a single step of the process; valid steps are: tag|publish-dist|publish-release.
@@ -85,12 +86,14 @@ IMGTAG=latest
 JAVA=
 RELEASE_STEP=
 GIT_REPO=
-while getopts "d:fhj:p:r:s:t:" opt; do
+MAVEN_VOLUME=
+while getopts "d:fhj:m:p:r:s:t:" opt; do
   case $opt in
     d) WORKDIR="$OPTARG" ;;
     f) DRY_RUN=0 ;;
     t) IMGTAG="$OPTARG" ;;
     j) JAVA="$OPTARG" ;;
+    m) MAVEN_VOLUME="$OPTARG" ;;
     p) PROJECT="$OPTARG" ;;
     r) GIT_REPO="$OPTARG" ;;
     s) RELEASE_STEP="$OPTARG" ;;
@@ -173,6 +176,12 @@ if [ -n "$JAVA" ]; then
   JAVA_VOL=(--volume "$JAVA:/opt/hbase-java")
 fi
 
+MAVEN_MOUNT=()
+if [ -n "MAVEN_VOLUME" ]; then
+  MAVEN_MOUNT=(--mount "type=volume,src=${MAVEN_VOLUME},dst=/home/hbase-rm/.m2-repository/")
+  echo "REPO=/home/hbase-rm/.m2-repository" >> "${ENVFILE}"
+fi
+
 #TODO some debug output would be good here
 GIT_REPO_MOUNT=()
 if [ -n "${GIT_REPO}" ]; then
@@ -234,6 +243,7 @@ cmd=(docker run -ti \
   --mount "type=bind,src=${WORKDIR},dst=/opt/hbase-rm,consistency=delegated" \
   "${JAVA_VOL[@]}" \
   "${GIT_REPO_MOUNT[@]}" \
+  "${MAVEN_MOUNT[@]}" \
   "hbase-rm:$IMGTAG")
 echo "${cmd[*]}"
 "${cmd[@]}"

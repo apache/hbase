@@ -53,7 +53,10 @@ ENV YETUS_HOME /opt/apache-yetus-${YETUS_VERSION}
 WORKDIR /opt/hbase-rm/output
 
 ARG UID
-RUN useradd -m -s /bin/bash -p hbase-rm -u $UID hbase-rm
+RUN useradd -m -s /bin/bash -p hbase-rm -u $UID hbase-rm && \
+    mkdir /home/hbase-rm/.m2-repository && \
+    chown -R hbase-rm /home/hbase-rm && \
+    chmod -R 700 /home/hbase-rm
 USER hbase-rm:hbase-rm
 
 ENTRYPOINT [ "/opt/hbase-rm/do-release.sh" ]

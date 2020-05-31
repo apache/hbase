@@ -64,6 +64,15 @@ fi
 GPG_TTY="$(tty)"
 export GPG_TTY
 
+if [[ -n "${REPO}" ]]; then
+  echo "reusing persistent maven repo, testing write access"
+  echo "foo" > "${REPO}/test.file"
+  if [[ -d "${REPO}/org/apache/hbase/" ]]; then
+    echo "reusing persistent maven repo, clearing out our project artifacts."
+    rm -rf "${REPO}/org/apache/hbase/"
+  fi
+fi
+
 if [[ -z "$RELEASE_STEP" ]]; then
   # If doing all stages, leave out 'publish-snapshot'
   RELEASE_STEP="tag_publish-dist_publish-release"
