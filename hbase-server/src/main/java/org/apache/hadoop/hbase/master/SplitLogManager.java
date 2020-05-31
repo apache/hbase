@@ -121,12 +121,8 @@ public class SplitLogManager {
       throws IOException {
     this.server = master;
     this.conf = conf;
-    // Get Server Thread name. Sometimes the Server is mocked so may not extends Thread.
-    // For example, in tests.
-    String name = master instanceof Thread? ((Thread)master).getName():
-        master.getServerName().toShortString();
     this.choreService =
-        new ChoreService(name + ".splitLogManager.");
+        new ChoreService(master.getServerName().toShortString() + ".splitLogManager.");
     if (server.getCoordinatedStateManager() != null) {
       SplitLogManagerCoordination coordination = getSplitLogManagerCoordination();
       Set<String> failedDeletions = Collections.synchronizedSet(new HashSet<String>());
