@@ -377,7 +377,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
    * @param family The current column family.
    */
   protected void createCacheConf(final ColumnFamilyDescriptor family) {
-    this.cacheConf = new CacheConfig(conf, family, region.getRegionInfo(), region.getBlockCache(),
+    this.cacheConf = new CacheConfig(conf, family, region.getBlockCache(),
         region.getRegionServicesForStores().getByteBuffAllocator());
   }
 
