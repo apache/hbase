@@ -276,8 +276,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     // used by ScanQueryMatcher
     long timeToPurgeDeletes =
         Math.max(conf.getLong("hbase.hstore.time.to.purge.deletes", 0), 0);
-    LOG.trace("Time to purge deletes set to {}ms in store {} in region {}", timeToPurgeDeletes,
-        this, this.getRegionInfo().getRegionNameAsString());
+    LOG.trace("Time to purge deletes set to {}ms in store {}", timeToPurgeDeletes, this);
     // Get TTL
     long ttl = determineTTLFromFamily(family);
     // Why not just pass a HColumnDescriptor in here altogether?  Even if have
@@ -332,11 +331,11 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
       confPrintThreshold = 10;
     }
     this.parallelPutCountPrintThreshold = confPrintThreshold;
-    LOG.info("Created HStore: Store={},  memstore type={}, storagePolicy={}, verifyBulkLoads={}, "
-            + "parallelPutCountPrintThreshold={}, encoding={}, compression={} in region {}",
+    LOG.info("Store={},  memstore type={}, storagePolicy={}, verifyBulkLoads={}, "
+            + "parallelPutCountPrintThreshold={}, encoding={}, compression={}",
         getColumnFamilyName(), memstore.getClass().getSimpleName(), policyName, verifyBulkLoads,
         parallelPutCountPrintThreshold, family.getDataBlockEncoding(),
-        family.getCompressionType(), getRegionInfo().getRegionNameAsString());
+        family.getCompressionType());
     cacheOnWriteLogged = false;
   }
 
@@ -932,8 +931,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
       // the lock.
       this.lock.writeLock().unlock();
     }
-    LOG.info("Loaded HFile " + sf.getFileInfo() + " into store '" + getColumnFamilyName()
-      + "' in region '" + getRegionInfo().getShortNameToLog() +"'");
+    LOG.info("Loaded HFile " + sf.getFileInfo() + " into store '" + getColumnFamilyName());
     if (LOG.isTraceEnabled()) {
       String traceMessage = "BULK LOAD time,size,store size,store files ["
           + EnvironmentEdgeManager.currentTime() + "," + r.length() + "," + storeSize
@@ -1005,7 +1003,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
           throw ioe;
         }
       }
-      LOG.trace("Closed {} in region {}", this, this.getRegionInfo().getRegionNameAsString());
+      LOG.trace("Closed {}", this);
       return result;
     } finally {
       this.lock.writeLock().unlock();
@@ -1064,8 +1062,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
           }
         }
       } catch (IOException e) {
-        LOG.warn("Failed flushing store file for store {} in region {}, retrying num={}", this,
-          this.getRegionInfo().getRegionNameAsString(), i, e);
+        LOG.warn("Failed flushing store file, retrying num={}", i, e);
         lastException = e;
       }
       if (lastException != null && i < (flushRetriesNumber - 1)) {
@@ -1174,10 +1171,9 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
         .getCacheCompactedBlocksOnWriteThreshold()) {
         writerCacheConf.enableCacheOnWrite();
         if (!cacheOnWriteLogged) {
-          LOG.info("For Store {} in region {}, " +
-              "cacheCompactedBlocksOnWrite is true, hence enabled " +
+          LOG.info("For Store {} , cacheCompactedBlocksOnWrite is true, hence enabled " +
               "cacheOnWrite for Data blocks, Index blocks and Bloom filter blocks",
-            getColumnFamilyName(), getRegionInfo().getRegionNameAsString());
+            getColumnFamilyName());
           cacheOnWriteLogged = true;
         }
       } else {
@@ -1185,11 +1181,9 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
         if (totalCompactedFilesSize > cacheConf.getCacheCompactedBlocksOnWriteThreshold()) {
           // checking condition once again for logging
           LOG.debug(
-            "For Store {} in region {}, " +
-              "setting cacheCompactedBlocksOnWrite as false as total size of compacted " +
-              "files - {}, is greater than cacheCompactedBlocksOnWriteThreshold - {}",
-            getColumnFamilyName(), getRegionInfo().getRegionNameAsString(),
-            totalCompactedFilesSize,
+            "For Store {}, setting cacheCompactedBlocksOnWrite as false as total size of compacted "
+              + "files - {}, is greater than cacheCompactedBlocksOnWriteThreshold - {}",
+            getColumnFamilyName(), totalCompactedFilesSize,
             cacheConf.getCacheCompactedBlocksOnWriteThreshold());
         }
       }
@@ -1198,10 +1192,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
       if (shouldCacheDataOnWrite) {
         writerCacheConf.enableCacheOnWrite();
         if (!cacheOnWriteLogged) {
-          LOG.info("For Store {} in region {}, " +
-            "cacheDataOnWrite is true, hence enabled cacheOnWrite for " +
-            "Index blocks and Bloom filter blocks",
-            getColumnFamilyName(), getRegionInfo().getRegionNameAsString());
+          LOG.info("For Store {} , cacheDataOnWrite is true, hence enabled cacheOnWrite for " +
+            "Index blocks and Bloom filter blocks", getColumnFamilyName());
           cacheOnWriteLogged = true;
         }
       }
@@ -1987,9 +1979,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
       return;
     }
     if (getColumnFamilyDescriptor().getMinVersions() > 0) {
-      LOG.debug("Skipping expired store file removal due to min version of " +
-          "store {} in region {} being {}",
-          this, this.getRegionInfo().getRegionNameAsString(),
+      LOG.debug("Skipping expired store file removal due to min version being {}",
           getColumnFamilyDescriptor().getMinVersions());
       return;
     }
@@ -2095,8 +2085,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     // Not split-able if we find a reference store file present in the store.
     boolean result = !hasReferences();
     if (!result) {
-      LOG.trace("Not splittable; has references: {}, region {}",
-        this, this.getRegionInfo().getRegionNameAsString());
+      LOG.trace("Not splittable; has references: {}", this);
     }
     return result;
   }
@@ -2111,14 +2100,12 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
       assert !this.getRegionInfo().isMetaRegion();
       // Not split-able if we find a reference store file present in the store.
       if (hasReferences()) {
-        LOG.trace("Not splittable; has references: {}, region {}",
-          this, this.getRegionInfo().getRegionNameAsString());
+        LOG.trace("Not splittable; has references: {}", this);
         return Optional.empty();
       }
       return this.storeEngine.getStoreFileManager().getSplitPoint();
     } catch(IOException e) {
-      LOG.warn("Failed getting store size for {} in region {}", this,
-        this.getRegionInfo().getRegionNameAsString(), e);
+      LOG.warn("Failed getting store size for {}", this, e);
     } finally {
       this.lock.readLock().unlock();
     }
