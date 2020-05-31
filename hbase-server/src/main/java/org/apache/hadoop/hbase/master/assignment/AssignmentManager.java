@@ -1907,11 +1907,7 @@ public class AssignmentManager {
   }
 
   private void startAssignmentThread() {
-    // Get Server Thread name. Sometimes the Server is mocked so may not implement Thread.
-    // For example, in tests.
-    String name = master instanceof Thread? ((Thread)master).getName():
-        master.getServerName().toShortString();
-    assignThread = new Thread(name) {
+    assignThread = new Thread(master.getServerName().toShortString()) {
       @Override
       public void run() {
         while (isRunning()) {
