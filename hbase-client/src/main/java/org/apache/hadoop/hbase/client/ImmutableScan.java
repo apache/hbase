@@ -237,10 +237,6 @@ public final class ImmutableScan extends Scan {
     throw new IllegalStateException("ImmutableScan does not allow access to setSmall");
   }
 
-  private void setOperationWithAttribute(String name, byte[] value) {
-
-  }
-
   @Override
   public Scan setAttribute(String name, byte[] value) {
     throw new IllegalStateException("ImmutableScan does not allow access to setAttribute");
