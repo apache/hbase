@@ -32,11 +32,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.MiniHBaseCluster.MiniHBaseClusterRegionServer;
@@ -72,11 +71,13 @@ import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ConfigUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.hbase.util.TestTableName;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
@@ -84,8 +85,12 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 
 /**
@@ -98,6 +103,8 @@ public class TestAssignmentManagerOnCluster {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   final static Configuration conf = TEST_UTIL.getConfiguration();
   private static HBaseAdmin admin;
+  @Rule
+  public TestTableName testTableName = new TestTableName();
 
   static void setupOnce() throws Exception {
     // Using the our load balancer to control region plans
@@ -599,6 +606,68 @@ public class TestAssignmentManagerOnCluster {
   }
 
   /**
+   * This tests region close with exponential backoff
+   */
+  @Test(timeout = 60000)
+  public void testCloseRegionWithExponentialBackOff() throws Exception {
+    TableName tableName = testTableName.getTableName();
+    // Set the backoff time between each retry for failed close
+    TEST_UTIL.getMiniHBaseCluster().getConf().setLong("hbase.assignment.retry.sleep.initial", 1000);
+    HMaster activeMaster = TEST_UTIL.getHBaseCluster().getMaster();
+    TEST_UTIL.getMiniHBaseCluster().stopMaster(activeMaster.getServerName());
+    TEST_UTIL.getMiniHBaseCluster().startMaster(); // restart the master for conf take into affect
+
+    try {
+      ScheduledThreadPoolExecutor scheduledThreadPoolExecutor =
+          new ScheduledThreadPoolExecutor(1, Threads.newDaemonThreadFactory("ExponentialBackOff"));
+
+      HTableDescriptor desc = new HTableDescriptor(tableName);
+      desc.addFamily(new HColumnDescriptor(FAMILY));
+      admin.createTable(desc);
+
+      Table meta = new HTable(conf, TableName.META_TABLE_NAME);
+      HRegionInfo hri =
+          new HRegionInfo(desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
+      MetaTableAccessor.addRegionToMeta(meta, hri);
+
+      HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+      AssignmentManager am = master.getAssignmentManager();
+      assertTrue(TEST_UTIL.assignRegion(hri));
+      ServerName sn = am.getRegionStates().getRegionServerOfRegion(hri);
+      TEST_UTIL.assertRegionOnServer(hri, sn, 6000);
+
+      MyRegionObserver.preCloseEnabled.set(true);
+      // Unset the precloseEnabled flag after 1 second for next retry to succeed
+      scheduledThreadPoolExecutor.schedule(new Runnable() {
+        @Override
+        public void run() {
+          MyRegionObserver.preCloseEnabled.set(false);
+        }
+      }, 1000, TimeUnit.MILLISECONDS);
+      am.unassign(hri);
+
+      // region may still be assigned now since it's closing,
+      // let's check if it's assigned after it's out of transition
+      am.waitOnRegionToClearRegionsInTransition(hri);
+
+      // region should be closed and re-assigned
+      assertTrue(am.waitForAssignment(hri));
+      ServerName serverName =
+          master.getAssignmentManager().getRegionStates().getRegionServerOfRegion(hri);
+      TEST_UTIL.assertRegionOnServer(hri, serverName, 6000);
+    } finally {
+      MyRegionObserver.preCloseEnabled.set(false);
+      TEST_UTIL.deleteTable(tableName);
+
+      // reset the backoff time to default
+      TEST_UTIL.getMiniHBaseCluster().getConf().unset("hbase.assignment.retry.sleep.initial");
+      activeMaster = TEST_UTIL.getMiniHBaseCluster().getMaster();
+      TEST_UTIL.getMiniHBaseCluster().stopMaster(activeMaster.getServerName());
+      TEST_UTIL.getMiniHBaseCluster().startMaster();
+    }
+  }
+
+  /**
    * This tests region open failed
    */
   @Test (timeout=60000)
@@ -889,7 +958,7 @@ public class TestAssignmentManagerOnCluster {
   /**
    * This tests region close racing with open
    */
-  @Test (timeout=60000)
+  @Test(timeout = 60000)
   public void testOpenCloseRacing() throws Exception {
     String table = "testOpenCloseRacing";
     try {
