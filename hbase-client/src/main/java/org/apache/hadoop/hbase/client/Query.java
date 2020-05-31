@@ -164,7 +164,11 @@ public abstract class Query extends OperationWithAttributes {
    * @param level IsolationLevel for this query
    */
   public Query setIsolationLevel(IsolationLevel level) {
-    setAttribute(ISOLATION_LEVEL, level.toBytes());
+    if (this instanceof ImmutableScan) {
+      super.setAttribute(ISOLATION_LEVEL, level.toBytes());
+    } else {
+      setAttribute(ISOLATION_LEVEL, level.toBytes());
+    }
     return this;
   }
 
