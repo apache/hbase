@@ -1164,8 +1164,10 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   private void checkIOErrorIsTolerated() {
     long now = EnvironmentEdgeManager.currentTime();
-    if (this.ioErrorStartTime > 0) {
-      if (cacheEnabled && (now - ioErrorStartTime) > this.ioErrorsTolerationDuration) {
+    // Do a single read to a local variable to avoid timing issue - HBASE-24454
+    long ioErrorStartTimeTmp = this.ioErrorStartTime;
+    if (ioErrorStartTimeTmp > 0) {
+      if (cacheEnabled && (now - ioErrorStartTimeTmp) > this.ioErrorsTolerationDuration) {
         LOG.error("IO errors duration time has exceeded " + ioErrorsTolerationDuration +
           "ms, disabling cache, please check your IOEngine");
         disableCache();
