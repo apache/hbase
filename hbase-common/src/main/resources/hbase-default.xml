@@ -1728,6 +1728,15 @@ possible configurations would overwhelm and obscure the important.
     </description>
   </property>
   <property>
+    <name>hbase.http.enable.prometheus.servlets</name>
+    <value>false</value>
+    <description>
+      Enable prometheus servlets /prom and /prom2 for prometheus based monitoring.
+      /prom is based on new HBase metrics API and all metrics are not exported for now.
+      /prom2 is based on the old hadoop2 metrics API and has all the metrics.
+    </description>
+  </property>
+  <property>
   	<name>hbase.replication.rpc.codec</name>
   	<value>org.apache.hadoop.hbase.codec.KeyValueCodecWithTags</value>
   	<description>
