@@ -58,22 +58,6 @@ public final class ImmutableScan extends Scan {
     isObjInit = true;
   }
 
-  /**
-   * Create a new Scan with a cursor. It only set the position information like start row key.
-   * The others (like cfs, stop row, limit) should still be filled in by the user.
-   * {@link Result#isCursor()}
-   * {@link Result#getCursor()}
-   * {@link Cursor}
-   */
-  public static Scan createScanFromCursor(Cursor cursor) {
-    Scan scan = new Scan().withStartRow(cursor.getRow());
-    try {
-      return new ImmutableScan(scan);
-    } catch (IOException e) {
-      throw new RuntimeException("Scan should not throw IOException", e);
-    }
-  }
-
   @Override
   public Scan addFamily(byte[] family) {
     if (!isObjInit) {
