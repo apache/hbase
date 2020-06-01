@@ -1950,7 +1950,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     }
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug(this + "is initiating " + (request.isMajor() ? "major" : "minor") + " compaction"
+      LOG.debug(this + " is initiating " + (request.isMajor() ? "major" : "minor") + " compaction"
           + (request.isAllFiles() ? " (all files)" : ""));
     }
     this.region.reportCompactionRequestStart(request.isMajor());
