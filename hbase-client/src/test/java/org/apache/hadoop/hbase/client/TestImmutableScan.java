@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.client;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
@@ -30,6 +31,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -159,8 +161,92 @@ public class TestImmutableScan {
     assertEquals(scan.getStopRow(), scanCopy.getStopRow());
     assertEquals(scan.getTimeRange(), scanCopy.getTimeRange());
 
+    // isObjInit should be ignored
     assertTrue("Make sure copy constructor adds all the fields in the copied object",
-      EqualsBuilder.reflectionEquals(scan, scanCopy));
+      EqualsBuilder.reflectionEquals(scan, scanCopy, "isObjInit"));
+
+    try {
+      scanCopy.setFilter(Mockito.mock(Filter.class));
+      throw new RuntimeException("Should not reach here");
+    } catch (UnsupportedOperationException e) {
+      assertEquals("ImmutableScan does not allow access to setFilter", e.getMessage());
+    }
+    try {
+      scanCopy.addFamily(new byte[] { 0, 1 });
+      throw new RuntimeException("Should not reach here");
+    } catch (UnsupportedOperationException e) {
+      assertEquals("ImmutableScan does not allow access to addFamily", e.getMessage());
+    }
+    try {
+      scanCopy.addColumn(new byte[] { 0, 1 }, new byte[] { 2, 3 });
+      throw new RuntimeException("Should not reach here");
+    } catch (UnsupportedOperationException e) {
+      assertEquals("ImmutableScan does not allow access to addColumn", e.getMessage());
+    }
+    try {
+      scanCopy.setTimeRange(1L, 2L);
+      throw new RuntimeException("Should not reach here");
+    } catch (UnsupportedOperationException e) {
+      assertEquals("ImmutableScan does not allow access to setTimeRange", e.getMessage());
+    }
+    try {
+      scanCopy.setTimestamp(1L);
+      throw new RuntimeException("Should not reach here");
+    } catch (UnsupportedOperationException e) {
+      assertEquals("ImmutableScan does not allow access to setTimestamp", e.getMessage());
+    }
+    try {
+      scanCopy.setColumnFamilyTimeRange(new byte[] { 0 }, 1L, 2L);
+      throw new RuntimeException("Should not reach here");
+    } catch (UnsupportedOperationException e) {
+      assertEquals("ImmutableScan does not allow access to setColumnFamilyTimeRange",
+        e.getMessage());
+    }
+    try {
+      scanCopy.withStopRow(new byte[] { 1, 2 });
+      throw new RuntimeException("Should not reach here");
+    } catch (UnsupportedOperationException e) {
+      assertEquals("ImmutableScan does not allow access to withStopRow", e.getMessage());
+    }
+    try {
+      scanCopy.setRowPrefixFilter(new byte[] { 1, 2 });
+      throw new RuntimeException("Should not reach here");
+    } catch (UnsupportedOperationException e) {
+      assertEquals("ImmutableScan does not allow access to setRowPrefixFilter", e.getMessage());
+    }
+    try {
+      scanCopy.readAllVersions();
+      throw new RuntimeException("Should not reach here");
+    } catch (UnsupportedOperationException e) {
+      assertEquals("ImmutableScan does not allow access to readAllVersions", e.getMessage());
+    }
+    try {
+      scanCopy.setBatch(1);
+      throw new RuntimeException("Should not reach here");
+    } catch (UnsupportedOperationException e) {
+      assertEquals("ImmutableScan does not allow access to setBatch", e.getMessage());
+    }
+    try {
+      scanCopy.setRowOffsetPerColumnFamily(1);
+      throw new RuntimeException("Should not reach here");
+    } catch (UnsupportedOperationException e) {
+      assertEquals("ImmutableScan does not allow access to setRowOffsetPerColumnFamily",
+        e.getMessage());
+    }
+    try {
+      scanCopy.setCaching(1);
+      throw new RuntimeException("Should not reach here");
+    } catch (UnsupportedOperationException e) {
+      assertEquals("ImmutableScan does not allow access to setCaching",
+        e.getMessage());
+    }
+    try {
+      scanCopy.setLoadColumnFamiliesOnDemand(true);
+      throw new RuntimeException("Should not reach here");
+    } catch (UnsupportedOperationException e) {
+      assertEquals("ImmutableScan does not allow access to setLoadColumnFamiliesOnDemand",
+        e.getMessage());
+    }
   }
 
 }

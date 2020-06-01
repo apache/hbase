@@ -35,6 +35,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public final class ImmutableScan extends Scan {
 
+  private final boolean isObjInit;
+
   /**
    * Create Immutable instance of Scan from given Scan object
    *
@@ -43,27 +45,7 @@ public final class ImmutableScan extends Scan {
    */
   public ImmutableScan(Scan scan) throws IOException {
     super(scan);
-    super.setIsolationLevel(scan.getIsolationLevel());
-    Map<byte[], NavigableSet<byte[]>> familyMap = scan.getFamilyMap();
-    for (Map.Entry<byte[], NavigableSet<byte[]>> entry : familyMap.entrySet()) {
-      byte[] family = entry.getKey();
-      NavigableSet<byte[]> cols = entry.getValue();
-      if (cols != null && cols.size() > 0) {
-        for (byte[] col : cols) {
-          super.addColumn(family, col);
-        }
-      } else {
-        super.addFamily(family);
-      }
-    }
-    for (Map.Entry<String, byte[]> attr : scan.getAttributesMap().entrySet()) {
-      super.setAttribute(attr.getKey(), attr.getValue());
-    }
-    for (Map.Entry<byte[], TimeRange> entry : scan.getColumnFamilyTimeRange().entrySet()) {
-      TimeRange tr = entry.getValue();
-      super.setColumnFamilyTimeRange(entry.getKey(), tr.getMin(), tr.getMax());
-    }
-    super.setPriority(scan.getPriority());
+    isObjInit = true;
   }
 
   /**
@@ -73,15 +55,7 @@ public final class ImmutableScan extends Scan {
    */
   public ImmutableScan(Get get) {
     super(get);
-    super.setIsolationLevel(get.getIsolationLevel());
-    for (Map.Entry<String, byte[]> attr : get.getAttributesMap().entrySet()) {
-      super.setAttribute(attr.getKey(), attr.getValue());
-    }
-    for (Map.Entry<byte[], TimeRange> entry : get.getColumnFamilyTimeRange().entrySet()) {
-      TimeRange tr = entry.getValue();
-      super.setColumnFamilyTimeRange(entry.getKey(), tr.getMin(), tr.getMax());
-    }
-    super.setPriority(get.getPriority());
+    isObjInit = true;
   }
 
   /**
@@ -102,195 +76,311 @@ public final class ImmutableScan extends Scan {
 
   @Override
   public Scan addFamily(byte[] family) {
+    if (!isObjInit) {
+      return super.addFamily(family);
+    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to addFamily");
   }
 
   @Override
   public Scan addColumn(byte[] family, byte[] qualifier) {
+    if (!isObjInit) {
+      return super.addColumn(family, qualifier);
+    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to addColumn");
   }
 
   @Override
   public Scan setTimeRange(long minStamp, long maxStamp) {
+    if (!isObjInit) {
+      try {
+        return super.setTimeRange(minStamp, maxStamp);
+      } catch (IOException e) {
+        throw new AssertionError("Scan#setTimeRange should not throw IOException");
+      }
+    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setTimeRange");
   }
 
   @Deprecated
   @Override
   public Scan setTimeStamp(long timestamp) {
+    if (!isObjInit) {
+      try {
+        return super.setTimeStamp(timestamp);
+      } catch (IOException e) {
+        throw new AssertionError("Scan#setTimeStamp should not throw IOException");
+      }
+    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setTimeStamp");
   }
 
   @Override
   public Scan setTimestamp(long timestamp) {
+    if (!isObjInit) {
+      return super.setTimestamp(timestamp);
+    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setTimestamp");
   }
 
   @Override
   public Scan setColumnFamilyTimeRange(byte[] cf, long minStamp, long maxStamp) {
+    if (!isObjInit) {
+      return super.setColumnFamilyTimeRange(cf, minStamp, maxStamp);
+    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setColumnFamilyTimeRange");
   }
 
   @Override
   public Scan withStartRow(byte[] startRow) {
+    if (!isObjInit) {
+      return super.withStartRow(startRow);
+    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to withStartRow");
   }
 
   @Override
   public Scan withStartRow(byte[] startRow, boolean inclusive) {
+    if (!isObjInit) {
+      return super.withStartRow(startRow, inclusive);
+    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to withStartRow");
   }
 
   @Override
   public Scan withStopRow(byte[] stopRow) {
+    if (!isObjInit) {
+      return super.withStopRow(stopRow);
+    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to withStopRow");
   }
 
   @Override
   public Scan withStopRow(byte[] stopRow, boolean inclusive) {
+    if (!isObjInit) {
+      return super.withStopRow(stopRow, inclusive);
+    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to withStopRow");
   }
 
   @Override
   public Scan setRowPrefixFilter(byte[] rowPrefix) {
+    if (!isObjInit) {
+      return super.setRowPrefixFilter(rowPrefix);
+    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setRowPrefixFilter");
   }
 
   @Override
   public Scan readAllVersions() {
+    if (!isObjInit) {
+      return super.readAllVersions();
+    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to readAllVersions");
   }
 
   @Override
   public Scan readVersions(int versions) {
+    if (!isObjInit) {
+      return super.readVersions(versions);
+    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to readVersions");
   }
 
   @Override
   public Scan setBatch(int batch) {
+    if (!isObjInit) {
+      return super.setBatch(batch);
+    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setBatch");
   }
 
   @Override
   public Scan setMaxResultsPerColumnFamily(int limit) {
+    if (!isObjInit) {
+      return super.setMaxResultsPerColumnFamily(limit);
+    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setMaxResultsPerColumnFamily");
   }
 
   @Override
   public Scan setRowOffsetPerColumnFamily(int offset) {
+    if (!isObjInit) {
+      return super.setRowOffsetPerColumnFamily(offset);
+    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setRowOffsetPerColumnFamily");
   }
 
   @Override
   public Scan setCaching(int caching) {
+    if (!isObjInit) {
+      return super.setCaching(caching);
+    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setCaching");
   }
 
   @Override
   public Scan setMaxResultSize(long maxResultSize) {
+    if (!isObjInit) {
+      return super.setMaxResultSize(maxResultSize);
+    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setMaxResultSize");
   }
 
   @Override
   public Scan setFilter(Filter filter) {
+    if (!isObjInit) {
+      return super.setFilter(filter);
+    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setFilter");
   }
 
   @Override
   public Scan setFamilyMap(Map<byte[], NavigableSet<byte[]>> familyMap) {
+    if (!isObjInit) {
+      return super.setFamilyMap(familyMap);
+    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setFamilyMap");
   }
 
   @Override
   public Scan setCacheBlocks(boolean cacheBlocks) {
+    if (!isObjInit) {
+      return super.setCacheBlocks(cacheBlocks);
+    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setCacheBlocks");
   }
 
   @Override
   public Scan setReversed(boolean reversed) {
+    if (!isObjInit) {
+      return super.setReversed(reversed);
+    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setReversed");
   }
 
   @Override
   public Scan setAllowPartialResults(final boolean allowPartialResults) {
+    if (!isObjInit) {
+      return super.setAllowPartialResults(allowPartialResults);
+    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setAllowPartialResults");
   }
 
   @Override
   public Scan setLoadColumnFamiliesOnDemand(boolean value) {
+    if (!isObjInit) {
+      return super.setLoadColumnFamiliesOnDemand(value);
+    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setLoadColumnFamiliesOnDemand");
   }
 
   @Override
   public Scan setRaw(boolean raw) {
+    if (!isObjInit) {
+      return super.setRaw(raw);
+    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setRaw");
   }
 
   @Override
   @Deprecated
   public Scan setSmall(boolean small) {
+    if (!isObjInit) {
+      return super.setSmall(small);
+    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setSmall");
   }
 
   @Override
   public Scan setAttribute(String name, byte[] value) {
+    if (!isObjInit) {
+      return super.setAttribute(name, value);
+    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setAttribute");
   }
 
   @Override
   public Scan setId(String id) {
+    if (!isObjInit) {
+      return super.setId(id);
+    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setId");
   }
 
   @Override
   public Scan setAuthorizations(Authorizations authorizations) {
+    if (!isObjInit) {
+      return super.setAuthorizations(authorizations);
+    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setAuthorizations");
   }
 
   @Override
   public Scan setACL(Map<String, Permission> perms) {
+    if (!isObjInit) {
+      return super.setACL(perms);
+    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setACL");
   }
 
   @Override
   public Scan setACL(String user, Permission perms) {
+    if (!isObjInit) {
+      return super.setACL(user, perms);
+    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setACL");
   }
 
   @Override
   public Scan setConsistency(Consistency consistency) {
+    if (!isObjInit) {
+      return super.setConsistency(consistency);
+    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setConsistency");
   }
 
   @Override
-  public Scan setReplicaId(int Id) {
+  public Scan setReplicaId(int id) {
+    if (!isObjInit) {
+      return super.setReplicaId(id);
+    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setReplicaId");
   }
 
   @Override
   public Scan setIsolationLevel(IsolationLevel level) {
+    if (!isObjInit) {
+      return super.setIsolationLevel(level);
+    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setIsolationLevel");
   }
 
   @Override
   public Scan setPriority(int priority) {
+    if (!isObjInit) {
+      return super.setPriority(priority);
+    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setPriority");
   }
 
   @Override
   public Scan setScanMetricsEnabled(final boolean enabled) {
+    if (!isObjInit) {
+      return super.setScanMetricsEnabled(enabled);
+    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setScanMetricsEnabled");
   }
@@ -298,40 +388,61 @@ public final class ImmutableScan extends Scan {
   @Override
   @Deprecated
   public Scan setAsyncPrefetch(boolean asyncPrefetch) {
+    if (!isObjInit) {
+      return super.setAsyncPrefetch(asyncPrefetch);
+    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setAsyncPrefetch");
   }
 
   @Override
   public Scan setLimit(int limit) {
+    if (!isObjInit) {
+      return super.setLimit(limit);
+    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setLimit");
   }
 
   @Override
   public Scan setOneRowLimit() {
+    if (!isObjInit) {
+      return super.setOneRowLimit();
+    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setOneRowLimit");
   }
 
   @Override
   public Scan setReadType(ReadType readType) {
+    if (!isObjInit) {
+      return super.setReadType(readType);
+    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setReadType");
   }
 
   @Override
   Scan setMvccReadPoint(long mvccReadPoint) {
+    if (!isObjInit) {
+      return super.setMvccReadPoint(mvccReadPoint);
+    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setMvccReadPoint");
   }
 
   @Override
   Scan resetMvccReadPoint() {
+    if (!isObjInit) {
+      return super.resetMvccReadPoint();
+    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to resetMvccReadPoint");
   }
 
   @Override
   public Scan setNeedCursorResult(boolean needCursorResult) {
+    if (!isObjInit) {
+      return super.setNeedCursorResult(needCursorResult);
+    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setNeedCursorResult");
   }

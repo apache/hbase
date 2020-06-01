@@ -200,37 +200,35 @@ public class Scan extends Query {
     filter = scan.getFilter(); // clone?
     loadColumnFamiliesOnDemand = scan.getLoadColumnFamiliesOnDemandValue();
     consistency = scan.getConsistency();
+    this.setIsolationLevel(scan.getIsolationLevel());
     reversed = scan.isReversed();
     asyncPrefetch = scan.isAsyncPrefetch();
     small = scan.isSmall();
     allowPartialResults = scan.getAllowPartialResults();
     tr = scan.getTimeRange(); // TimeRange is immutable
-    if (!(this instanceof ImmutableScan)) {
-      this.setIsolationLevel(scan.getIsolationLevel());
-      Map<byte[], NavigableSet<byte[]>> fams = scan.getFamilyMap();
-      for (Map.Entry<byte[], NavigableSet<byte[]>> entry : fams.entrySet()) {
-        byte[] fam = entry.getKey();
-        NavigableSet<byte[]> cols = entry.getValue();
-        if (cols != null && cols.size() > 0) {
-          for (byte[] col : cols) {
-            addColumn(fam, col);
-          }
-        } else {
-          addFamily(fam);
+    Map<byte[], NavigableSet<byte[]>> fams = scan.getFamilyMap();
+    for (Map.Entry<byte[],NavigableSet<byte[]>> entry : fams.entrySet()) {
+      byte [] fam = entry.getKey();
+      NavigableSet<byte[]> cols = entry.getValue();
+      if (cols != null && cols.size() > 0) {
+        for (byte[] col : cols) {
+          addColumn(fam, col);
         }
+      } else {
+        addFamily(fam);
       }
-      for (Map.Entry<String, byte[]> attr : scan.getAttributesMap().entrySet()) {
-        setAttribute(attr.getKey(), attr.getValue());
-      }
-      for (Map.Entry<byte[], TimeRange> entry : scan.getColumnFamilyTimeRange().entrySet()) {
-        TimeRange tr = entry.getValue();
-        setColumnFamilyTimeRange(entry.getKey(), tr.getMin(), tr.getMax());
-      }
-      setPriority(scan.getPriority());
+    }
+    for (Map.Entry<String, byte[]> attr : scan.getAttributesMap().entrySet()) {
+      setAttribute(attr.getKey(), attr.getValue());
+    }
+    for (Map.Entry<byte[], TimeRange> entry : scan.getColumnFamilyTimeRange().entrySet()) {
+      TimeRange tr = entry.getValue();
+      setColumnFamilyTimeRange(entry.getKey(), tr.getMin(), tr.getMax());
     }
     this.mvccReadPoint = scan.getMvccReadPoint();
     this.limit = scan.getLimit();
     this.needCursorResult = scan.isNeedCursorResult();
+    setPriority(scan.getPriority());
     readType = scan.getReadType();
     super.setReplicaId(scan.getReplicaId());
   }
@@ -253,19 +251,17 @@ public class Scan extends Query {
     this.familyMap = get.getFamilyMap();
     this.asyncPrefetch = false;
     this.consistency = get.getConsistency();
+    this.setIsolationLevel(get.getIsolationLevel());
     this.loadColumnFamiliesOnDemand = get.getLoadColumnFamiliesOnDemandValue();
-    if (!(this instanceof ImmutableScan)) {
-      this.setIsolationLevel(get.getIsolationLevel());
-      for (Map.Entry<String, byte[]> attr : get.getAttributesMap().entrySet()) {
-        setAttribute(attr.getKey(), attr.getValue());
-      }
-      for (Map.Entry<byte[], TimeRange> entry : get.getColumnFamilyTimeRange().entrySet()) {
-        TimeRange tr = entry.getValue();
-        setColumnFamilyTimeRange(entry.getKey(), tr.getMin(), tr.getMax());
-      }
-      setPriority(get.getPriority());
+    for (Map.Entry<String, byte[]> attr : get.getAttributesMap().entrySet()) {
+      setAttribute(attr.getKey(), attr.getValue());
+    }
+    for (Map.Entry<byte[], TimeRange> entry : get.getColumnFamilyTimeRange().entrySet()) {
+      TimeRange tr = entry.getValue();
+      setColumnFamilyTimeRange(entry.getKey(), tr.getMin(), tr.getMax());
     }
     this.mvccReadPoint = -1L;
+    setPriority(get.getPriority());
     super.setReplicaId(get.getReplicaId());
   }
 
