@@ -32,7 +32,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 /**
  * Immutable version of Scan
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 public final class ImmutableScan extends Scan {
 
   /**
@@ -102,225 +102,238 @@ public final class ImmutableScan extends Scan {
 
   @Override
   public Scan addFamily(byte[] family) {
-    throw new IllegalStateException("ImmutableScan does not allow access to addFamily");
+    throw new UnsupportedOperationException("ImmutableScan does not allow access to addFamily");
   }
 
   @Override
   public Scan addColumn(byte[] family, byte[] qualifier) {
-    throw new IllegalStateException("ImmutableScan does not allow access to addColumn");
+    throw new UnsupportedOperationException("ImmutableScan does not allow access to addColumn");
   }
 
   @Override
   public Scan setTimeRange(long minStamp, long maxStamp) {
-    throw new IllegalStateException("ImmutableScan does not allow access to setTimeRange");
+    throw new UnsupportedOperationException("ImmutableScan does not allow access to setTimeRange");
   }
 
   @Deprecated
   @Override
   public Scan setTimeStamp(long timestamp) {
-    throw new IllegalStateException("ImmutableScan does not allow access to setTimeStamp");
+    throw new UnsupportedOperationException("ImmutableScan does not allow access to setTimeStamp");
   }
 
   @Override
   public Scan setTimestamp(long timestamp) {
-    throw new IllegalStateException("ImmutableScan does not allow access to setTimestamp");
+    throw new UnsupportedOperationException("ImmutableScan does not allow access to setTimestamp");
   }
 
   @Override
   public Scan setColumnFamilyTimeRange(byte[] cf, long minStamp, long maxStamp) {
-    throw new IllegalStateException(
+    throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setColumnFamilyTimeRange");
   }
 
   @Override
   public Scan withStartRow(byte[] startRow) {
-    throw new IllegalStateException("ImmutableScan does not allow access to withStartRow");
+    throw new UnsupportedOperationException("ImmutableScan does not allow access to withStartRow");
   }
 
   @Override
   public Scan withStartRow(byte[] startRow, boolean inclusive) {
-    throw new IllegalStateException("ImmutableScan does not allow access to withStartRow");
+    throw new UnsupportedOperationException("ImmutableScan does not allow access to withStartRow");
   }
 
   @Override
   public Scan withStopRow(byte[] stopRow) {
-    throw new IllegalStateException("ImmutableScan does not allow access to withStopRow");
+    throw new UnsupportedOperationException("ImmutableScan does not allow access to withStopRow");
   }
 
   @Override
   public Scan withStopRow(byte[] stopRow, boolean inclusive) {
-    throw new IllegalStateException("ImmutableScan does not allow access to withStopRow");
+    throw new UnsupportedOperationException("ImmutableScan does not allow access to withStopRow");
   }
 
   @Override
   public Scan setRowPrefixFilter(byte[] rowPrefix) {
-    throw new IllegalStateException("ImmutableScan does not allow access to setRowPrefixFilter");
+    throw new UnsupportedOperationException(
+      "ImmutableScan does not allow access to setRowPrefixFilter");
   }
 
   @Override
   public Scan readAllVersions() {
-    throw new IllegalStateException("ImmutableScan does not allow access to readAllVersions");
+    throw new UnsupportedOperationException(
+      "ImmutableScan does not allow access to readAllVersions");
   }
 
   @Override
   public Scan readVersions(int versions) {
-    throw new IllegalStateException("ImmutableScan does not allow access to readVersions");
+    throw new UnsupportedOperationException("ImmutableScan does not allow access to readVersions");
   }
 
   @Override
   public Scan setBatch(int batch) {
-    throw new IllegalStateException("ImmutableScan does not allow access to setBatch");
+    throw new UnsupportedOperationException("ImmutableScan does not allow access to setBatch");
   }
 
   @Override
   public Scan setMaxResultsPerColumnFamily(int limit) {
-    throw new IllegalStateException(
+    throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setMaxResultsPerColumnFamily");
   }
 
   @Override
   public Scan setRowOffsetPerColumnFamily(int offset) {
-    throw new IllegalStateException(
+    throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setRowOffsetPerColumnFamily");
   }
 
   @Override
   public Scan setCaching(int caching) {
-    throw new IllegalStateException("ImmutableScan does not allow access to setCaching");
+    throw new UnsupportedOperationException("ImmutableScan does not allow access to setCaching");
   }
 
   @Override
   public Scan setMaxResultSize(long maxResultSize) {
-    throw new IllegalStateException("ImmutableScan does not allow access to setMaxResultSize");
+    throw new UnsupportedOperationException(
+      "ImmutableScan does not allow access to setMaxResultSize");
   }
 
   @Override
   public Scan setFilter(Filter filter) {
-    throw new IllegalStateException("ImmutableScan does not allow access to setFilter");
+    throw new UnsupportedOperationException("ImmutableScan does not allow access to setFilter");
   }
 
   @Override
   public Scan setFamilyMap(Map<byte[], NavigableSet<byte[]>> familyMap) {
-    throw new IllegalStateException("ImmutableScan does not allow access to setFamilyMap");
+    throw new UnsupportedOperationException("ImmutableScan does not allow access to setFamilyMap");
   }
 
   @Override
   public Scan setCacheBlocks(boolean cacheBlocks) {
-    throw new IllegalStateException("ImmutableScan does not allow access to setCacheBlocks");
+    throw new UnsupportedOperationException(
+      "ImmutableScan does not allow access to setCacheBlocks");
   }
 
   @Override
   public Scan setReversed(boolean reversed) {
-    throw new IllegalStateException("ImmutableScan does not allow access to setReversed");
+    throw new UnsupportedOperationException("ImmutableScan does not allow access to setReversed");
   }
 
   @Override
   public Scan setAllowPartialResults(final boolean allowPartialResults) {
-    throw new IllegalStateException(
+    throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setAllowPartialResults");
   }
 
   @Override
   public Scan setLoadColumnFamiliesOnDemand(boolean value) {
-    throw new IllegalStateException(
+    throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setLoadColumnFamiliesOnDemand");
   }
 
   @Override
   public Scan setRaw(boolean raw) {
-    throw new IllegalStateException("ImmutableScan does not allow access to setRaw");
+    throw new UnsupportedOperationException("ImmutableScan does not allow access to setRaw");
   }
 
   @Override
   @Deprecated
   public Scan setSmall(boolean small) {
-    throw new IllegalStateException("ImmutableScan does not allow access to setSmall");
+    throw new UnsupportedOperationException("ImmutableScan does not allow access to setSmall");
   }
 
   @Override
   public Scan setAttribute(String name, byte[] value) {
-    throw new IllegalStateException("ImmutableScan does not allow access to setAttribute");
+    throw new UnsupportedOperationException("ImmutableScan does not allow access to setAttribute");
   }
 
   @Override
   public Scan setId(String id) {
-    throw new IllegalStateException("ImmutableScan does not allow access to setId");
+    throw new UnsupportedOperationException("ImmutableScan does not allow access to setId");
   }
 
   @Override
   public Scan setAuthorizations(Authorizations authorizations) {
-    throw new IllegalStateException("ImmutableScan does not allow access to setAuthorizations");
+    throw new UnsupportedOperationException(
+      "ImmutableScan does not allow access to setAuthorizations");
   }
 
   @Override
   public Scan setACL(Map<String, Permission> perms) {
-    throw new IllegalStateException("ImmutableScan does not allow access to setACL");
+    throw new UnsupportedOperationException("ImmutableScan does not allow access to setACL");
   }
 
   @Override
   public Scan setACL(String user, Permission perms) {
-    throw new IllegalStateException("ImmutableScan does not allow access to setACL");
+    throw new UnsupportedOperationException("ImmutableScan does not allow access to setACL");
   }
 
   @Override
   public Scan setConsistency(Consistency consistency) {
-    throw new IllegalStateException("ImmutableScan does not allow access to setConsistency");
+    throw new UnsupportedOperationException(
+      "ImmutableScan does not allow access to setConsistency");
   }
 
   @Override
   public Scan setReplicaId(int Id) {
-    throw new IllegalStateException("ImmutableScan does not allow access to setReplicaId");
+    throw new UnsupportedOperationException("ImmutableScan does not allow access to setReplicaId");
   }
 
   @Override
   public Scan setIsolationLevel(IsolationLevel level) {
-    throw new IllegalStateException("ImmutableScan does not allow access to setIsolationLevel");
+    throw new UnsupportedOperationException(
+      "ImmutableScan does not allow access to setIsolationLevel");
   }
 
   @Override
   public Scan setPriority(int priority) {
-    throw new IllegalStateException("ImmutableScan does not allow access to setPriority");
+    throw new UnsupportedOperationException("ImmutableScan does not allow access to setPriority");
   }
 
   @Override
   public Scan setScanMetricsEnabled(final boolean enabled) {
-    throw new IllegalStateException("ImmutableScan does not allow access to setScanMetricsEnabled");
+    throw new UnsupportedOperationException(
+      "ImmutableScan does not allow access to setScanMetricsEnabled");
   }
 
   @Override
   @Deprecated
   public Scan setAsyncPrefetch(boolean asyncPrefetch) {
-    throw new IllegalStateException("ImmutableScan does not allow access to setAsyncPrefetch");
+    throw new UnsupportedOperationException(
+      "ImmutableScan does not allow access to setAsyncPrefetch");
   }
 
   @Override
   public Scan setLimit(int limit) {
-    throw new IllegalStateException("ImmutableScan does not allow access to setLimit");
+    throw new UnsupportedOperationException("ImmutableScan does not allow access to setLimit");
   }
 
   @Override
   public Scan setOneRowLimit() {
-    throw new IllegalStateException("ImmutableScan does not allow access to setOneRowLimit");
+    throw new UnsupportedOperationException(
+      "ImmutableScan does not allow access to setOneRowLimit");
   }
 
   @Override
   public Scan setReadType(ReadType readType) {
-    throw new IllegalStateException("ImmutableScan does not allow access to setReadType");
+    throw new UnsupportedOperationException("ImmutableScan does not allow access to setReadType");
   }
 
   @Override
   Scan setMvccReadPoint(long mvccReadPoint) {
-    throw new IllegalStateException("ImmutableScan does not allow access to setMvccReadPoint");
+    throw new UnsupportedOperationException(
+      "ImmutableScan does not allow access to setMvccReadPoint");
   }
 
   @Override
   Scan resetMvccReadPoint() {
-    throw new IllegalStateException("ImmutableScan does not allow access to resetMvccReadPoint");
+    throw new UnsupportedOperationException(
+      "ImmutableScan does not allow access to resetMvccReadPoint");
   }
 
   @Override
   public Scan setNeedCursorResult(boolean needCursorResult) {
-    throw new IllegalStateException("ImmutableScan does not allow access to setNeedCursorResult");
+    throw new UnsupportedOperationException(
+      "ImmutableScan does not allow access to setNeedCursorResult");
   }
 
   @Override
