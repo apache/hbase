@@ -210,18 +210,6 @@ public class MetricsRegionServer {
     userAggregate.updateScanTime(t);
   }
 
-  public void updateSplitTime(long t) {
-    serverSource.updateSplitTime(t);
-  }
-
-  public void incrSplitRequest() {
-    serverSource.incrSplitRequest();
-  }
-
-  public void incrSplitSuccess() {
-    serverSource.incrSplitSuccess();
-  }
-
   public void updateFlush(String table, long t, long memstoreSize, long fileSize) {
     serverSource.updateFlushTime(t);
     serverSource.updateFlushMemStoreSize(memstoreSize);
