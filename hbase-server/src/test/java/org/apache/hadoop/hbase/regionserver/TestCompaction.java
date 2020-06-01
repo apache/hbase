@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
@@ -369,7 +370,7 @@ public class TestCompaction {
     // setup a compact/split thread on a mock server
     HRegionServer mockServer = Mockito.mock(HRegionServer.class);
     Mockito.when(mockServer.getConfiguration()).thenReturn(r.getBaseConf());
-    CompactSplit thread = new CompactSplit(mockServer);
+    final CompactSplit thread = new CompactSplit(mockServer);
     Mockito.when(mockServer.getCompactSplitThread()).thenReturn(thread);
     // setup a region/store with some files
     HStore store = r.getStore(COLUMN_FAMILY);
@@ -380,19 +381,26 @@ public class TestCompaction {
     thread.switchCompaction(false);
     thread.requestCompaction(r, store, "test", Store.PRIORITY_USER,
       CompactionLifeCycleTracker.DUMMY, null);
-    assertEquals(false, thread.isCompactionsEnabled());
+    assertFalse(thread.isCompactionsEnabled());
     int longCompactions = thread.getLongCompactions().getActiveCount();
     int shortCompactions = thread.getShortCompactions().getActiveCount();
     assertEquals("longCompactions=" + longCompactions + "," +
         "shortCompactions=" + shortCompactions, 0, longCompactions + shortCompactions);
     thread.switchCompaction(true);
-    assertEquals(true, thread.isCompactionsEnabled());
+    assertTrue(thread.isCompactionsEnabled());
+    // Make sure no compactions have run.
+    assertEquals(0, thread.getLongCompactions().getCompletedTaskCount() +
+        thread.getShortCompactions().getCompletedTaskCount());
+    // Request a compaction and make sure it is submitted successfully.
     thread.requestCompaction(r, store, "test", Store.PRIORITY_USER,
-      CompactionLifeCycleTracker.DUMMY, null);
-    longCompactions = thread.getLongCompactions().getActiveCount();
-    shortCompactions = thread.getShortCompactions().getActiveCount();
-    assertEquals("longCompactions=" + longCompactions + "," +
-        "shortCompactions=" + shortCompactions, 1, longCompactions + shortCompactions);
+        CompactionLifeCycleTracker.DUMMY, null);
+    // Wait until the compaction finishes.
+    Waiter.waitFor(UTIL.getConfiguration(), 5000,
+        (Waiter.Predicate<Exception>) () -> thread.getLongCompactions().getCompletedTaskCount() +
+        thread.getShortCompactions().getCompletedTaskCount() == 1);
+    // Make sure there are no compactions running.
+    assertEquals(0, thread.getLongCompactions().getActiveCount()
+        + thread.getShortCompactions().getActiveCount());
   }
 
   @Test public void testInterruptingRunningCompactions() throws Exception {
