@@ -382,7 +382,8 @@ public class TestCompaction {
     assertEquals(0, thread.getLongCompactions().getCompletedTaskCount() +
         thread.getShortCompactions().getCompletedTaskCount());
     // Request a compaction and make sure it is submitted successfully.
-    assertNotNull(thread.requestCompaction(r, store, "test", Store.PRIORITY_USER, new CompactionRequest(), null));
+    assertNotNull(thread.requestCompaction(r, store, "test", Store.PRIORITY_USER,
+        new CompactionRequest(), null));
     // Wait until the compaction finishes.
     Waiter.waitFor(UTIL.getConfiguration(), 5000, new Waiter.Predicate<Exception>() {
       @Override
