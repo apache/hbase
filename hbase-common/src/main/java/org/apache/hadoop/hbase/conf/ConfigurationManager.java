@@ -23,6 +23,8 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.WeakHashMap;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Maintains the set of all the classes which would like to get notified
@@ -64,6 +66,8 @@ import org.apache.hadoop.conf.Configuration;
  *    automatically collected during GC. But nonetheless, it is still a good
  *    practice to deregister your observer, whenever possible.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class ConfigurationManager {
   private static final Log LOG = LogFactory.getLog(ConfigurationManager.class);
 
