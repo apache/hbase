@@ -424,7 +424,6 @@ public class ServerCrashProcedure
         this.regionsOnCrashedServer.add(ProtobufUtil.toRegionInfo(ri));
       }
     }
-    updateProgress(false);
   }
 
   @Override
