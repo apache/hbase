@@ -835,11 +835,13 @@ module Hbase
           r_source_string = '       SOURCE:'
           r_load_sink = sl.getReplicationLoadSink
           next if r_load_sink.nil?
-          if (r_load_sink.getTimestampsOfLastAppliedOp() == r_load_sink.getTimeStampStarted())
-            r_sink_string << " TimeStampStarted=" + r_load_sink.getTimeStampStarted().to_s
+          if r_load_sink.getTimestampsOfLastAppliedOp() == r_load_sink.getTimestampStarted()
+          # If we have applied no operations since we've started replication,
+          # assume that we're not acting as a sink and don't print the normal information
+            r_sink_string << " TimeStampStarted=" + r_load_sink.getTimestampStarted().to_s
             r_sink_string << ", Waiting for OPs... "
           else
-            r_sink_string << " TimeStampStarted=" + r_load_sink.getTimeStampStarted().to_s
+            r_sink_string << " TimeStampStarted=" + r_load_sink.getTimestampStarted().to_s
             r_sink_string << ", AgeOfLastAppliedOp=" + r_load_sink.getAgeOfLastAppliedOp().to_s
             r_sink_string << ", TimeStampsOfLastAppliedOp=" +
                (java.util.Date.new(r_load_sink.getTimestampsOfLastAppliedOp())).toString()

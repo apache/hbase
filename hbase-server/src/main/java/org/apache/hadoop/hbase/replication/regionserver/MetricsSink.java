@@ -105,7 +105,7 @@ public class MetricsSink {
    * @return startTimestamp
    */
   public long getStartTimestamp() {
-    return startTimestamp;
+    return this.startTimestamp;
   }
 
   /**
