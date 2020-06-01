@@ -1166,13 +1166,16 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
   public void postClearDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx,
       List<ServerName> servers, List<ServerName> notClearedServers)
       throws IOException {
-    Set<Address> clearedServer = Sets.newHashSet();
+    Set<Address> clearedServers = Sets.newHashSet();
     for (ServerName server: servers) {
       if (!notClearedServers.contains(server)) {
-        clearedServer.add(server.getAddress());
+        clearedServers.add(server.getAddress());
       }
     }
-    groupAdminServer.removeServers(clearedServer);
+    if (clearedServers.isEmpty()) {
+      return;
+    }
+    groupAdminServer.removeServers(clearedServers);
   }
 
   @Override
