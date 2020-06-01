@@ -32,6 +32,8 @@ import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferExce
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This filter is used for selecting only those keys with columns that matches
@@ -40,6 +42,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @InterfaceAudience.Public
 public class MultipleColumnPrefixFilter extends FilterBase {
+  private static final Logger LOG = LoggerFactory.getLogger(MultipleColumnPrefixFilter.class);
   protected byte [] hint = null;
   protected TreeSet<byte []> sortedPrefixes = createTreeSet();
   private final static int MAX_LOG_PREFIXES = 5;
@@ -47,8 +50,10 @@ public class MultipleColumnPrefixFilter extends FilterBase {
   public MultipleColumnPrefixFilter(final byte [][] prefixes) {
     if (prefixes != null) {
       for (int i = 0; i < prefixes.length; i++) {
-        if (!sortedPrefixes.add(prefixes[i]))
-          throw new IllegalArgumentException ("prefixes must be distinct");
+        if (!sortedPrefixes.add(prefixes[i])) {
+          LOG.error("prefix {} is repeated", Bytes.toString(prefixes[i]));
+          throw new IllegalArgumentException("prefixes must be distinct");
+        }
       }
     }
   }
