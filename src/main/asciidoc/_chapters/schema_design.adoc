@@ -127,8 +127,9 @@ ____
 ==  On the number of column families
 
 HBase currently does not do well with anything above two or three column families so keep the number of column families in your schema low.
-Currently, flushing and compactions are done on a per Region basis so if one column family is carrying the bulk of the data bringing on flushes, the adjacent families will also be flushed even though the amount of data they carry is small.
-When many column families exist the flushing and compaction interaction can make for a bunch of needless i/o (To be addressed by changing flushing and compaction to work on a per column family basis). For more information on compactions, see <<compaction>>.
+Currently, flushing is done on a per Region basis so if one column family is carrying the bulk of the data bringing on flushes, the adjacent families will also be flushed even though the amount of data they carry is small.
+When many column families exist the flushing interaction can make for a bunch of needless i/o (To be addressed by changing flushing to work on a per column family basis).
+In addition, compactions triggered at table/region level will happen per store too.
 
 Try to make do with one column family if you can in your schemas.
 Only introduce a second and third column family in the case where data access is usually column scoped; i.e.
