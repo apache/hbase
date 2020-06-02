@@ -59,7 +59,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   private long maxFlushQueueSize;
   private long maxCompactionQueueSize;
   private long readsFromMemstore;
-  private long readsFromFile;
+  private long mixedReadsOnStore;
 
   private ScheduledFuture<?> regionMetricsUpdateTask;
 
@@ -241,8 +241,8 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   }
 
   @Override
-  public long getFileReadRequestCount() {
-    return readsFromFile;
+  public long getMixedReadRequestCount() {
+    return mixedReadsOnStore;
   }
 
   public class HRegionMetricsWrapperRunnable implements Runnable {
@@ -262,7 +262,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
       long avgAgeNumerator = 0;
       long numHFiles = 0;
       long tempReadsFromMemstore = 0L;
-      long tempReadsFromFile = 0L;
+      long mixedReads = 0L;
       if (region.stores != null) {
         for (HStore store : region.stores.values()) {
           tempNumStoreFiles += store.getStorefilesCount();
@@ -294,7 +294,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
             avgAgeNumerator += (long) storeAvgStoreFileAge.getAsDouble() * storeHFiles;
           }
           tempReadsFromMemstore += store.getReadRequestsCountFromMemstore();
-          tempReadsFromFile += store.getReadRequestsCountFromFile();
+          mixedReads += store.getMixedReadRequestsCount();
         }
       }
 
@@ -322,7 +322,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
         maxFlushQueueSize = tempMaxFlushQueueSize;
       }
       readsFromMemstore = tempReadsFromMemstore;
-      readsFromFile = tempReadsFromFile;
+      mixedReadsOnStore = mixedReads;
     }
   }
 

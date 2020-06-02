@@ -117,5 +117,5 @@ public interface MetricsTableWrapperAggregate {
   /**
    * @return number of get requests from file per store for this table
    */
-  Map<String, Long> getFileRequestsCount(String table);
+  Map<String, Long> getMixedRequestsCount(String table);
 }

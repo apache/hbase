@@ -223,7 +223,7 @@ public class TestMetricsRegionSourceImpl {
     }
 
     @Override
-    public long getFileReadRequestCount() {
+    public long getMixedReadRequestCount() {
       // TODO Auto-generated method stub
       return 0;
     }

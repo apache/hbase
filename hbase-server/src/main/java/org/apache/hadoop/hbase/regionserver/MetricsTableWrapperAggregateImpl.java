@@ -65,8 +65,8 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
           mt = new MetricsTableValues();
           localMetricsTableMap.put(tbl, mt);
         }
-        long memstoreReadCount = 0l;
-        long fileReadCount = 0l;
+        long memstoreReadCount = 0L;
+        long mixedReadCount = 0L;
         String tempKey = null;
         if (r.getStores() != null) {
           String familyName = null;
@@ -94,17 +94,17 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
             tempKey = tbl.getNameAsString() + UNDERSCORE + familyName;
             Long tempVal = mt.perStoreMemstoreReadCount.get(tempKey);
             if (tempVal == null) {
-              tempVal = 0l;
+              tempVal = 0L;
             }
             memstoreReadCount = store.getReadRequestsCountFromMemstore() + tempVal;
-            tempVal = mt.perStoreFileReadCount.get(tempKey);
+            tempVal = mt.perStoreMixedReadCount.get(tempKey);
             if (tempVal == null) {
-              tempVal = 0l;
+              tempVal = 0L;
             }
-            fileReadCount = store.getReadRequestsCountFromFile() + tempVal;
+            mixedReadCount = store.getMixedReadRequestsCount() + tempVal;
             // accumulate the count
             mt.perStoreMemstoreReadCount.put(tempKey, memstoreReadCount);
-            mt.perStoreFileReadCount.put(tempKey, fileReadCount);
+            mt.perStoreMixedReadCount.put(tempKey, mixedReadCount);
           }
 
           mt.regionCount += 1;
@@ -160,12 +160,12 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
   }
 
   @Override
-  public Map<String, Long> getFileRequestsCount(String table) {
+  public Map<String, Long> getMixedRequestsCount(String table) {
     MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
     if (metricsTable == null) {
       return null;
     } else {
-      return metricsTable.perStoreFileReadCount;
+      return metricsTable.perStoreMixedReadCount;
     }
   }
 
@@ -341,7 +341,7 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
     long referenceFileCount;
     long cpRequestCount;
     Map<String, Long> perStoreMemstoreReadCount = new HashMap<>();
-    Map<String, Long> perStoreFileReadCount = new HashMap<>();
+    Map<String, Long> perStoreMixedReadCount = new HashMap<>();
   }
 
 }

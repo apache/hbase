@@ -89,5 +89,5 @@ public interface MetricsStoreWrapper {
   /**
    * @return the number of read requests from the store files
    */
-  long getFileReadRequestsCount();
+  long getMixedReadRequestsCount();
 }

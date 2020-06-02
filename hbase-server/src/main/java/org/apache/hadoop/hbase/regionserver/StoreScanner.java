@@ -569,8 +569,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
     int count = 0;
     long totalBytesRead = 0;
-    boolean onlyFromMemstore = false;
-    boolean onlyFromFile = false;
+    boolean onlyFromMemstore = true;
     try {
       LOOP: do {
         // Update and check the time limit based on the configured value of cellsPerTimeoutCheck
@@ -639,14 +638,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
               totalBytesRead += cellSize;
 
               /**
-               * See if at the end of the loop if both the booleans are true. If so we wont't
-               * increment the metric. If any one of them alone stays true - increment the related
-               * metric
+               * Increment the metric if all the cells are from memstore.
+               * If not we will account it for mixed reads
                */
-              if (heap.current.isFileScanner()) {
-                onlyFromFile = true;
-              } else {
-                onlyFromMemstore = true;
+              if (onlyFromMemstore && !heap.isCellFromMemstoreScanner()) {
+                onlyFromMemstore = false;
               }
               // Update the progress of the scanner context
               scannerContext.incrementSizeProgress(cellSize, cell.heapSize());
@@ -754,13 +750,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     } finally {
       // increment only if we have some result
       if (count > 0) {
-        // pure memstore
-        if (onlyFromMemstore && !onlyFromFile) {
-          updateMetricsStore(true);
-        } else if (onlyFromFile && !onlyFromMemstore) {
-          // pure file reads
-          updateMetricsStore(false);
-        }
+        // if true increment memstore metrics, if not the mixed one
+        updateMetricsStore(onlyFromMemstore);
       }
     }
   }

@@ -61,7 +61,7 @@ public class TestMetricsStore {
       500, agg);
     HELPER.assertCounter(
       "namespace_ns_table_table1_region_region1_store_store1_metric_" +
-        "readRequestCountOnFiles",
+        "mixedReadRequestCountOnStore",
       500, agg);
     ms.close();
   }

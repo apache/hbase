@@ -325,8 +325,8 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
         addGauge(mrb, tableWrapperAgg.getMemstoreReadRequestsCount(tableName.getNameAsString()),
           MetricsRegionSource.READ_REQUEST_ON_MEMSTORE,
           MetricsRegionSource.READ_REQUEST_ON_MEMSTORE_DESC);
-        addGauge(mrb, tableWrapperAgg.getFileRequestsCount(tableName.getNameAsString()),
-          MetricsRegionSource.READ_REQUEST_ON_FILE, MetricsRegionSource.READ_REQUEST_ON_FILE_DESC);
+        addGauge(mrb, tableWrapperAgg.getMixedRequestsCount(tableName.getNameAsString()),
+          MetricsRegionSource.MIXED_READ_REQUEST_ON_STORE, MetricsRegionSource.MIXED_READ_REQUEST_ON_STORE_DESC);
       }
     }
   }

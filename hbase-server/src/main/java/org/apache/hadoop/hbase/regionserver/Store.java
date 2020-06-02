@@ -291,5 +291,5 @@ public interface Store {
   /**
    * @return the number of read requests from the files under this store.
    */
-  long getReadRequestsCountFromFile();
+  long getMixedReadRequestsCount();
 }

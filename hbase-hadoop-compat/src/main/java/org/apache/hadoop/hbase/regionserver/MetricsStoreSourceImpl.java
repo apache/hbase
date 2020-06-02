@@ -146,9 +146,9 @@ public class MetricsStoreSourceImpl implements MetricsStoreSource {
           MetricsRegionSource.READ_REQUEST_ON_MEMSTORE_DESC),
         this.storeWrapper.getMemstoreReadRequestsCount());
       mrb.addCounter(
-        Interns.info(storeNamePrefix + MetricsRegionSource.READ_REQUEST_ON_FILE,
-          MetricsRegionSource.READ_REQUEST_ON_FILE_DESC),
-        this.storeWrapper.getFileReadRequestsCount());
+        Interns.info(storeNamePrefix + MetricsRegionSource.MIXED_READ_REQUEST_ON_STORE,
+          MetricsRegionSource.MIXED_READ_REQUEST_ON_STORE_DESC),
+        this.storeWrapper.getMixedReadRequestsCount());
     }
   }
 

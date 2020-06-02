@@ -179,6 +179,6 @@ public interface MetricsRegionWrapper {
   /**
    * @return the reads happening on files
    */
-  long getFileReadRequestCount();
+  long getMixedReadRequestCount();
 
 }

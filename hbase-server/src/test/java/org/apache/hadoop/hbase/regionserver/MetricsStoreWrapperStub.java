@@ -85,7 +85,7 @@ public class MetricsStoreWrapperStub implements MetricsStoreWrapper {
   }
 
   @Override
-  public long getFileReadRequestsCount() {
+  public long getMixedReadRequestsCount() {
     return 500;
   }
 

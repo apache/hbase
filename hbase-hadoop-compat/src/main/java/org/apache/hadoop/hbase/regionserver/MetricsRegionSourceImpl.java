@@ -307,9 +307,9 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
           MetricsRegionSource.READ_REQUEST_ON_MEMSTORE_DESC),
         this.regionWrapper.getMemstoreReadRequestsCount());
       mrb.addCounter(
-        Interns.info(regionNamePrefix + MetricsRegionSource.READ_REQUEST_ON_FILE,
-          MetricsRegionSource.READ_REQUEST_ON_FILE_DESC),
-        this.regionWrapper.getFileReadRequestCount());
+        Interns.info(regionNamePrefix + MetricsRegionSource.MIXED_READ_REQUEST_ON_STORE,
+          MetricsRegionSource.MIXED_READ_REQUEST_ON_STORE_DESC),
+        this.regionWrapper.getMixedReadRequestCount());
     }
   }
 

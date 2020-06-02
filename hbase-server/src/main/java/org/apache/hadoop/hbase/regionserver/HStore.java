@@ -165,7 +165,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   private AtomicLong storeSize = new AtomicLong();
   private AtomicLong totalUncompressedBytes = new AtomicLong();
   private LongAdder readRequestsFromMemstore = new LongAdder();
-  private LongAdder readRequestsFromFile = new LongAdder();
+  private LongAdder mixedReadRequests = new LongAdder();
 
   private boolean cacheOnWriteLogged;
 
@@ -2919,16 +2919,15 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   }
 
   @Override
-  public long getReadRequestsCountFromFile() {
-    return readRequestsFromFile.sum();
+  public long getMixedReadRequestsCount() {
+    return mixedReadRequests.sum();
   }
 
   void updateMetricsStore(boolean memstoreRead) {
     if (memstoreRead) {
       readRequestsFromMemstore.increment();
     } else {
-      readRequestsFromFile.increment();
+      mixedReadRequests.increment();
     }
   }
-
 }

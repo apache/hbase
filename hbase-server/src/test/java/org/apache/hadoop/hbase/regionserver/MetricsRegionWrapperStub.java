@@ -189,7 +189,7 @@ public class MetricsRegionWrapperStub implements MetricsRegionWrapper {
   }
 
   @Override
-  public long getFileReadRequestCount() {
+  public long getMixedReadRequestCount() {
     // TODO Auto-generated method stub
     return 0;
   }
