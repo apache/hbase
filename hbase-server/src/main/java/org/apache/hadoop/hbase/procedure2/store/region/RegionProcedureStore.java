@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.procedure2.store.region;
 
 import static org.apache.hadoop.hbase.HConstants.EMPTY_BYTE_ARRAY;
 import static org.apache.hadoop.hbase.HConstants.NO_NONCE;
-import static org.apache.hadoop.hbase.master.store.LocalStore.PROC_FAMILY;
+import static org.apache.hadoop.hbase.master.region.MasterRegionFactory.PROC_FAMILY;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -49,7 +49,7 @@ import org.apache.hadoop.hbase.master.assignment.MoveRegionProcedure;
 import org.apache.hadoop.hbase.master.assignment.UnassignProcedure;
 import org.apache.hadoop.hbase.master.procedure.RecoverMetaProcedure;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
-import org.apache.hadoop.hbase.master.store.LocalStore;
+import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.store.LeaseRecovery;
@@ -88,13 +88,13 @@ public class RegionProcedureStore extends ProcedureStoreBase {
   private final LeaseRecovery leaseRecovery;
 
   @VisibleForTesting
-  final LocalStore localStore;
+  final MasterRegion region;
 
   private int numThreads;
 
-  public RegionProcedureStore(Server server, LocalStore localStore, LeaseRecovery leaseRecovery) {
+  public RegionProcedureStore(Server server, MasterRegion region, LeaseRecovery leaseRecovery) {
     this.server = server;
-    this.localStore = localStore;
+    this.region = region;
     this.leaseRecovery = leaseRecovery;
   }
 
@@ -236,7 +236,7 @@ public class RegionProcedureStore extends ProcedureStoreBase {
     if (maxProcIdSet.longValue() > maxProcIdFromProcs.longValue()) {
       if (maxProcIdSet.longValue() > 0) {
         // let's add a fake row to retain the max proc id
-        localStore.update(r -> r.put(new Put(Bytes.toBytes(maxProcIdSet.longValue()))
+        region.update(r -> r.put(new Put(Bytes.toBytes(maxProcIdSet.longValue()))
           .addColumn(PROC_FAMILY, PROC_QUALIFIER, EMPTY_BYTE_ARRAY)));
       }
     } else if (maxProcIdSet.longValue() < maxProcIdFromProcs.longValue()) {
@@ -263,7 +263,7 @@ public class RegionProcedureStore extends ProcedureStoreBase {
     long maxProcId = 0;
 
     try (RegionScanner scanner =
-      localStore.getScanner(new Scan().addColumn(PROC_FAMILY, PROC_QUALIFIER))) {
+      region.getScanner(new Scan().addColumn(PROC_FAMILY, PROC_QUALIFIER))) {
       List<Cell> cells = new ArrayList<>();
       boolean moreRows;
       do {
@@ -333,7 +333,7 @@ public class RegionProcedureStore extends ProcedureStoreBase {
         for (Procedure<?> subProc : subProcs) {
           serializePut(subProc, mutations, rowsToLock);
         }
-        localStore.update(r -> r.mutateRowsWithLocks(mutations, rowsToLock, NO_NONCE, NO_NONCE));
+        region.update(r -> r.mutateRowsWithLocks(mutations, rowsToLock, NO_NONCE, NO_NONCE));
       } catch (IOException e) {
         LOG.error(HBaseMarkers.FATAL, "Failed to insert proc {}, sub procs {}", proc,
           Arrays.toString(subProcs), e);
@@ -351,7 +351,7 @@ public class RegionProcedureStore extends ProcedureStoreBase {
         for (Procedure<?> proc : procs) {
           serializePut(proc, mutations, rowsToLock);
         }
-        localStore.update(r -> r.mutateRowsWithLocks(mutations, rowsToLock, NO_NONCE, NO_NONCE));
+        region.update(r -> r.mutateRowsWithLocks(mutations, rowsToLock, NO_NONCE, NO_NONCE));
       } catch (IOException e) {
         LOG.error(HBaseMarkers.FATAL, "Failed to insert procs {}", Arrays.toString(procs), e);
         throw new UncheckedIOException(e);
@@ -364,7 +364,7 @@ public class RegionProcedureStore extends ProcedureStoreBase {
     runWithoutRpcCall(() -> {
       try {
         ProcedureProtos.Procedure proto = ProcedureUtil.convertToProtoProcedure(proc);
-        localStore.update(r -> r.put(new Put(Bytes.toBytes(proc.getProcId())).addColumn(PROC_FAMILY,
+        region.update(r -> r.put(new Put(Bytes.toBytes(proc.getProcId())).addColumn(PROC_FAMILY,
           PROC_QUALIFIER, proto.toByteArray())));
       } catch (IOException e) {
         LOG.error(HBaseMarkers.FATAL, "Failed to update proc {}", proc, e);
@@ -376,7 +376,7 @@ public class RegionProcedureStore extends ProcedureStoreBase {
   @Override
   public void delete(long procId) {
     try {
-      localStore.update(r -> r.put(
+      region.update(r -> r.put(
         new Put(Bytes.toBytes(procId)).addColumn(PROC_FAMILY, PROC_QUALIFIER, EMPTY_BYTE_ARRAY)));
     } catch (IOException e) {
       LOG.error(HBaseMarkers.FATAL, "Failed to delete pid={}", procId, e);
@@ -393,7 +393,7 @@ public class RegionProcedureStore extends ProcedureStoreBase {
       for (long subProcId : subProcIds) {
         serializeDelete(subProcId, mutations, rowsToLock);
       }
-      localStore.update(r -> r.mutateRowsWithLocks(mutations, rowsToLock, NO_NONCE, NO_NONCE));
+      region.update(r -> r.mutateRowsWithLocks(mutations, rowsToLock, NO_NONCE, NO_NONCE));
     } catch (IOException e) {
       LOG.error(HBaseMarkers.FATAL, "Failed to delete parent proc {}, sub pids={}", parentProc,
         Arrays.toString(subProcIds), e);
@@ -417,7 +417,7 @@ public class RegionProcedureStore extends ProcedureStoreBase {
       serializeDelete(procId, mutations, rowsToLock);
     }
     try {
-      localStore.update(r -> r.mutateRowsWithLocks(mutations, rowsToLock, NO_NONCE, NO_NONCE));
+      region.update(r -> r.mutateRowsWithLocks(mutations, rowsToLock, NO_NONCE, NO_NONCE));
     } catch (IOException e) {
       LOG.error(HBaseMarkers.FATAL, "Failed to delete pids={}", Arrays.toString(procIds), e);
       throw new UncheckedIOException(e);
@@ -429,7 +429,7 @@ public class RegionProcedureStore extends ProcedureStoreBase {
     // actually delete the procedures if it is not the one with the max procedure id.
     List<Cell> cells = new ArrayList<Cell>();
     try (RegionScanner scanner =
-      localStore.getScanner(new Scan().addColumn(PROC_FAMILY, PROC_QUALIFIER).setReversed(true))) {
+      region.getScanner(new Scan().addColumn(PROC_FAMILY, PROC_QUALIFIER).setReversed(true))) {
       // skip the row with max procedure id
       boolean moreRows = scanner.next(cells);
       if (cells.isEmpty()) {
@@ -444,7 +444,7 @@ public class RegionProcedureStore extends ProcedureStoreBase {
         Cell cell = cells.get(0);
         cells.clear();
         if (cell.getValueLength() == 0) {
-          localStore.update(r -> r
+          region.update(r -> r
             .delete(new Delete(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength())));
         }
       }
