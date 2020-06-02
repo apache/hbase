@@ -58,4 +58,8 @@ public class MetricsReplicationSinkSourceImpl implements MetricsReplicationSinkS
   public void incrAppliedHFiles(long hfiles) {
     hfilesCounter.incr(hfiles);
   }
+
+  @Override public long getSinkAppliedOps() {
+    return opsCounter.value();
+  }
 }

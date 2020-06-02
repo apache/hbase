@@ -812,12 +812,18 @@ module Hbase
           r_source_string = '       SOURCE:'
           r_load_sink = sl.getReplicationLoadSink
           next if r_load_sink.nil?
+          if r_load_sink.getTimestampsOfLastAppliedOp() == r_load_sink.getTimestampStarted()
+          # If we have applied no operations since we've started replication,
+          # assume that we're not acting as a sink and don't print the normal information
+            r_sink_string << " TimeStampStarted=" + r_load_sink.getTimestampStarted().to_s
+            r_sink_string << ", Waiting for OPs... "
+          else
+            r_sink_string << " TimeStampStarted=" + r_load_sink.getTimestampStarted().to_s
+            r_sink_string << ", AgeOfLastAppliedOp=" + r_load_sink.getAgeOfLastAppliedOp().to_s
+            r_sink_string << ", TimeStampsOfLastAppliedOp=" +
+               (java.util.Date.new(r_load_sink.getTimestampsOfLastAppliedOp())).toString()
+          end
 
-          r_sink_string << ' AgeOfLastAppliedOp=' +
-                           r_load_sink.getAgeOfLastAppliedOp.to_s
-          r_sink_string << ', TimeStampsOfLastAppliedOp=' +
-                           java.util.Date.new(r_load_sink
-                             .getTimeStampsOfLastAppliedOp).toString
           r_load_source_map = sl.getReplicationLoadSourceMap
           build_source_string(r_load_source_map, r_source_string)
           puts(format('    %<host>s:', host: server_status.getHostname))
@@ -888,7 +894,7 @@ module Hbase
     end
 
     def build_shipped_stats(source_load, r_source_string)
-      r_source_string << if source_load.getTimeStampOfLastShippedOp.zero?
+      r_source_string << if source_load.getTimestampOfLastShippedOp.zero?
                            "\n           " \
                            'No Ops shipped since last restart'
                          else
@@ -896,7 +902,7 @@ module Hbase
                            source_load.getAgeOfLastShippedOp.to_s +
                            ', TimeStampOfLastShippedOp=' +
                            java.util.Date.new(source_load
-                             .getTimeStampOfLastShippedOp).toString
+                             .getTimestampOfLastShippedOp).toString
                          end
     end
 

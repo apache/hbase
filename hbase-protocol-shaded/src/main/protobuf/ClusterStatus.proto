@@ -185,6 +185,8 @@ message ClientMetrics {
 message ReplicationLoadSink {
   required uint64 ageOfLastAppliedOp = 1;
   required uint64 timeStampsOfLastAppliedOp = 2;
+  required uint64 timestampStarted = 3;
+  required uint64 totalOpsProcessed = 4;
 }
 
 message ReplicationLoadSource {
