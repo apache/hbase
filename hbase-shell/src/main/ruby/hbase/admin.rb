@@ -1068,31 +1068,6 @@ module Hbase
       family
     end
 
-    #----------------------------------------------------------------------------------------------
-    # Enables/disables a region by name
-    def online(region_name, on_off)
-      # Open meta table
-      meta = @connection.getTable(org.apache.hadoop.hbase.TableName::META_TABLE_NAME)
-
-      # Read region info
-      # FIXME: fail gracefully if can't find the region
-      region_bytes = region_name.to_java_bytes
-      g = org.apache.hadoop.hbase.client.Get.new(region_bytes)
-      g.addColumn(org.apache.hadoop.hbase.HConstants::CATALOG_FAMILY, org.apache.hadoop.hbase.HConstants::REGIONINFO_QUALIFIER)
-      hri_bytes = meta.get(g).value
-
-      # Change region status
-      hri = org.apache.hadoop.hbase.util.Writables.getWritable(hri_bytes, org.apache.hadoop.hbase.HRegionInfo.new)
-      hri.setOffline(on_off)
-
-      # Write it back
-      put = org.apache.hadoop.hbase.client.Put.new(region_bytes)
-      put.addColumn(org.apache.hadoop.hbase.HConstants::CATALOG_FAMILY,
-                    org.apache.hadoop.hbase.HConstants::REGIONINFO_QUALIFIER,
-                    org.apache.hadoop.hbase.util.Writables.getBytes(hri))
-      meta.put(put)
-    end
-
     # Apply user metadata to table/column descriptor
     def set_user_metadata(descriptor, metadata)
       raise(ArgumentError, "#{METADATA} must be a Hash type") unless metadata.is_a?(Hash)
