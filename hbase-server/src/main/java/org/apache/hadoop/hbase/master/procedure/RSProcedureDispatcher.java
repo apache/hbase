@@ -237,7 +237,7 @@ public class RSProcedureDispatcher
     private final long rsRpcRetryInterval;
     public static final String RS_RPC_RETRY_INTERVAL_CONF_KEY =
         "hbase.regionserver.rpc.retry.interval";
-    private static final int DEFAULT_RS_RPC_RETRY_INTERVAL = 60000;
+    private static final int DEFAULT_RS_RPC_RETRY_INTERVAL = 100;
 
     private ExecuteProceduresRequest.Builder request = null;
 
