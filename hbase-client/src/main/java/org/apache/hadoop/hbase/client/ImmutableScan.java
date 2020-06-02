@@ -39,13 +39,6 @@ public final class ImmutableScan extends Scan {
   private final Scan delegateScan;
 
   /**
-   * Create Immutable instance of Scan
-   */
-  public ImmutableScan() {
-    this.delegateScan = new Scan();
-  }
-
-  /**
    * Create Immutable instance of Scan from given Scan object
    *
    * @param scan Copy all values from Scan
