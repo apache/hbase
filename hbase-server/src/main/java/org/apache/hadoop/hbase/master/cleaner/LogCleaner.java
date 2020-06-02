@@ -35,7 +35,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
-import org.apache.hadoop.hbase.master.store.LocalStore;
+import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -89,7 +89,7 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate>
   protected boolean validate(Path file) {
     return AbstractFSWALProvider.validateWALFilename(file.getName()) ||
       MasterProcedureUtil.validateProcedureWALFilename(file.getName()) ||
-      file.getName().endsWith(LocalStore.ARCHIVED_WAL_SUFFIX);
+      file.getName().endsWith(MasterRegionFactory.ARCHIVED_WAL_SUFFIX);
   }
 
   @Override

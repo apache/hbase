@@ -29,7 +29,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
-import org.apache.hadoop.hbase.master.store.LocalStore;
+import org.apache.hadoop.hbase.master.region.MasterRegion;
+import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStorePerformanceEvaluation;
 import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
@@ -113,7 +114,7 @@ public class RegionProcedureStorePerformanceEvaluation
     }
   }
 
-  private LocalStore localStore;
+  private MasterRegion region;
 
   @Override
   protected RegionProcedureStore createProcedureStore(Path storeDir) throws IOException {
@@ -127,11 +128,11 @@ public class RegionProcedureStorePerformanceEvaluation
     int chunkSize = conf.getInt(MemStoreLAB.CHUNK_SIZE_KEY, MemStoreLAB.CHUNK_SIZE_DEFAULT);
     ChunkCreator.initialize(chunkSize, offheap, globalMemStoreSize, poolSizePercentage,
       initialCountPercentage, null);
-    conf.setBoolean(LocalStore.USE_HSYNC_KEY, "hsync".equals(syncType));
+    conf.setBoolean(MasterRegionFactory.USE_HSYNC_KEY, "hsync".equals(syncType));
     CommonFSUtils.setRootDir(conf, storeDir);
     MockServer server = new MockServer(conf);
-    localStore = LocalStore.create(server);
-    return new RegionProcedureStore(server, localStore, (fs, apth) -> {
+    region = MasterRegionFactory.create(server);
+    return new RegionProcedureStore(server, region, (fs, apth) -> {
     });
   }
 
@@ -148,7 +149,7 @@ public class RegionProcedureStorePerformanceEvaluation
 
   @Override
   protected void postStop(RegionProcedureStore store) throws IOException {
-    localStore.close(true);
+    region.close(true);
   }
 
   public static void main(String[] args) throws IOException {

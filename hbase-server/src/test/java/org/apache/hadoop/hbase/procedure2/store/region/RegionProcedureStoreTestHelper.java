@@ -26,7 +26,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.master.store.LocalStore;
+import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.procedure2.store.LeaseRecovery;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureLoader;
 
@@ -43,9 +43,9 @@ final class RegionProcedureStoreTestHelper {
     return server;
   }
 
-  static RegionProcedureStore createStore(Server server, LocalStore localStore,
+  static RegionProcedureStore createStore(Server server, MasterRegion region,
     ProcedureLoader loader) throws IOException {
-    RegionProcedureStore store = new RegionProcedureStore(server, localStore, new LeaseRecovery() {
+    RegionProcedureStore store = new RegionProcedureStore(server, region, new LeaseRecovery() {
 
       @Override
       public void recoverFileLease(FileSystem fs, Path path) throws IOException {
