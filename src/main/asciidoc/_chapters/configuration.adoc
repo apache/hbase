@@ -324,7 +324,9 @@ See also <<casestudies.max.transfer.threads,casestudies.max.transfer.threads>> a
 [[zookeeper.requirements]]
 === ZooKeeper Requirements
 
-ZooKeeper 3.4.x is required.
+An Apache ZooKeeper quorum is required. The exact version depends on your version of HBase, though
+the minimum ZooKeeper version is 3.4.x due to the `useMulti` feature made default in 1.0.0
+(see https://issues.apache.org/jira/browse/HBASE-16598[HBASE-16598]).
 
 [[standalone_dist]]
 == HBase run modes: Standalone and Distributed

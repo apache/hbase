@@ -324,11 +324,21 @@ The RegionServer Grouping feature has been reimplemented. See section
 There is no special consideration upgrading to hbase-2.3.x from earlier versions. From 2.2.x, it should be
 rolling upgradeable. From 2.1.x or 2.0.x, you will need to clear the <<upgrade2.2>> hurdle first.
 
-[[in-master-procedure-store-region]]
+[[upgrade2.3_zookeeper]]
+==== Upgraded ZooKeeper Dependency Version
+
+Our dependency on Apache ZooKeeper has been upgraded to 3.5.7
+(https://issues.apache.org/jira/browse/HBASE-24132[HBASE-24132]), as 3.4.x is EOL. The newer 3.5.x
+client is compatible with the older 3.4.x server. However, if you're using HBase in stand-alone
+mode and perform an in-place upgrade, there are some upgrade steps
+https://cwiki.apache.org/confluence/display/ZOOKEEPER/Upgrade+FAQ[documented by the ZooKeeper community].
+This doesn't impact a production deployment, but would impact a developer's local environment.
+
+[[upgrade2.3_in-master-procedure-store-region]]
 ==== New In-Master Procedure Store
 
 Of note, HBase 2.3.0 changes the in-Master Procedure Store implementation. It was a dedicated custom store
-(see <<master.wal>>) to instead use a standard HBase Region (link:https://issues.apache.org/jira/browse/HBASE-23326).
+(see <<master.wal>>) to instead use a standard HBase Region (https://issues.apache.org/jira/browse/HBASE-23326[HBASE-23326]).
 The migration from the old to new format is automatic run by the new 2.3.0 Master on startup. The old _MasterProcWALs_
 dir which hosted the old custom implementation files in _${hbase.rootdir}_ is deleted on successful
 migration. A new _MasterProc_ sub-directory replaces it to host the Store files and WALs for the new
