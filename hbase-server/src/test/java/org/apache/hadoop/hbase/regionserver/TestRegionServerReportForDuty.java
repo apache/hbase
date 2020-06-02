@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
@@ -229,7 +228,7 @@ public class TestRegionServerReportForDuty {
   /**
    * Tests region sever reportForDuty with manual environment edge
    */
-  @Test(timeout = 60000)
+  @Test
   public void testReportForDutyWithEnvironmentEdge() throws Exception {
     // Start a master and wait for it to become the active/primary master.
     // Use a random unique port
@@ -245,7 +244,6 @@ public class TestRegionServerReportForDuty {
     cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART,
       tablesOnMaster ? 2 : 1);
 
-    EnvironmentEdge previousEdge = EnvironmentEdgeManager.getDelegate();
     // Inject manual environment edge for clock skew computation between RS and master
     ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
     EnvironmentEdgeManager.injectEdge(edge);
@@ -256,9 +254,6 @@ public class TestRegionServerReportForDuty {
     rs.start();
 
     waitForClusterOnline(master);
-
-    // Reset the manual environment edge
-    EnvironmentEdgeManager.injectEdge(previousEdge);
   }
 
   private void waitForClusterOnline(MasterThread master) throws InterruptedException {
