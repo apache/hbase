@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.store;
+package org.apache.hadoop.hbase.master.region;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -41,18 +41,18 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ MasterTests.class, MediumTests.class })
-public class TestLocalRegionCompaction extends LocalRegionTestBase {
+public class TestMasterRegionCompaction extends MasterRegionTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestLocalRegionCompaction.class);
+    HBaseClassTestRule.forClass(TestMasterRegionCompaction.class);
 
   private int compactMin = 4;
 
   private HFileCleaner hfileCleaner;
 
   @Override
-  protected void configure(LocalRegionParams params) {
+  protected void configure(MasterRegionParams params) {
     params.compactMin(compactMin);
   }
 

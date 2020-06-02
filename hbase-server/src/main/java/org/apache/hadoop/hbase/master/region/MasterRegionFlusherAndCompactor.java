@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.store;
+package org.apache.hadoop.hbase.master.region;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -45,8 +45,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
- * As long as there is no RegionServerServices for a 'local' region, we need implement the flush and
- * compaction logic by our own.
+ * As long as there is no RegionServerServices for a master local region, we need implement the
+ * flush and compaction logic by our own.
  * <p/>
  * The flush logic is very simple, every time after calling a modification method in
  * {@link RegionProcedureStore}, we will call the {@link #onUpdate()} method below, and in this
@@ -57,9 +57,9 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  * count, if it is above the compactMin, we will do a major compaction.
  */
 @InterfaceAudience.Private
-class LocalRegionFlusherAndCompactor implements Closeable {
+class MasterRegionFlusherAndCompactor implements Closeable {
 
-  private static final Logger LOG = LoggerFactory.getLogger(LocalRegionFlusherAndCompactor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MasterRegionFlusherAndCompactor.class);
 
   private final Configuration conf;
 
@@ -101,7 +101,7 @@ class LocalRegionFlusherAndCompactor implements Closeable {
 
   private volatile boolean closed = false;
 
-  LocalRegionFlusherAndCompactor(Configuration conf, Abortable abortable, HRegion region,
+  MasterRegionFlusherAndCompactor(Configuration conf, Abortable abortable, HRegion region,
     long flushSize, long flushPerChanges, long flushIntervalMs, int compactMin,
     Path globalArchivePath, String archivedHFileSuffix) {
     this.conf = conf;
@@ -142,7 +142,7 @@ class LocalRegionFlusherAndCompactor implements Closeable {
       Path globalStoreArchiveDir = HFileArchiveUtil.getStoreArchivePathForArchivePath(
         globalArchivePath, region.getRegionInfo(), store.getColumnFamilyDescriptor().getName());
       try {
-        LocalRegionUtils.moveFilesUnderDir(fs, storeArchiveDir, globalStoreArchiveDir,
+        MasterRegionUtils.moveFilesUnderDir(fs, storeArchiveDir, globalStoreArchiveDir,
           archivedHFileSuffix);
       } catch (IOException e) {
         LOG.warn("Failed to move archived hfiles from {} to global dir {}", storeArchiveDir,
@@ -156,7 +156,7 @@ class LocalRegionFlusherAndCompactor implements Closeable {
       region.compact(true);
       moveHFileToGlobalArchiveDir();
     } catch (IOException e) {
-      LOG.error("Failed to compact procedure store region", e);
+      LOG.error("Failed to compact master local region", e);
     }
     compactLock.lock();
     try {
@@ -207,8 +207,8 @@ class LocalRegionFlusherAndCompactor implements Closeable {
         region.flush(true);
         lastFlushTime = EnvironmentEdgeManager.currentTime();
       } catch (IOException e) {
-        LOG.error(HBaseMarkers.FATAL, "Failed to flush procedure store region, aborting...", e);
-        abortable.abort("Failed to flush procedure store region", e);
+        LOG.error(HBaseMarkers.FATAL, "Failed to flush master local region, aborting...", e);
+        abortable.abort("Failed to flush master local region", e);
         return;
       }
       compactLock.lock();
