@@ -8348,7 +8348,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       ClassSize.OBJECT +
       ClassSize.ARRAY +
       55 * ClassSize.REFERENCE + 3 * Bytes.SIZEOF_INT +
-      (14 * Bytes.SIZEOF_LONG) +
+      (15 * Bytes.SIZEOF_LONG) +
       3 * Bytes.SIZEOF_BOOLEAN);
 
   // woefully out of date - currently missing:
