@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Collections;
@@ -95,6 +96,8 @@ public class TestImmutableScan {
     assertEquals(get.getACL(), scan.getACL());
     assertEquals(get.getAuthorizations().getLabels(), scan.getAuthorizations().getLabels());
     assertEquals(get.getPriority(), scan.getPriority());
+
+    testUnmodifiableSetters(scan);
   }
 
   @Test
@@ -176,6 +179,10 @@ public class TestImmutableScan {
     LOG.debug("Compare all getters of scan and scanCopy.");
     compareGetters(scan, scanCopy);
 
+    testUnmodifiableSetters(scanCopy);
+  }
+
+  private void testUnmodifiableSetters(Scan scanCopy) throws IOException {
     try {
       scanCopy.setFilter(Mockito.mock(Filter.class));
       throw new RuntimeException("Should not reach here");
