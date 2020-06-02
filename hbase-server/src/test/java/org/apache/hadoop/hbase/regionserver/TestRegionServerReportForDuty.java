@@ -36,8 +36,11 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdge;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
+import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.log4j.Appender;
 import org.apache.log4j.Layout;
 import org.apache.log4j.PatternLayout;
@@ -221,6 +224,41 @@ public class TestRegionServerReportForDuty {
     assertEquals(backupMaster.getMaster().getServerManager().getOnlineServersList().size(),
       tablesOnMaster? 3: 2);
 
+  }
+
+  /**
+   * Tests region sever reportForDuty with manual environment edge
+   */
+  @Test(timeout = 60000)
+  public void testReportForDutyWithEnvironmentEdge() throws Exception {
+    // Start a master and wait for it to become the active/primary master.
+    // Use a random unique port
+    cluster.getConfiguration().setInt(HConstants.MASTER_PORT, HBaseTestingUtility.randomFreePort());
+    // Set the dispatch and retry delay to 0 since we want the rpc request to be sent immediately
+    cluster.getConfiguration().setInt("hbase.procedure.remote.dispatcher.delay.msec", 0);
+    cluster.getConfiguration().setInt("hbase.regionserver.rpc.retry.interval", 0);
+
+    // master has a rs. defaultMinToStart = 2
+    boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(testUtil.getConfiguration());
+    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART,
+      tablesOnMaster ? 2 : 1);
+    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART,
+      tablesOnMaster ? 2 : 1);
+
+    EnvironmentEdge previousEdge = EnvironmentEdgeManager.getDelegate();
+    // Inject manual environment edge for clock skew computation between RS and master
+    ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
+    EnvironmentEdgeManager.injectEdge(edge);
+    master = cluster.addMaster();
+    rs = cluster.addRegionServer();
+    LOG.debug("Starting master: " + master.getMaster().getServerName());
+    master.start();
+    rs.start();
+
+    waitForClusterOnline(master);
+
+    // Reset the manual environment edge
+    EnvironmentEdgeManager.injectEdge(previousEdge);
   }
 
   private void waitForClusterOnline(MasterThread master) throws InterruptedException {

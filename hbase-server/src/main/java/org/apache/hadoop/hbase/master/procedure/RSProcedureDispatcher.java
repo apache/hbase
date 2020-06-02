@@ -22,6 +22,7 @@ import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ServerName;
@@ -35,15 +36,6 @@ import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher;
 import org.apache.hadoop.hbase.regionserver.RegionServerAbortedException;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FutureUtils;
-import org.apache.hadoop.ipc.RemoteException;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
-import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
@@ -51,6 +43,15 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProc
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProceduresResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RemoteProcedureRequest;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.FutureUtils;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A remote procecdure dispatcher for regionservers.
@@ -233,6 +234,10 @@ public class RSProcedureDispatcher
 
     private int numberOfAttemptsSoFar = 0;
     private long maxWaitTime = -1;
+    private final long rsRpcRetryInterval;
+    public static final String RS_RPC_RETRY_INTERVAL_CONF_KEY =
+        "hbase.regionserver.rpc.retry.interval";
+    private static final int DEFAULT_RS_RPC_RETRY_INTERVAL = 60000;
 
     private ExecuteProceduresRequest.Builder request = null;
 
@@ -240,6 +245,8 @@ public class RSProcedureDispatcher
         final Set<RemoteProcedure> remoteProcedures) {
       this.serverName = serverName;
       this.remoteProcedures = remoteProcedures;
+      this.rsRpcRetryInterval = master.getConfiguration().getLong(RS_RPC_RETRY_INTERVAL_CONF_KEY,
+        DEFAULT_RS_RPC_RETRY_INTERVAL);
     }
 
     private AsyncRegionServerAdmin  getRsAdmin() throws IOException {
@@ -259,8 +266,8 @@ public class RSProcedureDispatcher
           LOG.warn("Waiting a little before retrying {}, try={}, can wait up to {}ms",
             serverName, numberOfAttemptsSoFar, remainingTime);
           numberOfAttemptsSoFar++;
-          // Retry every 100ms up to maximum wait time.
-          submitTask(this, 100, TimeUnit.MILLISECONDS);
+          // Retry every rsRpcRetryInterval millis up to maximum wait time.
+          submitTask(this, rsRpcRetryInterval, TimeUnit.MILLISECONDS);
           return true;
         }
         LOG.warn("{} is throwing ServerNotRunningYetException for {}ms; trying another server",
@@ -305,10 +312,12 @@ public class RSProcedureDispatcher
       numberOfAttemptsSoFar++;
       // Add some backoff here as the attempts rise otherwise if a stuck condition, will fill logs
       // with failed attempts. None of our backoff classes -- RetryCounter or ClientBackoffPolicy
-      // -- fit here nicely so just do something simple; increment by 100ms * retry^2 on each try
+      // -- fit here nicely so just do something simple; increment by rsRpcRetryInterval millis *
+      // retry^2 on each try
       // up to max of 10 seconds (don't want to back off too much in case of situation change).
       submitTask(this,
-        Math.min(100 * (this.numberOfAttemptsSoFar * this.numberOfAttemptsSoFar), 10 * 1000),
+        Math.min(rsRpcRetryInterval * (this.numberOfAttemptsSoFar * this.numberOfAttemptsSoFar),
+          10 * 1000),
         TimeUnit.MILLISECONDS);
       return true;
     }
