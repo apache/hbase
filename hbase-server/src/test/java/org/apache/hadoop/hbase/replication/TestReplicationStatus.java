@@ -50,6 +50,15 @@ public class TestReplicationStatus extends TestReplicationBase {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestReplicationStatus.class);
 
+  private void insertRowsOnSource() throws IOException {
+    final byte[] qualName = Bytes.toBytes("q");
+    for (int i = 0; i < NB_ROWS_IN_BATCH; i++) {
+      Put p = new Put(Bytes.toBytes("row" + i));
+      p.addColumn(famName, qualName, Bytes.toBytes("val" + i));
+      htable1.put(p);
+    }
+  }
+
   /**
    * Test for HBASE-9531.
    * <p/>
@@ -70,12 +79,7 @@ public class TestReplicationStatus extends TestReplicationBase {
     Admin hbaseAdmin = UTIL1.getAdmin();
     // disable peer <= WHY? I DON'T GET THIS DISABLE BUT TEST FAILS W/O IT.
     hbaseAdmin.disableReplicationPeer(PEER_ID2);
-    final byte[] qualName = Bytes.toBytes("q");
-    for (int i = 0; i < NB_ROWS_IN_BATCH; i++) {
-      Put p = new Put(Bytes.toBytes("row" + i));
-      p.addColumn(famName, qualName, Bytes.toBytes("val" + i));
-      htable1.put(p);
-    }
+    insertRowsOnSource();
     LOG.info("AFTER PUTS");
     // TODO: Change this wait to a barrier. I tried waiting on replication stats to
     // change but sleeping in main thread seems to mess up background replication.
@@ -120,6 +124,35 @@ public class TestReplicationStatus extends TestReplicationBase {
     assertEquals(PEER_ID2, rLoadSourceList.get(0).getPeerID());
   }
 
+  @Test
+  public void testReplicationStatusSink() throws Exception {
+    try (Admin hbaseAdmin = UTIL2.getConnection().getAdmin()) {
+      ServerName server = UTIL2.getHBaseCluster().getRegionServer(0).getServerName();
+      ReplicationLoadSink loadSink = getLatestSinkMetric(hbaseAdmin, server);
+      //First checks if status of timestamp of last applied op is same as RS start, since no edits
+      //were replicated yet
+      assertEquals(loadSink.getTimestampStarted(), loadSink.getTimestampsOfLastAppliedOp());
+      //now insert some rows on source, so that it gets delivered to target
+      insertRowsOnSource();
+      long wait = Waiter.waitFor(UTIL2.getConfiguration(),
+        10000, new Waiter.Predicate<Exception>() {
+          @Override
+          public boolean evaluate() throws Exception {
+            ReplicationLoadSink loadSink = getLatestSinkMetric(hbaseAdmin, server);
+            return loadSink.getTimestampsOfLastAppliedOp()>loadSink.getTimestampStarted();
+          }
+        });
+      //If wait is -1, we know predicate condition was never true
+      assertTrue(wait>=0);
+    }
+  }
+
+  private ReplicationLoadSink getLatestSinkMetric(Admin admin, ServerName server)
+      throws IOException {
+    ClusterMetrics metrics = admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS));
+    ServerMetrics sm = metrics.getLiveServerMetrics().get(server);
+    return sm.getReplicationLoadSink();
+  }
   /**
    * Wait until Master shows metrics counts for ReplicationLoadSourceList that are
    * greater than <code>greaterThan</code> for <code>serverName</code> before
