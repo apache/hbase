@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 public class MetricsSink {
 
   private long lastTimestampForAge = System.currentTimeMillis();
+  private long startTimestamp = System.currentTimeMillis();
   private final MetricsReplicationSinkSource mss;
 
   public MetricsSink() {
@@ -110,4 +111,21 @@ public class MetricsSink {
   public long getTimestampOfLastAppliedOp() {
     return this.lastTimestampForAge;
   }
+
+  /**
+   * Gets the time stamp from when the Sink was initialized.
+   * @return startTimestamp
+   */
+  public long getStartTimestamp() {
+    return this.startTimestamp;
+  }
+
+  /**
+   * Gets the total number of OPs delivered to this sink.
+   * @return totalAplliedOps
+   */
+  public long getAppliedOps() {
+    return this.mss.getSinkAppliedOps();
+  }
+
 }
