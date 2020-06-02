@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.store;
+package org.apache.hadoop.hbase.master.region;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -47,17 +47,17 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ MasterTests.class, MediumTests.class })
-public class TestLocalRegionFlush {
+public class TestMasterRegionFlush {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestLocalRegionFlush.class);
+    HBaseClassTestRule.forClass(TestMasterRegionFlush.class);
 
   private Configuration conf;
 
   private HRegion region;
 
-  private LocalRegionFlusherAndCompactor flusher;
+  private MasterRegionFlusherAndCompactor flusher;
 
   private AtomicInteger flushCalled;
 
@@ -97,7 +97,7 @@ public class TestLocalRegionFlush {
   }
 
   private void initFlusher(long flushSize, long flushPerChanges, long flushIntervalMs) {
-    flusher = new LocalRegionFlusherAndCompactor(conf, new Abortable() {
+    flusher = new MasterRegionFlusherAndCompactor(conf, new Abortable() {
 
       @Override
       public boolean isAborted() {

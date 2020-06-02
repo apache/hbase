@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.procedure2.store.region;
 
-import static org.apache.hadoop.hbase.master.store.LocalStore.PROC_FAMILY;
+import static org.apache.hadoop.hbase.master.region.MasterRegionFactory.PROC_FAMILY;
 
 import java.io.PrintStream;
 import java.time.Instant;

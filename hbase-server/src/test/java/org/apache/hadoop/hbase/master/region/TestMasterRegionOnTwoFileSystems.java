@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.store;
+package org.apache.hadoop.hbase.master.region;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -69,12 +69,12 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 @Category({ MasterTests.class, MediumTests.class })
-public class TestLocalRegionOnTwoFileSystems {
-  private static final Logger LOG = LoggerFactory.getLogger(TestLocalRegionOnTwoFileSystems.class);
+public class TestMasterRegionOnTwoFileSystems {
+  private static final Logger LOG = LoggerFactory.getLogger(TestMasterRegionOnTwoFileSystems.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestLocalRegionOnTwoFileSystems.class);
+    HBaseClassTestRule.forClass(TestMasterRegionOnTwoFileSystems.class);
 
   private static final HBaseCommonTestingUtility HFILE_UTIL = new HBaseCommonTestingUtility();
 
@@ -90,7 +90,7 @@ public class TestLocalRegionOnTwoFileSystems {
 
   private static int COMPACT_MIN = 4;
 
-  private LocalRegion region;
+  private MasterRegion region;
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -113,18 +113,18 @@ public class TestLocalRegionOnTwoFileSystems {
     HFILE_UTIL.cleanupTestDir();
   }
 
-  private LocalRegion createLocalRegion(ServerName serverName) throws IOException {
+  private MasterRegion createMasterRegion(ServerName serverName) throws IOException {
     Server server = mock(Server.class);
     when(server.getConfiguration()).thenReturn(HFILE_UTIL.getConfiguration());
     when(server.getServerName()).thenReturn(serverName);
-    LocalRegionParams params = new LocalRegionParams();
+    MasterRegionParams params = new MasterRegionParams();
     params.server(server).regionDirName("local").tableDescriptor(TD)
       .flushSize(TableDescriptorBuilder.DEFAULT_MEMSTORE_FLUSH_SIZE).flushPerChanges(1_000_000)
       .flushIntervalMs(TimeUnit.MINUTES.toMillis(15)).compactMin(COMPACT_MIN).maxWals(32)
       .useHsync(false).ringBufferSlotCount(16).rollPeriodMs(TimeUnit.MINUTES.toMillis(15))
-      .archivedWalSuffix(LocalStore.ARCHIVED_WAL_SUFFIX)
-      .archivedHFileSuffix(LocalStore.ARCHIVED_HFILE_SUFFIX);
-    return LocalRegion.create(params);
+      .archivedWalSuffix(MasterRegionFactory.ARCHIVED_WAL_SUFFIX)
+      .archivedHFileSuffix(MasterRegionFactory.ARCHIVED_HFILE_SUFFIX);
+    return MasterRegion.create(params);
   }
 
   @Before
@@ -135,7 +135,7 @@ public class TestLocalRegionOnTwoFileSystems {
     Path walRootDir = WAL_UTIL.getDataTestDirOnTestFS();
     FileSystem walFs = WAL_UTIL.getTestFileSystem();
     walFs.delete(walRootDir, true);
-    region = createLocalRegion(ServerName.valueOf("localhost", 12345, System.currentTimeMillis()));
+    region = createMasterRegion(ServerName.valueOf("localhost", 12345, System.currentTimeMillis()));
   }
 
   @After
@@ -174,9 +174,8 @@ public class TestLocalRegionOnTwoFileSystems {
         return false;
       }
     });
-    LOG.info("hfile archive content {}",
-      Arrays.stream(rootFs.listStatus(storeArchiveDir)).map(f -> f.getPath().toString()).
-        collect(Collectors.joining(",")));
+    LOG.info("hfile archive content {}", Arrays.stream(rootFs.listStatus(storeArchiveDir))
+      .map(f -> f.getPath().toString()).collect(Collectors.joining(",")));
 
     // make sure the archived wal files are on the wal fs
     Path walArchiveDir = new Path(CommonFSUtils.getWALRootDir(HFILE_UTIL.getConfiguration()),
@@ -219,7 +218,7 @@ public class TestLocalRegionOnTwoFileSystems {
         region.update(r -> r.put(put));
       }
       region.close(true);
-      region = createLocalRegion(
+      region = createMasterRegion(
         ServerName.valueOf("localhost", 12345, System.currentTimeMillis() + round + 1));
       try (RegionScanner scanner = region.getScanner(new Scan())) {
         List<Cell> cells = new ArrayList<>();

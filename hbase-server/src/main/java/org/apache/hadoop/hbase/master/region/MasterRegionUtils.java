@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.store;
+package org.apache.hadoop.hbase.master.region;
 
 import java.io.IOException;
 import org.apache.hadoop.fs.FileStatus;
@@ -26,11 +26,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
-final class LocalRegionUtils {
+final class MasterRegionUtils {
 
-  private static final Logger LOG = LoggerFactory.getLogger(LocalRegionUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MasterRegionUtils.class);
 
-  private LocalRegionUtils() {
+  private MasterRegionUtils() {
   }
 
   static void moveFilesUnderDir(FileSystem fs, Path src, Path dst, String suffix)

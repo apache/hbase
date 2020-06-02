@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.store;
+package org.apache.hadoop.hbase.master.region;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
@@ -23,23 +23,16 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
-import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.regionserver.HRegion.FlushResult;
-import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
- * Used for storing data at master side. The data will be stored in a {@link LocalRegion}.
+ * The factory class for creating a {@link MasterRegion}.
  */
 @InterfaceAudience.Private
-public final class LocalStore {
+public final class MasterRegionFactory {
 
   // Use the character $ to let the log cleaner know that this is not the normal wal file.
   public static final String ARCHIVED_WAL_SUFFIX = "$masterlocalwal$";
@@ -89,45 +82,8 @@ public final class LocalStore {
   private static final TableDescriptor TABLE_DESC = TableDescriptorBuilder.newBuilder(TABLE_NAME)
     .setColumnFamily(ColumnFamilyDescriptorBuilder.of(PROC_FAMILY)).build();
 
-  private final LocalRegion region;
-
-  private LocalStore(LocalRegion region) {
-    this.region = region;
-  }
-
-  public void update(UpdateLocalRegion action) throws IOException {
-    region.update(action);
-  }
-
-  public Result get(Get get) throws IOException {
-    return region.get(get);
-  }
-
-  public RegionScanner getScanner(Scan scan) throws IOException {
-    return region.getScanner(scan);
-  }
-
-  public void close(boolean abort) {
-    region.close(abort);
-  }
-
-  @VisibleForTesting
-  public FlushResult flush(boolean force) throws IOException {
-    return region.flush(force);
-  }
-
-  @VisibleForTesting
-  public void requestRollAll() {
-    region.requestRollAll();
-  }
-
-  @VisibleForTesting
-  public void waitUntilWalRollFinished() throws InterruptedException {
-    region.waitUntilWalRollFinished();
-  }
-
-  public static LocalStore create(Server server) throws IOException {
-    LocalRegionParams params = new LocalRegionParams().server(server)
+  public static MasterRegion create(Server server) throws IOException {
+    MasterRegionParams params = new MasterRegionParams().server(server)
       .regionDirName(MASTER_STORE_DIR).tableDescriptor(TABLE_DESC);
     Configuration conf = server.getConfiguration();
     long flushSize = conf.getLong(FLUSH_SIZE_KEY, DEFAULT_FLUSH_SIZE);
@@ -145,7 +101,6 @@ public final class LocalStore {
     long rollPeriodMs = conf.getLong(ROLL_PERIOD_MS_KEY, DEFAULT_ROLL_PERIOD_MS);
     params.rollPeriodMs(rollPeriodMs).archivedWalSuffix(ARCHIVED_WAL_SUFFIX)
       .archivedHFileSuffix(ARCHIVED_HFILE_SUFFIX);
-    LocalRegion region = LocalRegion.create(params);
-    return new LocalStore(region);
+    return MasterRegion.create(params);
   }
 }

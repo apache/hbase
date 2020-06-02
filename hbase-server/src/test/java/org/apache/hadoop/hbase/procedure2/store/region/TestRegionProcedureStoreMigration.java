@@ -39,7 +39,8 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.master.assignment.AssignProcedure;
-import org.apache.hadoop.hbase.master.store.LocalStore;
+import org.apache.hadoop.hbase.master.region.MasterRegion;
+import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.LoadCounter;
 import org.apache.hadoop.hbase.procedure2.store.LeaseRecovery;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureIterator;
@@ -67,7 +68,7 @@ public class TestRegionProcedureStoreMigration {
 
   private Server server;
 
-  private LocalStore localStore;
+  private MasterRegion region;
 
   private RegionProcedureStore store;
 
@@ -92,7 +93,7 @@ public class TestRegionProcedureStoreMigration {
     walStore.recoverLease();
     walStore.load(new LoadCounter());
     server = RegionProcedureStoreTestHelper.mockServer(conf);
-    localStore = LocalStore.create(server);
+    region = MasterRegionFactory.create(server);
   }
 
   @After
@@ -100,7 +101,7 @@ public class TestRegionProcedureStoreMigration {
     if (store != null) {
       store.stop(true);
     }
-    localStore.close(true);
+    region.close(true);
     walStore.stop(true);
     htu.cleanupTestDir();
   }
@@ -120,7 +121,7 @@ public class TestRegionProcedureStoreMigration {
     SortedSet<RegionProcedureStoreTestProcedure> loadedProcs =
       new TreeSet<>((p1, p2) -> Long.compare(p1.getProcId(), p2.getProcId()));
     MutableLong maxProcIdSet = new MutableLong(0);
-    store = RegionProcedureStoreTestHelper.createStore(server, localStore, new ProcedureLoader() {
+    store = RegionProcedureStoreTestHelper.createStore(server, region, new ProcedureLoader() {
 
       @Override
       public void setMaxProcId(long maxProcId) {
@@ -166,7 +167,7 @@ public class TestRegionProcedureStoreMigration {
     walStore.stop(true);
 
     try {
-      store = RegionProcedureStoreTestHelper.createStore(server, localStore, new LoadCounter());
+      store = RegionProcedureStoreTestHelper.createStore(server, region, new LoadCounter());
       fail("Should fail since AssignProcedure is not supported");
     } catch (HBaseIOException e) {
       assertThat(e.getMessage(), startsWith("Unsupported"));

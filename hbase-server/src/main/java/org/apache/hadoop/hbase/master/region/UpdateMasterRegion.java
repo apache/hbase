@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.store;
+package org.apache.hadoop.hbase.master.region;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -23,7 +23,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 @FunctionalInterface
-public interface UpdateLocalRegion {
+public interface UpdateMasterRegion {
 
   void update(HRegion region) throws IOException;
 }

@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.store;
+package org.apache.hadoop.hbase.master.region;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -40,11 +40,11 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ MasterTests.class, MediumTests.class })
-public class TestLocalRegionWALCleaner extends LocalRegionTestBase {
+public class TestMasterRegionWALCleaner extends MasterRegionTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestLocalRegionWALCleaner.class);
+    HBaseClassTestRule.forClass(TestMasterRegionWALCleaner.class);
 
   private static long TTL_MS = 5000;
 

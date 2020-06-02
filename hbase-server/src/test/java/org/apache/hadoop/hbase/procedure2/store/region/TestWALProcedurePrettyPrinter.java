@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.master.store.LocalStore;
+import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.util.ToolRunner;
@@ -58,18 +58,18 @@ public class TestWALProcedurePrettyPrinter extends RegionProcedureStoreTestBase 
       store.insert(proc, null);
       procs.add(proc);
     }
-    store.localStore.flush(true);
+    store.region.flush(true);
     for (int i = 0; i < 5; i++) {
       store.delete(procs.get(i).getProcId());
     }
     store.cleanup();
     Path walParentDir = new Path(htu.getDataTestDir(),
-      LocalStore.MASTER_STORE_DIR + "/" + HConstants.HREGION_LOGDIR_NAME);
+      MasterRegionFactory.MASTER_STORE_DIR + "/" + HConstants.HREGION_LOGDIR_NAME);
     FileSystem fs = walParentDir.getFileSystem(htu.getConfiguration());
     Path walDir = fs.listStatus(walParentDir)[0].getPath();
     Path walFile = fs.listStatus(walDir)[0].getPath();
-    store.localStore.requestRollAll();
-    store.localStore.waitUntilWalRollFinished();
+    store.region.requestRollAll();
+    store.region.waitUntilWalRollFinished();
     ByteArrayOutputStream bos = new ByteArrayOutputStream();
     PrintStream out = new PrintStream(bos);
     WALProcedurePrettyPrinter printer = new WALProcedurePrettyPrinter(out);

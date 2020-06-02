@@ -22,7 +22,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.master.store.LocalStore;
+import org.apache.hadoop.hbase.master.region.MasterRegion;
+import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.LoadCounter;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -37,7 +38,7 @@ public class RegionProcedureStoreTestBase {
 
   protected HBaseCommonTestingUtility htu;
 
-  protected LocalStore localStore;
+  protected MasterRegion region;
 
   protected RegionProcedureStore store;
 
@@ -51,14 +52,14 @@ public class RegionProcedureStoreTestBase {
     Path testDir = htu.getDataTestDir();
     CommonFSUtils.setRootDir(htu.getConfiguration(), testDir);
     Server server = RegionProcedureStoreTestHelper.mockServer(conf);
-    localStore = LocalStore.create(server);
-    store = RegionProcedureStoreTestHelper.createStore(server, localStore, new LoadCounter());
+    region = MasterRegionFactory.create(server);
+    store = RegionProcedureStoreTestHelper.createStore(server, region, new LoadCounter());
   }
 
   @After
   public void tearDown() throws IOException {
     store.stop(true);
-    localStore.close(true);
+    region.close(true);
     htu.cleanupTestDir();
   }
 }

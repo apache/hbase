@@ -15,17 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.store;
+package org.apache.hadoop.hbase.master.region;
 
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * The parameters for constructing {@link LocalRegion}.
+ * The parameters for constructing {@link MasterRegion}.
  */
 @InterfaceAudience.Private
-public class LocalRegionParams {
+public class MasterRegionParams {
 
   private Server server;
 
@@ -53,68 +53,75 @@ public class LocalRegionParams {
 
   private String archivedHFileSuffix;
 
-  public LocalRegionParams server(Server server) {
+  private Boolean useMetaCellComparator;
+
+  public MasterRegionParams server(Server server) {
     this.server = server;
     return this;
   }
 
-  public LocalRegionParams regionDirName(String regionDirName) {
+  public MasterRegionParams regionDirName(String regionDirName) {
     this.regionDirName = regionDirName;
     return this;
   }
 
-  public LocalRegionParams tableDescriptor(TableDescriptor tableDescriptor) {
+  public MasterRegionParams tableDescriptor(TableDescriptor tableDescriptor) {
     this.tableDescriptor = tableDescriptor;
     return this;
   }
 
-  public LocalRegionParams flushSize(long flushSize) {
+  public MasterRegionParams flushSize(long flushSize) {
     this.flushSize = flushSize;
     return this;
   }
 
-  public LocalRegionParams flushPerChanges(long flushPerChanges) {
+  public MasterRegionParams flushPerChanges(long flushPerChanges) {
     this.flushPerChanges = flushPerChanges;
     return this;
   }
 
-  public LocalRegionParams flushIntervalMs(long flushIntervalMs) {
+  public MasterRegionParams flushIntervalMs(long flushIntervalMs) {
     this.flushIntervalMs = flushIntervalMs;
     return this;
   }
 
-  public LocalRegionParams compactMin(int compactMin) {
+  public MasterRegionParams compactMin(int compactMin) {
     this.compactMin = compactMin;
     return this;
   }
 
-  public LocalRegionParams maxWals(int maxWals) {
+  public MasterRegionParams maxWals(int maxWals) {
     this.maxWals = maxWals;
     return this;
   }
 
-  public LocalRegionParams useHsync(boolean useHsync) {
+  public MasterRegionParams useHsync(boolean useHsync) {
     this.useHsync = useHsync;
     return this;
   }
 
-  public LocalRegionParams ringBufferSlotCount(int ringBufferSlotCount) {
+  public MasterRegionParams ringBufferSlotCount(int ringBufferSlotCount) {
     this.ringBufferSlotCount = ringBufferSlotCount;
     return this;
   }
 
-  public LocalRegionParams rollPeriodMs(long rollPeriodMs) {
+  public MasterRegionParams rollPeriodMs(long rollPeriodMs) {
     this.rollPeriodMs = rollPeriodMs;
     return this;
   }
 
-  public LocalRegionParams archivedWalSuffix(String archivedWalSuffix) {
+  public MasterRegionParams archivedWalSuffix(String archivedWalSuffix) {
     this.archivedWalSuffix = archivedWalSuffix;
     return this;
   }
 
-  public LocalRegionParams archivedHFileSuffix(String archivedHFileSuffix) {
+  public MasterRegionParams archivedHFileSuffix(String archivedHFileSuffix) {
     this.archivedHFileSuffix = archivedHFileSuffix;
+    return this;
+  }
+
+  public MasterRegionParams useMetaCellComparator(boolean useMetaCellComparator) {
+    this.useMetaCellComparator = useMetaCellComparator;
     return this;
   }
 
@@ -168,5 +175,9 @@ public class LocalRegionParams {
 
   public String archivedHFileSuffix() {
     return archivedHFileSuffix;
+  }
+
+  public Boolean useMetaCellComparator() {
+    return useMetaCellComparator;
   }
 }

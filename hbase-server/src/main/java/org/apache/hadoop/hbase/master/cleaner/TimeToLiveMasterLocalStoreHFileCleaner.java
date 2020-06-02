@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.master.cleaner;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.master.store.LocalStore;
+import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -42,7 +42,7 @@ public class TimeToLiveMasterLocalStoreHFileCleaner extends BaseTimeToLiveFileCl
 
   @Override
   protected boolean valiateFilename(Path file) {
-    return file.getName().endsWith(LocalStore.ARCHIVED_HFILE_SUFFIX);
+    return file.getName().endsWith(MasterRegionFactory.ARCHIVED_HFILE_SUFFIX);
   }
 
 }

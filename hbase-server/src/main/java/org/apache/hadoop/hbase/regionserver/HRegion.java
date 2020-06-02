@@ -82,6 +82,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.CellComparatorImpl.MetaCellComparator;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
@@ -253,6 +254,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static final String SPECIAL_RECOVERED_EDITS_DIR =
     "hbase.hregion.special.recovered.edits.dir";
 
+  /**
+   * Whether to use {@link MetaCellComparator} even if we are not meta region. Used when creating
+   * master local region.
+   */
+  public static final String USE_META_CELL_COMPARATOR = "hbase.region.use.meta.cell.comparator";
+
+  public static final boolean DEFAULT_USE_META_CELL_COMPARATOR = false;
+
   final AtomicBoolean closed = new AtomicBoolean(false);
 
   /* Closing can take some time; use the closing flag if there is stuff we don't
@@ -411,6 +420,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   // Used for testing.
   private volatile Long timeoutForWriteLock = null;
+
+  private final CellComparator cellComparator;
 
   /**
    * @return The smallest mvcc readPoint across all the scanners in this
@@ -765,9 +776,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     // 'conf' renamed to 'confParam' b/c we use this.conf in the constructor
     this.baseConf = confParam;
-    this.conf = new CompoundConfiguration()
-      .add(confParam)
-      .addBytesMap(htd.getValues());
+    this.conf = new CompoundConfiguration().add(confParam).addBytesMap(htd.getValues());
+    this.cellComparator = htd.isMetaTable() ||
+      conf.getBoolean(USE_META_CELL_COMPARATOR, DEFAULT_USE_META_CELL_COMPARATOR) ?
+        CellComparatorImpl.META_COMPARATOR :
+        CellComparatorImpl.COMPARATOR;
     this.lock = new ReentrantReadWriteLock(conf.getBoolean(FAIR_REENTRANT_CLOSE_LOCK,
         DEFAULT_FAIR_REENTRANT_CLOSE_LOCK));
     this.flushCheckInterval = conf.getInt(MEMSTORE_PERIODIC_FLUSH_INTERVAL,
@@ -8849,8 +8862,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   @Override
   public CellComparator getCellComparator() {
-    return this.getRegionInfo().isMetaRegion() ? CellComparatorImpl.META_COMPARATOR
-        : CellComparatorImpl.COMPARATOR;
+    return cellComparator;
   }
 
   public long getMemStoreFlushSize() {

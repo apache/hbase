@@ -32,7 +32,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.io.HFileLink;
-import org.apache.hadoop.hbase.master.store.LocalStore;
+import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.StealJobQueue;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -161,7 +161,7 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate>
   protected boolean validate(Path file) {
     return HFileLink.isBackReferencesDir(file) || HFileLink.isBackReferencesDir(file.getParent()) ||
       StoreFileInfo.validateStoreFileName(file.getName()) ||
-      file.getName().endsWith(LocalStore.ARCHIVED_HFILE_SUFFIX);
+      file.getName().endsWith(MasterRegionFactory.ARCHIVED_HFILE_SUFFIX);
   }
 
   /**

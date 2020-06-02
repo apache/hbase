@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.store;
+package org.apache.hadoop.hbase.master.region;
 
 import static org.apache.hadoop.hbase.HConstants.HREGION_LOGDIR_NAME;
 
@@ -54,7 +54,7 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 import org.apache.hbase.thirdparty.com.google.common.math.IntMath;
 
 /**
- * A region that stores data in a separated directory.
+ * A region that stores data in a separated directory, which can be used to store master local data.
  * <p/>
  * FileSystem layout:
  *
@@ -79,14 +79,14 @@ import org.apache.hbase.thirdparty.com.google.common.math.IntMath;
  * Notice that, you can use different root file system and WAL file system. Then the above directory
  * will be on two file systems, the root file system will have the data directory while the WAL
  * filesystem will have the WALs directory. The archived HFile will be moved to the global HFile
- * archived directory with the {@link LocalRegionParams#archivedWalSuffix()} suffix. The archived
+ * archived directory with the {@link MasterRegionParams#archivedWalSuffix()} suffix. The archived
  * WAL will be moved to the global WAL archived directory with the
- * {@link LocalRegionParams#archivedHFileSuffix()} suffix.
+ * {@link MasterRegionParams#archivedHFileSuffix()} suffix.
  */
 @InterfaceAudience.Private
-public final class LocalRegion {
+public final class MasterRegion {
 
-  private static final Logger LOG = LoggerFactory.getLogger(LocalRegion.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MasterRegion.class);
 
   private static final String REPLAY_EDITS_DIR = "recovered.wals";
 
@@ -100,12 +100,12 @@ public final class LocalRegion {
   final HRegion region;
 
   @VisibleForTesting
-  final LocalRegionFlusherAndCompactor flusherAndCompactor;
+  final MasterRegionFlusherAndCompactor flusherAndCompactor;
 
-  private LocalRegionWALRoller walRoller;
+  private MasterRegionWALRoller walRoller;
 
-  private LocalRegion(HRegion region, WALFactory walFactory,
-    LocalRegionFlusherAndCompactor flusherAndCompactor, LocalRegionWALRoller walRoller) {
+  private MasterRegion(HRegion region, WALFactory walFactory,
+    MasterRegionFlusherAndCompactor flusherAndCompactor, MasterRegionWALRoller walRoller) {
     this.region = region;
     this.walFactory = walFactory;
     this.flusherAndCompactor = flusherAndCompactor;
@@ -128,7 +128,7 @@ public final class LocalRegion {
     }
   }
 
-  public void update(UpdateLocalRegion action) throws IOException {
+  public void update(UpdateMasterRegion action) throws IOException {
     action.update(region);
     flusherAndCompactor.onUpdate();
   }
@@ -142,17 +142,17 @@ public final class LocalRegion {
   }
 
   @VisibleForTesting
-  FlushResult flush(boolean force) throws IOException {
+  public FlushResult flush(boolean force) throws IOException {
     return region.flush(force);
   }
 
   @VisibleForTesting
-  void requestRollAll() {
+  public void requestRollAll() {
     walRoller.requestRollAll();
   }
 
   @VisibleForTesting
-  void waitUntilWalRollFinished() throws InterruptedException {
+  public void waitUntilWalRollFinished() throws InterruptedException {
     walRoller.waitUntilWalRollFinished();
   }
 
@@ -176,7 +176,7 @@ public final class LocalRegion {
     }
   }
 
-  private static WAL createWAL(WALFactory walFactory, LocalRegionWALRoller walRoller,
+  private static WAL createWAL(WALFactory walFactory, MasterRegionWALRoller walRoller,
     String serverName, FileSystem walFs, Path walRootDir, RegionInfo regionInfo)
     throws IOException {
     String logName = AbstractFSWALProvider.getWALDirectoryName(serverName);
@@ -197,7 +197,7 @@ public final class LocalRegion {
 
   private static HRegion bootstrap(Configuration conf, TableDescriptor td, FileSystem fs,
     Path rootDir, FileSystem walFs, Path walRootDir, WALFactory walFactory,
-    LocalRegionWALRoller walRoller, String serverName) throws IOException {
+    MasterRegionWALRoller walRoller, String serverName) throws IOException {
     TableName tn = td.getTableName();
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tn).setRegionId(REGION_ID).build();
     Path tmpTableDir = CommonFSUtils.getTableDir(rootDir,
@@ -215,7 +215,7 @@ public final class LocalRegion {
   }
 
   private static HRegion open(Configuration conf, TableDescriptor td, FileSystem fs, Path rootDir,
-    FileSystem walFs, Path walRootDir, WALFactory walFactory, LocalRegionWALRoller walRoller,
+    FileSystem walFs, Path walRootDir, WALFactory walFactory, MasterRegionWALRoller walRoller,
     String serverName) throws IOException {
     Path tableDir = CommonFSUtils.getTableDir(rootDir, td.getTableName());
     Path regionDir =
@@ -269,7 +269,7 @@ public final class LocalRegion {
     return HRegion.openHRegionFromTableDir(conf, fs, tableDir, regionInfo, td, wal, null, null);
   }
 
-  public static LocalRegion create(LocalRegionParams params) throws IOException {
+  public static MasterRegion create(MasterRegionParams params) throws IOException {
     TableDescriptor td = params.tableDescriptor();
     LOG.info("Create or load local region for table " + td);
     Server server = params.server();
@@ -284,18 +284,21 @@ public final class LocalRegion {
     Configuration conf = new Configuration(baseConf);
     CommonFSUtils.setRootDir(conf, rootDir);
     CommonFSUtils.setWALRootDir(conf, walRootDir);
-    LocalRegionFlusherAndCompactor.setupConf(conf, params.flushSize(), params.flushPerChanges(),
+    MasterRegionFlusherAndCompactor.setupConf(conf, params.flushSize(), params.flushPerChanges(),
       params.flushIntervalMs());
     conf.setInt(AbstractFSWAL.MAX_LOGS, params.maxWals());
     if (params.useHsync() != null) {
       conf.setBoolean(HRegion.WAL_HSYNC_CONF_KEY, params.useHsync());
     }
+    if (params.useMetaCellComparator() != null) {
+      conf.setBoolean(HRegion.USE_META_CELL_COMPARATOR, params.useMetaCellComparator());
+    }
     conf.setInt(AbstractFSWAL.RING_BUFFER_SLOT_COUNT,
       IntMath.ceilingPowerOfTwo(params.ringBufferSlotCount()));
 
-    LocalRegionWALRoller walRoller = LocalRegionWALRoller.create(td.getTableName() + "-WAL-Roller",
-      conf, server, walFs, walRootDir, globalWALRootDir, params.archivedWalSuffix(),
-      params.rollPeriodMs(), params.flushSize());
+    MasterRegionWALRoller walRoller = MasterRegionWALRoller.create(
+      td.getTableName() + "-WAL-Roller", conf, server, walFs, walRootDir, globalWALRootDir,
+      params.archivedWalSuffix(), params.rollPeriodMs(), params.flushSize());
     walRoller.start();
 
     WALFactory walFactory = new WALFactory(conf, server.getServerName().toString());
@@ -311,7 +314,7 @@ public final class LocalRegion {
         server.getServerName().toString());
     }
     Path globalArchiveDir = HFileArchiveUtil.getArchivePath(baseConf);
-    LocalRegionFlusherAndCompactor flusherAndCompactor = new LocalRegionFlusherAndCompactor(conf,
+    MasterRegionFlusherAndCompactor flusherAndCompactor = new MasterRegionFlusherAndCompactor(conf,
       server, region, params.flushSize(), params.flushPerChanges(), params.flushIntervalMs(),
       params.compactMin(), globalArchiveDir, params.archivedHFileSuffix());
     walRoller.setFlusherAndCompactor(flusherAndCompactor);
@@ -320,6 +323,6 @@ public final class LocalRegion {
       LOG.warn("Failed to create archive directory {}. Usually this should not happen but it will" +
         " be created again when we actually archive the hfiles later, so continue", archiveDir);
     }
-    return new LocalRegion(region, walFactory, flusherAndCompactor, walRoller);
+    return new MasterRegion(region, walFactory, flusherAndCompactor, walRoller);
   }
 }

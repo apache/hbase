@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_COORDINATED
 import static org.apache.hadoop.hbase.HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.util.DNS.MASTER_HOSTNAME_KEY;
+
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Service;
 import java.io.IOException;
@@ -136,6 +137,8 @@ import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.master.procedure.TruncateTableProcedure;
+import org.apache.hadoop.hbase.master.region.MasterRegion;
+import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.master.replication.AddPeerProcedure;
 import org.apache.hadoop.hbase.master.replication.DisablePeerProcedure;
 import org.apache.hadoop.hbase.master.replication.EnablePeerProcedure;
@@ -145,7 +148,6 @@ import org.apache.hadoop.hbase.master.replication.ReplicationPeerManager;
 import org.apache.hadoop.hbase.master.replication.UpdatePeerConfigProcedure;
 import org.apache.hadoop.hbase.master.slowlog.SlowLogMasterService;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
-import org.apache.hadoop.hbase.master.store.LocalStore;
 import org.apache.hadoop.hbase.master.zksyncer.MasterAddressSyncer;
 import org.apache.hadoop.hbase.master.zksyncer.MetaLocationSyncer;
 import org.apache.hadoop.hbase.mob.MobConstants;
@@ -217,10 +219,12 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.webapp.WebAppContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
@@ -435,7 +439,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   private ProcedureStore procedureStore;
 
   // the master local storage to store procedure data, etc.
-  private LocalStore localStore;
+  private MasterRegion masterRegion;
 
   // handle table states
   private TableStateManager tableStateManager;
@@ -935,8 +939,8 @@ public class HMaster extends HRegionServer implements MasterServices {
       this.splitWALManager = new SplitWALManager(this);
     }
 
-    // initialize local store
-    localStore = LocalStore.create(this);
+    // initialize master local region
+    masterRegion = MasterRegionFactory.create(this);
     createProcedureExecutor();
     Map<Class<?>, List<Procedure<MasterProcedureEnv>>> procsByType =
       procedureExecutor.getActiveProceduresNoCopy().stream()
@@ -1510,8 +1514,8 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     stopProcedureExecutor();
 
-    if (localStore != null) {
-      localStore.close(isAborted());
+    if (masterRegion != null) {
+      masterRegion.close(isAborted());
     }
     if (this.walManager != null) {
       this.walManager.stop();
@@ -1530,7 +1534,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   private void createProcedureExecutor() throws IOException {
     MasterProcedureEnv procEnv = new MasterProcedureEnv(this);
     procedureStore =
-      new RegionProcedureStore(this, localStore, new MasterProcedureEnv.FsUtilsLeaseRecovery(this));
+      new RegionProcedureStore(this, masterRegion, new MasterProcedureEnv.FsUtilsLeaseRecovery(this));
     procedureStore.registerListener(new ProcedureStoreListener() {
 
       @Override
