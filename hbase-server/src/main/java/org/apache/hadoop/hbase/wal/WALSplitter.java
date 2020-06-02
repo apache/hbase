@@ -287,7 +287,7 @@ public class WALSplitter {
         lastFlushedSequenceId = lastFlushedSequenceIds.get(encodedRegionNameAsStr);
         if (lastFlushedSequenceId == null) {
           if (!(isRegionDirPresentUnderRoot(entry.getKey().getTableName(), encodedRegionNameAsStr))) {
-            // The region directory itself is not present in the WAL FS. This indicates that
+            // The region directory itself is not present in the FS. This indicates that
             // the region/table is already removed. We can just skip all the edits for this
             // region. Setting lastFlushedSequenceId as Long.MAX_VALUE so that all edits
             // will get skipped by the seqId check below.
