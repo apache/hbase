@@ -19,6 +19,10 @@
 
 package org.apache.hadoop.hbase.client;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.Collections;
+import java.util.Map;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -32,6 +36,8 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -44,6 +50,8 @@ public class TestImmutableScan {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestImmutableScan.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestImmutableScan.class);
 
   @Test
   public void testGetToScan() throws Exception {
@@ -160,10 +168,13 @@ public class TestImmutableScan {
     assertEquals(scan.getStartRow(), scanCopy.getStartRow());
     assertEquals(scan.getStopRow(), scanCopy.getStopRow());
     assertEquals(scan.getTimeRange(), scanCopy.getTimeRange());
+    assertEquals(scan.getFingerprint(), scanCopy.getFingerprint());
+    assertEquals(scan.toMap(1), scanCopy.toMap(1));
+    assertEquals(scan.toString(2), scanCopy.toString(2));
+    assertEquals(scan.toJSON(2), scanCopy.toJSON(2));
 
-    // isObjInit should be ignored
-    assertTrue("Make sure copy constructor adds all the fields in the copied object",
-      EqualsBuilder.reflectionEquals(scan, scanCopy, "isObjInit"));
+    LOG.debug("Compare all getters of scan and scanCopy.");
+    compareGetters(scan, scanCopy);
 
     try {
       scanCopy.setFilter(Mockito.mock(Filter.class));
@@ -247,6 +258,106 @@ public class TestImmutableScan {
       assertEquals("ImmutableScan does not allow access to setLoadColumnFamiliesOnDemand",
         e.getMessage());
     }
+    try {
+      scanCopy.setRaw(true);
+      throw new RuntimeException("Should not reach here");
+    } catch (UnsupportedOperationException e) {
+      assertEquals("ImmutableScan does not allow access to setRaw", e.getMessage());
+    }
+    try {
+      scanCopy.setAuthorizations(new Authorizations("test"));
+      throw new RuntimeException("Should not reach here");
+    } catch (UnsupportedOperationException e) {
+      assertEquals("ImmutableScan does not allow access to setAuthorizations", e.getMessage());
+    }
+    try {
+      scanCopy.setACL("user1", new Permission(Permission.Action.READ));
+      throw new RuntimeException("Should not reach here");
+    } catch (UnsupportedOperationException e) {
+      assertEquals("ImmutableScan does not allow access to setACL", e.getMessage());
+    }
+    try {
+      scanCopy.setReplicaId(12);
+      throw new RuntimeException("Should not reach here");
+    } catch (UnsupportedOperationException e) {
+      assertEquals("ImmutableScan does not allow access to setReplicaId", e.getMessage());
+    }
+    try {
+      scanCopy.setReadType(Scan.ReadType.STREAM);
+      throw new RuntimeException("Should not reach here");
+    } catch (UnsupportedOperationException e) {
+      assertEquals("ImmutableScan does not allow access to setReadType", e.getMessage());
+    }
+    try {
+      scanCopy.setNeedCursorResult(false);
+      throw new RuntimeException("Should not reach here");
+    } catch (UnsupportedOperationException e) {
+      assertEquals("ImmutableScan does not allow access to setNeedCursorResult", e.getMessage());
+    }
+  }
+
+  private void compareGetters(Scan scan, Scan scanCopy) {
+    Method[] methods = Scan.class.getMethods();
+    for (Method method : methods) {
+      if (isGetter(method)) {
+        LOG.debug("Comparing return values of method: {}", method);
+        try {
+          Object obj1;
+          Object obj2;
+          switch (method.getName()) {
+            case "toMap": {
+              if (method.getParameterCount() == 1) {
+                obj1 = method.invoke(scan, 2);
+                obj2 = method.invoke(scanCopy, 2);
+                break;
+              }
+            }
+            case "getAttribute": {
+              if (method.getParameterCount() == 1) {
+                obj1 = method.invoke(scan, "acl");
+                obj2 = method.invoke(scanCopy, "acl");
+                break;
+              }
+            }
+            case "toString": {
+              if (method.getParameterCount() == 1) {
+                obj1 = method.invoke(scan, 25);
+                obj2 = method.invoke(scanCopy, 25);
+                break;
+              }
+            }
+            case "toJSON": {
+              if (method.getParameterCount() == 1) {
+                obj1 = method.invoke(scan, 25);
+                obj2 = method.invoke(scanCopy, 25);
+                break;
+              }
+            }
+            default: {
+              obj1 = method.invoke(scan);
+              obj2 = method.invoke(scanCopy);
+            }
+          }
+          if (obj1 instanceof Map && obj2 instanceof Map) {
+            obj1 = Collections.unmodifiableMap((Map<?, ?>) obj1);
+          }
+          if (!EqualsBuilder.reflectionEquals(obj1, obj2)) {
+            throw new AssertionError("Method " + method + " does not return equal values");
+          }
+        } catch (IllegalAccessException | InvocationTargetException | IllegalArgumentException e) {
+          throw new AssertionError("Error invoking method " + method, e);
+        }
+      }
+    }
+  }
+
+  private static boolean isGetter(Method method) {
+    if ("hashCode".equals(method.getName()) || "equals".equals(method.getName())
+        || method.getName().startsWith("set")) {
+      return false;
+    }
+    return !void.class.equals(method.getReturnType())
+      && !Scan.class.equals(method.getReturnType());
   }
 
 }

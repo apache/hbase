@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.NavigableSet;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.security.access.Permission;
@@ -35,7 +36,14 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public final class ImmutableScan extends Scan {
 
-  private final boolean isObjInit;
+  private final Scan delegateScan;
+
+  /**
+   * Create Immutable instance of Scan
+   */
+  public ImmutableScan() {
+    this.delegateScan = new Scan();
+  }
 
   /**
    * Create Immutable instance of Scan from given Scan object
@@ -44,8 +52,7 @@ public final class ImmutableScan extends Scan {
    * @throws IOException From parent constructor
    */
   public ImmutableScan(Scan scan) throws IOException {
-    super(scan);
-    isObjInit = true;
+    this.delegateScan = new Scan(scan);
   }
 
   /**
@@ -54,317 +61,200 @@ public final class ImmutableScan extends Scan {
    * @param get Get to model Scan after
    */
   public ImmutableScan(Get get) {
-    super(get);
-    isObjInit = true;
+    this.delegateScan = new Scan(get);
   }
 
   @Override
   public Scan addFamily(byte[] family) {
-    if (!isObjInit) {
-      return super.addFamily(family);
-    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to addFamily");
   }
 
   @Override
   public Scan addColumn(byte[] family, byte[] qualifier) {
-    if (!isObjInit) {
-      return super.addColumn(family, qualifier);
-    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to addColumn");
   }
 
   @Override
   public Scan setTimeRange(long minStamp, long maxStamp) {
-    if (!isObjInit) {
-      try {
-        return super.setTimeRange(minStamp, maxStamp);
-      } catch (IOException e) {
-        throw new AssertionError("Scan#setTimeRange should not throw IOException");
-      }
-    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setTimeRange");
   }
 
   @Deprecated
   @Override
   public Scan setTimeStamp(long timestamp) {
-    if (!isObjInit) {
-      try {
-        return super.setTimeStamp(timestamp);
-      } catch (IOException e) {
-        throw new AssertionError("Scan#setTimeStamp should not throw IOException");
-      }
-    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setTimeStamp");
   }
 
   @Override
   public Scan setTimestamp(long timestamp) {
-    if (!isObjInit) {
-      return super.setTimestamp(timestamp);
-    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setTimestamp");
   }
 
   @Override
   public Scan setColumnFamilyTimeRange(byte[] cf, long minStamp, long maxStamp) {
-    if (!isObjInit) {
-      return super.setColumnFamilyTimeRange(cf, minStamp, maxStamp);
-    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setColumnFamilyTimeRange");
   }
 
   @Override
   public Scan withStartRow(byte[] startRow) {
-    if (!isObjInit) {
-      return super.withStartRow(startRow);
-    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to withStartRow");
   }
 
   @Override
   public Scan withStartRow(byte[] startRow, boolean inclusive) {
-    if (!isObjInit) {
-      return super.withStartRow(startRow, inclusive);
-    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to withStartRow");
   }
 
   @Override
   public Scan withStopRow(byte[] stopRow) {
-    if (!isObjInit) {
-      return super.withStopRow(stopRow);
-    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to withStopRow");
   }
 
   @Override
   public Scan withStopRow(byte[] stopRow, boolean inclusive) {
-    if (!isObjInit) {
-      return super.withStopRow(stopRow, inclusive);
-    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to withStopRow");
   }
 
   @Override
   public Scan setRowPrefixFilter(byte[] rowPrefix) {
-    if (!isObjInit) {
-      return super.setRowPrefixFilter(rowPrefix);
-    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setRowPrefixFilter");
   }
 
   @Override
   public Scan readAllVersions() {
-    if (!isObjInit) {
-      return super.readAllVersions();
-    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to readAllVersions");
   }
 
   @Override
   public Scan readVersions(int versions) {
-    if (!isObjInit) {
-      return super.readVersions(versions);
-    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to readVersions");
   }
 
   @Override
   public Scan setBatch(int batch) {
-    if (!isObjInit) {
-      return super.setBatch(batch);
-    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setBatch");
   }
 
   @Override
   public Scan setMaxResultsPerColumnFamily(int limit) {
-    if (!isObjInit) {
-      return super.setMaxResultsPerColumnFamily(limit);
-    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setMaxResultsPerColumnFamily");
   }
 
   @Override
   public Scan setRowOffsetPerColumnFamily(int offset) {
-    if (!isObjInit) {
-      return super.setRowOffsetPerColumnFamily(offset);
-    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setRowOffsetPerColumnFamily");
   }
 
   @Override
   public Scan setCaching(int caching) {
-    if (!isObjInit) {
-      return super.setCaching(caching);
-    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setCaching");
   }
 
   @Override
   public Scan setMaxResultSize(long maxResultSize) {
-    if (!isObjInit) {
-      return super.setMaxResultSize(maxResultSize);
-    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setMaxResultSize");
   }
 
   @Override
   public Scan setFilter(Filter filter) {
-    if (!isObjInit) {
-      return super.setFilter(filter);
-    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setFilter");
   }
 
   @Override
   public Scan setFamilyMap(Map<byte[], NavigableSet<byte[]>> familyMap) {
-    if (!isObjInit) {
-      return super.setFamilyMap(familyMap);
-    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setFamilyMap");
   }
 
   @Override
   public Scan setCacheBlocks(boolean cacheBlocks) {
-    if (!isObjInit) {
-      return super.setCacheBlocks(cacheBlocks);
-    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setCacheBlocks");
   }
 
   @Override
   public Scan setReversed(boolean reversed) {
-    if (!isObjInit) {
-      return super.setReversed(reversed);
-    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setReversed");
   }
 
   @Override
   public Scan setAllowPartialResults(final boolean allowPartialResults) {
-    if (!isObjInit) {
-      return super.setAllowPartialResults(allowPartialResults);
-    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setAllowPartialResults");
   }
 
   @Override
   public Scan setLoadColumnFamiliesOnDemand(boolean value) {
-    if (!isObjInit) {
-      return super.setLoadColumnFamiliesOnDemand(value);
-    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setLoadColumnFamiliesOnDemand");
   }
 
   @Override
   public Scan setRaw(boolean raw) {
-    if (!isObjInit) {
-      return super.setRaw(raw);
-    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setRaw");
   }
 
   @Override
   @Deprecated
   public Scan setSmall(boolean small) {
-    if (!isObjInit) {
-      return super.setSmall(small);
-    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setSmall");
   }
 
   @Override
   public Scan setAttribute(String name, byte[] value) {
-    if (!isObjInit) {
-      return super.setAttribute(name, value);
-    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setAttribute");
   }
 
   @Override
   public Scan setId(String id) {
-    if (!isObjInit) {
-      return super.setId(id);
-    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setId");
   }
 
   @Override
   public Scan setAuthorizations(Authorizations authorizations) {
-    if (!isObjInit) {
-      return super.setAuthorizations(authorizations);
-    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setAuthorizations");
   }
 
   @Override
   public Scan setACL(Map<String, Permission> perms) {
-    if (!isObjInit) {
-      return super.setACL(perms);
-    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setACL");
   }
 
   @Override
   public Scan setACL(String user, Permission perms) {
-    if (!isObjInit) {
-      return super.setACL(user, perms);
-    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setACL");
   }
 
   @Override
   public Scan setConsistency(Consistency consistency) {
-    if (!isObjInit) {
-      return super.setConsistency(consistency);
-    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setConsistency");
   }
 
   @Override
   public Scan setReplicaId(int id) {
-    if (!isObjInit) {
-      return super.setReplicaId(id);
-    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setReplicaId");
   }
 
   @Override
   public Scan setIsolationLevel(IsolationLevel level) {
-    if (!isObjInit) {
-      return super.setIsolationLevel(level);
-    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setIsolationLevel");
   }
 
   @Override
   public Scan setPriority(int priority) {
-    if (!isObjInit) {
-      return super.setPriority(priority);
-    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setPriority");
   }
 
   @Override
   public Scan setScanMetricsEnabled(final boolean enabled) {
-    if (!isObjInit) {
-      return super.setScanMetricsEnabled(enabled);
-    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setScanMetricsEnabled");
   }
@@ -372,214 +262,288 @@ public final class ImmutableScan extends Scan {
   @Override
   @Deprecated
   public Scan setAsyncPrefetch(boolean asyncPrefetch) {
-    if (!isObjInit) {
-      return super.setAsyncPrefetch(asyncPrefetch);
-    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setAsyncPrefetch");
   }
 
   @Override
   public Scan setLimit(int limit) {
-    if (!isObjInit) {
-      return super.setLimit(limit);
-    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setLimit");
   }
 
   @Override
   public Scan setOneRowLimit() {
-    if (!isObjInit) {
-      return super.setOneRowLimit();
-    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setOneRowLimit");
   }
 
   @Override
   public Scan setReadType(ReadType readType) {
-    if (!isObjInit) {
-      return super.setReadType(readType);
-    }
     throw new UnsupportedOperationException("ImmutableScan does not allow access to setReadType");
   }
 
   @Override
   Scan setMvccReadPoint(long mvccReadPoint) {
-    if (!isObjInit) {
-      return super.setMvccReadPoint(mvccReadPoint);
-    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setMvccReadPoint");
   }
 
   @Override
   Scan resetMvccReadPoint() {
-    if (!isObjInit) {
-      return super.resetMvccReadPoint();
-    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to resetMvccReadPoint");
   }
 
   @Override
   public Scan setNeedCursorResult(boolean needCursorResult) {
-    if (!isObjInit) {
-      return super.setNeedCursorResult(needCursorResult);
-    }
     throw new UnsupportedOperationException(
       "ImmutableScan does not allow access to setNeedCursorResult");
   }
 
   @Override
   public long getMaxResultSize() {
-    return super.getMaxResultSize();
+    return this.delegateScan.getMaxResultSize();
   }
 
   @Override
   public Map<byte[], NavigableSet<byte[]>> getFamilyMap() {
-    return Collections.unmodifiableMap(super.getFamilyMap());
+    return Collections.unmodifiableMap(this.delegateScan.getFamilyMap());
   }
 
   @Override
   public int numFamilies() {
-    return super.numFamilies();
+    return this.delegateScan.numFamilies();
   }
 
   @Override
   public boolean hasFamilies() {
-    return super.hasFamilies();
+    return this.delegateScan.hasFamilies();
   }
 
   @Override
   public byte[][] getFamilies() {
-    return super.getFamilies();
+    return this.delegateScan.getFamilies();
   }
 
   @Override
   public byte[] getStartRow() {
-    return super.getStartRow();
+    return this.delegateScan.getStartRow();
   }
 
   @Override
   public boolean includeStartRow() {
-    return super.includeStartRow();
+    return this.delegateScan.includeStartRow();
   }
 
   @Override
   public byte[] getStopRow() {
-    return super.getStopRow();
+    return this.delegateScan.getStopRow();
   }
 
   @Override
   public boolean includeStopRow() {
-    return super.includeStopRow();
+    return this.delegateScan.includeStopRow();
   }
 
   @Override
   public int getMaxVersions() {
-    return super.getMaxVersions();
+    return this.delegateScan.getMaxVersions();
   }
 
   @Override
   public int getBatch() {
-    return super.getBatch();
+    return this.delegateScan.getBatch();
   }
 
   @Override
   public int getMaxResultsPerColumnFamily() {
-    return super.getMaxResultsPerColumnFamily();
+    return this.delegateScan.getMaxResultsPerColumnFamily();
   }
 
   @Override
   public int getRowOffsetPerColumnFamily() {
-    return super.getRowOffsetPerColumnFamily();
+    return this.delegateScan.getRowOffsetPerColumnFamily();
   }
 
   @Override
   public int getCaching() {
-    return super.getCaching();
+    return this.delegateScan.getCaching();
   }
 
   @Override
   public TimeRange getTimeRange() {
-    return super.getTimeRange();
+    return this.delegateScan.getTimeRange();
   }
 
   @Override
   public Filter getFilter() {
-    return super.getFilter();
+    return this.delegateScan.getFilter();
   }
 
   @Override
   public boolean hasFilter() {
-    return super.hasFilter();
+    return this.delegateScan.hasFilter();
   }
 
   @Override
   public boolean getCacheBlocks() {
-    return super.getCacheBlocks();
+    return this.delegateScan.getCacheBlocks();
   }
 
   @Override
   public boolean isReversed() {
-    return super.isReversed();
+    return this.delegateScan.isReversed();
   }
 
   @Override
   public boolean getAllowPartialResults() {
-    return super.getAllowPartialResults();
+    return this.delegateScan.getAllowPartialResults();
+  }
+
+  @Override
+  public byte[] getACL() {
+    return this.delegateScan.getACL();
   }
 
   @Override
   public Map<String, Object> getFingerprint() {
-    return Collections.unmodifiableMap(super.getFingerprint());
+    return Collections.unmodifiableMap(this.delegateScan.getFingerprint());
   }
 
   @Override
   public Map<String, Object> toMap(int maxCols) {
-    return Collections.unmodifiableMap(super.toMap(maxCols));
+    return Collections.unmodifiableMap(this.delegateScan.toMap(maxCols));
   }
 
   @Override
   public boolean isRaw() {
-    return super.isRaw();
+    return this.delegateScan.isRaw();
   }
 
   @Override
   @Deprecated
   public boolean isSmall() {
-    return super.isSmall();
+    return this.delegateScan.isSmall();
   }
 
   @Override
   public boolean isScanMetricsEnabled() {
-    return super.isScanMetricsEnabled();
+    return this.delegateScan.isScanMetricsEnabled();
   }
 
   @Override
   public Boolean isAsyncPrefetch() {
-    return super.isAsyncPrefetch();
+    return this.delegateScan.isAsyncPrefetch();
   }
 
   @Override
   public int getLimit() {
-    return super.getLimit();
+    return this.delegateScan.getLimit();
   }
 
   @Override
   public ReadType getReadType() {
-    return super.getReadType();
+    return this.delegateScan.getReadType();
   }
 
   @Override
   long getMvccReadPoint() {
-    return super.getMvccReadPoint();
+    return this.delegateScan.getMvccReadPoint();
   }
 
   @Override
   public boolean isNeedCursorResult() {
-    return super.isNeedCursorResult();
+    return this.delegateScan.isNeedCursorResult();
+  }
+
+  @Override
+  public byte[] getAttribute(String name) {
+    return this.delegateScan.getAttribute(name);
+  }
+
+  @Override
+  public Consistency getConsistency() {
+    return this.delegateScan.getConsistency();
+  }
+
+  @Override
+  public long getAttributeSize() {
+    return this.delegateScan.getAttributeSize();
+  }
+
+  @Override
+  public Map<String, byte[]> getAttributesMap() {
+    return Collections.unmodifiableMap(this.delegateScan.getAttributesMap());
+  }
+
+  @Override
+  public Boolean getLoadColumnFamiliesOnDemandValue() {
+    return this.delegateScan.getLoadColumnFamiliesOnDemandValue();
+  }
+
+  @Override
+  public int getPriority() {
+    return this.delegateScan.getPriority();
+  }
+
+  @Override
+  public Map<byte[], TimeRange> getColumnFamilyTimeRange() {
+    return Collections.unmodifiableMap(this.delegateScan.getColumnFamilyTimeRange());
+  }
+
+  @Override
+  public int getReplicaId() {
+    return this.delegateScan.getReplicaId();
+  }
+
+  @Override
+  public boolean doLoadColumnFamiliesOnDemand() {
+    return this.delegateScan.doLoadColumnFamiliesOnDemand();
+  }
+
+  @Override
+  public String getId() {
+    return this.delegateScan.getId();
+  }
+
+  @Override
+  public boolean isGetScan() {
+    return this.delegateScan.isGetScan();
+  }
+
+  @Override
+  public IsolationLevel getIsolationLevel() {
+    return this.delegateScan.getIsolationLevel();
+  }
+
+  @Override
+  public Authorizations getAuthorizations() throws DeserializationException {
+    return this.delegateScan.getAuthorizations();
+  }
+
+  @Override
+  public String toString(int maxCols) {
+    return this.delegateScan.toString(maxCols);
+  }
+
+  @Override
+  public String toString() {
+    return this.delegateScan.toString();
+  }
+
+  @Override
+  public Map<String, Object> toMap() {
+    return Collections.unmodifiableMap(this.delegateScan.toMap());
+  }
+
+  @Override
+  public String toJSON(int maxCols) throws IOException {
+    return this.delegateScan.toJSON(maxCols);
+  }
+
+  @Override
+  public String toJSON() throws IOException {
+    return this.delegateScan.toJSON();
   }
 
 }

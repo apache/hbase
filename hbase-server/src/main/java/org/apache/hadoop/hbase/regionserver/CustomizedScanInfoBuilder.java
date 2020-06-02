@@ -43,11 +43,7 @@ public class CustomizedScanInfoBuilder implements ScanOptions {
 
   public CustomizedScanInfoBuilder(ScanInfo scanInfo) {
     this.scanInfo = scanInfo;
-    try {
-      this.scan = new ImmutableScan(new Scan());
-    } catch (IOException e) {
-      throw new AssertionError("Scan should not throw IOException", e);
-    }
+    this.scan = new ImmutableScan();
   }
 
   public CustomizedScanInfoBuilder(ScanInfo scanInfo, Scan scan) {
