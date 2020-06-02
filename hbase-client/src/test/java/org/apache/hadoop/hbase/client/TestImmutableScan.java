@@ -39,6 +39,7 @@ import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -53,52 +54,6 @@ public class TestImmutableScan {
     HBaseClassTestRule.forClass(TestImmutableScan.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestImmutableScan.class);
-
-  @Test
-  public void testGetToScan() throws Exception {
-    Get get = new Get(Bytes.toBytes(1));
-    get.setCacheBlocks(true)
-      .setConsistency(Consistency.TIMELINE)
-      .setFilter(new FilterList())
-      .setId("get")
-      .setIsolationLevel(IsolationLevel.READ_COMMITTED)
-      .setLoadColumnFamiliesOnDemand(false)
-      .setMaxResultsPerColumnFamily(1000)
-      .readVersions(9999)
-      .setRowOffsetPerColumnFamily(5)
-      .setTimeRange(0, 13)
-      .setAttribute("att_v0", Bytes.toBytes("att_v1"))
-      .setColumnFamilyTimeRange(Bytes.toBytes("cf1"), 0, 123)
-      .setReplicaId(3)
-      .setACL("user1", new Permission(Permission.Action.READ))
-      .setAuthorizations(new Authorizations("test_label"))
-      .setPriority(3);
-
-    Scan scan = new ImmutableScan(get);
-    assertEquals(get.getCacheBlocks(), scan.getCacheBlocks());
-    assertEquals(get.getConsistency(), scan.getConsistency());
-    assertEquals(get.getFilter(), scan.getFilter());
-    assertEquals(get.getId(), scan.getId());
-    assertEquals(get.getIsolationLevel(), scan.getIsolationLevel());
-    assertEquals(get.getLoadColumnFamiliesOnDemandValue(),
-      scan.getLoadColumnFamiliesOnDemandValue());
-    assertEquals(get.getMaxResultsPerColumnFamily(), scan.getMaxResultsPerColumnFamily());
-    assertEquals(get.getMaxVersions(), scan.getMaxVersions());
-    assertEquals(get.getRowOffsetPerColumnFamily(), scan.getRowOffsetPerColumnFamily());
-    assertEquals(get.getTimeRange().getMin(), scan.getTimeRange().getMin());
-    assertEquals(get.getTimeRange().getMax(), scan.getTimeRange().getMax());
-    assertTrue(Bytes.equals(get.getAttribute("att_v1"), scan.getAttribute("att_v1")));
-    assertEquals(get.getColumnFamilyTimeRange().get(Bytes.toBytes("cf1")).getMin(),
-      scan.getColumnFamilyTimeRange().get(Bytes.toBytes("cf1")).getMin());
-    assertEquals(get.getColumnFamilyTimeRange().get(Bytes.toBytes("cf1")).getMax(),
-      scan.getColumnFamilyTimeRange().get(Bytes.toBytes("cf1")).getMax());
-    assertEquals(get.getReplicaId(), scan.getReplicaId());
-    assertEquals(get.getACL(), scan.getACL());
-    assertEquals(get.getAuthorizations().getLabels(), scan.getAuthorizations().getLabels());
-    assertEquals(get.getPriority(), scan.getPriority());
-
-    testUnmodifiableSetters(scan);
-  }
 
   @Test
   public void testScanCopyConstructor() throws Exception {
@@ -141,9 +96,9 @@ public class TestImmutableScan {
     Scan scanCopy = new ImmutableScan(scan);
 
     // validate fields of copied scan object match with the original scan object
-    assertEquals(scan.getACL(), scanCopy.getACL());
+    assertArrayEquals(scan.getACL(), scanCopy.getACL());
     assertEquals(scan.getAllowPartialResults(), scanCopy.getAllowPartialResults());
-    assertEquals(scan.getAttribute("test_key"), scanCopy.getAttribute("test_key"));
+    assertArrayEquals(scan.getAttribute("test_key"), scanCopy.getAttribute("test_key"));
     assertEquals(scan.getAttributeSize(), scanCopy.getAttributeSize());
     assertEquals(scan.getAttributesMap(), scanCopy.getAttributesMap());
     assertEquals(scan.getAuthorizations().getLabels(), scanCopy.getAuthorizations().getLabels());
@@ -152,7 +107,7 @@ public class TestImmutableScan {
     assertEquals(scan.getCaching(), scanCopy.getCaching());
     assertEquals(scan.getConsistency(), scanCopy.getConsistency());
     assertEquals(scan.getFamilies().length, scanCopy.getFamilies().length);
-    assertEquals(scan.getFamilies()[0], scanCopy.getFamilies()[0]);
+    assertArrayEquals(scan.getFamilies()[0], scanCopy.getFamilies()[0]);
     assertEquals(scan.getFamilyMap(), scanCopy.getFamilyMap());
     assertEquals(scan.getFilter(), scanCopy.getFilter());
     assertEquals(scan.getId(), scanCopy.getId());
@@ -168,8 +123,8 @@ public class TestImmutableScan {
     assertEquals(scan.getReadType(), scanCopy.getReadType());
     assertEquals(scan.getReplicaId(), scanCopy.getReplicaId());
     assertEquals(scan.getRowOffsetPerColumnFamily(), scanCopy.getRowOffsetPerColumnFamily());
-    assertEquals(scan.getStartRow(), scanCopy.getStartRow());
-    assertEquals(scan.getStopRow(), scanCopy.getStopRow());
+    assertArrayEquals(scan.getStartRow(), scanCopy.getStartRow());
+    assertArrayEquals(scan.getStopRow(), scanCopy.getStopRow());
     assertEquals(scan.getTimeRange(), scanCopy.getTimeRange());
     assertEquals(scan.getFingerprint(), scanCopy.getFingerprint());
     assertEquals(scan.toMap(1), scanCopy.toMap(1));
@@ -296,10 +251,78 @@ public class TestImmutableScan {
       assertEquals("ImmutableScan does not allow access to setReadType", e.getMessage());
     }
     try {
+      scanCopy.setOneRowLimit();
+      throw new RuntimeException("Should not reach here");
+    } catch (UnsupportedOperationException e) {
+      assertEquals("ImmutableScan does not allow access to setOneRowLimit", e.getMessage());
+    }
+    try {
       scanCopy.setNeedCursorResult(false);
       throw new RuntimeException("Should not reach here");
     } catch (UnsupportedOperationException e) {
       assertEquals("ImmutableScan does not allow access to setNeedCursorResult", e.getMessage());
+    }
+    try {
+      scanCopy.resetMvccReadPoint();
+      throw new RuntimeException("Should not reach here");
+    } catch (UnsupportedOperationException e) {
+      assertEquals("ImmutableScan does not allow access to resetMvccReadPoint", e.getMessage());
+    }
+    try {
+      scanCopy.setMvccReadPoint(1L);
+      throw new RuntimeException("Should not reach here");
+    } catch (UnsupportedOperationException e) {
+      assertEquals("ImmutableScan does not allow access to setMvccReadPoint", e.getMessage());
+    }
+    try {
+      scanCopy.setIsolationLevel(IsolationLevel.READ_UNCOMMITTED);
+      throw new RuntimeException("Should not reach here");
+    } catch (UnsupportedOperationException e) {
+      assertEquals("ImmutableScan does not allow access to setIsolationLevel", e.getMessage());
+    }
+    try {
+      scanCopy.setPriority(10);
+      throw new RuntimeException("Should not reach here");
+    } catch (UnsupportedOperationException e) {
+      assertEquals("ImmutableScan does not allow access to setPriority", e.getMessage());
+    }
+    try {
+      scanCopy.setConsistency(Consistency.TIMELINE);
+      throw new RuntimeException("Should not reach here");
+    } catch (UnsupportedOperationException e) {
+      assertEquals("ImmutableScan does not allow access to setConsistency", e.getMessage());
+    }
+    try {
+      scanCopy.setCacheBlocks(true);
+      throw new RuntimeException("Should not reach here");
+    } catch (UnsupportedOperationException e) {
+      assertEquals("ImmutableScan does not allow access to setCacheBlocks", e.getMessage());
+    }
+    try {
+      scanCopy.setAllowPartialResults(true);
+      throw new RuntimeException("Should not reach here");
+    } catch (UnsupportedOperationException e) {
+      assertEquals("ImmutableScan does not allow access to setAllowPartialResults",
+        e.getMessage());
+    }
+    try {
+      scanCopy.setId("id");
+      throw new RuntimeException("Should not reach here");
+    } catch (UnsupportedOperationException e) {
+      assertEquals("ImmutableScan does not allow access to setId", e.getMessage());
+    }
+    try {
+      scanCopy.setMaxResultSize(100);
+      throw new RuntimeException("Should not reach here");
+    } catch (UnsupportedOperationException e) {
+      assertEquals("ImmutableScan does not allow access to setMaxResultSize", e.getMessage());
+    }
+    try {
+      scanCopy.setMaxResultsPerColumnFamily(100);
+      throw new RuntimeException("Should not reach here");
+    } catch (UnsupportedOperationException e) {
+      assertEquals("ImmutableScan does not allow access to setMaxResultsPerColumnFamily",
+        e.getMessage());
     }
   }
 

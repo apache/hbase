@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 import java.util.NavigableSet;
@@ -45,16 +46,7 @@ public final class ImmutableScan extends Scan {
    * @throws IOException From parent constructor
    */
   public ImmutableScan(Scan scan) throws IOException {
-    this.delegateScan = new Scan(scan);
-  }
-
-  /**
-   * Create Immutable instance of Scan from given Get object
-   *
-   * @param get Get to model Scan after
-   */
-  public ImmutableScan(Get get) {
-    this.delegateScan = new Scan(get);
+    this.delegateScan = scan;
   }
 
   @Override
@@ -315,12 +307,18 @@ public final class ImmutableScan extends Scan {
 
   @Override
   public byte[][] getFamilies() {
-    return this.delegateScan.getFamilies();
+    final byte[][] families = this.delegateScan.getFamilies();
+    byte[][] cloneFamilies = new byte[families.length][];
+    for (int i = 0; i < families.length; i++) {
+      cloneFamilies[i] = Arrays.copyOf(families[i], families[i].length);
+    }
+    return cloneFamilies;
   }
 
   @Override
   public byte[] getStartRow() {
-    return this.delegateScan.getStartRow();
+    final byte[] startRow = this.delegateScan.getStartRow();
+    return Arrays.copyOf(startRow, startRow.length);
   }
 
   @Override
@@ -330,7 +328,8 @@ public final class ImmutableScan extends Scan {
 
   @Override
   public byte[] getStopRow() {
-    return this.delegateScan.getStopRow();
+    final byte[] stopRow = this.delegateScan.getStopRow();
+    return Arrays.copyOf(stopRow, stopRow.length);
   }
 
   @Override
@@ -395,7 +394,8 @@ public final class ImmutableScan extends Scan {
 
   @Override
   public byte[] getACL() {
-    return this.delegateScan.getACL();
+    final byte[] acl = this.delegateScan.getACL();
+    return Arrays.copyOf(acl, acl.length);
   }
 
   @Override
@@ -451,7 +451,8 @@ public final class ImmutableScan extends Scan {
 
   @Override
   public byte[] getAttribute(String name) {
-    return this.delegateScan.getAttribute(name);
+    final byte[] attribute = this.delegateScan.getAttribute(name);
+    return Arrays.copyOf(attribute, attribute.length);
   }
 
   @Override
