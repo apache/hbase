@@ -295,16 +295,32 @@ public class TestRegionInfoBuilder {
     assertEquals(expectedRi, convertedRi);
   }
 
+  private void assertRegionNameNotEquals(RegionInfo expected, RegionInfo actual) {
+    assertNotEquals(expected.getRegionNameAsString(), actual.getRegionNameAsString());
+    assertNotEquals(expected.getEncodedName(), actual.getEncodedName());
+  }
+
+  private void assertRegionNameEquals(RegionInfo expected, RegionInfo actual) {
+    assertEquals(expected.getRegionNameAsString(), actual.getRegionNameAsString());
+    assertEquals(expected.getEncodedName(), actual.getEncodedName());
+  }
+
   @Test
   public void testNewBuilderWithRegionInfo() {
     RegionInfo ri = RegionInfoBuilder.newBuilder(name.getTableName()).build();
-    RegionInfo ri2 = RegionInfoBuilder.newBuilder(ri).build();
-    assertEquals(ri, ri2);
+    assertEquals(ri, RegionInfoBuilder.newBuilder(ri).build());
 
     // make sure that the region name and encoded name are changed, see HBASE-24500 for more
     // details.
-    RegionInfo ri3 = RegionInfoBuilder.newBuilder(ri).setReplicaId(1).build();
-    assertNotEquals(ri.getRegionNameAsString(), ri3.getRegionNameAsString());
-    assertNotEquals(ri.getEncodedName(), ri3.getEncodedName());
+    assertRegionNameNotEquals(ri,
+      RegionInfoBuilder.newBuilder(ri).setStartKey(new byte[1]).build());
+    assertRegionNameNotEquals(ri,
+      RegionInfoBuilder.newBuilder(ri).setRegionId(ri.getRegionId() + 1).build());
+    assertRegionNameNotEquals(ri, RegionInfoBuilder.newBuilder(ri).setReplicaId(1).build());
+
+    // these fields are not in region name
+    assertRegionNameEquals(ri, RegionInfoBuilder.newBuilder(ri).setEndKey(new byte[1]).build());
+    assertRegionNameEquals(ri, RegionInfoBuilder.newBuilder(ri).setSplit(true).build());
+    assertRegionNameEquals(ri, RegionInfoBuilder.newBuilder(ri).setOffline(true).build());
   }
 }
