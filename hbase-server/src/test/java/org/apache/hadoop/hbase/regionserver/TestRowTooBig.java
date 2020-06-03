@@ -22,11 +22,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RowTooBigException;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -93,11 +94,9 @@ public class TestRowTooBig {
       tableDescriptor.setColumnFamily(familyDescriptor);
     }
 
-    final HRegionInfo hri =
-      new HRegionInfo(tableDescriptor.getTableName(), HConstants.EMPTY_END_ROW,
-        HConstants.EMPTY_END_ROW);
-    HRegion region = HBaseTestingUtility.createRegionAndWAL(hri,
-      rootRegionDir, HTU.getConfiguration(), tableDescriptor);
+    final RegionInfo hri = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
+    HRegion region = HBaseTestingUtility.createRegionAndWAL(hri, rootRegionDir,
+      HTU.getConfiguration(), tableDescriptor);
     try {
       // Add 5 cells to memstore
       for (int i = 0; i < 5 ; i++) {
@@ -141,11 +140,9 @@ public class TestRowTooBig {
       tableDescriptor.setColumnFamily(hcd);
     }
 
-    final HRegionInfo hri =
-      new HRegionInfo(tableDescriptor.getTableName(), HConstants.EMPTY_END_ROW,
-        HConstants.EMPTY_END_ROW);
-    HRegion region = HBaseTestingUtility.createRegionAndWAL(hri,
-      rootRegionDir, HTU.getConfiguration(), tableDescriptor);
+    final RegionInfo hri = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
+    HRegion region = HBaseTestingUtility.createRegionAndWAL(hri, rootRegionDir,
+      HTU.getConfiguration(), tableDescriptor);
     try {
       // Add to memstore
       for (int i = 0; i < 10; i++) {

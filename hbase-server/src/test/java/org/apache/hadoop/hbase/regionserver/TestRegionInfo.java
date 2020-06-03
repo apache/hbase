@@ -16,23 +16,26 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.regionserver;
+
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.RegionInfoDisplay;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -46,15 +49,18 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
 @Category({RegionServerTests.class, SmallTests.class})
-public class TestHRegionInfo {
+public class TestRegionInfo {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHRegionInfo.class);
+      HBaseClassTestRule.forClass(TestRegionInfo.class);
 
   @Rule
   public TestName name = new TestName();
@@ -128,7 +134,7 @@ public class TestHRegionInfo {
   }
 
   /**
-   * Tests {@link RegionInfo#isOverlap(RegionInfo[])}
+   * Tests {@link RegionInfo#isOverlap(RegionInfo)}
    */
   @Test
   public void testIsOverlaps() {
@@ -153,20 +159,24 @@ public class TestHRegionInfo {
     org.apache.hadoop.hbase.client.RegionInfo efri =
       org.apache.hadoop.hbase.client.RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).
         setStartKey(e).setEndKey(f).build();
+    assertFalse(ari.isOverlap(abri));
+    assertTrue(abri.isOverlap(eri));
+    assertFalse(cdri.isOverlap(efri));
+    assertTrue(eri.isOverlap(ari));
   }
 
   @Test
   public void testPb() throws DeserializationException {
-    HRegionInfo hri = HRegionInfo.FIRST_META_REGIONINFO;
-    byte [] bytes = hri.toByteArray();
-    HRegionInfo pbhri = HRegionInfo.parseFrom(bytes);
+    RegionInfo hri = RegionInfoBuilder.FIRST_META_REGIONINFO;
+    byte [] bytes = RegionInfo.toByteArray(hri);
+    RegionInfo pbhri = RegionInfo.parseFrom(bytes);
     assertTrue(hri.equals(pbhri));
   }
 
   @Test
   public void testReadAndWriteHRegionInfoFile() throws IOException, InterruptedException {
     HBaseTestingUtility htu = new HBaseTestingUtility();
-    HRegionInfo hri = HRegionInfo.FIRST_META_REGIONINFO;
+    RegionInfo hri = RegionInfoBuilder.FIRST_META_REGIONINFO;
     Path basedir = htu.getDataTestDir();
     // Create a region.  That'll write the .regioninfo file.
     FSTableDescriptors fsTableDescriptors = new FSTableDescriptors(htu.getConfiguration());
@@ -207,15 +217,15 @@ public class TestHRegionInfo {
     String id = "id";
 
     // old format region name
-    byte [] name = HRegionInfo.createRegionName(tn, sk, id, false);
+    byte [] name = RegionInfo.createRegionName(tn, sk, id, false);
     String nameStr = Bytes.toString(name);
     assertEquals(tableName + "," + startKey + "," + id, nameStr);
 
 
     // new format region name.
     String md5HashInHex = MD5Hash.getMD5AsHex(name);
-    assertEquals(HRegionInfo.MD5_HEX_LENGTH, md5HashInHex.length());
-    name = HRegionInfo.createRegionName(tn, sk, id, true);
+    assertEquals(RegionInfo.MD5_HEX_LENGTH, md5HashInHex.length());
+    name = RegionInfo.createRegionName(tn, sk, id, true);
     nameStr = Bytes.toString(name);
     assertEquals(tableName + "," + startKey + ","
                  + id + "." + md5HashInHex + ".",
@@ -224,9 +234,10 @@ public class TestHRegionInfo {
 
   @Test
   public void testContainsRange() {
-    HTableDescriptor tableDesc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
-    HRegionInfo hri = new HRegionInfo(
-        tableDesc.getTableName(), Bytes.toBytes("a"), Bytes.toBytes("g"));
+    TableDescriptor tableDesc =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
+    RegionInfo hri = RegionInfoBuilder.newBuilder(tableDesc.getTableName())
+      .setStartKey(Bytes.toBytes("a")).setEndKey(Bytes.toBytes("g")).build();
     // Single row range at start of region
     assertTrue(hri.containsRange(Bytes.toBytes("a"), Bytes.toBytes("a")));
     // Fully contained range
@@ -252,50 +263,56 @@ public class TestHRegionInfo {
 
   @Test
   public void testLastRegionCompare() {
-    HTableDescriptor tableDesc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
-    HRegionInfo hrip = new HRegionInfo(
-        tableDesc.getTableName(), Bytes.toBytes("a"), new byte[0]);
-    HRegionInfo hric = new HRegionInfo(
-        tableDesc.getTableName(), Bytes.toBytes("a"), Bytes.toBytes("b"));
+    TableDescriptor tableDesc =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
+    RegionInfo hrip = RegionInfoBuilder.newBuilder(tableDesc.getTableName())
+      .setStartKey(Bytes.toBytes("a")).build();
+    RegionInfo hric = RegionInfoBuilder.newBuilder(tableDesc.getTableName())
+      .setStartKey(Bytes.toBytes("a")).setEndKey(Bytes.toBytes("b")).build();
     assertTrue(hrip.compareTo(hric) > 0);
   }
 
   @Test
   public void testMetaTables() {
-    assertTrue(HRegionInfo.FIRST_META_REGIONINFO.isMetaRegion());
+    assertTrue(RegionInfoBuilder.FIRST_META_REGIONINFO.isMetaRegion());
   }
 
   @SuppressWarnings("SelfComparison")
   @Test
   public void testComparator() {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    byte[] empty = new byte[0];
-    HRegionInfo older = new HRegionInfo(tableName, empty, empty, false, 0L);
-    HRegionInfo newer = new HRegionInfo(tableName, empty, empty, false, 1L);
+    RegionInfo older = RegionInfoBuilder.newBuilder(tableName).setRegionId(0).build();
+    RegionInfo newer = RegionInfoBuilder.newBuilder(tableName).setRegionId(1).build();
     assertTrue(older.compareTo(newer) < 0);
     assertTrue(newer.compareTo(older) > 0);
     assertEquals(0, older.compareTo(older));
     assertEquals(0, newer.compareTo(newer));
 
-    HRegionInfo a = new HRegionInfo(TableName.valueOf("a"), null, null);
-    HRegionInfo b = new HRegionInfo(TableName.valueOf("b"), null, null);
+    RegionInfo a = RegionInfoBuilder.newBuilder(TableName.valueOf("a")).build();
+    RegionInfo b = RegionInfoBuilder.newBuilder(TableName.valueOf("b")).build();
     assertNotEquals(0, a.compareTo(b));
-    HTableDescriptor t = new HTableDescriptor(TableName.valueOf("t"));
+    TableName t = TableName.valueOf("t");
     byte [] midway = Bytes.toBytes("midway");
-    a = new HRegionInfo(t.getTableName(), null, midway);
-    b = new HRegionInfo(t.getTableName(), midway, null);
+    a = RegionInfoBuilder.newBuilder(t).setEndKey(midway).build();
+    b = RegionInfoBuilder.newBuilder(t).setStartKey(midway).build();
     assertTrue(a.compareTo(b) < 0);
     assertTrue(b.compareTo(a) > 0);
     assertEquals(a, a);
     assertEquals(0, a.compareTo(a));
-    a = new HRegionInfo(t.getTableName(), Bytes.toBytes("a"), Bytes.toBytes("d"));
-    b = new HRegionInfo(t.getTableName(), Bytes.toBytes("e"), Bytes.toBytes("g"));
+    a = RegionInfoBuilder.newBuilder(t).setStartKey(Bytes.toBytes("a"))
+      .setEndKey(Bytes.toBytes("d")).build();
+    b = RegionInfoBuilder.newBuilder(t).setStartKey(Bytes.toBytes("e"))
+      .setEndKey(Bytes.toBytes("g")).build();
     assertTrue(a.compareTo(b) < 0);
-    a = new HRegionInfo(t.getTableName(), Bytes.toBytes("aaaa"), Bytes.toBytes("dddd"));
-    b = new HRegionInfo(t.getTableName(), Bytes.toBytes("e"), Bytes.toBytes("g"));
+    a = RegionInfoBuilder.newBuilder(t).setStartKey(Bytes.toBytes("aaaa"))
+      .setEndKey(Bytes.toBytes("dddd")).build();
+    b = RegionInfoBuilder.newBuilder(t).setStartKey(Bytes.toBytes("e"))
+      .setEndKey(Bytes.toBytes("g")).build();
     assertTrue(a.compareTo(b) < 0);
-    a = new HRegionInfo(t.getTableName(), Bytes.toBytes("aaaa"), Bytes.toBytes("dddd"));
-    b = new HRegionInfo(t.getTableName(), Bytes.toBytes("aaaa"), Bytes.toBytes("eeee"));
+    a = RegionInfoBuilder.newBuilder(t).setStartKey(Bytes.toBytes("aaaa"))
+      .setEndKey(Bytes.toBytes("dddd")).build();
+    b = RegionInfoBuilder.newBuilder(t).setStartKey(Bytes.toBytes("aaaa"))
+      .setEndKey(Bytes.toBytes("eeee")).build();
     assertTrue(a.compareTo(b) < 0);
 
   }
@@ -311,21 +328,21 @@ public class TestHRegionInfo {
     // assert with only the region name without encoding
 
     // primary, replicaId = 0
-    byte [] name = HRegionInfo.createRegionName(tn, sk, Bytes.toBytes(id), 0, false);
+    byte [] name = RegionInfo.createRegionName(tn, sk, Bytes.toBytes(id), 0, false);
     String nameStr = Bytes.toString(name);
     assertEquals(tableName + "," + startKey + "," + id, nameStr);
 
     // replicaId = 1
-    name = HRegionInfo.createRegionName(tn, sk, Bytes.toBytes(id), 1, false);
+    name = RegionInfo.createRegionName(tn, sk, Bytes.toBytes(id), 1, false);
     nameStr = Bytes.toString(name);
     assertEquals(tableName + "," + startKey + "," + id + "_" +
-      String.format(HRegionInfo.REPLICA_ID_FORMAT, 1), nameStr);
+      String.format(RegionInfo.REPLICA_ID_FORMAT, 1), nameStr);
 
     // replicaId = max
-    name = HRegionInfo.createRegionName(tn, sk, Bytes.toBytes(id), 0xFFFF, false);
+    name = RegionInfo.createRegionName(tn, sk, Bytes.toBytes(id), 0xFFFF, false);
     nameStr = Bytes.toString(name);
     assertEquals(tableName + "," + startKey + "," + id + "_" +
-        String.format(HRegionInfo.REPLICA_ID_FORMAT, 0xFFFF), nameStr);
+        String.format(RegionInfo.REPLICA_ID_FORMAT, 0xFFFF), nameStr);
   }
 
   @Test
@@ -336,24 +353,24 @@ public class TestHRegionInfo {
     int replicaId = 42;
 
     // test without replicaId
-    byte[] regionName = HRegionInfo.createRegionName(tableName, startKey, regionId, false);
+    byte[] regionName = RegionInfo.createRegionName(tableName, startKey, regionId, false);
 
-    byte[][] fields = HRegionInfo.parseRegionName(regionName);
+    byte[][] fields = RegionInfo.parseRegionName(regionName);
     assertArrayEquals(Bytes.toString(fields[0]),tableName.getName(), fields[0]);
     assertArrayEquals(Bytes.toString(fields[1]),startKey, fields[1]);
     assertArrayEquals(Bytes.toString(fields[2]), Bytes.toBytes(Long.toString(regionId)),fields[2]);
     assertEquals(3, fields.length);
 
     // test with replicaId
-    regionName = HRegionInfo.createRegionName(tableName, startKey, regionId,
+    regionName = RegionInfo.createRegionName(tableName, startKey, regionId,
       replicaId, false);
 
-    fields = HRegionInfo.parseRegionName(regionName);
+    fields = RegionInfo.parseRegionName(regionName);
     assertArrayEquals(Bytes.toString(fields[0]),tableName.getName(), fields[0]);
     assertArrayEquals(Bytes.toString(fields[1]),startKey, fields[1]);
     assertArrayEquals(Bytes.toString(fields[2]), Bytes.toBytes(Long.toString(regionId)),fields[2]);
     assertArrayEquals(Bytes.toString(fields[3]), Bytes.toBytes(
-      String.format(HRegionInfo.REPLICA_ID_FORMAT, replicaId)), fields[3]);
+      String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId)), fields[3]);
   }
 
   @Test
@@ -365,12 +382,11 @@ public class TestHRegionInfo {
     long regionId = System.currentTimeMillis();
     int replicaId = 42;
 
-
-    HRegionInfo hri = new HRegionInfo(tableName, startKey, endKey, split,
-      regionId, replicaId);
+    RegionInfo hri = RegionInfoBuilder.newBuilder(tableName).setStartKey(startKey).setEndKey(endKey)
+      .setSplit(split).setRegionId(regionId).setReplicaId(replicaId).build();
 
     // convert two times, compare
-    HRegionInfo convertedHri = HRegionInfo.convert(HRegionInfo.convert(hri));
+    RegionInfo convertedHri = ProtobufUtil.toRegionInfo(ProtobufUtil.toRegionInfo(hri));
 
     assertEquals(hri, convertedHri);
 
@@ -378,17 +394,15 @@ public class TestHRegionInfo {
     HBaseProtos.RegionInfo info = HBaseProtos.RegionInfo.newBuilder()
       .setTableName(HBaseProtos.TableName.newBuilder()
         .setQualifier(UnsafeByteOperations.unsafeWrap(tableName.getQualifier()))
-        .setNamespace(UnsafeByteOperations.unsafeWrap(tableName.getNamespace()))
-        .build())
+        .setNamespace(UnsafeByteOperations.unsafeWrap(tableName.getNamespace())).build())
       .setStartKey(UnsafeByteOperations.unsafeWrap(startKey))
-      .setEndKey(UnsafeByteOperations.unsafeWrap(endKey))
-      .setSplit(split)
-      .setRegionId(regionId)
+      .setEndKey(UnsafeByteOperations.unsafeWrap(endKey)).setSplit(split).setRegionId(regionId)
       .build();
 
-    convertedHri = HRegionInfo.convert(info);
-    HRegionInfo expectedHri = new HRegionInfo(tableName, startKey, endKey, split,
-      regionId, 0); // expecting default replicaId
+    convertedHri = ProtobufUtil.toRegionInfo(info);
+    // expecting default replicaId
+    RegionInfo expectedHri = RegionInfoBuilder.newBuilder(tableName).setStartKey(startKey)
+      .setEndKey(endKey).setSplit(split).setRegionId(regionId).setReplicaId(0).build();
 
     assertEquals(expectedHri, convertedHri);
   }
@@ -398,53 +412,52 @@ public class TestHRegionInfo {
     byte[] endKey = new byte[] {0x01, 0x01, 0x02, 0x04};
     Configuration conf = new Configuration();
     conf.setBoolean("hbase.display.keys", false);
-    HRegionInfo h = new HRegionInfo(TableName.valueOf(name.getMethodName()), startKey, endKey);
+    RegionInfo h = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+      .setStartKey(startKey).setEndKey(endKey).build();
     checkEquality(h, conf);
     // check HRIs with non-default replicaId
-    h = new HRegionInfo(TableName.valueOf(name.getMethodName()), startKey, endKey, false,
-        System.currentTimeMillis(), 1);
+    h = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName())).setStartKey(startKey)
+      .setEndKey(endKey).setRegionId(System.currentTimeMillis()).setReplicaId(1).build();
     checkEquality(h, conf);
-    Assert.assertArrayEquals(HRegionInfo.HIDDEN_END_KEY,
-        HRegionInfo.getEndKeyForDisplay(h, conf));
-    Assert.assertArrayEquals(HRegionInfo.HIDDEN_START_KEY,
-        HRegionInfo.getStartKeyForDisplay(h, conf));
+    assertArrayEquals(RegionInfoDisplay.HIDDEN_END_KEY,
+      RegionInfoDisplay.getEndKeyForDisplay(h, conf));
+    assertArrayEquals(RegionInfoDisplay.HIDDEN_START_KEY,
+      RegionInfoDisplay.getStartKeyForDisplay(h, conf));
 
     RegionState state = RegionState.createForTesting(h, RegionState.State.OPEN);
     String descriptiveNameForDisplay =
-        HRegionInfo.getDescriptiveNameFromRegionStateForDisplay(state, conf);
-    checkDescriptiveNameEquality(descriptiveNameForDisplay,state.toDescriptiveString(), startKey);
+      RegionInfoDisplay.getDescriptiveNameFromRegionStateForDisplay(state, conf);
+    checkDescriptiveNameEquality(descriptiveNameForDisplay, state.toDescriptiveString(), startKey);
 
     conf.setBoolean("hbase.display.keys", true);
-    Assert.assertArrayEquals(endKey, HRegionInfo.getEndKeyForDisplay(h, conf));
-    Assert.assertArrayEquals(startKey, HRegionInfo.getStartKeyForDisplay(h, conf));
-    Assert.assertEquals(state.toDescriptiveString(),
-        HRegionInfo.getDescriptiveNameFromRegionStateForDisplay(state, conf));
+    assertArrayEquals(endKey, RegionInfoDisplay.getEndKeyForDisplay(h, conf));
+    assertArrayEquals(startKey, RegionInfoDisplay.getStartKeyForDisplay(h, conf));
+    assertEquals(state.toDescriptiveString(),
+      RegionInfoDisplay.getDescriptiveNameFromRegionStateForDisplay(state, conf));
   }
 
   private void checkDescriptiveNameEquality(String descriptiveNameForDisplay, String origDesc,
-      byte[] startKey) {
+    byte[] startKey) {
     // except for the "hidden-start-key" substring everything else should exactly match
     String firstPart = descriptiveNameForDisplay.substring(0,
-        descriptiveNameForDisplay.indexOf(new String(HRegionInfo.HIDDEN_START_KEY)));
-    String secondPart = descriptiveNameForDisplay.substring(
-        descriptiveNameForDisplay.indexOf(new String(HRegionInfo.HIDDEN_START_KEY)) +
-        HRegionInfo.HIDDEN_START_KEY.length);
-    String firstPartOrig = origDesc.substring(0,
-        origDesc.indexOf(Bytes.toStringBinary(startKey)));
+      descriptiveNameForDisplay.indexOf(new String(RegionInfoDisplay.HIDDEN_START_KEY)));
+    String secondPart = descriptiveNameForDisplay
+      .substring(descriptiveNameForDisplay.indexOf(new String(RegionInfoDisplay.HIDDEN_START_KEY)) +
+        RegionInfoDisplay.HIDDEN_START_KEY.length);
+    String firstPartOrig = origDesc.substring(0, origDesc.indexOf(Bytes.toStringBinary(startKey)));
     String secondPartOrig = origDesc.substring(
-        origDesc.indexOf(Bytes.toStringBinary(startKey)) +
-        Bytes.toStringBinary(startKey).length());
-    assert(firstPart.equals(firstPartOrig));
-    assert(secondPart.equals(secondPartOrig));
+      origDesc.indexOf(Bytes.toStringBinary(startKey)) + Bytes.toStringBinary(startKey).length());
+    assert (firstPart.equals(firstPartOrig));
+    assert (secondPart.equals(secondPartOrig));
   }
 
-  private void checkEquality(HRegionInfo h, Configuration conf) throws IOException {
-    byte[] modifiedRegionName = HRegionInfo.getRegionNameForDisplay(h, conf);
-    byte[][] modifiedRegionNameParts = HRegionInfo.parseRegionName(modifiedRegionName);
-    byte[][] regionNameParts = HRegionInfo.parseRegionName(h.getRegionName());
+  private void checkEquality(RegionInfo h, Configuration conf) throws IOException {
+    byte[] modifiedRegionName = RegionInfoDisplay.getRegionNameForDisplay(h, conf);
+    byte[][] modifiedRegionNameParts = RegionInfo.parseRegionName(modifiedRegionName);
+    byte[][] regionNameParts = RegionInfo.parseRegionName(h.getRegionName());
 
-    //same number of parts
-    assert(modifiedRegionNameParts.length == regionNameParts.length);
+    // same number of parts
+    assert (modifiedRegionNameParts.length == regionNameParts.length);
 
     for (int i = 0; i < regionNameParts.length; i++) {
       // all parts should match except for [1] where in the modified one,
@@ -454,7 +467,7 @@ public class TestHRegionInfo {
       } else {
         assertNotEquals(regionNameParts[i][0], modifiedRegionNameParts[i][0]);
         Assert.assertArrayEquals(modifiedRegionNameParts[1],
-            HRegionInfo.getStartKeyForDisplay(h, conf));
+          RegionInfoDisplay.getStartKeyForDisplay(h, conf));
       }
     }
   }

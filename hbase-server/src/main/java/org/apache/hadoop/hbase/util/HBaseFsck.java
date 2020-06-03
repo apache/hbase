@@ -1956,7 +1956,7 @@ public class HBaseFsck extends Configured implements Closeable {
    * Deletes region from meta table
    */
   private void deleteMetaRegion(HbckRegionInfo hi) throws IOException {
-    deleteMetaRegion(hi.getMetaEntry().getRegionName());
+    deleteMetaRegion(hi.getMetaEntry().getRegionInfo().getRegionName());
   }
 
   /**
@@ -1972,21 +1972,20 @@ public class HBaseFsck extends Configured implements Closeable {
    * Reset the split parent region info in meta table
    */
   private void resetSplitParent(HbckRegionInfo hi) throws IOException {
-    RowMutations mutations = new RowMutations(hi.getMetaEntry().getRegionName());
-    Delete d = new Delete(hi.getMetaEntry().getRegionName());
+    RowMutations mutations = new RowMutations(hi.getMetaEntry().getRegionInfo().getRegionName());
+    Delete d = new Delete(hi.getMetaEntry().getRegionInfo().getRegionName());
     d.addColumn(HConstants.CATALOG_FAMILY, HConstants.SPLITA_QUALIFIER);
     d.addColumn(HConstants.CATALOG_FAMILY, HConstants.SPLITB_QUALIFIER);
     mutations.add(d);
 
-    RegionInfo hri = RegionInfoBuilder.newBuilder(hi.getMetaEntry())
-        .setOffline(false)
-        .setSplit(false)
-        .build();
+    RegionInfo hri = RegionInfoBuilder.newBuilder(hi.getMetaEntry().getRegionInfo())
+      .setOffline(false).setSplit(false).build();
     Put p = MetaTableAccessor.makePutFromRegionInfo(hri, EnvironmentEdgeManager.currentTime());
     mutations.add(p);
 
     meta.mutateRow(mutations);
-    LOG.info("Reset split parent " + hi.getMetaEntry().getRegionNameAsString() + " in META");
+    LOG.info("Reset split parent " + hi.getMetaEntry().getRegionInfo().getRegionNameAsString() +
+      " in META");
   }
 
   /**
@@ -2130,7 +2129,7 @@ public class HBaseFsck extends Configured implements Closeable {
       setShouldRerun();
       RegionInfo hri = hbi.getHdfsHRI();
       if (hri == null) {
-        hri = hbi.getMetaEntry();
+        hri = hbi.getMetaEntry().getRegionInfo();
       }
       HBaseFsckRepair.fixUnassigned(admin, hri);
       HBaseFsckRepair.waitUntilAssigned(admin, hri);
@@ -2168,12 +2167,12 @@ public class HBaseFsck extends Configured implements Closeable {
     boolean hasMetaAssignment = inMeta && hbi.getMetaEntry().regionServer != null;
     boolean isDeployed = !hbi.getDeployedOn().isEmpty();
     boolean isMultiplyDeployed = hbi.getDeployedOn().size() > 1;
-    boolean deploymentMatchesMeta =
-      hasMetaAssignment && isDeployed && !isMultiplyDeployed &&
+    boolean deploymentMatchesMeta = hasMetaAssignment && isDeployed && !isMultiplyDeployed &&
       hbi.getMetaEntry().regionServer.equals(hbi.getDeployedOn().get(0));
-    boolean splitParent =
-        inMeta && hbi.getMetaEntry().isSplit() && hbi.getMetaEntry().isOffline();
-    boolean shouldBeDeployed = inMeta && !isTableDisabled(hbi.getMetaEntry().getTable());
+    boolean splitParent = inMeta && hbi.getMetaEntry().getRegionInfo().isSplit() &&
+      hbi.getMetaEntry().getRegionInfo().isOffline();
+    boolean shouldBeDeployed =
+      inMeta && !isTableDisabled(hbi.getMetaEntry().getRegionInfo().getTable());
     boolean recentlyModified = inHdfs &&
       hbi.getModTime() + timelag > EnvironmentEdgeManager.currentTime();
 
@@ -2354,18 +2353,20 @@ public class HBaseFsck extends Configured implements Closeable {
       if (shouldFixAssignments()) {
         errors.print("Trying to close the region " + descriptiveName);
         setShouldRerun();
-        HBaseFsckRepair.fixMultiAssignment(connection, hbi.getMetaEntry(), hbi.getDeployedOn());
+        HBaseFsckRepair.fixMultiAssignment(connection, hbi.getMetaEntry().getRegionInfo(),
+          hbi.getDeployedOn());
       }
     } else if (inMeta && inHdfs && isMultiplyDeployed) {
-      errors.reportError(ERROR_CODE.MULTI_DEPLOYED, "Region " + descriptiveName
-          + " is listed in hbase:meta on region server " + hbi.getMetaEntry().regionServer
-          + " but is multiply assigned to region servers " +
+      errors.reportError(ERROR_CODE.MULTI_DEPLOYED,
+        "Region " + descriptiveName + " is listed in hbase:meta on region server " +
+          hbi.getMetaEntry().regionServer + " but is multiply assigned to region servers " +
           Joiner.on(", ").join(hbi.getDeployedOn()));
       // If we are trying to fix the errors
       if (shouldFixAssignments()) {
         errors.print("Trying to fix assignment error...");
         setShouldRerun();
-        HBaseFsckRepair.fixMultiAssignment(connection, hbi.getMetaEntry(), hbi.getDeployedOn());
+        HBaseFsckRepair.fixMultiAssignment(connection, hbi.getMetaEntry().getRegionInfo(),
+          hbi.getDeployedOn());
       }
     } else if (inMeta && inHdfs && isDeployed && !deploymentMatchesMeta) {
       errors.reportError(ERROR_CODE.SERVER_DOES_NOT_MATCH_META, "Region "
@@ -2376,7 +2377,8 @@ public class HBaseFsck extends Configured implements Closeable {
       if (shouldFixAssignments()) {
         errors.print("Trying to fix assignment error...");
         setShouldRerun();
-        HBaseFsckRepair.fixMultiAssignment(connection, hbi.getMetaEntry(), hbi.getDeployedOn());
+        HBaseFsckRepair.fixMultiAssignment(connection, hbi.getMetaEntry().getRegionInfo(),
+          hbi.getDeployedOn());
         HBaseFsckRepair.waitUntilAssigned(admin, hbi.getHdfsHRI());
       }
     } else {
@@ -2416,7 +2418,7 @@ public class HBaseFsck extends Configured implements Closeable {
         errors.detail("Skipping region because no region server: " + hbi);
         continue;
       }
-      if (hbi.getMetaEntry().isOffline()) {
+      if (hbi.getMetaEntry().getRegionInfo().isOffline()) {
         errors.detail("Skipping region because it is offline: " + hbi);
         continue;
       }
@@ -2435,7 +2437,7 @@ public class HBaseFsck extends Configured implements Closeable {
       }
 
       // We should be safe here
-      TableName tableName = hbi.getMetaEntry().getTable();
+      TableName tableName = hbi.getMetaEntry().getRegionInfo().getTable();
       HbckTableInfo modTInfo = tablesInfo.get(tableName);
       if (modTInfo == null) {
         modTInfo = new HbckTableInfo(tableName, this);
@@ -2593,9 +2595,10 @@ public class HBaseFsck extends Configured implements Closeable {
 
       // if the start key is zero, then we have found the first region of a table.
       // pick only those tables that were not modified in the last few milliseconds.
-      if (info != null && info.getStartKey().length == 0 && !info.isMetaRegion()) {
+      if (info != null && info.getRegionInfo().getStartKey().length == 0 &&
+        !info.getRegionInfo().isMetaRegion()) {
         if (info.modTime + timelag < now) {
-          tableNames.add(info.getTable());
+          tableNames.add(info.getRegionInfo().getTable());
         } else {
           numSkipped.incrementAndGet(); // one more in-flux table
         }
@@ -2652,7 +2655,7 @@ public class HBaseFsck extends Configured implements Closeable {
   boolean checkMetaRegion() throws IOException, KeeperException, InterruptedException {
     Map<Integer, HbckRegionInfo> metaRegions = new HashMap<>();
     for (HbckRegionInfo value : regionInfoMap.values()) {
-      if (value.getMetaEntry() != null && value.getMetaEntry().isMetaRegion()) {
+      if (value.getMetaEntry() != null && value.getMetaEntry().getRegionInfo().isMetaRegion()) {
         metaRegions.put(value.getReplicaId(), value);
       }
     }
@@ -2680,8 +2683,8 @@ public class HBaseFsck extends Configured implements Closeable {
                 metaHbckRegionInfo.getReplicaId() + "..");
             setShouldRerun();
             // try fix it (treat is a dupe assignment)
-            HBaseFsckRepair
-                .fixMultiAssignment(connection, metaHbckRegionInfo.getMetaEntry(), servers);
+            HBaseFsckRepair.fixMultiAssignment(connection,
+              metaHbckRegionInfo.getMetaEntry().getRegionInfo(), servers);
           }
         }
       }
@@ -2705,10 +2708,10 @@ public class HBaseFsck extends Configured implements Closeable {
   }
 
   private void unassignMetaReplica(HbckRegionInfo hi)
-      throws IOException, InterruptedException, KeeperException {
+    throws IOException, InterruptedException, KeeperException {
     undeployRegions(hi);
-    ZKUtil
-        .deleteNode(zkw, zkw.getZNodePaths().getZNodeForReplica(hi.getMetaEntry().getReplicaId()));
+    ZKUtil.deleteNode(zkw,
+      zkw.getZNodePaths().getZNodeForReplica(hi.getMetaEntry().getRegionInfo().getReplicaId()));
   }
 
   private void assignMetaReplica(int replicaId)

@@ -30,10 +30,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.BloomType;
@@ -109,7 +110,7 @@ public class TestScannerSelectionUsingKeyRange {
       new TableDescriptorBuilder.ModifyableTableDescriptor(TABLE);
 
     tableDescriptor.setColumnFamily(familyDescriptor);
-    HRegionInfo info = new HRegionInfo(TABLE);
+    RegionInfo info = RegionInfoBuilder.newBuilder(TABLE).build();
     HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(), conf,
       tableDescriptor);
 

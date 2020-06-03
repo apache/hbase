@@ -20,14 +20,12 @@
 package org.apache.hadoop.hbase.rest.model;
 
 import java.io.Serializable;
-
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Representation of a region of a table and its current location on the
@@ -96,7 +94,7 @@ public class TableRegionModel implements Serializable {
   public String getName() {
     byte [] tableNameAsBytes = Bytes.toBytes(this.table);
     TableName tableName = TableName.valueOf(tableNameAsBytes);
-    byte [] nameAsBytes = HRegionInfo.createRegionName(
+    byte [] nameAsBytes = RegionInfo.createRegionName(
       tableName, this.startKey, this.id, !tableName.isSystemTable());
     return Bytes.toString(nameAsBytes);
   }

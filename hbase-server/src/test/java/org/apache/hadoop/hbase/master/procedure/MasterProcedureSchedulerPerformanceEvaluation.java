@@ -19,18 +19,19 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.Random;
-
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
+
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
 
@@ -79,7 +80,7 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
   }
 
   private class RegionProcedure extends TestMasterProcedureScheduler.TestRegionProcedure {
-    RegionProcedure(long procId, HRegionInfo hri) {
+    RegionProcedure(long procId, RegionInfo hri) {
       super(procId, hri.getTable(), TableOperationType.REGION_UNASSIGN, hri);
     }
 
@@ -96,9 +97,9 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
   }
 
   private class RegionProcedureFactory implements ProcedureFactory {
-    final HRegionInfo hri;
+    final RegionInfo hri;
 
-    RegionProcedureFactory(HRegionInfo hri) {
+    RegionProcedureFactory(RegionInfo hri) {
       this.hri = hri;
     }
 
@@ -150,8 +151,8 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
     for (int i = 0; i < numTables; ++i) {
       for (int j = 0; j < regionsPerTable; ++j) {
         regionOps[i * regionsPerTable + j] = new RegionProcedureFactory(
-            new HRegionInfo(((TableProcedureFactory)tableOps[i]).tableName, Bytes.toBytes(j),
-                Bytes.toBytes(j + 1)));
+          RegionInfoBuilder.newBuilder(((TableProcedureFactory) tableOps[i]).tableName)
+            .setStartKey(Bytes.toBytes(j)).setEndKey(Bytes.toBytes(j + 1)).build());
       }
     }
 

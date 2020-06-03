@@ -28,14 +28,14 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -94,10 +94,9 @@ public class TestSnapshotHFileCleaner {
 
     // write an hfile to the snapshot directory
     String snapshotName = "snapshot";
-    byte[] snapshot = Bytes.toBytes(snapshotName);
     final TableName tableName = TableName.valueOf(name.getMethodName());
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
-    HRegionInfo mockRegion = new HRegionInfo(tableName);
+    RegionInfo mockRegion = RegionInfoBuilder.newBuilder(tableName).build();
     Path regionSnapshotDir = new Path(snapshotDir, mockRegion.getEncodedName());
     Path familyDir = new Path(regionSnapshotDir, "family");
     // create a reference to a supposedly valid hfile

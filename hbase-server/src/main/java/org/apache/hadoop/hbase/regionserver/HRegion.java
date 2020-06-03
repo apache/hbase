@@ -113,7 +113,6 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.PackagePrivateFieldAccessor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Row;
@@ -7570,7 +7569,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       LOG.debug("Opening region (readOnly filesystem): " + info);
     }
     if (info.getReplicaId() <= 0) {
-      info = RegionInfoBuilder.newBuilder(info).setReplicaId(1).build();
+      info = RegionReplicaUtil.getRegionInfoForReplica(info, 1);
     }
     HRegion r = HRegion.newHRegion(tableDir, null, fs, conf, info, htd, null);
     r.writestate.setReadOnly(true);

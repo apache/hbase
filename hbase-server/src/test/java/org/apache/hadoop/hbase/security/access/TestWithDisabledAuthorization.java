@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.security.access;
 
 import static org.junit.Assert.assertEquals;
+
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
@@ -26,7 +27,6 @@ import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
@@ -43,6 +43,8 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -78,6 +80,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category({SecurityTests.class, LargeTests.class})
@@ -545,7 +548,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HRegionInfo region = new HRegionInfo(testTable.getTableName());
+        RegionInfo region = RegionInfoBuilder.newBuilder(testTable.getTableName()).build();
         ServerName srcServer = ServerName.valueOf("1.1.1.1", 1, 0);
         ServerName destServer = ServerName.valueOf("2.2.2.2", 2, 0);
         ACCESS_CONTROLLER.preMove(ObserverContextImpl.createAndPrepare(CP_ENV), region,
@@ -558,7 +561,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HRegionInfo region = new HRegionInfo(testTable.getTableName());
+        RegionInfo region = RegionInfoBuilder.newBuilder(testTable.getTableName()).build();
         ACCESS_CONTROLLER.preAssign(ObserverContextImpl.createAndPrepare(CP_ENV), region);
         return null;
       }
@@ -568,7 +571,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HRegionInfo region = new HRegionInfo(testTable.getTableName());
+        RegionInfo region = RegionInfoBuilder.newBuilder(testTable.getTableName()).build();
         ACCESS_CONTROLLER.preUnassign(ObserverContextImpl.createAndPrepare(CP_ENV), region,
           true);
         return null;

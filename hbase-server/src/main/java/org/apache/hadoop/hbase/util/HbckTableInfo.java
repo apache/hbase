@@ -157,7 +157,7 @@ public class HbckTableInfo {
       for (HbckRegionInfo h : regionInfoMap.values()) {
         if (tableName.equals(h.getTableName())) {
           if (h.getMetaEntry() != null) {
-            regions.add(h.getMetaEntry());
+            regions.add(h.getMetaEntry().getRegionInfo());
           }
         }
       }

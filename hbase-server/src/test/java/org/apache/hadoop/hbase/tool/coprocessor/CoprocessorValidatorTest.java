@@ -35,11 +35,9 @@ import java.util.Optional;
 import java.util.jar.JarOutputStream;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.CoprocessorDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -56,7 +54,6 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.io.ByteStreams;
 
 @Category({ SmallTests.class })
-@SuppressWarnings("deprecation")
 public class CoprocessorValidatorTest {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -156,15 +153,15 @@ public class CoprocessorValidatorTest {
         "org.apache.hadoop.hbase.tool.coprocessor.CoprocessorValidatorTest$MissingClass"));
   }
 
-  /*
-   * ObsoleteMethod coprocessor implements preCreateTable method which has
-   * HRegionInfo parameters. In our current implementation, we pass only
-   * RegionInfo parameters, so this method won't be called by HBase at all.
+  /**
+   * ObsoleteMethod coprocessor implements preCreateTable method which has HRegionInfo parameters.
+   * In our current implementation, we pass only RegionInfo parameters, so this method won't be
+   * called by HBase at all.
    */
   @SuppressWarnings("unused")
   private static class ObsoleteMethodObserver /* implements MasterObserver */ {
-    public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
+    public void preEnableTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tablName) throws IOException {
     }
   }
 

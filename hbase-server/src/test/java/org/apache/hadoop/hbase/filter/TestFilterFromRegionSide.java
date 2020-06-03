@@ -27,12 +27,13 @@ import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -90,7 +91,7 @@ public class TestFilterFromRegionSide {
         new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family);
       tableDescriptor.setColumnFamily(familyDescriptor);
     }
-    HRegionInfo info = new HRegionInfo(tableDescriptor.getTableName(), null, null, false);
+    RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     REGION = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
       TEST_UTIL.getConfiguration(), tableDescriptor);
     for(Put put:createPuts(ROWS, FAMILIES, QUALIFIERS, VALUE)){

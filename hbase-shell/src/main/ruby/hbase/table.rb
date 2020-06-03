@@ -746,7 +746,7 @@ EOF
       if is_meta_table?
         if column == 'info:regioninfo' || column == 'info:splitA' || column == 'info:splitB' || \
             column.start_with?('info:merge')
-          hri = org.apache.hadoop.hbase.HRegionInfo.parseFromOrNull(kv.getValueArray,
+          hri = org.apache.hadoop.hbase.client.RegionInfo.parseFromOrNull(kv.getValueArray,
             kv.getValueOffset, kv.getValueLength)
           return format('timestamp=%s, value=%s', toISO8601(kv.getTimestamp),
             hri.nil? ? '' : hri.toString)

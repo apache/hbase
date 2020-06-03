@@ -30,7 +30,6 @@ import java.util.Set;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -38,6 +37,8 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -78,7 +79,7 @@ public class TestColumnSeeking {
       new TableDescriptorBuilder.ModifyableTableDescriptor(table);
 
     tableDescriptor.setColumnFamily(familyDescriptor);
-    HRegionInfo info = new HRegionInfo(table, null, null, false);
+    RegionInfo info = RegionInfoBuilder.newBuilder(table).build();
     // Set this so that the archiver writes to the temp dir as well.
     HRegion region = TEST_UTIL.createLocalHRegion(info, tableDescriptor);
     try {
@@ -194,7 +195,7 @@ public class TestColumnSeeking {
         .setMaxVersions(3).build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
 
-    HRegionInfo info = new HRegionInfo(table, null, null, false);
+    RegionInfo info = RegionInfoBuilder.newBuilder(table).build();
     HRegion region = TEST_UTIL.createLocalHRegion(info, tableDescriptorBuilder.build());
 
     List<String> rows = generateRandomWords(10, "row");

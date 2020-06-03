@@ -23,7 +23,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -31,11 +30,12 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -82,9 +82,9 @@ public class TestMemStoreSegmentsIterator {
       ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(FAMILY)).build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
 
-    HRegionInfo info = new HRegionInfo(TableName.valueOf(TABLE), null, null, false);
+    RegionInfo info = RegionInfoBuilder.newBuilder(TableName.valueOf(TABLE)).build();
     Path rootPath = hbaseUtility.getDataTestDir(ROOT_SUB_PATH);
-    this.wal = hbaseUtility.createWal(conf, rootPath, info);
+    this.wal = HBaseTestingUtility.createWal(conf, rootPath, info);
     this.region = HRegion.createHRegion(info, rootPath, conf,
       tableDescriptorBuilder.build(), this.wal, true);
     this.store = new HStore(this.region, columnFamilyDescriptor, conf, false);

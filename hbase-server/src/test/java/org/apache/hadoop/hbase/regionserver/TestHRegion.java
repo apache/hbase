@@ -83,7 +83,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
@@ -2886,7 +2885,7 @@ public class TestHRegion {
         TableName.valueOf("testFilterAndColumnTracker"));
     tableDescriptor.setColumnFamily(familyDescriptor);
     ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
-    HRegionInfo info = new HRegionInfo(tableDescriptor.getTableName(), null, null, false);
+    RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     Path logDir = TEST_UTIL.getDataTestDirOnTestFS(method + ".log");
     final WAL wal = HBaseTestingUtility.createWal(TEST_UTIL.getConfiguration(), logDir, info);
     this.region = TEST_UTIL.createLocalHRegion(info, tableDescriptor, wal);
@@ -4199,7 +4198,7 @@ public class TestHRegion {
     TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
       new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
     tableDescriptor.setColumnFamily(familyDescriptor);
-    HRegionInfo info = new HRegionInfo(tableDescriptor.getTableName(), null, null, false);
+    RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     this.region = TEST_UTIL.createLocalHRegion(info, tableDescriptor);
     int num_unique_rows = 10;
     int duplicate_multiplier = 2;
@@ -4255,7 +4254,7 @@ public class TestHRegion {
     TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
       new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(TABLE));
     tableDescriptor.setColumnFamily(familyDescriptor);
-    HRegionInfo info = new HRegionInfo(tableDescriptor.getTableName(), null, null, false);
+    RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     this.region = TEST_UTIL.createLocalHRegion(info, tableDescriptor);
     // For row:0, col:0: insert versions 1 through 5.
     byte[] row = Bytes.toBytes("row:" + 0);
@@ -4301,7 +4300,7 @@ public class TestHRegion {
     TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
       new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
     tableDescriptor.setColumnFamily(familyDescriptor);
-    HRegionInfo info = new HRegionInfo(tableDescriptor.getTableName(), null, null, false);
+    RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     this.region = TEST_UTIL.createLocalHRegion(info, tableDescriptor);
     // Insert some data
     byte[] row = Bytes.toBytes("row1");
@@ -4405,7 +4404,7 @@ public class TestHRegion {
    */
   @Test
   public void testStatusSettingToAbortIfAnyExceptionDuringRegionInitilization() throws Exception {
-    HRegionInfo info;
+    RegionInfo info;
     try {
       FileSystem fs = Mockito.mock(FileSystem.class);
       Mockito.when(fs.exists((Path) Mockito.anyObject())).thenThrow(new IOException());
@@ -4414,8 +4413,7 @@ public class TestHRegion {
       ColumnFamilyDescriptor columnFamilyDescriptor =
         ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("cf")).build();
       tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
-      info = new HRegionInfo(tableDescriptorBuilder.build().getTableName(),
-        HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY, false);
+      info = RegionInfoBuilder.newBuilder(tableName).build();
       Path path = new Path(dir + "testStatusSettingToAbortIfAnyExceptionDuringRegionInitilization");
       region = HRegion.newHRegion(path, null, fs, CONF, info,
         tableDescriptorBuilder.build(), null);
@@ -4450,7 +4448,7 @@ public class TestHRegion {
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
     TableDescriptor tableDescriptor = tableDescriptorBuilder.build();
 
-    HRegionInfo hri = new HRegionInfo(tableDescriptor.getTableName());
+    RegionInfo hri = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
 
     // Create a region and skip the initialization (like CreateTableHandler)
     region = HBaseTestingUtility.createRegionAndWAL(hri, rootDir, CONF,
@@ -4790,7 +4788,7 @@ public class TestHRegion {
     // XXX: The spied AsyncFSWAL can not work properly because of a Mockito defect that can not
     // deal with classes which have a field of an inner class. See discussions in HBASE-15536.
     walConf.set(WALFactory.WAL_PROVIDER, "filesystem");
-    final WALFactory wals = new WALFactory(walConf, TEST_UTIL.getRandomUUID().toString());
+    final WALFactory wals = new WALFactory(walConf, HBaseTestingUtility.getRandomUUID().toString());
     final WAL wal = spy(wals.getWAL(RegionInfoBuilder.newBuilder(tableName).build()));
     this.region = initHRegion(tableName, HConstants.EMPTY_START_ROW,
         HConstants.EMPTY_END_ROW, false, tableDurability, wal,
@@ -4802,7 +4800,7 @@ public class TestHRegion {
     region.put(put);
 
     // verify append called or not
-    verify(wal, expectAppend ? times(1) : never()).appendData((HRegionInfo) any(),
+    verify(wal, expectAppend ? times(1) : never()).appendData((RegionInfo) any(),
       (WALKeyImpl) any(), (WALEdit) any());
 
     // verify sync called or not
@@ -4851,12 +4849,10 @@ public class TestHRegion {
     }
 
     long time = System.currentTimeMillis();
-    HRegionInfo primaryHri = new HRegionInfo(tableDescriptor.getTableName(),
-      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW,
-      false, time, 0);
-    HRegionInfo secondaryHri = new HRegionInfo(tableDescriptor.getTableName(),
-      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW,
-      false, time, 1);
+    RegionInfo primaryHri = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName())
+      .setRegionId(time).setReplicaId(0).build();
+    RegionInfo secondaryHri = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName())
+      .setRegionId(time).setReplicaId(1).build();
 
     HRegion primaryRegion = null, secondaryRegion = null;
 
@@ -4904,12 +4900,10 @@ public class TestHRegion {
     }
 
     long time = System.currentTimeMillis();
-    HRegionInfo primaryHri = new HRegionInfo(tableDescriptor.getTableName(),
-      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW,
-      false, time, 0);
-    HRegionInfo secondaryHri = new HRegionInfo(tableDescriptor.getTableName(),
-      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW,
-      false, time, 1);
+    RegionInfo primaryHri = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName())
+      .setRegionId(time).setReplicaId(0).build();
+    RegionInfo secondaryHri = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName())
+      .setRegionId(time).setReplicaId(1).build();
 
     HRegion primaryRegion = null, secondaryRegion = null;
 
@@ -4966,12 +4960,10 @@ public class TestHRegion {
     }
 
     long time = System.currentTimeMillis();
-    HRegionInfo primaryHri = new HRegionInfo(tableDescriptor.getTableName(),
-      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW,
-      false, time, 0);
-    HRegionInfo secondaryHri = new HRegionInfo(tableDescriptor.getTableName(),
-      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW,
-      false, time, 1);
+    RegionInfo primaryHri = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName())
+      .setRegionId(time).setReplicaId(0).build();
+    RegionInfo secondaryHri = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName())
+      .setRegionId(time).setReplicaId(1).build();
 
     HRegion primaryRegion = null, secondaryRegion = null;
 
@@ -5165,13 +5157,14 @@ public class TestHRegion {
   }
 
   protected HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey,
-      String callingMethod, Configuration conf, boolean isReadOnly, byte[]... families)
-      throws IOException {
+    String callingMethod, Configuration conf, boolean isReadOnly, byte[]... families)
+    throws IOException {
     Path logDir = TEST_UTIL.getDataTestDirOnTestFS(callingMethod + ".log");
-    HRegionInfo hri = new HRegionInfo(tableName, startKey, stopKey);
+    RegionInfo hri =
+      RegionInfoBuilder.newBuilder(tableName).setStartKey(startKey).setEndKey(stopKey).build();
     final WAL wal = HBaseTestingUtility.createWal(conf, logDir, hri);
-    return initHRegion(tableName, startKey, stopKey, isReadOnly,
-        Durability.SYNC_WAL, wal, families);
+    return initHRegion(tableName, startKey, stopKey, isReadOnly, Durability.SYNC_WAL, wal,
+      families);
   }
 
   /**
@@ -5998,7 +5991,7 @@ public class TestHRegion {
       new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
     tableDescriptor.setColumnFamily(
       new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam1));
-    HRegionInfo info = new HRegionInfo(tableName, null, null, false);
+    RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
     Path path = TEST_UTIL.getDataTestDir(getClass().getSimpleName());
     region = HBaseTestingUtility.createRegionAndWAL(info, path,
       TEST_UTIL.getConfiguration(), tableDescriptor);
@@ -6178,9 +6171,9 @@ public class TestHRegion {
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MIN_FORMAT_VERSION_WITH_TAGS);
 
-    region = HBaseTestingUtility.createRegionAndWAL(new HRegionInfo(tableDescriptor.getTableName(),
-            HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY),
-        TEST_UTIL.getDataTestDir(), conf, tableDescriptor);
+    region = HBaseTestingUtility.createRegionAndWAL(
+      RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build(),
+      TEST_UTIL.getDataTestDir(), conf, tableDescriptor);
     assertNotNull(region);
     long now = EnvironmentEdgeManager.currentTime();
     // Add a cell that will expire in 5 seconds via cell TTL
@@ -6596,8 +6589,7 @@ public class TestHRegion {
         TableName.valueOf(name.getMethodName()));
     tableDescriptor.setColumnFamily(
       new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam1));
-    HRegionInfo hri = new HRegionInfo(tableDescriptor.getTableName(),
-        HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY);
+    RegionInfo hri = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     region = HRegion.openHRegion(hri, tableDescriptor, rss.getWAL(hri),
       TEST_UTIL.getConfiguration(), rss, null);
 

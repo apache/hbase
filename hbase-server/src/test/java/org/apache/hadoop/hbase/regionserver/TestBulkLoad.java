@@ -46,10 +46,11 @@ import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
@@ -257,9 +258,8 @@ public class TestBulkLoad {
 
 
   private HRegion testRegionWithFamiliesAndSpecifiedTableName(TableName tableName,
-                                                              byte[]... families)
-  throws IOException {
-    HRegionInfo hRegionInfo = new HRegionInfo(tableName);
+    byte[]... families) throws IOException {
+    RegionInfo hRegionInfo = RegionInfoBuilder.newBuilder(tableName).build();
     TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
       new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
 
@@ -269,12 +269,8 @@ public class TestBulkLoad {
     }
     ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
     // TODO We need a way to do this without creating files
-    return HRegion.createHRegion(hRegionInfo,
-        new Path(testFolder.newFolder().toURI()),
-        conf,
-        tableDescriptor,
-        log);
-
+    return HRegion.createHRegion(hRegionInfo, new Path(testFolder.newFolder().toURI()), conf,
+      tableDescriptor, log);
   }
 
   private HRegion testRegionWithFamilies(byte[]... families) throws IOException {

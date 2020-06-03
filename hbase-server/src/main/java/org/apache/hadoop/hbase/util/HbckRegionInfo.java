@@ -18,13 +18,11 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -61,7 +59,7 @@ public class HbckRegionInfo implements KeyRange {
   }
 
   public synchronized int getReplicaId() {
-    return metaEntry != null? metaEntry.getReplicaId(): deployedReplicaId;
+    return metaEntry != null? metaEntry.hri.getReplicaId(): deployedReplicaId;
   }
 
   public synchronized void addServer(RegionInfo regionInfo, ServerName serverName) {
@@ -78,7 +76,7 @@ public class HbckRegionInfo implements KeyRange {
   public synchronized String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("{ meta => ");
-    sb.append((metaEntry != null)? metaEntry.getRegionNameAsString() : "null");
+    sb.append((metaEntry != null)? metaEntry.hri.getRegionNameAsString() : "null");
     sb.append(", hdfs => " + getHdfsRegionDir());
     sb.append(", deployed => " + Joiner.on(", ").join(deployedEntries));
     sb.append(", replicaId => " + getReplicaId());
@@ -89,7 +87,7 @@ public class HbckRegionInfo implements KeyRange {
   @Override
   public byte[] getStartKey() {
     if (this.metaEntry != null) {
-      return this.metaEntry.getStartKey();
+      return this.metaEntry.hri.getStartKey();
     } else if (this.hdfsEntry != null) {
       return this.hdfsEntry.hri.getStartKey();
     } else {
@@ -101,7 +99,7 @@ public class HbckRegionInfo implements KeyRange {
   @Override
   public byte[] getEndKey() {
     if (this.metaEntry != null) {
-      return this.metaEntry.getEndKey();
+      return this.metaEntry.hri.getEndKey();
     } else if (this.hdfsEntry != null) {
       return this.hdfsEntry.hri.getEndKey();
     } else {
@@ -161,7 +159,7 @@ public class HbckRegionInfo implements KeyRange {
 
   public TableName getTableName() {
     if (this.metaEntry != null) {
-      return this.metaEntry.getTable();
+      return this.metaEntry.hri.getTable();
     } else if (this.hdfsEntry != null) {
       // we are only guaranteed to have a path and not an HRI for hdfsEntry,
       // so we get the name from the Path
@@ -178,7 +176,7 @@ public class HbckRegionInfo implements KeyRange {
 
   public String getRegionNameAsString() {
     if (metaEntry != null) {
-      return metaEntry.getRegionNameAsString();
+      return metaEntry.hri.getRegionNameAsString();
     } else if (hdfsEntry != null) {
       if (hdfsEntry.hri != null) {
         return hdfsEntry.hri.getRegionNameAsString();
@@ -194,7 +192,7 @@ public class HbckRegionInfo implements KeyRange {
 
   public byte[] getRegionName() {
     if (metaEntry != null) {
-      return metaEntry.getRegionName();
+      return metaEntry.hri.getRegionName();
     } else if (hdfsEntry != null) {
       return hdfsEntry.hri.getRegionName();
     } else {
@@ -264,7 +262,8 @@ public class HbckRegionInfo implements KeyRange {
   /**
    * Stores the regioninfo entries scanned from META
    */
-  public static class MetaEntry extends HRegionInfo {
+  public static class MetaEntry {
+    RegionInfo hri;
     ServerName regionServer;   // server hosting this region
     long modTime;          // timestamp of most recent modification metadata
     RegionInfo splitA, splitB; //split daughters
@@ -275,11 +274,15 @@ public class HbckRegionInfo implements KeyRange {
 
     public MetaEntry(RegionInfo rinfo, ServerName regionServer, long modTime,
         RegionInfo splitA, RegionInfo splitB) {
-      super(rinfo);
+      this.hri = rinfo;
       this.regionServer = regionServer;
       this.modTime = modTime;
       this.splitA = splitA;
       this.splitB = splitB;
+    }
+
+    public RegionInfo getRegionInfo() {
+      return hri;
     }
 
     public ServerName getRegionServer() {
@@ -302,12 +305,7 @@ public class HbckRegionInfo implements KeyRange {
 
     @Override
     public int hashCode() {
-      int hash = Arrays.hashCode(getRegionName());
-      hash = (int) (hash ^ getRegionId());
-      hash ^= Arrays.hashCode(getStartKey());
-      hash ^= Arrays.hashCode(getEndKey());
-      hash ^= Boolean.valueOf(isOffline()).hashCode();
-      hash ^= getTable().hashCode();
+      int hash = hri.hashCode();
       if (regionServer != null) {
         hash ^= regionServer.hashCode();
       }

@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NotServingRegionException;
@@ -81,13 +80,12 @@ public class TestReplicasClient {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicasClient.class);
 
-  private static final int NB_SERVERS = 1;
   private static TableName TABLE_NAME;
   private Table table = null;
   private static final byte[] row = Bytes.toBytes(TestReplicasClient.class.getName());;
 
   private static RegionInfo hriPrimary;
-  private static HRegionInfo hriSecondary;
+  private static RegionInfo hriSecondary;
 
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
   private static final byte[] f = HConstants.CATALOG_FAMILY;
@@ -209,8 +207,7 @@ public class TestReplicasClient {
     }
 
     // mock a secondary region info to open
-    hriSecondary = new HRegionInfo(hriPrimary.getTable(), hriPrimary.getStartKey(),
-        hriPrimary.getEndKey(), hriPrimary.isSplit(), hriPrimary.getRegionId(), 1);
+    hriSecondary = RegionReplicaUtil.getRegionInfoForReplica(hriPrimary, 1);
 
     // No master
     LOG.info("Master is going to be stopped");

@@ -23,18 +23,18 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -90,7 +90,7 @@ public class TestWalAndCompactingMemStoreFlush {
       i++;
     }
 
-    HRegionInfo info = new HRegionInfo(TABLENAME, null, null, false);
+    RegionInfo info = RegionInfoBuilder.newBuilder(TABLENAME).build();
     Path path = new Path(DIR, callingMethod);
     HRegion region = HBaseTestingUtility.createRegionAndWAL(info, path, conf,
       tableDescriptor, false);

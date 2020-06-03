@@ -27,13 +27,12 @@ import java.util.OptionalLong;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -810,7 +809,7 @@ class MetricsRegionServerWrapperImpl
 
           HDFSBlocksDistribution distro = r.getHDFSBlocksDistribution();
           hdfsBlocksDistribution.add(distro);
-          if (r.getRegionInfo().getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) {
+          if (r.getRegionInfo().getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
             hdfsBlocksDistributionSecondaryRegions.add(distro);
           }
           regionCount++;

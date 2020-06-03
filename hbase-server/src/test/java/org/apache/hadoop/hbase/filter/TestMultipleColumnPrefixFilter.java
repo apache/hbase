@@ -29,7 +29,6 @@ import java.util.Set;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -37,6 +36,8 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -77,7 +78,7 @@ public class TestMultipleColumnPrefixFilter {
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
     TableDescriptor tableDescriptor = tableDescriptorBuilder.build();
     // HRegionInfo info = new HRegionInfo(htd, null, null, false);
-    HRegionInfo info = new HRegionInfo(tableDescriptor.getTableName(), null, null, false);
+    RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.
         getDataTestDir(), TEST_UTIL.getConfiguration(), tableDescriptor);
 
@@ -150,7 +151,7 @@ public class TestMultipleColumnPrefixFilter {
       .build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
     TableDescriptor tableDescriptor = tableDescriptorBuilder.build();
-    HRegionInfo info = new HRegionInfo(tableDescriptor.getTableName(), null, null, false);
+    RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.
       getDataTestDir(), TEST_UTIL.getConfiguration(), tableDescriptor);
 
@@ -219,7 +220,7 @@ public class TestMultipleColumnPrefixFilter {
       ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(family)).build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
     TableDescriptor tableDescriptor = tableDescriptorBuilder.build();
-    HRegionInfo info = new HRegionInfo(tableDescriptor.getTableName(), null, null, false);
+    RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.
       getDataTestDir(), TEST_UTIL.getConfiguration(), tableDescriptor);
 

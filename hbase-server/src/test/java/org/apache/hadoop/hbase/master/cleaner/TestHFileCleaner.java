@@ -34,12 +34,12 @@ import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.mob.ManualMobMaintHFileCleaner;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -126,7 +126,7 @@ public class TestHFileCleaner {
     Path root = UTIL.getDataTestDirOnTestFS();
     TableName table = TableName.valueOf("testManualMobCleanerLetsNonMobGo");
     Path nonmob = HFileArchiveUtil.getRegionArchiveDir(root, table,
-        new HRegionInfo(table).getEncodedName());
+      RegionInfoBuilder.newBuilder(table).build().getEncodedName());
     Path family= new Path(nonmob, "family");
 
     Path file = new Path(family, "someHFileThatWouldBeAUUID");

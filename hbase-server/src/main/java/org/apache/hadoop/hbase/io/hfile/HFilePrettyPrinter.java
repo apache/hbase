@@ -58,12 +58,12 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
@@ -207,10 +207,10 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     if (cmd.hasOption("r")) {
       String regionName = cmd.getOptionValue("r");
       byte[] rn = Bytes.toBytes(regionName);
-      byte[][] hri = HRegionInfo.parseRegionName(rn);
+      byte[][] hri = RegionInfo.parseRegionName(rn);
       Path rootDir = CommonFSUtils.getRootDir(getConf());
       Path tableDir = CommonFSUtils.getTableDir(rootDir, TableName.valueOf(hri[0]));
-      String enc = HRegionInfo.encodeRegionName(rn);
+      String enc = RegionInfo.encodeRegionName(rn);
       Path regionDir = new Path(tableDir, enc);
       if (verbose)
         out.println("region dir -> " + regionDir);

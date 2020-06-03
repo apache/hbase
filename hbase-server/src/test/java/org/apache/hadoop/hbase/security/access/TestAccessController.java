@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
@@ -65,6 +64,7 @@ import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -3072,7 +3072,7 @@ public class TestAccessController extends SecureTestUtil {
   public void testRemoteLocks() throws Exception {
     String namespace = "preQueueNs";
     final TableName tableName = TableName.valueOf(namespace, name.getMethodName());
-    HRegionInfo[] regionInfos = new HRegionInfo[] {new HRegionInfo(tableName)};
+    RegionInfo[] regionInfos = new RegionInfo[] { RegionInfoBuilder.newBuilder(tableName).build() };
 
     // Setup Users
     // User will be granted ADMIN and CREATE on namespace. Should be denied before grant.

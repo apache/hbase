@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -30,8 +31,6 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
@@ -59,18 +58,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * TestGet is a medley of tests of get all done up as a single test.
- * It was originally written to test a method since removed, getClosestAtOrBefore
- * but the test is retained because it runs some interesting exercises.
+ * TestGet is a medley of tests of get all done up as a single test. It was originally written to
+ * test a method since removed, getClosestAtOrBefore but the test is retained because it runs some
+ * interesting exercises.
  */
-@Category({RegionServerTests.class, SmallTests.class})
-public class TestGetClosestAtOrBefore  {
+@Category({ RegionServerTests.class, SmallTests.class })
+public class TestGetClosestAtOrBefore {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestGetClosestAtOrBefore.class);
+    HBaseClassTestRule.forClass(TestGetClosestAtOrBefore.class);
 
-  @Rule public TestName testName = new TestName();
+  @Rule
+  public TestName testName = new TestName();
   private static final Logger LOG = LoggerFactory.getLogger(TestGetClosestAtOrBefore.class);
 
   private static final byte[] T00 = Bytes.toBytes("000");
@@ -94,19 +94,19 @@ public class TestGetClosestAtOrBefore  {
     FSTableDescriptors.tryUpdateMetaTableDescriptor(UTIL.getConfiguration());
     TableDescriptor td = tds.get(TableName.META_TABLE_NAME);
     td = TableDescriptorBuilder.newBuilder(td).setMemStoreFlushSize(64 * 1024 * 1024).build();
-    HRegion mr = HBaseTestingUtility.createRegionAndWAL(HRegionInfo.FIRST_META_REGIONINFO,
-        rootdir, this.conf, td);
+    HRegion mr = HBaseTestingUtility.createRegionAndWAL(RegionInfoBuilder.FIRST_META_REGIONINFO,
+      rootdir, conf, td);
     try {
       // Write rows for three tables 'A', 'B', and 'C'.
       for (char c = 'A'; c < 'D'; c++) {
-        HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("" + c));
+        TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf("" + c)).build();
         final int last = 128;
         final int interval = 2;
         for (int i = 0; i <= last; i += interval) {
           RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName())
-            .setStartKey(i == 0 ? HConstants.EMPTY_BYTE_ARRAY : Bytes.toBytes((byte)i))
-            .setEndKey(i == last ? HConstants.EMPTY_BYTE_ARRAY :
-              Bytes.toBytes((byte)i + interval)).build();
+            .setStartKey(i == 0 ? HConstants.EMPTY_BYTE_ARRAY : Bytes.toBytes((byte) i))
+            .setEndKey(i == last ? HConstants.EMPTY_BYTE_ARRAY : Bytes.toBytes((byte) i + interval))
+            .build();
           Put put =
             MetaTableAccessor.makePutFromRegionInfo(hri, EnvironmentEdgeManager.currentTime());
           put.setDurability(Durability.SKIP_WAL);
@@ -163,41 +163,32 @@ public class TestGetClosestAtOrBefore  {
     }
   }
 
-  /*
-   * @param mr
-   * @param table
-   * @param rowToFind
+  /**
    * @param answer Pass -1 if we're not to find anything.
    * @return Row found.
-   * @throws IOException
    */
-  private byte [] findRow(final Region mr, final char table,
-    final int rowToFind, final int answer)
-  throws IOException {
+  private byte[] findRow(final Region mr, final char table, final int rowToFind, final int answer)
+    throws IOException {
     TableName tableb = TableName.valueOf("" + table);
     // Find the row.
-    byte [] tofindBytes = Bytes.toBytes((short)rowToFind);
-    byte [] metaKey = HRegionInfo.createRegionName(
-        tableb, tofindBytes,
-      HConstants.NINES, false);
+    byte[] tofindBytes = Bytes.toBytes((short) rowToFind);
+    byte[] metaKey = RegionInfo.createRegionName(tableb, tofindBytes, HConstants.NINES, false);
     LOG.info("find=" + new String(metaKey, StandardCharsets.UTF_8));
     Result r = UTIL.getClosestRowBefore(mr, metaKey, HConstants.CATALOG_FAMILY);
     if (answer == -1) {
       assertNull(r);
       return null;
     }
-    assertTrue(Bytes.compareTo(Bytes.toBytes((short)answer),
-      extractRowFromMetaRow(r.getRow())) == 0);
+    assertTrue(
+      Bytes.compareTo(Bytes.toBytes((short) answer), extractRowFromMetaRow(r.getRow())) == 0);
     return r.getRow();
   }
 
-  private byte [] extractRowFromMetaRow(final byte [] b) {
-    int firstDelimiter = Bytes.searchDelimiterIndex(b, 0, b.length,
-      HConstants.DELIMITER);
-    int lastDelimiter = Bytes.searchDelimiterIndexInReverse(b, 0, b.length,
-      HConstants.DELIMITER);
+  private byte[] extractRowFromMetaRow(final byte[] b) {
+    int firstDelimiter = Bytes.searchDelimiterIndex(b, 0, b.length, HConstants.DELIMITER);
+    int lastDelimiter = Bytes.searchDelimiterIndexInReverse(b, 0, b.length, HConstants.DELIMITER);
     int length = lastDelimiter - firstDelimiter - 1;
-    byte [] row = new byte[length];
+    byte[] row = new byte[length];
     System.arraycopy(b, firstDelimiter + 1, row, 0, length);
     return row;
   }
@@ -207,13 +198,13 @@ public class TestGetClosestAtOrBefore  {
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-751">HBASE-751</a>
    */
   @Test
-  public void testGetClosestRowBefore3() throws IOException{
+  public void testGetClosestRowBefore3() throws IOException {
     HRegion region = null;
-    byte [] c0 = UTIL.COLUMNS[0];
-    byte [] c1 = UTIL.COLUMNS[1];
+    byte[] c0 = HBaseTestingUtility.COLUMNS[0];
+    byte[] c1 = HBaseTestingUtility.COLUMNS[1];
     try {
       TableName tn = TableName.valueOf(testName.getMethodName());
-      HTableDescriptor htd = UTIL.createTableDescriptor(tn);
+      TableDescriptor htd = UTIL.createTableDescriptor(tn);
       region = UTIL.createLocalHRegion(htd, null, null);
 
       Put p = new Put(T00);
@@ -262,7 +253,7 @@ public class TestGetClosestAtOrBefore  {
       r = UTIL.getClosestRowBefore(region, T31, c0);
       assertTrue(Bytes.equals(T10, r.getRow()));
 
-      // Put into a different column family.  Should make it so I still get t10
+      // Put into a different column family. Should make it so I still get t10
       p = new Put(T20);
       p.addColumn(c1, c1, T20);
       region.put(p);
@@ -279,7 +270,7 @@ public class TestGetClosestAtOrBefore  {
       r = UTIL.getClosestRowBefore(region, T31, c0);
       assertTrue(Bytes.equals(T10, r.getRow()));
 
-      // Now try combo of memcache and mapfiles.  Delete the t20 COLUMS[1]
+      // Now try combo of memcache and mapfiles. Delete the t20 COLUMS[1]
       // in memory; make sure we get back t10 again.
       d = new Delete(T20);
       d.addColumn(c1, c1);
@@ -287,14 +278,14 @@ public class TestGetClosestAtOrBefore  {
       r = UTIL.getClosestRowBefore(region, T30, c0);
       assertTrue(Bytes.equals(T10, r.getRow()));
 
-      // Ask for a value off the end of the file.  Should return t10.
+      // Ask for a value off the end of the file. Should return t10.
       r = UTIL.getClosestRowBefore(region, T31, c0);
       assertTrue(Bytes.equals(T10, r.getRow()));
       region.flush(true);
       r = UTIL.getClosestRowBefore(region, T31, c0);
       assertTrue(Bytes.equals(T10, r.getRow()));
 
-      // Ok.  Let the candidate come out of hfile but have delete of
+      // Ok. Let the candidate come out of hfile but have delete of
       // the candidate be in memory.
       p = new Put(T11);
       p.addColumn(c0, c0, T11);
@@ -318,12 +309,12 @@ public class TestGetClosestAtOrBefore  {
 
   /** For HBASE-694 */
   @Test
-  public void testGetClosestRowBefore2() throws IOException{
+  public void testGetClosestRowBefore2() throws IOException {
     HRegion region = null;
-    byte [] c0 = UTIL.COLUMNS[0];
+    byte[] c0 = HBaseTestingUtility.COLUMNS[0];
     try {
       TableName tn = TableName.valueOf(testName.getMethodName());
-      HTableDescriptor htd = UTIL.createTableDescriptor(tn);
+      TableDescriptor htd = UTIL.createTableDescriptor(tn);
       region = UTIL.createLocalHRegion(htd, null, null);
 
       Put p = new Put(T10);
@@ -375,4 +366,3 @@ public class TestGetClosestAtOrBefore  {
   }
 
 }
-

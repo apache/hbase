@@ -28,9 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -91,8 +89,8 @@ public class TestMobFileCache {
     conf.set(MobConstants.MOB_FILE_CACHE_SIZE_KEY, TEST_CACHE_SIZE);
     TableDescriptorBuilder tableDescriptorBuilder =
       TableDescriptorBuilder.newBuilder(UTIL.createTableDescriptor(
-        TableName.valueOf("testMobFileCache"), HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3,
-        HConstants.FOREVER, HColumnDescriptor.DEFAULT_KEEP_DELETED));
+        TableName.valueOf("testMobFileCache"), ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS,
+        3, HConstants.FOREVER, ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED));
     ColumnFamilyDescriptor columnFamilyDescriptor =
       ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(FAMILY1))
         .setMobEnabled(true)
@@ -159,7 +157,7 @@ public class TestMobFileCache {
     KeyValue key3 = new KeyValue(ROW2, columnFamilyDescriptor.getName(), QF3, 1, VALUE2);
     KeyValue[] keys = new KeyValue[] { key1, key2, key3 };
     int maxKeyCount = keys.length;
-    HRegionInfo regionInfo = new HRegionInfo(tn);
+    RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tn).build();
     StoreFileWriter mobWriter = mobStore.createWriterInTmp(currentDate,
       maxKeyCount, columnFamilyDescriptor.getCompactionCompressionType(),
       regionInfo.getStartKey(), false);

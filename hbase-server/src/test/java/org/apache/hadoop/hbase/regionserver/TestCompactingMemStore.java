@@ -27,7 +27,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
@@ -36,13 +35,14 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.exceptions.IllegalArgumentIOException;
@@ -114,9 +114,8 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
       new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf("foobar"));
 
     tableDescriptor.setColumnFamily(familyDescriptor);
-    HRegionInfo info =
-        new HRegionInfo(TableName.valueOf("foobar"), null, null, false);
-    WAL wal = hbaseUtility.createWal(conf, hbaseUtility.getDataTestDir(), info);
+    RegionInfo info = RegionInfoBuilder.newBuilder(TableName.valueOf("foobar")).build();
+    WAL wal = HBaseTestingUtility.createWal(conf, hbaseUtility.getDataTestDir(), info);
     this.region = HRegion.createHRegion(info, hbaseUtility.getDataTestDir(), conf,
       tableDescriptor, wal, true);
     this.regionServicesForStores = Mockito.spy(region.getRegionServicesForStores());
@@ -323,7 +322,6 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
   /**
    * Tests that the timeOfOldestEdit is updated correctly for the
    * various edit operations in memstore.
-   * @throws Exception
    */
   @Override
   @Test
@@ -887,12 +885,9 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
 
     @Override
     public long currentTime() {
-            return t;
-        }
-      public void setCurrentTimeMillis(long t) {
-        this.t = t;
-      }
+      return t;
     }
+  }
 
   static protected class MyCompactingMemStore extends CompactingMemStore {
 
