@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.OptionalDouble;
 import java.util.OptionalLong;
@@ -58,8 +59,8 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   private long numReferenceFiles;
   private long maxFlushQueueSize;
   private long maxCompactionQueueSize;
-  private long readsFromMemstore;
-  private long mixedReadsOnStore;
+  private Map<String, Long> readsFromMemstore;
+  private Map<String, Long> mixedReadsOnStore;
 
   private ScheduledFuture<?> regionMetricsUpdateTask;
 
@@ -236,12 +237,12 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   }
 
   @Override
-  public long getMemstoreReadRequestsCount() {
+  public Map<String, Long> getMemstoreReadRequestsCount() {
     return readsFromMemstore;
   }
 
   @Override
-  public long getMixedReadRequestCount() {
+  public Map<String, Long> getMixedReadRequestCount() {
     return mixedReadsOnStore;
   }
 
@@ -261,8 +262,6 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
       long tempMaxFlushQueueSize = 0;
       long avgAgeNumerator = 0;
       long numHFiles = 0;
-      long tempReadsFromMemstore = 0L;
-      long mixedReads = 0L;
       if (region.stores != null) {
         for (HStore store : region.stores.values()) {
           tempNumStoreFiles += store.getStorefilesCount();
@@ -293,8 +292,26 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
           if (storeAvgStoreFileAge.isPresent()) {
             avgAgeNumerator += (long) storeAvgStoreFileAge.getAsDouble() * storeHFiles;
           }
-          tempReadsFromMemstore += store.getReadRequestsCountFromMemstore();
-          mixedReads += store.getMixedReadRequestsCount();
+          if(mixedReadsOnStore == null) {
+            mixedReadsOnStore = new HashMap<String, Long>();
+          }
+          Long tempVal = mixedReadsOnStore.get(store.getColumnFamilyName());
+          if (tempVal == null) {
+            tempVal = 0L;
+          } else {
+            tempVal += store.getMixedReadRequestsCount();
+          }
+          mixedReadsOnStore.put(store.getColumnFamilyName(), tempVal);
+          if (readsFromMemstore == null) {
+            readsFromMemstore = new HashMap<String, Long>();
+          }
+          tempVal = readsFromMemstore.get(store.getColumnFamilyName());
+          if (tempVal == null) {
+            tempVal = 0L;
+          } else {
+            tempVal += store.getReadRequestsCountFromMemstore();
+          }
+          readsFromMemstore.put(store.getColumnFamilyName(), tempVal);
         }
       }
 
@@ -321,8 +338,6 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
       if (tempMaxFlushQueueSize > maxFlushQueueSize) {
         maxFlushQueueSize = tempMaxFlushQueueSize;
       }
-      readsFromMemstore = tempReadsFromMemstore;
-      mixedReadsOnStore = mixedReads;
     }
   }
 

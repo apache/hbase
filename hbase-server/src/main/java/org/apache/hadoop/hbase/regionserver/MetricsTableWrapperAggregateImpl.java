@@ -135,7 +135,7 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
         if (metricsTableMap.get(table) != null) {
           metricsTableMap.remove(table);
         }
-      } 
+      }
     }
   }
 
