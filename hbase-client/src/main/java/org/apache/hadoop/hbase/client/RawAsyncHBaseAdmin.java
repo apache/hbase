@@ -47,6 +47,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
 import org.apache.hadoop.hbase.CacheEvictionStats;
@@ -3521,20 +3522,33 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       return failedFuture(e);
     }
     CompletableFuture<Void> future = new CompletableFuture<>();
-    addListener(ConnectionFactory.createAsyncConnection(peerConf), (conn, err) -> {
+    CompletableFuture<AsyncConnection> cf = ConnectionFactory.createAsyncConnection(peerConf);
+    addListener(cf, (conn, err) -> {
       if (err != null) {
-        future.completeExceptionally(err);
+        try {
+          future.completeExceptionally(err);
+        } finally {
+          IOUtils.closeQuietly(conn);
+        }
         return;
       }
       addListener(getDescriptor(tableName), (tableDesc, err1) -> {
         if (err1 != null) {
-          future.completeExceptionally(err1);
+          try {
+            future.completeExceptionally(err1);
+          } finally {
+            IOUtils.closeQuietly(conn);
+          }
           return;
         }
         AsyncAdmin peerAdmin = conn.getAdmin();
         addListener(peerAdmin.tableExists(tableName), (exist, err2) -> {
           if (err2 != null) {
-            future.completeExceptionally(err2);
+            try {
+              future.completeExceptionally(err2);
+            } finally {
+              IOUtils.closeQuietly(conn);
+            }
             return;
           }
           if (!exist) {
@@ -3546,9 +3560,17 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
             }
             addListener(createTableFuture, (result, err3) -> {
               if (err3 != null) {
-                future.completeExceptionally(err3);
+                try {
+                  future.completeExceptionally(err3);
+                } finally {
+                  IOUtils.closeQuietly(conn);
+                }
               } else {
-                future.complete(result);
+                try {
+                  future.complete(result);
+                } finally {
+                  IOUtils.closeQuietly(conn);
+                }
               }
             });
           } else {
@@ -3557,13 +3579,19 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
                 if (err4 != null) {
                   future.completeExceptionally(err4);
                 } else {
-                  future.complete(result);
+                  try {
+                    future.complete(result);
+                  } finally {
+                    IOUtils.closeQuietly(conn);
+                  }
                 }
               });
           }
         });
       });
+
     });
+
     return future;
   }
 
