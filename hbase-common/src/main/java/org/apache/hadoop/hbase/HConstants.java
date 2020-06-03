@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -1645,6 +1646,13 @@ public final class HConstants {
    * Default value of {@link #BATCH_ROWS_THRESHOLD_NAME}
    */
   public static final int BATCH_ROWS_THRESHOLD_DEFAULT = 5000;
+
+  /**
+   * Configuration for storefile tracking feature
+   */
+  public static final String STOREFILE_TABLE_INIT_TIMEOUT =
+      "hbase.master.storefiletable.init.timeout";
+  public static final long DEFAULT_STOREFILE_TABLE_INIT_TIMEOUT_MS = TimeUnit.MINUTES.toMillis(5);
 
   private HConstants() {
     // Can't be instantiated with this ctor.
