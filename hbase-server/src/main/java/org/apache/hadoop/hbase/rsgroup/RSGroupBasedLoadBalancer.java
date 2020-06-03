@@ -19,12 +19,15 @@ package org.apache.hadoop.hbase.rsgroup;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -76,6 +79,17 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
   private FavoredNodesManager favoredNodesManager;
   private volatile RSGroupInfoManager rsGroupInfoManager;
   private LoadBalancer internalBalancer;
+
+  /**
+   * Define the config key of fallback groups
+   * Enabled only if this property is set
+   * Please keep balancer switch on at the same time, which is relied on to correct misplaced
+   * regions
+   */
+  public static final String FALLBACK_GROUPS_KEY = "hbase.rsgroup.fallback.groups";
+
+  private boolean fallbackEnabled = false;
+  private Set<String> fallbackGroups;
 
   /**
    * Used by reflection in {@link org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory}.
@@ -200,11 +214,14 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
               .orElse(defaultInfo).getName();
         groupToRegion.put(groupName, region);
       }
-      for (String key : groupToRegion.keySet()) {
+      for (String group : groupToRegion.keySet()) {
         Map<RegionInfo, ServerName> currentAssignmentMap = new TreeMap<RegionInfo, ServerName>();
-        List<RegionInfo> regionList = groupToRegion.get(key);
-        RSGroupInfo info = rsGroupInfoManager.getRSGroup(key);
+        List<RegionInfo> regionList = groupToRegion.get(group);
+        RSGroupInfo info = rsGroupInfoManager.getRSGroup(group);
         List<ServerName> candidateList = filterOfflineServers(info, servers);
+        if (fallbackEnabled && candidateList.isEmpty()) {
+          candidateList = getFallBackCandidates(servers);
+        }
         for (RegionInfo region : regionList) {
           currentAssignmentMap.put(region, regions.get(region));
         }
@@ -213,8 +230,8 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
             .putAll(this.internalBalancer.retainAssignment(currentAssignmentMap, candidateList));
         } else {
           if (LOG.isDebugEnabled()) {
-            LOG.debug("No available servers to assign regions: {}",
-              RegionInfo.getShortNameToLog(regionList));
+            LOG.debug("No available servers for group {} to assign regions: {}", group,
+                RegionInfo.getShortNameToLog(regionList));
           }
           assignments.computeIfAbsent(LoadBalancer.BOGUS_SERVER_NAME, s -> new ArrayList<>())
             .addAll(regionList);
@@ -250,7 +267,10 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
       for (String groupKey : regionMap.keySet()) {
         RSGroupInfo info = rsGroupInfoManager.getRSGroup(groupKey);
         serverMap.putAll(groupKey, filterOfflineServers(info, servers));
-        if(serverMap.get(groupKey).size() < 1) {
+        if (fallbackEnabled && serverMap.get(groupKey).isEmpty()) {
+          serverMap.putAll(groupKey, getFallBackCandidates(servers));
+        }
+        if (serverMap.get(groupKey).isEmpty()) {
           serverMap.put(groupKey, LoadBalancer.BOGUS_SERVER_NAME);
         }
       }
@@ -369,6 +389,12 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
       internalBalancer.setClusterMetrics(clusterStatus);
     }
     internalBalancer.initialize();
+    // init fallback groups
+    Collection<String> groups = config.getTrimmedStringCollection(FALLBACK_GROUPS_KEY);
+    if (groups != null && !groups.isEmpty()) {
+      this.fallbackEnabled = true;
+      this.fallbackGroups = new HashSet<>(groups);
+    }
   }
 
   public boolean isOnline() {
@@ -456,5 +482,18 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
       regionPlans.addAll(tablePlans);
     }
     return regionPlans;
+  }
+
+  private List<ServerName> getFallBackCandidates(List<ServerName> servers) {
+    List<ServerName> serverNames = new ArrayList<>();
+    for (String fallbackGroup : fallbackGroups) {
+      try {
+        RSGroupInfo info = rsGroupInfoManager.getRSGroup(fallbackGroup);
+        serverNames.addAll(filterOfflineServers(info, servers));
+      } catch (IOException e) {
+        LOG.error("Get group info for {} failed", fallbackGroup, e);
+      }
+    }
+    return serverNames;
   }
 }
