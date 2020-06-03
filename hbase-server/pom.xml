@@ -380,6 +380,10 @@
       <artifactId>jetty-webapp</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.eclipse.jetty.toolchain</groupId>
+      <artifactId>jetty-schemas</artifactId>
+    </dependency>
+    <dependency>
       <!-- For JspC used in ant task, then needed at compile /runtime
            because the source code made from the JSP refers to its runtime
         -->
