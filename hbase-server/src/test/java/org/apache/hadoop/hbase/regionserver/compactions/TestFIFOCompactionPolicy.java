@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -58,6 +59,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 @Category({ RegionServerTests.class, MediumTests.class })
 public class TestFIFOCompactionPolicy {
@@ -216,23 +218,18 @@ public class TestFIFOCompactionPolicy {
     TEST_UTIL.getAdmin().flush(tableName); // HFile-0
     put = new Put(Bytes.toBytes("row2")).addColumn(family, qualifier, ts, Bytes.toBytes("value1"));
     table.put(put);
+    final int testWaitTimeoutMs = 20000;
     TEST_UTIL.getAdmin().flush(tableName); // HFile-1
 
-    HStore store = getStoreWithName(tableName);
-    Assert.assertNotNull(store);
+    HStore store = Preconditions.checkNotNull(getStoreWithName(tableName));
     Assert.assertEquals(2, store.getStorefilesCount());
 
     TEST_UTIL.getAdmin().majorCompact(tableName);
-    for (int i = 0; i < 100; i++) {
-      if (store.getStorefilesCount() > 1) {
-        Thread.sleep(100);
-      } else {
-        break;
-      }
-    }
+    TEST_UTIL.waitFor(testWaitTimeoutMs,
+        (Waiter.Predicate<Exception>) () -> store.getStorefilesCount() == 1);
+
     Assert.assertEquals(1, store.getStorefilesCount());
-    HStoreFile sf = store.getStorefiles().iterator().next();
-    Assert.assertNotNull(sf);
+    HStoreFile sf = Preconditions.checkNotNull(store.getStorefiles().iterator().next());
     Assert.assertEquals(0, sf.getReader().getEntries());
 
     put = new Put(Bytes.toBytes("row3")).addColumn(family, qualifier, ts, Bytes.toBytes("value1"));
@@ -241,17 +238,11 @@ public class TestFIFOCompactionPolicy {
     Assert.assertEquals(2, store.getStorefilesCount());
 
     TEST_UTIL.getAdmin().majorCompact(tableName);
-    for (int i = 0; i < 100; i++) {
-      if (store.getStorefilesCount() > 1) {
-        Thread.sleep(100);
-      } else {
-        break;
-      }
-    }
+    TEST_UTIL.waitFor(testWaitTimeoutMs,
+        (Waiter.Predicate<Exception>) () -> store.getStorefilesCount() == 1);
 
     Assert.assertEquals(1, store.getStorefilesCount());
-    sf = store.getStorefiles().iterator().next();
-    Assert.assertNotNull(sf);
+    sf = Preconditions.checkNotNull(store.getStorefiles().iterator().next());
     Assert.assertEquals(0, sf.getReader().getEntries());
   }
 }
