@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 
 import static org.junit.Assert.assertEquals;
 
+import com.google.common.base.Preconditions;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -31,6 +32,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Put;
@@ -214,36 +216,31 @@ public class TestFIFOCompactionPolicy {
     put = new Put(Bytes.toBytes("row2")).addColumn(family, qualifier, ts, Bytes.toBytes("value1"));
     table.put(put);
     TEST_UTIL.getHBaseAdmin().flush(tableName); // HFile-1
-    Store store = getStoreWithName(tableName);
-    Assert.assertNotNull(store);
+    final Store store = Preconditions.checkNotNull(getStoreWithName(tableName));
     Assert.assertEquals(2, store.getStorefilesCount());
     TEST_UTIL.getHBaseAdmin().majorCompact(tableName);
-    for (int i = 0; i < 100; i++) {
-      if (store.getStorefilesCount() > 1) {
-        Thread.sleep(100);
-      } else {
-        break;
+    final int testWaitTimeoutMs = 20000;
+    TEST_UTIL.waitFor(testWaitTimeoutMs, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() {
+        return store.getStorefilesCount() == 1;
       }
-    }
-    Assert.assertEquals(1, store.getStorefilesCount());
-    StoreFile sf = store.getStorefiles().iterator().next();
-    Assert.assertNotNull(sf);
+    });
+    StoreFile sf = Preconditions.checkNotNull(store.getStorefiles().iterator().next());
+    // Empty store file generated.
     Assert.assertEquals(0, sf.getReader().getEntries());
     put = new Put(Bytes.toBytes("row3")).addColumn(family, qualifier, ts, Bytes.toBytes("value1"));
     table.put(put);
     TEST_UTIL.getHBaseAdmin().flush(tableName); // HFile-2
     Assert.assertEquals(2, store.getStorefilesCount());
     TEST_UTIL.getHBaseAdmin().majorCompact(tableName);
-    for (int i = 0; i < 100; i++) {
-      if (store.getStorefilesCount() > 1) {
-        Thread.sleep(100);
-      } else {
-        break;
+    TEST_UTIL.waitFor(testWaitTimeoutMs, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() {
+        return store.getStorefilesCount() == 1;
       }
-    }
-    Assert.assertEquals(1, store.getStorefilesCount());
-    sf = store.getStorefiles().iterator().next();
-    Assert.assertNotNull(sf);
+    });
+    sf = Preconditions.checkNotNull(store.getStorefiles().iterator().next());
     Assert.assertEquals(0, sf.getReader().getEntries());
   }
 }
