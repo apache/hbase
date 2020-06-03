@@ -82,6 +82,9 @@ public class TestFsDelegationToken {
     when(hdfsToken.getKind()).thenReturn(new Text("HDFS_DELEGATION_TOKEN"));
     when(webhdfsToken.getKind()).thenReturn(WEBHDFS_TOKEN_KIND);
     when(swebhdfsToken.getKind()).thenReturn(SWEBHDFS_TOKEN_KIND);
+    when(fileSystem.getDelegationToken("Renewer")).thenReturn(hdfsToken);
+    when(webHdfsFileSystem.getDelegationToken("Renewer")).thenReturn(webhdfsToken);
+    when(swebHdfsFileSystem.getDelegationToken("Renewer")).thenReturn(swebhdfsToken);
   }
 
   @Test
