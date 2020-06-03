@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver;
+package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -25,21 +25,13 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNameTestRule;
-import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.RegionInfoBuilder;
-import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -51,7 +43,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
-@Category({ RegionServerTests.class, SmallTests.class })
+@Category({ ClientTests.class, SmallTests.class })
 public class TestRegionInfoBuilder {
 
   @ClassRule
@@ -94,38 +86,6 @@ public class TestRegionInfoBuilder {
     byte[] bytes = RegionInfo.toByteArray(ri);
     RegionInfo pbri = RegionInfo.parseFrom(bytes);
     assertTrue(RegionInfo.COMPARATOR.compare(ri, pbri) == 0);
-  }
-
-  @Test
-  public void testReadAndWriteRegionInfoFile() throws IOException, InterruptedException {
-    HBaseTestingUtility htu = new HBaseTestingUtility();
-    RegionInfo ri = RegionInfoBuilder.FIRST_META_REGIONINFO;
-    Path basedir = htu.getDataTestDir();
-    // Create a region. That'll write the .regioninfo file.
-    FSTableDescriptors fsTableDescriptors = new FSTableDescriptors(htu.getConfiguration());
-    FSTableDescriptors.tryUpdateMetaTableDescriptor(htu.getConfiguration());
-    HRegion r = HBaseTestingUtility.createRegionAndWAL(ri, basedir, htu.getConfiguration(),
-      fsTableDescriptors.get(TableName.META_TABLE_NAME));
-    // Get modtime on the file.
-    long modtime = getModTime(r);
-    HBaseTestingUtility.closeRegionAndWAL(r);
-    Thread.sleep(1001);
-    r = HRegion.openHRegion(basedir, ri, fsTableDescriptors.get(TableName.META_TABLE_NAME), null,
-      htu.getConfiguration());
-    // Ensure the file is not written for a second time.
-    long modtime2 = getModTime(r);
-    assertEquals(modtime, modtime2);
-    // Now load the file.
-    HRegionFileSystem.loadRegionInfoFileContent(r.getRegionFileSystem().getFileSystem(),
-      r.getRegionFileSystem().getRegionDir());
-    HBaseTestingUtility.closeRegionAndWAL(r);
-  }
-
-  private long getModTime(final HRegion r) throws IOException {
-    FileStatus[] statuses = r.getRegionFileSystem().getFileSystem().listStatus(
-      new Path(r.getRegionFileSystem().getRegionDir(), HRegionFileSystem.REGION_INFO_FILE));
-    assertTrue(statuses != null && statuses.length == 1);
-    return statuses[0].getModificationTime();
   }
 
   @Test
