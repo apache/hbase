@@ -65,7 +65,8 @@ public class FsDelegationToken {
    * @param renewer the account name that is allowed to renew the token.
    * @param renewAheadTime how long in millis
    */
-  public FsDelegationToken(final UserProvider userProvider, final String renewer, long renewAheadTime) {
+  public FsDelegationToken(final UserProvider userProvider, final String renewer,
+    long renewAheadTime) {
     this.userProvider = userProvider;
     this.renewer = renewer;
     this.renewAheadTime = renewAheadTime;

@@ -126,7 +126,8 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
   public static final String BULK_LOAD_HFILES_BY_FAMILY = "hbase.mapreduce.bulkload.by.family";
 
   //HDFS DelegationToken is cached and should be renewed before token expiration
-  public static final String BULK_LOAD_RENEW_TOKEN_TIME_BUFFER = "hbase.bulkload.renew.token.time.buffer";
+  public static final String BULK_LOAD_RENEW_TOKEN_TIME_BUFFER
+    = "hbase.bulkload.renew.token.time.buffer";
 
   // We use a '.' prefix which is ignored when walking directory trees
   // above. It is invalid family name.
