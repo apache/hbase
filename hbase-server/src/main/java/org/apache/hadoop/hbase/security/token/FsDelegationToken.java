@@ -126,7 +126,7 @@ public class FsDelegationToken {
           userProvider.getCurrent().addToken(userToken);
         } catch (InterruptedException | NullPointerException e) {
           // we need to handle NullPointerException in case HADOOP-10009 is missing
-          LOG.error("Failed to get token for " + renewer);
+          LOG.error("Failed to get token for " + renewer, e);
         }
       } else {
         hasForwardedToken = true;
