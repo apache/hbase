@@ -293,7 +293,6 @@ public class SecureBulkLoadManager {
           return region.bulkLoadHFiles(familyPaths, true,
               new SecureBulkLoadListener(fs, bulkToken, conf), request.getCopyFile(),
             clusterIds, request.getReplicate());
-          return null;
         }
       });
     } catch (Exception e){
