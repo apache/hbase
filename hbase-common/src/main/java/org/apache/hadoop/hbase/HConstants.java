@@ -1488,6 +1488,7 @@ public final class HConstants {
 
   public static final String HBASE_CANARY_READ_RAW_SCAN_KEY = "hbase.canary.read.raw.enabled";
 
+  public static final String HBASE_CANARY_READ_ALL_CF = "hbase.canary.read.all.column.famliy";
   /**
    * Configuration keys for programmatic JAAS configuration for secured ZK interaction
    */
