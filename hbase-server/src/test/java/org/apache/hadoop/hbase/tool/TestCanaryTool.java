@@ -35,7 +35,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -129,6 +132,53 @@ public class TestCanaryTool {
   }
 
   @Test
+  public void testCanaryRegionTaskReadAllCF() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    Table table = testingUtility.createTable(tableName,
+      new byte[][] { Bytes.toBytes("f1"), Bytes.toBytes("f2") });
+    // insert some test rows
+    for (int i = 0; i < 1000; i++) {
+      byte[] iBytes = Bytes.toBytes(i);
+      Put p = new Put(iBytes);
+      p.addColumn(Bytes.toBytes("f1"), COLUMN, iBytes);
+      p.addColumn(Bytes.toBytes("f2"), COLUMN, iBytes);
+      table.put(p);
+    }
+    Configuration configuration = HBaseConfiguration.create(testingUtility.getConfiguration());
+    String[] args = { "-t", "10000", "testCanaryRegionTaskReadAllCF" };
+    ExecutorService executor = new ScheduledThreadPoolExecutor(1);
+    for (boolean readAllCF : new boolean[] { true, false }) {
+      CanaryTool.RegionStdOutSink sink = spy(new CanaryTool.RegionStdOutSink());
+      CanaryTool canary = new CanaryTool(executor, sink);
+      configuration.setBoolean(HConstants.HBASE_CANARY_READ_ALL_CF, readAllCF);
+      assertEquals(0, ToolRunner.run(configuration, canary, args));
+      // the test table has two column family. If readAllCF set true,
+      // we expect read count is double of region count
+      int expectedReadCount =
+          readAllCF ? 2 * sink.getTotalExpectedRegions() : sink.getTotalExpectedRegions();
+      assertEquals("canary region success count should equal total expected read count",
+        expectedReadCount, sink.getReadSuccessCount());
+      Map<String, List<CanaryTool.RegionTaskResult>> regionMap = sink.getRegionMap();
+      assertFalse("verify region map has size > 0", regionMap.isEmpty());
+
+      for (String regionName : regionMap.keySet()) {
+        for (CanaryTool.RegionTaskResult res : regionMap.get(regionName)) {
+          assertNotNull("verify getRegionNameAsString()", regionName);
+          assertNotNull("verify getRegionInfo()", res.getRegionInfo());
+          assertNotNull("verify getTableName()", res.getTableName());
+          assertNotNull("verify getTableNameAsString()", res.getTableNameAsString());
+          assertNotNull("verify getServerName()", res.getServerName());
+          assertNotNull("verify getServerNameAsString()", res.getServerNameAsString());
+          assertNotNull("verify getColumnFamily()", res.getColumnFamily());
+          assertNotNull("verify getColumnFamilyNameAsString()", res.getColumnFamilyNameAsString());
+          assertTrue("read from region " + regionName + " succeeded", res.isReadSuccess());
+          assertTrue("read took some time", res.getReadLatency() > -1);
+        }
+      }
+    }
+  }
+
+  @Test
   public void testCanaryRegionTaskResult() throws Exception {
     TableName tableName = TableName.valueOf("testCanaryRegionTaskResult");
     Table table = testingUtility.createTable(tableName, new byte[][] { FAMILY });
@@ -190,7 +240,8 @@ public class TestCanaryTool {
   // mockAppender.doAppend(
   // <custom argument matcher>
   //      );
-  //      -> at org.apache.hadoop.hbase.tool.TestCanaryTool.testReadTableTimeouts(TestCanaryTool.java:216)
+  //      -> at org.apache.hadoop.hbase.tool.TestCanaryTool
+  //          .testReadTableTimeouts(TestCanaryTool.java:216)
   //      Actual invocations have different arguments:
   //      mockAppender.doAppend(
   //          org.apache.log4j.spi.LoggingEvent@2055cfc1
