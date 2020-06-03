@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 import java.util.NavigableSet;
@@ -29,6 +28,7 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -43,9 +43,8 @@ public final class ImmutableScan extends Scan {
    * Create Immutable instance of Scan from given Scan object
    *
    * @param scan Copy all values from Scan
-   * @throws IOException From parent constructor
    */
-  public ImmutableScan(Scan scan) throws IOException {
+  public ImmutableScan(Scan scan) {
     this.delegateScan = scan;
   }
 
@@ -310,7 +309,7 @@ public final class ImmutableScan extends Scan {
     final byte[][] families = this.delegateScan.getFamilies();
     byte[][] cloneFamilies = new byte[families.length][];
     for (int i = 0; i < families.length; i++) {
-      cloneFamilies[i] = Arrays.copyOf(families[i], families[i].length);
+      cloneFamilies[i] = Bytes.copy(families[i]);
     }
     return cloneFamilies;
   }
@@ -318,7 +317,7 @@ public final class ImmutableScan extends Scan {
   @Override
   public byte[] getStartRow() {
     final byte[] startRow = this.delegateScan.getStartRow();
-    return Arrays.copyOf(startRow, startRow.length);
+    return Bytes.copy(startRow);
   }
 
   @Override
@@ -329,7 +328,7 @@ public final class ImmutableScan extends Scan {
   @Override
   public byte[] getStopRow() {
     final byte[] stopRow = this.delegateScan.getStopRow();
-    return Arrays.copyOf(stopRow, stopRow.length);
+    return Bytes.copy(stopRow);
   }
 
   @Override
@@ -395,7 +394,7 @@ public final class ImmutableScan extends Scan {
   @Override
   public byte[] getACL() {
     final byte[] acl = this.delegateScan.getACL();
-    return Arrays.copyOf(acl, acl.length);
+    return Bytes.copy(acl);
   }
 
   @Override
@@ -452,7 +451,7 @@ public final class ImmutableScan extends Scan {
   @Override
   public byte[] getAttribute(String name) {
     final byte[] attribute = this.delegateScan.getAttribute(name);
-    return Arrays.copyOf(attribute, attribute.length);
+    return Bytes.copy(attribute);
   }
 
   @Override
