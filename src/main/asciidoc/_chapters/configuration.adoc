@@ -97,55 +97,74 @@ This section lists required services and some required system configuration.
 [[java]]
 .Java
 
-The following table summarizes the recommendation of the HBase community wrt deploying on various
-Java versions. A icon:check-circle[role="green"] symbol is meant to indicate a base level of
-testing and willingness to help diagnose and address issues you might run into. Similarly, an entry
-of icon:exclamation-circle[role="yellow"] or icon:times-circle[role="red"] generally means that
-should you run into an issue the community is likely to ask you to change the Java environment
-before proceeding to help. In some cases, specific guidance on limitations (e.g. whether compiling
-/ unit tests work, specific operational issues, etc) will also be noted.
+HBase runs on the Java Virtual Machine, thus all HBase deployments require a JVM runtime.
 
-.Long Term Support JDKs are recommended
+The following table summarizes the recommendations of the HBase community with respect to running
+on various Java versions. The icon:check-circle[role="green"] symbol indicates a base level of
+testing and willingness to help diagnose and address issues you might run into; these are the
+expected deployment combinations. An entry of icon:exclamation-circle[role="yellow"]
+means that there may be challenges with this combination, and you should look for more information
+before deciding to pursue this as your deployment strategy. The icon:times-circle[role="red"] means
+this combination does not work; either an older Java version is considered deprecated by the HBase
+community, or this combination is known to not work. For combinations of newer JDK with older HBase
+releases, it's likely there are known compatibility issues that cannot be addressed under our
+compatibility guarantees, making the combination impossible. In some cases, specific guidance on
+limitations (e.g. whether compiling / unit tests work, specific operational issues, etc) are also
+noted. Assume any combination not listed here is considered icon:times-circle[role="red"].
+
+.Long-Term Support JDKs are Recommended
+[WARNING]
+====
+HBase recommends downstream users rely only on JDK releases that are marked as Long-Term Supported
+(LTS), either from the OpenJDK project or vendors. At the time of this writing, the following JDK
+releases are NOT LTS releases and are NOT tested or advocated for use by the Apache HBase
+community: JDK9, JDK10, JDK12, JDK13, and JDK14. Community discussion around this decision is
+recorded on link:https://issues.apache.org/jira/browse/HBASE-20264[HBASE-20264].
+====
+
+.HotSpot vs. OpenJ9
 [TIP]
 ====
-HBase recommends downstream users rely on JDK releases that are marked as Long Term Supported (LTS)
-either from the OpenJDK project or vendors. As of March 2018 that means Java 8 is the only
-applicable version and that the next likely version to see testing will be Java 11 near Q3 2018.
+At this time, all testing performed by the Apache HBase project runs on the HotSpot variant of the
+JVM. When selecting your JDK distribution, please take this into consideration.
 ====
 
 .Java support by release line
-[cols="6*^.^", options="header"]
+[cols="4*^.^", options="header"]
 |===
-|HBase Version
-|JDK 7
-|JDK 8
-|JDK 9 (Non-LTS)
-|JDK 10 (Non-LTS)
-|JDK 11
+|Java Version
+|HBase 1.3+
+|HBase 2.1+
+|HBase 2.3+
 
-|2.1+
+|JDK7
+|icon:check-circle[role="green"]
 |icon:times-circle[role="red"]
-|icon:check-circle[role="green"]
-v|icon:exclamation-circle[role="yellow"]
-link:https://issues.apache.org/jira/browse/HBASE-20264[HBASE-20264]
-v|icon:exclamation-circle[role="yellow"]
-link:https://issues.apache.org/jira/browse/HBASE-20264[HBASE-20264]
-v|icon:exclamation-circle[role="yellow"]
-link:https://issues.apache.org/jira/browse/HBASE-21110[HBASE-21110]
+|icon:times-circle[role="red"]
 
-|1.3+
+|JDK8
 |icon:check-circle[role="green"]
 |icon:check-circle[role="green"]
-v|icon:exclamation-circle[role="yellow"]
-link:https://issues.apache.org/jira/browse/HBASE-20264[HBASE-20264]
-v|icon:exclamation-circle[role="yellow"]
-link:https://issues.apache.org/jira/browse/HBASE-20264[HBASE-20264]
-v|icon:exclamation-circle[role="yellow"]
-link:https://issues.apache.org/jira/browse/HBASE-21110[HBASE-21110]
+|icon:check-circle[role="green"]
+
+|JDK11
+|icon:times-circle[role="red"]
+|icon:times-circle[role="red"]
+|icon:exclamation-circle[role="yellow"]*
 
 |===
 
-NOTE: HBase will neither build nor run with Java 6.
+.A Note on JDK11 icon:exclamation-circle[role="yellow"]*
+[WARNING]
+====
+Preliminary support for JDK11 is introduced with HBase 2.3.0. This support is limited to
+compilation and running the full test suite. There are open questions regarding the runtime
+compatibility of JDK11 with Apache ZooKeeper and Apache Hadoop
+(link:https://issues.apache.org/jira/browse/HADOOP-15338[HADOOP-15338]). Significantly, neither
+project has yet released a version with explicit runtime support for JDK11. The remaining known
+issues in HBase are catalogued in
+link:https://issues.apache.org/jira/browse/HBASE-22972[HBASE-22972].
+====
 
 NOTE: You must set `JAVA_HOME` on each node of your cluster. _hbase-env.sh_ provides a handy
 mechanism to do this.
