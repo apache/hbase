@@ -18,7 +18,16 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import com.google.common.annotations.VisibleForTesting;
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,13 +40,15 @@ import org.apache.hadoop.util.StringUtils;
  * reading/writing data from this large buffer with a position and offset
  */
 @InterfaceAudience.Private
-public final class ByteBufferArray {
+public class ByteBufferArray {
   private static final Log LOG = LogFactory.getLog(ByteBufferArray.class);
 
   static final int DEFAULT_BUFFER_SIZE = 4 * 1024 * 1024;
-  private ByteBuffer buffers[];
+  @VisibleForTesting
+  ByteBuffer[] buffers;
   private int bufferSize;
-  private int bufferCount;
+  @VisibleForTesting
+  int bufferCount;
 
   /**
    * We allocate a number of byte buffers as the capacity. In order not to out
@@ -46,7 +57,8 @@ public final class ByteBufferArray {
    * @param capacity total size of the byte buffer array
    * @param directByteBuffer true if we allocate direct buffer
    */
-  public ByteBufferArray(long capacity, boolean directByteBuffer) {
+  public ByteBufferArray(long capacity, boolean directByteBuffer, ByteBufferAllocator allocator)
+      throws IOException {
     this.bufferSize = DEFAULT_BUFFER_SIZE;
     if (this.bufferSize > (capacity / 16))
       this.bufferSize = (int) roundUp(capacity / 16, 32768);
@@ -55,13 +67,74 @@ public final class ByteBufferArray {
         + ", sizePerBuffer=" + StringUtils.byteDesc(bufferSize) + ", count="
         + bufferCount + ", direct=" + directByteBuffer);
     buffers = new ByteBuffer[bufferCount + 1];
-    for (int i = 0; i <= bufferCount; i++) {
-      if (i < bufferCount) {
-        buffers[i] = directByteBuffer ? ByteBuffer.allocateDirect(bufferSize)
-            : ByteBuffer.allocate(bufferSize);
-      } else {
-        buffers[i] = ByteBuffer.allocate(0);
+    createBuffers(directByteBuffer, allocator);
+  }
+
+  @VisibleForTesting
+  void createBuffers(boolean directByteBuffer, ByteBufferAllocator allocator)
+      throws IOException {
+    int threadCount = getThreadCount();
+    ExecutorService service = new ThreadPoolExecutor(threadCount, threadCount, 0L,
+        TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
+    int perThreadCount = (int)Math.floor((double) (bufferCount) / threadCount);
+    int lastThreadCount = bufferCount - (perThreadCount * (threadCount - 1));
+    Future<ByteBuffer[]>[] futures = new Future[threadCount];
+    try {
+      for (int i = 0; i < threadCount; i++) {
+        // Last thread will have to deal with a different number of buffers
+        int buffersToCreate = (i == threadCount - 1) ? lastThreadCount : perThreadCount;
+        futures[i] = service.submit(
+          new BufferCreatorCallable(bufferSize, directByteBuffer, buffersToCreate, allocator));
       }
+      int bufferIndex = 0;
+      for (Future<ByteBuffer[]> future : futures) {
+        try {
+          ByteBuffer[] buffers = future.get();
+          for (ByteBuffer buffer : buffers) {
+            this.buffers[bufferIndex++] = buffer;
+          }
+        } catch (InterruptedException | ExecutionException e) {
+          LOG.error("Buffer creation interrupted", e);
+          throw new IOException(e);
+        }
+      }
+    } finally {
+      service.shutdownNow();
+    }
+    // always create on heap empty dummy buffer at last
+    this.buffers[bufferCount] = ByteBuffer.allocate(0);
+  }
+
+  @VisibleForTesting
+  int getThreadCount() {
+    return Runtime.getRuntime().availableProcessors();
+  }
+
+  /**
+   * A callable that creates buffers of the specified length either onheap/offheap using the
+   * {@link ByteBufferAllocator}
+   */
+  private static class BufferCreatorCallable implements Callable<ByteBuffer[]> {
+    private final int bufferCapacity;
+    private final boolean directByteBuffer;
+    private final int bufferCount;
+    private final ByteBufferAllocator allocator;
+
+    BufferCreatorCallable(int bufferCapacity, boolean directByteBuffer, int bufferCount,
+        ByteBufferAllocator allocator) {
+      this.bufferCapacity = bufferCapacity;
+      this.directByteBuffer = directByteBuffer;
+      this.bufferCount = bufferCount;
+      this.allocator = allocator;
+    }
+
+    @Override
+    public ByteBuffer[] call() throws Exception {
+      ByteBuffer[] buffers = new ByteBuffer[this.bufferCount];
+      for (int i = 0; i < this.bufferCount; i++) {
+        buffers[i] = allocator.allocate(this.bufferCapacity, this.directByteBuffer);
+      }
+      return buffers;
 
     }
   }
