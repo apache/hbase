@@ -52,19 +52,15 @@ public class TestMetaAssignmentWithStopMaster {
   private static final long WAIT_TIMEOUT = 120000;
 
   @BeforeClass
-  public static void setUp() throws Exception {
+  public static void setUpBeforeClass() throws Exception {
     StartMiniClusterOption option = StartMiniClusterOption.builder()
         .numMasters(2).numRegionServers(3).numDataNodes(3).build();
     UTIL.startMiniCluster(option);
   }
 
   @AfterClass
-  public static void cleanup() {
-    try {
-      UTIL.shutdownMiniCluster();
-    } catch (Exception e) {
-      LOG.warn("failure shutting down cluster", e);
-    }
+  public static void tearDownAfterClass() throws Exception {
+    UTIL.shutdownMiniCluster();
   }
 
   @Test
