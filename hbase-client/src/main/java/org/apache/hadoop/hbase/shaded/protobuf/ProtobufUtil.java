@@ -115,8 +115,6 @@ import org.apache.hadoop.hbase.util.Methods;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.io.ByteStreams;
@@ -211,12 +209,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
  * users; e.g. Coprocessor Endpoints. If you make change in here, be sure to make change in
  * the companion class too (not the end of the world, especially if you are adding new functionality
  * but something to be aware of.
+ * @see ProtobufUtil
  */
+// TODO: Generate the non-shaded protobufutil from this one.
 @InterfaceAudience.Private // TODO: some clients (Hive, etc) use this class
 public final class ProtobufUtil {
-
-  private static final Logger LOG = LoggerFactory.getLogger(ProtobufUtil.class);
-
   private ProtobufUtil() {
   }
 
@@ -2306,6 +2303,14 @@ public final class ProtobufUtil {
         .setQualifier(UnsafeByteOperations.unsafeWrap(tableName.getQualifier())).build();
   }
 
+  public static HBaseProtos.RegionInfo toProtoRegionInfo(
+    org.apache.hadoop.hbase.client.RegionInfo regionInfo) {
+    return HBaseProtos.RegionInfo.newBuilder()
+      .setRegionId(regionInfo.getRegionId())
+      .setRegionEncodedName(regionInfo.getEncodedName())
+      .setTableName(toProtoTableName(regionInfo.getTable())).build();
+  }
+
   public static List<TableName> toTableNameList(List<HBaseProtos.TableName> tableNamesList) {
     if (tableNamesList == null) {
       return new ArrayList<>();
@@ -3253,9 +3258,7 @@ public final class ProtobufUtil {
    * @return the converted Proto RegionInfo
    */
   public static HBaseProtos.RegionInfo toRegionInfo(final org.apache.hadoop.hbase.client.RegionInfo info) {
-    if (info == null) {
-      return null;
-    }
+    if (info == null) return null;
     HBaseProtos.RegionInfo.Builder builder = HBaseProtos.RegionInfo.newBuilder();
     builder.setTableName(ProtobufUtil.toProtoTableName(info.getTable()));
     builder.setRegionId(info.getRegionId());
@@ -3279,9 +3282,7 @@ public final class ProtobufUtil {
    * @return the converted RegionInfo
    */
   public static org.apache.hadoop.hbase.client.RegionInfo toRegionInfo(final HBaseProtos.RegionInfo proto) {
-    if (proto == null) {
-      return null;
-    }
+    if (proto == null) return null;
     TableName tableName = ProtobufUtil.toTableName(proto.getTableName());
     long regionId = proto.getRegionId();
     int defaultReplicaId = org.apache.hadoop.hbase.client.RegionInfo.DEFAULT_REPLICA_ID;
@@ -3310,10 +3311,8 @@ public final class ProtobufUtil {
     if (proto.hasOffline()) {
       rib.setOffline(proto.getOffline());
     }
-    org.apache.hadoop.hbase.client.RegionInfo ri = rib.build();
-    if (proto.hasRegionEncodedName() && !proto.getRegionEncodedName().equals(ri.getEncodedName())) {
-      LOG.warn("The converted region info is {}, but the encoded name in proto is {}", ri,
-        proto.getRegionEncodedName());
+    if (proto.hasRegionEncodedName()) {
+      rib.setEncodedName(proto.getRegionEncodedName());
     }
     return rib.build();
   }
