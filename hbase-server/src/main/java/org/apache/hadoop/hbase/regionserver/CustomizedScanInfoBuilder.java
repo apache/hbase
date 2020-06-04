@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.KeepDeletedCells;
+import org.apache.hadoop.hbase.client.ImmutableScan;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -42,16 +43,13 @@ public class CustomizedScanInfoBuilder implements ScanOptions {
 
   public CustomizedScanInfoBuilder(ScanInfo scanInfo) {
     this.scanInfo = scanInfo;
-    this.scan = new Scan();
+    this.scan = new ImmutableScan(new Scan());
   }
+
   public CustomizedScanInfoBuilder(ScanInfo scanInfo, Scan scan) {
     this.scanInfo = scanInfo;
     //copy the scan so no coproc using this ScanOptions can alter the "real" scan
-    try {
-      this.scan = new Scan(scan);
-    } catch (IOException e) {
-      throw new AssertionError("Scan should not throw IOException", e);
-    }
+    this.scan = new ImmutableScan(scan);
   }
 
   @Override
@@ -109,11 +107,7 @@ public class CustomizedScanInfoBuilder implements ScanOptions {
 
   @Override
   public Scan getScan() {
-    try {
-      return new Scan(scan);
-    } catch(IOException e) {
-      throw new AssertionError("Scan should not throw IOException anymore", e);
-    }
+    return scan;
   }
 
 }
