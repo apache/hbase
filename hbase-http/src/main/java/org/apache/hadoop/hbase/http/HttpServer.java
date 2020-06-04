@@ -785,7 +785,7 @@ public class HttpServer implements FilterContainer {
         .register("prometheus", "Hadoop metrics prometheus exporter", prometheusMetricsSink);
 
       addPrivilegedServlet("prometheus", "/prom", PrometheusServlet.class);
-      addPrivilegedServlet("prometheus2", "/prom2", PrometheusHadoop2Servlet.class);
+      addPrivilegedServlet("prometheus2", "/prom-old", PrometheusHadoop2Servlet.class);
     }
   }
 

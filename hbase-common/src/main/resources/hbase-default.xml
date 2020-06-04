@@ -1731,9 +1731,10 @@ possible configurations would overwhelm and obscure the important.
     <name>hbase.http.enable.prometheus.servlets</name>
     <value>false</value>
     <description>
-      Enable prometheus servlets /prom and /prom2 for prometheus based monitoring.
-      /prom is based on new HBase metrics API and all metrics are not exported for now.
-      /prom2 is based on the old hadoop2 metrics API and has all the metrics.
+      Enable prometheus servlets /prom and /prom-old for prometheus based monitoring.
+      /prom is based on native HBase metrics API and as of now all metrics are not exposed.
+      /prom-old is based on the hadoop2 metrics API and has all the metrics, this
+      will be dropped once all metrics are available via /prom.
     </description>
   </property>
   <property>

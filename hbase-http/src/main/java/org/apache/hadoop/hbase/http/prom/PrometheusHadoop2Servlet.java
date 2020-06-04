@@ -31,16 +31,14 @@ import java.io.IOException;
 public class PrometheusHadoop2Servlet extends HttpServlet {
 
   public PrometheusMetricsSink getPrometheusSink() {
-    return
-      (PrometheusMetricsSink) getServletContext().getAttribute(
-        HttpServer.PROMETHEUS_SINK);
+    return (PrometheusMetricsSink) getServletContext().getAttribute(HttpServer.PROMETHEUS_SINK);
   }
 
   @Override
   protected void doGet(HttpServletRequest req, HttpServletResponse resp)
     throws ServletException, IOException {
-    DefaultMetricsSystem.instance().publishMetricsNow();
-    getPrometheusSink().writeMetrics(resp.getWriter());
+    PrometheusMetricsSink sink = getPrometheusSink();
+    sink.writeMetrics(resp.getWriter());
     resp.getWriter().flush();
   }
 }
