@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.shaded.protobuf;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -29,17 +31,26 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.MD5Hash;
+import org.apache.log4j.Appender;
+import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.spi.LoggingEvent;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.ArgumentCaptor;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.protobuf.Any;
@@ -54,6 +65,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationPr
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.DeleteType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.MutationType;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
@@ -478,5 +490,30 @@ public class TestProtobufUtil {
         + "},"
         + "\"sharedLockCount\":0"
         + "}]", lockJson);
+  }
+
+  @Test
+  public void testRegionInfo() {
+    TableName tableName = TableName.valueOf("testRegionInfo");
+    RegionInfo expected = RegionInfoBuilder.newBuilder(tableName).build();
+    String md5 = MD5Hash.getMD5AsHex(new byte[0]);
+    HBaseProtos.RegionInfo proto =
+      ProtobufUtil.toRegionInfo(expected).toBuilder().setRegionEncodedName(md5).build();
+
+    Appender appender = mock(Appender.class);
+    LogManager.getRootLogger().addAppender(appender);
+    try {
+      RegionInfo actual = ProtobufUtil.toRegionInfo(proto);
+      assertEquals(expected, actual);
+      ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
+      verify(appender).doAppend(captor.capture());
+      LoggingEvent event = captor.getValue();
+      assertEquals(Level.WARN, event.getLevel());
+      assertEquals(
+        "The converted region info is " + actual + ", but the encoded name in proto is " + md5,
+        event.getRenderedMessage());
+    } finally {
+      LogManager.getRootLogger().removeAppender(appender);
+    }
   }
 }
