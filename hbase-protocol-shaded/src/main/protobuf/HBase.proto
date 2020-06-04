@@ -69,7 +69,7 @@ message ColumnFamilySchema {
 }
 
 /**
- * Protocol buffer version of HRegionInfo.
+ * Protocol buffer version of RegionInfo.
  */
 message RegionInfo {
   required uint64 region_id = 1;
@@ -79,7 +79,6 @@ message RegionInfo {
   optional bool offline = 5;
   optional bool split = 6;
   optional int32 replica_id = 7 [default = 0];
-  optional string region_encoded_name = 8;
 }
 
 /**
