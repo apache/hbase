@@ -64,7 +64,23 @@ public class RegionReplicaUtil {
     if (regionInfo.getReplicaId() == replicaId) {
       return regionInfo;
     }
-    return RegionInfoBuilder.newBuilder(regionInfo).setReplicaId(replicaId).build();
+
+    if (regionInfo.isMetaRegion()) {
+      return RegionInfoBuilder.newBuilder(regionInfo.getTable())
+          .setRegionId(regionInfo.getRegionId())
+          .setReplicaId(replicaId)
+          .setOffline(regionInfo.isOffline())
+          .build();
+    } else {
+      return RegionInfoBuilder.newBuilder(regionInfo.getTable())
+              .setStartKey(regionInfo.getStartKey())
+              .setEndKey(regionInfo.getEndKey())
+              .setSplit(regionInfo.isSplit())
+              .setRegionId(regionInfo.getRegionId())
+              .setReplicaId(replicaId)
+              .setOffline(regionInfo.isOffline())
+              .build();
+    }
   }
 
   /**
