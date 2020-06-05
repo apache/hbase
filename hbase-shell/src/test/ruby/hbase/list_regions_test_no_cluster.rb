@@ -73,8 +73,10 @@ module Hbase
     end
 
     def create_region_location(server_name)
-      HRegionLocation.new(RegionInfoBuilder.newBuilder(TableName.valueOf('t1')).build,
-        ServerName.valueOf(server_name))
+      HRegionLocation.new(
+        RegionInfoBuilder.newBuilder(TableName.valueOf('t1')).build,
+        ServerName.valueOf(server_name)
+      )
     end
   end
 end
