@@ -19,8 +19,6 @@
 package org.apache.hadoop.hbase.client;
 
 import java.util.Arrays;
-
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -59,8 +57,6 @@ public class RegionInfoBuilder {
   private int replicaId = RegionInfo.DEFAULT_REPLICA_ID;
   private boolean offLine = false;
   private boolean split = false;
-  private byte[] regionName = null;
-  private String encodedName = null;
 
   public static RegionInfoBuilder newBuilder(TableName tableName) {
     return new RegionInfoBuilder(tableName);
@@ -82,8 +78,6 @@ public class RegionInfoBuilder {
     this.split = regionInfo.isSplit();
     this.regionId = regionInfo.getRegionId();
     this.replicaId = regionInfo.getReplicaId();
-    this.regionName = regionInfo.getRegionName();
-    this.encodedName = regionInfo.getEncodedName();
   }
 
   public RegionInfoBuilder setStartKey(byte[] startKey) {
@@ -118,7 +112,7 @@ public class RegionInfoBuilder {
 
   public RegionInfo build() {
     return new MutableRegionInfo(tableName, startKey, endKey, split,
-        regionId, replicaId, offLine, regionName, encodedName);
+        regionId, replicaId, offLine);
   }
 
   /**
@@ -206,32 +200,12 @@ public class RegionInfoBuilder {
      * first meta regions
      */
     private MutableRegionInfo(long regionId, TableName tableName, int replicaId) {
-      this(tableName,
-          HConstants.EMPTY_START_ROW,
-          HConstants.EMPTY_END_ROW,
-          false,
-          regionId,
-          replicaId,
-          false,
-          RegionInfo.createRegionName(tableName, null, regionId, replicaId, false));
+      this(tableName, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, false, regionId,
+        replicaId, false);
     }
 
-    MutableRegionInfo(final TableName tableName, final byte[] startKey,
-        final byte[] endKey, final boolean split, final long regionId,
-        final int replicaId, boolean offLine, byte[] regionName) {
-      this(checkTableName(tableName),
-          checkStartKey(startKey),
-          checkEndKey(endKey),
-          split, regionId,
-          checkReplicaId(replicaId),
-          offLine,
-          regionName,
-          RegionInfo.encodeRegionName(regionName));
-    }
-
-    MutableRegionInfo(final TableName tableName, final byte[] startKey,
-        final byte[] endKey, final boolean split, final long regionId,
-        final int replicaId, boolean offLine, byte[] regionName, String encodedName) {
+    MutableRegionInfo(final TableName tableName, final byte[] startKey, final byte[] endKey,
+      final boolean split, final long regionId, final int replicaId, boolean offLine) {
       this.tableName = checkTableName(tableName);
       this.startKey = checkStartKey(startKey);
       this.endKey = checkEndKey(endKey);
@@ -239,24 +213,14 @@ public class RegionInfoBuilder {
       this.regionId = regionId;
       this.replicaId = checkReplicaId(replicaId);
       this.offLine = offLine;
-      if (ArrayUtils.isEmpty(regionName)) {
-        this.regionName = RegionInfo.createRegionName(this.tableName, this.startKey, this.regionId, this.replicaId,
-            !this.tableName.equals(TableName.META_TABLE_NAME));
-        this.encodedName = RegionInfo.encodeRegionName(this.regionName);
-      } else {
-        this.regionName = regionName;
-        this.encodedName = encodedName;
-      }
-      this.hashCode = generateHashCode(
-          this.tableName,
-          this.startKey,
-          this.endKey,
-          this.regionId,
-          this.replicaId,
-          this.offLine,
-          this.regionName);
+      this.regionName = RegionInfo.createRegionName(this.tableName, this.startKey, this.regionId,
+        this.replicaId, !this.tableName.equals(TableName.META_TABLE_NAME));
+      this.encodedName = RegionInfo.encodeRegionName(this.regionName);
+      this.hashCode = generateHashCode(this.tableName, this.startKey, this.endKey, this.regionId,
+        this.replicaId, this.offLine, this.regionName);
       this.encodedNameAsBytes = Bytes.toBytes(this.encodedName);
     }
+
     /**
      * @return Return a short, printable name for this region
      * (usually encoded name) for us logging.
@@ -278,7 +242,7 @@ public class RegionInfoBuilder {
      * @see #getRegionNameAsString()
      */
     @Override
-    public byte [] getRegionName(){
+    public byte[] getRegionName() {
       return regionName;
     }
 
@@ -297,20 +261,19 @@ public class RegionInfoBuilder {
     }
 
     @Override
-    public byte [] getEncodedNameAsBytes() {
+    public byte[] getEncodedNameAsBytes() {
       return this.encodedNameAsBytes;
     }
 
     /** @return the startKey */
     @Override
-    public byte [] getStartKey(){
+    public byte[] getStartKey() {
       return startKey;
     }
 
-
     /** @return the endKey */
     @Override
-    public byte [] getEndKey(){
+    public byte[] getEndKey() {
       return endKey;
     }
 
@@ -402,7 +365,9 @@ public class RegionInfoBuilder {
      */
     @Override
     public boolean isSplitParent() {
-      if (!isSplit()) return false;
+      if (!isSplit()) {
+        return false;
+      }
       if (!isOffline()) {
         LOG.warn("Region is split but NOT offline: " + getRegionNameAsString());
       }
