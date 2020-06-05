@@ -453,7 +453,6 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       }
 
       short numRetries = 0;
-      final short MAX_RETRIES = 5;
       while (true) {
         setupConnection();
         InputStream inStream = NetUtils.getInputStream(socket);
