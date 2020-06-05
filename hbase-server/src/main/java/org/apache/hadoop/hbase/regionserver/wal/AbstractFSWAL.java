@@ -663,7 +663,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
         listForPrint.add(Bytes.toStringBinary(r.getKey()) + "[" + families.toString() + "]");
       }
       LOG.info("Too many WALs; count=" + logCount + ", max=" + this.maxLogs +
-        "; forcing (partial) flush of " + regions.size() + " region(s): " + StringUtils.join(",", listForPrint));
+        "; forcing (partial) flush of " + regions.size() + " region(s): " +
+        StringUtils.join(",", listForPrint));
     }
     return regions;
   }
@@ -825,7 +826,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   }
 
   @Override
-  public Map<byte[], List<byte[]>> rollWriter(boolean force) throws FailedLogCloseException, IOException {
+  public Map<byte[], List<byte[]>> rollWriter(boolean force) throws IOException {
     rollWriterLock.lock();
     try {
       if (this.closed) {

@@ -46,7 +46,7 @@ import org.slf4j.LoggerFactory;
  * NOTE: This class extends Thread rather than Chore because the sleep time can be interrupted when
  * there is something to do, rather than the Chore sleep time which is invariant.
  * <p/>
- * The {@link #scheduleFlush(String, List<byte[]>)} is abstract here,
+ * The {@link #scheduleFlush(String, List&lt;byte[]&gt;)} is abstract here,
  * as sometimes we hold a region without a region server but we still want to roll its WAL.
  * <p/>
  * TODO: change to a pool of threads

@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
  * roller logic by our own.
  * <p/>
  * We can reuse most of the code for normal wal roller, the only difference is that there is only
- * one region, so in {@link #scheduleFlush(String, List<byte[]>)} method we can just schedule flush
+ * one region, so in {@link #scheduleFlush(String, List&lt;byte[]&gt;)} method we can just schedule flush
  * for the master local region.
  */
 @InterfaceAudience.Private

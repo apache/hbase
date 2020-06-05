@@ -458,7 +458,8 @@ class MemStoreFlusher implements FlushRequester {
   }
 
   @Override
-  public boolean requestFlush(HRegion r, boolean forceFlushAllStores, FlushLifeCycleTracker tracker) {
+  public boolean requestFlush(HRegion r, boolean forceFlushAllStores,
+      FlushLifeCycleTracker tracker) {
     return this.requestFlush(r, forceFlushAllStores, null, tracker);
   }
 

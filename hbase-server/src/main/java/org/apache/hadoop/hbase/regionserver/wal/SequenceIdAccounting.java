@@ -457,7 +457,8 @@ class SequenceIdAccounting {
             if (toFlush == null) {
               toFlush = new TreeMap(Bytes.BYTES_COMPARATOR);
             }
-            toFlush.computeIfAbsent(e.getKey(), k -> new ArrayList<>()).add(Bytes.toBytes(me.getKey().toString()));
+            toFlush.computeIfAbsent(e.getKey(), k -> new ArrayList<>())
+              .add(Bytes.toBytes(me.getKey().toString()));
           }
         }
       }
