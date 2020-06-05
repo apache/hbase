@@ -78,6 +78,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.RetryCounterFactory;
 import org.apache.hadoop.hbase.util.Triple;
@@ -404,7 +405,7 @@ public class ServerManager {
    */
   private void checkClockSkew(final ServerName serverName, final long serverCurrentTime)
   throws ClockOutOfSyncException {
-    long skew = Math.abs(System.currentTimeMillis() - serverCurrentTime);
+    long skew = Math.abs(EnvironmentEdgeManager.currentTime() - serverCurrentTime);
     if (skew > maxSkew) {
       String message = "Server " + serverName + " has been " +
         "rejected; Reported time is too far out of sync with master.  " +

@@ -31,20 +31,21 @@ import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
+import org.apache.hadoop.hbase.MiniHBaseCluster.MiniHBaseClusterRegionServer;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
-import org.apache.hadoop.hbase.MiniHBaseCluster.MiniHBaseClusterRegionServer;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
+import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.log4j.Appender;
 import org.apache.log4j.Layout;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.WriterAppender;
 import org.apache.zookeeper.KeeperException;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -211,6 +212,30 @@ public class TestRegionServerReportForDuty {
     assertTrue(backupMaster.getMaster().isInitialized());
     assertEquals(backupMaster.getMaster().getServerManager().getOnlineServersList().size(), 2);
 
+  }
+
+  /**
+   * Tests region sever reportForDuty with manual environment edge
+   */
+  @Test(timeout = 60000)
+  public void testReportForDutyWithEnvironmentEdge() throws Exception {
+
+    // Start a master and wait for it to become the active/primary master.
+    // Use a random unique port
+    cluster.getConfiguration().setInt(HConstants.MASTER_PORT, HBaseTestingUtility.randomFreePort());
+    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
+    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, 1);
+
+    // Inject manual environment edge for clock skew computation between RS and master
+    ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
+    EnvironmentEdgeManager.injectEdge(edge);
+    master = cluster.addMaster();
+    rs = cluster.addRegionServer();
+    LOG.debug("Starting master: " + master.getMaster().getServerName());
+    master.start();
+    rs.start();
+
+    waitForClusterOnline(master);
   }
 
   private void waitForClusterOnline(MasterThread master) throws InterruptedException {
