@@ -148,6 +148,7 @@ public class IntegrationTestingUtility extends HBaseTestingUtility {
       " since it is a distributed cluster");
     Class<? extends ClusterManager> clusterManagerClass = conf.getClass(HBASE_CLUSTER_MANAGER_CLASS,
       DEFAULT_HBASE_CLUSTER_MANAGER_CLASS, ClusterManager.class);
+    LOG.info(String.format("Instantiating %s", clusterManagerClass.getName()));
     ClusterManager clusterManager = ReflectionUtils.newInstance(
       clusterManagerClass, conf);
     setHBaseCluster(new DistributedHBaseCluster(conf, clusterManager));

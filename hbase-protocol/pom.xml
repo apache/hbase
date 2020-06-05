@@ -197,6 +197,7 @@
                           <include>RSGroup.proto</include>
                           <include>RSGroupAdmin.proto</include>
                           <include>SecureBulkLoad.proto</include>
+                          <include>ShellExecEndpoint.proto</include>
                           <include>Snapshot.proto</include>
                           <include>SnapshotCleanup.proto</include>
                           <include>Table.proto</include>
