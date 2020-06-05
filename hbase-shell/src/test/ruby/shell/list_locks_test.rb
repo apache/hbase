@@ -152,7 +152,7 @@ module Hbase
       lock = create_exclusive_lock(3)
 
       table_name = org.apache.hadoop.hbase.TableName.valueOf('ns3', 'table3')
-      region_info = org.apache.hadoop.hbase.HRegionInfo.new(table_name)
+      region_info = org.apache.hadoop.hbase.client.RegionInfoBuilder.newBuilder(table_name).build
 
       @scheduler.waitRegion(lock, region_info)
       output = capture_stdout { @list_locks.command }

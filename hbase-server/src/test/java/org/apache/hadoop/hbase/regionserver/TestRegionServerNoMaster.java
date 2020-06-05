@@ -21,12 +21,12 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -118,12 +118,12 @@ public class TestRegionServerNoMaster {
     }
 
     ProtobufUtil.openRegion(null, hrs.getRSRpcServices(),
-      hrs.getServerName(), HRegionInfo.FIRST_META_REGIONINFO);
+      hrs.getServerName(), RegionInfoBuilder.FIRST_META_REGIONINFO);
     while (true) {
       sn = MetaTableLocator.getMetaRegionLocation(zkw);
       if (sn != null && sn.equals(hrs.getServerName())
           && hrs.getOnlineRegions().containsKey(
-              HRegionInfo.FIRST_META_REGIONINFO.getEncodedName())) {
+            RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName())) {
         break;
       }
       Thread.sleep(100);
@@ -180,7 +180,7 @@ public class TestRegionServerNoMaster {
     Assert.assertTrue(rs.getRegion(hri.getRegionName()).isAvailable());
   }
 
-  public static void closeRegion(HBaseTestingUtility HTU, HRegionServer rs, HRegionInfo hri)
+  public static void closeRegion(HBaseTestingUtility HTU, HRegionServer rs, RegionInfo hri)
       throws Exception {
     AdminProtos.CloseRegionRequest crr = ProtobufUtil.buildCloseRegionRequest(
       rs.getServerName(), hri.getRegionName());

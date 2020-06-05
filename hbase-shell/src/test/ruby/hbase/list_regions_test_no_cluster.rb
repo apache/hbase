@@ -21,7 +21,7 @@ require 'hbase_constants'
 include HBaseConstants
 
 java_import 'org.apache.hadoop.hbase.HRegionLocation'
-java_import 'org.apache.hadoop.hbase.HRegionInfo'
+java_import 'org.apache.hadoop.hbase.client.RegionInfoBuilder'
 java_import 'org.apache.hadoop.hbase.ServerName'
 
 module Hbase
@@ -73,7 +73,10 @@ module Hbase
     end
 
     def create_region_location(server_name)
-      HRegionLocation.new(HRegionInfo.new(TableName.valueOf('t1')), ServerName.valueOf(server_name))
+      HRegionLocation.new(
+        RegionInfoBuilder.newBuilder(TableName.valueOf('t1')).build,
+        ServerName.valueOf(server_name)
+      )
     end
   end
 end

@@ -29,13 +29,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -119,8 +119,9 @@ public class TestRegionOpen {
     HTU.waitUntilNoRegionsInTransition(60000);
 
     // Create new HRI with non-default region replica id
-    HRegionInfo hri = new HRegionInfo(htd.getTableName(),  Bytes.toBytes("A"), Bytes.toBytes("B"), false,
-        System.currentTimeMillis(), 2);
+    RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName())
+      .setStartKey(Bytes.toBytes("A")).setEndKey(Bytes.toBytes("B"))
+      .setRegionId(System.currentTimeMillis()).setReplicaId(2).build();
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs,
       CommonFSUtils.getTableDir(rootDir, hri.getTable()), hri);
     Path regionDir = regionFs.getRegionDir();

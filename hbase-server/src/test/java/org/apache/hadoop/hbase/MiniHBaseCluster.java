@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegion.FlushResult;
@@ -826,7 +827,7 @@ public class MiniHBaseCluster extends HBaseCluster {
    * of HRS carrying regionName. Returns -1 if none found.
    */
   public int getServerWithMeta() {
-    return getServerWith(HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
+    return getServerWith(RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName());
   }
 
   /**
@@ -836,20 +837,18 @@ public class MiniHBaseCluster extends HBaseCluster {
    * of HRS carrying hbase:meta. Returns -1 if none found.
    */
   public int getServerWith(byte[] regionName) {
-    int index = -1;
-    int count = 0;
+    int index = 0;
     for (JVMClusterUtil.RegionServerThread rst: getRegionServerThreads()) {
       HRegionServer hrs = rst.getRegionServer();
       if (!hrs.isStopped()) {
         Region region = hrs.getOnlineRegion(regionName);
         if (region != null) {
-          index = count;
-          break;
+          return index;
         }
       }
-      count++;
+      index++;
     }
-    return index;
+    return -1;
   }
 
   @Override

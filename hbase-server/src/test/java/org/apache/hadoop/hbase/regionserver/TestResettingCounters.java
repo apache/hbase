@@ -29,11 +29,12 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Increment;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -80,7 +81,7 @@ public class TestResettingCounters {
         new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
     }
 
-    HRegionInfo hri = new HRegionInfo(tableDescriptor.getTableName(), null, null, false);
+    RegionInfo hri = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     String testDir = htu.getDataTestDir() + "/TestResettingCounters/";
     Path path = new Path(testDir);
     if (fs.exists(path)) {

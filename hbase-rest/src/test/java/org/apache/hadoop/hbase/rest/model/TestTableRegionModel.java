@@ -21,8 +21,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -80,8 +81,8 @@ public class TestTableRegionModel extends TestModelBase<TableRegionModel> {
   public void testGetName() {
     TableRegionModel model = buildTestModel();
     String modelName = model.getName();
-    HRegionInfo hri = new HRegionInfo(TableName.valueOf(TABLE),
-      START_KEY, END_KEY, false, ID);
+    RegionInfo hri = RegionInfoBuilder.newBuilder(TableName.valueOf(TABLE)).setStartKey(START_KEY)
+      .setEndKey(END_KEY).setRegionId(ID).build();
     assertEquals(modelName, hri.getRegionNameAsString());
   }
 

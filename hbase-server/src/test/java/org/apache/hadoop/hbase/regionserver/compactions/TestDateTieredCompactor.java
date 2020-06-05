@@ -21,9 +21,9 @@ import static org.apache.hadoop.hbase.regionserver.compactions.TestCompactor.cre
 import static org.apache.hadoop.hbase.regionserver.compactions.TestCompactor.createDummyStoreFile;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyLong;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -38,10 +38,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -107,7 +107,7 @@ public class TestDateTieredCompactor {
     when(store.getScanInfo()).thenReturn(si);
     when(store.areWritesEnabled()).thenReturn(true);
     when(store.getFileSystem()).thenReturn(mock(FileSystem.class));
-    when(store.getRegionInfo()).thenReturn(new HRegionInfo(TABLE_NAME));
+    when(store.getRegionInfo()).thenReturn(RegionInfoBuilder.newBuilder(TABLE_NAME).build());
     when(store.createWriterInTmp(anyLong(), any(), anyBoolean(),
       anyBoolean(), anyBoolean(), anyBoolean())).thenAnswer(writers);
     when(store.createWriterInTmp(anyLong(), any(), anyBoolean(),

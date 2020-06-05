@@ -27,10 +27,11 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
@@ -68,7 +69,7 @@ public class TestSeekBeforeWithReverseScan {
     tableDescriptor.setColumnFamily(
       new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(cfName)
         .setDataBlockEncoding(DataBlockEncoding.FAST_DIFF));
-    HRegionInfo info = new HRegionInfo(tableName, null, null, false);
+    RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
     Path path = testUtil.getDataTestDir(getClass().getSimpleName());
     region = HBaseTestingUtility.createRegionAndWAL(info, path, testUtil.getConfiguration(),
       tableDescriptor);

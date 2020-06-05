@@ -27,9 +27,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
@@ -100,7 +101,7 @@ public class TestCompactionPolicy {
       new TableDescriptorBuilder.ModifyableTableDescriptor(
         TableName.valueOf(Bytes.toBytes("table")));
     tableDescriptor.setColumnFamily(familyDescriptor);
-    HRegionInfo info = new HRegionInfo(tableDescriptor.getTableName(), null, null, false);
+    RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
 
     hlog = new FSHLog(fs, basedir, logName, conf);
     hlog.init();

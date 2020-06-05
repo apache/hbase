@@ -54,7 +54,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -65,6 +64,8 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -278,7 +279,7 @@ public abstract class AbstractTestWALReplay {
         TableName.valueOf("test2727");
 
     MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
-    HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
+    RegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
     Path basedir = CommonFSUtils.getTableDir(hbaseRootDir, tableName);
     deleteDir(basedir);
 
@@ -346,7 +347,7 @@ public abstract class AbstractTestWALReplay {
       NoSuchFieldException, IllegalAccessException, InterruptedException {
     final TableName tableName =
         TableName.valueOf("testRegionMadeOfBulkLoadedFilesOnly");
-    final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
+    final RegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
     final Path basedir = new Path(this.hbaseRootDir, tableName.getNameAsString());
     deleteDir(basedir);
     final HTableDescriptor htd = new HTableDescriptor(createBasic3FamilyHTD(tableName));
@@ -412,7 +413,7 @@ public abstract class AbstractTestWALReplay {
       NoSuchFieldException, IllegalAccessException, InterruptedException {
     final TableName tableName =
         TableName.valueOf("testCompactedBulkLoadedFiles");
-    final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
+    final RegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
     final Path basedir = new Path(this.hbaseRootDir, tableName.getNameAsString());
     deleteDir(basedir);
     final HTableDescriptor htd = new HTableDescriptor(createBasic3FamilyHTD(tableName));
@@ -482,7 +483,7 @@ public abstract class AbstractTestWALReplay {
       NoSuchFieldException, IllegalAccessException, InterruptedException {
     final TableName tableName =
         TableName.valueOf("testReplayEditsWrittenViaHRegion");
-    final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
+    final RegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
     final Path basedir = CommonFSUtils.getTableDir(this.hbaseRootDir, tableName);
     deleteDir(basedir);
     final byte[] rowName = tableName.getName();
@@ -590,7 +591,7 @@ public abstract class AbstractTestWALReplay {
       NoSuchFieldException, IllegalAccessException, InterruptedException {
     final TableName tableName =
         TableName.valueOf("testReplayEditsWrittenViaHRegion");
-    final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
+    final RegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
     final Path basedir = CommonFSUtils.getTableDir(this.hbaseRootDir, tableName);
     deleteDir(basedir);
     final byte[] rowName = tableName.getName();
@@ -669,13 +670,12 @@ public abstract class AbstractTestWALReplay {
    * Test that we could recover the data correctly after aborting flush. In the
    * test, first we abort flush after writing some data, then writing more data
    * and flush again, at last verify the data.
-   * @throws IOException
    */
   @Test
   public void testReplayEditsAfterAbortingFlush() throws IOException {
     final TableName tableName =
         TableName.valueOf("testReplayEditsAfterAbortingFlush");
-    final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
+    final RegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
     final Path basedir = CommonFSUtils.getTableDir(this.hbaseRootDir, tableName);
     deleteDir(basedir);
     final HTableDescriptor htd = new HTableDescriptor(createBasic3FamilyHTD(tableName));
@@ -766,15 +766,14 @@ public abstract class AbstractTestWALReplay {
 
   /**
    * Create an HRegion with the result of a WAL split and test we only see the
-   * good edits
-   * @throws Exception
+   * good edits=
    */
   @Test
   public void testReplayEditsWrittenIntoWAL() throws Exception {
     final TableName tableName =
         TableName.valueOf("testReplayEditsWrittenIntoWAL");
     final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
-    final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
+    final RegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
     final Path basedir = CommonFSUtils.getTableDir(hbaseRootDir, tableName);
     deleteDir(basedir);
 
@@ -875,7 +874,7 @@ public abstract class AbstractTestWALReplay {
   // the following test is for HBASE-6065
   public void testSequentialEditLogSeqNum() throws IOException {
     final TableName tableName = TableName.valueOf(currentTest.getMethodName());
-    final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
+    final RegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
     final Path basedir =
       CommonFSUtils.getWALTableDir(conf, tableName);
     deleteDir(basedir);
@@ -933,7 +932,7 @@ public abstract class AbstractTestWALReplay {
   @Test
   public void testDatalossWhenInputError() throws Exception {
     final TableName tableName = TableName.valueOf("testDatalossWhenInputError");
-    final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
+    final RegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
     final Path basedir = CommonFSUtils.getWALTableDir(conf, tableName);
     deleteDir(basedir);
     final byte[] rowName = tableName.getName();
@@ -1030,7 +1029,7 @@ public abstract class AbstractTestWALReplay {
       StreamLacksCapabilityException {
     final TableName tableName = TableName.valueOf("testReplayEditsWrittenIntoWAL");
     final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
-    final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
+    final RegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
     final Path basedir = CommonFSUtils.getTableDir(hbaseRootDir, tableName);
     deleteDir(basedir);
 
@@ -1147,7 +1146,7 @@ public abstract class AbstractTestWALReplay {
     }
   }
 
-  private WALKeyImpl createWALKey(final TableName tableName, final HRegionInfo hri,
+  private WALKeyImpl createWALKey(final TableName tableName, final RegionInfo hri,
       final MultiVersionConcurrencyControl mvcc, NavigableMap<byte[], Integer> scopes) {
     return new WALKeyImpl(hri.getEncodedNameAsBytes(), tableName, 999, mvcc, scopes);
   }
@@ -1161,7 +1160,7 @@ public abstract class AbstractTestWALReplay {
     return edit;
   }
 
-  private FSWALEntry createFSWALEntry(HTableDescriptor htd, HRegionInfo hri, long sequence,
+  private FSWALEntry createFSWALEntry(TableDescriptor htd, RegionInfo hri, long sequence,
     byte[] rowName, byte[] family, EnvironmentEdge ee, MultiVersionConcurrencyControl mvcc,
     int index, NavigableMap<byte[], Integer> scopes) throws IOException {
     FSWALEntry entry = new FSWALEntry(sequence, createWALKey(htd.getTableName(), hri, mvcc, scopes),
@@ -1170,7 +1169,7 @@ public abstract class AbstractTestWALReplay {
     return entry;
   }
 
-  private void addWALEdits(final TableName tableName, final HRegionInfo hri, final byte[] rowName,
+  private void addWALEdits(final TableName tableName, final RegionInfo hri, final byte[] rowName,
       final byte[] family, final int count, EnvironmentEdge ee, final WAL wal,
       final MultiVersionConcurrencyControl mvcc,
       NavigableMap<byte[], Integer> scopes) throws IOException {
@@ -1194,20 +1193,18 @@ public abstract class AbstractTestWALReplay {
     return puts;
   }
 
-  /*
-   * Creates an HRI around an HTD that has <code>tableName</code> and three
-   * column families named 'a','b', and 'c'.
+  /**
+   * Creates an HRI around an HTD that has <code>tableName</code> and three column families named
+   * 'a','b', and 'c'.
    * @param tableName Name of table to use when we create HTableDescriptor.
    */
-   private HRegionInfo createBasic3FamilyHRegionInfo(final TableName tableName) {
-    return new HRegionInfo(tableName, null, null, false);
-   }
+  private RegionInfo createBasic3FamilyHRegionInfo(final TableName tableName) {
+    return RegionInfoBuilder.newBuilder(tableName).build();
+  }
 
-  /*
+  /**
    * Run the split.  Verify only single split file made.
-   * @param c
    * @return The single split file made
-   * @throws IOException
    */
   private Path runWALSplit(final Configuration c) throws IOException {
     List<Path> splits = WALSplitter.split(

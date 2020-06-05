@@ -28,7 +28,6 @@ org.apache.hadoop.hbase.io.ByteBuffAllocator;
 org.apache.hadoop.hbase.ipc.MetricsHBaseServerWrapper;
 org.apache.hadoop.hbase.regionserver.MetricsRegionServerWrapper;
 org.apache.hadoop.hbase.util.Bytes;
-org.apache.hadoop.hbase.HRegionInfo;
 org.apache.hadoop.hbase.ServerName;
 org.apache.hadoop.hbase.HBaseConfiguration;
 org.apache.hadoop.hbase.util.DirectMemoryUtils;

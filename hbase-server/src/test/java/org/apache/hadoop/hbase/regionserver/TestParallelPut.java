@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.Random;
 import org.apache.hadoop.hbase.Cell;
@@ -28,11 +29,12 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -186,7 +188,7 @@ public class TestParallelPut {
       tableDescriptor.setColumnFamily(
         new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
     }
-    HRegionInfo info = new HRegionInfo(tableDescriptor.getTableName(), null, null, false);
+    RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     return HBTU.createLocalHRegion(info, tableDescriptor);
   }
 

@@ -30,6 +30,8 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -165,10 +167,10 @@ public abstract class HBaseTestCase extends TestCase {
     return createNewHRegion(tableDescriptor, startKey, endKey, this.conf);
   }
 
-  public HRegion createNewHRegion(TableDescriptor tableDescriptor, byte [] startKey,
-      byte [] endKey, Configuration conf)
-  throws IOException {
-    HRegionInfo hri = new HRegionInfo(tableDescriptor.getTableName(), startKey, endKey);
+  public HRegion createNewHRegion(TableDescriptor tableDescriptor, byte[] startKey, byte[] endKey,
+    Configuration conf) throws IOException {
+    RegionInfo hri = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName())
+      .setStartKey(startKey).setEndKey(endKey).build();
     return HBaseTestingUtility.createRegionAndWAL(hri, testDir, conf, tableDescriptor);
   }
 
@@ -424,14 +426,13 @@ public abstract class HBaseTestCase extends TestCase {
   }
 
   /**
-   * You must call {@link #closeRootAndMeta()} when done after calling this
-   * method. It does cleanup.
+   * You must call {@link #closeRootAndMeta()} when done after calling this method. It does cleanup.
    * @throws IOException
    */
   protected void createMetaRegion() throws IOException {
     FSTableDescriptors fsTableDescriptors = new FSTableDescriptors(conf);
-    meta = HBaseTestingUtility.createRegionAndWAL(HRegionInfo.FIRST_META_REGIONINFO, testDir,
-        conf, fsTableDescriptors.get(TableName.META_TABLE_NAME));
+    meta = HBaseTestingUtility.createRegionAndWAL(RegionInfoBuilder.FIRST_META_REGIONINFO, testDir,
+      conf, fsTableDescriptors.get(TableName.META_TABLE_NAME));
   }
 
   protected void closeRootAndMeta() throws IOException {

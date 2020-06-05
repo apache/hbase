@@ -24,13 +24,11 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.RegionSplitter;
@@ -99,7 +97,7 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
       this.delegate = delegate;
     }
 
-    public TableSnapshotRegionSplit(HTableDescriptor htd, HRegionInfo regionInfo,
+    public TableSnapshotRegionSplit(TableDescriptor htd, RegionInfo regionInfo,
         List<String> locations, Scan scan, Path restoreDir) {
       this.delegate =
           new TableSnapshotInputFormatImpl.InputSplit(htd, regionInfo, locations, scan, restoreDir);
@@ -123,15 +121,6 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
     @Override
     public void readFields(DataInput in) throws IOException {
       delegate.readFields(in);
-    }
-
-    /**
-     * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-     *             Use {@link #getRegion()}
-     */
-    @Deprecated
-    public HRegionInfo getRegionInfo() {
-      return delegate.getRegionInfo();
     }
 
     public RegionInfo getRegion() {

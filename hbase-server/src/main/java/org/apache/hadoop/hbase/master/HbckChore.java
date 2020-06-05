@@ -245,7 +245,7 @@ public class HbckChore extends ScheduledChore {
           orphanRegionsOnRS.put(RegionInfo.getRegionNameAsString(regionName), serverName);
           continue;
         }
-        hri.addServer(hri.getMetaEntry(), serverName);
+        hri.addServer(hri.getMetaEntry().getRegionInfo(), serverName);
       }
       numRegions += entry.getValue().size();
     }

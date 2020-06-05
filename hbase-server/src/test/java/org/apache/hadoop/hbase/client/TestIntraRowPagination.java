@@ -22,7 +22,6 @@ import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
@@ -48,8 +47,6 @@ public class TestIntraRowPagination {
 
   /**
    * Test from client side for scan with maxResultPerCF set
-   *
-   * @throws Exception
    */
   @Test
   public void testScanLimitAndOffset() throws Exception {
@@ -62,7 +59,7 @@ public class TestIntraRowPagination {
       new TableDescriptorBuilder.ModifyableTableDescriptor(
         TableName.valueOf(HTestConst.DEFAULT_TABLE_BYTES));
 
-    HRegionInfo info = new HRegionInfo(HTestConst.DEFAULT_TABLE, null, null, false);
+    RegionInfo info = RegionInfoBuilder.newBuilder(HTestConst.DEFAULT_TABLE).build();
     for (byte[] family : FAMILIES) {
       ColumnFamilyDescriptor familyDescriptor =
         new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family);

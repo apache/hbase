@@ -202,8 +202,8 @@ public class VerifyReplication extends Configured implements Tool {
 
         byte[] endRow = null;
         if (tableSplit instanceof TableSnapshotInputFormat.TableSnapshotRegionSplit) {
-          endRow = ((TableSnapshotInputFormat.TableSnapshotRegionSplit) tableSplit).getRegionInfo()
-              .getEndKey();
+          endRow = ((TableSnapshotInputFormat.TableSnapshotRegionSplit) tableSplit).getRegion()
+            .getEndKey();
         } else {
           endRow = ((TableSplit) tableSplit).getEndRow();
         }

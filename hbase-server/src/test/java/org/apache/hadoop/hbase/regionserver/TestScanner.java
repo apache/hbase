@@ -25,6 +25,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,7 +35,6 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
@@ -42,6 +42,8 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -97,11 +99,10 @@ public class TestScanner {
     );
   }
   /** HRegionInfo for root region */
-  public static final HRegionInfo REGION_INFO =
-    new HRegionInfo(TESTTABLEDESC.getTableName(), HConstants.EMPTY_BYTE_ARRAY,
-    HConstants.EMPTY_BYTE_ARRAY);
+  public static final RegionInfo REGION_INFO =
+    RegionInfoBuilder.newBuilder(TESTTABLEDESC.getTableName()).build();
 
-  private static final byte [] ROW_KEY = REGION_INFO.getRegionName();
+  private static final byte[] ROW_KEY = REGION_INFO.getRegionName();
 
   private static final long START_CODE = Long.MAX_VALUE;
 
@@ -263,7 +264,7 @@ public class TestScanner {
       Put put = new Put(ROW_KEY, System.currentTimeMillis());
 
       put.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-          REGION_INFO.toByteArray());
+          RegionInfo.toByteArray(REGION_INFO));
       table.put(put);
 
       // What we just committed is in the memstore. Verify that we can get
@@ -362,7 +363,7 @@ public class TestScanner {
 
   /** Compare the HRegionInfo we read from HBase to what we stored */
   private void validateRegionInfo(byte [] regionBytes) throws IOException {
-    HRegionInfo info = HRegionInfo.parseFromOrNull(regionBytes);
+    RegionInfo info = RegionInfo.parseFromOrNull(regionBytes);
 
     assertEquals(REGION_INFO.getRegionId(), info.getRegionId());
     assertEquals(0, info.getStartKey().length);

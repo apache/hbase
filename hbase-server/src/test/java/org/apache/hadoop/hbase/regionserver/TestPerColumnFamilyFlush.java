@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -44,6 +43,8 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -96,7 +97,7 @@ public class TestPerColumnFamilyFlush {
       tableDescriptor.setColumnFamily(
         new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
     }
-    HRegionInfo info = new HRegionInfo(TABLENAME, null, null, false);
+    RegionInfo info = RegionInfoBuilder.newBuilder(TABLENAME).build();
     Path path = new Path(DIR, callingMethod);
     return HBaseTestingUtility.createRegionAndWAL(info, path, conf, tableDescriptor);
   }

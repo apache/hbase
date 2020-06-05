@@ -30,9 +30,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -64,7 +65,7 @@ public class TestRegionSplitPolicy {
   @Before
   public void setupMocks() {
     conf = HBaseConfiguration.create();
-    HRegionInfo hri = new HRegionInfo(TABLENAME);
+    RegionInfo hri = RegionInfoBuilder.newBuilder(TABLENAME).build();
     htd = new HTableDescriptor(TABLENAME);
     mockRegion = Mockito.mock(HRegion.class);
     Mockito.doReturn(htd).when(mockRegion).getTableDescriptor();

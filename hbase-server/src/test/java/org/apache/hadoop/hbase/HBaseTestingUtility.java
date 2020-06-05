@@ -630,14 +630,18 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     return dfsCluster;
   }
 
-  /** This is used before starting HDFS and map-reduce mini-clusters
-   * Run something like the below to check for the likes of '/tmp' references -- i.e.
-   * references outside of the test data dir -- in the conf.
-   *     Configuration conf = TEST_UTIL.getConfiguration();
-   *     for (Iterator<Map.Entry<String, String>> i = conf.iterator(); i.hasNext();) {
-   *       Map.Entry<String, String> e = i.next();
-   *       assertFalse(e.getKey() + " " + e.getValue(), e.getValue().contains("/tmp"));
-   *     }
+  /**
+   * This is used before starting HDFS and map-reduce mini-clusters Run something like the below to
+   * check for the likes of '/tmp' references -- i.e. references outside of the test data dir -- in
+   * the conf.
+   *
+   * <pre>
+   * Configuration conf = TEST_UTIL.getConfiguration();
+   * for (Iterator&lt;Map.Entry&lt;String, String&gt;&gt; i = conf.iterator(); i.hasNext();) {
+   *   Map.Entry&lt;String, String&gt; e = i.next();
+   *   assertFalse(e.getKey() + " " + e.getValue(), e.getValue().contains("/tmp"));
+   * }
+   * </pre>
    */
   private void createDirsAndSetProperties() throws IOException {
     setupClusterTestDir();
@@ -2012,12 +2016,11 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @param startKey the start boundary of the region
    * @param endKey the end boundary of the region
    * @return a region that writes to local dir for testing
-   * @throws IOException
    */
-  public HRegion createLocalHRegion(TableDescriptor desc, byte [] startKey,
-      byte [] endKey)
-  throws IOException {
-    HRegionInfo hri = new HRegionInfo(desc.getTableName(), startKey, endKey);
+  public HRegion createLocalHRegion(TableDescriptor desc, byte[] startKey, byte[] endKey)
+    throws IOException {
+    RegionInfo hri = RegionInfoBuilder.newBuilder(desc.getTableName()).setStartKey(startKey)
+      .setEndKey(endKey).build();
     return createLocalHRegion(hri, desc);
   }
 
@@ -2059,10 +2062,8 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   public HRegion createLocalHRegionWithInMemoryFlags(TableName tableName, byte[] startKey,
-      byte[] stopKey,
-      boolean isReadOnly, Durability durability, WAL wal, boolean[] compactedMemStore,
-      byte[]... families)
-      throws IOException {
+    byte[] stopKey, boolean isReadOnly, Durability durability, WAL wal, boolean[] compactedMemStore,
+    byte[]... families) throws IOException {
     TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
       new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
     tableDescriptor.setReadOnly(isReadOnly);
@@ -2082,7 +2083,8 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       tableDescriptor.setColumnFamily(familyDescriptor);
     }
     tableDescriptor.setDurability(durability);
-    HRegionInfo info = new HRegionInfo(tableDescriptor.getTableName(), startKey, stopKey, false);
+    RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName())
+      .setStartKey(startKey).setEndKey(stopKey).build();
     return createLocalHRegion(info, tableDescriptor, wal);
   }
 
@@ -3573,7 +3575,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
             try (ResultScanner s = meta.getScanner(scan)) {
               for (Result r; (r = s.next()) != null;) {
                 byte[] b = r.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-                HRegionInfo info = HRegionInfo.parseFromOrNull(b);
+                RegionInfo info = RegionInfo.parseFromOrNull(b);
                 if (info != null && info.getTable().equals(tableName)) {
                   // Get server hosting this region from catalog family. Return false if no server
                   // hosting this region, or if the server hosting this region was recently killed
