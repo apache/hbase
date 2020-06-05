@@ -478,7 +478,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
             });
           } catch (Exception ex) {
             ExceptionUtil.rethrowIfInterrupt(ex);
-            handleSaslConnectionFailure(numRetries++, MAX_RETRIES, ex, ticket);
+            handleSaslConnectionFailure(numRetries++, reloginMaxRetries, ex, ticket);
             continue;
           }
           if (continueSasl) {
