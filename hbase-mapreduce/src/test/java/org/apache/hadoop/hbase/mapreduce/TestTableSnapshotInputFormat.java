@@ -54,7 +54,6 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -93,9 +92,6 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     return yyy;
   }
 
-  @After
-  public void tearDown() throws Exception {
-  }
 
   @Test
   public void testGetBestLocations() throws IOException {
@@ -175,7 +171,6 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
 
   @Test
   public void testInitTableSnapshotMapperJobConfig() throws Exception {
-    setupCluster();
     final TableName tableName = TableName.valueOf(name.getMethodName());
     String snapshotName = "foo";
 
@@ -200,7 +195,6 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     } finally {
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
-      tearDownCluster();
     }
   }
 
@@ -217,7 +211,6 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
   public void testWithMockedMapReduce(HBaseTestingUtility util, String snapshotName,
       int numRegions, int numSplitsPerRegion, int expectedNumSplits, boolean setLocalityEnabledTo)
       throws Exception {
-    setupCluster();
     final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
       createTableAndSnapshot(
@@ -245,13 +238,11 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     } finally {
       util.getAdmin().deleteSnapshot(snapshotName);
       util.deleteTable(tableName);
-      tearDownCluster();
     }
   }
 
   @Test
   public void testWithMockedMapReduceWithSplitsPerRegion() throws Exception {
-    setupCluster();
     String snapshotName = "testWithMockedMapReduceMultiRegion";
     final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
@@ -272,13 +263,11 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     } finally {
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
-      tearDownCluster();
     }
   }
 
   @Test
   public void testWithMockedMapReduceWithNoStartRowStopRow() throws Exception {
-    setupCluster();
     String snapshotName = "testWithMockedMapReduceMultiRegion";
     final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
@@ -301,13 +290,11 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     } finally {
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
-      tearDownCluster();
     }
   }
 
   @Test
   public void testScanLimit() throws Exception {
-    setupCluster();
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final String snapshotName = tableName + "Snapshot";
     Table table = null;
@@ -351,13 +338,11 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       UTIL.getConfiguration().unset(SNAPSHOT_INPUTFORMAT_ROW_LIMIT_PER_INPUTSPLIT);
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
-      tearDownCluster();
     }
   }
 
   @Test
   public void testNoDuplicateResultsWhenSplitting() throws Exception {
-    setupCluster();
     TableName tableName = TableName.valueOf("testNoDuplicateResultsWhenSplitting");
     String snapshotName = "testSnapshotBug";
     try {
@@ -403,7 +388,6 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     } finally {
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
-      tearDownCluster();
     }
   }
 
