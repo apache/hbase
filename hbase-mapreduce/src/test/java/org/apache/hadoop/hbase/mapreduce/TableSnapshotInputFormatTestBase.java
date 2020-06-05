@@ -41,7 +41,9 @@ import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,6 +57,7 @@ public abstract class TableSnapshotInputFormatTestBase {
   protected FileSystem fs;
   protected Path rootDir;
 
+  @Before
   public void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
     StartMiniClusterOption option = StartMiniClusterOption.builder()
@@ -65,6 +68,7 @@ public abstract class TableSnapshotInputFormatTestBase {
     fs = rootDir.getFileSystem(UTIL.getConfiguration());
   }
 
+  @After
   public void tearDownCluster() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -115,7 +119,6 @@ public abstract class TableSnapshotInputFormatTestBase {
   // Test that snapshot restore does not create back references in the HBase root dir.
   @Test
   public void testRestoreSnapshotDoesNotCreateBackRefLinks() throws Exception {
-    setupCluster();
     TableName tableName = TableName.valueOf("testRestoreSnapshotDoesNotCreateBackRefLinks");
     String snapshotName = "foo";
 
@@ -149,25 +152,18 @@ public abstract class TableSnapshotInputFormatTestBase {
     } finally {
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
-      tearDownCluster();
     }
   }
 
   public abstract void testRestoreSnapshotDoesNotCreateBackRefLinksInit(TableName tableName,
       String snapshotName, Path tmpTableDir) throws Exception;
 
-  protected void testWithMapReduce(HBaseTestingUtility util, String snapshotName,
-      int numRegions, int numSplitsPerRegion, int expectedNumSplits, boolean shutdownCluster)
-      throws Exception {
-    setupCluster();
-    try {
-      Path tableDir = util.getDataTestDirOnTestFS(snapshotName);
-      TableName tableName = TableName.valueOf("testWithMapReduce");
-      testWithMapReduceImpl(util, tableName, snapshotName, tableDir, numRegions,
-              numSplitsPerRegion, expectedNumSplits, shutdownCluster);
-    } finally {
-      tearDownCluster();
-    }
+  protected void testWithMapReduce(HBaseTestingUtility util, String snapshotName, int numRegions,
+      int numSplitsPerRegion, int expectedNumSplits, boolean shutdownCluster) throws Exception {
+    Path tableDir = util.getDataTestDirOnTestFS(snapshotName);
+    TableName tableName = TableName.valueOf("testWithMapReduce");
+    testWithMapReduceImpl(util, tableName, snapshotName, tableDir, numRegions, numSplitsPerRegion,
+      expectedNumSplits, shutdownCluster);
   }
 
   protected static void verifyRowFromMap(ImmutableBytesWritable key, Result result)
