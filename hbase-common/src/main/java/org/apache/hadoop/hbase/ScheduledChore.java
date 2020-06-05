@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.hadoop.hbase.util.MovingAverage;
-import org.apache.hadoop.hbase.util.WindowMovingAverage;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,10 +78,6 @@ public abstract class ScheduledChore implements Runnable {
    * command can cause many chores to stop together.
    */
   private final Stoppable stopper;
-
-  private final MovingAverage<Void> timeMeasurement;
-  private static final long FIVE_MINUTES_IN_NANOS = TimeUnit.MINUTES.toNanos(5L);
-  private long lastLog = System.nanoTime();
 
   interface ChoreServicer {
     /**
@@ -165,7 +159,6 @@ public abstract class ScheduledChore implements Runnable {
     this.period = period;
     this.initialDelay = initialDelay < 0 ? 0 : initialDelay;
     this.timeUnit = unit;
-    this.timeMeasurement = new WindowMovingAverage(name);
   }
 
   /**
@@ -183,18 +176,21 @@ public abstract class ScheduledChore implements Runnable {
       if (LOG.isInfoEnabled()) LOG.info("Chore: " + getName() + " was stopped");
     } else {
       try {
+        // TODO: Histogram metrics per chore name.
+        // For now, just measure and log if DEBUG level logging is enabled.
+        long start = 0;
+        if (LOG.isDebugEnabled()) {
+          start = System.nanoTime();
+        }
         if (!initialChoreComplete) {
           initialChoreComplete = initialChore();
         } else {
-          timeMeasurement.measure(() -> {
-            chore();
-            return null;
-          });
-          if (LOG.isInfoEnabled() && (System.nanoTime() - lastLog > FIVE_MINUTES_IN_NANOS)) {
-            LOG.info("{} average execution time: {} ns.", getName(),
-                (long)(timeMeasurement.getAverageTime()));
-            lastLog = System.nanoTime();
-          }
+          chore();
+        }
+        if (LOG.isDebugEnabled() && start > 0) {
+          long end = System.nanoTime();
+          LOG.debug("{} execution time: {} ms.", getName(),
+            TimeUnit.NANOSECONDS.toMillis(end - start));
         }
       } catch (Throwable t) {
         if (LOG.isErrorEnabled()) LOG.error("Caught error", t);
