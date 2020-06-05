@@ -453,7 +453,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       }
 
       short numRetries = 0;
-      final short MAX_RETRIES = 5;
+      int reloginMaxRetries = this.rpcClient.conf.getInt("hbase.security.relogin.maxretries", 5);
       while (true) {
         setupConnection();
         InputStream inStream = NetUtils.getInputStream(socket);
@@ -478,7 +478,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
             });
           } catch (Exception ex) {
             ExceptionUtil.rethrowIfInterrupt(ex);
-            handleSaslConnectionFailure(numRetries++, MAX_RETRIES, ex, ticket);
+            handleSaslConnectionFailure(numRetries++, reloginMaxRetries, ex, ticket);
             continue;
           }
           if (continueSasl) {
