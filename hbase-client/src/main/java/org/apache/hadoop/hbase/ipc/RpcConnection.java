@@ -66,8 +66,6 @@ abstract class RpcConnection {
 
   protected final int reloginMaxBackoff; // max pause before relogin on sasl failure
 
-  protected final int reloginMaxRetries; // max retries for relogin on sasl failure
-
   protected final Codec codec;
 
   protected final CompressionCodec compressor;
@@ -129,7 +127,6 @@ abstract class RpcConnection {
           + ", sasl=" + useSasl);
     }
     reloginMaxBackoff = conf.getInt("hbase.security.relogin.maxbackoff", 5000);
-    reloginMaxRetries = conf.getInt("hbase.security.relogin.maxretries", 5);
     this.remoteId = remoteId;
   }
 
