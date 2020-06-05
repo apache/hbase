@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -191,31 +190,30 @@ public class TestHbck {
   @Test
   public void testSetRegionStateInMeta() throws Exception {
     Hbck hbck = getHbck();
-    try(Admin admin = TEST_UTIL.getAdmin()){
-      final List<RegionInfo> regions = admin.getRegions(TABLE_NAME);
-      final AssignmentManager am = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager();
-      final List<RegionState> prevStates = new ArrayList<>();
-      final List<RegionState> newStates = new ArrayList<>();
-      final Map<String, Pair<RegionState, RegionState>> regionsMap = new HashMap<>();
-      regions.forEach(r -> {
-        RegionState prevState = am.getRegionStates().getRegionState(r);
-        prevStates.add(prevState);
-        RegionState newState = RegionState.createForTesting(r, RegionState.State.CLOSED);
-        newStates.add(newState);
-        regionsMap.put(r.getEncodedName(), new Pair<>(prevState, newState));
-      });
-      final List<RegionState> result = hbck.setRegionStateInMeta(newStates);
-      result.forEach(r -> {
-        RegionState prevState = regionsMap.get(r.getRegion().getEncodedName()).getFirst();
-        assertEquals(prevState.getState(), r.getState());
-      });
-      regions.forEach(r -> {
-        RegionState cachedState = am.getRegionStates().getRegionState(r.getEncodedName());
-        RegionState newState = regionsMap.get(r.getEncodedName()).getSecond();
-        assertEquals(newState.getState(), cachedState.getState());
-      });
-      hbck.setRegionStateInMeta(prevStates);
-    }
+    Admin admin = TEST_UTIL.getAdmin();
+    final List<RegionInfo> regions = admin.getRegions(TABLE_NAME);
+    final AssignmentManager am = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager();
+    Map<String, RegionState.State> prevStates = new HashMap<>();
+    Map<String, RegionState.State> newStates = new HashMap<>();
+    final Map<String, Pair<RegionState.State, RegionState.State>> regionsMap = new HashMap<>();
+    regions.forEach(r -> {
+      RegionState prevState = am.getRegionStates().getRegionState(r);
+      prevStates.put(r.getEncodedName(), prevState.getState());
+      newStates.put(r.getEncodedName(), RegionState.State.CLOSED);
+      regionsMap.put(r.getEncodedName(),
+        new Pair<>(prevState.getState(), RegionState.State.CLOSED));
+    });
+    final Map<String, RegionState.State> result = hbck.setRegionStateInMeta(newStates);
+    result.forEach((k, v) -> {
+      RegionState.State prevState = regionsMap.get(k).getFirst();
+      assertEquals(prevState, v);
+    });
+    regions.forEach(r -> {
+      RegionState cachedState = am.getRegionStates().getRegionState(r.getEncodedName());
+      RegionState.State newState = regionsMap.get(r.getEncodedName()).getSecond();
+      assertEquals(newState, cachedState.getState());
+    });
+    hbck.setRegionStateInMeta(prevStates);
   }
 
   @Test
