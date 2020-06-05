@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.ByteBufferAllocator;
 import org.apache.hadoop.hbase.util.ByteBufferArray;
 
 /**
@@ -44,7 +45,17 @@ public class ByteBufferIOEngine implements IOEngine {
       throws IOException {
     this.capacity = capacity;
     this.direct = direct;
-    bufferArray = new ByteBufferArray(capacity, direct);
+    ByteBufferAllocator allocator = new ByteBufferAllocator() {
+      @Override
+      public ByteBuffer allocate(long size, boolean directByteBuffer) throws IOException {
+        if (directByteBuffer) {
+          return ByteBuffer.allocateDirect((int) size);
+        } else {
+          return ByteBuffer.allocate((int) size);
+        }
+      }
+    };
+    bufferArray = new ByteBufferArray(capacity, direct, allocator);
   }
 
   @Override
