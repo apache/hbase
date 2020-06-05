@@ -453,6 +453,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       }
 
       short numRetries = 0;
+      int reloginMaxRetries = this.rpcClient.conf.getInt("hbase.security.relogin.maxretries", 5);
       while (true) {
         setupConnection();
         InputStream inStream = NetUtils.getInputStream(socket);
