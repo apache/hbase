@@ -109,7 +109,6 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
 
   @Test
   public void testInitTableSnapshotMapperJobConfig() throws Exception {
-    setupCluster();
     final TableName tableName = TableName.valueOf(name.getMethodName());
     String snapshotName = "foo";
 
@@ -134,7 +133,6 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     } finally {
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
-      tearDownCluster();
     }
   }
 
@@ -176,7 +174,6 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
   protected void testWithMockedMapReduce(HBaseTestingUtility util, String snapshotName,
       int numRegions, int numSplitsPerRegion, int expectedNumSplits, boolean setLocalityEnabledTo)
       throws Exception {
-    setupCluster();
     final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
       createTableAndSnapshot(
@@ -205,7 +202,6 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     } finally {
       util.getAdmin().deleteSnapshot(snapshotName);
       util.deleteTable(tableName);
-      tearDownCluster();
     }
   }
 
@@ -261,8 +257,8 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
 
   @Override
   protected void testWithMapReduceImpl(HBaseTestingUtility util, TableName tableName,
-      String snapshotName, Path tableDir, int numRegions, int numSplitsPerRegion, int expectedNumSplits,
-      boolean shutdownCluster) throws Exception {
+      String snapshotName, Path tableDir, int numRegions, int numSplitsPerRegion,
+      int expectedNumSplits, boolean shutdownCluster) throws Exception {
     doTestWithMapReduce(util, tableName, snapshotName, getStartRow(), getEndRow(), tableDir,
       numRegions, numSplitsPerRegion, expectedNumSplits, shutdownCluster);
   }
