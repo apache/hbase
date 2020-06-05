@@ -130,7 +130,6 @@ abstract class RpcConnection {
     }
     reloginMaxBackoff = conf.getInt("hbase.security.relogin.maxbackoff", 5000);
     reloginMaxRetries = conf.getInt("hbase.security.relogin.maxretries", 5);
-    
     this.remoteId = remoteId;
   }
 
