@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.CellSet;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
@@ -76,7 +77,7 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
   }
 
   @Override
-  void append(RegionEntryBuffer buffer) throws IOException {
+  void append(RegionEntryBuffer buffer, MonitoredTask status) throws IOException {
     Map<String, CellSet> familyCells = new HashMap<>();
     Map<String, Long> familySeqIds = new HashMap<>();
     boolean isMetaTable = buffer.tableName.equals(META_TABLE_NAME);
@@ -123,12 +124,12 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
   }
 
   @Override
-  public List<Path> close() throws IOException {
+  public List<Path> close(MonitoredTask status) throws IOException {
     boolean isSuccessful = true;
     try {
-      isSuccessful &= finishWriterThreads();
+      isSuccessful = finishWriterThreads();
     } finally {
-      isSuccessful &= writeRemainingEntryBuffers();
+      isSuccessful &= writeRemainingEntryBuffers(status);
     }
     return isSuccessful ? splits : null;
   }
@@ -136,12 +137,13 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
   /**
    * Write out the remaining RegionEntryBuffers and close the writers.
    *
+   * @param status MonitoredTask instance to capture WAL splitting
    * @return true when there is no error.
    */
-  private boolean writeRemainingEntryBuffers() throws IOException {
+  private boolean writeRemainingEntryBuffers(MonitoredTask status) throws IOException {
     for (EntryBuffers.RegionEntryBuffer buffer : entryBuffers.buffers.values()) {
       closeCompletionService.submit(() -> {
-        append(buffer);
+        append(buffer, status);
         return null;
       });
     }

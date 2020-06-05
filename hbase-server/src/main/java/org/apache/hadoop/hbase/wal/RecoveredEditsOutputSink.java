@@ -29,6 +29,7 @@ import java.util.concurrent.Future;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -52,7 +53,8 @@ class RecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
   }
 
   @Override
-  public void append(EntryBuffers.RegionEntryBuffer buffer) throws IOException {
+  public void append(EntryBuffers.RegionEntryBuffer buffer, MonitoredTask status)
+      throws IOException {
     List<WAL.Entry> entries = buffer.entryBuffer;
     if (entries.isEmpty()) {
       LOG.warn("got an empty buffer, skipping");
@@ -60,7 +62,7 @@ class RecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
     }
     RecoveredEditsWriter writer =
       getRecoveredEditsWriter(buffer.tableName, buffer.encodedRegionName,
-        entries.get(0).getKey().getSequenceId());
+        entries.get(0).getKey().getSequenceId(), status);
     if (writer != null) {
       writer.writeRegionEntries(entries);
     }
@@ -72,12 +74,12 @@ class RecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
    * @return null if this region shouldn't output any logs
    */
   private RecoveredEditsWriter getRecoveredEditsWriter(TableName tableName, byte[] region,
-    long seqId) throws IOException {
+      long seqId, MonitoredTask status) throws IOException {
     RecoveredEditsWriter ret = writers.get(Bytes.toString(region));
     if (ret != null) {
       return ret;
     }
-    ret = createRecoveredEditsWriter(tableName, region, seqId);
+    ret = createRecoveredEditsWriter(tableName, region, seqId, status);
     if (ret == null) {
       return null;
     }
@@ -86,12 +88,12 @@ class RecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
   }
 
   @Override
-  public List<Path> close() throws IOException {
+  public List<Path> close(MonitoredTask status) throws IOException {
     boolean isSuccessful = true;
     try {
-      isSuccessful &= finishWriterThreads();
+      isSuccessful = finishWriterThreads();
     } finally {
-      isSuccessful &= closeWriters();
+      isSuccessful &= closeWriters(status);
     }
     return isSuccessful ? splits : null;
   }
@@ -99,13 +101,14 @@ class RecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
   /**
    * Close all of the output streams.
    *
+   * @param status MonitoredTask instance to capture WAL splitting
    * @return true when there is no error.
    */
-  private boolean closeWriters() throws IOException {
+  private boolean closeWriters(MonitoredTask status) throws IOException {
     List<IOException> thrown = Lists.newArrayList();
     for (RecoveredEditsWriter writer : writers.values()) {
       closeCompletionService.submit(() -> {
-        Path dst = closeRecoveredEditsWriter(writer, thrown);
+        Path dst = closeRecoveredEditsWriter(writer, thrown, status);
         splits.add(dst);
         return null;
       });

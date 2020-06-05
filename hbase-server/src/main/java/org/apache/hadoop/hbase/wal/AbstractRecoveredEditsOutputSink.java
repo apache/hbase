@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -57,7 +58,7 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
    * @return a writer that wraps a {@link WALProvider.Writer} and its Path. Caller should close.
    */
   protected RecoveredEditsWriter createRecoveredEditsWriter(TableName tableName, byte[] region,
-    long seqId) throws IOException {
+      long seqId, MonitoredTask status) throws IOException {
     Path regionEditsPath = getRegionSplitEditsPath(tableName, region, seqId,
       walSplitter.getFileBeingSplit().getPath().getName(), walSplitter.getTmpDirName(),
       walSplitter.conf);
@@ -70,12 +71,14 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
       }
     }
     WALProvider.Writer w = walSplitter.createWriter(regionEditsPath);
-    LOG.info("Creating recovered edits writer path={}", regionEditsPath);
+    final String msg = "Creating recovered edits writer path=" + regionEditsPath;
+    LOG.info(msg);
+    status.setStatus(msg);
     return new RecoveredEditsWriter(region, regionEditsPath, w, seqId);
   }
 
   protected Path closeRecoveredEditsWriter(RecoveredEditsWriter editsWriter,
-    List<IOException> thrown) throws IOException {
+      List<IOException> thrown, MonitoredTask status) throws IOException {
     try {
       editsWriter.writer.close();
     } catch (IOException ioe) {
@@ -83,9 +86,11 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
       thrown.add(ioe);
       return null;
     }
-    LOG.info("Closed recovered edits writer path={} (wrote {} edits, skipped {} edits in {} ms",
-      editsWriter.path, editsWriter.editsWritten, editsWriter.editsSkipped,
-      editsWriter.nanosSpent / 1000 / 1000);
+    final String msg = "Closed recovered edits writer path=" + editsWriter.path + " (wrote "
+      + editsWriter.editsWritten + " edits, skipped " + editsWriter.editsSkipped + " edits in " + (
+      editsWriter.nanosSpent / 1000 / 1000) + " ms)";
+    LOG.info(msg);
+    status.setStatus(msg);
     if (editsWriter.editsWritten == 0) {
       // just remove the empty recovered.edits file
       if (walSplitter.walFS.exists(editsWriter.path) &&
@@ -110,7 +115,9 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
           throw new IOException(
             "Failed renaming recovered edits " + editsWriter.path + " to " + dst);
         }
-        LOG.info("Rename recovered edits {} to {}", editsWriter.path, dst);
+        final String renameEditMsg = "Rename recovered edits " + editsWriter.path + " to " + dst;
+        LOG.info(renameEditMsg);
+        status.setStatus(renameEditMsg);
       }
     } catch (IOException ioe) {
       LOG.error("Could not rename recovered edits {} to {}", editsWriter.path, dst, ioe);

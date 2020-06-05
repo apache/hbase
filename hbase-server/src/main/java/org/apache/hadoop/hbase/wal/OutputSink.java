@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -58,6 +59,8 @@ abstract class OutputSink {
 
   protected final List<Path> splits = new ArrayList<>();
 
+  private MonitoredTask status = null;
+
   /**
    * Used when close this output sink.
    */
@@ -78,12 +81,16 @@ abstract class OutputSink {
     this.reporter = reporter;
   }
 
+  void setStatus(MonitoredTask status) {
+    this.status = status;
+  }
+
   /**
    * Start the threads that will pump data from the entryBuffers to the output files.
    */
   void startWriterThreads() throws IOException {
     for (int i = 0; i < numThreads; i++) {
-      WriterThread t = new WriterThread(controller, entryBuffers, this, i);
+      WriterThread t = new WriterThread(controller, entryBuffers, this, i, status);
       t.start();
       writerThreads.add(t);
     }
@@ -114,7 +121,9 @@ abstract class OutputSink {
       }
     }
     controller.checkForErrors();
-    LOG.info("{} split writer threads finished", this.writerThreads.size());
+    final String msg = this.writerThreads.size() + " split writer threads finished";
+    LOG.info(msg);
+    status.setStatus(msg);
     return (!progressFailed);
   }
 
@@ -129,10 +138,13 @@ abstract class OutputSink {
 
   /**
    * @param buffer A buffer of some number of edits for a given region.
+   * @param status MonitoredTask instance to capture WAL splitting
+   * @throws IOException For any IO errors
    */
-  abstract void append(EntryBuffers.RegionEntryBuffer buffer) throws IOException;
+  abstract void append(EntryBuffers.RegionEntryBuffer buffer, MonitoredTask status)
+    throws IOException;
 
-  abstract List<Path> close() throws IOException;
+  abstract List<Path> close(MonitoredTask status) throws IOException;
 
   /**
    * @return a map from encoded region ID to the number of edits written out for that region.
@@ -156,13 +168,15 @@ abstract class OutputSink {
     private WALSplitter.PipelineController controller;
     private EntryBuffers entryBuffers;
     private OutputSink outputSink = null;
+    private final MonitoredTask status;
 
     WriterThread(WALSplitter.PipelineController controller, EntryBuffers entryBuffers,
-        OutputSink sink, int i) {
+        OutputSink sink, int i, MonitoredTask status) {
       super(Thread.currentThread().getName() + "-Writer-" + i);
       this.controller = controller;
       this.entryBuffers = entryBuffers;
       outputSink = sink;
+      this.status = status;
     }
 
     @Override
@@ -206,7 +220,7 @@ abstract class OutputSink {
     }
 
     private void writeBuffer(EntryBuffers.RegionEntryBuffer buffer) throws IOException {
-      outputSink.append(buffer);
+      outputSink.append(buffer, status);
     }
 
     private void finish() {
