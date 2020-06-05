@@ -18,16 +18,21 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
-
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.master.RegionState;
-import org.apache.hadoop.hbase.ServerName;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
@@ -37,17 +42,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.BypassProc
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FixMetaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.HbckService.BlockingInterface;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RegionSpecifierAndState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunHbckChoreRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunHbckChoreResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ScheduleServerCrashProcedureResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignsResponse;
-
-import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
-
-import org.apache.yetus.audience.InterfaceAudience;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Use {@link ClusterConnection#getHbck()} to obtain an instance of {@link Hbck} instead of
@@ -113,18 +112,20 @@ public class HBaseHbck implements Hbck {
   }
 
   @Override
-  public List<RegionState> setRegionStateInMeta(List<RegionState> states) throws IOException {
+  public Map<String, RegionState.State> setRegionStateInMeta(
+    Map<String, RegionState.State> nameOrEncodedName2State) throws IOException {
     try {
-      if(LOG.isDebugEnabled()) {
-        states.forEach(s ->
-          LOG.debug("region={}, state={}", s.getRegion().getRegionName(), s.getState())
-        );
+      if (LOG.isDebugEnabled()) {
+        nameOrEncodedName2State.forEach((k, v) -> LOG.debug("region={}, state={}", k, v));
       }
-      MasterProtos.GetRegionStateInMetaResponse response = hbck.setRegionStateInMeta(
-        rpcControllerFactory.newController(),
-        RequestConverter.buildSetRegionStateInMetaRequest(states));
-      final List<RegionState> result = new ArrayList<>();
-      response.getStatesList().forEach(s -> result.add(RegionState.convert(s)));
+      MasterProtos.SetRegionStateInMetaResponse response =
+        hbck.setRegionStateInMeta(rpcControllerFactory.newController(),
+          RequestConverter.buildSetRegionStateInMetaRequest(nameOrEncodedName2State));
+      Map<String, RegionState.State> result = new HashMap<>();
+      for (RegionSpecifierAndState nameAndState : response.getStatesList()) {
+        result.put(nameAndState.getRegionSpecifier().getValue().toStringUtf8(),
+          RegionState.State.convert(nameAndState.getState()));
+      }
       return result;
     } catch (ServiceException se) {
       throw new IOException(se);
