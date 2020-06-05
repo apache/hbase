@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
+import org.apache.hadoop.hbase.client.LogQueryFilter;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
@@ -52,7 +53,6 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.LogQueryFilter;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
@@ -138,6 +138,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MoveRegion
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.NormalizeRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RegionSpecifierAndState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCleanerChoreRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
@@ -1433,13 +1434,23 @@ public final class RequestConverter {
 
   /**
    * Creates a protocol buffer SetRegionStateInMetaRequest
-   * @param states list of regions states to update in Meta
+   * @param nameOrEncodedName2State list of regions states to update in Meta
    * @return a SetRegionStateInMetaRequest
    */
-  public static SetRegionStateInMetaRequest buildSetRegionStateInMetaRequest(
-      final List<RegionState> states) {
-    final SetRegionStateInMetaRequest.Builder builder = SetRegionStateInMetaRequest.newBuilder();
-    states.forEach(s -> builder.addStates(s.convert()));
+  public static SetRegionStateInMetaRequest
+    buildSetRegionStateInMetaRequest(Map<String, RegionState.State> nameOrEncodedName2State) {
+    SetRegionStateInMetaRequest.Builder builder = SetRegionStateInMetaRequest.newBuilder();
+    nameOrEncodedName2State.forEach((name, state) -> {
+      byte[] bytes = Bytes.toBytes(name);
+      RegionSpecifier spec;
+      if (RegionInfo.isEncodedRegionName(bytes)) {
+        spec = buildRegionSpecifier(RegionSpecifierType.ENCODED_REGION_NAME, bytes);
+      } else {
+        spec = buildRegionSpecifier(RegionSpecifierType.REGION_NAME, bytes);
+      }
+      builder.addStates(RegionSpecifierAndState.newBuilder().setRegionSpecifier(spec)
+        .setState(state.convert()).build());
+    });
     return builder.build();
   }
 

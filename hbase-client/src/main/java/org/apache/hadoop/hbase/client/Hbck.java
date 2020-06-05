@@ -22,17 +22,14 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 
 /**
  * Hbck fixup tool APIs. Obtain an instance from {@link ClusterConnection#getHbck()} and call
@@ -57,12 +54,13 @@ public interface Hbck extends Abortable, Closeable {
   TableState setTableStateInMeta(TableState state) throws IOException;
 
   /**
-   * Update region state in Meta only. No procedures are submitted to manipulate the given region
-   * or any other region from same table.
-   * @param states list of all region states to be updated in meta
+   * Update region state in Meta only. No procedures are submitted to manipulate the given region or
+   * any other region from same table.
+   * @param nameOrEncodedName2State list of all region states to be updated in meta
    * @return previous state of the region in Meta
    */
-  List<RegionState> setRegionStateInMeta(List<RegionState> states) throws IOException;
+  Map<String, RegionState.State>
+    setRegionStateInMeta(Map<String, RegionState.State> nameOrEncodedName2State) throws IOException;
 
   /**
    * Like {@link Admin#assign(byte[])} but 'raw' in that it can do more than one Region at a time
