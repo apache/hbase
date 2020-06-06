@@ -160,7 +160,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
   private static final String LRU_CACHE_HEAVY_EVICTION_MB_SIZE_LIMIT
           = "hbase.lru.cache.heavy.eviction.mb.size.limit";
   private static final long DEFAULT_LRU_CACHE_HEAVY_EVICTION_MB_SIZE_LIMIT = 500;
-  
+
   private static final String LRU_CACHE_HEAVY_EVICTION_OVERHEAD_COEFFICIENT
           = "hbase.lru.cache.heavy.eviction.overhead.coefficient";
   private static final float DEFAULT_LRU_CACHE_HEAVY_EVICTION_OVERHEAD_COEFFICIENT = 0.01f;
@@ -335,7 +335,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
       int mapInitialSize, float mapLoadFactor, int mapConcurrencyLevel,
       float minFactor, float acceptableFactor, float singleFactor,
       float multiFactor, float memoryFactor, float hardLimitFactor,
-      boolean forceInMemory, long maxBlockSize, 
+      boolean forceInMemory, long maxBlockSize,
       int heavyEvictionCountLimit, long heavyEvictionMbSizeLimit,
       float heavyEvictionOverheadCoefficient) {
     this.maxBlockSize = maxBlockSize;
@@ -405,7 +405,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
       runEviction();
     }
   }
-  
+
   @VisibleForTesting
   public int getCacheDataBlockPercent() {
     return cacheDataBlockPercent;
@@ -1027,7 +1027,8 @@ public class LruBlockCache implements FirstLevelBlockCache {
         if (stopTime - startTime <= 1000 * 10 - 1) {
           mbFreedSum += bytesFreed/1024/1024;
         } else {
-          freedDataOverheadPercent = (int) (mbFreedSum * 100 / cache.heavyEvictionMbSizeLimit) - 100;
+          freedDataOverheadPercent =
+            (int) (mbFreedSum * 100 / cache.heavyEvictionMbSizeLimit) - 100;
           if (mbFreedSum > cache.heavyEvictionMbSizeLimit) {
             heavyEvictionCount++;
             if (heavyEvictionCount > cache.heavyEvictionCountLimit) {
@@ -1035,14 +1036,16 @@ public class LruBlockCache implements FirstLevelBlockCache {
               ch = ch > 15 ? 15 : ch;
               ch = ch < 0 ? 0 : ch;
               cache.cacheDataBlockPercent -= ch;
-              cache.cacheDataBlockPercent = cache.cacheDataBlockPercent < 1 ? 1 : cache.cacheDataBlockPercent;
+              cache.cacheDataBlockPercent =
+                cache.cacheDataBlockPercent < 1 ? 1 : cache.cacheDataBlockPercent;
             }
           } else {
             if (mbFreedSum >= cache.heavyEvictionMbSizeLimit * 0.1) {
               // It help avoid exit during short-term fluctuation
               int ch = (int) (-freedDataOverheadPercent * 0.1 + 1);
               cache.cacheDataBlockPercent += ch;
-              cache.cacheDataBlockPercent = cache.cacheDataBlockPercent > 100 ? 100 : cache.cacheDataBlockPercent;
+              cache.cacheDataBlockPercent =
+                cache.cacheDataBlockPercent > 100 ? 100 : cache.cacheDataBlockPercent;
             } else {
               heavyEvictionCount = 0;
               cache.cacheDataBlockPercent = 100;
