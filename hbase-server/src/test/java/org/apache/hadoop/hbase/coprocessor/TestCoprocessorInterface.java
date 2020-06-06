@@ -38,9 +38,9 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
@@ -295,7 +295,7 @@ public class TestCoprocessorInterface {
     HRegion region = initHRegion(tableName, name.getMethodName(), hc, new Class<?>[]{}, families);
 
     for (int i = 0; i < 3; i++) {
-      HBaseTestCase.addContent(region, fam3);
+      HTestConst.addContent(region, fam3);
       region.flush(true);
     }
 
@@ -357,7 +357,7 @@ public class TestCoprocessorInterface {
     HRegion region = initHRegion(tableName, name.getMethodName(), hc,
       new Class<?>[]{CoprocessorImpl.class}, families);
     for (int i = 0; i < 3; i++) {
-      HBaseTestCase.addContent(region, fam3);
+      HTestConst.addContent(region, fam3);
       region.flush(true);
     }
 
