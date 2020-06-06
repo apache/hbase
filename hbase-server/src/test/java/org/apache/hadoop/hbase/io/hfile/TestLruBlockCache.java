@@ -1069,7 +1069,7 @@ public class TestLruBlockCache {
                     false,
                     maxSize,
                     heavyEvictionCountLimit,
-                    500,
+                    200,
                     0.01);
 
     EvictionThread evictionThread = cache.getEvictionThread();
@@ -1082,6 +1082,8 @@ public class TestLruBlockCache {
     for (int blockIndex = 0; blockIndex <= numBlocks * 3000; ++blockIndex) {
       CachedItem block = new CachedItem(hfileName, (int) blockSize, blockIndex);
       cache.cacheBlock(block.cacheKey, block, false);
+      if (cache.getCacheDataBlockPercent() < 70) // enough for test
+        break;
     }
 
     evictionThread.evict();
@@ -1089,12 +1091,13 @@ public class TestLruBlockCache {
 
     if (heavyEvictionCountLimit == 0) {
       // Check if all offset (last two digits) of cached blocks less than the percent.
-      // It means some of blocks haven't not put into BlockCache
+      // It means some of blocks haven't put into BlockCache
       assertTrue(cache.getCacheDataBlockPercent() < 90);
       for (BlockCacheKey key : cache.getMapForTests().keySet()) {
         assertTrue(!(key.getOffset() % 100 > 90));
       }
     } else {
+      // Check that auto-scaling is not working (all blocks in BlockCache)
       assertTrue(cache.getCacheDataBlockPercent() == 100);
       int counter = 0;
       for (BlockCacheKey key : cache.getMapForTests().keySet()) {
@@ -1103,12 +1106,16 @@ public class TestLruBlockCache {
       }
       assertTrue(counter > 1000);
     }
+    evictionThread.shutdown();
   }
 
   @Test
   public void testSkipCacheDataBlocks() throws Exception {
+    // Check that auto-scaling will work right after start
     testSkipCacheDataBlocksInteral(0);
+    // Check that auto-scaling will not work right after start
+    // (have to finished before auto-scaling)
     testSkipCacheDataBlocksInteral(100);
   }
-  
+
 }
