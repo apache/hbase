@@ -54,6 +54,7 @@ if [ "$RUNNING_IN_DOCKER" = "1" ]; then
   if [ -d "output" ]; then
     cd output
   fi
+  GPG_ARGS=("${GPG_ARGS[@]}" --local-user "${GPG_KEY}")
   echo "GPG Version: $("${GPG}" "${GPG_ARGS[@]}" --version)"
   # Inside docker, need to import the GPG key stored in the current directory.
   $GPG "${GPG_ARGS[@]}" --import "$SELF/gpg.key.public"
@@ -69,6 +70,7 @@ if [ "$RUNNING_IN_DOCKER" = "1" ]; then
 else
   # Outside docker, need to ask for information about the release.
   get_release_info
+  GPG_ARGS=("${GPG_ARGS[@]}" --local-user "${GPG_KEY}")
 fi
 
 GPG_TTY="$(tty)"

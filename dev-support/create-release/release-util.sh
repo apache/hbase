@@ -19,7 +19,7 @@
 DRY_RUN=${DRY_RUN:-1} #default to dry run
 DEBUG=${DEBUG:-0}
 GPG=${GPG:-gpg}
-GPG_ARGS=(--no-autostart --batch --local-user "${GPG_KEY}")
+GPG_ARGS=(--no-autostart --batch)
 # Maven Profiles for publishing snapshots and release to Maven Central and Dist
 PUBLISH_PROFILES=("-P" "apache-release,release")
 
