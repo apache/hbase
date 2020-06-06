@@ -177,7 +177,7 @@ if [ -n "$JAVA" ]; then
 fi
 
 MAVEN_MOUNT=()
-if [ -n "MAVEN_VOLUME" ]; then
+if [ -n "${MAVEN_VOLUME}" ]; then
   MAVEN_MOUNT=(--mount "type=volume,src=${MAVEN_VOLUME},dst=/home/hbase-rm/.m2-repository/")
   echo "REPO=/home/hbase-rm/.m2-repository" >> "${ENVFILE}"
 fi
