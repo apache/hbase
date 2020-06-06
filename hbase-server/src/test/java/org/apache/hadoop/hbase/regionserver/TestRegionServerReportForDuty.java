@@ -254,8 +254,7 @@ public class TestRegionServerReportForDuty {
       public void run() {
         rs.start();
       }
-    }, cluster.getConfiguration().getLong("hbase.regionserver.rpc.retry.interval", 300),
-      TimeUnit.MILLISECONDS);
+    }, 1000, TimeUnit.MILLISECONDS);
 
     waitForClusterOnline(master);
   }
