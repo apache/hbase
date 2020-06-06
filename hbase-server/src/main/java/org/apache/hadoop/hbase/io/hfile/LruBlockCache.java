@@ -378,10 +378,10 @@ public class LruBlockCache implements FirstLevelBlockCache {
     this.heavyEvictionCountLimit = heavyEvictionCountLimit < 0 ? 0 : heavyEvictionCountLimit;
     this.heavyEvictionMbSizeLimit = heavyEvictionMbSizeLimit < 1 ? 1 : heavyEvictionMbSizeLimit;
     this.cacheDataBlockPercent = 100;
-    heavyEvictionOverheadCoefficient = heavyEvictionOverheadCoefficient > 1
-      ? 1 : heavyEvictionOverheadCoefficient;
-    heavyEvictionOverheadCoefficient = heavyEvictionOverheadCoefficient < 0.001
-      ? 0.001 : heavyEvictionOverheadCoefficient;
+    heavyEvictionOverheadCoefficient = heavyEvictionOverheadCoefficient > 0.1f
+      ? 1f : heavyEvictionOverheadCoefficient;
+    heavyEvictionOverheadCoefficient = heavyEvictionOverheadCoefficient < 0.001f
+      ? 0.001f : heavyEvictionOverheadCoefficient;
     this.heavyEvictionOverheadCoefficient = heavyEvictionOverheadCoefficient;
 
     // TODO: Add means of turning this off.  Bit obnoxious running thread just to make a log
@@ -1135,7 +1135,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
   public final static long CACHE_FIXED_OVERHEAD = ClassSize.align(
       (5 * Bytes.SIZEOF_LONG) + (11 * ClassSize.REFERENCE) +
       (7 * Bytes.SIZEOF_FLOAT) + (2 * Bytes.SIZEOF_BOOLEAN) +
-      (1 * Bytes.SIZEOF_INT) + ClassSize.OBJECT);
+      (2 * Bytes.SIZEOF_INT) + ClassSize.OBJECT);
 
   @Override
   public long heapSize() {
