@@ -335,7 +335,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
       int mapInitialSize, float mapLoadFactor, int mapConcurrencyLevel,
       float minFactor, float acceptableFactor, float singleFactor,
       float multiFactor, float memoryFactor, float hardLimitFactor,
-      boolean forceInMemory, long maxBlockSize, int cacheDataBlockPercent,
+      boolean forceInMemory, long maxBlockSize, 
       int heavyEvictionCountLimit, long heavyEvictionMbSizeLimit,
       double heavyEvictionOverheadCoefficient) {
     this.maxBlockSize = maxBlockSize;
