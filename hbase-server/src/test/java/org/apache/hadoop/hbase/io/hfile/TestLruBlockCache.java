@@ -1060,7 +1060,8 @@ public class TestLruBlockCache {
 
     final LruBlockCache cache =
             new LruBlockCache(maxSize, blockSize, true, (int) Math.ceil(1.2 * maxSize / blockSize),
-                    LruBlockCache.DEFAULT_LOAD_FACTOR, LruBlockCache.DEFAULT_CONCURRENCY_LEVEL, 0.5f, // min
+                    LruBlockCache.DEFAULT_LOAD_FACTOR, LruBlockCache.DEFAULT_CONCURRENCY_LEVEL, 
+                    0.5f, // min
                     0.99f, // acceptable
                     0.33f, // single
                     0.33f, // multi
@@ -1082,8 +1083,10 @@ public class TestLruBlockCache {
     for (int blockIndex = 0; blockIndex <= numBlocks * 3000; ++blockIndex) {
       CachedItem block = new CachedItem(hfileName, (int) blockSize, blockIndex);
       cache.cacheBlock(block.cacheKey, block, false);
-      if (cache.getCacheDataBlockPercent() < 70) // enough for test
+      if (cache.getCacheDataBlockPercent() < 70) {
+        // enough for test
         break;
+      }
     }
 
     evictionThread.evict();
@@ -1101,8 +1104,9 @@ public class TestLruBlockCache {
       assertTrue(cache.getCacheDataBlockPercent() == 100);
       int counter = 0;
       for (BlockCacheKey key : cache.getMapForTests().keySet()) {
-        if (key.getOffset() % 100 > 90)
+        if (key.getOffset() % 100 > 90) {
           counter++;
+        }
       }
       assertTrue(counter > 1000);
     }
