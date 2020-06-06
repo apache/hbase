@@ -22,13 +22,14 @@ import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam2;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -174,13 +175,13 @@ public class TestMinorCompaction {
       throws Exception {
     Table loader = new RegionAsTable(r);
     for (int i = 0; i < compactionThreshold + 1; i++) {
-      HBaseTestCase.addContent(loader, Bytes.toString(fam1), Bytes.toString(col1), firstRowBytes,
+      HTestConst.addContent(loader, Bytes.toString(fam1), Bytes.toString(col1), firstRowBytes,
         thirdRowBytes, i);
-      HBaseTestCase.addContent(loader, Bytes.toString(fam1), Bytes.toString(col2), firstRowBytes,
+      HTestConst.addContent(loader, Bytes.toString(fam1), Bytes.toString(col2), firstRowBytes,
         thirdRowBytes, i);
-      HBaseTestCase.addContent(loader, Bytes.toString(fam2), Bytes.toString(col1), firstRowBytes,
+      HTestConst.addContent(loader, Bytes.toString(fam2), Bytes.toString(col1), firstRowBytes,
         thirdRowBytes, i);
-      HBaseTestCase.addContent(loader, Bytes.toString(fam2), Bytes.toString(col2), firstRowBytes,
+      HTestConst.addContent(loader, Bytes.toString(fam2), Bytes.toString(col2), firstRowBytes,
         thirdRowBytes, i);
       r.flush(true);
     }
