@@ -252,7 +252,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
   private final int heavyEvictionCountLimit;
 
   /** Limit of volume eviction process when start to avoid to cache blocks */
-  private final int heavyEvictionMbSizeLimit;
+  private final long heavyEvictionMbSizeLimit;
 
   /** Adjust auto-scaling via overhead of evition rate */
   private final double heavyEvictionOverheadCoefficient;
@@ -336,7 +336,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
       float minFactor, float acceptableFactor, float singleFactor,
       float multiFactor, float memoryFactor, float hardLimitFactor,
       boolean forceInMemory, long maxBlockSize, int cacheDataBlockPercent,
-      int heavyEvictionCountLimit, int heavyEvictionMbSizeLimit,
+      int heavyEvictionCountLimit, long heavyEvictionMbSizeLimit,
       double heavyEvictionOverheadCoefficient) {
     this.maxBlockSize = maxBlockSize;
     if(singleFactor + multiFactor + memoryFactor != 1 ||
