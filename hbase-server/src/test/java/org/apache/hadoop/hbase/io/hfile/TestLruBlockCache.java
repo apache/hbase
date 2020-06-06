@@ -343,9 +343,9 @@ public class TestLruBlockCache {
         1.2f,  // limit
         false,
         16 * 1024 * 1024,
-        50,
         10,
-        10 * 1024 * 1024);
+        500,
+        0.01);
 
     CachedItem [] singleBlocks = generateFixedBlocks(5, blockSize, "single");
     CachedItem [] multiBlocks = generateFixedBlocks(5, blockSize, "multi");
@@ -468,9 +468,9 @@ public class TestLruBlockCache {
         1.2f, // limit
         true,
         16 * 1024 * 1024,
-        50,
         10,
-        10 * 1024 * 1024);
+        500,
+        0.01);
 
     CachedItem [] singleBlocks = generateFixedBlocks(10, blockSize, "single");
     CachedItem [] multiBlocks = generateFixedBlocks(10, blockSize, "multi");
@@ -578,10 +578,9 @@ public class TestLruBlockCache {
         1.2f,  // limit
         false,
         16 * 1024 * 1024,
-        50,
         10,
-        10 * 1024 * 1024);
-
+        500,
+        0.01);
 
     CachedItem [] singleBlocks = generateFixedBlocks(20, blockSize, "single");
     CachedItem [] multiBlocks = generateFixedBlocks(5, blockSize, "multi");
@@ -646,9 +645,10 @@ public class TestLruBlockCache {
         1.2f,  // limit
         false,
         1024,
-        50,
         10,
-        10 * 1024 * 1024);
+        500,
+        0.01);
+
     CachedItem [] tooLong = generateFixedBlocks(10, 1024+5, "long");
     CachedItem [] small = generateFixedBlocks(15, 600, "small");
 
@@ -689,9 +689,9 @@ public class TestLruBlockCache {
         1.2f,  // limit
         false,
         16 * 1024 * 1024,
-        50,
         10,
-        10 * 1024 * 1024);
+        500,
+        0.01);
 
     CachedItem [] singleBlocks = generateFixedBlocks(10, blockSize, "single");
     CachedItem [] multiBlocks = generateFixedBlocks(10, blockSize, "multi");
@@ -854,9 +854,9 @@ public class TestLruBlockCache {
         1.2f,  // limit
         false,
         1024,
-        50,
         10,
-        10 * 1024 * 1024);
+        500,
+        0.01);
 
     BlockCacheKey key = new BlockCacheKey("key1", 0);
     ByteBuffer actualBuffer = ByteBuffer.allocate(length);
@@ -1046,31 +1046,31 @@ public class TestLruBlockCache {
             0.34f, // memory
             1.2f, // limit
             false, 1024,
-            50,
             10,
-            10 * 1024 * 1024);
+            500,
+            0.01);
     testMultiThreadGetAndEvictBlockInternal(cache);
   }
-
-  public void testSkipCacheDataBlocksInteral(int percentOfCachedBlocks) throws Exception {
-    long maxSize = 100000;
-    int numBlocks = 100;
+  
+  public void testSkipCacheDataBlocksInteral(int heavyEvictionCountLimit) throws Exception {
+    long maxSize = 100000000;
+    int numBlocks = 100000;
     final long blockSize = calculateBlockSizeDefault(maxSize, numBlocks);
     assertTrue("calculateBlockSize appears broken.", blockSize * numBlocks <= maxSize);
 
     final LruBlockCache cache =
-        new LruBlockCache(maxSize, blockSize, true, (int) Math.ceil(1.2 * maxSize / blockSize),
-            LruBlockCache.DEFAULT_LOAD_FACTOR, LruBlockCache.DEFAULT_CONCURRENCY_LEVEL, 0.5f, // min
-            0.99f, // acceptable
-            0.33f, // single
-            0.33f, // multi
-            0.34f, // memory
-            1.2f, // limit
-            false,
-            maxSize,
-            percentOfCachedBlocks,
-            0,
-            1);
+            new LruBlockCache(maxSize, blockSize, true, (int) Math.ceil(1.2 * maxSize / blockSize),
+                    LruBlockCache.DEFAULT_LOAD_FACTOR, LruBlockCache.DEFAULT_CONCURRENCY_LEVEL, 0.5f, // min
+                    0.99f, // acceptable
+                    0.33f, // single
+                    0.33f, // multi
+                    0.34f, // memory
+                    1.2f, // limit
+                    false,
+                    maxSize,
+                    heavyEvictionCountLimit,
+                    500,
+                    0.01);
 
     EvictionThread evictionThread = cache.getEvictionThread();
     assertTrue(evictionThread != null);
@@ -1079,23 +1079,36 @@ public class TestLruBlockCache {
     }
 
     final String hfileName = "hfile";
-    for (int blockIndex = 0; blockIndex <= numBlocks * 5; ++blockIndex) {
+    for (int blockIndex = 0; blockIndex <= numBlocks * 3000; ++blockIndex) {
       CachedItem block = new CachedItem(hfileName, (int) blockSize, blockIndex);
       cache.cacheBlock(block.cacheKey, block, false);
-      Thread.sleep(1);
     }
 
-    // Check if all offset (last two digits) of cached blocks less than the percent.
-    // It means some of blocka were not put into BlockCache
-    for (BlockCacheKey key : cache.getMapForTests().keySet()) {
-      Assert.assertTrue(key.getOffset() % 100 < percentOfCachedBlocks);
+    evictionThread.evict();
+    Thread.sleep(100);
+
+    if (heavyEvictionCountLimit == 0) {
+      // Check if all offset (last two digits) of cached blocks less than the percent.
+      // It means some of blocks haven't not put into BlockCache
+      assertTrue(cache.getCacheDataBlockPercent() < 90);
+      for (BlockCacheKey key : cache.getMapForTests().keySet()) {
+        assertTrue(!(key.getOffset() % 100 > 90));
+      }
+    } else {
+      assertTrue(cache.getCacheDataBlockPercent() == 100);
+      int counter = 0;
+      for (BlockCacheKey key : cache.getMapForTests().keySet()) {
+        if (key.getOffset() % 100 > 90)
+          counter++;
+      }
+      assertTrue(counter > 1000);
     }
   }
 
   @Test
   public void testSkipCacheDataBlocks() throws Exception {
-    for (int percentOfCachedBlocks = 25; percentOfCachedBlocks <= 100; percentOfCachedBlocks+=25) {
-      testSkipCacheDataBlocksInteral(percentOfCachedBlocks);
-    }
+    testSkipCacheDataBlocksInteral(0);
+    testSkipCacheDataBlocksInteral(100);
   }
+  
 }
