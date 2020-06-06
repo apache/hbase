@@ -163,7 +163,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
   
   private static final String LRU_CACHE_HEAVY_EVICTION_OVERHEAD_COEFFICIENT
           = "hbase.lru.cache.heavy.eviction.overhead.coefficient";
-  private static final double DEFAULT_LRU_CACHE_HEAVY_EVICTION_OVERHEAD_COEFFICIENT = 0.01;
+  private static final float DEFAULT_LRU_CACHE_HEAVY_EVICTION_OVERHEAD_COEFFICIENT = 0.01f;
 
   /**
    * Defined the cache map as {@link ConcurrentHashMap} here, because in
@@ -255,7 +255,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
   private final long heavyEvictionMbSizeLimit;
 
   /** Adjust auto-scaling via overhead of evition rate */
-  private final double heavyEvictionOverheadCoefficient;
+  private final float heavyEvictionOverheadCoefficient;
 
   /**
    * Default constructor.  Specify maximum size and expected average block
@@ -308,7 +308,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
                       DEFAULT_LRU_CACHE_HEAVY_EVICTION_COUNT_LIMIT),
         conf.getLong(LRU_CACHE_HEAVY_EVICTION_MB_SIZE_LIMIT,
                       DEFAULT_LRU_CACHE_HEAVY_EVICTION_MB_SIZE_LIMIT),
-        conf.getDouble(LRU_CACHE_HEAVY_EVICTION_OVERHEAD_COEFFICIENT,
+        conf.getFloat(LRU_CACHE_HEAVY_EVICTION_OVERHEAD_COEFFICIENT,
                       DEFAULT_LRU_CACHE_HEAVY_EVICTION_OVERHEAD_COEFFICIENT));
   }
 
@@ -337,7 +337,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
       float multiFactor, float memoryFactor, float hardLimitFactor,
       boolean forceInMemory, long maxBlockSize, 
       int heavyEvictionCountLimit, long heavyEvictionMbSizeLimit,
-      double heavyEvictionOverheadCoefficient) {
+      float heavyEvictionOverheadCoefficient) {
     this.maxBlockSize = maxBlockSize;
     if(singleFactor + multiFactor + memoryFactor != 1 ||
         singleFactor < 0 || multiFactor < 0 || memoryFactor < 0) {
@@ -1133,9 +1133,9 @@ public class LruBlockCache implements FirstLevelBlockCache {
   }
 
   public final static long CACHE_FIXED_OVERHEAD = ClassSize.align(
-      (4 * Bytes.SIZEOF_LONG) + (11 * ClassSize.REFERENCE) +
-      (6 * Bytes.SIZEOF_FLOAT) + (2 * Bytes.SIZEOF_BOOLEAN) +
-      (4 * Bytes.SIZEOF_INT) + ClassSize.OBJECT);
+      (5 * Bytes.SIZEOF_LONG) + (11 * ClassSize.REFERENCE) +
+      (7 * Bytes.SIZEOF_FLOAT) + (2 * Bytes.SIZEOF_BOOLEAN) +
+      (1 * Bytes.SIZEOF_INT) + ClassSize.OBJECT);
 
   @Override
   public long heapSize() {
