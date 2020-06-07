@@ -104,11 +104,14 @@ perl --version | grep 'This is'
 
 rm -rf "${PROJECT}"
 
+if is_debug; then
+  set -x  # detailed logging during action
+fi
+
 if [[ "$1" == "tag" ]]; then
   init_yetus
   # for 'tag' stage
   set -o pipefail
-  set -x  # detailed logging during action
   check_get_passwords ASF_PASSWORD
   check_needed_vars PROJECT RELEASE_VERSION RELEASE_TAG NEXT_VERSION GIT_EMAIL GIT_NAME GIT_BRANCH
   if [ -z "${GIT_REPO}" ]; then
@@ -205,16 +208,13 @@ fi
 
 git clean -d -f -x
 cd ..
-set -x  # detailed logging during action
 
 if [[ "$1" == "publish-dist" ]]; then
   # Source and binary tarballs
   echo "Packaging release source tarballs"
   make_src_release "${PROJECT}" "${RELEASE_VERSION}"
 
-  echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') Building binary dist"
   make_binary_release "${PROJECT}" "${RELEASE_VERSION}"
-  echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') Done building binary distribution"
 
   if [[ "$PROJECT" =~ ^hbase- ]]; then
     DEST_DIR_NAME="${PROJECT}-${package_version_name}"
