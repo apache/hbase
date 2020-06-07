@@ -1051,7 +1051,7 @@ public class TestLruBlockCache {
             0.01f);
     testMultiThreadGetAndEvictBlockInternal(cache);
   }
-  
+
   public void testSkipCacheDataBlocksInteral(int heavyEvictionCountLimit) throws Exception {
     long maxSize = 100000000;
     int numBlocks = 100000;
@@ -1060,7 +1060,7 @@ public class TestLruBlockCache {
 
     final LruBlockCache cache =
             new LruBlockCache(maxSize, blockSize, true, (int) Math.ceil(1.2 * maxSize / blockSize),
-                    LruBlockCache.DEFAULT_LOAD_FACTOR, LruBlockCache.DEFAULT_CONCURRENCY_LEVEL, 
+                    LruBlockCache.DEFAULT_LOAD_FACTOR, LruBlockCache.DEFAULT_CONCURRENCY_LEVEL,
                     0.5f, // min
                     0.99f, // acceptable
                     0.33f, // single
