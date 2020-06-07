@@ -58,21 +58,30 @@ function banner {
   echo
 }
 
+# current number of seconds since epoch
+function get_ctime {
+  date +"%s"
+}
+
 function run_silent {
   local BANNER="$1"
   local LOG_FILE="$2"
   shift 2
+  local -i start_time
+  local -i stop_time
 
   banner "${BANNER}"
   echo "Command: $*"
   echo "Log file: $LOG_FILE"
+  start_time="$(get_ctime)"
 
   if ! "$@" 1>"$LOG_FILE" 2>&1; then
     echo "Command FAILED. Check full logs for details."
     tail "$LOG_FILE"
     exit 1
   fi
-  echo "=== SUCCESS"
+  stop_time="$(get_ctime)"
+  echo "=== SUCCESS ($((stop_time - start_time)) seconds)"
 }
 
 function fcreate_secure {
@@ -447,6 +456,26 @@ function git_clone_overwrite {
   fi
 }
 
+function start_step {
+  local name=$1
+  if [ -z "${name}" ]; then
+    name="${FUNCNAME[1]}"
+  fi
+  echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') ${name} start" >&2
+  get_ctime
+}
+
+function stop_step {
+  local name=$2
+  local start_time=$1
+  local stop_time
+  if [ -z "${name}" ]; then
+    name="${FUNCNAME[1]}"
+  fi
+  stop_time="$(get_ctime)"
+  echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') ${name} stop ($((stop_time - start_time)) seconds)"
+}
+
 # Writes report into cwd!
 # TODO should have option for maintenance release that include LimitedPrivate in report
 function generate_api_report {
@@ -454,12 +483,15 @@ function generate_api_report {
   local previous_tag="$2"
   local release_tag="$3"
   local previous_version
+  local timing_token
+  timing_token="$(start_step)"
   # Generate api report.
   "${project}"/dev-support/checkcompatibility.py --annotation \
     org.apache.yetus.audience.InterfaceAudience.Public  \
     "$previous_tag" "$release_tag"
   previous_version="$(echo "${previous_tag}" | sed -e 's/rel\///')"
   cp "${project}/target/compat-check/report.html" "./api_compare_${previous_version}_to_${release_tag}.html"
+  stop_step "${timing_token}"
 }
 
 # Look up the Jira name associated with project.
@@ -488,6 +520,8 @@ function update_releasenotes {
   local project_dir="$1"
   local jira_fix_version="$2"
   local jira_project
+  local timing_token
+  timing_token="$(start_step)"
   jira_project="$(get_jira_name "$(basename "$project_dir")")"
   "${YETUS_HOME}/bin/releasedocmaker" -p "${jira_project}" --fileversions -v "${jira_fix_version}" \
       -l --sortorder=newer --skip-credits
@@ -523,6 +557,7 @@ function update_releasenotes {
   else
     mv "RELEASENOTES.${jira_fix_version}.md" "${project_dir}/RELEASENOTES.md"
   fi
+  stop_step "${timing_token}"
 }
 
 # Make src release.
@@ -539,6 +574,8 @@ make_src_release() {
   local project="${1}"
   local version="${2}"
   local base_name="${project}-${version}"
+  local timing_token
+  timing_token="$(start_step)"
   rm -rf "${base_name}"-src*
   tgz="${base_name}-src.tar.gz"
   cd "${project}" || exit
@@ -547,6 +584,7 @@ make_src_release() {
   cd .. || exit
   $GPG "${GPG_ARGS[@]}" --armor --output "${tgz}.asc" --detach-sig "${tgz}"
   $GPG "${GPG_ARGS[@]}" --print-md SHA512 "${tgz}" > "${tgz}.sha512"
+  stop_step "${timing_token}"
 }
 
 # Make binary release.
@@ -563,6 +601,8 @@ make_binary_release() {
   local project="${1}"
   local version="${2}"
   local base_name="${project}-${version}"
+  local timing_token
+  timing_token="$(start_step)"
   rm -rf "${base_name}"-bin*
   cd "$project" || exit
 
@@ -590,6 +630,8 @@ make_binary_release() {
     cd .. || exit
     echo "No ${f_bin_prefix}*-bin.tar.gz product; expected?"
   fi
+
+  stop_step "${timing_token}"
 }
 
 # "Wake up" the gpg agent so it responds properly to maven-gpg-plugin, and doesn't cause timeout.
@@ -621,6 +663,7 @@ function maven_get_version {
 
 # Do maven deploy to snapshot or release artifact repository, with checks.
 function maven_deploy { #inputs: <snapshot|release> <log_file_path>
+  local timing_token
   # Invoke with cwd=$PROJECT
   local deploy_type="$1"
   local mvn_log_file="$2" #secondary log file used later to extract staged_repo_id
@@ -630,6 +673,7 @@ function maven_deploy { #inputs: <snapshot|release> <log_file_path>
   if [[ -z "$mvn_log_file" ]] || ! touch "$mvn_log_file"; then
     error "must provide writable maven log output filepath"
   fi
+  timing_token=$(start_step)
   # shellcheck disable=SC2153
   if [[ "$deploy_type" == "snapshot" ]] && ! [[ "$RELEASE_VERSION" =~ -SNAPSHOT$ ]]; then
     error "Snapshots must have a version with suffix '-SNAPSHOT'; you gave version '$RELEASE_VERSION'"
@@ -660,6 +704,7 @@ function maven_deploy { #inputs: <snapshot|release> <log_file_path>
     error "Deploy build failed, for details see log at '$mvn_log_file'."
   fi
   echo "BUILD SUCCESS."
+  stop_step "${timing_token}"
   return 0
 }
 
