@@ -49,9 +49,9 @@ public class MultipleColumnPrefixFilter extends FilterBase {
 
   public MultipleColumnPrefixFilter(final byte [][] prefixes) {
     if (prefixes != null) {
-      for (int i = 0; i < prefixes.length; i++) {
-        if (!sortedPrefixes.add(prefixes[i])) {
-          LOG.error("prefix {} is repeated", Bytes.toString(prefixes[i]));
+      for (byte[] prefix : prefixes) {
+        if (!sortedPrefixes.add(prefix)) {
+          LOG.error("prefix {} is repeated", Bytes.toString(prefix));
           throw new IllegalArgumentException("prefixes must be distinct");
         }
       }
