@@ -849,7 +849,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
       stats.evict();
       evictionInProgress = false;
       evictionLock.unlock();
-      return bytesFreed;
+      return bytesToFree;
     }
   }
 
