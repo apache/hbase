@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -557,6 +558,18 @@ public class ServerManager {
     }
     moveFromOnlineToDeadServers(serverName);
 
+    // If server is in draining mode, remove corresponding znode
+    // In some tests, the mocked HM may not have ZK Instance, hence null check
+    if (master.getZooKeeper() != null) {
+      String drainingZnode = ZNodePaths
+        .joinZNode(master.getZooKeeper().getZNodePaths().drainingZNode, serverName.getServerName());
+      try {
+        ZKUtil.deleteNodeFailSilent(master.getZooKeeper(), drainingZnode);
+      } catch (KeeperException e) {
+        LOG.warn("Error deleting the draining znode for stopping server " + serverName.getServerName(), e);
+      }
+    }
+    
     // If cluster is going down, yes, servers are going to be expiring; don't
     // process as a dead server
     if (isClusterShutdown()) {
