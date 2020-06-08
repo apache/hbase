@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import static org.apache.hadoop.hbase.replication.regionserver.HBaseInterClusterReplicationEndpoint.REPLICATION_DROP_ON_DELETED_TABLE_KEY;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -136,7 +137,7 @@ public class TestReplicationDroppedTables extends TestReplicationBase {
   }
 
   private void testEditsBehindDroppedTable(boolean allowProceeding, String tName) throws Exception {
-    CONF1.setBoolean(HConstants.REPLICATION_DROP_ON_DELETED_TABLE_KEY, allowProceeding);
+    CONF1.setBoolean(REPLICATION_DROP_ON_DELETED_TABLE_KEY, allowProceeding);
     CONF1.setInt(HConstants.REPLICATION_SOURCE_MAXTHREADS_KEY, 1);
 
     // make sure we have a single region server only, so that all
@@ -205,12 +206,12 @@ public class TestReplicationDroppedTables extends TestReplicationBase {
       verifyReplicationStuck();
     }
     // just to be safe
-    CONF1.setBoolean(HConstants.REPLICATION_DROP_ON_DELETED_TABLE_KEY, false);
+    CONF1.setBoolean(REPLICATION_DROP_ON_DELETED_TABLE_KEY, false);
   }
 
   @Test
   public void testEditsBehindDroppedTableTiming() throws Exception {
-    CONF1.setBoolean(HConstants.REPLICATION_DROP_ON_DELETED_TABLE_KEY, true);
+    CONF1.setBoolean(REPLICATION_DROP_ON_DELETED_TABLE_KEY, true);
     CONF1.setInt(HConstants.REPLICATION_SOURCE_MAXTHREADS_KEY, 1);
 
     // make sure we have a single region server only, so that all
@@ -281,7 +282,7 @@ public class TestReplicationDroppedTables extends TestReplicationBase {
       verifyReplicationProceeded();
     }
     // just to be safe
-    CONF1.setBoolean(HConstants.REPLICATION_DROP_ON_DELETED_TABLE_KEY, false);
+    CONF1.setBoolean(REPLICATION_DROP_ON_DELETED_TABLE_KEY, false);
   }
 
   private boolean peerHasAllNormalRows() throws IOException {
