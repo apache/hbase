@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
 import org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException;
-import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -94,15 +93,10 @@ public class SnapshotHFileCleaner extends BaseHFileCleanerDelegate {
         DEFAULT_HFILE_CACHE_REFRESH_PERIOD);
       final FileSystem fs = CommonFSUtils.getCurrentFileSystem(conf);
       Path rootDir = CommonFSUtils.getRootDir(conf);
-      Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(rootDir, conf);
-      FileSystem workingFs = workingDir.getFileSystem(conf);
-
-      cache = new SnapshotFileCache(fs, rootDir, workingFs, workingDir, cacheRefreshPeriod,
-        cacheRefreshPeriod, "snapshot-hfile-cleaner-cache-refresher",
-        new SnapshotFileCache.SnapshotFileInspector() {
+      cache = new SnapshotFileCache(fs, rootDir, cacheRefreshPeriod, cacheRefreshPeriod,
+          "snapshot-hfile-cleaner-cache-refresher", new SnapshotFileCache.SnapshotFileInspector() {
             @Override
-            public Collection<String> filesUnderSnapshot(final FileSystem fs,
-              final Path snapshotDir)
+            public Collection<String> filesUnderSnapshot(final Path snapshotDir)
                 throws IOException {
               return SnapshotReferenceUtil.getHFileNames(conf, fs, snapshotDir);
             }
