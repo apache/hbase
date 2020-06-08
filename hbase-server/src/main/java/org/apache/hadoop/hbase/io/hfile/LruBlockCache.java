@@ -155,14 +155,18 @@ public class LruBlockCache implements FirstLevelBlockCache {
 
   private static final String LRU_CACHE_HEAVY_EVICTION_COUNT_LIMIT
     = "hbase.lru.cache.heavy.eviction.count.limit";
-  private static final int DEFAULT_LRU_CACHE_HEAVY_EVICTION_COUNT_LIMIT = 10;
+  // Default value actually equal to disable feature of increasing performance.
+  // Because 2147483647 is about ~680 years (after that it will start to work)
+  // We can set it to 0-10 and get the profit right now.
+  // (see details https://issues.apache.org/jira/browse/HBASE-23887).
+  private static final int DEFAULT_LRU_CACHE_HEAVY_EVICTION_COUNT_LIMIT = 2147483647;
 
   private static final String LRU_CACHE_HEAVY_EVICTION_MB_SIZE_LIMIT
-          = "hbase.lru.cache.heavy.eviction.mb.size.limit";
+    = "hbase.lru.cache.heavy.eviction.mb.size.limit";
   private static final long DEFAULT_LRU_CACHE_HEAVY_EVICTION_MB_SIZE_LIMIT = 500;
 
   private static final String LRU_CACHE_HEAVY_EVICTION_OVERHEAD_COEFFICIENT
-          = "hbase.lru.cache.heavy.eviction.overhead.coefficient";
+    = "hbase.lru.cache.heavy.eviction.overhead.coefficient";
   private static final float DEFAULT_LRU_CACHE_HEAVY_EVICTION_OVERHEAD_COEFFICIENT = 0.01f;
 
   /**
@@ -452,10 +456,13 @@ public class LruBlockCache implements FirstLevelBlockCache {
   @Override
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory) {
 
-    // Don't cache this DATA block when too many blocks evict
-    // and if we have limit on percent of blocks to cache.
-    // It is good for performance (HBASE-23887)
+    // Some data blocks will not put into BlockCache when eviction rate too much.
+    // It is good for performance
+    // (see details: https://issues.apache.org/jira/browse/HBASE-23887)
+    // How to calculate it can find inside EvictionThread class.
     if (cacheDataBlockPercent != 100 && buf.getBlockType().isData()) {
+      // It works like filter - blocks which two last digits of offset 
+      // more than we calculate in Eviction Thread will not put into BlockCache
       if (cacheKey.getOffset() % 100 >= cacheDataBlockPercent) {
         return;
       }
@@ -715,6 +722,11 @@ public class LruBlockCache implements FirstLevelBlockCache {
 
   /**
    * Eviction method.
+   *
+   * Evict items in order of use, allowing delete items
+   * which haven't been used for the longest amount of time.
+   *
+   * @return how many bytes were freed
    */
   long evict() {
 
@@ -837,7 +849,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
       stats.evict();
       evictionInProgress = false;
       evictionLock.unlock();
-      return bytesToFree;
+      return bytesFreed;
     }
   }
 
@@ -1020,33 +1032,80 @@ public class LruBlockCache implements FirstLevelBlockCache {
         LruBlockCache cache = this.cache.get();
         if (cache == null) break;
         bytesFreed = cache.evict();
+        /* 
+        * Sometimes we are reading more data than can fit into BlockCache
+        * and it is the cause a high rate of evictions.
+        * This in turn leads to heavy Garbage Collector works.
+        * So a lot of blocks put into BlockCache but never read,
+        * but spending a lot of CPU resources.
+        * Here we will analyze how many bytes were freed and decide
+        * decide whether the time has come to reduce amount of caching blocks.
+        * It help avoid put too many blocks into BlockCache
+        * when evict() works very active and save CPU for other jobs.
+        * More delails: https://issues.apache.org/jira/browse/HBASE-23887
+        */
+        
+        // First of all we have to control how much time 
+        // has passed since previuos evict() was launched
+        // This is should be almost the same time (+/- 10s)
+        // because we get comparable volumes of freed bytes each time.
+        // 10s because this is default period to run evict() (see above this.wait)
         long stopTime = System.currentTimeMillis();
-        // If heavy cleaning BlockCache control.
-        // It helps avoid put too many blocks into BlockCache
-        // when evict() works very active.
         if (stopTime - startTime <= 1000 * 10 - 1) {
           mbFreedSum += bytesFreed/1024/1024;
         } else {
+          // Here we have to calc what situation we have got.
+          // We have the limit "hbase.lru.cache.heavy.eviction.bytes.size.limit"
+          // and can calculte overhead on it.
+          // We will use this information to decide, 
+          // how to change percent of caching blocks.
           freedDataOverheadPercent =
             (int) (mbFreedSum * 100 / cache.heavyEvictionMbSizeLimit) - 100;
-          if (mbFreedSum > cache.heavyEvictionMbSizeLimit) {
+          if (freedDataOverheadPercent > 100) {
+            // Now we are in the situation when we are above the limit
+            // But maybe we are going to ignore it because it will end quite soon
             heavyEvictionCount++;
             if (heavyEvictionCount > cache.heavyEvictionCountLimit) {
+              // It is going for a long time and we have to reduce of caching
+              // blocks now. So we calculate here how many blocks we want to skip.
+              // It depends on: 
+              // 1. Overhead - if overhead is big we could more aggressive
+              // reducing amount of caching blocks.
+              // 2. How fast we want to get the result. If we know that our 
+              // heavy reading for a long time, we don't want to wait and can 
+              // increase the coefficient and get good performance quite soon.
+              // But if we don't sure we can do it slowly and it could prevent 
+              // premature exit from this mode. So, when the coefficient is 
+              // higher we can get better performance when heavy reading is stable.
+              // But when reading is changing we can adjust to it and set 
+              // the coefficient to lower value.
               int ch = (int) (freedDataOverheadPercent * cache.heavyEvictionOverheadCoefficient);
+              // But practice shows that 15% of reducing is quite enough.
+              // We are not greedy (it could lead to premature exit).
               ch = ch > 15 ? 15 : ch;
-              ch = ch < 0 ? 0 : ch;
+              ch = ch < 0 ? 0 : ch; // I think it will never happen but check for sure
+              // So this is the key point, here we are reducing % of caching blocks
               cache.cacheDataBlockPercent -= ch;
+              // If we go down too deep we have to stop here, 1% any way should be.
               cache.cacheDataBlockPercent =
                 cache.cacheDataBlockPercent < 1 ? 1 : cache.cacheDataBlockPercent;
             }
           } else {
+            // Well, we have got overshooting. 
+            // Mayby it is just short-term fluctuation and we can stay in this mode.
+            // It help avoid permature exit during short-term fluctuation.
+            // If overshooting less than 90%, we will try to increase the percent of 
+            // caching blocks and hope it is enough.
             if (mbFreedSum >= cache.heavyEvictionMbSizeLimit * 0.1) {
-              // It help avoid exit during short-term fluctuation
+              // Simple logic: more overshooting - more caching blocks (backpressure)
               int ch = (int) (-freedDataOverheadPercent * 0.1 + 1);
               cache.cacheDataBlockPercent += ch;
+              // But it can't be more then 100%, so check it.
               cache.cacheDataBlockPercent =
                 cache.cacheDataBlockPercent > 100 ? 100 : cache.cacheDataBlockPercent;
             } else {
+              // Looks like heavy reading is over. 
+              // Just exit form this mode.
               heavyEvictionCount = 0;
               cache.cacheDataBlockPercent = 100;
             }
