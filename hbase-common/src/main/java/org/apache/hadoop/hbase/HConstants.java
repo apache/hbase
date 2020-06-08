@@ -1339,7 +1339,11 @@ public final class HConstants {
   public static final String REPLICATION_SOURCE_MAXTHREADS_KEY =
       "hbase.replication.source.maxthreads";
 
-  /** Drop edits for tables that been deleted from the replication source and target */
+  /**
+   * Drop edits for tables that been deleted from the replication source and target
+   * @deprecated moved it into HBaseInterClusterReplicationEndpoint
+   */
+  @Deprecated
   public static final String REPLICATION_DROP_ON_DELETED_TABLE_KEY =
       "hbase.replication.drop.on.deleted.table";
 

@@ -24,8 +24,11 @@ import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
@@ -34,39 +37,43 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
+import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
+import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSinkManager.SinkPeer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService.BlockingInterface;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
-
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService.BlockingInterface;
 
 /**
  * A {@link org.apache.hadoop.hbase.replication.ReplicationEndpoint}
@@ -85,6 +92,13 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
       LoggerFactory.getLogger(HBaseInterClusterReplicationEndpoint.class);
 
   private static final long DEFAULT_MAX_TERMINATION_WAIT_MULTIPLIER = 2;
+
+  /** Drop edits for tables that been deleted from the replication source and target */
+  public static final String REPLICATION_DROP_ON_DELETED_TABLE_KEY =
+      "hbase.replication.drop.on.deleted.table";
+  /** Drop edits for CFs that been deleted from the replication source and target */
+  public static final String REPLICATION_DROP_ON_DELETED_COLUMN_FAMILY_KEY =
+      "hbase.replication.drop.on.deleted.columnfamily";
 
   private ClusterConnection conn;
   private Configuration localConf;
@@ -112,6 +126,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   private boolean replicationBulkLoadDataEnabled;
   private Abortable abortable;
   private boolean dropOnDeletedTables;
+  private boolean dropOnDeletedColumnFamilies;
   private boolean isSerial = false;
 
   /*
@@ -174,7 +189,9 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     this.replicationRpcLimit = (int)(0.95 * conf.getLong(RpcServer.MAX_REQUEST_SIZE,
       RpcServer.DEFAULT_MAX_REQUEST_SIZE));
     this.dropOnDeletedTables =
-        this.conf.getBoolean(HConstants.REPLICATION_DROP_ON_DELETED_TABLE_KEY, false);
+        this.conf.getBoolean(REPLICATION_DROP_ON_DELETED_TABLE_KEY, false);
+    this.dropOnDeletedColumnFamilies = this.conf
+        .getBoolean(REPLICATION_DROP_ON_DELETED_COLUMN_FAMILY_KEY, false);
 
     this.replicationBulkLoadDataEnabled =
         conf.getBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY,
@@ -285,28 +302,148 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     }
   }
 
-  private TableName parseTable(String msg) {
-    // ... TableNotFoundException: '<table>'/n...
-    Pattern p = Pattern.compile("TableNotFoundException: '([\\S]*)'");
-    Matcher m = p.matcher(msg);
-    if (m.find()) {
-      String table = m.group(1);
-      try {
-        // double check that table is a valid table name
-        TableName.valueOf(TableName.isLegalFullyQualifiedTableName(Bytes.toBytes(table)));
-        return TableName.valueOf(table);
-      } catch (IllegalArgumentException ignore) {
+  /**
+   * Check if there's an {@link TableNotFoundException} in the caused by stacktrace.
+   */
+  @VisibleForTesting
+  public static boolean isTableNotFoundException(Throwable io) {
+    if (io instanceof RemoteException) {
+      io = ((RemoteException) io).unwrapRemoteException();
+    }
+    if (io != null && io.getMessage().contains("TableNotFoundException")) {
+      return true;
+    }
+    for (; io != null; io = io.getCause()) {
+      if (io instanceof TableNotFoundException) {
+        return true;
       }
     }
-    return null;
+    return false;
   }
 
-  // Filter a set of batches by TableName
-  private List<List<Entry>> filterBatches(final List<List<Entry>> oldEntryList, TableName table) {
-    return oldEntryList
-        .stream().map(entries -> entries.stream()
-            .filter(e -> !e.getKey().getTableName().equals(table)).collect(Collectors.toList()))
-        .collect(Collectors.toList());
+  /**
+   * Check if there's an {@link NoSuchColumnFamilyException} in the caused by stacktrace.
+   */
+  @VisibleForTesting
+  public static boolean isNoSuchColumnFamilyException(Throwable io) {
+    if (io instanceof RemoteException) {
+      io = ((RemoteException) io).unwrapRemoteException();
+    }
+    if (io != null && io.getMessage().contains("NoSuchColumnFamilyException")) {
+      return true;
+    }
+    for (; io != null; io = io.getCause()) {
+      if (io instanceof NoSuchColumnFamilyException) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  @VisibleForTesting
+  List<List<Entry>> filterNotExistTableEdits(final List<List<Entry>> oldEntryList) {
+    List<List<Entry>> entryList = new ArrayList<>();
+    Map<TableName, Boolean> existMap = new HashMap<>();
+    try (Connection localConn = ConnectionFactory.createConnection(ctx.getLocalConfiguration());
+         Admin localAdmin = localConn.getAdmin()) {
+      for (List<Entry> oldEntries : oldEntryList) {
+        List<Entry> entries = new ArrayList<>();
+        for (Entry e : oldEntries) {
+          TableName tableName = e.getKey().getTableName();
+          boolean exist = true;
+          if (existMap.containsKey(tableName)) {
+            exist = existMap.get(tableName);
+          } else {
+            try {
+              exist = localAdmin.tableExists(tableName);
+              existMap.put(tableName, exist);
+            } catch (IOException iox) {
+              LOG.warn("Exception checking for local table " + tableName, iox);
+              // we can't drop edits without full assurance, so we assume table exists.
+              exist = true;
+            }
+          }
+          if (exist) {
+            entries.add(e);
+          } else {
+            // Would potentially be better to retry in one of the outer loops
+            // and add a table filter there; but that would break the encapsulation,
+            // so we're doing the filtering here.
+            LOG.warn("Missing table detected at sink, local table also does not exist, "
+                + "filtering edits for table '{}'", tableName);
+          }
+        }
+        if (!entries.isEmpty()) {
+          entryList.add(entries);
+        }
+      }
+    } catch (IOException iox) {
+      LOG.warn("Exception when creating connection to check local table", iox);
+      return oldEntryList;
+    }
+    return entryList;
+  }
+
+  @VisibleForTesting
+  List<List<Entry>> filterNotExistColumnFamilyEdits(final List<List<Entry>> oldEntryList) {
+    List<List<Entry>> entryList = new ArrayList<>();
+    Map<TableName, Set<String>> existColumnFamilyMap = new HashMap<>();
+    try (Connection localConn = ConnectionFactory.createConnection(ctx.getLocalConfiguration());
+         Admin localAdmin = localConn.getAdmin()) {
+      for (List<Entry> oldEntries : oldEntryList) {
+        List<Entry> entries = new ArrayList<>();
+        for (Entry e : oldEntries) {
+          TableName tableName = e.getKey().getTableName();
+          if (!existColumnFamilyMap.containsKey(tableName)) {
+            try {
+              Set<String> cfs = localAdmin.getDescriptor(tableName).getColumnFamilyNames().stream()
+                  .map(Bytes::toString).collect(Collectors.toSet());
+              existColumnFamilyMap.put(tableName, cfs);
+            } catch (Exception ex) {
+              LOG.warn("Exception getting cf names for local table {}", tableName, ex);
+              // if catch any exception, we are not sure about table's description,
+              // so replicate raw entry
+              entries.add(e);
+              continue;
+            }
+          }
+
+          Set<String> existColumnFamilies = existColumnFamilyMap.get(tableName);
+          Set<String> missingCFs = new HashSet<>();
+          WALEdit walEdit = new WALEdit();
+          walEdit.getCells().addAll(e.getEdit().getCells());
+          WALUtil.filterCells(walEdit, cell -> {
+            String cf = Bytes.toString(CellUtil.cloneFamily(cell));
+            if (existColumnFamilies.contains(cf)) {
+              return cell;
+            } else {
+              missingCFs.add(cf);
+              return null;
+            }
+          });
+          if (!walEdit.isEmpty()) {
+            Entry newEntry = new Entry(e.getKey(), walEdit);
+            entries.add(newEntry);
+          }
+
+          if (!missingCFs.isEmpty()) {
+            // Would potentially be better to retry in one of the outer loops
+            // and add a table filter there; but that would break the encapsulation,
+            // so we're doing the filtering here.
+            LOG.warn(
+                "Missing column family detected at sink, local column family also does not exist,"
+                    + " filtering edits for table '{}',column family '{}'", tableName, missingCFs);
+          }
+        }
+        if (!entries.isEmpty()) {
+          entryList.add(entries);
+        }
+      }
+    } catch (IOException iox) {
+      LOG.warn("Exception when creating connection to check local table", iox);
+      return oldEntryList;
+    }
+    return entryList;
   }
 
   private void reconnectToPeerCluster() {
@@ -403,36 +540,21 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
         return true;
       } catch (IOException ioe) {
         if (ioe instanceof RemoteException) {
-          ioe = ((RemoteException) ioe).unwrapRemoteException();
-          LOG.warn("{} Can't replicate because of an error on the remote cluster: ", logPeerId(),
-            ioe);
-          if (ioe instanceof TableNotFoundException) {
-            if (dropOnDeletedTables) {
-              // this is a bit fragile, but cannot change how TNFE is serialized
-              // at least check whether the table name is legal
-              TableName table = parseTable(ioe.getMessage());
-              if (table != null) {
-                try (Connection localConn =
-                    ConnectionFactory.createConnection(ctx.getLocalConfiguration())) {
-                  if (!localConn.getAdmin().tableExists(table)) {
-                    // Would potentially be better to retry in one of the outer loops
-                    // and add a table filter there; but that would break the encapsulation,
-                    // so we're doing the filtering here.
-                    LOG.info("{} Missing table detected at sink, local table also does not "
-                      + "exist, filtering edits for '{}'", logPeerId(), table);
-                    batches = filterBatches(batches, table);
-                    continue;
-                  }
-                } catch (IOException iox) {
-                  LOG.warn("{} Exception checking for local table: ", logPeerId(), iox);
-                }
-              }
+          if (dropOnDeletedTables && isTableNotFoundException(ioe)) {
+            // Only filter the edits to replicate and don't change the entries in replicateContext
+            // as the upper layer rely on it.
+            batches = filterNotExistTableEdits(batches);
+            if (batches.isEmpty()) {
+              LOG.warn("After filter not exist table's edits, 0 edits to replicate, just return");
+              return true;
             }
-            // fall through and sleep below
-          } else {
-            LOG.warn("{} Peer encountered RemoteException, rechecking all sinks: ", logPeerId(),
-              ioe);
-            replicationSinkMgr.chooseSinks();
+          } else if (dropOnDeletedColumnFamilies && isNoSuchColumnFamilyException(ioe)) {
+            batches = filterNotExistColumnFamilyEdits(batches);
+            if (batches.isEmpty()) {
+              LOG.warn(
+                  "After filter not exist column family's edits, 0 edits to replicate, just return");
+              return true;
+            }
           }
         } else {
           if (ioe instanceof SocketTimeoutException) {
