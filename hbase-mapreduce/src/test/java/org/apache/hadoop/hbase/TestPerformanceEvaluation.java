@@ -257,6 +257,7 @@ public class TestPerformanceEvaluation {
     } catch (IllegalArgumentException  e) {
       System.out.println(e.getMessage());
     }
+    ((LinkedList<String>) opts).offerFirst(cmdName);
     ((LinkedList<String>) opts).offerFirst("--multiPut=10");
     ((LinkedList<String>) opts).offerFirst("--autoFlush=true");
     options = PerformanceEvaluation.parseOpts(opts);
@@ -264,6 +265,35 @@ public class TestPerformanceEvaluation {
     assertNotNull(options.getCmdName());
     assertEquals(cmdName, options.getCmdName());
     assertEquals(10, options.getMultiPut());
+  }
+
+  @Test
+  public void testParseOptsMultiPutsAndAutoFlushOrder() {
+    Queue<String> opts = new LinkedList<>();
+    String cmdName = "sequentialWrite";
+    String cmdMultiPut = "--multiPut=10";
+    String cmdAutoFlush = "--autoFlush=true";
+    opts.offer(cmdAutoFlush);
+    opts.offer(cmdMultiPut);
+    opts.offer(cmdName);
+    opts.offer("64");
+    PerformanceEvaluation.TestOptions options = null;
+    options = PerformanceEvaluation.parseOpts(opts);
+    assertNotNull(options);
+    assertEquals(true, options.autoFlush);
+    assertEquals(10, options.getMultiPut());
+
+    // Change the order of AutoFlush and Multiput
+    opts.offer(cmdMultiPut);
+    opts.offer(cmdAutoFlush);
+    opts.offer(cmdName);
+    opts.offer("64");
+
+    options = null;
+    options = PerformanceEvaluation.parseOpts(opts);
+    assertNotNull(options);
+    assertEquals(10, options.getMultiPut());
+    assertEquals(true, options.autoFlush);
   }
 
   @Test
@@ -281,6 +311,8 @@ public class TestPerformanceEvaluation {
     } catch (IllegalArgumentException  e) {
       System.out.println(e.getMessage());
     }
+
+    ((LinkedList<String>) opts).offerFirst(cmdName);
     ((LinkedList<String>) opts).offerFirst("--connCount=10");
     options = PerformanceEvaluation.parseOpts(opts);
     assertNotNull(options);
@@ -288,4 +320,30 @@ public class TestPerformanceEvaluation {
     assertEquals(cmdName, options.getCmdName());
     assertEquals(10, options.getConnCount());
   }
+
+  @Test
+  public void testParseOptsValueRandom() {
+    Queue<String> opts = new LinkedList<>();
+    String cmdName = "sequentialWrite";
+    opts.offer("--valueRandom");
+    opts.offer("--valueZipf");
+    opts.offer(cmdName);
+    opts.offer("64");
+    PerformanceEvaluation.TestOptions options = null;
+    try {
+      options = PerformanceEvaluation.parseOpts(opts);
+      fail("should fail");
+    } catch (IllegalStateException  e) {
+      System.out.println(e.getMessage());
+    }
+    ((LinkedList<String>) opts).offerFirst(cmdName);
+    ((LinkedList<String>) opts).offerFirst("--valueRandom");
+    options = PerformanceEvaluation.parseOpts(opts);
+
+    assertNotNull(options);
+    assertNotNull(options.getCmdName());
+    assertEquals(cmdName, options.getCmdName());
+    assertEquals(true, options.valueRandom);
+  }
+
 }
