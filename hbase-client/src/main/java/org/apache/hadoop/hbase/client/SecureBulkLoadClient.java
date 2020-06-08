@@ -138,7 +138,7 @@ public class SecureBulkLoadClient {
     final Token<?> userToken, final String bulkToken,
     boolean copyFiles) throws IOException {
     return secureBulkLoadHFiles(client, familyPaths, regionName, assignSeqNum, userToken,
-      bulkToken, false, null);
+      bulkToken, copyFiles, null);
   }
 
   public boolean secureBulkLoadHFiles(final ClientService.BlockingInterface client,
