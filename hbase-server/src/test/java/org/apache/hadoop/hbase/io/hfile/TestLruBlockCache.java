@@ -1059,19 +1059,19 @@ public class TestLruBlockCache {
     assertTrue("calculateBlockSize appears broken.", blockSize * numBlocks <= maxSize);
 
     final LruBlockCache cache =
-            new LruBlockCache(maxSize, blockSize, true, (int) Math.ceil(1.2 * maxSize / blockSize),
-                    LruBlockCache.DEFAULT_LOAD_FACTOR, LruBlockCache.DEFAULT_CONCURRENCY_LEVEL,
-                    0.5f, // min
-                    0.99f, // acceptable
-                    0.33f, // single
-                    0.33f, // multi
-                    0.34f, // memory
-                    1.2f, // limit
-                    false,
-                    maxSize,
-                    heavyEvictionCountLimit,
-                    200,
-                    0.01f);
+      new LruBlockCache(maxSize, blockSize, true, (int) Math.ceil(1.2 * maxSize / blockSize),
+        LruBlockCache.DEFAULT_LOAD_FACTOR, LruBlockCache.DEFAULT_CONCURRENCY_LEVEL,
+          0.5f, // min
+          0.99f, // acceptable
+          0.33f, // single
+          0.33f, // multi
+          0.34f, // memory
+          1.2f, // limit
+          false,
+          maxSize,
+          heavyEvictionCountLimit,
+          200,
+          0.01f);
 
     EvictionThread evictionThread = cache.getEvictionThread();
     assertTrue(evictionThread != null);
