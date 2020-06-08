@@ -224,7 +224,9 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
       verifier.verifySnapshot(this.workingDir, serverNames);
 
       // complete the snapshot, atomically moving from tmp to .snapshot dir.
-      completeSnapshot(this.snapshotDir, this.workingDir, this.rootFs, this.workingDirFs);
+      SnapshotDescriptionUtils.completeSnapshot(this.snapshotDir, this.workingDir, this.rootFs,
+        this.workingDirFs, this.conf);
+      finished = true;
       msg = "Snapshot " + snapshot.getName() + " of table " + snapshotTable + " completed";
       status.markComplete(msg);
       LOG.info(msg);
@@ -256,42 +258,6 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
       }
       tableLockToRelease.release();
     }
-  }
-
-  /**
-   * Reset the manager to allow another snapshot to proceed.
-   * Commits the snapshot process by moving the working snapshot
-   * to the finalized filepath
-   *
-   * @param snapshotDir The file path of the completed snapshots
-   * @param workingDir  The file path of the in progress snapshots
-   * @param fs The file system of the completed snapshots
-   * @param workingDirFs The file system of the in progress snapshots
-   *
-   * @throws SnapshotCreationException if the snapshot could not be moved
-   * @throws IOException the filesystem could not be reached
-   */
-  public void completeSnapshot(Path snapshotDir, Path workingDir, FileSystem fs,
-      FileSystem workingDirFs) throws SnapshotCreationException, IOException {
-    LOG.debug("Sentinel is done, just moving the snapshot from " + workingDir + " to "
-        + snapshotDir);
-    // If the working and completed snapshot directory are on the same file system, attempt
-    // to rename the working snapshot directory to the completed location. If that fails,
-    // or the file systems differ, attempt to copy the directory over, throwing an exception
-    // if this fails
-    URI workingURI = workingDirFs.getUri();
-    URI rootURI = fs.getUri();
-    if ((!workingURI.getScheme().equals(rootURI.getScheme()) ||
-        workingURI.getAuthority() == null ||
-        !workingURI.getAuthority().equals(rootURI.getAuthority()) ||
-        workingURI.getUserInfo() == null ||
-        !workingURI.getUserInfo().equals(rootURI.getUserInfo()) ||
-        !fs.rename(workingDir, snapshotDir)) && !FileUtil.copy(workingDirFs, workingDir, fs,
-        snapshotDir, true, true, this.conf)) {
-      throw new SnapshotCreationException("Failed to copy working directory(" + workingDir
-          + ") to completed directory(" + snapshotDir + ").");
-    }
-    finished = true;
   }
 
   /**
