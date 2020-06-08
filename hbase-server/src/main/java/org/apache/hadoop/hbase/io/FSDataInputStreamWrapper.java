@@ -267,7 +267,7 @@ public class FSDataInputStreamWrapper implements Closeable {
       if (this.instanceOfCanUnbuffer == null) {
         // To ensure we compute whether the stream is instance of CanUnbuffer only once.
         this.instanceOfCanUnbuffer = false;
-        if (CanUnbuffer.class.isAssignableFrom(streamClass)) {
+        if (wrappedStream instanceof CanUnbuffer) {
           this.unbuffer = (CanUnbuffer) wrappedStream;
           this.instanceOfCanUnbuffer = true;
         }
