@@ -23,6 +23,7 @@
   import="java.util.List"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.master.HMaster"
+  import="org.apache.hadoop.hbase.quotas.MasterQuotaManager"
   import="org.apache.hadoop.hbase.quotas.QuotaRetriever"
   import="org.apache.hadoop.hbase.quotas.QuotaSettings"
   import="org.apache.hadoop.hbase.quotas.ThrottleSettings"
@@ -31,20 +32,24 @@
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
   Configuration conf = master.getConfiguration();
   pageContext.setAttribute("pageTitle", "HBase Master Quotas: " + master.getServerName());
-  boolean exceedThrottleQuotaEnabled = master.getMasterQuotaManager().isExceedThrottleQuotaEnabled();
   List<ThrottleSettings> regionServerThrottles = new ArrayList<>();
   List<ThrottleSettings> namespaceThrottles = new ArrayList<>();
   List<ThrottleSettings> userThrottles = new ArrayList<>();
-  try (QuotaRetriever scanner = QuotaRetriever.open(conf, null)) {
-    for (QuotaSettings quota : scanner) {
-      if (quota instanceof ThrottleSettings) {
-        ThrottleSettings throttle = (ThrottleSettings) quota;
-        if (throttle.getUserName() != null) {
-          userThrottles.add(throttle);
-        } else if (throttle.getNamespace() != null) {
-          namespaceThrottles.add(throttle);
-        } else if (throttle.getRegionServer() != null) {
-          regionServerThrottles.add(throttle);
+  MasterQuotaManager quotaManager = master.getMasterQuotaManager();
+  boolean exceedThrottleQuotaEnabled = false;
+  if (quotaManager != null) {
+    exceedThrottleQuotaEnabled = quotaManager.isExceedThrottleQuotaEnabled();
+    try (QuotaRetriever scanner = QuotaRetriever.open(conf, null)) {
+      for (QuotaSettings quota : scanner) {
+        if (quota instanceof ThrottleSettings) {
+          ThrottleSettings throttle = (ThrottleSettings) quota;
+          if (throttle.getUserName() != null) {
+            userThrottles.add(throttle);
+          } else if (throttle.getNamespace() != null) {
+            namespaceThrottles.add(throttle);
+          } else if (throttle.getRegionServer() != null) {
+            regionServerThrottles.add(throttle);
+          }
         }
       }
     }
@@ -61,13 +66,15 @@
   </div>
 </div>
 
+<%if (quotaManager != null) {%>
+
 <div class="container-fluid content">
   <div class="row">
     <div class="page-header">
       <h2>Rpc Throttle Enabled</h2>
     </div>
   </div>
-  <%if (master.getMasterQuotaManager().isRpcThrottleEnabled()) {%>
+  <%if (quotaManager.isRpcThrottleEnabled()) {%>
   <div class="alert alert-success">
     Rpc throttle is enabled.
   </div>
@@ -200,5 +207,7 @@
   </table>
   <% } %>
 </div>
+
+<% } %>
 
 <jsp:include page="footer.jsp" />

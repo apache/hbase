@@ -522,11 +522,7 @@ public interface AsyncAdmin {
   }
 
   /**
-   * Merge regions.
-   * <p/>
-   * You may get a {@code DoNotRetryIOException} if you pass more than two regions in but the master
-   * does not support merging more than two regions. At least till 2.2.0, we still only support
-   * merging two regions.
+   * Merge multiple regions (>=2).
    * @param nameOfRegionsToMerge encoded or full name of daughter regions
    * @param forcible true if do a compulsory merge, otherwise we will only merge two adjacent
    *          regions
@@ -1020,8 +1016,8 @@ public interface AsyncAdmin {
    * @return current live region servers list wrapped by {@link CompletableFuture}
    */
   default CompletableFuture<Collection<ServerName>> getRegionServers() {
-    return getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
-      .thenApply(cm -> cm.getLiveServerMetrics().keySet());
+    return getClusterMetrics(EnumSet.of(Option.SERVERS_NAME))
+        .thenApply(ClusterMetrics::getServersName);
   }
 
   /**

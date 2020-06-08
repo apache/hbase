@@ -42,10 +42,6 @@ public class MutableHistogram extends MutableMetric implements MetricHistogram {
   }
 
   public MutableHistogram(String name, String description) {
-    this(name, description, Integer.MAX_VALUE << 2);
-  }
-
-  protected MutableHistogram(String name, String description, long maxExpected) {
     this.name = StringUtils.capitalize(name);
     this.desc = StringUtils.uncapitalize(description);
     this.histogram = new HistogramImpl();

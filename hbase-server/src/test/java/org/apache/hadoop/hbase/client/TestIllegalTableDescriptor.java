@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -112,6 +113,11 @@ public class TestIllegalTableDescriptor {
     htd.setRegionSplitPolicyClassName(null);
     checkTableIsLegal(htd);
 
+    htd.setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY, "nonexisting.foo.class");
+    checkTableIsIllegal(htd);
+    htd.remove(HConstants.HBASE_REGION_SPLIT_POLICY_KEY);
+    checkTableIsLegal(htd);
+
     hcd.setBlocksize(0);
     checkTableIsIllegal(htd);
     hcd.setBlocksize(1024 * 1024 * 128); // 128M
@@ -149,6 +155,11 @@ public class TestIllegalTableDescriptor {
     hcd.setScope(-1);
     checkTableIsIllegal(htd);
     hcd.setScope(0);
+    checkTableIsLegal(htd);
+
+    hcd.setValue(ColumnFamilyDescriptorBuilder.IN_MEMORY_COMPACTION, "INVALID");
+    checkTableIsIllegal(htd);
+    hcd.setValue(ColumnFamilyDescriptorBuilder.IN_MEMORY_COMPACTION, "NONE");
     checkTableIsLegal(htd);
 
     try {

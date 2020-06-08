@@ -196,7 +196,7 @@ abstract class RpcConnection {
 
         @Override
         public void run(Timeout timeout) throws Exception {
-          call.setTimeout(new CallTimeoutException("Call id=" + call.id + ", waitTime="
+          call.setTimeout(new CallTimeoutException(call.toShortString() + ", waitTime="
               + (EnvironmentEdgeManager.currentTime() - call.getStartTime()) + ", rpcTimeout="
               + call.timeout));
           callTimeout(call);

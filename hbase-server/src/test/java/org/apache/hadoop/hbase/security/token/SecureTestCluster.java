@@ -51,6 +51,23 @@ public class SecureTestCluster {
 
   private static String HTTP_PRINCIPAL;
 
+  //When extending SecureTestCluster on downstream projects that refer SecureTestCluster via
+  //hbase-server jar, we need to provide a way for the implementation to refer to its own class
+  //definition, so that KeyStoreTestUtil.getClasspathDir can resolve a valid path in the local FS
+  //to place required SSL config files.
+  private static Class testRunnerClass = SecureTestCluster.class;
+
+  /**
+   * SecureTestCluster extending classes can set their own <code>Class</code> reference type
+   * to be used as the target resource to be looked for on the class loader by
+   * <code>KeyStoreTestUtil</code>, when deciding where to place ssl related config files.
+   * @param testRunnerClass a <code>Class</code> reference from the
+   *                        <code>SecureTestCluster</code> extender.
+   */
+  protected static void setTestRunner(Class testRunnerClass){
+    SecureTestCluster.testRunnerClass = testRunnerClass;
+  }
+
   /**
    * Setup and start kerberos, hbase
    */
@@ -65,7 +82,7 @@ public class SecureTestCluster {
 
     HBaseKerberosUtils.setSecuredConfiguration(TEST_UTIL.getConfiguration(),
         PRINCIPAL + "@" + KDC.getRealm(), HTTP_PRINCIPAL + "@" + KDC.getRealm());
-    HBaseKerberosUtils.setSSLConfiguration(TEST_UTIL, SecureTestCluster.class);
+    HBaseKerberosUtils.setSSLConfiguration(TEST_UTIL, testRunnerClass);
 
     TEST_UTIL.getConfiguration().setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
         TokenProvider.class.getName());
@@ -78,13 +95,17 @@ public class SecureTestCluster {
 
   @AfterClass
   public static void tearDown() throws Exception {
-    if (CLUSTER != null) {
-      CLUSTER.shutdown();
+    try {
+      if (CLUSTER != null) {
+        CLUSTER.shutdown();
+      }
+      CLUSTER.join();
+      if (KDC != null) {
+        KDC.stop();
+      }
+      TEST_UTIL.shutdownMiniCluster();
+    } finally {
+      setTestRunner(SecureTestCluster.class);
     }
-    CLUSTER.join();
-    if (KDC != null) {
-      KDC.stop();
-    }
-    TEST_UTIL.shutdownMiniCluster();
   }
 }

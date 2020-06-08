@@ -17,6 +17,7 @@
 package org.apache.hadoop.hbase.quotas;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -33,6 +34,11 @@ import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
 
 /**
  * A manager for filesystem space quotas in the RegionServer.
@@ -55,6 +61,8 @@ public class RegionServerSpaceQuotaManager {
   private boolean started = false;
   private final ConcurrentHashMap<TableName,SpaceViolationPolicyEnforcement> enforcedPolicies;
   private SpaceViolationPolicyEnforcementFactory factory;
+  private RegionSizeStore regionSizeStore;
+  private RegionSizeReportingChore regionSizeReporter;
 
   public RegionServerSpaceQuotaManager(RegionServerServices rsServices) {
     this(rsServices, SpaceViolationPolicyEnforcementFactory.getInstance());
@@ -67,6 +75,8 @@ public class RegionServerSpaceQuotaManager {
     this.factory = factory;
     this.enforcedPolicies = new ConcurrentHashMap<>();
     this.currentQuotaSnapshots = new AtomicReference<>(new HashMap<>());
+    // Initialize the size store to not track anything -- create the real one if we're start()'ed
+    this.regionSizeStore = NoOpRegionSizeStore.getInstance();
   }
 
   public synchronized void start() throws IOException {
@@ -79,8 +89,13 @@ public class RegionServerSpaceQuotaManager {
       LOG.warn("RegionServerSpaceQuotaManager has already been started!");
       return;
     }
+    // Start the chores
     this.spaceQuotaRefresher = new SpaceQuotaRefresherChore(this, rsServices.getClusterConnection());
     rsServices.getChoreService().scheduleChore(spaceQuotaRefresher);
+    this.regionSizeReporter = new RegionSizeReportingChore(rsServices);
+    rsServices.getChoreService().scheduleChore(regionSizeReporter);
+    // Instantiate the real RegionSizeStore
+    this.regionSizeStore = RegionSizeStoreFactory.getInstance().createStore();
     started = true;
   }
 
@@ -88,6 +103,10 @@ public class RegionServerSpaceQuotaManager {
     if (spaceQuotaRefresher != null) {
       spaceQuotaRefresher.cancel();
       spaceQuotaRefresher = null;
+    }
+    if (regionSizeReporter != null) {
+      regionSizeReporter.cancel();
+      regionSizeReporter = null;
     }
     started = false;
   }
@@ -209,6 +228,43 @@ public class RegionServerSpaceQuotaManager {
       return enforcement.areCompactionsDisabled();
     }
     return false;
+  }
+
+  /**
+   * Returns the {@link RegionSizeStore} tracking filesystem utilization by each region.
+   *
+   * @return A {@link RegionSizeStore} implementation.
+   */
+  public RegionSizeStore getRegionSizeStore() {
+    return regionSizeStore;
+  }
+
+  /**
+   * Builds the protobuf message to inform the Master of files being archived.
+   *
+   * @param tn The table the files previously belonged to.
+   * @param archivedFiles The files and their size in bytes that were archived.
+   * @return The protobuf representation
+   */
+  public RegionServerStatusProtos.FileArchiveNotificationRequest buildFileArchiveRequest(
+      TableName tn, Collection<Entry<String,Long>> archivedFiles) {
+    RegionServerStatusProtos.FileArchiveNotificationRequest.Builder builder =
+        RegionServerStatusProtos.FileArchiveNotificationRequest.newBuilder();
+    HBaseProtos.TableName protoTn = ProtobufUtil.toProtoTableName(tn);
+    for (Entry<String,Long> archivedFile : archivedFiles) {
+      RegionServerStatusProtos.FileArchiveNotificationRequest.FileWithSize fws =
+          RegionServerStatusProtos.FileArchiveNotificationRequest.FileWithSize.newBuilder()
+              .setName(archivedFile.getKey())
+              .setSize(archivedFile.getValue())
+              .setTableName(protoTn)
+              .build();
+      builder.addArchivedFiles(fws);
+    }
+    final RegionServerStatusProtos.FileArchiveNotificationRequest request = builder.build();
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Reporting file archival to Master: " + TextFormat.shortDebugString(request));
+    }
+    return request;
   }
 
   /**

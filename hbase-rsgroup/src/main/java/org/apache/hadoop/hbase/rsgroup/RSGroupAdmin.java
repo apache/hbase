@@ -98,4 +98,11 @@ public interface RSGroupAdmin {
    * @param servers set of servers to remove
    */
   void removeServers(Set<Address> servers) throws IOException;
+
+  /**
+   * Rename rsgroup.
+   * @param oldName old rsgroup name
+   * @param newName new rsgroup name
+   */
+  void renameRSGroup(String oldName, String newName) throws IOException;
 }

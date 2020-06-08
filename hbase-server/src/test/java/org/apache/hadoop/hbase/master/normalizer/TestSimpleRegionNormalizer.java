@@ -18,16 +18,21 @@
 package org.apache.hadoop.hbase.master.normalizer;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerName;
@@ -79,6 +84,22 @@ public class TestSimpleRegionNormalizer {
   @BeforeClass
   public static void beforeAllTests() throws Exception {
     normalizer = new SimpleRegionNormalizer();
+  }
+
+  @Test
+  public void testPlanComparator() {
+    Comparator<NormalizationPlan> comparator = new SimpleRegionNormalizer.PlanComparator();
+    NormalizationPlan splitPlan1 = new SplitNormalizationPlan(null, null);
+    NormalizationPlan splitPlan2 = new SplitNormalizationPlan(null, null);
+    NormalizationPlan mergePlan1 = new MergeNormalizationPlan(null, null);
+    NormalizationPlan mergePlan2 = new MergeNormalizationPlan(null, null);
+
+    assertTrue(comparator.compare(splitPlan1, splitPlan2) == 0);
+    assertTrue(comparator.compare(splitPlan2, splitPlan1) == 0);
+    assertTrue(comparator.compare(mergePlan1, mergePlan2) == 0);
+    assertTrue(comparator.compare(mergePlan2, mergePlan1) == 0);
+    assertTrue(comparator.compare(splitPlan1, mergePlan1) < 0);
+    assertTrue(comparator.compare(mergePlan1, splitPlan1) > 0);
   }
 
   @Test
@@ -457,6 +478,47 @@ public class TestSimpleRegionNormalizer {
     assertTrue(plan instanceof MergeNormalizationPlan);
     assertEquals(hri1, ((MergeNormalizationPlan) plan).getFirstRegion());
     assertEquals(hri2, ((MergeNormalizationPlan) plan).getSecondRegion());
+  }
+
+  @Test
+  public void testSplitIfTooFewRegions() throws HBaseIOException {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    List<RegionInfo> RegionInfo = new ArrayList<>();
+    Map<byte[], Integer> regionSizes = new HashMap<>();
+
+    RegionInfo hri1 = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(Bytes.toBytes("aaa"))
+        .setEndKey(Bytes.toBytes("bbb"))
+        .build();
+    RegionInfo.add(hri1);
+    regionSizes.put(hri1.getRegionName(), 1);
+
+    RegionInfo hri2 = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(Bytes.toBytes("bbb"))
+        .setEndKey(Bytes.toBytes("ccc"))
+        .build();
+    RegionInfo.add(hri2);
+    regionSizes.put(hri2.getRegionName(), 1);
+    // the third region is huge one
+    RegionInfo hri3 = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(Bytes.toBytes("ccc"))
+        .setEndKey(Bytes.toBytes("ddd"))
+        .build();
+    RegionInfo.add(hri3);
+    regionSizes.put(hri3.getRegionName(), 10);
+
+    setupMocksForNormalizer(regionSizes, RegionInfo);
+
+    Configuration configuration = HBaseConfiguration.create();
+    configuration.setInt(SimpleRegionNormalizer.HBASE_REGION_NORMALIZER_MIN_REGION_COUNT_KEY, 4);
+    when(masterServices.getConfiguration()).thenReturn(configuration);
+    normalizer.setMasterServices(masterServices);
+
+    List<NormalizationPlan> plans = normalizer.computePlanForTable(tableName);
+    assertNotNull(plans);
+    assertEquals(1, plans.size());
+    NormalizationPlan plan = plans.get(0);
+    assertEquals(hri3, ((SplitNormalizationPlan) plan).getRegionInfo());
   }
 
   @SuppressWarnings("MockitoCast")

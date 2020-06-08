@@ -51,7 +51,6 @@ import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
@@ -115,7 +114,7 @@ public class RegionStateStore {
       if (regionInfo == null) continue;
 
       final int replicaId = regionInfo.getReplicaId();
-      final State state = getRegionState(result, replicaId);
+      final State state = getRegionState(result, regionInfo);
 
       final ServerName lastHost = hrl.getServerName();
       final ServerName regionLocation = getRegionServer(result, replicaId);
@@ -326,17 +325,25 @@ public class RegionStateStore {
 
   /**
    * Pull the region state from a catalog table {@link Result}.
-   * @param r Result to pull the region state from
    * @return the region state, or null if unknown.
    */
-  @VisibleForTesting
-  public static State getRegionState(final Result r, int replicaId) {
-    Cell cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY, getStateColumn(replicaId));
+  public static State getRegionState(final Result r, RegionInfo regionInfo) {
+    Cell cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+        getStateColumn(regionInfo.getReplicaId()));
     if (cell == null || cell.getValueLength() == 0) {
       return null;
     }
-    return State.valueOf(Bytes.toString(cell.getValueArray(), cell.getValueOffset(),
-        cell.getValueLength()));
+
+    String state = Bytes.toString(cell.getValueArray(), cell.getValueOffset(),
+        cell.getValueLength());
+    try {
+      return State.valueOf(state);
+    } catch (IllegalArgumentException e) {
+      LOG.warn("BAD value {} in hbase:meta info:state column for region {} , " +
+              "Consider using HBCK2 setRegionState ENCODED_REGION_NAME STATE",
+          state, regionInfo.getEncodedName());
+      return null;
+    }
   }
 
   private static byte[] getStateColumn(int replicaId) {

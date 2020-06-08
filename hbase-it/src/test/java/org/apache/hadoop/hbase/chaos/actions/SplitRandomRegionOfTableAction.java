@@ -19,16 +19,21 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.List;
+
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.client.Admin;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
 * Action that tries to split a random region of a table.
 */
 public class SplitRandomRegionOfTableAction extends Action {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(SplitRandomRegionOfTableAction.class);
   private final long sleepTime;
   private final TableName tableName;
 

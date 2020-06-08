@@ -639,6 +639,10 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
         LOG.debug("Table {} not enabled", tableName);
         return false;
       }
+      if (TableName.isMetaTableName(tableName)) {
+        // meta table is always available
+        return true;
+      }
       List<Pair<RegionInfo, ServerName>> locations =
         MetaTableAccessor.getTableRegionsAndLocations(this, tableName, true);
 
@@ -1984,11 +1988,6 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   @Override
   public boolean isAborted(){
     return this.aborted;
-  }
-
-  @Override
-  public int getCurrentNrHRS() throws IOException {
-    return get(this.registry.getCurrentNrHRS());
   }
 
   @Override

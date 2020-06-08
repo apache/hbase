@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,28 +19,31 @@ package org.apache.hadoop.hbase.quotas;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
@@ -86,8 +89,8 @@ public class TestQuotaObserverChoreRegionReports {
   @Test
   public void testReportExpiration() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
-    // Send reports every 30 seconds
-    conf.setInt(FileSystemUtilizationChore.FS_UTILIZATION_CHORE_PERIOD_KEY, 25000);
+    // Send reports every 25 seconds
+    conf.setInt(RegionSizeReportingChore.REGION_SIZE_REPORTING_CHORE_PERIOD_KEY, 25000);
     // Expire the reports after 5 seconds
     conf.setInt(QuotaObserverChore.REGION_REPORT_RETENTION_DURATION_KEY, 5000);
     TEST_UTIL.startMiniCluster(1);
@@ -103,8 +106,8 @@ public class TestQuotaObserverChoreRegionReports {
 
     // Create a table
     final TableName tn = TableName.valueOf("reportExpiration");
-    HTableDescriptor tableDesc = new HTableDescriptor(tn);
-    tableDesc.addFamily(new HColumnDescriptor(FAM1));
+    TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tn).addColumnFamily(
+        ColumnFamilyDescriptorBuilder.of(FAM1)).build();
     TEST_UTIL.getAdmin().createTable(tableDesc);
 
     // No reports right after we created this table.
@@ -143,13 +146,20 @@ public class TestQuotaObserverChoreRegionReports {
     // Expire the reports after 5 seconds
     conf.setInt(QuotaObserverChore.REGION_REPORT_RETENTION_DURATION_KEY, 5000);
     TEST_UTIL.startMiniCluster(1);
+    // Wait till quota table onlined.
+    TEST_UTIL.waitFor(10000, new Waiter.Predicate<Exception>() {
+      @Override public boolean evaluate() throws Exception {
+        return MetaTableAccessor.tableExists(TEST_UTIL.getConnection(),
+          QuotaTableUtil.QUOTA_TABLE_NAME);
+      }
+    });
 
     final String FAM1 = "f1";
 
     // Create a table
     final TableName tn = TableName.valueOf("quotaAcceptanceWithoutReports");
-    HTableDescriptor tableDesc = new HTableDescriptor(tn);
-    tableDesc.addFamily(new HColumnDescriptor(FAM1));
+    TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tn).addColumnFamily(
+        ColumnFamilyDescriptorBuilder.of(FAM1)).build();
     TEST_UTIL.getAdmin().createTable(tableDesc);
 
     // Set a quota
@@ -157,6 +167,7 @@ public class TestQuotaObserverChoreRegionReports {
     final SpaceViolationPolicy violationPolicy = SpaceViolationPolicy.NO_INSERTS;
     QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(tn, sizeLimit, violationPolicy);
     final Admin admin = TEST_UTIL.getAdmin();
+    LOG.info("SET QUOTA");
     admin.setQuota(settings);
     final Connection conn = TEST_UTIL.getConnection();
 

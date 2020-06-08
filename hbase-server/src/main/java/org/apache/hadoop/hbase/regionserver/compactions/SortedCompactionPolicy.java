@@ -84,6 +84,7 @@ public abstract class SortedCompactionPolicy extends CompactionPolicy {
 
     CompactionRequestImpl result = createCompactionRequest(candidateSelection,
       isTryingMajor || isAfterSplit, mayUseOffPeak, mayBeStuck);
+    result.setAfterSplit(isAfterSplit);
 
     ArrayList<HStoreFile> filesToCompact = Lists.newArrayList(result.getFiles());
     removeExcessFiles(filesToCompact, isUserCompaction, isTryingMajor);

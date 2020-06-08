@@ -290,7 +290,12 @@ public class TBoundedThreadPoolServer extends TServer {
         outputProtocol = outputProtocolFactory_.getProtocol(outputTransport);
         // we check stopped_ first to make sure we're not supposed to be shutting
         // down. this is necessary for graceful shutdown.
-        while (!stopped && processor.process(inputProtocol, outputProtocol)) {}
+        while (true) {
+          if (stopped) {
+            break;
+          }
+          processor.process(inputProtocol, outputProtocol);
+        }
       } catch (TTransportException ttx) {
         // Assume the client died and continue silently
       } catch (TException tx) {

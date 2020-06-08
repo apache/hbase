@@ -150,6 +150,8 @@ under the License.
    <dt><a href="http://code.google.com/p/hbase-jdo/">HBase UI Tool &amp; Util</a></dt>
    <dd>HBase UI Tool &amp; Util is an HBase UI client and simple util module.
     It can handle hbase more easily like jdo(not persistence api)</dd>
+   <dt><a href="https://github.com/flipkart-incubator/hbase-orm">HBase ORM</a></dt>
+   <dd>A light-weight HBase ORM library that enables object-oriented access of HBase records with minimal coding and good testability</dd>
   </dl>
   <h3>Example HBase Applications</h3>
   <ul>

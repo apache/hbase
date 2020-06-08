@@ -30,6 +30,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
@@ -78,12 +79,15 @@ import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveRSGro
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse;
+import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RenameRSGroupRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RenameRSGroupResponse;
 import org.apache.hadoop.hbase.protobuf.generated.TableProtos;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -399,6 +403,31 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
       }
       done.run(builder.build());
     }
+
+    @Override
+    public void renameRSGroup(RpcController controller,
+                              RenameRSGroupRequest request,
+                              RpcCallback<RenameRSGroupResponse> done) {
+      String oldRSGroup = request.getOldRsgroupName();
+      String newRSGroup = request.getNewRsgroupName();
+      LOG.info("{} rename rsgroup from {} to {}",
+        master.getClientIdAuditPrefix(), oldRSGroup, newRSGroup);
+
+      RenameRSGroupResponse.Builder builder = RenameRSGroupResponse.newBuilder();
+      try {
+        if (master.getMasterCoprocessorHost() != null) {
+          master.getMasterCoprocessorHost().preRenameRSGroup(oldRSGroup, newRSGroup);
+        }
+        checkPermission("renameRSGroup");
+        groupAdminServer.renameRSGroup(oldRSGroup, newRSGroup);
+        if (master.getMasterCoprocessorHost() != null) {
+          master.getMasterCoprocessorHost().postRenameRSGroup(oldRSGroup, newRSGroup);
+        }
+      } catch (IOException e) {
+        CoprocessorRpcUtils.setControllerException(controller, e);
+      }
+      done.run(builder.build());
+    }
   }
 
   boolean rsgroupHasServersOnline(TableDescriptor desc) throws IOException {
@@ -431,20 +460,14 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
   }
 
   void assignTableToGroup(TableDescriptor desc) throws IOException {
-    String groupName =
-        master.getClusterSchema().getNamespace(desc.getTableName().getNamespaceAsString())
-                .getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP);
-    if (groupName == null) {
-      groupName = RSGroupInfo.DEFAULT_GROUP;
-    }
-    RSGroupInfo rsGroupInfo = groupAdminServer.getRSGroupInfo(groupName);
+    RSGroupInfo rsGroupInfo = groupInfoManager.determineRSGroupInfoForTable(desc.getTableName());
     if (rsGroupInfo == null) {
-      throw new ConstraintException("Default RSGroup (" + groupName + ") for this table's "
-          + "namespace does not exist.");
+      throw new ConstraintException("Default RSGroup for this table " + desc.getTableName()
+        + " does not exist.");
     }
     if (!rsGroupInfo.containsTable(desc.getTableName())) {
-      LOG.debug("Pre-moving table " + desc.getTableName() + " to RSGroup " + groupName);
-      groupAdminServer.moveTables(Sets.newHashSet(desc.getTableName()), groupName);
+      LOG.debug("Pre-moving table " + desc.getTableName() + " to RSGroup " + rsGroupInfo.getName());
+      groupAdminServer.moveTables(Sets.newHashSet(desc.getTableName()), rsGroupInfo.getName());
     }
   }
 
@@ -457,17 +480,22 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
       final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final TableDescriptor desc,
       final RegionInfo[] regions) throws IOException {
-    if (!desc.getTableName().isSystemTable() && !rsgroupHasServersOnline(desc)) {
-      throw new HBaseIOException("No online servers in the rsgroup, which table " +
-          desc.getTableName().getNameAsString() + " belongs to");
+    if (desc.getTableName().isSystemTable()) {
+      return;
     }
-  }
-
-  // Assign table to default RSGroup.
-  @Override
-  public void postCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableDescriptor desc, RegionInfo[] regions) throws IOException {
-    assignTableToGroup(desc);
+    RSGroupInfo rsGroupInfo = groupInfoManager.determineRSGroupInfoForTable(desc.getTableName());
+    if (rsGroupInfo == null) {
+      throw new ConstraintException("Default RSGroup for this table " + desc.getTableName()
+        + " does not exist.");
+    }
+    if (!RSGroupUtil.rsGroupHasOnlineServer(master, rsGroupInfo)) {
+      throw new HBaseIOException("No online servers in the rsgroup " + rsGroupInfo.getName()
+        + " which table " + desc.getTableName().getNameAsString() + " belongs to");
+    }
+    synchronized (groupInfoManager) {
+      groupInfoManager.moveTables(
+        Collections.singleton(desc.getTableName()), rsGroupInfo.getName());
+    }
   }
 
   // Remove table from its RSGroup.
@@ -491,7 +519,7 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
                                  NamespaceDescriptor ns) throws IOException {
     String group = ns.getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP);
     if(group != null && groupAdminServer.getRSGroupInfo(group) == null) {
-      throw new ConstraintException("Region server group "+group+" does not exit");
+      throw new ConstraintException("Region server group " + group + " does not exist.");
     }
   }
 

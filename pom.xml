@@ -32,14 +32,14 @@
   <parent>
     <groupId>org.apache</groupId>
     <artifactId>apache</artifactId>
-    <version>21</version>
+    <version>23</version>
     <relativePath/>
     <!-- no parent resolution -->
   </parent>
   <groupId>org.apache.hbase</groupId>
   <artifactId>hbase</artifactId>
   <packaging>pom</packaging>
-  <version>2.2.2</version>
+  <version>2.2.6-SNAPSHOT</version>
   <name>Apache HBase</name>
   <description>
     Apache HBase is the Hadoop database. Use it when you need
@@ -140,6 +140,13 @@
       <subscribe>builds-subscribe@hbase.apache.org</subscribe>
       <unsubscribe>builds-unsubscribe@hbase.apache.org</unsubscribe>
       <archive>http://mail-archives.apache.org/mod_mbox/hbase-builds/</archive>
+    </mailingList>
+    <mailingList>
+      <name>User (ZH) List</name>
+      <subscribe>user-zh-subscribe@hbase.apache.org</subscribe>
+      <unsubscribe>user-zh-unsubscribe@hbase.apache.org</unsubscribe>
+      <post>user-zh@hbase.apache.org</post>
+      <archive>https://lists.apache.org/list.html?user-zh@hbase.apache.org</archive>
     </mailingList>
   </mailingLists>
   <developers>
@@ -772,7 +779,6 @@
           <!-- excludes are inherited -->
           <groupId>org.apache.rat</groupId>
           <artifactId>apache-rat-plugin</artifactId>
-          <version>${apache.rat.version}</version>
           <configuration>
             <excludes>
               <exclude>**/*.versionsBackup</exclude>
@@ -1388,7 +1394,7 @@
     <httpcore.version>4.4.6</httpcore.version>
     <metrics-core.version>3.2.6</metrics-core.version>
     <jackson.version>2.9.10</jackson.version>
-    <jackson.databind.version>2.9.10</jackson.databind.version>
+    <jackson.databind.version>2.9.10.1</jackson.databind.version>
     <jaxb-api.version>2.2.12</jaxb-api.version>
     <jetty.version>9.3.27.v20190418</jetty.version>
     <servlet.api.version>3.1.0</servlet.api.version>
@@ -1407,7 +1413,7 @@
     <external.protobuf.version>2.5.0</external.protobuf.version>
     <protobuf.plugin.version>0.5.0</protobuf.plugin.version>
     <thrift.path>thrift</thrift.path>
-    <thrift.version>0.12.0</thrift.version>
+    <thrift.version>0.13.0</thrift.version>
     <zookeeper.version>3.4.10</zookeeper.version>
     <!-- What ZooKeeper 3.4.x depends on and nothing more -->
     <jline.version>0.9.94</jline.version>
@@ -1424,7 +1430,6 @@
     <commons-crypto.version>1.0.0</commons-crypto.version>
     <curator.version>4.0.0</curator.version>
     <!-- Plugin Dependencies -->
-    <apache.rat.version>0.12</apache.rat.version>
     <asciidoctor.plugin.version>1.5.5</asciidoctor.plugin.version>
     <asciidoctorj.pdf.version>1.5.0-alpha.15</asciidoctorj.pdf.version>
     <build.helper.maven.version>3.0.0</build.helper.maven.version>
@@ -1443,7 +1448,7 @@
     <maven.warbucks.version>1.1.0</maven.warbucks.version>
     <os.maven.version>1.5.0.Final</os.maven.version>
     <spotbugs.version>3.1.11</spotbugs.version>
-    <surefire.version>2.22.2</surefire.version>
+    <surefire.version>3.0.0-M4</surefire.version>
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
     <hbase-thirdparty.version>2.2.1</hbase-thirdparty.version>
@@ -2349,6 +2354,28 @@
         <argLine>${hbase-surefire.cygwin-argLine}</argLine>
       </properties>
     </profile>
+    <!-- this profile should match the name of the release profile in the root asf pom -->
+    <profile>
+      <id>apache-release</id>
+      <build>
+        <plugins>
+          <!-- This should insert itself in place of the normal deploy plugin and then
+               handle either closing or dropping the staging repository for us depending
+               on if the build succeeds.
+            -->
+          <plugin>
+            <groupId>org.sonatype.plugins</groupId>
+            <artifactId>nexus-staging-maven-plugin</artifactId>
+            <version>1.6.8</version>
+            <extensions>true</extensions>
+            <configuration>
+              <nexusUrl>https://repository.apache.org/</nexusUrl>
+              <serverId>apache.releases.https</serverId>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
     <!-- this profile should be activated for release builds -->
     <profile>
       <id>release</id>
@@ -2597,7 +2624,7 @@
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-auth</artifactId>
-	    <version>${hadoop-two.version}</version>
+            <version>${hadoop-two.version}</version>
             <exclusions>
               <exclusion>
                 <groupId>com.google.guava</groupId>

@@ -22,7 +22,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -94,6 +93,7 @@ public class TestBulkLoad {
   private final byte[] randomBytes = new byte[100];
   private final byte[] family1 = Bytes.toBytes("family1");
   private final byte[] family2 = Bytes.toBytes("family2");
+  private final byte[] family3 = Bytes.toBytes("family3");
 
   @Rule
   public TestName name = new TestName();
@@ -113,20 +113,19 @@ public class TestBulkLoad {
     storeFileName = (new Path(storeFileName)).getName();
     List<String> storeFileNames = new ArrayList<>();
     storeFileNames.add(storeFileName);
-    when(log.append(any(), any(),
-            argThat(bulkLogWalEdit(WALEdit.BULK_LOAD, tableName.toBytes(),
-                    familyName, storeFileNames)),
-            anyBoolean())).thenAnswer(new Answer() {
-              @Override
-              public Object answer(InvocationOnMock invocation) {
-                WALKeyImpl walKey = invocation.getArgument(1);
-                MultiVersionConcurrencyControl mvcc = walKey.getMvcc();
-                if (mvcc != null) {
-                  MultiVersionConcurrencyControl.WriteEntry we = mvcc.begin();
-                  walKey.setWriteEntry(we);
-                }
-                return 01L;
-              };
+    when(log.appendMarker(any(), any(), argThat(
+        bulkLogWalEdit(WALEdit.BULK_LOAD, tableName.toBytes(), familyName, storeFileNames)))).
+        thenAnswer(new Answer() {
+          @Override
+          public Object answer(InvocationOnMock invocation) {
+            WALKeyImpl walKey = invocation.getArgument(1);
+            MultiVersionConcurrencyControl mvcc = walKey.getMvcc();
+            if (mvcc != null) {
+              MultiVersionConcurrencyControl.WriteEntry we = mvcc.begin();
+              walKey.setWriteEntry(we);
+            }
+            return 01L;
+          };
     });
     testRegionWithFamiliesAndSpecifiedTableName(tableName, family1)
         .bulkLoadHFiles(familyPaths, false, null);
@@ -140,9 +139,8 @@ public class TestBulkLoad {
 
   @Test
   public void shouldBulkLoadSingleFamilyHLog() throws IOException {
-    when(log.append(any(),
-            any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD)),
-            anyBoolean())).thenAnswer(new Answer() {
+    when(log.appendMarker(any(),
+            any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD)))).thenAnswer(new Answer() {
               @Override
               public Object answer(InvocationOnMock invocation) {
                 WALKeyImpl walKey = invocation.getArgument(1);
@@ -160,9 +158,8 @@ public class TestBulkLoad {
 
   @Test
   public void shouldBulkLoadManyFamilyHLog() throws IOException {
-    when(log.append(any(),
-            any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD)),
-            anyBoolean())).thenAnswer(new Answer() {
+    when(log.appendMarker(any(),
+            any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD)))).thenAnswer(new Answer() {
               @Override
               public Object answer(InvocationOnMock invocation) {
                 WALKeyImpl walKey = invocation.getArgument(1);
@@ -181,9 +178,8 @@ public class TestBulkLoad {
 
   @Test
   public void shouldBulkLoadManyFamilyHLogEvenWhenTableNameNamespaceSpecified() throws IOException {
-    when(log.append(any(),
-            any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD)),
-            anyBoolean())).thenAnswer(new Answer() {
+    when(log.appendMarker(any(),
+            any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD)))).thenAnswer(new Answer() {
               @Override
               public Object answer(InvocationOnMock invocation) {
                 WALKeyImpl walKey = invocation.getArgument(1);
@@ -207,6 +203,13 @@ public class TestBulkLoad {
       null);
   }
 
+  // after HBASE-24021 will throw DoNotRetryIOException, not MultipleIOException
+  @Test(expected = DoNotRetryIOException.class)
+  public void shouldCrashIfBulkLoadMultiFamiliesNotInTable() throws IOException {
+    testRegionWithFamilies(family1).bulkLoadHFiles(withFamilyPathsFor(family1, family2, family3),
+      false, null);
+  }
+
   @Test(expected = DoNotRetryIOException.class)
   public void bulkHLogShouldThrowErrorWhenFamilySpecifiedAndHFileExistsButNotInTableDescriptor()
       throws IOException {
@@ -224,6 +227,15 @@ public class TestBulkLoad {
   public void shouldThrowErrorIfHFileDoesNotExist() throws IOException {
     List<Pair<byte[], String>> list = asList(withMissingHFileForFamily(family1));
     testRegionWithFamilies(family1).bulkLoadHFiles(list, false, null);
+  }
+
+  // after HBASE-24021 will throw FileNotFoundException, not MultipleIOException
+  @Test(expected = FileNotFoundException.class)
+  public void shouldThrowErrorIfMultiHFileDoesNotExist() throws IOException {
+    List<Pair<byte[], String>> list = new ArrayList<>();
+    list.addAll(asList(withMissingHFileForFamily(family1)));
+    list.addAll(asList(withMissingHFileForFamily(family2)));
+    testRegionWithFamilies(family1, family2).bulkLoadHFiles(list, false, null);
   }
 
   private Pair<byte[], String> withMissingHFileForFamily(byte[] family) {

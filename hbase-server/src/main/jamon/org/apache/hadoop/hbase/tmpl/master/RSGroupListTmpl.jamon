@@ -37,6 +37,7 @@ ServerManager serverManager;
     org.apache.hadoop.hbase.master.ServerManager;
     org.apache.hadoop.hbase.net.Address;
     org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
+    org.apache.hadoop.util.StringUtils;
     org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 </%import>
 <%java>
@@ -139,7 +140,7 @@ if (master.getServerManager() != null) {
     <td><% tables %></td>
     <td><% requestsPerSecond %></td>
     <td><% numRegionsOnline %></td>
-    <td><% avgLoad %></td>
+    <td><% StringUtils.limitDecimalTo2(avgLoad) %></td>
 </tr>
 <%java>
 }
@@ -150,7 +151,7 @@ if (master.getServerManager() != null) {
 <td><% totalTables %></td>
 <td><% totalRequests %></td>
 <td><% totalRegions %></td>
-<td><% master.getServerManager().getAverageLoad() %></td>
+<td><% StringUtils.limitDecimalTo2(master.getServerManager().getAverageLoad()) %></td>
 </tr>
 </table>
 </%def>
@@ -170,10 +171,10 @@ if (master.getServerManager() != null) {
 </tr>
 <%java>
     final String ZEROMB = "0 MB";
-    String usedHeapStr = ZEROMB;
-    String maxHeapStr = ZEROMB;
-    String memstoreSizeStr = ZEROMB;
     for (RSGroupInfo rsGroupInfo: rsGroupInfos) {
+      String usedHeapStr = ZEROMB;
+      String maxHeapStr = ZEROMB;
+      String memstoreSizeStr = ZEROMB;
       String rsGroupName = rsGroupInfo.getName();
       long usedHeap = 0;
       long maxHeap = 0;
@@ -274,11 +275,11 @@ if (master.getServerManager() != null) {
 <%java>
     final String ZEROKB = "0 KB";
     final String ZEROMB = "0 MB";
-    String uncompressedStorefileSizeStr = ZEROMB;
-    String storefileSizeStr = ZEROMB;
-    String indexSizeStr = ZEROKB;
-    String bloomSizeStr = ZEROKB;
     for (RSGroupInfo rsGroupInfo: rsGroupInfos) {
+      String uncompressedStorefileSizeStr = ZEROMB;
+      String storefileSizeStr = ZEROMB;
+      String indexSizeStr = ZEROKB;
+      String bloomSizeStr = ZEROKB;
       String rsGroupName = rsGroupInfo.getName();
       int numStores = 0;
       long numStorefiles = 0;

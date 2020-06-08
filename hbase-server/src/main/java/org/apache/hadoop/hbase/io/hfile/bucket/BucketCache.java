@@ -384,7 +384,15 @@ public class BucketCache implements BlockCache, HeapSize {
     } else if (ioEngineName.startsWith("offheap")) {
       return new ByteBufferIOEngine(capacity);
     } else if (ioEngineName.startsWith("mmap:")) {
-      return new FileMmapEngine(ioEngineName.substring(5), capacity);
+      return new ExclusiveMemoryMmapIOEngine(ioEngineName.substring(5), capacity);
+    } else if (ioEngineName.startsWith("pmem:")) {
+      // This mode of bucket cache creates an IOEngine over a file on the persistent memory
+      // device. Since the persistent memory device has its own address space the contents
+      // mapped to this address space does not get swapped out like in the case of mmapping
+      // on to DRAM. Hence the cells created out of the hfile blocks in the pmem bucket cache
+      // can be directly referred to without having to copy them onheap. Once the RPC is done,
+      // the blocks can be returned back as in case of ByteBufferIOEngine.
+      return new SharedMemoryMmapIOEngine(ioEngineName.substring(5), capacity);
     } else {
       throw new IllegalArgumentException(
           "Don't understand io engine name for cache- prefix with file:, files:, mmap: or offheap");
@@ -1136,8 +1144,10 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   private void checkIOErrorIsTolerated() {
     long now = EnvironmentEdgeManager.currentTime();
-    if (this.ioErrorStartTime > 0) {
-      if (cacheEnabled && (now - ioErrorStartTime) > this.ioErrorsTolerationDuration) {
+    // Do a single read to a local variable to avoid timing issue - HBASE-24454
+    long ioErrorStartTimeTmp = this.ioErrorStartTime;
+    if (ioErrorStartTimeTmp > 0) {
+      if (cacheEnabled && (now - ioErrorStartTimeTmp) > this.ioErrorsTolerationDuration) {
         LOG.error("IO errors duration time has exceeded " + ioErrorsTolerationDuration +
           "ms, disabling cache, please check your IOEngine");
         disableCache();

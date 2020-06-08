@@ -29,7 +29,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -100,6 +99,7 @@ import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -113,6 +113,7 @@ import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.filter.BigDecimalComparator;
@@ -146,9 +147,11 @@ import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Threads;
@@ -676,6 +679,60 @@ public class TestHRegion {
     Cell keyValue = results.get(0);
     Assert.assertTrue(Bytes.compareTo(CellUtil.cloneRow(keyValue), Bytes.toBytes("r2")) == 0);
     scanner1.close();
+  }
+
+  @Test
+  public void testArchiveRecoveredEditsReplay() throws Exception {
+    byte[] family = Bytes.toBytes("family");
+    this.region = initHRegion(tableName, method, CONF, family);
+    final WALFactory wals = new WALFactory(CONF, method);
+    try {
+      Path regiondir = region.getRegionFileSystem().getRegionDir();
+      FileSystem fs = region.getRegionFileSystem().getFileSystem();
+      byte[] regionName = region.getRegionInfo().getEncodedNameAsBytes();
+
+      Path recoveredEditsDir = WALSplitUtil.getRegionDirRecoveredEditsDir(regiondir);
+
+      long maxSeqId = 1050;
+      long minSeqId = 1000;
+
+      for (long i = minSeqId; i <= maxSeqId; i += 10) {
+        Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", i));
+        fs.create(recoveredEdits);
+        WALProvider.Writer writer = wals.createRecoveredEditsWriter(fs, recoveredEdits);
+
+        long time = System.nanoTime();
+        WALEdit edit = new WALEdit();
+        edit.add(new KeyValue(row, family, Bytes.toBytes(i), time, KeyValue.Type.Put, Bytes
+          .toBytes(i)));
+        writer.append(new WAL.Entry(new WALKeyImpl(regionName, tableName, i, time,
+          HConstants.DEFAULT_CLUSTER_ID), edit));
+
+        writer.close();
+      }
+      MonitoredTask status = TaskMonitor.get().createStatus(method);
+      Map<byte[], Long> maxSeqIdInStores = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+      for (HStore store : region.getStores()) {
+        maxSeqIdInStores.put(Bytes.toBytes(store.getColumnFamilyName()), minSeqId - 1);
+      }
+      CONF.set("hbase.region.archive.recovered.edits", "true");
+      CONF.set(CommonFSUtils.HBASE_WAL_DIR, "/custom_wal_dir");
+      long seqId = region.replayRecoveredEditsIfAny(maxSeqIdInStores, null, status);
+      assertEquals(maxSeqId, seqId);
+      region.getMVCC().advanceTo(seqId);
+      String fakeFamilyName = recoveredEditsDir.getName();
+      Path rootDir = new Path(CONF.get(HConstants.HBASE_DIR));
+      Path storeArchiveDir = HFileArchiveUtil.getStoreArchivePathForRootDir(rootDir,
+        region.getRegionInfo(), Bytes.toBytes(fakeFamilyName));
+      FileStatus[] list = TEST_UTIL.getTestFileSystem().listStatus(storeArchiveDir);
+      assertEquals(6, list.length);
+    } finally {
+      CONF.set("hbase.region.archive.recovered.edits", "false");
+      CONF.set(CommonFSUtils.HBASE_WAL_DIR, "");
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
+      this.region = null;
+      wals.close();
+    }
   }
 
   @Test
@@ -2051,6 +2108,8 @@ public class TestHRegion {
     put.addColumn(fam2, qf3, val1);
     put.addColumn(fam1, qf3, val1);
     region.put(put);
+
+    LOG.info("get={}", region.get(new Get(row1).addColumn(fam1, qf1)).toString());
 
     // Multi-column delete
     Delete delete = new Delete(row1);
@@ -3551,6 +3610,20 @@ public class TestHRegion {
   }
 
   /**
+   * So can be overridden in subclasses.
+   */
+  int getNumQualifiersForTestWritesWhileScanning() {
+    return 100;
+  }
+
+  /**
+   * So can be overridden in subclasses.
+   */
+  int getTestCountForTestWritesWhileScanning() {
+    return 100;
+  }
+
+  /**
    * Writes very wide records and scans for the latest every time.. Flushes and
    * compacts the region every now and then to keep things realistic.
    *
@@ -3561,10 +3634,10 @@ public class TestHRegion {
    */
   @Test
   public void testWritesWhileScanning() throws IOException, InterruptedException {
-    int testCount = 100;
+    int testCount = getTestCountForTestWritesWhileScanning();
     int numRows = 1;
     int numFamilies = 10;
-    int numQualifiers = 100;
+    int numQualifiers = getNumQualifiersForTestWritesWhileScanning();
     int flushInterval = 7;
     int compactInterval = 5 * flushInterval;
     byte[][] families = new byte[numFamilies][];
@@ -4491,10 +4564,9 @@ public class TestHRegion {
     put.setDurability(mutationDurability);
     region.put(put);
 
-    //verify append called or not
-    verify(wal, expectAppend ? times(1) : never())
-      .append((HRegionInfo)any(), (WALKeyImpl)any(),
-          (WALEdit)any(), Mockito.anyBoolean());
+    // verify append called or not
+    verify(wal, expectAppend ? times(1) : never()).appendData((HRegionInfo) any(),
+      (WALKeyImpl) any(), (WALEdit) any());
 
     // verify sync called or not
     if (expectSync || expectSyncFromLogSyncer) {
@@ -5603,12 +5675,10 @@ public class TestHRegion {
     final ServerName serverName = ServerName.valueOf(name.getMethodName(), 100, 42);
     final RegionServerServices rss = spy(TEST_UTIL.createMockRegionServerService(serverName));
 
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
-    htd.addFamily(new HColumnDescriptor(fam1));
-    htd.addFamily(new HColumnDescriptor(fam2));
-
-    HRegionInfo hri = new HRegionInfo(htd.getTableName(),
-      HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY);
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam1))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam2)).build();
+    RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
 
     // open the region w/o rss and wal and flush some files
     region =
@@ -5625,13 +5695,13 @@ public class TestHRegion {
 
     // capture append() calls
     WAL wal = mockWAL();
-    when(rss.getWAL((HRegionInfo) any())).thenReturn(wal);
+    when(rss.getWAL(any(RegionInfo.class))).thenReturn(wal);
 
     region = HRegion.openHRegion(hri, htd, rss.getWAL(hri),
       TEST_UTIL.getConfiguration(), rss, null);
 
-    verify(wal, times(1)).append((HRegionInfo)any(), (WALKeyImpl)any()
-      , editCaptor.capture(), anyBoolean());
+    verify(wal, times(1)).appendMarker(any(RegionInfo.class), any(WALKeyImpl.class),
+      editCaptor.capture());
 
     WALEdit edit = editCaptor.getValue();
     assertNotNull(edit);
@@ -5697,15 +5767,14 @@ public class TestHRegion {
 
   /**
    * Utility method to setup a WAL mock.
+   * <p/>
    * Needs to do the bit where we close latch on the WALKeyImpl on append else test hangs.
    * @return a mock WAL
-   * @throws IOException
    */
   private WAL mockWAL() throws IOException {
     WAL wal = mock(WAL.class);
-    Mockito.when(wal.append((HRegionInfo)Mockito.any(),
-        (WALKeyImpl)Mockito.any(), (WALEdit)Mockito.any(), Mockito.anyBoolean())).
-      thenAnswer(new Answer<Long>() {
+    when(wal.appendData(any(RegionInfo.class), any(WALKeyImpl.class), any(WALEdit.class)))
+      .thenAnswer(new Answer<Long>() {
         @Override
         public Long answer(InvocationOnMock invocation) throws Throwable {
           WALKeyImpl key = invocation.getArgument(1);
@@ -5713,32 +5782,38 @@ public class TestHRegion {
           key.setWriteEntry(we);
           return 1L;
         }
-
-    });
+      });
+    when(wal.appendMarker(any(RegionInfo.class), any(WALKeyImpl.class), any(WALEdit.class))).
+        thenAnswer(new Answer<Long>() {
+          @Override
+          public Long answer(InvocationOnMock invocation) throws Throwable {
+            WALKeyImpl key = invocation.getArgument(1);
+            MultiVersionConcurrencyControl.WriteEntry we = key.getMvcc().begin();
+            key.setWriteEntry(we);
+            return 1L;
+          }
+        });
     return wal;
   }
 
   @Test
   public void testCloseRegionWrittenToWAL() throws Exception {
-
     Path rootDir = new Path(dir + name.getMethodName());
     FSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootDir);
 
     final ServerName serverName = ServerName.valueOf("testCloseRegionWrittenToWAL", 100, 42);
     final RegionServerServices rss = spy(TEST_UTIL.createMockRegionServerService(serverName));
 
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
-    htd.addFamily(new HColumnDescriptor(fam1));
-    htd.addFamily(new HColumnDescriptor(fam2));
-
-    final HRegionInfo hri = new HRegionInfo(htd.getTableName(),
-      HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY);
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam1))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam2)).build();
+    RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
 
     ArgumentCaptor<WALEdit> editCaptor = ArgumentCaptor.forClass(WALEdit.class);
 
     // capture append() calls
     WAL wal = mockWAL();
-    when(rss.getWAL((HRegionInfo) any())).thenReturn(wal);
+    when(rss.getWAL(any(RegionInfo.class))).thenReturn(wal);
 
 
     // create and then open a region first so that it can be closed later
@@ -5750,8 +5825,8 @@ public class TestHRegion {
     region.close(false);
 
     // 2 times, one for region open, the other close region
-    verify(wal, times(2)).append((HRegionInfo)any(), (WALKeyImpl)any(),
-      editCaptor.capture(), anyBoolean());
+    verify(wal, times(2)).appendMarker(any(RegionInfo.class),
+        (WALKeyImpl) any(WALKeyImpl.class), editCaptor.capture());
 
     WALEdit edit = editCaptor.getAllValues().get(1);
     assertNotNull(edit);

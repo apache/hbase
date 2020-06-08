@@ -116,6 +116,9 @@ public class MetricsMasterSourceImpl
     }
 
     metricsRegistry.snapshot(metricsRecordBuilder, all);
+    if(metricsAdapter != null) {
+      metricsAdapter.snapshotAllMetrics(registry, metricsRecordBuilder);
+    }
   }
 
   @Override

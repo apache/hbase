@@ -379,6 +379,7 @@ message BulkLoadHFileRequest {
   optional string bulk_token = 5;
   optional bool copy_file = 6 [default = false];
   repeated string cluster_ids = 7;
+  optional bool replicate = 8 [default = true];
 
   message FamilyPath {
     required bytes family = 1;

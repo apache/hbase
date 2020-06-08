@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -41,6 +42,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.DoNotRetryRegionException;
+import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionStatesCount;
@@ -58,6 +60,7 @@ import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.master.balancer.FavoredStochasticBalancer;
+import org.apache.hadoop.hbase.master.procedure.HBCKServerCrashProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
@@ -580,8 +583,7 @@ public class AssignmentManager {
     if (!regionNode.isInState(expectedStates)) {
       throw new DoNotRetryRegionException("Unexpected state for " + regionNode);
     }
-    if (getTableStateManager().isTableState(regionNode.getTable(), TableState.State.DISABLING,
-      TableState.State.DISABLED)) {
+    if (isTableDisabled(regionNode.getTable())) {
       throw new DoNotRetryIOException(regionNode.getTable() + " is disabled for " + regionNode);
     }
   }
@@ -1004,6 +1006,12 @@ public class AssignmentManager {
         " hriA=" + hriA + " hriB=" + hriB);
     }
 
+    if (!master.isSplitOrMergeEnabled(MasterSwitchType.SPLIT)) {
+      LOG.warn("Split switch is off! skip split of " + parent);
+      throw new DoNotRetryIOException("Split region " + parent.getRegionNameAsString() +
+          " failed due to split switch off");
+    }
+
     // Submit the Split procedure
     final byte[] splitKey = hriB.getStartKey();
     if (LOG.isDebugEnabled()) {
@@ -1027,6 +1035,12 @@ public class AssignmentManager {
       throw new UnexpectedStateException("Unsupported merge regionState=" + state +
         " for regionA=" + hriA + " regionB=" + hriB + " merged=" + merged +
         " maybe an old RS (< 2.0) had the operation in progress");
+    }
+
+    if (!master.isSplitOrMergeEnabled(MasterSwitchType.MERGE)) {
+      LOG.warn("Merge switch is off! skip merge of regionA=" + hriA + " regionB=" + hriB);
+      throw new DoNotRetryIOException("Merge of regionA=" + hriA + " regionB=" + hriB +
+        " failed because merge switch is off");
     }
 
     // Submit the Merge procedure
@@ -1176,15 +1190,9 @@ public class AssignmentManager {
         if (rsn.getState() != State.OPEN) {
           continue; // Opportunistic check, should quickly skip RITs, offline tables, etc.
         }
-        ServerName sn;
-        State state;
-        rsn.lock();
-        try {
-          sn = rsn.getRegionLocation();
-          state = rsn.getState();
-        } finally {
-          rsn.unlock();
-        }
+        // Do not need to acquire region state lock as this is only for showing metrics.
+        ServerName sn = rsn.getRegionLocation();
+        State state = rsn.getState();
         if (state != State.OPEN) {
           continue; // Mostly skipping RITs that are already being take care of.
         }
@@ -1459,44 +1467,67 @@ public class AssignmentManager {
     return 0;
   }
 
-  public long submitServerCrash(ServerName serverName, boolean shouldSplitWal) {
-    boolean carryingMeta;
-    long pid;
+  /**
+   * Usually run by the Master in reaction to server crash during normal processing.
+   * Can also be invoked via external RPC to effect repair; in the latter case,
+   * the 'force' flag is set so we push through the SCP though context may indicate
+   * already-running-SCP (An old SCP may have exited abnormally, or damaged cluster
+   * may still have references in hbase:meta to 'Unknown Servers' -- servers that
+   * are not online or in dead servers list, etc.)
+   * @param force Set if the request came in externally over RPC (via hbck2). Force means
+   *              run the SCP even if it seems as though there might be an outstanding
+   *              SCP running.
+   * @return pid of scheduled SCP or {@link Procedure#NO_PROC_ID} if none scheduled.
+   */
+  public long submitServerCrash(ServerName serverName, boolean shouldSplitWal, boolean force) {
+    // May be an 'Unknown Server' so handle case where serverNode is null.
     ServerStateNode serverNode = regionStates.getServerNode(serverName);
-    if(serverNode == null){
-      LOG.info("Skip to add SCP for {} since this server should be OFFLINE already", serverName);
-      return -1;
-    }
-
     // Remove the in-memory rsReports result
     synchronized (rsReports) {
       rsReports.remove(serverName);
     }
 
-    // we hold the write lock here for fencing on reportRegionStateTransition. Once we set the
+    // We hold the write lock here for fencing on reportRegionStateTransition. Once we set the
     // server state to CRASHED, we will no longer accept the reportRegionStateTransition call from
     // this server. This is used to simplify the implementation for TRSP and SCP, where we can make
     // sure that, the region list fetched by SCP will not be changed any more.
-    serverNode.writeLock().lock();
+    if (serverNode != null) {
+      serverNode.writeLock().lock();
+    }
+    boolean carryingMeta;
+    long pid;
     try {
       ProcedureExecutor<MasterProcedureEnv> procExec = this.master.getMasterProcedureExecutor();
       carryingMeta = isCarryingMeta(serverName);
-      if (!serverNode.isInState(ServerState.ONLINE)) {
-        LOG.info(
-          "Skip to add SCP for {} with meta= {}, " +
-              "since there should be a SCP is processing or already done for this server node",
-          serverName, carryingMeta);
-        return -1;
+      if (!force && serverNode != null && !serverNode.isInState(ServerState.ONLINE)) {
+        LOG.info("Skip adding SCP for {} (meta={}) -- running?", serverNode, carryingMeta);
+        return Procedure.NO_PROC_ID;
       } else {
-        serverNode.setState(ServerState.CRASHED);
-        pid = procExec.submitProcedure(new ServerCrashProcedure(procExec.getEnvironment(),
-            serverName, shouldSplitWal, carryingMeta));
-        LOG.info(
-          "Added {} to dead servers which carryingMeta={}, submitted ServerCrashProcedure pid={}",
-          serverName, carryingMeta, pid);
+        MasterProcedureEnv mpe = procExec.getEnvironment();
+        // If serverNode == null, then 'Unknown Server'. Schedule HBCKSCP instead.
+        // HBCKSCP scours Master in-memory state AND hbase;meta for references to
+        // serverName just-in-case. An SCP that is scheduled when the server is
+        // 'Unknown' probably originated externally with HBCK2 fix-it tool.
+        ServerState oldState = null;
+        if (serverNode != null) {
+          oldState = serverNode.getState();
+          serverNode.setState(ServerState.CRASHED);
+        }
+
+        if (force) {
+          pid = procExec.submitProcedure(
+              new HBCKServerCrashProcedure(mpe, serverName, shouldSplitWal, carryingMeta));
+        } else {
+          pid = procExec.submitProcedure(
+              new ServerCrashProcedure(mpe, serverName, shouldSplitWal, carryingMeta));
+        }
+        LOG.info("Scheduled SCP pid={} for {} (carryingMeta={}){}.", pid, serverName, carryingMeta,
+            serverNode == null? "": " " + serverNode.toString() + ", oldState=" + oldState);
       }
     } finally {
-      serverNode.writeLock().unlock();
+      if (serverNode != null) {
+        serverNode.writeLock().unlock();
+      }
     }
     return pid;
   }
@@ -1688,7 +1719,7 @@ public class AssignmentManager {
 
   // should be called under the RegionStateNode lock
   // for SCP
-  void regionClosedAbnormally(RegionStateNode regionNode) throws IOException {
+  public void regionClosedAbnormally(RegionStateNode regionNode) throws IOException {
     RegionState.State state = regionNode.getState();
     ServerName regionLocation = regionNode.getRegionLocation();
     regionNode.transitionState(State.ABNORMALLY_CLOSED);

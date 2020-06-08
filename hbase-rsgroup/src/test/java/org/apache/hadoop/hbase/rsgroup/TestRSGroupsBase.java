@@ -304,6 +304,8 @@ public abstract class TestRSGroupsBase {
     boolean postRemoveServersCalled = false;
     boolean preMoveServersAndTables = false;
     boolean postMoveServersAndTables = false;
+    boolean preRenameRSGroupCalled = false;
+    boolean postRenameRSGroupCalled = false;
 
     public void resetFlags() {
       preBalanceRSGroupCalled = false;
@@ -320,6 +322,8 @@ public abstract class TestRSGroupsBase {
       postRemoveServersCalled = false;
       preMoveServersAndTables = false;
       postMoveServersAndTables = false;
+      preRenameRSGroupCalled = false;
+      postRenameRSGroupCalled = false;
     }
 
     @Override
@@ -411,6 +415,18 @@ public abstract class TestRSGroupsBase {
     public void postBalanceRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx,
         String groupName, boolean balancerRan) throws IOException {
       postBalanceRSGroupCalled = true;
+    }
+
+    @Override
+    public void preRenameRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        String oldName, String newName) throws IOException {
+      preRenameRSGroupCalled = true;
+    }
+
+    @Override
+    public void postRenameRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        String oldName, String newName) throws IOException {
+      postRenameRSGroupCalled = true;
     }
   }
 

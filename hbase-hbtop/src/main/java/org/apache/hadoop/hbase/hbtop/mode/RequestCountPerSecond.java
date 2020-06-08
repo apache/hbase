@@ -41,13 +41,14 @@ public class RequestCountPerSecond {
       previousFilteredReadRequestCount = filteredReadRequestCount;
       previousWriteRequestCount = writeRequestCount;
     } else if (previousLastReportTimestamp != lastReportTimestamp) {
-      readRequestCountPerSecond = (readRequestCount - previousReadRequestCount) /
-        ((lastReportTimestamp - previousLastReportTimestamp) / 1000);
+      long delta = (lastReportTimestamp - previousLastReportTimestamp) / 1000;
+      if (delta < 1) {
+        delta = 1;
+      }
+      readRequestCountPerSecond = (readRequestCount - previousReadRequestCount) / delta;
       filteredReadRequestCountPerSecond =
-        (filteredReadRequestCount - previousFilteredReadRequestCount) /
-        ((lastReportTimestamp - previousLastReportTimestamp) / 1000);
-      writeRequestCountPerSecond = (writeRequestCount - previousWriteRequestCount) /
-        ((lastReportTimestamp - previousLastReportTimestamp) / 1000);
+        (filteredReadRequestCount - previousFilteredReadRequestCount) / delta;
+      writeRequestCountPerSecond = (writeRequestCount - previousWriteRequestCount) / delta;
 
       previousLastReportTimestamp = lastReportTimestamp;
       previousReadRequestCount = readRequestCount;

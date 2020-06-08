@@ -39,7 +39,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -59,7 +58,6 @@ import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.Admin;
@@ -455,7 +453,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     createSubDir(
       "mapreduce.cluster.local.dir",
       testPath, "mapred-local-dir");
-
     return testPath;
   }
 
@@ -695,16 +692,24 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     return dfsCluster;
   }
 
-  /** This is used before starting HDFS and map-reduce mini-clusters */
+  /** This is used before starting HDFS and map-reduce mini-clusters
+   * Run something like the below to check for the likes of '/tmp' references -- i.e.
+   * references outside of the test data dir -- in the conf.
+   *     Configuration conf = TEST_UTIL.getConfiguration();
+   *     for (Iterator<Map.Entry<String, String>> i = conf.iterator(); i.hasNext();) {
+   *       Map.Entry<String, String> e = i.next();
+   *       assertFalse(e.getKey() + " " + e.getValue(), e.getValue().contains("/tmp"));
+   *     }
+   */
   private void createDirsAndSetProperties() throws IOException {
     setupClusterTestDir();
     conf.set(TEST_DIRECTORY_KEY, clusterTestDir.getPath());
     System.setProperty(TEST_DIRECTORY_KEY, clusterTestDir.getPath());
-    createDirAndSetProperty("cache_data", "test.cache.data");
-    createDirAndSetProperty("hadoop_tmp", "hadoop.tmp.dir");
-    hadoopLogDir = createDirAndSetProperty("hadoop_logs", "hadoop.log.dir");
-    createDirAndSetProperty("mapred_local", "mapreduce.cluster.local.dir");
-    createDirAndSetProperty("mapred_temp", "mapreduce.cluster.temp.dir");
+    createDirAndSetProperty("test.cache.data", "test.cache.data");
+    createDirAndSetProperty("hadoop.tmp.dir", "hadoop.tmp.dir");
+    hadoopLogDir = createDirAndSetProperty("hadoop.log.dir", "hadoop.log.dir");
+    createDirAndSetProperty("mapreduce.cluster.local.dir", "mapreduce.cluster.local.dir");
+    createDirAndSetProperty("mapreduce.cluster.temp.dir", "mapreduce.cluster.temp.dir");
     enableShortCircuit();
 
     Path root = getDataTestDirOnTestFS("hadoop");
@@ -716,6 +721,22 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     conf.set("mapreduce.job.working.dir", new Path(root, "mapred-working-dir").toString());
     conf.set("yarn.app.mapreduce.am.staging-dir",
       new Path(root, "mapreduce-am-staging-root-dir").toString());
+
+    // Frustrate yarn's and hdfs's attempts at writing /tmp.
+    // Below is fragile. Make it so we just interpolate any 'tmp' reference.
+    createDirAndSetProperty("yarn.node-labels.fs-store.root-dir");
+    createDirAndSetProperty("yarn.nodemanager.log-dirs");
+    createDirAndSetProperty("yarn.nodemanager.remote-app-log-dir");
+    createDirAndSetProperty("yarn.timeline-service.entity-group-fs-store.active-dir");
+    createDirAndSetProperty("yarn.timeline-service.entity-group-fs-store.done-dir");
+    createDirAndSetProperty("yarn.nodemanager.remote-app-log-dir");
+    createDirAndSetProperty("dfs.journalnode.edits.dir");
+    createDirAndSetProperty("dfs.datanode.shared.file.descriptor.paths");
+    createDirAndSetProperty("nfs.dump.dir");
+    createDirAndSetProperty("java.io.tmpdir");
+    createDirAndSetProperty("java.io.tmpdir");
+    createDirAndSetProperty("dfs.journalnode.edits.dir");
+    createDirAndSetProperty("dfs.provided.aliasmap.inmemory.leveldb.dir");
   }
 
   /**
@@ -762,6 +783,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     } else {
       LOG.info("read short circuit is OFF");
     }
+  }
+
+  private String createDirAndSetProperty(String property) {
+    return createDirAndSetProperty(property, property);
   }
 
   private String createDirAndSetProperty(final String relPath, String property) {
@@ -3653,8 +3678,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
                       return false;
                     }
                   }
-                  if (RegionStateStore.getRegionState(r,
-                    info.getReplicaId()) != RegionState.State.OPEN) {
+                  if (RegionStateStore.getRegionState(r, info) != RegionState.State.OPEN) {
                     return false;
                   }
                 }
@@ -4090,9 +4114,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       // create a table a pre-splits regions.
       // The number of splits is set as:
       //    region servers * regions per region server).
-      int numberOfServers =
-          admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics()
-              .size();
+      int numberOfServers = admin.getRegionServers().size();
       if (numberOfServers == 0) {
         throw new IllegalStateException("No live regionservers");
       }

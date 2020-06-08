@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.MoveTablesR
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RSGroupAdminService;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RenameRSGroupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -232,6 +233,18 @@ public class RSGroupAdminClient implements RSGroupAdmin {
         .build();
     try {
       stub.removeServers(null, request);
+    } catch (ServiceException e) {
+      throw ProtobufUtil.handleRemoteException(e);
+    }
+  }
+
+  @Override
+  public void renameRSGroup(String oldName, String newName) throws IOException {
+    RenameRSGroupRequest request = RenameRSGroupRequest.newBuilder()
+      .setOldRsgroupName(oldName)
+      .setNewRsgroupName(newName).build();
+    try {
+      stub.renameRSGroup(null, request);
     } catch (ServiceException e) {
       throw ProtobufUtil.handleRemoteException(e);
     }

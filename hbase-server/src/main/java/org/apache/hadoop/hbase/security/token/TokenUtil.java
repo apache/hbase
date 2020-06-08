@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -59,6 +60,19 @@ public class TokenUtil {
   private static void injectFault() throws ServiceException {
     if (injectedException != null) {
       throw injectedException;
+    }
+  }
+
+  /**
+   * It was removed in HBase-2.0 but added again as spark code relies on this method to obtain
+   * delegation token
+   * @deprecated Since 2.0.0.
+   */
+  @Deprecated
+  public static Token<AuthenticationTokenIdentifier> obtainToken(Configuration conf)
+      throws IOException {
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      return obtainToken(connection);
     }
   }
 

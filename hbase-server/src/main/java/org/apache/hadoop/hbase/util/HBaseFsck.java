@@ -116,8 +116,6 @@ import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
-import org.apache.hadoop.hbase.replication.ReplicationUtils;
-import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Bytes.ByteArrayComparator;
 import org.apache.hadoop.hbase.util.HbckErrorReporter.ERROR_CODE;
@@ -130,6 +128,7 @@ import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
@@ -1936,7 +1935,7 @@ public class HBaseFsck extends Configured implements Closeable {
     }
   }
 
-  private void preCheckPermission() throws IOException, AccessDeniedException {
+  private void preCheckPermission() throws IOException {
     if (shouldIgnorePreCheckPermission()) {
       return;
     }
@@ -1948,8 +1947,8 @@ public class HBaseFsck extends Configured implements Closeable {
     FileStatus[] files = fs.listStatus(hbaseDir);
     for (FileStatus file : files) {
       try {
-        FSUtils.checkAccess(ugi, file, FsAction.WRITE);
-      } catch (AccessDeniedException ace) {
+        fs.access(file.getPath(), FsAction.WRITE);
+      } catch (AccessControlException ace) {
         LOG.warn("Got AccessDeniedException when preCheckPermission ", ace);
         errors.reportError(ERROR_CODE.WRONG_USAGE, "Current user " + ugi.getUserName()
           + " does not have write perms to " + file.getPath()
@@ -3792,8 +3791,6 @@ public class HBaseFsck extends Configured implements Closeable {
     // pre-check current user has FS write permission or not
     try {
       preCheckPermission();
-    } catch (AccessDeniedException ace) {
-      Runtime.getRuntime().exit(-1);
     } catch (IOException ioe) {
       Runtime.getRuntime().exit(-1);
     }
@@ -3927,8 +3924,8 @@ public class HBaseFsck extends Configured implements Closeable {
     List<ReplicationPeerDescription> peerDescriptions = admin.listReplicationPeers();
     if (peerDescriptions != null && peerDescriptions.size() > 0) {
       List<String> peers = peerDescriptions.stream()
-          .filter(peerConfig -> ReplicationUtils.contains(peerConfig.getPeerConfig(),
-            cleanReplicationBarrierTable))
+          .filter(peerConfig -> peerConfig.getPeerConfig()
+            .needToReplicate(cleanReplicationBarrierTable))
           .map(peerConfig -> peerConfig.getPeerId()).collect(Collectors.toList());
       try {
         List<String> batch = new ArrayList<>();

@@ -25,15 +25,21 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -45,8 +51,10 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -56,13 +64,17 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.SampleRegionWALCoprocessor;
+import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.MemStoreLABImpl;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.SequenceId;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -167,7 +179,7 @@ public abstract class AbstractTestFSWAL {
       WALKeyImpl key = new WALKeyImpl(hri.getEncodedNameAsBytes(), htd.getTableName(),
           SequenceId.NO_SEQUENCE_ID, timestamp, WALKey.EMPTY_UUIDS, HConstants.NO_NONCE,
           HConstants.NO_NONCE, mvcc, scopes);
-      log.append(hri, key, cols, true);
+      log.appendData(hri, key, cols);
     }
     log.sync();
   }
@@ -473,6 +485,96 @@ public abstract class AbstractTestFSWAL {
       assertThat(e.getMessage(), containsString("log is closed"));
       // the WriteEntry should be null since we fail before setting it.
       assertNull(key.getWriteEntry());
+    }
+  }
+
+  @Test
+  public void testUnflushedSeqIdTrackingWithAsyncWal() throws IOException, InterruptedException {
+    final String testName = currentTest.getMethodName();
+    final byte[] b = Bytes.toBytes("b");
+
+    final AtomicBoolean startHoldingForAppend = new AtomicBoolean(false);
+    final CountDownLatch holdAppend = new CountDownLatch(1);
+    final CountDownLatch closeFinished = new CountDownLatch(1);
+    final CountDownLatch putFinished = new CountDownLatch(1);
+
+    try (AbstractFSWAL<?> wal = newWAL(FS, FSUtils.getRootDir(CONF), testName,
+      HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null)) {
+      wal.init();
+      wal.registerWALActionsListener(new WALActionsListener() {
+        @Override
+        public void visitLogEntryBeforeWrite(WALKey logKey, WALEdit logEdit) throws IOException {
+          if (startHoldingForAppend.get()) {
+            try {
+              holdAppend.await();
+            } catch (InterruptedException e) {
+              LOG.error(e.toString(), e);
+            }
+          }
+        }
+      });
+
+      // open a new region which uses this WAL
+      TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf("table"))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(b)).build();
+      RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
+      ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
+      TEST_UTIL.createLocalHRegion(hri, htd, wal).close();
+      RegionServerServices rsServices = mock(RegionServerServices.class);
+      when(rsServices.getServerName()).thenReturn(ServerName.valueOf("localhost:12345", 123456));
+      when(rsServices.getConfiguration()).thenReturn(TEST_UTIL.getConfiguration());
+      final HRegion region = HRegion.openHRegion(TEST_UTIL.getDataTestDir(), hri, htd, wal,
+        TEST_UTIL.getConfiguration(), rsServices, null);
+
+      ExecutorService exec = Executors.newFixedThreadPool(2);
+
+      // do a regular write first because of memstore size calculation.
+      region.put(new Put(b).addColumn(b, b, b));
+
+      startHoldingForAppend.set(true);
+      exec.submit(new Runnable() {
+        @Override
+        public void run() {
+          try {
+            region.put(new Put(b).addColumn(b, b, b).setDurability(Durability.ASYNC_WAL));
+            putFinished.countDown();
+          } catch (IOException e) {
+            LOG.error(e.toString(), e);
+          }
+        }
+      });
+
+      // give the put a chance to start
+      Threads.sleep(3000);
+
+      exec.submit(new Runnable() {
+        @Override
+        public void run() {
+          try {
+            Map<?, ?> closeResult = region.close();
+            LOG.info("Close result:" + closeResult);
+            closeFinished.countDown();
+          } catch (IOException e) {
+            LOG.error(e.toString(), e);
+          }
+        }
+      });
+
+      // give the flush a chance to start. Flush should have got the region lock, and
+      // should have been waiting on the mvcc complete after this.
+      Threads.sleep(3000);
+
+      // let the append to WAL go through now that the flush already started
+      holdAppend.countDown();
+      putFinished.await();
+      closeFinished.await();
+
+      // now check the region's unflushed seqIds.
+      long seqId = wal.getEarliestMemStoreSeqNum(hri.getEncodedNameAsBytes());
+      assertEquals("Found seqId for the region which is already closed", HConstants.NO_SEQNUM,
+        seqId);
+
+      wal.close();
     }
   }
 }

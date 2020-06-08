@@ -57,7 +57,6 @@ public class TestProcedureAdmin {
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
-
   private static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
   }

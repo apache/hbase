@@ -103,16 +103,11 @@ public class ChecksumUtil {
         cktype.getDataChecksumType(), bytesPerChecksum);
     assert dataChecksum != null;
     int onDiskDataSizeWithHeader =
-        buffer.getInt(HFileBlock.Header.ON_DISK_DATA_SIZE_WITH_HEADER_INDEX);
-    if (LOG.isTraceEnabled()) {
-      LOG.info("dataLength=" + buffer.capacity()
-          + ", sizeWithHeader=" + onDiskDataSizeWithHeader
-          + ", checksumType=" + cktype.getName()
-          + ", file=" + pathName
-          + ", offset=" + offset
-          + ", headerSize=" + hdrSize
-          + ", bytesPerChecksum=" + bytesPerChecksum);
-    }
+      buffer.getInt(HFileBlock.Header.ON_DISK_DATA_SIZE_WITH_HEADER_INDEX);
+    LOG.trace("dataLength={}, sizeWithHeader={}, checksumType={}, file={}, "
+      + "offset={}, headerSize={}, bytesPerChecksum={}",
+      buffer.capacity(), onDiskDataSizeWithHeader, cktype.getName(),
+      pathName, offset, hdrSize, bytesPerChecksum);
     try {
       ByteBuffer data = (ByteBuffer) buffer.duplicate().position(0).limit(onDiskDataSizeWithHeader);
       ByteBuffer checksums = (ByteBuffer) buffer.duplicate().position(onDiskDataSizeWithHeader)

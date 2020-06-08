@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -22,14 +22,11 @@ package org.apache.hadoop.hbase.util;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-
-import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-
 
 /**
  * LossyCounting utility, bounded data structure that maintains approximate high frequency
@@ -41,13 +38,11 @@ import org.slf4j.LoggerFactory;
  * Based on paper:
  * http://www.vldb.org/conf/2002/S10P03.pdf
  */
-
 @InterfaceAudience.Private
 public class LossyCounting {
   private static final Logger LOG = LoggerFactory.getLogger(LossyCounting.class);
   private long bucketSize;
   private int currentTerm;
-  private double errorRate;
   private Map<String, Integer> data;
   private long totalDataCount;
   private String name;
@@ -57,8 +52,11 @@ public class LossyCounting {
     void sweep(String key);
   }
 
-  public LossyCounting(double errorRate, String name, LossyCountingListener listener) {
-    this.errorRate = errorRate;
+  LossyCounting(String name, double errorRate) {
+    this(name, errorRate, null);
+  }
+
+  public LossyCounting(String name, double errorRate, LossyCountingListener listener) {
     this.name = name;
     if (errorRate < 0.0 || errorRate > 1.0) {
       throw new IllegalArgumentException(" Lossy Counting error rate should be within range [0,1]");
@@ -71,9 +69,12 @@ public class LossyCounting {
     calculateCurrentTerm();
   }
 
-  public LossyCounting(String name, LossyCountingListener listener) {
-    this(HBaseConfiguration.create().getDouble(HConstants.DEFAULT_LOSSY_COUNTING_ERROR_RATE, 0.02),
-        name, listener);
+  LossyCounting(String name, Configuration conf) {
+    this(name, conf, null);
+  }
+
+  public LossyCounting(String name, Configuration conf, LossyCountingListener listener) {
+    this(name, conf.getDouble(HConstants.DEFAULT_LOSSY_COUNTING_ERROR_RATE, 0.02), listener);
   }
 
   private void addByOne(String key) {

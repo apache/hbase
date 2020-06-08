@@ -137,7 +137,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
  *                             columns: info:merge0001, info:merge0002. You make also see 'mergeA',
  *                             and 'mergeB'. This is old form replaced by the new format that allows
  *                             for more than two parents to be merged at a time.
- * TODO: Add rep_barrier for serial replication explaination.
+ * TODO: Add rep_barrier for serial replication explaination. See SerialReplicationChecker.
  * </pre>
  * </p>
  * <p>
@@ -608,6 +608,7 @@ public class MetaTableAccessor {
    * @param excludeOfflinedSplitParents don't return split parents
    * @return Return list of regioninfos and server addresses.
    */
+  // What happens here when 1M regions in hbase:meta? This won't scale?
   public static List<Pair<RegionInfo, ServerName>> getTableRegionsAndLocations(
       Connection connection, @Nullable final TableName tableName,
       final boolean excludeOfflinedSplitParents) throws IOException {
@@ -1447,7 +1448,7 @@ public class MetaTableAccessor {
     }
   }
 
-  private static void addRegionStateToPut(Put put, RegionState.State state) throws IOException {
+  private static Put addRegionStateToPut(Put put, RegionState.State state) throws IOException {
     put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
         .setRow(put.getRow())
         .setFamily(HConstants.CATALOG_FAMILY)
@@ -1456,6 +1457,17 @@ public class MetaTableAccessor {
         .setType(Cell.Type.Put)
         .setValue(Bytes.toBytes(state.name()))
         .build());
+    return put;
+  }
+
+  /**
+   * Update state column in hbase:meta.
+   */
+  public static void updateRegionState(Connection connection, RegionInfo ri,
+      RegionState.State state) throws IOException {
+    Put put = new Put(RegionReplicaUtil.getRegionInfoForDefaultReplica(ri).getRegionName());
+    MetaTableAccessor.putsToMetaTable(connection,
+        Collections.singletonList(addRegionStateToPut(put, state)));
   }
 
   /**
@@ -1897,7 +1909,10 @@ public class MetaTableAccessor {
         .setQualifier(HConstants.REGIONINFO_QUALIFIER)
         .setTimestamp(p.getTimestamp())
         .setType(Type.Put)
-        .setValue(RegionInfo.toByteArray(hri))
+        // Serialize the Default Replica HRI otherwise scan of hbase:meta
+        // shows an info:regioninfo value with encoded name and region
+        // name that differs from that of the hbase;meta row.
+        .setValue(RegionInfo.toByteArray(RegionReplicaUtil.getRegionInfoForDefaultReplica(hri)))
         .build());
     return p;
   }
@@ -1988,6 +2003,9 @@ public class MetaTableAccessor {
     return put;
   }
 
+  /**
+   * See class comment on SerialReplicationChecker
+   */
   public static void addReplicationBarrier(Put put, long openSeqNum) throws IOException {
     put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
       .setRow(put.getRow())

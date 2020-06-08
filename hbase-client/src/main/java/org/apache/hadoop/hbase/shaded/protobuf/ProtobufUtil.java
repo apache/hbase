@@ -196,11 +196,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
  * users; e.g. Coprocessor Endpoints. If you make change in here, be sure to make change in
  * the companion class too (not the end of the world, especially if you are adding new functionality
  * but something to be aware of.
- * @see ProtobufUtil
  */
-// TODO: Generate the non-shaded protobufutil from this one.
 @InterfaceAudience.Private // TODO: some clients (Hive, etc) use this class
 public final class ProtobufUtil {
+
   private ProtobufUtil() {
   }
 
@@ -909,60 +908,6 @@ public final class ProtobufUtil {
       return toPut(proto, null);
     }
     throw new IOException("Unknown mutation type " + type);
-  }
-
-  /**
-   * Convert a protocol buffer Mutate to a Get.
-   * @param proto the protocol buffer Mutate to convert.
-   * @param cellScanner
-   * @return the converted client get.
-   * @throws IOException
-   */
-  public static Get toGet(final MutationProto proto, final CellScanner cellScanner)
-      throws IOException {
-    MutationType type = proto.getMutateType();
-    assert type == MutationType.INCREMENT || type == MutationType.APPEND : type.name();
-    byte[] row = proto.hasRow() ? proto.getRow().toByteArray() : null;
-    Get get = null;
-    int cellCount = proto.hasAssociatedCellCount() ? proto.getAssociatedCellCount() : 0;
-    if (cellCount > 0) {
-      // The proto has metadata only and the data is separate to be found in the cellScanner.
-      if (cellScanner == null) {
-        throw new DoNotRetryIOException("Cell count of " + cellCount + " but no cellScanner: "
-            + TextFormat.shortDebugString(proto));
-      }
-      for (int i = 0; i < cellCount; i++) {
-        if (!cellScanner.advance()) {
-          throw new DoNotRetryIOException("Cell count of " + cellCount + " but at index " + i
-              + " no cell returned: " + TextFormat.shortDebugString(proto));
-        }
-        Cell cell = cellScanner.current();
-        if (get == null) {
-          get = new Get(CellUtil.cloneRow(cell));
-        }
-        get.addColumn(CellUtil.cloneFamily(cell), CellUtil.cloneQualifier(cell));
-      }
-    } else {
-      get = new Get(row);
-      for (ColumnValue column : proto.getColumnValueList()) {
-        byte[] family = column.getFamily().toByteArray();
-        for (QualifierValue qv : column.getQualifierValueList()) {
-          byte[] qualifier = qv.getQualifier().toByteArray();
-          if (!qv.hasValue()) {
-            throw new DoNotRetryIOException("Missing required field: qualifier value");
-          }
-          get.addColumn(family, qualifier);
-        }
-      }
-    }
-    if (proto.hasTimeRange()) {
-      TimeRange timeRange = toTimeRange(proto.getTimeRange());
-      get.setTimeRange(timeRange.getMin(), timeRange.getMax());
-    }
-    for (NameBytesPair attribute : proto.getAttributeList()) {
-      get.setAttribute(attribute.getName(), attribute.getValue().toByteArray());
-    }
-    return get;
   }
 
   public static ClientProtos.Scan.ReadType toReadType(Scan.ReadType readType) {
@@ -1714,21 +1659,21 @@ public final class ProtobufUtil {
 // Start helpers for Admin
 
   /**
-   * A helper to retrieve region info given a region name
-   * using admin protocol.
+   * A helper to retrieve region info given a region name or an
+   * encoded region name using admin protocol.
    *
-   * @param admin
-   * @param regionName
    * @return the retrieved region info
-   * @throws IOException
    */
-  public static org.apache.hadoop.hbase.client.RegionInfo getRegionInfo(final RpcController controller,
-      final AdminService.BlockingInterface admin, final byte[] regionName) throws IOException {
+  public static org.apache.hadoop.hbase.client.RegionInfo getRegionInfo(
+      final RpcController controller, final AdminService.BlockingInterface admin,
+      final byte[] regionName) throws IOException {
     try {
       GetRegionInfoRequest request =
+          org.apache.hadoop.hbase.client.RegionInfo.isEncodedRegionName(regionName)?
+        GetRegionInfoRequest.newBuilder().setRegion(RequestConverter.
+            buildRegionSpecifier(RegionSpecifierType.ENCODED_REGION_NAME, regionName)).build():
         RequestConverter.buildGetRegionInfoRequest(regionName);
-      GetRegionInfoResponse response =
-        admin.getRegionInfo(controller, request);
+      GetRegionInfoResponse response = admin.getRegionInfo(controller, request);
       return toRegionInfo(response.getRegionInfo());
     } catch (ServiceException se) {
       throw getRemoteException(se);
@@ -2581,16 +2526,19 @@ public final class ProtobufUtil {
     ByteString encodedRegionName, Map<byte[], List<Path>> storeFiles,
     Map<String, Long> storeFilesSize, long bulkloadSeqId) {
     return toBulkLoadDescriptor(tableName, encodedRegionName, storeFiles,
-      storeFilesSize, bulkloadSeqId, null);
+      storeFilesSize, bulkloadSeqId, null, true);
   }
 
   public static WALProtos.BulkLoadDescriptor toBulkLoadDescriptor(TableName tableName,
       ByteString encodedRegionName, Map<byte[], List<Path>> storeFiles,
-      Map<String, Long> storeFilesSize, long bulkloadSeqId, List<String> clusterIds) {
+      Map<String, Long> storeFilesSize, long bulkloadSeqId,
+      List<String> clusterIds, boolean replicate) {
     BulkLoadDescriptor.Builder desc =
         BulkLoadDescriptor.newBuilder()
-        .setTableName(ProtobufUtil.toProtoTableName(tableName))
-        .setEncodedRegionName(encodedRegionName).setBulkloadSeqNum(bulkloadSeqId);
+          .setTableName(ProtobufUtil.toProtoTableName(tableName))
+          .setEncodedRegionName(encodedRegionName)
+          .setBulkloadSeqNum(bulkloadSeqId)
+          .setReplicate(replicate);
     if(clusterIds != null) {
       desc.addAllClusterIds(clusterIds);
     }
@@ -3123,7 +3071,9 @@ public final class ProtobufUtil {
    * @return the converted Proto RegionInfo
    */
   public static HBaseProtos.RegionInfo toRegionInfo(final org.apache.hadoop.hbase.client.RegionInfo info) {
-    if (info == null) return null;
+    if (info == null) {
+      return null;
+    }
     HBaseProtos.RegionInfo.Builder builder = HBaseProtos.RegionInfo.newBuilder();
     builder.setTableName(ProtobufUtil.toProtoTableName(info.getTable()));
     builder.setRegionId(info.getRegionId());
@@ -3146,7 +3096,9 @@ public final class ProtobufUtil {
    * @return the converted RegionInfo
    */
   public static org.apache.hadoop.hbase.client.RegionInfo toRegionInfo(final HBaseProtos.RegionInfo proto) {
-    if (proto == null) return null;
+    if (proto == null) {
+      return null;
+    }
     TableName tableName = ProtobufUtil.toTableName(proto.getTableName());
     long regionId = proto.getRegionId();
     int defaultReplicaId = org.apache.hadoop.hbase.client.RegionInfo.DEFAULT_REPLICA_ID;

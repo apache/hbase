@@ -101,7 +101,6 @@ import org.apache.hbase.thirdparty.io.netty.channel.ChannelPipeline;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoop;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.SimpleChannelInboundHandler;
-import org.apache.hbase.thirdparty.io.netty.handler.codec.protobuf.ProtobufDecoder;
 import org.apache.hbase.thirdparty.io.netty.handler.codec.protobuf.ProtobufVarint32FrameDecoder;
 import org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleStateEvent;
 import org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleStateHandler;
@@ -221,6 +220,18 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     };
   }
 
+  private static FileCreator createFileCreator3_3() throws NoSuchMethodException {
+    Method createMethod = ClientProtocol.class.getMethod("create", String.class, FsPermission.class,
+        String.class, EnumSetWritable.class, boolean.class, short.class, long.class,
+        CryptoProtocolVersion[].class, String.class, String.class);
+
+    return (instance, src, masked, clientName, flag, createParent, replication, blockSize,
+        supportedVersions) -> {
+      return (HdfsFileStatus) createMethod.invoke(instance, src, masked, clientName, flag,
+          createParent, replication, blockSize, supportedVersions, null, null);
+    };
+  }
+
   private static FileCreator createFileCreator3() throws NoSuchMethodException {
     Method createMethod = ClientProtocol.class.getMethod("create", String.class, FsPermission.class,
       String.class, EnumSetWritable.class, boolean.class, short.class, long.class,
@@ -246,6 +257,12 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
   }
 
   private static FileCreator createFileCreator() throws NoSuchMethodException {
+    try {
+      return createFileCreator3_3();
+    } catch (NoSuchMethodException e) {
+      LOG.debug("ClientProtocol::create wrong number of arguments, should be hadoop 3.2 or below");
+    }
+
     try {
       return createFileCreator3();
     } catch (NoSuchMethodException e) {

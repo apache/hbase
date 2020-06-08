@@ -32,6 +32,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.logging.impl.Jdk14Logger;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.hbase.http.HttpServer;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ServletUtil;
 import org.apache.log4j.LogManager;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -104,6 +105,14 @@ public final class LogLevel {
       // Do the authorization
       if (!HttpServer.hasAdministratorAccess(getServletContext(), request,
           response)) {
+        return;
+      }
+      // Disallow modification of the LogLevel if explicitly set to readonly
+      Configuration conf = (Configuration) getServletContext().getAttribute(
+          HttpServer.CONF_CONTEXT_ATTRIBUTE);
+      if (conf.getBoolean("hbase.master.ui.readonly", false)) {
+        response.sendError(HttpServletResponse.SC_FORBIDDEN, "Modification of HBase via"
+            + " the UI is disallowed in configuration.");
         return;
       }
       response.setContentType("text/html");

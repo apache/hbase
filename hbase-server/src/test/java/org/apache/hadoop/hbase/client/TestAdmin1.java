@@ -633,9 +633,9 @@ public class TestAdmin1 {
     assertFalse(this.admin.tableExists(tableName));
   }
 
-  protected void verifyRoundRobinDistribution(ClusterConnection c, RegionLocator regionLocator, int
-      expectedRegions) throws IOException {
-    int numRS = c.getCurrentNrHRS();
+  private void verifyRoundRobinDistribution(RegionLocator regionLocator, int expectedRegions)
+      throws IOException {
+    int numRS = TEST_UTIL.getMiniHBaseCluster().getNumLiveRegionServers();
     List<HRegionLocation> regions = regionLocator.getAllRegionLocations();
     Map<ServerName, List<RegionInfo>> server2Regions = new HashMap<>();
     for (HRegionLocation loc : regions) {
@@ -780,7 +780,7 @@ public class TestAdmin1 {
       assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[8]));
       assertTrue(hri.getEndKey() == null || hri.getEndKey().length == 0);
 
-      verifyRoundRobinDistribution(conn, l, expectedRegions);
+      verifyRoundRobinDistribution(l, expectedRegions);
     }
 
 
@@ -841,7 +841,7 @@ public class TestAdmin1 {
       assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 }));
       assertTrue(hri.getEndKey() == null || hri.getEndKey().length == 0);
 
-      verifyRoundRobinDistribution(conn, l, expectedRegions);
+      verifyRoundRobinDistribution(l, expectedRegions);
     }
 
     // Try once more with something that divides into something infinite
@@ -865,7 +865,7 @@ public class TestAdmin1 {
           "but only found " + regions.size(), expectedRegions, regions.size());
       System.err.println("Found " + regions.size() + " regions");
 
-      verifyRoundRobinDistribution(conn, l, expectedRegions);
+      verifyRoundRobinDistribution(l, expectedRegions);
     }
 
 

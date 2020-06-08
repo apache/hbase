@@ -38,6 +38,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -47,8 +48,11 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.QualifierFilter;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
@@ -974,6 +978,32 @@ public class TestStoreScanner {
     try (StoreScanner storeScanner = new StoreScanner(scanInfo, -1,
       ScanType.COMPACT_RETAIN_DELETES, scanners)) {
       assertFalse(storeScanner.isScanUsePread());
+    }
+  }
+
+  @Test
+  public void testReadVersionWithRawAndFilter() throws IOException {
+    ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, 1, Long.MAX_VALUE,
+            KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0
+            , CellComparator.getInstance(), false);
+    KeyValue [] kvs = new KeyValue[] {
+            create("R1", "cf", "a", 3, KeyValue.Type.Put, "dont-care"),
+            create("R1", "cf", "a", 2, KeyValue.Type.Put, "dont-care"),
+            create("R1", "cf", "a", 1, KeyValue.Type.Put, "dont-care")
+    };
+    List<KeyValueScanner> scanners = Arrays.asList(
+      new KeyValueScanner[]{
+        new KeyValueScanFixture(CellComparator.getInstance(), kvs)
+      });
+
+    BinaryComparator comp = new BinaryComparator(Bytes.toBytes("a"));
+    Filter filter = new QualifierFilter(CompareOperator.EQUAL, comp);
+    Scan scanSpec = new Scan().withStartRow(Bytes.toBytes("R1")).readVersions(2).setRaw(true);
+    scanSpec.setFilter(filter);
+    try (StoreScanner scan = new StoreScanner(scanSpec, scanInfo, null, scanners)) {
+      List<Cell> results = new ArrayList<>();
+      assertEquals(true, scan.next(results));
+      assertEquals(2, results.size());
     }
   }
 }

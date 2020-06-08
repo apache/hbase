@@ -30,11 +30,15 @@ import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.server.namenode.ha.proto.HAZKInfoProtos.ActiveNodeInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Action that tries to restart the active namenode.
  */
 public class RestartActiveNameNodeAction extends RestartActionBaseAction {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RestartActiveNameNodeAction.class);
 
   // Value taken from org.apache.hadoop.ha.ActiveStandbyElector.java, variable :- LOCK_FILENAME
   private static final String ACTIVE_NN_LOCK_NAME = "ActiveStandbyElectorLock";

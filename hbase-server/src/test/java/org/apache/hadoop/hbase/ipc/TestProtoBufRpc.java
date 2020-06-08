@@ -32,8 +32,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -84,10 +82,10 @@ public class TestProtoBufRpc {
     this.conf = HBaseConfiguration.create();
     this.conf.set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY,
         rpcServerImpl);
-    Logger log = Logger.getLogger("org.apache.hadoop.ipc.HBaseServer");
-    log.setLevel(Level.DEBUG);
-    log = Logger.getLogger("org.apache.hadoop.ipc.HBaseServer.trace");
-    log.setLevel(Level.TRACE);
+    org.apache.log4j.Logger.getLogger("org.apache.hadoop.ipc.HBaseServer")
+      .setLevel(org.apache.log4j.Level.ERROR);
+    org.apache.log4j.Logger.getLogger("org.apache.hadoop.ipc.HBaseServer.trace")
+      .setLevel(org.apache.log4j.Level.TRACE);
     // Create server side implementation
     // Get RPC server for server side implementation
     this.server = RpcServerFactory.createRpcServer(null, "testrpc",

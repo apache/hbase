@@ -237,14 +237,6 @@ public class CreateTableProcedure
     return super.waitInitialized(env);
   }
 
-  @Override
-  protected LockState acquireLock(final MasterProcedureEnv env) {
-    if (env.getProcedureScheduler().waitTableExclusiveLock(this, getTableName())) {
-      return LockState.LOCK_EVENT_WAIT;
-    }
-    return LockState.LOCK_ACQUIRED;
-  }
-
   private boolean prepareCreate(final MasterProcedureEnv env) throws IOException {
     final TableName tableName = getTableName();
     if (MetaTableAccessor.tableExists(env.getMasterServices().getConnection(), tableName)) {

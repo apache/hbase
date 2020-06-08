@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hbase.rest;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
@@ -60,7 +63,6 @@ import org.junit.experimental.categories.Category;
 
 @Category({RestTests.class, MediumTests.class})
 public class TestNamespacesInstanceResource {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestNamespacesInstanceResource.class);
@@ -122,9 +124,9 @@ public class TestNamespacesInstanceResource {
 
   private NamespaceDescriptor findNamespace(Admin admin, String namespaceName) throws IOException{
     NamespaceDescriptor[] nd = admin.listNamespaceDescriptors();
-    for(int i = 0; i < nd.length; i++){
-      if(nd[i].getName().equals(namespaceName)){
-        return nd[i];
+    for (NamespaceDescriptor namespaceDescriptor : nd) {
+      if (namespaceDescriptor.getName().equals(namespaceName)) {
+        return namespaceDescriptor;
       }
     }
     return null;
@@ -137,15 +139,15 @@ public class TestNamespacesInstanceResource {
   private void checkNamespaceProperties(Map<String,String> namespaceProps,
       Map<String,String> testProps){
     assertTrue(namespaceProps.size() == testProps.size());
-    for(String key: testProps.keySet()){
+    for (String key: testProps.keySet()) {
       assertEquals(testProps.get(key), namespaceProps.get(key));
     }
   }
 
   private void checkNamespaceTables(List<TableModel> namespaceTables, List<String> testTables){
     assertEquals(namespaceTables.size(), testTables.size());
-    for(int i = 0 ; i < namespaceTables.size() ; i++){
-      String tableName = ((TableModel) namespaceTables.get(i)).getName();
+    for (TableModel namespaceTable : namespaceTables) {
+      String tableName = namespaceTable.getName();
       assertTrue(testTables.contains(tableName));
     }
   }
@@ -369,7 +371,7 @@ public class TestNamespacesInstanceResource {
   }
 
   @Test
-  public void testNamespaceCreateAndDeletePBAndNoBody() throws IOException, JAXBException {
+  public void testNamespaceCreateAndDeletePBAndNoBody() throws IOException {
     String namespacePath3 = "/namespaces/" + NAMESPACE3;
     String namespacePath4 = "/namespaces/" + NAMESPACE4;
     NamespacesInstanceModel model3;

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,6 +28,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -122,7 +123,6 @@ public class HbckChore extends ScheduledChore {
       LOG.warn("hbckChore is either disabled or is already running. Can't run the chore");
       return;
     }
-    running = true;
     regionInfoMap.clear();
     disabledTableRegions.clear();
     splitParentRegions.clear();
@@ -130,14 +130,19 @@ public class HbckChore extends ScheduledChore {
     orphanRegionsOnFS.clear();
     inconsistentRegions.clear();
     checkingStartTimestamp = EnvironmentEdgeManager.currentTime();
-    loadRegionsFromInMemoryState();
-    loadRegionsFromRSReport();
+    running = true;
     try {
-      loadRegionsFromFS();
-    } catch (IOException e) {
-      LOG.warn("Failed to load the regions from filesystem", e);
+      loadRegionsFromInMemoryState();
+      loadRegionsFromRSReport();
+      try {
+        loadRegionsFromFS(scanForMergedParentRegions());
+      } catch (IOException e) {
+        LOG.warn("Failed to load the regions from filesystem", e);
+      }
+      saveCheckResultToSnapshot();
+    } catch (Throwable t) {
+      LOG.warn("Unexpected", t);
     }
-    saveCheckResultToSnapshot();
     running = false;
   }
 
@@ -183,6 +188,31 @@ public class HbckChore extends ScheduledChore {
     }
   }
 
+  /**
+   * Scan hbase:meta to get set of merged parent regions, this is a very heavy scan.
+   *
+   * @return Return generated {@link HashSet}
+   */
+  private HashSet<String> scanForMergedParentRegions() throws IOException {
+    HashSet<String> mergedParentRegions = new HashSet<>();
+    // Null tablename means scan all of meta.
+    MetaTableAccessor.scanMetaForTableRegions(this.master.getConnection(),
+      r -> {
+        List<RegionInfo> mergeParents = MetaTableAccessor.getMergeRegions(r.rawCells());
+        if (mergeParents != null) {
+          for (RegionInfo mergeRegion : mergeParents) {
+            if (mergeRegion != null) {
+              // This region is already being merged
+              mergedParentRegions.add(mergeRegion.getEncodedName());
+            }
+          }
+        }
+        return true;
+        },
+      null);
+    return mergedParentRegions;
+  }
+
   private void loadRegionsFromInMemoryState() {
     List<RegionState> regionStates =
         master.getAssignmentManager().getRegionStates().getRegionStates();
@@ -190,10 +220,10 @@ public class HbckChore extends ScheduledChore {
       RegionInfo regionInfo = regionState.getRegion();
       if (master.getTableStateManager()
           .isTableState(regionInfo.getTable(), TableState.State.DISABLED)) {
-        disabledTableRegions.add(regionInfo.getEncodedName());
+        disabledTableRegions.add(regionInfo.getRegionNameAsString());
       }
       if (regionInfo.isSplitParent()) {
-        splitParentRegions.add(regionInfo.getEncodedName());
+        splitParentRegions.add(regionInfo.getRegionNameAsString());
       }
       HbckRegionInfo.MetaEntry metaEntry =
           new HbckRegionInfo.MetaEntry(regionInfo, regionState.getServerName(),
@@ -212,7 +242,7 @@ public class HbckChore extends ScheduledChore {
         String encodedRegionName = RegionInfo.encodeRegionName(regionName);
         HbckRegionInfo hri = regionInfoMap.get(encodedRegionName);
         if (hri == null) {
-          orphanRegionsOnRS.put(encodedRegionName, serverName);
+          orphanRegionsOnRS.put(RegionInfo.getRegionNameAsString(regionName), serverName);
           continue;
         }
         hri.addServer(hri.getMetaEntry(), serverName);
@@ -223,7 +253,6 @@ public class HbckChore extends ScheduledChore {
         numRegions, rsReports.size(), orphanRegionsOnFS.size());
 
     for (Map.Entry<String, HbckRegionInfo> entry : regionInfoMap.entrySet()) {
-      String encodedRegionName = entry.getKey();
       HbckRegionInfo hri = entry.getValue();
       ServerName locationInMeta = hri.getMetaEntry().getRegionServer();
       if (hri.getDeployedOn().size() == 0) {
@@ -231,26 +260,29 @@ public class HbckChore extends ScheduledChore {
           continue;
         }
         // skip the offline region which belong to disabled table.
-        if (disabledTableRegions.contains(encodedRegionName)) {
+        if (disabledTableRegions.contains(hri.getRegionNameAsString())) {
           continue;
         }
         // skip the split parent regions
-        if (splitParentRegions.contains(encodedRegionName)) {
+        if (splitParentRegions.contains(hri.getRegionNameAsString())) {
           continue;
         }
         // Master thought this region opened, but no regionserver reported it.
-        inconsistentRegions.put(encodedRegionName, new Pair<>(locationInMeta, new LinkedList<>()));
+        inconsistentRegions.put(hri.getRegionNameAsString(),
+            new Pair<>(locationInMeta, new LinkedList<>()));
       } else if (hri.getDeployedOn().size() > 1) {
         // More than one regionserver reported opened this region
-        inconsistentRegions.put(encodedRegionName, new Pair<>(locationInMeta, hri.getDeployedOn()));
+        inconsistentRegions.put(hri.getRegionNameAsString(),
+            new Pair<>(locationInMeta, hri.getDeployedOn()));
       } else if (!hri.getDeployedOn().get(0).equals(locationInMeta)) {
         // Master thought this region opened on Server1, but regionserver reported Server2
-        inconsistentRegions.put(encodedRegionName, new Pair<>(locationInMeta, hri.getDeployedOn()));
+        inconsistentRegions.put(hri.getRegionNameAsString(),
+            new Pair<>(locationInMeta, hri.getDeployedOn()));
       }
     }
   }
 
-  private void loadRegionsFromFS() throws IOException {
+  private void loadRegionsFromFS(final HashSet<String> mergedParentRegions) throws IOException {
     Path rootDir = master.getMasterFileSystem().getRootDir();
     FileSystem fs = master.getMasterFileSystem().getFileSystem();
 
@@ -260,13 +292,17 @@ public class HbckChore extends ScheduledChore {
       List<Path> regionDirs = FSUtils.getRegionDirs(fs, tableDir);
       for (Path regionDir : regionDirs) {
         String encodedRegionName = regionDir.getName();
+        if (encodedRegionName == null) {
+          LOG.warn("Failed get of encoded name from {}", regionDir);
+          continue;
+        }
         HbckRegionInfo hri = regionInfoMap.get(encodedRegionName);
-        if (hri == null) {
+        // If it is not in in-memory database and not a merged region,
+        // report it as an orphan region.
+        if (hri == null && !mergedParentRegions.contains(encodedRegionName)) {
           orphanRegionsOnFS.put(encodedRegionName, regionDir);
           continue;
         }
-        HbckRegionInfo.HdfsEntry hdfsEntry = new HbckRegionInfo.HdfsEntry(regionDir);
-        hri.setHdfsEntry(hdfsEntry);
       }
       numRegions += regionDirs.size();
     }

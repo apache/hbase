@@ -36,11 +36,7 @@ public abstract class MutableRangeHistogram extends MutableHistogram implements 
   }
 
   public MutableRangeHistogram(String name, String description) {
-    this(name, description, Integer.MAX_VALUE << 2);
-  }
-
-  public MutableRangeHistogram(String name, String description, long expectedMax) {
-    super(name, description, expectedMax);
+    super(name, description);
   }
 
   /**

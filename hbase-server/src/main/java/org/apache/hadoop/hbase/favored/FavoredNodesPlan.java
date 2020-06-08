@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -18,10 +18,11 @@
  */
 package org.apache.hadoop.hbase.favored;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -35,9 +36,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class FavoredNodesPlan {
-
-  /** the map between each region name and its favored region server list */
-  private Map<String, List<ServerName>> favoredNodesMap;
+  /** The map between each region name and its favored region server list */
+  private final Map<String, List<ServerName>> favoredNodesMap;
 
   public static enum Position {
     PRIMARY,
@@ -46,13 +46,18 @@ public class FavoredNodesPlan {
   }
 
   public FavoredNodesPlan() {
-    favoredNodesMap = new ConcurrentHashMap<>();
+    this.favoredNodesMap = new ConcurrentHashMap<>();
+  }
+
+  /**
+   * Add to existing Map of FavoredNodes.
+   */
+  void updateFavoredNodesMap(FavoredNodesPlan fnp) {
+    this.favoredNodesMap.putAll(fnp.favoredNodesMap);
   }
 
   /**
    * Update an assignment to the plan
-   * @param region
-   * @param servers
    */
   public void updateFavoredNodesMap(RegionInfo region, List<ServerName> servers) {
     if (region == null || servers == null || servers.isEmpty()) {
@@ -63,15 +68,13 @@ public class FavoredNodesPlan {
 
   /**
    * Remove a favored node assignment
-   * @param region region
    * @return the list of favored region server for this region based on the plan
    */
-  public List<ServerName> removeFavoredNodes(RegionInfo region) {
+  List<ServerName> removeFavoredNodes(RegionInfo region) {
     return favoredNodesMap.remove(region.getRegionNameAsString());
   }
 
   /**
-   * @param region
    * @return the list of favored region server for this region based on the plan
    */
   public List<ServerName> getFavoredNodes(RegionInfo region) {
@@ -81,8 +84,6 @@ public class FavoredNodesPlan {
   /**
    * Return the position of the server in the favoredNodes list. Assumes the
    * favoredNodes list is of size 3.
-   * @param favoredNodes
-   * @param server
    * @return position
    */
   public static Position getFavoredServerPosition(
@@ -103,7 +104,13 @@ public class FavoredNodesPlan {
    * @return the mapping between each region to its favored region server list
    */
   public Map<String, List<ServerName>> getAssignmentMap() {
-    return favoredNodesMap;
+    // Make a deep copy so changes don't harm our copy of favoredNodesMap.
+    return this.favoredNodesMap.entrySet().stream().
+      collect(Collectors.toMap(k -> k.getKey(), v -> new ArrayList<ServerName>(v.getValue())));
+  }
+
+  public int size() {
+    return this.favoredNodesMap.size();
   }
 
   @Override
@@ -117,12 +124,13 @@ public class FavoredNodesPlan {
     if (getClass() != o.getClass()) {
       return false;
     }
-    // To compare the map from objec o is identical to current assignment map.
-    Map<String, List<ServerName>> comparedMap = ((FavoredNodesPlan)o).getAssignmentMap();
+    // To compare the map from object o is identical to current assignment map.
+    Map<String, List<ServerName>> comparedMap = ((FavoredNodesPlan)o).favoredNodesMap;
 
     // compare the size
-    if (comparedMap.size() != this.favoredNodesMap.size())
+    if (comparedMap.size() != this.favoredNodesMap.size()) {
       return false;
+    }
 
     // compare each element in the assignment map
     for (Map.Entry<String, List<ServerName>> entry :

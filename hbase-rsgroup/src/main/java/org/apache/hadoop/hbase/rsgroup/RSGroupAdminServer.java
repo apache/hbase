@@ -329,7 +329,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
   @Override
   public void moveTables(Set<TableName> tables, String targetGroup) throws IOException {
     if (tables == null) {
-      throw new ConstraintException("The list of servers cannot be null.");
+      throw new ConstraintException("The list of tables cannot be null.");
     }
     if (tables.size() < 1) {
       LOG.debug("moveTables() passed an empty set. Ignoring.");
@@ -435,16 +435,9 @@ public class RSGroupAdminServer implements RSGroupAdmin {
       }
 
       //We balance per group instead of per table
-      List<RegionPlan> plans = new ArrayList<>();
-      for(Map.Entry<TableName, Map<ServerName, List<RegionInfo>>> tableMap:
-          getRSGroupAssignmentsByTable(groupName).entrySet()) {
-        LOG.info("Creating partial plan for table {} : {}", tableMap.getKey(), tableMap.getValue());
-        List<RegionPlan> partialPlans = balancer.balanceCluster(tableMap.getValue());
-        LOG.info("Partial plan for table {} : {}", tableMap.getKey(), partialPlans);
-        if (partialPlans != null) {
-          plans.addAll(partialPlans);
-        }
-      }
+      Map<TableName, Map<ServerName, List<RegionInfo>>> assignmentsByTable =
+        getRSGroupAssignmentsByTable(groupName);
+      List<RegionPlan> plans = balancer.balanceCluster(assignmentsByTable);
       boolean balancerRan = !plans.isEmpty();
       if (balancerRan) {
         LOG.info("RSGroup balance {} starting with plan count: {}", groupName, plans.size());
@@ -511,6 +504,13 @@ public class RSGroupAdminServer implements RSGroupAdmin {
         rsGroupInfoManager.removeServers(servers);
         LOG.info("Remove decommissioned servers {} from RSGroup done", servers);
       }
+    }
+  }
+
+  @Override
+  public void renameRSGroup(String oldName, String newName) throws IOException {
+    synchronized (rsGroupInfoManager) {
+      rsGroupInfoManager.renameRSGroup(oldName, newName);
     }
   }
 

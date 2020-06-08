@@ -972,6 +972,10 @@ public final class HConstants {
 
   public static final int REPLICATION_SOURCE_TOTAL_BUFFER_DFAULT = 256 * 1024 * 1024;
 
+  /** Configuration key for ReplicationSource shipeEdits timeout */
+  public static final String REPLICATION_SOURCE_SHIPEDITS_TIMEOUT =
+      "replication.source.shipedits.timeout";
+  public static final int REPLICATION_SOURCE_SHIPEDITS_TIMEOUT_DFAULT = 60000;
 
   /**
    * Directory where the source cluster file system client configuration are placed which is used by
@@ -1428,6 +1432,7 @@ public final class HConstants {
 
   public static final String HBASE_CANARY_READ_RAW_SCAN_KEY = "hbase.canary.read.raw.enabled";
 
+  public static final String HBASE_CANARY_READ_ALL_CF = "hbase.canary.read.all.column.famliy";
   /**
    * Configuration keys for programmatic JAAS configuration for secured ZK interaction
    */

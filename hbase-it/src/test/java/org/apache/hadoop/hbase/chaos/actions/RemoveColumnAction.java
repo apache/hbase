@@ -28,11 +28,15 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Action that removes a column family.
  */
 public class RemoveColumnAction extends Action {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RemoveColumnAction.class);
   private final TableName tableName;
   private final Set<String> protectedColumns;
   private Admin admin;

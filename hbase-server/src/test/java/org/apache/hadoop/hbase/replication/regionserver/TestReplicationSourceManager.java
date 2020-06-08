@@ -290,11 +290,9 @@ public abstract class TestReplicationSourceManager {
         wal.rollWriter();
       }
       LOG.info(Long.toString(i));
-      final long txid = wal.append(
-          hri,
-          new WALKeyImpl(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc, scopes),
-          edit,
-          true);
+      final long txid = wal.appendData(hri,
+        new WALKeyImpl(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc, scopes),
+        edit);
       wal.sync(txid);
     }
 
@@ -306,9 +304,9 @@ public abstract class TestReplicationSourceManager {
     LOG.info(baseline + " and " + time);
 
     for (int i = 0; i < 3; i++) {
-      wal.append(hri,
+      wal.appendData(hri,
         new WALKeyImpl(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc, scopes),
-        edit, true);
+        edit);
     }
     wal.sync();
 
@@ -324,9 +322,9 @@ public abstract class TestReplicationSourceManager {
     manager.logPositionAndCleanOldLogs("1", false,
       new WALEntryBatch(0, manager.getSources().get(0).getCurrentPath()));
 
-    wal.append(hri,
+    wal.appendData(hri,
       new WALKeyImpl(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc, scopes),
-      edit, true);
+      edit);
     wal.sync();
 
     assertEquals(1, manager.getWALs().size());

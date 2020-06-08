@@ -20,6 +20,392 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+# HBASE  2.2.5 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+---
+
+* [HBASE-24115](https://issues.apache.org/jira/browse/HBASE-24115) | *Major* | **Relocate test-only REST "client" from src/ to test/ and mark Private**
+
+Relocate test-only REST RemoteHTable and RemoteAdmin from src/ to test/. And mark them as InterfaceAudience.Private.
+
+
+---
+
+* [HBASE-24271](https://issues.apache.org/jira/browse/HBASE-24271) | *Major* | **Set values in \`conf/hbase-site.xml\` that enable running on \`LocalFileSystem\` out of the box**
+
+<!-- markdown -->
+HBASE-24271 makes changes the the default `conf/hbase-site.xml` such that `bin/hbase` will run directly out of the binary tarball or a compiled source tree without any configuration modifications vs. Hadoop 2.8+. This changes our long-standing history of shipping no configured values in `conf/hbase-site.xml`, so existing processes that assume this file is empty of configuration properties may require attention.
+
+
+---
+
+* [HBASE-22710](https://issues.apache.org/jira/browse/HBASE-22710) | *Major* | **Wrong result in one case of scan that use  raw and versions and filter together**
+
+Make the logic of the versions chosen more reasonable for raw scan, to avoid lose result when using filter.
+
+
+---
+
+* [HBASE-24252](https://issues.apache.org/jira/browse/HBASE-24252) | *Major* | **Implement proxyuser/doAs mechanism for hbase-http**
+
+This feature enables the HBase Web UI's to accept a 'proxyuser' via the HTTP Request's query string. When the parameter \`hbase.security.authentication.spnego.kerberos.proxyuser.enable\` is set to \`true\` in hbase-site.xml (default is \`false\`), the HBase UI will attempt to impersonate the user specified by the query parameter "doAs". This query parameter is checked case-insensitively. When this option is not provided, the user who executed the request is the "real" user and there is no ability to execute impersonation against the WebUI.
+
+For example, if the user "bob" with Kerberos credentials executes a request against the WebUI with this feature enabled and a query string which includes \`doAs=alice\`, the HBase UI will treat this request as executed as \`alice\`, not \`bob\`.
+
+The standard Hadoop proxyuser configuration properties to limit users who may impersonate others apply to this change (e.g. to enable \`bob\` to impersonate \`alice\`). See the Hadoop documentation for more information on how to configure these proxyuser rules.
+
+
+---
+
+* [HBASE-24196](https://issues.apache.org/jira/browse/HBASE-24196) | *Major* | **[Shell] Add rename rsgroup command in hbase shell**
+
+user or admin can now use
+hbase shell \> rename\_rsgroup 'oldname', 'newname'
+to rename rsgroup.
+
+
+---
+
+* [HBASE-24218](https://issues.apache.org/jira/browse/HBASE-24218) | *Major* | **Add hadoop 3.2.x in hadoop check**
+
+Add hadoop-3.2.0 and hadoop-3.2.1 in hadoop check and when '--quick-hadoopcheck' we will only check hadoop-3.2.1.
+
+Notice that, for aligning the personality scripts across all the active branches, we will commit the patch to all active branches, but the hadoop-3.2.x support in hadoopcheck is only applied to branch-2.2+.
+
+
+---
+
+* [HBASE-24112](https://issues.apache.org/jira/browse/HBASE-24112) | *Major* | **[RSGroup] Support renaming rsgroup**
+
+Support RSGroup renaming in core codebase. New API Admin#renameRSGroup(String, String) is introduced in 3.0.0.
+
+
+---
+
+* [HBASE-24121](https://issues.apache.org/jira/browse/HBASE-24121) | *Major* | **[Authorization] ServiceAuthorizationManager isn't dynamically updatable. And it should be.**
+
+Master & RegionService now support refresh policy authorization defined in hbase-policy.xml without restarting service. To refresh policy, please execute hbase shell command: update\_config or update\_config\_all after policy file updated and synced on all nodes.
+
+
+---
+
+* [HBASE-24099](https://issues.apache.org/jira/browse/HBASE-24099) | *Major* | **Use a fair ReentrantReadWriteLock for the region close lock**
+
+This change modifies the default acquisition policy for the region's close lock in order to prevent observed starvation of close requests. The new boolean configuration parameter 'hbase.regionserver.fair.region.close.lock' controls the lock acquisition policy: if true, the lock is created in fair mode (default); if false, the lock is created in nonfair mode (the old default).
+
+
+---
+
+* [HBASE-24122](https://issues.apache.org/jira/browse/HBASE-24122) | *Major* | **Change machine ulimit-l to ulimit-a so dumps full ulimit rather than just 'max locked memory'**
+
+Our 'Build Artifacts' have a machine directory under which we emit vitals on the host the build was run on. We used to emit the result of 'ulimit -l' as a file named 'ulimit-l'. This has been hijacked to instead emit result of running 'ulimit -a' which includes stat on ulimit -l.
+
+
+---
+
+* [HBASE-24050](https://issues.apache.org/jira/browse/HBASE-24050) | *Major* | **Deprecated PBType on all 2.x branches**
+
+org.apache.hadoop.hbase.types.PBType is marked as deprecated without any replacement. It will be moved to hbase-example module and marked as IA.Private in 3.0.0. This is a mistake as it should not be part of our public API. Users who depend on this class should just copy the code your own code base.
+
+
+---
+
+* [HBASE-8868](https://issues.apache.org/jira/browse/HBASE-8868) | *Minor* | **add metric to report client shortcircuit reads**
+
+Expose file system level read metrics for RegionServer.
+
+If the HBase RS runs on top of HDFS, calculate the aggregation of
+ReadStatistics of each HdfsFileInputStream. These metrics include:
+(1) total number of bytes read from HDFS.
+(2) total number of bytes read from local DataNode.
+(3) total number of bytes read locally through short-circuit read.
+(4) total number of bytes read locally through zero-copy read.
+
+Because HDFS ReadStatistics is calculated per input stream, it is not
+feasible to update the aggregated number in real time. Instead, the
+metrics are updated when an input stream is closed.
+
+
+---
+
+* [HBASE-24032](https://issues.apache.org/jira/browse/HBASE-24032) | *Major* | **[RSGroup] Assign created tables to respective rsgroup automatically instead of manual operations**
+
+Admin can determine which tables go to which rsgroup by script  (setting hbase.rsgroup.table.mapping.script with local filystem path) on Master side which aims to lighten the burden of admin operations.  Note, since HBase 3+, rsgroup can be specified in TableDescriptor as well, if clients specify this, master will skip the determination from script.
+
+Here is a simple example of script:
+{code}
+# Input consists of two string, 1st is the namespace of the table, 2nd is the table name of the table
+#!/bin/bash
+namespace=$1
+tablename=$2
+if [[ $namespace == test ]]; then
+  echo test
+elif [[ $tablename == \*foo\* ]]; then
+  echo other
+else
+  echo default
+fi
+{code}
+
+
+
+# HBASE  2.2.4 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-22827](https://issues.apache.org/jira/browse/HBASE-22827) | *Major* | **Expose multi-region merge in shell and Admin API**
+
+merge\_region shell command can now be used to merge more than 2 regions as well. It takes a list of regions as comma separated values or as an array of regions, and not just 2 regions. The full regionnames and encoded regionnames are continued to be accepted.
+
+
+---
+
+* [HBASE-23874](https://issues.apache.org/jira/browse/HBASE-23874) | *Minor* | **Move Jira-attached file precommit definition from script in Jenkins config to dev-support**
+
+The Jira Precommit job (https://builds.apache.org/job/PreCommit-HBASE-Build/) will now look for a file within the source tree (dev-support/jenkins\_precommit\_jira\_yetus.sh) instead of depending on a script section embedded in the job.
+
+
+---
+
+* [HBASE-17115](https://issues.apache.org/jira/browse/HBASE-17115) | *Major* | **HMaster/HRegion Info Server does not honour admin.acl**
+
+Implements authorization for the HBase Web UI by limiting access to certain endpoints which could be used to extract sensitive information from HBase.
+
+Access to these restricted endpoints can be limited to a group of administrators, identified either by a list of users (hbase.security.authentication.spnego.admin.users) or by a list of groups
+(hbase.security.authentication.spnego.admin.groups).  By default, neither of these values are set which will preserve backwards compatibility (allowing all authenticated users to access all endpoints).
+
+Further, users who have sensitive information in the HBase service configuration can set hbase.security.authentication.ui.config.protected to true which will treat the configuration endpoint as a protected, admin-only resource. By default, all authenticated users may access the configuration endpoint.
+
+
+---
+
+* [HBASE-23686](https://issues.apache.org/jira/browse/HBASE-23686) | *Major* | **Revert binary incompatible change and remove reflection**
+
+- Reverts a binary incompatible binary change for ByteRangeUtils
+- Usage of reflection inside CommonFSUtils removed
+
+
+---
+
+* [HBASE-23679](https://issues.apache.org/jira/browse/HBASE-23679) | *Critical* | **FileSystem instance leaks due to bulk loads with Kerberos enabled**
+
+This issues fixes an issue with Bulk Loading on installations with Kerberos enabled and more than a single RegionServer. When multiple tables are involved in hosting a table's regions which are being bulk-loaded into, all but the RegionServer hosting the table's first Region will "leak" one DistributedFileSystem object onto the heap, never freeing that memory. Eventually, with enough bulk loads, this will create a situation for RegionServers where they have no free heap space and will either spend all time in JVM GC, lose their ZK session, or crash with an OutOfMemoryError.
+
+The only mitigation for this issue is to periodically restart RegionServers. All earlier versions of HBase 2.x are subject to this issue (2.0.x, \<=2.1.8, \<=2.2.3)
+
+
+
+# HBASE  2.2.3 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-23651](https://issues.apache.org/jira/browse/HBASE-23651) | *Major* | **Region balance throttling can be disabled**
+
+Set hbase.balancer.max.balancing to a int value which \<=0 will disable region balance throttling.
+
+
+---
+
+* [HBASE-23596](https://issues.apache.org/jira/browse/HBASE-23596) | *Major* | **HBCKServerCrashProcedure can double assign**
+
+Makes it so the recently added HBCKServerCrashProcedure -- the SCP that gets invoked when an operator schedules an SCP via hbck2 scheduleRecoveries command -- now works the same as SCP EXCEPT if master knows nothing of the scheduled servername. In this latter case, HBCKSCP will do a full scan of hbase:meta looking for instances of the passed servername. If any found it will attempt cleanup of hbase:meta references by reassigning any found OPEN or OPENING and by closing any in CLOSING state.
+
+Used to fix instances of what the 'HBCK Report' page shows as 'Unknown Servers'.
+
+
+---
+
+* [HBASE-23619](https://issues.apache.org/jira/browse/HBASE-23619) | *Trivial* | **Use built-in formatting for logging in hbase-zookeeper**
+
+Changed the logging in hbase-zookeeper to use built-in formatting
+
+
+---
+
+* [HBASE-23320](https://issues.apache.org/jira/browse/HBASE-23320) | *Major* | **Upgrade surefire plugin to 3.0.0-M4**
+
+Bumped surefire plugin to 3.0.0-M4
+
+
+---
+
+* [HBASE-20461](https://issues.apache.org/jira/browse/HBASE-20461) | *Major* | **Implement fsync for AsyncFSWAL**
+
+Now AsyncFSWAL also supports Durability.FSYNC\_WAL.
+
+
+---
+
+* [HBASE-23239](https://issues.apache.org/jira/browse/HBASE-23239) | *Major* | **Reporting on status of backing MOB files from client-facing cells**
+
+<!-- markdown -->
+
+Users of the MOB feature can now use the `mobrefs` utility to get statistics about data in the MOB system and verify the health of backing files on HDFS.
+
+```
+HADOOP_CLASSPATH=/etc/hbase/conf:$(hbase mapredcp) yarn jar \
+    /some/path/to/hbase-shaded-mapreduce.jar mobrefs mobrefs-report-output some_table foo
+```
+
+See javadocs of the class `MobRefReporter` for more details.
+
+the reference guide has added some information about MOB internals and troubleshooting.
+
+
+---
+
+* [HBASE-23549](https://issues.apache.org/jira/browse/HBASE-23549) | *Minor* | **Document steps to disable MOB for a column family**
+
+The reference guide now includes a walk through of disabling the MOB feature if needed while maintaining availability.
+
+
+---
+
+* [HBASE-23582](https://issues.apache.org/jira/browse/HBASE-23582) | *Minor* | **Unbalanced braces in string representation of table descriptor**
+
+Fixed unbalanced braces in string representation within HBase shell
+
+
+---
+
+* [HBASE-23554](https://issues.apache.org/jira/browse/HBASE-23554) | *Major* | **Encoded regionname to regionname utility**
+
+    Adds shell command regioninfo:
+
+      hbase(main):001:0\>  regioninfo '0e6aa5c19ae2b2627649dc7708ce27d0'
+      {ENCODED =\> 0e6aa5c19ae2b2627649dc7708ce27d0, NAME =\> 'TestTable,,1575941375972.0e6aa5c19ae2b2627649dc7708ce27d0.', STARTKEY =\> '', ENDKEY =\> '00000000000000000000299441'}
+      Took 0.4737 seconds
+
+
+---
+
+* [HBASE-23293](https://issues.apache.org/jira/browse/HBASE-23293) | *Minor* | **[REPLICATION] make ship edits timeout configurable**
+
+The default rpc timeout for ReplicationSourceShipper#shipEdits is 60s, when bulkload replication enabled, timeout exception may be occurred.
+Now we can conf the timeout value through replication.source.shipedits.timeout, and it’s adaptive.
+
+
+---
+
+* [HBASE-23312](https://issues.apache.org/jira/browse/HBASE-23312) | *Major* | **HBase Thrift SPNEGO configs (HBASE-19852) should be backwards compatible**
+
+The newer HBase Thrift SPNEGO configs should not be required. The hbase.thrift.spnego.keytab.file and hbase.thrift.spnego.principal configs will fall back to the hbase.thrift.keytab.file and hbase.thrift.kerberos.principal original configs. The older configs will log a deprecation warning. It is preferred to new the newer SPNEGO configurations.
+
+
+---
+
+* [HBASE-22969](https://issues.apache.org/jira/browse/HBASE-22969) | *Minor* | **A new binary component comparator(BinaryComponentComparator) to perform comparison of arbitrary length and position**
+
+With BinaryComponentCompartor applications will be able to design diverse and powerful set of filters for rows and columns. See https://issues.apache.org/jira/browse/HBASE-22969 for example. In general, the comparator can be used with any filter taking ByteArrayComparable. As of now, following filters take ByteArrayComparable: 
+
+1. RowFilter
+2. ValueFilter
+3. QualifierFilter
+4. FamilyFilter
+5. ColumnValueFilter
+
+
+---
+
+* [HBASE-23322](https://issues.apache.org/jira/browse/HBASE-23322) | *Minor* | **[hbck2] Simplification on HBCKSCP scheduling**
+
+An hbck2 scheduleRecoveries will run a subclass of ServerCrashProcedure which asks Master what Regions were on the dead Server but it will also do a hbase:meta table scan to see if any vestiges of the old Server remain (for the case where an SCP failed mid-point leaving references in place or where Master and hbase:meta deviated in accounting).
+
+
+---
+
+* [HBASE-23321](https://issues.apache.org/jira/browse/HBASE-23321) | *Minor* | **[hbck2] fixHoles of fixMeta doesn't update in-memory state**
+
+If holes in hbase:meta, hbck2 fixMeta now will update Master in-memory state so you do not need to restart master just so you can assign the new hole-bridging regions.
+
+
+---
+
+* [HBASE-23282](https://issues.apache.org/jira/browse/HBASE-23282) | *Major* | **HBCKServerCrashProcedure for 'Unknown Servers'**
+
+hbck2 scheduleRecoveries will now run a SCP that also looks in hbase:meta for any references to the scheduled server -- not just consult Master in-memory state -- just in case vestiges of the server are leftover in hbase:meta
+
+
+---
+
+* [HBASE-19450](https://issues.apache.org/jira/browse/HBASE-19450) | *Minor* | **Add log about average execution time for ScheduledChore**
+
+<!-- markdown -->
+HBase internal chores now log a moving average of how long execution of each chore takes at `INFO` level for the logger `org.apache.hadoop.hbase.ScheduledChore`.
+
+Such messages will happen at most once per five minutes.
+
+
+---
+
+* [HBASE-23250](https://issues.apache.org/jira/browse/HBASE-23250) | *Minor* | **Log message about CleanerChore delegate initialization should be at INFO**
+
+CleanerChore delegate initialization is now logged at INFO level instead of DEBUG
+
+
+---
+
+* [HBASE-23243](https://issues.apache.org/jira/browse/HBASE-23243) | *Major* | **[pv2] Filter out SUCCESS procedures; on decent-sized cluster, plethora overwhelms problems**
+
+The 'Procedures & Locks' tab in Master UI only displays problematic Procedures now (RUNNABLE, WAITING-TIMEOUT, etc.). It no longer notes procedures whose state is SUCCESS.
+
+
+---
+
+* [HBASE-23227](https://issues.apache.org/jira/browse/HBASE-23227) | *Blocker* | **Upgrade jackson-databind to 2.9.10.1 to avoid recent CVEs**
+
+<!-- markdown -->
+
+the Apache HBase REST Proxy now uses Jackson Databind version 2.9.10.1 to address the following CVEs
+
+  - CVE-2019-16942
+  - CVE-2019-16943
+
+Users of prior releases with Jackson Databind 2.9.10 are advised to either upgrade to this release or to upgrade their local Jackson Databind jar directly.
+
+
+---
+
+* [HBASE-23222](https://issues.apache.org/jira/browse/HBASE-23222) | *Critical* | **Better logging and mitigation for MOB compaction failures**
+
+<!-- markdown -->
+
+The MOB compaction process in the HBase Master now logs more about its activity.
+
+In the event that you run into the problems described in HBASE-22075, there is a new HFileCleanerDelegate that will stop all removal of MOB hfiles from the archive area. It can be configured by adding `org.apache.hadoop.hbase.mob.ManualMobMaintHFileCleaner` to the list configured for `hbase.master.hfilecleaner.plugins`. This new cleaner delegate will cause your archive area to grow unbounded; you will have to manually prune files which may be prohibitively complex. Consider if your use case will allow you to mitigate by disabling mob compactions instead.
+
+Caveats:
+* Be sure the list of cleaner delegates still includes the default cleaners you will likely need: ttl, snapshot, and hlink.
+* Be mindful that if you enable this cleaner delegate then there will be *no* automated process for removing these mob hfiles. You should see a single region per table in `%hbase_root%/archive` that accumulates files over time. You will have to determine which of these files are safe or not to remove.
+* You should list this cleaner delegate after the snapshot and hlink delegates so that you can enable sufficient logging to determine when an archived mob hfile is needed by those subsystems. When set to `TRACE` logging, the CleanerChore logger will include archive retention decision justifications.
+* If your use case creates a large number of uniquely named tables, this new delegate will cause memory pressure on the master.
+
+
+---
+
+* [HBASE-23172](https://issues.apache.org/jira/browse/HBASE-23172) | *Minor* | **HBase Canary region success count metrics reflect column family successes, not region successes**
+
+Added a comment to make clear that read/write success counts are tallying column family success counts, not region success counts. 
+
+Additionally, the region read and write latencies previously only stored the latencies of the last column family of the region reads/writes. This has been fixed by using a map of each region to a list of read and write latency values.
+
+
+---
+
+* [HBASE-23177](https://issues.apache.org/jira/browse/HBASE-23177) | *Major* | **If fail to open reference because FNFE, make it plain it is a Reference**
+
+Changes the message on the FNFE exception thrown when the file a Reference points to is missing; the message now includes detail on Reference as well as pointed-to file so can connect how FNFE relates to region open.
+
+
+
 # HBASE  2.2.2 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.

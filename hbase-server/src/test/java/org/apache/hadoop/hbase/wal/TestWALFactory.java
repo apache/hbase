@@ -208,7 +208,7 @@ public class TestWALFactory {
           LOG.info("Region " + i + ": " + edit);
           WALKeyImpl walKey =  new WALKeyImpl(infos[i].getEncodedNameAsBytes(), tableName,
               System.currentTimeMillis(), mvcc, scopes);
-          log.append(infos[i], walKey, edit, true);
+          log.appendData(infos[i], walKey, edit);
           walKey.getWriteEntry();
         }
         log.sync();
@@ -270,8 +270,8 @@ public class TestWALFactory {
       for (int i = 0; i < total; i++) {
         WALEdit kvs = new WALEdit();
         kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), tableName.getName()));
-        wal.append(info, new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
-            System.currentTimeMillis(), mvcc, scopes), kvs, true);
+        wal.appendData(info, new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
+          System.currentTimeMillis(), mvcc, scopes), kvs);
       }
       // Now call sync and try reading.  Opening a Reader before you sync just
       // gives you EOFE.
@@ -289,8 +289,8 @@ public class TestWALFactory {
       for (int i = 0; i < total; i++) {
         WALEdit kvs = new WALEdit();
         kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), tableName.getName()));
-        wal.append(info, new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
-            System.currentTimeMillis(), mvcc, scopes), kvs, true);
+        wal.appendData(info, new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
+          System.currentTimeMillis(), mvcc, scopes), kvs);
       }
       wal.sync();
       reader = wals.createReader(fs, walPath);
@@ -311,8 +311,8 @@ public class TestWALFactory {
       for (int i = 0; i < total; i++) {
         WALEdit kvs = new WALEdit();
         kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), value));
-        wal.append(info, new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
-            System.currentTimeMillis(), mvcc, scopes), kvs,  true);
+        wal.appendData(info, new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
+          System.currentTimeMillis(), mvcc, scopes), kvs);
       }
       // Now I should have written out lots of blocks.  Sync then read.
       wal.sync();
@@ -388,9 +388,8 @@ public class TestWALFactory {
     for (int i = 0; i < total; i++) {
       WALEdit kvs = new WALEdit();
       kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), tableName.getName()));
-      wal.append(regionInfo, new WALKeyImpl(regionInfo.getEncodedNameAsBytes(), tableName,
-          System.currentTimeMillis(), mvcc, scopes),
-        kvs, true);
+      wal.appendData(regionInfo, new WALKeyImpl(regionInfo.getEncodedNameAsBytes(), tableName,
+        System.currentTimeMillis(), mvcc, scopes), kvs);
     }
     // Now call sync to send the data to HDFS datanodes
     wal.sync();
@@ -522,10 +521,8 @@ public class TestWALFactory {
           .setEndKey(Bytes.toBytes(Bytes.toString(row) + "1")).build();
       final WAL log = wals.getWAL(info);
 
-      final long txid = log.append(info,
-        new WALKeyImpl(info.getEncodedNameAsBytes(), htd.getTableName(), System.currentTimeMillis(),
-            mvcc, scopes),
-        cols, true);
+      final long txid = log.appendData(info, new WALKeyImpl(info.getEncodedNameAsBytes(),
+        htd.getTableName(), System.currentTimeMillis(), mvcc, scopes), cols);
       log.sync(txid);
       log.startCacheFlush(info.getEncodedNameAsBytes(), htd.getColumnFamilyNames());
       log.completeCacheFlush(info.getEncodedNameAsBytes());
@@ -580,10 +577,8 @@ public class TestWALFactory {
       }
       RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
       final WAL log = wals.getWAL(hri);
-      final long txid = log.append(hri,
-        new WALKeyImpl(hri.getEncodedNameAsBytes(), htd.getTableName(), System.currentTimeMillis(),
-            mvcc, scopes),
-        cols, true);
+      final long txid = log.appendData(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(),
+        htd.getTableName(), System.currentTimeMillis(), mvcc, scopes), cols);
       log.sync(txid);
       log.startCacheFlush(hri.getEncodedNameAsBytes(), htd.getColumnFamilyNames());
       log.completeCacheFlush(hri.getEncodedNameAsBytes());
@@ -634,8 +629,8 @@ public class TestWALFactory {
       cols.add(new KeyValue(row, Bytes.toBytes("column"),
           Bytes.toBytes(Integer.toString(i)),
           timestamp, new byte[]{(byte) (i + '0')}));
-      log.append(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(), tableName,
-          System.currentTimeMillis(), mvcc, scopes), cols, true);
+      log.appendData(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(), tableName,
+        System.currentTimeMillis(), mvcc, scopes), cols);
     }
     log.sync();
     assertEquals(COL_COUNT, visitor.increments);
@@ -644,8 +639,8 @@ public class TestWALFactory {
     cols.add(new KeyValue(row, Bytes.toBytes("column"),
         Bytes.toBytes(Integer.toString(11)),
         timestamp, new byte[]{(byte) (11 + '0')}));
-    log.append(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(), tableName,
-        System.currentTimeMillis(), mvcc, scopes), cols, true);
+    log.appendData(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(), tableName,
+      System.currentTimeMillis(), mvcc, scopes), cols);
     log.sync();
     assertEquals(COL_COUNT, visitor.increments);
   }

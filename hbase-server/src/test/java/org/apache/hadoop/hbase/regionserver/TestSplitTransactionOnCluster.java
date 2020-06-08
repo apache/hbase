@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
@@ -26,6 +27,8 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -73,6 +76,7 @@ import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
@@ -84,6 +88,8 @@ import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -105,6 +111,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -274,6 +281,83 @@ public class TestSplitTransactionOnCluster {
     assertEquals(2, cluster.getRegions(tableName).size());
   }
 
+  @Test
+  public void testSplitCompactWithPriority() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    // Create table then get the single region for our new table.
+    byte[] cf = Bytes.toBytes("cf");
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(cf)).build();
+    admin.createTable(htd);
+
+    assertNotEquals("Unable to retrieve regions of the table", -1,
+      TESTING_UTIL.waitFor(10000, () -> cluster.getRegions(tableName).size() == 1));
+
+    HRegion region = cluster.getRegions(tableName).get(0);
+    HStore store = region.getStore(cf);
+    int regionServerIndex = cluster.getServerWith(region.getRegionInfo().getRegionName());
+    HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
+
+    Table table = TESTING_UTIL.getConnection().getTable(tableName);
+    // insert data
+    insertData(tableName, admin, table);
+    insertData(tableName, admin, table, 20);
+    insertData(tableName, admin, table, 40);
+
+    // Compaction Request
+    store.triggerMajorCompaction();
+    Optional<CompactionContext> compactionContext = store.requestCompaction();
+    assertTrue(compactionContext.isPresent());
+    assertFalse(compactionContext.get().getRequest().isAfterSplit());
+    assertEquals(compactionContext.get().getRequest().getPriority(), 13);
+
+    // Split
+    long procId =
+      cluster.getMaster().splitRegion(region.getRegionInfo(), Bytes.toBytes("row4"), 0, 0);
+
+    // wait for the split to complete or get interrupted.  If the split completes successfully,
+    // the procedure will return true; if the split fails, the procedure would throw exception.
+    ProcedureTestingUtility.waitProcedure(cluster.getMaster().getMasterProcedureExecutor(),
+      procId);
+    Thread.sleep(3000);
+    assertNotEquals("Table is not split properly?", -1,
+      TESTING_UTIL.waitFor(3000,
+        () -> cluster.getRegions(tableName).size() == 2));
+    // we have 2 daughter regions
+    HRegion hRegion1 = cluster.getRegions(tableName).get(0);
+    HRegion hRegion2 = cluster.getRegions(tableName).get(1);
+    HStore hStore1 = hRegion1.getStore(cf);
+    HStore hStore2 = hRegion2.getStore(cf);
+
+    // For hStore1 && hStore2, set mock reference to one of the storeFiles
+    StoreFileInfo storeFileInfo1 = new ArrayList<>(hStore1.getStorefiles()).get(0).getFileInfo();
+    StoreFileInfo storeFileInfo2 = new ArrayList<>(hStore2.getStorefiles()).get(0).getFileInfo();
+    Field field = StoreFileInfo.class.getDeclaredField("reference");
+    field.setAccessible(true);
+    field.set(storeFileInfo1, Mockito.mock(Reference.class));
+    field.set(storeFileInfo2, Mockito.mock(Reference.class));
+    hStore1.triggerMajorCompaction();
+    hStore2.triggerMajorCompaction();
+
+    compactionContext = hStore1.requestCompaction();
+    assertTrue(compactionContext.isPresent());
+    // since we set mock reference to one of the storeFiles, we will get isAfterSplit=true &&
+    // highest priority for hStore1's compactionContext
+    assertTrue(compactionContext.get().getRequest().isAfterSplit());
+    assertEquals(compactionContext.get().getRequest().getPriority(), Integer.MIN_VALUE + 1000);
+
+    compactionContext =
+      hStore2.requestCompaction(Integer.MIN_VALUE + 10, CompactionLifeCycleTracker.DUMMY, null);
+    assertTrue(compactionContext.isPresent());
+    // compaction request contains higher priority than default priority of daughter region
+    // compaction (Integer.MIN_VALUE + 1000), hence we are expecting request priority to
+    // be accepted.
+    assertTrue(compactionContext.get().getRequest().isAfterSplit());
+    assertEquals(compactionContext.get().getRequest().getPriority(), Integer.MIN_VALUE + 10);
+    admin.disableTable(tableName);
+    admin.deleteTable(tableName);
+  }
+
   public static class FailingSplitMasterObserver implements MasterCoprocessor, MasterObserver {
     volatile CountDownLatch latch;
 
@@ -360,10 +444,8 @@ public class TestSplitTransactionOnCluster {
     final TableName tableName = TableName.valueOf(name.getMethodName());
 
     // Create table then get the single region for our new table.
-    Table t = createTableAndWait(tableName, HConstants.CATALOG_FAMILY);
-    List<HRegion> regions = cluster.getRegions(tableName);
-    RegionInfo hri = getAndCheckSingleTableRegion(regions);
-
+    Table t = createTableAndWait(tableName, HConstants.CATALOG_FAMILY); List<HRegion> regions =
+      cluster.getRegions(tableName); RegionInfo hri = getAndCheckSingleTableRegion(regions);
     int tableRegionIndex = ensureTableRegionNotOnSameServerAsMeta(admin, hri);
 
     // Turn off balancer so it doesn't cut in and mess up our placements.
@@ -380,22 +462,12 @@ public class TestSplitTransactionOnCluster {
       admin.splitRegionAsync(hri.getRegionName()).get(2, TimeUnit.MINUTES);
       // Get daughters
       List<HRegion> daughters = checkAndGetDaughters(tableName);
-      HRegion daughterRegion = daughters.get(0);
       // Now split one of the daughters.
+      HRegion daughterRegion = daughters.get(0);
       RegionInfo daughter = daughterRegion.getRegionInfo();
       LOG.info("Daughter we are going to split: " + daughter);
-      // Compact first to ensure we have cleaned up references -- else the split
-      // will fail.
-      daughterRegion.compact(true);
-      daughterRegion.getStores().get(0).closeAndArchiveCompactedFiles();
-      for (int i = 0; i < 100; i++) {
-        if (!daughterRegion.hasReferences()) {
-          break;
-        }
-        Threads.sleep(100);
-      }
-      assertFalse("Waiting for reference to be compacted", daughterRegion.hasReferences());
-      LOG.info("Daughter hri before split (has been compacted): " + daughter);
+      clearReferences(daughterRegion);
+      LOG.info("Finished {} references={}", daughterRegion, daughterRegion.hasReferences());
       admin.splitRegionAsync(daughter.getRegionName()).get(2, TimeUnit.MINUTES);
       // Get list of daughters
       daughters = cluster.getRegions(tableName);
@@ -425,6 +497,26 @@ public class TestSplitTransactionOnCluster {
       admin.balancerSwitch(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
       t.close();
+    }
+  }
+
+  private void clearReferences(HRegion region) throws IOException {
+    // Presumption.
+    assertEquals(1, region.getStores().size());
+    HStore store = region.getStores().get(0);
+    while (store.hasReferences()) {
+      // Wait on any current compaction to complete first.
+      CompactionProgress progress = store.getCompactionProgress();
+      if (progress != null && progress.getProgressPct() < 1.0f) {
+        while (progress.getProgressPct() < 1.0f) {
+          LOG.info("Waiting, progress={}", progress.getProgressPct());
+          Threads.sleep(1000);
+        }
+      } else {
+        // Run new compaction. Shoudn't be any others running.
+        region.compact(true);
+      }
+      store.closeAndArchiveCompactedFiles();
     }
   }
 
@@ -525,8 +617,7 @@ public class TestSplitTransactionOnCluster {
       HMaster master = abortAndWaitForMaster();
       // Now call compact on the daughters and clean up any references.
       for (HRegion daughter : daughters) {
-        daughter.compact(true);
-        daughter.getStores().get(0).closeAndArchiveCompactedFiles();
+        clearReferences(daughter);
         assertFalse(daughter.hasReferences());
       }
       // BUT calling compact on the daughters is not enough. The CatalogJanitor looks
@@ -626,18 +717,21 @@ public class TestSplitTransactionOnCluster {
     }
   }
 
-  private void insertData(final TableName tableName, Admin admin, Table t) throws IOException,
-      InterruptedException {
-    Put p = new Put(Bytes.toBytes("row1"));
+  private void insertData(final TableName tableName, Admin admin, Table t) throws IOException {
+    insertData(tableName, admin, t, 1);
+  }
+
+  private void insertData(TableName tableName, Admin admin, Table t, int i) throws IOException {
+    Put p = new Put(Bytes.toBytes("row" + i));
     p.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes("1"));
     t.put(p);
-    p = new Put(Bytes.toBytes("row2"));
+    p = new Put(Bytes.toBytes("row" + (i + 1)));
     p.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes("2"));
     t.put(p);
-    p = new Put(Bytes.toBytes("row3"));
+    p = new Put(Bytes.toBytes("row" + (i + 2)));
     p.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes("3"));
     t.put(p);
-    p = new Put(Bytes.toBytes("row4"));
+    p = new Put(Bytes.toBytes("row" + (i + 3)));
     p.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes("4"));
     t.put(p);
     admin.flush(tableName);
@@ -809,8 +903,6 @@ public class TestSplitTransactionOnCluster {
   /**
    * Ensure single table region is not on same server as the single hbase:meta table
    * region.
-   * @param admin
-   * @param hri
    * @return Index of the server hosting the single table region
    * @throws UnknownRegionException
    * @throws MasterNotRunningException

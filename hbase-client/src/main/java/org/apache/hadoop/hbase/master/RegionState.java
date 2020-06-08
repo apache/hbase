@@ -248,6 +248,10 @@ public class RegionState {
     return state == State.CLOSED;
   }
 
+  public boolean isClosedOrAbnormallyClosed() {
+    return isClosed() || this.state == State.ABNORMALLY_CLOSED;
+  }
+
   public boolean isOpening() {
     return state == State.OPENING;
   }

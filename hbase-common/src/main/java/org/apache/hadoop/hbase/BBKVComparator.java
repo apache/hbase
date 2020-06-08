@@ -20,11 +20,11 @@ package org.apache.hadoop.hbase;
 import java.util.Comparator;
 
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
-import org.apache.hbase.thirdparty.com.google.common.primitives.Longs;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.primitives.Longs;
 
 /**
  * A comparator for case where {@link ByteBufferKeyValue} is prevalent type (BBKV
@@ -71,7 +71,6 @@ public class BBKVComparator implements Comparator {
 
   @Override
   public int compare(Object l, Object r) {
-    // LOG.info("ltype={} rtype={}", l, r);
     if ((l instanceof ByteBufferKeyValue) && (r instanceof ByteBufferKeyValue)) {
       return compare((ByteBufferKeyValue)l, (ByteBufferKeyValue)r, false);
     }
@@ -81,7 +80,7 @@ public class BBKVComparator implements Comparator {
 
   // TODO: Come back here. We get a few percentage points extra of throughput if this is a
   // private method.
-  static final int compare(ByteBufferKeyValue left, ByteBufferKeyValue right,
+  static int compare(ByteBufferKeyValue left, ByteBufferKeyValue right,
       boolean ignoreSequenceid) {
     // NOTE: Same method is in CellComparatorImpl, also private, not shared, intentionally. Not
     // sharing gets us a few percent more throughput in compares. If changes here or there, make

@@ -61,8 +61,8 @@ public class DeadServer {
   private final Set<ServerName> processingServers = new HashSet<ServerName>();
 
   /**
-   * A dead server that comes back alive has a different start code. The new start code should be
-   *  greater than the old one, but we don't take this into account in this method.
+   * Handles restart of a server. The new server instance has a different start code.
+   * The new start code should be greater than the old one. We don't check that here.
    *
    * @param newServerName Servername as either <code>host:port</code> or
    *                      <code>host,port,startcode</code>.
@@ -78,7 +78,8 @@ public class DeadServer {
         // remove from processingServers
         boolean removed = processingServers.remove(sn);
         if (removed) {
-          LOG.debug("Removed " + sn + " ; numProcessing=" + processingServers.size());
+          LOG.debug("Removed {}, processing={}, numProcessing={}", sn, removed,
+              processingServers.size());
         }
         return true;
       }
@@ -122,7 +123,6 @@ public class DeadServer {
 
   /**
    * Adds the server to the dead server list if it's not there already.
-   * @param sn the server name
    */
   public synchronized void add(ServerName sn) {
     if (!deadServers.containsKey(sn)){

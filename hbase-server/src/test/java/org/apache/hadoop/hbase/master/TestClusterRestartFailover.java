@@ -29,6 +29,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
@@ -40,6 +41,8 @@ import org.apache.hadoop.hbase.master.assignment.ServerState;
 import org.apache.hadoop.hbase.master.assignment.ServerStateNode;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
@@ -58,6 +61,8 @@ public class TestClusterRestartFailover extends AbstractTestRestartCluster {
     HBaseClassTestRule.forClass(TestClusterRestartFailover.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestClusterRestartFailover.class);
+  private static final MetricsAssertHelper metricsHelper =
+    CompatibilityFactory.getInstance(MetricsAssertHelper.class);
 
   private static CountDownLatch SCP_LATCH;
   private static ServerName SERVER_FOR_TEST;
@@ -116,8 +121,9 @@ public class TestClusterRestartFailover extends AbstractTestRestartCluster {
         .filter(p -> (p instanceof ServerCrashProcedure) &&
             ((ServerCrashProcedure) p).getServerName().equals(SERVER_FOR_TEST)).findAny();
     assertTrue("Should have one SCP for " + SERVER_FOR_TEST, procedure.isPresent());
-    assertFalse("Submit the SCP for the same serverName " + SERVER_FOR_TEST + " which should fail",
-        UTIL.getHBaseCluster().getMaster().getServerManager().expireServer(SERVER_FOR_TEST));
+    assertTrue("Submit the SCP for the same serverName " + SERVER_FOR_TEST + " which should fail",
+      UTIL.getHBaseCluster().getMaster().getServerManager().expireServer(SERVER_FOR_TEST) ==
+          Procedure.NO_PROC_ID);
 
     // Wait the SCP to finish
     SCP_LATCH.countDown();
@@ -125,10 +131,16 @@ public class TestClusterRestartFailover extends AbstractTestRestartCluster {
 
     assertFalse("Even when the SCP is finished, the duplicate SCP should not be scheduled for " +
             SERVER_FOR_TEST,
-        UTIL.getHBaseCluster().getMaster().getServerManager().expireServer(SERVER_FOR_TEST));
+      UTIL.getHBaseCluster().getMaster().getServerManager().expireServer(SERVER_FOR_TEST) ==
+        Procedure.NO_PROC_ID);
     serverNode = UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
         .getServerNode(SERVER_FOR_TEST);
     assertNull("serverNode should be deleted after SCP finished", serverNode);
+
+    MetricsMasterSource masterSource = UTIL.getHBaseCluster().getMaster().getMasterMetrics()
+      .getMetricsSource();
+    metricsHelper.assertCounter(MetricsMasterSource.SERVER_CRASH_METRIC_PREFIX+"SubmittedCount",
+      4, masterSource);
   }
 
   private void setupCluster() throws Exception {

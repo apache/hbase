@@ -2822,14 +2822,13 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   public CompletableFuture<Void> updateConfiguration() {
     CompletableFuture<Void> future = new CompletableFuture<Void>();
     addListener(
-      getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS, Option.MASTER, Option.BACKUP_MASTERS)),
+      getClusterMetrics(EnumSet.of(Option.SERVERS_NAME, Option.MASTER, Option.BACKUP_MASTERS)),
       (status, err) -> {
         if (err != null) {
           future.completeExceptionally(err);
         } else {
           List<CompletableFuture<Void>> futures = new ArrayList<>();
-          status.getLiveServerMetrics().keySet()
-            .forEach(server -> futures.add(updateConfiguration(server)));
+          status.getServersName().forEach(server -> futures.add(updateConfiguration(server)));
           futures.add(updateConfiguration(status.getMasterName()));
           status.getBackupMasterNames().forEach(master -> futures.add(updateConfiguration(master)));
           addListener(
@@ -3136,12 +3135,12 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     CompletableFuture<List<ServerName>> future = new CompletableFuture<>();
     if (serverNamesList.isEmpty()) {
       CompletableFuture<ClusterMetrics> clusterMetricsCompletableFuture =
-        getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS));
+        getClusterMetrics(EnumSet.of(Option.SERVERS_NAME));
       addListener(clusterMetricsCompletableFuture, (clusterMetrics, err) -> {
         if (err != null) {
           future.completeExceptionally(err);
         } else {
-          future.complete(new ArrayList<>(clusterMetrics.getLiveServerMetrics().keySet()));
+          future.complete(clusterMetrics.getServersName());
         }
       });
       return future;

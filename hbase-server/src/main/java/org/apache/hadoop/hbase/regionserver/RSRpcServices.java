@@ -690,8 +690,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           r = region.append(append, nonceGroup, nonce);
         } else {
           // convert duplicate append to get
-          List<Cell> results = region.get(ProtobufUtil.toGet(mutation, cellScanner), false,
-              nonceGroup, nonce);
+          List<Cell> results = region.get(toGet(append), false, nonceGroup, nonce);
           r = Result.create(results);
         }
         success = true;
@@ -742,8 +741,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           r = region.increment(increment, nonceGroup, nonce);
         } else {
           // convert duplicate increment to get
-          List<Cell> results = region.get(ProtobufUtil.toGet(mutation, cells), false, nonceGroup,
-              nonce);
+          List<Cell> results = region.get(toGet(increment), false, nonceGroup, nonce);
           r = Result.create(results);
         }
         success = true;
@@ -762,6 +760,31 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           EnvironmentEdgeManager.currentTime() - before);
     }
     return r == null ? Result.EMPTY_RESULT : r;
+  }
+
+  private static Get toGet(final Mutation mutation) throws IOException {
+    if(!(mutation instanceof Increment) && !(mutation instanceof Append)) {
+      throw new AssertionError("mutation must be a instance of Increment or Append");
+    }
+    Get get = new Get(mutation.getRow());
+    CellScanner cellScanner = mutation.cellScanner();
+    while (!cellScanner.advance()) {
+      Cell cell = cellScanner.current();
+      get.addColumn(CellUtil.cloneFamily(cell), CellUtil.cloneQualifier(cell));
+    }
+    if (mutation instanceof Increment) {
+      // Increment
+      Increment increment = (Increment) mutation;
+      get.setTimeRange(increment.getTimeRange().getMin(), increment.getTimeRange().getMax());
+    } else {
+      // Append
+      Append append = (Append) mutation;
+      get.setTimeRange(append.getTimeRange().getMin(), append.getTimeRange().getMax());
+    }
+    for (Entry<String, byte[]> entry : mutation.getAttributesMap().entrySet()) {
+      get.setAttribute(entry.getKey(), entry.getValue());
+    }
+    return get;
   }
 
   /**
@@ -946,9 +969,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         int size = PrivateCellUtil.estimatedSerializedSizeOf(cells.current());
         if (size > r.maxCellSize) {
           String msg = "Cell with size " + size + " exceeds limit of " + r.maxCellSize + " bytes";
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(msg);
-          }
+          LOG.debug(msg);
           throw new DoNotRetryIOException(msg);
         }
       }
@@ -1350,6 +1371,21 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     builder.append("table: ").append(scanner.getRegionInfo().getTable().getNameAsString());
     builder.append(" region: ").append(scanner.getRegionInfo().getRegionNameAsString());
     return builder.toString();
+  }
+
+  public String getScanDetailsWithRequest(ScanRequest request) {
+    try {
+      if (!request.hasRegion()) {
+        return null;
+      }
+      Region region = getRegion(request.getRegion());
+      StringBuilder builder = new StringBuilder();
+      builder.append("table: ").append(region.getRegionInfo().getTable().getNameAsString());
+      builder.append(" region: ").append(region.getRegionInfo().getRegionNameAsString());
+      return builder.toString();
+    } catch (IOException ignored) {
+      return null;
+    }
   }
 
   /**
@@ -1756,6 +1792,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
   }
 
+  // Master implementation of this Admin Service differs given it is not
+  // able to supply detail only known to RegionServer. See note on
+  // MasterRpcServers#getRegionInfo.
   @Override
   @QosPriority(priority=HConstants.ADMIN_QOS)
   public GetRegionInfoResponse getRegionInfo(final RpcController controller,
@@ -2366,9 +2405,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       requestCount.increment();
       HRegion region = getRegion(request.getRegion());
       Map<byte[], List<Path>> map = null;
+      final boolean spaceQuotaEnabled = QuotaUtil.isQuotaEnabled(getConfiguration());
+      long sizeToBeLoaded = -1;
 
       // Check to see if this bulk load would exceed the space quota for this table
-      if (QuotaUtil.isQuotaEnabled(getConfiguration())) {
+      if (spaceQuotaEnabled) {
         ActivePolicyEnforcement activeSpaceQuotas = getSpaceQuotaManager().getActiveEnforcements();
         SpaceViolationPolicyEnforcement enforcement = activeSpaceQuotas.getPolicyEnforcement(
             region);
@@ -2379,7 +2420,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             filePaths.add(familyPath.getPath());
           }
           // Check if the batch of files exceeds the current quota
-          enforcement.checkBulkLoad(regionServer.getFileSystem(), filePaths);
+          sizeToBeLoaded = enforcement.computeBulkLoadSize(regionServer.getFileSystem(), filePaths);
         }
       }
 
@@ -2393,7 +2434,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         }
         try {
           map = region.bulkLoadHFiles(familyPaths, request.getAssignSeqNum(), null,
-              request.getCopyFile(), clusterIds);
+              request.getCopyFile(), clusterIds, request.getReplicate());
         } finally {
           if (region.getCoprocessorHost() != null) {
             region.getCoprocessorHost().postBulkLoadHFile(familyPaths, map);
@@ -2405,6 +2446,19 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
       BulkLoadHFileResponse.Builder builder = BulkLoadHFileResponse.newBuilder();
       builder.setLoaded(map != null);
+      if (map != null) {
+        // Treat any negative size as a flag to "ignore" updating the region size as that is
+        // not possible to occur in real life (cannot bulk load a file with negative size)
+        if (spaceQuotaEnabled && sizeToBeLoaded > 0) {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Incrementing space use of " + region.getRegionInfo() + " by "
+                + sizeToBeLoaded + " bytes");
+          }
+          // Inform space quotas of the new files for this region
+          getSpaceQuotaManager().getRegionSizeStore().incrementRegionSize(
+              region.getRegionInfo(), sizeToBeLoaded);
+        }
+      }
       return builder.build();
     } catch (IOException ie) {
       throw new ServiceException(ie);

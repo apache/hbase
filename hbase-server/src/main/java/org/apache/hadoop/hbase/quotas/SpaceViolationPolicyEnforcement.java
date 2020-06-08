@@ -80,12 +80,13 @@ public interface SpaceViolationPolicyEnforcement {
   boolean shouldCheckBulkLoads();
 
   /**
-   * Checks the file at the given path against <code>this</code> policy and the current
-   * {@link SpaceQuotaSnapshot}. If the file would violate the policy, a
+   * Computes the size of the file(s) at the given path against <code>this</code> policy and the
+   * current {@link SpaceQuotaSnapshot}. If the file would violate the policy, a
    * {@link SpaceLimitingException} will be thrown.
    *
    * @param paths The paths in HDFS to files to be bulk loaded.
+   * @return The size, in bytes, of the files that would be loaded.
    */
-  void checkBulkLoad(FileSystem fs, List<String> paths) throws SpaceLimitingException;
+  long computeBulkLoadSize(FileSystem fs, List<String> paths) throws SpaceLimitingException;
 
 }

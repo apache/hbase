@@ -64,7 +64,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService.BlockingInterface;
 
@@ -114,6 +116,25 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   private boolean dropOnDeletedTables;
   private boolean isSerial = false;
 
+  /*
+   * Some implementations of HBaseInterClusterReplicationEndpoint may require instantiating
+   * different Connection implementations, or initialize it in a different way,
+   * so defining createConnection as protected for possible overridings.
+   */
+  protected Connection createConnection(Configuration conf) throws IOException {
+    return ConnectionFactory.createConnection(conf);
+  }
+
+  /*
+   * Some implementations of HBaseInterClusterReplicationEndpoint may require instantiating
+   * different ReplicationSinkManager implementations, or initialize it in a different way,
+   * so defining createReplicationSinkManager as protected for possible overridings.
+   */
+  protected ReplicationSinkManager createReplicationSinkManager(Connection conn) {
+    return new ReplicationSinkManager((ClusterConnection) conn, this.ctx.getPeerId(),
+      this, this.conf);
+  }
+
   @Override
   public void init(Context context) throws IOException {
     super.init(context);
@@ -133,12 +154,16 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     // TODO: This connection is replication specific or we should make it particular to
     // replication and make replication specific settings such as compression or codec to use
     // passing Cells.
-    this.conn = (ClusterConnection) ConnectionFactory.createConnection(this.conf);
+    Connection connection = createConnection(this.conf);
+    //Since createConnection method may be overridden by extending classes, we need to make sure
+    //it's indeed returning a ClusterConnection instance.
+    Preconditions.checkState(connection instanceof ClusterConnection);
+    this.conn = (ClusterConnection) connection;
     this.sleepForRetries =
         this.conf.getLong("replication.source.sleepforretries", 1000);
     this.metrics = context.getMetrics();
     // ReplicationQueueInfo parses the peerId out of the znode for us
-    this.replicationSinkMgr = new ReplicationSinkManager(conn, ctx.getPeerId(), this, this.conf);
+    this.replicationSinkMgr = createReplicationSinkManager(conn);
     // per sink thread pool
     this.maxThreads = this.conf.getInt(HConstants.REPLICATION_SOURCE_MAXTHREADS_KEY,
       HConstants.REPLICATION_SOURCE_MAXTHREADS_DEFAULT);
@@ -309,7 +334,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
             replicateContext.getSize());
         }
         // RuntimeExceptions encountered here bubble up and are handled in ReplicationSource
-        pool.submit(createReplicator(entries, i));
+        pool.submit(createReplicator(entries, i, replicateContext.getTimeout()));
         futures++;
       }
     }
@@ -477,7 +502,8 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   }
 
   @VisibleForTesting
-  protected int replicateEntries(List<Entry> entries, int batchIndex) throws IOException {
+  protected int replicateEntries(List<Entry> entries, int batchIndex, int timeout)
+      throws IOException {
     SinkPeer sinkPeer = null;
     try {
       int entriesHashCode = System.identityHashCode(entries);
@@ -490,7 +516,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
       BlockingInterface rrs = sinkPeer.getRegionServer();
       try {
         ReplicationProtbufUtil.replicateWALEntry(rrs, entries.toArray(new Entry[entries.size()]),
-          replicationClusterId, baseNamespaceDir, hfileArchiveDir);
+          replicationClusterId, baseNamespaceDir, hfileArchiveDir, timeout);
         if (LOG.isTraceEnabled()) {
           LOG.trace("{} Completed replicating batch {}", logPeerId(), entriesHashCode);
         }
@@ -510,14 +536,14 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     return batchIndex;
   }
 
-  private int serialReplicateRegionEntries(List<Entry> entries, int batchIndex)
+  private int serialReplicateRegionEntries(List<Entry> entries, int batchIndex, int timeout)
       throws IOException {
     int batchSize = 0, index = 0;
     List<Entry> batch = new ArrayList<>();
     for (Entry entry : entries) {
       int entrySize = getEstimatedEntrySize(entry);
       if (batchSize > 0 && batchSize + entrySize > replicationRpcLimit) {
-        replicateEntries(batch, index++);
+        replicateEntries(batch, index++, timeout);
         batch.clear();
         batchSize = 0;
       }
@@ -525,15 +551,15 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
       batchSize += entrySize;
     }
     if (batchSize > 0) {
-      replicateEntries(batch, index);
+      replicateEntries(batch, index, timeout);
     }
     return batchIndex;
   }
 
   @VisibleForTesting
-  protected Callable<Integer> createReplicator(List<Entry> entries, int batchIndex) {
-    return isSerial ? () -> serialReplicateRegionEntries(entries, batchIndex)
-        : () -> replicateEntries(entries, batchIndex);
+  protected Callable<Integer> createReplicator(List<Entry> entries, int batchIndex, int timeout) {
+    return isSerial ? () -> serialReplicateRegionEntries(entries, batchIndex, timeout)
+        : () -> replicateEntries(entries, batchIndex, timeout);
   }
 
   private String logPeerId(){

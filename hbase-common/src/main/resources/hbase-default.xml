@@ -758,14 +758,15 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.hstore.compaction.min</name>
-    <value>3</value>
+    <value></value>
     <description>The minimum number of StoreFiles which must be eligible for compaction before
       compaction can run. The goal of tuning hbase.hstore.compaction.min is to avoid ending up with
       too many tiny StoreFiles to compact. Setting this value to 2 would cause a minor compaction
       each time you have two StoreFiles in a Store, and this is probably not appropriate. If you
       set this value too high, all the other values will need to be adjusted accordingly. For most
-      cases, the default value is appropriate. In previous versions of HBase, the parameter
-      hbase.hstore.compaction.min was named hbase.hstore.compactionThreshold.</description>
+      cases, the default value is appropriate  (empty value here, results in 3 by code logic). In 
+      previous versions of HBase, the parameter hbase.hstore.compaction.min was named 
+      hbase.hstore.compactionThreshold.</description>
   </property>
   <property>
     <name>hbase.hstore.compaction.max</name>
@@ -920,10 +921,30 @@ possible configurations would overwhelm and obscure the important.
     <name>hbase.bucketcache.ioengine</name>
     <value></value>
     <description>Where to store the contents of the bucketcache. One of: offheap,
-    file, files or mmap. If a file or files, set it to file(s):PATH_TO_FILE.
-    mmap means the content will be in an mmaped file. Use mmap:PATH_TO_FILE.
+    file, files, mmap or pmem. If a file or files, set it to file(s):PATH_TO_FILE.
+    mmap means the content will be in an mmaped file. Use mmap:PATH_TO_FILE. 'pmem'
+    is bucket cache over a file on the persistent memory device.
+    Use pmem:PATH_TO_FILE.
     See http://hbase.apache.org/book.html#offheap.blockcache for more information.
     </description>
+  </property>
+  <property>
+    <name>hbase.hstore.compaction.throughput.lower.bound</name>
+    <value>52428800</value>
+    <description>The target lower bound on aggregate compaction throughput, in bytes/sec. Allows
+    you to tune the minimum available compaction throughput when the
+    PressureAwareCompactionThroughputController throughput controller is active. (It is active by
+    default.)</description>
+  </property>
+  <property>
+    <name>hbase.hstore.compaction.throughput.higher.bound</name>
+    <value>104857600</value>
+    <description>The target upper bound on aggregate compaction throughput, in bytes/sec. Allows
+    you to control aggregate compaction throughput demand when the
+    PressureAwareCompactionThroughputController throughput controller is active. (It is active by
+    default.) The maximum throughput will be tuned between the lower and upper bounds when
+    compaction pressure is within the range [0.0, 1.0]. If compaction pressure is 1.0 or greater
+    the higher bound will be ignored until pressure returns to the normal range.</description>
   </property>
   <property>
     <name>hbase.bucketcache.size</name>

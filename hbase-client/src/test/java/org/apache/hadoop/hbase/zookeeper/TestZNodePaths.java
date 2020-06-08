@@ -46,7 +46,6 @@ public class TestZNodePaths {
     assertTrue(znodePaths.isClientReadable(ZNodePaths.joinZNode(znodePaths.tableZNode, "foo")));
     assertTrue(znodePaths.isClientReadable(znodePaths.rsZNode));
 
-    assertFalse(znodePaths.isClientReadable(znodePaths.tableLockZNode));
     assertFalse(znodePaths.isClientReadable(znodePaths.balancerZNode));
     assertFalse(znodePaths.isClientReadable(znodePaths.regionNormalizerZNode));
     assertFalse(znodePaths.isClientReadable(znodePaths.clusterStateZNode));

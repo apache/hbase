@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.master.cleaner;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -440,8 +439,6 @@ public class TestSnapshotFromMaster {
         snapshotName, TABLE_NAME, SnapshotType.FLUSH));
     Waiter.waitFor(UTIL.getConfiguration(), 10 * 1000L, 200L,
       () -> UTIL.getAdmin().listSnapshots(Pattern.compile(snapshotName)).size() == 1);
-    assertTrue(master.getSnapshotManager().isTakingAnySnapshot());
-    Thread.sleep(11 * 1000L);
-    assertFalse(master.getSnapshotManager().isTakingAnySnapshot());
+    UTIL.waitFor(30000, () -> !master.getSnapshotManager().isTakingAnySnapshot());
   }
 }

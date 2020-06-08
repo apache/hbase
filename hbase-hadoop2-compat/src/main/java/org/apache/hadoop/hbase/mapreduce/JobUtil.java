@@ -53,4 +53,20 @@ public abstract class JobUtil {
       throws IOException, InterruptedException {
     return JobSubmissionFiles.getStagingDir(new Cluster(conf), conf);
   }
+
+  /**
+   * Initializes the staging directory and returns the qualified path.
+   *
+   * @param conf conf system configuration
+   * @return qualified staging directory path
+   * @throws IOException if the ownership on the staging directory is not as expected
+   * @throws InterruptedException if the thread getting the staging directory is interrupted
+   */
+  public static Path getQualifiedStagingDir(Configuration conf)
+    throws IOException, InterruptedException {
+    Cluster cluster = new Cluster(conf);
+    Path stagingDir = JobSubmissionFiles.getStagingDir(cluster, conf);
+    return cluster.getFileSystem().makeQualified(stagingDir);
+  }
+
 }

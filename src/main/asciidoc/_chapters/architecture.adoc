@@ -410,6 +410,20 @@ See link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/BinaryP
 
 See link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/BinaryComparator.html[BinaryComparator].
 
+[[client.filter.cvp.bcc]]
+==== BinaryComponentComparator
+
+link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/BinaryComponentComparator.html[BinaryComponentComparator] can be used to compare specific value at specific location with in the cell value. The comparison can be done for both ascii and binary data.
+
+[source,java]
+----
+byte[] partialValue = Bytes.toBytes("partial_value");
+    int partialValueOffset =
+    Filter partialValueFilter = new ValueFilter(CompareFilter.CompareOp.GREATER,
+            new BinaryComponentComparator(partialValue,partialValueOffset));
+----
+See link:https://issues.apache.org/jira/browse/HBASE-22969[HBASE-22969] for other use cases and details.
+
 [[client.filter.kvm]]
 === KeyValue Metadata
 
@@ -534,6 +548,8 @@ Note:  Introduced in HBase 0.92
 ==== RowFilter
 
 It is generally a better idea to use the startRow/stopRow methods on Scan for row selection, however link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/RowFilter.html[RowFilter] can also be used.
+
+You can supplement a scan (both bounded and unbounded) with RowFilter constructed from link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/BinaryComponentComparator.html[BinaryComponentComparator] for further filtering out or filtering in rows. See link:https://issues.apache.org/jira/browse/HBASE-22969[HBASE-22969] for use cases and other details.
 
 [[client.filter.utility]]
 === Utility
@@ -733,6 +749,8 @@ See configurations, sizings, current usage, time-in-the-cache, and even detail o
 
 `LruBlockCache` is the original implementation, and is entirely within the Java heap.
 `BucketCache` is optional and mainly intended for keeping block cache data off-heap, although `BucketCache` can also be a file-backed cache.
+ In file-backed we can either use it in the file mode or the mmaped mode.
+ We also have pmem mode where the bucket cache resides on the persistent memory device.
 
 When you enable BucketCache, you are enabling a two tier caching system. We used to describe the
 tiers as "L1" and "L2" but have deprecated this terminology as of hbase-2.0.0. The "L1" cache referred to an

@@ -291,11 +291,11 @@ public class TestAccessController3 extends SecureTestUtil {
     };
 
     // verify that superuser can create tables
-    verifyAllowed(createTable, SUPERUSER, USER_ADMIN, USER_GROUP_CREATE);
+    verifyAllowed(createTable, SUPERUSER, USER_ADMIN, USER_GROUP_CREATE, USER_GROUP_ADMIN);
 
     // all others should be denied
-    verifyDenied(createTable, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_ADMIN,
-      USER_GROUP_READ, USER_GROUP_WRITE);
+    verifyDenied(createTable, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE);
   }
 
 }

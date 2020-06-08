@@ -31,7 +31,6 @@ import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
@@ -146,8 +145,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private RackLocalityCostFunction rackLocalityCost;
   private RegionReplicaHostCostFunction regionReplicaHostCostFunction;
   private RegionReplicaRackCostFunction regionReplicaRackCostFunction;
-  private boolean isByTable = false;
-  private TableName tableName = null;
 
   /**
    * The constructor that pass a MetricsStochasticBalancer to BaseLoadBalancer to replace its
@@ -171,7 +168,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     runMaxSteps = conf.getBoolean(RUN_MAX_STEPS_KEY, runMaxSteps);
 
     numRegionLoadsToRemember = conf.getInt(KEEP_REGION_LOADS, numRegionLoadsToRemember);
-    isByTable = conf.getBoolean(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, isByTable);
     minCostNeedBalance = conf.getFloat(MIN_COST_NEED_BALANCE_KEY, minCostNeedBalance);
     if (localityCandidateGenerator == null) {
       localityCandidateGenerator = new LocalityBasedCandidateGenerator(services);
@@ -270,7 +266,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   }
 
   @Override
-  protected boolean needsBalance(Cluster cluster) {
+  protected boolean needsBalance(TableName tableName, Cluster cluster) {
     ClusterLoadState cs = new ClusterLoadState(cluster.clusterState);
     if (cs.getNumServers() < MIN_SERVER_BALANCE) {
       if (LOG.isDebugEnabled()) {
@@ -288,35 +284,29 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     for (CostFunction c : costFunctions) {
       float multiplier = c.getMultiplier();
       if (multiplier <= 0) {
+        LOG.trace("{} not needed because multiplier is <= 0", c.getClass().getSimpleName());
         continue;
       }
       if (!c.isNeeded()) {
-        LOG.debug("{} not needed", c.getClass().getSimpleName());
+        LOG.trace("{} not needed", c.getClass().getSimpleName());
         continue;
       }
       sumMultiplier += multiplier;
       total += c.cost() * multiplier;
     }
 
-    if (total <= 0 || sumMultiplier <= 0
-        || (sumMultiplier > 0 && (total / sumMultiplier) < minCostNeedBalance)) {
+    boolean balanced = total <= 0 || sumMultiplier <= 0 ||
+        (sumMultiplier > 0 && (total / sumMultiplier) < minCostNeedBalance);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("{} {}; total cost={}, sum multiplier={}; cost/multiplier to need a balance is {}",
+          balanced ? "Skipping load balancing because balanced" : "We need to load balance",
+          isByTable ? String.format("table (%s)", tableName) : "cluster",
+          total, sumMultiplier, minCostNeedBalance);
       if (LOG.isTraceEnabled()) {
-        final String loadBalanceTarget =
-            isByTable ? String.format("table (%s)", tableName) : "cluster";
-        LOG.trace("Skipping load balancing because the {} is balanced. Total cost: {}, "
-            + "Sum multiplier: {}, Minimum cost needed for balance: {}", loadBalanceTarget, total,
-            sumMultiplier, minCostNeedBalance);
+        LOG.trace("Balance decision detailed function costs={}", functionCost());
       }
-      return false;
     }
-    return true;
-  }
-
-  @Override
-  public synchronized List<RegionPlan> balanceCluster(TableName tableName, Map<ServerName,
-    List<RegionInfo>> clusterState) {
-    this.tableName = tableName;
-    return balanceCluster(clusterState);
+    return !balanced;
   }
 
   @VisibleForTesting
@@ -330,19 +320,19 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * should always approach the optimal state given enough steps.
    */
   @Override
-  public synchronized List<RegionPlan> balanceCluster(Map<ServerName,
-    List<RegionInfo>> clusterState) {
-    List<RegionPlan> plans = balanceMasterRegions(clusterState);
-    if (plans != null || clusterState == null || clusterState.size() <= 1) {
+  public synchronized List<RegionPlan> balanceTable(TableName tableName, Map<ServerName,
+    List<RegionInfo>> loadOfOneTable) {
+    List<RegionPlan> plans = balanceMasterRegions(loadOfOneTable);
+    if (plans != null || loadOfOneTable == null || loadOfOneTable.size() <= 1) {
       return plans;
     }
 
-    if (masterServerName != null && clusterState.containsKey(masterServerName)) {
-      if (clusterState.size() <= 2) {
+    if (masterServerName != null && loadOfOneTable.containsKey(masterServerName)) {
+      if (loadOfOneTable.size() <= 2) {
         return null;
       }
-      clusterState = new HashMap<>(clusterState);
-      clusterState.remove(masterServerName);
+      loadOfOneTable = new HashMap<>(loadOfOneTable);
+      loadOfOneTable.remove(masterServerName);
     }
 
     // On clusters with lots of HFileLinks or lots of reference files,
@@ -358,13 +348,13 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     //The clusterState that is given to this method contains the state
     //of all the regions in the table(s) (that's true today)
     // Keep track of servers to iterate through them.
-    Cluster cluster = new Cluster(clusterState, loads, finder, rackManager);
+    Cluster cluster = new Cluster(loadOfOneTable, loads, finder, rackManager);
 
     long startTime = EnvironmentEdgeManager.currentTime();
 
     initCosts(cluster);
 
-    if (!needsBalance(cluster)) {
+    if (!needsBalance(tableName, cluster)) {
       return null;
     }
 
@@ -1156,15 +1146,26 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
 
     @Override
+    void init(Cluster cluster) {
+      super.init(cluster);
+      LOG.debug("{} sees a total of {} servers and {} regions.", getClass().getSimpleName(),
+          cluster.numServers, cluster.numRegions);
+      if (LOG.isTraceEnabled()) {
+        for (int i =0; i < cluster.numServers; i++) {
+          LOG.trace("{} sees server '{}' has {} regions", getClass().getSimpleName(),
+              cluster.servers[i], cluster.regionsPerServer[i].length);
+        }
+      }
+    }
+
+    @Override
     double cost() {
       if (stats == null || stats.length != cluster.numServers) {
         stats = new double[cluster.numServers];
       }
-
       for (int i =0; i < cluster.numServers; i++) {
         stats[i] = cluster.regionsPerServer[i].length;
       }
-
       return costFromArray(stats);
     }
   }

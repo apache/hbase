@@ -380,7 +380,8 @@ public class ReplicationSourceManager implements ReplicationListener {
       ReplicationSourceInterface toRemove = this.sources.put(peerId, src);
       if (toRemove != null) {
         LOG.info("Terminate replication source for " + toRemove.getPeerId());
-        toRemove.terminate(terminateMessage);
+        // Do not clear metrics
+        toRemove.terminate(terminateMessage, null, false);
       }
       for (SortedSet<String> walsByGroup : walsById.get(peerId).values()) {
         walsByGroup.forEach(wal -> src.enqueueLog(new Path(this.logDir, wal)));
@@ -393,11 +394,13 @@ public class ReplicationSourceManager implements ReplicationListener {
     // synchronized on oldsources to avoid race with NodeFailoverWorker
     synchronized (this.oldsources) {
       List<String> previousQueueIds = new ArrayList<>();
-      for (ReplicationSourceInterface oldSource : this.oldsources) {
+      for (Iterator<ReplicationSourceInterface> iter = this.oldsources.iterator(); iter
+          .hasNext();) {
+        ReplicationSourceInterface oldSource = iter.next();
         if (oldSource.getPeerId().equals(peerId)) {
           previousQueueIds.add(oldSource.getQueueId());
           oldSource.terminate(terminateMessage);
-          this.oldsources.remove(oldSource);
+          iter.remove();
         }
       }
       for (String queueId : previousQueueIds) {
