@@ -35,6 +35,7 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -48,6 +49,7 @@ import org.slf4j.LoggerFactory;
  * facility from TestExportSnapshot where possible.
  * @see TestExportSnapshot
  */
+@Ignore // HBASE-24493
 @Category({VerySlowMapReduceTests.class, LargeTests.class})
 public class TestExportSnapshotAdjunct {
   private static final Logger LOG = LoggerFactory.getLogger(TestExportSnapshotAdjunct.class);
