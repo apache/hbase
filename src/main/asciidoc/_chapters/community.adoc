@@ -91,6 +91,9 @@ NOTE: End-of-life releases are not included in this list.
 | 2.2
 | Guanghao Zhang
 
+| 2.3
+| Nick Dimiduk
+
 |===
 
 [[hbase.commit.msg.format]]
