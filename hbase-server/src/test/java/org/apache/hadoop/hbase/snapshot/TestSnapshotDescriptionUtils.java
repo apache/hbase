@@ -97,15 +97,11 @@ public class TestSnapshotDescriptionUtils {
     Path snapshotDir = new Path(root, HConstants.SNAPSHOT_DIR_NAME);
     Path tmpDir = new Path(snapshotDir, ".tmp");
     Path workingDir = new Path(tmpDir, "not_a_snapshot");
-    Configuration conf = new Configuration();
-    FileSystem workingFs = workingDir.getFileSystem(conf);
     assertFalse("Already have working snapshot dir: " + workingDir
         + " but shouldn't. Test file leak?", fs.exists(workingDir));
     SnapshotDescription snapshot = SnapshotDescription.newBuilder().setName("snapshot").build();
-    Path finishedDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, snapshotDir);
-
     try {
-      SnapshotDescriptionUtils.completeSnapshot(finishedDir, workingDir, fs, workingFs, conf);
+      SnapshotDescriptionUtils.completeSnapshot(snapshot, root, workingDir, fs);
       fail("Shouldn't successfully complete move of a non-existent directory.");
     } catch (IOException e) {
       LOG.info("Correctly failed to move non-existant directory: " + e.getMessage());
