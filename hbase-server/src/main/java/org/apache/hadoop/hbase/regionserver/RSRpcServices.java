@@ -720,8 +720,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           r = region.append(append, nonceGroup, nonce);
         } else {
           // convert duplicate append to get
-          List<Cell> results = region.get(ProtobufUtil.toGet(mutation, cellScanner), false,
-              nonceGroup, nonce);
+          List<Cell> results = region.get(toGet(append), false, nonceGroup, nonce);
           r = Result.create(results);
         }
         success = true;
@@ -767,8 +766,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           r = region.increment(increment, nonceGroup, nonce);
         } else {
           // convert duplicate increment to get
-          List<Cell> results = region.get(ProtobufUtil.toGet(mutation, cells), false, nonceGroup,
-              nonce);
+          List<Cell> results = region.get(toGet(increment), false, nonceGroup, nonce);
           r = Result.create(results);
         }
         success = true;
@@ -788,6 +786,31 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           EnvironmentEdgeManager.currentTime() - before);
     }
     return r == null ? Result.EMPTY_RESULT : r;
+  }
+
+  private static Get toGet(final Mutation mutation) throws IOException {
+    if(!(mutation instanceof Increment) && !(mutation instanceof Append)) {
+      throw new AssertionError("mutation must be a instance of Increment or Append");
+    }
+    Get get = new Get(mutation.getRow());
+    CellScanner cellScanner = mutation.cellScanner();
+    while (!cellScanner.advance()) {
+      Cell cell = cellScanner.current();
+      get.addColumn(CellUtil.cloneFamily(cell), CellUtil.cloneQualifier(cell));
+    }
+    if (mutation instanceof Increment) {
+      // Increment
+      Increment increment = (Increment) mutation;
+      get.setTimeRange(increment.getTimeRange().getMin(), increment.getTimeRange().getMax());
+    } else {
+      // Append
+      Append append = (Append) mutation;
+      get.setTimeRange(append.getTimeRange().getMin(), append.getTimeRange().getMax());
+    }
+    for (Entry<String, byte[]> entry : mutation.getAttributesMap().entrySet()) {
+      get.setAttribute(entry.getKey(), entry.getValue());
+    }
+    return get;
   }
 
   /**
