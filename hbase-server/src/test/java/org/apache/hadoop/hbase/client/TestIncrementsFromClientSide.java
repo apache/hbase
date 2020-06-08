@@ -25,6 +25,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -135,6 +136,46 @@ public class TestIncrementsFromClientSide {
         table.close();
         connection.close();
       }
+    }
+  }
+
+  /**
+   * Test batch increment result when there are duplicate rpc request.
+   */
+  @Test
+  public void testDuplicateBatchIncrement() throws Exception {
+    HTableDescriptor hdt =
+      TEST_UTIL.createTableDescriptor(TableName.valueOf(name.getMethodName()));
+    Map<String, String> kvs = new HashMap<>();
+    kvs.put(HConnectionTestingUtility.SleepAtFirstRpcCall.SLEEP_TIME_CONF_KEY, "2000");
+    hdt.addCoprocessor(HConnectionTestingUtility.SleepAtFirstRpcCall.class.getName(), null, 1,
+      kvs);
+    TEST_UTIL.createTable(hdt, new byte[][] { ROW }).close();
+
+    Configuration c = new Configuration(TEST_UTIL.getConfiguration());
+    c.setInt(HConstants.HBASE_CLIENT_PAUSE, 50);
+    // Client will retry beacuse rpc timeout is small than the sleep time of first rpc call
+    c.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 1500);
+
+    try (Connection connection = ConnectionFactory.createConnection(c);
+      Table table = connection.getTableBuilder(TableName.valueOf(name.getMethodName()), null)
+        .setOperationTimeout(3 * 1000).build()) {
+      Increment inc = new Increment(ROW);
+      inc.addColumn(HBaseTestingUtility.fam1, QUALIFIER, 1);
+
+      // Batch increment
+      Object[] results = new Object[1];
+      table.batch(Collections.singletonList(inc), results);
+
+      Cell[] cells = ((Result) results[0]).rawCells();
+      assertEquals(1, cells.length);
+      assertIncrementKey(cells[0], ROW, HBaseTestingUtility.fam1, QUALIFIER, 1);
+
+      // Verify expected result
+      Result readResult = table.get(new Get(ROW));
+      cells = readResult.rawCells();
+      assertEquals(1, cells.length);
+      assertIncrementKey(cells[0], ROW, HBaseTestingUtility.fam1, QUALIFIER, 1);
     }
   }
 
