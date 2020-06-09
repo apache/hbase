@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -485,6 +486,12 @@ public class ServerCrashProcedure
         // UPDATE: HBCKServerCrashProcedure overrides isMatchingRegionLocation; this check can get
         // in the way of our clearing out 'Unknown Servers'.
         if (!isMatchingRegionLocation(regionNode)) {
+          // See HBASE-24117, though we have already changed the shutdown order, it is still worth
+          // double checking here to confirm that we do not skip assignment incorrectly.
+          if (!am.isRunning()) {
+            throw new DoNotRetryIOException(
+              "AssignmentManager has been stopped, can not process assignment any more");
+          }
           LOG.info("{} found {} whose regionLocation no longer matches {}, skipping assign...",
             this, regionNode, serverName);
           continue;
