@@ -159,7 +159,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
   // Because 2147483647 is about ~680 years (after that it will start to work)
   // We can set it to 0-10 and get the profit right now.
   // (see details https://issues.apache.org/jira/browse/HBASE-23887).
-  private static final int DEFAULT_LRU_CACHE_HEAVY_EVICTION_COUNT_LIMIT = 2147483647;
+  private static final int DEFAULT_LRU_CACHE_HEAVY_EVICTION_COUNT_LIMIT = Integer.MAX_VALUE;
 
   private static final String LRU_CACHE_HEAVY_EVICTION_MB_SIZE_LIMIT
     = "hbase.lru.cache.heavy.eviction.mb.size.limit";
@@ -1015,8 +1015,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
 
     @Override
     public void run() {
-      long bytesFreed;
-      long mbFreedSum = 0;
+      long freedSumMb = 0;
       int heavyEvictionCount = 0;
       int freedDataOverheadPercent = 0;
       long startTime = System.currentTimeMillis();
@@ -1031,7 +1030,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
         }
         LruBlockCache cache = this.cache.get();
         if (cache == null) break;
-        bytesFreed = cache.evict();
+        freedSumMb += cache.evict()/1024/1024;
         /* 
         * Sometimes we are reading more data than can fit into BlockCache
         * and it is the cause a high rate of evictions.
@@ -1051,16 +1050,14 @@ public class LruBlockCache implements FirstLevelBlockCache {
         // because we get comparable volumes of freed bytes each time.
         // 10s because this is default period to run evict() (see above this.wait)
         long stopTime = System.currentTimeMillis();
-        if (stopTime - startTime <= 1000 * 10 - 1) {
-          mbFreedSum += bytesFreed/1024/1024;
-        } else {
+        if ((stopTime - startTime) > 1000 * 10 - 1) {
           // Here we have to calc what situation we have got.
           // We have the limit "hbase.lru.cache.heavy.eviction.bytes.size.limit"
           // and can calculte overhead on it.
           // We will use this information to decide, 
           // how to change percent of caching blocks.
           freedDataOverheadPercent =
-            (int) (mbFreedSum * 100 / cache.heavyEvictionMbSizeLimit) - 100;
+            (int) (freedSumMb * 100 / cache.heavyEvictionMbSizeLimit) - 100;
           if (freedDataOverheadPercent > 0) {
             // Now we are in the situation when we are above the limit
             // But maybe we are going to ignore it because it will end quite soon
@@ -1079,16 +1076,15 @@ public class LruBlockCache implements FirstLevelBlockCache {
               // higher we can get better performance when heavy reading is stable.
               // But when reading is changing we can adjust to it and set 
               // the coefficient to lower value.
-              int ch = (int) (freedDataOverheadPercent * cache.heavyEvictionOverheadCoefficient);
+              int change = (int) (freedDataOverheadPercent * cache.heavyEvictionOverheadCoefficient);
               // But practice shows that 15% of reducing is quite enough.
               // We are not greedy (it could lead to premature exit).
-              ch = ch > 15 ? 15 : ch;
-              ch = ch < 0 ? 0 : ch; // I think it will never happen but check for sure
+              change = Math.min(15, change);
+              change = Math.max(0, change); // I think it will never happen but check for sure
               // So this is the key point, here we are reducing % of caching blocks
-              cache.cacheDataBlockPercent -= ch;
+              cache.cacheDataBlockPercent -= change;
               // If we go down too deep we have to stop here, 1% any way should be.
-              cache.cacheDataBlockPercent =
-                cache.cacheDataBlockPercent < 1 ? 1 : cache.cacheDataBlockPercent;
+              cache.cacheDataBlockPercent = Math.max(1, cache.cacheDataBlockPercent);
             }
           } else {
             // Well, we have got overshooting. 
@@ -1096,13 +1092,13 @@ public class LruBlockCache implements FirstLevelBlockCache {
             // It help avoid permature exit during short-term fluctuation.
             // If overshooting less than 90%, we will try to increase the percent of 
             // caching blocks and hope it is enough.
-            if (mbFreedSum >= cache.heavyEvictionMbSizeLimit * 0.1) {
+            if (freedSumMb >= cache.heavyEvictionMbSizeLimit * 0.1) {
               // Simple logic: more overshooting - more caching blocks (backpressure)
-              int ch = (int) (-freedDataOverheadPercent * 0.1 + 1);
-              cache.cacheDataBlockPercent += ch;
+              int change = (int) (-freedDataOverheadPercent * 0.1 + 1);
+              cache.cacheDataBlockPercent += change;
               // But it can't be more then 100%, so check it.
               cache.cacheDataBlockPercent =
-                cache.cacheDataBlockPercent > 100 ? 100 : cache.cacheDataBlockPercent;
+                cache.cacheDataBlockPercent = Math.min(100, cache.cacheDataBlockPercent);
             } else {
               // Looks like heavy reading is over. 
               // Just exit form this mode.
@@ -1111,12 +1107,12 @@ public class LruBlockCache implements FirstLevelBlockCache {
             }
           }
           LOG.info("BlockCache evicted (MB): {}, overhead (%): {}, " +
-                          "heavy eviction counter: {}, " +
-                          "current caching DataBlock (%): {}",
-                  mbFreedSum, freedDataOverheadPercent,
-                  heavyEvictionCount, cache.cacheDataBlockPercent);
+            "heavy eviction counter: {}, " +
+            "current caching DataBlock (%): {}",
+            freedSumMb, freedDataOverheadPercent,
+            heavyEvictionCount, cache.cacheDataBlockPercent);
 
-          mbFreedSum = 0;
+          freedSumMb = 0;
           startTime = stopTime;
         }
       }
