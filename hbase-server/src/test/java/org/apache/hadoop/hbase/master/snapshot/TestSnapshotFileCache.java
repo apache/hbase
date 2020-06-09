@@ -17,8 +17,11 @@
  */
 package org.apache.hadoop.hbase.master.snapshot;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -26,11 +29,14 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils.SnapshotMock;
@@ -46,6 +52,11 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
+
 /**
  * Test that we correctly reload the cache, filter directories, etc.
  */
@@ -56,20 +67,30 @@ public class TestSnapshotFileCache {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestSnapshotFileCache.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotFileCache.class);
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected static final Logger LOG = LoggerFactory.getLogger(TestSnapshotFileCache.class);
+  protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   // don't refresh the cache unless we tell it to
-  private static final long PERIOD = Long.MAX_VALUE;
-  private static FileSystem fs;
-  private static Path rootDir;
-  private static Path snapshotDir;
+  protected static final long PERIOD = Long.MAX_VALUE;
+  protected static FileSystem fs;
+  protected static Path rootDir;
+  protected static Path snapshotDir;
+  protected static Configuration conf;
+  protected static FileSystem workingFs;
+  protected static Path workingDir;
 
-  @BeforeClass
-  public static void startCluster() throws Exception {
+  protected static void initCommon() throws Exception {
     UTIL.startMiniDFSCluster(1);
     fs = UTIL.getDFSCluster().getFileSystem();
     rootDir = UTIL.getDefaultRootDirPath();
     snapshotDir = SnapshotDescriptionUtils.getSnapshotsDir(rootDir);
+    conf = UTIL.getConfiguration();
+  }
+
+  @BeforeClass
+  public static void startCluster() throws Exception {
+    initCommon();
+    workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(rootDir, conf);
+    workingFs = workingDir.getFileSystem(conf);
   }
 
   @AfterClass
@@ -85,18 +106,20 @@ public class TestSnapshotFileCache {
 
   @Test
   public void testLoadAndDelete() throws IOException {
-    SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, PERIOD, 10000000,
-        "test-snapshot-file-cache-refresh", new SnapshotFiles());
+    SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, workingFs, workingDir, PERIOD,
+      10000000, "test-snapshot-file-cache-refresh", new SnapshotFiles());
 
     createAndTestSnapshotV1(cache, "snapshot1a", false, true, false);
+    createAndTestSnapshotV1(cache, "snapshot1b", true, true, false);
 
     createAndTestSnapshotV2(cache, "snapshot2a", false, true, false);
+    createAndTestSnapshotV2(cache, "snapshot2b", true, true, false);
   }
 
   @Test
   public void testReloadModifiedDirectory() throws IOException {
-    SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, PERIOD, 10000000,
-        "test-snapshot-file-cache-refresh", new SnapshotFiles());
+    SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, workingFs, workingDir, PERIOD,
+      10000000, "test-snapshot-file-cache-refresh", new SnapshotFiles());
 
     createAndTestSnapshotV1(cache, "snapshot1", false, true, false);
     // now delete the snapshot and add a file with a different name
@@ -109,8 +132,8 @@ public class TestSnapshotFileCache {
 
   @Test
   public void testSnapshotTempDirReload() throws IOException {
-    SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, PERIOD, 10000000,
-      "test-snapshot-file-cache-refresh", new SnapshotFiles());
+    SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, workingFs, workingDir, PERIOD,
+      10000000, "test-snapshot-file-cache-refresh", new SnapshotFiles());
 
     // Add a new non-tmp snapshot
     createAndTestSnapshotV1(cache, "snapshot0v1", false, false, false);
@@ -119,8 +142,8 @@ public class TestSnapshotFileCache {
 
   @Test
   public void testCacheUpdatedWhenLastModifiedOfSnapDirNotUpdated() throws IOException {
-    SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, PERIOD, 10000000,
-        "test-snapshot-file-cache-refresh", new SnapshotFiles());
+    SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, workingFs, workingDir, PERIOD,
+      10000000, "test-snapshot-file-cache-refresh", new SnapshotFiles());
 
     // Add a new non-tmp snapshot
     createAndTestSnapshotV1(cache, "snapshot1v1", false, false, true);
@@ -133,11 +156,77 @@ public class TestSnapshotFileCache {
     createAndTestSnapshotV2(cache, "snapshot2v2", true, false, true);
   }
 
+  @Test
+  public void testWeNeverCacheTmpDirAndLoadIt() throws Exception {
+
+    final AtomicInteger count = new AtomicInteger(0);
+    // don't refresh the cache unless we tell it to
+    long period = Long.MAX_VALUE;
+    SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, workingFs, workingDir, period,
+      10000000, "test-snapshot-file-cache-refresh", new SnapshotFiles()) {
+      @Override
+      List<String> getSnapshotsInProgress()
+              throws IOException {
+        List<String> result = super.getSnapshotsInProgress();
+        count.incrementAndGet();
+        return result;
+      }
+
+      @Override public void triggerCacheRefreshForTesting() {
+        super.triggerCacheRefreshForTesting();
+      }
+    };
+
+    SnapshotMock.SnapshotBuilder complete =
+        createAndTestSnapshotV1(cache, "snapshot", false, false, false);
+
+    int countBeforeCheck = count.get();
+
+    CommonFSUtils.logFileSystemState(fs, rootDir, LOG);
+
+    List<FileStatus> allStoreFiles = getStoreFilesForSnapshot(complete);
+    Iterable<FileStatus> deletableFiles = cache.getUnreferencedFiles(allStoreFiles, null);
+    assertTrue(Iterables.isEmpty(deletableFiles));
+    // no need for tmp dir check as all files are accounted for.
+    assertEquals(0, count.get() - countBeforeCheck);
+
+    // add a random file to make sure we refresh
+    FileStatus randomFile = mockStoreFile(UTIL.getRandomUUID().toString());
+    allStoreFiles.add(randomFile);
+    deletableFiles = cache.getUnreferencedFiles(allStoreFiles, null);
+    assertEquals(randomFile, Iterables.getOnlyElement(deletableFiles));
+    assertEquals(1, count.get() - countBeforeCheck); // we check the tmp directory
+  }
+
+  private List<FileStatus> getStoreFilesForSnapshot(SnapshotMock.SnapshotBuilder builder)
+      throws IOException {
+    final List<FileStatus> allStoreFiles = Lists.newArrayList();
+    SnapshotReferenceUtil
+        .visitReferencedFiles(conf, fs, builder.getSnapshotsDir(),
+            new SnapshotReferenceUtil.SnapshotVisitor() {
+              @Override public void storeFile(RegionInfo regionInfo, String familyName,
+                  SnapshotProtos.SnapshotRegionManifest.StoreFile storeFile) throws IOException {
+                FileStatus status = mockStoreFile(storeFile.getName());
+                allStoreFiles.add(status);
+              }
+            });
+    return allStoreFiles;
+  }
+
+  private FileStatus mockStoreFile(String storeFileName) {
+    FileStatus status = mock(FileStatus.class);
+    Path path = mock(Path.class);
+    when(path.getName()).thenReturn(storeFileName);
+    when(status.getPath()).thenReturn(path);
+    return status;
+  }
+
   class SnapshotFiles implements SnapshotFileCache.SnapshotFileInspector {
     @Override
-    public Collection<String> filesUnderSnapshot(final Path snapshotDir) throws IOException {
+    public Collection<String> filesUnderSnapshot(final FileSystem workingFs,
+      final Path snapshotDir) throws IOException {
       Collection<String> files =  new HashSet<>();
-      files.addAll(SnapshotReferenceUtil.getHFileNames(UTIL.getConfiguration(), fs, snapshotDir));
+      files.addAll(SnapshotReferenceUtil.getHFileNames(conf, workingFs, snapshotDir));
       return files;
     }
   };
@@ -145,7 +234,7 @@ public class TestSnapshotFileCache {
   private SnapshotMock.SnapshotBuilder createAndTestSnapshotV1(final SnapshotFileCache cache,
       final String name, final boolean tmp, final boolean removeOnExit, boolean setFolderTime)
       throws IOException {
-    SnapshotMock snapshotMock = new SnapshotMock(UTIL.getConfiguration(), fs, rootDir);
+    SnapshotMock snapshotMock = new SnapshotMock(conf, fs, rootDir);
     SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV1(name, name);
     createAndTestSnapshot(cache, builder, tmp, removeOnExit, setFolderTime);
     return builder;
@@ -153,7 +242,7 @@ public class TestSnapshotFileCache {
 
   private void createAndTestSnapshotV2(final SnapshotFileCache cache, final String name,
       final boolean tmp, final boolean removeOnExit, boolean setFolderTime) throws IOException {
-    SnapshotMock snapshotMock = new SnapshotMock(UTIL.getConfiguration(), fs, rootDir);
+    SnapshotMock snapshotMock = new SnapshotMock(conf, fs, rootDir);
     SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV2(name, name);
     createAndTestSnapshot(cache, builder, tmp, removeOnExit, setFolderTime);
   }
@@ -164,12 +253,20 @@ public class TestSnapshotFileCache {
     List<Path> files = new ArrayList<>();
     for (int i = 0; i < 3; ++i) {
       for (Path filePath: builder.addRegion()) {
+        if (tmp) {
+          // We should be able to find all the files while the snapshot creation is in-progress
+          CommonFSUtils.logFileSystemState(fs, rootDir, LOG);
+          assertFalse("Cache didn't find " + filePath,
+            contains(getNonSnapshotFiles(cache, filePath), filePath));
+        }
         files.add(filePath);
       }
     }
 
     // Finalize the snapshot
-    builder.commit();
+    if (!tmp) {
+      builder.commit();
+    }
 
     if (setFolderTime) {
       fs.setTimes(snapshotDir, 0, -1);
@@ -183,7 +280,7 @@ public class TestSnapshotFileCache {
     CommonFSUtils.logFileSystemState(fs, rootDir, LOG);
     if (removeOnExit) {
       LOG.debug("Deleting snapshot.");
-      fs.delete(builder.getSnapshotsDir(), true);
+      builder.getSnapshotsDir().getFileSystem(conf).delete(builder.getSnapshotsDir(), true);
       CommonFSUtils.logFileSystemState(fs, rootDir, LOG);
 
       // then trigger a refresh
