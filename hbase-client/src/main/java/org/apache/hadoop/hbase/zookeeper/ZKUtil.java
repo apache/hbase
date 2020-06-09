@@ -1811,9 +1811,10 @@ public class ZKUtil {
    */
   public static void multiOrSequential(ZooKeeperWatcher zkw, List<ZKUtilOp> ops,
       boolean runSequentialOnMultiFailure) throws KeeperException {
-    if (ops == null) return;
+    if (ops == null || ops.isEmpty()) {
+      return;
+    }
     boolean useMulti = zkw.getConfiguration().getBoolean(HConstants.ZOOKEEPER_USEMULTI, false);
-
     if (useMulti) {
       List<Op> zkOps = new LinkedList<Op>();
       for (ZKUtilOp op : ops) {
@@ -1846,7 +1847,6 @@ public class ZKUtil {
       // run sequentially
       processSequentially(zkw, ops);
     }
-
   }
 
   private static void processSequentially(ZooKeeperWatcher zkw, List<ZKUtilOp> ops)

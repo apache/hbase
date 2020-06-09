@@ -66,8 +66,14 @@ public class ZooKeeperMainServer {
      * @throws IOException
      * @throws InterruptedException
      */
-    void runCmdLine() throws KeeperException, IOException, InterruptedException {
-      processCmd(this.cl);
+    void runCmdLine() throws IOException, InterruptedException {
+      try {
+        processCmd(this.cl);
+      } catch (IOException | InterruptedException e) {
+        throw e;
+      } catch (Exception e) {
+        throw new IOException(e);
+      }
       System.exit(0);
     }
   }

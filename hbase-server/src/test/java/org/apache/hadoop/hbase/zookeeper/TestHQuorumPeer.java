@@ -21,6 +21,10 @@ package org.apache.hadoop.hbase.zookeeper;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.Properties;
 
@@ -111,25 +115,39 @@ public class TestHQuorumPeer {
     QuorumPeerConfig config = new QuorumPeerConfig();
     config.parseProperties(properties);
 
-    assertEquals(this.dataDir.toString(), config.getDataDir());
+    assertEquals(this.dataDir.toString(), config.getDataDir().toString());
     assertEquals(2181, config.getClientPortAddress().getPort());
     Map<Long,QuorumServer> servers = config.getServers();
     assertEquals(3, servers.size());
     assertTrue(servers.containsKey(Long.valueOf(0)));
     QuorumServer server = servers.get(Long.valueOf(0));
-    assertEquals("localhost", server.addr.getHostName());
+    assertEquals("localhost", getHostName(server));
 
     // Override with system property.
     System.setProperty("hbase.master.hostname", "foo.bar");
     is = new ByteArrayInputStream(s.getBytes());
     properties = ZKConfig.parseZooCfg(conf, is);
     assertEquals("foo.bar:2888:3888", properties.get("server.0"));
-
     config.parseProperties(properties);
 
     servers = config.getServers();
     server = servers.get(Long.valueOf(0));
-    assertEquals("foo.bar", server.addr.getHostName());
+    assertEquals("foo.bar", getHostName(server));
+  }
+
+  private static String getHostName(QuorumServer server) throws Exception {
+    String hostname;
+    switch (server.addr.getClass().getName()) {
+      case "org.apache.zookeeper.server.quorum.MultipleAddresses":
+        Method m = server.addr.getClass().getDeclaredMethod("getOne");
+        hostname = ((InetSocketAddress)m.invoke(server.addr)).getHostName();
+        break;
+      default:
+        Field f = server.getClass().getField("addr");
+        hostname = ((InetSocketAddress)f.get(server)).getHostName();
+        break;
+    }
+    return hostname;
   }
 
   @Test public void testShouldAssignDefaultZookeeperClientPort() {

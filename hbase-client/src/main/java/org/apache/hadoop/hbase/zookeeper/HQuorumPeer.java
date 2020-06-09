@@ -85,14 +85,20 @@ public class HQuorumPeer {
   }
 
   private static void runZKServer(QuorumPeerConfig zkConfig) throws UnknownHostException, IOException {
-    if (zkConfig.isDistributed()) {
-      QuorumPeerMain qp = new QuorumPeerMain();
-      qp.runFromConfig(zkConfig);
-    } else {
-      ZooKeeperServerMain zk = new ZooKeeperServerMain();
-      ServerConfig serverConfig = new ServerConfig();
-      serverConfig.readFrom(zkConfig);
-      zk.runFromConfig(serverConfig);
+    try {
+      if (zkConfig.isDistributed()) {
+        QuorumPeerMain qp = new QuorumPeerMain();
+        qp.runFromConfig(zkConfig);
+      } else {
+        ZooKeeperServerMain zk = new ZooKeeperServerMain();
+        ServerConfig serverConfig = new ServerConfig();
+        serverConfig.readFrom(zkConfig);
+        zk.runFromConfig(serverConfig);
+      }
+    } catch (UnknownHostException e) {
+      throw e;
+    } catch (Exception e) {
+      throw new IOException(e);
     }
   }
 
