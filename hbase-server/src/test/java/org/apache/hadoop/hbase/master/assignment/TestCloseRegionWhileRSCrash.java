@@ -163,7 +163,7 @@ public class TestCloseRegionWhileRSCrash {
     UTIL.shutdownMiniCluster();
   }
 
-  @org.junit.Ignore @Test // Until root-cause of flakeyness, HBASE-24117, is addressed.
+  @Test
   public void testRetryBackoff() throws IOException, InterruptedException {
     HRegionServer srcRs = UTIL.getRSForFirstRegionInTable(TABLE_NAME);
     RegionInfo region = srcRs.getRegions(TABLE_NAME).get(0).getRegionInfo();
