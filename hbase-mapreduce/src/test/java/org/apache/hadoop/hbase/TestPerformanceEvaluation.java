@@ -257,9 +257,14 @@ public class TestPerformanceEvaluation {
     } catch (IllegalArgumentException  e) {
       System.out.println(e.getMessage());
     }
-    ((LinkedList<String>) opts).offerFirst(cmdName);
-    ((LinkedList<String>) opts).offerFirst("--multiPut=10");
-    ((LinkedList<String>) opts).offerFirst("--autoFlush=true");
+
+    //Re-create options
+    opts = new LinkedList<>();
+    opts.offer("--autoFlush=true");
+    opts.offer("--multiPut=10");
+    opts.offer(cmdName);
+    opts.offer("64");
+
     options = PerformanceEvaluation.parseOpts(opts);
     assertNotNull(options);
     assertNotNull(options.getCmdName());
@@ -284,6 +289,7 @@ public class TestPerformanceEvaluation {
     assertEquals(10, options.getMultiPut());
 
     // Change the order of AutoFlush and Multiput
+    opts = new LinkedList<>();
     opts.offer(cmdMultiPut);
     opts.offer(cmdAutoFlush);
     opts.offer(cmdName);
@@ -312,8 +318,11 @@ public class TestPerformanceEvaluation {
       System.out.println(e.getMessage());
     }
 
-    ((LinkedList<String>) opts).offerFirst(cmdName);
-    ((LinkedList<String>) opts).offerFirst("--connCount=10");
+    opts = new LinkedList<>();
+    opts.offer("--connCount=10");
+    opts.offer(cmdName);
+    opts.offer("64");
+
     options = PerformanceEvaluation.parseOpts(opts);
     assertNotNull(options);
     assertNotNull(options.getCmdName());
@@ -336,8 +345,12 @@ public class TestPerformanceEvaluation {
     } catch (IllegalStateException  e) {
       System.out.println(e.getMessage());
     }
-    ((LinkedList<String>) opts).offerFirst(cmdName);
-    ((LinkedList<String>) opts).offerFirst("--valueRandom");
+
+    opts = new LinkedList<>();
+    opts.offer("--valueRandom");
+    opts.offer(cmdName);
+    opts.offer("64");
+
     options = PerformanceEvaluation.parseOpts(opts);
 
     assertNotNull(options);
