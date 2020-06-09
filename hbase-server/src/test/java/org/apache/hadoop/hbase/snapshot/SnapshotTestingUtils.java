@@ -510,7 +510,8 @@ public final class SnapshotTestingUtils {
         this.tableRegions = tableRegions;
         this.snapshotDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir, conf);
         new FSTableDescriptors(conf)
-          .createTableDescriptorForTableDirectory(snapshotDir, htd, false);
+          .createTableDescriptorForTableDirectory(this.snapshotDir.getFileSystem(conf),
+            snapshotDir, htd, false);
       }
 
       public TableDescriptor getTableDescriptor() {
@@ -633,7 +634,9 @@ public final class SnapshotTestingUtils {
         SnapshotManifest manifest = SnapshotManifest.create(conf, fs, snapshotDir, desc, monitor);
         manifest.addTableDescriptor(htd);
         manifest.consolidate();
-        SnapshotDescriptionUtils.completeSnapshot(desc, rootDir, snapshotDir, fs);
+        Path finishedDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(desc, rootDir);
+        SnapshotDescriptionUtils.completeSnapshot(finishedDir, snapshotDir, fs,
+          snapshotDir.getFileSystem(conf), conf);
         snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(desc, rootDir);
         return snapshotDir;
       }
@@ -695,7 +698,8 @@ public final class SnapshotTestingUtils {
         .build();
 
       Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir, conf);
-      SnapshotDescriptionUtils.writeSnapshotInfo(desc, workingDir, fs);
+      FileSystem workingFs = workingDir.getFileSystem(conf);
+      SnapshotDescriptionUtils.writeSnapshotInfo(desc, workingDir, workingFs);
       return new SnapshotBuilder(conf, fs, rootDir, htd, desc, regions);
     }
 
