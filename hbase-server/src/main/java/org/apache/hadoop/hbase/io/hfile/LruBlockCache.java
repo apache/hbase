@@ -1054,7 +1054,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
           // Here we have to calc what situation we have got.
           // We have the limit "hbase.lru.cache.heavy.eviction.bytes.size.limit"
           // and can calculte overhead on it.
-          // We will use this information to decide, 
+          // We will use this information to decide,
           // how to change percent of caching blocks.
           freedDataOverheadPercent =
             (int) (freedSumMb * 100 / cache.heavyEvictionMbSizeLimit) - 100;
@@ -1065,7 +1065,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
             if (heavyEvictionCount > cache.heavyEvictionCountLimit) {
               // It is going for a long time and we have to reduce of caching
               // blocks now. So we calculate here how many blocks we want to skip.
-              // It depends on: 
+              // It depends on:
               // 1. Overhead - if overhead is big we could more aggressive
               // reducing amount of caching blocks.
               // 2. How fast we want to get the result. If we know that our
@@ -1076,7 +1076,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
               // higher we can get better performance when heavy reading is stable.
               // But when reading is changing we can adjust to it and set
               // the coefficient to lower value.
-              int change = 
+              int change =
                 (int) (freedDataOverheadPercent * cache.heavyEvictionOverheadCoefficient);
               // But practice shows that 15% of reducing is quite enough.
               // We are not greedy (it could lead to premature exit).
