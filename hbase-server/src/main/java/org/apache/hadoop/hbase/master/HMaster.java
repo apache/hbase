@@ -1464,6 +1464,11 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     LOG.debug("Stopping service threads");
 
+    // stop procedure executor prior to other services such as server manager and assignment
+    // manager, as these services are important for some running procedures. See HBASE-24117 for
+    // example.
+    stopProcedureExecutor();
+
     if (this.quotaManager != null) {
       this.quotaManager.stop();
     }
@@ -1477,8 +1482,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (this.assignmentManager != null) {
       this.assignmentManager.stop();
     }
-
-    stopProcedureExecutor();
 
     if (this.walManager != null) {
       this.walManager.stop();

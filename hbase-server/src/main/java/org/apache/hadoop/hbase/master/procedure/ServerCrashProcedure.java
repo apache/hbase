@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -473,6 +474,12 @@ public class ServerCrashProcedure
         // updated the region location, or even finished itself, so the region is no longer on us
         // any more, we should not try to assign it again. Please see HBASE-23594 for more details.
         if (!serverName.equals(regionNode.getRegionLocation())) {
+          // See HBASE-24117, though we have already changed the shutdown order, it is still worth
+          // double checking here to confirm that we do not skip assignment incorrectly.
+          if (!am.isRunning()) {
+            throw new DoNotRetryIOException(
+              "AssignmentManager has been stopped, can not process assignment any more");
+          }
           LOG.info("{} found a region {} which is no longer on us {}, give up assigning...", this,
             regionNode, serverName);
           continue;
