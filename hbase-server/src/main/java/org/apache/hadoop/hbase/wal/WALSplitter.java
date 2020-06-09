@@ -292,8 +292,7 @@ public class WALSplitter {
             // region. Setting lastFlushedSequenceId as Long.MAX_VALUE so that all edits
             // will get skipped by the seqId check below.
             // See more details at https://issues.apache.org/jira/browse/HBASE-24189
-            LOG.debug(
-                "Region {} seems not available in the FS. Just skipping all edits for this region",
+            LOG.info("{} no longer available in the FS. Skipping all edits for this region.",
                 encodedRegionNameAsStr);
             lastFlushedSequenceId = Long.MAX_VALUE;
           } else {
