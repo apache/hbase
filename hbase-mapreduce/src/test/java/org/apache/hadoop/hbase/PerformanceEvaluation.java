@@ -2606,29 +2606,18 @@ public class PerformanceEvaluation extends Configured implements Tool {
       final String autoFlush = "--autoFlush=";
       if (cmd.startsWith(autoFlush)) {
         opts.autoFlush = Boolean.parseBoolean(cmd.substring(autoFlush.length()));
-        if (!opts.autoFlush && opts.multiPut > 0) {
-          throw new IllegalArgumentException("autoFlush must be true when multiPut is more than 0");
-        }
         continue;
       }
 
       final String onceCon = "--oneCon=";
       if (cmd.startsWith(onceCon)) {
         opts.oneCon = Boolean.parseBoolean(cmd.substring(onceCon.length()));
-        if (opts.oneCon && opts.connCount > 1) {
-          throw new IllegalArgumentException("oneCon is set to true, "
-              + "connCount should not bigger than 1");
-        }
         continue;
       }
 
       final String connCount = "--connCount=";
       if (cmd.startsWith(connCount)) {
         opts.connCount = Integer.parseInt(cmd.substring(connCount.length()));
-        if (opts.oneCon && opts.connCount > 1) {
-          throw new IllegalArgumentException("oneCon is set to true, "
-              + "connCount should not bigger than 1");
-        }
         continue;
       }
 
@@ -2647,9 +2636,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
       final String multiPut = "--multiPut=";
       if (cmd.startsWith(multiPut)) {
         opts.multiPut = Integer.parseInt(cmd.substring(multiPut.length()));
-        if (!opts.autoFlush && opts.multiPut > 0) {
-          throw new IllegalArgumentException("autoFlush must be true when multiPut is more than 0");
-        }
         continue;
       }
 
@@ -2723,18 +2709,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
       final String valueRandom = "--valueRandom";
       if (cmd.startsWith(valueRandom)) {
         opts.valueRandom = true;
-        if (opts.valueZipf) {
-          throw new IllegalStateException("Either valueZipf or valueRandom but not both");
-        }
         continue;
       }
 
       final String valueZipf = "--valueZipf";
       if (cmd.startsWith(valueZipf)) {
         opts.valueZipf = true;
-        if (opts.valueRandom) {
-          throw new IllegalStateException("Either valueZipf or valueRandom but not both");
-        }
         continue;
       }
 
@@ -2800,6 +2780,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
         continue;
       }
 
+      validateParsedOpts(opts);
+
       if (isCommandClass(cmd)) {
         opts.cmdName = cmd;
         try {
@@ -2819,6 +2801,25 @@ public class PerformanceEvaluation extends Configured implements Tool {
       break;
     }
     return opts;
+  }
+
+  /**
+  * Validates opts after all the opts are parsed, so that caller need not to maintain order of opts
+  */
+  private static void validateParsedOpts(TestOptions opts)  {
+
+    if (!opts.autoFlush && opts.multiPut > 0) {
+      throw new IllegalArgumentException("autoFlush must be true when multiPut is more than 0");
+    }
+
+    if (opts.oneCon && opts.connCount > 1) {
+      throw new IllegalArgumentException("oneCon is set to true, "
+          + "connCount should not bigger than 1");
+    }
+
+    if (opts.valueZipf && opts.valueRandom) {
+      throw new IllegalStateException("Either valueZipf or valueRandom but not both");
+    }
   }
 
   static TestOptions calculateRowsAndSize(final TestOptions opts) {
