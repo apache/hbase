@@ -461,7 +461,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
     // (see details: https://issues.apache.org/jira/browse/HBASE-23887)
     // How to calculate it can find inside EvictionThread class.
     if (cacheDataBlockPercent != 100 && buf.getBlockType().isData()) {
-      // It works like filter - blocks which two last digits of offset 
+      // It works like filter - blocks which two last digits of offset
       // more than we calculate in Eviction Thread will not put into BlockCache
       if (cacheKey.getOffset() % 100 >= cacheDataBlockPercent) {
         return;
@@ -1031,7 +1031,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
         LruBlockCache cache = this.cache.get();
         if (cache == null) break;
         freedSumMb += cache.evict()/1024/1024;
-        /* 
+        /*
         * Sometimes we are reading more data than can fit into BlockCache
         * and it is the cause a high rate of evictions.
         * This in turn leads to heavy Garbage Collector works.
@@ -1043,8 +1043,8 @@ public class LruBlockCache implements FirstLevelBlockCache {
         * when evict() works very active and save CPU for other jobs.
         * More delails: https://issues.apache.org/jira/browse/HBASE-23887
         */
-        
-        // First of all we have to control how much time 
+
+        // First of all we have to control how much time
         // has passed since previuos evict() was launched
         // This is should be almost the same time (+/- 10s)
         // because we get comparable volumes of freed bytes each time.
@@ -1068,13 +1068,13 @@ public class LruBlockCache implements FirstLevelBlockCache {
               // It depends on: 
               // 1. Overhead - if overhead is big we could more aggressive
               // reducing amount of caching blocks.
-              // 2. How fast we want to get the result. If we know that our 
-              // heavy reading for a long time, we don't want to wait and can 
+              // 2. How fast we want to get the result. If we know that our
+              // heavy reading for a long time, we don't want to wait and can
               // increase the coefficient and get good performance quite soon.
-              // But if we don't sure we can do it slowly and it could prevent 
-              // premature exit from this mode. So, when the coefficient is 
+              // But if we don't sure we can do it slowly and it could prevent
+              // premature exit from this mode. So, when the coefficient is
               // higher we can get better performance when heavy reading is stable.
-              // But when reading is changing we can adjust to it and set 
+              // But when reading is changing we can adjust to it and set
               // the coefficient to lower value.
               int change = 
                 (int) (freedDataOverheadPercent * cache.heavyEvictionOverheadCoefficient);
@@ -1088,10 +1088,10 @@ public class LruBlockCache implements FirstLevelBlockCache {
               cache.cacheDataBlockPercent = Math.max(1, cache.cacheDataBlockPercent);
             }
           } else {
-            // Well, we have got overshooting. 
+            // Well, we have got overshooting.
             // Mayby it is just short-term fluctuation and we can stay in this mode.
             // It help avoid permature exit during short-term fluctuation.
-            // If overshooting less than 90%, we will try to increase the percent of 
+            // If overshooting less than 90%, we will try to increase the percent of
             // caching blocks and hope it is enough.
             if (freedSumMb >= cache.heavyEvictionMbSizeLimit * 0.1) {
               // Simple logic: more overshooting - more caching blocks (backpressure)
@@ -1100,7 +1100,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
               // But it can't be more then 100%, so check it.
               cache.cacheDataBlockPercent = Math.min(100, cache.cacheDataBlockPercent);
             } else {
-              // Looks like heavy reading is over. 
+              // Looks like heavy reading is over.
               // Just exit form this mode.
               heavyEvictionCount = 0;
               cache.cacheDataBlockPercent = 100;
