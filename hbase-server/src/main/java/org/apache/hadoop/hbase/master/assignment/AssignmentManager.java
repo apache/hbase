@@ -230,17 +230,15 @@ public class AssignmentManager {
       RegionState regionState = MetaTableLocator.getMetaRegionState(zkw);
       RegionStateNode regionNode =
         regionStates.getOrCreateRegionStateNode(RegionInfoBuilder.FIRST_META_REGIONINFO);
-      regionNode.lock();
-      try {
-        regionNode.setRegionLocation(regionState.getServerName());
-        regionNode.setState(regionState.getState());
-        if (regionNode.getProcedure() != null) {
-          regionNode.getProcedure().stateLoaded(this, regionNode);
-        }
-        setMetaAssigned(regionState.getRegion(), regionState.getState() == State.OPEN);
-      } finally {
-        regionNode.unlock();
+      regionNode.setRegionLocation(regionState.getServerName());
+      regionNode.setState(regionState.getState());
+      if (regionNode.getProcedure() != null) {
+        regionNode.getProcedure().stateLoaded(this, regionNode);
       }
+      if (regionState.getServerName() != null) {
+        regionStates.addRegionToServer(regionNode);
+      }
+      setMetaAssigned(regionState.getRegion(), regionState.getState() == State.OPEN);
     }
   }
 
