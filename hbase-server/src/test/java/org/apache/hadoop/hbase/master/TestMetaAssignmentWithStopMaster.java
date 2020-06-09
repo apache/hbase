@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -50,10 +51,15 @@ public class TestMetaAssignmentWithStopMaster {
   private static final long WAIT_TIMEOUT = 120000;
 
   @BeforeClass
-  public static void setUp() throws Exception {
+  public static void setUpBeforeClass() throws Exception {
     StartMiniClusterOption option = StartMiniClusterOption.builder()
         .numMasters(2).numRegionServers(3).numDataNodes(3).build();
     UTIL.startMiniCluster(option);
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    UTIL.shutdownMiniCluster();
   }
 
   @Test
