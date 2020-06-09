@@ -44,7 +44,7 @@ public interface FlushRequester {
    * @param region the Region requesting the cache flush
    * @param forceFlushAllStores whether we want to flush all stores. e.g., when request from log
    *          rolling.
-   * @param families stores of region to flush.
+   * @param families stores of region to flush, take effect only if forceFlushAllStores is false
    * @return true if our region is added into the queue, false otherwise
    */
   boolean requestFlush(HRegion region, boolean forceFlushAllStores, List<byte[]> families,

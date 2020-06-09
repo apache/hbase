@@ -48,17 +48,4 @@ public abstract class FlushPolicy extends Configured {
    * @return the stores need to be flushed.
    */
   public abstract Collection<HStore> selectStoresToFlush();
-
-  /**
-   * select stores which matches the specified families
-   *
-   * @return the stores need to be flushed.
-   */
-  public Collection<HStore> selectStoresToFlush(Map<byte[], HStore> stores, List<byte[]> families) {
-    Collection<HStore> specificStoresToFlush = new ArrayList<>();
-    for (byte[] family : families) {
-      specificStoresToFlush.add(stores.get(family));
-    }
-    return specificStoresToFlush;
-  }
 }

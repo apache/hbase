@@ -2465,7 +2465,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       try {
         Collection<HStore> specificStoresToFlush = null;
         if (!forceFlushAllStores && families != null) {
-          specificStoresToFlush = flushPolicy.selectStoresToFlush(stores, families);
+          specificStoresToFlush = getSpecificStores(families);
         } else {
           specificStoresToFlush =
             forceFlushAllStores ? stores.values() : flushPolicy.selectStoresToFlush();
@@ -2497,6 +2497,19 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         status.prettyPrintJournal());
       status.cleanup();
     }
+  }
+
+  /**
+   * get stores which matches the specified families
+   *
+   * @return the stores need to be flushed.
+   */
+  private Collection<HStore> getSpecificStores(List<byte[]> families) {
+    Collection<HStore> specificStoresToFlush = new ArrayList<>();
+    for (byte[] family : families) {
+      specificStoresToFlush.add(stores.get(family));
+    }
+    return specificStoresToFlush;
   }
 
   /**
