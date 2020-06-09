@@ -72,6 +72,12 @@ public class ZooKeeperMainServer {
       } catch (IOException | InterruptedException e) {
         throw e;
       } catch (Exception e) {
+        // The current signature proposes we throw IOException or
+        // InterruptedException. ZK 3.6 throws another type of checked
+        // exception, which causes a compilation error. Therefore we catch
+        // that and potentially others, and wrap it into an IOE. Adding a
+        // new checked exception to the signature would cause a compilation 
+        // problem with 3.4.
         throw new IOException(e);
       }
       System.exit(0);

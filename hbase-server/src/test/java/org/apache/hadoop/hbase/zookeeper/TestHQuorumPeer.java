@@ -135,14 +135,20 @@ public class TestHQuorumPeer {
     assertEquals("foo.bar", getHostName(server));
   }
 
+  // The reflection in this method is needed to smooth over internal differences
+  // between ZK 3.4 and 3.6. The type of 'addr' in 3.4 is InetSocketAddress. In
+  // 3.6 it becomes org.apache.zookeeper.server.quorum.MultipleAddresses, a set
+  // of InetSocketAddress.
   private static String getHostName(QuorumServer server) throws Exception {
     String hostname;
     switch (server.addr.getClass().getName()) {
       case "org.apache.zookeeper.server.quorum.MultipleAddresses":
+        // ZK 3.6 and up
         Method m = server.addr.getClass().getDeclaredMethod("getOne");
         hostname = ((InetSocketAddress)m.invoke(server.addr)).getHostName();
         break;
       default:
+        // ZK <= 3.5
         Field f = server.getClass().getField("addr");
         hostname = ((InetSocketAddress)f.get(server)).getHostName();
         break;
