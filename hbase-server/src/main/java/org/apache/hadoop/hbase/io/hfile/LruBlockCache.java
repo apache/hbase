@@ -1076,7 +1076,8 @@ public class LruBlockCache implements FirstLevelBlockCache {
               // higher we can get better performance when heavy reading is stable.
               // But when reading is changing we can adjust to it and set 
               // the coefficient to lower value.
-              int change = (int) (freedDataOverheadPercent * cache.heavyEvictionOverheadCoefficient);
+              int change = 
+                (int) (freedDataOverheadPercent * cache.heavyEvictionOverheadCoefficient);
               // But practice shows that 15% of reducing is quite enough.
               // We are not greedy (it could lead to premature exit).
               change = Math.min(15, change);
@@ -1097,8 +1098,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
               int change = (int) (-freedDataOverheadPercent * 0.1 + 1);
               cache.cacheDataBlockPercent += change;
               // But it can't be more then 100%, so check it.
-              cache.cacheDataBlockPercent =
-                cache.cacheDataBlockPercent = Math.min(100, cache.cacheDataBlockPercent);
+              cache.cacheDataBlockPercent = Math.min(100, cache.cacheDataBlockPercent);
             } else {
               // Looks like heavy reading is over. 
               // Just exit form this mode.
