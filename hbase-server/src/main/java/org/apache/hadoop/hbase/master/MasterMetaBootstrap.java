@@ -30,7 +30,9 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
+import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -81,22 +83,27 @@ class MasterMetaBootstrap {
         }
         for (int i = 1; i < numReplicas; i++) {
           RegionInfo secondaryRegionInfo = RegionReplicaUtil.getRegionInfoForReplica(regionInfo, i);
-          RegionState secondaryRegionState = regionStates.getRegionState(secondaryRegionInfo);
-          ServerName sn = null;
-          if (secondaryRegionState != null) {
-            sn = secondaryRegionState.getServerName();
-            if (sn != null && !metaServerNames.add(sn)) {
-              LOG.info("{} old location {} is same with other hbase:meta replica location;" +
-                " setting location as null...", secondaryRegionInfo.getRegionNameAsString(), sn);
-              sn = null;
-            }
-          }
+          RegionStateNode secondaryRegionState =
+            regionStates.getOrCreateRegionStateNode(secondaryRegionInfo);
           // These assigns run inline. All is blocked till they complete. Only interrupt is shutting
           // down hosting server which calls AM#stop.
-          if (sn != null) {
-            am.assignAsync(secondaryRegionInfo, sn);
-          } else {
+          if (secondaryRegionState.getState() == State.OFFLINE) {
+            LOG.info("Assign new meta region replica {}", secondaryRegionInfo);
             am.assignAsync(secondaryRegionInfo);
+          } else if (secondaryRegionState.getProcedure() == null) {
+            ServerName sn = secondaryRegionState.getRegionLocation();
+            if (sn != null) {
+              if (!metaServerNames.add(sn)) {
+                LOG.info(
+                  "{} old location {} is same with other hbase:meta replica location;" +
+                    " setting location as null...",
+                  secondaryRegionInfo.getRegionNameAsString(),
+                  secondaryRegionState.getRegionLocation());
+                am.moveAsync(new RegionPlan(secondaryRegionInfo, sn, null));
+              } else {
+                regionStates.addRegionToServer(secondaryRegionState);
+              }
+            }
           }
         }
       }
@@ -119,8 +126,10 @@ class MasterMetaBootstrap {
       }
       RegionState regionState = regionStates.getRegionState(regionInfo);
       try {
-        ServerManager.closeRegionSilentlyAndWait(master.getAsyncClusterConnection(),
-          regionState.getServerName(), regionInfo, 30000);
+        if (regionState.getServerName() != null) {
+          ServerManager.closeRegionSilentlyAndWait(master.getAsyncClusterConnection(),
+            regionState.getServerName(), regionInfo, 30000);
+        }
         if (regionInfo.isFirst()) {
           // for compatibility, also try to remove the replicas on zk.
           ZKUtil.deleteNode(zooKeeper,

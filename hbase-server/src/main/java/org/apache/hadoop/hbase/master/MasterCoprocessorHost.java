@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
@@ -33,6 +34,7 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionLocateType;
 import org.apache.hadoop.hbase.client.SharedConnection;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -2036,6 +2038,44 @@ public class MasterCoprocessorHost
       @Override
       public void call(MasterObserver observer) throws IOException {
         observer.postHasUserPermissions(this, userName, permissions);
+      }
+    });
+  }
+
+  public void preLocateMetaRegion(byte[] row, RegionLocateType locateType) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preLocateMetaRegion(this, row, locateType);
+      }
+    });
+  }
+
+  public void postLocateMetaRegion(byte[] row, RegionLocateType locateType,
+    List<HRegionLocation> locs) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postLocateMetaRegion(this, row, locateType, locs);
+      }
+    });
+  }
+
+  public void preGetAllMetaRegionLocations(boolean excludeOfflinedSplitParents) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preGetAllMetaRegionLocations(this, excludeOfflinedSplitParents);
+      }
+    });
+  }
+
+  public void postGetAllMetaRegionLocations(boolean excludeOfflinedSplitParents,
+    List<HRegionLocation> locs) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postGetAllMetaRegionLocations(this, excludeOfflinedSplitParents, locs);
       }
     });
   }

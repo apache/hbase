@@ -107,8 +107,8 @@ public interface AsyncTableRegionLocator {
   /**
    * Retrieves all of the regions associated with this table.
    * <p/>
-   * Usually we will go to meta table directly in this method so there is no {@code reload}
-   * parameter.
+   * We will go to meta table directly in this method so there is no {@code reload} parameter. So
+   * please use with caution as this could generate great load to a cluster.
    * <p/>
    * Notice that the location for region replicas other than the default replica are also returned.
    * @return a {@link List} of all regions associated with this table.

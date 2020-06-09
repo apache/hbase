@@ -81,6 +81,7 @@ import org.apache.hadoop.hbase.client.PackagePrivateFieldAccessor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionLoadStats;
+import org.apache.hadoop.hbase.client.RegionLocateType;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.client.Result;
@@ -3542,5 +3543,31 @@ public final class ProtobufUtil {
         .collect(Collectors.toList());
     return RSGroupProtos.RSGroupInfo.newBuilder().setName(pojo.getName()).addAllServers(hostports)
         .addAllTables(tables).addAllConfiguration(configuration).build();
+  }
+
+  public static MasterProtos.RegionLocateType toProtoRegionLocateType(RegionLocateType pojo) {
+    switch (pojo) {
+      case BEFORE:
+        return MasterProtos.RegionLocateType.REGION_LOCATE_TYPE_BEFORE;
+      case CURRENT:
+        return MasterProtos.RegionLocateType.REGION_LOCATE_TYPE_CURRENT;
+      case AFTER:
+        return MasterProtos.RegionLocateType.REGION_LOCATE_TYPE_AFTER;
+      default:
+        throw new IllegalArgumentException("Unknown RegionLocateType: " + pojo);
+    }
+  }
+
+  public static RegionLocateType toRegionLocateType(MasterProtos.RegionLocateType proto) {
+    switch (proto) {
+      case REGION_LOCATE_TYPE_BEFORE:
+        return RegionLocateType.BEFORE;
+      case REGION_LOCATE_TYPE_CURRENT:
+        return RegionLocateType.CURRENT;
+      case REGION_LOCATE_TYPE_AFTER:
+        return RegionLocateType.AFTER;
+      default:
+        throw new IllegalArgumentException("Unknown proto RegionLocateType: " + proto);
+    }
   }
 }

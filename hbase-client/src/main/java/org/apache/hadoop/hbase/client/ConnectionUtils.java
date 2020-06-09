@@ -186,24 +186,6 @@ public final class ConnectionUtils {
     return Arrays.copyOf(row, row.length + 1);
   }
 
-  /**
-   * Create a row before the specified row and very close to the specified row.
-   */
-  static byte[] createCloseRowBefore(byte[] row) {
-    if (row.length == 0) {
-      return MAX_BYTE_ARRAY;
-    }
-    if (row[row.length - 1] == 0) {
-      return Arrays.copyOf(row, row.length - 1);
-    } else {
-      byte[] nextRow = new byte[row.length + MAX_BYTE_ARRAY.length];
-      System.arraycopy(row, 0, nextRow, 0, row.length - 1);
-      nextRow[row.length - 1] = (byte) ((row[row.length - 1] & 0xFF) - 1);
-      System.arraycopy(MAX_BYTE_ARRAY, 0, nextRow, row.length, MAX_BYTE_ARRAY.length);
-      return nextRow;
-    }
-  }
-
   static boolean isEmptyStartRow(byte[] row) {
     return Bytes.equals(row, EMPTY_START_ROW);
   }

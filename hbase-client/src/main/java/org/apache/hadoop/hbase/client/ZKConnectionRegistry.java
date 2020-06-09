@@ -24,6 +24,7 @@ import static org.apache.hadoop.hbase.client.RegionReplicaUtil.getRegionInfoForR
 import static org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.lengthOfPBMagic;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 import static org.apache.hadoop.hbase.zookeeper.ZKMetadata.removeMetaData;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -42,7 +43,9 @@ import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 
@@ -112,7 +115,7 @@ class ZKConnectionRegistry implements ConnectionRegistry {
   }
 
   private static void tryComplete(MutableInt remaining, HRegionLocation[] locs,
-      CompletableFuture<RegionLocations> future) {
+    CompletableFuture<RegionLocations> future) {
     remaining.decrement();
     if (remaining.intValue() > 0) {
       return;
@@ -120,8 +123,8 @@ class ZKConnectionRegistry implements ConnectionRegistry {
     future.complete(new RegionLocations(locs));
   }
 
-  private Pair<RegionState.State, ServerName> getStateAndServerName(
-      ZooKeeperProtos.MetaRegionServer proto) {
+  private Pair<RegionState.State, ServerName>
+    getStateAndServerName(ZooKeeperProtos.MetaRegionServer proto) {
     RegionState.State state;
     if (proto.hasState()) {
       state = RegionState.State.convert(proto.getState());
@@ -134,7 +137,7 @@ class ZKConnectionRegistry implements ConnectionRegistry {
   }
 
   private void getMetaRegionLocation(CompletableFuture<RegionLocations> future,
-      List<String> metaReplicaZNodes) {
+    List<String> metaReplicaZNodes) {
     if (metaReplicaZNodes.isEmpty()) {
       future.completeExceptionally(new IOException("No meta znode available"));
     }
@@ -190,13 +193,12 @@ class ZKConnectionRegistry implements ConnectionRegistry {
     }
   }
 
-  @Override
+  // keep the method here just for testing compatibility
   public CompletableFuture<RegionLocations> getMetaRegionLocations() {
     CompletableFuture<RegionLocations> future = new CompletableFuture<>();
     addListener(
-      zk.list(znodePaths.baseZNode)
-        .thenApply(children -> children.stream()
-          .filter(c -> this.znodePaths.isMetaZNodePrefix(c)).collect(Collectors.toList())),
+      zk.list(znodePaths.baseZNode).thenApply(children -> children.stream()
+        .filter(c -> this.znodePaths.isMetaZNodePrefix(c)).collect(Collectors.toList())),
       (metaReplicaZNodes, error) -> {
         if (error != null) {
           future.completeExceptionally(error);
@@ -219,14 +221,13 @@ class ZKConnectionRegistry implements ConnectionRegistry {
   @Override
   public CompletableFuture<ServerName> getActiveMaster() {
     return getAndConvert(znodePaths.masterAddressZNode, ZKConnectionRegistry::getMasterProto)
-        .thenApply(proto -> {
-          if (proto == null) {
-            return null;
-          }
-          HBaseProtos.ServerName snProto = proto.getMaster();
-          return ServerName.valueOf(snProto.getHostName(), snProto.getPort(),
-            snProto.getStartCode());
-        });
+      .thenApply(proto -> {
+        if (proto == null) {
+          return null;
+        }
+        HBaseProtos.ServerName snProto = proto.getMaster();
+        return ServerName.valueOf(snProto.getHostName(), snProto.getPort(), snProto.getStartCode());
+      });
   }
 
   @Override

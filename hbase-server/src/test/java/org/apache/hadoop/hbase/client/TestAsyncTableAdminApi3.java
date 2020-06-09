@@ -47,15 +47,15 @@ import org.junit.runners.Parameterized;
 
 /**
  * Class to test asynchronous table admin operations.
- * @see TestAsyncTableAdminApi2 This test and it used to be joined it was taking longer than our
- * ten minute timeout so they were split.
+ * @see TestAsyncTableAdminApi2 This test and it used to be joined it was taking longer than our ten
+ *      minute timeout so they were split.
  */
 @RunWith(Parameterized.class)
 @Category({ LargeTests.class, ClientTests.class })
 public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAsyncTableAdminApi3.class);
+    HBaseClassTestRule.forClass(TestAsyncTableAdminApi3.class);
 
   @Test
   public void testTableExist() throws Exception {
@@ -123,7 +123,7 @@ public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
     assertEquals(tables.length + 1, size);
     for (int i = 0, j = 0; i < tables.length && j < size; i++, j++) {
       assertTrue("tableName should be equal in order",
-          tableDescs.get(j).getTableName().equals(tables[i]));
+        tableDescs.get(j).getTableName().equals(tables[i]));
     }
     assertTrue(tableDescs.get(size - 1).getTableName().equals(TableName.META_TABLE_NAME));
 
@@ -168,7 +168,7 @@ public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
 
     this.admin.disableTable(tableName).join();
     assertTrue("Table must be disabled.", TEST_UTIL.getHBaseCluster().getMaster()
-        .getTableStateManager().isTableState(tableName, TableState.State.DISABLED));
+      .getTableStateManager().isTableState(tableName, TableState.State.DISABLED));
     assertEquals(TableState.State.DISABLED, TestAsyncTableAdminApi.getStateFromMeta(tableName));
 
     // Test that table is disabled
@@ -190,7 +190,7 @@ public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
     assertTrue(ok);
     this.admin.enableTable(tableName).join();
     assertTrue("Table must be enabled.", TEST_UTIL.getHBaseCluster().getMaster()
-        .getTableStateManager().isTableState(tableName, TableState.State.ENABLED));
+      .getTableStateManager().isTableState(tableName, TableState.State.ENABLED));
     assertEquals(TableState.State.ENABLED, TestAsyncTableAdminApi.getStateFromMeta(tableName));
 
     // Test that table is enabled
@@ -232,7 +232,7 @@ public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
     table2.get(get).get();
 
     admin.listTableNames(Pattern.compile(tableName.getNameAsString() + ".*"), false).get()
-        .forEach(t -> admin.disableTable(t).join());
+      .forEach(t -> admin.disableTable(t).join());
 
     // Test that tables are disabled
     get = new Get(row);
@@ -256,7 +256,7 @@ public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
     assertEquals(TableState.State.DISABLED, TestAsyncTableAdminApi.getStateFromMeta(tableName2));
 
     admin.listTableNames(Pattern.compile(tableName.getNameAsString() + ".*"), false).get()
-        .forEach(t -> admin.enableTable(t).join());
+      .forEach(t -> admin.enableTable(t).join());
 
     // Test that tables are enabled
     try {
@@ -283,8 +283,8 @@ public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
     createTableWithDefaultConf(tableName, splitKeys);
 
     AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(META_TABLE_NAME);
-    List<HRegionLocation> regions = ClientMetaTableAccessor
-      .getTableHRegionLocations(metaTable, tableName).get();
+    List<HRegionLocation> regions =
+      ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName, true).get();
     assertEquals(
       "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size(),
       expectedRegions, regions.size());
@@ -294,8 +294,8 @@ public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
     // Enable table, use retain assignment to assign regions.
     admin.enableTable(tableName).join();
 
-    List<HRegionLocation> regions2 = ClientMetaTableAccessor
-      .getTableHRegionLocations(metaTable, tableName).get();
+    List<HRegionLocation> regions2 =
+      ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName, true).get();
     // Check the assignment.
     assertEquals(regions.size(), regions2.size());
     assertTrue(regions2.containsAll(regions));

@@ -17,10 +17,19 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
+import static org.apache.hadoop.hbase.HConstants.DEFAULT_USE_META_REPLICAS;
+import static org.apache.hadoop.hbase.HConstants.USE_META_REPLICAS;
+import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.createRegionLocations;
+import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -31,8 +40,6 @@ import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
@@ -44,25 +51,51 @@ import org.apache.hbase.thirdparty.io.netty.util.Timeout;
 @InterfaceAudience.Private
 class AsyncRegionLocator {
 
-  private static final Logger LOG = LoggerFactory.getLogger(AsyncRegionLocator.class);
+  @VisibleForTesting
+  static final String MAX_CONCURRENT_LOCATE_REQUEST_PER_TABLE =
+    "hbase.client.meta.max.concurrent.locate.per.table";
+
+  private static final int DEFAULT_MAX_CONCURRENT_LOCATE_REQUEST_PER_TABLE = 8;
+
+  @VisibleForTesting
+  static final String MAX_CONCURRENT_LOCATE_META_REQUEST =
+    "hbase.client.meta.max.concurrent.locate";
+
+  @VisibleForTesting
+  static String LOCATE_PREFETCH_LIMIT = "hbase.client.locate.prefetch.limit";
+
+  private static final int DEFAULT_LOCATE_PREFETCH_LIMIT = 10;
 
   private final HashedWheelTimer retryTimer;
 
   private final AsyncConnectionImpl conn;
 
-  private final AsyncMetaRegionLocator metaRegionLocator;
+  private final int maxConcurrentLocateRequestPerTable;
 
-  private final AsyncNonMetaRegionLocator nonMetaRegionLocator;
+  private final int maxConcurrentLocateMetaRequest;
 
-  AsyncRegionLocator(AsyncConnectionImpl conn, HashedWheelTimer retryTimer) {
+  private final int locatePrefetchLimit;
+
+  private final boolean useMetaReplicas;
+
+  private final ConcurrentMap<TableName, AbstractAsyncTableRegionLocator> table2Locator =
+    new ConcurrentHashMap<>();
+
+  public AsyncRegionLocator(AsyncConnectionImpl conn, HashedWheelTimer retryTimer) {
     this.conn = conn;
-    this.metaRegionLocator = new AsyncMetaRegionLocator(conn.registry);
-    this.nonMetaRegionLocator = new AsyncNonMetaRegionLocator(conn);
     this.retryTimer = retryTimer;
+    this.maxConcurrentLocateRequestPerTable = conn.getConfiguration().getInt(
+      MAX_CONCURRENT_LOCATE_REQUEST_PER_TABLE, DEFAULT_MAX_CONCURRENT_LOCATE_REQUEST_PER_TABLE);
+    this.maxConcurrentLocateMetaRequest = conn.getConfiguration()
+      .getInt(MAX_CONCURRENT_LOCATE_META_REQUEST, maxConcurrentLocateRequestPerTable);
+    this.locatePrefetchLimit =
+      conn.getConfiguration().getInt(LOCATE_PREFETCH_LIMIT, DEFAULT_LOCATE_PREFETCH_LIMIT);
+    this.useMetaReplicas =
+      conn.getConfiguration().getBoolean(USE_META_REPLICAS, DEFAULT_USE_META_REPLICAS);
   }
 
   private <T> CompletableFuture<T> withTimeout(CompletableFuture<T> future, long timeoutNs,
-      Supplier<String> timeoutMsg) {
+    Supplier<String> timeoutMsg) {
     if (future.isDone() || timeoutNs <= 0) {
       return future;
     }
@@ -85,12 +118,28 @@ class AsyncRegionLocator {
     return TableName.isMetaTableName(tableName);
   }
 
+  private AbstractAsyncTableRegionLocator getOrCreateTableRegionLocator(TableName tableName) {
+    return computeIfAbsent(table2Locator, tableName, () -> {
+      if (isMeta(tableName)) {
+        return new AsyncMetaTableRegionLocator(conn, tableName, maxConcurrentLocateMetaRequest);
+      } else {
+        return new AsyncNonMetaTableRegionLocator(conn, tableName,
+          maxConcurrentLocateRequestPerTable, locatePrefetchLimit, useMetaReplicas);
+      }
+    });
+  }
+
+  @VisibleForTesting
   CompletableFuture<RegionLocations> getRegionLocations(TableName tableName, byte[] row,
-      RegionLocateType type, boolean reload, long timeoutNs) {
-    CompletableFuture<RegionLocations> future = isMeta(tableName)
-      ? metaRegionLocator.getRegionLocations(RegionReplicaUtil.DEFAULT_REPLICA_ID, reload)
-      : nonMetaRegionLocator.getRegionLocations(tableName, row,
-        RegionReplicaUtil.DEFAULT_REPLICA_ID, type, reload);
+    int replicaId, RegionLocateType locateType, boolean reload) {
+    return getOrCreateTableRegionLocator(tableName).getRegionLocations(row, replicaId, locateType,
+      reload);
+  }
+
+  CompletableFuture<RegionLocations> getRegionLocations(TableName tableName, byte[] row,
+    RegionLocateType type, boolean reload, long timeoutNs) {
+    CompletableFuture<RegionLocations> future =
+      getRegionLocations(tableName, row, RegionReplicaUtil.DEFAULT_REPLICA_ID, type, reload);
     return withTimeout(future, timeoutNs,
       () -> "Timeout(" + TimeUnit.NANOSECONDS.toMillis(timeoutNs) +
         "ms) waiting for region locations for " + tableName + ", row='" +
@@ -98,13 +147,12 @@ class AsyncRegionLocator {
   }
 
   CompletableFuture<HRegionLocation> getRegionLocation(TableName tableName, byte[] row,
-      int replicaId, RegionLocateType type, boolean reload, long timeoutNs) {
+    int replicaId, RegionLocateType type, boolean reload, long timeoutNs) {
     // meta region can not be split right now so we always call the same method.
     // Change it later if the meta table can have more than one regions.
     CompletableFuture<HRegionLocation> future = new CompletableFuture<>();
     CompletableFuture<RegionLocations> locsFuture =
-      isMeta(tableName) ? metaRegionLocator.getRegionLocations(replicaId, reload)
-        : nonMetaRegionLocator.getRegionLocations(tableName, row, replicaId, type, reload);
+      getRegionLocations(tableName, row, replicaId, type, reload);
     addListener(locsFuture, (locs, error) -> {
       if (error != null) {
         future.completeExceptionally(error);
@@ -131,72 +179,115 @@ class AsyncRegionLocator {
   }
 
   CompletableFuture<HRegionLocation> getRegionLocation(TableName tableName, byte[] row,
-      int replicaId, RegionLocateType type, long timeoutNs) {
+    int replicaId, RegionLocateType type, long timeoutNs) {
     return getRegionLocation(tableName, row, replicaId, type, false, timeoutNs);
   }
 
   CompletableFuture<HRegionLocation> getRegionLocation(TableName tableName, byte[] row,
-      RegionLocateType type, boolean reload, long timeoutNs) {
+    RegionLocateType type, boolean reload, long timeoutNs) {
     return getRegionLocation(tableName, row, RegionReplicaUtil.DEFAULT_REPLICA_ID, type, reload,
       timeoutNs);
   }
 
   CompletableFuture<HRegionLocation> getRegionLocation(TableName tableName, byte[] row,
-      RegionLocateType type, long timeoutNs) {
+    RegionLocateType type, long timeoutNs) {
     return getRegionLocation(tableName, row, type, false, timeoutNs);
   }
 
-  void updateCachedLocationOnError(HRegionLocation loc, Throwable exception) {
-    if (loc.getRegion().isMetaRegion()) {
-      metaRegionLocator.updateCachedLocationOnError(loc, exception);
-    } else {
-      nonMetaRegionLocator.updateCachedLocationOnError(loc, exception);
+  /**
+   * Get all region locations for a table.
+   * <p/>
+   * Notice that this method will not read from cache.
+   */
+  CompletableFuture<List<HRegionLocation>> getAllRegionLocations(TableName tableName,
+    boolean excludeOfflinedSplitParents) {
+    CompletableFuture<List<HRegionLocation>> future =
+      getOrCreateTableRegionLocator(tableName).getAllRegionLocations(excludeOfflinedSplitParents);
+    addListener(future, (locs, error) -> {
+      if (error != null) {
+        return;
+      }
+      // add locations to cache
+      AbstractAsyncTableRegionLocator locator = getOrCreateTableRegionLocator(tableName);
+      Map<RegionInfo, List<HRegionLocation>> map = new HashMap<>();
+      for (HRegionLocation loc : locs) {
+        // do not cache split parent
+        if (loc.getRegion() != null && !loc.getRegion().isSplitParent()) {
+          map.computeIfAbsent(RegionReplicaUtil.getRegionInfoForDefaultReplica(loc.getRegion()),
+            k -> new ArrayList<>()).add(loc);
+        }
+      }
+      for (List<HRegionLocation> l : map.values()) {
+        locator.addToCache(new RegionLocations(l));
+      }
+    });
+    return future;
+  }
+
+  private void removeLocationFromCache(HRegionLocation loc) {
+    AbstractAsyncTableRegionLocator locator = table2Locator.get(loc.getRegion().getTable());
+    if (locator == null) {
+      return;
     }
+    locator.removeLocationFromCache(loc);
+  }
+
+  private void addLocationToCache(HRegionLocation loc) {
+    getOrCreateTableRegionLocator(loc.getRegion().getTable())
+      .addToCache(createRegionLocations(loc));
+  }
+
+  private HRegionLocation getCachedLocation(HRegionLocation loc) {
+    AbstractAsyncTableRegionLocator locator = table2Locator.get(loc.getRegion().getTable());
+    if (locator == null) {
+      return null;
+    }
+    RegionLocations locs = locator.getInCache(loc.getRegion().getStartKey());
+    return locs != null ? locs.getRegionLocation(loc.getRegion().getReplicaId()) : null;
+  }
+
+  void updateCachedLocationOnError(HRegionLocation loc, Throwable exception) {
+    AsyncRegionLocatorHelper.updateCachedLocationOnError(loc, exception, this::getCachedLocation,
+      this::addLocationToCache, this::removeLocationFromCache, conn.getConnectionMetrics());
   }
 
   void clearCache(TableName tableName) {
-    LOG.debug("Clear meta cache for {}", tableName);
-    if (tableName.equals(META_TABLE_NAME)) {
-      metaRegionLocator.clearCache();
-    } else {
-      nonMetaRegionLocator.clearCache(tableName);
+    AbstractAsyncTableRegionLocator locator = table2Locator.remove(tableName);
+    if (locator == null) {
+      return;
     }
-  }
-
-  void clearCache(ServerName serverName) {
-    LOG.debug("Clear meta cache for {}", serverName);
-    metaRegionLocator.clearCache(serverName);
-    nonMetaRegionLocator.clearCache(serverName);
-    conn.getConnectionMetrics().ifPresent(MetricsConnection::incrMetaCacheNumClearServer);
+    locator.clearPendingRequests();
+    conn.getConnectionMetrics()
+      .ifPresent(metrics -> metrics.incrMetaCacheNumClearRegion(locator.getCacheSize()));
   }
 
   void clearCache() {
-    metaRegionLocator.clearCache();
-    nonMetaRegionLocator.clearCache();
+    table2Locator.clear();
   }
 
-  @VisibleForTesting
-  AsyncNonMetaRegionLocator getNonMetaRegionLocator() {
-    return nonMetaRegionLocator;
+  void clearCache(ServerName serverName) {
+    for (AbstractAsyncTableRegionLocator locator : table2Locator.values()) {
+      locator.clearCache(serverName);
+    }
   }
 
   // only used for testing whether we have cached the location for a region.
   @VisibleForTesting
   RegionLocations getRegionLocationInCache(TableName tableName, byte[] row) {
-    if (TableName.isMetaTableName(tableName)) {
-      return metaRegionLocator.getRegionLocationInCache();
-    } else {
-      return nonMetaRegionLocator.getRegionLocationInCache(tableName, row);
+    AbstractAsyncTableRegionLocator locator = table2Locator.get(tableName);
+    if (locator == null) {
+      return null;
     }
+    return locator.locateInCache(row);
   }
 
   // only used for testing whether we have cached the location for a table.
   @VisibleForTesting
   int getNumberOfCachedRegionLocations(TableName tableName) {
-    if (TableName.isMetaTableName(tableName)) {
-      return metaRegionLocator.getNumberOfCachedRegionLocations();
-    } else {
-      return nonMetaRegionLocator.getNumberOfCachedRegionLocations(tableName);
+    AbstractAsyncTableRegionLocator locator = table2Locator.get(tableName);
+    if (locator == null) {
+      return 0;
     }
+    return locator.getNumberOfCachedRegionLocations();
   }
 }
