@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertNotSame;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -26,6 +28,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessControlConstants;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
@@ -42,6 +45,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 
 @Category(MediumTests.class)
@@ -242,5 +246,17 @@ public class TestSnapshotWithAcl extends SecureTestUtil {
     verifyDenied(new AccessReadAction(TEST_TABLE), USER_NONE);
     verifyAllowed(new AccessWriteAction(TEST_TABLE), USER_OWNER, USER_RW);
     verifyDenied(new AccessWriteAction(TEST_TABLE), USER_RO, USER_NONE);
+  }
+
+  @Test
+  public void testListSnapshot() throws Exception {
+    String snapshotName1 = UUID.randomUUID().toString();
+    admin.snapshot(snapshotName1, TEST_TABLE);
+    List<HBaseProtos.SnapshotDescription> snapshotDescriptions = admin.listSnapshots();
+    for (HBaseProtos.SnapshotDescription snapshotDescription:
+      snapshotDescriptions) {
+      assertNotSame(snapshotDescription.getOwner(), "");
+    }
+    admin.deleteSnapshot(snapshotName1);
   }
 }
