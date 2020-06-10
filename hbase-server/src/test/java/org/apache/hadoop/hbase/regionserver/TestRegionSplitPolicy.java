@@ -154,6 +154,41 @@ public class TestRegionSplitPolicy {
   }
 
   @Test
+  public void testIsExceedSize() throws IOException {
+    // Configure SteppingAllStoresSizeSplitPolicy as our split policy
+    conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
+      SteppingAllStoresSizeSplitPolicy.class.getName());
+    // Now make it so the mock region has a RegionServerService that will
+    // return 'online regions'.
+    RegionServerServices rss = Mockito.mock(RegionServerServices.class);
+    final List<HRegion> regions = new ArrayList<>();
+    Mockito.doReturn(regions).when(rss).getRegions(TABLENAME);
+    Mockito.when(mockRegion.getRegionServerServices()).thenReturn(rss);
+
+    SteppingAllStoresSizeSplitPolicy policy =
+      (SteppingAllStoresSizeSplitPolicy) RegionSplitPolicy.create(mockRegion, conf);
+    regions.add(mockRegion);
+
+    HStore mockStore1 = Mockito.mock(HStore.class);
+    Mockito.doReturn(100L).when(mockStore1).getSize();
+    HStore mockStore2 = Mockito.mock(HStore.class);
+    Mockito.doReturn(924L).when(mockStore2).getSize();
+    HStore mockStore3 = Mockito.mock(HStore.class);
+    Mockito.doReturn(925L).when(mockStore3).getSize();
+
+    // test sum of store's size not greater than sizeToCheck
+    stores.add(mockStore1);
+    stores.add(mockStore2);
+    assertFalse(policy.isExceedSize(1, 1024));
+    stores.clear();
+
+    // test sum of store's size greater than sizeToCheck
+    stores.add(mockStore1);
+    stores.add(mockStore3);
+    assertTrue(policy.isExceedSize(1, 1024));
+  }
+
+  @Test
   public void testBusyRegionSplitPolicy() throws Exception {
     doReturn(TableDescriptorBuilder.newBuilder(TABLENAME).build()).when(mockRegion)
       .getTableDescriptor();
